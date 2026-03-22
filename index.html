@@ -78,7 +78,7 @@ const menu = {
     small: { 燒肉:56, 火腿:56, 雞肉:68, 烤肉:72, 雙層烤肉:78, 綜合:79 },
     large: { 燒肉:80, 火腿:80, 雞肉:100, 烤肉:105, 雙層烤肉:115, 綜合:130 },
     combo: { 1:90, 2:90, 3:118, 4:128, 5:135, 6:142 },
-    drinks: { 越南咖啡:48, 豆漿:37, 紅茶:37, 可樂:37, 雪碧:37 },
+    drinks: { 越南咖啡:48, 豆漿:37, 紅茶:37, 可樂:37,雪碧:37 },
     topping: { 起司:15, 火腿:20, 烤肉:20, 燒肉:25, 雞肉:25 }
 };
 
@@ -283,13 +283,31 @@ function generateOrderNumber() {
 }
 
 async function submitOrder() {
-    const date = document.getElementById('pickup-date').value;
-    const time = document.getElementById('pickup-time').value;
+    const dateInput = document.getElementById('pickup-date').value;
+    const timeInput = document.getElementById('pickup-time').value;
     const currentTotal = calculateTotal();
     let hasItem = Object.values(cart).some(q => q > 0);
 
     if (!hasItem) return customAlert('請 選品項');
-    if (!date || !time) return customAlert('請 選取餐時間');
+    if (!dateInput || !timeInput) return customAlert('請 選取餐時間');
+
+    // Kiểm tra giờ hoạt động
+    const pickupDate = new Date(dateInput);
+    const dayOfWeek = pickupDate.getDay(); // 0: Chủ nhật, 1: Thứ hai, ..., 6: Thứ bảy
+    const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+    
+    const [hours, minutes] = timeInput.split(':').map(Number);
+    const timeValue = hours + minutes / 60;
+
+    if (isWeekend) {
+        if (timeValue < 7.5 || timeValue > 21) {
+            return customAlert('週末營業時間為 07:30 - 21:00，請重新選擇取餐時間');
+        }
+    } else {
+        if (timeValue < 11 || timeValue > 21) {
+            return customAlert('平日營業時間為 11:00 - 21:00，請重新選擇取餐時間');
+        }
+    }
 
     const orderNum = generateOrderNumber();
     let msg = `訂單編號：${orderNum}\n`;
@@ -318,7 +336,7 @@ async function submitOrder() {
         }
     }
 
-    msg += `\n🕒 取餐時間：${date} ${time}`;
+    msg += `\n🕒 取餐時間：${dateInput} ${timeInput}`;
     const mainNote = document.getElementById('note').value;
     if (mainNote) msg += `\n📝 總備註：${mainNote}`;
     
