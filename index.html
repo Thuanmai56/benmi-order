@@ -77,8 +77,20 @@
 const menu = {
     small: { 燒肉:56, 火腿:56, 雞肉:68, 烤肉:72, 雙層烤肉:78, 綜合:79 },
     large: { 燒肉:80, 火腿:80, 雞肉:100, 烤肉:105, 雙層烤肉:115, 綜合:130 },
-    combo: { 1:90, 2:90, 3:118, 4:128, 5:135, 6:142 },
-    drinks: { 越南咖啡:48, 豆漿:37, 紅茶:37, 可樂:37,雪碧:37 },
+    combo: { 
+        "1 （大燒肉+飲料）": 90, 
+        "2 （大火腿+飲料）": 90, 
+        "3 （大雞肉肉+飲料）": 118, 
+        "4 （大烤肉+飲料）": 128, 
+        "5 （大雙層烤肉+飲料）": 135, 
+        "6 （大綜合+飲料）": 142,
+        "7 （小燒肉+飲料）": 77,
+        "8 （小雞肉肉+飲料）": 88,
+        "9 （小烤肉+飲料）": 95,
+        "10 （小雙層烤肉+飲料）": 99,
+        "11 （小綜合+飲料）": 100
+    },
+    drinks: { 越南咖啡:48, 豆漿:37, 紅茶:37, 可樂:37, 雪碧:37 },
     topping: { 起司:15, 火腿:20, 烤肉:20, 燒肉:25, 雞肉:25 }
 };
 
@@ -231,7 +243,7 @@ function calculateTotal() {
 }
 
 function renderComboDrinksInline(name, qty) {
-    let id = 'combo-drinks-' + name;
+    let id = 'combo-drinks-' + name.replace(/\s+/g, '-');
     let existing = document.getElementById(id);
     if (existing) existing.remove();
     if (qty === 0) return;
@@ -246,12 +258,13 @@ function renderComboDrinksInline(name, qty) {
     for (let i = 1; i <= qty; i++) {
         let sel = document.createElement('select');
         let firstDrink = Object.keys(menu.drinks)[0];
-        comboDrinkData[name][i-1] = firstDrink;
+        if(!comboDrinkData[name][i-1]) comboDrinkData[name][i-1] = firstDrink;
 
         for (let d in menu.drinks) {
             let opt = document.createElement('option');
             opt.value = d;
             opt.text = `第 ${i} 份飲料：${d}`;
+            if(comboDrinkData[name][i-1] === d) opt.selected = true;
             sel.appendChild(opt);
         }
 
@@ -288,12 +301,11 @@ async function submitOrder() {
     const currentTotal = calculateTotal();
     let hasItem = Object.values(cart).some(q => q > 0);
 
-    if (!hasItem) return customAlert('請 選品項');
-    if (!dateInput || !timeInput) return customAlert('請 選取餐時間');
+    if (!hasItem) return customAlert('請 ít nhất chọn một món');
+    if (!dateInput || !timeInput) return customAlert('請 chọn ngày và giờ lấy hàng');
 
-    // Kiểm tra giờ hoạt động
     const pickupDate = new Date(dateInput);
-    const dayOfWeek = pickupDate.getDay(); // 0: Chủ nhật, 1: Thứ hai, ..., 6: Thứ bảy
+    const dayOfWeek = pickupDate.getDay(); 
     const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
     
     const [hours, minutes] = timeInput.split(':').map(Number);
@@ -315,11 +327,11 @@ async function submitOrder() {
     
     for (let key in cart) {
         if (cart[key] > 0) {
-            msg += `\n${key} x${cart[key]}份`;
+            let [cat, itemName] = key.split('_');
+            msg += `\n${itemName} x${cart[key]}份`;
 
-            if (key.startsWith('combo_')) {
-                let comboName = key.replace('combo_','');
-                let drinks = comboDrinkData[comboName] || [];
+            if (cat === 'combo') {
+                let drinks = comboDrinkData[itemName] || [];
                 drinks.forEach((d, i) => {
                     msg += `\n  - 第 ${i+1} 份飲料：${d}`;
                 });
