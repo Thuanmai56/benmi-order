@@ -104,7 +104,8 @@ function updateQty(category, name, change) {
     document.getElementById('qty-' + category + '-' + name).innerText = cart[key];
     const btn = document.getElementById('customize-btn-' + category + '-' + name);
 
-    if (cart[key] > 0 && (category === 'small' || category === 'large')) {
+    // Bổ sung: Cho phép hiển thị nút 客制化 cho cả category combo
+    if (cart[key] > 0 && (category === 'small' || category === 'large' || category === 'combo')) {
         btn.style.display = 'inline';
     } else if (btn) {
         btn.style.display = 'none';
