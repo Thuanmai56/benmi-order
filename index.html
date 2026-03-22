@@ -304,6 +304,13 @@ async function submitOrder() {
     if (!hasItem) return customAlert('請 選品項');
     if (!dateInput || !timeInput) return customAlert('請 選取餐時間');
 
+    // KIỂM TRA THỜI GIAN QUÁ KHỨ
+    const now = new Date();
+    const selectedDateTime = new Date(`${dateInput}T${timeInput}`);
+    if (selectedDateTime < now) {
+        return customAlert('不能選擇過去的時間，請重新選擇取餐時間');
+    }
+
     const pickupDate = new Date(dateInput);
     const dayOfWeek = pickupDate.getDay(); 
     const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
@@ -364,7 +371,10 @@ async function submitOrder() {
 
 function setTodayDate() {
     const today = new Date();
-    document.getElementById('pickup-date').value = today.toISOString().split('T')[0];
+    const dateStr = today.toISOString().split('T')[0];
+    const dateEl = document.getElementById('pickup-date');
+    dateEl.value = dateStr;
+    dateEl.min = dateStr; // Chặn chọn ngày quá khứ từ lịch
 }
 
 renderMenu();
