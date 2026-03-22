@@ -370,7 +370,7 @@ async function submitOrder() {
     
     msg += `\n💰 總金額：$${currentTotal}`;
 
-    await liff.init({ liffId: '2009555608-DMioljsI' });
+    await liff.init({ liffId: '2009560906-c5taZfiY' });
     liff.sendMessages([{ type: 'text', text: msg }]).then(() => {
         customAlert('訂單已送出', () => {
             liff.closeWindow();
