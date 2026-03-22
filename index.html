@@ -6,24 +6,7 @@
 <title>Benmi Order</title>
 <style>
     body { font-family: -apple-system, sans-serif; background: #f4f6f8; margin: 0; padding-bottom: 120px; }
-    /* Cập nhật header để chứa logo */
-    .header { 
-        background: #00b900; 
-        color: white; 
-        padding: 12px 18px; 
-        text-align: center; 
-        font-size: 20px; 
-        font-weight: bold; 
-        display: flex; 
-        align-items: center; 
-        justify-content: center; 
-        gap: 10px; 
-    }
-    .header img {
-        height: 35px; /* Điều chỉnh kích thước logo tại đây */
-        width: auto;
-        border-radius: 4px;
-    }
+    .header { background: #00b900; color: white; padding: 18px; text-align: center; font-size: 20px; font-weight: bold; }
     .section-title { padding: 12px 16px; font-weight: bold; color: #333; background: #ffeeba; }
     .item { background: white; display: flex; align-items: center; padding: 14px 16px; border-bottom: 1px solid #eee; position: relative; }
     .item-info { flex-grow: 1; }
@@ -53,10 +36,7 @@
 </head>
 
 <body>
-<div class="header">
-    <img src="https://drive.google.com/file/d/1iEfQESkbOh9MfqQvJ_tgf5irhcvw1QQ5/view?usp=sharing" alt="logo"> <!-- Thay link ảnh logo vào đây -->
-    Benmi 點餐系統
-</div>
+<div class="header">🥪 Benmi 點餐系統</div>
 
 <div class="section-title">小麵包</div><div id="small-list"></div>
 <div class="section-title">大麵包</div><div id="large-list"></div>
@@ -98,7 +78,7 @@ const menu = {
     small: { 燒肉:56, 火腿:56, 雞肉:68, 烤肉:72, 雙層烤肉:78, 綜合:79 },
     large: { 燒肉:80, 火腿:80, 雞肉:100, 烤肉:105, 雙層烤肉:115, 綜合:130 },
     combo: { 1:90, 2:90, 3:118, 4:128, 5:135, 6:142 },
-    drinks: { 越南咖啡:48, 豆漿:37, 紅茶:37, 可樂:37, 雪碧:37 },
+    drinks: { 越南咖啡:48, 豆漿:37, 紅茶:37, 可樂:37,雪碧:37 },
     topping: { 起司:15, 火腿:20, 烤肉:20, 燒肉:25, 雞肉:25 }
 };
 
@@ -311,8 +291,9 @@ async function submitOrder() {
     if (!hasItem) return customAlert('請 選品項');
     if (!dateInput || !timeInput) return customAlert('請 選取餐時間');
 
+    // Kiểm tra giờ hoạt động
     const pickupDate = new Date(dateInput);
-    const dayOfWeek = pickupDate.getDay(); 
+    const dayOfWeek = pickupDate.getDay(); // 0: Chủ nhật, 1: Thứ hai, ..., 6: Thứ bảy
     const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
     
     const [hours, minutes] = timeInput.split(':').map(Number);
