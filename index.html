@@ -104,7 +104,6 @@ function updateQty(category, name, change) {
     document.getElementById('qty-' + category + '-' + name).innerText = cart[key];
     const btn = document.getElementById('customize-btn-' + category + '-' + name);
 
-    // Bổ sung: Cho phép hiển thị nút 客制化 cho cả category combo
     if (cart[key] > 0 && (category === 'small' || category === 'large' || category === 'combo')) {
         btn.style.display = 'inline';
     } else if (btn) {
@@ -131,7 +130,10 @@ function toggleCustomize(category, name) {
     box.innerHTML = `<div class="popup-header"><span>${name} 客制化</span><span onclick="closePopup()">✕</span></div>`;
 
     for (let i = 0; i < qty; i++) {
-        let data = customizeData[key][i] || { topping: '', spicy: '不辣', note: '' };
+        // Mặc định là 微辣
+        let data = customizeData[key][i] || { topping: '', spicy: '微辣', note: '' };
+        if (!customizeData[key][i]) customizeData[key][i] = data;
+
         let section = document.createElement('div');
         section.style.marginBottom = "15px";
         section.style.borderBottom = "1px solid #eee";
@@ -147,9 +149,10 @@ function toggleCustomize(category, name) {
             <select onchange="saveCustomize('${key}',${i},'topping',this.value)">${toppingOptions}</select>
             <label>辣度</label>
             <select onchange="saveCustomize('${key}',${i},'spicy',this.value)">
-                <option ${data.spicy==='不辣'?'selected':''}>不辣</option>
-                <option ${data.spicy==='小辣'?'selected':''}>小辣</option>
-                <option ${data.spicy==='大辣'?'selected':''}>大辣</option>
+                <option value="不辣" ${data.spicy==='不辣'?'selected':''}>不辣</option>
+                <option value="微辣" ${data.spicy==='微辣'?'selected':''}>微辣</option>
+                <option value="中辣" ${data.spicy==='中辣'?'selected':''}>中辣</option>
+                <option value="大辣" ${data.spicy==='大辣'?'selected':''}>大辣</option>
             </select>
             <input type="text" value="${data.note||''}" onchange="saveCustomize('${key}',${i},'note',this.value)" placeholder="個別備註：如不要香菜">
         `;
@@ -252,7 +255,9 @@ async function submitOrder() {
             if (customizeData[key]) {
                 customizeData[key].forEach((c, i) => {
                     let toppingStr = c.topping ? `加${c.topping}` : '無加料';
-                    msg += `\n  - 份 ${i+1}: ${toppingStr}, ${c.spicy||'不辣'}, ${c.note||''}`;
+                    // Đảm bảo lấy đúng giá trị spicy, mặc định là 微辣 nếu trống
+                    let spicyVal = c.spicy || '微辣';
+                    msg += `\n  - 份 ${i+1}: ${toppingStr}, ${spicyVal}, ${c.note||''}`;
                 });
             }
             msg += '\n';
