@@ -288,7 +288,7 @@ async function submitOrder() {
     const currentTotal = calculateTotal();
     let hasItem = Object.values(cart).some(q => q > 0);
 
-    if (!hasItem) return customAlert('請 品項');
+    if (!hasItem) return customAlert('請 選品項');
     if (!date || !time) return customAlert('請 選取餐時間');
 
     const orderNum = generateOrderNumber();
