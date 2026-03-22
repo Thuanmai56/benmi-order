@@ -55,6 +55,7 @@
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script>
+
 const menu = {
     small: { 燒肉:56, 火腿:56, 雞肉:68, 烤肉:72, 雙層烤肉:78, 綜合:79 },
     large: { 燒肉:80, 火腿:80, 雞肉:100, 烤肉:105, 雙層烤肉:115, 綜合:130 },
@@ -65,6 +66,7 @@ const menu = {
 
 let cart = {};
 let customizeData = {};
+let comboDrinkData = {};
 let currentPopup = null;
 
 function createItem(name, price, category, containerId) {
@@ -202,14 +204,30 @@ function renderComboDrinksInline(name, qty) {
     container.className = 'combo-drinks';
     document.getElementById('item-combo-' + name).after(container);
 
+    if (!comboDrinkData[name]) comboDrinkData[name] = [];
+
     for (let i = 1; i <= qty; i++) {
+
         let sel = document.createElement('select');
+
+        let firstDrink = Object.keys(menu.drinks)[0];
+        comboDrinkData[name][i-1] = firstDrink;
+
         for (let d in menu.drinks) {
+
             let opt = document.createElement('option');
-            opt.value = d; opt.text = `第 ${i} 份飲料：${d}`;
+            opt.value = d;
+            opt.text = `第 ${i} 份飲料：${d}`;
             sel.appendChild(opt);
+
         }
+
+        sel.onchange = () => {
+            comboDrinkData[name][i-1] = sel.value;
+        };
+
         container.appendChild(sel);
+
     }
 }
 
@@ -225,6 +243,15 @@ async function submitOrder() {
     for (let key in cart) {
         if (cart[key] > 0) {
             msg += `\n${key} x${cart[key]}`;
+
+            if (key.startsWith('combo_')) {
+                let comboName = key.replace('combo_','');
+                let drinks = comboDrinkData[comboName] || [];
+                drinks.forEach((d, i) => {
+                    msg += `\n  - 第 ${i+1} 份飲料：${d}`;
+                });
+            }
+
             if (customizeData[key]) {
                 customizeData[key].forEach((c, i) => {
                     msg += `\n  - 份 ${i+1}: ${c.topping||'無加料'}, ${c.spicy||'不辣'}, ${c.note||''}`;
@@ -233,6 +260,7 @@ async function submitOrder() {
             msg += '\n';
         }
     }
+
     msg += `\n🕒 取餐時間：${date} ${time}`;
     const mainNote = document.getElementById('note').value;
     if (mainNote) msg += `\n📝 總備註：${mainNote}`;
@@ -251,6 +279,7 @@ function setTodayDate() {
 
 renderMenu();
 setTodayDate();
+
 </script>
 </body>
 </html>
