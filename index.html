@@ -304,7 +304,6 @@ async function submitOrder() {
     if (!hasItem) return customAlert('請 選品項');
     if (!dateInput || !timeInput) return customAlert('請 選取餐時間');
 
-    // KIỂM TRA THỜI GIAN QUÁ KHỨ
     const now = new Date();
     const selectedDateTime = new Date(`${dateInput}T${timeInput}`);
     if (selectedDateTime < now) {
@@ -332,6 +331,8 @@ async function submitOrder() {
     let msg = `訂單編號：${orderNum}\n`;
     msg += '📦 訂單內容：\n';
     
+    const zhNumbers = ["第一份", "第二份", "第三份", "第四份", "第五份", "第六份", "第七份", "第八份", "第九份", "第十份"];
+    
     for (let key in cart) {
         if (cart[key] > 0) {
             let [cat, itemName] = key.split('_');
@@ -339,16 +340,18 @@ async function submitOrder() {
 
             if (cat === 'combo') {
                 let drinks = comboDrinkData[itemName] || [];
-                drinks.forEach((d, i) => {
-                    msg += `\n  - 第 ${i+1} 份飲料：${d}`;
-                });
+                let drinkCounts = {};
+                drinks.forEach(d => { drinkCounts[d] = (drinkCounts[d] || 0) + 1; });
+                let drinkStr = Object.entries(drinkCounts).map(([name, count]) => `${name} x${count}`).join('，');
+                msg += `\n  - 飲料：${drinkStr}`;
             }
 
             if (customizeData[key]) {
                 customizeData[key].forEach((c, i) => {
                     let toppingStr = c.topping ? `加${c.topping}` : '無加料';
                     let spicyVal = c.spicy || '微辣';
-                    msg += `\n  - 份 ${i+1}: ${toppingStr}, ${spicyVal}, ${c.note||''}`;
+                    let zhIdx = zhNumbers[i] || `第 ${i+1} 份`;
+                    msg += `\n  - ${zhIdx}: ${toppingStr}, ${spicyVal}, ${c.note||''}`;
                 });
             }
             msg += '\n';
@@ -374,7 +377,7 @@ function setTodayDate() {
     const dateStr = today.toISOString().split('T')[0];
     const dateEl = document.getElementById('pickup-date');
     dateEl.value = dateStr;
-    dateEl.min = dateStr; // Chặn chọn ngày quá khứ từ lịch
+    dateEl.min = dateStr;
 }
 
 renderMenu();
