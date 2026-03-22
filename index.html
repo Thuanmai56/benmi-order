@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Benmi Order</title>
+<style>
+    body { font-family: -apple-system, sans-serif; background: #f4f6f8; margin: 0; padding-bottom: 120px; }
+    .header { background: #00b900; color: white; padding: 18px; text-align: center; font-size: 20px; font-weight: bold; }
+    .section-title { padding: 12px 16px; font-weight: bold; color: #333; background: #ffeeba; }
+    .item { background: white; display: flex; align-items: center; padding: 14px 16px; border-bottom: 1px solid #eee; position: relative; }
+    .item-info { flex-grow: 1; }
+    .item-name { font-weight: 600; }
+    .item-price { color: #e44d26; font-size: 14px; }
+    .qty-control { display: flex; align-items: center; gap: 10px; }
+    .btn-qty { border: 1px solid #00b900; background: white; color: #00b900; width: 32px; height: 32px; border-radius: 50%; font-size: 18px; }
+    .customize-btn { margin-left: 10px; color: #00b900; font-weight: bold; cursor: pointer; display: none; text-decoration: underline; }
+    .popup-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 999; }
+    .popup-box { background: white; padding: 15px; width: 90%; max-width: 420px; border-radius: 10px; max-height: 80vh; overflow-y: auto; }
+    .popup-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px; }
+    .input-group { background: white; padding: 15px; border-bottom: 1px solid #eee; }
+    .datetime-row { display: flex; gap: 10px; }
+    input, textarea, select { width: 100%; padding: 10px; font-size: 16px; margin-top: 8px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 5px; }
+    .footer { position: fixed; bottom: 0; width: 100%; background: white; padding: 16px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; }
+    .btn-send { background: #00b900; color: white; border: none; padding: 12px 26px; border-radius: 25px; font-weight: bold; font-size: 16px; }
+    .combo-drinks { padding: 10px 16px; background: #f9f9f9; border-bottom: 1px solid #eee; }
+</style>
+</head>
+
+<body>
+<div class="header">🥪 Benmi 點餐系統</div>
+
+<div class="section-title">小麵包</div><div id="small-list"></div>
+<div class="section-title">大麵包</div><div id="large-list"></div>
+<div class="section-title">套餐 (可任選飲料)</div><div id="combo-list"></div>
+<div class="section-title">單點飲料</div><div id="drink-list"></div>
+
+<div class="section-title">⚠️ 請選擇取餐日期 / 時間</div>
+<div class="input-group">
+    <div class="datetime-row">
+        <input type="date" id="pickup-date">
+        <input type="time" id="pickup-time">
+    </div>
+</div>
+
+<div class="section-title">其他要求</div>
+<div class="input-group">
+    <textarea id="note" rows="3" placeholder="例如：切半、不辣、不要香菜"></textarea>
+</div>
+
+<div class="footer">
+    <div>總計: $<span id="total-price">0</span></div>
+    <button class="btn-send" onclick="submitOrder()">確認下單</button>
+</div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script>
+const menu = {
+    small: { 燒肉:56, 火腿:56, 雞肉:68, 烤肉:72, 雙層烤肉:78, 綜合:79 },
+    large: { 燒肉:80, 火腿:80, 雞肉:100, 烤肉:105, 雙層烤肉:115, 綜合:130 },
+    combo: { 1:90, 2:90, 3:118, 4:128, 5:135, 6:142 },
+    drinks: { 越南咖啡:48, 豆漿:37, 紅茶:37, 可樂:37, 雪碧:37 },
+    topping: { 起司:15, 火腿:20, 烤肉:20, 燒肉:25, 雞肉:25 }
+};
+
+let cart = {};
+let customizeData = {};
+let currentPopup = null;
+
+function createItem(name, price, category, containerId) {
+    const container = document.getElementById(containerId);
+    const div = document.createElement('div');
+    div.className = 'item';
+    div.id = `item-${category}-${name}`;
+    div.innerHTML = `
+        <div class="item-info">
+            <div class="item-name">${name}</div>
+            <div class="item-price">$${price}</div>
+        </div>
+        <div class="qty-control">
+            <button class="btn-qty" onclick="updateQty('${category}','${name}',-1)">-</button>
+            <span id="qty-${category}-${name}">0</span>
+            <button class="btn-qty" onclick="updateQty('${category}','${name}',1)">+</button>
+            <span class="customize-btn" id="customize-btn-${category}-${name}" onclick="toggleCustomize('${category}','${name}')">客制化</span>
+        </div>
+    `;
+    container.appendChild(div);
+}
+
+function renderMenu() {
+    for (let name in menu.small) createItem(name + '小', menu.small[name], 'small', 'small-list');
+    for (let name in menu.large) createItem(name + '大', menu.large[name], 'large', 'large-list');
+    for (let set in menu.combo) createItem('套餐 ' + set, menu.combo[set], 'combo', 'combo-list');
+    for (let name in menu.drinks) createItem(name, menu.drinks[name], 'drink', 'drink-list');
+}
+
+function updateQty(category, name, change) {
+    const key = category + '_' + name;
+    cart[key] = (cart[key] || 0) + change;
+    if (cart[key] < 0) cart[key] = 0;
+
+    document.getElementById('qty-' + category + '-' + name).innerText = cart[key];
+    const btn = document.getElementById('customize-btn-' + category + '-' + name);
+
+    if (cart[key] > 0 && (category === 'small' || category === 'large')) {
+        btn.style.display = 'inline';
+    } else if (btn) {
+        btn.style.display = 'none';
+    }
+
+    if (category === 'combo') renderComboDrinksInline(name, cart[key]);
+    calculateTotal();
+}
+
+function toggleCustomize(category, name) {
+    const key = category + '_' + name;
+    const qty = cart[key];
+    if (!qty) return;
+
+    if (!customizeData[key]) customizeData[key] = [];
+
+    const overlay = document.createElement('div');
+    overlay.className = 'popup-overlay';
+    overlay.onclick = (e) => { if (e.target === overlay) closePopup(); };
+
+    const box = document.createElement('div');
+    box.className = 'popup-box';
+    box.innerHTML = `<div class="popup-header"><span>${name} 客制化</span><span onclick="closePopup()">✕</span></div>`;
+
+    for (let i = 0; i < qty; i++) {
+        let data = customizeData[key][i] || { topping: '', spicy: '不辣', note: '' };
+        let section = document.createElement('div');
+        section.style.marginBottom = "15px";
+        section.style.borderBottom = "1px solid #eee";
+        
+        let toppingOptions = '<option value="">不加料</option>';
+        for (let t in menu.topping) {
+            toppingOptions += `<option value="${t}" ${data.topping===t?'selected':''}>${t} +$${menu.topping[t]}</option>`;
+        }
+
+        section.innerHTML = `
+            <p><b>第 ${i+1} 份</b></p>
+            <label>加料</label>
+            <select onchange="saveCustomize('${key}',${i},'topping',this.value)">${toppingOptions}</select>
+            <label>辣度</label>
+            <select onchange="saveCustomize('${key}',${i},'spicy',this.value)">
+                <option ${data.spicy==='不辣'?'selected':''}>不辣</option>
+                <option ${data.spicy==='小辣'?'selected':''}>小辣</option>
+                <option ${data.spicy==='大辣'?'selected':''}>大辣</option>
+            </select>
+            <input type="text" value="${data.note||''}" onchange="saveCustomize('${key}',${i},'note',this.value)" placeholder="個別備註：如不要香菜">
+        `;
+        box.appendChild(section);
+    }
+
+    const okBtn = document.createElement('button');
+    okBtn.innerText = "確認下單";
+    okBtn.className = "btn-send";
+    okBtn.style.width = "100%";
+    okBtn.onclick = () => { closePopup(); calculateTotal(); };
+    box.appendChild(okBtn);
+
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    currentPopup = overlay;
+}
+
+function saveCustomize(key, index, field, value) {
+    if (!customizeData[key]) customizeData[key] = [];
+    if (!customizeData[key][index]) customizeData[key][index] = {};
+    customizeData[key][index][field] = value;
+}
+
+function closePopup() { if (currentPopup) { currentPopup.remove(); currentPopup = null; } }
+
+function calculateTotal() {
+    let total = 0;
+    for (let key in cart) {
+        let [cat, name] = key.split('_');
+        let qty = cart[key];
+        if (cat === 'small') total += qty * menu.small[name.replace('小','')];
+        if (cat === 'large') total += qty * menu.large[name.replace('大','')];
+        if (cat === 'combo') total += qty * menu.combo[name.replace('套餐 ','')];
+        if (cat === 'drink') total += qty * menu.drinks[name];
+    }
+    for (let key in customizeData) {
+        customizeData[key].forEach(item => {
+            if (item && item.topping) total += menu.topping[item.topping] || 0;
+        });
+    }
+    document.getElementById('total-price').innerText = total;
+}
+
+function renderComboDrinksInline(name, qty) {
+    let id = 'combo-drinks-' + name;
+    let existing = document.getElementById(id);
+    if (existing) existing.remove();
+    if (qty === 0) return;
+
+    let container = document.createElement('div');
+    container.id = id;
+    container.className = 'combo-drinks';
+    document.getElementById('item-combo-' + name).after(container);
+
+    for (let i = 1; i <= qty; i++) {
+        let sel = document.createElement('select');
+        for (let d in menu.drinks) {
+            let opt = document.createElement('option');
+            opt.value = d; opt.text = `第 ${i} 份飲料：${d}`;
+            sel.appendChild(opt);
+        }
+        container.appendChild(sel);
+    }
+}
+
+async function submitOrder() {
+    const date = document.getElementById('pickup-date').value;
+    const time = document.getElementById('pickup-time').value;
+    let hasItem = Object.values(cart).some(q => q > 0);
+
+    if (!hasItem) return alert('請 ít nhất chọn một món');
+    if (!date || !time) return alert('請 chọn ngày và giờ lấy hàng');
+
+    let msg = '📦 訂單內容：\n';
+    for (let key in cart) {
+        if (cart[key] > 0) {
+            msg += `\n${key} x${cart[key]}`;
+            if (customizeData[key]) {
+                customizeData[key].forEach((c, i) => {
+                    msg += `\n  - 份 ${i+1}: ${c.topping||'無加料'}, ${c.spicy||'不辣'}, ${c.note||''}`;
+                });
+            }
+            msg += '\n';
+        }
+    }
+    msg += `\n🕒 取餐時間：${date} ${time}`;
+    const mainNote = document.getElementById('note').value;
+    if (mainNote) msg += `\n📝 總備註：${mainNote}`;
+
+    await liff.init({ liffId: '2009555608-DMioljsI' });
+    liff.sendMessages([{ type: 'text', text: msg }]).then(() => {
+        alert('訂單已送出');
+        liff.closeWindow();
+    });
+}
+
+function setTodayDate() {
+    const today = new Date();
+    document.getElementById('pickup-date').value = today.toISOString().split('T')[0];
+}
+
+renderMenu();
+setTodayDate();
+</script>
+</body>
+</html>
