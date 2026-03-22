@@ -25,7 +25,6 @@
     .btn-send { background: #00b900; color: white; border: none; padding: 12px 26px; border-radius: 25px; font-weight: bold; font-size: 16px; }
     .combo-drinks { padding: 10px 16px; background: #f9f9f9; border-bottom: 1px solid #eee; }
     
-    /* Style cho Custom Alert */
     .custom-alert-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 10000; }
     .custom-alert-box { background: white; width: 80%; max-width: 300px; border-radius: 12px; text-align: center; overflow: hidden; animation: alertShow 0.2s ease-out; }
     .custom-alert-header { padding: 15px; font-weight: bold; font-size: 18px; border-bottom: 1px solid #eee; color: #333; }
@@ -62,7 +61,6 @@
     <button class="btn-send" onclick="submitOrder()">確認下單</button>
 </div>
 
-<!-- Custom Alert HTML -->
 <div id="custom-alert" class="custom-alert-overlay">
     <div class="custom-alert-box">
         <div class="custom-alert-header">謝謝光臨</div>
@@ -90,7 +88,6 @@ let comboDrinkData = {};
 let currentPopup = null;
 let alertCallback = null;
 
-// Hàm Alert tùy chỉnh thay thế window.alert
 function customAlert(msg, callback = null) {
     document.getElementById('custom-alert-message').innerText = msg;
     document.getElementById('custom-alert').style.display = 'flex';
@@ -265,16 +262,39 @@ function renderComboDrinksInline(name, qty) {
     }
 }
 
+function generateOrderNumber() {
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const todayKey = month + day;
+    
+    let lastDate = localStorage.getItem('lastOrderDate');
+    let sequence = parseInt(localStorage.getItem('orderSequence')) || 35;
+
+    if (lastDate !== todayKey) {
+        sequence = 35;
+        localStorage.setItem('lastOrderDate', todayKey);
+    } else {
+        sequence += 1;
+    }
+    
+    localStorage.setItem('orderSequence', sequence);
+    return `B${todayKey}${sequence}`;
+}
+
 async function submitOrder() {
     const date = document.getElementById('pickup-date').value;
     const time = document.getElementById('pickup-time').value;
     const currentTotal = calculateTotal();
     let hasItem = Object.values(cart).some(q => q > 0);
 
-    if (!hasItem) return customAlert('請 選品項');
-    if (!date || !time) return customAlert('請 選取餐時間');
+    if (!hasItem) return customAlert('請 ít nhất chọn một món');
+    if (!date || !time) return customAlert('請 chọn ngày và giờ lấy hàng');
 
-    let msg = '📦 訂單內容：\n';
+    const orderNum = generateOrderNumber();
+    let msg = `訂單編號：${orderNum}\n`;
+    msg += '📦 訂單內容：\n';
+    
     for (let key in cart) {
         if (cart[key] > 0) {
             msg += `\n${key} x${cart[key]}份`;
