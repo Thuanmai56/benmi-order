@@ -24,6 +24,15 @@
     .footer { position: fixed; bottom: 0; width: 100%; background: white; padding: 16px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; }
     .btn-send { background: #00b900; color: white; border: none; padding: 12px 26px; border-radius: 25px; font-weight: bold; font-size: 16px; }
     .combo-drinks { padding: 10px 16px; background: #f9f9f9; border-bottom: 1px solid #eee; }
+    
+    /* Style cho Custom Alert */
+    .custom-alert-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 10000; }
+    .custom-alert-box { background: white; width: 80%; max-width: 300px; border-radius: 12px; text-align: center; overflow: hidden; animation: alertShow 0.2s ease-out; }
+    .custom-alert-header { padding: 15px; font-weight: bold; font-size: 18px; border-bottom: 1px solid #eee; color: #333; }
+    .custom-alert-body { padding: 20px; font-size: 16px; color: #666; line-height: 1.5; }
+    .custom-alert-footer { display: flex; border-top: 1px solid #eee; }
+    .custom-alert-btn { flex: 1; padding: 12px; border: none; background: white; color: #00b900; font-weight: bold; font-size: 16px; cursor: pointer; }
+    @keyframes alertShow { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 </style>
 </head>
 
@@ -53,6 +62,17 @@
     <button class="btn-send" onclick="submitOrder()">確認下單</button>
 </div>
 
+<!-- Custom Alert HTML -->
+<div id="custom-alert" class="custom-alert-overlay">
+    <div class="custom-alert-box">
+        <div class="custom-alert-header">謝謝光臨</div>
+        <div id="custom-alert-message" class="custom-alert-body"></div>
+        <div class="custom-alert-footer">
+            <button class="custom-alert-btn" onclick="closeCustomAlert()">確定</button>
+        </div>
+    </div>
+</div>
+
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script>
 
@@ -68,6 +88,22 @@ let cart = {};
 let customizeData = {};
 let comboDrinkData = {};
 let currentPopup = null;
+let alertCallback = null;
+
+// Hàm Alert tùy chỉnh thay thế window.alert
+function customAlert(msg, callback = null) {
+    document.getElementById('custom-alert-message').innerText = msg;
+    document.getElementById('custom-alert').style.display = 'flex';
+    alertCallback = callback;
+}
+
+function closeCustomAlert() {
+    document.getElementById('custom-alert').style.display = 'none';
+    if (alertCallback) {
+        alertCallback();
+        alertCallback = null;
+    }
+}
 
 function createItem(name, price, category, containerId) {
     const container = document.getElementById(containerId);
@@ -130,7 +166,6 @@ function toggleCustomize(category, name) {
     box.innerHTML = `<div class="popup-header"><span>${name} 客制化</span><span onclick="closePopup()">✕</span></div>`;
 
     for (let i = 0; i < qty; i++) {
-        // Mặc định là 微辣
         let data = customizeData[key][i] || { topping: '', spicy: '微辣', note: '' };
         if (!customizeData[key][i]) customizeData[key][i] = data;
 
@@ -236,8 +271,8 @@ async function submitOrder() {
     const currentTotal = calculateTotal();
     let hasItem = Object.values(cart).some(q => q > 0);
 
-    if (!hasItem) return alert('請 ít nhất chọn một món');
-    if (!date || !time) return alert('請 chọn ngày và giờ lấy hàng');
+    if (!hasItem) return customAlert('請 ít nhất chọn một món');
+    if (!date || !time) return customAlert('請 chọn ngày và giờ lấy hàng');
 
     let msg = '📦 訂單內容：\n';
     for (let key in cart) {
@@ -255,7 +290,6 @@ async function submitOrder() {
             if (customizeData[key]) {
                 customizeData[key].forEach((c, i) => {
                     let toppingStr = c.topping ? `加${c.topping}` : '無加料';
-                    // Đảm bảo lấy đúng giá trị spicy, mặc định là 微辣 nếu trống
                     let spicyVal = c.spicy || '微辣';
                     msg += `\n  - 份 ${i+1}: ${toppingStr}, ${spicyVal}, ${c.note||''}`;
                 });
@@ -272,8 +306,9 @@ async function submitOrder() {
 
     await liff.init({ liffId: '2009555608-DMioljsI' });
     liff.sendMessages([{ type: 'text', text: msg }]).then(() => {
-        alert('訂單已送出');
-        liff.closeWindow();
+        customAlert('訂單已送出', () => {
+            liff.closeWindow();
+        });
     });
 }
 
