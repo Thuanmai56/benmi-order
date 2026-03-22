@@ -301,8 +301,8 @@ async function submitOrder() {
     const currentTotal = calculateTotal();
     let hasItem = Object.values(cart).some(q => q > 0);
 
-    if (!hasItem) return customAlert('請 ít nhất chọn một món');
-    if (!dateInput || !timeInput) return customAlert('請 chọn ngày và giờ lấy hàng');
+    if (!hasItem) return customAlert('請 選品項');
+    if (!dateInput || !timeInput) return customAlert('請 選取餐時間');
 
     const pickupDate = new Date(dateInput);
     const dayOfWeek = pickupDate.getDay(); 
