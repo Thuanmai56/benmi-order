@@ -348,10 +348,16 @@ async function submitOrder() {
 
             if (customizeData[key]) {
                 customizeData[key].forEach((c, i) => {
-                    let toppingStr = c.topping ? `加${c.topping}` : '無加料';
-                    let spicyVal = c.spicy || '微辣';
                     let zhIdx = zhNumbers[i] || `第 ${i+1} 份`;
-                    msg += `\n  - ${zhIdx}: ${toppingStr}, ${spicyVal}, ${c.note||''}`;
+                    let parts = [];
+                    
+                    // Kiểm tra và chỉ thêm nếu khác mặc định
+                    if (c.topping && c.topping !== '') parts.push(`加${c.topping}`);
+                    if (c.spicy && c.spicy !== '微辣') parts.push(c.spicy);
+                    if (c.note && c.note.trim() !== '') parts.push(c.note.trim());
+
+                    let detailStr = parts.length > 0 ? parts.join(', ') : '正常';
+                    msg += `\n  - ${zhIdx}: ${detailStr}`;
                 });
             }
             msg += '\n';
