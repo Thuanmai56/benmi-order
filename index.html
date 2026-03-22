@@ -191,6 +191,7 @@ function calculateTotal() {
         });
     }
     document.getElementById('total-price').innerText = total;
+    return total;
 }
 
 function renderComboDrinksInline(name, qty) {
@@ -207,33 +208,28 @@ function renderComboDrinksInline(name, qty) {
     if (!comboDrinkData[name]) comboDrinkData[name] = [];
 
     for (let i = 1; i <= qty; i++) {
-
         let sel = document.createElement('select');
-
         let firstDrink = Object.keys(menu.drinks)[0];
         comboDrinkData[name][i-1] = firstDrink;
 
         for (let d in menu.drinks) {
-
             let opt = document.createElement('option');
             opt.value = d;
             opt.text = `第 ${i} 份飲料：${d}`;
             sel.appendChild(opt);
-
         }
 
         sel.onchange = () => {
             comboDrinkData[name][i-1] = sel.value;
         };
-
         container.appendChild(sel);
-
     }
 }
 
 async function submitOrder() {
     const date = document.getElementById('pickup-date').value;
     const time = document.getElementById('pickup-time').value;
+    const currentTotal = calculateTotal();
     let hasItem = Object.values(cart).some(q => q > 0);
 
     if (!hasItem) return alert('請 ít nhất chọn một món');
@@ -242,7 +238,7 @@ async function submitOrder() {
     let msg = '📦 訂單內容：\n';
     for (let key in cart) {
         if (cart[key] > 0) {
-            msg += `\n${key} x${cart[key]}`;
+            msg += `\n${key} x${cart[key]}份`;
 
             if (key.startsWith('combo_')) {
                 let comboName = key.replace('combo_','');
@@ -254,7 +250,8 @@ async function submitOrder() {
 
             if (customizeData[key]) {
                 customizeData[key].forEach((c, i) => {
-                    msg += `\n  - 份 ${i+1}: ${c.topping||'無加料'}, ${c.spicy||'不辣'}, ${c.note||''}`;
+                    let toppingStr = c.topping ? `加${c.topping}` : '無加料';
+                    msg += `\n  - 份 ${i+1}: ${toppingStr}, ${c.spicy||'不辣'}, ${c.note||''}`;
                 });
             }
             msg += '\n';
@@ -264,6 +261,8 @@ async function submitOrder() {
     msg += `\n🕒 取餐時間：${date} ${time}`;
     const mainNote = document.getElementById('note').value;
     if (mainNote) msg += `\n📝 總備註：${mainNote}`;
+    
+    msg += `\n💰 總金額：$${currentTotal}`;
 
     await liff.init({ liffId: '2009555608-DMioljsI' });
     liff.sendMessages([{ type: 'text', text: msg }]).then(() => {
