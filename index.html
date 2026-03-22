@@ -288,8 +288,8 @@ async function submitOrder() {
     const currentTotal = calculateTotal();
     let hasItem = Object.values(cart).some(q => q > 0);
 
-    if (!hasItem) return customAlert('請 ít nhất chọn một món');
-    if (!date || !time) return customAlert('請 chọn ngày và giờ lấy hàng');
+    if (!hasItem) return customAlert('請 品項');
+    if (!date || !time) return customAlert('請 選取餐時間');
 
     const orderNum = generateOrderNumber();
     let msg = `訂單編號：${orderNum}\n`;
