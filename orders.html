@@ -333,26 +333,25 @@ function isUrgent(time) {
 }
 
 async function fetchOrders() {
-
-    if (isProcessing) return
-
+    if (isProcessing) return;
     try {
-
-        const mockOrders = [
-
-            {
-                key: "B032335",
-                time: "12:30",
-                content: "綜合大 x2份...",
-                status: "NEW"
-            },
-
-            {
-                key: "B032336",
-                time: "13:00",
-                content: "燒肉小 x1份...",
-                status: "ACCEPTED"
+        const res = await fetch("https://spring-smoke-46ba.thuanmnc.workers.dev/api/orders");
+        const orders = await res.json();
+        
+        const currentJSON = JSON.stringify(orders);
+        if (currentJSON !== lastOrdersJSON) {
+            // Phát âm thanh nếu có đơn hàng mới
+            if (lastOrdersJSON !== "" && orders.length > JSON.parse(lastOrdersJSON).length) {
+                const audio = document.getElementById("orderAudio");
+                audio.play().catch(() => {});
             }
+            lastOrdersJSON = currentJSON;
+            renderOrders(orders);
+        }
+    } catch (e) {
+        console.error("Lỗi tải đơn:", e);
+    }
+}
 
         ]
 
@@ -685,61 +684,30 @@ async function confirmAction(type) {
 
 }
 
-async function callUpdateAPI(
-data,
-btnElement
-) {
-
-    isProcessing = true
-
-    let originalText = ""
-
-    if (btnElement) {
-
-    btnElement.disabled = true
-
-    originalText =
-    btnElement.innerText
-
-    btnElement.innerText =
-    "處理中..."
-
-    }
-
+async function callUpdateAPI(data, btnElement) {
+    isProcessing = true;
     try {
-
-    console.log(
-    "POST /api/update-order",
-    data
-    )
-
-    alert("操作 thành công!")
-
-    await fetchOrders()
-
+        const res = await fetch("https://spring-smoke-46ba.thuanmnc.workers.dev/api/update", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+        });
+        
+        if (res.ok) {
+            alert("Thao tác thành công!");
+            await fetchOrders(); // Tải lại danh sách ngay lập tức
+        } else {
+            alert("Lỗi server");
+        }
+    } catch (e) {
+        alert("Lỗi kết nối API");
+    } finally {
+        isProcessing = false;
+        if (btnElement) {
+            btnElement.disabled = false;
+            btnElement.innerText = btnElement.getAttribute('data-original-text') || "Xác nhận";
+        }
     }
-
-    catch (e) {
-
-    alert("Lỗi kết nối API")
-
-    }
-
-    finally {
-
-    isProcessing = false
-
-    if (btnElement) {
-
-    btnElement.disabled = false
-
-    btnElement.innerText =
-    originalText
-
-    }
-
-    }
-
 }
 
 setInterval(
