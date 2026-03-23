@@ -108,6 +108,19 @@
 
             const orders = await response.json();
             const safeOrders = Array.isArray(orders) ? orders : [];
+
+            // Sort theo thời gian lấy bánh (gần -> xa)
+            safeOrders.sort((a, b) => {
+                const at = parsePickupTimeMs(a?.time);
+                const bt = parsePickupTimeMs(b?.time);
+
+                if (Number.isNaN(at) || Number.isNaN(bt)) {
+                    // Fallback: nếu parse lỗi thì sắp theo createdAt (cũ -> mới)
+                    return (a?.createdAt || 0) - (b?.createdAt || 0);
+                }
+                return at - bt;
+            });
+
             const newOrders = safeOrders.filter(o => o && o.key && !knownOrderKeys.has(o.key));
             const newKeySet = new Set(newOrders.map(o => o.key));
 
@@ -135,6 +148,16 @@
         }
     }
 
+    // Parse format: "YYYY-MM-DD HH:MM" -> epoch ms
+    function parsePickupTimeMs(timeStr) {
+        if (!timeStr || typeof timeStr !== "string") return NaN;
+        const m = timeStr.match(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})/);
+        if (!m) return NaN;
+        const iso = `${m[1]}T${m[2]}:00`;
+        const ms = new Date(iso).getTime();
+        return Number.isNaN(ms) ? NaN : ms;
+    }
+
     function renderOrders(orders, newKeySet = new Set()) {
         const container = document.getElementById('orders-container');
         container.innerHTML = '';
@@ -152,6 +175,29 @@
             const card = document.createElement('div');
             const isNewArrival = order && order.key && newKeySet.has(order.key);
             card.className = `order-card ${isNewArrival ? 'new' : ''}`;
+
+            let actionsHtml = "";
+            const status = order?.status;
+
+            // NEW: Accept/Change/Reject. ACCEPTED: only Done. Others: no actions.
+            if (status === "NEW") {
+                actionsHtml = `
+                    <button class="btn btn-accept" onclick="handleAction('${order.key}', 'ACCEPT')">接單 (Nhận đơn)</button>
+                    <button class="btn btn-change" onclick="openModal('${order.key}', 'CHANGE')">需要更改</button>
+                    <button class="btn btn-reject" onclick="openModal('${order.key}', 'REJECT')">無法接單</button>
+                `;
+            } else if (status === "ACCEPTED") {
+                actionsHtml = `
+                    <button class="btn btn-accept" onclick="handleAction('${order.key}', 'DONE')">完成 (Đã xong)</button>
+                `;
+            } else {
+                actionsHtml = `
+                    <div style="grid-column: span 2; text-align:center; color:#777; font-weight:bold;">
+                        已處理 / Đã xử lý
+                    </div>
+                `;
+            }
+
             card.innerHTML = `
                 <div class="order-header">
                     <span class="order-id">#${order.key}</span>
@@ -159,9 +205,7 @@
                 </div>
                 <div class="order-content">${order.content}</div>
                 <div class="actions">
-                    <button class="btn btn-accept" onclick="handleAction('${order.key}', 'ACCEPT')">接單 (Nhận đơn)</button>
-                    <button class="btn btn-change" onclick="openModal('${order.key}', 'CHANGE')">需要更改</button>
-                    <button class="btn btn-reject" onclick="openModal('${order.key}', 'REJECT')">無法接單</button>
+                    ${actionsHtml}
                 </div>
             `;
             container.appendChild(card);
@@ -179,23 +223,46 @@
     }
 
     async function handleAction(key, action) {
-        if (action !== 'ACCEPT') return;
-        if (!confirm(`確認接受訂單 #${key}?`)) return;
+        if (!key || !action) return;
 
-        try {
-            const response = await fetch(`${WORKER_BASE}/api/update`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ key, status: "ACCEPTED" })
-            });
-            if (!response.ok) {
-                throw new Error(`update /api/update failed: ${response.status}`);
+        if (action === "ACCEPT") {
+            if (!confirm(`確認接受訂單 #${key}?`)) return;
+            try {
+                const response = await fetch(`${WORKER_BASE}/api/update`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ key, status: "ACCEPTED" })
+                });
+                if (!response.ok) {
+                    throw new Error(`update /api/update failed: ${response.status}`);
+                }
+                closeModal();
+                fetchOrders();
+            } catch (e) {
+                console.error("Accept failed:", e);
+                alert("處理失敗，請稍後再試。");
             }
-            closeModal();
-            fetchOrders();
-        } catch (e) {
-            console.error("Accept failed:", e);
-            alert("處理失敗，請稍後再試。");
+            return;
+        }
+
+        if (action === "DONE") {
+            if (!confirm(`確認完成訂單 #${key}？`)) return;
+
+            try {
+                const response = await fetch(`${WORKER_BASE}/api/update`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ key, status: "DONE" })
+                });
+                if (!response.ok) {
+                    throw new Error(`update /api/update failed: ${response.status}`);
+                }
+                closeModal();
+                fetchOrders();
+            } catch (e) {
+                console.error("Done failed:", e);
+                alert("處理失敗，請稍後再試。");
+            }
         }
     }
 
