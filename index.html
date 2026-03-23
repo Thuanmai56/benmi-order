@@ -23,6 +23,7 @@
     input, textarea, select { width: 100%; padding: 10px; font-size: 16px; margin-top: 8px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 5px; }
     .footer { position: fixed; bottom: 0; width: 100%; background: white; padding: 16px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; }
     .btn-send { background: #00b900; color: white; border: none; padding: 12px 26px; border-radius: 25px; font-weight: bold; font-size: 16px; }
+    .btn-send:disabled { background: #ccc; cursor: not-allowed; }
     .combo-drinks { padding: 10px 16px; background: #f9f9f9; border-bottom: 1px solid #eee; }
     
     .custom-alert-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 10000; }
@@ -58,7 +59,7 @@
 
 <div class="footer">
     <div>總計: $<span id="total-price">0</span></div>
-    <button class="btn-send" onclick="submitOrder()">確認下單</button>
+    <button class="btn-send" id="btn-submit" onclick="submitOrder()">確認下單</button>
 </div>
 
 <div id="custom-alert" class="custom-alert-overlay">
@@ -99,6 +100,7 @@ let customizeData = {};
 let comboDrinkData = {};
 let currentPopup = null;
 let alertCallback = null;
+let isSubmitting = false;
 
 function customAlert(msg, callback = null) {
     document.getElementById('custom-alert-message').innerText = msg;
@@ -296,6 +298,8 @@ function generateOrderNumber() {
 }
 
 async function submitOrder() {
+    if (isSubmitting) return;
+
     const dateInput = document.getElementById('pickup-date').value;
     const timeInput = document.getElementById('pickup-time').value;
     const currentTotal = calculateTotal();
@@ -327,6 +331,11 @@ async function submitOrder() {
         }
     }
 
+    isSubmitting = true;
+    const submitBtn = document.getElementById('btn-submit');
+    submitBtn.disabled = true;
+    submitBtn.innerText = "處理中...";
+
     const orderNum = generateOrderNumber();
     let msg = `訂單編號：${orderNum}\n`;
     msg += '📦 訂單內容：\n';
@@ -351,7 +360,6 @@ async function submitOrder() {
                     let zhIdx = zhNumbers[i] || `第 ${i+1} 份`;
                     let parts = [];
                     
-                    // Kiểm tra và chỉ thêm nếu khác mặc định
                     if (c.topping && c.topping !== '') parts.push(`加${c.topping}`);
                     if (c.spicy && c.spicy !== '微辣') parts.push(c.spicy);
                     if (c.note && c.note.trim() !== '') parts.push(c.note.trim());
@@ -370,12 +378,18 @@ async function submitOrder() {
     
     msg += `\n💰 總金額：$${currentTotal}`;
 
-    await liff.init({ liffId: '2009560906-c5taZfiY' });
-    liff.sendMessages([{ type: 'text', text: msg }]).then(() => {
+    try {
+        await liff.init({ liffId: '2009560906-c5taZfiY' });
+        await liff.sendMessages([{ type: 'text', text: msg }]);
         customAlert('訂單已送出', () => {
             liff.closeWindow();
         });
-    });
+    } catch (err) {
+        customAlert('傳送失敗，請重試');
+        isSubmitting = false;
+        submitBtn.disabled = false;
+        submitBtn.innerText = "確認下單";
+    }
 }
 
 function setTodayDate() {
