@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Benmi Dashboard - 訂單 Quản lý đơn hàng</title>
+    <style>
+        :root {
+            --primary-color: #00b900;
+            --warning-color: #ff9800;
+            --danger-color: #f44336;
+            --bg-color: #f0f2f5;
+        }
+        body { font-family: -apple-system, sans-serif; background: var(--bg-color); margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: white; padding: 15px 25px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .status-badge { padding: 5px 10px; background: #eee; border-radius: 20px; font-size: 14px; }
+        
+        /* Grid cho các thẻ đơn hàng */
+        .orders-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
+        
+        .order-card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 8px solid #ccc; position: relative; }
+        .order-card.new { border-left-color: var(--primary-color); animation: pulse 2s infinite; }
+        
+        .order-header { display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px; }
+        .order-id { font-weight: bold; font-size: 1.2em; color: #333; }
+        .pickup-time { color: var(--danger-color); font-weight: bold; font-size: 1.1em; }
+        
+        .order-content { min-height: 100px; font-size: 16px; line-height: 1.5; white-space: pre-line; margin-bottom: 15px; }
+        
+        /* Nút bấm to cho máy tính bảng */
+        .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .btn { border: none; padding: 15px; border-radius: 10px; font-weight: bold; font-size: 16px; cursor: pointer; transition: opacity 0.2s; }
+        .btn-accept { background: var(--primary-color); color: white; grid-column: span 2; }
+        .btn-change { background: var(--warning-color); color: white; }
+        .btn-reject { background: var(--danger-color); color: white; }
+        
+        /* Modal Popup */
+        .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 25px; border-radius: 15px; width: 90%; max-width: 500px; }
+        .modal-content select, .modal-content textarea { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #ddd; font-size: 16px; }
+
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(0,185,0, 0.4); } 70% { box-shadow: 0 0 0 15px rgba(0,185,0, 0); } 100% { box-shadow: 0 0 0 0 rgba(0,185,0, 0); } }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h2>🥖 Benmi Order Manager</h2>
+    <div id="refresh-status" class="status-badge">🟢 Auto-refreshing: 5s</div>
+</div>
+
+<div id="orders-container" class="orders-grid">
+    <div style="text-align: center; grid-column: 1/-1; padding: 50px; color: #999;">
+        正在加載訂單... (Đang tải đơn hàng...)
+    </div>
+</div>
+
+<div id="changeModal" class="modal">
+    <div class="modal-content">
+        <h3>需要更改 (Yêu cầu thay đổi)</h3>
+        <label>原因 / 建議 (Lý do / Đề xuất):</label>
+        <select id="change-reason">
+            <option value="口味售完">該口味已售完 (Vị này đã hết)</option>
+            <option value="時間需調整">時間太趕，需延後 (Cần lùi thời gian)</option>
+            <option value="配料售完">部分加料售完 (Hết topping)</option>
+        </select>
+        <textarea id="change-note" rows="3" placeholder="輸入具 thể 建議... (VD: 延後20分鐘 hoặc đổi sang vị khác)"></textarea>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn btn-change" onclick="confirmAction('CHANGE')" style="flex:1">傳送建議</button>
+            <button class="btn" onclick="closeModal()" style="flex:1; background: #eee;">取消</button>
+        </div>
+    </div>
+</div>
+
+<div id="rejectModal" class="modal">
+    <div class="modal-content">
+        <h3>無法接單 (Không thể nhận đơn)</h3>
+        <select id="reject-reason">
+            <option value="今日已售完">今日已售完 (Hôm nay đã bán hết)</option>
+            <option value="訂單過多">訂單過多，暫不接單 (Đơn quá tải)</option>
+            <option value="已過營業時間">已過營業時間 (Hết giờ làm việc)</option>
+        </select>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn btn-danger" onclick="confirmAction('REJECT')" style="flex:1; background: var(--danger-color); color:white;">確認拒絕</button>
+            <button class="btn" onclick="closeModal()" style="flex:1; background: #eee;">取消</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentOrderKey = null;
+
+    // 1. Hàm load đơn hàng từ Cloudflare Worker (Bạn sẽ kết nối với Worker ở bước tiếp theo)
+    async function fetchOrders() {
+        try {
+            // Sau này bạn thay link này bằng link Cloudflare Worker của bạn
+            // const response = await fetch('https://your-worker.workers.dev/api/get-orders');
+            // const orders = await response.json();
+            // renderOrders(orders);
+            
+            console.log("Fetching orders every 5s...");
+            // Demo dữ liệu mẫu để bạn thấy giao diện
+            const mockOrders = [{
+                key: "B032335",
+                time: "12:30",
+                content: "綜合大 x2份\n- 第一份: 中辣\n- 第二份: 正常\n\n套餐 4 x1\n- 飲料: 越南咖啡",
+                status: "NEW"
+            }];
+            renderOrders(mockOrders);
+        } catch (e) {
+            console.error("Lỗi tải đơn:", e);
+        }
+    }
+
+    function renderOrders(orders) {
+        const container = document.getElementById('orders-container');
+        container.innerHTML = '';
+        
+        orders.forEach(order => {
+            const card = document.createElement('div');
+            card.className = `order-card ${order.status === 'NEW' ? 'new' : ''}`;
+            card.innerHTML = `
+                <div class="order-header">
+                    <span class="order-id">#${order.key}</span>
+                    <span class="pickup-time">⏰ ${order.time}</span>
+                </div>
+                <div class="order-content">${order.content}</div>
+                <div class="actions">
+                    <button class="btn btn-accept" onclick="handleAction('${order.key}', 'ACCEPT')">接單 (Nhận đơn)</button>
+                    <button class="btn btn-change" onclick="openModal('${order.key}', 'CHANGE')">需要更改</button>
+                    <button class="btn btn-reject" onclick="openModal('${order.key}', 'REJECT')">無法接單</button>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    // 2. Xử lý các nút bấm
+    function openModal(key, type) {
+        currentOrderKey = key;
+        if(type === 'CHANGE') document.getElementById('changeModal').style.display = 'flex';
+        if(type === 'REJECT') document.getElementById('rejectModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+    }
+
+    async function handleAction(key, action) {
+        if(action === 'ACCEPT') {
+            if(confirm(`確認接受訂單 #${key}?`)) {
+                console.log("Accepting order:", key);
+                // Gửi lệnh về Worker để cập nhật trạng thái và gọi AI soạn tin nhắn
+            }
+        }
+    }
+
+    async function confirmAction(type) {
+        const key = currentOrderKey;
+        let data = { key: key, type: type };
+        
+        if(type === 'CHANGE') {
+            data.reason = document.getElementById('change-reason').value;
+            data.note = document.getElementById('change-note').value;
+        } else {
+            data.reason = document.getElementById('reject-reason').value;
+        }
+
+        console.log("Gửi xử lý về Worker:", data);
+        // Sau khi gửi fetch thành công:
+        closeModal();
+        alert("Đã xử lý đơn hàng!");
+    }
+
+    // Tự động làm mới mỗi 5 giây
+    setInterval(fetchOrders, 5000);
+    fetchOrders(); // Chạy lần đầu
+</script>
+
+</body>
+</html>
