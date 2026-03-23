@@ -1,205 +1,52 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Benmi Dashboard - 訂單 Quản lý đơn hàng</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Benmi Dashboard - 訂單 Quản lý đơn hàng</title>
+    <style>
+        :root {
+            --primary-color: #00b900;
+            --warning-color: #ff9800;
+            --danger-color: #f44336;
+            --bg-color: #f0f2f5;
+        }
+        body { font-family: -apple-system, sans-serif; background: var(--bg-color); margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: white; padding: 15px 25px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .status-badge { padding: 5px 10px; background: #eee; border-radius: 20px; font-size: 14px; }
+        
+        /* Grid cho các thẻ đơn hàng */
+        .orders-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
+        
+        .order-card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 8px solid #ccc; position: relative; }
+        .order-card.new { border-left-color: var(--primary-color); animation: pulse 2s infinite; }
+        
+        .order-header { display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px; }
+        .order-id { font-weight: bold; font-size: 1.2em; color: #333; }
+        .pickup-time { color: var(--danger-color); font-weight: bold; font-size: 1.1em; }
+        
+        .order-content { min-height: 100px; font-size: 16px; line-height: 1.5; white-space: pre-line; margin-bottom: 15px; }
+        
+        /* Nút bấm to cho máy tính bảng */
+        .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .btn { border: none; padding: 15px; border-radius: 10px; font-weight: bold; font-size: 16px; cursor: pointer; transition: opacity 0.2s; }
+        .btn-accept { background: var(--primary-color); color: white; grid-column: span 2; }
+        .btn-change { background: var(--warning-color); color: white; }
+        .btn-reject { background: var(--danger-color); color: white; }
+        
+        /* Modal Popup */
+        .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 25px; border-radius: 15px; width: 90%; max-width: 500px; }
+        .modal-content select, .modal-content textarea { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #ddd; font-size: 16px; }
 
-<style>
-:root {
-    --primary-color: #00b900;
-    --warning-color: #ff9800;
-    --danger-color: #f44336;
-    --done-color: #9e9e9e;
-    --bg-color: #f0f2f5;
-}
-
-body {
-    font-family: -apple-system, sans-serif;
-    background: var(--bg-color);
-    margin: 0;
-    padding: 20px;
-}
-
-.header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    background: white;
-    padding: 15px 25px;
-    border-radius: 12px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.status-badge {
-    padding: 5px 10px;
-    background: #eee;
-    border-radius: 20px;
-    font-size: 14px;
-}
-
-.orders-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-    gap: 20px;
-}
-
-.order-card {
-    background: white;
-    border-radius: 15px;
-    padding: 20px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    border-left: 8px solid #ccc;
-    position: relative;
-    transition: all 0.3s ease;
-}
-
-.order-card.new {
-    border-left-color: var(--primary-color);
-    animation: pulse 2s infinite;
-    background: #f0fff0;
-}
-
-.order-card.done {
-    border-left-color: var(--done-color);
-    opacity: 0.7;
-    background: #f9f9f9;
-}
-
-.order-card.urgent {
-    border-left-color: red;
-    background: #fff3f3;
-}
-
-.order-card.done .pickup-time {
-    color: var(--done-color);
-}
-
-.order-header {
-    display: flex;
-    justify-content: space-between;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 10px;
-    margin-bottom: 10px;
-}
-
-.order-id {
-    font-weight: bold;
-    font-size: 1.2em;
-    color: #333;
-}
-
-.order-status-text {
-    font-size: 0.8em;
-    padding: 2px 8px;
-    border-radius: 4px;
-    background: #eee;
-    margin-left: 5px;
-}
-
-.pickup-time {
-    color: var(--danger-color);
-    font-weight: bold;
-    font-size: 1.1em;
-}
-
-.order-content {
-    min-height: 100px;
-    font-size: 16px;
-    line-height: 1.5;
-    white-space: pre-line;
-    margin-bottom: 15px;
-}
-
-.actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-}
-
-.btn {
-    border: none;
-    padding: 15px;
-    border-radius: 10px;
-    font-weight: bold;
-    font-size: 16px;
-    cursor: pointer;
-}
-
-.btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.btn-accept {
-    background: var(--primary-color);
-    color: white;
-    grid-column: span 2;
-}
-
-.btn-change {
-    background: var(--warning-color);
-    color: white;
-}
-
-.btn-reject {
-    background: var(--danger-color);
-    color: white;
-}
-
-.btn-done {
-    background: var(--done-color);
-    color: white;
-    grid-column: span 2;
-}
-
-.modal {
-    display: none;
-    position: fixed;
-    top:0;
-    left:0;
-    width:100%;
-    height:100%;
-    background: rgba(0,0,0,0.6);
-    z-index: 1000;
-    justify-content: center;
-    align-items: center;
-}
-
-.modal-content {
-    background: white;
-    padding: 25px;
-    border-radius: 15px;
-    width: 90%;
-    max-width: 500px;
-}
-
-.modal-content select,
-.modal-content textarea {
-    width: 100%;
-    padding: 12px;
-    margin: 10px 0;
-    border-radius: 8px;
-    border: 1px solid #ddd;
-    font-size: 16px;
-}
-
-@keyframes pulse {
-0% { box-shadow: 0 0 0 0 rgba(0,185,0, 0.4); }
-70% { box-shadow: 0 0 0 15px rgba(0,185,0, 0); }
-100% { box-shadow: 0 0 0 0 rgba(0,185,0, 0); }
-}
-</style>
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(0,185,0, 0.4); } 70% { box-shadow: 0 0 0 15px rgba(0,185,0, 0); } 100% { box-shadow: 0 0 0 0 rgba(0,185,0, 0); } }
+    </style>
 </head>
-
 <body>
 
 <div class="header">
     <h2>🥖 Benmi Order Manager</h2>
-    <div id="refresh-status" class="status-badge">
-        🟢 Auto-refreshing: 5s
-    </div>
+    <div id="refresh-status" class="status-badge">🟢 Auto-refreshing: 5s</div>
 </div>
 
 <div id="orders-container" class="orders-grid">
@@ -211,512 +58,209 @@ body {
 <div id="changeModal" class="modal">
     <div class="modal-content">
         <h3>需要更改 (Yêu cầu thay đổi)</h3>
-
-        <label>原因 / 建議:</label>
-
+        <label>原因 / 建議 (Lý do / Đề xuất):</label>
         <select id="change-reason">
-            <option value="口味售完">
-                該口味已售完
-            </option>
-
-            <option value="時間需調整">
-                時間太趕，需延後
-            </option>
-
-            <option value="配料售完">
-                部分加料售完
-            </option>
+            <option value="口味售完">該口味已售完 (Vị này đã hết)</option>
+            <option value="時間需調整">時間太趕，需延後 (Cần lùi thời gian)</option>
+            <option value="配料售完">部分加料售完 (Hết topping)</option>
         </select>
-
-        <textarea
-            id="change-note"
-            rows="3"
-            placeholder="輸入具體建議..."
-        ></textarea>
-
+        <textarea id="change-note" rows="3" placeholder="輸入具體 建議... (VD: 延後20分鐘 hoặc đổi sang vị khác)"></textarea>
         <div style="display: flex; gap: 10px;">
-
-            <button
-                class="btn btn-change"
-                id="btn-confirm-change"
-                onclick="confirmAction('CHANGE')"
-                style="flex:1"
-            >
-                傳送建議
-            </button>
-
-            <button
-                class="btn"
-                onclick="closeModal()"
-                style="flex:1; background: #eee;"
-            >
-                取消
-            </button>
-
+            <button class="btn btn-change" onclick="confirmAction('CHANGE')" style="flex:1">傳送建議</button>
+            <button class="btn" onclick="closeModal()" style="flex:1; background: #eee;">取消</button>
         </div>
     </div>
 </div>
 
 <div id="rejectModal" class="modal">
     <div class="modal-content">
-
         <h3>無法接單 (Không thể nhận đơn)</h3>
-
         <select id="reject-reason">
-
-            <option value="今日已售完">
-                今日已售完
-            </option>
-
-            <option value="訂單過多">
-                訂單過多，暫不接單
-            </option>
-
-            <option value="已過營業時間">
-                已過營業時間
-            </option>
-
+            <option value="今日已售完">今日已售完 (Hôm nay đã bán hết)</option>
+            <option value="訂單過多">訂單過多，暫不接單 (Đơn quá tải)</option>
+            <option value="已過營業時間">已過營業時間 (Hết giờ làm việc)</option>
         </select>
-
         <div style="display: flex; gap: 10px;">
-
-            <button
-                class="btn btn-reject"
-                id="btn-confirm-reject"
-                onclick="confirmAction('REJECT')"
-                style="flex:1"
-            >
-                確認拒絕
-            </button>
-
-            <button
-                class="btn"
-                onclick="closeModal()"
-                style="flex:1; background: #eee;"
-            >
-                取消
-            </button>
-
+            <button class="btn btn-reject" onclick="confirmAction('REJECT')" style="flex:1; background: var(--danger-color); color:white;">確認拒絕</button>
+            <button class="btn" onclick="closeModal()" style="flex:1; background: #eee;">取消</button>
         </div>
-
     </div>
 </div>
 
-<audio
-    id="orderAudio"
-    src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"
-    preload="auto"
-></audio>
-
 <script>
+    let currentOrderKey = null;
+    const WORKER_BASE = "https://spring-smoke-46ba.thuanmnc.workers.dev";
+    const knownOrderKeys = new Set();
+    let isFirstLoad = true;
+    let soundUnlocked = false;
 
-let currentOrderKey = null
-let lastOrdersJSON = ""
-let isProcessing = false
+    // Unlock sound after a user gesture (autoplay policy)
+    document.addEventListener('click', () => {
+        soundUnlocked = true;
+    }, { once: true });
 
-function isUrgent(time) {
+    async function fetchOrders() {
+        try {
+            const response = await fetch(`${WORKER_BASE}/api/orders`);
+            if (!response.ok) {
+                throw new Error(`fetch /api/orders failed: ${response.status}`);
+            }
 
-    const now = new Date()
+            const orders = await response.json();
+            const safeOrders = Array.isArray(orders) ? orders : [];
+            const newOrders = safeOrders.filter(o => o && o.key && !knownOrderKeys.has(o.key));
+            const newKeySet = new Set(newOrders.map(o => o.key));
 
-    const [h, m] = time.split(':')
+            renderOrders(safeOrders, newKeySet);
 
-    const pickup = new Date()
+            if (isFirstLoad) {
+                // Lần đầu không beep để tránh gây ồn khi nhân viên mở dashboard
+                safeOrders.forEach(o => { if (o && o.key) knownOrderKeys.add(o.key); });
+                isFirstLoad = false;
+                return;
+            }
 
-    pickup.setHours(h)
-    pickup.setMinutes(m)
-    pickup.setSeconds(0)
+            newOrders.forEach(o => { if (o && o.key) knownOrderKeys.add(o.key); });
+            if (newOrders.length > 0) {
+                playNewOrderSound();
+            }
+        } catch (e) {
+            console.error("Lỗi tải đơn:", e);
+            const container = document.getElementById('orders-container');
+            container.innerHTML = `
+                <div style="text-align:center; grid-column: 1/-1; padding: 30px; color: #f44336;">
+                    Không tải được đơn hàng: ${String(e?.message || e)}
+                </div>
+            `;
+        }
+    }
 
-    const diff = (pickup - now) / 60000
+    function renderOrders(orders, newKeySet = new Set()) {
+        const container = document.getElementById('orders-container');
+        container.innerHTML = '';
 
-    return diff <= 10
-
-}
-
-async function fetchOrders() {
-    if (isProcessing) return;
-    try {
-        const res = await fetch("https://spring-smoke-46ba.thuanmnc.workers.dev/api/orders");
-        const orders = await res.json();
+        if (orders.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; grid-column: 1/-1; padding: 50px; color: #999;">
+                    Chưa có đơn nào
+                </div>
+            `;
+            return;
+        }
         
-        const currentJSON = JSON.stringify(orders);
-        if (currentJSON !== lastOrdersJSON) {
-            // Phát âm thanh nếu có đơn hàng mới
-            if (lastOrdersJSON !== "" && orders.length > JSON.parse(lastOrdersJSON).length) {
-                const audio = document.getElementById("orderAudio");
-                audio.play().catch(() => {});
-            }
-            lastOrdersJSON = currentJSON;
-            renderOrders(orders);
-        }
-    } catch (e) {
-        console.error("Lỗi tải đơn:", e);
-    }
-}
-
-        ]
-
-        const currentJSON =
-        JSON.stringify(mockOrders)
-
-        if (currentJSON !== lastOrdersJSON) {
-
-            if (
-                lastOrdersJSON !== "" &&
-                mockOrders.length >
-                JSON.parse(lastOrdersJSON).length
-            ) {
-
-                const audio =
-                document.getElementById(
-                    "orderAudio"
-                )
-
-                audio.currentTime = 0
-
-                audio.play()
-                .catch(() => {})
-
-            }
-
-            lastOrdersJSON =
-            currentJSON
-
-            renderOrders(
-                mockOrders
-            )
-
-        }
-
-    }
-
-    catch (e) {
-
-        console.error(
-            "Lỗi tải đơn:",
-            e
-        )
-
-    }
-
-}
-
-function renderOrders(orders) {
-
-    const container =
-    document.getElementById(
-        "orders-container"
-    )
-
-    if (orders.length === 0) {
-
-        container.innerHTML =
-        '<div style="text-align: center; grid-column: 1/-1; padding: 50px; color: #999;">目前沒有訂單</div>'
-
-        return
-
-    }
-
-    const sortedOrders =
-    [...orders].sort(
-        (a, b) => {
-
-        const statusOrder = {
-            NEW: 1,
-            ACCEPTED: 2,
-            DONE: 3
-        }
-
-        if (
-            statusOrder[a.status] !==
-            statusOrder[b.status]
-        ) {
-
-            return (
-            statusOrder[a.status] -
-            statusOrder[b.status]
-            )
-
-        }
-
-        return a.time.localeCompare(
-            b.time
-        )
-
-    })
-
-    container.innerHTML = ""
-
-    sortedOrders.forEach(order => {
-
-        const isDone =
-        order.status === "DONE"
-
-        const urgent =
-        isUrgent(order.time)
-
-        const card =
-        document.createElement("div")
-
-        card.className =
-        `order-card
-        ${order.status === "NEW" ? "new" : ""}
-        ${isDone ? "done" : ""}
-        ${urgent ? "urgent" : ""}`
-
-        card.innerHTML = `
-        <div class="order-header">
-            <div>
-                <span class="order-id">
-                    #${order.key}
-                </span>
-
-                <span class="order-status-text">
-                    ${order.status}
-                </span>
-            </div>
-
-            <span class="pickup-time">
-                ⏰ ${order.time}
-            </span>
-        </div>
-
-        <div class="order-content">
-            ${order.content}
-        </div>
-
-        <div class="actions">
-
-        ${
-        order.status === "NEW"
-
-        ? `
-
-        <button
-        class="btn btn-accept"
-        onclick="handleAction(
-        '${order.key}',
-        'ACCEPTED',
-        this
-        )">
-
-        接單
-
-        </button>
-
-        <button
-        class="btn btn-change"
-        onclick="openModal(
-        '${order.key}',
-        'CHANGE'
-        )">
-
-        需要更改
-
-        </button>
-
-        <button
-        class="btn btn-reject"
-        onclick="openModal(
-        '${order.key}',
-        'REJECT'
-        )">
-
-        無法接單
-
-        </button>
-
-        `
-
-        : order.status ===
-        "ACCEPTED"
-
-        ? `
-
-        <button
-        class="btn btn-done"
-        onclick="handleAction(
-        '${order.key}',
-        'DONE',
-        this
-        )">
-
-        製作完成
-
-        </button>
-
-        `
-
-        :
-
-        `
-
-        <div
-        style="
-        grid-column: span 2;
-        text-align: center;
-        color: #999;
-        font-weight: bold;
-        ">
-
-        訂單已完成
-
-        </div>
-
-        `
-
-        }
-
-        </div>
-        `
-
-        container.appendChild(card)
-
-    })
-
-}
-
-function openModal(key, type) {
-
-    currentOrderKey = key
-
-    if (type === "CHANGE")
-    document.getElementById(
-    "changeModal"
-    ).style.display = "flex"
-
-    if (type === "REJECT")
-    document.getElementById(
-    "rejectModal"
-    ).style.display = "flex"
-
-}
-
-function closeModal() {
-
-    document
-    .querySelectorAll(".modal")
-    .forEach(
-    m => m.style.display = "none"
-    )
-
-}
-
-async function handleAction(
-key,
-newStatus,
-btnElement
-) {
-
-    if (isProcessing) return
-
-    if (
-    newStatus === "ACCEPTED" &&
-    !confirm(
-    `確認接受訂單 #${key}?`
-    )
-    ) return
-
-    await callUpdateAPI(
-    {
-        key: key,
-        status: newStatus
-    },
-    btnElement
-    )
-
-}
-
-async function confirmAction(type) {
-
-    if (isProcessing) return
-
-    const btn =
-    type === "CHANGE"
-
-    ? document.getElementById(
-    "btn-confirm-change"
-    )
-
-    : document.getElementById(
-    "btn-confirm-reject"
-    )
-
-    let data = {
-
-    key: currentOrderKey,
-    status: type
-
-    }
-
-    if (type === "CHANGE") {
-
-    data.reason =
-    document.getElementById(
-    "change-reason"
-    ).value
-
-    data.note =
-    document.getElementById(
-    "change-note"
-    ).value
-
-    }
-
-    else {
-
-    data.reason =
-    document.getElementById(
-    "reject-reason"
-    ).value
-
-    }
-
-    await callUpdateAPI(
-    data,
-    btn
-    )
-
-    closeModal()
-
-    document.getElementById(
-    "change-note"
-    ).value = ""
-
-}
-
-async function callUpdateAPI(data, btnElement) {
-    isProcessing = true;
-    try {
-        const res = await fetch("https://spring-smoke-46ba.thuanmnc.workers.dev/api/update", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(data)
+        orders.forEach(order => {
+            const card = document.createElement('div');
+            const isNewArrival = order && order.key && newKeySet.has(order.key);
+            card.className = `order-card ${isNewArrival ? 'new' : ''}`;
+            card.innerHTML = `
+                <div class="order-header">
+                    <span class="order-id">#${order.key}</span>
+                    <span class="pickup-time">⏰ ${order.time}</span>
+                </div>
+                <div class="order-content">${order.content}</div>
+                <div class="actions">
+                    <button class="btn btn-accept" onclick="handleAction('${order.key}', 'ACCEPT')">接單 (Nhận đơn)</button>
+                    <button class="btn btn-change" onclick="openModal('${order.key}', 'CHANGE')">需要更改</button>
+                    <button class="btn btn-reject" onclick="openModal('${order.key}', 'REJECT')">無法接單</button>
+                </div>
+            `;
+            container.appendChild(card);
         });
-        
-        if (res.ok) {
-            alert("Thao tác thành công!");
-            await fetchOrders(); // Tải lại danh sách ngay lập tức
-        } else {
-            alert("Lỗi server");
-        }
-    } catch (e) {
-        alert("Lỗi kết nối API");
-    } finally {
-        isProcessing = false;
-        if (btnElement) {
-            btnElement.disabled = false;
-            btnElement.innerText = btnElement.getAttribute('data-original-text') || "Xác nhận";
+    }
+
+    function openModal(key, type) {
+        currentOrderKey = key;
+        if (type === 'CHANGE') document.getElementById('changeModal').style.display = 'flex';
+        if (type === 'REJECT') document.getElementById('rejectModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+    }
+
+    async function handleAction(key, action) {
+        if (action !== 'ACCEPT') return;
+        if (!confirm(`確認接受訂單 #${key}?`)) return;
+
+        try {
+            const response = await fetch(`${WORKER_BASE}/api/update`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ key, status: "ACCEPTED" })
+            });
+            if (!response.ok) {
+                throw new Error(`update /api/update failed: ${response.status}`);
+            }
+            closeModal();
+            fetchOrders();
+        } catch (e) {
+            console.error("Accept failed:", e);
+            alert("處理失敗，請稍後再試。");
         }
     }
-}
 
-setInterval(
-fetchOrders,
-5000
-)
+    async function confirmAction(type) {
+        const key = currentOrderKey;
 
-fetchOrders()
+        const isChange = type === "CHANGE";
+        const status = isChange ? "CHANGED" : "REJECTED";
+        const reason = isChange
+            ? document.getElementById('change-reason').value
+            : document.getElementById('reject-reason').value;
+        const note = isChange ? document.getElementById('change-note').value : undefined;
 
+        try {
+            const response = await fetch(`${WORKER_BASE}/api/update`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    key,
+                    status,
+                    reason,
+                    note
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`update /api/update failed: ${response.status}`);
+            }
+
+            closeModal();
+            fetchOrders();
+            alert("Đã xử lý đơn hàng!");
+        } catch (e) {
+            console.error("Update failed:", e);
+            alert("處理失敗，請稍後再試。");
+        }
+    }
+
+    setInterval(fetchOrders, 5000);
+    fetchOrders(); // Chạy lần đầu
+
+    function playNewOrderSound() {
+        if (!soundUnlocked) return; // require user gesture
+        try {
+            const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+            const ctx = new AudioContextCtor();
+            const oscillator = ctx.createOscillator();
+            const gain = ctx.createGain();
+
+            oscillator.type = 'sine';
+            oscillator.frequency.value = 880;
+            gain.gain.value = 0.08;
+
+            oscillator.connect(gain);
+            gain.connect(ctx.destination);
+
+            oscillator.start();
+            setTimeout(() => {
+                oscillator.stop();
+                ctx.close();
+            }, 200);
+        } catch (e) {
+            console.error("playNewOrderSound failed:", e);
+        }
+    }
 </script>
 
 </body>
