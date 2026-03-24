@@ -170,6 +170,8 @@
   </style>
 </head>
 <body>
+  <audio id="order-sound" src="DÁN_LINK_BẠN_VỪA_COPY_VÀO_ĐÂY" preload="auto"></audio>
+  <div class="app">
   <div class="app">
     <div class="topbar">
       <div class="brand">
@@ -780,12 +782,37 @@
       setTimeout(() => oscillator.stop(), durationMs);
     }
 
-    function playAlarmCycle() {
-      clearAlarmTimeouts();
-      playTone(880, 250, "square", 0.22);
-      alarmTimeoutIds.push(setTimeout(() => playTone(1040, 250, "square", 0.22), 320));
-      alarmTimeoutIds.push(setTimeout(() => playTone(880, 320, "square", 0.24), 680));
+    // Tìm hàm playAlarmCycle cũ và thay bằng đoạn này:
+function playAlarmCycle() {
+    const sound = document.getElementById('order-sound');
+    if (sound) {
+        // Reset về giây đầu tiên để nếu đơn nổ liên tục nó vẫn kêu lại được
+        sound.currentTime = 0; 
+        
+        // Phát âm thanh
+        const playPromise = sound.play();
+        
+        if (playPromise !== undefined) {
+            playPromise.catch(error => {
+                console.log("Trình duyệt chặn tự động phát: ", error);
+            });
+        }
     }
+}
+
+// Hàm stopContinuousAlarm cũng cần chỉnh lại để tắt hẳn file MP3 nếu đang kêu dài
+function stopContinuousAlarm() {
+    if (alarmIntervalId) {
+        clearInterval(alarmIntervalId);
+        alarmIntervalId = null;
+    }
+    const sound = document.getElementById('order-sound');
+    if (sound) {
+        sound.pause();
+        sound.currentTime = 0;
+    }
+    clearAlarmTimeouts();
+}
 
     function startContinuousAlarm() {
       if (!soundUnlocked) return;
