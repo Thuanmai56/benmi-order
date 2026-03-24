@@ -35,6 +35,17 @@
       cursor: pointer; font-size: 14px;
     }
     .tab.active { border-color: var(--primary); color: var(--primary); }
+    .mini-btn {
+      border: 1px solid var(--border);
+      background: #fff;
+      color: #111827;
+      border-radius: 999px;
+      padding: 8px 10px;
+      font-size: 12px;
+      font-weight: 1000;
+      cursor: pointer;
+      white-space: nowrap;
+    }
     .status-pill {
       padding: 8px 10px; border-radius: 999px; background: #f3f4f6;
       font-size: 13px; color: #111827; white-space: nowrap; font-weight: 900;
@@ -168,6 +179,7 @@
       <div class="tabs">
         <button class="tab active" id="tab-live" onclick="switchTab('live')">Live</button>
         <button class="tab" id="tab-history" onclick="switchTab('history')">Lịch sử</button>
+        <button class="mini-btn" onclick="testSound()">Test Sound</button>
       </div>
     </div>
 
@@ -329,9 +341,23 @@
     const knownOrderKeys = new Set();
     let isFirstLoad = true;
     let soundUnlocked = false;
+    let audioCtx = null;
 
-    // Unlock sound after a user gesture (autoplay policy)
-    document.addEventListener("click", () => { soundUnlocked = true; }, { once: true });
+    // Unlock audio after a user gesture (Chrome autoplay policy)
+    async function unlockSound() {
+      soundUnlocked = true;
+      try {
+        const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextCtor) return;
+        if (!audioCtx) audioCtx = new AudioContextCtor();
+        if (audioCtx.state === "suspended") await audioCtx.resume();
+      } catch (e) {
+        console.error("unlockSound failed:", e);
+      }
+    }
+    document.addEventListener("click", unlockSound, { once: true });
+    document.addEventListener("touchstart", unlockSound, { once: true });
+    document.addEventListener("keydown", unlockSound, { once: true });
 
     function escapeHtml(s) {
       return String(s ?? "")
@@ -712,26 +738,34 @@
       alert("Đã xử lý đơn hàng!");
     }
 
-    function playNewOrderSound() {
+    async function playNewOrderSound() {
       if (!soundUnlocked) return;
       try {
         const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
-        const ctx = new AudioContextCtor();
-        const oscillator = ctx.createOscillator();
-        const gain = ctx.createGain();
+        if (!AudioContextCtor) return;
+        if (!audioCtx) audioCtx = new AudioContextCtor();
+        if (audioCtx.state === "suspended") await audioCtx.resume();
+
+        const oscillator = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
 
         oscillator.type = "sine";
         oscillator.frequency.value = 880;
-        gain.gain.value = 0.08;
+        gain.gain.value = 0.12;
 
         oscillator.connect(gain);
-        gain.connect(ctx.destination);
+        gain.connect(audioCtx.destination);
 
         oscillator.start();
-        setTimeout(() => { oscillator.stop(); ctx.close(); }, 200);
+        setTimeout(() => { oscillator.stop(); }, 260);
       } catch (e) {
         console.error(e);
       }
+    }
+
+    async function testSound() {
+      await unlockSound();
+      await playNewOrderSound();
     }
 
     setInterval(fetchOrders, 5000);
