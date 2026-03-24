@@ -342,6 +342,8 @@
     let isFirstLoad = true;
     let soundUnlocked = false;
     let audioCtx = null;
+    let alarmIntervalId = null;
+    let alarmTimeoutIds = [];
 
     // Unlock audio after a user gesture (Chrome autoplay policy)
     async function unlockSound() {
@@ -421,11 +423,13 @@
         // New arrivals => sound
         const newArrivals = latestOrders.filter(o => o && o.key && !knownOrderKeys.has(o.key));
         newArrivals.forEach(o => { if (o?.key) knownOrderKeys.add(o.key); });
-        if (!isFirstLoad && newArrivals.length > 0) playNewOrderSound();
-        isFirstLoad = false;
 
         // NEW orders => fullscreen alert
         pendingNewOrders = latestOrders.filter(o => o && o.status === "NEW").slice().sort(sortByPickupTimeAsc);
+        if (!isFirstLoad && newArrivals.length > 0 && pendingNewOrders.length > 0) {
+          startContinuousAlarm();
+        }
+        isFirstLoad = false;
         updateNewAlert();
 
         renderAll();
@@ -609,6 +613,7 @@
         alertEl.style.display = "none";
         newAlertSnoozeUntilMs = 0;
         snoozedNewOrderKeys = new Set();
+        stopContinuousAlarm();
         return;
       }
 
@@ -617,20 +622,24 @@
         const hasBrandNew = pendingNewOrders.some(o => o?.key && !snoozedNewOrderKeys.has(o.key));
         if (!hasBrandNew) {
           alertEl.style.display = "none";
+          stopContinuousAlarm();
           return;
         }
       }
       titleEl.innerText = `${count} 單 新訂單`;
       alertEl.style.display = "flex";
+      startContinuousAlarm();
     }
 
     function dismissNewAlert() {
       newAlertSnoozeUntilMs = Date.now() + 30_000;
       snoozedNewOrderKeys = new Set(pendingNewOrders.map(o => o?.key).filter(Boolean));
       document.getElementById("new-alert").style.display = "none";
+      stopContinuousAlarm();
     }
 
     function reviewNextNewOrder() {
+      stopContinuousAlarm();
       if (pendingNewOrders.length <= 0) return dismissNewAlert();
       openReview(pendingNewOrders[0].key);
     }
@@ -639,6 +648,10 @@
       const order = (latestOrders || []).find(o => o && o.key === orderKey);
       if (!order) return;
       reviewingOrder = order;
+
+      if (order.status === "NEW") {
+        stopContinuousAlarm();
+      }
 
       document.getElementById("review-order-key").innerText = order.key || "-";
       document.getElementById("review-customer").innerText = order.customer || "-";
@@ -738,6 +751,51 @@
       alert("Đã xử lý đơn hàng!");
     }
 
+    function clearAlarmTimeouts() {
+      alarmTimeoutIds.forEach(id => clearTimeout(id));
+      alarmTimeoutIds = [];
+    }
+
+    function stopContinuousAlarm() {
+      if (alarmIntervalId) {
+        clearInterval(alarmIntervalId);
+        alarmIntervalId = null;
+      }
+      clearAlarmTimeouts();
+    }
+
+    function playTone(frequency, durationMs, type = "square", volume = 0.22) {
+      if (!audioCtx || audioCtx.state !== "running") return;
+      const oscillator = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      oscillator.type = type;
+      oscillator.frequency.value = frequency;
+      gain.gain.value = volume;
+
+      oscillator.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      oscillator.start();
+      setTimeout(() => oscillator.stop(), durationMs);
+    }
+
+    function playAlarmCycle() {
+      clearAlarmTimeouts();
+      playTone(880, 250, "square", 0.22);
+      alarmTimeoutIds.push(setTimeout(() => playTone(1040, 250, "square", 0.22), 320));
+      alarmTimeoutIds.push(setTimeout(() => playTone(880, 320, "square", 0.24), 680));
+    }
+
+    function startContinuousAlarm() {
+      if (!soundUnlocked) return;
+      if (alarmIntervalId) return;
+      playAlarmCycle();
+      alarmIntervalId = setInterval(() => {
+        playAlarmCycle();
+      }, 2200);
+    }
+
     async function playNewOrderSound() {
       if (!soundUnlocked) return;
       try {
@@ -745,19 +803,7 @@
         if (!AudioContextCtor) return;
         if (!audioCtx) audioCtx = new AudioContextCtor();
         if (audioCtx.state === "suspended") await audioCtx.resume();
-
-        const oscillator = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-
-        oscillator.type = "sine";
-        oscillator.frequency.value = 880;
-        gain.gain.value = 0.12;
-
-        oscillator.connect(gain);
-        gain.connect(audioCtx.destination);
-
-        oscillator.start();
-        setTimeout(() => { oscillator.stop(); }, 260);
+        playAlarmCycle();
       } catch (e) {
         console.error(e);
       }
