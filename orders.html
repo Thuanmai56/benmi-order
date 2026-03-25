@@ -342,6 +342,7 @@
     let isFirstLoad = true;
     let soundUnlocked = false;
     let audioCtx = null;
+
     let alarmIntervalId = null;
     let alarmTimeoutIds = [];
 
@@ -420,18 +421,16 @@
         const orders = await response.json();
         latestOrders = Array.isArray(orders) ? orders : [];
 
-        // New arrivals => sound
         const newArrivals = latestOrders.filter(o => o && o.key && !knownOrderKeys.has(o.key));
         newArrivals.forEach(o => { if (o?.key) knownOrderKeys.add(o.key); });
 
-        // NEW orders => fullscreen alert
         pendingNewOrders = latestOrders.filter(o => o && o.status === "NEW").slice().sort(sortByPickupTimeAsc);
+
         if (!isFirstLoad && newArrivals.length > 0 && pendingNewOrders.length > 0) {
           startContinuousAlarm();
         }
         isFirstLoad = false;
         updateNewAlert();
-
         renderAll();
       } catch (e) {
         console.error(e);
@@ -445,7 +444,12 @@
       if (!Array.isArray(latestOrders)) return;
 
       const leftOrders = latestOrders
-        .filter(o => o && (o.status === "NEW" || o.status === "ACCEPTED"))
+        .filter(o => o && (
+          o.status === "NEW" ||
+          o.status === "ACCEPTED" ||
+          o.status === "WAITING_CUSTOMER_CHANGE" ||
+          o.status === "WAITING_CUSTOMER_REJECT"
+        ))
         .slice()
         .sort(sortByPickupTimeAsc);
 
@@ -481,17 +485,28 @@
 
       orders.forEach(order => {
         const isNew = order.status === "NEW";
+        const isWaiting =
+          order.status === "WAITING_CUSTOMER_CHANGE" ||
+          order.status === "WAITING_CUSTOMER_REJECT";
         const eta = formatEta(order.time);
 
         const tile = document.createElement("div");
         tile.className = `tile ${isNew ? "new" : ""}`;
         tile.onclick = () => openReview(order.key);
 
-        const badge = isNew ? `<span class="badge new">NEW</span>` : `<span class="badge wait">DOING</span>`;
+        let badge = "";
+        if (isNew) badge = `<span class="badge new">NEW</span>`;
+        else if (isWaiting) badge = `<span class="badge wait">等客戶確認</span>`;
+        else badge = `<span class="badge wait">準備中</span>`;
 
-        const rightActions = (order.status === "ACCEPTED")
-          ? `<button class="btn btn-primary btn-block" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','DONE')">准备好了</button>`
-          : `<button class="btn btn-ghost btn-block" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">Review</button>`;
+        let rightActions = "";
+        if (order.status === "ACCEPTED") {
+          rightActions = `<button class="btn btn-primary btn-block" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','DONE')">准备好了</button>`;
+        } else if (isWaiting) {
+          rightActions = `<button class="btn btn-ghost btn-block" style="opacity:0.7; cursor:not-allowed;" disabled>等客戶確認</button>`;
+        } else {
+          rightActions = `<button class="btn btn-ghost btn-block" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">Review</button>`;
+        }
 
         tile.innerHTML = `
           <div>
@@ -581,6 +596,7 @@
           const tile = document.createElement("div");
           tile.className = "tile";
           tile.onclick = () => openReview(order.key);
+
           const badge = order.status === "PICKED_UP"
             ? `<span class="badge done">PICKED</span>`
             : `<span class="badge">${escapeHtml(order.status)}</span>`;
@@ -608,7 +624,6 @@
       const alertEl = document.getElementById("new-alert");
       const titleEl = document.getElementById("new-alert-title");
 
-      // If no NEW orders, hide and clear snooze state
       if (count <= 0) {
         alertEl.style.display = "none";
         newAlertSnoozeUntilMs = 0;
@@ -617,7 +632,6 @@
         return;
       }
 
-      // Snooze: hide alerts for existing NEW orders, but if a brand new NEW order arrives, show immediately.
       if (Date.now() < newAlertSnoozeUntilMs) {
         const hasBrandNew = pendingNewOrders.some(o => o?.key && !snoozedNewOrderKeys.has(o.key));
         if (!hasBrandNew) {
@@ -626,6 +640,7 @@
           return;
         }
       }
+
       titleEl.innerText = `${count} 單 新訂單`;
       alertEl.style.display = "flex";
       startContinuousAlarm();
@@ -650,6 +665,12 @@
       reviewingOrder = order;
 
       if (order.status === "NEW") {
+        // Prevent sound from restarting on the next polling tick
+        newAlertSnoozeUntilMs = Date.now() + 30_000;
+        snoozedNewOrderKeys.add(order.key);
+        document.getElementById("new-alert").style.display = "none";
+        stopContinuousAlarm();
+      } else {
         stopContinuousAlarm();
       }
 
@@ -669,6 +690,7 @@
         actionsNew.style.display = "none";
         actionsAccepted.style.display = "grid";
       } else {
+        // WAITING_CUSTOMER_CHANGE / WAITING_CUSTOMER_REJECT / other statuses
         actionsNew.style.display = "none";
         actionsAccepted.style.display = "none";
       }
@@ -764,46 +786,88 @@
       clearAlarmTimeouts();
     }
 
-    function playTone(frequency, durationMs, type = "square", volume = 0.22) {
-      if (!audioCtx || audioCtx.state !== "running") return;
+    // --------- AUDIO (siren when new orders, beep for Test Sound) ---------
+    function ensureAudioRunning() {
+      try {
+        if (audioCtx && audioCtx.state === "suspended") audioCtx.resume().catch(() => {});
+      } catch (e) {}
+    }
+
+    function playBeep(freq = 880, durationMs = 250, volume = 0.18) {
+      if (!audioCtx) return;
+      ensureAudioRunning();
+      const now = audioCtx.currentTime;
+
       const oscillator = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
 
-      oscillator.type = type;
-      oscillator.frequency.value = frequency;
-      gain.gain.value = volume;
+      oscillator.type = "square";
+      oscillator.frequency.setValueAtTime(freq, now);
+
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(volume, now + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + durationMs / 1000);
 
       oscillator.connect(gain);
       gain.connect(audioCtx.destination);
 
-      oscillator.start();
-      setTimeout(() => oscillator.stop(), durationMs);
+      oscillator.start(now);
+      oscillator.stop(now + durationMs / 1000);
+    }
+
+    function playSirenSweep(fromHz, toHz, durationMs, volume = 0.26) {
+      if (!audioCtx) return;
+      ensureAudioRunning();
+      const now = audioCtx.currentTime;
+
+      const oscillator = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      oscillator.type = "sawtooth";
+      oscillator.frequency.setValueAtTime(fromHz, now);
+      oscillator.frequency.exponentialRampToValueAtTime(toHz, now + durationMs / 1000);
+
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(volume, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + durationMs / 1000);
+
+      oscillator.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      oscillator.start(now);
+      oscillator.stop(now + durationMs / 1000);
     }
 
     function playAlarmCycle() {
+      // Modern siren pattern (continuous loop until Review/Tạm ẩn)
       clearAlarmTimeouts();
-      playTone(880, 250, "square", 0.22);
-      alarmTimeoutIds.push(setTimeout(() => playTone(1040, 250, "square", 0.22), 320));
-      alarmTimeoutIds.push(setTimeout(() => playTone(880, 320, "square", 0.24), 680));
+
+      // up sweep
+      playSirenSweep(740, 1040, 240, 0.24);
+      // down sweep
+      alarmTimeoutIds.push(setTimeout(() => playSirenSweep(1040, 740, 240, 0.24), 260));
+      // higher accent sweep
+      alarmTimeoutIds.push(setTimeout(() => playSirenSweep(820, 1180, 320, 0.30), 520));
     }
 
     function startContinuousAlarm() {
       if (!soundUnlocked) return;
       if (alarmIntervalId) return;
+
       playAlarmCycle();
-      alarmIntervalId = setInterval(() => {
-        playAlarmCycle();
-      }, 2200);
+      // interval tuned so cycles don't overlap too much
+      alarmIntervalId = setInterval(playAlarmCycle, 2600);
     }
 
     async function playNewOrderSound() {
+      // Test Sound remains beep only
       if (!soundUnlocked) return;
       try {
         const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
         if (!AudioContextCtor) return;
         if (!audioCtx) audioCtx = new AudioContextCtor();
         if (audioCtx.state === "suspended") await audioCtx.resume();
-        playAlarmCycle();
+        playBeep(880, 250, 0.18);
       } catch (e) {
         console.error(e);
       }
