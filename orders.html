@@ -281,7 +281,7 @@
       </div>
 
       <div class="modal-actions two" id="review-actions-accepted" style="display:none;">
-        <button class="btn btn-primary" onclick="markReadyFromReview()">准备好了</button>
+        <button class="btn btn-primary" onclick="markReadyFromReview()">準備好了</button>
         <button class="btn btn-ghost" onclick="closeModal()">Đóng</button>
       </div>
     </div>
@@ -490,7 +490,7 @@
         const badge = isNew ? `<span class="badge new">NEW</span>` : `<span class="badge wait">DOING</span>`;
 
         const rightActions = (order.status === "ACCEPTED")
-          ? `<button class="btn btn-primary btn-block" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','DONE')">准备好了</button>`
+          ? `<button class="btn btn-primary btn-block" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','DONE')">準備好了</button>`
           : `<button class="btn btn-ghost btn-block" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">Review</button>`;
 
         tile.innerHTML = `
