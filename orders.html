@@ -798,28 +798,45 @@
       }
     }
 
-    function playTone(frequency, durationMs, type = "square", volume = 0.22) {
-      if (!audioCtx || audioCtx.state !== "running") return;
-      const oscillator = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
 
-      oscillator.type = type;
-      oscillator.frequency.value = frequency;
-      gain.gain.value = volume;
+    async function playTone(frequency, durationMs, type = "square", volume = 0.22) {
+      if (!audioCtx) return;
+      if (audioCtx.state !== "running") {
+        try {
+          await audioCtx.resume();
+        } catch (e) {
+          // If resume fails, just skip beep
+          return;
+        }
+      }
 
-      oscillator.connect(gain);
-      gain.connect(audioCtx.destination);
+      const oscillator = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
 
-      oscillator.start();
-      setTimeout(() => oscillator.stop(), durationMs);
-    }
+      oscillator.type = type;
+      oscillator.frequency.value = frequency;
+      gain.gain.value = volume;
 
-    function playAlarmCycle() {
-      clearAlarmTimeouts();
-      playTone(880, 250, "square", 0.22);
-      alarmTimeoutIds.push(setTimeout(() => playTone(1040, 250, "square", 0.22), 320));
-      alarmTimeoutIds.push(setTimeout(() => playTone(880, 320, "square", 0.24), 680));
-    }
+      oscillator.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      oscillator.start();
+      setTimeout(() => oscillator.stop(), durationMs);
+      await sleep(durationMs);
+    }
+
+    async function playAlarmCycle() {
+      // Beep test: play sequentially so we never start oscillator before resume()
+      clearAlarmTimeouts();
+      await playTone(880, 250, "square", 0.22);
+      await sleep(70);
+      await playTone(1040, 250, "square", 0.22);
+      await sleep(110);
+      await playTone(880, 320, "square", 0.24);
+    }
 
     function startContinuousAlarm() {
       if (!soundUnlocked) return;
@@ -853,7 +870,7 @@
         if (!AudioContextCtor) return;
         if (!audioCtx) audioCtx = new AudioContextCtor();
         if (audioCtx.state === "suspended") await audioCtx.resume();
-        playAlarmCycle();
+        await playAlarmCycle();
       } catch (e) {
         console.error(e);
       }
