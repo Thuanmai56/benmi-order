@@ -1,821 +1,871 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Benmi Dashboard</title>
-  <style>
-    :root {
-      --primary: #00b900;
-      --brand-yellow: #ffcc00;
-      --brand-red: #d32f2f;
-      --bg: #f0f2f5;
-      --card: #ffffff;
-      --muted: #6b7280;
-      --border: #e5e7eb;
-    }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Benmi Dashboard</title>
+  <style>
+    :root {
+      --primary: #00b900;
+      --brand-yellow: #ffcc00;
+      --brand-red: #d32f2f;
+      --bg: #f0f2f5;
+      --card: #ffffff;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+    }
 
-    * { box-sizing: border-box; }
-    body { margin: 0; font-family: -apple-system, sans-serif; background: var(--bg); }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, sans-serif; background: var(--bg); }
 
-    .app { height: 100vh; display: flex; flex-direction: column; }
+    .app { height: 100vh; display: flex; flex-direction: column; }
 
-    .topbar {
-      display: flex; align-items: center; justify-content: space-between; gap: 12px;
-      padding: 14px 16px; background: var(--card); border-bottom: 1px solid #eee;
-    }
-    .brand { display: flex; align-items: baseline; gap: 10px; }
-    .brand-title { font-weight: 1000; font-size: 18px; }
-    .brand-sub { color: var(--muted); font-size: 13px; font-weight: 800; }
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 14px 16px; background: var(--card); border-bottom: 1px solid #eee;
+    }
+    .brand { display: flex; align-items: baseline; gap: 10px; }
+    .brand-title { font-weight: 1000; font-size: 18px; }
+    .brand-sub { color: var(--muted); font-size: 13px; font-weight: 800; }
 
-    .tabs { display: flex; gap: 8px; align-items: center; }
-    .tab {
-      border: 1px solid var(--border); background: #fff;
-      padding: 10px 12px; border-radius: 999px; font-weight: 1000;
-      cursor: pointer; font-size: 14px;
-    }
-    .tab.active { border-color: var(--primary); color: var(--primary); }
-    .mini-btn {
-      border: 1px solid var(--border);
-      background: #fff;
-      color: #111827;
-      border-radius: 999px;
-      padding: 8px 10px;
-      font-size: 12px;
-      font-weight: 1000;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-    .status-pill {
-      padding: 8px 10px; border-radius: 999px; background: #f3f4f6;
-      font-size: 13px; color: #111827; white-space: nowrap; font-weight: 900;
-    }
+    .tabs { display: flex; gap: 8px; align-items: center; }
+    .tab {
+      border: 1px solid var(--border); background: #fff;
+      padding: 10px 12px; border-radius: 999px; font-weight: 1000;
+      cursor: pointer; font-size: 14px;
+    }
+    .tab.active { border-color: var(--primary); color: var(--primary); }
+    .mini-btn {
+      border: 1px solid var(--border);
+      background: #fff;
+      color: #111827;
+      border-radius: 999px;
+      padding: 8px 10px;
+      font-size: 12px;
+      font-weight: 1000;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .status-pill {
+      padding: 8px 10px; border-radius: 999px; background: #f3f4f6;
+      font-size: 13px; color: #111827; white-space: nowrap; font-weight: 900;
+    }
 
-    .content { flex: 1; min-height: 0; padding: 14px 16px; }
-    .split { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; height: 100%; }
+    .content { flex: 1; min-height: 0; padding: 14px 16px; }
+    .split { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; height: 100%; }
 
-    .panel {
-      background: var(--card); border: 1px solid #eee; border-radius: 16px;
-      display: flex; flex-direction: column; min-height: 0; overflow: hidden;
-    }
-    .panel-header {
-      padding: 12px 14px; border-bottom: 1px solid #eee;
-      display: flex; justify-content: space-between; align-items: center;
-    }
-    .panel-title { font-weight: 1100; }
-    .panel-sub { color: var(--muted); font-size: 12px; font-weight: 900; margin-top: 2px; }
-    .panel-body { padding: 10px; overflow: auto; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+    .panel {
+      background: var(--card); border: 1px solid #eee; border-radius: 16px;
+      display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+    }
+    .panel-header {
+      padding: 12px 14px; border-bottom: 1px solid #eee;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .panel-title { font-weight: 1100; }
+    .panel-sub { color: var(--muted); font-size: 12px; font-weight: 900; margin-top: 2px; }
+    .panel-body { padding: 10px; overflow: auto; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
 
-    .badge {
-      display: inline-flex; align-items: center;
-      padding: 4px 8px; border-radius: 999px;
-      font-size: 12px; font-weight: 1100;
-      background: #f3f4f6; color: #111827;
-    }
-    .badge.new { background: rgba(211,47,47,0.12); color: var(--brand-red); }
-    .badge.wait { background: rgba(255,204,0,0.18); color: #7a5a00; }
-    .badge.done { background: rgba(0,185,0,0.12); color: var(--primary); }
+    .badge {
+      display: inline-flex; align-items: center;
+      padding: 4px 8px; border-radius: 999px;
+      font-size: 12px; font-weight: 1100;
+      background: #f3f4f6; color: #111827;
+    }
+    .badge.new { background: rgba(211,47,47,0.12); color: var(--brand-red); }
+    .badge.wait { background: rgba(255,204,0,0.18); color: #7a5a00; }
+    .badge.done { background: rgba(0,185,0,0.12); color: var(--primary); }
 
-    .tile {
-      border: 1px solid var(--border); border-radius: 14px;
-      padding: 12px; display: grid; grid-template-columns: 1fr auto; gap: 10px;
-      cursor: pointer; background: #fff;
-    }
-    .tile.new { border-color: rgba(211,47,47,0.35); box-shadow: 0 0 0 3px rgba(211,47,47,0.08) inset; }
-    .tile-top { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: baseline; }
-    .tile-customer { font-weight: 1100; }
-    .tile-meta { color: var(--muted); font-size: 12px; font-weight: 900; }
-    .tile-items {
-      margin-top: 6px; color: #111827; font-size: 13px; line-height: 1.35;
-      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-      overflow: hidden; white-space: pre-line;
-    }
-    .tile-actions { display: flex; flex-direction: column; gap: 8px; justify-content: center; min-width: 160px; }
+    .tile {
+      border: 1px solid var(--border); border-radius: 14px;
+      padding: 12px; display: grid; grid-template-columns: 1fr auto; gap: 10px;
+      cursor: pointer; background: #fff;
+    }
+    .tile.new { border-color: rgba(211,47,47,0.35); box-shadow: 0 0 0 3px rgba(211,47,47,0.08) inset; }
+    .tile-top { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: baseline; }
+    .tile-customer { font-weight: 1100; }
+    .tile-meta { color: var(--muted); font-size: 12px; font-weight: 900; }
+    .tile-items {
+      margin-top: 6px; color: #111827; font-size: 13px; line-height: 1.35;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden; white-space: pre-line;
+    }
+    .tile-actions { display: flex; flex-direction: column; gap: 8px; justify-content: center; min-width: 160px; }
 
-    .btn {
-      border: none; padding: 12px; border-radius: 12px;
-      font-weight: 1100; font-size: 14px; cursor: pointer;
-      transition: transform 0.05s ease, opacity 0.2s ease;
-    }
-    .btn:active { transform: scale(0.99); }
-    .btn-primary { background: var(--primary); color: #fff; }
-    .btn-yellow { background: var(--brand-yellow); color: #1f2937; }
-    .btn-danger { background: var(--brand-red); color: #fff; }
-    .btn-ghost { background: #f3f4f6; color: #111827; }
-    .btn-block { width: 100%; }
+    .btn {
+      border: none; padding: 12px; border-radius: 12px;
+      font-weight: 1100; font-size: 14px; cursor: pointer;
+      transition: transform 0.05s ease, opacity 0.2s ease;
+    }
+    .btn:active { transform: scale(0.99); }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-yellow { background: var(--brand-yellow); color: #1f2937; }
+    .btn-danger { background: var(--brand-red); color: #fff; }
+    .btn-ghost { background: #f3f4f6; color: #111827; }
+    .btn-block { width: 100%; }
 
-    /* Fullscreen new order alert */
-    .new-alert {
-      position: fixed; inset: 0; z-index: 2000;
-      display: none; align-items: center; justify-content: center;
-      background: linear-gradient(135deg, rgba(211,47,47,0.97), rgba(255,204,0,0.92));
-      padding: 20px; text-align: center;
-    }
-    .new-alert-box {
-      width: min(680px, 96vw);
-      background: rgba(255,255,255,0.92);
-      border: 2px solid rgba(255,255,255,0.55);
-      border-radius: 22px; padding: 22px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-    }
-    .new-alert-title { font-size: 34px; font-weight: 1200; margin: 0; color: #111827; }
-    .new-alert-sub { margin-top: 10px; color: #111827; font-weight: 1000; font-size: 14px; opacity: 0.75; }
-    .new-alert-actions { margin-top: 16px; display: grid; grid-template-columns: 1fr; gap: 10px; }
+    /* Fullscreen new order alert */
+    .new-alert {
+      position: fixed; inset: 0; z-index: 2000;
+      display: none; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, rgba(211,47,47,0.97), rgba(255,204,0,0.92));
+      padding: 20px; text-align: center;
+    }
+    .new-alert-box {
+      width: min(680px, 96vw);
+      background: rgba(255,255,255,0.92);
+      border: 2px solid rgba(255,255,255,0.55);
+      border-radius: 22px; padding: 22px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .new-alert-title { font-size: 34px; font-weight: 1200; margin: 0; color: #111827; }
+    .new-alert-sub { margin-top: 10px; color: #111827; font-weight: 1000; font-size: 14px; opacity: 0.75; }
+    .new-alert-actions { margin-top: 16px; display: grid; grid-template-columns: 1fr; gap: 10px; }
 
-    /* Modal */
-    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 2100; justify-content: center; align-items: center; padding: 16px; }
-    .modal-content { background: #fff; border-radius: 16px; width: min(860px, 96vw); max-height: 88vh; overflow: auto; padding: 18px; }
-    .modal-title { display:flex; justify-content: space-between; align-items:center; gap: 10px; }
-    .modal-title h3 { margin: 0; font-weight: 1100; }
-    .modal-close { cursor: pointer; font-weight: 1200; font-size: 18px; padding: 6px 10px; border-radius: 10px; background: #f3f4f6; }
+    /* Modal */
+    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 2100; justify-content: center; align-items: center; padding: 16px; }
+    .modal-content { background: #fff; border-radius: 16px; width: min(860px, 96vw); max-height: 88vh; overflow: auto; padding: 18px; }
+    .modal-title { display:flex; justify-content: space-between; align-items:center; gap: 10px; }
+    .modal-title h3 { margin: 0; font-weight: 1100; }
+    .modal-close { cursor: pointer; font-weight: 1200; font-size: 18px; padding: 6px 10px; border-radius: 10px; background: #f3f4f6; }
 
-    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
-    .detail-box { border: 1px solid var(--border); border-radius: 14px; padding: 12px; background: #fff; }
-    .detail-label { color: var(--muted); font-size: 12px; font-weight: 1100; }
-    .detail-value { margin-top: 6px; font-size: 14px; font-weight: 1100; color: #111827; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-weight: 1000; }
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+    .detail-box { border: 1px solid var(--border); border-radius: 14px; padding: 12px; background: #fff; }
+    .detail-label { color: var(--muted); font-size: 12px; font-weight: 1100; }
+    .detail-value { margin-top: 6px; font-size: 14px; font-weight: 1100; color: #111827; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-weight: 1000; }
 
-    .detail-content {
-      margin-top: 12px; border: 1px solid var(--border); border-radius: 14px;
-      padding: 12px; background: #fff; white-space: pre-line; line-height: 1.45; font-size: 14px;
-    }
-    .detail-lines { display: flex; flex-direction: column; gap: 8px; }
-    .detail-line {
-      padding: 10px 10px;
-      border: 1px solid rgba(229,231,235,0.9);
-      border-radius: 12px;
-      background: #fff;
-      white-space: pre-wrap;
-      line-height: 1.5;
-      font-size: 14px;
-    }
-    .detail-line.primary {
-      border-color: rgba(0,185,0,0.25);
-      background: rgba(0,185,0,0.05);
-      font-weight: 1100;
-    }
-    .detail-line.sub {
-      border-color: rgba(211,47,47,0.18);
-      background: rgba(211,47,47,0.03);
-      padding-left: 14px;
-    }
+    .detail-content {
+      margin-top: 12px; border: 1px solid var(--border); border-radius: 14px;
+      padding: 12px; background: #fff; white-space: pre-line; line-height: 1.45; font-size: 14px;
+    }
+    .detail-lines { display: flex; flex-direction: column; gap: 8px; }
+    .detail-line {
+      padding: 10px 10px;
+      border: 1px solid rgba(229,231,235,0.9);
+      border-radius: 12px;
+      background: #fff;
+      white-space: pre-wrap;
+      line-height: 1.5;
+      font-size: 14px;
+    }
+    .detail-line.primary {
+      border-color: rgba(0,185,0,0.25);
+      background: rgba(0,185,0,0.05);
+      font-weight: 1100;
+    }
+    .detail-line.sub {
+      border-color: rgba(211,47,47,0.18);
+      background: rgba(211,47,47,0.03);
+      padding-left: 14px;
+    }
 
-    .modal-actions { margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-    .modal-actions.two { grid-template-columns: 1fr 1fr; }
+    .modal-actions { margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .modal-actions.two { grid-template-columns: 1fr 1fr; }
 
-    @media (max-width: 960px) {
-      .split { grid-template-columns: 1fr; }
-      .tile-actions { min-width: 140px; }
-    }
-  </style>
+    @media (max-width: 960px) {
+      .split { grid-template-columns: 1fr; }
+      .tile-actions { min-width: 140px; }
+    }
+  </style>
 </head>
 <body>
-  <div class="app">
-    <div class="topbar">
-      <div class="brand">
-        <div class="brand-title">🥖 Benmi Dashboard</div>
-        <div class="brand-sub">Live orders</div>
-      </div>
-      <div class="tabs">
-        <button class="tab active" id="tab-live" onclick="switchTab('live')">Live</button>
-        <button class="tab" id="tab-history" onclick="switchTab('history')">Lịch sử</button>
-        <button class="mini-btn" onclick="testSound()">Test Sound</button>
-      </div>
-    </div>
+  <div class="app">
+    <div class="topbar">
+      <div class="brand">
+        <div class="brand-title">🥖 Benmi Dashboard</div>
+        <div class="brand-sub">Live orders</div>
+      </div>
+      <div class="tabs">
+        <button class="tab active" id="tab-live" onclick="switchTab('live')">Live</button>
+        <button class="tab" id="tab-history" onclick="switchTab('history')">Lịch sử</button>
+        <button class="mini-btn" onclick="testSound()">Test Sound</button>
+      </div>
+    </div>
 
-    <div class="content" id="view-live">
-      <div class="split">
-        <div class="panel">
-          <div class="panel-header">
-            <div>
-              <div class="panel-title">Đang chuẩn bị</div>
-              <div class="panel-sub">Gần → xa (theo giờ lấy)</div>
-            </div>
-            <div class="badge wait" id="count-left">0</div>
-          </div>
-          <div class="panel-body" id="list-left">
-            <div style="text-align:center; padding: 22px; color:#999;">Đang tải...</div>
-          </div>
-        </div>
+    <div class="content" id="view-live">
+      <div class="split">
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <div class="panel-title">Đang chuẩn bị</div>
+              <div class="panel-sub">Gần → xa (theo giờ lấy)</div>
+            </div>
+            <div class="badge wait" id="count-left">0</div>
+          </div>
+          <div class="panel-body" id="list-left">
+            <div style="text-align:center; padding: 22px; color:#999;">Đang tải...</div>
+          </div>
+        </div>
 
-        <div class="panel">
-          <div class="panel-header">
-            <div>
-              <div class="panel-title">Chờ lấy</div>
-              <div class="panel-sub">Đã chuẩn bị xong</div>
-            </div>
-            <div class="badge done" id="count-right">0</div>
-          </div>
-          <div class="panel-body" id="list-right">
-            <div style="text-align:center; padding: 22px; color:#999;">Chưa có</div>
-          </div>
-        </div>
-      </div>
-    </div>
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <div class="panel-title">Chờ lấy</div>
+              <div class="panel-sub">Đã chuẩn bị xong</div>
+            </div>
+            <div class="badge done" id="count-right">0</div>
+          </div>
+          <div class="panel-body" id="list-right">
+            <div style="text-align:center; padding: 22px; color:#999;">Chưa có</div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-    <div class="content" id="view-history" style="display:none;">
-      <div class="panel" style="height: 100%;">
-        <div class="panel-header">
-          <div>
-            <div class="panel-title">Lịch sử đơn hàng</div>
-            <div class="panel-sub">Theo ngày</div>
-          </div>
-          <div class="badge" id="count-history">0</div>
-        </div>
-        <div class="panel-body" id="list-history">
-          <div style="text-align:center; padding: 22px; color:#999;">Đang tải...</div>
-        </div>
-      </div>
-    </div>
-  </div>
+    <div class="content" id="view-history" style="display:none;">
+      <div class="panel" style="height: 100%;">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">Lịch sử đơn hàng</div>
+            <div class="panel-sub">Theo ngày</div>
+          </div>
+          <div class="badge" id="count-history">0</div>
+        </div>
+        <div class="panel-body" id="list-history">
+          <div style="text-align:center; padding: 22px; color:#999;">Đang tải...</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-  <!-- Fullscreen new order alert -->
-  <div class="new-alert" id="new-alert">
-    <div class="new-alert-box">
-      <h1 class="new-alert-title" id="new-alert-title">1 單 新訂單</h1>
-      <div class="new-alert-sub">Nhấn “Review 訂單” để xem chi tiết và nhận đơn</div>
-      <div class="new-alert-actions">
-        <button class="btn btn-primary btn-block" onclick="reviewNextNewOrder()">Review 訂單</button>
-        <button class="btn btn-ghost btn-block" onclick="dismissNewAlert()">Tạm ẩn</button>
-      </div>
-    </div>
-  </div>
+  <!-- Fullscreen new order alert -->
+  <div class="new-alert" id="new-alert">
+    <div class="new-alert-box">
+      <h1 class="new-alert-title" id="new-alert-title">1 單 新訂單</h1>
+      <div class="new-alert-sub">Nhấn “Review 訂單” để xem chi tiết và nhận đơn</div>
+      <div class="new-alert-actions">
+        <button class="btn btn-primary btn-block" onclick="reviewNextNewOrder()">Review 訂單</button>
+        <button class="btn btn-ghost btn-block" onclick="dismissNewAlert()">Tạm ẩn</button>
+      </div>
+    </div>
+  </div>
 
-  <!-- Review modal -->
-  <div id="reviewModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-title">
-        <h3>Review 訂單</h3>
-        <div class="modal-close" onclick="closeModal()">✕</div>
-      </div>
+  <!-- Review modal -->
+  <div id="reviewModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-title">
+        <h3>Review 訂單</h3>
+        <div class="modal-close" onclick="closeModal()">✕</div>
+      </div>
 
-      <div class="detail-grid">
-        <div class="detail-box">
-          <div class="detail-label">訂單 / Order</div>
-          <div class="detail-value mono" id="review-order-key">-</div>
-        </div>
-        <div class="detail-box">
-          <div class="detail-label">LINE 顧客 / Buyer</div>
-          <div class="detail-value" id="review-customer">-</div>
-        </div>
-        <div class="detail-box">
-          <div class="detail-label">取餐時間</div>
-          <div class="detail-value" id="review-pickup">-</div>
-        </div>
-        <div class="detail-box">
-          <div class="detail-label">剩餘時間</div>
-          <div class="detail-value" id="review-eta" style="color: var(--brand-red);">-</div>
-        </div>
-        <div class="detail-box">
-          <div class="detail-label">狀態</div>
-          <div class="detail-value" id="review-status">-</div>
-        </div>
-      </div>
+      <div class="detail-grid">
+        <div class="detail-box">
+          <div class="detail-label">訂單 / Order</div>
+          <div class="detail-value mono" id="review-order-key">-</div>
+        </div>
+        <div class="detail-box">
+          <div class="detail-label">LINE 顧客 / Buyer</div>
+          <div class="detail-value" id="review-customer">-</div>
+        </div>
+        <div class="detail-box">
+          <div class="detail-label">取餐時間</div>
+          <div class="detail-value" id="review-pickup">-</div>
+        </div>
+        <div class="detail-box">
+          <div class="detail-label">剩餘時間</div>
+          <div class="detail-value" id="review-eta" style="color: var(--brand-red);">-</div>
+        </div>
+        <div class="detail-box">
+          <div class="detail-label">狀態</div>
+          <div class="detail-value" id="review-status">-</div>
+        </div>
+      </div>
 
-      <div class="detail-content" id="review-content">-</div>
+      <div class="detail-content" id="review-content">-</div>
 
-      <div class="modal-actions" id="review-actions">
-        <button class="btn btn-primary" onclick="reviewAccept()">接單 (Nhận đơn)</button>
-        <button class="btn btn-yellow" onclick="reviewOpenChange()">需要更改</button>
-        <button class="btn btn-danger" onclick="reviewOpenReject()">無法接單</button>
-      </div>
+      <div class="modal-actions" id="review-actions">
+        <button class="btn btn-primary" onclick="reviewAccept()">接單 (Nhận đơn)</button>
+        <button class="btn btn-yellow" onclick="reviewOpenChange()">需要更改</button>
+        <button class="btn btn-danger" onclick="reviewOpenReject()">無法接單</button>
+      </div>
 
-      <div class="modal-actions two" id="review-actions-accepted" style="display:none;">
-        <button class="btn btn-primary" onclick="markReadyFromReview()">准备好了</button>
-        <button class="btn btn-ghost" onclick="closeModal()">Đóng</button>
-      </div>
-    </div>
-  </div>
+      <div class="modal-actions two" id="review-actions-accepted" style="display:none;">
+        <button class="btn btn-primary" onclick="markReadyFromReview()">准备好了</button>
+        <button class="btn btn-ghost" onclick="closeModal()">Đóng</button>
+      </div>
+    </div>
+  </div>
 
-  <!-- Change modal -->
-  <div id="changeModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-title">
-        <h3>需要更改 (Yêu cầu thay đổi)</h3>
-        <div class="modal-close" onclick="closeModal()">✕</div>
-      </div>
-      <label style="display:block; margin-top: 10px; font-weight: 1100;">原因 / 建議:</label>
-      <select id="change-reason" style="width:100%; padding: 12px; margin-top: 10px; border-radius: 10px; border: 1px solid var(--border); font-size: 16px;">
-        <option value="口味售完">該口味已售完</option>
-        <option value="時間需調整">時間太趕，需延後</option>
-        <option value="配料售完">部分加料售完</option>
-      </select>
-      <textarea id="change-note" rows="3" placeholder="輸入具體 建議..." style="width:100%; padding: 12px; margin-top: 10px; border-radius: 10px; border: 1px solid var(--border); font-size: 16px;"></textarea>
-      <div class="modal-actions two">
-        <button class="btn btn-yellow" onclick="confirmAction('CHANGE')">傳送建議</button>
-        <button class="btn btn-ghost" onclick="closeModal()">取消</button>
-      </div>
-    </div>
-  </div>
+  <!-- Change modal -->
+  <div id="changeModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-title">
+        <h3>需要更改 (Yêu cầu thay đổi)</h3>
+        <div class="modal-close" onclick="closeModal()">✕</div>
+      </div>
+      <label style="display:block; margin-top: 10px; font-weight: 1100;">原因 / 建議:</label>
+      <select id="change-reason" style="width:100%; padding: 12px; margin-top: 10px; border-radius: 10px; border: 1px solid var(--border); font-size: 16px;">
+        <option value="口味售完">該口味已售完</option>
+        <option value="時間需調整">時間太趕，需延後</option>
+        <option value="配料售完">部分加料售完</option>
+      </select>
+      <textarea id="change-note" rows="3" placeholder="輸入具體 建議..." style="width:100%; padding: 12px; margin-top: 10px; border-radius: 10px; border: 1px solid var(--border); font-size: 16px;"></textarea>
+      <div class="modal-actions two">
+        <button class="btn btn-yellow" onclick="confirmAction('CHANGE')">傳送建議</button>
+        <button class="btn btn-ghost" onclick="closeModal()">取消</button>
+      </div>
+    </div>
+  </div>
 
-  <!-- Reject modal -->
-  <div id="rejectModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-title">
-        <h3>無法接單 (Không thể nhận đơn)</h3>
-        <div class="modal-close" onclick="closeModal()">✕</div>
-      </div>
-      <select id="reject-reason" style="width:100%; padding: 12px; margin-top: 12px; border-radius: 10px; border: 1px solid var(--border); font-size: 16px;">
-        <option value="今日已售完">今日已售完</option>
-        <option value="訂單過多">訂單過多，暫不接單</option>
-        <option value="已過營業時間">已過營業時間</option>
-      </select>
-      <div class="modal-actions two">
-        <button class="btn btn-danger" onclick="confirmAction('REJECT')">確認拒絕</button>
-        <button class="btn btn-ghost" onclick="closeModal()">取消</button>
-      </div>
-    </div>
-  </div>
+  <!-- Reject modal -->
+  <div id="rejectModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-title">
+        <h3>無法接單 (Không thể nhận đơn)</h3>
+        <div class="modal-close" onclick="closeModal()">✕</div>
+      </div>
+      <select id="reject-reason" style="width:100%; padding: 12px; margin-top: 12px; border-radius: 10px; border: 1px solid var(--border); font-size: 16px;">
+        <option value="今日已售完">今日已售完</option>
+        <option value="訂單過多">訂單過多，暫不接單</option>
+        <option value="已過營業時間">已過營業時間</option>
+      </select>
+      <div class="modal-actions two">
+        <button class="btn btn-danger" onclick="confirmAction('REJECT')">確認拒絕</button>
+        <button class="btn btn-ghost" onclick="closeModal()">取消</button>
+      </div>
+    </div>
+  </div>
 
-  <script>
-    const WORKER_BASE = "https://spring-smoke-46ba.thuanmnc.workers.dev";
+  <script>
+    const WORKER_BASE = "https://spring-smoke-46ba.thuanmnc.workers.dev";
 
-    let latestOrders = [];
-    let pendingNewOrders = [];
-    let reviewingOrder = null;
-    let currentOrderKey = null;
-    let activeTab = "live";
-    let newAlertSnoozeUntilMs = 0;
-    let snoozedNewOrderKeys = new Set();
+    let latestOrders = [];
+    let pendingNewOrders = [];
+    let reviewingOrder = null;
+    let currentOrderKey = null;
+    let activeTab = "live";
+    let newAlertSnoozeUntilMs = 0;
+    let snoozedNewOrderKeys = new Set();
 
-    const knownOrderKeys = new Set();
-    let isFirstLoad = true;
-    let soundUnlocked = false;
-    let audioCtx = null;
-    let alarmIntervalId = null;
-    let alarmTimeoutIds = [];
+    const knownOrderKeys = new Set();
+    let isFirstLoad = true;
+    let soundUnlocked = false;
+    let audioCtx = null;
+    let alarmIntervalId = null;
+    let alarmTimeoutIds = [];
+    const ALARM_AUDIO_URL = "https://github.com/Thuanmai56/Sound/raw/refs/heads/main/perfect_alarm.mp3";
+    let alarmAudio = null;
 
-    // Unlock audio after a user gesture (Chrome autoplay policy)
-    async function unlockSound() {
-      soundUnlocked = true;
+    // Unlock audio after a user gesture (Chrome autoplay policy)
+    async function unlockSound() {
+      soundUnlocked = true;
+      try {
+        const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextCtor) return;
+        if (!audioCtx) audioCtx = new AudioContextCtor();
+        if (audioCtx.state === "suspended") await audioCtx.resume();
+      } catch (e) {
+        console.error("unlockSound failed:", e);
+      }
+
+      // Prepare mp3 alarm player for continuous playback
       try {
-        const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
-        if (!AudioContextCtor) return;
-        if (!audioCtx) audioCtx = new AudioContextCtor();
-        if (audioCtx.state === "suspended") await audioCtx.resume();
-      } catch (e) {
-        console.error("unlockSound failed:", e);
-      }
-    }
-    document.addEventListener("click", unlockSound, { once: true });
-    document.addEventListener("touchstart", unlockSound, { once: true });
-    document.addEventListener("keydown", unlockSound, { once: true });
-
-    function escapeHtml(s) {
-      return String(s ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-    }
-
-    function parsePickupTimeMs(timeStr) {
-      if (!timeStr || typeof timeStr !== "string") return NaN;
-      const m = timeStr.match(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})/);
-      if (!m) return NaN;
-      const iso = `${m[1]}T${m[2]}:00`;
-      const ms = new Date(iso).getTime();
-      return Number.isNaN(ms) ? NaN : ms;
-    }
-
-    function sortByPickupTimeAsc(a, b) {
-      const at = parsePickupTimeMs(a?.time);
-      const bt = parsePickupTimeMs(b?.time);
-      if (Number.isNaN(at) || Number.isNaN(bt)) return (a?.createdAt || 0) - (b?.createdAt || 0);
-      return at - bt;
-    }
-
-    function formatEta(timeStr) {
-      const target = parsePickupTimeMs(timeStr);
-      if (Number.isNaN(target)) return "-";
-      const diffMs = target - Date.now();
-      const diffMin = Math.round(diffMs / 60000);
-      if (diffMin <= 0) return `已到 / ${Math.abs(diffMin)} 分鐘前`;
-      if (diffMin < 60) return `剩 ${diffMin} 分鐘`;
-      const h = Math.floor(diffMin / 60);
-      const m = diffMin % 60;
-      return `剩 ${h} 小時 ${m} 分`;
-    }
-
-    function shortItems(content) {
-      if (!content) return "";
-      const lines = String(content).split("\n").map(s => s.trim()).filter(Boolean);
-      return lines.slice(0, 6).join("\n");
-    }
-
-    function switchTab(tab) {
-      activeTab = tab;
-      document.getElementById("tab-live").classList.toggle("active", tab === "live");
-      document.getElementById("tab-history").classList.toggle("active", tab === "history");
-      document.getElementById("view-live").style.display = tab === "live" ? "block" : "none";
-      document.getElementById("view-history").style.display = tab === "history" ? "block" : "none";
-      renderAll();
-    }
-
-    async function fetchOrders() {
-      try {
-        const response = await fetch(`${WORKER_BASE}/api/orders`);
-        if (!response.ok) throw new Error(`fetch failed: ${response.status}`);
-        const orders = await response.json();
-        latestOrders = Array.isArray(orders) ? orders : [];
-
-        // New arrivals => sound
-        const newArrivals = latestOrders.filter(o => o && o.key && !knownOrderKeys.has(o.key));
-        newArrivals.forEach(o => { if (o?.key) knownOrderKeys.add(o.key); });
-
-        // NEW orders => fullscreen alert
-        pendingNewOrders = latestOrders.filter(o => o && o.status === "NEW").slice().sort(sortByPickupTimeAsc);
-        if (!isFirstLoad && newArrivals.length > 0 && pendingNewOrders.length > 0) {
-          startContinuousAlarm();
+        if (!alarmAudio) {
+          alarmAudio = new Audio(ALARM_AUDIO_URL);
+          alarmAudio.loop = true;
+          alarmAudio.preload = "auto";
+          alarmAudio.volume = 1.0;
         }
-        isFirstLoad = false;
-        updateNewAlert();
 
-        renderAll();
-      } catch (e) {
-        console.error(e);
-        document.getElementById("list-left").innerHTML = `<div style="text-align:center; padding: 22px; color:#d32f2f;">Không tải được: ${escapeHtml(e?.message || e)}</div>`;
-        document.getElementById("list-right").innerHTML = `<div style="text-align:center; padding: 22px; color:#d32f2f;">Không tải được</div>`;
-        document.getElementById("list-history").innerHTML = `<div style="text-align:center; padding: 22px; color:#d32f2f;">Không tải được</div>`;
-      }
-    }
-
-    function renderAll() {
-      if (!Array.isArray(latestOrders)) return;
-
-      const leftOrders = latestOrders
-        .filter(o => o && (o.status === "NEW" || o.status === "ACCEPTED"))
-        .slice()
-        .sort(sortByPickupTimeAsc);
-
-      const rightOrders = latestOrders
-        .filter(o => o && o.status === "DONE")
-        .slice()
-        .sort(sortByPickupTimeAsc);
-
-      const historyOrders = latestOrders
-        .filter(o => o && ["PICKED_UP", "REJECTED", "CHANGED"].includes(o.status))
-        .slice()
-        .sort((a, b) => (b?.createdAt || 0) - (a?.createdAt || 0));
-
-      document.getElementById("count-left").innerText = String(leftOrders.length);
-      document.getElementById("count-right").innerText = String(rightOrders.length);
-      document.getElementById("count-history").innerText = String(historyOrders.length);
-
-      if (activeTab === "live") {
-        renderListLeft(leftOrders);
-        renderListRight(rightOrders);
-      } else {
-        renderHistory(historyOrders);
-      }
-    }
-
-    function renderListLeft(orders) {
-      const container = document.getElementById("list-left");
-      container.innerHTML = "";
-      if (orders.length === 0) {
-        container.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">Chưa có</div>`;
-        return;
-      }
-
-      orders.forEach(order => {
-        const isNew = order.status === "NEW";
-        const eta = formatEta(order.time);
-
-        const tile = document.createElement("div");
-        tile.className = `tile ${isNew ? "new" : ""}`;
-        tile.onclick = () => openReview(order.key);
-
-        const badge = isNew ? `<span class="badge new">NEW</span>` : `<span class="badge wait">DOING</span>`;
-
-        const rightActions = (order.status === "ACCEPTED")
-          ? `<button class="btn btn-primary btn-block" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','DONE')">准备好了</button>`
-          : `<button class="btn btn-ghost btn-block" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">Review</button>`;
-
-        tile.innerHTML = `
-          <div>
-            <div class="tile-top">
-              <span class="tile-customer">${escapeHtml(order.customer || "Khách")}</span>
-              ${badge}
-              <span class="tile-meta">#${escapeHtml(order.key)}</span>
-            </div>
-            <div class="tile-top" style="margin-top: 6px;">
-              <span class="tile-meta">取餐: ${escapeHtml(order.time || "-")}</span>
-              <span class="tile-meta" style="color: var(--brand-red); font-weight: 1100;">${escapeHtml(eta)}</span>
-            </div>
-            <div class="tile-items">${escapeHtml(shortItems(order.content))}</div>
-          </div>
-          <div class="tile-actions">
-            ${rightActions}
-          </div>
-        `;
-
-        container.appendChild(tile);
-      });
-    }
-
-    function renderListRight(orders) {
-      const container = document.getElementById("list-right");
-      container.innerHTML = "";
-      if (orders.length === 0) {
-        container.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">Chưa có</div>`;
-        return;
-      }
-
-      orders.forEach(order => {
-        const eta = formatEta(order.time);
-        const tile = document.createElement("div");
-        tile.className = "tile";
-        tile.onclick = () => openReview(order.key);
-
-        tile.innerHTML = `
-          <div>
-            <div class="tile-top">
-              <span class="tile-customer">${escapeHtml(order.customer || "Khách")}</span>
-              <span class="badge done">READY</span>
-              <span class="tile-meta">#${escapeHtml(order.key)}</span>
-            </div>
-            <div class="tile-top" style="margin-top: 6px;">
-              <span class="tile-meta">取餐: ${escapeHtml(order.time || "-")}</span>
-              <span class="tile-meta" style="color: var(--brand-red); font-weight: 1100;">${escapeHtml(eta)}</span>
-            </div>
-            <div class="tile-items">${escapeHtml(shortItems(order.content))}</div>
-          </div>
-          <div class="tile-actions">
-            <button class="btn btn-yellow btn-block" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','PICKED_UP')">已取餐</button>
-          </div>
-        `;
-        container.appendChild(tile);
-      });
-    }
-
-    function groupByDate(orders) {
-      const map = new Map();
-      orders.forEach(o => {
-        const d = (o?.time && typeof o.time === "string") ? o.time.slice(0, 10) : "Unknown";
-        if (!map.has(d)) map.set(d, []);
-        map.get(d).push(o);
-      });
-      return map;
-    }
-
-    function renderHistory(orders) {
-      const container = document.getElementById("list-history");
-      container.innerHTML = "";
-      if (orders.length === 0) {
-        container.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">Chưa có lịch sử</div>`;
-        return;
-      }
-
-      const grouped = groupByDate(orders);
-      for (const [date, items] of grouped.entries()) {
-        const header = document.createElement("div");
-        header.style.padding = "10px 8px 2px";
-        header.style.fontWeight = "1100";
-        header.style.color = "#111827";
-        header.innerText = `${date} (${items.length})`;
-        container.appendChild(header);
-
-        items.forEach(order => {
-          const tile = document.createElement("div");
-          tile.className = "tile";
-          tile.onclick = () => openReview(order.key);
-          const badge = order.status === "PICKED_UP"
-            ? `<span class="badge done">PICKED</span>`
-            : `<span class="badge">${escapeHtml(order.status)}</span>`;
-
-          tile.innerHTML = `
-            <div>
-              <div class="tile-top">
-                <span class="tile-customer">${escapeHtml(order.customer || "Khách")}</span>
-                ${badge}
-                <span class="tile-meta">#${escapeHtml(order.key)}</span>
-              </div>
-              <div class="tile-items">${escapeHtml(shortItems(order.content))}</div>
-            </div>
-            <div class="tile-actions">
-              <button class="btn btn-ghost btn-block" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">Xem</button>
-            </div>
-          `;
-          container.appendChild(tile);
-        });
-      }
-    }
-
-    function updateNewAlert() {
-      const count = pendingNewOrders.length;
-      const alertEl = document.getElementById("new-alert");
-      const titleEl = document.getElementById("new-alert-title");
-
-      // If no NEW orders, hide and clear snooze state
-      if (count <= 0) {
-        alertEl.style.display = "none";
-        newAlertSnoozeUntilMs = 0;
-        snoozedNewOrderKeys = new Set();
-        stopContinuousAlarm();
-        return;
-      }
-
-      // Snooze: hide alerts for existing NEW orders, but if a brand new NEW order arrives, show immediately.
-      if (Date.now() < newAlertSnoozeUntilMs) {
-        const hasBrandNew = pendingNewOrders.some(o => o?.key && !snoozedNewOrderKeys.has(o.key));
-        if (!hasBrandNew) {
-          alertEl.style.display = "none";
-          stopContinuousAlarm();
-          return;
+        // "Unlock" media playback by starting and immediately pausing.
+        // This helps browsers allow later play() when orders arrive.
+        const p = alarmAudio.play();
+        if (p && typeof p.catch === "function") {
+          p.catch(() => {}).finally(() => {
+            try {
+              alarmAudio.pause();
+              alarmAudio.currentTime = 0;
+            } catch (e) {}
+          });
         }
-      }
-      titleEl.innerText = `${count} 單 新訂單`;
-      alertEl.style.display = "flex";
-      startContinuousAlarm();
-    }
-
-    function dismissNewAlert() {
-      newAlertSnoozeUntilMs = Date.now() + 30_000;
-      snoozedNewOrderKeys = new Set(pendingNewOrders.map(o => o?.key).filter(Boolean));
-      document.getElementById("new-alert").style.display = "none";
-      stopContinuousAlarm();
-    }
-
-    function reviewNextNewOrder() {
-      stopContinuousAlarm();
-      if (pendingNewOrders.length <= 0) return dismissNewAlert();
-      openReview(pendingNewOrders[0].key);
-    }
-
-    function openReview(orderKey) {
-      const order = (latestOrders || []).find(o => o && o.key === orderKey);
-      if (!order) return;
-      reviewingOrder = order;
-
-      if (order.status === "NEW") {
-        stopContinuousAlarm();
-      }
-
-      document.getElementById("review-order-key").innerText = order.key || "-";
-      document.getElementById("review-customer").innerText = order.customer || "-";
-      document.getElementById("review-pickup").innerText = order.time || "-";
-      document.getElementById("review-eta").innerText = formatEta(order.time);
-      document.getElementById("review-status").innerText = order.status || "-";
-      document.getElementById("review-content").innerHTML = formatContentHtml(order.content || "");
-
-      const actionsNew = document.getElementById("review-actions");
-      const actionsAccepted = document.getElementById("review-actions-accepted");
-      if (order.status === "NEW") {
-        actionsNew.style.display = "grid";
-        actionsAccepted.style.display = "none";
-      } else if (order.status === "ACCEPTED") {
-        actionsNew.style.display = "none";
-        actionsAccepted.style.display = "grid";
-      } else {
-        actionsNew.style.display = "none";
-        actionsAccepted.style.display = "none";
-      }
-
-      document.getElementById("reviewModal").style.display = "flex";
-    }
-
-    function formatContentHtml(content) {
-      const raw = String(content || "");
-      const lines = raw.split("\n").map(l => l.trimEnd()).filter(l => l.trim() !== "");
-      if (lines.length === 0) return `<div class="detail-lines"><div class="detail-line">-</div></div>`;
-
-      const htmlLines = lines.map(line => {
-        const t = line.trimStart();
-        const isSub = t.startsWith("-") || t.startsWith("•") || t.startsWith("－");
-        const cls = isSub ? "detail-line sub" : "detail-line primary";
-        return `<div class="${cls}">${escapeHtml(line)}</div>`;
-      });
-
-      return `<div class="detail-lines">${htmlLines.join("")}</div>`;
-    }
-
-    function closeModal() {
-      document.querySelectorAll(".modal").forEach(m => m.style.display = "none");
-    }
-
-    async function updateStatus(key, status, extra = {}) {
-      try {
-        const response = await fetch(`${WORKER_BASE}/api/update`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ key, status, ...extra })
-        });
-        if (!response.ok) throw new Error(`update failed: ${response.status}`);
-        await fetchOrders();
       } catch (e) {
-        console.error(e);
-        alert("處理失敗，請稍後再試。");
+        console.error("alarmAudio init failed:", e);
       }
-    }
+    }
+    document.addEventListener("click", unlockSound, { once: true });
+    document.addEventListener("touchstart", unlockSound, { once: true });
+    document.addEventListener("keydown", unlockSound, { once: true });
 
-    async function reviewAccept() {
-      if (!reviewingOrder?.key) return;
-      await updateStatus(reviewingOrder.key, "ACCEPTED");
-      closeModal();
-      dismissNewAlert();
-      switchTab("live");
-    }
+    function escapeHtml(s) {
+      return String(s ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
 
-    function reviewOpenChange() {
-      if (!reviewingOrder?.key) return;
-      currentOrderKey = reviewingOrder.key;
-      closeModal();
-      document.getElementById("changeModal").style.display = "flex";
-    }
+    function parsePickupTimeMs(timeStr) {
+      if (!timeStr || typeof timeStr !== "string") return NaN;
+      const m = timeStr.match(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})/);
+      if (!m) return NaN;
+      const iso = `${m[1]}T${m[2]}:00`;
+      const ms = new Date(iso).getTime();
+      return Number.isNaN(ms) ? NaN : ms;
+    }
 
-    function reviewOpenReject() {
-      if (!reviewingOrder?.key) return;
-      currentOrderKey = reviewingOrder.key;
-      closeModal();
-      document.getElementById("rejectModal").style.display = "flex";
-    }
+    function sortByPickupTimeAsc(a, b) {
+      const at = parsePickupTimeMs(a?.time);
+      const bt = parsePickupTimeMs(b?.time);
+      if (Number.isNaN(at) || Number.isNaN(bt)) return (a?.createdAt || 0) - (b?.createdAt || 0);
+      return at - bt;
+    }
 
-    async function markReadyFromReview() {
-      if (!reviewingOrder?.key) return;
-      await updateStatus(reviewingOrder.key, "DONE");
-      closeModal();
-      switchTab("live");
-    }
+    function formatEta(timeStr) {
+      const target = parsePickupTimeMs(timeStr);
+      if (Number.isNaN(target)) return "-";
+      const diffMs = target - Date.now();
+      const diffMin = Math.round(diffMs / 60000);
+      if (diffMin <= 0) return `已到 / ${Math.abs(diffMin)} 分鐘前`;
+      if (diffMin < 60) return `剩 ${diffMin} 分鐘`;
+      const h = Math.floor(diffMin / 60);
+      const m = diffMin % 60;
+      return `剩 ${h} 小時 ${m} 分`;
+    }
 
-    async function confirmAction(type) {
-      const key = currentOrderKey;
-      const isChange = type === "CHANGE";
-      const status = isChange ? "CHANGED" : "REJECTED";
-      const reason = isChange ? document.getElementById("change-reason").value : document.getElementById("reject-reason").value;
-      const note = isChange ? document.getElementById("change-note").value : undefined;
+    function shortItems(content) {
+      if (!content) return "";
+      const lines = String(content).split("\n").map(s => s.trim()).filter(Boolean);
+      return lines.slice(0, 6).join("\n");
+    }
 
-      await updateStatus(key, status, { reason, note });
-      closeModal();
-      alert("Đã xử lý đơn hàng!");
-    }
+    function switchTab(tab) {
+      activeTab = tab;
+      document.getElementById("tab-live").classList.toggle("active", tab === "live");
+      document.getElementById("tab-history").classList.toggle("active", tab === "history");
+      document.getElementById("view-live").style.display = tab === "live" ? "block" : "none";
+      document.getElementById("view-history").style.display = tab === "history" ? "block" : "none";
+      renderAll();
+    }
 
-    function clearAlarmTimeouts() {
-      alarmTimeoutIds.forEach(id => clearTimeout(id));
-      alarmTimeoutIds = [];
-    }
+    async function fetchOrders() {
+      try {
+        const response = await fetch(`${WORKER_BASE}/api/orders`);
+        if (!response.ok) throw new Error(`fetch failed: ${response.status}`);
+        const orders = await response.json();
+        latestOrders = Array.isArray(orders) ? orders : [];
 
-    function stopContinuousAlarm() {
-      if (alarmIntervalId) {
-        clearInterval(alarmIntervalId);
-        alarmIntervalId = null;
-      }
-      clearAlarmTimeouts();
-    }
+        // New arrivals => sound
+        const newArrivals = latestOrders.filter(o => o && o.key && !knownOrderKeys.has(o.key));
+        newArrivals.forEach(o => { if (o?.key) knownOrderKeys.add(o.key); });
 
-    function playTone(frequency, durationMs, type = "square", volume = 0.22) {
-      if (!audioCtx || audioCtx.state !== "running") return;
-      const oscillator = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
+        // NEW orders => fullscreen alert
+        pendingNewOrders = latestOrders.filter(o => o && o.status === "NEW").slice().sort(sortByPickupTimeAsc);
+        if (!isFirstLoad && newArrivals.length > 0 && pendingNewOrders.length > 0) {
+          startContinuousAlarm();
+        }
+        isFirstLoad = false;
+        updateNewAlert();
 
-      oscillator.type = type;
-      oscillator.frequency.value = frequency;
-      gain.gain.value = volume;
+        renderAll();
+      } catch (e) {
+        console.error(e);
+        document.getElementById("list-left").innerHTML = `<div style="text-align:center; padding: 22px; color:#d32f2f;">Không tải được: ${escapeHtml(e?.message || e)}</div>`;
+        document.getElementById("list-right").innerHTML = `<div style="text-align:center; padding: 22px; color:#d32f2f;">Không tải được</div>`;
+        document.getElementById("list-history").innerHTML = `<div style="text-align:center; padding: 22px; color:#d32f2f;">Không tải được</div>`;
+      }
+    }
 
-      oscillator.connect(gain);
-      gain.connect(audioCtx.destination);
+    function renderAll() {
+      if (!Array.isArray(latestOrders)) return;
 
-      oscillator.start();
-      setTimeout(() => oscillator.stop(), durationMs);
-    }
+      const leftOrders = latestOrders
+        .filter(o => o && (o.status === "NEW" || o.status === "ACCEPTED"))
+        .slice()
+        .sort(sortByPickupTimeAsc);
 
-    function playAlarmCycle() {
-      clearAlarmTimeouts();
-      playTone(880, 250, "square", 0.22);
-      alarmTimeoutIds.push(setTimeout(() => playTone(1040, 250, "square", 0.22), 320));
-      alarmTimeoutIds.push(setTimeout(() => playTone(880, 320, "square", 0.24), 680));
-    }
+      const rightOrders = latestOrders
+        .filter(o => o && o.status === "DONE")
+        .slice()
+        .sort(sortByPickupTimeAsc);
 
-    function startContinuousAlarm() {
-      if (!soundUnlocked) return;
-      if (alarmIntervalId) return;
-      playAlarmCycle();
-      alarmIntervalId = setInterval(() => {
-        playAlarmCycle();
-      }, 2200);
-    }
+      const historyOrders = latestOrders
+        .filter(o => o && ["PICKED_UP", "REJECTED", "CHANGED"].includes(o.status))
+        .slice()
+        .sort((a, b) => (b?.createdAt || 0) - (a?.createdAt || 0));
 
-    async function playNewOrderSound() {
-      if (!soundUnlocked) return;
+      document.getElementById("count-left").innerText = String(leftOrders.length);
+      document.getElementById("count-right").innerText = String(rightOrders.length);
+      document.getElementById("count-history").innerText = String(historyOrders.length);
+
+      if (activeTab === "live") {
+        renderListLeft(leftOrders);
+        renderListRight(rightOrders);
+      } else {
+        renderHistory(historyOrders);
+      }
+    }
+
+    function renderListLeft(orders) {
+      const container = document.getElementById("list-left");
+      container.innerHTML = "";
+      if (orders.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">Chưa có</div>`;
+        return;
+      }
+
+      orders.forEach(order => {
+        const isNew = order.status === "NEW";
+        const eta = formatEta(order.time);
+
+        const tile = document.createElement("div");
+        tile.className = `tile ${isNew ? "new" : ""}`;
+        tile.onclick = () => openReview(order.key);
+
+        const badge = isNew ? `<span class="badge new">NEW</span>` : `<span class="badge wait">DOING</span>`;
+
+        const rightActions = (order.status === "ACCEPTED")
+          ? `<button class="btn btn-primary btn-block" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','DONE')">准备好了</button>`
+          : `<button class="btn btn-ghost btn-block" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">Review</button>`;
+
+        tile.innerHTML = `
+          <div>
+            <div class="tile-top">
+              <span class="tile-customer">${escapeHtml(order.customer || "Khách")}</span>
+              ${badge}
+              <span class="tile-meta">#${escapeHtml(order.key)}</span>
+            </div>
+            <div class="tile-top" style="margin-top: 6px;">
+              <span class="tile-meta">取餐: ${escapeHtml(order.time || "-")}</span>
+              <span class="tile-meta" style="color: var(--brand-red); font-weight: 1100;">${escapeHtml(eta)}</span>
+            </div>
+            <div class="tile-items">${escapeHtml(shortItems(order.content))}</div>
+          </div>
+          <div class="tile-actions">
+            ${rightActions}
+          </div>
+        `;
+
+        container.appendChild(tile);
+      });
+    }
+
+    function renderListRight(orders) {
+      const container = document.getElementById("list-right");
+      container.innerHTML = "";
+      if (orders.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">Chưa có</div>`;
+        return;
+      }
+
+      orders.forEach(order => {
+        const eta = formatEta(order.time);
+        const tile = document.createElement("div");
+        tile.className = "tile";
+        tile.onclick = () => openReview(order.key);
+
+        tile.innerHTML = `
+          <div>
+            <div class="tile-top">
+              <span class="tile-customer">${escapeHtml(order.customer || "Khách")}</span>
+              <span class="badge done">READY</span>
+              <span class="tile-meta">#${escapeHtml(order.key)}</span>
+            </div>
+            <div class="tile-top" style="margin-top: 6px;">
+              <span class="tile-meta">取餐: ${escapeHtml(order.time || "-")}</span>
+              <span class="tile-meta" style="color: var(--brand-red); font-weight: 1100;">${escapeHtml(eta)}</span>
+            </div>
+            <div class="tile-items">${escapeHtml(shortItems(order.content))}</div>
+          </div>
+          <div class="tile-actions">
+            <button class="btn btn-yellow btn-block" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','PICKED_UP')">已取餐</button>
+          </div>
+        `;
+        container.appendChild(tile);
+      });
+    }
+
+    function groupByDate(orders) {
+      const map = new Map();
+      orders.forEach(o => {
+        const d = (o?.time && typeof o.time === "string") ? o.time.slice(0, 10) : "Unknown";
+        if (!map.has(d)) map.set(d, []);
+        map.get(d).push(o);
+      });
+      return map;
+    }
+
+    function renderHistory(orders) {
+      const container = document.getElementById("list-history");
+      container.innerHTML = "";
+      if (orders.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">Chưa có lịch sử</div>`;
+        return;
+      }
+
+      const grouped = groupByDate(orders);
+      for (const [date, items] of grouped.entries()) {
+        const header = document.createElement("div");
+        header.style.padding = "10px 8px 2px";
+        header.style.fontWeight = "1100";
+        header.style.color = "#111827";
+        header.innerText = `${date} (${items.length})`;
+        container.appendChild(header);
+
+        items.forEach(order => {
+          const tile = document.createElement("div");
+          tile.className = "tile";
+          tile.onclick = () => openReview(order.key);
+          const badge = order.status === "PICKED_UP"
+            ? `<span class="badge done">PICKED</span>`
+            : `<span class="badge">${escapeHtml(order.status)}</span>`;
+
+          tile.innerHTML = `
+            <div>
+              <div class="tile-top">
+                <span class="tile-customer">${escapeHtml(order.customer || "Khách")}</span>
+                ${badge}
+                <span class="tile-meta">#${escapeHtml(order.key)}</span>
+              </div>
+              <div class="tile-items">${escapeHtml(shortItems(order.content))}</div>
+            </div>
+            <div class="tile-actions">
+              <button class="btn btn-ghost btn-block" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">Xem</button>
+            </div>
+          `;
+          container.appendChild(tile);
+        });
+      }
+    }
+
+    function updateNewAlert() {
+      const count = pendingNewOrders.length;
+      const alertEl = document.getElementById("new-alert");
+      const titleEl = document.getElementById("new-alert-title");
+
+      // If no NEW orders, hide and clear snooze state
+      if (count <= 0) {
+        alertEl.style.display = "none";
+        newAlertSnoozeUntilMs = 0;
+        snoozedNewOrderKeys = new Set();
+        stopContinuousAlarm();
+        return;
+      }
+
+      // Snooze: hide alerts for existing NEW orders, but if a brand new NEW order arrives, show immediately.
+      if (Date.now() < newAlertSnoozeUntilMs) {
+        const hasBrandNew = pendingNewOrders.some(o => o?.key && !snoozedNewOrderKeys.has(o.key));
+        if (!hasBrandNew) {
+          alertEl.style.display = "none";
+          stopContinuousAlarm();
+          return;
+        }
+      }
+      titleEl.innerText = `${count} 單 新訂單`;
+      alertEl.style.display = "flex";
+      startContinuousAlarm();
+    }
+
+    function dismissNewAlert() {
+      newAlertSnoozeUntilMs = Date.now() + 30_000;
+      snoozedNewOrderKeys = new Set(pendingNewOrders.map(o => o?.key).filter(Boolean));
+      document.getElementById("new-alert").style.display = "none";
+      stopContinuousAlarm();
+    }
+
+    function reviewNextNewOrder() {
+      stopContinuousAlarm();
+      if (pendingNewOrders.length <= 0) return dismissNewAlert();
+      openReview(pendingNewOrders[0].key);
+    }
+
+    function openReview(orderKey) {
+      const order = (latestOrders || []).find(o => o && o.key === orderKey);
+      if (!order) return;
+      reviewingOrder = order;
+
+      if (order.status === "NEW") {
+        stopContinuousAlarm();
+      }
+
+      document.getElementById("review-order-key").innerText = order.key || "-";
+      document.getElementById("review-customer").innerText = order.customer || "-";
+      document.getElementById("review-pickup").innerText = order.time || "-";
+      document.getElementById("review-eta").innerText = formatEta(order.time);
+      document.getElementById("review-status").innerText = order.status || "-";
+      document.getElementById("review-content").innerHTML = formatContentHtml(order.content || "");
+
+      const actionsNew = document.getElementById("review-actions");
+      const actionsAccepted = document.getElementById("review-actions-accepted");
+      if (order.status === "NEW") {
+        actionsNew.style.display = "grid";
+        actionsAccepted.style.display = "none";
+      } else if (order.status === "ACCEPTED") {
+        actionsNew.style.display = "none";
+        actionsAccepted.style.display = "grid";
+      } else {
+        actionsNew.style.display = "none";
+        actionsAccepted.style.display = "none";
+      }
+
+      document.getElementById("reviewModal").style.display = "flex";
+    }
+
+    function formatContentHtml(content) {
+      const raw = String(content || "");
+      const lines = raw.split("\n").map(l => l.trimEnd()).filter(l => l.trim() !== "");
+      if (lines.length === 0) return `<div class="detail-lines"><div class="detail-line">-</div></div>`;
+
+      const htmlLines = lines.map(line => {
+        const t = line.trimStart();
+        const isSub = t.startsWith("-") || t.startsWith("•") || t.startsWith("－");
+        const cls = isSub ? "detail-line sub" : "detail-line primary";
+        return `<div class="${cls}">${escapeHtml(line)}</div>`;
+      });
+
+      return `<div class="detail-lines">${htmlLines.join("")}</div>`;
+    }
+
+    function closeModal() {
+      document.querySelectorAll(".modal").forEach(m => m.style.display = "none");
+    }
+
+    async function updateStatus(key, status, extra = {}) {
+      try {
+        const response = await fetch(`${WORKER_BASE}/api/update`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key, status, ...extra })
+        });
+        if (!response.ok) throw new Error(`update failed: ${response.status}`);
+        await fetchOrders();
+      } catch (e) {
+        console.error(e);
+        alert("處理失敗，請稍後再試。");
+      }
+    }
+
+    async function reviewAccept() {
+      if (!reviewingOrder?.key) return;
+      await updateStatus(reviewingOrder.key, "ACCEPTED");
+      closeModal();
+      dismissNewAlert();
+      switchTab("live");
+    }
+
+    function reviewOpenChange() {
+      if (!reviewingOrder?.key) return;
+      currentOrderKey = reviewingOrder.key;
+      closeModal();
+      document.getElementById("changeModal").style.display = "flex";
+    }
+
+    function reviewOpenReject() {
+      if (!reviewingOrder?.key) return;
+      currentOrderKey = reviewingOrder.key;
+      closeModal();
+      document.getElementById("rejectModal").style.display = "flex";
+    }
+
+    async function markReadyFromReview() {
+      if (!reviewingOrder?.key) return;
+      await updateStatus(reviewingOrder.key, "DONE");
+      closeModal();
+      switchTab("live");
+    }
+
+    async function confirmAction(type) {
+      const key = currentOrderKey;
+      const isChange = type === "CHANGE";
+      const status = isChange ? "CHANGED" : "REJECTED";
+      const reason = isChange ? document.getElementById("change-reason").value : document.getElementById("reject-reason").value;
+      const note = isChange ? document.getElementById("change-note").value : undefined;
+
+      await updateStatus(key, status, { reason, note });
+      closeModal();
+      alert("Đã xử lý đơn hàng!");
+    }
+
+    function clearAlarmTimeouts() {
+      alarmTimeoutIds.forEach(id => clearTimeout(id));
+      alarmTimeoutIds = [];
+    }
+
+    function stopContinuousAlarm() {
+      // For mp3 loop we don't use setInterval; treat alarmIntervalId as a "running" flag.
+      if (alarmIntervalId) alarmIntervalId = null;
+      clearAlarmTimeouts();
+
+      // Stop mp3 alarm
       try {
-        const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
-        if (!AudioContextCtor) return;
-        if (!audioCtx) audioCtx = new AudioContextCtor();
-        if (audioCtx.state === "suspended") await audioCtx.resume();
-        playAlarmCycle();
+        if (alarmAudio) {
+          alarmAudio.pause();
+          alarmAudio.currentTime = 0;
+        }
       } catch (e) {
-        console.error(e);
+        console.error("stopContinuousAlarm audio failed:", e);
       }
-    }
+    }
 
-    async function testSound() {
-      await unlockSound();
-      await playNewOrderSound();
-    }
+    function playTone(frequency, durationMs, type = "square", volume = 0.22) {
+      if (!audioCtx || audioCtx.state !== "running") return;
+      const oscillator = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
 
-    setInterval(fetchOrders, 5000);
-    fetchOrders();
-  </script>
+      oscillator.type = type;
+      oscillator.frequency.value = frequency;
+      gain.gain.value = volume;
+
+      oscillator.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      oscillator.start();
+      setTimeout(() => oscillator.stop(), durationMs);
+    }
+
+    function playAlarmCycle() {
+      clearAlarmTimeouts();
+      playTone(880, 250, "square", 0.22);
+      alarmTimeoutIds.push(setTimeout(() => playTone(1040, 250, "square", 0.22), 320));
+      alarmTimeoutIds.push(setTimeout(() => playTone(880, 320, "square", 0.24), 680));
+    }
+
+    function startContinuousAlarm() {
+      if (!soundUnlocked) return;
+      if (alarmIntervalId) return;
+
+      // Start mp3 alarm in a loop
+      try {
+        if (!alarmAudio) {
+          alarmAudio = new Audio(ALARM_AUDIO_URL);
+          alarmAudio.loop = true;
+          alarmAudio.preload = "auto";
+          alarmAudio.volume = 1.0;
+        }
+        alarmAudio.loop = true;
+        alarmAudio.currentTime = 0;
+        // play() may reject if browser still blocks autoplay; unlockSound should prevent that
+        const p = alarmAudio.play();
+        if (p && typeof p.catch === "function") p.catch(() => {});
+      } catch (e) {
+        console.error("startContinuousAlarm audio failed:", e);
+      }
+
+      // Use alarmIntervalId as a simple "running" flag (no longer need setInterval)
+      alarmIntervalId = 1;
+    }
+
+    async function playNewOrderSound() {
+      if (!soundUnlocked) return;
+      try {
+        const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextCtor) return;
+        if (!audioCtx) audioCtx = new AudioContextCtor();
+        if (audioCtx.state === "suspended") await audioCtx.resume();
+        playAlarmCycle();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function testSound() {
+      await unlockSound();
+      await playNewOrderSound();
+    }
+
+    setInterval(fetchOrders, 5000);
+    fetchOrders();
+  </script>
 </body>
 </html>
