@@ -603,7 +603,7 @@
       }
     }
 
-        function updateNewAlert() {
+            function updateNewAlert() {
       const count = pendingNewOrders.length;
       const alertEl = document.getElementById("new-alert");
       const titleEl = document.getElementById("new-alert-title");
@@ -616,12 +616,13 @@
         return;
       }
 
-      // Kiểm tra xem nhân viên có đang mở bảng Review không
-      const isReviewing = document.getElementById("reviewModal").style.display === "flex";
+      // Kiểm tra xem có BẤT KỲ bảng nào liên quan đến Review đang mở không
+      const isReviewing = 
+        document.getElementById("reviewModal").style.display === "flex" ||
+        document.getElementById("changeModal").style.display === "flex" ||
+        document.getElementById("rejectModal").style.display === "flex";
 
-      // Nếu đang trong thời gian 30s Tạm ẩn HOẶC Đang mở bảng Review => Tắt cảnh báo
       if (Date.now() < newAlertSnoozeUntilMs || isReviewing) {
-        // Chỉ reo chuông nếu có thêm 1 đơn HOÀN TOÀN MỚI vừa bay vào
         const hasBrandNew = pendingNewOrders.some(o => o?.key && !snoozedNewOrderKeys.has(o.key));
         if (!hasBrandNew) {
           alertEl.style.display = "none";
