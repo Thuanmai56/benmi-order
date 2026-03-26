@@ -603,12 +603,11 @@
       }
     }
 
-    function updateNewAlert() {
+        function updateNewAlert() {
       const count = pendingNewOrders.length;
       const alertEl = document.getElementById("new-alert");
       const titleEl = document.getElementById("new-alert-title");
 
-      // If no NEW orders, hide and clear snooze state
       if (count <= 0) {
         alertEl.style.display = "none";
         newAlertSnoozeUntilMs = 0;
@@ -617,7 +616,6 @@
         return;
       }
 
-      // Snooze: hide alerts for existing NEW orders, but if a brand new NEW order arrives, show immediately.
       if (Date.now() < newAlertSnoozeUntilMs) {
         const hasBrandNew = pendingNewOrders.some(o => o?.key && !snoozedNewOrderKeys.has(o.key));
         if (!hasBrandNew) {
@@ -639,8 +637,10 @@
     }
 
     function reviewNextNewOrder() {
-      stopContinuousAlarm();
-      if (pendingNewOrders.length <= 0) return dismissNewAlert();
+      if (pendingNewOrders.length <= 0) {
+        dismissNewAlert();
+        return;
+      }
       openReview(pendingNewOrders[0].key);
     }
 
@@ -650,8 +650,32 @@
       reviewingOrder = order;
 
       if (order.status === "NEW") {
-        stopContinuousAlarm();
+        dismissNewAlert();
       }
+
+      document.getElementById("review-order-key").innerText = order.key || "-";
+      document.getElementById("review-customer").innerText = order.customer || "-";
+      document.getElementById("review-pickup").innerText = order.time || "-";
+      document.getElementById("review-eta").innerText = formatEta(order.time);
+      document.getElementById("review-status").innerText = order.status || "-";
+      document.getElementById("review-content").innerHTML = formatContentHtml(order.content || "");
+
+      const actionsNew = document.getElementById("review-actions");
+      const actionsAccepted = document.getElementById("review-actions-accepted");
+      if (order.status === "NEW") {
+        actionsNew.style.display = "grid";
+        actionsAccepted.style.display = "none";
+      } else if (order.status === "ACCEPTED") {
+        actionsNew.style.display = "none";
+        actionsAccepted.style.display = "grid";
+      } else {
+        actionsNew.style.display = "none";
+        actionsAccepted.style.display = "none";
+      }
+
+      document.getElementById("reviewModal").style.display = "flex";
+    }
+
 
       document.getElementById("review-order-key").innerText = order.key || "-";
       document.getElementById("review-customer").innerText = order.customer || "-";
