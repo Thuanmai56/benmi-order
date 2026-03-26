@@ -327,7 +327,7 @@
     </div>
   </div>
 
-  <script>
+    <script>
     const WORKER_BASE = "https://spring-smoke-46ba.thuanmnc.workers.dev";
 
     let latestOrders = [];
@@ -603,7 +603,7 @@
       }
     }
 
-        function updateNewAlert() {
+    function updateNewAlert() {
       const count = pendingNewOrders.length;
       const alertEl = document.getElementById("new-alert");
       const titleEl = document.getElementById("new-alert-title");
@@ -652,30 +652,6 @@
       if (order.status === "NEW") {
         dismissNewAlert();
       }
-
-      document.getElementById("review-order-key").innerText = order.key || "-";
-      document.getElementById("review-customer").innerText = order.customer || "-";
-      document.getElementById("review-pickup").innerText = order.time || "-";
-      document.getElementById("review-eta").innerText = formatEta(order.time);
-      document.getElementById("review-status").innerText = order.status || "-";
-      document.getElementById("review-content").innerHTML = formatContentHtml(order.content || "");
-
-      const actionsNew = document.getElementById("review-actions");
-      const actionsAccepted = document.getElementById("review-actions-accepted");
-      if (order.status === "NEW") {
-        actionsNew.style.display = "grid";
-        actionsAccepted.style.display = "none";
-      } else if (order.status === "ACCEPTED") {
-        actionsNew.style.display = "none";
-        actionsAccepted.style.display = "grid";
-      } else {
-        actionsNew.style.display = "none";
-        actionsAccepted.style.display = "none";
-      }
-
-      document.getElementById("reviewModal").style.display = "flex";
-    }
-
 
       document.getElementById("review-order-key").innerText = order.key || "-";
       document.getElementById("review-customer").innerText = order.customer || "-";
