@@ -296,8 +296,8 @@
       </div>
       <label style="display:block; margin-top: 10px; font-weight: 1100;">原因 / 建議:</label>
       <select id="change-reason" style="width:100%; padding: 12px; margin-top: 10px; border-radius: 10px; border: 1px solid var(--border); font-size: 16px;">
-        <option value="時間需調整">時間太趕，需延後</option>
         <option value="口味售完">該口味已售完</option>
+        <option value="時間需調整">時間太趕，需延後</option>
       </select>
       <textarea id="change-note" rows="3" placeholder="輸入具體 建議..." style="width:100%; padding: 12px; margin-top: 10px; border-radius: 10px; border: 1px solid var(--border); font-size: 16px;"></textarea>
       <div class="modal-actions two">
@@ -326,7 +326,7 @@
     </div>
   </div>
 
-    <script>
+  <script>
     const WORKER_BASE = "https://spring-smoke-46ba.thuanmnc.workers.dev";
 
     let latestOrders = [];
@@ -434,14 +434,15 @@
         renderAll();
       } catch (e) {
         console.error(e);
-        document.getElementById("list-left").innerHTML = `<div style="text-align:center; padding: 22px; color:#d32f2f;">Không tải được: ${escapeHtml(e?.message || e)}</div>`;
-        document.getElementById("list-right").innerHTML = `<div style="text-align:center; padding: 22px; color:#d32f2f;">Không tải được</div>`;
-        document.getElementById("list-history").innerHTML = `<div style="text-align:center; padding: 22px; color:#d32f2f;">Không tải được</div>`;
+        document.getElementById("list-left").innerHTML = `<div style="text-align:center; padding: 22px; color:#d32f2f;">Không tải được dữ liệu: ${escapeHtml(e?.message || e)}</div>`;
+        document.getElementById("list-right").innerHTML = `<div style="text-align:center; padding: 22px; color:#d32f2f;">Không tải được dữ liệu</div>`;
+        document.getElementById("list-history").innerHTML = `<div style="text-align:center; padding: 22px; color:#d32f2f;">Không tải được dữ liệu</div>`;
       }
     }
 
     function renderAll() {
       if (!Array.isArray(latestOrders)) return;
+
       const leftOrders = latestOrders
         .filter(o => o && (o.status === "NEW" || o.status === "ACCEPTED" || o.status === "WAITING_CUSTOMER_CHANGE"))
         .slice()
@@ -502,7 +503,6 @@
           rightActions = `<button class="btn btn-ghost btn-block" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">Review</button>`;
         }
 
-        // Vẫn giữ tính năng click xem full chi tiết đơn đối với mọi trạng thái
         tile.onclick = () => openReview(order.key);
 
         tile.innerHTML = `
@@ -522,43 +522,6 @@
             ${rightActions}
           </div>
         `;
-        container.appendChild(tile);
-      });
-    }
-
-
-      orders.forEach(order => {
-        const isNew = order.status === "NEW";
-        const eta = formatEta(order.time);
-
-        const tile = document.createElement("div");
-        tile.className = `tile ${isNew ? "new" : ""}`;
-        tile.onclick = () => openReview(order.key);
-
-        const badge = isNew ? `<span class="badge new">NEW</span>` : `<span class="badge wait">DOING</span>`;
-
-        const rightActions = (order.status === "ACCEPTED")
-          ? `<button class="btn btn-primary btn-block" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','DONE')">准备好了</button>`
-          : `<button class="btn btn-ghost btn-block" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">Review</button>`;
-
-        tile.innerHTML = `
-          <div>
-            <div class="tile-top">
-              <span class="tile-customer">${escapeHtml(order.customer || "Khách")}</span>
-              ${badge}
-              <span class="tile-meta">#${escapeHtml(order.key)}</span>
-            </div>
-            <div class="tile-top" style="margin-top: 6px;">
-              <span class="tile-meta">取餐: ${escapeHtml(order.time || "-")}</span>
-              <span class="tile-meta" style="color: var(--brand-red); font-weight: 1100;">${escapeHtml(eta)}</span>
-            </div>
-            <div class="tile-items">${escapeHtml(shortItems(order.content))}</div>
-          </div>
-          <div class="tile-actions">
-            ${rightActions}
-          </div>
-        `;
-
         container.appendChild(tile);
       });
     }
@@ -651,7 +614,7 @@
       }
     }
 
-            function updateNewAlert() {
+    function updateNewAlert() {
       const count = pendingNewOrders.length;
       const alertEl = document.getElementById("new-alert");
       const titleEl = document.getElementById("new-alert-title");
@@ -664,7 +627,6 @@
         return;
       }
 
-      // Kiểm tra xem có BẤT KỲ bảng nào liên quan đến Review đang mở không
       const isReviewing = 
         document.getElementById("reviewModal").style.display === "flex" ||
         document.getElementById("changeModal").style.display === "flex" ||
@@ -802,7 +764,7 @@
 
       await updateStatus(key, status, { reason, note });
       closeModal();
-      alert("Đã xử lý đơn hàng!");
+      alert("Đã xử lý xong!");
     }
 
     function clearAlarmTimeouts() {
