@@ -442,9 +442,8 @@
 
     function renderAll() {
       if (!Array.isArray(latestOrders)) return;
-
       const leftOrders = latestOrders
-        .filter(o => o && (o.status === "NEW" || o.status === "ACCEPTED"))
+        .filter(o => o && (o.status === "NEW" || o.status === "ACCEPTED" || o.status === "WAITING_CUSTOMER_CHANGE"))
         .slice()
         .sort(sortByPickupTimeAsc);
 
@@ -477,6 +476,56 @@
         container.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">Chưa có</div>`;
         return;
       }
+
+      orders.forEach(order => {
+        const eta = formatEta(order.time);
+        const tile = document.createElement("div");
+
+        // UI Label Dán nhãn
+        let isNew = order.status === "NEW";
+        let isWaiting = order.status === "WAITING_CUSTOMER_CHANGE";
+        tile.className = `tile ${isNew ? "new" : ""}`;
+        
+        let badge = "";
+        if (isNew) { badge = `<span class="badge new">NEW</span>`; }
+        else if (isWaiting) { badge = `<span class="badge wait" style="background:#fef3c7; color:#b45309;">WAITING</span>`; }
+        else { badge = `<span class="badge wait">DOING</span>`; }
+
+        // Logic Nút bấm Action
+        let rightActions = "";
+        if (order.status === "ACCEPTED") {
+          rightActions = `<button class="btn btn-primary btn-block" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','DONE')">准备好了</button>`;
+        } else if (isWaiting) {
+          // Bôi xám, vô hiệu hóa
+          rightActions = `<button class="btn btn-ghost btn-block" disabled style="opacity: 0.5; cursor: not-allowed;">等客戶確認</button>`;
+        } else {
+          rightActions = `<button class="btn btn-ghost btn-block" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">Review</button>`;
+        }
+
+        // Vẫn giữ tính năng click xem full chi tiết đơn đối với mọi trạng thái
+        tile.onclick = () => openReview(order.key);
+
+        tile.innerHTML = `
+          <div>
+            <div class="tile-top">
+              <span class="tile-customer">${escapeHtml(order.customer || "Khách")}</span>
+              ${badge}
+              <span class="tile-meta">#${escapeHtml(order.key)}</span>
+            </div>
+            <div class="tile-top" style="margin-top: 6px;">
+              <span class="tile-meta">取餐: ${escapeHtml(order.time || "-")}</span>
+              <span class="tile-meta" style="color: var(--brand-red); font-weight: 1100;">${escapeHtml(eta)}</span>
+            </div>
+            <div class="tile-items">${escapeHtml(shortItems(order.content))}</div>
+          </div>
+          <div class="tile-actions">
+            ${rightActions}
+          </div>
+        `;
+        container.appendChild(tile);
+      });
+    }
+
 
       orders.forEach(order => {
         const isNew = order.status === "NEW";
