@@ -638,9 +638,13 @@
       stopContinuousAlarm();
     }
 
-    function reviewNextNewOrder() {
-      stopContinuousAlarm();
-      if (pendingNewOrders.length <= 0) return dismissNewAlert();
+        function reviewNextNewOrder() {
+      // Nếu không còn đơn thì tắt hẳn cảnh báo
+      if (pendingNewOrders.length <= 0) {
+        dismissNewAlert();
+        return;
+      }
+      // Chuyển sang xem đơn NEW đầu tiên
       openReview(pendingNewOrders[0].key);
     }
 
@@ -650,8 +654,33 @@
       reviewingOrder = order;
 
       if (order.status === "NEW") {
-        stopContinuousAlarm();
+        // Thay vì chỉ stopContinuousAlarm() như cũ, ta gọi dismissNewAlert() 
+        // để ẩn giao diện báo động chung và "Tạm ẩn" chuông trong 30s khi đang review
+        dismissNewAlert();
       }
+
+      document.getElementById("review-order-key").innerText = order.key || "-";
+      document.getElementById("review-customer").innerText = order.customer || "-";
+      document.getElementById("review-pickup").innerText = order.time || "-";
+      document.getElementById("review-eta").innerText = formatEta(order.time);
+      document.getElementById("review-status").innerText = order.status || "-";
+      document.getElementById("review-content").innerHTML = formatContentHtml(order.content || "");
+
+      const actionsNew = document.getElementById("review-actions");
+      const actionsAccepted = document.getElementById("review-actions-accepted");
+      if (order.status === "NEW") {
+        actionsNew.style.display = "grid";
+        actionsAccepted.style.display = "none";
+      } else if (order.status === "ACCEPTED") {
+        actionsNew.style.display = "none";
+        actionsAccepted.style.display = "grid";
+      } else {
+        actionsNew.style.display = "none";
+        actionsAccepted.style.display = "none";
+      }
+
+      document.getElementById("reviewModal").style.display = "flex";
+    }
 
       document.getElementById("review-order-key").innerText = order.key || "-";
       document.getElementById("review-customer").innerText = order.customer || "-";
