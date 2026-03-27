@@ -295,11 +295,11 @@
         <div class="modal-close" onclick="closeModal()">✕</div>
       </div>
       <label style="display:block; margin-top: 10px; font-weight: 1100;">原因 / 建議:</label>
-      <select id="change-reason" style="width:100%; padding: 12px; margin-top: 10px; border-radius: 10px; border: 1px solid var(--border); font-size: 16px;">
+      <select id="change-reason" style="width:100%; padding: 12px; margin-top: 10px; border-radius: 10px; border: 1px solid var(--border); font-size: 16px;" onchange="onChangeReasonChange()">
         <option value="時間需調整">時間太趕，需延後</option>
         <option value="口味售完">該口味已售完</option>
       </select>
-      <textarea id="change-note" rows="3" placeholder="輸入具體 建議..." style="width:100%; padding: 12px; margin-top: 10px; border-radius: 10px; border: 1px solid var(--border); font-size: 16px;"></textarea>
+      <textarea id="change-note" rows="3" placeholder="建議時間/Gợi ý thời gian mới (VD: 11:00)" style="width:100%; padding: 12px; margin-top: 10px; border-radius: 10px; border: 1px solid var(--border); font-size: 16px;"></textarea>
       <div class="modal-actions two">
         <button class="btn btn-yellow" onclick="confirmAction('CHANGE')">傳送建議</button>
         <button class="btn btn-ghost" onclick="closeModal()">取消</button>
@@ -326,7 +326,7 @@
     </div>
   </div>
 
-    <script>
+  <script>
     const WORKER_BASE = "https://spring-smoke-46ba.thuanmnc.workers.dev";
 
     let latestOrders = [];
@@ -602,7 +602,7 @@
       }
     }
 
-            function updateNewAlert() {
+    function updateNewAlert() {
       const count = pendingNewOrders.length;
       const alertEl = document.getElementById("new-alert");
       const titleEl = document.getElementById("new-alert-title");
@@ -744,12 +744,27 @@
       switchTab("live");
     }
 
+    function onChangeReasonChange() {
+      const reason = document.getElementById("change-reason").value;
+      const note = document.getElementById("change-note");
+      if (reason === "時間需調整") {
+        note.placeholder = "建議時間/Gợi ý thời gian mới (VD: 11:00)";
+      } else {
+        note.placeholder = "輸入具體 建議...";
+      }
+    }
+
     async function confirmAction(type) {
       const key = currentOrderKey;
       const isChange = type === "CHANGE";
       const status = isChange ? "CHANGED" : "REJECTED";
       const reason = isChange ? document.getElementById("change-reason").value : document.getElementById("reject-reason").value;
-      const note = isChange ? document.getElementById("change-note").value : undefined;
+      const note = isChange ? document.getElementById("change-note").value.trim() : undefined;
+
+      if (isChange && reason === "時間需調整" && !note) {
+        alert("Vui lòng nhập thời gian gợi ý mới (Ví dụ: 11:00)!");
+        return;
+      }
 
       await updateStatus(key, status, { reason, note });
       closeModal();
