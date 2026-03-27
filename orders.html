@@ -743,6 +743,9 @@
       if (!reviewingOrder?.key) return;
       currentOrderKey = reviewingOrder.key;
       closeModal();
+      document.getElementById("change-reason").value = "時間需調整";
+      document.getElementById("change-note").value = "";
+      onChangeReasonChange();
       document.getElementById("changeModal").style.display = "flex";
     }
 
@@ -750,6 +753,7 @@
       if (!reviewingOrder?.key) return;
       currentOrderKey = reviewingOrder.key;
       closeModal();
+      document.getElementById("reject-reason").selectedIndex = 0;
       document.getElementById("rejectModal").style.display = "flex";
     }
 
