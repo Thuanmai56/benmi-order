@@ -284,6 +284,11 @@
         <button class="btn btn-primary" onclick="markReadyFromReview()">准备好了</button>
         <button class="btn btn-ghost" onclick="closeModal()">Đóng</button>
       </div>
+
+      <div class="modal-actions two" id="review-actions-waiting" style="display:none;">
+        <button class="btn btn-danger" onclick="reviewForceCancel()">取消訂單 (Hủy đơn do chờ lâu)</button>
+        <button class="btn btn-ghost" onclick="closeModal()">Đóng</button>
+      </div>
     </div>
   </div>
 
@@ -444,7 +449,7 @@
       if (!Array.isArray(latestOrders)) return;
 
       const leftOrders = latestOrders
-        .filter(o => o && (o.status === "NEW" || o.status === "ACCEPTED"))
+        .filter(o => o && (o.status === "NEW" || o.status === "ACCEPTED" || o.status === "WAITING_CUSTOMER_CHANGE" || o.status === "WAITING_CUSTOMER_REJECT"))
         .slice()
         .sort(sortByPickupTimeAsc);
 
@@ -454,7 +459,7 @@
         .sort(sortByPickupTimeAsc);
 
       const historyOrders = latestOrders
-        .filter(o => o && ["PICKED_UP", "REJECTED", "CHANGED"].includes(o.status))
+        .filter(o => o && ["PICKED_UP", "REJECTED"].includes(o.status))
         .slice()
         .sort((a, b) => (b?.createdAt || 0) - (a?.createdAt || 0));
 
@@ -486,11 +491,19 @@
         tile.className = `tile ${isNew ? "new" : ""}`;
         tile.onclick = () => openReview(order.key);
 
-        const badge = isNew ? `<span class="badge new">NEW</span>` : `<span class="badge wait">DOING</span>`;
+        let badge = "";
+        let rightActions = "";
 
-        const rightActions = (order.status === "ACCEPTED")
-          ? `<button class="btn btn-primary btn-block" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','DONE')">准备好了</button>`
-          : `<button class="btn btn-ghost btn-block" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">Review</button>`;
+        if (isNew) {
+          badge = `<span class="badge new">NEW</span>`;
+          rightActions = `<button class="btn btn-ghost btn-block" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">Review</button>`;
+        } else if (order.status === "ACCEPTED") {
+          badge = `<span class="badge wait">DOING</span>`;
+          rightActions = `<button class="btn btn-primary btn-block" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','DONE')">准备好了</button>`;
+        } else {
+          badge = `<span class="badge wait" style="background:#e5e7eb; color:#4b5563;">等客戶確認</span>`;
+          rightActions = `<button class="btn btn-block" style="background:#f3f4f6; color:#9ca3af; cursor:not-allowed;" disabled>等待回覆</button>`;
+        }
 
         tile.innerHTML = `
           <div>
@@ -667,15 +680,18 @@
 
       const actionsNew = document.getElementById("review-actions");
       const actionsAccepted = document.getElementById("review-actions-accepted");
+      const actionsWaiting = document.getElementById("review-actions-waiting");
+
+      actionsNew.style.display = "none";
+      actionsAccepted.style.display = "none";
+      actionsWaiting.style.display = "none";
+
       if (order.status === "NEW") {
         actionsNew.style.display = "grid";
-        actionsAccepted.style.display = "none";
       } else if (order.status === "ACCEPTED") {
-        actionsNew.style.display = "none";
         actionsAccepted.style.display = "grid";
-      } else {
-        actionsNew.style.display = "none";
-        actionsAccepted.style.display = "none";
+      } else if (order.status === "WAITING_CUSTOMER_CHANGE" || order.status === "WAITING_CUSTOMER_REJECT") {
+        actionsWaiting.style.display = "grid";
       }
 
       document.getElementById("reviewModal").style.display = "flex";
@@ -740,6 +756,14 @@
     async function markReadyFromReview() {
       if (!reviewingOrder?.key) return;
       await updateStatus(reviewingOrder.key, "DONE");
+      closeModal();
+      switchTab("live");
+    }
+
+    async function reviewForceCancel() {
+      if (!reviewingOrder?.key) return;
+      if (!confirm("Hủy đơn hàng này do khách không phản hồi?")) return;
+      await updateStatus(reviewingOrder.key, "FORCE_REJECT");
       closeModal();
       switchTab("live");
     }
