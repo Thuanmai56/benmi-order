@@ -163,6 +163,10 @@
     .modal-actions { margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
     .modal-actions.two { grid-template-columns: 1fr 1fr; }
 
+    .checkbox-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+    .checkbox-label { display: flex; align-items: center; gap: 6px; font-size: 14px; cursor: pointer; color: #111827; font-weight: 1000; }
+    .checkbox-label input { width: 17px; height: 17px; margin: 0; cursor: pointer; accent-color: var(--primary); }
+
     @media (max-width: 960px) {
       .split { grid-template-columns: 1fr; }
       .tile-actions { min-width: 140px; }
@@ -305,7 +309,26 @@
         <option value="口味售完">該口味已售完</option>
       </select>
       <textarea id="change-note" rows="3" placeholder="建議時間/Gợi ý thời gian mới (VD: 11:00)" style="width:100%; padding: 12px; margin-top: 10px; border-radius: 10px; border: 1px solid var(--border); font-size: 16px;"></textarea>
-      <div class="modal-actions two">
+      
+      <div id="change-items-div" style="display: none;">
+        <div style="margin-top: 12px; font-weight: 1000; font-size: 14px; margin-bottom: 8px;">Chọn món đã hết:</div>
+        <div class="checkbox-grid">
+          <label class="checkbox-label"><input type="checkbox" value="燒肉" class="sold-item"> 燒肉</label>
+          <label class="checkbox-label"><input type="checkbox" value="火腿" class="sold-item"> 火腿</label>
+          <label class="checkbox-label"><input type="checkbox" value="雞肉" class="sold-item"> 雞肉</label>
+          <label class="checkbox-label"><input type="checkbox" value="烤肉" class="sold-item"> 烤肉</label>
+          <label class="checkbox-label"><input type="checkbox" value="雙層烤肉" class="sold-item"> 雙層烤肉</label>
+          <label class="checkbox-label"><input type="checkbox" value="綜合" class="sold-item"> 綜合</label>
+          <label class="checkbox-label"><input type="checkbox" value="起司" class="sold-item"> 起司</label>
+          <label class="checkbox-label"><input type="checkbox" value="越南咖啡" class="sold-item"> 越南咖啡</label>
+          <label class="checkbox-label"><input type="checkbox" value="豆漿" class="sold-item"> 豆漿</label>
+          <label class="checkbox-label"><input type="checkbox" value="紅茶" class="sold-item"> 紅茶</label>
+          <label class="checkbox-label"><input type="checkbox" value="可樂" class="sold-item"> 可樂</label>
+          <label class="checkbox-label"><input type="checkbox" value="雪碧" class="sold-item"> 雪碧</label>
+        </div>
+      </div>
+
+      <div class="modal-actions two" style="margin-top: 16px;">
         <button class="btn btn-yellow" onclick="confirmAction('CHANGE')">傳送建議</button>
         <button class="btn btn-ghost" onclick="closeModal()">取消</button>
       </div>
@@ -745,6 +768,8 @@
       closeModal();
       document.getElementById("change-reason").value = "時間需調整";
       document.getElementById("change-note").value = "";
+      const checkboxes = document.querySelectorAll(".sold-item");
+      if (checkboxes) checkboxes.forEach(cb => cb.checked = false);
       onChangeReasonChange();
       document.getElementById("changeModal").style.display = "flex";
     }
@@ -775,10 +800,15 @@
     function onChangeReasonChange() {
       const reason = document.getElementById("change-reason").value;
       const note = document.getElementById("change-note");
+      const itemsDiv = document.getElementById("change-items-div");
+      
       if (reason === "時間需調整") {
+        note.style.display = "block";
+        itemsDiv.style.display = "none";
         note.placeholder = "建議時間/Gợi ý thời gian mới (VD: 11:00)";
       } else {
-        note.placeholder = "輸入具體 建議...";
+        note.style.display = "none";
+        itemsDiv.style.display = "block";
       }
     }
 
@@ -787,11 +817,20 @@
       const isChange = type === "CHANGE";
       const status = isChange ? "CHANGED" : "REJECTED";
       const reason = isChange ? document.getElementById("change-reason").value : document.getElementById("reject-reason").value;
-      const note = isChange ? document.getElementById("change-note").value.trim() : undefined;
+      let note = isChange ? document.getElementById("change-note").value.trim() : undefined;
 
       if (isChange && reason === "時間需調整" && !note) {
         alert("Vui lòng nhập thời gian gợi ý mới (Ví dụ: 11:00)!");
         return;
+      }
+      
+      if (isChange && reason === "口味售完") {
+        const checked = Array.from(document.querySelectorAll(".sold-item:checked")).map(cb => cb.value);
+        if (checked.length === 0) {
+          alert("Vui lòng chọn ít nhất một món đã hết!");
+          return;
+        }
+        note = checked.join(",");
       }
 
       await updateStatus(key, status, { reason, note });
