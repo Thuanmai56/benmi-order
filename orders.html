@@ -275,4 +275,590 @@
       <div class="detail-content" id="review-content">-</div>
 
       <div class="modal-actions" id="review-actions">
-        <button class="btn btn-primary" onclick="reviewAccept()">接單 (Nhận đơn)</
+        <button class="btn btn-primary" onclick="reviewAccept()">接單 (Nhận đơn)</button>
+        <button class="btn btn-yellow" onclick="reviewOpenChange()">需要更改</button>
+        <button class="btn btn-danger" onclick="reviewOpenReject()">無法接單</button>
+      </div>
+
+      <div class="modal-actions two" id="review-actions-accepted" style="display:none;">
+        <button class="btn btn-primary" onclick="markReadyFromReview()">准备好了</button>
+        <button class="btn btn-ghost" onclick="closeModal()">Đóng</button>
+      </div>
+
+      <div class="modal-actions two" id="review-actions-waiting" style="display:none;">
+        <button class="btn btn-danger" onclick="reviewForceCancel()">取消訂單 (Hủy đơn do chờ lâu)</button>
+        <button class="btn btn-ghost" onclick="closeModal()">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Change modal -->
+  <div id="changeModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-title">
+        <h3>需要更改 (Yêu cầu thay đổi)</h3>
+        <div class="modal-close" onclick="closeModal()">✕</div>
+      </div>
+      <label style="display:block; margin-top: 10px; font-weight: 1100;">原因 / 建議:</label>
+      <select id="change-reason" style="width:100%; padding: 12px; margin-top: 10px; border-radius: 10px; border: 1px solid var(--border); font-size: 16px;" onchange="onChangeReasonChange()">
+        <option value="時間需調整">時間太趕，需延後</option>
+        <option value="口味售完">該口味已售完</option>
+      </select>
+      <textarea id="change-note" rows="3" placeholder="建議時間/Gợi ý thời gian mới (VD: 11:00)" style="width:100%; padding: 12px; margin-top: 10px; border-radius: 10px; border: 1px solid var(--border); font-size: 16px;"></textarea>
+      <div class="modal-actions two">
+        <button class="btn btn-yellow" onclick="confirmAction('CHANGE')">傳送建議</button>
+        <button class="btn btn-ghost" onclick="closeModal()">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reject modal -->
+  <div id="rejectModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-title">
+        <h3>無法接單 (Không thể nhận đơn)</h3>
+        <div class="modal-close" onclick="closeModal()">✕</div>
+      </div>
+      <select id="reject-reason" style="width:100%; padding: 12px; margin-top: 12px; border-radius: 10px; border: 1px solid var(--border); font-size: 16px;">
+        <option value="今日已售完">今日已售完</option>
+        <option value="訂單過多">訂單過多，暫不接單</option>
+        <option value="已過營業時間">已過營業時間</option>
+      </select>
+      <div class="modal-actions two">
+        <button class="btn btn-danger" onclick="confirmAction('REJECT')">確認拒絕</button>
+        <button class="btn btn-ghost" onclick="closeModal()">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const WORKER_BASE = "https://spring-smoke-46ba.thuanmnc.workers.dev";
+
+    let latestOrders = [];
+    let pendingNewOrders = [];
+    let reviewingOrder = null;
+    let currentOrderKey = null;
+    let activeTab = "live";
+    let newAlertSnoozeUntilMs = 0;
+    let snoozedNewOrderKeys = new Set();
+
+    const knownOrderKeys = new Set();
+    let isFirstLoad = true;
+    let soundUnlocked = false;
+    let audioCtx = null;
+    let alarmIntervalId = null;
+    let alarmTimeoutIds = [];
+
+    // Unlock audio after a user gesture (Chrome autoplay policy)
+    async function unlockSound() {
+      soundUnlocked = true;
+      try {
+        const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextCtor) return;
+        if (!audioCtx) audioCtx = new AudioContextCtor();
+        if (audioCtx.state === "suspended") await audioCtx.resume();
+      } catch (e) {
+        console.error("unlockSound failed:", e);
+      }
+    }
+    document.addEventListener("click", unlockSound, { once: true });
+    document.addEventListener("touchstart", unlockSound, { once: true });
+    document.addEventListener("keydown", unlockSound, { once: true });
+
+    function escapeHtml(s) {
+      return String(s ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function parsePickupTimeMs(timeStr) {
+      if (!timeStr || typeof timeStr !== "string") return NaN;
+      const m = timeStr.match(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})/);
+      if (!m) return NaN;
+      const iso = `${m[1]}T${m[2]}:00`;
+      const ms = new Date(iso).getTime();
+      return Number.isNaN(ms) ? NaN : ms;
+    }
+
+    function sortByPickupTimeAsc(a, b) {
+      const at = parsePickupTimeMs(a?.time);
+      const bt = parsePickupTimeMs(b?.time);
+      if (Number.isNaN(at) || Number.isNaN(bt)) return (a?.createdAt || 0) - (b?.createdAt || 0);
+      return at - bt;
+    }
+
+    function formatEta(timeStr) {
+      const target = parsePickupTimeMs(timeStr);
+      if (Number.isNaN(target)) return "-";
+      const diffMs = target - Date.now();
+      const diffMin = Math.round(diffMs / 60000);
+      if (diffMin <= 0) return `已到 / ${Math.abs(diffMin)} 分鐘前`;
+      if (diffMin < 60) return `剩 ${diffMin} 分鐘`;
+      const h = Math.floor(diffMin / 60);
+      const m = diffMin % 60;
+      return `剩 ${h} 小時 ${m} 分`;
+    }
+
+    function shortItems(content) {
+      if (!content) return "";
+      const lines = String(content).split("\n").map(s => s.trim()).filter(Boolean);
+      return lines.slice(0, 6).join("\n");
+    }
+
+    function switchTab(tab) {
+      activeTab = tab;
+      document.getElementById("tab-live").classList.toggle("active", tab === "live");
+      document.getElementById("tab-history").classList.toggle("active", tab === "history");
+      document.getElementById("view-live").style.display = tab === "live" ? "block" : "none";
+      document.getElementById("view-history").style.display = tab === "history" ? "block" : "none";
+      renderAll();
+    }
+
+    async function fetchOrders() {
+      try {
+        const response = await fetch(`${WORKER_BASE}/api/orders`);
+        if (!response.ok) throw new Error(`fetch failed: ${response.status}`);
+        const orders = await response.json();
+        latestOrders = Array.isArray(orders) ? orders : [];
+
+        // New arrivals => sound
+        const newArrivals = latestOrders.filter(o => o && o.key && !knownOrderKeys.has(o.key));
+        newArrivals.forEach(o => { if (o?.key) knownOrderKeys.add(o.key); });
+
+        // NEW orders => fullscreen alert
+        pendingNewOrders = latestOrders.filter(o => o && o.status === "NEW").slice().sort(sortByPickupTimeAsc);
+        if (!isFirstLoad && newArrivals.length > 0 && pendingNewOrders.length > 0) {
+          startContinuousAlarm();
+        }
+        isFirstLoad = false;
+        updateNewAlert();
+
+        renderAll();
+      } catch (e) {
+        console.error(e);
+        document.getElementById("list-left").innerHTML = `<div style="text-align:center; padding: 22px; color:#d32f2f;">Không tải được: ${escapeHtml(e?.message || e)}</div>`;
+        document.getElementById("list-right").innerHTML = `<div style="text-align:center; padding: 22px; color:#d32f2f;">Không tải được</div>`;
+        document.getElementById("list-history").innerHTML = `<div style="text-align:center; padding: 22px; color:#d32f2f;">Không tải được</div>`;
+      }
+    }
+
+    function renderAll() {
+      if (!Array.isArray(latestOrders)) return;
+
+      const leftOrders = latestOrders
+        .filter(o => o && (o.status === "NEW" || o.status === "ACCEPTED" || o.status === "WAITING_CUSTOMER_CHANGE" || o.status === "WAITING_CUSTOMER_REJECT"))
+        .slice()
+        .sort(sortByPickupTimeAsc);
+
+      const rightOrders = latestOrders
+        .filter(o => o && o.status === "DONE")
+        .slice()
+        .sort(sortByPickupTimeAsc);
+
+      const historyOrders = latestOrders
+        .filter(o => o && ["PICKED_UP", "REJECTED"].includes(o.status))
+        .slice()
+        .sort((a, b) => (b?.createdAt || 0) - (a?.createdAt || 0));
+
+      document.getElementById("count-left").innerText = String(leftOrders.length);
+      document.getElementById("count-right").innerText = String(rightOrders.length);
+      document.getElementById("count-history").innerText = String(historyOrders.length);
+
+      if (activeTab === "live") {
+        renderListLeft(leftOrders);
+        renderListRight(rightOrders);
+      } else {
+        renderHistory(historyOrders);
+      }
+    }
+
+    function renderListLeft(orders) {
+      const container = document.getElementById("list-left");
+      container.innerHTML = "";
+      if (orders.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">Chưa có</div>`;
+        return;
+      }
+
+      orders.forEach(order => {
+        const isNew = order.status === "NEW";
+        const eta = formatEta(order.time);
+
+        const tile = document.createElement("div");
+        tile.className = `tile ${isNew ? "new" : ""}`;
+        tile.onclick = () => openReview(order.key);
+
+        let badge = "";
+        let rightActions = "";
+
+        if (isNew) {
+          badge = `<span class="badge new">NEW</span>`;
+          rightActions = `<button class="btn btn-ghost btn-block" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">Review</button>`;
+        } else if (order.status === "ACCEPTED") {
+          badge = `<span class="badge wait">DOING</span>`;
+          rightActions = `<button class="btn btn-primary btn-block" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','DONE')">准备好了</button>`;
+        } else {
+          badge = `<span class="badge wait" style="background:#e5e7eb; color:#4b5563;">等客戶確認</span>`;
+          rightActions = `<button class="btn btn-block" style="background:#f3f4f6; color:#9ca3af; cursor:not-allowed;" disabled>等待回覆</button>`;
+        }
+
+        tile.innerHTML = `
+          <div>
+            <div class="tile-top">
+              <span class="tile-customer">${escapeHtml(order.customer || "Khách")}</span>
+              ${badge}
+              <span class="tile-meta">#${escapeHtml(order.key)}</span>
+            </div>
+            <div class="tile-top" style="margin-top: 6px;">
+              <span class="tile-meta">取餐: ${escapeHtml(order.time || "-")}</span>
+              <span class="tile-meta" style="color: var(--brand-red); font-weight: 1100;">${escapeHtml(eta)}</span>
+            </div>
+            <div class="tile-items">${escapeHtml(shortItems(order.content))}</div>
+          </div>
+          <div class="tile-actions">
+            ${rightActions}
+          </div>
+        `;
+
+        container.appendChild(tile);
+      });
+    }
+
+    function renderListRight(orders) {
+      const container = document.getElementById("list-right");
+      container.innerHTML = "";
+      if (orders.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">Chưa có</div>`;
+        return;
+      }
+
+      orders.forEach(order => {
+        const eta = formatEta(order.time);
+        const tile = document.createElement("div");
+        tile.className = "tile";
+        tile.onclick = () => openReview(order.key);
+
+        tile.innerHTML = `
+          <div>
+            <div class="tile-top">
+              <span class="tile-customer">${escapeHtml(order.customer || "Khách")}</span>
+              <span class="badge done">READY</span>
+              <span class="tile-meta">#${escapeHtml(order.key)}</span>
+            </div>
+            <div class="tile-top" style="margin-top: 6px;">
+              <span class="tile-meta">取餐: ${escapeHtml(order.time || "-")}</span>
+              <span class="tile-meta" style="color: var(--brand-red); font-weight: 1100;">${escapeHtml(eta)}</span>
+            </div>
+            <div class="tile-items">${escapeHtml(shortItems(order.content))}</div>
+          </div>
+          <div class="tile-actions">
+            <button class="btn btn-yellow btn-block" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','PICKED_UP')">已取餐</button>
+          </div>
+        `;
+        container.appendChild(tile);
+      });
+    }
+
+    function groupByDate(orders) {
+      const map = new Map();
+      orders.forEach(o => {
+        const d = (o?.time && typeof o.time === "string") ? o.time.slice(0, 10) : "Unknown";
+        if (!map.has(d)) map.set(d, []);
+        map.get(d).push(o);
+      });
+      return map;
+    }
+
+    function renderHistory(orders) {
+      const container = document.getElementById("list-history");
+      container.innerHTML = "";
+      if (orders.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">Chưa có lịch sử</div>`;
+        return;
+      }
+
+      const grouped = groupByDate(orders);
+      for (const [date, items] of grouped.entries()) {
+        const header = document.createElement("div");
+        header.style.padding = "10px 8px 2px";
+        header.style.fontWeight = "1100";
+        header.style.color = "#111827";
+        header.innerText = `${date} (${items.length})`;
+        container.appendChild(header);
+
+        items.forEach(order => {
+          const tile = document.createElement("div");
+          tile.className = "tile";
+          tile.onclick = () => openReview(order.key);
+          const badge = order.status === "PICKED_UP"
+            ? `<span class="badge done">PICKED</span>`
+            : `<span class="badge">${escapeHtml(order.status)}</span>`;
+
+          tile.innerHTML = `
+            <div>
+              <div class="tile-top">
+                <span class="tile-customer">${escapeHtml(order.customer || "Khách")}</span>
+                ${badge}
+                <span class="tile-meta">#${escapeHtml(order.key)}</span>
+              </div>
+              <div class="tile-items">${escapeHtml(shortItems(order.content))}</div>
+            </div>
+            <div class="tile-actions">
+              <button class="btn btn-ghost btn-block" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">Xem</button>
+            </div>
+          `;
+          container.appendChild(tile);
+        });
+      }
+    }
+
+    function updateNewAlert() {
+      const count = pendingNewOrders.length;
+      const alertEl = document.getElementById("new-alert");
+      const titleEl = document.getElementById("new-alert-title");
+
+      if (count <= 0) {
+        alertEl.style.display = "none";
+        newAlertSnoozeUntilMs = 0;
+        snoozedNewOrderKeys = new Set();
+        stopContinuousAlarm();
+        return;
+      }
+
+      // Kiểm tra xem có BẤT KỲ bảng nào liên quan đến Review đang mở không
+      const isReviewing = 
+        document.getElementById("reviewModal").style.display === "flex" ||
+        document.getElementById("changeModal").style.display === "flex" ||
+        document.getElementById("rejectModal").style.display === "flex";
+
+      if (Date.now() < newAlertSnoozeUntilMs || isReviewing) {
+        const hasBrandNew = pendingNewOrders.some(o => o?.key && !snoozedNewOrderKeys.has(o.key));
+        if (!hasBrandNew) {
+          alertEl.style.display = "none";
+          stopContinuousAlarm();
+          return;
+        }
+      }
+      titleEl.innerText = `${count} 單 新訂單`;
+      alertEl.style.display = "flex";
+      startContinuousAlarm();
+    }
+
+    function dismissNewAlert() {
+      newAlertSnoozeUntilMs = Date.now() + 30_000;
+      snoozedNewOrderKeys = new Set(pendingNewOrders.map(o => o?.key).filter(Boolean));
+      document.getElementById("new-alert").style.display = "none";
+      stopContinuousAlarm();
+    }
+
+    function reviewNextNewOrder() {
+      if (pendingNewOrders.length <= 0) {
+        dismissNewAlert();
+        return;
+      }
+      openReview(pendingNewOrders[0].key);
+    }
+
+    function openReview(orderKey) {
+      const order = (latestOrders || []).find(o => o && o.key === orderKey);
+      if (!order) return;
+      reviewingOrder = order;
+
+      if (order.status === "NEW") {
+        dismissNewAlert();
+      }
+
+      document.getElementById("review-order-key").innerText = order.key || "-";
+      document.getElementById("review-customer").innerText = order.customer || "-";
+      document.getElementById("review-pickup").innerText = order.time || "-";
+      document.getElementById("review-eta").innerText = formatEta(order.time);
+      document.getElementById("review-status").innerText = order.status || "-";
+      document.getElementById("review-content").innerHTML = formatContentHtml(order.content || "");
+
+      const actionsNew = document.getElementById("review-actions");
+      const actionsAccepted = document.getElementById("review-actions-accepted");
+      const actionsWaiting = document.getElementById("review-actions-waiting");
+
+      actionsNew.style.display = "none";
+      actionsAccepted.style.display = "none";
+      actionsWaiting.style.display = "none";
+
+      if (order.status === "NEW") {
+        actionsNew.style.display = "grid";
+      } else if (order.status === "ACCEPTED") {
+        actionsAccepted.style.display = "grid";
+      } else if (order.status === "WAITING_CUSTOMER_CHANGE" || order.status === "WAITING_CUSTOMER_REJECT") {
+        actionsWaiting.style.display = "grid";
+      }
+
+      document.getElementById("reviewModal").style.display = "flex";
+    }
+
+    function formatContentHtml(content) {
+      const raw = String(content || "");
+      const lines = raw.split("\n").map(l => l.trimEnd()).filter(l => l.trim() !== "");
+      if (lines.length === 0) return `<div class="detail-lines"><div class="detail-line">-</div></div>`;
+
+      const htmlLines = lines.map(line => {
+        const t = line.trimStart();
+        const isSub = t.startsWith("-") || t.startsWith("•") || t.startsWith("－");
+        const cls = isSub ? "detail-line sub" : "detail-line primary";
+        return `<div class="${cls}">${escapeHtml(line)}</div>`;
+      });
+
+      return `<div class="detail-lines">${htmlLines.join("")}</div>`;
+    }
+
+    function closeModal() {
+      document.querySelectorAll(".modal").forEach(m => m.style.display = "none");
+    }
+
+    async function updateStatus(key, status, extra = {}) {
+      try {
+        const response = await fetch(`${WORKER_BASE}/api/update`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key, status, ...extra })
+        });
+        if (!response.ok) throw new Error(`update failed: ${response.status}`);
+        await fetchOrders();
+      } catch (e) {
+        console.error(e);
+        alert("處理失敗，請稍後再試。");
+      }
+    }
+
+    async function reviewAccept() {
+      if (!reviewingOrder?.key) return;
+      await updateStatus(reviewingOrder.key, "ACCEPTED");
+      closeModal();
+      dismissNewAlert();
+      switchTab("live");
+    }
+
+    function reviewOpenChange() {
+      if (!reviewingOrder?.key) return;
+      currentOrderKey = reviewingOrder.key;
+      closeModal();
+      document.getElementById("changeModal").style.display = "flex";
+    }
+
+    function reviewOpenReject() {
+      if (!reviewingOrder?.key) return;
+      currentOrderKey = reviewingOrder.key;
+      closeModal();
+      document.getElementById("rejectModal").style.display = "flex";
+    }
+
+    async function markReadyFromReview() {
+      if (!reviewingOrder?.key) return;
+      await updateStatus(reviewingOrder.key, "DONE");
+      closeModal();
+      switchTab("live");
+    }
+
+    async function reviewForceCancel() {
+      if (!reviewingOrder?.key) return;
+      if (!confirm("Hủy đơn hàng này do khách không phản hồi?")) return;
+      await updateStatus(reviewingOrder.key, "FORCE_REJECT");
+      closeModal();
+      switchTab("live");
+    }
+
+    function onChangeReasonChange() {
+      const reason = document.getElementById("change-reason").value;
+      const note = document.getElementById("change-note");
+      if (reason === "時間需調整") {
+        note.placeholder = "建議時間/Gợi ý thời gian mới (VD: 11:00)";
+      } else {
+        note.placeholder = "輸入具體 建議...";
+      }
+    }
+
+    async function confirmAction(type) {
+      const key = currentOrderKey;
+      const isChange = type === "CHANGE";
+      const status = isChange ? "CHANGED" : "REJECTED";
+      const reason = isChange ? document.getElementById("change-reason").value : document.getElementById("reject-reason").value;
+      const note = isChange ? document.getElementById("change-note").value.trim() : undefined;
+
+      if (isChange && reason === "時間需調整" && !note) {
+        alert("Vui lòng nhập thời gian gợi ý mới (Ví dụ: 11:00)!");
+        return;
+      }
+
+      await updateStatus(key, status, { reason, note });
+      closeModal();
+    }
+
+    function clearAlarmTimeouts() {
+      alarmTimeoutIds.forEach(id => clearTimeout(id));
+      alarmTimeoutIds = [];
+    }
+
+    function stopContinuousAlarm() {
+      if (alarmIntervalId) {
+        clearInterval(alarmIntervalId);
+        alarmIntervalId = null;
+      }
+      clearAlarmTimeouts();
+    }
+
+    function playTone(frequency, durationMs, type = "square", volume = 0.22) {
+      if (!audioCtx || audioCtx.state !== "running") return;
+      const oscillator = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      oscillator.type = type;
+      oscillator.frequency.value = frequency;
+      gain.gain.value = volume;
+
+      oscillator.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      oscillator.start();
+      setTimeout(() => oscillator.stop(), durationMs);
+    }
+
+    function playAlarmCycle() {
+      clearAlarmTimeouts();
+      playTone(880, 250, "square", 0.22);
+      alarmTimeoutIds.push(setTimeout(() => playTone(1040, 250, "square", 0.22), 320));
+      alarmTimeoutIds.push(setTimeout(() => playTone(880, 320, "square", 0.24), 680));
+    }
+
+    function startContinuousAlarm() {
+      if (!soundUnlocked) return;
+      if (alarmIntervalId) return;
+      playAlarmCycle();
+      alarmIntervalId = setInterval(() => {
+        playAlarmCycle();
+      }, 2200);
+    }
+
+    async function playNewOrderSound() {
+      if (!soundUnlocked) return;
+      try {
+        const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextCtor) return;
+        if (!audioCtx) audioCtx = new AudioContextCtor();
+        if (audioCtx.state === "suspended") await audioCtx.resume();
+        playAlarmCycle();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function testSound() {
+      await unlockSound();
+      await playNewOrderSound();
+    }
+
+    setInterval(fetchOrders, 5000);
+    fetchOrders();
+  </script>
+</body>
+</html>
