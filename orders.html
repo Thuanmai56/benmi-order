@@ -284,8 +284,15 @@
         <button class="btn btn-danger" onclick="reviewOpenReject()">無法接單</button>
       </div>
 
-      <div class="modal-actions two" id="review-actions-accepted" style="display:none;">
+      <div class="modal-actions" id="review-actions-accepted" style="display:none;">
         <button class="btn btn-primary" onclick="markReadyFromReview()">准备好了</button>
+        <button class="btn btn-danger" onclick="if(confirm('Bạn có chắc muốn hủy đơn này? Khách sẽ KHÔNG nhận được thông báo.')){ updateStatus(reviewingOrder.key, 'REJECTED', { reason: '取消並不回復客戶' }); closeModal(); }">取消訂單</button>
+        <button class="btn btn-ghost" onclick="closeModal()">Đóng</button>
+      </div>
+
+      <div class="modal-actions" id="review-actions-done" style="display:none;">
+        <button class="btn btn-primary" onclick="updateStatus(reviewingOrder.key, 'PICKED_UP'); closeModal();">已取餐</button>
+        <button class="btn btn-danger" onclick="if(confirm('Bạn có chắc muốn hủy đơn này? Khách sẽ KHÔNG nhận được thông báo.')){ updateStatus(reviewingOrder.key, 'REJECTED', { reason: '取消並不回復客戶' }); closeModal(); }">取消訂單</button>
         <button class="btn btn-ghost" onclick="closeModal()">Đóng</button>
       </div>
 
@@ -706,15 +713,19 @@
       const actionsNew = document.getElementById("review-actions");
       const actionsAccepted = document.getElementById("review-actions-accepted");
       const actionsWaiting = document.getElementById("review-actions-waiting");
+      const actionsDone = document.getElementById("review-actions-done");
 
       actionsNew.style.display = "none";
       actionsAccepted.style.display = "none";
       actionsWaiting.style.display = "none";
+      if (actionsDone) actionsDone.style.display = "none";
 
       if (order.status === "NEW") {
         actionsNew.style.display = "grid";
       } else if (order.status === "ACCEPTED") {
         actionsAccepted.style.display = "grid";
+      } else if (order.status === "DONE") {
+        if (actionsDone) actionsDone.style.display = "grid";
       } else if (order.status === "WAITING_CUSTOMER_CHANGE" || order.status === "WAITING_CUSTOMER_REJECT") {
         actionsWaiting.style.display = "grid";
       }
