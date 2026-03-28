@@ -25,30 +25,25 @@
       padding: 14px 16px; background: var(--card); border-bottom: 1px solid #eee;
     }
     .brand { display: flex; align-items: baseline; gap: 10px; }
-    .brand-title { font-weight: 1000; font-size: 18px; }
-    .brand-sub { color: var(--muted); font-size: 13px; font-weight: 800; }
+    .brand-title { font-weight: 1000; font-size: 22px; }
+    .brand-sub { color: var(--muted); font-size: 15px; font-weight: 800; }
 
-    .tabs { display: flex; gap: 8px; align-items: center; }
+    .tabs { display: flex; gap: 10px; align-items: center; }
     .tab {
       border: 1px solid var(--border); background: #fff;
-      padding: 10px 12px; border-radius: 999px; font-weight: 1000;
-      cursor: pointer; font-size: 14px;
+      padding: 12px 18px; border-radius: 999px; font-weight: 1000;
+      cursor: pointer; font-size: 16px;
     }
-    .tab.active { border-color: var(--primary); color: var(--primary); }
+    .tab.active { border-color: var(--primary); color: var(--primary); border-width: 2px; }
     .mini-btn {
       border: 1px solid var(--border);
-      background: #fff;
-      color: #111827;
-      border-radius: 999px;
-      padding: 8px 10px;
-      font-size: 12px;
-      font-weight: 1000;
-      cursor: pointer;
-      white-space: nowrap;
+      background: #fff; color: #111827;
+      border-radius: 999px; padding: 10px 14px;
+      font-size: 14px; font-weight: 1000; cursor: pointer; white-space: nowrap;
     }
     .status-pill {
-      padding: 8px 10px; border-radius: 999px; background: #f3f4f6;
-      font-size: 13px; color: #111827; white-space: nowrap; font-weight: 900;
+      padding: 10px 14px; border-radius: 999px; background: #f3f4f6;
+      font-size: 15px; color: #111827; white-space: nowrap; font-weight: 900;
     }
 
     .content { flex: 1; min-height: 0; padding: 14px 16px; }
@@ -59,17 +54,17 @@
       display: flex; flex-direction: column; min-height: 0; overflow: hidden;
     }
     .panel-header {
-      padding: 12px 14px; border-bottom: 1px solid #eee;
+      padding: 16px 18px; border-bottom: 1px solid #eee;
       display: flex; justify-content: space-between; align-items: center;
     }
-    .panel-title { font-weight: 1100; }
-    .panel-sub { color: var(--muted); font-size: 12px; font-weight: 900; margin-top: 2px; }
-    .panel-body { padding: 10px; overflow: auto; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+    .panel-title { font-weight: 1100; font-size: 20px; }
+    .panel-sub { color: var(--muted); font-size: 14px; font-weight: 900; margin-top: 4px; }
+    .panel-body { padding: 12px; overflow: auto; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
 
     .badge {
       display: inline-flex; align-items: center;
-      padding: 4px 8px; border-radius: 999px;
-      font-size: 12px; font-weight: 1100;
+      padding: 6px 12px; border-radius: 999px;
+      font-size: 14px; font-weight: 1100;
       background: #f3f4f6; color: #111827;
     }
     .badge.new { background: rgba(211,47,47,0.12); color: var(--brand-red); }
@@ -77,24 +72,24 @@
     .badge.done { background: rgba(0,185,0,0.12); color: var(--primary); }
 
     .tile {
-      border: 1px solid var(--border); border-radius: 14px;
-      padding: 12px; display: grid; grid-template-columns: 1fr auto; gap: 10px;
+      border: 1px solid var(--border); border-radius: 16px;
+      padding: 16px; display: grid; grid-template-columns: 1fr auto; gap: 14px;
       cursor: pointer; background: #fff;
     }
     .tile.new { border-color: rgba(211,47,47,0.35); box-shadow: 0 0 0 3px rgba(211,47,47,0.08) inset; }
-    .tile-top { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: baseline; }
-    .tile-customer { font-weight: 1100; }
-    .tile-meta { color: var(--muted); font-size: 12px; font-weight: 900; }
+    .tile-top { display: flex; flex-wrap: wrap; gap: 10px 12px; align-items: baseline; }
+    .tile-customer { font-weight: 1100; font-size: 18px; }
+    .tile-meta { color: var(--muted); font-size: 14px; font-weight: 900; }
     .tile-items {
-      margin-top: 6px; color: #111827; font-size: 13px; line-height: 1.35;
+      margin-top: 8px; color: #111827; font-size: 16px; line-height: 1.45;
       display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
       overflow: hidden; white-space: pre-line;
     }
-    .tile-actions { display: flex; flex-direction: column; gap: 8px; justify-content: center; min-width: 160px; }
+    .tile-actions { display: flex; flex-direction: column; gap: 10px; justify-content: center; min-width: 180px; }
 
     .btn {
-      border: none; padding: 12px; border-radius: 12px;
-      font-weight: 1100; font-size: 14px; cursor: pointer;
+      border: none; padding: 16px; border-radius: 14px;
+      font-weight: 1100; font-size: 18px; cursor: pointer;
       transition: transform 0.05s ease, opacity 0.2s ease;
     }
     .btn:active { transform: scale(0.99); }
@@ -123,31 +118,31 @@
     .new-alert-actions { margin-top: 16px; display: grid; grid-template-columns: 1fr; gap: 10px; }
 
     /* Modal */
-    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 2100; justify-content: center; align-items: center; padding: 16px; }
-    .modal-content { background: #fff; border-radius: 16px; width: min(860px, 96vw); max-height: 88vh; overflow: auto; padding: 18px; }
-    .modal-title { display:flex; justify-content: space-between; align-items:center; gap: 10px; }
-    .modal-title h3 { margin: 0; font-weight: 1100; }
-    .modal-close { cursor: pointer; font-weight: 1200; font-size: 18px; padding: 6px 10px; border-radius: 10px; background: #f3f4f6; }
+    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 2100; justify-content: center; align-items: center; padding: 20px; }
+    .modal-content { background: #fff; border-radius: 20px; width: min(860px, 96vw); max-height: 88vh; overflow: auto; padding: 24px; }
+    .modal-title { display:flex; justify-content: space-between; align-items:center; gap: 12px; }
+    .modal-title h3 { margin: 0; font-weight: 1100; font-size: 24px; }
+    .modal-close { cursor: pointer; font-weight: 1200; font-size: 22px; padding: 8px 14px; border-radius: 12px; background: #f3f4f6; }
 
-    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
-    .detail-box { border: 1px solid var(--border); border-radius: 14px; padding: 12px; background: #fff; }
-    .detail-label { color: var(--muted); font-size: 12px; font-weight: 1100; }
-    .detail-value { margin-top: 6px; font-size: 14px; font-weight: 1100; color: #111827; }
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+    .detail-box { border: 1px solid var(--border); border-radius: 14px; padding: 14px; background: #fff; }
+    .detail-label { color: var(--muted); font-size: 14px; font-weight: 1100; }
+    .detail-value { margin-top: 8px; font-size: 18px; font-weight: 1100; color: #111827; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-weight: 1000; }
 
     .detail-content {
-      margin-top: 12px; border: 1px solid var(--border); border-radius: 14px;
-      padding: 12px; background: #fff; white-space: pre-line; line-height: 1.45; font-size: 14px;
+      margin-top: 16px; border: 1px solid var(--border); border-radius: 16px;
+      padding: 16px; background: #fff; white-space: pre-line; line-height: 1.55; font-size: 18px;
     }
-    .detail-lines { display: flex; flex-direction: column; gap: 8px; }
+    .detail-lines { display: flex; flex-direction: column; gap: 10px; }
     .detail-line {
-      padding: 10px 10px;
+      padding: 14px 14px;
       border: 1px solid rgba(229,231,235,0.9);
-      border-radius: 12px;
+      border-radius: 14px;
       background: #fff;
       white-space: pre-wrap;
-      line-height: 1.5;
-      font-size: 14px;
+      line-height: 1.55;
+      font-size: 18px;
     }
     .detail-line.primary {
       border-color: rgba(0,185,0,0.25);
@@ -162,6 +157,10 @@
 
     .modal-actions { margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
     .modal-actions.two { grid-template-columns: 1fr 1fr; }
+
+    .checkbox-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px; }
+    .checkbox-label { display: flex; align-items: center; gap: 10px; font-size: 18px; cursor: pointer; color: #111827; font-weight: 1000; }
+    .checkbox-label input { width: 24px; height: 24px; margin: 0; cursor: pointer; accent-color: var(--primary); }
 
     @media (max-width: 960px) {
       .split { grid-template-columns: 1fr; }
@@ -280,8 +279,21 @@
         <button class="btn btn-danger" onclick="reviewOpenReject()">無法接單</button>
       </div>
 
-      <div class="modal-actions two" id="review-actions-accepted" style="display:none;">
+      <div class="modal-actions" id="review-actions-accepted" style="display:none;">
         <button class="btn btn-primary" onclick="markReadyFromReview()">准备好了</button>
+        <button class="btn btn-danger" onclick="if(confirm('Bạn có chắc muốn hủy đơn này? Khách sẽ KHÔNG nhận được thông báo.')){ updateStatus(reviewingOrder.key, 'REJECTED', { reason: '取消並不回復客戶' }); closeModal(); }">取消訂單</button>
+        <button class="btn btn-ghost" onclick="closeModal()">Đóng</button>
+      </div>
+
+      <div class="modal-actions" id="review-actions-done" style="display:none;">
+        <button class="btn btn-primary" onclick="updateStatus(reviewingOrder.key, 'PICKED_UP'); closeModal();">已取餐</button>
+        <button class="btn btn-danger" onclick="if(confirm('Bạn có chắc muốn hủy đơn này? Khách sẽ KHÔNG nhận được thông báo.')){ updateStatus(reviewingOrder.key, 'REJECTED', { reason: '取消並不回復客戶' }); closeModal(); }">取消訂單</button>
+        <button class="btn btn-ghost" onclick="closeModal()">Đóng</button>
+      </div>
+
+      <div class="modal-actions" id="review-actions-waiting" style="display:none;">
+        <button class="btn btn-primary" onclick="reviewAccept()">接單 (Nhận đơn)</button>
+        <button class="btn btn-danger" onclick="reviewForceCancel()">取消訂單 (Hủy)</button>
         <button class="btn btn-ghost" onclick="closeModal()">Đóng</button>
       </div>
     </div>
@@ -295,13 +307,31 @@
         <div class="modal-close" onclick="closeModal()">✕</div>
       </div>
       <label style="display:block; margin-top: 10px; font-weight: 1100;">原因 / 建議:</label>
-      <select id="change-reason" style="width:100%; padding: 12px; margin-top: 10px; border-radius: 10px; border: 1px solid var(--border); font-size: 16px;">
-        <option value="口味售完">該口味已售完</option>
+      <select id="change-reason" style="width:100%; padding: 12px; margin-top: 10px; border-radius: 10px; border: 1px solid var(--border); font-size: 16px;" onchange="onChangeReasonChange()">
         <option value="時間需調整">時間太趕，需延後</option>
-        <option value="配料售完">部分加料售完</option>
+        <option value="口味售完">該口味已售完</option>
       </select>
-      <textarea id="change-note" rows="3" placeholder="輸入具體 建議..." style="width:100%; padding: 12px; margin-top: 10px; border-radius: 10px; border: 1px solid var(--border); font-size: 16px;"></textarea>
-      <div class="modal-actions two">
+      <textarea id="change-note" rows="3" placeholder="建議時間/Gợi ý thời gian mới (VD: 11:00)" style="width:100%; padding: 12px; margin-top: 10px; border-radius: 10px; border: 1px solid var(--border); font-size: 16px;"></textarea>
+      
+      <div id="change-items-div" style="display: none;">
+        <div style="margin-top: 12px; font-weight: 1000; font-size: 14px; margin-bottom: 8px;">Chọn món đã hết:</div>
+        <div class="checkbox-grid">
+          <label class="checkbox-label"><input type="checkbox" value="燒肉" class="sold-item"> 燒肉</label>
+          <label class="checkbox-label"><input type="checkbox" value="火腿" class="sold-item"> 火腿</label>
+          <label class="checkbox-label"><input type="checkbox" value="雞肉" class="sold-item"> 雞肉</label>
+          <label class="checkbox-label"><input type="checkbox" value="烤肉" class="sold-item"> 烤肉</label>
+          <label class="checkbox-label"><input type="checkbox" value="雙層烤肉" class="sold-item"> 雙層烤肉</label>
+          <label class="checkbox-label"><input type="checkbox" value="綜合" class="sold-item"> 綜合</label>
+          <label class="checkbox-label"><input type="checkbox" value="起司" class="sold-item"> 起司</label>
+          <label class="checkbox-label"><input type="checkbox" value="越南咖啡" class="sold-item"> 越南咖啡</label>
+          <label class="checkbox-label"><input type="checkbox" value="豆漿" class="sold-item"> 豆漿</label>
+          <label class="checkbox-label"><input type="checkbox" value="紅茶" class="sold-item"> 紅茶</label>
+          <label class="checkbox-label"><input type="checkbox" value="可樂" class="sold-item"> 可樂</label>
+          <label class="checkbox-label"><input type="checkbox" value="雪碧" class="sold-item"> 雪碧</label>
+        </div>
+      </div>
+
+      <div class="modal-actions two" style="margin-top: 16px;">
         <button class="btn btn-yellow" onclick="confirmAction('CHANGE')">傳送建議</button>
         <button class="btn btn-ghost" onclick="closeModal()">取消</button>
       </div>
@@ -319,6 +349,7 @@
         <option value="今日已售完">今日已售完</option>
         <option value="訂單過多">訂單過多，暫不接單</option>
         <option value="已過營業時間">已過營業時間</option>
+        <option value="取消並不回復客戶">取消並不回復客戶 / Hủy không báo khách</option>
       </select>
       <div class="modal-actions two">
         <button class="btn btn-danger" onclick="confirmAction('REJECT')">確認拒絕</button>
@@ -328,7 +359,7 @@
   </div>
 
   <script>
-    const WORKER_BASE = "https://spring-smoke-46ba.thuanmnc.workers.dev";
+    const WORKER_BASE = "https://benmi-worker-official.thuanmnc.workers.dev";
 
     let latestOrders = [];
     let pendingNewOrders = [];
@@ -342,10 +373,8 @@
     let isFirstLoad = true;
     let soundUnlocked = false;
     let audioCtx = null;
-
     let alarmIntervalId = null;
     let alarmTimeoutIds = [];
-    const activeOscillators = new Set();
 
     // Unlock audio after a user gesture (Chrome autoplay policy)
     async function unlockSound() {
@@ -422,16 +451,18 @@
         const orders = await response.json();
         latestOrders = Array.isArray(orders) ? orders : [];
 
+        // New arrivals => sound
         const newArrivals = latestOrders.filter(o => o && o.key && !knownOrderKeys.has(o.key));
         newArrivals.forEach(o => { if (o?.key) knownOrderKeys.add(o.key); });
 
+        // NEW orders => fullscreen alert
         pendingNewOrders = latestOrders.filter(o => o && o.status === "NEW").slice().sort(sortByPickupTimeAsc);
-
         if (!isFirstLoad && newArrivals.length > 0 && pendingNewOrders.length > 0) {
           startContinuousAlarm();
         }
         isFirstLoad = false;
         updateNewAlert();
+
         renderAll();
       } catch (e) {
         console.error(e);
@@ -445,12 +476,7 @@
       if (!Array.isArray(latestOrders)) return;
 
       const leftOrders = latestOrders
-        .filter(o => o && (
-          o.status === "NEW" ||
-          o.status === "ACCEPTED" ||
-          o.status === "WAITING_CUSTOMER_CHANGE" ||
-          o.status === "WAITING_CUSTOMER_REJECT"
-        ))
+        .filter(o => o && (o.status === "NEW" || o.status === "ACCEPTED" || o.status === "WAITING_CUSTOMER_CHANGE" || o.status === "WAITING_CUSTOMER_REJECT"))
         .slice()
         .sort(sortByPickupTimeAsc);
 
@@ -460,7 +486,7 @@
         .sort(sortByPickupTimeAsc);
 
       const historyOrders = latestOrders
-        .filter(o => o && ["PICKED_UP", "REJECTED", "CHANGED"].includes(o.status))
+        .filter(o => o && ["PICKED_UP", "REJECTED"].includes(o.status))
         .slice()
         .sort((a, b) => (b?.createdAt || 0) - (a?.createdAt || 0));
 
@@ -486,9 +512,6 @@
 
       orders.forEach(order => {
         const isNew = order.status === "NEW";
-        const isWaiting =
-          order.status === "WAITING_CUSTOMER_CHANGE" ||
-          order.status === "WAITING_CUSTOMER_REJECT";
         const eta = formatEta(order.time);
 
         const tile = document.createElement("div");
@@ -496,17 +519,17 @@
         tile.onclick = () => openReview(order.key);
 
         let badge = "";
-        if (isNew) badge = `<span class="badge new">NEW</span>`;
-        else if (isWaiting) badge = `<span class="badge wait">等客戶確認</span>`;
-        else badge = `<span class="badge wait">準備中</span>`;
-
         let rightActions = "";
-        if (order.status === "ACCEPTED") {
-          rightActions = `<button class="btn btn-primary btn-block" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','DONE')">准备好了</button>`;
-        } else if (isWaiting) {
-          rightActions = `<button class="btn btn-ghost btn-block" style="opacity:0.7; cursor:not-allowed;" disabled>等客戶確認</button>`;
-        } else {
+
+        if (isNew) {
+          badge = `<span class="badge new">NEW</span>`;
           rightActions = `<button class="btn btn-ghost btn-block" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">Review</button>`;
+        } else if (order.status === "ACCEPTED") {
+          badge = `<span class="badge wait">DOING</span>`;
+          rightActions = `<button class="btn btn-primary btn-block" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','DONE')">准备好了</button>`;
+        } else {
+          badge = `<span class="badge wait" style="background:#e5e7eb; color:#4b5563;">等客戶確認</span>`;
+          rightActions = `<button class="btn btn-block" style="background:#f3f4f6; color:#9ca3af; cursor:not-allowed;" disabled>等待回覆</button>`;
         }
 
         tile.innerHTML = `
@@ -597,7 +620,6 @@
           const tile = document.createElement("div");
           tile.className = "tile";
           tile.onclick = () => openReview(order.key);
-
           const badge = order.status === "PICKED_UP"
             ? `<span class="badge done">PICKED</span>`
             : `<span class="badge">${escapeHtml(order.status)}</span>`;
@@ -633,7 +655,13 @@
         return;
       }
 
-      if (Date.now() < newAlertSnoozeUntilMs) {
+      // Kiểm tra xem có BẤT KỲ bảng nào liên quan đến Review đang mở không
+      const isReviewing = 
+        document.getElementById("reviewModal").style.display === "flex" ||
+        document.getElementById("changeModal").style.display === "flex" ||
+        document.getElementById("rejectModal").style.display === "flex";
+
+      if (Date.now() < newAlertSnoozeUntilMs || isReviewing) {
         const hasBrandNew = pendingNewOrders.some(o => o?.key && !snoozedNewOrderKeys.has(o.key));
         if (!hasBrandNew) {
           alertEl.style.display = "none";
@@ -641,7 +669,6 @@
           return;
         }
       }
-
       titleEl.innerText = `${count} 單 新訂單`;
       alertEl.style.display = "flex";
       startContinuousAlarm();
@@ -655,8 +682,10 @@
     }
 
     function reviewNextNewOrder() {
-      stopContinuousAlarm();
-      if (pendingNewOrders.length <= 0) return dismissNewAlert();
+      if (pendingNewOrders.length <= 0) {
+        dismissNewAlert();
+        return;
+      }
       openReview(pendingNewOrders[0].key);
     }
 
@@ -666,15 +695,7 @@
       reviewingOrder = order;
 
       if (order.status === "NEW") {
-        // Prevent sound from restarting on the next polling tick
-        // Keep snoozed until a brand-new NEW order arrives.
-        // (Dismiss keeps the old 30s behavior.)
-        newAlertSnoozeUntilMs = Number.MAX_SAFE_INTEGER;
-        snoozedNewOrderKeys.add(order.key);
-        document.getElementById("new-alert").style.display = "none";
-        stopContinuousAlarm();
-      } else {
-        stopContinuousAlarm();
+        dismissNewAlert();
       }
 
       document.getElementById("review-order-key").innerText = order.key || "-";
@@ -686,16 +707,22 @@
 
       const actionsNew = document.getElementById("review-actions");
       const actionsAccepted = document.getElementById("review-actions-accepted");
+      const actionsWaiting = document.getElementById("review-actions-waiting");
+      const actionsDone = document.getElementById("review-actions-done");
+
+      actionsNew.style.display = "none";
+      actionsAccepted.style.display = "none";
+      actionsWaiting.style.display = "none";
+      if (actionsDone) actionsDone.style.display = "none";
+
       if (order.status === "NEW") {
         actionsNew.style.display = "grid";
-        actionsAccepted.style.display = "none";
       } else if (order.status === "ACCEPTED") {
-        actionsNew.style.display = "none";
         actionsAccepted.style.display = "grid";
-      } else {
-        // WAITING_CUSTOMER_CHANGE / WAITING_CUSTOMER_REJECT / other statuses
-        actionsNew.style.display = "none";
-        actionsAccepted.style.display = "none";
+      } else if (order.status === "DONE") {
+        if (actionsDone) actionsDone.style.display = "grid";
+      } else if (order.status === "WAITING_CUSTOMER_CHANGE" || order.status === "WAITING_CUSTOMER_REJECT") {
+        actionsWaiting.style.display = "grid";
       }
 
       document.getElementById("reviewModal").style.display = "flex";
@@ -747,6 +774,11 @@
       if (!reviewingOrder?.key) return;
       currentOrderKey = reviewingOrder.key;
       closeModal();
+      document.getElementById("change-reason").value = "時間需調整";
+      document.getElementById("change-note").value = "";
+      const checkboxes = document.querySelectorAll(".sold-item");
+      if (checkboxes) checkboxes.forEach(cb => cb.checked = false);
+      onChangeReasonChange();
       document.getElementById("changeModal").style.display = "flex";
     }
 
@@ -754,6 +786,7 @@
       if (!reviewingOrder?.key) return;
       currentOrderKey = reviewingOrder.key;
       closeModal();
+      document.getElementById("reject-reason").selectedIndex = 0;
       document.getElementById("rejectModal").style.display = "flex";
     }
 
@@ -764,16 +797,52 @@
       switchTab("live");
     }
 
+    async function reviewForceCancel() {
+      if (!reviewingOrder?.key) return;
+      if (!confirm("Hủy đơn hàng này do khách không phản hồi?")) return;
+      await updateStatus(reviewingOrder.key, "FORCE_REJECT");
+      closeModal();
+      switchTab("live");
+    }
+
+    function onChangeReasonChange() {
+      const reason = document.getElementById("change-reason").value;
+      const note = document.getElementById("change-note");
+      const itemsDiv = document.getElementById("change-items-div");
+      
+      if (reason === "時間需調整") {
+        note.style.display = "block";
+        itemsDiv.style.display = "none";
+        note.placeholder = "建議時間/Gợi ý thời gian mới (VD: 11:00)";
+      } else {
+        note.style.display = "none";
+        itemsDiv.style.display = "block";
+      }
+    }
+
     async function confirmAction(type) {
       const key = currentOrderKey;
       const isChange = type === "CHANGE";
       const status = isChange ? "CHANGED" : "REJECTED";
       const reason = isChange ? document.getElementById("change-reason").value : document.getElementById("reject-reason").value;
-      const note = isChange ? document.getElementById("change-note").value : undefined;
+      let note = isChange ? document.getElementById("change-note").value.trim() : undefined;
+
+      if (isChange && reason === "時間需調整" && !note) {
+        alert("Vui lòng nhập thời gian gợi ý mới (Ví dụ: 11:00)!");
+        return;
+      }
+      
+      if (isChange && reason === "口味售完") {
+        const checked = Array.from(document.querySelectorAll(".sold-item:checked")).map(cb => cb.value);
+        if (checked.length === 0) {
+          alert("Vui lòng chọn ít nhất một món đã hết!");
+          return;
+        }
+        note = checked.join(",");
+      }
 
       await updateStatus(key, status, { reason, note });
       closeModal();
-      alert("Đã xử lý đơn hàng!");
     }
 
     function clearAlarmTimeouts() {
@@ -787,99 +856,48 @@
         alarmIntervalId = null;
       }
       clearAlarmTimeouts();
-      // Stop currently playing oscillators immediately.
-      activeOscillators.forEach(osc => {
-        try { osc.stop(); } catch (_) {}
-      });
-      activeOscillators.clear();
     }
 
-    // --------- AUDIO (siren when new orders, beep for Test Sound) ---------
-    function ensureAudioRunning() {
-      try {
-        if (audioCtx && audioCtx.state === "suspended") audioCtx.resume().catch(() => {});
-      } catch (e) {}
-    }
-
-    function playBeep(freq = 880, durationMs = 250, volume = 0.18) {
-      if (!audioCtx) return;
-      ensureAudioRunning();
-      const now = audioCtx.currentTime;
-
+    function playTone(frequency, durationMs, type = "square", volume = 0.22) {
+      if (!audioCtx || audioCtx.state !== "running") return;
       const oscillator = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
 
-      oscillator.type = "square";
-      oscillator.frequency.setValueAtTime(freq, now);
-
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.exponentialRampToValueAtTime(volume, now + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + durationMs / 1000);
+      oscillator.type = type;
+      oscillator.frequency.value = frequency;
+      gain.gain.value = volume;
 
       oscillator.connect(gain);
       gain.connect(audioCtx.destination);
 
-      oscillator.start(now);
-      activeOscillators.add(oscillator);
-      try { oscillator.onended = () => activeOscillators.delete(oscillator); } catch (_) {}
-      oscillator.stop(now + durationMs / 1000);
-    }
-
-    function playSirenSweep(fromHz, toHz, durationMs, volume = 0.26) {
-      if (!audioCtx) return;
-      ensureAudioRunning();
-      const now = audioCtx.currentTime;
-
-      const oscillator = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-
-      oscillator.type = "sawtooth";
-      oscillator.frequency.setValueAtTime(fromHz, now);
-      oscillator.frequency.exponentialRampToValueAtTime(toHz, now + durationMs / 1000);
-
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.exponentialRampToValueAtTime(volume, now + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + durationMs / 1000);
-
-      oscillator.connect(gain);
-      gain.connect(audioCtx.destination);
-
-      activeOscillators.add(oscillator);
-      try { oscillator.onended = () => activeOscillators.delete(oscillator); } catch (_) {}
-      oscillator.start(now);
-      oscillator.stop(now + durationMs / 1000);
+      oscillator.start();
+      setTimeout(() => oscillator.stop(), durationMs);
     }
 
     function playAlarmCycle() {
-      // Modern siren pattern (continuous loop until Review/Tạm ẩn)
       clearAlarmTimeouts();
-
-      // up sweep
-      playSirenSweep(740, 1040, 240, 0.24);
-      // down sweep
-      alarmTimeoutIds.push(setTimeout(() => playSirenSweep(1040, 740, 240, 0.24), 260));
-      // higher accent sweep
-      alarmTimeoutIds.push(setTimeout(() => playSirenSweep(820, 1180, 320, 0.30), 520));
+      playTone(880, 250, "square", 0.22);
+      alarmTimeoutIds.push(setTimeout(() => playTone(1040, 250, "square", 0.22), 320));
+      alarmTimeoutIds.push(setTimeout(() => playTone(880, 320, "square", 0.24), 680));
     }
 
     function startContinuousAlarm() {
       if (!soundUnlocked) return;
       if (alarmIntervalId) return;
-
       playAlarmCycle();
-      // interval tuned so cycles don't overlap too much
-      alarmIntervalId = setInterval(playAlarmCycle, 2600);
+      alarmIntervalId = setInterval(() => {
+        playAlarmCycle();
+      }, 2200);
     }
 
     async function playNewOrderSound() {
-      // Test Sound remains beep only
       if (!soundUnlocked) return;
       try {
         const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
         if (!AudioContextCtor) return;
         if (!audioCtx) audioCtx = new AudioContextCtor();
         if (audioCtx.state === "suspended") await audioCtx.resume();
-        playBeep(880, 250, 0.18);
+        playAlarmCycle();
       } catch (e) {
         console.error(e);
       }
@@ -890,7 +908,7 @@
       await playNewOrderSound();
     }
 
-    setInterval(fetchOrders, 20000);
+    setInterval(fetchOrders, 5000);
     fetchOrders();
   </script>
 </body>
