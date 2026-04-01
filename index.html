@@ -283,18 +283,9 @@ function generateOrderNumber() {
     const day = String(now.getDate()).padStart(2, '0');
     const todayKey = month + day;
     
-    let lastDate = localStorage.getItem('lastOrderDate');
-    let sequence = parseInt(localStorage.getItem('orderSequence')) || 35;
-
-    if (lastDate !== todayKey) {
-        sequence = 35;
-        localStorage.setItem('lastOrderDate', todayKey);
-    } else {
-        sequence += 1;
-    }
-    
-    localStorage.setItem('orderSequence', sequence);
-    return `B${todayKey}${sequence}`;
+    // Tạo 4 số ngẫu nhiên để 100% không trùng khi nhiều khách bấm cùng lúc
+    const randomSeq = Math.floor(1000 + Math.random() * 9000);
+    return `B${todayKey}-${randomSeq}`;
 }
 
 async function submitOrder() {
