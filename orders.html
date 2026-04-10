@@ -359,7 +359,7 @@
   </div>
 
   <script>
-    const WORKER_BASE = "https://benmi-worker-official.thuanmnc.workers.dev";
+    const WORKER_BASE = "https://benmi-worker-official.thuanmnc.workers.dev/";
 
     let latestOrders = [];
     let pendingNewOrders = [];
@@ -446,7 +446,7 @@
 
     async function fetchOrders() {
       try {
-        const response = await fetch(`${WORKER_BASE}/api/orders`);
+        const response = await fetch(`${WORKER_BASE}/api/orders?_t=${Date.now()}`, { cache: "no-store" });
         if (!response.ok) throw new Error(`fetch failed: ${response.status}`);
         const orders = await response.json();
         latestOrders = Array.isArray(orders) ? orders : [];
