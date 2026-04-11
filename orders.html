@@ -219,7 +219,6 @@
             <div class="panel-title">Lịch sử đơn hàng</div>
             <div class="panel-sub">Theo ngày</div>
           </div>
-          <div class="badge" id="count-history">0</div>
         </div>
         <div class="panel-body" id="list-history">
           <div style="text-align:center; padding: 22px; color:#999;">Đang tải...</div>
@@ -492,7 +491,6 @@
 
       document.getElementById("count-left").innerText = String(leftOrders.length);
       document.getElementById("count-right").innerText = String(rightOrders.length);
-      document.getElementById("count-history").innerText = String(historyOrders.length);
 
       if (activeTab === "live") {
         renderListLeft(leftOrders);
