@@ -592,7 +592,17 @@
     function groupByDate(orders) {
       const map = new Map();
       orders.forEach(o => {
-        const d = (o?.time && typeof o.time === "string") ? o.time.slice(0, 10) : "Unknown";
+        let d = "Unknown";
+        if (o.createdAt) {
+          const dt = new Date(o.createdAt);
+          const nowTaiwan = new Date(dt.getTime() + 8 * 3600000);
+          const yyyy = nowTaiwan.getUTCFullYear();
+          const mm = String(nowTaiwan.getUTCMonth() + 1).padStart(2, "0");
+          const dd = String(nowTaiwan.getUTCDate()).padStart(2, "0");
+          d = `${yyyy}-${mm}-${dd}`;
+        } else if (o?.time && typeof o.time === "string" && o.time.match(/^\d{4}-\d{2}-\d{2}/)) {
+          d = o.time.slice(0, 10);
+        }
         if (!map.has(d)) map.set(d, []);
         map.get(d).push(o);
       });
@@ -608,7 +618,18 @@
       }
 
       const grouped = groupByDate(orders);
-      for (const [date, items] of grouped.entries()) {
+      // Sort groups by date descending
+      const sortedDates = Array.from(grouped.keys()).sort((a, b) => b.localeCompare(a));
+      
+      for (const date of sortedDates) {
+        let items = grouped.get(date);
+        // Sort items: newest picked up at top (descending), fallback to newest created at top
+        items.sort((a, b) => {
+           const timeA = a.pickedUpAt || a.createdAt || 0;
+           const timeB = b.pickedUpAt || b.createdAt || 0;
+           return timeB - timeA;
+        });
+
         const header = document.createElement("div");
         header.style.padding = "10px 8px 2px";
         header.style.fontWeight = "1100";
