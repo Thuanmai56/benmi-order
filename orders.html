@@ -703,7 +703,7 @@
       document.getElementById("review-pickup").innerText = order.time || "-";
       document.getElementById("review-eta").innerText = formatEta(order.time);
       document.getElementById("review-status").innerText = order.status || "-";
-      document.getElementById("review-content").innerHTML = formatContentHtml(order.content || "");
+      document.getElementById("review-content").innerHTML = formatContentHtml(order);
 
       const actionsNew = document.getElementById("review-actions");
       const actionsAccepted = document.getElementById("review-actions-accepted");
@@ -728,8 +728,11 @@
       document.getElementById("reviewModal").style.display = "flex";
     }
 
-    function formatContentHtml(content) {
-      const raw = String(content || "");
+    function formatContentHtml(order) {
+      const raw = String(order.content || "");
+      if (order.reason === "Đơn qua tin nhắn") {
+        return `<div class="detail-lines"><div class="detail-line primary" style="white-space: pre-wrap; display: block;">${escapeHtml(raw)}</div></div>`;
+      }
       const lines = raw.split("\n").map(l => l.trimEnd()).filter(l => l.trim() !== "");
       if (lines.length === 0) return `<div class="detail-lines"><div class="detail-line">-</div></div>`;
 
