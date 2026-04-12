@@ -273,26 +273,26 @@
       <div class="detail-content" id="review-content">-</div>
 
       <div class="modal-actions" id="review-actions">
-        <button class="btn btn-primary" onclick="reviewAccept()">接單 (Nhận đơn)</button>
+        <button class="btn btn-primary" onclick="reviewAccept(this)">接單 (Nhận đơn)</button>
         <button class="btn btn-yellow" onclick="reviewOpenChange()">需要更改</button>
         <button class="btn btn-danger" onclick="reviewOpenReject()">無法接單</button>
       </div>
 
       <div class="modal-actions" id="review-actions-accepted" style="display:none;">
-        <button class="btn btn-primary" onclick="markReadyFromReview()">准备好了</button>
-        <button class="btn btn-danger" onclick="if(confirm('Bạn có chắc muốn hủy đơn này? Khách sẽ KHÔNG nhận được thông báo.')){ updateStatus(reviewingOrder.key, 'REJECTED', { reason: '取消並不回復客戶' }); closeModal(); }">取消訂單</button>
+        <button class="btn btn-primary" onclick="markReadyFromReview(this)">准备好了</button>
+        <button class="btn btn-danger" onclick="if(confirm('Bạn có chắc muốn hủy đơn này? Khách sẽ KHÔNG nhận được thông báo.')){ updateStatus(reviewingOrder.key, 'REJECTED', { reason: '取消並不回復客戶' }, this).then(() => closeModal()); }">取消訂單</button>
         <button class="btn btn-ghost" onclick="closeModal()">Đóng</button>
       </div>
 
       <div class="modal-actions" id="review-actions-done" style="display:none;">
-        <button class="btn btn-primary" onclick="updateStatus(reviewingOrder.key, 'PICKED_UP'); closeModal();">已取餐</button>
-        <button class="btn btn-danger" onclick="if(confirm('Bạn có chắc muốn hủy đơn này? Khách sẽ KHÔNG nhận được thông báo.')){ updateStatus(reviewingOrder.key, 'REJECTED', { reason: '取消並不回復客戶' }); closeModal(); }">取消訂單</button>
+        <button class="btn btn-primary" onclick="updateStatus(reviewingOrder.key, 'PICKED_UP', {}, this).then(() => closeModal());">已取餐</button>
+        <button class="btn btn-danger" onclick="if(confirm('Bạn có chắc muốn hủy đơn này? Khách sẽ KHÔNG nhận được thông báo.')){ updateStatus(reviewingOrder.key, 'REJECTED', { reason: '取消並不回復客戶' }, this).then(() => closeModal()); }">取消訂單</button>
         <button class="btn btn-ghost" onclick="closeModal()">Đóng</button>
       </div>
 
       <div class="modal-actions" id="review-actions-waiting" style="display:none;">
-        <button class="btn btn-primary" onclick="reviewAccept()">接單 (Nhận đơn)</button>
-        <button class="btn btn-danger" onclick="reviewForceCancel()">取消訂單 (Hủy)</button>
+        <button class="btn btn-primary" onclick="reviewAccept(this)">接單 (Nhận đơn)</button>
+        <button class="btn btn-danger" onclick="reviewForceCancel(this)">取消訂單 (Hủy)</button>
         <button class="btn btn-ghost" onclick="closeModal()">Đóng</button>
       </div>
     </div>
@@ -331,7 +331,7 @@
       </div>
 
       <div class="modal-actions two" style="margin-top: 16px;">
-        <button class="btn btn-yellow" onclick="confirmAction('CHANGE')">傳送建議</button>
+        <button class="btn btn-yellow" onclick="confirmAction('CHANGE', this)">傳送建議</button>
         <button class="btn btn-ghost" onclick="closeModal()">取消</button>
       </div>
     </div>
@@ -351,7 +351,7 @@
         <option value="取消並不回復客戶">取消並不回復客戶 / Hủy không báo khách</option>
       </select>
       <div class="modal-actions two">
-        <button class="btn btn-danger" onclick="confirmAction('REJECT')">確認拒絕</button>
+        <button class="btn btn-danger" onclick="confirmAction('REJECT', this)">確認拒絕</button>
         <button class="btn btn-ghost" onclick="closeModal()">取消</button>
       </div>
     </div>
@@ -369,6 +369,7 @@
     let snoozedNewOrderKeys = new Set();
 
     const knownOrderKeys = new Set();
+    const processingKeys = new Set();
     let isFirstLoad = true;
     let soundUnlocked = false;
     let audioCtx = null;
@@ -524,7 +525,7 @@
           rightActions = `<button class="btn btn-ghost btn-block" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">Review</button>`;
         } else if (order.status === "ACCEPTED") {
           badge = `<span class="badge wait">DOING</span>`;
-          rightActions = `<button class="btn btn-primary btn-block" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','DONE')">准备好了</button>`;
+          rightActions = `<button class="btn btn-primary btn-block" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','DONE', {}, this)">准备好了</button>`;
         } else {
           badge = `<span class="badge wait" style="background:#e5e7eb; color:#4b5563;">等客戶確認</span>`;
           rightActions = `<button class="btn btn-block" style="background:#f3f4f6; color:#9ca3af; cursor:not-allowed;" disabled>等待回覆</button>`;
@@ -580,7 +581,7 @@
             <div class="tile-items">${escapeHtml(shortItems(order.content))}</div>
           </div>
           <div class="tile-actions">
-            <button class="btn btn-yellow btn-block" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','PICKED_UP')">已取餐</button>
+            <button class="btn btn-yellow btn-block" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','PICKED_UP', {}, this)">已取餐</button>
           </div>
         `;
         container.appendChild(tile);
@@ -769,7 +770,17 @@
       document.querySelectorAll(".modal").forEach(m => m.style.display = "none");
     }
 
-    async function updateStatus(key, status, extra = {}) {
+    async function updateStatus(key, status, extra = {}, btn = null) {
+      if (!key) return;
+      if (processingKeys.has(key)) return;
+      processingKeys.add(key);
+
+      const oldText = btn ? btn.innerText : "";
+      if (btn) {
+        btn.disabled = true;
+        btn.innerText = "Đang xử lý...";
+      }
+
       try {
         const response = await fetch(`${WORKER_BASE}/api/update`, {
           method: "POST",
@@ -781,12 +792,18 @@
       } catch (e) {
         console.error(e);
         alert("處理失敗，請稍後再試。");
+      } finally {
+        processingKeys.delete(key);
+        if (btn) {
+          btn.disabled = false;
+          btn.innerText = oldText;
+        }
       }
     }
 
-    async function reviewAccept() {
+    async function reviewAccept(btn) {
       if (!reviewingOrder?.key) return;
-      await updateStatus(reviewingOrder.key, "ACCEPTED");
+      await updateStatus(reviewingOrder.key, "ACCEPTED", {}, btn);
       closeModal();
       dismissNewAlert();
       switchTab("live");
@@ -812,17 +829,17 @@
       document.getElementById("rejectModal").style.display = "flex";
     }
 
-    async function markReadyFromReview() {
+    async function markReadyFromReview(btn) {
       if (!reviewingOrder?.key) return;
-      await updateStatus(reviewingOrder.key, "DONE");
+      await updateStatus(reviewingOrder.key, "DONE", {}, btn);
       closeModal();
       switchTab("live");
     }
 
-    async function reviewForceCancel() {
+    async function reviewForceCancel(btn) {
       if (!reviewingOrder?.key) return;
       if (!confirm("Hủy đơn hàng này do khách không phản hồi?")) return;
-      await updateStatus(reviewingOrder.key, "FORCE_REJECT");
+      await updateStatus(reviewingOrder.key, "FORCE_REJECT", {}, btn);
       closeModal();
       switchTab("live");
     }
@@ -842,7 +859,7 @@
       }
     }
 
-    async function confirmAction(type) {
+    async function confirmAction(type, btn) {
       const key = currentOrderKey;
       const isChange = type === "CHANGE";
       const status = isChange ? "CHANGED" : "REJECTED";
@@ -863,7 +880,7 @@
         note = checked.join(",");
       }
 
-      await updateStatus(key, status, { reason, note });
+      await updateStatus(key, status, { reason, note }, btn);
       closeModal();
     }
 
