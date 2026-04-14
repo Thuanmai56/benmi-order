@@ -367,6 +367,7 @@
     let activeTab = "live";
     let newAlertSnoozeUntilMs = 0;
     let snoozedNewOrderKeys = new Set();
+    let localOverrides = {};
 
     const knownOrderKeys = new Set();
     const processingKeys = new Set();
@@ -448,8 +449,13 @@
       try {
         const response = await fetch(`${WORKER_BASE}/api/orders?_t=${Date.now()}`, { cache: "no-store" });
         if (!response.ok) throw new Error(`fetch failed: ${response.status}`);
-        const orders = await response.json();
-        latestOrders = Array.isArray(orders) ? orders : [];
+        let orders = await response.json();
+        if (!Array.isArray(orders)) orders = [];
+        
+        // Deduplicate
+        const uniqueMap = new Map();
+        orders.forEach(o => { if (o?.key) uniqueMap.set(o.key, o); });
+        latestOrders = Array.from(uniqueMap.values());
 
         // New arrivals => sound
         const newArrivals = latestOrders.filter(o => o && o.key && !knownOrderKeys.has(o.key));
@@ -475,17 +481,31 @@
     function renderAll() {
       if (!Array.isArray(latestOrders)) return;
 
-      const leftOrders = latestOrders
+      // Filter/Apply local overrides (ignore server data if override is < 15s old)
+      const now = Date.now();
+      const currentOrders = latestOrders.map(o => {
+        const override = localOverrides[o.key];
+        if (override && (now - override.time < 15000)) {
+           return { ...o, status: override.status };
+        }
+        // Cleanup old overrides
+        if (override && (now - override.time >= 15000)) {
+           delete localOverrides[o.key];
+        }
+        return o;
+      });
+
+      const leftOrders = currentOrders
         .filter(o => o && (o.status === "NEW" || o.status === "ACCEPTED" || o.status === "WAITING_CUSTOMER_CHANGE" || o.status === "WAITING_CUSTOMER_REJECT"))
         .slice()
         .sort(sortByPickupTimeAsc);
 
-      const rightOrders = latestOrders
+      const rightOrders = currentOrders
         .filter(o => o && o.status === "DONE")
         .slice()
         .sort(sortByPickupTimeAsc);
 
-      const historyOrders = latestOrders
+      const historyOrders = currentOrders
         .filter(o => o && ["PICKED_UP", "REJECTED"].includes(o.status))
         .slice()
         .sort((a, b) => (b?.createdAt || 0) - (a?.createdAt || 0));
@@ -751,19 +771,18 @@
     function formatContentHtml(order) {
       const raw = String(order.content || "");
       if (order.reason === "Đơn qua tin nhắn") {
-        return `<div class="detail-lines"><div class="detail-line primary" style="white-space: pre-wrap; display: block;">${escapeHtml(raw)}</div></div>`;
+        return `<div style="background:rgba(0,185,0,0.07); border:1.5px solid rgba(0,185,0,0.25); border-radius:16px; padding:18px; white-space:pre-wrap; line-height:1.7; font-size:22px;">${escapeHtml(raw)}</div>`;
       }
       const lines = raw.split("\n").map(l => l.trimEnd()).filter(l => l.trim() !== "");
-      if (lines.length === 0) return `<div class="detail-lines"><div class="detail-line">-</div></div>`;
+      if (lines.length === 0) return `<div style="background:rgba(0,185,0,0.07); border:1.5px solid rgba(0,185,0,0.25); border-radius:16px; padding:18px;">-</div>`;
 
-      const htmlLines = lines.map(line => {
+      const inner = lines.map(line => {
         const t = line.trimStart();
-        const isSub = t.startsWith("-") || t.startsWith("•") || t.startsWith("－");
-        const cls = isSub ? "detail-line sub" : "detail-line primary";
-        return `<div class="${cls}">${escapeHtml(line)}</div>`;
-      });
+        const isSub = t.startsWith("-") || t.startsWith("•") || t.startsWith("↳") || t.startsWith("－");
+        return `<div style="${isSub ? 'padding-left:16px; color:#4b5563; font-size:20px;' : 'font-weight:800; margin-top:8px; font-size:22px;'}">${escapeHtml(line)}</div>`;
+      }).join("");
 
-      return `<div class="detail-lines">${htmlLines.join("")}</div>`;
+      return `<div style="background:rgba(0,185,0,0.07); border:1.5px solid rgba(0,185,0,0.25); border-radius:16px; padding:18px; line-height:1.7;">${inner}</div>`;
     }
 
     function closeModal() {
@@ -788,6 +807,12 @@
           body: JSON.stringify({ key, status, ...extra })
         });
         if (!response.ok) throw new Error(`update failed: ${response.status}`);
+        
+        // Apply local override immediately for responsiveness
+        localOverrides[key] = { status, time: Date.now() };
+        renderAll();
+
+        // Still fetch to keep in sync
         await fetchOrders();
       } catch (e) {
         console.error(e);
