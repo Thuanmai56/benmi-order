@@ -1,99 +1,201 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Benmi Order</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Benmi 點餐</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
 <style>
-    body { font-family: -apple-system, sans-serif; background: #f4f6f8; margin: 0; padding-bottom: 120px; }
-    .header { background: #00b900; color: white; padding: 18px; text-align: center; font-size: 20px; font-weight: bold; }
-    .section-title { padding: 12px 16px; font-weight: bold; color: #333; background: #ffeeba; }
-    .item { background: white; display: flex; align-items: center; padding: 14px 16px; border-bottom: 1px solid #eee; position: relative; }
-    .item-info { flex-grow: 1; }
-    .item-name { font-weight: 600; }
-    .item-price { color: #e44d26; font-size: 14px; }
-    .qty-control { display: flex; align-items: center; gap: 10px; }
-    .btn-qty { border: 1px solid #00b900; background: white; color: #00b900; width: 32px; height: 32px; border-radius: 50%; font-size: 18px; }
-    .customize-btn { margin-left: 10px; color: #00b900; font-weight: bold; cursor: pointer; display: none; text-decoration: underline; }
-    .popup-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 999; }
-    .popup-box { background: white; padding: 15px; width: 90%; max-width: 420px; border-radius: 10px; max-height: 80vh; overflow-y: auto; }
-    .popup-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px; }
-    .input-group { background: white; padding: 15px; border-bottom: 1px solid #eee; }
-    .datetime-row { display: flex; gap: 10px; }
-    input, textarea, select { width: 100%; padding: 10px; font-size: 16px; margin-top: 8px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 5px; }
-    .footer { position: fixed; bottom: 0; width: 100%; background: white; padding: 16px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; }
-    .btn-send { background: #00b900; color: white; border: none; padding: 12px 26px; border-radius: 25px; font-weight: bold; font-size: 16px; }
-    .btn-send:disabled { background: #ccc; cursor: not-allowed; }
-    .combo-drinks { padding: 10px 16px; background: #f9f9f9; border-bottom: 1px solid #eee; }
+    :root {
+        --primary: #00b900;
+        --primary-dark: #009900;
+        --bg: #f4f6f8;
+        --card: #ffffff;
+        --text: #1f2937;
+        --muted: #6b7280;
+        --border: #f3f4f6;
+        --red: #ef4444;
+        --orange: #d97706;
+    }
     
+    * { box-sizing: border-box; }
+    body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); margin: 0; padding-bottom: 140px; color: var(--text); }
+    
+    /* Header & Nav */
+    .header-banner { background: var(--primary); color: white; padding: 20px; text-align: center; font-size: 24px; font-weight: 900; letter-spacing: 0.5px; }
+    
+    .sticky-nav { 
+        position: sticky; top: 0; z-index: 100; background: white; 
+        display: flex; overflow-x: auto; scroll-behavior: smooth;
+        border-bottom: 1px solid #ddd; box-shadow: 0 4px 10px rgba(0,0,0,0.03); 
+    }
+    .sticky-nav::-webkit-scrollbar { display: none; }
+    .nav-btn { 
+        padding: 16px 20px; white-space: nowrap; font-weight: 800; 
+        color: var(--muted); cursor: pointer; border-bottom: 3px solid transparent; 
+        transition: all 0.2s ease; font-size: 16px; 
+    }
+    .nav-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+    
+    /* Sections */
+    .container { padding: 16px; max-width: 600px; margin: 0 auto; }
+    .section-container { scroll-margin-top: 70px; margin-bottom: 30px; }
+    .section-title { font-size: 20px; font-weight: 900; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .section-title::before { content: ''; display: inline-block; width: 6px; height: 22px; background: var(--primary); border-radius: 4px; }
+    
+    .grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+    
+    /* Product Card */
+    .card { background: var(--card); border-radius: 16px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.04); display: flex; flex-direction: column; }
+    .card-body { padding: 16px; display: flex; flex-direction: column; flex-grow: 1; }
+    .card-title { font-size: 18px; font-weight: 800; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+    .card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
+    .card-price { font-size: 20px; font-weight: 900; color: var(--primary); }
+    
+    /* Badge */
+    .badge { color: #fff; background-color: #ef4444; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 900; }
+    
+    /* Quantity Controls */
+    .qty-control { display: flex; align-items: center; gap: 14px; background: #f3f4f6; border-radius: 99px; padding: 4px; }
+    .btn-qty { 
+        width: 32px; height: 32px; border-radius: 50%; border: none; 
+        background: white; color: var(--text); font-size: 18px; font-weight: 600; 
+        display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+    }
+    .qty-text { font-size: 16px; font-weight: 800; min-width: 20px; text-align: center; }
+    
+    .customize-btn { width: 100%; text-align: center; margin-top: 10px; background: #fff4e5; color: var(--orange); padding: 10px; border-radius: 12px; font-weight: 800; font-size: 14px; cursor: pointer; border: none; display: none; }
+    
+    /* Combo drink selector inside card */
+    .combo-drinks { padding: 12px; background: #f0fdf4; border-radius: 12px; margin-top: 10px; border: 1px dashed #86efac; }
+    .combo-drinks strong { font-size: 14px; color: var(--primary); display: block; margin-bottom: 8px; }
+    
+    /* Forms */
+    .input-group { background: var(--card); padding: 18px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); margin-bottom: 16px; }
+    .datetime-row { display: flex; gap: 12px; }
+    input, textarea, select { width: 100%; padding: 14px; font-size: 16px; box-sizing: border-box; border: 1.5px solid #e5e7eb; border-radius: 12px; margin-top: 8px; font-family: inherit; font-weight: 600; outline: none; transition: border-color 0.2s; }
+    input:focus, textarea:focus, select:focus { border-color: var(--primary); }
+    
+    /* Footer */
+    .footer { position: fixed; bottom: 0; width: 100%; background: white; padding: 16px 24px; padding-bottom: calc(16px + env(safe-area-inset-bottom)); box-shadow: 0 -5px 20px rgba(0,0,0,0.08); display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; z-index: 100; }
+    .total-wrap { display: flex; flex-direction: column; position: relative; cursor: pointer; }
+    .total-price { font-size: 24px; font-weight: 900; color: var(--text); }
+    .btn-send { background: var(--primary); color: white; border: none; padding: 16px 32px; border-radius: 99px; font-weight: 900; font-size: 18px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,185,0,0.4); transition: transform 0.1s; }
+    .btn-send:active { transform: scale(0.96); }
+    .btn-send:disabled { background: #d1d5db; box-shadow: none; cursor: not-allowed; }
+    
+    /* Popups */
+    .popup-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: flex-end; z-index: 999; animation: fade 0.2s; }
+    .popup-box { background: white; padding: 24px; width: 100%; border-radius: 24px 24px 0 0; max-height: 85vh; overflow-y: auto; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); box-sizing: border-box; }
+    .popup-header { display: flex; justify-content: space-between; align-items: center; font-size: 20px; font-weight: 900; border-bottom: 2px solid #f3f4f6; padding-bottom: 16px; margin-bottom: 16px; }
+    .close-btn { background: #f3f4f6; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; flex-shrink: 0; }
+
+    /* Custom Alert */
     .custom-alert-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 10000; }
-    .custom-alert-box { background: white; width: 80%; max-width: 300px; border-radius: 12px; text-align: center; overflow: hidden; animation: alertShow 0.2s ease-out; }
-    .custom-alert-header { padding: 15px; font-weight: bold; font-size: 18px; border-bottom: 1px solid #eee; color: #333; }
-    .custom-alert-body { padding: 20px; font-size: 16px; color: #666; line-height: 1.5; }
-    .custom-alert-footer { display: flex; border-top: 1px solid #eee; }
-    .custom-alert-btn { flex: 1; padding: 12px; border: none; background: white; color: #00b900; font-weight: bold; font-size: 16px; cursor: pointer; }
+    .custom-alert-box { background: white; width: 85%; max-width: 340px; border-radius: 20px; text-align: center; overflow: hidden; animation: alertShow 0.2s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+    .custom-alert-header { padding: 20px; font-weight: 900; font-size: 20px; border-bottom: 1px solid #eee; color: #111; }
+    .custom-alert-body { padding: 24px; font-size: 16px; font-weight: 600; color: #444; line-height: 1.5; }
+    .custom-alert-btn { width: 100%; padding: 18px; border: none; background: #fff; border-top: 1px solid #eee; color: var(--primary); font-weight: 900; font-size: 18px; cursor: pointer; }
+    
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
     @keyframes alertShow { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 </style>
 </head>
 
 <body>
-<div class="header">🥖 Benmi 點餐系統</div>
+<div class="header-banner">🥖 Benmi 點餐</div>
 
-<div class="section-title">小麵包</div><div id="small-list"></div>
-<div class="section-title">大麵包</div><div id="large-list"></div>
-<div class="section-title">套餐 (可任選飲料)</div><div id="combo-list"></div>
-<div class="section-title">單點飲料</div><div id="drink-list"></div>
+<nav class="sticky-nav" id="main-nav">
+    <div class="nav-btn active" onclick="scrollToSec('sec-small')">小麵包</div>
+    <div class="nav-btn" onclick="scrollToSec('sec-large')">大麵包</div>
+    <div class="nav-btn" onclick="scrollToSec('sec-combo')">套餐</div>
+    <div class="nav-btn" onclick="scrollToSec('sec-drink')">飲料</div>
+    <div class="nav-btn" onclick="scrollToSec('sec-checkout')">結帳</div>
+</nav>
 
-<div class="section-title">⚠️ 請選擇取餐日期 / 時間</div>
-<div class="input-group">
-    <div class="datetime-row">
-        <input type="date" id="pickup-date">
-        <input type="time" id="pickup-time">
+<div class="container">
+    <div class="section-container" id="sec-small">
+        <div class="section-title">🥖 小麵包</div>
+        <div class="grid" id="small-list"></div>
+    </div>
+
+    <div class="section-container" id="sec-large">
+        <div class="section-title">🍔 大麵包</div>
+        <div class="grid" id="large-list"></div>
+    </div>
+
+    <div class="section-container" id="sec-combo">
+        <div class="section-title">🎁 特惠套餐 (含飲料)</div>
+        <div class="grid" id="combo-list"></div>
+    </div>
+
+    <div class="section-container" id="sec-drink">
+        <div class="section-title">🥤 單點飲料</div>
+        <div class="grid" id="drink-list"></div>
+    </div>
+
+    <div class="section-container" id="sec-checkout" style="margin-top: 20px;">
+        <div class="section-title">🕒 取餐時間</div>
+        <div class="input-group">
+            <label style="font-weight: 800; color: var(--primary);">⚠️ 請選擇取餐日期 / 時間</label>
+            <div class="datetime-row">
+                <input type="date" id="pickup-date">
+                <input type="time" id="pickup-time">
+            </div>
+        </div>
+
+        <div class="section-title">📝 其他要求</div>
+        <div class="input-group">
+            <textarea id="note" rows="3" placeholder="例如：切半、不辣、不要香菜"></textarea>
+        </div>
     </div>
 </div>
 
-<div class="section-title">其他要求</div>
-<div class="input-group">
-    <textarea id="note" rows="3" placeholder="例如：切半、不辣、不要香菜"></textarea>
-</div>
-
 <div class="footer">
-    <div>總計: $<span id="total-price">0</span></div>
+    <div class="total-wrap" onclick="scrollToSec('sec-small')">
+        <span style="font-size: 32px; line-height:1;">🛒</span>
+        <span id="cart-badge" style="display:none; position:absolute; top:-6px; right:-10px; background:var(--red); color:#fff; font-size:11px; font-weight:900; border-radius:99px; padding: 2px 6px; min-width:18px; text-align:center;">0</span>
+        <span class="total-price">$<span id="total-price">0</span></span>
+    </div>
     <button class="btn-send" id="btn-submit" onclick="submitOrder()">確認下單</button>
 </div>
 
 <div id="custom-alert" class="custom-alert-overlay">
     <div class="custom-alert-box">
-        <div class="custom-alert-header">謝謝光臨</div>
+        <div class="custom-alert-header">提醒</div>
         <div id="custom-alert-message" class="custom-alert-body"></div>
-        <div class="custom-alert-footer">
-            <button class="custom-alert-btn" onclick="closeCustomAlert()">確定</button>
-        </div>
+        <button class="custom-alert-btn" onclick="closeCustomAlert()">確定</button>
     </div>
 </div>
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script>
 
+// --- MENU DATA ---
 const menu = {
     small: { 燒肉:56, 火腿:56, 雞肉:68, 烤肉:72, 雙層烤肉:78, 綜合:79 },
     large: { 燒肉:80, 火腿:80, 雞肉:100, 烤肉:105, 雙層烤肉:115, 綜合:130 },
     combo: { 
-        "1 （大燒肉+飲料）": 90, 
-        "2 （大火腿+飲料）": 90, 
-        "3 （大雞肉+飲料）": 118, 
-        "4 （大烤肉+飲料）": 128, 
-        "5 （大雙層烤肉+飲料）": 135, 
-        "6 （大綜合+飲料）": 142,
-        "7 （小燒肉+飲料）": 77,
-        "8 （小雞肉肉+飲料）": 88,
-        "9 （小烤肉+飲料）": 95,
-        "10 （小雙層烤肉+飲料）": 99,
-        "11 （小綜合+飲料）": 100
+        "1 大燒肉+飲料": 90, 
+        "2 大火腿+飲料": 90, 
+        "3 大雞肉+飲料": 118, 
+        "4 大烤肉+飲料": 128, 
+        "5 大雙層烤肉+飲料": 135, 
+        "6 大綜合+飲料": 142,
+        "7 小燒肉+飲料": 77,
+        "8 小雞肉+飲料": 88,
+        "9 小烤肉+飲料": 95,
+        "10 小雙層烤肉+飲料": 99,
+        "11 小綜合+飲料": 100
     },
     drinks: { 越南咖啡:48, 豆漿:37, 紅茶:37, 可樂:37, 雪碧:37 },
     topping: { 起司:15, 火腿:20, 燒肉:20, 烤肉:25, 雞肉:25 }
 };
+
+// Recommended items
+const recommended = new Set(['雙層烤肉', '綜合']);
+const recommendedCombo = new Set(['5 大雙層烤肉+飲料', '6 大綜合+飲料']);
 
 let cart = {};
 let customizeData = {};
@@ -102,67 +204,155 @@ let currentPopup = null;
 let alertCallback = null;
 let isSubmitting = false;
 
+// --- NAV / SCROLL ---
+function scrollToSec(id) {
+    document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+}
+
+const observerOptions = { root: null, rootMargin: '-80px 0px -70% 0px', threshold: 0 };
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            const targetBtn = document.querySelector(`.nav-btn[onclick="scrollToSec('${entry.target.id}')"]`);
+            if (targetBtn) {
+                targetBtn.classList.add('active');
+                const nav = document.getElementById('main-nav');
+                nav.scrollTo({ left: targetBtn.offsetLeft - 20, behavior: 'smooth' });
+            }
+        }
+    });
+}, observerOptions);
+
+// --- ALERT ---
 function customAlert(msg, callback = null) {
     document.getElementById('custom-alert-message').innerText = msg;
     document.getElementById('custom-alert').style.display = 'flex';
     alertCallback = callback;
 }
-
 function closeCustomAlert() {
     document.getElementById('custom-alert').style.display = 'none';
-    if (alertCallback) {
-        alertCallback();
-        alertCallback = null;
-    }
+    if (alertCallback) { alertCallback(); alertCallback = null; }
 }
 
-function createItem(name, price, category, containerId) {
+// --- MENU RENDER ---
+function createItem(displayName, price, category, containerId, origName, isRecommended) {
     const container = document.getElementById(containerId);
     const div = document.createElement('div');
-    div.className = 'item';
-    div.id = `item-${category}-${name}`;
+    div.className = 'card';
+    div.id = `item-${category}-${origName}`;
+
+    const badgeHTML = isRecommended ? `<span class="badge">👍 推薦</span>` : '';
+
     div.innerHTML = `
-        <div class="item-info">
-            <div class="item-name">${name}</div>
-            <div class="item-price">$${price}</div>
-        </div>
-        <div class="qty-control">
-            <button class="btn-qty" onclick="updateQty('${category}','${name}',-1)">-</button>
-            <span id="qty-${category}-${name}">0</span>
-            <button class="btn-qty" onclick="updateQty('${category}','${name}',1)">+</button>
-            <span class="customize-btn" id="customize-btn-${category}-${name}" onclick="toggleCustomize('${category}','${name}')">客制化</span>
+        <div class="card-body">
+            <div class="card-title">${displayName} ${badgeHTML}</div>
+            <div class="card-footer">
+                <div class="card-price">$${price}</div>
+                <div class="qty-control">
+                    <button class="btn-qty" onclick="updateQty('${category}','${origName}',-1)">-</button>
+                    <span class="qty-text" id="qty-${category}-${origName}">0</span>
+                    <button class="btn-qty" onclick="updateQty('${category}','${origName}',1)">+</button>
+                </div>
+            </div>
+            <button class="customize-btn" id="customize-btn-${category}-${origName}" onclick="toggleCustomize('${category}','${origName}')">✏️ 客製化（加料 / 辣度 / 備註）</button>
+            <div id="combo-container-${category}-${origName}"></div>
         </div>
     `;
     container.appendChild(div);
 }
 
 function renderMenu() {
-    for (let name in menu.small) createItem(name + '小', menu.small[name], 'small', 'small-list');
-    for (let name in menu.large) createItem(name + '大', menu.large[name], 'large', 'large-list');
-    for (let set in menu.combo) createItem('套餐 ' + set, menu.combo[set], 'combo', 'combo-list');
-    for (let name in menu.drinks) createItem(name, menu.drinks[name], 'drink', 'drink-list');
+    for (let name in menu.small) createItem(name + ' 小', menu.small[name], 'small', 'small-list', name, recommended.has(name));
+    for (let name in menu.large) createItem(name + ' 大', menu.large[name], 'large', 'large-list', name, recommended.has(name));
+    for (let name in menu.combo) createItem('套餐 ' + name, menu.combo[name], 'combo', 'combo-list', name, recommendedCombo.has(name));
+    for (let name in menu.drinks) createItem(name, menu.drinks[name], 'drink', 'drink-list', name, false);
+
+    document.querySelectorAll('.section-container').forEach(sec => observer.observe(sec));
 }
 
-function updateQty(category, name, change) {
-    const key = category + '_' + name;
+// --- CART LOGIC ---
+function updateQty(category, origName, change) {
+    const key = category + '_' + origName;
     cart[key] = (cart[key] || 0) + change;
     if (cart[key] < 0) cart[key] = 0;
 
-    document.getElementById('qty-' + category + '-' + name).innerText = cart[key];
-    const btn = document.getElementById('customize-btn-' + category + '-' + name);
+    const qtySpan = document.getElementById('qty-' + category + '-' + origName);
+    qtySpan.innerText = cart[key];
+    qtySpan.style.color = cart[key] > 0 ? 'var(--primary)' : 'inherit';
 
-    if (cart[key] > 0 && (category === 'small' || category === 'large' || category === 'combo')) {
-        btn.style.display = 'inline';
-    } else if (btn) {
-        btn.style.display = 'none';
-    }
+    const btn = document.getElementById('customize-btn-' + category + '-' + origName);
+    if (btn) btn.style.display = (cart[key] > 0 && category !== 'drink') ? 'block' : 'none';
 
-    if (category === 'combo') renderComboDrinksInline(name, cart[key]);
-    calculateTotal();
+    if (category === 'combo') renderComboDrinksInline(origName, cart[key]);
+    updateTotal();
 }
 
-function toggleCustomize(category, name) {
-    const key = category + '_' + name;
+function updateTotal() {
+    let total = 0;
+    let totalQty = 0;
+    for (let key in cart) {
+        let [cat, origName] = key.split('_');
+        let qty = cart[key];
+        totalQty += qty;
+        if (cat === 'small') total += qty * (menu.small[origName] || 0);
+        if (cat === 'large') total += qty * (menu.large[origName] || 0);
+        if (cat === 'combo') total += qty * (menu.combo[origName] || 0);
+        if (cat === 'drink') total += qty * (menu.drinks[origName] || 0);
+    }
+    for (let key in customizeData) {
+        let qty = cart[key] || 0;
+        customizeData[key].slice(0, qty).forEach(item => {
+            if (item && item.topping) total += menu.topping[item.topping] || 0;
+        });
+    }
+    document.getElementById('total-price').innerText = total;
+
+    // Update cart badge
+    const badge = document.getElementById('cart-badge');
+    if (badge) {
+        badge.innerText = totalQty;
+        badge.style.display = totalQty > 0 ? 'block' : 'none';
+    }
+
+    return total;
+}
+
+// --- COMBO DRINKS ---
+function renderComboDrinksInline(origName, qty) {
+    const containerId = 'combo-container-combo-' + origName;
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = '';
+    if (qty === 0) return;
+
+    if (!comboDrinkData[origName]) comboDrinkData[origName] = [];
+
+    const box = document.createElement('div');
+    box.className = 'combo-drinks';
+    box.innerHTML = '<strong>🥤 選擇附贈飲料</strong>';
+
+    for (let i = 1; i <= qty; i++) {
+        let firstDrink = Object.keys(menu.drinks)[0];
+        if (!comboDrinkData[origName][i-1]) comboDrinkData[origName][i-1] = firstDrink;
+
+        let sel = document.createElement('select');
+        for (let d in menu.drinks) {
+            let opt = document.createElement('option');
+            opt.value = d;
+            opt.text = `第 ${i} 份：${d}`;
+            if (comboDrinkData[origName][i-1] === d) opt.selected = true;
+            sel.appendChild(opt);
+        }
+        sel.onchange = () => { comboDrinkData[origName][i-1] = sel.value; };
+        box.appendChild(sel);
+    }
+    container.appendChild(box);
+}
+
+// --- CUSTOMIZE POPUP ---
+function toggleCustomize(category, origName) {
+    const key = category + '_' + origName;
     const qty = cart[key];
     if (!qty) return;
 
@@ -174,42 +364,58 @@ function toggleCustomize(category, name) {
 
     const box = document.createElement('div');
     box.className = 'popup-box';
-    box.innerHTML = `<div class="popup-header"><span>${name} 客制化</span><span onclick="closePopup()">✕</span></div>`;
+
+    const displayName = category === 'small' ? origName + ' 小' :
+                        category === 'large' ? origName + ' 大' :
+                        '套餐 ' + origName;
+
+    box.innerHTML = `
+        <div class="popup-header">
+            <span>${displayName} 客製化</span>
+            <div class="close-btn" onclick="closePopup()">✕</div>
+        </div>`;
+
+    const labelStyle = `font-size: 13px; font-weight: 800; color: var(--muted); display: block; margin: 16px 0 4px 0;`;
 
     for (let i = 0; i < qty; i++) {
         let data = customizeData[key][i] || { topping: '', spicy: '微辣', note: '' };
         if (!customizeData[key][i]) customizeData[key][i] = data;
 
-        let section = document.createElement('div');
-        section.style.marginBottom = "15px";
-        section.style.borderBottom = "1px solid #eee";
-        
         let toppingOptions = '<option value="">不加料</option>';
         for (let t in menu.topping) {
             toppingOptions += `<option value="${t}" ${data.topping===t?'selected':''}>${t} +$${menu.topping[t]}</option>`;
         }
 
+        const section = document.createElement('div');
+        section.style.cssText = 'margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid #f3f4f6;';
         section.innerHTML = `
-            <p><b>第 ${i+1} 份</b></p>
-            <label>加料</label>
-            <select onchange="saveCustomize('${key}',${i},'topping',this.value)">${toppingOptions}</select>
-            <label>辣度</label>
-            <select onchange="saveCustomize('${key}',${i},'spicy',this.value)">
-                <option value="不辣" ${data.spicy==='不辣'?'selected':''}>不辣</option>
-                <option value="微辣" ${data.spicy==='微辣'?'selected':''}>微辣</option>
-                <option value="中辣" ${data.spicy==='中辣'?'selected':''}>中辣</option>
-                <option value="大辣" ${data.spicy==='大辣'?'selected':''}>大辣</option>
-            </select>
-            <input type="text" value="${data.note||''}" onchange="saveCustomize('${key}',${i},'note',this.value)" placeholder="個別備註：如不要香菜">
+            <div style="font-weight: 900; color: var(--primary); font-size: 16px; margin-bottom: 12px;">第 ${i+1} 份</div>
+            <div style="display:flex; gap:12px;">
+                <div style="flex:1;">
+                    <label style="${labelStyle}">加料</label>
+                    <select onchange="saveCustomize('${key}',${i},'topping',this.value)">${toppingOptions}</select>
+                </div>
+                <div style="flex:1;">
+                    <label style="${labelStyle}">辣度</label>
+                    <select onchange="saveCustomize('${key}',${i},'spicy',this.value)">
+                        <option value="不辣" ${data.spicy==='不辣'?'selected':''}>不辣</option>
+                        <option value="微辣" ${data.spicy==='微辣'?'selected':''}>微辣</option>
+                        <option value="中辣" ${data.spicy==='中辣'?'selected':''}>中辣</option>
+                        <option value="大辣" ${data.spicy==='大辣'?'selected':''}>大辣</option>
+                    </select>
+                </div>
+            </div>
+            <label style="${labelStyle}">個別備註</label>
+            <input type="text" value="${data.note||''}" placeholder="如：不要香菜" onkeyup="saveCustomizeNote('${key}',${i},this.value)" onchange="saveCustomizeNote('${key}',${i},this.value)">
         `;
         box.appendChild(section);
     }
 
     const okBtn = document.createElement('button');
-    okBtn.innerText = "確認下單";
-    okBtn.className = "btn-send";
-    okBtn.style.width = "100%";
-    okBtn.onclick = () => { closePopup(); calculateTotal(); };
+    okBtn.innerText = '完成設定';
+    okBtn.className = 'btn-send';
+    okBtn.style.cssText = 'width:100%; margin-top:8px;';
+    okBtn.onclick = () => { closePopup(); updateTotal(); };
     box.appendChild(okBtn);
 
     overlay.appendChild(box);
@@ -221,175 +427,142 @@ function saveCustomize(key, index, field, value) {
     if (!customizeData[key]) customizeData[key] = [];
     if (!customizeData[key][index]) customizeData[key][index] = {};
     customizeData[key][index][field] = value;
+    updateTotal();
+}
+
+// Separate note handler to avoid popup re-render on mobile
+function saveCustomizeNote(key, index, value) {
+    if (!customizeData[key]) customizeData[key] = [];
+    if (!customizeData[key][index]) customizeData[key][index] = {};
+    customizeData[key][index]['note'] = value;
 }
 
 function closePopup() { if (currentPopup) { currentPopup.remove(); currentPopup = null; } }
 
-function calculateTotal() {
-    let total = 0;
-    for (let key in cart) {
-        let [cat, name] = key.split('_');
-        let qty = cart[key];
-        if (cat === 'small') total += qty * menu.small[name.replace('小','')];
-        if (cat === 'large') total += qty * menu.large[name.replace('大','')];
-        if (cat === 'combo') total += qty * menu.combo[name.replace('套餐 ','')];
-        if (cat === 'drink') total += qty * menu.drinks[name];
-    }
-    for (let key in customizeData) {
-        let qty = cart[key] || 0;
-        customizeData[key].slice(0, qty).forEach(item => {
-            if (item && item.topping) total += menu.topping[item.topping] || 0;
-        });
-    }
-    document.getElementById('total-price').innerText = total;
-    return total;
-}
-
-function renderComboDrinksInline(name, qty) {
-    let id = 'combo-drinks-' + name.replace(/\s+/g, '-');
-    let existing = document.getElementById(id);
-    if (existing) existing.remove();
-    if (qty === 0) return;
-
-    let container = document.createElement('div');
-    container.id = id;
-    container.className = 'combo-drinks';
-    document.getElementById('item-combo-' + name).after(container);
-
-    if (!comboDrinkData[name]) comboDrinkData[name] = [];
-
-    for (let i = 1; i <= qty; i++) {
-        let sel = document.createElement('select');
-        let firstDrink = Object.keys(menu.drinks)[0];
-        if(!comboDrinkData[name][i-1]) comboDrinkData[name][i-1] = firstDrink;
-
-        for (let d in menu.drinks) {
-            let opt = document.createElement('option');
-            opt.value = d;
-            opt.text = `第 ${i} 份飲料：${d}`;
-            if(comboDrinkData[name][i-1] === d) opt.selected = true;
-            sel.appendChild(opt);
-        }
-
-        sel.onchange = () => {
-            comboDrinkData[name][i-1] = sel.value;
-        };
-        container.appendChild(sel);
-    }
-}
-
+// --- ORDER SUBMIT ---
 function generateOrderNumber() {
     const now = new Date();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const todayKey = month + day;
-    
-    // Tạo 4 số ngẫu nhiên để 100% không trùng khi nhiều khách bấm cùng lúc
+    const twTime = new Date(now.getTime() + 8 * 3600000);
+    const month = String(twTime.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(twTime.getUTCDate()).padStart(2, '0');
+    const hours = String(twTime.getUTCHours()).padStart(2, '0');
+    const mins = String(twTime.getUTCMinutes()).padStart(2, '0');
     const randomSeq = Math.floor(1000 + Math.random() * 9000);
-    return `B${todayKey}-${randomSeq}`;
+    return `B${month}${day}-${hours}${mins}-${randomSeq}`;
 }
 
 async function submitOrder() {
     if (isSubmitting) return;
 
+    const hasItem = Object.values(cart).some(q => q > 0);
+    if (!hasItem) return customAlert('請選擇品項');
+
     const dateInput = document.getElementById('pickup-date').value;
     const timeInput = document.getElementById('pickup-time').value;
-    const currentTotal = calculateTotal();
-    let hasItem = Object.values(cart).some(q => q > 0);
 
-    if (!hasItem) return customAlert('請 選品項');
-    if (!dateInput || !timeInput) return customAlert('請 選取餐時間');
+    if (!dateInput || !timeInput) {
+        const timeSection = document.getElementById('sec-checkout');
+        if (timeSection) {
+            timeSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            timeSection.style.outline = '3px solid var(--primary)';
+            timeSection.style.borderRadius = '16px';
+            setTimeout(() => { timeSection.style.outline = 'none'; }, 2000);
+        }
+        setTimeout(() => {
+            if (!dateInput) document.getElementById('pickup-date').focus();
+            else document.getElementById('pickup-time').focus();
+        }, 400);
+        return customAlert('請先選取取餐日期和時間 ↓');
+    }
 
     const now = new Date();
     const selectedDateTime = new Date(`${dateInput}T${timeInput}`);
-    if (selectedDateTime < now) {
-        return customAlert('不能選擇過去的時間，請重新選擇取餐時間');
-    }
+    if (selectedDateTime < now) return customAlert('不能選擇過去的時間，請重新選擇');
 
     const pickupDate = new Date(dateInput);
-    const dayOfWeek = pickupDate.getDay(); 
+    const dayOfWeek = pickupDate.getDay();
     const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-    
     const [hours, minutes] = timeInput.split(':').map(Number);
     const timeValue = hours + minutes / 60;
 
     if (isWeekend) {
-        if (timeValue < 7.5 || timeValue > 21) {
-            return customAlert('週末營業時間為 07:30 - 21:00，請重新選擇取餐時間');
-        }
+        if (timeValue < 7.5 || timeValue > 21) return customAlert('週末營業時間為 07:30 - 21:00');
     } else {
-        if (timeValue < 11 || timeValue > 21) {
-            return customAlert('平日營業時間為 11:00 - 21:00，請重新選擇取餐時間');
-        }
+        if (timeValue < 11 || timeValue > 21) return customAlert('平日營業時間為 11:00 - 21:00');
     }
 
     isSubmitting = true;
     const submitBtn = document.getElementById('btn-submit');
     submitBtn.disabled = true;
-    submitBtn.innerText = "處理中...";
+    submitBtn.innerText = '處理中...';
 
+    const currentTotal = updateTotal();
     const orderNum = generateOrderNumber();
-    let msg = `訂單編號：${orderNum}\n`;
-    msg += '📦 訂單內容：\n';
-    
-    const zhNumbers = ["第一份", "第二份", "第三份", "第四份", "第五份", "第六份", "第七份", "第八份", "第九份", "第十份"];
+    const zhNumbers = ['第一份','第二份','第三份','第四份','第五份','第六份','第七份','第八份','第九份','第十份'];
+
+    let msg = `訂單編號：${orderNum}\n📦 訂單內容：\n`;
     
     for (let key in cart) {
         if (cart[key] > 0) {
-            let [cat, itemName] = key.split('_');
-            msg += `\n${itemName} x${cart[key]}份`;
+            let [cat, origName] = key.split('_');
+            let displayName = cat === 'small' ? origName + ' 小' :
+                              cat === 'large' ? origName + ' 大' :
+                              cat === 'combo' ? '套餐 ' + origName : origName;
+
+            msg += `\n${cart[key]}份 x ${displayName}`;
 
             if (cat === 'combo') {
-                let drinks = comboDrinkData[itemName] || [];
+                let drinks = comboDrinkData[origName] || [];
                 let drinkCounts = {};
                 drinks.slice(0, cart[key]).forEach(d => { drinkCounts[d] = (drinkCounts[d] || 0) + 1; });
-                let drinkStr = Object.entries(drinkCounts).map(([name, count]) => `${name} x${count}`).join('，');
-                msg += `\n  - 飲料：${drinkStr}`;
+                let drinkStr = Object.entries(drinkCounts).map(([n, c]) => `${n} x${c}`).join('、');
+                if (drinkStr) msg += `\n   ↳ 飲料：${drinkStr}`;
             }
 
             if (customizeData[key]) {
                 customizeData[key].slice(0, cart[key]).forEach((c, i) => {
-                    let zhIdx = zhNumbers[i] || `第 ${i+1} 份`;
                     let parts = [];
-                    
-                    if (c.topping && c.topping !== '') parts.push(`加${c.topping}`);
+                    if (c.topping && c.topping !== '') parts.push('加' + c.topping);
                     if (c.spicy && c.spicy !== '微辣') parts.push(c.spicy);
                     if (c.note && c.note.trim() !== '') parts.push(c.note.trim());
-
-                    let detailStr = parts.length > 0 ? parts.join(', ') : '正常';
-                    msg += `\n  - ${zhIdx}: ${detailStr}`;
+                    if (parts.length > 0) {
+                        let zhIdx = zhNumbers[i] || `第 ${i+1} 份`;
+                        msg += `\n   ↳ ${zhIdx}: ${parts.join(', ')}`;
+                    }
                 });
             }
-            msg += '\n';
         }
     }
 
-    msg += `\n🕒 取餐時間：${dateInput} ${timeInput}`;
+    msg += `\n\n🕒 取餐時間：${dateInput} ${timeInput}`;
     const mainNote = document.getElementById('note').value;
     if (mainNote) msg += `\n📝 總備註：${mainNote}`;
-    
     msg += `\n💰 總金額：$${currentTotal}`;
 
     try {
         await liff.init({ liffId: '2009560906-c5taZfiY' });
-        await liff.sendMessages([{ type: 'text', text: msg }]);
-        customAlert('訂單已送出', () => {
-            liff.closeWindow();
-        });
+        if (liff.isLoggedIn()) {
+            await liff.sendMessages([{ type: 'text', text: msg }]);
+            customAlert('訂單已送出 🎉', () => { liff.closeWindow(); });
+        } else {
+            console.log('LINE LIFF MSG DUMP:\n', msg);
+            customAlert('測試模式：訂單已在 Console 輸出');
+        }
     } catch (err) {
+        console.log('LINE LIFF MSG DUMP:\n', msg);
         customAlert('傳送失敗，請重試');
         isSubmitting = false;
         submitBtn.disabled = false;
-        submitBtn.innerText = "確認下單";
+        submitBtn.innerText = '確認下單';
     }
 }
 
 function setTodayDate() {
     const today = new Date();
-    const dateStr = today.toISOString().split('T')[0];
+    const offsetDate = new Date(today.getTime() + 8 * 3600000);
+    const dateStr = offsetDate.toISOString().split('T')[0];
     const dateEl = document.getElementById('pickup-date');
-    dateEl.value = dateStr;
-    dateEl.min = dateStr;
+    if (dateEl) { dateEl.value = dateStr; dateEl.min = dateStr; }
 }
 
 renderMenu();
