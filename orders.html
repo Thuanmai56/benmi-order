@@ -540,19 +540,25 @@
       </div>
     </div>
 
-    <!-- Cài đặt -->
-    <div class="content" id="view-settings" style="display:none; max-width: 800px; margin: 0 auto; width: 100%;">
+    <!-- Settings Panel -->
+    <div class="content" id="view-settings" style="display:none; max-width: 860px; margin: 0 auto; width: 100%;">
       <div class="panel" style="height: auto; padding-bottom: 24px;">
         <div class="panel-header">
           <div class="panel-title">Cài đặt hệ thống (Settings)</div>
         </div>
-        <div class="panel-body" style="padding: 24px;">
-          <div style="border: 1px solid var(--border); border-radius: 12px; padding: 20px; background: #fff;">
-            <div style="font-weight: 1100; font-size: 20px; margin-bottom: 12px;">Đổi mật khẩu Dashboard</div>
-            <input type="password" id="set-pw-old" placeholder="Mật khẩu hiện tại" style="width:100%; padding: 12px; margin-bottom:10px; border-radius:8px; border:1px solid #ccc; font-size:16px; box-sizing:border-box;">
-            <input type="password" id="set-pw-new" placeholder="Mật khẩu mới (tối thiểu 4 ký tự)" style="width:100%; padding: 12px; margin-bottom:10px; border-radius:8px; border:1px solid #ccc; font-size:16px; box-sizing:border-box;">
-            <button class="btn btn-primary" onclick="changePassword()" style="font-size: 16px; padding: 12px 24px; border-radius: 8px;">Cập nhật mật khẩu</button>
+        <div class="panel-body" style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
+
+          <!-- Operating Hours -->
+          <div style="border: 1px solid var(--border); border-radius: 12px; overflow: hidden;">
+            <div style="padding: 16px 20px; background: #f3f4f6; border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+              <div style="font-weight: 1100; font-size: 18px;">⏰ 營業時間 (Giờ hoạt động)</div>
+              <button class="btn btn-primary" style="padding: 10px 20px; font-size: 15px; border-radius: 8px;" onclick="saveOperatingHours()" id="btn-save-hours">儲存時間</button>
+            </div>
+            <div id="settings-hours-container" style="padding: 16px; display: flex; flex-direction: column; gap: 10px;">
+              <div style="text-align:center; font-size:14px; color:#999;">載入中...</div>
+            </div>
           </div>
+
         </div>
       </div>
     </div>
@@ -592,15 +598,7 @@
     </div>
   </div>
 
-  <!-- Auth modal -->
-  <div id="authModal" class="modal" style="display:flex; background: #f0f2f5; z-index: 9999;">
-    <div class="modal-content" style="max-width: 400px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.1);">
-      <h3 style="font-weight: 1100; font-size: 26px; margin-bottom: 8px; margin-top: 0;">Đăng nhập</h3>
-      <p style="color: var(--muted); margin-bottom: 24px; font-weight: 800;">Benmi Dashboard</p>
-      <input type="password" id="auth-password" placeholder="Nhập mật khẩu (Mặc định: 12345678)" style="width:100%; padding: 16px; font-size: 18px; border-radius: 12px; border: 2px solid var(--border); box-sizing:border-box; margin-bottom: 16px; text-align:center;">
-      <button class="btn btn-primary btn-block" onclick="verifyAuth()">Xác nhận</button>
-    </div>
-  </div>
+
 
   <!-- Fullscreen new order alert -->
   <div class="new-alert" id="new-alert">
@@ -817,8 +815,6 @@
       const lines = String(content).split("\n").map(s => s.trim()).filter(Boolean);
       return lines.slice(0, 6).join("\n");
     }
-
-    let sessionToken = localStorage.getItem("benmi_pos_token");
 
     function switchTab(tab) {
       activeTab = tab;
@@ -1362,84 +1358,118 @@
       await playNewOrderSound();
     }
 
-    // --- AUTH & SETTINGS LOGIC ---
-    async function verifyAuth() {
-      const pw = document.getElementById("auth-password").value;
-      if (!pw) return;
-      try {
-        const res = await fetch(`${WORKER_BASE}/api/auth`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ password: pw })
-        });
-        const data = await res.json();
-        if (data.ok) {
-          sessionToken = pw;
-          localStorage.setItem("benmi_pos_token", pw);
-          document.getElementById("authModal").style.display = "none";
-          fetchOrders();
-        } else {
-          alert("Mật khẩu sai!");
-        }
-      } catch (e) {
-        alert("Lỗi kết nối");
-      }
-    }
-
-    async function checkAuthOnLoad() {
-      if (!sessionToken) {
-        document.getElementById("authModal").style.display = "flex";
-        return;
-      }
-      try {
-        const res = await fetch(`${WORKER_BASE}/api/auth`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ password: sessionToken })
-        });
-        const data = await res.json();
-        if (data.ok) {
-          document.getElementById("authModal").style.display = "none";
-          fetchOrders();
-        } else {
-          sessionToken = null;
-          localStorage.removeItem("benmi_pos_token");
-          document.getElementById("authModal").style.display = "flex";
-        }
-      } catch (e) {
-        // network error, allow cached view
-      }
-    }
+    // --- SETTINGS & OPERATING HOURS ---
+    let storeOperatingHours = null;
+    const DAY_NAMES = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
 
     function openSettings() {
       activeTab = "settings";
       document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
       document.querySelectorAll(".content").forEach(c => c.style.display = "none");
       document.getElementById("view-settings").style.display = "block";
+      loadOperatingHours();
     }
 
-    async function changePassword() {
-      const oldPw = document.getElementById("set-pw-old").value;
-      const newPw = document.getElementById("set-pw-new").value;
-      if (!oldPw || !newPw) return alert("Vui lòng điền đủ thông tin");
+    async function loadOperatingHours() {
       try {
-        const res = await fetch(`${WORKER_BASE}/api/auth/change`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ current: oldPw, newPassword: newPw })
-        });
-        const data = await res.json();
-        if (data.ok) {
-          alert("Đổi mật khẩu thành công!");
-          sessionToken = newPw;
-          localStorage.setItem("benmi_pos_token", newPw);
-          document.getElementById("set-pw-old").value = "";
-          document.getElementById("set-pw-new").value = "";
+        const res = await fetch(`${WORKER_BASE}/api/config?_t=${Date.now()}`);
+        if (res.ok) {
+          const data = await res.json();
+          storeOperatingHours = data.operatingHours || createDefaultOperatingHours();
         } else {
-          alert("Lỗi: " + data.error);
+          storeOperatingHours = createDefaultOperatingHours();
         }
       } catch (e) {
-        alert("Lỗi mạng");
+        storeOperatingHours = createDefaultOperatingHours();
+      }
+      renderOperatingHours();
+    }
+
+    function createDefaultOperatingHours() {
+      let hrs = {};
+      for (let i = 0; i < 7; i++) hrs[i] = [{ start: "08:00", end: "21:00" }];
+      return hrs;
+    }
+
+    function renderOperatingHours() {
+      const container = document.getElementById("settings-hours-container");
+      container.innerHTML = "";
+      for (let i = 1; i <= 7; i++) {
+        const dayIdx = i === 7 ? 0 : i;
+        const shifts = storeOperatingHours[dayIdx] || [];
+        const isOpen = shifts.length > 0;
+        const row = document.createElement("div");
+        row.style.cssText = "background: #fff; border: 1px solid #eee; border-radius: 8px; padding: 12px;";
+        let shiftsHtml = "";
+        shifts.forEach((shift, sIdx) => {
+          shiftsHtml += `
+            <div style="display:flex; gap:8px; align-items:center; margin-top:10px;">
+              <input type="time" id="sh-start-${dayIdx}-${sIdx}" value="${shift.start}" style="flex:1; padding:8px; font-family:inherit; border:1px solid #ccc; border-radius:6px; font-size:15px;">
+              <span style="font-weight:900;">-</span>
+              <input type="time" id="sh-end-${dayIdx}-${sIdx}" value="${shift.end}" style="flex:1; padding:8px; font-family:inherit; border:1px solid #ccc; border-radius:6px; font-size:15px;">
+              <button onclick="removeShift(${dayIdx}, ${sIdx})" style="background:none; border:none; color:var(--brand-red); cursor:pointer; font-size:20px; padding:0 4px;">✕</button>
+            </div>`;
+        });
+        row.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:16px;">
+              <input type="checkbox" ${isOpen ? 'checked' : ''} onchange="toggleDayStatus(${dayIdx}, this.checked)" style="width:18px; height:18px;">
+              <span style="font-weight:900; color:${isOpen ? '#111' : '#999'};">${DAY_NAMES[dayIdx]}</span>
+            </label>
+            ${isOpen ? `<button onclick="addShift(${dayIdx})" style="font-size:13px; background:#eff6ff; color:#3b82f6; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-weight:900;">+ 新增時段</button>` : `<span style="font-size:13px; color:var(--brand-red); font-weight:900;">公休</span>`}
+          </div>
+          ${isOpen ? `<div id="shifts-box-${dayIdx}">${shiftsHtml}</div>` : ''}`;
+        container.appendChild(row);
+      }
+    }
+
+    function syncOperatingHoursFromDOM() {
+      for (let i = 0; i < 7; i++) {
+        const shifts = storeOperatingHours[i];
+        if (shifts && shifts.length > 0) {
+          shifts.forEach((shift, sIdx) => {
+            const elStart = document.getElementById(`sh-start-${i}-${sIdx}`);
+            const elEnd = document.getElementById(`sh-end-${i}-${sIdx}`);
+            if (elStart && elEnd) { shift.start = elStart.value; shift.end = elEnd.value; }
+          });
+        }
+      }
+    }
+
+    function toggleDayStatus(dayIdx, isChecked) {
+      storeOperatingHours[dayIdx] = isChecked ? [{ start: "08:00", end: "21:00" }] : [];
+      renderOperatingHours();
+    }
+
+    function addShift(dayIdx) {
+      syncOperatingHoursFromDOM();
+      storeOperatingHours[dayIdx].push({ start: "12:00", end: "13:00" });
+      renderOperatingHours();
+    }
+
+    function removeShift(dayIdx, sIdx) {
+      syncOperatingHoursFromDOM();
+      storeOperatingHours[dayIdx].splice(sIdx, 1);
+      renderOperatingHours();
+    }
+
+    async function saveOperatingHours() {
+      syncOperatingHoursFromDOM();
+      const btn = document.getElementById("btn-save-hours");
+      const oldText = btn.innerText;
+      btn.innerText = "儲存中..."; btn.disabled = true;
+      try {
+        const res = await fetch(`${WORKER_BASE}/api/config`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ operatingHours: storeOperatingHours })
+        });
+        if (!res.ok) throw new Error("API returned " + res.status);
+        alert("營業時間儲存成功！");
+      } catch (e) {
+        alert("儲存失敗：" + e.message);
+      } finally {
+        btn.innerText = oldText; btn.disabled = false;
       }
     }
 
@@ -1640,12 +1670,9 @@
     }
 
     setInterval(() => {
-      // Only poll orders if live or history tab is active, to save resources and avoid interfering with settings
-      if (activeTab === "live" || activeTab === "history") {
-        fetchOrders();
-      }
+      if (activeTab === "live" || activeTab === "history") fetchOrders();
     }, 5000);
-    checkAuthOnLoad();
+    fetchOrders();
   </script>
 </body>
 
