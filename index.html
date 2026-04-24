@@ -173,25 +173,19 @@
 <script>
 
 // --- MENU DATA ---
-const menu = {
-    small: { 燒肉:56, 火腿:56, 雞肉:68, 烤肉:72, 雙層烤肉:78, 綜合:79 },
-    large: { 燒肉:80, 火腿:80, 雞肉:100, 烤肉:105, 雙層烤肉:115, 綜合:130 },
-    combo: { 
-        "1 大燒肉+飲料": 90, 
-        "2 大火腿+飲料": 90, 
-        "3 大雞肉+飲料": 118, 
-        "4 大烤肉+飲料": 128, 
-        "5 大雙層烤肉+飲料": 135, 
-        "6 大綜合+飲料": 142,
-        "7 小燒肉+飲料": 77,
-        "8 小雞肉+飲料": 88,
-        "9 小烤肉+飲料": 95,
-        "10 小雙層烤肉+飲料": 99,
-        "11 小綜合+飲料": 100
-    },
-    drinks: { 越南咖啡:48, 豆漿:37, 紅茶:37, 可樂:37, 雪碧:37 },
-    topping: { 起司:15, 火腿:20, 燒肉:20, 烤肉:25, 雞肉:25 }
-};
+const WORKER_BASE = "https://benmi-worker-official.thuanmnc.workers.dev";
+let menu = { small:{}, large:{}, combo:{}, drinks:{}, topping:{} };
+
+async function fetchMenu() {
+    try {
+        const res = await fetch(`${WORKER_BASE}/api/menu`);
+        if (res.ok) {
+            menu = await res.json();
+        }
+    } catch (e) {
+        console.error("Failed to fetch menu", e);
+    }
+}
 
 // Recommended items
 const recommended = new Set(['雙層烤肉', '綜合']);
@@ -565,8 +559,12 @@ function setTodayDate() {
     if (dateEl) { dateEl.value = dateStr; dateEl.min = dateStr; }
 }
 
-renderMenu();
-setTodayDate();
+async function initApp() {
+    await fetchMenu();
+    renderMenu();
+    setTodayDate();
+}
+initApp();
 
 </script>
 </body>
