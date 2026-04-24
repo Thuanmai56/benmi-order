@@ -558,17 +558,35 @@
     </div>
 
     <!-- Menu Editor -->
-    <div class="content" id="view-menu" style="display:none; max-width: 1000px; margin: 0 auto; width: 100%;">
-      <div class="panel" style="height: auto; padding-bottom: 24px;">
-        <div class="panel-header">
-          <div>
-            <div class="panel-title">Chỉnh sửa Menu (Benmi)</div>
-            <div class="panel-sub" style="color: var(--brand-red);">Cảnh báo: Chỉ đổi tên/giá, không xóa các nhóm chính để tránh lỗi hệ thống.</div>
+    <div class="content" id="view-menu" style="display:none;">
+      <div class="split" style="grid-template-columns: 260px 1fr;">
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <div class="panel-title">菜單分類</div>
+              <div class="panel-sub" style="color: var(--brand-red); margin-top:4px;">5 nhóm cố định của Benmi</div>
+            </div>
+            <button class="mini-btn" onclick="loadMenuData()">重整</button>
           </div>
-          <button class="btn btn-primary" style="padding: 10px 20px; font-size: 16px; border-radius: 8px;" onclick="saveMenu()">Lưu Menu</button>
+          <div class="panel-body" id="menu-categories" style="padding: 0; background: #fff;">
+            <!-- Categories rendered here -->
+          </div>
         </div>
-        <div class="panel-body" id="menu-editor-body" style="padding: 24px; background: #f9fafb;">
-          <div style="text-align:center; padding: 22px; color:#999;">Đang tải menu...</div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <div class="panel-title" id="menu-editor-title">分類項目</div>
+              <div class="panel-sub">拖曳排序 ✦ 點擊欄位直接修改</div>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn-yellow" style="padding: 8px 16px; font-size: 14px;" onclick="addNewMenuItem()">+ 新增項目</button>
+              <button class="btn btn-primary" style="padding: 8px 16px; font-size: 14px;" onclick="saveMenuData()">儲存變更</button>
+            </div>
+          </div>
+          <div class="panel-body" id="menu-editor-body" style="background: #f9fafb;">
+            <div style="text-align:center; padding: 22px; color:#999;">請先從左側選擇分類</div>
+          </div>
         </div>
       </div>
     </div>
@@ -1425,127 +1443,199 @@
       }
     }
 
-    // --- MENU EDITOR LOGIC ---
-    let menuData = null;
+    // --- MENU EDITOR LOGIC (ALing-POS style, Benmi fixed categories) ---
+    // Benmi menu structure: { small:{name:price}, large:{}, combo:{}, drinks:{}, topping:{} }
+    // We convert to array of categories with items for the editor, then convert back on save.
+    let currentMenuData = null;   // Array form for editor
+    let rawMenuData = null;       // Original object form from API
+    let activeCategoryIndex = -1;
+
+    const BENMI_CATS = [
+      { id: "small",   label: "小麵包 (Bánh mì nhỏ)" },
+      { id: "large",   label: "大麵包 (Bánh mì lớn)" },
+      { id: "combo",   label: "套餐 (Combo + Nước)" },
+      { id: "drinks",  label: "單點飲料 (Đồ uống)" },
+      { id: "topping", label: "加料 (Topping)" }
+    ];
 
     function openMenuSettings() {
       activeTab = "menu";
       document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
       document.querySelectorAll(".content").forEach(c => c.style.display = "none");
       document.getElementById("view-menu").style.display = "block";
-      fetchMenu();
+      if (!currentMenuData) loadMenuData();
     }
 
-    async function fetchMenu() {
+    async function loadMenuData() {
       document.getElementById("menu-editor-body").innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">Đang tải menu...</div>`;
       try {
-        const res = await fetch(`${WORKER_BASE}/api/menu`);
-        const data = await res.json();
-        menuData = data;
-        renderMenuEditor();
+        const res = await fetch(`${WORKER_BASE}/api/menu?_t=${Date.now()}`);
+        if (!res.ok) throw new Error("Failed to load");
+        rawMenuData = await res.json();
+        // Convert object format to editable array format
+        currentMenuData = BENMI_CATS.map(cat => ({
+          id: cat.id,
+          title: cat.label,
+          items: Object.entries(rawMenuData[cat.id] || {}).map(([name, price]) => ({ name, price }))
+        }));
+        activeCategoryIndex = -1;
+        renderMenuCategories();
+        document.getElementById("menu-editor-body").innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">請先從左側選擇分類</div>`;
+        document.getElementById("menu-editor-title").innerText = "分類項目";
       } catch (e) {
-        document.getElementById("menu-editor-body").innerHTML = `<div style="color:var(--brand-red); text-align:center;">Lỗi tải menu</div>`;
+        alert("無法載入菜單資料：" + e.message);
       }
     }
 
-    function renderMenuEditor() {
-      if (!menuData) return;
-      const container = document.getElementById("menu-editor-body");
+    function renderMenuCategories() {
+      const container = document.getElementById("menu-categories");
       container.innerHTML = "";
-
-      const cats = [
-        { id: "small", name: "小麵包 (Bánh mì nhỏ)" },
-        { id: "large", name: "大麵包 (Bánh mì lớn)" },
-        { id: "combo", name: "套餐 (Combo + Nước)" },
-        { id: "drinks", name: "單點飲料 (Đồ uống)" },
-        { id: "topping", name: "加料 (Topping)" }
-      ];
-
-      cats.forEach(cat => {
-        if (!menuData[cat.id]) menuData[cat.id] = {};
-        
-        const catDiv = document.createElement("div");
-        catDiv.style.cssText = "background: #fff; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 20px; overflow: hidden;";
-        
-        let header = `<div style="padding: 16px 20px; background: #f3f4f6; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-          <div style="font-weight: 1100; font-size: 20px;">${cat.name}</div>
-          <button class="btn btn-ghost" style="padding: 8px 16px; font-size: 14px; background: white;" onclick="addMenuItem('${cat.id}')">+ Thêm món</button>
-        </div>`;
-        
-        let itemsHtml = `<div style="padding: 16px; display: grid; gap: 12px;" id="menu-cat-${cat.id}">`;
-        
-        Object.entries(menuData[cat.id]).forEach(([itemName, itemPrice]) => {
-          itemsHtml += `
-            <div style="display: flex; gap: 12px; align-items: center; background: #fafafa; padding: 12px; border-radius: 8px; border: 1px solid #eee; flex-wrap: wrap;">
-              <input type="text" value="${escapeHtml(itemName)}" style="flex: 1; min-width: 140px; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; box-sizing: border-box;" onchange="updateMenuKey('${cat.id}', '${escapeHtml(itemName)}', this.value)">
-              <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 100px;">
-                <span style="font-weight:900;">$</span>
-                <input type="number" value="${itemPrice}" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; box-sizing: border-box;" onchange="updateMenuPrice('${cat.id}', '${escapeHtml(itemName)}', this.value)">
-              </div>
-              <button class="btn btn-danger" style="padding: 12px 16px; border-radius: 8px; font-size: 14px; white-space: nowrap;" onclick="removeMenuItem('${cat.id}', '${escapeHtml(itemName)}')">Xóa</button>
-            </div>
-          `;
-        });
-        
-        itemsHtml += `</div>`;
-        catDiv.innerHTML = header + itemsHtml;
-        container.appendChild(catDiv);
+      if (!currentMenuData) return;
+      currentMenuData.forEach((cat, index) => {
+        const div = document.createElement("div");
+        div.style.cssText = `
+          padding: 16px; border-bottom: 1px solid #eee; cursor: pointer; font-weight: 1000; font-size: 16px;
+          background: ${activeCategoryIndex === index ? '#f3f4f6' : '#fff'};
+          border-left: 4px solid ${activeCategoryIndex === index ? 'var(--brand-red)' : 'transparent'};
+          display: flex; justify-content: space-between; align-items: center;
+        `;
+        div.innerHTML = `
+          <span>${escapeHtml(cat.title)}</span>
+          <span style="font-size: 13px; font-weight: 900; color: var(--muted);">${cat.items.length} 項</span>
+        `;
+        div.onclick = () => {
+          syncMenuDataFromDOM();
+          activeCategoryIndex = index;
+          renderMenuCategories();
+          renderMenuCategoryEditor(index);
+        };
+        container.appendChild(div);
       });
     }
 
-    function addMenuItem(catId) {
-      const name = prompt("Nhập tên món mới:");
-      if (!name) return;
-      const priceStr = prompt("Nhập giá (ví dụ: 50):");
-      const price = parseInt(priceStr) || 0;
-      if (menuData[catId][name] !== undefined) {
-        alert("Tên món đã tồn tại!");
-        return;
+    function renderMenuCategoryEditor(index) {
+      if (!currentMenuData || !currentMenuData[index]) return;
+      const cat = currentMenuData[index];
+      document.getElementById("menu-editor-title").innerText = cat.title + " (全部 " + cat.items.length + " 項)";
+
+      const container = document.getElementById("menu-editor-body");
+      container.innerHTML = "";
+
+      let draggedItemIndex = null;
+
+      cat.items.forEach((item, iIdx) => {
+        const row = document.createElement("div");
+        row.style.cssText = "background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 12px; display: flex; align-items: center; gap: 12px; transition: opacity 0.2s; cursor: grab;";
+        row.draggable = true;
+
+        row.addEventListener("dragstart", (e) => {
+          draggedItemIndex = iIdx;
+          e.dataTransfer.effectAllowed = "move";
+          setTimeout(() => row.style.opacity = "0.4", 0);
+        });
+        row.addEventListener("dragend", () => { row.style.opacity = "1"; });
+        row.addEventListener("dragover", (e) => {
+          e.preventDefault();
+          row.style.border = "2px dashed var(--primary)";
+        });
+        row.addEventListener("dragleave", () => {
+          row.style.border = "1px solid var(--border)";
+        });
+        row.addEventListener("drop", (e) => {
+          e.preventDefault();
+          row.style.border = "1px solid var(--border)";
+          if (draggedItemIndex !== null && draggedItemIndex !== iIdx) {
+            syncMenuDataFromDOM();
+            const arr = currentMenuData[index].items;
+            const moved = arr.splice(draggedItemIndex, 1)[0];
+            arr.splice(iIdx, 0, moved);
+            renderMenuCategoryEditor(index);
+          }
+        });
+
+        row.innerHTML = `
+          <div style="color: #ccc; font-size: 22px; cursor: grab; flex-shrink:0;">☰</div>
+          <input type="text" value="${escapeHtml(item.name)}" data-name-cidx="${index}" data-name-iidx="${iIdx}"
+            style="flex: 2; min-width: 120px; font-size: 17px; font-weight: 900; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-family:inherit; box-sizing:border-box;">
+          <label style="display:flex; align-items:center; gap:6px; font-weight:900; flex-shrink:0;">
+            <span style="font-size:18px;">$</span>
+            <input type="number" value="${item.price !== null && item.price !== undefined ? item.price : ''}" data-cidx="${index}" data-iidx="${iIdx}"
+              placeholder="隱藏" style="width: 90px; font-size: 17px; font-weight: 900; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-family:inherit; box-sizing:border-box;">
+          </label>
+          <button class="btn btn-ghost" style="padding: 8px 14px; color: var(--brand-red); font-size:14px; flex-shrink:0;" onclick="removeMenuItemAt(${index}, ${iIdx})">刪除</button>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    function removeMenuItemAt(cIdx, iIdx) {
+      if (confirm("確定要刪除這個項目嗎?")) {
+        syncMenuDataFromDOM();
+        currentMenuData[cIdx].items.splice(iIdx, 1);
+        renderMenuCategoryEditor(cIdx);
+        renderMenuCategories();
       }
-      menuData[catId][name] = price;
-      renderMenuEditor();
     }
 
-    function removeMenuItem(catId, itemName) {
-      if (confirm(`Xóa món "${itemName}"?`)) {
-        delete menuData[catId][itemName];
-        renderMenuEditor();
-      }
+    function addNewMenuItem() {
+      if (activeCategoryIndex < 0 || !currentMenuData) return;
+      syncMenuDataFromDOM();
+      currentMenuData[activeCategoryIndex].items.unshift({ name: "新項目", price: 0 });
+      renderMenuCategoryEditor(activeCategoryIndex);
+      renderMenuCategories();
     }
 
-    function updateMenuKey(catId, oldName, newName) {
-      newName = newName.trim();
-      if (!newName || newName === oldName) return;
-      if (menuData[catId][newName] !== undefined) {
-        alert("Tên món đã tồn tại!");
-        renderMenuEditor();
-        return;
-      }
-      menuData[catId][newName] = menuData[catId][oldName];
-      delete menuData[catId][oldName];
-      renderMenuEditor();
+    function syncMenuDataFromDOM() {
+      document.querySelectorAll("#menu-editor-body input[data-name-cidx]").forEach(inp => {
+        const cIdx = parseInt(inp.getAttribute("data-name-cidx"));
+        const iIdx = parseInt(inp.getAttribute("data-name-iidx"));
+        if (currentMenuData[cIdx] && currentMenuData[cIdx].items[iIdx]) {
+          currentMenuData[cIdx].items[iIdx].name = inp.value;
+        }
+      });
+      document.querySelectorAll("#menu-editor-body input[data-cidx]").forEach(inp => {
+        const cIdx = parseInt(inp.getAttribute("data-cidx"));
+        const iIdx = parseInt(inp.getAttribute("data-iidx"));
+        const val = inp.value.trim() === "" ? null : parseInt(inp.value);
+        if (currentMenuData[cIdx] && currentMenuData[cIdx].items[iIdx]) {
+          currentMenuData[cIdx].items[iIdx].price = val;
+        }
+      });
     }
 
-    function updateMenuPrice(catId, itemName, newPriceStr) {
-      menuData[catId][itemName] = parseInt(newPriceStr) || 0;
-    }
+    async function saveMenuData() {
+      if (!currentMenuData) return;
+      if (!confirm("確定要儲存所有變更嗎？這會直接即時影響顧客端點餐頁面。")) return;
+      syncMenuDataFromDOM();
 
-    async function saveMenu() {
-      if (!confirm("Lưu các thay đổi vào Menu? Hệ thống sẽ mất vài giây để cập nhật đồng bộ cho khách hàng.")) return;
+      // Convert back to Benmi object format
+      const output = {};
+      currentMenuData.forEach(cat => {
+        output[cat.id] = {};
+        cat.items.forEach(item => {
+          if (item.name && item.name.trim() !== "" && item.price !== null) {
+            output[cat.id][item.name.trim()] = item.price;
+          }
+        });
+      });
+
+      const btn = document.querySelector("#view-menu .btn-primary");
+      const oldText = btn.innerText;
+      btn.innerText = "儲存中..."; btn.disabled = true;
+
       try {
         const res = await fetch(`${WORKER_BASE}/api/menu`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(menuData)
+          body: JSON.stringify(output)
         });
-        const data = await res.json();
-        if (data.success) {
-          alert("Đã lưu menu thành công!");
-        } else {
-          alert("Lỗi lưu menu");
-        }
+        if (!res.ok) throw new Error("API returned " + res.status);
+        alert("儲存成功！");
+        renderMenuCategories();
       } catch (e) {
-        alert("Lỗi mạng");
+        alert("儲存失敗：" + e.message);
+      } finally {
+        btn.innerText = oldText; btn.disabled = false;
       }
     }
 
