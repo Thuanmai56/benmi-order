@@ -559,7 +559,7 @@
 
     <!-- Menu Editor -->
     <div class="content" id="view-menu" style="display:none; max-width: 1000px; margin: 0 auto; width: 100%;">
-      <div class="panel" style="height: 100%;">
+      <div class="panel" style="height: auto; padding-bottom: 24px;">
         <div class="panel-header">
           <div>
             <div class="panel-title">Chỉnh sửa Menu (Benmi)</div>
@@ -1467,22 +1467,22 @@
         const catDiv = document.createElement("div");
         catDiv.style.cssText = "background: #fff; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 20px; overflow: hidden;";
         
-        let header = `<div style="padding: 16px 20px; background: #f3f4f6; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+        let header = `<div style="padding: 16px 20px; background: #f3f4f6; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
           <div style="font-weight: 1100; font-size: 20px;">${cat.name}</div>
-          <button class="btn btn-ghost" style="padding: 8px 16px; font-size: 14px;" onclick="addMenuItem('${cat.id}')">+ Thêm món</button>
+          <button class="btn btn-ghost" style="padding: 8px 16px; font-size: 14px; background: white;" onclick="addMenuItem('${cat.id}')">+ Thêm món</button>
         </div>`;
         
         let itemsHtml = `<div style="padding: 16px; display: grid; gap: 12px;" id="menu-cat-${cat.id}">`;
         
         Object.entries(menuData[cat.id]).forEach(([itemName, itemPrice]) => {
           itemsHtml += `
-            <div style="display: flex; gap: 12px; align-items: center; background: #fafafa; padding: 12px; border-radius: 8px; border: 1px solid #eee;">
-              <input type="text" value="${escapeHtml(itemName)}" style="flex: 2; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px;" onchange="updateMenuKey('${cat.id}', '${escapeHtml(itemName)}', this.value)">
-              <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+            <div style="display: flex; gap: 12px; align-items: center; background: #fafafa; padding: 12px; border-radius: 8px; border: 1px solid #eee; flex-wrap: wrap;">
+              <input type="text" value="${escapeHtml(itemName)}" style="flex: 1; min-width: 140px; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; box-sizing: border-box;" onchange="updateMenuKey('${cat.id}', '${escapeHtml(itemName)}', this.value)">
+              <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 100px;">
                 <span style="font-weight:900;">$</span>
-                <input type="number" value="${itemPrice}" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px;" onchange="updateMenuPrice('${cat.id}', '${escapeHtml(itemName)}', this.value)">
+                <input type="number" value="${itemPrice}" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; box-sizing: border-box;" onchange="updateMenuPrice('${cat.id}', '${escapeHtml(itemName)}', this.value)">
               </div>
-              <button class="btn btn-danger" style="padding: 12px 16px; border-radius: 8px; font-size: 14px;" onclick="removeMenuItem('${cat.id}', '${escapeHtml(itemName)}')">Xóa</button>
+              <button class="btn btn-danger" style="padding: 12px 16px; border-radius: 8px; font-size: 14px; white-space: nowrap;" onclick="removeMenuItem('${cat.id}', '${escapeHtml(itemName)}')">Xóa</button>
             </div>
           `;
         });
