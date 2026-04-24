@@ -491,6 +491,8 @@
         <button class="tab active" id="tab-live" onclick="switchTab('live')">Live</button>
         <button class="tab" id="tab-history" onclick="switchTab('history')">Lịch sử</button>
         <button class="mini-btn" onclick="testSound()">Test Sound</button>
+        <button class="mini-btn" onclick="openMenuSettings()">Menu</button>
+        <button class="mini-btn" onclick="openSettings()">Cài đặt</button>
       </div>
     </div>
 
@@ -536,6 +538,49 @@
           <div style="text-align:center; padding: 22px; color:#999;">Đang tải...</div>
         </div>
       </div>
+    </div>
+
+    <!-- Cài đặt -->
+    <div class="content" id="view-settings" style="display:none; max-width: 800px; margin: 0 auto; width: 100%;">
+      <div class="panel" style="height: auto; padding-bottom: 24px;">
+        <div class="panel-header">
+          <div class="panel-title">Cài đặt hệ thống (Settings)</div>
+        </div>
+        <div class="panel-body" style="padding: 24px;">
+          <div style="border: 1px solid var(--border); border-radius: 12px; padding: 20px; background: #fff;">
+            <div style="font-weight: 1100; font-size: 20px; margin-bottom: 12px;">Đổi mật khẩu Dashboard</div>
+            <input type="password" id="set-pw-old" placeholder="Mật khẩu hiện tại" style="width:100%; padding: 12px; margin-bottom:10px; border-radius:8px; border:1px solid #ccc; font-size:16px; box-sizing:border-box;">
+            <input type="password" id="set-pw-new" placeholder="Mật khẩu mới (tối thiểu 4 ký tự)" style="width:100%; padding: 12px; margin-bottom:10px; border-radius:8px; border:1px solid #ccc; font-size:16px; box-sizing:border-box;">
+            <button class="btn btn-primary" onclick="changePassword()" style="font-size: 16px; padding: 12px 24px; border-radius: 8px;">Cập nhật mật khẩu</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Menu Editor -->
+    <div class="content" id="view-menu" style="display:none; max-width: 1000px; margin: 0 auto; width: 100%;">
+      <div class="panel" style="height: 100%;">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">Chỉnh sửa Menu (Benmi)</div>
+            <div class="panel-sub" style="color: var(--brand-red);">Cảnh báo: Chỉ đổi tên/giá, không xóa các nhóm chính để tránh lỗi hệ thống.</div>
+          </div>
+          <button class="btn btn-primary" style="padding: 10px 20px; font-size: 16px; border-radius: 8px;" onclick="saveMenu()">Lưu Menu</button>
+        </div>
+        <div class="panel-body" id="menu-editor-body" style="padding: 24px; background: #f9fafb;">
+          <div style="text-align:center; padding: 22px; color:#999;">Đang tải menu...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Auth modal -->
+  <div id="authModal" class="modal" style="display:flex; background: #f0f2f5; z-index: 9999;">
+    <div class="modal-content" style="max-width: 400px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.1);">
+      <h3 style="font-weight: 1100; font-size: 26px; margin-bottom: 8px; margin-top: 0;">Đăng nhập</h3>
+      <p style="color: var(--muted); margin-bottom: 24px; font-weight: 800;">Benmi Dashboard</p>
+      <input type="password" id="auth-password" placeholder="Nhập mật khẩu (Mặc định: 12345678)" style="width:100%; padding: 16px; font-size: 18px; border-radius: 12px; border: 2px solid var(--border); box-sizing:border-box; margin-bottom: 16px; text-align:center;">
+      <button class="btn btn-primary btn-block" onclick="verifyAuth()">Xác nhận</button>
     </div>
   </div>
 
@@ -755,13 +800,17 @@
       return lines.slice(0, 6).join("\n");
     }
 
+    let sessionToken = localStorage.getItem("benmi_pos_token");
+
     function switchTab(tab) {
       activeTab = tab;
       document.getElementById("tab-live").classList.toggle("active", tab === "live");
       document.getElementById("tab-history").classList.toggle("active", tab === "history");
       document.getElementById("view-live").style.display = tab === "live" ? "block" : "none";
       document.getElementById("view-history").style.display = tab === "history" ? "block" : "none";
-      renderAll();
+      document.getElementById("view-settings").style.display = "none";
+      document.getElementById("view-menu").style.display = "none";
+      if (tab === "live" || tab === "history") renderAll();
     }
 
     async function fetchOrders() {
@@ -1295,8 +1344,218 @@
       await playNewOrderSound();
     }
 
-    setInterval(fetchOrders, 5000);
-    fetchOrders();
+    // --- AUTH & SETTINGS LOGIC ---
+    async function verifyAuth() {
+      const pw = document.getElementById("auth-password").value;
+      if (!pw) return;
+      try {
+        const res = await fetch(`${WORKER_BASE}/api/auth`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password: pw })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          sessionToken = pw;
+          localStorage.setItem("benmi_pos_token", pw);
+          document.getElementById("authModal").style.display = "none";
+          fetchOrders();
+        } else {
+          alert("Mật khẩu sai!");
+        }
+      } catch (e) {
+        alert("Lỗi kết nối");
+      }
+    }
+
+    async function checkAuthOnLoad() {
+      if (!sessionToken) {
+        document.getElementById("authModal").style.display = "flex";
+        return;
+      }
+      try {
+        const res = await fetch(`${WORKER_BASE}/api/auth`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password: sessionToken })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          document.getElementById("authModal").style.display = "none";
+          fetchOrders();
+        } else {
+          sessionToken = null;
+          localStorage.removeItem("benmi_pos_token");
+          document.getElementById("authModal").style.display = "flex";
+        }
+      } catch (e) {
+        // network error, allow cached view
+      }
+    }
+
+    function openSettings() {
+      activeTab = "settings";
+      document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".content").forEach(c => c.style.display = "none");
+      document.getElementById("view-settings").style.display = "block";
+    }
+
+    async function changePassword() {
+      const oldPw = document.getElementById("set-pw-old").value;
+      const newPw = document.getElementById("set-pw-new").value;
+      if (!oldPw || !newPw) return alert("Vui lòng điền đủ thông tin");
+      try {
+        const res = await fetch(`${WORKER_BASE}/api/auth/change`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ current: oldPw, newPassword: newPw })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          alert("Đổi mật khẩu thành công!");
+          sessionToken = newPw;
+          localStorage.setItem("benmi_pos_token", newPw);
+          document.getElementById("set-pw-old").value = "";
+          document.getElementById("set-pw-new").value = "";
+        } else {
+          alert("Lỗi: " + data.error);
+        }
+      } catch (e) {
+        alert("Lỗi mạng");
+      }
+    }
+
+    // --- MENU EDITOR LOGIC ---
+    let menuData = null;
+
+    function openMenuSettings() {
+      activeTab = "menu";
+      document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".content").forEach(c => c.style.display = "none");
+      document.getElementById("view-menu").style.display = "block";
+      fetchMenu();
+    }
+
+    async function fetchMenu() {
+      document.getElementById("menu-editor-body").innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">Đang tải menu...</div>`;
+      try {
+        const res = await fetch(`${WORKER_BASE}/api/menu`);
+        const data = await res.json();
+        menuData = data;
+        renderMenuEditor();
+      } catch (e) {
+        document.getElementById("menu-editor-body").innerHTML = `<div style="color:var(--brand-red); text-align:center;">Lỗi tải menu</div>`;
+      }
+    }
+
+    function renderMenuEditor() {
+      if (!menuData) return;
+      const container = document.getElementById("menu-editor-body");
+      container.innerHTML = "";
+
+      const cats = [
+        { id: "small", name: "小麵包 (Bánh mì nhỏ)" },
+        { id: "large", name: "大麵包 (Bánh mì lớn)" },
+        { id: "combo", name: "套餐 (Combo + Nước)" },
+        { id: "drinks", name: "單點飲料 (Đồ uống)" },
+        { id: "topping", name: "加料 (Topping)" }
+      ];
+
+      cats.forEach(cat => {
+        if (!menuData[cat.id]) menuData[cat.id] = {};
+        
+        const catDiv = document.createElement("div");
+        catDiv.style.cssText = "background: #fff; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 20px; overflow: hidden;";
+        
+        let header = `<div style="padding: 16px 20px; background: #f3f4f6; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+          <div style="font-weight: 1100; font-size: 20px;">${cat.name}</div>
+          <button class="btn btn-ghost" style="padding: 8px 16px; font-size: 14px;" onclick="addMenuItem('${cat.id}')">+ Thêm món</button>
+        </div>`;
+        
+        let itemsHtml = `<div style="padding: 16px; display: grid; gap: 12px;" id="menu-cat-${cat.id}">`;
+        
+        Object.entries(menuData[cat.id]).forEach(([itemName, itemPrice]) => {
+          itemsHtml += `
+            <div style="display: flex; gap: 12px; align-items: center; background: #fafafa; padding: 12px; border-radius: 8px; border: 1px solid #eee;">
+              <input type="text" value="${escapeHtml(itemName)}" style="flex: 2; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px;" onchange="updateMenuKey('${cat.id}', '${escapeHtml(itemName)}', this.value)">
+              <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+                <span style="font-weight:900;">$</span>
+                <input type="number" value="${itemPrice}" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px;" onchange="updateMenuPrice('${cat.id}', '${escapeHtml(itemName)}', this.value)">
+              </div>
+              <button class="btn btn-danger" style="padding: 12px 16px; border-radius: 8px; font-size: 14px;" onclick="removeMenuItem('${cat.id}', '${escapeHtml(itemName)}')">Xóa</button>
+            </div>
+          `;
+        });
+        
+        itemsHtml += `</div>`;
+        catDiv.innerHTML = header + itemsHtml;
+        container.appendChild(catDiv);
+      });
+    }
+
+    function addMenuItem(catId) {
+      const name = prompt("Nhập tên món mới:");
+      if (!name) return;
+      const priceStr = prompt("Nhập giá (ví dụ: 50):");
+      const price = parseInt(priceStr) || 0;
+      if (menuData[catId][name] !== undefined) {
+        alert("Tên món đã tồn tại!");
+        return;
+      }
+      menuData[catId][name] = price;
+      renderMenuEditor();
+    }
+
+    function removeMenuItem(catId, itemName) {
+      if (confirm(`Xóa món "${itemName}"?`)) {
+        delete menuData[catId][itemName];
+        renderMenuEditor();
+      }
+    }
+
+    function updateMenuKey(catId, oldName, newName) {
+      newName = newName.trim();
+      if (!newName || newName === oldName) return;
+      if (menuData[catId][newName] !== undefined) {
+        alert("Tên món đã tồn tại!");
+        renderMenuEditor();
+        return;
+      }
+      menuData[catId][newName] = menuData[catId][oldName];
+      delete menuData[catId][oldName];
+      renderMenuEditor();
+    }
+
+    function updateMenuPrice(catId, itemName, newPriceStr) {
+      menuData[catId][itemName] = parseInt(newPriceStr) || 0;
+    }
+
+    async function saveMenu() {
+      if (!confirm("Lưu các thay đổi vào Menu? Hệ thống sẽ mất vài giây để cập nhật đồng bộ cho khách hàng.")) return;
+      try {
+        const res = await fetch(`${WORKER_BASE}/api/menu`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(menuData)
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert("Đã lưu menu thành công!");
+        } else {
+          alert("Lỗi lưu menu");
+        }
+      } catch (e) {
+        alert("Lỗi mạng");
+      }
+    }
+
+    setInterval(() => {
+      // Only poll orders if live or history tab is active, to save resources and avoid interfering with settings
+      if (activeTab === "live" || activeTab === "history") {
+        fetchOrders();
+      }
+    }, 5000);
+    checkAuthOnLoad();
   </script>
 </body>
 
