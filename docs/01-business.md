@@ -10,6 +10,14 @@ Nhà hàng có thể dẫn khách hàng từ Zalo tới một trang đặt món 
 
 Nền tảng được thiết kế để hỗ trợ nhiều nhà hàng trong cùng một hệ thống. Mỗi nhà hàng có menu, nhân viên, đơn hàng và cấu hình Zalo riêng.
 
+### Decision / Quyết định sản phẩm
+
+MVP này nhắm tới mô hình multi-tenant platform, không chỉ là một app riêng cho Benmi. Điều này có nghĩa là ngay từ đầu hệ thống cần có khái niệm tenant/restaurant, phân tách dữ liệu theo từng nhà hàng, và chuẩn bị cho nhiều cấu hình Zalo khác nhau.
+
+### Zalo OA strategy / Chiến lược Zalo OA
+
+Chiến lược Zalo Official Account vẫn chưa được quyết định: mỗi nhà hàng có OA riêng, hay toàn bộ platform dùng một OA chung. Đây là quyết định nền tảng vì nó ảnh hưởng tới onboarding, quyền gửi tin nhắn, chi phí, xác thực webhook, dữ liệu khách hàng và vận hành hỗ trợ.
+
 ---
 
 ## 2. Người dùng mục tiêu
@@ -40,7 +48,7 @@ Các vấn đề thường gặp:
 
 - Khách hàng gửi đơn hàng bằng tin nhắn tự do, dễ gây nhầm lẫn.
 - Nhân viên phải tự đọc, kiểm tra và phản hồi từng đơn hàng.
-- Không có trạng thái đơn hàng rõ ràng như pending, confirmed hoặc rejected.
+- Không có trạng thái đơn hàng rõ ràng như `NEW`, `ACCEPTED`, `DONE` hoặc `REJECTED`.
 - Khó quản lý menu, nhân viên, lịch sử đơn hàng trong cùng một nơi.
 - Khó mở rộng cùng một hệ thống cho nhiều nhà hàng nếu không có thiết kế multi-tenant.
 
@@ -64,7 +72,7 @@ Giá trị chính:
 
 Phiên bản đầu tiên nên tập trung vào các chức năng tối thiểu cần thiết để kiểm chứng business flow.
 
-### Bao gồm trong MVP
+### Must-have cho first validation
 
 - Tạo nhà hàng bởi platform admin
   - Giả định hiện tại là có khả năng cần tạo riêng Zalo OA cho từng nhà hàng. 
@@ -72,24 +80,41 @@ Phiên bản đầu tiên nên tập trung vào các chức năng tối thiểu 
 - Quản lý menu và món ăn
 - Trang đặt món cho khách hàng
 - Giỏ hàng và gửi đơn hàng
-- Đăng nhập riêng cho từng nhà hàng/quán (Ghi chú: Nếu sử dụng LINE, cần kiểm soát số lượng push message vì hiện tại có giới hạn khoảng 200 tin nhắn/tháng trong giai đoạn miễn phí.)
+- Đăng nhập riêng cho từng nhà hàng/quán
 - Staff dashboard để xem đơn hàng đang chờ xử lý
 - Trang chi tiết đơn hàng
 - Xác nhận đơn hàng
 - Từ chối đơn hàng
 - Gửi tin nhắn Zalo sau khi khách hàng tạo đơn hàng
 - Gửi tin nhắn Zalo sau khi nhân viên xác nhận/từ chối đơn hàng
-- Lịch sử đơn hàng cơ bản
 - Log cơ bản cho message và lỗi hệ thống
+
+### Maybe-after-first-restaurant
+
+- Lịch sử đơn hàng cơ bản
+- Quản lý nhiều nhân viên trên mỗi nhà hàng
+- Tối ưu onboarding Zalo OA cho từng nhà hàng
+- Cấu hình message template nâng cao
+- Bộ lọc và tìm kiếm đơn hàng
+- Báo cáo vận hành đơn giản
+- Import/export menu
+- Công cụ hỗ trợ platform admin xử lý lỗi tích hợp Zalo
+
+### Messaging platform limits / Giới hạn nền tảng nhắn tin
+
+Zalo là nền tảng chính cho MVP, nhưng cần kiểm tra quota, loại tin nhắn được phép gửi và chi phí theo từng loại message. Nếu sau này vẫn hỗ trợ LINE song song với Zalo, cần kiểm soát số lượng push message vì LINE có thể giới hạn số tin nhắn trong gói miễn phí hoặc gói thấp.
 
 ### Trạng thái đơn hàng trong MVP
 
-- pending
-- confirmed
-- rejected
-- cancelled
-- completed
-- expired
+Sử dụng cùng bộ trạng thái với technical architecture để tránh lệch giữa business doc và implementation:
+
+- `NEW`: đơn mới được tạo, đang chờ nhân viên xử lý.
+- `ACCEPTED`: nhân viên đã nhận đơn và bắt đầu chuẩn bị.
+- `DONE`: đơn đã chuẩn bị xong, đang chờ khách nhận.
+- `PICKED_UP`: khách đã nhận món.
+- `WAITING_CUSTOMER_CHANGE`: nhà hàng cần khách xác nhận thay đổi, ví dụ đổi giờ hoặc đổi món.
+- `WAITING_CUSTOMER_REJECT`: nhà hàng không thể nhận đơn và đang chờ khách xác nhận hủy hoặc phản hồi lại.
+- `REJECTED`: đơn bị từ chối hoặc đã hủy.
 
 ---
 
@@ -208,3 +233,15 @@ Các câu hỏi cần review trước khi implementation:
 - Mỗi nhà hàng cần Zalo OA riêng, hay nền tảng có thể dùng một OA chung?
 - Trong MVP, chủ nhà hàng có tự quản lý menu không, hay platform admin sẽ quản lý thủ công?
 - Staff dashboard nên polling bao lâu một lần?
+
+---
+
+## 12. Rủi ro cần theo dõi
+
+Các rủi ro chính cần được kiểm chứng sớm:
+
+- Zalo API permissions: cần xác nhận OA/app có quyền gửi đúng loại tin nhắn cần dùng cho order flow.
+- OA ownership per tenant: nếu mỗi nhà hàng dùng OA riêng, onboarding và vận hành phức tạp hơn; nếu dùng một OA chung, trải nghiệm thương hiệu và phân tách dữ liệu cần được thiết kế kỹ.
+- Message quota/cost: chi phí và giới hạn gửi tin nhắn có thể ảnh hưởng trực tiếp tới mô hình giá.
+- Webhook reliability: hệ thống cần xử lý retry, duplicate event, lỗi gửi message và trạng thái đơn hàng vẫn phải được lưu ổn định.
+- Staff auth: dashboard phải có xác thực và phân quyền theo tenant để tránh nhân viên nhà hàng này xem hoặc sửa dữ liệu của nhà hàng khác.
