@@ -67,7 +67,7 @@ Phiên bản đầu tiên nên tập trung vào các chức năng tối thiểu 
 ### Bao gồm trong MVP
 
 - Tạo nhà hàng bởi platform admin
-- - Giả định hiện tại là có khả năng cần tạo riêng cho từng nhà hàng. 
+  - Giả định hiện tại là có khả năng cần tạo riêng Zalo OA cho từng nhà hàng. 
 - Thông tin cơ bản của nhà hàng
 - Quản lý menu và món ăn
 - Trang đặt món cho khách hàng
