@@ -71,7 +71,6 @@ Phiên bản đầu tiên nên tập trung vào các chức năng tối thiểu 
 - Quản lý menu và món ăn
 - Trang đặt món cho khách hàng
 - Giỏ hàng và gửi đơn hàng
-- Đăng nhập cho nhân viên
 - Staff dashboard để xem đơn hàng đang chờ xử lý
 - Trang chi tiết đơn hàng
 - Xác nhận đơn hàng
