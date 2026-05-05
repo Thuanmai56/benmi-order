@@ -67,10 +67,12 @@ Phiên bản đầu tiên nên tập trung vào các chức năng tối thiểu 
 ### Bao gồm trong MVP
 
 - Tạo nhà hàng bởi platform admin
+- - Giả định hiện tại là có khả năng cần tạo riêng cho từng nhà hàng. 
 - Thông tin cơ bản của nhà hàng
 - Quản lý menu và món ăn
 - Trang đặt món cho khách hàng
 - Giỏ hàng và gửi đơn hàng
+- Đăng nhập riêng cho từng nhà hàng/quán (Ghi chú: Nếu sử dụng LINE, cần kiểm soát số lượng push message vì hiện tại có giới hạn khoảng 200 tin nhắn/tháng trong giai đoạn miễn phí.)
 - Staff dashboard để xem đơn hàng đang chờ xử lý
 - Trang chi tiết đơn hàng
 - Xác nhận đơn hàng
