@@ -23,9 +23,11 @@ MVP là Zalo-first. LINE chỉ được nhắc tới như một kênh có thể 
 
 ## 2. Tổng quan flow sản phẩm
 
+UX mục tiêu của MVP là: khi khách hàng đang ở trong Zalo chat, họ đã biết rõ mình đang tương tác với nhà hàng nào. Tên/avatar/thương hiệu trong Zalo nên là context chính, không bắt khách phải đoán hoặc chọn lại nhà hàng nếu không cần thiết.
+
 Flow chính của sản phẩm là:
 
-1. Khách hàng mở Zalo của nhà hàng hoặc của platform.
+1. Khách hàng mở Zalo OA của nhà hàng.
 2. Khách hàng được dẫn tới trang đặt món của đúng nhà hàng.
 3. Khách hàng chọn món và gửi đơn.
 4. Đơn hàng được lưu với trạng thái `NEW`.
@@ -35,7 +37,7 @@ Flow chính của sản phẩm là:
 
 ```mermaid
 flowchart TD
-    A[Khách hàng mở Zalo] --> B[Khách bấm link đặt món]
+    A[Khách hàng mở Zalo OA của nhà hàng] --> B[Khách bấm link đặt món]
     B --> C[Trang đặt món của nhà hàng]
     C --> D[Khách chọn món]
     D --> E[Khách gửi đơn]
@@ -57,64 +59,17 @@ Nguyên tắc quan trọng trong MVP:
 
 ---
 
-## 2.1 Sub-flow A: Nhà hàng sử dụng chung một Zalo OA tập trung
+## 2.1 Sub-flow A: Nhà hàng sử dụng Zalo OA riêng
 
-Trong mô hình này, Zalo OA được quản lý bởi platform. Các nhà hàng không cần tự tạo hoặc vận hành Zalo OA riêng ở giai đoạn đầu.
-
-Platform sẽ dùng một Zalo OA tập trung để:
-
-- Dẫn khách hàng tới trang đặt món của từng nhà hàng.
-- Gửi tin nhắn kết quả sau khi nhà hàng accept hoặc reject đơn.
-- Quản lý cấu hình messaging, token, template và message policy tập trung.
-
-Flow này phù hợp nếu mục tiêu là onboarding nhà hàng nhanh, giảm effort setup cho từng chủ quán, và kiểm soát tốt chi phí/message quota ở giai đoạn MVP.
-
-```mermaid
-flowchart TD
-    A[Khách hàng mở Zalo OA tập trung của platform] --> B[Khách chọn hoặc bấm link tới nhà hàng cụ thể]
-    B --> C[Order page với restaurant_slug hoặc restaurant_id]
-    C --> D[Khách chọn món và gửi đơn]
-    D --> E[System tạo order với status = NEW]
-    E --> F[Order thuộc về đúng restaurant_id]
-    F --> G[Nhà hàng xem đơn trên dashboard riêng]
-    G --> H{Nhà hàng xử lý đơn}
-    H -->|Accept| I[System cập nhật status = ACCEPTED]
-    H -->|Reject| J[System cập nhật status = REJECTED]
-    I --> K[Platform gửi message kết quả từ OA tập trung]
-    J --> K
-    K --> L[Khách nhận kết quả, message cần ghi rõ tên nhà hàng]
-```
-
-### Đặc điểm chính
-
-- Zalo OA thuộc platform.
-- Nhà hàng không cần tự quản lý OA.
-- Mỗi order vẫn phải gắn với `restaurant_id` rõ ràng.
-- Message gửi cho khách nên ghi rõ tên nhà hàng để tránh nhầm lẫn.
-- Platform kiểm soát message format và quota.
-- Nhà hàng chỉ cần sử dụng dashboard để xử lý đơn.
-
-### Ưu điểm
-
-- Onboarding nhà hàng nhanh hơn.
-- Ít phụ thuộc vào việc từng chủ quán biết cấu hình Zalo OA.
-- Token, webhook, message template được quản lý tập trung.
-- Phù hợp cho MVP hoặc giai đoạn thử nghiệm.
-
-### Nhược điểm / Rủi ro
-
-- Branding của nhà hàng yếu hơn vì message được gửi từ OA của platform.
-- Khách hàng có thể không cảm thấy đang tương tác trực tiếp với nhà hàng.
-- Cần routing chính xác để tránh gửi nhầm link/order giữa các nhà hàng.
-- Nếu OA tập trung gặp vấn đề, nhiều nhà hàng có thể bị ảnh hưởng cùng lúc.
-
----
-
-## 2.2 Sub-flow B: Nhà hàng sử dụng Zalo OA riêng
+Đây là flow ưu tiên cho MVP nếu yêu cầu UX là khách hàng phải biết rõ họ đang tương tác với nhà hàng nào ngay trong Zalo chat.
 
 Trong mô hình này, mỗi nhà hàng/chủ quán có Zalo OA riêng. Platform sẽ tích hợp với OA của từng nhà hàng để nhận context và gửi message.
 
-Flow này phù hợp nếu nhà hàng muốn giữ branding riêng, muốn khách hàng tương tác trực tiếp với OA của mình, hoặc về sau cần vận hành độc lập hơn.
+Khách hàng không cần chọn lại nhà hàng vì context đã đến từ Zalo OA:
+
+```text
+Zalo OA nào -> restaurant_id đó
+```
 
 ```mermaid
 flowchart TD
@@ -135,17 +90,19 @@ flowchart TD
 ### Đặc điểm chính
 
 - Mỗi nhà hàng có Zalo OA riêng.
+- Khách biết rõ đang tương tác với nhà hàng nào nhờ tên/avatar/thương hiệu của OA.
 - Message gửi cho khách đến từ OA của chính nhà hàng.
 - Platform cần lưu và quản lý cấu hình tích hợp của từng OA.
-- Mỗi order cần gắn với cả `restaurant_id` và thông tin messaging account tương ứng.
+- Mỗi order cần gắn với cả `restaurant_id` và `zalo_oa_id`.
 - Khi gửi message, system phải chọn đúng OA/token của nhà hàng đó.
 
 ### Ưu điểm
 
+- UX rõ ràng hơn vì khách đang chat trực tiếp với OA của nhà hàng.
 - Branding tốt hơn vì khách nhận message từ OA của nhà hàng.
+- Ít rủi ro khách chọn nhầm nhà hàng.
 - Phù hợp hơn với nhà hàng đã có Zalo OA và tệp khách hàng riêng.
 - Một OA gặp lỗi sẽ ít ảnh hưởng tới nhà hàng khác hơn.
-- Dễ mở rộng theo hướng mỗi nhà hàng tự quản lý kênh giao tiếp của mình.
 
 ### Nhược điểm / Rủi ro
 
@@ -157,6 +114,60 @@ flowchart TD
 
 ---
 
+## 2.2 Sub-flow B: Nhà hàng sử dụng chung một Zalo OA tập trung
+
+Trong mô hình này, Zalo OA được quản lý bởi platform. Các nhà hàng không cần tự tạo hoặc vận hành Zalo OA riêng ở giai đoạn đầu.
+
+Flow này chỉ nên xem là fallback/demo nếu mục tiêu là test nhanh. Nó không phải UX ưu tiên nếu yêu cầu là khách trong Zalo chat phải biết rõ đang tương tác với nhà hàng nào.
+
+Platform sẽ dùng một Zalo OA tập trung để:
+
+- Dẫn khách hàng tới trang đặt món của từng nhà hàng.
+- Gửi tin nhắn kết quả sau khi nhà hàng accept hoặc reject đơn.
+- Quản lý cấu hình messaging, token, template và message policy tập trung.
+
+```mermaid
+flowchart TD
+    A[Khách hàng mở Zalo OA tập trung của platform] --> B[Khách bấm link đặt món]
+    B --> C[Web page xác định restaurant bằng restaurant_slug hoặc restaurant_id]
+    C --> D[Khách chọn món và gửi đơn]
+    D --> E[System tạo order với status = NEW]
+    E --> F[Order thuộc về đúng restaurant_id]
+    F --> G[Nhà hàng xem đơn trên dashboard riêng]
+    G --> H{Nhà hàng xử lý đơn}
+    H -->|Accept| I[System cập nhật status = ACCEPTED]
+    H -->|Reject| J[System cập nhật status = REJECTED]
+    I --> K[Platform gửi message kết quả từ OA tập trung]
+    J --> K
+    K --> L[Khách nhận kết quả, message cần ghi rõ tên nhà hàng]
+```
+
+### Đặc điểm chính
+
+- Zalo OA thuộc platform.
+- Nhà hàng không cần tự quản lý OA.
+- Mỗi order vẫn phải gắn với `restaurant_id` rõ ràng.
+- Link hoặc web page phải xác định đúng nhà hàng bằng `restaurant_slug` hoặc `restaurant_id`.
+- Message gửi cho khách nên ghi rõ tên nhà hàng để tránh nhầm lẫn.
+- Platform kiểm soát message format và quota.
+
+### Ưu điểm
+
+- Onboarding nhà hàng nhanh hơn.
+- Ít phụ thuộc vào việc từng chủ quán biết cấu hình Zalo OA.
+- Token, webhook, message template được quản lý tập trung.
+- Phù hợp cho demo hoặc test nội bộ.
+
+### Nhược điểm / Rủi ro
+
+- Branding của nhà hàng yếu hơn vì message được gửi từ OA của platform.
+- Khách hàng có thể không cảm thấy đang tương tác trực tiếp với nhà hàng.
+- Nếu khách cần chọn nhà hàng trong web page, UX sẽ khác với kỳ vọng “đang chat với nhà hàng nào thì order nhà hàng đó”.
+- Cần routing chính xác để tránh gửi nhầm link/order giữa các nhà hàng.
+- Nếu OA tập trung gặp vấn đề, nhiều nhà hàng có thể bị ảnh hưởng cùng lúc.
+
+---
+
 ## 2.3 So sánh hai mô hình Zalo OA
 
 | Tiêu chí | OA tập trung do platform quản lý | OA riêng của từng nhà hàng |
@@ -165,14 +176,14 @@ flowchart TD
 | Branding nhà hàng | Yếu hơn | Tốt hơn |
 | Vận hành token/webhook | Đơn giản hơn | Phức tạp hơn |
 | Rủi ro ảnh hưởng dây chuyền | Cao hơn nếu OA tập trung lỗi | Thấp hơn, lỗi tách theo từng OA |
-| Phù hợp cho MVP | Rất phù hợp | Phù hợp nếu nhà hàng đã có OA |
+| Phù hợp cho MVP | Phù hợp cho demo/test nhanh | Phù hợp nếu UX ưu tiên là khách biết rõ nhà hàng trong Zalo chat |
 | Tenant isolation | Cần routing bằng `restaurant_id` thật chặt | Cần routing bằng `restaurant_id` + `zalo_oa_id` |
 | Chi phí/support ban đầu | Thấp hơn | Cao hơn |
 
 Khuyến nghị cho MVP:
 
-- Nếu muốn test nhanh: ưu tiên **OA tập trung do platform quản lý**.
-- Nếu nhà hàng đã có OA và muốn giữ branding riêng: hỗ trợ **OA riêng của nhà hàng** như một option.
+- Nếu UX mục tiêu là khách biết rõ đang tương tác với nhà hàng nào trong Zalo chat: ưu tiên **OA riêng của từng nhà hàng**.
+- Nếu muốn demo/test nhanh và chấp nhận branding yếu hơn: dùng **OA tập trung do platform quản lý** như fallback.
 - Dù dùng mô hình nào, order vẫn phải được lưu theo `restaurant_id` và dashboard của nhà hàng chỉ được xem dữ liệu của chính nhà hàng đó.
 
 ---
