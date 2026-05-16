@@ -586,6 +586,7 @@
               <div class="panel-sub">拖曳排序 ✦ 點擊欄位直接修改</div>
             </div>
             <div style="display:flex; gap:8px;">
+              <button class="btn btn-ghost" style="padding: 8px 16px; font-size: 14px; color: var(--brand-red);" onclick="restoreDefaultMenu()">Khôi phục Menu gốc</button>
               <button class="btn btn-yellow" style="padding: 8px 16px; font-size: 14px;" onclick="addNewMenuItem()">+ 新增項目</button>
               <button class="btn btn-primary" style="padding: 8px 16px; font-size: 14px;" onclick="saveMenuData()">儲存變更</button>
             </div>
@@ -733,6 +734,28 @@
       <div class="modal-actions two">
         <button class="btn btn-danger" onclick="confirmAction('REJECT', this)">確認拒絕</button>
         <button class="btn btn-ghost" onclick="closeModal()">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Image Manage Modal -->
+  <div id="imageModal" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+      <div class="modal-title">
+        <h3 id="image-modal-title">Quản lý Ảnh</h3>
+        <div class="modal-close" onclick="closeModal()">✕</div>
+      </div>
+      <div style="margin-top: 16px; text-align: center;">
+        <img id="image-preview" src="" style="max-width: 100%; max-height: 200px; border-radius: 12px; display: none; margin: 0 auto 16px; object-fit: cover; border: 1px solid #eee;">
+        <div id="image-status" style="margin-bottom: 16px; font-weight: 900; color: #666;">Đang kiểm tra ảnh...</div>
+      </div>
+      <input type="file" id="image-file-input" accept="image/png, image/jpeg, image/webp" style="display: none;" onchange="handleImageSelect(event)">
+      <div class="modal-actions two">
+        <button class="btn btn-primary" onclick="document.getElementById('image-file-input').click()">Chọn Ảnh</button>
+        <button class="btn btn-danger" id="btn-delete-image" style="display: none;" onclick="deleteItemImage()">Xóa Ảnh</button>
+      </div>
+      <div class="modal-actions" style="grid-template-columns: 1fr; margin-top: 10px;">
+        <button class="btn btn-ghost btn-block" onclick="closeModal()">Đóng</button>
       </div>
     </div>
   </div>
@@ -1592,6 +1615,7 @@
             <input type="number" value="${item.price !== null && item.price !== undefined ? item.price : ''}" data-cidx="${index}" data-iidx="${iIdx}"
               placeholder="隱藏" style="width: 90px; font-size: 17px; font-weight: 900; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-family:inherit; box-sizing:border-box;">
           </label>
+          <button class="btn btn-ghost" style="padding: 8px 14px; font-size:14px; flex-shrink:0;" onclick="openImageModal('${cat.id}', '${escapeHtml(item.name)}')">📷 Ảnh</button>
           <button class="btn btn-ghost" style="padding: 8px 14px; color: var(--brand-red); font-size:14px; flex-shrink:0;" onclick="removeMenuItemAt(${index}, ${iIdx})">刪除</button>
         `;
         container.appendChild(row);
@@ -1667,6 +1691,152 @@
       } finally {
         btn.innerText = oldText; btn.disabled = false;
       }
+    }
+
+    async function restoreDefaultMenu() {
+      if (!confirm("Bạn có chắc chắn muốn KHÔI PHỤC MENU về trạng thái gốc mặc định không? Tất cả các món bạn đã sửa sẽ bị ghi đè!")) return;
+      
+      const DEFAULT_MENU = {
+        small: { "燒肉": 56, "火腿": 56, "雞肉": 68, "烤肉": 72, "雙層烤肉": 78, "綜合": 79 },
+        large: { "燒肉": 80, "火腿": 80, "雞肉": 100, "烤肉": 105, "雙層烤肉": 115, "綜合": 130 },
+        combo: {
+          "1 大燒肉+飲料": 90, "2 大火腿+飲料": 90, "3 大雞肉+飲料": 118, "4 大烤肉+飲料": 128,
+          "5 大雙層烤肉+飲料": 135, "6 大綜合+飲料": 142, "7 小燒肉+飲料": 77, "8 小雞肉+飲料": 88,
+          "9 小烤肉+飲料": 95, "10 小雙層烤肉+飲料": 99, "11 小綜合+飲料": 100
+        },
+        drinks: { "越南咖啡": 48, "豆漿": 37, "紅茶": 37, "可樂": 37, "雪碧": 37 },
+        topping: { "起司": 15, "火腿": 20, "燒肉": 20, "烤肉": 25, "雞肉": 25 }
+      };
+
+      try {
+        const res = await fetch(`${WORKER_BASE}/api/menu`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(DEFAULT_MENU)
+        });
+        if (!res.ok) throw new Error("API returned " + res.status);
+        alert("Đã khôi phục menu gốc thành công!");
+        loadMenuData(); // Reload from server
+      } catch (e) {
+        alert("Lỗi khi khôi phục menu: " + e.message);
+      }
+    }
+
+    // --- Image Management ---
+    let currentImageItemName = null;
+
+    async function openImageModal(categoryId, itemName) {
+      currentImageItemName = `${categoryId}_${itemName}`;
+      document.getElementById("image-modal-title").innerText = `Ảnh: ${itemName}`;
+      document.getElementById("image-preview").style.display = "none";
+      document.getElementById("btn-delete-image").style.display = "none";
+      document.getElementById("image-status").innerText = "Đang kiểm tra ảnh...";
+      
+      document.getElementById("imageModal").style.display = "flex";
+
+      try {
+        const res = await fetch(`${WORKER_BASE}/api/image_list?_t=${Date.now()}`);
+        if (res.ok) {
+          const list = await res.json();
+          if (list.includes(currentImageItemName)) {
+            document.getElementById("image-preview").src = `${WORKER_BASE}/api/image?name=${encodeURIComponent(currentImageItemName)}&_t=${Date.now()}`;
+            document.getElementById("image-preview").style.display = "block";
+            document.getElementById("btn-delete-image").style.display = "block";
+            document.getElementById("image-status").innerText = "Món này đã có ảnh";
+          } else {
+            document.getElementById("image-status").innerText = "Món này chưa có ảnh";
+          }
+        }
+      } catch (e) {
+        document.getElementById("image-status").innerText = "Lỗi khi tải ảnh";
+      }
+    }
+
+    function handleImageSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const img = new Image();
+        img.onload = function() {
+          // Resize if too large
+          const MAX_WIDTH = 800;
+          const MAX_HEIGHT = 800;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Get base64 (webp is usually smaller)
+          const dataUri = canvas.toDataURL("image/webp", 0.8);
+          uploadImage(dataUri);
+        }
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+      event.target.value = ''; // reset
+    }
+
+    async function uploadImage(dataUri) {
+      document.getElementById("image-status").innerText = "Đang tải ảnh lên...";
+      try {
+        const res = await fetch(`${WORKER_BASE}/api/image`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: currentImageItemName, dataUri })
+        });
+        if (!res.ok) throw new Error("Upload failed");
+        
+        document.getElementById("image-preview").src = dataUri;
+        document.getElementById("image-preview").style.display = "block";
+        document.getElementById("btn-delete-image").style.display = "block";
+        document.getElementById("image-status").innerText = "Tải ảnh thành công!";
+      } catch (e) {
+        alert("Lỗi tải ảnh: " + e.message);
+        document.getElementById("image-status").innerText = "Lỗi khi tải ảnh";
+      }
+    }
+
+    async function deleteItemImage() {
+      if (!confirm("Bạn có chắc muốn xóa ảnh này?")) return;
+      document.getElementById("image-status").innerText = "Đang xóa ảnh...";
+      try {
+        const res = await fetch(`${WORKER_BASE}/api/image`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: currentImageItemName })
+        });
+        if (!res.ok) throw new Error("Delete failed");
+        
+        document.getElementById("image-preview").style.display = "none";
+        document.getElementById("btn-delete-image").style.display = "none";
+        document.getElementById("image-status").innerText = "Món này chưa có ảnh";
+      } catch (e) {
+        alert("Lỗi xóa ảnh: " + e.message);
+      }
+    }
+
+    function closeModal() {
+      document.querySelectorAll(".modal").forEach(m => m.style.display = "none");
+      reviewingOrder = null;
+      currentOrderKey = null;
     }
 
     setInterval(() => {
