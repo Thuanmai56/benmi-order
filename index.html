@@ -990,6 +990,15 @@
             box.appendChild(okBtn);
 
             overlay.appendChild(box);
+            
+            // Save scroll position and lock body
+            overlay._savedScrollY = window.scrollY;
+            document.body.style.position = 'fixed';
+            document.body.style.top = `-${overlay._savedScrollY}px`;
+            document.body.style.left = '0';
+            document.body.style.right = '0';
+            document.body.style.width = '100%';
+            
             document.body.appendChild(overlay);
             currentPopup = overlay;
         }
@@ -1008,7 +1017,27 @@
             customizeData[key][index]['note'] = value;
         }
 
-        function closePopup() { if (currentPopup) { currentPopup.remove(); currentPopup = null; } }
+        function closePopup() {
+            if (currentPopup) {
+                const savedY = currentPopup._savedScrollY || 0;
+                document.body.style.position = '';
+                document.body.style.top = '';
+                document.body.style.left = '';
+                document.body.style.right = '';
+                document.body.style.width = '';
+                
+                currentPopup.remove();
+                currentPopup = null;
+                
+                // Force synchronous layout update then restore scroll without animation
+                setTimeout(() => {
+                    const originalScrollBehavior = document.documentElement.style.scrollBehavior;
+                    document.documentElement.style.scrollBehavior = 'auto';
+                    window.scrollTo(0, savedY);
+                    document.documentElement.style.scrollBehavior = originalScrollBehavior;
+                }, 10);
+            }
+        }
 
         // --- ORDER SUBMIT ---
         function generateOrderNumber() {
