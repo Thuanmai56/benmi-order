@@ -1140,21 +1140,49 @@
             msg += `\n💰 總金額：$${currentTotal}`;
 
             try {
-                await liff.init({ liffId: '2009560906-c5taZfiY' });
-                if (liff.isLoggedIn()) {
-                    await liff.sendMessages([{ type: 'text', text: msg }]);
-                    customAlert('<div style="margin-bottom: 15px;"><svg width="64" height="64" viewBox="0 0 24 24" fill="#10b981"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></div><div style="font-size: 18px; line-height: 1.4; color: #111;">訂單已送出，店員會馬上跟您確認，請稍等</div>', () => {
-                        liff.closeWindow();
-                    });
-                } else {
-                    console.log('LINE LIFF MSG DUMP:\n', msg);
-                    customAlert('測試模式：訂單已在 Console 輸出');
+                if (!liff.isLoggedIn()) {
+                    localStorage.setItem('benmi_cart_save', JSON.stringify({ cart, customizeData, comboDrinkData }));
+                    liff.login({ redirectUri: window.location.href });
+                    return;
                 }
+                
+                await liff.sendMessages([{ type: 'text', text: msg }]);
+                customAlert('<div style="margin-bottom: 15px;"><svg width="64" height="64" viewBox="0 0 24 24" fill="#10b981"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></div><div style="font-size: 18px; line-height: 1.4; color: #111;">訂單已送出，店員會馬上跟您確認，請稍等</div>', () => {
+                    liff.closeWindow();
+                });
             } catch (err) {
+                if (liff.isLoggedIn()) {
+                    try {
+                        const profile = await liff.getProfile();
+                        const orderPayload = {
+                            userId: profile.userId,
+                            customer: profile.displayName,
+                            time: `${dateInput} ${timeInput}`,
+                            content: msg.split('\n\n🕒')[0].replace('[Benmi 點餐]\n', ''),
+                            total: currentTotal,
+                            note: mainNote,
+                            liffFallback: true
+                        };
+                        const res = await fetch(`${WORKER_BASE}/api/create`, {
+                            method: "POST",
+                            headers: {"Content-Type": "application/json"},
+                            body: JSON.stringify(orderPayload)
+                        });
+                        if (res.ok) {
+                            customAlert('<div style="margin-bottom: 15px;"><svg width="64" height="64" viewBox="0 0 24 24" fill="#10b981"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></div><div style="font-size: 18px; line-height: 1.4; color: #111;">訂單已送出，店員會馬上跟您確認</div>', () => {
+                                liff.closeWindow();
+                            });
+                            return;
+                        }
+                    } catch (fallbackErr) {
+                        console.error('Fallback API Error:', fallbackErr);
+                    }
+                }
+
                 console.error('LIFF Error:', err);
                 console.log('LINE LIFF MSG DUMP:\n', msg);
                 if (err.code === "400" || String(err).includes("liffId")) {
-                    customAlert('⚠️ 傳送失敗：URL chưa được cấp phép trong LINE LIFF. Vui lòng test trên link chính thức hoặc cấu hình lại LIFF Endpoint.');
+                    customAlert('⚠️ 傳送失敗：Vui lòng dùng ứng dụng LINE trên điện thoại để đặt hàng, hoặc báo nhân viên xử lý lỗi.');
                 } else {
                     customAlert('傳送失敗，請重試 (Lỗi LIFF)');
                 }
@@ -1203,8 +1231,33 @@
         }
 
         async function initApp() {
+            try {
+                await liff.init({ liffId: '2009560906-c5taZfiY' });
+            } catch(e) {
+                console.error("LIFF Init Error", e);
+            }
+
             await fetchMenu();
             renderMenu();
+
+            try {
+                const saved = localStorage.getItem('benmi_cart_save');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    cart = parsed.cart || {};
+                    customizeData = parsed.customizeData || {};
+                    comboDrinkData = parsed.comboDrinkData || {};
+                    localStorage.removeItem('benmi_cart_save');
+                    
+                    for (let key in cart) {
+                        if (cart[key] > 0) {
+                            const [cat, origName] = key.split('_');
+                            updateQty(cat, origName, 0);
+                        }
+                    }
+                }
+            } catch(e) {}
+
             setTodayDate();
             checkStoreStatus();
             setInterval(checkStoreStatus, 60000); // Cập nhật trạng thái mỗi phút
