@@ -669,8 +669,8 @@
         async function fetchMenu() {
             try {
                 const [resMenu, resImage] = await Promise.all([
-                    fetch(`${WORKER_BASE}/api/menu`),
-                    fetch(`${WORKER_BASE}/api/image_list`)
+                    fetch(`${WORKER_BASE}/api/menu?_t=${Date.now()}`, { cache: 'no-store' }),
+                    fetch(`${WORKER_BASE}/api/image_list?_t=${Date.now()}`, { cache: 'no-store' })
                 ]);
                 if (resMenu.ok) menu = await resMenu.json();
                 if (resImage.ok) imageList = await resImage.json();
