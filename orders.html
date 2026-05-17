@@ -1502,6 +1502,25 @@
     let currentMenuData = null;   // Array form for editor
     let rawMenuData = null;       // Original object form from API
     let activeCategoryIndex = -1;
+    let isMenuDirty = false;
+
+    function markMenuDirty() {
+      isMenuDirty = true;
+      const btn = document.querySelector("#view-menu .btn-primary");
+      if (btn) {
+        btn.style.backgroundColor = "var(--brand-red)";
+        btn.innerText = "Lưu thay đổi (Chưa lưu *)";
+      }
+    }
+
+    function clearMenuDirty() {
+      isMenuDirty = false;
+      const btn = document.querySelector("#view-menu .btn-primary");
+      if (btn) {
+        btn.style.backgroundColor = ""; // revert to CSS default
+        btn.innerText = "Lưu thay đổi (Lưu Menu)";
+      }
+    }
 
     const BENMI_CATS = [
       { id: "small",   label: "小麵包 (Bánh mì nhỏ)" },
@@ -1602,17 +1621,18 @@
             const arr = currentMenuData[index].items;
             const moved = arr.splice(draggedItemIndex, 1)[0];
             arr.splice(iIdx, 0, moved);
+            markMenuDirty();
             renderMenuCategoryEditor(index);
           }
         });
 
         row.innerHTML = `
           <div style="color: #ccc; font-size: 22px; cursor: grab; flex-shrink:0;">☰</div>
-          <input type="text" value="${escapeHtml(item.name)}" data-name-cidx="${index}" data-name-iidx="${iIdx}"
+          <input type="text" value="${escapeHtml(item.name)}" data-name-cidx="${index}" data-name-iidx="${iIdx}" oninput="markMenuDirty()"
             style="flex: 2; min-width: 120px; font-size: 17px; font-weight: 900; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-family:inherit; box-sizing:border-box;">
           <label style="display:flex; align-items:center; gap:6px; font-weight:900; flex-shrink:0;">
             <span style="font-size:18px;">$</span>
-            <input type="number" value="${item.price !== null && item.price !== undefined ? item.price : ''}" data-cidx="${index}" data-iidx="${iIdx}"
+            <input type="number" value="${item.price !== null && item.price !== undefined ? item.price : ''}" data-cidx="${index}" data-iidx="${iIdx}" oninput="markMenuDirty()"
               placeholder="隱藏" style="width: 90px; font-size: 17px; font-weight: 900; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-family:inherit; box-sizing:border-box;">
           </label>
           <button class="btn btn-ghost" style="padding: 8px 14px; font-size:14px; flex-shrink:0;" onclick="openImageModal('${cat.id}', '${escapeHtml(item.name)}')">📷 Ảnh</button>
@@ -1626,6 +1646,7 @@
       if (confirm("確定要刪除這個項目嗎?")) {
         syncMenuDataFromDOM();
         currentMenuData[cIdx].items.splice(iIdx, 1);
+        markMenuDirty();
         renderMenuCategoryEditor(cIdx);
         renderMenuCategories();
       }
@@ -1635,6 +1656,7 @@
       if (activeCategoryIndex < 0 || !currentMenuData) return;
       syncMenuDataFromDOM();
       currentMenuData[activeCategoryIndex].items.unshift({ name: "新項目", price: 0 });
+      markMenuDirty();
       renderMenuCategoryEditor(activeCategoryIndex);
       renderMenuCategories();
     }
@@ -1684,12 +1706,13 @@
           body: JSON.stringify(output)
         });
         if (!res.ok) throw new Error("API returned " + res.status);
+        clearMenuDirty();
         alert("儲存成功！");
         renderMenuCategories();
       } catch (e) {
         alert("儲存失敗：" + e.message);
       } finally {
-        btn.innerText = oldText; btn.disabled = false;
+        btn.innerText = "Lưu thay đổi (Lưu Menu)"; btn.disabled = false;
       }
     }
 
