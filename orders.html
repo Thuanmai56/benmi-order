@@ -1245,8 +1245,9 @@
 
     function reviewOpenChange() {
       if (!reviewingOrder?.key) return;
-      currentOrderKey = reviewingOrder.key;
+      const savedKey = reviewingOrder.key;  // Save key BEFORE closeModal wipes it
       closeModal();
+      currentOrderKey = savedKey;           // Restore after closeModal
       document.getElementById("change-reason").value = "時間需調整";
       document.getElementById("change-note").value = "";
       const checkboxes = document.querySelectorAll(".sold-item");
@@ -1257,8 +1258,9 @@
 
     function reviewOpenReject() {
       if (!reviewingOrder?.key) return;
-      currentOrderKey = reviewingOrder.key;
+      const savedKey = reviewingOrder.key;  // Save key BEFORE closeModal wipes it
       closeModal();
+      currentOrderKey = savedKey;           // Restore after closeModal
       document.getElementById("reject-reason").selectedIndex = 0;
       document.getElementById("rejectModal").style.display = "flex";
     }
