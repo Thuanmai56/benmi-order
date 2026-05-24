@@ -744,15 +744,6 @@ async function handleLineWebhook(request, env, ctx) {
       }
 
       let custName = "Khách (Web)";
-      try {
-        const token = env.LINE_CHANNEL_TOKEN;
-        const profUrl = `https://api.line.me/v2/bot/profile/${userId}`;
-        const resp = await fetch(profUrl, { headers: { Authorization: `Bearer ${token}` } });
-        if (resp.ok) {
-          const p = await resp.json();
-          if (p && p.displayName) custName = p.displayName;
-        }
-      } catch (e) { }
 
       const contentStart = userText.indexOf("📦 訂單內容：");
       const contentEnd = userText.indexOf("🕒 取餐時間：");
@@ -775,6 +766,26 @@ async function handleLineWebhook(request, env, ctx) {
       };
 
       await saveOrder(env, orderData);
+
+      // Fetch real LINE name in background and update KV
+      if (ctx && ctx.waitUntil) {
+        ctx.waitUntil((async () => {
+          try {
+            const token = env.LINE_CHANNEL_TOKEN;
+            const profUrl = `https://api.line.me/v2/bot/profile/${userId}`;
+            const resp = await fetch(profUrl, { headers: { Authorization: `Bearer ${token}` } });
+            if (resp.ok) {
+              const p = await resp.json();
+              if (p && p.displayName) {
+                orderData.customer = p.displayName;
+                await saveOrder(env, orderData);
+              }
+            }
+          } catch (e) {
+            console.error("Background profile fetch failed:", e);
+          }
+        })());
+      }
 
       // Auto-clear any stuck pending state
       try { await env.ORDER_STATE.delete(pendingKey); } catch { }
