@@ -574,7 +574,7 @@
             </div>
             <div class="store-detail-row">
                 <span class="detail-icon">🕒</span>
-                <div class="time-block">
+                <div class="time-block" id="store-hours-display">
                     <div>週一~週五&nbsp;&nbsp;11:00-21:00</div>
                     <div>週六、週日&nbsp;&nbsp;9:00-21:00</div>
                 </div>
@@ -665,17 +665,20 @@
         const WORKER_BASE = "https://benmi-worker-official.thuanmnc.workers.dev";
         let menu = { small: {}, large: {}, combo: {}, drinks: {}, topping: {} };
         let imageList = [];
+        let storeConfig = null;
 
         async function fetchMenu() {
             try {
-                const [resMenu, resImage] = await Promise.all([
+                const [resMenu, resImage, resConfig] = await Promise.all([
                     fetch(`${WORKER_BASE}/api/menu?_t=${Date.now()}`, { cache: 'no-store' }),
-                    fetch(`${WORKER_BASE}/api/image_list?_t=${Date.now()}`, { cache: 'no-store' })
+                    fetch(`${WORKER_BASE}/api/image_list?_t=${Date.now()}`, { cache: 'no-store' }),
+                    fetch(`${WORKER_BASE}/api/config?_t=${Date.now()}`, { cache: 'no-store' })
                 ]);
                 if (resMenu.ok) menu = await resMenu.json();
                 if (resImage.ok) imageList = await resImage.json();
+                if (resConfig.ok) storeConfig = await resConfig.json();
             } catch (e) {
-                console.error("Failed to fetch menu", e);
+                console.error("Failed to fetch menu or config", e);
             }
         }
 
@@ -1081,14 +1084,45 @@
 
             const pickupDate = new Date(dateInput);
             const dayOfWeek = pickupDate.getDay();
-            const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
             const [hours, minutes] = timeInput.split(':').map(Number);
             const timeValue = hours + minutes / 60;
 
-            if (isWeekend) {
-                if (timeValue < 9 || timeValue > 21) return customAlert('週末營業時間為 9:00 - 21:00');
+            let isValidTime = false;
+            let displayHoursMsg = "";
+            
+            if (storeConfig && storeConfig.operatingHours) {
+                const shifts = storeConfig.operatingHours[dayOfWeek] || [];
+                if (shifts.length > 0) {
+                    for (let shift of shifts) {
+                        const [sH, sM] = shift.start.split(':').map(Number);
+                        const [eH, eM] = shift.end.split(':').map(Number);
+                        const startVal = sH + sM / 60;
+                        const endVal = eH + eM / 60;
+                        if (timeValue >= startVal && timeValue <= endVal) {
+                            isValidTime = true;
+                            break;
+                        }
+                    }
+                    displayHoursMsg = shifts.map(s => `${s.start} - ${s.end}`).join(", ");
+                }
             } else {
-                if (timeValue < 11 || timeValue > 21) return customAlert('平日營業時間為 11:00 - 21:00');
+                const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+                if (isWeekend) {
+                    if (timeValue >= 9 && timeValue <= 21) isValidTime = true;
+                    displayHoursMsg = "9:00 - 21:00";
+                } else {
+                    if (timeValue >= 11 && timeValue <= 21) isValidTime = true;
+                    displayHoursMsg = "11:00 - 21:00";
+                }
+            }
+            
+            if (!isValidTime) {
+                if (displayHoursMsg === "") {
+                    return customAlert('當天店家公休，請選擇其他日期');
+                } else {
+                    const days = ["日", "一", "二", "三", "四", "五", "六"];
+                    return customAlert(`週${days[dayOfWeek]}的營業時間為 ${displayHoursMsg}，請重新選擇取餐時間`);
+                }
             }
 
             isSubmitting = true;
@@ -1200,25 +1234,44 @@
             if (dateEl) { dateEl.value = dateStr; dateEl.min = dateStr; }
         }
 
+        function isStoreOpen(twTime) {
+            if (!storeConfig || !storeConfig.operatingHours) {
+                const day = twTime.getDay();
+                const hours = twTime.getHours();
+                const minutes = twTime.getMinutes();
+                const timeValue = hours + minutes / 60;
+                if (day >= 1 && day <= 5) {
+                    return (timeValue >= 11 && timeValue < 21);
+                } else {
+                    return (timeValue >= 9 && timeValue < 21);
+                }
+            }
+            
+            const day = twTime.getDay();
+            const hours = twTime.getHours();
+            const minutes = twTime.getMinutes();
+            const timeValue = hours + minutes / 60;
+            
+            const shifts = storeConfig.operatingHours[day] || [];
+            for (let shift of shifts) {
+                const [sH, sM] = shift.start.split(':').map(Number);
+                const [eH, eM] = shift.end.split(':').map(Number);
+                const startVal = sH + sM / 60;
+                const endVal = eH + eM / 60;
+                if (timeValue >= startVal && timeValue < endVal) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         function checkStoreStatus() {
             const now = new Date();
             // Chuyển đổi giờ địa phương của client sang giờ UTC+8 (Đài Loan)
             const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
             const twTime = new Date(utc + (8 * 3600000));
-
-            const day = twTime.getDay(); // 0: Chủ nhật, 1-5: T2-T6, 6: T7
-            const hours = twTime.getHours();
-            const minutes = twTime.getMinutes();
-            const timeValue = hours + minutes / 60;
-
-            let isOpen = false;
-            if (day >= 1 && day <= 5) {
-                // T2-T6: 11:00 - 21:00
-                if (timeValue >= 11 && timeValue < 21) isOpen = true;
-            } else {
-                // T7-CN: 9:00 - 21:00
-                if (timeValue >= 9 && timeValue < 21) isOpen = true;
-            }
+            
+            const isOpen = isStoreOpen(twTime);
 
             const statusEl = document.getElementById('store-status');
             if (isOpen) {
@@ -1227,6 +1280,48 @@
             } else {
                 statusEl.innerText = '休息中';
                 statusEl.className = 'store-status closed';
+            }
+        }
+
+        function renderStoreOperatingHours() {
+            const displayEl = document.getElementById('store-hours-display');
+            if (!displayEl) return;
+            
+            if (storeConfig && storeConfig.operatingHours) {
+                const hrs = storeConfig.operatingHours;
+                const days = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
+                let html = "";
+                
+                const getShiftsStr = (dayIdx) => {
+                    const shifts = hrs[dayIdx] || [];
+                    if (shifts.length === 0) return "公休";
+                    return shifts.map(s => `${s.start}-${s.end}`).join(", ");
+                };
+                
+                const monStr = getShiftsStr(1);
+                const tueStr = getShiftsStr(2);
+                const wedStr = getShiftsStr(3);
+                const thuStr = getShiftsStr(4);
+                const friStr = getShiftsStr(5);
+                const satStr = getShiftsStr(6);
+                const sunStr = getShiftsStr(0);
+                
+                const weekdaysEqual = (monStr === tueStr && tueStr === wedStr && wedStr === thuStr && thuStr === friStr);
+                const weekendsEqual = (satStr === sunStr);
+                
+                if (weekdaysEqual && weekendsEqual) {
+                    html = `<div>週一~週五&nbsp;&nbsp;${monStr}</div>
+                            <div>週六、週日&nbsp;&nbsp;${satStr}</div>`;
+                } else {
+                    for (let i = 1; i <= 7; i++) {
+                        const dayIdx = i === 7 ? 0 : i;
+                        html += `<div>${days[dayIdx]}&nbsp;&nbsp;${getShiftsStr(dayIdx)}</div>`;
+                    }
+                }
+                displayEl.innerHTML = html;
+            } else {
+                displayEl.innerHTML = `<div>週一~週五&nbsp;&nbsp;11:00-21:00</div>
+                                       <div>週六、週日&nbsp;&nbsp;9:00-21:00</div>`;
             }
         }
 
@@ -1239,6 +1334,7 @@
 
             await fetchMenu();
             renderMenu();
+            renderStoreOperatingHours();
 
             try {
                 const saved = localStorage.getItem('benmi_cart_save');
