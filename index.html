@@ -1086,7 +1086,7 @@
             const timeValue = hours + minutes / 60;
 
             if (isWeekend) {
-                if (timeValue < 7.5 || timeValue > 21) return customAlert('週末營業時間為 07:30 - 21:00');
+                if (timeValue < 9 || timeValue > 21) return customAlert('週末營業時間為 9:00 - 21:00');
             } else {
                 if (timeValue < 11 || timeValue > 21) return customAlert('平日營業時間為 11:00 - 21:00');
             }
@@ -1216,7 +1216,7 @@
                 // T2-T6: 11:00 - 21:00
                 if (timeValue >= 11 && timeValue < 21) isOpen = true;
             } else {
-                // T7-CN: 07:30 - 21:00
+                // T7-CN: 9:00 - 21:00
                 if (timeValue >= 9 && timeValue < 21) isOpen = true;
             }
 
