@@ -1,3 +1,6 @@
+let memoryCacheOrders = null;
+let memoryCacheTime = 0;
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -15,10 +18,15 @@ export default {
     if (request.method === "POST" && path === "/api/config") return updateConfig(request, env);
     if (request.method === "GET" && path === "/api/menu") return getMenu(env);
     if (request.method === "POST" && path === "/api/menu") return updateMenu(request, env);
+    if (request.method === "GET" && path === "/api/image_list") return getImageList(env);
+    if (request.method === "GET" && path === "/api/image") return getImage(request, env);
+    if (request.method === "POST" && path === "/api/image") return updateImage(request, env);
+    if (request.method === "DELETE" && path === "/api/image") return deleteImage(request, env);
     if ((request.method === "POST" || request.method === "GET") && path === "/api/auth") return handleAuth(request, env, url);
     if (request.method === "POST" && path === "/api/auth/change") return handleAuthChange(request, env);
     if (request.method === "POST" && path === "/api/auth/templink") return handleCreateTempLink(request, env);
     if (request.method === "GET" && path === "/api/auth/templink") return handleVerifyTempLink(request, env);
+    if (request.method === "GET" && path === "/api/debug") return debugKV(env, url);
 
     return new Response("Not Found", { status: 404, headers: corsHeaders() });
   }
@@ -30,9 +38,9 @@ async function getConfig(env) {
   try {
     const raw = await env.ORDER_STATE.get("store_config");
     if (raw) stored = JSON.parse(raw);
-  } catch (e) {}
-  
-  return json({ 
+  } catch (e) { }
+
+  return json({
     liffId: env.LIFF_ID || null,
     operatingHours: stored.operatingHours || null
   });
@@ -44,9 +52,9 @@ async function updateConfig(request, env) {
     let stored = {};
     const raw = await env.ORDER_STATE.get("store_config");
     if (raw) stored = JSON.parse(raw);
-    
+
     if (payload.operatingHours) stored.operatingHours = payload.operatingHours;
-    
+
     await env.ORDER_STATE.put("store_config", JSON.stringify(stored));
     return json({ success: true });
   } catch (e) {
@@ -83,7 +91,7 @@ async function syncToGoogleSheets(order, env) {
 function corsHeaders() {
   return {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+    "Access-Control-Allow-Methods": "GET,POST,DELETE,OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type,Authorization",
   };
 }
@@ -123,6 +131,19 @@ async function createOrder(request, env) {
   };
 
   await saveOrder(env, order);
+
+  if (data.liffFallback && data.userId) {
+    let notifyText = `請稍等，店員會馬上確認\n` +
+      `訂單編號：${orderKey}\n` +
+      `📦 訂單內容：\n\n` +
+      `${order.content}\n\n` +
+      `🕒 取餐時間：${order.time}`;
+
+    if (order.note) notifyText += `\n📝 總備註：${order.note}`;
+    notifyText += `\n💰 總金額：$${order.total}`;
+
+    await pushLineMessage(data.userId, notifyText, env);
+  }
 
   return json({ success: true, key: orderKey });
 }
@@ -298,48 +319,84 @@ async function updateOrder(request, env, ctx) {
 }
 
 async function getOrders(env) {
-  const cacheRaw = await env.ORDER_STATE.get("order_view:cache");
+  const now = Date.now();
+  // Giảm 70-80% số lượt gọi KV get() bằng cách dùng Memory Cache trong 3 giây cho mỗi Isolate
+  if (memoryCacheOrders && (now - memoryCacheTime < 3000)) {
+    return json(memoryCacheOrders);
+  }
+
   let orders = [];
-  try { orders = cacheRaw ? JSON.parse(cacheRaw) : []; } catch { orders = []; }
+  try {
+    const cacheRaw = await env.ORDER_STATE.get("order_view:cache");
+    if (cacheRaw) orders = JSON.parse(cacheRaw);
 
-  if (orders.length > 0) {
-    return json(orders);
+    const indexRaw = await env.ORDER_STATE.get(ORDER_INDEX_LATEST);
+    let keys = [];
+    if (indexRaw) keys = JSON.parse(indexRaw);
+    if (!Array.isArray(keys)) keys = [];
+
+    // Chỉ quan tâm các đơn gần đây
+    const maxRebuild = 30;
+    const latestKeys = keys.slice(0, maxRebuild);
+    const missingKeys = latestKeys.filter(k => !orders.find(o => o.key === k));
+
+    if (missingKeys.length > 0) {
+      const promises = missingKeys.map(k =>
+        env.ORDER_STATE.get(`order:${k}`)
+          .then(raw => {
+            if (raw) {
+              try { return JSON.parse(raw); } catch (err) { return "FAILED"; }
+            }
+            // Nếu khóa thực sự không tồn tại trong KV (trả về null), trả về placeholder để cache lại, tránh loop GET vô hạn
+            return { key: k, status: "NOT_FOUND", createdAt: 0 };
+          })
+          .catch(err => {
+            console.error(`Error fetching missing key ${k}:`, err);
+            return "FAILED";
+          })
+      );
+
+      const results = await Promise.all(promises);
+
+      // Nếu có bất kỳ request nào bị FAILED (do vượt limit hoặc mạng lỗi), tuyệt đối KHÔNG ghi đè cache
+      const hasFailed = results.includes("FAILED");
+      const rebuiltOrders = results.filter(r => r && r !== "FAILED");
+
+      if (rebuiltOrders.length > 0) {
+        const rebuiltKeys = rebuiltOrders.map(o => o.key);
+        const oldOrders = orders.filter(o => !rebuiltKeys.includes(o.key));
+        orders = [...rebuiltOrders, ...oldOrders].slice(0, MAX_INDEX);
+        orders.sort((a, b) => (b?.createdAt || 0) - (a?.createdAt || 0));
+
+        if (!hasFailed) {
+          // Chỉ ghi lại cache nếu KHÔNG có lỗi FAILED nào để tránh xóa nhầm đơn hàng mới
+          await env.ORDER_STATE.put("order_view:cache", JSON.stringify(orders));
+        }
+      }
+    }
+  } catch (e) {
+    // Nếu KV get limit bị vượt quá, nó sẽ văng lỗi. Ta trả về memory cache cũ nhất có thể thay vì báo lỗi 500
+    console.error("KV get() limit error:", e);
+    if (memoryCacheOrders) return json(memoryCacheOrders);
+    return json([]);
   }
 
-  // Fallback: Rebuild Cache if empty
-  const indexRaw = await env.ORDER_STATE.get(ORDER_INDEX_LATEST);
-  let keys = [];
-  try { keys = indexRaw ? JSON.parse(indexRaw) : []; } catch { keys = []; }
-
-  if (!Array.isArray(keys) || keys.length === 0) return json([]);
-
-  const promises = keys.map(k => env.ORDER_STATE.get(`order:${k}`).then(raw => {
-    if (raw) { try { return JSON.parse(raw); } catch { } }
-    return null;
-  }));
-
-  const results = await Promise.all(promises);
-  orders = results.filter(Boolean);
-  orders.sort((a, b) => (b?.createdAt || 0) - (a?.createdAt || 0));
-
-  if (orders.length > 0) {
-    await env.ORDER_STATE.put("order_view:cache", JSON.stringify(orders));
-  }
-
+  memoryCacheOrders = orders;
+  memoryCacheTime = now;
   return json(orders);
 }
 
 // ================= MENU & AUTH =================
 const DEFAULT_MENU = {
-  small: { "燒肉":56, "火腿":56, "雞肉":68, "烤肉":72, "雙層烤肉":78, "綜合":79 },
-  large: { "燒肉":80, "火腿":80, "雞肉":100, "烤肉":105, "雙層烤肉":115, "綜合":130 },
-  combo: { 
-    "1 大燒肉+飲料": 90, "2 大火腿+飲料": 90, "3 大雞肉+飲料": 118, "4 大烤肉+飲料": 128, 
+  small: { "燒肉": 56, "火腿": 56, "雞肉": 68, "烤肉": 72, "雙層烤肉": 78, "綜合": 79 },
+  large: { "燒肉": 80, "火腿": 80, "雞肉": 100, "烤肉": 105, "雙層烤肉": 115, "綜合": 130 },
+  combo: {
+    "1 大燒肉+飲料": 90, "2 大火腿+飲料": 90, "3 大雞肉+飲料": 118, "4 大烤肉+飲料": 128,
     "5 大雙層烤肉+飲料": 135, "6 大綜合+飲料": 142, "7 小燒肉+飲料": 77, "8 小雞肉+飲料": 88,
     "9 小烤肉+飲料": 95, "10 小雙層烤肉+飲料": 99, "11 小綜合+飲料": 100
   },
-  drinks: { "越南咖啡":48, "豆漿":37, "紅茶":37, "可樂":37, "雪碧":37 },
-  topping: { "起司":15, "火腿":20, "燒肉":20, "烤肉":25, "雞肉":25 }
+  drinks: { "越南咖啡": 48, "豆漿": 37, "紅茶": 37, "可樂": 37, "雪碧": 37 },
+  topping: { "起司": 15, "火腿": 20, "燒肉": 20, "烤肉": 25, "雞肉": 25 }
 };
 
 async function getMenu(env) {
@@ -360,6 +417,95 @@ async function updateMenu(request, env) {
     return json({ success: true });
   } catch (e) {
     return json({ error: "Invalid data" }, 400);
+  }
+}
+
+async function getImageList(env) {
+  try {
+    const raw = await env.ORDER_STATE.get("image_list");
+    if (raw) return json(JSON.parse(raw));
+  } catch (e) { }
+  return json([]);
+}
+
+async function getImage(request, env) {
+  try {
+    const url = new URL(request.url);
+    const name = url.searchParams.get("name");
+    if (!name) return new Response("Missing name", { status: 400, headers: corsHeaders() });
+
+    const dataUri = await env.ORDER_STATE.get(`image:${name}`);
+    if (!dataUri) return new Response("Not found", { status: 404, headers: corsHeaders() });
+
+    const match = dataUri.match(/^data:(.*?);base64,(.*)$/);
+    if (!match) return new Response("Invalid format", { status: 500, headers: corsHeaders() });
+
+    const mime = match[1];
+    const base64 = match[2];
+    const binaryStr = atob(base64);
+    const binary = new Uint8Array(binaryStr.length);
+    for (let i = 0; i < binaryStr.length; i++) {
+      binary[i] = binaryStr.charCodeAt(i);
+    }
+
+    return new Response(binary, {
+      headers: {
+        ...corsHeaders(),
+        "Content-Type": mime,
+        "Cache-Control": "public, max-age=86400"
+      }
+    });
+  } catch (e) {
+    return new Response("Server error", { status: 500, headers: corsHeaders() });
+  }
+}
+
+async function updateImage(request, env) {
+  try {
+    const { name, dataUri } = await request.json();
+    if (!name || !dataUri) return json({ error: "Missing name or dataUri" }, 400);
+
+    // Limit size check (~5MB base64)
+    if (dataUri.length > 5 * 1024 * 1024) {
+      return json({ error: "Image too large" }, 400);
+    }
+
+    await env.ORDER_STATE.put(`image:${name}`, dataUri);
+
+    let list = [];
+    const listRaw = await env.ORDER_STATE.get("image_list");
+    if (listRaw) {
+      try { list = JSON.parse(listRaw); } catch (e) { }
+    }
+    if (!list.includes(name)) {
+      list.push(name);
+      await env.ORDER_STATE.put("image_list", JSON.stringify(list));
+    }
+
+    return json({ success: true });
+  } catch (e) {
+    return json({ error: "Invalid data" }, 400);
+  }
+}
+
+async function deleteImage(request, env) {
+  try {
+    const { name } = await request.json();
+    if (!name) return json({ error: "Missing name" }, 400);
+
+    await env.ORDER_STATE.delete(`image:${name}`);
+
+    let list = [];
+    const listRaw = await env.ORDER_STATE.get("image_list");
+    if (listRaw) {
+      try { list = JSON.parse(listRaw); } catch (e) { }
+    }
+    list = list.filter(n => n !== name);
+    await env.ORDER_STATE.put("image_list", JSON.stringify(list));
+
+    return json({ success: true });
+  } catch (e) {
+    return json({ error: "Server error" }, 500);
   }
 }
 
@@ -409,42 +555,84 @@ async function handleVerifyTempLink(request, env) {
 
 // ================= DATA LOGIC =================
 async function saveOrder(env, order) {
-  // 1. Single source of truth
-  await env.ORDER_STATE.put(`order:${order.key}`, JSON.stringify(order));
+  try {
+    // 1. Single source of truth
+    await env.ORDER_STATE.put(`order:${order.key}`, JSON.stringify(order));
 
-  // 2. Index Keys
-  const indexRaw = await env.ORDER_STATE.get(ORDER_INDEX_LATEST);
-  let keys = [];
-  try { keys = indexRaw ? JSON.parse(indexRaw) : []; } catch { keys = []; }
-  if (!Array.isArray(keys)) keys = [];
-  if (!keys.includes(order.key)) keys.unshift(order.key);
-  keys = keys.filter(Boolean);
-  keys = [...new Set(keys)].slice(0, MAX_INDEX);
-  await env.ORDER_STATE.put(ORDER_INDEX_LATEST, JSON.stringify(keys));
+    // 1.5. Đồng bộ trạng thái đơn hàng hoạt động (Active Order Sync)
+    if (order.userId) {
+      if (order.status === "PICKED_UP" || order.status === "REJECTED") {
+        await env.ORDER_STATE.delete(`active_order:${order.userId}`);
+      } else {
+        await env.ORDER_STATE.put(`active_order:${order.userId}`, order.key);
+      }
+    }
 
-  // 3. Cache latest View Data (Safe merge)
-  const cacheRaw = await env.ORDER_STATE.get("order_view:cache");
-  let orders = [];
-  try { orders = cacheRaw ? JSON.parse(cacheRaw) : []; } catch { orders = []; }
+    // Vẫn lưu vào ORDER_INDEX_LATEST để tương thích ngược
+    const indexRaw = await env.ORDER_STATE.get(ORDER_INDEX_LATEST);
+    let keys = [];
+    try { keys = indexRaw ? JSON.parse(indexRaw) : []; } catch { keys = []; }
+    if (!Array.isArray(keys)) keys = [];
+    if (!keys.includes(order.key)) {
+      keys.unshift(order.key);
+      keys = keys.filter(Boolean).slice(0, MAX_INDEX);
+      await env.ORDER_STATE.put(ORDER_INDEX_LATEST, JSON.stringify(keys));
+    }
 
-  if (!cacheRaw || orders.length === 0) {
-    // If cache is empty, we DON'T just put current order to avoid wiping others.
-    // Instead, force a refresh or just rely on individual puts.
-    // Let's at least mark cache as dirty by deleting it, getOrders will rebuild it.
-    await env.ORDER_STATE.delete("order_view:cache");
-    return;
+    // 3. Cache latest View Data (Safe merge)
+    const cacheRaw = await env.ORDER_STATE.get("order_view:cache");
+    let orders = [];
+    try { orders = cacheRaw ? JSON.parse(cacheRaw) : []; } catch { orders = []; }
+
+    if (!cacheRaw || orders.length === 0) {
+      // Chỉ lấy tối đa 30 đơn hàng gần nhất để rebuild cache, tránh vượt quá giới hạn 50 subrequests của Cloudflare Free Tier
+      const maxRebuild = 30;
+      const keysToFetch = keys.slice(0, maxRebuild);
+
+      const promises = keysToFetch.map(k => {
+        if (k === order.key) return Promise.resolve(order); // Tiết kiệm 1 lần đọc KV
+        return env.ORDER_STATE.get(`order:${k}`).then(raw => {
+          if (raw) { try { return JSON.parse(raw); } catch { } }
+          return null;
+        });
+      });
+      const results = await Promise.all(promises);
+      orders = results.filter(Boolean);
+      orders.sort((a, b) => (b?.createdAt || 0) - (a?.createdAt || 0));
+      await env.ORDER_STATE.put("order_view:cache", JSON.stringify(orders));
+
+      // Cập nhật memory cache của isolate để getOrders lấy được ngay đơn mới
+      memoryCacheOrders = orders;
+      memoryCacheTime = Date.now();
+      return;
+    }
+
+    const idx = orders.findIndex(o => o.key === order.key);
+    if (idx >= 0) {
+      orders[idx] = order;
+    } else {
+      orders.unshift(order);
+    }
+
+    orders = orders.filter(Boolean).slice(0, MAX_INDEX);
+    orders.sort((a, b) => (b?.createdAt || 0) - (a?.createdAt || 0));
+    await env.ORDER_STATE.put("order_view:cache", JSON.stringify(orders));
+
+    // Cập nhật memory cache của isolate để getOrders lấy được ngay đơn mới
+    memoryCacheOrders = orders;
+    memoryCacheTime = Date.now();
+  } catch (err) {
+    console.error("Error in saveOrder:", err);
+    try {
+      await env.ORDER_STATE.put("last_save_error", JSON.stringify({
+        message: err.message,
+        stack: err.stack,
+        time: new Date(Date.now() + 8 * 3600000).toISOString(),
+        orderKey: order.key
+      }));
+    } catch (e) { }
+    throw err;
   }
-
-  const idx = orders.findIndex(o => o.key === order.key);
-  if (idx >= 0) {
-    orders[idx] = order;
-  } else {
-    orders.unshift(order);
-  }
-
-  orders = orders.filter(Boolean).slice(0, MAX_INDEX);
-  orders.sort((a, b) => (b?.createdAt || 0) - (a?.createdAt || 0));
-  await env.ORDER_STATE.put("order_view:cache", JSON.stringify(orders));
 }
 
 // ================= LINE PUSH/REPLY =================
@@ -603,6 +791,11 @@ async function replyWithLiffRedirect(replyToken, userId, env) {
     }
   };
 
+  // Double check and Optimistic lock để tránh race condition khi khách nhắn nhiều câu liên tiếp
+  const alreadySent = await env.ORDER_STATE.get(`liff_redirected:${userId}`);
+  if (alreadySent) return;
+  await env.ORDER_STATE.put(`liff_redirected:${userId}`, "1", { expirationTtl: 3600 }); // Đổi thành 60 phút theo yêu cầu
+
   const resp = await fetch("https://api.line.me/v2/bot/message/reply", {
     method: "POST",
     headers: {
@@ -624,10 +817,6 @@ async function replyWithLiffRedirect(replyToken, userId, env) {
       ]
     }),
   });
-
-  if (resp.status === 200) {
-    await env.ORDER_STATE.put(`liff_redirected:${userId}`, "1", { expirationTtl: 1800 });
-  }
 }
 
 // ================= AI =================
@@ -666,14 +855,45 @@ async function callAI(prompt, env) {
 }
 
 // ================= Quick Reply =================
-function handleQuickReply(text) {
+async function getOperatingHoursText(env) {
+  try {
+    const raw = await env.ORDER_STATE.get("store_config");
+    if (raw) {
+      const config = JSON.parse(raw);
+      if (config && config.operatingHours) {
+        const hrs = config.operatingHours;
+        const days = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
+        let lines = [];
+        for (let i = 0; i < 7; i++) {
+          const shifts = hrs[i] || [];
+          if (shifts.length === 0) {
+            lines.push(`${days[i]}：公休`);
+          } else {
+            const shiftStr = shifts.map(s => `${s.start}-${s.end}`).join(", ");
+            lines.push(`${days[i]}：${shiftStr}`);
+          }
+        }
+        return "我們的營業時間：\n" + lines.join("\n");
+      }
+    }
+  } catch (e) { }
+  return "我們的營業時間：週一到週五 11:00-21:00，週六週日 09:00-21:00。";
+}
+
+async function handleQuickReply(text, env) {
   const msg = String(text || "").toLowerCase();
   if (msg.includes("營業時間"))
-    return "我們的營業時間：11:00-21:00（一到五），7:30-21:00（六日）。";
+    return await getOperatingHoursText(env);
   if (msg.includes("地址") || msg.includes("在哪"))
     return "新北市土城區中央路二段135號";
   if (msg.includes("外送嗎"))
-    return "土城區金額滿$2000可以外送的";
+    return `感謝您聯絡本米！外送說明如下：
+🛵 滿 2000 元：不限距離，土城全區免運。
+🛵 滿 800 元：
+ - 距離店址 2公里內 ➔ 免運。
+ - 距離店址 超過2公里 ➔ 酌收 80元 運費。
+🛵 未滿 800 元：請直接點 UberEats 平台下單。
+👉 https://cutt.ly/Mt9w2fAD`;
   return null;
 }
 
@@ -691,10 +911,23 @@ function normalizeCustomerReply(text) {
 
 async function handleLineWebhook(request, env, ctx) {
   const body = await request.json().catch(() => ({}));
+  if (ctx && ctx.waitUntil) {
+    ctx.waitUntil(processEvents(body, env, ctx));
+  } else {
+    // Fallback for environment without waitUntil
+    await processEvents(body, env, ctx);
+  }
+  return new Response("OK", { status: 200, headers: corsHeaders() });
+}
+
+async function processEvents(body, env, ctx) {
   const events = Array.isArray(body.events) ? body.events : [];
 
   for (const event of events) {
     if (!event || event.type !== "message") continue;
+    // Nếu cửa hàng bật Manual Chat (Chat thủ công), webhook sẽ nhận event.mode = "standby". 
+    // Ta phải bỏ qua để bot không chen ngang nhân viên.
+    if (event.mode === "standby") continue;
     const message = event.message || {};
     if (message.type !== "text") continue;
 
@@ -708,12 +941,7 @@ async function handleLineWebhook(request, env, ctx) {
     const draftKey = `draft:${userId}`;
 
     // 0) Priority Catch new order from LIFF text message (Bypasses pending states)
-    if (userText.includes("訂單編號：") && userText.includes("📦 訂單內容：")) {
-      const lines = userText.split("\n");
-      const keyLine = lines.find(l => l.includes("訂單編號："));
-      const timeLine = lines.find(l => l.includes("🕒 取餐時間："));
-      const totalLine = lines.find(l => l.includes("💰 總金額："));
-
+    if (userText.includes("訂單編號") && userText.includes("訂單內容")) {
       const nowTaiwan = new Date(Date.now() + 8 * 3600000);
       const mm = String(nowTaiwan.getUTCMonth() + 1).padStart(2, "0");
       const dd = String(nowTaiwan.getUTCDate()).padStart(2, "0");
@@ -722,35 +950,47 @@ async function handleLineWebhook(request, env, ctx) {
       const todayKey = mm + dd;
       const timeKey = hh + min;
       const tempRandomId = Math.floor(1000 + Math.random() * 9000);
-      const orderKey = keyLine ? keyLine.replace("訂單編號：", "").trim() : `BD${todayKey}-${timeKey}-${tempRandomId}`;
-      const timeStr = timeLine ? timeLine.replace("🕒 取餐時間：", "").trim() : "Unknown";
-      const totalStr = totalLine ? totalLine.replace("💰 總金額：", "").replace("$", "").trim() : "0";
-      
-      // Robust note extraction using absolute string indexing to handle multi-line notes perfectly
-      let noteStr = "";
-      const noteStart = userText.indexOf("總備註");
-      const totalStartIdx = userText.indexOf("💰 總金額");
-      
-      if (noteStart !== -1) {
-        let colonIdx = userText.indexOf("：", noteStart);
-        if (colonIdx === -1) colonIdx = userText.indexOf(":", noteStart);
-        if (colonIdx === -1) colonIdx = noteStart + 3; // fallback if no colon found
-        
-        if (totalStartIdx !== -1 && totalStartIdx > colonIdx) {
-          noteStr = userText.substring(colonIdx + 1, totalStartIdx).trim();
-        } else {
-          noteStr = userText.substring(colonIdx + 1).trim();
+
+      // Trích xuất Order Key
+      const keyMatch = userText.match(/訂單編號[：:\s]*([A-Za-z0-9-]+)/);
+      const orderKey = keyMatch ? keyMatch[1].trim() : `BD${todayKey}-${timeKey}-${tempRandomId}`;
+
+      // Check if order already exists to avoid redundant save & race conditions
+      // Chờ 1.5 giây để api/create kịp ghi vào Edge Cache, tránh lỗi ghi đè đồng thời
+      await new Promise(r => setTimeout(r, 1500));
+      try {
+        const existingRaw = await env.ORDER_STATE.get(`order:${orderKey}`);
+        if (existingRaw) {
+          try { await env.ORDER_STATE.delete(pendingKey); } catch { }
+          continue;
         }
+      } catch (e) {
+        console.error("[Benmi Webhook] Check existing order failed:", e);
+      }
+
+      // Trích xuất Giờ nhận
+      const timeMatch = userText.match(/取餐時間[：:\s]*([^\n]*)/);
+      const timeStr = timeMatch ? timeMatch[1].trim() : "Unknown";
+
+      // Trích xuất Tổng tiền (Lọc lấy đúng số)
+      const totalMatch = userText.match(/總金額[：:\s]*\$?(\d+)/);
+      const totalStr = totalMatch ? totalMatch[1] : "0";
+
+      // Trích xuất Nội dung
+      let extractedContent = userText;
+      const contentMatch = userText.match(/訂單內容[：:\s]*([\s\S]*?)(?:🕒\s*)?取餐時間/);
+      if (contentMatch) {
+        extractedContent = contentMatch[1].trim();
+      }
+
+      // Trích xuất Ghi chú
+      let noteStr = "";
+      const noteMatch = userText.match(/(?:總備註|備註)[：:\s]*([\s\S]*?)(?=💰|總金額|$)/);
+      if (noteMatch) {
+        noteStr = noteMatch[1].trim();
       }
 
       let custName = "Khách (Web)";
-
-      const contentStart = userText.indexOf("📦 訂單內容：");
-      const contentEnd = userText.indexOf("🕒 取餐時間：");
-      let extractedContent = userText;
-      if (contentStart > -1 && contentEnd > contentStart) {
-        extractedContent = userText.substring(contentStart + 8, contentEnd).replace("📦 訂單內容：", "").trim();
-      }
 
       const orderData = {
         key: orderKey,
@@ -826,11 +1066,7 @@ async function handleLineWebhook(request, env, ctx) {
             try { await env.ORDER_STATE.delete(draftKey); } catch { }
           }
         };
-        if (ctx && ctx.waitUntil) {
-          ctx.waitUntil(processDraft());
-        } else {
-          await processDraft();
-        }
+        await processDraft();
         continue;
       }
     }
@@ -875,8 +1111,9 @@ async function handleLineWebhook(request, env, ctx) {
             if (isCancel) {
               order.status = "REJECTED"; // Tự động huỷ
               await replyText(replyToken, `收到，謝謝您！`, env);
-              const cleanup = async () => { await saveOrder(env, order); await finishPending(); await syncToGoogleSheets(order, env); };
-              if (ctx && ctx.waitUntil) ctx.waitUntil(cleanup()); else await cleanup();
+              await saveOrder(env, order);
+              await finishPending();
+              await syncToGoogleSheets(order, env);
             }
             else if (exactMatch) {
               const timeParts = (order.time || "").split(" ");
@@ -892,8 +1129,8 @@ async function handleLineWebhook(request, env, ctx) {
               order.note = "";
               order.status = "NEW"; // Tái xuất hiện thông báo đơn mới trên Dashboard
               await replyText(replyToken, `收到您的同意！取餐時間已為您更改為 ${newSuggestedTime}`, env);
-              const cleanup = async () => { await saveOrder(env, order); await finishPending(); };
-              if (ctx && ctx.waitUntil) ctx.waitUntil(cleanup()); else await cleanup();
+              await saveOrder(env, order);
+              await finishPending();
             }
             else {
               await replyText(replyToken, `請簡單回覆「好 / 同意」以確認，或回覆「不要了 / 取消」取消訂單。`, env);
@@ -921,8 +1158,9 @@ async function handleLineWebhook(request, env, ctx) {
             if (isCancel) {
               order.status = "REJECTED"; // Tự động huỷ
               await replyText(replyToken, `好的，已為您取消訂單 #${orderKey}。`, env);
-              const cleanup = async () => { await saveOrder(env, order); await finishPending(); await syncToGoogleSheets(order, env); };
-              if (ctx && ctx.waitUntil) ctx.waitUntil(cleanup()); else await cleanup();
+              await saveOrder(env, order);
+              await finishPending();
+              await syncToGoogleSheets(order, env);
               continue;
             }
 
@@ -937,8 +1175,8 @@ async function handleLineWebhook(request, env, ctx) {
               order.note = "";
               order.status = "NEW";
               await replyText(replyToken, `收到您的回覆！我們會依您的需求修改訂單。`, env);
-              const cleanup = async () => { await saveOrder(env, order); await finishPending(); };
-              if (ctx && ctx.waitUntil) ctx.waitUntil(cleanup()); else await cleanup();
+              await saveOrder(env, order);
+              await finishPending();
               continue;
             }
 
@@ -947,8 +1185,8 @@ async function handleLineWebhook(request, env, ctx) {
             if (isAgree) {
               order.status = "ACCEPTED";
               await replyText(replyToken, `Benmi 收到您的同意！我們會開始準備您的訂單 #${orderKey}。🥖`, env);
-              const cleanup = async () => { await saveOrder(env, order); await finishPending(); };
-              if (ctx && ctx.waitUntil) ctx.waitUntil(cleanup()); else await cleanup();
+              await saveOrder(env, order);
+              await finishPending();
               continue;
             }
 
@@ -962,14 +1200,10 @@ async function handleLineWebhook(request, env, ctx) {
 
             if (isAgree) {
               order.status = "REJECTED";
-              const reason = order.reason || "（未提供原因）";
-              await replyText(
-                replyToken,
-                `非常抱歉！Benmi 無法接下您的訂單 #${orderKey}。\n原因：${reason}\n感謝您訂購 Benmi，歡迎您下次再訂購。`,
-                env
-              );
-              const cleanup = async () => { await saveOrder(env, order); await finishPending(); await syncToGoogleSheets(order, env); };
-              if (ctx && ctx.waitUntil) ctx.waitUntil(cleanup()); else await cleanup();
+              await replyText(replyToken, `謝謝您！`, env);
+              await saveOrder(env, order);
+              await finishPending();
+              await syncToGoogleSheets(order, env);
               continue;
             }
 
@@ -980,8 +1214,8 @@ async function handleLineWebhook(request, env, ctx) {
                 `謝謝您的回覆！我已將訂單 #${orderKey} 回到「等待店家接單」狀態，店家會再為您確認。`,
                 env
               );
-              const cleanup = async () => { await saveOrder(env, order); await finishPending(); };
-              if (ctx && ctx.waitUntil) ctx.waitUntil(cleanup()); else await cleanup();
+              await saveOrder(env, order);
+              await finishPending();
               continue;
             }
 
@@ -997,10 +1231,8 @@ async function handleLineWebhook(request, env, ctx) {
       continue;
     }
 
-    // 1.5 removed, already handled in 0)
-
     // 2) Quick reply
-    const quick = handleQuickReply(userText);
+    const quick = await handleQuickReply(userText, env);
     if (quick) {
       await replyText(replyToken, quick, env);
       continue;
@@ -1008,6 +1240,10 @@ async function handleLineWebhook(request, env, ctx) {
 
     // 3) AI fallback - Detect ordering intent and redirect to LIFF (once per 30 min)
     const aiPromise = async () => {
+      // Nếu khách hàng đang có đơn hàng hoạt động, Bot giữ im lặng để nhân viên chat tay
+      const activeOrderKey = await env.ORDER_STATE.get(`active_order:${userId}`);
+      if (activeOrderKey) return;
+
       // If already redirected once in the last 30 min, stay silent — let human staff handle
       const alreadySent = await env.ORDER_STATE.get(`liff_redirected:${userId}`);
       if (alreadySent) return;
@@ -1027,13 +1263,100 @@ async function handleLineWebhook(request, env, ctx) {
       // If AI failed (null/error/empty): send LIFF redirect as safe fallback
       await replyWithLiffRedirect(replyToken, userId, env);
     };
-    if (ctx && ctx.waitUntil) {
-      ctx.waitUntil(aiPromise());
-    } else {
-      await aiPromise();
+    await aiPromise();
+  }
+}
+
+// ================= DEBUG =================
+async function debugKV(env, url) {
+  const targetKey = url.searchParams.get("key");
+  if (targetKey) {
+    const val = await env.ORDER_STATE.get(targetKey);
+    return new Response(val || "Not found", { headers: corsHeaders() });
+  }
+
+  const rebuild = url.searchParams.get("rebuild");
+  if (rebuild === "1") {
+    try {
+      // 1. List all keys in KV with prefix "order:"
+      let allKeys = [];
+      let cursor = "";
+      while (true) {
+        const listRes = await env.ORDER_STATE.list({ prefix: "order:", cursor });
+        allKeys.push(...listRes.keys.map(k => k.name.replace("order:", "")));
+        if (listRes.list_complete || !listRes.cursor) break;
+        cursor = listRes.cursor;
+      }
+
+      // 2. Sort keys descending so newest are first (e.g. B0617 before B0614)
+      allKeys.sort((a, b) => {
+        const matchA = a.match(/^B(?:D)?(\d{4})(?:-(\d{4}))?/);
+        const matchB = b.match(/^B(?:D)?(\d{4})(?:-(\d{4}))?/);
+        if (matchA && matchB) {
+          const dateA = matchA[1];
+          const dateB = matchB[1];
+          if (dateA !== dateB) return dateB.localeCompare(dateA);
+          const timeA = matchA[2] || "";
+          const timeB = matchB[2] || "";
+          return timeB.localeCompare(timeA);
+        }
+        return b.localeCompare(a);
+      });
+
+      // Keep only up to MAX_INDEX (200)
+      const newIndex = allKeys.slice(0, MAX_INDEX);
+
+      // 3. Write new index to ORDER_INDEX_LATEST
+      await env.ORDER_STATE.put(ORDER_INDEX_LATEST, JSON.stringify(newIndex));
+
+      // 4. Fetch the first 30 orders to rebuild the cache
+      const maxRebuild = 30;
+      const keysToFetch = newIndex.slice(0, maxRebuild);
+      const promises = keysToFetch.map(k => env.ORDER_STATE.get(`order:${k}`).then(raw => {
+        if (raw) { try { return JSON.parse(raw); } catch { } }
+        return null;
+      }));
+      const results = await Promise.all(promises);
+      const rebuiltOrders = results.filter(Boolean);
+      rebuiltOrders.sort((a, b) => (b?.createdAt || 0) - (a?.createdAt || 0));
+
+      // Write to cache
+      await env.ORDER_STATE.put("order_view:cache", JSON.stringify(rebuiltOrders));
+
+      // Clear memory cache so it reloads
+      memoryCacheOrders = null;
+      memoryCacheTime = 0;
+
+      return json({
+        success: true,
+        message: `Successfully rebuilt index and cache with ${newIndex.length} keys.`,
+        index: newIndex.slice(0, 10),
+        cache: rebuiltOrders.map(o => o.key)
+      });
+    } catch (err) {
+      return json({ success: false, error: err.message }, 500);
     }
   }
 
-  return new Response("OK", { status: 200, headers: corsHeaders() });
-}
+  let list = { keys: [], list_complete: true };
+  try {
+    list = await env.ORDER_STATE.list({ prefix: "order:" });
+  } catch (e) {
+    console.error("KV List Error in Debug", e);
+  }
 
+  const index = await env.ORDER_STATE.get(ORDER_INDEX_LATEST);
+  const cache = await env.ORDER_STATE.get("order_view:cache");
+  const lastSaveError = await env.ORDER_STATE.get("last_save_error");
+
+  return json({
+    total_orders_in_first_1000: list.keys.length,
+    list_complete: list.list_complete,
+    cursor: list.cursor,
+    keys: list.keys.map(k => k.name),
+    index: index ? JSON.parse(index) : null,
+    cache: cache ? JSON.parse(cache).map(o => o.key) : null,
+    last_save_error: lastSaveError ? JSON.parse(lastSaveError) : null,
+    error: list.keys.length === 0 ? "KV list() limit exceeded for the day" : null
+  });
+}
