@@ -320,8 +320,8 @@ async function updateOrder(request, env, ctx) {
 
 async function getOrders(env) {
   const now = Date.now();
-  // Giảm 70-80% số lượt gọi KV get() bằng cách dùng Memory Cache trong 3 giây cho mỗi Isolate
-  if (memoryCacheOrders && (now - memoryCacheTime < 3000)) {
+  // Giảm 70-80% số lượt gọi KV get() bằng cách dùng Memory Cache trong 2 giây cho mỗi Isolate
+  if (memoryCacheOrders && (now - memoryCacheTime < 2000)) {
     return json(memoryCacheOrders);
   }
 
@@ -556,31 +556,30 @@ async function handleVerifyTempLink(request, env) {
 // ================= DATA LOGIC =================
 async function saveOrder(env, order) {
   try {
-    // 1. Single source of truth
-    await env.ORDER_STATE.put(`order:${order.key}`, JSON.stringify(order));
+    // 1. Gửi đồng thời các yêu cầu đọc và ghi độc lập (Parallel Read & Write)
+    const [indexRaw, cacheRaw] = await Promise.all([
+      env.ORDER_STATE.get(ORDER_INDEX_LATEST),
+      env.ORDER_STATE.get("order_view:cache"),
+      env.ORDER_STATE.put(`order:${order.key}`, JSON.stringify(order)),
+      order.userId
+        ? (order.status === "PICKED_UP" || order.status === "REJECTED"
+          ? env.ORDER_STATE.delete(`active_order:${order.userId}`)
+          : env.ORDER_STATE.put(`active_order:${order.userId}`, order.key))
+        : Promise.resolve()
+    ]);
 
-    // 1.5. Đồng bộ trạng thái đơn hàng hoạt động (Active Order Sync)
-    if (order.userId) {
-      if (order.status === "PICKED_UP" || order.status === "REJECTED") {
-        await env.ORDER_STATE.delete(`active_order:${order.userId}`);
-      } else {
-        await env.ORDER_STATE.put(`active_order:${order.userId}`, order.key);
-      }
-    }
-
-    // Vẫn lưu vào ORDER_INDEX_LATEST để tương thích ngược
-    const indexRaw = await env.ORDER_STATE.get(ORDER_INDEX_LATEST);
+    // 2. Cập nhật chỉ mục (Index) trong bộ nhớ
     let keys = [];
     try { keys = indexRaw ? JSON.parse(indexRaw) : []; } catch { keys = []; }
     if (!Array.isArray(keys)) keys = [];
+    let keysChanged = false;
     if (!keys.includes(order.key)) {
       keys.unshift(order.key);
       keys = keys.filter(Boolean).slice(0, MAX_INDEX);
-      await env.ORDER_STATE.put(ORDER_INDEX_LATEST, JSON.stringify(keys));
+      keysChanged = true;
     }
 
-    // 3. Cache latest View Data (Safe merge)
-    const cacheRaw = await env.ORDER_STATE.get("order_view:cache");
+    // 3. Cập nhật cache hiển thị (Cache latest View Data)
     let orders = [];
     try { orders = cacheRaw ? JSON.parse(cacheRaw) : []; } catch { orders = []; }
 
@@ -599,7 +598,14 @@ async function saveOrder(env, order) {
       const results = await Promise.all(promises);
       orders = results.filter(Boolean);
       orders.sort((a, b) => (b?.createdAt || 0) - (a?.createdAt || 0));
-      await env.ORDER_STATE.put("order_view:cache", JSON.stringify(orders));
+
+      const updates = [
+        env.ORDER_STATE.put("order_view:cache", JSON.stringify(orders))
+      ];
+      if (keysChanged) {
+        updates.push(env.ORDER_STATE.put(ORDER_INDEX_LATEST, JSON.stringify(keys)));
+      }
+      await Promise.all(updates);
 
       // Cập nhật memory cache của isolate để getOrders lấy được ngay đơn mới
       memoryCacheOrders = orders;
@@ -616,7 +622,14 @@ async function saveOrder(env, order) {
 
     orders = orders.filter(Boolean).slice(0, MAX_INDEX);
     orders.sort((a, b) => (b?.createdAt || 0) - (a?.createdAt || 0));
-    await env.ORDER_STATE.put("order_view:cache", JSON.stringify(orders));
+
+    const finalUpdates = [
+      env.ORDER_STATE.put("order_view:cache", JSON.stringify(orders))
+    ];
+    if (keysChanged) {
+      finalUpdates.push(env.ORDER_STATE.put(ORDER_INDEX_LATEST, JSON.stringify(keys)));
+    }
+    await Promise.all(finalUpdates);
 
     // Cập nhật memory cache của isolate để getOrders lấy được ngay đơn mới
     memoryCacheOrders = orders;
