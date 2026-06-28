@@ -910,6 +910,49 @@ async function handleQuickReply(text, env) {
   return null;
 }
 
+// ================= MENU KEYWORD MATCHER =================
+/**
+ * Check if the customer's free-text reply contains any known menu item.
+ * Also detects negation patterns (e.g. "不要雞肉") to avoid false-positive swaps.
+ * Returns { matched: string[] | null, hasNegation: boolean }
+ */
+async function matchMenuItems(text, env) {
+  let menu = DEFAULT_MENU;
+  try {
+    const raw = await env.ORDER_STATE.get("menu:latest");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") menu = parsed;
+    }
+  } catch {}
+
+  // Collect all unique item names from all categories
+  const allItems = new Set();
+  for (const category of Object.values(menu)) {
+    if (typeof category === "object") {
+      for (const name of Object.keys(category)) {
+        // Strip combo prefixes like "1 大燒肉+飲料" → "燒肉"
+        const clean = name.replace(/^\d+\s*/, "").replace(/^[大小]\s*/, "").replace(/\+.*$/, "").trim();
+        if (clean) allItems.add(clean);
+      }
+    }
+  }
+
+  const lowerText = text.toLowerCase();
+  const matched = [];
+  for (const item of allItems) {
+    if (lowerText.includes(item.toLowerCase())) {
+      matched.push(item);
+    }
+  }
+
+  // Negation detection: check if the text contains negation words alongside a menu item
+  const negationPatterns = ["不要", "不用", "不想", "沒有", "別"];
+  const hasNegation = negationPatterns.some(neg => lowerText.includes(neg));
+
+  return { matched: matched.length > 0 ? matched : null, hasNegation };
+}
+
 // ================= WEBHOOK =================
 function normalizeCustomerReply(text) {
   const t = String(text || "").trim().toLowerCase();
@@ -1140,12 +1183,94 @@ async function processEvents(body, env, ctx) {
             continue; // KẾT THÚC LUỒNG XỬ LÝ RIÊNG
           }
 
-          // CÁC TRƯỜNG HỢP KHÁC (ví dụ: Hết món, Đổi món): DÙNG AI ĐỂ XỬ LÝ
+          // TÁCH RIÊNG TRƯỜNG HỢP "口味售完" — Dùng menu keyword matcher TRƯỚC AI
+          if (pendingType === "CHANGE" && currentReason === "口味售完") {
+            const isCancel = lowerText.includes("不要了") || lowerText.includes("取消") || lowerText.includes("不用了") || lowerText === "不要";
+
+            if (isCancel) {
+              order.status = "REJECTED";
+              await replyText(replyToken, `好的，已為您取消訂單 #${orderKey}。`, env);
+              await saveOrder(env, order);
+              await finishPending();
+              await syncToGoogleSheets(order, env);
+              continue;
+            }
+
+            // "好/OK" without specifying a replacement → ask for clarification
+            const isAgreeOnly = lowerText === "好" || lowerText === "同意" || lowerText === "ok" || lowerText === "okay" || lowerText === "可以" || lowerText === "好的";
+            if (isAgreeOnly) {
+              await replyText(replyToken, `好的，請問您想換什麼口味呢？`, env);
+              continue; // Giữ pending state, chờ khách chọn món
+            }
+
+            // Layer 1: Deterministic menu keyword match (skips AI entirely)
+            const { matched: menuMatch, hasNegation } = await matchMenuItems(userText, env);
+
+            if (menuMatch && hasNegation) {
+              // Negation detected (e.g. "不要雞肉") → treat as cancel
+              console.log(`[Benmi] Menu match with negation for userId=${userId}: matched=${JSON.stringify(menuMatch)}, text="${userText}"`);
+              order.status = "REJECTED";
+              await replyText(replyToken, `好的，已為您取消訂單 #${orderKey}。`, env);
+              await saveOrder(env, order);
+              await finishPending();
+              await syncToGoogleSheets(order, env);
+              continue;
+            }
+
+            if (menuMatch) {
+              // Deterministic match — accept swap immediately, skip AI
+              console.log(`[Benmi] Menu match for userId=${userId}: matched=${JSON.stringify(menuMatch)}, text="${userText}"`);
+              order.content = `【顧客換單】：${userText}\n----原本訂單/Đơn cũ 👇----\n${order.content}`;
+              order.reason = "";
+              order.note = "";
+              order.status = "NEW";
+              await replyText(replyToken, `收到您的回覆！我們會依您的需求修改訂單。`, env);
+              await saveOrder(env, order);
+              await finishPending();
+              continue;
+            }
+
+            // Layer 2: AI fallback with swap-specific prompt
+            let aiSaysNo = false;
+            if (questionText) {
+              const prompt = `店家告知顧客某些餐點售完，問他要不要換別的。\n` +
+                `店家的問題：「${questionText}」\n` +
+                `顧客回覆：「${userText}」\n\n` +
+                `顧客的回覆是否有提到想要的替代品項或口味？（例如：「換雞肉」「要烤肉」「那改綜合」「幫我換火腿的」等）\n` +
+                `如果有提到替代品項 → 回覆「YES」\n` +
+                `如果只是反問、抱怨、或完全無關 → 回覆「NO」\n` +
+                `請嚴格只回覆 YES 或 NO。`;
+              const aiRes = await callAI(prompt, env);
+              // Mặc định cho qua (optimistic) nếu AI lỗi, tránh rơi rớt đơn của khách
+              if (aiRes) {
+                const up = aiRes.toUpperCase();
+                if (up.includes("NO") && !up.includes("YES")) {
+                  aiSaysNo = true;
+                }
+              }
+            }
+
+            if (aiSaysNo) {
+              await replyText(replyToken, `請您明確告訴我們想換什麼品項，或者回覆「取消」直接取消訂單。`, env);
+              continue;
+            }
+
+            // AI says YES or AI failed → accept the swap (optimistic fallback)
+            order.content = `【顧客換單】：${userText}\n----原本訂單/Đơn cũ 👇----\n${order.content}`;
+            order.reason = "";
+            order.note = "";
+            order.status = "NEW";
+            await replyText(replyToken, `收到您的回覆！我們會依您的需求修改訂單。`, env);
+            await saveOrder(env, order);
+            await finishPending();
+            continue;
+          }
+
+          // CÁC TRƯỜNG HỢP CHANGE KHÁC (non-口味售完): DÙNG AI ĐỂ XỬ LÝ
           let aiSaysNo = false;
           if (questionText) {
             const prompt = `店家剛才詢問顧客：「${questionText}」\n顧客的回覆是：「${userText}」\n請問顧客的回覆是否針對問題做出了決定（如已明確選擇換的口味、同意、拒絕等）？\n注意：如果問題是問想換什麼口味，但顧客只回答「好/同意」而沒有說明要換什麼品項，表示未做出完整決定，請回答「NO」。\n如果顧客只是在反問、抱怨、尋求資訊，也請回答「NO」。\n如果顧客已經給出明確選項或決定取消，請回答「YES」。\n請嚴格只回覆「YES」或「NO」，不要有其他文字。`;
             const aiRes = await callAI(prompt, env);
-            // Mặc định cho qua nếu AI lỗi, tránh rơi rớt đơn của khách. Chỉ chặn khi AI chắc chắn trả lời NO.
             if (aiRes) {
               const up = aiRes.toUpperCase();
               if (up.includes("NO") && !up.includes("YES")) {
@@ -1158,7 +1283,7 @@ async function processEvents(body, env, ctx) {
             const isCancel = lowerText.includes("不要了") || lowerText.includes("取消") || lowerText.includes("不用了") || lowerText === "不要";
 
             if (isCancel) {
-              order.status = "REJECTED"; // Tự động huỷ
+              order.status = "REJECTED";
               await replyText(replyToken, `好的，已為您取消訂單 #${orderKey}。`, env);
               await saveOrder(env, order);
               await finishPending();
@@ -1168,17 +1293,6 @@ async function processEvents(body, env, ctx) {
 
             if (aiSaysNo) {
               await replyText(replyToken, `請您明確告訴我們想換什麼品項，或者回覆「取消」直接取消訂單。`, env);
-              continue; // Yêu cầu khách nhập rõ ràng
-            }
-
-            if (currentReason === "口味售完") {
-              order.content = `【顧客換單】：${userText}\n----原本訂單/Đơn cũ 👇----\n${order.content}`;
-              order.reason = "";
-              order.note = "";
-              order.status = "NEW";
-              await replyText(replyToken, `收到您的回覆！我們會依您的需求修改訂單。`, env);
-              await saveOrder(env, order);
-              await finishPending();
               continue;
             }
 
