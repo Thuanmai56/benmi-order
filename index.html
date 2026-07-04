@@ -261,7 +261,7 @@
             qtySpan.style.color = cart[key] > 0 ? 'var(--primary)' : 'inherit';
 
             const btn = document.getElementById('customize-btn-' + category + '-' + origName);
-            if (btn) btn.style.display = (cart[key] > 0 && category !== 'drink') ? 'block' : 'none';
+            if (btn) btn.style.display = (cart[key] > 0 && category !== 'drinks') ? 'block' : 'none';
 
             if (category === 'combo') renderComboDrinksInline(origName, cart[key]);
             updateTotal();
