@@ -550,9 +550,11 @@
 
           <!-- Operating Hours -->
           <div style="border: 1px solid var(--border); border-radius: 12px; overflow: hidden;">
-            <div style="padding: 16px 20px; background: #f3f4f6; border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+            <div
+              style="padding: 16px 20px; background: #f3f4f6; border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
               <div style="font-weight: 1100; font-size: 18px;">⏰ 營業時間 (Giờ hoạt động)</div>
-              <button class="btn btn-primary" style="padding: 10px 20px; font-size: 15px; border-radius: 8px;" onclick="saveOperatingHours()" id="btn-save-hours">儲存時間</button>
+              <button class="btn btn-primary" style="padding: 10px 20px; font-size: 15px; border-radius: 8px;"
+                onclick="saveOperatingHours()" id="btn-save-hours">儲存時間</button>
             </div>
             <div id="settings-hours-container" style="padding: 16px; display: flex; flex-direction: column; gap: 10px;">
               <div style="text-align:center; font-size:14px; color:#999;">載入中...</div>
@@ -586,9 +588,12 @@
               <div class="panel-sub">拖曳排序 ✦ 點擊欄位直接修改</div>
             </div>
             <div style="display:flex; gap:8px;">
-              <button class="btn btn-ghost" style="padding: 8px 16px; font-size: 14px; color: var(--brand-red);" onclick="restoreDefaultMenu()">Khôi phục Menu gốc</button>
-              <button class="btn btn-yellow" style="padding: 8px 16px; font-size: 14px;" onclick="addNewMenuItem()">+ 新增項目</button>
-              <button class="btn btn-primary" style="padding: 8px 16px; font-size: 14px;" onclick="saveMenuData()">儲存變更</button>
+              <button class="btn btn-ghost" style="padding: 8px 16px; font-size: 14px; color: var(--brand-red);"
+                onclick="restoreDefaultMenu()">Khôi phục Menu gốc</button>
+              <button class="btn btn-yellow" style="padding: 8px 16px; font-size: 14px;" onclick="addNewMenuItem()">+
+                新增項目</button>
+              <button class="btn btn-primary" style="padding: 8px 16px; font-size: 14px;"
+                onclick="saveMenuData()">儲存變更</button>
             </div>
           </div>
           <div class="panel-body" id="menu-editor-body" style="background: #f9fafb;">
@@ -746,13 +751,16 @@
         <div class="modal-close" onclick="closeModal()">✕</div>
       </div>
       <div style="margin-top: 16px; text-align: center;">
-        <img id="image-preview" src="" style="max-width: 100%; max-height: 200px; border-radius: 12px; display: none; margin: 0 auto 16px; object-fit: cover; border: 1px solid #eee;">
+        <img id="image-preview" src=""
+          style="max-width: 100%; max-height: 200px; border-radius: 12px; display: none; margin: 0 auto 16px; object-fit: cover; border: 1px solid #eee;">
         <div id="image-status" style="margin-bottom: 16px; font-weight: 900; color: #666;">Đang kiểm tra ảnh...</div>
       </div>
-      <input type="file" id="image-file-input" accept="image/png, image/jpeg, image/webp" style="display: none;" onchange="handleImageSelect(event)">
+      <input type="file" id="image-file-input" accept="image/png, image/jpeg, image/webp" style="display: none;"
+        onchange="handleImageSelect(event)">
       <div class="modal-actions two">
         <button class="btn btn-primary" onclick="document.getElementById('image-file-input').click()">Chọn Ảnh</button>
-        <button class="btn btn-danger" id="btn-delete-image" style="display: none;" onclick="deleteItemImage()">Xóa Ảnh</button>
+        <button class="btn btn-danger" id="btn-delete-image" style="display: none;" onclick="deleteItemImage()">Xóa
+          Ảnh</button>
       </div>
       <div class="modal-actions" style="grid-template-columns: 1fr; margin-top: 10px;">
         <button class="btn btn-ghost btn-block" onclick="closeModal()">Đóng</button>
@@ -761,7 +769,7 @@
   </div>
 
   <script>
-    const WORKER_BASE = "https://benmi-worker-official.thuanmnc.workers.dev";
+    const WORKER_BASE = "https://spring-smoke-46ba.thuanmnc.workers.dev";
 
     let latestOrders = [];
     let pendingNewOrders = [];
@@ -1525,10 +1533,10 @@
     }
 
     const BENMI_CATS = [
-      { id: "small",   label: "小麵包 (Bánh mì nhỏ)" },
-      { id: "large",   label: "大麵包 (Bánh mì lớn)" },
-      { id: "combo",   label: "套餐 (Combo + Nước)" },
-      { id: "drinks",  label: "單點飲料 (Đồ uống)" },
+      { id: "small", label: "小麵包 (Bánh mì nhỏ)" },
+      { id: "large", label: "大麵包 (Bánh mì lớn)" },
+      { id: "combo", label: "套餐 (Combo + Nước)" },
+      { id: "drinks", label: "單點飲料 (Đồ uống)" },
       { id: "topping", label: "加料 (Topping)" }
     ];
 
@@ -1720,7 +1728,7 @@
 
     async function restoreDefaultMenu() {
       if (!confirm("Bạn có chắc chắn muốn KHÔI PHỤC MENU về trạng thái gốc mặc định không? Tất cả các món bạn đã sửa sẽ bị ghi đè!")) return;
-      
+
       const DEFAULT_MENU = {
         small: { "燒肉": 56, "火腿": 56, "雞肉": 68, "烤肉": 72, "雙層烤肉": 78, "綜合": 79 },
         large: { "燒肉": 80, "火腿": 80, "雞肉": 100, "烤肉": 105, "雙層烤肉": 115, "綜合": 130 },
@@ -1756,7 +1764,7 @@
       document.getElementById("image-preview").style.display = "none";
       document.getElementById("btn-delete-image").style.display = "none";
       document.getElementById("image-status").innerText = "Đang kiểm tra ảnh...";
-      
+
       document.getElementById("imageModal").style.display = "flex";
 
       try {
@@ -1784,7 +1792,7 @@
       const reader = new FileReader();
       reader.onload = function (e) {
         const img = new Image();
-        img.onload = function() {
+        img.onload = function () {
           // Resize if too large
           const MAX_WIDTH = 800;
           const MAX_HEIGHT = 800;
@@ -1828,7 +1836,7 @@
           body: JSON.stringify({ name: currentImageItemName, dataUri })
         });
         if (!res.ok) throw new Error("Upload failed");
-        
+
         document.getElementById("image-preview").src = dataUri;
         document.getElementById("image-preview").style.display = "block";
         document.getElementById("btn-delete-image").style.display = "block";
@@ -1849,7 +1857,7 @@
           body: JSON.stringify({ name: currentImageItemName })
         });
         if (!res.ok) throw new Error("Delete failed");
-        
+
         document.getElementById("image-preview").style.display = "none";
         document.getElementById("btn-delete-image").style.display = "none";
         document.getElementById("image-status").innerText = "Món này chưa có ảnh";
