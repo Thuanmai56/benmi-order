@@ -244,17 +244,17 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
       const orderKey = keyLine ? keyLine.replace("訂單編號：", "").trim() : `BD${todayKey}-${timeKey}-${tempRandomId}`;
       const timeStr = timeLine ? timeLine.replace("🕒 取餐時間：", "").trim() : "Unknown";
       const totalStr = totalLine ? totalLine.replace("💰 總金額：", "").replace("$", "").trim() : "0";
-      
+
       // Robust note extraction using absolute string indexing to handle multi-line notes perfectly
       let noteStr = "";
       const noteStart = userText.indexOf("總備註");
       const totalStartIdx = userText.indexOf("💰 總金額");
-      
+
       if (noteStart !== -1) {
         let colonIdx = userText.indexOf("：", noteStart);
         if (colonIdx === -1) colonIdx = userText.indexOf(":", noteStart);
         if (colonIdx === -1) colonIdx = noteStart + 3; // fallback if no colon found
-        
+
         if (totalStartIdx !== -1 && totalStartIdx > colonIdx) {
           noteStr = userText.substring(colonIdx + 1, totalStartIdx).trim();
         } else {

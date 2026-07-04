@@ -46,7 +46,7 @@ graph TD
         C2 <--> D2[("KV PROD:<br>ORDER_STATE")]
     end
 
-    BranchTest -. "copy-paste thủ công" .-> C1
+    BranchTest -- "auto deploy (Workers Builds)" --> C1
     BranchMain -. "copy-paste thủ công" .-> C2
 
     style github fill:#f5f5f5,stroke:#333,stroke-width:2px
@@ -89,9 +89,7 @@ flowchart TD
         Coding --> SetTestEnv["Sửa biến env sang TEST trong code:<br>- WORKER_BASE (index.html, orders.html)<br>- liffId (index.html)"]
         SetTestEnv --> PushTest[Push/Merge vào branch test trên GitHub]
         PushTest --> PagesTest["FrontEnd tự động deploy lên:<br>test.benmi-order.pages.dev"]
-        PushTest --> CopyWorkerTest[Mở file src/worker.js trên branch test & Copy toàn bộ code]
-        CopyWorkerTest --> PasteWorkerTest["Vào Cloudflare Web -> Chọn Worker: spring-smoke-46ba<br>-> Chọn Quick Edit -> Dán code vào"]
-        PasteWorkerTest --> DeployWorkerTest[Click Save and Deploy]
+        PushTest --> DeployWorkerTest["Worker TEST tự động deploy lên:<br>spring-smoke-46ba<br>(nhờ Cloudflare Workers Builds)"]
     end
 
     DeployWorkerTest --> Testing{Chạy thử nghiệm OK?}
@@ -131,12 +129,7 @@ flowchart TD
      ```
    * Thực hiện commit và push/merge code vào branch `test`. Cloudflare Pages sẽ tự động nhận biết và deploy giao diện web.
 2. **Cập nhật BackEnd (Worker):**
-   * Mở file `benmi-worker-official/src/worker.js` trên branch `test` và copy toàn bộ nội dung file này.
-   * Truy cập vào trang quản trị Cloudflare của bạn.
-   * Đi tới **Workers & Pages** > Chọn Worker **`spring-smoke-46ba`**.
-   * Nhấn nút **Quick Edit** ở góc trên cùng bên phải.
-   * Xóa toàn bộ code cũ trong khung soạn thảo, dán code mới vừa copy vào.
-   * Nhấn **Save and Deploy** (Lưu và triển khai).
+   * Do bạn đã thiết lập **Workers Builds (GitHub Integration)**, Cloudflare Worker TEST (`spring-smoke-46ba`) sẽ **tự động deploy** ngay khi bạn push/merge code vào branch `test` (thông qua lệnh `npx wrangler deploy --env test`). Bạn không cần phải copy-paste code thủ công nữa!
 3. **Thử nghiệm:**
    * Truy cập [test.benmi-order.pages.dev](https://test.benmi-order.pages.dev) bằng tài khoản LINE Test để đặt thử bánh mì và kiểm tra trang nhận đơn tại [test.benmi-order.pages.dev/orders.html](https://test.benmi-order.pages.dev/orders.html).
 
@@ -172,3 +165,5 @@ Chỉ thực hiện bước này sau khi môi trường TEST đã hoạt động
 
 > [!IMPORTANT]  
 > **Lưu ý cực kỳ quan trọng:** Luôn luôn kiểm tra kỹ các biến `WORKER_BASE` và `liffId` trước khi push/merge code. Việc nhầm lẫn biến TEST sang PRODUCTION có thể làm gián đoạn quá trình nhận đơn hàng của cửa hàng thật, hoặc làm đơn hàng thử nghiệm nhảy vào dữ liệu thật.
+
+---
