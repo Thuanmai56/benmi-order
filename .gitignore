@@ -22,3 +22,6 @@ Thumbs.db
 # Node modules
 node_modules/
 dist/
+
+.dev.vars*
+!.dev.vars.example
