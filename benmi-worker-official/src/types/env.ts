@@ -8,5 +8,7 @@ export interface Env {
   LIFF_URL?: string;
   OPENROUTER_API_KEY?: string;
   OPENROUTER_MODEL?: string;
+  GROQ_API_KEY?: string;
+  GROQ_MODEL?: string;
   GOOGLE_SHEETS_URL?: string;
 }
