@@ -2,7 +2,7 @@ import { Env } from '../types/env';
 import { Order } from '../types/index';
 import { corsHeaders } from '../utils/http';
 import { saveOrder, getPendingMap } from './orders';
-import { callAI } from '../integrations/openRouter';
+import { callAI } from '../integrations/groq';
 import { syncToGoogleSheets } from '../integrations/googleSheets';
 
 export async function pushLineMessage(userId: string, text: string, env: Env): Promise<void> {
@@ -34,26 +34,38 @@ export async function pushLineMessage(userId: string, text: string, env: Env): P
   }
 }
 
-export async function replyText(replyToken: string, text: string, env: Env): Promise<void> {
+export async function replyText(replyToken: string, text: string, env: Env): Promise<boolean> {
   const token = env.LINE_CHANNEL_TOKEN;
-  if (!token || !replyToken) return;
+  if (!token || !replyToken) return false;
 
-  await fetch("https://api.line.me/v2/bot/message/reply", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      replyToken,
-      messages: [{ type: "text", text }],
-    }),
-  });
+  try {
+    const res = await fetch("https://api.line.me/v2/bot/message/reply", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        replyToken,
+        messages: [{ type: "text", text }],
+      }),
+    });
+
+    if (!res.ok) {
+      const errorBody = await res.text().catch(() => "");
+      console.error(`[Benmi] replyText FAILED: status=${res.status} body=${errorBody}`);
+      return false;
+    }
+    return true;
+  } catch (e: any) {
+    console.error(`[Benmi] replyText EXCEPTION: ${e.message}`);
+    return false;
+  }
 }
 
-export async function replyWithLiffRedirect(replyToken: string, userId: string, env: Env): Promise<void> {
+export async function replyWithLiffRedirect(replyToken: string, userId: string, env: Env): Promise<boolean> {
   const token = env.LINE_CHANNEL_TOKEN;
-  if (!token || !replyToken) return;
+  if (!token || !replyToken) return false;
 
   const liffUrl = env.LIFF_URL || "https://liff.line.me/";
 
@@ -159,30 +171,40 @@ export async function replyWithLiffRedirect(replyToken: string, userId: string, 
     }
   };
 
-  const resp = await fetch("https://api.line.me/v2/bot/message/reply", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      replyToken,
-      messages: [
-        {
-          type: "text",
-          text: "您好！為了確保您的訂單準確無誤，請點擊下方連結進入系統預訂 🙏"
-        },
-        {
-          type: "flex",
-          altText: "點擊進入線上點餐系統",
-          contents: flexBubble
-        }
-      ]
-    }),
-  });
+  try {
+    const resp = await fetch("https://api.line.me/v2/bot/message/reply", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        replyToken,
+        messages: [
+          {
+            type: "text",
+            text: "您好！為了確保您的訂單準確無誤，請點擊下方連結進入系統預訂 🙏"
+          },
+          {
+            type: "flex",
+            altText: "點擊進入線上點餐系統",
+            contents: flexBubble
+          }
+        ]
+      }),
+    });
 
-  if (resp.status === 200) {
+    if (!resp.ok) {
+      const errorBody = await resp.text().catch(() => "");
+      console.error(`[Benmi] replyWithLiffRedirect FAILED: status=${resp.status} body=${errorBody}`);
+      return false;
+    }
+
     await env.ORDER_STATE.put(`liff_redirected:${userId}`, "1", { expirationTtl: 1800 });
+    return true;
+  } catch (e: any) {
+    console.error(`[Benmi] replyWithLiffRedirect EXCEPTION: ${e.message}`);
+    return false;
   }
 }
 
