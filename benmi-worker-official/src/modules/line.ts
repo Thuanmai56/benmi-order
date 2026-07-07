@@ -38,17 +38,26 @@ export async function replyText(replyToken: string, text: string, env: Env): Pro
   const token = env.LINE_CHANNEL_TOKEN;
   if (!token || !replyToken) return;
 
-  await fetch("https://api.line.me/v2/bot/message/reply", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      replyToken,
-      messages: [{ type: "text", text }],
-    }),
-  });
+  try {
+    const res = await fetch("https://api.line.me/v2/bot/message/reply", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        replyToken,
+        messages: [{ type: "text", text }],
+      }),
+    });
+
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => "(unreadable)");
+      console.error(`[Benmi] replyText FAILED: status=${res.status} body=${errBody}`);
+    }
+  } catch (e: any) {
+    console.error(`[Benmi] replyText EXCEPTION: error=${e.message}`);
+  }
 }
 
 export async function replyWithLiffRedirect(replyToken: string, userId: string, env: Env): Promise<void> {
@@ -159,30 +168,37 @@ export async function replyWithLiffRedirect(replyToken: string, userId: string, 
     }
   };
 
-  const resp = await fetch("https://api.line.me/v2/bot/message/reply", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      replyToken,
-      messages: [
-        {
-          type: "text",
-          text: "您好！為了確保您的訂單準確無誤，請點擊下方連結進入系統預訂 🙏"
-        },
-        {
-          type: "flex",
-          altText: "點擊進入線上點餐系統",
-          contents: flexBubble
-        }
-      ]
-    }),
-  });
+  try {
+    const resp = await fetch("https://api.line.me/v2/bot/message/reply", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        replyToken,
+        messages: [
+          {
+            type: "text",
+            text: "您好！為了確保您的訂單準確無誤，請點擊下方連結进入系統預訂 🙏"
+          },
+          {
+            type: "flex",
+            altText: "點擊進入線上點餐系統",
+            contents: flexBubble
+          }
+        ]
+      }),
+    });
 
-  if (resp.status === 200) {
-    await env.ORDER_STATE.put(`liff_redirected:${userId}`, "1", { expirationTtl: 1800 });
+    if (resp.status === 200) {
+      await env.ORDER_STATE.put(`liff_redirected:${userId}`, "1", { expirationTtl: 1800 });
+    } else {
+      const errBody = await resp.text().catch(() => "(unreadable)");
+      console.error(`[Benmi] replyWithLiffRedirect FAILED: status=${resp.status} body=${errBody}`);
+    }
+  } catch (e: any) {
+    console.error(`[Benmi] replyWithLiffRedirect EXCEPTION: error=${e.message}`);
   }
 }
 
@@ -264,6 +280,17 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
 
       let custName = "Khách (Web)";
 
+      // Check if order already exists to preserve customer name
+      const existingRaw = await env.ORDER_STATE.get(`order:${orderKey}`);
+      if (existingRaw) {
+        try {
+          const existingOrder = JSON.parse(existingRaw) as Order;
+          if (existingOrder && existingOrder.customer && existingOrder.customer !== "Khách (Web)") {
+            custName = existingOrder.customer;
+          }
+        } catch { }
+      }
+
       const contentStart = userText.indexOf("📦 訂單內容：");
       const contentEnd = userText.indexOf("🕒 取餐時間：");
       let extractedContent = userText;
@@ -299,9 +326,12 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
                 orderData.customer = p.displayName;
                 await saveOrder(env, orderData);
               }
+            } else {
+              const errBody = await resp.text().catch(() => "(unreadable)");
+              console.error(`[Benmi] Background profile fetch FAILED: status=${resp.status} userId=${userId} body=${errBody}`);
             }
-          } catch (e) {
-            console.error("Background profile fetch failed:", e);
+          } catch (e: any) {
+            console.error("[Benmi] Background profile fetch EXCEPTION:", e);
           }
         })());
       }
