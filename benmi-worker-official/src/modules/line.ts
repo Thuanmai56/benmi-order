@@ -219,6 +219,29 @@ export function handleQuickReply(text: string): string | null {
   return null;
 }
 
+export function checkDirectIntent(text: string): "YES" | "NO" | null {
+  const t = String(text || "").trim().toLowerCase();
+
+  // 1. Nhóm từ khóa chắc chắn là muốn ĐẶT HÀNG (YES) -> Đi thẳng tới LIFF Link (Tiếng Đài/Trung)
+  const yesKeywords = [
+    "點餐", "我要點餐", "我要訂餐", "想訂餐", "開始點餐", "點餐連結", "菜單"
+  ];
+  if (yesKeywords.some(kw => t.includes(kw))) {
+    return "YES";
+  }
+
+  // 2. Nhóm câu chào hỏi hoặc từ khóa ngắn chắc chắn KHÔNG phải đặt hàng (NO) -> Im lặng (Tiếng Đài/Trung)
+  const noKeywords = [
+    "你好", "哈囉", "哈嘍", "嗨", "謝謝", "謝謝你", "營業時間", "地址", "外送"
+  ];
+  // Chỉ áp dụng NO khi câu chat ngắn (tránh trường hợp khách viết dài có chứa từ chào hỏi)
+  if (noKeywords.some(kw => t.includes(kw)) && t.length < 15) {
+    return "NO";
+  }
+
+  return null;
+}
+
 export function normalizeCustomerReply(text: string) {
   const t = String(text || "").trim().toLowerCase();
   const hasAgree =
@@ -540,6 +563,16 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
     const quick = handleQuickReply(userText);
     if (quick) {
       await replyText(replyToken, quick, env);
+      continue;
+    }
+
+    // 2.5) Bộ lọc từ khóa thủ công nhanh (Rule-based Filter)
+    const directIntent = checkDirectIntent(userText);
+    if (directIntent === "YES") {
+      await replyWithLiffRedirect(replyToken, userId, env);
+      continue;
+    } else if (directIntent === "NO") {
+      // Im lặng, kết thúc vòng lặp để nhân viên tự chat tay
       continue;
     }
 
