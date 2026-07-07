@@ -379,31 +379,34 @@ Trong các hàm gọi AI phân loại ý định (YES/NO, ORDER/IGNORE), chúng 
 
 ## 8. Step-by-Step Execution Plan
 
-- [ ] **Phase 1: Tích hợp Groq làm kênh chính & fallback OpenRouter (Chỉ dùng gói Miễn phí)**
-  - [ ] Đổi tên file [openRouter.ts](file:///Users/duc.cao/Documents/learning/benmi-order/benmi-worker-official/src/integrations/openRouter.ts) thành `groq.ts`.
-  - [ ] Cập nhật toàn bộ các file import sang `groq.ts`.
-  - [ ] Tích hợp Groq API (`https://api.groq.com/openai/v1/chat/completions`) sử dụng API Key `GROQ_API_KEY`.
-  - [ ] Thiết lập Groq mặc định dùng model miễn phí `llama-3.1-8b-instant`.
-  - [ ] Viết logic tự động fallback: Nếu gọi Groq lỗi (ví dụ hết rate limit 429) hoặc thiếu `GROQ_API_KEY`, tự động fallback gọi sang OpenRouter dùng model miễn phí `google/gemini-2.5-flash:free` nếu có `OPENROUTER_API_KEY`.
+- [x] **Task 1: Tích hợp Groq làm kênh chính, Fallback OpenRouter & Observability**
+  - [x] Đổi tên file [openRouter.ts](file:///Users/duc.cao/Documents/learning/benmi-order/benmi-worker-official/src/integrations/openRouter.ts) thành `groq.ts`.
+  - [x] Cập nhật toàn bộ các file import sang `groq.ts`.
+  - [x] Tích hợp Groq API (`https://api.groq.com/openai/v1/chat/completions`) sử dụng API Key `GROQ_API_KEY`.
+  - [x] Thiết lập Groq mặc định dùng model miễn phí `llama-3.1-8b-instant`.
+  - [x] Viết logic tự động fallback sang OpenRouter dùng model miễn phí `google/gemini-2.5-flash:free` nếu Groq bị lỗi/hết quota.
+  - [x] Thêm timeout tối đa 8 giây cho hàm gọi AI `callAI()`.
+  - [x] Thêm các tham số tối ưu hóa API `temperature: 0` và `max_tokens: 10`.
+  - [x] Thêm error logging chi tiết và giá trị trả về dạng `boolean` cho hàm `replyText` và `replyWithLiffRedirect`.
+  - [x] Bật `traces.enabled = true` trong `wrangler.jsonc`.
 
-- [ ] **Phase 2: Observability & Timeout Hardening**
-  - [ ] Thêm timeout tối đa 8 giây cho hàm gọi AI (`callAI` của `groq.ts`) bằng `AbortController`.
-  - [ ] Thêm error logging chi tiết và giá trị trả về dạng `boolean` cho hàm `replyText` trong `line.ts`.
-  - [ ] Bật `traces.enabled = true` trong `wrangler.jsonc`.
+- [ ] **Task 2: Tối ưu hóa phản hồi bằng Bộ lọc Từ khóa Thủ công (Rule-based Filter)**
+  - [ ] Khai báo hàm `checkDirectIntent` trong `line.ts` để lọc nhanh các tin nhắn chào hỏi hoặc các tin nhắn đặt hàng rõ ràng.
+  - [ ] Tích hợp bộ lọc này trước luồng gọi AI để bỏ qua AI cho các trường hợp khớp từ khóa.
 
-- [ ] **Phase 3: Background Processing Core Refactoring (Sửa lỗi timeout 2s của LINE)**
+- [ ] **Task 3: Background Processing Core Refactoring (Sửa lỗi timeout 2s của LINE)**
   - [ ] Thay đổi cấu trúc hàm `handleLineWebhook()` trong `line.ts` để trả về HTTP 200 OK ngay lập tức (< 10ms) cho LINE.
-  - [ ] Tách toàn bộ việc xử lý nghiệp vụ tin nhắn (đọc KV, AI, reply/push, ghi KV) chạy ngầm thông qua `ctx.waitUntil()`.
+  - [ ] Tách toàn bộ việc xử lý nghiệp vụ tin nhắn chạy ngầm thông qua `ctx.waitUntil()`.
 
-- [ ] **Phase 4: Parallel KV Reads & Reply-First Flow**
+- [ ] **Task 4: Parallel KV Reads & Reply-First Flow**
   - [ ] Thực hiện đọc dữ liệu trạng thái (`draft`, `pending`, `liff_redirected`) đồng thời bằng `Promise.all` ở đầu hàm xử lý sự kiện ngầm.
   - [ ] Cập nhật hàm reply để tự động chuyển từ `replyText` sang `pushLineMessage` nếu replyToken hết hạn (fallback).
   - [ ] Đẩy `saveOrder` và dọn dẹp pending KV ra sau khi đã gửi tin nhắn phản hồi thành công (Reply-First).
 
-- [ ] **Phase 5: Verification & Monitoring**
+- [ ] **Task 5: Verification & Monitoring**
   - [ ] Chạy kiểm tra build TypeScript (`tsc --noEmit`).
   - [ ] Deploy lên môi trường thử nghiệm (`wrangler deploy --env test`).
-  - [ ] Thực hiện kiểm thử thủ công 5 kịch bản (Quick reply, AI fallback, AI timeout, Pending flow, fallback sang Push API).
+  - [ ] Thực hiện kiểm thử thủ công với kịch bản tích hợp đầy đủ.
   - [ ] Giám sát log trên Cloudflare Dashboard trong vòng 48 giờ.
 
 ---

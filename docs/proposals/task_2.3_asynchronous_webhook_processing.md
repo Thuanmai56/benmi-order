@@ -1,6 +1,6 @@
-# PDP: Nhiệm vụ 2.2 - Tách luồng Webhook Bất Đồng Bộ (Sửa lỗi timeout 2s của LINE)
+# PDP: Nhiệm vụ 2.3 - Tách luồng Webhook Bất Đồng Bộ (Sửa lỗi timeout 2s của LINE)
 
-Tài liệu này chi tiết hóa thiết kế kỹ thuật của **Task 2** trong kế hoạch khắc phục lỗi trễ và mất phản hồi của Webhook LINE. Mục tiêu cốt lõi là giải phóng hoàn toàn Webhook HTTP Response bằng cách trả về mã trạng thái HTTP 200 OK ngay lập tức (< 10ms), đồng thời chuyển toàn bộ xử lý tin nhắn chạy ngầm trong `ctx.waitUntil()`.
+Tài liệu này chi tiết hóa thiết kế kỹ thuật của **Task 3** trong kế hoạch khắc phục lỗi trễ và mất phản hồi của Webhook LINE. Mục tiêu cốt lõi là giải phóng hoàn toàn Webhook HTTP Response bằng cách trả về mã trạng thái HTTP 200 OK ngay lập tức (< 10ms), đồng thời chuyển toàn bộ xử lý tin nhắn chạy ngầm trong `ctx.waitUntil()`.
 
 ---
 

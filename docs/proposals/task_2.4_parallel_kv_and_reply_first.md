@@ -1,6 +1,6 @@
-# PDP: Nhiệm vụ 2.3 - Đọc/Ghi dữ liệu Tối ưu & Dự phòng API Phản hồi (Reply-First & Push Fallback)
+# PDP: Nhiệm vụ 2.4 - Đọc/Ghi dữ liệu Tối ưu & Dự phòng API Phản hồi (Reply-First & Push Fallback)
 
-Tài liệu này chi tiết hóa thiết kế kỹ thuật của **Task 3** trong kế hoạch khắc phục lỗi trễ và mất phản hồi của Webhook LINE. Mục tiêu là loại bỏ độ trễ do các thao tác lưu trữ đồng bộ (KV operations) bằng cách đọc song song và trì hoãn việc ghi (Reply-First), đồng thời xây dựng cơ chế tự động gửi tin nhắn chủ động (Push API) dự phòng khi token phản hồi hết hạn.
+Tài liệu này chi tiết hóa thiết kế kỹ thuật của **Task 4** trong kế hoạch khắc phục lỗi trễ và mất phản hồi của Webhook LINE. Mục tiêu là loại bỏ độ trễ do các thao tác lưu trữ đồng bộ (KV operations) bằng cách đọc song song và trì hoãn việc ghi (Reply-First), đồng thời xây dựng cơ chế tự động gửi tin nhắn chủ động (Push API) dự phòng khi token phản hồi hết hạn.
 
 ---
 
