@@ -663,7 +663,7 @@
                 });
 
                 // Gửi tin nhắn lưu vết bất đồng bộ (không chặn luồng thành công của khách)
-                liff.sendMessages([{ type: 'text', text: msg }]).catch(e => {
+                liff.sendMessages([{ type: 'text', text: '✅ [已收到] ' + msg }]).catch(e => {
                     console.error("Non-blocking liff.sendMessages failed:", e);
                 });
 
