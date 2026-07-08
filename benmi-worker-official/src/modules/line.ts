@@ -244,6 +244,14 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
 
     // 0) Priority Catch new order from LIFF text message (Bypasses pending states)
     if (userText.includes("訂單編號：") && userText.includes("📦 訂單內容：")) {
+      // If it is a receipt message from successful API creation, skip parsing/saving to avoid overwriting due to KV latency
+      if (userText.includes("[已收到]") || userText.includes("[Đã nhận]")) {
+        console.log(`[Benmi] Webhook received receipt message. Skipping to avoid overwrite.`);
+        try { await env.ORDER_STATE.delete(pendingKey); } catch { }
+        try { await env.ORDER_STATE.delete(draftKey); } catch { }
+        continue;
+      }
+
       const lines = userText.split("\n");
       const keyLine = lines.find((l: string) => l.includes("訂單編號："));
       const timeLine = lines.find((l: string) => l.includes("🕒 取餐時間："));
