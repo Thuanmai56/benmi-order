@@ -34,6 +34,14 @@ export async function createOrder(request: Request, env: Env): Promise<Response>
 
   await saveOrder(env, order);
 
+  if (order.userId) {
+    try {
+      await pushLineMessage(order.userId, "感謝您的訂單！餐點製作完成後，我們會再次通知您前來取餐，謝謝！", env);
+    } catch (e) {
+      console.error("[Benmi] Failed to send order creation message:", e);
+    }
+  }
+
   return json({ success: true, key: orderKey });
 }
 
@@ -87,7 +95,7 @@ export async function updateOrder(request: Request, env: Env, ctx: ExecutionCont
     return json({ success: true });
   }
 
-  // Employee 準備好了 (Chỉ lưu trạng thái DONE, KHÔNG báo thông báo cho khách)
+  // Employee 準備好了
   if (incoming === "DONE") {
     if (order.status === "DONE" || order.status === "PICKED_UP") {
       await saveOrder(env, order); // Sync cache
@@ -95,6 +103,14 @@ export async function updateOrder(request: Request, env: Env, ctx: ExecutionCont
     }
     order.status = "DONE";
     await saveOrder(env, order);
+
+    if (order.userId) {
+      try {
+        await pushLineMessage(order.userId, "您的餐點已準備完成，請至櫃檯取餐，謝謝！", env);
+      } catch (e) {
+        console.error("[Benmi] Failed to send order ready message:", e);
+      }
+    }
 
     return json({ success: true });
   }

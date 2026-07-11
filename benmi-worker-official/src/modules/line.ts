@@ -254,7 +254,7 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
 
       const lines = userText.split("\n");
       const keyLine = lines.find((l: string) => l.includes("訂單編號："));
-      const timeLine = lines.find((l: string) => l.includes("🕒 取餐時間："));
+      const timeLine = lines.find((l: string) => l.includes("🕒 取餐日期：") || l.includes("🕒 取餐時間："));
       const totalLine = lines.find((l: string) => l.includes("💰 總金額："));
 
       const nowTaiwan = new Date(Date.now() + 8 * 3600000);
@@ -266,7 +266,7 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
       const timeKey = hh + min;
       const tempRandomId = Math.floor(1000 + Math.random() * 9000);
       const orderKey = keyLine ? keyLine.replace("訂單編號：", "").trim() : `BD${todayKey}-${timeKey}-${tempRandomId}`;
-      const timeStr = timeLine ? timeLine.replace("🕒 取餐時間：", "").trim() : "Unknown";
+      const timeStr = timeLine ? timeLine.replace("🕒 取餐日期：", "").replace("🕒 取餐時間：", "").trim() : "Unknown";
       const totalStr = totalLine ? totalLine.replace("💰 總金額：", "").replace("$", "").trim() : "0";
 
       // Robust note extraction using absolute string indexing to handle multi-line notes perfectly
@@ -300,7 +300,10 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
       }
 
       const contentStart = userText.indexOf("📦 訂單內容：");
-      const contentEnd = userText.indexOf("🕒 取餐時間：");
+      let contentEnd = userText.indexOf("🕒 取餐日期：");
+      if (contentEnd === -1) {
+        contentEnd = userText.indexOf("🕒 取餐時間：");
+      }
       let extractedContent = userText;
       if (contentStart > -1 && contentEnd > contentStart) {
         extractedContent = userText.substring(contentStart + 8, contentEnd).replace("📦 訂單內容：", "").trim();
@@ -320,6 +323,14 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
       };
 
       await saveOrder(env, orderData);
+
+      if (!existingRaw && replyToken) {
+        try {
+          await replyText(replyToken, "感謝您的訂單！餐點製作完成後，我們會再次通知您前來取餐，謝謝！", env);
+        } catch (e) {
+          console.error("[Benmi] Failed to send webhook reply message:", e);
+        }
+      }
 
       // Fetch real LINE name in background and update KV
       if (ctx && ctx.waitUntil) {
