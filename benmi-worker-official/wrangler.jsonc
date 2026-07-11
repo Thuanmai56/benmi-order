@@ -34,6 +34,15 @@
           "binding": "ORDER_STATE"
         }
       ]
+    },
+    "dev": {
+      "name": "benmi-order-worker-dev", // dev worker
+      "kv_namespaces": [
+        {
+          "id": "ad5b1e14aad4486fb2ffcd9961cadf3a", // Sharing test KV namespace or placeholder
+          "binding": "ORDER_STATE"
+        }
+      ]
     }
   }
 }
