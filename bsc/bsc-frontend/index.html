@@ -11,74 +11,49 @@
 
 <body>
     <div class="store-header">
-        <div class="store-header-top">
-            <div class="store-logo-wrapper">
-                <!-- Vui lòng đảm bảo file benmi_logo.png nằm cùng thư mục -->
-                <img src="./logo.png" alt="Gancheng Logo" class="store-logo">
+        <div class="store-header-content">
+            <div class="store-header-top">
+                <div class="store-logo-wrapper">
+                    <!-- Vui lòng đảm bảo file benmi_logo.png nằm cùng thư mục -->
+                    <img src="./logo.png" alt="Gancheng Logo" class="store-logo">
+                </div>
+                <div class="store-info">
+                    <h1 class="store-name">干城鹹水雞</h1>
+                    <p class="store-subtitle">台中黎明店</p>
+                </div>
+                <div id="store-status" class="store-status">營業中</div>
             </div>
-            <div class="store-info">
-                <h1 class="store-name">干城鹹水雞</h1>
-                <p class="store-subtitle">台中黎明店</p>
-            </div>
-            <div id="store-status" class="store-status">營業中</div>
-        </div>
-        <div class="store-details">
-            <div class="store-detail-row">
-                <span class="detail-icon">📍</span>
-                <span>台中市南屯區黎明里干城街302號</span>
-            </div>
-            <div class="store-detail-row">
-                <span class="detail-icon">🕒</span>
-                <div class="time-block" id="store-hours-display">
-                    <div>週一、週五、週六、週日&nbsp;&nbsp;16:30-21:30</div>
-                    <div>週二、週三、週四&nbsp;&nbsp;公休</div>
+            <div class="store-details">
+                <div class="store-detail-row">
+                    <span class="detail-icon">📍</span>
+                    <span>台中市南屯區黎明里干城街302號</span>
+                </div>
+                <div class="store-detail-row">
+                    <span class="detail-icon">🕒</span>
+                    <div class="time-block" id="store-hours-display">
+                        <div>週一、週五、週六、週日&nbsp;&nbsp;16:30-21:30</div>
+                        <div>週二、週三、週四&nbsp;&nbsp;公休</div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <nav class="sticky-nav" id="main-nav">
-        <div class="nav-btn active" onclick="scrollToSec('sec-meat')">🍗 肉類</div>
-        <div class="nav-btn" onclick="scrollToSec('sec-side50')">小菜$50</div>
-        <div class="nav-btn" onclick="scrollToSec('sec-side30')">小菜$30</div>
-        <div class="nav-btn" onclick="scrollToSec('sec-side25')">小菜$25</div>
-        <div class="nav-btn" onclick="scrollToSec('sec-veggie')">蔬菜/配菜</div>
-        <div class="nav-btn" onclick="scrollToSec('sec-checkout')">結帳</div>
+    <nav class="sticky-nav">
+        <div class="sticky-nav-content" id="main-nav">
+            <div class="nav-btn active" onclick="scrollToSec('sec-flavor')">🧪 口味選擇</div>
+            <div class="nav-btn" onclick="scrollToSec('sec-meat')">🍗 肉類</div>
+            <div class="nav-btn" onclick="scrollToSec('sec-side50')">小菜$50</div>
+            <div class="nav-btn" onclick="scrollToSec('sec-side30')">小菜$30</div>
+            <div class="nav-btn" onclick="scrollToSec('sec-side25')">小菜$25</div>
+            <div class="nav-btn" onclick="scrollToSec('sec-veggie')">蔬菜/配菜</div>
+            <div class="nav-btn" onclick="scrollToSec('sec-checkout')">結帳</div>
+        </div>
     </nav>
 
-    <div class="container">
-        <div class="section-container" id="sec-meat">
-            <div class="section-title">🍗 肉類</div>
-            <div class="grid" id="meat-list"></div>
-        </div>
-
-        <div class="section-container" id="sec-side50">
-            <div class="section-title">⭐ 精選小菜 $50/份</div>
-            <div class="grid" id="side50-list"></div>
-        </div>
-
-        <div class="section-container" id="sec-side30">
-            <div class="section-title">🥘 特色小菜 $30/份</div>
-            <div class="grid" id="side30-list"></div>
-        </div>
-
-        <div class="section-container" id="sec-side25">
-            <div class="section-title">🥗 經典小菜 $25/份</div>
-            <div class="grid" id="side25-list"></div>
-        </div>
-
-        <div class="section-container" id="sec-veggie">
-            <div class="section-title">🥦 蔬菜/配菜 1份$35 / 3份$100</div>
-            <div class="grid" id="veggie-list"></div>
-        </div>
-
-        <div class="section-container" id="sec-checkout" style="margin-top: 20px;">
-            <div class="section-title">🛍️ 購物車清單</div>
-            <div id="cart-summary"
-                style="margin-bottom: 20px; padding: 12px; background: #fff; border-radius: 12px; border: 1px solid var(--border); font-size: 15px; color: #444;">
-                <div style="text-align:center; color:#9ca3af;">(目前沒有已選商品)</div>
-            </div>
-
+    <div class="container main-layout">
+        <div class="menu-column">
+            <div class="section-container" id="sec-flavor">
             <div class="section-title">🧪 口味與客製化選擇</div>
             <div class="custom-panel" style="margin-bottom: 20px; padding: 16px; background: #fff; border-radius: 12px; border: 1px solid var(--border); font-size: 15px; color: #444;">
                 <div class="custom-group">
@@ -103,6 +78,7 @@
                     <div id="original-custom-sub" style="display: none; margin-top: 10px; padding-left: 10px; border-left: 2px solid #ddd; gap: 15px; flex-wrap: wrap;">
                         <label class="checkbox-label"><input type="checkbox" id="chk-no-oil"> 不加香油</label>
                         <label class="checkbox-label"><input type="checkbox" id="chk-no-pepper"> 不加胡椒</label>
+                        <label class="checkbox-label"><input type="checkbox" id="chk-no-pepper-with-salt"> 不加胡椒加鹽巴</label>
                     </div>
                     <div id="lemon-custom-sub" style="display: none; margin-top: 10px; padding-left: 10px; border-left: 2px solid #ddd; gap: 15px; flex-wrap: wrap;">
                         <label class="checkbox-label"><input type="checkbox" id="chk-lemon-no-oil"> 不加香油</label>
@@ -148,6 +124,39 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        <div class="section-container" id="sec-meat">
+            <div class="section-title">🍗 肉類</div>
+            <div class="grid" id="meat-list"></div>
+        </div>
+
+        <div class="section-container" id="sec-side50">
+            <div class="section-title">⭐ 精選小菜 $50/份</div>
+            <div class="grid" id="side50-list"></div>
+        </div>
+
+        <div class="section-container" id="sec-side30">
+            <div class="section-title">🥘 特色小菜 $30/份</div>
+            <div class="grid" id="side30-list"></div>
+        </div>
+
+        <div class="section-container" id="sec-side25">
+            <div class="section-title">🥗 經典小菜 $25/份</div>
+            <div class="grid" id="side25-list"></div>
+        </div>
+
+        <div class="section-container" id="sec-veggie">
+            <div class="section-title">🥦 蔬菜/配菜 1份$35 / 3份$100</div>
+            <div class="grid" id="veggie-list"></div>
+        </div>
+        <div class="checkout-column">
+            <div class="section-container" id="sec-checkout" style="margin-top: 20px;">
+            <div class="section-title">🛍️ 購物車清單</div>
+            <div id="cart-summary"
+                style="margin-bottom: 20px; padding: 12px; background: #fff; border-radius: 12px; border: 1px solid var(--border); font-size: 15px; color: #444;">
+                <div style="text-align:center; color:#9ca3af;">(目前沒有已選商品)</div>
+            </div>
 
             <div class="section-title">🕒 取餐日期</div>
             <div class="input-group">
@@ -162,17 +171,18 @@
                 <textarea id="note" rows="3" placeholder="例如：切半、多汁一點、洋蔥多一點"></textarea>
             </div>
         </div>
-    </div>
 
-    <div class="footer">
-        <div class="total-wrap" onclick="scrollToSec('sec-checkout')">
-            <span style="font-size: 32px; line-height:1;">🛒</span>
-            <span id="cart-badge"
-                style="display:none; position:absolute; top:-6px; right:-10px; background:var(--red); color:#fff; font-size:11px; font-weight:900; border-radius:99px; padding: 2px 6px; min-width:18px; text-align:center;">0</span>
-            <span class="total-price">$<span id="total-price">0</span></span>
+        <div class="footer">
+            <div class="total-wrap" onclick="scrollToSec('sec-checkout')">
+                <span style="font-size: 32px; line-height:1;">🛒</span>
+                <span id="cart-badge"
+                    style="display:none; position:absolute; top:-6px; right:-10px; background:var(--red); color:#fff; font-size:11px; font-weight:900; border-radius:99px; padding: 2px 6px; min-width:18px; text-align:center;">0</span>
+                <span class="total-price">$<span id="total-price">0</span></span>
+            </div>
+            <button class="btn-send" id="btn-submit" onclick="submitOrder()">確認下單</button>
         </div>
-        <button class="btn-send" id="btn-submit" onclick="submitOrder()">確認下單</button>
     </div>
+</div>
 
     <div id="custom-alert" class="custom-alert-overlay">
         <div class="custom-alert-box">
@@ -254,6 +264,15 @@
             const hasItem = Object.values(cart).some(q => q > 0);
             if (!hasItem) return customAlert('請選擇品項');
 
+            const secCheckout = document.getElementById('sec-checkout');
+            if (secCheckout) {
+                const rect = secCheckout.getBoundingClientRect();
+                if (rect.top > 100) {
+                    secCheckout.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    return;
+                }
+            }
+
             const dateInput = document.getElementById('pickup-date').value;
 
             if (!dateInput) {
@@ -310,6 +329,7 @@
                 let subOpts = [];
                 if (document.getElementById('chk-no-oil')?.checked) subOpts.push('不加香油');
                 if (document.getElementById('chk-no-pepper')?.checked) subOpts.push('不加胡椒');
+                if (document.getElementById('chk-no-pepper-with-salt')?.checked) subOpts.push('不加胡椒加鹽巴');
                 if (subOpts.length > 0) {
                     flavorDetails = ` (${subOpts.join('、')})`;
                 }
@@ -543,7 +563,7 @@
 
         async function initApp() {
             try {
-                await liff.init({ liffId: '2010595300-DfWko6Bj' });
+                await liff.init({ liffId: '2009555608-DMioljsI' });
             } catch(e) {
                 console.error("LIFF Init Error", e);
             }
@@ -660,8 +680,10 @@
                     subDiv.style.display = 'none';
                     const noOil = document.getElementById('chk-no-oil');
                     const noPepper = document.getElementById('chk-no-pepper');
+                    const noPepperWithSalt = document.getElementById('chk-no-pepper-with-salt');
                     if (noOil) noOil.checked = false;
                     if (noPepper) noPepper.checked = false;
+                    if (noPepperWithSalt) noPepperWithSalt.checked = false;
                 }
             }
             const lemonSubDiv = document.getElementById('lemon-custom-sub');
