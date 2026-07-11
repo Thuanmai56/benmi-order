@@ -52,13 +52,13 @@ export async function replyText(replyToken: string, text: string, env: Env): Pro
     });
 
     if (!res.ok) {
-      const errorBody = await res.text().catch(() => "");
-      console.error(`[Benmi] replyText FAILED: status=${res.status} body=${errorBody}`);
+      const errBody = await res.text().catch(() => "(unreadable)");
+      console.error(`[Benmi] replyText FAILED: status=${res.status} body=${errBody}`);
       return false;
     }
     return true;
   } catch (e: any) {
-    console.error(`[Benmi] replyText EXCEPTION: ${e.message}`);
+    console.error(`[Benmi] replyText EXCEPTION: error=${e.message}`);
     return false;
   }
 }
@@ -194,16 +194,16 @@ export async function replyWithLiffRedirect(replyToken: string, userId: string, 
       }),
     });
 
-    if (!resp.ok) {
-      const errorBody = await resp.text().catch(() => "");
-      console.error(`[Benmi] replyWithLiffRedirect FAILED: status=${resp.status} body=${errorBody}`);
+    if (resp.status !== 200) {
+      const errBody = await resp.text().catch(() => "(unreadable)");
+      console.error(`[Benmi] replyWithLiffRedirect FAILED: status=${resp.status} body=${errBody}`);
       return false;
     }
 
     await env.ORDER_STATE.put(`liff_redirected:${userId}`, "1", { expirationTtl: 1800 });
     return true;
   } catch (e: any) {
-    console.error(`[Benmi] replyWithLiffRedirect EXCEPTION: ${e.message}`);
+    console.error(`[Benmi] replyWithLiffRedirect EXCEPTION: error=${e.message}`);
     return false;
   }
 }
@@ -250,6 +250,14 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
 
     // 0) Priority Catch new order from LIFF text message (Bypasses pending states)
     if (userText.includes("訂單編號：") && userText.includes("📦 訂單內容：")) {
+      // If it is a receipt message from successful API creation, skip parsing/saving to avoid overwriting due to KV latency
+      if (userText.includes("[已收到]") || userText.includes("[Đã nhận]")) {
+        console.log(`[Benmi] Webhook received receipt message. Skipping to avoid overwrite.`);
+        try { await env.ORDER_STATE.delete(pendingKey); } catch { }
+        try { await env.ORDER_STATE.delete(draftKey); } catch { }
+        continue;
+      }
+
       const lines = userText.split("\n");
       const keyLine = lines.find((l: string) => l.includes("訂單編號："));
       const timeLine = lines.find((l: string) => l.includes("🕒 取餐時間："));
@@ -286,6 +294,17 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
 
       let custName = "Khách (Web)";
 
+      // Check if order already exists to preserve customer name
+      const existingRaw = await env.ORDER_STATE.get(`order:${orderKey}`);
+      if (existingRaw) {
+        try {
+          const existingOrder = JSON.parse(existingRaw) as Order;
+          if (existingOrder && existingOrder.customer && existingOrder.customer !== "Khách (Web)") {
+            custName = existingOrder.customer;
+          }
+        } catch { }
+      }
+
       const contentStart = userText.indexOf("📦 訂單內容：");
       const contentEnd = userText.indexOf("🕒 取餐時間：");
       let extractedContent = userText;
@@ -321,9 +340,12 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
                 orderData.customer = p.displayName;
                 await saveOrder(env, orderData);
               }
+            } else {
+              const errBody = await resp.text().catch(() => "(unreadable)");
+              console.error(`[Benmi] Background profile fetch FAILED: status=${resp.status} userId=${userId} body=${errBody}`);
             }
-          } catch (e) {
-            console.error("Background profile fetch failed:", e);
+          } catch (e: any) {
+            console.error("[Benmi] Background profile fetch EXCEPTION:", e);
           }
         })());
       }
