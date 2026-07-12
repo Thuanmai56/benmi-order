@@ -64,6 +64,15 @@
           "database_id": "40b67d8a-29e0-40c1-9ce2-b76f76864e95"
         }
       ]
+    },
+    "dev": {
+      "name": "benmi-order-worker-dev", // dev worker
+      "kv_namespaces": [
+        {
+          "id": "ad5b1e14aad4486fb2ffcd9961cadf3a", // Sharing test KV namespace or placeholder
+          "binding": "ORDER_STATE"
+        }
+      ]
     }
   }
 }

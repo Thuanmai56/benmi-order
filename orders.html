@@ -338,7 +338,10 @@
   </div>
 
   <script>
-    const WORKER_BASE = "https://benmi-worker-official.thuanmnc.workers.dev";
+    // DEV:  "https://benmi-order-worker-dev.thuanmnc.workers.dev"
+    // TEST: "https://spring-smoke-46ba.thuanmnc.workers.dev"
+    // PROD: "https://benmi-worker-official.thuanmnc.workers.dev"
+    const WORKER_BASE = "https://benmi-order-worker-dev.thuanmnc.workers.dev";
 
     let latestOrders = [];
     let pendingNewOrders = [];
