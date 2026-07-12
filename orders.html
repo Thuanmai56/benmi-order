@@ -296,6 +296,47 @@
     </div>
   </div>
 
+  <!-- Stock Manage Modal -->
+  <div id="stockModal" class="modal">
+    <div class="modal-content" style="max-width: 450px;">
+      <div class="modal-title">
+        <h3 id="stock-modal-title">Cấu hình Hết hàng</h3>
+        <div class="modal-close" onclick="closeModal()">✕</div>
+      </div>
+      <div style="margin-top: 16px;">
+        <p id="stock-modal-item-name" style="font-weight: 900; font-size: 16px; margin-bottom: 12px; color: var(--brand-red);"></p>
+        
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 16px; cursor: pointer; font-weight: 900;">
+            <input type="radio" name="stock-status" value="in_stock" checked style="width:18px; height:18px;">
+            Còn hàng (In Stock)
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 16px; cursor: pointer; font-weight: 900;">
+            <input type="radio" name="stock-status" value="today" style="width:18px; height:18px;">
+            Hết hàng hôm nay (Tự động mở lại lúc 04:00 sáng mai)
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 16px; cursor: pointer; font-weight: 900;">
+            <input type="radio" name="stock-status" value="multiple_days" style="width:18px; height:18px;">
+            Hết hàng nhiều ngày (Chọn ngày mở lại bên dưới)
+          </label>
+          
+          <div id="stock-date-picker-container" style="padding-left: 26px; display: none;">
+            <input type="date" id="stock-until-date" style="padding: 8px 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 8px; font-family: inherit; font-weight: 900;">
+          </div>
+          
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 16px; cursor: pointer; font-weight: 900;">
+            <input type="radio" name="stock-status" value="indefinite" style="width:18px; height:18px;">
+            Hết hàng vô thời hạn (Chỉ mở lại khi bật thủ công)
+          </label>
+        </div>
+      </div>
+      <div class="modal-actions two" style="margin-top: 20px;">
+        <button class="btn btn-primary" id="btn-save-stock" onclick="saveStockStatus()">Lưu thay đổi</button>
+        <button class="btn btn-ghost" onclick="closeModal()">Hủy</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const WORKER_BASE = "https://benmi-worker-official.thuanmnc.workers.dev";
 
@@ -734,6 +775,119 @@
       document.querySelectorAll(".modal").forEach(m => m.style.display = "none");
     }
 
+    // --- STOCK MANAGEMENT LOGIC ---
+    let stockEditingItem = null;
+
+    function openStockModal(cIdx, iIdx) {
+      const cat = currentMenuData[cIdx];
+      const item = cat.items[iIdx];
+      stockEditingItem = { cIdx, iIdx, catSlug: cat.id, name: item.name, isOos: item.isOos };
+      
+      document.getElementById('stock-modal-item-name').innerText = `${cat.title} - ${item.name}`;
+      
+      const radios = document.getElementsByName('stock-status');
+      if (item.isOos) {
+        radios[1].checked = true; // Hết hàng hôm nay
+        document.getElementById('stock-date-picker-container').style.display = 'none';
+      } else {
+        radios[0].checked = true; // Còn hàng
+        document.getElementById('stock-date-picker-container').style.display = 'none';
+      }
+      
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      document.getElementById('stock-until-date').value = tomorrow.toISOString().split('T')[0];
+      
+      document.getElementById('stockModal').style.display = 'flex';
+    }
+
+    async function saveStockStatus() {
+      if (!stockEditingItem) return;
+      const btn = document.getElementById('btn-save-stock');
+      const originalText = btn.innerText;
+      btn.innerText = "Đang lưu...";
+      btn.disabled = true;
+      
+      try {
+        const radios = document.getElementsByName('stock-status');
+        let selectedValue = 'in_stock';
+        for (const radio of radios) {
+          if (radio.checked) {
+            selectedValue = radio.value;
+            break;
+          }
+        }
+        
+        let payload = {};
+        if (selectedValue === 'in_stock') {
+          payload = {
+            category_slug: stockEditingItem.catSlug,
+            name: stockEditingItem.name,
+            status: 'in_stock'
+          };
+        } else {
+          payload = {
+            category_slug: stockEditingItem.catSlug,
+            name: stockEditingItem.name,
+            status: 'out_of_stock',
+            duration: selectedValue
+          };
+          if (selectedValue === 'multiple_days') {
+            const dateVal = document.getElementById('stock-until-date').value;
+            if (!dateVal) {
+              alert("Vui lòng chọn ngày mở lại!");
+              btn.innerText = originalText;
+              btn.disabled = false;
+              return;
+            }
+            const targetDate = new Date(dateVal);
+            targetDate.setHours(4, 0, 0, 0); // 04:00 AM local
+            const utcTime = new Date(targetDate.getTime() - 7 * 60 * 60 * 1000);
+            payload.until_date = utcTime.toISOString();
+          }
+        }
+        
+        const res = await fetch(`${WORKER_BASE}/api/menu/stock-status`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.error || "Gặp lỗi khi cập nhật");
+        }
+        
+        // Cập nhật state local
+        currentMenuData[stockEditingItem.cIdx].items[stockEditingItem.iIdx].isOos = (selectedValue !== 'in_stock');
+        
+        // Vẽ lại UI
+        renderMenuCategoryEditor(stockEditingItem.cIdx);
+        renderMenuCategories();
+        
+        closeModal();
+      } catch (e) {
+        alert("Lỗi khi lưu trạng thái: " + e.message);
+      } finally {
+        btn.innerText = originalText;
+        btn.disabled = false;
+      }
+    }
+
+    // Thiết lập lắng nghe thay đổi radio để hiển thị/ẩn datepicker
+    document.addEventListener("DOMContentLoaded", () => {
+      document.querySelectorAll('input[name="stock-status"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+          const datePicker = document.getElementById('stock-date-picker-container');
+          if (e.target.value === 'multiple_days') {
+            datePicker.style.display = 'block';
+          } else {
+            datePicker.style.display = 'none';
+          }
+        });
+      });
+    });
+
     async function updateStatus(key, status, extra = {}, btn = null) {
       if (!key) return;
       if (processingKeys.has(key)) return;
@@ -1086,7 +1240,10 @@
         currentMenuData = BENMI_CATS.map(cat => ({
           id: cat.id,
           title: cat.label,
-          items: Object.entries(rawMenuData[cat.id] || {}).map(([name, price]) => ({ name, price }))
+          items: Object.entries(rawMenuData[cat.id] || {}).map(([name, price]) => {
+            const isOos = rawMenuData.out_of_stock && rawMenuData.out_of_stock.includes(`${cat.id}:${name}`);
+            return { name, price, isOos };
+          })
         }));
         activeCategoryIndex = -1;
         renderMenuCategories();
@@ -1164,6 +1321,11 @@
           }
         });
 
+        const oosBg = item.isOos ? '#fee2e2' : '#d1fae5';
+        const oosColor = item.isOos ? '#b91c1c' : '#065f46';
+        const oosBorder = item.isOos ? '#fca5a5' : '#6ee7b7';
+        const oosText = item.isOos ? '🔴 Hết' : '🟢 Còn';
+
         row.innerHTML = `
           <div style="color: #ccc; font-size: 22px; cursor: grab; flex-shrink:0;">☰</div>
           <input type="text" value="${escapeHtml(item.name)}" data-name-cidx="${index}" data-name-iidx="${iIdx}" oninput="markMenuDirty()"
@@ -1173,6 +1335,8 @@
             <input type="number" value="${item.price !== null && item.price !== undefined ? item.price : ''}" data-cidx="${index}" data-iidx="${iIdx}" oninput="markMenuDirty()"
               placeholder="隱藏" style="width: 90px; font-size: 17px; font-weight: 900; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-family:inherit; box-sizing:border-box;">
           </label>
+          <button class="btn" style="padding: 8px 14px; font-size:14px; flex-shrink:0; background: ${oosBg}; color: ${oosColor}; border: 1px solid ${oosBorder}; border-radius: 8px; font-weight: 900;"
+            onclick="openStockModal(${index}, ${iIdx})">${oosText}</button>
           <button class="btn btn-ghost" style="padding: 8px 14px; font-size:14px; flex-shrink:0;" onclick="openImageModal('${cat.id}', '${escapeHtml(item.name)}')">📷 Ảnh</button>
           <button class="btn btn-ghost" style="padding: 8px 14px; color: var(--brand-red); font-size:14px; flex-shrink:0;" onclick="removeMenuItemAt(${index}, ${iIdx})">刪除</button>
         `;

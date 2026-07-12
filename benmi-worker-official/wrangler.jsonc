@@ -25,6 +25,13 @@
       "binding": "ORDER_STATE"
     }
   ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "blab-db-production",
+      "database_id": "48479f91-eec7-4da2-b044-edaaf622f195"
+    }
+  ],
   "env": {
     "test": {
       "name": "spring-smoke-46ba", // test worker
@@ -32,6 +39,29 @@
         {
           "id": "ad5b1e14aad4486fb2ffcd9961cadf3a",
           "binding": "ORDER_STATE"
+        }
+      ],
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "blab-db-test",
+          "database_id": "c0152835-7d42-4545-8cb4-6658dfc7e97d"
+        }
+      ]
+    },
+    "dev": {
+      "name": "benmi-order-worker-dev",
+      "kv_namespaces": [
+        {
+          "id": "ad5b1e14aad4486fb2ffcd9961cadf3a",
+          "binding": "ORDER_STATE"
+        }
+      ],
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "blab-db-dev",
+          "database_id": "40b67d8a-29e0-40c1-9ce2-b76f76864e95"
         }
       ]
     }

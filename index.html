@@ -217,6 +217,21 @@
             const trans = itemTranslations[origName] || '';
             const transHTML = trans ? `<div style="font-size: 13px; color: #9ca3af; margin-top: 2px;">${trans}</div>` : '';
 
+            const isOos = menu.out_of_stock && menu.out_of_stock.includes(`${category}:${origName}`);
+            if (isOos) {
+                div.style.opacity = '0.65';
+            }
+
+            const qtyControlHTML = isOos ? `
+                <div style="color: #ef4444; font-weight: 900; font-size: 14px; background: #fee2e2; padding: 4px 10px; border-radius: 6px; border: 1px solid #fca5a5;">已售完 / Hết hàng</div>
+            ` : `
+                <div class="qty-control">
+                    <button class="btn-qty" onclick="updateQty('${category}','${origName}',-1)">-</button>
+                    <span class="qty-text" id="qty-${category}-${origName}">0</span>
+                    <button class="btn-qty" onclick="updateQty('${category}','${origName}',1)">+</button>
+                </div>
+            `;
+
             div.innerHTML = `
         <div class="card-main">
             ${imgHTML}
@@ -227,11 +242,7 @@
                 </div>
                 <div class="card-footer">
                     <div class="card-price">$${price}</div>
-                    <div class="qty-control">
-                        <button class="btn-qty" onclick="updateQty('${category}','${origName}',-1)">-</button>
-                        <span class="qty-text" id="qty-${category}-${origName}">0</span>
-                        <button class="btn-qty" onclick="updateQty('${category}','${origName}',1)">+</button>
-                    </div>
+                    ${qtyControlHTML}
                 </div>
             </div>
         </div>
@@ -361,15 +372,20 @@
             box.className = 'combo-drinks';
             box.innerHTML = '<strong>🥤 選擇附贈飲料</strong>';
 
+            // Tìm đồ uống đầu tiên còn hàng để làm mặc định
+            let firstAvailableDrink = Object.keys(menu.drinks).find(d => !(menu.out_of_stock && menu.out_of_stock.includes(`drinks:${d}`)));
+            if (!firstAvailableDrink) firstAvailableDrink = Object.keys(menu.drinks)[0];
+
             for (let i = 1; i <= qty; i++) {
-                let firstDrink = Object.keys(menu.drinks)[0];
-                if (!comboDrinkData[origName][i - 1]) comboDrinkData[origName][i - 1] = firstDrink;
+                if (!comboDrinkData[origName][i - 1]) comboDrinkData[origName][i - 1] = firstAvailableDrink;
 
                 let sel = document.createElement('select');
                 for (let d in menu.drinks) {
+                    const isDrinkOos = menu.out_of_stock && menu.out_of_stock.includes(`drinks:${d}`);
                     let opt = document.createElement('option');
                     opt.value = d;
-                    opt.text = `第 ${i} 份：${d}`;
+                    opt.text = `第 ${i} 份：${d}${isDrinkOos ? ' (已售完 / Hết)' : ''}`;
+                    if (isDrinkOos) opt.disabled = true;
                     if (comboDrinkData[origName][i - 1] === d) opt.selected = true;
                     sel.appendChild(opt);
                 }
@@ -412,7 +428,10 @@
 
                 let toppingOptions = '<option value="">不加料</option>';
                 for (let t in menu.topping) {
-                    toppingOptions += `<option value="${t}" ${data.topping === t ? 'selected' : ''}>${t} +$${menu.topping[t]}</option>`;
+                    const isToppingOos = menu.out_of_stock && menu.out_of_stock.includes(`topping:${t}`);
+                    const disabledAttr = isToppingOos ? 'disabled' : '';
+                    const oosLabel = isToppingOos ? ' (已售完 / Hết)' : '';
+                    toppingOptions += `<option value="${t}" ${data.topping === t ? 'selected' : ''} ${disabledAttr}>${t} +$${menu.topping[t]}${oosLabel}</option>`;
                 }
 
                 const section = document.createElement('div');
