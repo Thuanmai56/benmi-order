@@ -3,7 +3,7 @@ export interface Env {
   ORDER_STATE: KVNamespace;
 
   // Secrets & Env Variables
-  LINE_CHANNEL_TOKEN?: string;
+  LINE_CHANNEL_TOKEN?: any;
   LINE_CHANNEL_ACCESS_TOKEN?: string;
   LIFF_ID?: string;
   LIFF_URL?: string;

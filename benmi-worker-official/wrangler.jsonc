@@ -34,6 +34,22 @@
           "binding": "ORDER_STATE"
         }
       ]
+    },
+    "dev": {
+      "name": "benmi-order-worker-dev",
+      "kv_namespaces": [
+        {
+          "id": "ad5b1e14aad4486fb2ffcd9961cadf3a",
+          "binding": "ORDER_STATE"
+        }
+      ],
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "blab-db-dev",
+          "database_id": "40b67d8a-29e0-40c1-9ce2-b76f76864e95"
+        }
+      ]
     }
   }
 }

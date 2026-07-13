@@ -5,8 +5,20 @@ import { saveOrder, getPendingMap } from './orders';
 import { callAI } from '../integrations/groq';
 import { syncToGoogleSheets } from '../integrations/googleSheets';
 
+async function resolveSecret(rawVal: any): Promise<string> {
+  if (!rawVal) return "";
+  if (typeof rawVal === "object" && rawVal !== null && "get" in rawVal) {
+    return await rawVal.get();
+  }
+  return String(rawVal);
+}
+
+async function getLineToken(env: Env): Promise<string> {
+  return await resolveSecret(env.LINE_CHANNEL_TOKEN);
+}
+
 export async function pushLineMessage(userId: string, text: string, env: Env): Promise<void> {
-  const token = env.LINE_CHANNEL_TOKEN;
+  const token = await getLineToken(env);
   if (!token) { console.error("[Benmi] pushLineMessage: LINE_CHANNEL_TOKEN missing"); return; }
   if (!userId) { console.error("[Benmi] pushLineMessage: userId is empty, cannot push"); return; }
 
@@ -35,7 +47,7 @@ export async function pushLineMessage(userId: string, text: string, env: Env): P
 }
 
 export async function replyText(replyToken: string, text: string, env: Env): Promise<boolean> {
-  const token = env.LINE_CHANNEL_TOKEN;
+  const token = await getLineToken(env);
   if (!token || !replyToken) return false;
 
   try {
@@ -64,7 +76,7 @@ export async function replyText(replyToken: string, text: string, env: Env): Pro
 }
 
 export async function replyWithLiffRedirect(replyToken: string, userId: string, env: Env): Promise<boolean> {
-  const token = env.LINE_CHANNEL_TOKEN;
+  const token = await getLineToken(env);
   if (!token || !replyToken) return false;
 
   const liffUrl = env.LIFF_URL || "https://liff.line.me/";
