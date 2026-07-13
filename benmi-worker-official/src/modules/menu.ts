@@ -14,21 +14,205 @@ export const DEFAULT_MENU: Menu = {
   topping: { "起司": 15, "火腿": 20, "燒肉": 20, "烤肉": 25, "雞肉": 25 }
 };
 
-export async function getMenu(env: Env): Promise<Response> {
-  try {
-    const raw = await env.ORDER_STATE.get("menu:latest");
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === "object") return json(parsed);
-    }
-  } catch (e) { }
-  return json(DEFAULT_MENU);
+// Helper để trích xuất Tenant ID từ Request
+export function getTenantId(request: Request): string {
+  const url = new URL(request.url);
+  
+  // 1. Ưu tiên query parameter ?tenant_id=...
+  const queryTenant = url.searchParams.get("tenant_id");
+  if (queryTenant) return queryTenant;
+
+  // 2. Kiểm tra Header X-Tenant-ID
+  const headerTenant = request.headers.get("X-Tenant-ID");
+  if (headerTenant) return headerTenant;
+
+  // 3. Phân tích Subdomain từ Host Header (ví dụ: thuanmai56.benmi.vn)
+  const host = request.headers.get("Host") || "";
+  const parts = host.split(".");
+  if (parts.length > 2 && parts[0] !== "www" && !parts[0].includes("localhost") && !parts[0].includes("127")) {
+    return parts[0];
+  }
+
+  // 4. Mặc định là thuanmai56
+  return "thuanmai56";
 }
 
+// GET /api/menu
+export async function getMenu(request: Request, env: Env): Promise<Response> {
+  const tenantId = getTenantId(request);
+  const cacheKey = `tenant:${tenantId}:menu`;
+
+  try {
+    // 1. Kiểm tra bộ nhớ đệm KV trước
+    const cachedMenu = await env.ORDER_STATE.get(cacheKey);
+    if (cachedMenu) {
+      return json(JSON.parse(cachedMenu));
+    }
+  } catch (e) {
+    console.error("KV read failed:", e);
+  }
+
+  try {
+    // 2. Cache Miss: Truy vấn từ D1 Database
+    // Sử dụng batch queries để giảm thiểu số vòng kết nối mạng
+    const [categoriesRes, itemsRes] = await env.DB.batch([
+      env.DB.prepare("SELECT id, name, slug FROM menu_categories WHERE tenant_id = ? ORDER BY sort_order ASC").bind(tenantId),
+      env.DB.prepare("SELECT id, category_id, name, price, description, out_of_stock_until FROM menu_items WHERE tenant_id = ? ORDER BY sort_order ASC").bind(tenantId)
+    ]);
+
+    const categories = categoriesRes.results as Array<{ id: string; name: string; slug: string }>;
+    const items = itemsRes.results as Array<{
+      id: string;
+      category_id: string;
+      name: string;
+      price: number;
+      description: string | null;
+      out_of_stock_until: string | null;
+    }>;
+
+    // Nếu không có dữ liệu nào trong D1 cho Tenant này, trả về DEFAULT_MENU
+    if (categories.length === 0 || items.length === 0) {
+      return json(DEFAULT_MENU);
+    }
+
+    // 3. Xây dựng cấu trúc JSON Menu tương thích ngược
+    const menuData: Menu = {
+      out_of_stock: []
+    };
+
+    // Tạo các mảng danh mục rỗng
+    const catMap = new Map<string, string>(); // category_id -> slug
+    for (const cat of categories) {
+      menuData[cat.slug] = {};
+      catMap.set(cat.id, cat.slug);
+    }
+
+    const now = new Date();
+    let nextExpirationTime: Date | null = null;
+
+    // Phân bổ món ăn vào các danh mục và xác định món hết hàng
+    for (const item of items) {
+      const categorySlug = catMap.get(item.category_id);
+      if (!categorySlug) continue;
+
+      // Lưu giá tiền
+      menuData[categorySlug][item.name] = item.price;
+
+      // Kiểm tra trạng thái hết hàng (out-of-stock)
+      if (item.out_of_stock_until) {
+        const oosUntil = new Date(item.out_of_stock_until);
+        if (oosUntil > now) {
+          // Món đang thực sự hết hàng
+          menuData.out_of_stock!.push(`${categorySlug}:${item.name}`);
+
+          // Tìm thời điểm phục hồi sớm nhất của món hết hàng tạm thời
+          if (oosUntil.getFullYear() < 9000) { // Không tính vô thời hạn (9999)
+            if (!nextExpirationTime || oosUntil < nextExpirationTime) {
+              nextExpirationTime = oosUntil;
+            }
+          }
+        }
+      }
+    }
+
+    // 4. Tính toán TTL tối ưu cho KV Cache
+    let ttl = 3600; // Mặc định là 1 giờ
+    if (nextExpirationTime) {
+      const secondsToExpiration = Math.ceil((nextExpirationTime.getTime() - now.getTime()) / 1000);
+      // Giới hạn TTL tối thiểu 60 giây và tối đa 3600 giây
+      ttl = Math.max(60, Math.min(3600, secondsToExpiration));
+    }
+
+    // 5. Ghi đè vào KV cache để phục vụ các request tiếp theo
+    try {
+      await env.ORDER_STATE.put(cacheKey, JSON.stringify(menuData), { expirationTtl: ttl });
+    } catch (e) {
+      console.error("KV write failed:", e);
+    }
+
+    return json(menuData);
+
+  } catch (err: any) {
+    console.error("D1 read failed, falling back to KV/Default:", err);
+    
+    // Fallback: Trong trường hợp D1 lỗi, đọc từ KV key cũ hoặc trả về DEFAULT_MENU
+    try {
+      const raw = await env.ORDER_STATE.get("menu:latest");
+      if (raw) return json(JSON.parse(raw));
+    } catch (e) {}
+
+    return json(DEFAULT_MENU);
+  }
+}
+
+// POST /api/menu/stock-status
+export async function updateStockStatus(request: Request, env: Env): Promise<Response> {
+  try {
+    const { category_slug, name, status, duration, until_date } = (await request.json()) as any;
+
+    if (!category_slug || !name || !status) {
+      return json({ error: "Missing category_slug, name, or status" }, 400);
+    }
+
+    const tenantId = getTenantId(request);
+    let outOfStockUntil: string | null = null;
+
+    if (status === "out_of_stock") {
+      if (duration === "today") {
+        // Tự động khôi phục lúc 04:00 AM ngày hôm sau (theo múi giờ GMT+7)
+        const nowGmt7 = new Date(new Date().getTime() + 7 * 60 * 60 * 1000);
+        const tomorrow4AmGmt7 = new Date(nowGmt7);
+        tomorrow4AmGmt7.setDate(nowGmt7.getDate() + 1);
+        tomorrow4AmGmt7.setHours(4, 0, 0, 0);
+        // Chuyển ngược lại UTC để lưu DB
+        outOfStockUntil = new Date(tomorrow4AmGmt7.getTime() - 7 * 60 * 60 * 1000).toISOString();
+      } else if (duration === "multiple_days") {
+        if (!until_date) {
+          return json({ error: "Missing until_date for multiple_days duration" }, 400);
+        }
+        outOfStockUntil = new Date(until_date).toISOString();
+      } else {
+        // Vô thời hạn: Đặt mốc xa năm 9999
+        outOfStockUntil = "9999-12-31T23:59:59.000Z";
+      }
+    }
+
+    // 1. Cập nhật trạng thái trong D1 Database
+    const dbRes = await env.DB.prepare(
+      `UPDATE menu_items 
+       SET out_of_stock_until = ?, updated_at = datetime('now') 
+       WHERE tenant_id = ? 
+         AND name = ? 
+         AND category_id = (SELECT id FROM menu_categories WHERE tenant_id = ? AND slug = ?)`
+    ).bind(outOfStockUntil, tenantId, name, tenantId, category_slug).run();
+
+    if (dbRes.meta.changes === 0) {
+      return json({ error: "Menu item not found or unauthorized" }, 404);
+    }
+
+    // 2. Invalidate bộ nhớ đệm KV của tenant
+    const cacheKey = `tenant:${tenantId}:menu`;
+    await env.ORDER_STATE.delete(cacheKey);
+
+    // Kích hoạt tác vụ ngầm bất đồng bộ để tái tạo cache (giảm độ trễ cho request khách hàng kế tiếp)
+    // Cloudflare Worker cho phép chạy các lệnh sau khi Response đã trả về
+    return json({ success: true, message: "Stock status updated and cache invalidated." });
+
+  } catch (err: any) {
+    console.error("Update stock status failed:", err);
+    return json({ error: err.message || "Internal Server Error" }, 500);
+  }
+}
+
+// Giữ lại API cũ cho tương thích ngược nếu cần thiết
 export async function updateMenu(request: Request, env: Env): Promise<Response> {
   try {
     const data = await request.json();
     await env.ORDER_STATE.put("menu:latest", JSON.stringify(data));
+    
+    // Invalidate luôn cache đa hộ thuê của thuanmai56 khi cập nhật qua API cũ
+    await env.ORDER_STATE.delete("tenant:thuanmai56:menu");
+
     return json({ success: true });
   } catch (e) {
     return json({ error: "Invalid data" }, 400);

@@ -22,17 +22,26 @@ Hệ thống của chúng ta gồm 3 thành phần chính:
 ```mermaid
 graph TD
     subgraph github ["GitHub Repo: benmi-order"]
+        BranchDev["Branch: dev"]
         BranchTest["Branch: test"]
         BranchMain["Branch: main"]
     end
 
     subgraph pages ["Cloudflare Pages (chung 1 cụm):<br>benmi-order.pages.dev"]
+        SubDev["Subdomain DEV:<br>dev.benmi-order.pages.dev"]
         SubTest["Subdomain TEST:<br>test.benmi-order.pages.dev"]
         SubProd["Domain PROD:<br>benmi-order.pages.dev"]
     end
 
+    BranchDev -- "auto deploy" --> SubDev
     BranchTest -- "auto deploy" --> SubTest
     BranchMain -- "auto deploy" --> SubProd
+
+    subgraph dev_env ["Môi trường DEV"]
+        A0[LINE Account Dev] <--> SubDev
+        SubDev <--> C0["Worker DEV:<br>benmi-order-worker-dev.thuanmnc.workers.dev"]
+        C0 <--> D0[("KV DEV/TEST:<br>ORDER_STATE")]
+    end
 
     subgraph test_env ["Môi trường TEST"]
         A1[LINE Account Test] <--> SubTest
@@ -46,11 +55,13 @@ graph TD
         C2 <--> D2[("KV PROD:<br>ORDER_STATE")]
     end
 
+    BranchDev -- "auto deploy (Workers Builds)" --> C0
     BranchTest -- "auto deploy (Workers Builds)" --> C1
     BranchMain -. "copy-paste thủ công" .-> C2
 
     style github fill:#f5f5f5,stroke:#333,stroke-width:2px
     style pages fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    style dev_env fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
     style test_env fill:#e1f5fe,stroke:#01579b,stroke-width:2px
     style prod_env fill:#efebe9,stroke:#4e342e,stroke-width:2px
 ```
@@ -61,12 +72,12 @@ graph TD
 
 Các biến môi trường như `WORKER_BASE` và `LIFFID` hiện đang được **hardcode** (ghi trực tiếp) trong code FrontEnd. Khi deploy lên môi trường nào, bạn cần đảm bảo sửa các giá trị này cho đúng.
 
-| Tên biến & File cần sửa | Môi trường TEST | Môi trường PRODUCTION |
-| :--- | :--- | :--- |
-| **WORKER_BASE**<br>*(trong `index.html` & `orders.html`)* | `https://spring-smoke-46ba.thuanmnc.workers.dev` | `https://benmi-worker-official.thuanmnc.workers.dev` |
-| **liffId**<br>*(trong `index.html`)* | `2009555608-DMioljsI` | `2009560906-c5taZfiY` |
-| **Branch trên GitHub** | `test` | `main` |
-| **Domain FrontEnd tương ứng** | [test.benmi-order.pages.dev](https://test.benmi-order.pages.dev) | [benmi-order.pages.dev](https://benmi-order.pages.dev) |
+| Tên biến & File cần sửa | Môi trường DEV | Môi trường TEST | Môi trường PRODUCTION |
+| :--- | :--- | :--- | :--- |
+| **WORKER_BASE**<br>*(trong `index.html` & `orders.html`)* | `https://benmi-order-worker-dev.thuanmnc.workers.dev` | `https://spring-smoke-46ba.thuanmnc.workers.dev` | `https://benmi-worker-official.thuanmnc.workers.dev` |
+| **liffId**<br>*(trong `index.html`)* | `2010653208-lDeTERbJ` | `2009555608-DMioljsI` | `2009560906-c5taZfiY` |
+| **Branch trên GitHub** | `dev` | `test` | `main` |
+| **Domain FrontEnd tương ứng** | [dev.benmi-order.pages.dev](https://dev.benmi-order.pages.dev) | [test.benmi-order.pages.dev](https://test.benmi-order.pages.dev) | [benmi-order.pages.dev](https://benmi-order.pages.dev) |
 
 ---
 
@@ -115,7 +126,27 @@ flowchart TD
 
 ## 4. Hướng Dẫn Deploy Chi Tiết Từng Bước
 
-### Bước 1: Deploy và Kiểm thử trên môi trường TEST
+### Bước 1: Deploy và Kiểm thử trên môi trường DEV
+
+1. **Cập nhật FrontEnd:**
+   * Mở file `index.html` và `orders.html`.
+   * Tìm dòng định nghĩa `WORKER_BASE` và sửa thành:
+     ```javascript
+     const WORKER_BASE = "https://benmi-order-worker-dev.thuanmnc.workers.dev";
+     ```
+   * Mở file `index.html`, tìm hàm `initApp()` và sửa `liffId` thành:
+     ```javascript
+     await liff.init({ liffId: '2010653208-lDeTERbJ' });
+     ```
+   * Thực hiện commit và push/merge code vào branch `dev`. Cloudflare Pages sẽ tự động nhận biết và deploy giao diện web.
+2. **Cập nhật BackEnd (Worker):**
+   * Tương tự như môi trường TEST, Cloudflare Worker DEV (`benmi-order-worker-dev`) sẽ **tự động deploy** ngay khi bạn push/merge code vào branch `dev` (thông qua lệnh `npx wrangler deploy --env dev`). Bạn không cần phải copy-paste code thủ công!
+3. **Thử nghiệm:**
+   * Truy cập [dev.benmi-order.pages.dev](https://dev.benmi-order.pages.dev) bằng tài khoản LINE Dev để đặt thử bánh mì và kiểm tra trang nhận đơn tại [dev.benmi-order.pages.dev/orders.html](https://dev.benmi-order.pages.dev/orders.html).
+
+---
+
+### Bước 2: Deploy và Kiểm thử trên môi trường TEST
 
 1. **Cập nhật FrontEnd:**
    * Mở file `index.html` và `orders.html`.
@@ -135,7 +166,7 @@ flowchart TD
 
 ---
 
-### Bước 2: Deploy lên môi trường PRODUCTION (Chạy thật)
+### Bước 3: Deploy lên môi trường PRODUCTION (Chạy thật)
 
 Chỉ thực hiện bước này sau khi môi trường TEST đã hoạt động hoàn toàn ổn định và không còn lỗi.
 
@@ -164,6 +195,6 @@ Chỉ thực hiện bước này sau khi môi trường TEST đã hoạt động
 ---
 
 > [!IMPORTANT]  
-> **Lưu ý cực kỳ quan trọng:** Luôn luôn kiểm tra kỹ các biến `WORKER_BASE` và `liffId` trước khi push/merge code. Việc nhầm lẫn biến TEST sang PRODUCTION có thể làm gián đoạn quá trình nhận đơn hàng của cửa hàng thật, hoặc làm đơn hàng thử nghiệm nhảy vào dữ liệu thật.
+> **Lưu ý cực kỳ quan trọng:** Luôn luôn kiểm tra kỹ các biến `WORKER_BASE` và `liffId` trước khi push/merge code. Việc nhầm lẫn biến TEST hoặc DEV sang PRODUCTION có thể làm gián đoạn quá trình nhận đơn hàng của cửa hàng thật, hoặc làm đơn hàng thử nghiệm nhảy vào dữ liệu thật.
 
 ---
