@@ -167,3 +167,5 @@ Chỉ thực hiện bước này sau khi môi trường TEST đã hoạt động
 > **Lưu ý cực kỳ quan trọng:** Luôn luôn kiểm tra kỹ các biến `WORKER_BASE` và `liffId` trước khi push/merge code. Việc nhầm lẫn biến TEST sang PRODUCTION có thể làm gián đoạn quá trình nhận đơn hàng của cửa hàng thật, hoặc làm đơn hàng thử nghiệm nhảy vào dữ liệu thật.
 
 ---
+
+test
