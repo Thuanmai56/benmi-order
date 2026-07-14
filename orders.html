@@ -1122,7 +1122,7 @@
           title: cat.label,
           items: Object.entries(rawMenuData[cat.id] || {}).map(([name, price]) => {
             const isOos = rawMenuData.out_of_stock && rawMenuData.out_of_stock.includes(`${cat.id}:${name}`);
-            return { name, price, isOos };
+            return { name, price, isOos, originalName: name };
           })
         }));
         activeCategoryIndex = -1;
@@ -1443,6 +1443,9 @@
     let currentStockIidx = null;
 
     function openStockModal(cIdx, iIdx) {
+      // Lưu lại các thay đổi người dùng đang nhập dở trên input
+      syncMenuDataFromDOM();
+
       currentStockCidx = cIdx;
       currentStockIidx = iIdx;
       
@@ -1494,6 +1497,9 @@
     async function saveStockStatus() {
       if (currentStockCidx === null || currentStockIidx === null) return;
       
+      // Đồng bộ dữ liệu hiện tại từ DOM
+      syncMenuDataFromDOM();
+
       const categorySlug = currentMenuData[currentStockCidx].id;
       const item = currentMenuData[currentStockCidx].items[currentStockIidx];
       const status = document.getElementById("stock-status-select").value;
@@ -1507,7 +1513,7 @@
 
       const body = {
         category_slug: categorySlug,
-        name: item.name,
+        name: item.originalName || item.name,
         status: status,
         duration: duration,
         until_date: untilDate ? `${untilDate}T04:00:00+07:00` : null
