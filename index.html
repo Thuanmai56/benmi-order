@@ -843,13 +843,18 @@
         }
 
         async function initApp() {
+            // Khởi chạy fetchMenu song song với việc khởi tạo LIFF
+            const menuPromise = fetchMenu();
+
             try {
                 await liff.init({ liffId: '2009555608-DMioljsI' });
             } catch(e) {
                 console.error("LIFF Init Error", e);
             }
 
-            await fetchMenu();
+            // Đợi dữ liệu menu được fetch xong
+            await menuPromise;
+
             renderMenu();
             renderStoreOperatingHours();
 
