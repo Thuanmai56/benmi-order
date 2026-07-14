@@ -1,5 +1,6 @@
 {
   "name": "benmi-worker-official",
+  "account_id": "525bb177ae7306325d13269246769f50",
   "main": "src/index.ts",
   "workers_dev": true,
   "preview_urls": true,
@@ -23,6 +24,13 @@
     {
       "id": "4800c4ce106043de89baa2aa7a7676b0",
       "binding": "ORDER_STATE"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "blab-db-production",
+      "database_id": "48479f91-eec7-4da2-b044-edaaf622f195"
     }
   ],
   "vars": {
@@ -74,6 +82,13 @@
         {
           "id": "ad5b1e14aad4486fb2ffcd9961cadf3a",
           "binding": "ORDER_STATE"
+        }
+      ],
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "blab-db-test",
+          "database_id": "c0152835-7d42-4545-8cb4-6658dfc7e97d"
         }
       ]
     },
