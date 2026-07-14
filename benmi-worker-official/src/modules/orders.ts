@@ -39,16 +39,41 @@ export async function createOrder(request: Request, env: Env): Promise<Response>
 
 // Logic help for pending states: Stores as object { [orderKey]: question } to avoid overwriting
 export async function getPendingMap(env: Env, userId: string): Promise<Record<string, any>> {
-  const raw = await env.ORDER_STATE.get(`pending:${userId}`);
-  if (!raw) return {};
+  if (!env.DB) {
+    const raw = await env.ORDER_STATE.get(`pending:${userId}`);
+    if (!raw) return {};
+    try {
+      const data = JSON.parse(raw);
+      if (data.orderKey && !data[data.orderKey]) {
+        return { [data.orderKey]: data };
+      }
+      return data;
+    } catch { return {}; }
+  }
+
   try {
-    const data = JSON.parse(raw);
-    // Compatibility: If it's an old style single object, convert it
-    if (data.orderKey && !data[data.orderKey]) {
-      return { [data.orderKey]: data };
+    const { results } = await env.DB.prepare(
+      "SELECT * FROM pending_actions WHERE user_id = ?"
+    ).bind(userId).all<any>();
+
+    const pMap: Record<string, any> = {};
+    if (results) {
+      for (const row of results) {
+        pMap[row.order_key] = {
+          orderKey: row.order_key,
+          type: row.action_type,
+          createdAt: row.created_at ? new Date(row.created_at + "Z").getTime() : Date.now(),
+          questionText: row.question_text,
+          reason: row.reason || "",
+          note: row.note || ""
+        };
+      }
     }
-    return data;
-  } catch { return {}; }
+    return pMap;
+  } catch (e) {
+    console.error("[getPendingMap] D1 Error:", e);
+    return {};
+  }
 }
 
 export async function updateOrder(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -74,10 +99,16 @@ export async function updateOrder(request: Request, env: Env, ctx: ExecutionCont
 
     if (order.userId) {
       try {
-        const pMap = await getPendingMap(env, order.userId);
-        if (pMap[order.key]) {
-          delete pMap[order.key];
-          await env.ORDER_STATE.put(`pending:${order.userId}`, JSON.stringify(pMap));
+        if (env.DB) {
+          await env.DB.prepare(
+            "DELETE FROM pending_actions WHERE user_id = ? AND order_key = ?"
+          ).bind(order.userId, order.key).run();
+        } else {
+          const pMap = await getPendingMap(env, order.userId);
+          if (pMap[order.key]) {
+            delete pMap[order.key];
+            await env.ORDER_STATE.put(`pending:${order.userId}`, JSON.stringify(pMap));
+          }
         }
       } catch { }
       if (!wasWaiting) {
@@ -128,9 +159,22 @@ export async function updateOrder(request: Request, env: Env, ctx: ExecutionCont
           `\n請回覆「同意」以接受變更，或回覆「取消 / 不要了」以取消訂單。`;
       }
 
-      const pMap = await getPendingMap(env, order.userId);
-      pMap[order.key] = { orderKey: order.key, type: "CHANGE", createdAt: Date.now(), questionText: notifyText, reason: order.reason, note: order.note };
-      await env.ORDER_STATE.put(`pending:${order.userId}`, JSON.stringify(pMap));
+      if (env.DB) {
+        await env.DB.prepare(
+          `INSERT INTO pending_actions (user_id, order_key, action_type, question_text, reason, note)
+           VALUES (?, ?, ?, ?, ?, ?)
+           ON CONFLICT(user_id, order_key) DO UPDATE SET
+             action_type = excluded.action_type,
+             question_text = excluded.question_text,
+             reason = excluded.reason,
+             note = excluded.note,
+             created_at = CURRENT_TIMESTAMP`
+        ).bind(order.userId, order.key, "CHANGE", notifyText, order.reason || "", order.note || "").run();
+      } else {
+        const pMap = await getPendingMap(env, order.userId);
+        pMap[order.key] = { orderKey: order.key, type: "CHANGE", createdAt: Date.now(), questionText: notifyText, reason: order.reason, note: order.note };
+        await env.ORDER_STATE.put(`pending:${order.userId}`, JSON.stringify(pMap));
+      }
 
       await pushLineMessage(order.userId, notifyText, env);
     }
@@ -155,11 +199,24 @@ export async function updateOrder(request: Request, env: Env, ctx: ExecutionCont
       const notifyText =
         `非常抱歉！Benmi 目前無法接下您的訂單 #${order.key}。\n` +
         `原因：${reason}\n` +
-        `\n請回覆「同意」以取消訂單，或回覆「不同意」以重新確認。`;
+        `\n請回覆「同意」以取消訂單， or 回覆「不同意」以重新確認。`;
 
-      const pMap = await getPendingMap(env, order.userId);
-      pMap[order.key] = { orderKey: order.key, type: "REJECT", createdAt: Date.now(), questionText: notifyText, reason: order.reason, note: order.note };
-      await env.ORDER_STATE.put(`pending:${order.userId}`, JSON.stringify(pMap));
+      if (env.DB) {
+        await env.DB.prepare(
+          `INSERT INTO pending_actions (user_id, order_key, action_type, question_text, reason, note)
+           VALUES (?, ?, ?, ?, ?, ?)
+           ON CONFLICT(user_id, order_key) DO UPDATE SET
+             action_type = excluded.action_type,
+             question_text = excluded.question_text,
+             reason = excluded.reason,
+             note = excluded.note,
+             created_at = CURRENT_TIMESTAMP`
+        ).bind(order.userId, order.key, "REJECT", notifyText, order.reason || "", order.note || "").run();
+      } else {
+        const pMap = await getPendingMap(env, order.userId);
+        pMap[order.key] = { orderKey: order.key, type: "REJECT", createdAt: Date.now(), questionText: notifyText, reason: order.reason, note: order.note };
+        await env.ORDER_STATE.put(`pending:${order.userId}`, JSON.stringify(pMap));
+      }
 
       await pushLineMessage(order.userId, notifyText, env);
     }
@@ -174,10 +231,16 @@ export async function updateOrder(request: Request, env: Env, ctx: ExecutionCont
 
     if (order.userId) {
       try {
-        const pMap = await getPendingMap(env, order.userId);
-        if (pMap[order.key]) {
-          delete pMap[order.key];
-          await env.ORDER_STATE.put(`pending:${order.userId}`, JSON.stringify(pMap));
+        if (env.DB) {
+          await env.DB.prepare(
+            "DELETE FROM pending_actions WHERE user_id = ? AND order_key = ?"
+          ).bind(order.userId, order.key).run();
+        } else {
+          const pMap = await getPendingMap(env, order.userId);
+          if (pMap[order.key]) {
+            delete pMap[order.key];
+            await env.ORDER_STATE.put(`pending:${order.userId}`, JSON.stringify(pMap));
+          }
         }
       } catch { }
       await pushLineMessage(order.userId, `Benmi：由於未收到您的回覆，訂單 #${order.key} 已自動取消。期待下次為您服務！`, env);

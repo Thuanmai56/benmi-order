@@ -422,11 +422,17 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
 
           // If handled:
           const finishPending = async () => {
-            delete pMap[orderKey];
-            if (Object.keys(pMap).length === 0) {
-              await env.ORDER_STATE.delete(pendingKey);
+            if (env.DB) {
+              await env.DB.prepare(
+                "DELETE FROM pending_actions WHERE user_id = ? AND order_key = ?"
+              ).bind(userId, orderKey).run();
             } else {
-              await env.ORDER_STATE.put(pendingKey, JSON.stringify(pMap));
+              delete pMap[orderKey];
+              if (Object.keys(pMap).length === 0) {
+                await env.ORDER_STATE.delete(pendingKey);
+              } else {
+                await env.ORDER_STATE.put(pendingKey, JSON.stringify(pMap));
+              }
             }
           };
 
