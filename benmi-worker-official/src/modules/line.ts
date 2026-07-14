@@ -404,16 +404,9 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
     }
 
     // 1) Pending flow priority
-    let pMap = await getPendingMap(env, userId);
+    const pMap = await getPendingMap(env, userId);
     // Find latest pending entry for this user
-    let pKeys = Object.keys(pMap).sort((a, b) => (pMap[b].createdAt || 0) - (pMap[a].createdAt || 0));
-
-    // Trì hoãn 2.5 giây và thử đọc lại KV nếu trống (để chờ dữ liệu KV đồng bộ qua Edge Node)
-    if (pKeys.length === 0) {
-      await new Promise(resolve => setTimeout(resolve, 2500));
-      pMap = await getPendingMap(env, userId);
-      pKeys = Object.keys(pMap).sort((a, b) => (pMap[b].createdAt || 0) - (pMap[a].createdAt || 0));
-    }
+    const pKeys = Object.keys(pMap).sort((a, b) => (pMap[b].createdAt || 0) - (pMap[a].createdAt || 0));
 
     if (pKeys.length > 0) {
       const orderKey = pKeys[0]; // Respond to the most recent one
