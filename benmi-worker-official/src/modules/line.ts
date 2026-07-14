@@ -1,17 +1,10 @@
 import { Env } from '../types/env';
 import { Order } from '../types/index';
 import { corsHeaders } from '../utils/http';
+import { resolveSecret } from '../utils/secrets';
 import { saveOrder, getPendingMap } from './orders';
 import { callAI } from '../integrations/groq';
 import { syncToGoogleSheets } from '../integrations/googleSheets';
-
-async function resolveSecret(rawVal: any): Promise<string> {
-  if (!rawVal) return "";
-  if (typeof rawVal === "object" && rawVal !== null && "get" in rawVal) {
-    return await rawVal.get();
-  }
-  return String(rawVal);
-}
 
 async function getLineToken(env: Env): Promise<string> {
   return await resolveSecret(env.LINE_CHANNEL_TOKEN);
@@ -79,7 +72,7 @@ export async function replyWithLiffRedirect(replyToken: string, userId: string, 
   const token = await getLineToken(env);
   if (!token || !replyToken) return false;
 
-  const liffUrl = env.LIFF_URL || "https://liff.line.me/";
+  const liffUrl = (await resolveSecret(env.LIFF_URL)) || "https://liff.line.me/";
 
   const flexBubble = {
     type: "bubble",
@@ -343,7 +336,7 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
       if (ctx && ctx.waitUntil) {
         ctx.waitUntil((async () => {
           try {
-            const token = env.LINE_CHANNEL_TOKEN;
+            const token = await getLineToken(env);
             const profUrl = `https://api.line.me/v2/bot/profile/${userId}`;
             const resp = await fetch(profUrl, { headers: { Authorization: `Bearer ${token}` } });
             if (resp.ok) {

@@ -25,9 +25,17 @@
       "binding": "ORDER_STATE"
     }
   ],
+  "vars": {
+    "LIFF_ID": "2009560906-c5taZfiY",
+    "LIFF_URL": "https://liff.line.me/2009560906-c5taZfiY"
+  },
   "env": {
     "test": {
       "name": "spring-smoke-46ba", // test worker
+      "vars": {
+        "LIFF_ID": "2009555608-DMioljsI",
+        "LIFF_URL": "https://liff.line.me/2009555608-DMioljsI"
+      },
       "kv_namespaces": [
         {
           "id": "ad5b1e14aad4486fb2ffcd9961cadf3a",

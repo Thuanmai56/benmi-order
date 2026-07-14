@@ -1,8 +1,10 @@
 import { Env } from '../types/env';
+import { resolveSecret } from '../utils/secrets';
 
 // Gọi Groq API (Kênh chính)
 async function callGroq(prompt: string, env: Env, signal: AbortSignal): Promise<string | null> {
-  if (!env.GROQ_API_KEY) {
+  const apiKey = await resolveSecret(env.GROQ_API_KEY);
+  if (!apiKey) {
     console.warn("[Benmi] callGroq: GROQ_API_KEY is missing");
     return null;
   }
@@ -11,7 +13,7 @@ async function callGroq(prompt: string, env: Env, signal: AbortSignal): Promise<
   const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${env.GROQ_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
@@ -35,7 +37,8 @@ async function callGroq(prompt: string, env: Env, signal: AbortSignal): Promise<
 
 // Gọi OpenRouter API (Kênh Fallback)
 async function callOpenRouterFallback(prompt: string, env: Env, signal: AbortSignal): Promise<string | null> {
-  if (!env.OPENROUTER_API_KEY) {
+  const apiKey = await resolveSecret(env.OPENROUTER_API_KEY);
+  if (!apiKey) {
     console.warn("[Benmi] callOpenRouterFallback: OPENROUTER_API_KEY is missing, no fallback possible");
     return null;
   }
@@ -44,7 +47,7 @@ async function callOpenRouterFallback(prompt: string, env: Env, signal: AbortSig
   const resp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${env.OPENROUTER_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
