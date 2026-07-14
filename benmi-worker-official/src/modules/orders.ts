@@ -3,6 +3,7 @@ import { Order } from '../types/index';
 import { json } from '../utils/http';
 import { syncToGoogleSheets } from '../integrations/googleSheets';
 import { pushLineMessage } from './line';
+import { getTenantId } from './menu';
 
 export const ORDER_INDEX_LATEST = "order_index:latest";
 export const MAX_INDEX = 200;
@@ -38,7 +39,7 @@ export async function createOrder(request: Request, env: Env): Promise<Response>
 }
 
 // Logic help for pending states: Stores as object { [orderKey]: question } to avoid overwriting
-export async function getPendingMap(env: Env, userId: string): Promise<Record<string, any>> {
+export async function getPendingMap(env: Env, tenantId: string, userId: string): Promise<Record<string, any>> {
   if (!env.DB) {
     const raw = await env.ORDER_STATE.get(`pending:${userId}`);
     if (!raw) return {};
@@ -53,8 +54,8 @@ export async function getPendingMap(env: Env, userId: string): Promise<Record<st
 
   try {
     const { results } = await env.DB.prepare(
-      "SELECT * FROM pending_actions WHERE user_id = ?"
-    ).bind(userId).all<any>();
+      "SELECT * FROM pending_actions WHERE tenant_id = ? AND user_id = ?"
+    ).bind(tenantId, userId).all<any>();
 
     const pMap: Record<string, any> = {};
     if (results) {
@@ -83,6 +84,7 @@ export async function updateOrder(request: Request, env: Env, ctx: ExecutionCont
 
   const order: Order = JSON.parse(raw);
   const incoming = data.status;
+  const tenantId = getTenantId(request);
 
   if (data.reason !== undefined) order.reason = data.reason;
   if (data.note !== undefined) order.note = data.note;
@@ -101,10 +103,10 @@ export async function updateOrder(request: Request, env: Env, ctx: ExecutionCont
       try {
         if (env.DB) {
           await env.DB.prepare(
-            "DELETE FROM pending_actions WHERE user_id = ? AND order_key = ?"
-          ).bind(order.userId, order.key).run();
+            "DELETE FROM pending_actions WHERE tenant_id = ? AND user_id = ? AND order_key = ?"
+          ).bind(tenantId, order.userId, order.key).run();
         } else {
-          const pMap = await getPendingMap(env, order.userId);
+          const pMap = await getPendingMap(env, tenantId, order.userId);
           if (pMap[order.key]) {
             delete pMap[order.key];
             await env.ORDER_STATE.put(`pending:${order.userId}`, JSON.stringify(pMap));
@@ -161,17 +163,17 @@ export async function updateOrder(request: Request, env: Env, ctx: ExecutionCont
 
       if (env.DB) {
         await env.DB.prepare(
-          `INSERT INTO pending_actions (user_id, order_key, action_type, question_text, reason, note)
-           VALUES (?, ?, ?, ?, ?, ?)
-           ON CONFLICT(user_id, order_key) DO UPDATE SET
+          `INSERT INTO pending_actions (tenant_id, user_id, order_key, action_type, question_text, reason, note)
+           VALUES (?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT(tenant_id, user_id, order_key) DO UPDATE SET
              action_type = excluded.action_type,
              question_text = excluded.question_text,
              reason = excluded.reason,
              note = excluded.note,
              created_at = CURRENT_TIMESTAMP`
-        ).bind(order.userId, order.key, "CHANGE", notifyText, order.reason || "", order.note || "").run();
+        ).bind(tenantId, order.userId, order.key, "CHANGE", notifyText, order.reason || "", order.note || "").run();
       } else {
-        const pMap = await getPendingMap(env, order.userId);
+        const pMap = await getPendingMap(env, tenantId, order.userId);
         pMap[order.key] = { orderKey: order.key, type: "CHANGE", createdAt: Date.now(), questionText: notifyText, reason: order.reason, note: order.note };
         await env.ORDER_STATE.put(`pending:${order.userId}`, JSON.stringify(pMap));
       }
@@ -203,17 +205,17 @@ export async function updateOrder(request: Request, env: Env, ctx: ExecutionCont
 
       if (env.DB) {
         await env.DB.prepare(
-          `INSERT INTO pending_actions (user_id, order_key, action_type, question_text, reason, note)
-           VALUES (?, ?, ?, ?, ?, ?)
-           ON CONFLICT(user_id, order_key) DO UPDATE SET
+          `INSERT INTO pending_actions (tenant_id, user_id, order_key, action_type, question_text, reason, note)
+           VALUES (?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT(tenant_id, user_id, order_key) DO UPDATE SET
              action_type = excluded.action_type,
              question_text = excluded.question_text,
              reason = excluded.reason,
              note = excluded.note,
              created_at = CURRENT_TIMESTAMP`
-        ).bind(order.userId, order.key, "REJECT", notifyText, order.reason || "", order.note || "").run();
+        ).bind(tenantId, order.userId, order.key, "REJECT", notifyText, order.reason || "", order.note || "").run();
       } else {
-        const pMap = await getPendingMap(env, order.userId);
+        const pMap = await getPendingMap(env, tenantId, order.userId);
         pMap[order.key] = { orderKey: order.key, type: "REJECT", createdAt: Date.now(), questionText: notifyText, reason: order.reason, note: order.note };
         await env.ORDER_STATE.put(`pending:${order.userId}`, JSON.stringify(pMap));
       }
@@ -233,10 +235,10 @@ export async function updateOrder(request: Request, env: Env, ctx: ExecutionCont
       try {
         if (env.DB) {
           await env.DB.prepare(
-            "DELETE FROM pending_actions WHERE user_id = ? AND order_key = ?"
-          ).bind(order.userId, order.key).run();
+            "DELETE FROM pending_actions WHERE tenant_id = ? AND user_id = ? AND order_key = ?"
+          ).bind(tenantId, order.userId, order.key).run();
         } else {
-          const pMap = await getPendingMap(env, order.userId);
+          const pMap = await getPendingMap(env, tenantId, order.userId);
           if (pMap[order.key]) {
             delete pMap[order.key];
             await env.ORDER_STATE.put(`pending:${order.userId}`, JSON.stringify(pMap));

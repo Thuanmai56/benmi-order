@@ -5,6 +5,7 @@ import { resolveSecret } from '../utils/secrets';
 import { saveOrder, getPendingMap } from './orders';
 import { callAI } from '../integrations/groq';
 import { syncToGoogleSheets } from '../integrations/googleSheets';
+import { getTenantId } from './menu';
 
 async function getLineToken(env: Env): Promise<string> {
   return await resolveSecret(env.LINE_CHANNEL_TOKEN);
@@ -404,7 +405,8 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
     }
 
     // 1) Pending flow priority
-    const pMap = await getPendingMap(env, userId);
+    const tenantId = getTenantId(request);
+    const pMap = await getPendingMap(env, tenantId, userId);
     // Find latest pending entry for this user
     const pKeys = Object.keys(pMap).sort((a, b) => (pMap[b].createdAt || 0) - (pMap[a].createdAt || 0));
 
@@ -424,8 +426,8 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
           const finishPending = async () => {
             if (env.DB) {
               await env.DB.prepare(
-                "DELETE FROM pending_actions WHERE user_id = ? AND order_key = ?"
-              ).bind(userId, orderKey).run();
+                "DELETE FROM pending_actions WHERE tenant_id = ? AND user_id = ? AND order_key = ?"
+              ).bind(tenantId, userId, orderKey).run();
             } else {
               delete pMap[orderKey];
               if (Object.keys(pMap).length === 0) {
