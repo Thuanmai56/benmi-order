@@ -438,7 +438,10 @@
                     if (comboDrinkData[origName][i - 1] === d) opt.selected = true;
                     sel.appendChild(opt);
                 }
-                sel.onchange = () => { comboDrinkData[origName][i - 1] = sel.value; };
+                sel.onchange = () => {
+                    comboDrinkData[origName][i - 1] = sel.value;
+                    updateTotal();
+                };
                 box.appendChild(sel);
             }
             container.appendChild(box);
