@@ -3,7 +3,7 @@ import { Order } from '../types/index';
 import { corsHeaders } from '../utils/http';
 import { resolveSecret } from '../utils/secrets';
 import { saveOrder, getPendingMap } from './orders';
-import { callAI } from '../integrations/groq';
+import { callAI } from '../integrations/openRouter';
 import { syncToGoogleSheets } from '../integrations/googleSheets';
 import { getTenantId } from './menu';
 
@@ -60,12 +60,9 @@ export async function replyText(replyToken: string, text: string, env: Env): Pro
     if (!res.ok) {
       const errBody = await res.text().catch(() => "(unreadable)");
       console.error(`[Benmi] replyText FAILED: status=${res.status} body=${errBody}`);
-      return false;
     }
-    return true;
   } catch (e: any) {
     console.error(`[Benmi] replyText EXCEPTION: error=${e.message}`);
-    return false;
   }
 }
 
@@ -189,7 +186,7 @@ export async function replyWithLiffRedirect(replyToken: string, userId: string, 
         messages: [
           {
             type: "text",
-            text: "您好！為了確保您的訂單準確無誤，請點擊下方連結進入系統預訂 🙏"
+            text: "您好！為了確保您的訂單準確無誤，請點擊下方連結进入系統預訂 🙏"
           },
           {
             type: "flex",
@@ -200,17 +197,14 @@ export async function replyWithLiffRedirect(replyToken: string, userId: string, 
       }),
     });
 
-    if (resp.status !== 200) {
+    if (resp.status === 200) {
+      await env.ORDER_STATE.put(`liff_redirected:${userId}`, "1", { expirationTtl: 1800 });
+    } else {
       const errBody = await resp.text().catch(() => "(unreadable)");
       console.error(`[Benmi] replyWithLiffRedirect FAILED: status=${resp.status} body=${errBody}`);
-      return false;
     }
-
-    await env.ORDER_STATE.put(`liff_redirected:${userId}`, "1", { expirationTtl: 1800 });
-    return true;
   } catch (e: any) {
     console.error(`[Benmi] replyWithLiffRedirect EXCEPTION: error=${e.message}`);
-    return false;
   }
 }
 
