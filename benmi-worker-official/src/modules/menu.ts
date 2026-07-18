@@ -224,16 +224,132 @@ export async function updateStockStatus(request: Request, env: Env): Promise<Res
   }
 }
 
+async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<void> {
+  // 1. Nạp danh mục và món ăn hiện có để ánh xạ ID tránh xung đột unique
+  const { results: existingCats } = await env.DB.prepare(
+    "SELECT id, slug FROM menu_categories WHERE tenant_id = ?"
+  ).bind(tenantId).all();
+
+  const { results: existingItems } = await env.DB.prepare(
+    "SELECT id, category_id, name FROM menu_items WHERE tenant_id = ?"
+  ).bind(tenantId).all();
+
+  const catIdMap = new Map<string, string>();
+  for (const cat of (existingCats || [])) {
+    catIdMap.set(cat.slug as string, cat.id as string);
+  }
+
+  const itemIdMap = new Map<string, string>();
+  for (const item of (existingItems || [])) {
+    itemIdMap.set(`${item.category_id}:${item.name}`, item.id as string);
+  }
+
+  const statements: any[] = [];
+  const defaultCategoryNames: Record<string, string> = {
+    small: "Kích thước Nhỏ",
+    large: "Kích thước Lớn",
+    combo: "Set Combo",
+    drinks: "Đồ uống",
+    topping: "Topping thêm"
+  };
+
+  const activeCategoryIds: string[] = [];
+  const activeItemIds: string[] = [];
+
+  let catSortOrder = 1;
+  for (const slug of Object.keys(menuData)) {
+    let catId = catIdMap.get(slug);
+    if (!catId) {
+      catId = `${tenantId}_${slug}`;
+    }
+    activeCategoryIds.push(catId);
+
+    const catName = defaultCategoryNames[slug] || (slug.charAt(0).toUpperCase() + slug.slice(1));
+    statements.push(
+      env.DB.prepare(
+        `INSERT INTO menu_categories (id, tenant_id, name, slug, sort_order)
+         VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET name = excluded.name, sort_order = excluded.sort_order`
+      ).bind(catId, tenantId, catName, slug, catSortOrder++)
+    );
+
+    const itemsMap = menuData[slug];
+    if (itemsMap && typeof itemsMap === "object") {
+      let itemSortOrder = 1;
+      for (const itemName of Object.keys(itemsMap)) {
+        const price = Number(itemsMap[itemName]);
+        if (isNaN(price)) continue;
+
+        let itemId = itemIdMap.get(`${catId}:${itemName}`);
+        if (!itemId) {
+          itemId = `${tenantId}_${slug}_${itemName}`;
+        }
+        activeItemIds.push(itemId);
+
+        statements.push(
+          env.DB.prepare(
+            `INSERT INTO menu_items (id, tenant_id, category_id, name, price, sort_order)
+             VALUES (?, ?, ?, ?, ?, ?)
+             ON CONFLICT(id) DO UPDATE SET price = excluded.price, sort_order = excluded.sort_order`
+          ).bind(itemId, tenantId, catId, itemName, price, itemSortOrder++)
+        );
+      }
+    }
+  }
+
+  // Deletion queries for cleanup
+  if (activeItemIds.length > 0) {
+    const placeholders = activeItemIds.map(() => "?").join(",");
+    statements.push(
+      env.DB.prepare(
+        `DELETE FROM menu_items WHERE tenant_id = ? AND id NOT IN (${placeholders})`
+      ).bind(tenantId, ...activeItemIds)
+    );
+  } else {
+    statements.push(
+      env.DB.prepare("DELETE FROM menu_items WHERE tenant_id = ?").bind(tenantId)
+    );
+  }
+
+  if (activeCategoryIds.length > 0) {
+    const placeholders = activeCategoryIds.map(() => "?").join(",");
+    statements.push(
+      env.DB.prepare(
+        `DELETE FROM menu_categories WHERE tenant_id = ? AND id NOT IN (${placeholders})`
+      ).bind(tenantId, ...activeCategoryIds)
+    );
+  } else {
+    statements.push(
+      env.DB.prepare("DELETE FROM menu_categories WHERE tenant_id = ?").bind(tenantId)
+    );
+  }
+
+  // Run all statements in a single batch
+  await env.DB.batch(statements);
+}
+
 export async function updateMenu(request: Request, env: Env): Promise<Response> {
   try {
+    const tenantId = getTenantId(request);
     const data = await request.json();
-    await env.ORDER_STATE.put("menu:latest", JSON.stringify(data));
-    
-    // Invalidate luôn cache đa hộ thuê của benmi khi cập nhật qua API cũ
-    await env.ORDER_STATE.delete("tenant:benmi:menu");
+
+    // 1. Đồng bộ vào D1 Database nếu có liên kết DB
+    if (env.DB) {
+      await syncMenuToD1(tenantId, data, env);
+    }
+
+    // 2. Ghi KV fallback cho tenant mặc định benmi
+    if (tenantId === "benmi") {
+      await env.ORDER_STATE.put("menu:latest", JSON.stringify(data));
+    }
+
+    // 3. Xóa cache đa hộ thuê để force reload ở lượt đọc sau
+    const cacheKey = `tenant:${tenantId}:menu`;
+    await env.ORDER_STATE.delete(cacheKey);
 
     return json({ success: true });
-  } catch (e) {
-    return json({ error: "Invalid data" }, 400);
+  } catch (e: any) {
+    console.error("Update menu failed:", e);
+    return json({ error: e.message || "Invalid data" }, 400);
   }
 }

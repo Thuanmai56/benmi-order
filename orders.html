@@ -332,6 +332,10 @@
 
   <script>
     const WORKER_BASE = "https://spring-smoke-46ba.thuanmnc.workers.dev";
+    function getTenantIdFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("tenant_id") || "benmi";
+    }
 
     let latestOrders = [];
     let pendingNewOrders = [];
@@ -967,7 +971,7 @@
 
     async function loadOperatingHours() {
       try {
-        const res = await fetch(`${WORKER_BASE}/api/config?_t=${Date.now()}`);
+        const res = await fetch(`${WORKER_BASE}/api/config?tenant_id=${getTenantIdFromUrl()}&_t=${Date.now()}`);
         if (res.ok) {
           const data = await res.json();
           storeOperatingHours = data.operatingHours || createDefaultOperatingHours();
@@ -1054,7 +1058,7 @@
       const oldText = btn.innerText;
       btn.innerText = "儲存中..."; btn.disabled = true;
       try {
-        const res = await fetch(`${WORKER_BASE}/api/config`, {
+        const res = await fetch(`${WORKER_BASE}/api/config?tenant_id=${getTenantIdFromUrl()}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ operatingHours: storeOperatingHours })
@@ -1113,7 +1117,7 @@
     async function loadMenuData() {
       document.getElementById("menu-editor-body").innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">Đang tải menu...</div>`;
       try {
-        const res = await fetch(`${WORKER_BASE}/api/menu?_t=${Date.now()}`);
+        const res = await fetch(`${WORKER_BASE}/api/menu?tenant_id=${getTenantIdFromUrl()}&_t=${Date.now()}`);
         if (!res.ok) throw new Error("Failed to load");
         rawMenuData = await res.json();
         // Convert object format to editable array format
@@ -1282,7 +1286,7 @@
       btn.innerText = "儲存中..."; btn.disabled = true;
 
       try {
-        const res = await fetch(`${WORKER_BASE}/api/menu`, {
+        const res = await fetch(`${WORKER_BASE}/api/menu?tenant_id=${getTenantIdFromUrl()}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(output)
@@ -1314,7 +1318,7 @@
       };
 
       try {
-        const res = await fetch(`${WORKER_BASE}/api/menu`, {
+        const res = await fetch(`${WORKER_BASE}/api/menu?tenant_id=${getTenantIdFromUrl()}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(DEFAULT_MENU)
@@ -1340,11 +1344,11 @@
       document.getElementById("imageModal").style.display = "flex";
 
       try {
-        const res = await fetch(`${WORKER_BASE}/api/image_list?_t=${Date.now()}`);
+        const res = await fetch(`${WORKER_BASE}/api/image_list?tenant_id=${getTenantIdFromUrl()}&_t=${Date.now()}`);
         if (res.ok) {
           const list = await res.json();
           if (list.includes(currentImageItemName)) {
-            document.getElementById("image-preview").src = `${WORKER_BASE}/api/image?name=${encodeURIComponent(currentImageItemName)}&_t=${Date.now()}`;
+            document.getElementById("image-preview").src = `${WORKER_BASE}/api/image?tenant_id=${getTenantIdFromUrl()}&name=${encodeURIComponent(currentImageItemName)}&_t=${Date.now()}`;
             document.getElementById("image-preview").style.display = "block";
             document.getElementById("btn-delete-image").style.display = "block";
             document.getElementById("image-status").innerText = "Món này đã có ảnh";
@@ -1402,7 +1406,7 @@
     async function uploadImage(dataUri) {
       document.getElementById("image-status").innerText = "Đang tải ảnh lên...";
       try {
-        const res = await fetch(`${WORKER_BASE}/api/image`, {
+        const res = await fetch(`${WORKER_BASE}/api/image?tenant_id=${getTenantIdFromUrl()}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name: currentImageItemName, dataUri })
@@ -1423,7 +1427,7 @@
       if (!confirm("Bạn có chắc muốn xóa ảnh này?")) return;
       document.getElementById("image-status").innerText = "Đang xóa ảnh...";
       try {
-        const res = await fetch(`${WORKER_BASE}/api/image`, {
+        const res = await fetch(`${WORKER_BASE}/api/image?tenant_id=${getTenantIdFromUrl()}`, {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name: currentImageItemName })
@@ -1520,7 +1524,7 @@
       };
 
       try {
-        const res = await fetch(`${WORKER_BASE}/api/menu/stock-status`, {
+        const res = await fetch(`${WORKER_BASE}/api/menu/stock-status?tenant_id=${getTenantIdFromUrl()}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body)

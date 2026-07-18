@@ -23,12 +23,12 @@ export default {
     if (request.method === "POST" && path === "/api/create") return createOrder(request, env);
     if (request.method === "POST" && path === "/api/update") return updateOrder(request, env, ctx);
     if (request.method === "GET" && path === "/api/orders") return getOrders(env);
-    if (request.method === "GET" && path === "/api/config") return getConfig(env);
+    if (request.method === "GET" && path === "/api/config") return getConfig(request, env);
     if (request.method === "POST" && path === "/api/config") return updateConfig(request, env);
     if (request.method === "GET" && path === "/api/menu") return getMenu(request, env);
     if (request.method === "POST" && path === "/api/menu") return updateMenu(request, env);
     if (request.method === "POST" && path === "/api/menu/stock-status") return updateStockStatus(request, env);
-    if (request.method === "GET" && path === "/api/image_list") return getImageList(env);
+    if (request.method === "GET" && path === "/api/image_list") return getImageList(request, env);
     if (request.method === "GET" && path === "/api/image") return getImage(request, env);
     if (request.method === "POST" && path === "/api/image") return updateImage(request, env);
     if (request.method === "DELETE" && path === "/api/image") return deleteImage(request, env);

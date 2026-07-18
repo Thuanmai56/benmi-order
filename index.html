@@ -118,16 +118,21 @@
 
         // --- MENU DATA ---
         const WORKER_BASE = "https://spring-smoke-46ba.thuanmnc.workers.dev";
+        function getTenantIdFromUrl() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get("tenant_id") || "benmi";
+        }
         let menu = { small: {}, large: {}, combo: {}, drinks: {}, topping: {} };
         let imageList = [];
         let storeConfig = null;
 
         async function fetchMenu() {
             try {
+                const tenantId = getTenantIdFromUrl();
                 const [resMenu, resImage, resConfig] = await Promise.all([
-                    fetch(`${WORKER_BASE}/api/menu?_t=${Date.now()}`, { cache: 'no-store' }),
-                    fetch(`${WORKER_BASE}/api/image_list?_t=${Date.now()}`, { cache: 'no-store' }),
-                    fetch(`${WORKER_BASE}/api/config?_t=${Date.now()}`, { cache: 'no-store' })
+                    fetch(`${WORKER_BASE}/api/menu?tenant_id=${tenantId}&_t=${Date.now()}`, { cache: 'no-store' }),
+                    fetch(`${WORKER_BASE}/api/image_list?tenant_id=${tenantId}&_t=${Date.now()}`, { cache: 'no-store' }),
+                    fetch(`${WORKER_BASE}/api/config?tenant_id=${tenantId}&_t=${Date.now()}`, { cache: 'no-store' })
                 ]);
                 if (resMenu.ok) menu = await resMenu.json();
                 if (resImage.ok) imageList = await resImage.json();
@@ -212,7 +217,7 @@
 
             const imageKey = `${category}_${origName}`;
             const hasImage = imageList.includes(imageKey);
-            const imgHTML = hasImage ? `<img class="item-img" src="${WORKER_BASE}/api/image?name=${encodeURIComponent(imageKey)}&v=2" alt="${origName}" loading="lazy" onclick="openImageLightbox(this.src)" style="cursor: zoom-in;">` : '';
+            const imgHTML = hasImage ? `<img class="item-img" src="${WORKER_BASE}/api/image?tenant_id=${getTenantIdFromUrl()}&name=${encodeURIComponent(imageKey)}&v=2" alt="${origName}" loading="lazy" onclick="openImageLightbox(this.src)" style="cursor: zoom-in;">` : '';
 
             const trans = itemTranslations[origName] || '';
             const transHTML = trans ? `<div style="font-size: 13px; color: #9ca3af; margin-top: 2px;">${trans}</div>` : '';
@@ -843,17 +848,18 @@
         }
 
         async function initApp() {
-            // Khởi chạy fetchMenu song song với việc khởi tạo LIFF
+            // Khởi chạy fetchMenu song song
             const menuPromise = fetchMenu();
 
+            // Đợi dữ liệu menu & config được fetch xong để lấy storeConfig
+            await menuPromise;
+
             try {
-                await liff.init({ liffId: '2009555608-DMioljsI' });
+                const liffId = (storeConfig && storeConfig.liffId) ? storeConfig.liffId : '2009555608-DMioljsI';
+                await liff.init({ liffId });
             } catch(e) {
                 console.error("LIFF Init Error", e);
             }
-
-            // Đợi dữ liệu menu được fetch xong
-            await menuPromise;
 
             renderMenu();
             renderStoreOperatingHours();
