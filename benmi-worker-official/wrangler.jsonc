@@ -46,7 +46,7 @@
     {
       "binding": "OPENROUTER_API_KEY",
       "store_id": "7e2896f1c5cf4e1eb80ef6c89f3024d4",
-      "secret_name": "OPENROUTER_API_KEY_BENMI"
+      "secret_name": "OPENROUTER_API_KEY_BLAB"
     },
     {
       "binding": "GROQ_API_KEY",
