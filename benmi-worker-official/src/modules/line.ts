@@ -1,12 +1,18 @@
 import { Env } from '../types/env';
 import { Order } from '../types/index';
 import { corsHeaders } from '../utils/http';
+import { resolveSecret } from '../utils/secrets';
 import { saveOrder, getPendingMap } from './orders';
 import { callAI } from '../integrations/openRouter';
 import { syncToGoogleSheets } from '../integrations/googleSheets';
+import { getTenantId } from './menu';
+
+async function getLineToken(env: Env): Promise<string> {
+  return await resolveSecret(env.LINE_CHANNEL_TOKEN);
+}
 
 export async function pushLineMessage(userId: string, text: string, env: Env): Promise<void> {
-  const token = env.LINE_CHANNEL_TOKEN;
+  const token = await getLineToken(env);
   if (!token) { console.error("[Benmi] pushLineMessage: LINE_CHANNEL_TOKEN missing"); return; }
   if (!userId) { console.error("[Benmi] pushLineMessage: userId is empty, cannot push"); return; }
 
@@ -34,9 +40,9 @@ export async function pushLineMessage(userId: string, text: string, env: Env): P
   }
 }
 
-export async function replyText(replyToken: string, text: string, env: Env): Promise<void> {
-  const token = env.LINE_CHANNEL_TOKEN;
-  if (!token || !replyToken) return;
+export async function replyText(replyToken: string, text: string, env: Env): Promise<boolean> {
+  const token = await getLineToken(env);
+  if (!token || !replyToken) return false;
 
   try {
     const res = await fetch("https://api.line.me/v2/bot/message/reply", {
@@ -60,11 +66,11 @@ export async function replyText(replyToken: string, text: string, env: Env): Pro
   }
 }
 
-export async function replyWithLiffRedirect(replyToken: string, userId: string, env: Env): Promise<void> {
-  const token = env.LINE_CHANNEL_TOKEN;
-  if (!token || !replyToken) return;
+export async function replyWithLiffRedirect(replyToken: string, userId: string, env: Env): Promise<boolean> {
+  const token = await getLineToken(env);
+  if (!token || !replyToken) return false;
 
-  const liffUrl = env.LIFF_URL || "https://liff.line.me/";
+  const liffUrl = (await resolveSecret(env.LIFF_URL)) || "https://liff.line.me/";
 
   const flexBubble = {
     type: "bubble",
@@ -325,7 +331,7 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
       if (ctx && ctx.waitUntil) {
         ctx.waitUntil((async () => {
           try {
-            const token = env.LINE_CHANNEL_TOKEN;
+            const token = await getLineToken(env);
             const profUrl = `https://api.line.me/v2/bot/profile/${userId}`;
             const resp = await fetch(profUrl, { headers: { Authorization: `Bearer ${token}` } });
             if (resp.ok) {
@@ -393,7 +399,8 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
     }
 
     // 1) Pending flow priority
-    const pMap = await getPendingMap(env, userId);
+    const tenantId = getTenantId(request);
+    const pMap = await getPendingMap(env, tenantId, userId);
     // Find latest pending entry for this user
     const pKeys = Object.keys(pMap).sort((a, b) => (pMap[b].createdAt || 0) - (pMap[a].createdAt || 0));
 
@@ -411,11 +418,17 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
 
           // If handled:
           const finishPending = async () => {
-            delete pMap[orderKey];
-            if (Object.keys(pMap).length === 0) {
-              await env.ORDER_STATE.delete(pendingKey);
+            if (env.DB) {
+              await env.DB.prepare(
+                "DELETE FROM pending_actions WHERE tenant_id = ? AND user_id = ? AND order_key = ?"
+              ).bind(tenantId, userId, orderKey).run();
             } else {
-              await env.ORDER_STATE.put(pendingKey, JSON.stringify(pMap));
+              delete pMap[orderKey];
+              if (Object.keys(pMap).length === 0) {
+                await env.ORDER_STATE.delete(pendingKey);
+              } else {
+                await env.ORDER_STATE.put(pendingKey, JSON.stringify(pMap));
+              }
             }
           };
 

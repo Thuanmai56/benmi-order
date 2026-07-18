@@ -296,8 +296,46 @@
     </div>
   </div>
 
+  <!-- Modal Quản lý Hết Hàng (Stock Management) -->
+  <div id="stockModal" class="modal">
+    <div class="modal-content" style="max-width: 450px;">
+      <div class="modal-title">
+        <h3 id="stock-modal-title">Cài đặt Trạng thái Kho</h3>
+        <div class="modal-close" onclick="closeStockModal()">✕</div>
+      </div>
+      <div style="margin-top: 16px;">
+        <label style="display: block; font-weight: 900; margin-bottom: 8px; font-size: 15px;">Trạng thái:</label>
+        <select id="stock-status-select" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px;" onchange="handleStockStatusChange()">
+          <option value="in_stock">🟢 Còn hàng (In Stock)</option>
+          <option value="out_of_stock">🔴 Hết hàng (Out of Stock)</option>
+        </select>
+      </div>
+      <div id="oos-options-container" style="margin-top: 16px; display: none;">
+        <label style="display: block; font-weight: 900; margin-bottom: 8px; font-size: 15px;">Thời hạn hết hàng:</label>
+        <select id="stock-duration-select" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px;" onchange="handleStockDurationChange()">
+          <option value="today">Hôm nay (Tự hồi phục lúc 4h sáng mai)</option>
+          <option value="multiple_days">Nhiều ngày (Chọn ngày khôi phục)</option>
+          <option value="indefinite">Vô thời hạn (Chờ mở thủ công)</option>
+        </select>
+        
+        <div id="oos-date-container" style="margin-top: 16px; display: none;">
+          <label style="display: block; font-weight: 900; margin-bottom: 8px; font-size: 15px;">Ngày khôi phục bán:</label>
+          <input type="date" id="oos-until-date" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px;">
+        </div>
+      </div>
+      <div class="modal-actions two" style="margin-top: 24px;">
+        <button class="btn btn-primary btn-block" onclick="saveStockStatus()">Lưu Thay Đổi</button>
+        <button class="btn btn-ghost btn-block" onclick="closeStockModal()">Hủy</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const WORKER_BASE = "https://benmi-worker-official.thuanmnc.workers.dev";
+    function getTenantIdFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("tenant_id") || "benmi";
+    }
 
     let latestOrders = [];
     let pendingNewOrders = [];
@@ -933,7 +971,7 @@
 
     async function loadOperatingHours() {
       try {
-        const res = await fetch(`${WORKER_BASE}/api/config?_t=${Date.now()}`);
+        const res = await fetch(`${WORKER_BASE}/api/config?tenant_id=${getTenantIdFromUrl()}&_t=${Date.now()}`);
         if (res.ok) {
           const data = await res.json();
           storeOperatingHours = data.operatingHours || createDefaultOperatingHours();
@@ -1020,7 +1058,7 @@
       const oldText = btn.innerText;
       btn.innerText = "儲存中..."; btn.disabled = true;
       try {
-        const res = await fetch(`${WORKER_BASE}/api/config`, {
+        const res = await fetch(`${WORKER_BASE}/api/config?tenant_id=${getTenantIdFromUrl()}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ operatingHours: storeOperatingHours })
@@ -1079,14 +1117,17 @@
     async function loadMenuData() {
       document.getElementById("menu-editor-body").innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">Đang tải menu...</div>`;
       try {
-        const res = await fetch(`${WORKER_BASE}/api/menu?_t=${Date.now()}`);
+        const res = await fetch(`${WORKER_BASE}/api/menu?tenant_id=${getTenantIdFromUrl()}&_t=${Date.now()}`);
         if (!res.ok) throw new Error("Failed to load");
         rawMenuData = await res.json();
         // Convert object format to editable array format
         currentMenuData = BENMI_CATS.map(cat => ({
           id: cat.id,
           title: cat.label,
-          items: Object.entries(rawMenuData[cat.id] || {}).map(([name, price]) => ({ name, price }))
+          items: Object.entries(rawMenuData[cat.id] || {}).map(([name, price]) => {
+            const isOos = rawMenuData.out_of_stock && rawMenuData.out_of_stock.includes(`${cat.id}:${name}`);
+            return { name, price, isOos, originalName: name };
+          })
         }));
         activeCategoryIndex = -1;
         renderMenuCategories();
@@ -1164,6 +1205,11 @@
           }
         });
 
+        const oosBg = item.isOos ? '#fee2e2' : '#d1fae5';
+        const oosColor = item.isOos ? '#b91c1c' : '#065f46';
+        const oosBorder = item.isOos ? '#fca5a5' : '#6ee7b7';
+        const oosText = item.isOos ? '🔴 Hết' : '🟢 Còn';
+
         row.innerHTML = `
           <div style="color: #ccc; font-size: 22px; cursor: grab; flex-shrink:0;">☰</div>
           <input type="text" value="${escapeHtml(item.name)}" data-name-cidx="${index}" data-name-iidx="${iIdx}" oninput="markMenuDirty()"
@@ -1173,6 +1219,8 @@
             <input type="number" value="${item.price !== null && item.price !== undefined ? item.price : ''}" data-cidx="${index}" data-iidx="${iIdx}" oninput="markMenuDirty()"
               placeholder="隱藏" style="width: 90px; font-size: 17px; font-weight: 900; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-family:inherit; box-sizing:border-box;">
           </label>
+          <button class="btn" style="padding: 8px 14px; font-size:14px; flex-shrink:0; background: ${oosBg}; color: ${oosColor}; border: 1px solid ${oosBorder}; border-radius: 8px; font-weight: 900;"
+            onclick="openStockModal(${index}, ${iIdx})">${oosText}</button>
           <button class="btn btn-ghost" style="padding: 8px 14px; font-size:14px; flex-shrink:0;" onclick="openImageModal('${cat.id}', '${escapeHtml(item.name)}')">📷 Ảnh</button>
           <button class="btn btn-ghost" style="padding: 8px 14px; color: var(--brand-red); font-size:14px; flex-shrink:0;" onclick="removeMenuItemAt(${index}, ${iIdx})">刪除</button>
         `;
@@ -1238,7 +1286,7 @@
       btn.innerText = "儲存中..."; btn.disabled = true;
 
       try {
-        const res = await fetch(`${WORKER_BASE}/api/menu`, {
+        const res = await fetch(`${WORKER_BASE}/api/menu?tenant_id=${getTenantIdFromUrl()}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(output)
@@ -1270,7 +1318,7 @@
       };
 
       try {
-        const res = await fetch(`${WORKER_BASE}/api/menu`, {
+        const res = await fetch(`${WORKER_BASE}/api/menu?tenant_id=${getTenantIdFromUrl()}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(DEFAULT_MENU)
@@ -1296,11 +1344,11 @@
       document.getElementById("imageModal").style.display = "flex";
 
       try {
-        const res = await fetch(`${WORKER_BASE}/api/image_list?_t=${Date.now()}`);
+        const res = await fetch(`${WORKER_BASE}/api/image_list?tenant_id=${getTenantIdFromUrl()}&_t=${Date.now()}`);
         if (res.ok) {
           const list = await res.json();
           if (list.includes(currentImageItemName)) {
-            document.getElementById("image-preview").src = `${WORKER_BASE}/api/image?name=${encodeURIComponent(currentImageItemName)}&_t=${Date.now()}`;
+            document.getElementById("image-preview").src = `${WORKER_BASE}/api/image?tenant_id=${getTenantIdFromUrl()}&name=${encodeURIComponent(currentImageItemName)}&_t=${Date.now()}`;
             document.getElementById("image-preview").style.display = "block";
             document.getElementById("btn-delete-image").style.display = "block";
             document.getElementById("image-status").innerText = "Món này đã có ảnh";
@@ -1358,7 +1406,7 @@
     async function uploadImage(dataUri) {
       document.getElementById("image-status").innerText = "Đang tải ảnh lên...";
       try {
-        const res = await fetch(`${WORKER_BASE}/api/image`, {
+        const res = await fetch(`${WORKER_BASE}/api/image?tenant_id=${getTenantIdFromUrl()}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name: currentImageItemName, dataUri })
@@ -1379,7 +1427,7 @@
       if (!confirm("Bạn có chắc muốn xóa ảnh này?")) return;
       document.getElementById("image-status").innerText = "Đang xóa ảnh...";
       try {
-        const res = await fetch(`${WORKER_BASE}/api/image`, {
+        const res = await fetch(`${WORKER_BASE}/api/image?tenant_id=${getTenantIdFromUrl()}`, {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name: currentImageItemName })
@@ -1391,6 +1439,110 @@
         document.getElementById("image-status").innerText = "Món này chưa có ảnh";
       } catch (e) {
         alert("Lỗi xóa ảnh: " + e.message);
+      }
+    }
+
+    // --- Stock Management ---
+    let currentStockCidx = null;
+    let currentStockIidx = null;
+
+    function openStockModal(cIdx, iIdx) {
+      // Lưu lại các thay đổi người dùng đang nhập dở trên input
+      syncMenuDataFromDOM();
+
+      currentStockCidx = cIdx;
+      currentStockIidx = iIdx;
+      
+      const item = currentMenuData[cIdx].items[iIdx];
+      document.getElementById("stock-modal-title").innerText = `Kho hàng: ${item.name}`;
+      
+      // Set values
+      const statusSelect = document.getElementById("stock-status-select");
+      statusSelect.value = item.isOos ? "out_of_stock" : "in_stock";
+      
+      // Reset duration & date
+      document.getElementById("stock-duration-select").value = "today";
+      document.getElementById("oos-until-date").value = "";
+      
+      handleStockStatusChange();
+      
+      document.getElementById("stockModal").style.display = "flex";
+    }
+
+    function closeStockModal() {
+      document.getElementById("stockModal").style.display = "none";
+      currentStockCidx = null;
+      currentStockIidx = null;
+    }
+
+    function handleStockStatusChange() {
+      const status = document.getElementById("stock-status-select").value;
+      const optionsContainer = document.getElementById("oos-options-container");
+      if (status === "out_of_stock") {
+        optionsContainer.style.display = "block";
+      } else {
+        optionsContainer.style.display = "none";
+      }
+      handleStockDurationChange();
+    }
+
+    function handleStockDurationChange() {
+      const duration = document.getElementById("stock-duration-select").value;
+      const dateContainer = document.getElementById("oos-date-container");
+      const status = document.getElementById("stock-status-select").value;
+      
+      if (status === "out_of_stock" && duration === "multiple_days") {
+        dateContainer.style.display = "block";
+      } else {
+        dateContainer.style.display = "none";
+      }
+    }
+
+    async function saveStockStatus() {
+      if (currentStockCidx === null || currentStockIidx === null) return;
+      
+      // Đồng bộ dữ liệu hiện tại từ DOM
+      syncMenuDataFromDOM();
+
+      const categorySlug = currentMenuData[currentStockCidx].id;
+      const item = currentMenuData[currentStockCidx].items[currentStockIidx];
+      const status = document.getElementById("stock-status-select").value;
+      const duration = document.getElementById("stock-duration-select").value;
+      const untilDate = document.getElementById("oos-until-date").value;
+      
+      if (status === "out_of_stock" && duration === "multiple_days" && !untilDate) {
+        alert("Vui lòng chọn ngày khôi phục bán!");
+        return;
+      }
+
+      const body = {
+        category_slug: categorySlug,
+        name: item.originalName || item.name,
+        status: status,
+        duration: duration,
+        until_date: untilDate ? `${untilDate}T04:00:00+07:00` : null
+      };
+
+      try {
+        const res = await fetch(`${WORKER_BASE}/api/menu/stock-status?tenant_id=${getTenantIdFromUrl()}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        });
+
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.error || "Update failed");
+        }
+
+        // Cập nhật local state
+        item.isOos = (status === "out_of_stock");
+        
+        const targetCidx = currentStockCidx;
+        closeStockModal();
+        renderMenuCategoryEditor(targetCidx);
+      } catch (e) {
+        alert("Lỗi cập nhật trạng thái kho: " + e.message);
       }
     }
 

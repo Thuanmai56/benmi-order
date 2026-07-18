@@ -118,16 +118,21 @@
 
         // --- MENU DATA ---
         const WORKER_BASE = "https://benmi-worker-official.thuanmnc.workers.dev";
+        function getTenantIdFromUrl() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get("tenant_id") || "benmi";
+        }
         let menu = { small: {}, large: {}, combo: {}, drinks: {}, topping: {} };
         let imageList = [];
         let storeConfig = null;
 
         async function fetchMenu() {
             try {
+                const tenantId = getTenantIdFromUrl();
                 const [resMenu, resImage, resConfig] = await Promise.all([
-                    fetch(`${WORKER_BASE}/api/menu?_t=${Date.now()}`, { cache: 'no-store' }),
-                    fetch(`${WORKER_BASE}/api/image_list?_t=${Date.now()}`, { cache: 'no-store' }),
-                    fetch(`${WORKER_BASE}/api/config?_t=${Date.now()}`, { cache: 'no-store' })
+                    fetch(`${WORKER_BASE}/api/menu?tenant_id=${tenantId}&_t=${Date.now()}`, { cache: 'no-store' }),
+                    fetch(`${WORKER_BASE}/api/image_list?tenant_id=${tenantId}&_t=${Date.now()}`, { cache: 'no-store' }),
+                    fetch(`${WORKER_BASE}/api/config?tenant_id=${tenantId}&_t=${Date.now()}`, { cache: 'no-store' })
                 ]);
                 if (resMenu.ok) menu = await resMenu.json();
                 if (resImage.ok) imageList = await resImage.json();
@@ -202,6 +207,54 @@
             "雪碧": "Cocacola / Sprite"
         };
 
+        function getFooterHTML(category, origName, price, isOos) {
+            const qty = cart[category + '_' + origName] || 0;
+            return isOos ? `
+                <div class="card-price" style="color: #9ca3af;">$${price}</div>
+                <div style="color: #dc2626; font-weight: 900; font-size: 14px; background: #fee2e2; padding: 4px 10px; border-radius: 6px;">已售完 / Hết hàng</div>
+            ` : `
+                <div class="card-price">$${price}</div>
+                <div class="qty-control">
+                    <button class="btn-qty" onclick="updateQty('${category}','${origName}',-1)">-</button>
+                    <span class="qty-text" id="qty-${category}-${origName}" style="${qty > 0 ? 'color: var(--primary);' : ''}">${qty}</span>
+                    <button class="btn-qty" onclick="updateQty('${category}','${origName}',1)">+</button>
+                </div>
+            `;
+        }
+
+        function updateMenuOosUI() {
+            if (!menu) return;
+            const categories = ['small', 'large', 'combo', 'drinks'];
+            categories.forEach(category => {
+                const itemsMap = menu[category] || {};
+                Object.keys(itemsMap).forEach(origName => {
+                    const elId = `item-${category}-${origName}`;
+                    const div = document.getElementById(elId);
+                    if (!div) return;
+                    
+                    const isOos = menu.out_of_stock && menu.out_of_stock.includes(`${category}:${origName}`);
+                    
+                    div.style.opacity = isOos ? '0.65' : '1';
+                    div.style.pointerEvents = isOos ? 'none' : 'auto';
+                    
+                    const footer = div.querySelector('.card-footer');
+                    if (footer) {
+                        const price = itemsMap[origName];
+                        const footerHTML = getFooterHTML(category, origName, price, isOos);
+                        if (footer.innerHTML.trim() !== footerHTML.trim()) {
+                            footer.innerHTML = footerHTML;
+                        }
+                    }
+                    
+                    const custBtn = div.querySelector('.customize-btn');
+                    if (custBtn) {
+                        const qty = cart[category + '_' + origName] || 0;
+                        custBtn.style.display = (isOos || category === 'drinks' || !(qty > 0)) ? 'none' : 'block';
+                    }
+                });
+            });
+        }
+
         function createItem(displayName, price, category, containerId, origName, isRecommended) {
             const container = document.getElementById(containerId);
             const div = document.createElement('div');
@@ -212,32 +265,40 @@
 
             const imageKey = `${category}_${origName}`;
             const hasImage = imageList.includes(imageKey);
-            const imgHTML = hasImage ? `<img class="item-img" src="${WORKER_BASE}/api/image?name=${encodeURIComponent(imageKey)}&v=2" alt="${origName}" loading="lazy" onclick="openImageLightbox(this.src)" style="cursor: zoom-in;">` : '';
+            const imgHTML = hasImage ? `<img class="item-img" src="${WORKER_BASE}/api/image?tenant_id=${getTenantIdFromUrl()}&name=${encodeURIComponent(imageKey)}&v=2" alt="${origName}" loading="lazy" onclick="openImageLightbox(this.src)" style="cursor: zoom-in;">` : '';
 
             const trans = itemTranslations[origName] || '';
             const transHTML = trans ? `<div style="font-size: 13px; color: #9ca3af; margin-top: 2px;">${trans}</div>` : '';
 
+            const isOos = menu.out_of_stock && menu.out_of_stock.includes(`${category}:${origName}`);
+            if (isOos) {
+                div.style.opacity = '0.65';
+                div.style.pointerEvents = 'none'; // prevent image zoom or any click on the card
+            }
+
+            const footerHTML = getFooterHTML(category, origName, price, isOos);
+
+            const qty = cart[category + '_' + origName] || 0;
+            const customizeBtnHTML = `
+                <button class="customize-btn" id="customize-btn-${category}-${origName}" onclick="toggleCustomize('${category}','${origName}')" style="pointer-events: auto; display: ${(!isOos && qty > 0 && category !== 'drinks') ? 'block' : 'none'};">✏️ 客製化（加料 / 辣度 / 備註）</button>
+            `;
+
             div.innerHTML = `
-        <div class="card-main">
-            ${imgHTML}
-            <div class="card-info">
-                <div>
-                    <div class="card-title">${displayName} ${badgeHTML}</div>
-                    ${transHTML}
-                </div>
-                <div class="card-footer">
-                    <div class="card-price">$${price}</div>
-                    <div class="qty-control">
-                        <button class="btn-qty" onclick="updateQty('${category}','${origName}',-1)">-</button>
-                        <span class="qty-text" id="qty-${category}-${origName}">0</span>
-                        <button class="btn-qty" onclick="updateQty('${category}','${origName}',1)">+</button>
+                <div class="card-main" style="${isOos ? 'pointer-events: none;' : ''}">
+                    ${imgHTML}
+                    <div class="card-info">
+                        <div>
+                            <div class="card-title">${displayName} ${badgeHTML}</div>
+                            ${transHTML}
+                        </div>
+                        <div class="card-footer">
+                            ${footerHTML}
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
-        <button class="customize-btn" id="customize-btn-${category}-${origName}" onclick="toggleCustomize('${category}','${origName}')">✏️ 客製化（加料 / 辣度 / 備註）</button>
-        <div id="combo-container-${category}-${origName}"></div>
-    `;
+                ${customizeBtnHTML}
+                <div id="combo-container-${category}-${origName}"></div>
+            `;
             container.appendChild(div);
         }
 
@@ -362,18 +423,25 @@
             box.innerHTML = '<strong>🥤 選擇附贈飲料</strong>';
 
             for (let i = 1; i <= qty; i++) {
-                let firstDrink = Object.keys(menu.drinks)[0];
+                let firstDrink = Object.keys(menu.drinks).find(d => !menu.out_of_stock || !menu.out_of_stock.includes(`drinks:${d}`)) || Object.keys(menu.drinks)[0];
                 if (!comboDrinkData[origName][i - 1]) comboDrinkData[origName][i - 1] = firstDrink;
 
                 let sel = document.createElement('select');
                 for (let d in menu.drinks) {
                     let opt = document.createElement('option');
                     opt.value = d;
-                    opt.text = `第 ${i} 份：${d}`;
+                    const isDrinkOos = menu.out_of_stock && menu.out_of_stock.includes(`drinks:${d}`);
+                    opt.text = `第 ${i} 份：${d}${isDrinkOos ? ' (已售完/Hết)' : ''}`;
+                    if (isDrinkOos && comboDrinkData[origName][i - 1] !== d) {
+                        opt.disabled = true;
+                    }
                     if (comboDrinkData[origName][i - 1] === d) opt.selected = true;
                     sel.appendChild(opt);
                 }
-                sel.onchange = () => { comboDrinkData[origName][i - 1] = sel.value; };
+                sel.onchange = () => {
+                    comboDrinkData[origName][i - 1] = sel.value;
+                    updateTotal();
+                };
                 box.appendChild(sel);
             }
             container.appendChild(box);
@@ -412,7 +480,10 @@
 
                 let toppingOptions = '<option value="">不加料</option>';
                 for (let t in menu.topping) {
-                    toppingOptions += `<option value="${t}" ${data.topping === t ? 'selected' : ''}>${t} +$${menu.topping[t]}</option>`;
+                    const isToppingOos = menu.out_of_stock && menu.out_of_stock.includes(`topping:${t}`);
+                    const isDisabled = isToppingOos && data.topping !== t ? 'disabled' : '';
+                    const oosLabel = isToppingOos ? ' (已售完/Hết)' : '';
+                    toppingOptions += `<option value="${t}" ${data.topping === t ? 'selected' : ''} ${isDisabled}>${t}${oosLabel} +$${menu.topping[t]}</option>`;
                 }
 
                 const section = document.createElement('div');
@@ -819,13 +890,19 @@
         }
 
         async function initApp() {
+            // Khởi chạy fetchMenu song song
+            const menuPromise = fetchMenu();
+
+            // Đợi dữ liệu menu & config được fetch xong để lấy storeConfig
+            await menuPromise;
+
             try {
-                await liff.init({ liffId: '2009560906-c5taZfiY' });
+                const liffId = (storeConfig && storeConfig.liffId) ? storeConfig.liffId : '2009560906-c5taZfiY';
+                await liff.init({ liffId });
             } catch(e) {
                 console.error("LIFF Init Error", e);
             }
 
-            await fetchMenu();
             renderMenu();
             renderStoreOperatingHours();
 
@@ -850,6 +927,7 @@
             setTodayDate();
             checkStoreStatus();
             setInterval(checkStoreStatus, 60000); // Cập nhật trạng thái mỗi phút
+            setInterval(fetchMenu, 15000); // Tự động cập nhật trạng thái hết hàng/còn hàng mỗi 15 giây
         }
         initApp();
 
