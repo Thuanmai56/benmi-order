@@ -1538,8 +1538,9 @@
         // Cập nhật local state
         item.isOos = (status === "out_of_stock");
         
+        const targetCidx = currentStockCidx;
         closeStockModal();
-        renderMenuCategoryEditor(currentStockCidx);
+        renderMenuCategoryEditor(targetCidx);
       } catch (e) {
         alert("Lỗi cập nhật trạng thái kho: " + e.message);
       }
