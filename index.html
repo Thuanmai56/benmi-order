@@ -207,6 +207,54 @@
             "雪碧": "Cocacola / Sprite"
         };
 
+        function getFooterHTML(category, origName, price, isOos) {
+            const qty = cart[category + '_' + origName] || 0;
+            return isOos ? `
+                <div class="card-price" style="color: #9ca3af;">$${price}</div>
+                <div style="color: #dc2626; font-weight: 900; font-size: 14px; background: #fee2e2; padding: 4px 10px; border-radius: 6px;">已售完 / Hết hàng</div>
+            ` : `
+                <div class="card-price">$${price}</div>
+                <div class="qty-control">
+                    <button class="btn-qty" onclick="updateQty('${category}','${origName}',-1)">-</button>
+                    <span class="qty-text" id="qty-${category}-${origName}" style="${qty > 0 ? 'color: var(--primary);' : ''}">${qty}</span>
+                    <button class="btn-qty" onclick="updateQty('${category}','${origName}',1)">+</button>
+                </div>
+            `;
+        }
+
+        function updateMenuOosUI() {
+            if (!menu) return;
+            const categories = ['small', 'large', 'combo', 'drinks'];
+            categories.forEach(category => {
+                const itemsMap = menu[category] || {};
+                Object.keys(itemsMap).forEach(origName => {
+                    const elId = `item-${category}-${origName}`;
+                    const div = document.getElementById(elId);
+                    if (!div) return;
+                    
+                    const isOos = menu.out_of_stock && menu.out_of_stock.includes(`${category}:${origName}`);
+                    
+                    div.style.opacity = isOos ? '0.65' : '1';
+                    div.style.pointerEvents = isOos ? 'none' : 'auto';
+                    
+                    const footer = div.querySelector('.card-footer');
+                    if (footer) {
+                        const price = itemsMap[origName];
+                        const footerHTML = getFooterHTML(category, origName, price, isOos);
+                        if (footer.innerHTML.trim() !== footerHTML.trim()) {
+                            footer.innerHTML = footerHTML;
+                        }
+                    }
+                    
+                    const custBtn = div.querySelector('.customize-btn');
+                    if (custBtn) {
+                        const qty = cart[category + '_' + origName] || 0;
+                        custBtn.style.display = (isOos || category === 'drinks' || !(qty > 0)) ? 'none' : 'block';
+                    }
+                });
+            });
+        }
+
         function createItem(displayName, price, category, containerId, origName, isRecommended) {
             const container = document.getElementById(containerId);
             const div = document.createElement('div');
@@ -228,20 +276,11 @@
                 div.style.pointerEvents = 'none'; // prevent image zoom or any click on the card
             }
 
-            const footerHTML = isOos ? `
-                <div class="card-price" style="color: #9ca3af;">$${price}</div>
-                <div style="color: #dc2626; font-weight: 900; font-size: 14px; background: #fee2e2; padding: 4px 10px; border-radius: 6px;">已售完 / Hết hàng</div>
-            ` : `
-                <div class="card-price">$${price}</div>
-                <div class="qty-control">
-                    <button class="btn-qty" onclick="updateQty('${category}','${origName}',-1)">-</button>
-                    <span class="qty-text" id="qty-${category}-${origName}">0</span>
-                    <button class="btn-qty" onclick="updateQty('${category}','${origName}',1)">+</button>
-                </div>
-            `;
+            const footerHTML = getFooterHTML(category, origName, price, isOos);
 
-            const customizeBtnHTML = isOos ? '' : `
-                <button class="customize-btn" id="customize-btn-${category}-${origName}" onclick="toggleCustomize('${category}','${origName}')" style="pointer-events: auto;">✏️ 客製化（加料 / 辣度 / 備註）</button>
+            const qty = cart[category + '_' + origName] || 0;
+            const customizeBtnHTML = `
+                <button class="customize-btn" id="customize-btn-${category}-${origName}" onclick="toggleCustomize('${category}','${origName}')" style="pointer-events: auto; display: ${(!isOos && qty > 0 && category !== 'drinks') ? 'block' : 'none'};">✏️ 客製化（加料 / 辣度 / 備註）</button>
             `;
 
             div.innerHTML = `
@@ -885,6 +924,7 @@
             setTodayDate();
             checkStoreStatus();
             setInterval(checkStoreStatus, 60000); // Cập nhật trạng thái mỗi phút
+            setInterval(fetchMenu, 15000); // Tự động cập nhật trạng thái hết hàng/còn hàng mỗi 15 giây
         }
         initApp();
 
