@@ -301,53 +301,60 @@ export async function handleOrdersMigration(request: Request, env: Env): Promise
     return new Response("Unauthorized", { status: 401 });
   }
 
+  const batchSize = parseInt(url.searchParams.get("limit") || "40", 10);
+  const reqCursor = url.searchParams.get("cursor") || "";
+
   const logs: string[] = [];
-  let cursor = "";
   let migratedCount = 0;
 
   try {
-    while (true) {
-      const listRes = await env.ORDER_STATE.list({ prefix: "order:", cursor });
-      for (const keyObj of listRes.keys) {
-        const key = keyObj.name;
-        if (key === "order_index:latest" || key === "order_view:cache") continue;
+    const listRes = await env.ORDER_STATE.list({ 
+      prefix: "order:", 
+      cursor: reqCursor,
+      limit: batchSize
+    });
 
-        const raw = await env.ORDER_STATE.get(key);
-        if (!raw) continue;
+    for (const keyObj of listRes.keys) {
+      const key = keyObj.name;
+      if (key === "order_index:latest" || key === "order_view:cache") continue;
 
-        try {
-          const order = JSON.parse(raw);
-          const tenantId = order.tenantId || "benmi";
+      const raw = await env.ORDER_STATE.get(key);
+      if (!raw) continue;
 
-          await env.DB.prepare(
-            `INSERT OR IGNORE INTO orders (key, tenant_id, user_id, customer_name, pickup_time, status, total_amount, order_content, reason, note, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime(?, 'unixepoch'), datetime('now'))`
-          ).bind(
-            order.key,
-            tenantId,
-            order.userId || null,
-            order.customer,
-            order.time,
-            order.status || "NEW",
-            order.total || 0,
-            order.content,
-            order.reason || "",
-            order.note || "",
-            Math.floor((order.createdAt || Date.now()) / 1000)
-          ).run();
-          migratedCount++;
-        } catch (e: any) {
-          logs.push(`Failed to migrate order ${key}: ${e.message}`);
-        }
+      try {
+        const order = JSON.parse(raw);
+        const tenantId = order.tenantId || "benmi";
+
+        await env.DB.prepare(
+          `INSERT OR IGNORE INTO orders (key, tenant_id, user_id, customer_name, pickup_time, status, total_amount, order_content, reason, note, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime(?, 'unixepoch'), datetime('now'))`
+        ).bind(
+          order.key,
+          tenantId,
+          order.userId || null,
+          order.customer,
+          order.time,
+          order.status || "NEW",
+          order.total || 0,
+          order.content,
+          order.reason || "",
+          order.note || "",
+          Math.floor((order.createdAt || Date.now()) / 1000)
+        ).run();
+        migratedCount++;
+      } catch (e: any) {
+        logs.push(`Failed to migrate order ${key}: ${e.message}`);
       }
-
-      if (listRes.list_complete || !listRes.cursor) break;
-      cursor = listRes.cursor;
     }
+
+    const nextCursor = listRes.cursor || "";
+    const isComplete = listRes.list_complete || nextCursor === "";
 
     return json({
       success: true,
-      message: `Migrated ${migratedCount} orders successfully.`,
+      migrated_count: migratedCount,
+      completed: isComplete,
+      next_cursor: nextCursor,
       logs
     });
   } catch (err: any) {
