@@ -144,7 +144,7 @@ export async function updateOrder(request: Request, env: Env, ctx: ExecutionCont
         } else if (items.length > 2) {
           joinedItems = items.slice(0, -1).join("、") + "跟" + items[items.length - 1];
         }
-        notifyText = `不好意思 ${joinedItems}我們現在賣完了，請問可以幫您換別 của 嗎？`;
+        notifyText = `不好意思 ${joinedItems}我們現在賣完了，請問可以幫您換別的嗎？`;
       } else {
         const reason = order.reason || "未提供原因";
         const note = order.note || "";
@@ -347,7 +347,7 @@ export async function handleOrdersMigration(request: Request, env: Env): Promise
       }
     }
 
-    const nextCursor = listRes.cursor || "";
+    const nextCursor = ("cursor" in listRes) ? (listRes.cursor || "") : "";
     const isComplete = listRes.list_complete || nextCursor === "";
 
     return json({
