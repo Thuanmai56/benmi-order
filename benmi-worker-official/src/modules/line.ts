@@ -60,9 +60,12 @@ export async function replyText(replyToken: string, text: string, env: Env): Pro
     if (!res.ok) {
       const errBody = await res.text().catch(() => "(unreadable)");
       console.error(`[Benmi] replyText FAILED: status=${res.status} body=${errBody}`);
+      return false;
     }
+    return true;
   } catch (e: any) {
     console.error(`[Benmi] replyText EXCEPTION: error=${e.message}`);
+    return false;
   }
 }
 
@@ -199,12 +202,15 @@ export async function replyWithLiffRedirect(replyToken: string, userId: string, 
 
     if (resp.status === 200) {
       await env.ORDER_STATE.put(`liff_redirected:${userId}`, "1", { expirationTtl: 1800 });
+      return true;
     } else {
       const errBody = await resp.text().catch(() => "(unreadable)");
       console.error(`[Benmi] replyWithLiffRedirect FAILED: status=${resp.status} body=${errBody}`);
+      return false;
     }
   } catch (e: any) {
     console.error(`[Benmi] replyWithLiffRedirect EXCEPTION: error=${e.message}`);
+    return false;
   }
 }
 
@@ -244,6 +250,7 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
     const userId = source.userId;
     if (!userId) continue;
 
+    const tenantId = getTenantId(request);
     const userText = message.text || "";
     const pendingKey = `pending:${userId}`;
     const draftKey = `draft:${userId}`;
@@ -253,7 +260,10 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
       // If it is a receipt message from successful API creation, skip parsing/saving to avoid overwriting due to KV latency
       if (userText.includes("[已收到]") || userText.includes("[Đã nhận]")) {
         console.log(`[Benmi] Webhook received receipt message. Skipping to avoid overwrite.`);
-        try { await env.ORDER_STATE.delete(pendingKey); } catch { }
+        try {
+          await env.DB.prepare("DELETE FROM pending_actions WHERE tenant_id = ? AND user_id = ?")
+            .bind(tenantId, userId).run();
+        } catch { }
         try { await env.ORDER_STATE.delete(draftKey); } catch { }
         continue;
       }
@@ -295,14 +305,11 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
       let custName = "Khách (Web)";
 
       // Check if order already exists to preserve customer name
-      const existingRaw = await env.ORDER_STATE.get(`order:${orderKey}`);
-      if (existingRaw) {
-        try {
-          const existingOrder = JSON.parse(existingRaw) as Order;
-          if (existingOrder && existingOrder.customer && existingOrder.customer !== "Khách (Web)") {
-            custName = existingOrder.customer;
-          }
-        } catch { }
+      const existingOrder = await env.DB.prepare(
+        "SELECT customer_name FROM orders WHERE key = ?"
+      ).bind(orderKey).first<{ customer_name: string }>();
+      if (existingOrder?.customer_name && existingOrder.customer_name !== "Khách (Web)") {
+        custName = existingOrder.customer_name;
       }
 
       const contentStart = userText.indexOf("📦 訂單內容：");
@@ -325,9 +332,9 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
         note: noteStr
       };
 
-      await saveOrder(env, orderData);
+      await saveOrder(env, orderData, tenantId);
 
-      // Fetch real LINE name in background and update KV
+      // Fetch real LINE name in background and update DB
       if (ctx && ctx.waitUntil) {
         ctx.waitUntil((async () => {
           try {
@@ -338,7 +345,7 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
               const p: any = await resp.json();
               if (p && p.displayName) {
                 orderData.customer = p.displayName;
-                await saveOrder(env, orderData);
+                await saveOrder(env, orderData, tenantId);
               }
             } else {
               const errBody = await resp.text().catch(() => "(unreadable)");
@@ -351,7 +358,10 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
       }
 
       // Auto-clear any stuck pending state
-      try { await env.ORDER_STATE.delete(pendingKey); } catch { }
+      try {
+        await env.DB.prepare("DELETE FROM pending_actions WHERE tenant_id = ? AND user_id = ?")
+          .bind(tenantId, userId).run();
+      } catch { }
 
       continue;
     }
@@ -399,7 +409,6 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
     }
 
     // 1) Pending flow priority
-    const tenantId = getTenantId(request);
     const pMap = await getPendingMap(env, tenantId, userId);
     // Find latest pending entry for this user
     const pKeys = Object.keys(pMap).sort((a, b) => (pMap[b].createdAt || 0) - (pMap[a].createdAt || 0));
@@ -411,25 +420,29 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
       const lowerText = userText.trim().toLowerCase();
 
       if (orderKey) {
-        const orderRaw = await env.ORDER_STATE.get(`order:${orderKey}`);
-        if (orderRaw) {
-          const order: Order = JSON.parse(orderRaw);
+        const orderRow = await env.DB.prepare(
+          "SELECT * FROM orders WHERE key = ?"
+        ).bind(orderKey).first<any>();
+        if (orderRow) {
+          const order: Order = {
+            key: orderRow.key,
+            customer: orderRow.customer_name,
+            time: orderRow.pickup_time,
+            content: orderRow.order_content,
+            status: orderRow.status,
+            createdAt: new Date(orderRow.created_at + "Z").getTime(),
+            userId: orderRow.user_id || undefined,
+            total: orderRow.total_amount,
+            reason: orderRow.reason || "",
+            note: orderRow.note || ""
+          };
           const pendingType = pending?.type;
 
           // If handled:
           const finishPending = async () => {
-            if (env.DB) {
-              await env.DB.prepare(
-                "DELETE FROM pending_actions WHERE tenant_id = ? AND user_id = ? AND order_key = ?"
-              ).bind(tenantId, userId, orderKey).run();
-            } else {
-              delete pMap[orderKey];
-              if (Object.keys(pMap).length === 0) {
-                await env.ORDER_STATE.delete(pendingKey);
-              } else {
-                await env.ORDER_STATE.put(pendingKey, JSON.stringify(pMap));
-              }
-            }
+            await env.DB.prepare(
+              "DELETE FROM pending_actions WHERE tenant_id = ? AND user_id = ? AND order_key = ?"
+            ).bind(tenantId, userId, orderKey).run();
           };
 
           // Xử lý độ trễ lan truyền của Cloudflare KV
@@ -444,7 +457,7 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
             if (isCancel) {
               order.status = "REJECTED"; // Tự động huỷ
               await replyText(replyToken, `收到，謝謝您！`, env);
-              const cleanup = async () => { await saveOrder(env, order); await finishPending(); await syncToGoogleSheets(order, env); };
+              const cleanup = async () => { await saveOrder(env, order, tenantId); await finishPending(); await syncToGoogleSheets(order, env); };
               if (ctx && ctx.waitUntil) ctx.waitUntil(cleanup()); else await cleanup();
             }
             else if (exactMatch) {
@@ -461,7 +474,7 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
               order.note = "";
               order.status = "NEW"; // Tái xuất hiện thông báo đơn mới trên Dashboard
               await replyText(replyToken, `收到您的同意！取餐時間已為您更改為 ${newSuggestedTime}`, env);
-              const cleanup = async () => { await saveOrder(env, order); await finishPending(); };
+              const cleanup = async () => { await saveOrder(env, order, tenantId); await finishPending(); };
               if (ctx && ctx.waitUntil) ctx.waitUntil(cleanup()); else await cleanup();
             }
             else {
@@ -489,7 +502,7 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
             if (isCancel) {
               order.status = "REJECTED"; // Tự động huỷ
               await replyText(replyToken, `好的，已為您取消訂單 #${orderKey}。`, env);
-              const cleanup = async () => { await saveOrder(env, order); await finishPending(); await syncToGoogleSheets(order, env); };
+              const cleanup = async () => { await saveOrder(env, order, tenantId); await finishPending(); await syncToGoogleSheets(order, env); };
               if (ctx && ctx.waitUntil) ctx.waitUntil(cleanup()); else await cleanup();
               continue;
             }
@@ -505,7 +518,7 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
               order.note = "";
               order.status = "NEW";
               await replyText(replyToken, `收到您的回覆！我們會依您的需求修改訂單。`, env);
-              const cleanup = async () => { await saveOrder(env, order); await finishPending(); };
+              const cleanup = async () => { await saveOrder(env, order, tenantId); await finishPending(); };
               if (ctx && ctx.waitUntil) ctx.waitUntil(cleanup()); else await cleanup();
               continue;
             }
@@ -515,7 +528,7 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
             if (isAgree) {
               order.status = "ACCEPTED";
               await replyText(replyToken, `Benmi 收到您的同意！我們會開始準備您的訂單 #${orderKey}。🥖`, env);
-              const cleanup = async () => { await saveOrder(env, order); await finishPending(); };
+              const cleanup = async () => { await saveOrder(env, order, tenantId); await finishPending(); };
               if (ctx && ctx.waitUntil) ctx.waitUntil(cleanup()); else await cleanup();
               continue;
             }
@@ -536,7 +549,7 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
                 `非常抱歉！Benmi 無法接下您的訂單 #${orderKey}。\n原因：${reason}\n感謝您訂購 Benmi，歡迎您下次再訂購。`,
                 env
               );
-              const cleanup = async () => { await saveOrder(env, order); await finishPending(); await syncToGoogleSheets(order, env); };
+              const cleanup = async () => { await saveOrder(env, order, tenantId); await finishPending(); await syncToGoogleSheets(order, env); };
               if (ctx && ctx.waitUntil) ctx.waitUntil(cleanup()); else await cleanup();
               continue;
             }
@@ -548,7 +561,7 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
                 `謝謝您的回覆！我已將訂單 #${orderKey} 回到「等待店家接單」狀態，店家會再為您確認。`,
                 env
               );
-              const cleanup = async () => { await saveOrder(env, order); await finishPending(); };
+              const cleanup = async () => { await saveOrder(env, order, tenantId); await finishPending(); };
               if (ctx && ctx.waitUntil) ctx.waitUntil(cleanup()); else await cleanup();
               continue;
             }
@@ -560,7 +573,10 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
       }
 
       // pending exists but invalid state
-      try { await env.ORDER_STATE.delete(pendingKey); } catch { }
+      try {
+        await env.DB.prepare("DELETE FROM pending_actions WHERE tenant_id = ? AND user_id = ?")
+          .bind(tenantId, userId).run();
+      } catch { }
       await replyText(replyToken, `目前有點狀況，請稍後再確認一次。`, env);
       continue;
     }

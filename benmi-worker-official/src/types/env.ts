@@ -11,4 +11,6 @@ export interface Env {
   OPENROUTER_API_KEY?: string;
   OPENROUTER_MODEL?: string;
   GOOGLE_SHEETS_URL?: string;
+  GROQ_API_KEY?: any;
+  GROQ_MODEL?: string;
 }

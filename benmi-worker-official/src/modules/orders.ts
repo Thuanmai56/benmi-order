@@ -10,6 +10,7 @@ export const MAX_INDEX = 200;
 
 export async function createOrder(request: Request, env: Env): Promise<Response> {
   const data: any = await request.json();
+  const tenantId = getTenantId(request);
 
   // Taiwan time UTC+8
   const nowTaiwan = new Date(Date.now() + 8 * 3600000);
@@ -33,25 +34,12 @@ export async function createOrder(request: Request, env: Env): Promise<Response>
     note: data.note || ""
   };
 
-  await saveOrder(env, order);
+  await saveOrder(env, order, tenantId);
 
   return json({ success: true, key: orderKey });
 }
 
-// Logic help for pending states: Stores as object { [orderKey]: question } to avoid overwriting
 export async function getPendingMap(env: Env, tenantId: string, userId: string): Promise<Record<string, any>> {
-  if (!env.DB) {
-    const raw = await env.ORDER_STATE.get(`pending:${userId}`);
-    if (!raw) return {};
-    try {
-      const data = JSON.parse(raw);
-      if (data.orderKey && !data[data.orderKey]) {
-        return { [data.orderKey]: data };
-      }
-      return data;
-    } catch { return {}; }
-  }
-
   try {
     const { results } = await env.DB.prepare(
       "SELECT * FROM pending_actions WHERE tenant_id = ? AND user_id = ?"
@@ -79,12 +67,26 @@ export async function getPendingMap(env: Env, tenantId: string, userId: string):
 
 export async function updateOrder(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const data: any = await request.json();
-  const raw = await env.ORDER_STATE.get(`order:${data.key}`);
-  if (!raw) return json({ error: "order not found" }, 404);
-
-  const order: Order = JSON.parse(raw);
-  const incoming = data.status;
   const tenantId = getTenantId(request);
+
+  const orderRow = await env.DB.prepare(
+    "SELECT * FROM orders WHERE key = ?"
+  ).bind(data.key).first<any>();
+  if (!orderRow) return json({ error: "order not found" }, 404);
+
+  const order: Order = {
+    key: orderRow.key,
+    customer: orderRow.customer_name,
+    time: orderRow.pickup_time,
+    content: orderRow.order_content,
+    status: orderRow.status,
+    createdAt: new Date(orderRow.created_at + "Z").getTime(),
+    userId: orderRow.user_id || undefined,
+    total: orderRow.total_amount,
+    reason: orderRow.reason || "",
+    note: orderRow.note || ""
+  };
+  const incoming = data.status;
 
   if (data.reason !== undefined) order.reason = data.reason;
   if (data.note !== undefined) order.note = data.note;
@@ -92,26 +94,18 @@ export async function updateOrder(request: Request, env: Env, ctx: ExecutionCont
   // Employee 接單
   if (incoming === "ACCEPTED") {
     if (order.status === "ACCEPTED" || order.status === "DONE" || order.status === "PICKED_UP") {
-      await saveOrder(env, order); // Sync cache
+      await saveOrder(env, order, tenantId); // Sync DB
       return json({ success: true });
     }
     const wasWaiting = order.status && order.status.startsWith("WAITING");
     order.status = "ACCEPTED";
-    await saveOrder(env, order);
+    await saveOrder(env, order, tenantId);
 
     if (order.userId) {
       try {
-        if (env.DB) {
-          await env.DB.prepare(
-            "DELETE FROM pending_actions WHERE tenant_id = ? AND user_id = ? AND order_key = ?"
-          ).bind(tenantId, order.userId, order.key).run();
-        } else {
-          const pMap = await getPendingMap(env, tenantId, order.userId);
-          if (pMap[order.key]) {
-            delete pMap[order.key];
-            await env.ORDER_STATE.put(`pending:${order.userId}`, JSON.stringify(pMap));
-          }
-        }
+        await env.DB.prepare(
+          "DELETE FROM pending_actions WHERE tenant_id = ? AND user_id = ? AND order_key = ?"
+        ).bind(tenantId, order.userId, order.key).run();
       } catch { }
       if (!wasWaiting) {
         await pushLineMessage(order.userId, `Benmi 已收到您的訂單 #${order.key}，謝謝您！`, env);
@@ -120,14 +114,14 @@ export async function updateOrder(request: Request, env: Env, ctx: ExecutionCont
     return json({ success: true });
   }
 
-  // Employee 準備好了 (Chỉ lưu trạng thái DONE, KHÔNG báo thông báo cho khách)
+  // Employee 準備好了
   if (incoming === "DONE") {
     if (order.status === "DONE" || order.status === "PICKED_UP") {
-      await saveOrder(env, order); // Sync cache
+      await saveOrder(env, order, tenantId);
       return json({ success: true });
     }
     order.status = "DONE";
-    await saveOrder(env, order);
+    await saveOrder(env, order, tenantId);
 
     return json({ success: true });
   }
@@ -135,13 +129,13 @@ export async function updateOrder(request: Request, env: Env, ctx: ExecutionCont
   // Employee 需要更改 -> 等客戶「同意/取消」
   if (incoming === "CHANGED") {
     order.status = "WAITING_CUSTOMER_CHANGE";
-    await saveOrder(env, order);
+    await saveOrder(env, order, tenantId);
 
     if (order.userId) {
       let notifyText = "";
       if (order.reason === "時間需調整") {
         const t = order.note || "稍後";
-        notifyText = `時間有點趕，請問可以改成${t}嗎？\n\n(回覆「好 / 同意」以確認，或回覆「不要了」取消訂單)`;
+        notifyText = `時間有點趕，請問可以改成${t}嗎？\n\n(回覆「好 / 同意」以確認， or 回覆「不要了」取消訂單)`;
       } else if (order.reason === "口味售完") {
         const items = (order.note || "").split(",");
         let joinedItems = items[0] || "";
@@ -150,33 +144,27 @@ export async function updateOrder(request: Request, env: Env, ctx: ExecutionCont
         } else if (items.length > 2) {
           joinedItems = items.slice(0, -1).join("、") + "跟" + items[items.length - 1];
         }
-        notifyText = `不好意思 ${joinedItems}我們現在賣完了，請問可以幫您換別的嗎？`;
+        notifyText = `不好意思 ${joinedItems}我們現在賣完了，請問可以幫您換別 của 嗎？`;
       } else {
         const reason = order.reason || "未提供原因";
         const note = order.note || "";
         notifyText =
-          `Benmi 已收到您的訂單 #${order.key}，需要做小幅調整。\n` +
+          `Benmi 已收到您的訂單 #${order.key}， need to do small modification.\n` +
           `原因：${reason}\n` +
           (note ? `備註：${note}\n` : "") +
-          `\n請回覆「同意」以接受變更，或回覆「取消 / 不要了」以取消訂單。`;
+          `\n請回覆「同意」以接受變更， or 回覆「取消 / 不要了」以取消訂單。`;
       }
 
-      if (env.DB) {
-        await env.DB.prepare(
-          `INSERT INTO pending_actions (tenant_id, user_id, order_key, action_type, question_text, reason, note)
-           VALUES (?, ?, ?, ?, ?, ?, ?)
-           ON CONFLICT(tenant_id, user_id, order_key) DO UPDATE SET
-             action_type = excluded.action_type,
-             question_text = excluded.question_text,
-             reason = excluded.reason,
-             note = excluded.note,
-             created_at = CURRENT_TIMESTAMP`
-        ).bind(tenantId, order.userId, order.key, "CHANGE", notifyText, order.reason || "", order.note || "").run();
-      } else {
-        const pMap = await getPendingMap(env, tenantId, order.userId);
-        pMap[order.key] = { orderKey: order.key, type: "CHANGE", createdAt: Date.now(), questionText: notifyText, reason: order.reason, note: order.note };
-        await env.ORDER_STATE.put(`pending:${order.userId}`, JSON.stringify(pMap));
-      }
+      await env.DB.prepare(
+        `INSERT INTO pending_actions (tenant_id, user_id, order_key, action_type, question_text, reason, note)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(tenant_id, user_id, order_key) DO UPDATE SET
+           action_type = excluded.action_type,
+           question_text = excluded.question_text,
+           reason = excluded.reason,
+           note = excluded.note,
+           created_at = CURRENT_TIMESTAMP`
+      ).bind(tenantId, order.userId, order.key, "CHANGE", notifyText, order.reason || "", order.note || "").run();
 
       await pushLineMessage(order.userId, notifyText, env);
     }
@@ -188,13 +176,13 @@ export async function updateOrder(request: Request, env: Env, ctx: ExecutionCont
   if (incoming === "REJECTED") {
     if (order.reason === "取消並不回復客戶") {
       order.status = "REJECTED";
-      await saveOrder(env, order);
+      await saveOrder(env, order, tenantId);
       if (ctx && ctx.waitUntil) ctx.waitUntil(syncToGoogleSheets(order, env));
       return json({ success: true });
     }
 
     order.status = "WAITING_CUSTOMER_REJECT";
-    await saveOrder(env, order);
+    await saveOrder(env, order, tenantId);
 
     if (order.userId) {
       const reason = order.reason || "未提供原因";
@@ -203,22 +191,16 @@ export async function updateOrder(request: Request, env: Env, ctx: ExecutionCont
         `原因：${reason}\n` +
         `\n請回覆「同意」以取消訂單， or 回覆「不同意」以重新確認。`;
 
-      if (env.DB) {
-        await env.DB.prepare(
-          `INSERT INTO pending_actions (tenant_id, user_id, order_key, action_type, question_text, reason, note)
-           VALUES (?, ?, ?, ?, ?, ?, ?)
-           ON CONFLICT(tenant_id, user_id, order_key) DO UPDATE SET
-             action_type = excluded.action_type,
-             question_text = excluded.question_text,
-             reason = excluded.reason,
-             note = excluded.note,
-             created_at = CURRENT_TIMESTAMP`
-        ).bind(tenantId, order.userId, order.key, "REJECT", notifyText, order.reason || "", order.note || "").run();
-      } else {
-        const pMap = await getPendingMap(env, tenantId, order.userId);
-        pMap[order.key] = { orderKey: order.key, type: "REJECT", createdAt: Date.now(), questionText: notifyText, reason: order.reason, note: order.note };
-        await env.ORDER_STATE.put(`pending:${order.userId}`, JSON.stringify(pMap));
-      }
+      await env.DB.prepare(
+        `INSERT INTO pending_actions (tenant_id, user_id, order_key, action_type, question_text, reason, note)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(tenant_id, user_id, order_key) DO UPDATE SET
+           action_type = excluded.action_type,
+           question_text = excluded.question_text,
+           reason = excluded.reason,
+           note = excluded.note,
+           created_at = CURRENT_TIMESTAMP`
+      ).bind(tenantId, order.userId, order.key, "REJECT", notifyText, order.reason || "", order.note || "").run();
 
       await pushLineMessage(order.userId, notifyText, env);
     }
@@ -226,24 +208,16 @@ export async function updateOrder(request: Request, env: Env, ctx: ExecutionCont
     return json({ success: true });
   }
 
-  // Employee 強制取消 (Quá lâu khách không rep -> Nhấn Hủy trực tiếp)
+  // Employee 強制取消
   if (incoming === "FORCE_REJECT") {
     order.status = "REJECTED";
-    await saveOrder(env, order);
+    await saveOrder(env, order, tenantId);
 
     if (order.userId) {
       try {
-        if (env.DB) {
-          await env.DB.prepare(
-            "DELETE FROM pending_actions WHERE tenant_id = ? AND user_id = ? AND order_key = ?"
-          ).bind(tenantId, order.userId, order.key).run();
-        } else {
-          const pMap = await getPendingMap(env, tenantId, order.userId);
-          if (pMap[order.key]) {
-            delete pMap[order.key];
-            await env.ORDER_STATE.put(`pending:${order.userId}`, JSON.stringify(pMap));
-          }
-        }
+        await env.DB.prepare(
+          "DELETE FROM pending_actions WHERE tenant_id = ? AND user_id = ? AND order_key = ?"
+        ).bind(tenantId, order.userId, order.key).run();
       } catch { }
       await pushLineMessage(order.userId, `Benmi：由於未收到您的回覆，訂單 #${order.key} 已自動取消。期待下次為您服務！`, env);
     }
@@ -252,90 +226,132 @@ export async function updateOrder(request: Request, env: Env, ctx: ExecutionCont
     return json({ success: true });
   }
 
-  // Employee 已取餐 (Không gửi thêm thông báo để tiết kiệm LINE API quota)
+  // Employee 已取餐
   if (incoming === "PICKED_UP") {
     if (order.status === "PICKED_UP") {
-      await saveOrder(env, order); // Sync cache
+      await saveOrder(env, order, tenantId);
       return json({ success: true });
     }
     order.status = "PICKED_UP";
-    await saveOrder(env, order);
+    await saveOrder(env, order, tenantId);
 
     if (ctx && ctx.waitUntil) ctx.waitUntil(syncToGoogleSheets(order, env));
     return json({ success: true });
   }
 
-  // Các trạng thái kết thúc khác
   order.status = incoming;
-  await saveOrder(env, order);
+  await saveOrder(env, order, tenantId);
 
   return json({ success: true });
 }
 
-export async function getOrders(env: Env): Promise<Response> {
-  const cacheRaw = await env.ORDER_STATE.get("order_view:cache");
-  let orders: Order[] = [];
-  try { orders = cacheRaw ? JSON.parse(cacheRaw) : []; } catch { orders = []; }
+export async function getOrders(request: Request, env: Env): Promise<Response> {
+  const tenantId = getTenantId(request);
+  const { results } = await env.DB.prepare(
+    "SELECT * FROM orders WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 200"
+  ).bind(tenantId).all<any>();
 
-  if (orders.length > 0) {
-    return json(orders);
-  }
-
-  // Fallback: Rebuild Cache if empty
-  const indexRaw = await env.ORDER_STATE.get(ORDER_INDEX_LATEST);
-  let keys: string[] = [];
-  try { keys = indexRaw ? JSON.parse(indexRaw) : []; } catch { keys = []; }
-
-  if (!Array.isArray(keys) || keys.length === 0) return json([]);
-
-  const promises = keys.map(k => env.ORDER_STATE.get(`order:${k}`).then(raw => {
-    if (raw) { try { return JSON.parse(raw) as Order; } catch { } }
-    return null;
+  const orders: Order[] = (results || []).map(row => ({
+    key: row.key,
+    customer: row.customer_name,
+    time: row.pickup_time,
+    content: row.order_content,
+    status: row.status,
+    createdAt: new Date(row.created_at + "Z").getTime(),
+    userId: row.user_id || undefined,
+    total: row.total_amount,
+    reason: row.reason || "",
+    note: row.note || ""
   }));
-
-  const results = await Promise.all(promises);
-  orders = results.filter(Boolean) as Order[];
-  orders.sort((a, b) => (b?.createdAt || 0) - (a?.createdAt || 0));
-
-  if (orders.length > 0) {
-    await env.ORDER_STATE.put("order_view:cache", JSON.stringify(orders));
-  }
 
   return json(orders);
 }
 
-export async function saveOrder(env: Env, order: Order): Promise<void> {
-  // 1. Single source of truth
-  await env.ORDER_STATE.put(`order:${order.key}`, JSON.stringify(order));
-
-  // 2. Index Keys
-  const indexRaw = await env.ORDER_STATE.get(ORDER_INDEX_LATEST);
-  let keys: string[] = [];
-  try { keys = indexRaw ? JSON.parse(indexRaw) : []; } catch { keys = []; }
-  if (!Array.isArray(keys)) keys = [];
-  if (!keys.includes(order.key)) keys.unshift(order.key);
-  keys = keys.filter(Boolean);
-  keys = [...new Set(keys)].slice(0, MAX_INDEX);
-  await env.ORDER_STATE.put(ORDER_INDEX_LATEST, JSON.stringify(keys));
-
-  // 3. Cache latest View Data (Safe merge)
-  const cacheRaw = await env.ORDER_STATE.get("order_view:cache");
-  let orders: Order[] = [];
-  try { orders = cacheRaw ? JSON.parse(cacheRaw) : []; } catch { orders = []; }
-
-  if (!cacheRaw || orders.length === 0) {
-    await env.ORDER_STATE.delete("order_view:cache");
-    return;
-  }
-
-  const idx = orders.findIndex(o => o.key === order.key);
-  if (idx >= 0) {
-    orders[idx] = order;
-  } else {
-    orders.unshift(order);
-  }
-
-  orders = orders.filter(Boolean).slice(0, MAX_INDEX);
-  orders.sort((a, b) => (b?.createdAt || 0) - (a?.createdAt || 0));
-  await env.ORDER_STATE.put("order_view:cache", JSON.stringify(orders));
+export async function saveOrder(env: Env, order: Order, tenantId: string): Promise<void> {
+  // Save order to D1
+  await env.DB.prepare(
+    `INSERT INTO orders (key, tenant_id, user_id, customer_name, pickup_time, status, total_amount, order_content, reason, note, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime(?, 'unixepoch'), datetime('now'))
+     ON CONFLICT(key) DO UPDATE SET
+       status = excluded.status,
+       total_amount = excluded.total_amount,
+       order_content = excluded.order_content,
+       reason = excluded.reason,
+       note = excluded.note,
+       updated_at = datetime('now')`
+  ).bind(
+    order.key,
+    tenantId,
+    order.userId || null,
+    order.customer,
+    order.time,
+    order.status,
+    order.total,
+    order.content,
+    order.reason || "",
+    order.note || "",
+    Math.floor((order.createdAt || Date.now()) / 1000)
+  ).run();
 }
+
+export async function handleOrdersMigration(request: Request, env: Env): Promise<Response> {
+  const url = new URL(request.url);
+  const secret = url.searchParams.get("secret");
+  if (secret !== "benmi_migrate_2026") {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  const logs: string[] = [];
+  let cursor = "";
+  let migratedCount = 0;
+
+  try {
+    while (true) {
+      const listRes = await env.ORDER_STATE.list({ prefix: "order:", cursor });
+      for (const keyObj of listRes.keys) {
+        const key = keyObj.name;
+        if (key === "order_index:latest" || key === "order_view:cache") continue;
+
+        const raw = await env.ORDER_STATE.get(key);
+        if (!raw) continue;
+
+        try {
+          const order = JSON.parse(raw);
+          const tenantId = order.tenantId || "benmi";
+
+          await env.DB.prepare(
+            `INSERT OR IGNORE INTO orders (key, tenant_id, user_id, customer_name, pickup_time, status, total_amount, order_content, reason, note, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime(?, 'unixepoch'), datetime('now'))`
+          ).bind(
+            order.key,
+            tenantId,
+            order.userId || null,
+            order.customer,
+            order.time,
+            order.status || "NEW",
+            order.total || 0,
+            order.content,
+            order.reason || "",
+            order.note || "",
+            Math.floor((order.createdAt || Date.now()) / 1000)
+          ).run();
+          migratedCount++;
+        } catch (e: any) {
+          logs.push(`Failed to migrate order ${key}: ${e.message}`);
+        }
+      }
+
+      if (listRes.list_complete || !listRes.cursor) break;
+      cursor = listRes.cursor;
+    }
+
+    return json({
+      success: true,
+      message: `Migrated ${migratedCount} orders successfully.`,
+      logs
+    });
+  } catch (err: any) {
+    return json({ success: false, error: err.message, logs }, 500);
+  }
+}
+

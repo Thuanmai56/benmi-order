@@ -21,7 +21,7 @@ Before writing the proposal, you must:
 
 ## 2. Proposal Structure: Principal Design Proposal (PDP)
 
-Write the proposal as a markdown file. If it is a major design, save it in the workspace under `docs/proposals/<name_of_proposal>.md`. If it is a smaller or transient design, write it as a conversation artifact.
+Write the proposal as a markdown file. If it is a major design, save it in the workspace under `docs/proposals/<name_of_proposal>/<proposal_files>.md`. If it is a smaller or transient design, write it as a conversation artifact.
 
 The PDP must contain the following sections:
 

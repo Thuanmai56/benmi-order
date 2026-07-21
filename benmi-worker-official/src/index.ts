@@ -1,7 +1,7 @@
 import { Env } from './types/env';
 import { corsHeaders } from './utils/http';
 import { handleLineWebhook } from './modules/line';
-import { createOrder, updateOrder, getOrders } from './modules/orders';
+import { createOrder, updateOrder, getOrders, handleOrdersMigration } from './modules/orders';
 import { getConfig, updateConfig } from './modules/config';
 import { getMenu, updateMenu, updateStockStatus } from './modules/menu';
 import { handleAuth, handleAuthChange, handleCreateTempLink, handleVerifyTempLink } from './modules/auth';
@@ -22,7 +22,7 @@ export default {
     }
     if (request.method === "POST" && path === "/api/create") return createOrder(request, env);
     if (request.method === "POST" && path === "/api/update") return updateOrder(request, env, ctx);
-    if (request.method === "GET" && path === "/api/orders") return getOrders(env);
+    if (request.method === "GET" && path === "/api/orders") return getOrders(request, env);
     if (request.method === "GET" && path === "/api/config") return getConfig(request, env);
     if (request.method === "POST" && path === "/api/config") return updateConfig(request, env);
     if (request.method === "GET" && path === "/api/menu") return getMenu(request, env);
@@ -37,6 +37,7 @@ export default {
     if (request.method === "POST" && path === "/api/auth/templink") return handleCreateTempLink(request, env);
     if (request.method === "GET" && path === "/api/auth/templink") return handleVerifyTempLink(request, env);
     if (request.method === "GET" && path === "/api/debug") return debugKV(env, url);
+    if (request.method === "GET" && path === "/api/migrate/orders-kv-to-d1") return handleOrdersMigration(request, env);
 
     return new Response("Not Found", { status: 404, headers: corsHeaders() });
   }
