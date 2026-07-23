@@ -370,7 +370,7 @@
                                 lineTotal += topPrice;
                                 parts.push('加' + c.topping + ' (+$' + topPrice + ')');
                             }
-                            if (c.spicy && c.spicy !== '微辣') parts.push(c.spicy);
+                            if (c.spicy && c.spicy !== '不辣') parts.push(c.spicy);
                             if (c.note && c.note.trim() !== '') parts.push(c.note.trim());
 
                             if (parts.length > 0) {
@@ -475,7 +475,7 @@
             const labelStyle = `font-size: 13px; font-weight: 800; color: var(--muted); display: block; margin: 16px 0 4px 0;`;
 
             for (let i = 0; i < qty; i++) {
-                let data = customizeData[key][i] || { topping: '', spicy: '微辣', note: '' };
+                let data = customizeData[key][i] || { topping: '', spicy: '不辣', note: '' };
                 if (!customizeData[key][i]) customizeData[key][i] = data;
 
                 let toppingOptions = '<option value="">不加料</option>';
@@ -683,7 +683,7 @@
                         customizeData[key].slice(0, cart[key]).forEach((c, i) => {
                             let parts = [];
                             if (c.topping && c.topping !== '') parts.push('加' + c.topping);
-                            if (c.spicy && c.spicy !== '微辣') parts.push(c.spicy);
+                            if (c.spicy && c.spicy !== '不辣') parts.push(c.spicy);
                             if (c.note && c.note.trim() !== '') parts.push(c.note.trim());
                             if (parts.length > 0) {
                                 let zhIdx = zhNumbers[i] || `第 ${i + 1} 份`;
