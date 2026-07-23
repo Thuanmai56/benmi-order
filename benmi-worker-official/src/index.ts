@@ -20,7 +20,7 @@ export default {
     if (request.method === "POST" && (path === "/webhook" || path === "/")) {
       return handleLineWebhook(request, env, ctx);
     }
-    if (request.method === "POST" && path === "/api/create") return createOrder(request, env);
+    if (request.method === "POST" && path === "/api/create") return createOrder(request, env, ctx);
     if (request.method === "POST" && path === "/api/update") return updateOrder(request, env, ctx);
     if (request.method === "GET" && path === "/api/orders") return getOrders(request, env);
     if (request.method === "GET" && path === "/api/config") return getConfig(request, env);
