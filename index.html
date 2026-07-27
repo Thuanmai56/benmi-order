@@ -728,14 +728,20 @@
                     throw new Error(`API returned status ${res.status}`);
                 }
 
-                // Gửi thành công: Đóng cửa sổ và báo cho khách ngay lập tức
-                customAlert('<div style="margin-bottom: 15px;"><svg width="64" height="64" viewBox="0 0 24 24" fill="#10b981"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></div><div style="font-size: 18px; line-height: 1.4; color: #111;">訂單已送出，店員會馬上跟您確認，請稍等</div>', () => {
-                    liff.closeWindow();
-                });
+                // Gửi tin nhắn lưu vết (Chờ hoàn tất trước khi báo cho khách & đóng ứng dụng)
+                if (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient() && liff.isApiAvailable && liff.isApiAvailable('sendMessages')) {
+                    try {
+                        await liff.sendMessages([{ type: 'text', text: '✅ [已收到] ' + msg }]);
+                    } catch (e) {
+                        console.error("liff.sendMessages failed:", e);
+                    }
+                }
 
-                // Gửi tin nhắn lưu vết bất đồng bộ (không chặn luồng thành công của khách)
-                liff.sendMessages([{ type: 'text', text: '✅ [已收到] ' + msg }]).catch(e => {
-                    console.error("Non-blocking liff.sendMessages failed:", e);
+                // Gửi thành công: Báo cho khách và đóng cửa sổ
+                customAlert('<div style="margin-bottom: 15px;"><svg width="64" height="64" viewBox="0 0 24 24" fill="#10b981"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></div><div style="font-size: 18px; line-height: 1.4; color: #111;">訂單已送出，店員會馬上跟您確認，請稍等</div>', () => {
+                    if (typeof liff !== 'undefined' && liff.closeWindow) {
+                        liff.closeWindow();
+                    }
                 });
 
             } catch (err) {
