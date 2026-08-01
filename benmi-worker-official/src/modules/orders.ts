@@ -1,9 +1,20 @@
 import { Env } from '../types/env';
 import { Order } from '../types/index';
-import { json } from '../utils/http';
+import { corsHeaders, json } from '../utils/http';
 import { syncToGoogleSheets } from '../integrations/googleSheets';
 import { pushLineMessage } from './line';
 import { getTenantId } from './menu';
+
+function jsonWithETag(data: any, version: string, status: number = 200): Response {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      ...corsHeaders(),
+      "Content-Type": "application/json",
+      "ETag": `"${version}"`,
+    },
+  });
+}
 
 export const ORDER_INDEX_LATEST = "order_index:latest";
 export const MAX_INDEX = 200;
@@ -266,26 +277,165 @@ export async function updateOrder(request: Request, env: Env, ctx: ExecutionCont
   return json({ success: true });
 }
 
+// In-Memory Cache (RAM) trong Worker Isolate
+interface MemoryOrdersCache {
+  orders: Order[];
+  timestamp: number;
+}
+interface MemoryCountCache {
+  count: number;
+  timestamp: number;
+}
+const memoryOrdersCache = new Map<string, MemoryOrdersCache>();
+const memoryCountCache = new Map<string, MemoryCountCache>();
+const memoryOrdersVersion = new Map<string, string>();
+const MEMORY_CACHE_TTL_MS = 2000; // 2 giây
+
+export async function getWaitingCount(request: Request, env: Env): Promise<Response> {
+  const tenantId = getTenantId(request);
+  const versionKey = `tenant:${tenantId}:orders_version`;
+
+  let currentVersion: string | undefined = memoryOrdersVersion.get(tenantId);
+  if (!currentVersion && env.ORDER_STATE) {
+    try {
+      currentVersion = (await env.ORDER_STATE.get(versionKey)) || undefined;
+    } catch {}
+  }
+  if (!currentVersion) {
+    currentVersion = Date.now().toString();
+    memoryOrdersVersion.set(tenantId, currentVersion);
+  } else {
+    memoryOrdersVersion.set(tenantId, currentVersion);
+  }
+
+  const clientETag = request.headers.get("if-none-match")?.replace(/^W\//, '').replace(/"/g, '');
+  if (clientETag && clientETag === currentVersion) {
+    return new Response(null, {
+      status: 304,
+      headers: {
+        "ETag": `"${currentVersion}"`,
+        ...corsHeaders(),
+      },
+    });
+  }
+
+  const memCached = memoryCountCache.get(tenantId);
+  if (memCached && Date.now() - memCached.timestamp < MEMORY_CACHE_TTL_MS) {
+    return jsonWithETag({ waitingCount: memCached.count }, currentVersion);
+  }
+
+  if (!env.DB) return jsonWithETag({ waitingCount: 0 }, currentVersion);
+
+  try {
+    const row = await env.DB.prepare(
+      `SELECT COUNT(*) as cnt FROM orders 
+       WHERE tenant_id = ? AND status IN ('NEW', 'ACCEPTED', 'WAITING_CUSTOMER_CHANGE', 'WAITING_CUSTOMER_REJECT')`
+    ).bind(tenantId).first<{ cnt: number }>();
+
+    const waitingCount = row?.cnt || 0;
+    memoryCountCache.set(tenantId, { count: waitingCount, timestamp: Date.now() });
+    return jsonWithETag({ waitingCount }, currentVersion);
+  } catch (e: any) {
+    console.error("[getWaitingCount] D1 error:", e);
+    return jsonWithETag({ waitingCount: 0 }, currentVersion);
+  }
+}
+
 export async function getOrders(request: Request, env: Env): Promise<Response> {
   const tenantId = getTenantId(request);
-  const { results } = await env.DB.prepare(
-    "SELECT * FROM orders WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 200"
-  ).bind(tenantId).all<any>();
+  const cacheKey = `tenant:${tenantId}:orders_cache`;
+  const versionKey = `tenant:${tenantId}:orders_version`;
 
-  const orders: Order[] = (results || []).map(row => ({
-    key: row.key,
-    customer: row.customer_name,
-    time: row.pickup_time,
-    content: row.order_content,
-    status: row.status,
-    createdAt: new Date(row.created_at + "Z").getTime(),
-    userId: row.user_id || undefined,
-    total: row.total_amount,
-    reason: row.reason || "",
-    note: row.note || ""
-  }));
+  // 1. Luôn lấy ETag version mới nhất từ Cloudflare KV
+  let currentVersion: string | undefined = undefined;
+  if (env.ORDER_STATE) {
+    try {
+      currentVersion = (await env.ORDER_STATE.get(versionKey)) || undefined;
+    } catch (e) {
+      console.error("[getOrders] KV version read error:", e);
+    }
+  }
 
-  return json(orders);
+  if (!currentVersion) {
+    currentVersion = memoryOrdersVersion.get(tenantId) || Date.now().toString();
+    memoryOrdersVersion.set(tenantId, currentVersion);
+    if (env.ORDER_STATE) {
+      try {
+        await env.ORDER_STATE.put(versionKey, currentVersion);
+      } catch {}
+    }
+  } else {
+    memoryOrdersVersion.set(tenantId, currentVersion);
+  }
+
+  // 2. Client gửi Header "If-None-Match" -> Trả về HTTP 304 Not Modified
+  const clientETag = request.headers.get("if-none-match")?.replace(/^W\//, '').replace(/"/g, '');
+  if (clientETag && clientETag === currentVersion) {
+    return new Response(null, {
+      status: 304,
+      headers: {
+        "ETag": `"${currentVersion}"`,
+        ...corsHeaders(),
+      },
+    });
+  }
+
+  // 3. Kiểm tra RAM Cache trước (0ms latency, 0 KV reads, 0 D1 reads)
+  const memCached = memoryOrdersCache.get(tenantId);
+  if (memCached && Date.now() - memCached.timestamp < MEMORY_CACHE_TTL_MS) {
+    return jsonWithETag(memCached.orders, currentVersion);
+  }
+
+  // 4. RAM Cache Miss -> Kiểm tra KV Cache
+  if (env.ORDER_STATE) {
+    try {
+      const cached = await env.ORDER_STATE.get(cacheKey);
+      if (cached) {
+        const parsedOrders: Order[] = JSON.parse(cached);
+        memoryOrdersCache.set(tenantId, { orders: parsedOrders, timestamp: Date.now() });
+        return jsonWithETag(parsedOrders, currentVersion);
+      }
+    } catch (e) {
+      console.error("[getOrders] KV Cache read error:", e);
+    }
+  }
+
+  if (!env.DB) return jsonWithETag([], currentVersion);
+
+  // 5. RAM & KV Cache Miss -> Truy vấn từ D1 Database
+  try {
+    const { results } = await env.DB.prepare(
+      "SELECT key, customer_name, pickup_time, status, total_amount, order_content, reason, note, created_at FROM orders WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 200"
+    ).bind(tenantId).all<any>();
+
+    const orders: Order[] = (results || []).map(row => ({
+      key: row.key,
+      customer: row.customer_name,
+      time: row.pickup_time,
+      content: row.order_content,
+      status: row.status,
+      createdAt: new Date(row.created_at + "Z").getTime(),
+      userId: row.user_id || undefined,
+      total: row.total_amount,
+      reason: row.reason || "",
+      note: row.note || ""
+    }));
+
+    memoryOrdersCache.set(tenantId, { orders, timestamp: Date.now() });
+
+    if (env.ORDER_STATE) {
+      try {
+        await env.ORDER_STATE.put(cacheKey, JSON.stringify(orders), { expirationTtl: 60 });
+      } catch (e) {
+        console.error("[getOrders] KV Cache write error:", e);
+      }
+    }
+
+    return jsonWithETag(orders, currentVersion);
+  } catch (e: any) {
+    console.error("[getOrders] D1 error:", e);
+    return json({ error: "Failed to fetch orders", details: e.message }, 500);
+  }
 }
 
 export async function saveOrder(env: Env, order: Order, tenantId: string): Promise<void> {
@@ -313,6 +463,21 @@ export async function saveOrder(env: Env, order: Order, tenantId: string): Promi
     order.note || "",
     Math.floor((order.createdAt || Date.now()) / 1000)
   ).run();
+
+  // Invalidate RAM Cache & Update version cho tenantId
+  const newVersion = Date.now().toString();
+  memoryOrdersVersion.set(tenantId, newVersion);
+  memoryOrdersCache.delete(tenantId);
+  memoryCountCache.delete(tenantId);
+
+  if (env.ORDER_STATE) {
+    try {
+      await env.ORDER_STATE.delete(`tenant:${tenantId}:orders_cache`);
+      await env.ORDER_STATE.put(`tenant:${tenantId}:orders_version`, newVersion);
+    } catch (e) {
+      console.error("[saveOrder] KV Cache update error:", e);
+    }
+  }
 }
 
 export async function handleOrdersMigration(request: Request, env: Env): Promise<Response> {
