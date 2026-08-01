@@ -1,7 +1,7 @@
 import { Env } from './types/env';
 import { corsHeaders } from './utils/http';
 import { handleLineWebhook } from './modules/line';
-import { createOrder, updateOrder, getOrders, handleOrdersMigration } from './modules/orders';
+import { createOrder, updateOrder, getOrders, getWaitingCount, handleOrdersMigration } from './modules/orders';
 import { getConfig, updateConfig } from './modules/config';
 import { getMenu, updateMenu, updateStockStatus } from './modules/menu';
 import { handleAuth, handleAuthChange, handleCreateTempLink, handleVerifyTempLink } from './modules/auth';
@@ -22,6 +22,7 @@ export default {
     }
     if (request.method === "POST" && path === "/api/create") return createOrder(request, env, ctx);
     if (request.method === "POST" && path === "/api/update") return updateOrder(request, env, ctx);
+    if (request.method === "GET" && path === "/api/orders/waiting-count") return getWaitingCount(request, env);
     if (request.method === "GET" && path === "/api/orders") return getOrders(request, env);
     if (request.method === "GET" && path === "/api/config") return getConfig(request, env);
     if (request.method === "POST" && path === "/api/config") return updateConfig(request, env);
