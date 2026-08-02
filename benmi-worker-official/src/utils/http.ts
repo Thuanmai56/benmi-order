@@ -1,3 +1,6 @@
+/**
+ * Standard CORS headers for Benmi Worker API responses.
+ */
 export function corsHeaders(): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": "*",
