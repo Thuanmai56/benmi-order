@@ -4,26 +4,28 @@ fallback_models = ["gemini/gemini-1.5-flash"]
 custom_model_max_tokens = 1000000
 git_provider = "github"
 
+[github_action_config]
+auto_review = true
+auto_describe = true
+auto_improve = true
+
 [pr_reviewer]
+require_score_review = true
+require_tests_review = true
+require_estimate_effort_to_review = true
+require_security_review = true
+num_code_suggestions = 4
 extra_instructions = """
 Bạn là một Senior Code Reviewer chuyên nghiệp cho dự án benmi-order (sử dụng Cloudflare Workers, TypeScript, D1 Database, Hono framework).
-Khi review PR, hãy tập trung kiểm tra các tiêu chí sau:
-1. **Cloudflare Workers & Hono Best Practices**:
-   - Đảm bảo async/await được sử dụng chính xác, không floating promise.
-   - Tránh dùng các module Node.js không tương thích với Workers runtime trừ khi có polyfill/node_compat phù hợp.
-   - Kiểm tra việc truyền và truy cập Env bindings (D1, KV, R2, Secrets).
-2. **Hiệu năng & D1 Database**:
-   - Phát hiện các câu lệnh SQL không tối ưu, N+1 queries, thiếu index, hoặc SELECT * không cần thiết.
-   - Ưu tiên batch queries hoặc chuẩn hóa câu lệnh D1 SQLite.
-3. **Bảo mật & Validation**:
-   - Kiểm tra kĩ việc validate input tại các API endpoints.
-   - Đảm bảo tính cô lập dữ liệu giữa các Tenant (Tenant isolation / `tenant_id` check trong mọi query D1).
-4. **TypeScript & Code Quality**:
-   - Sử dụng type an toàn, hạn chế dùng `any`.
-   - Xử lý lỗi (Error handling) rõ ràng, trả về chuẩn HTTP status code.
+Hãy luôn đưa ra nhận xét chi tiết bằng tiếng Việt bao gồm:
+1. **Phân tích tổng quan tác động của PR**.
+2. **Kiểm tra chuẩn Cloudflare Workers & Hono**: Async/await, Workers runtime compatibility, Env bindings.
+3. **Kiểm tra D1 Database**: Tránh N+1 query, kiểm tra index, đảm bảo tenant_id isolation.
+4. **Kiểm tra TypeScript**: Hạn chế any type, xử lý lỗi rõ ràng.
 """
 
 [pr_description]
+publish_labels = true
 extra_instructions = """
 Tóm tắt PR bằng tiếng Việt ngắn gọn, súc tích, bao gồm:
 - Mục tiêu chính của PR.
@@ -31,6 +33,8 @@ Tóm tắt PR bằng tiếng Việt ngắn gọn, súc tích, bao gồm:
 """
 
 [pr_code_suggestions]
+num_code_suggestions = 4
+summarize_only = false
 extra_instructions = """
-Đưa ra các gợi ý refactor code cụ thể, sạch sẽ, tuân thủ đúng chuẩn TypeScript và Cloudflare Workers. Giải thích ngắn gọn lý do bằng tiếng Việt.
+Đưa ra các gợi ý refactor code cụ thể, sạch sẽ, tuân thủ đúng chuẩn TypeScript và Cloudflare Workers. Giải thích lý do bằng tiếng Việt.
 """
