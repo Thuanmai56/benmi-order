@@ -8,12 +8,13 @@ export function corsHeaders(): Record<string, string> {
   };
 }
 
-export function json(data: any, status: number = 200): Response {
+export function json<T = unknown>(data: T, status: number = 200, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
       "Content-Type": "application/json",
       ...corsHeaders(),
+      ...headers,
     },
   });
 }
