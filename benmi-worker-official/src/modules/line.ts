@@ -1,20 +1,30 @@
 import { Env } from '../types/env';
+import { TenantContext } from '../types/tenant';
 import { Order } from '../types/index';
 import { corsHeaders } from '../utils/http';
 import { resolveSecret } from '../utils/secrets';
 import { saveOrder, getPendingMap } from './orders';
-import { callAI } from '../integrations/openRouter';
+import { callAI } from '../integrations/groq';
 import { syncToGoogleSheets } from '../integrations/googleSheets';
 import { getTenantId } from './menu';
 
-async function getLineToken(env: Env): Promise<string> {
+async function getLineToken(env: Env, tenantCtx?: TenantContext | null): Promise<string> {
+  if (tenantCtx?.lineChannelToken) {
+    return tenantCtx.lineChannelToken;
+  }
   return await resolveSecret(env.LINE_CHANNEL_TOKEN);
 }
 
-export async function pushLineMessage(userId: string, text: string, env: Env): Promise<void> {
-  const token = await getLineToken(env);
-  if (!token) { console.error("[Benmi] pushLineMessage: LINE_CHANNEL_TOKEN missing"); return; }
-  if (!userId) { console.error("[Benmi] pushLineMessage: userId is empty, cannot push"); return; }
+export async function pushLineMessage(
+  userId: string,
+  text: string,
+  env: Env,
+  tenantCtx?: TenantContext | null
+): Promise<void> {
+  const token = await getLineToken(env, tenantCtx);
+  const brand = tenantCtx?.brandName || "Bot";
+  if (!token) { console.error(`[${brand}] pushLineMessage: LINE_CHANNEL_TOKEN missing`); return; }
+  if (!userId) { console.error(`[${brand}] pushLineMessage: userId is empty, cannot push`); return; }
 
   try {
     const res = await fetch("https://api.line.me/v2/bot/message/push", {
@@ -31,17 +41,23 @@ export async function pushLineMessage(userId: string, text: string, env: Env): P
 
     if (!res.ok) {
       const body = await res.text().catch(() => "(unreadable)");
-      console.error(`[Benmi] pushLineMessage FAILED: status=${res.status} userId=${userId} body=${body}`);
+      console.error(`[${brand}] pushLineMessage FAILED: status=${res.status} userId=${userId} body=${body}`);
     } else {
-      console.log(`[Benmi] pushLineMessage OK: userId=${userId}`);
+      console.log(`[${brand}] pushLineMessage OK: userId=${userId}`);
     }
   } catch (e: any) {
-    console.error(`[Benmi] pushLineMessage EXCEPTION: userId=${userId} error=${e.message}`);
+    console.error(`[${brand}] pushLineMessage EXCEPTION: userId=${userId} error=${e.message}`);
   }
 }
 
-export async function replyText(replyToken: string, text: string, env: Env): Promise<boolean> {
-  const token = await getLineToken(env);
+export async function replyText(
+  replyToken: string,
+  text: string,
+  env: Env,
+  tenantCtx?: TenantContext | null
+): Promise<boolean> {
+  const token = await getLineToken(env, tenantCtx);
+  const brand = tenantCtx?.brandName || "Bot";
   if (!token || !replyToken) return false;
 
   try {
@@ -59,21 +75,29 @@ export async function replyText(replyToken: string, text: string, env: Env): Pro
 
     if (!res.ok) {
       const errBody = await res.text().catch(() => "(unreadable)");
-      console.error(`[Benmi] replyText FAILED: status=${res.status} body=${errBody}`);
+      console.error(`[${brand}] replyText FAILED: status=${res.status} body=${errBody}`);
       return false;
     }
     return true;
   } catch (e: any) {
-    console.error(`[Benmi] replyText EXCEPTION: error=${e.message}`);
+    console.error(`[${brand}] replyText EXCEPTION: error=${e.message}`);
     return false;
   }
 }
 
-export async function replyWithLiffRedirect(replyToken: string, userId: string, env: Env): Promise<boolean> {
-  const token = await getLineToken(env);
+export async function replyWithLiffRedirect(
+  replyToken: string,
+  userId: string,
+  env: Env,
+  tenantCtx?: TenantContext | null
+): Promise<boolean> {
+  const token = await getLineToken(env, tenantCtx);
+  const brand = tenantCtx?.brandName || "Bot";
   if (!token || !replyToken) return false;
 
-  const liffUrl = (await resolveSecret(env.LIFF_URL)) || "https://liff.line.me/";
+  const liffUrl = tenantCtx?.liffUrl || (await resolveSecret(env.LIFF_URL)) || "https://liff.line.me/";
+  const brandColor = tenantCtx?.brandColor || "#00b900";
+  const brandTitle = tenantCtx?.brandName || "線上點餐";
 
   const flexBubble = {
     type: "bubble",
@@ -81,7 +105,7 @@ export async function replyWithLiffRedirect(replyToken: string, userId: string, 
     header: {
       type: "box",
       layout: "vertical",
-      backgroundColor: "#00b900",
+      backgroundColor: brandColor,
       paddingAll: "20px",
       contents: [
         {
@@ -95,8 +119,8 @@ export async function replyWithLiffRedirect(replyToken: string, userId: string, 
               layout: "vertical",
               justifyContent: "center",
               contents: [
-                { type: "text", text: "線上點餐", weight: "bold", size: "xl", color: "#ffffff" },
-                { type: "text", text: "Online Order", size: "sm", color: "#d4f5d4" }
+                { type: "text", text: brandTitle, weight: "bold", size: "xl", color: "#ffffff" },
+                { type: "text", text: "Online Order", size: "sm", color: "#ffffff" }
               ]
             }
           ]
@@ -146,7 +170,7 @@ export async function replyWithLiffRedirect(replyToken: string, userId: string, 
         {
           type: "box",
           layout: "vertical",
-          backgroundColor: "#06C755",
+          backgroundColor: brandColor,
           cornerRadius: "xxl",
           paddingAll: "18px",
           action: {
@@ -189,7 +213,7 @@ export async function replyWithLiffRedirect(replyToken: string, userId: string, 
         messages: [
           {
             type: "text",
-            text: "您好！為了確保您的訂單準確無誤，請點擊下方連結进入系統預訂 🙏"
+            text: "您好！為了確保您的訂單準確無誤，請點擊下方連結進入系統預訂 🙏"
           },
           {
             type: "flex",
@@ -205,28 +229,46 @@ export async function replyWithLiffRedirect(replyToken: string, userId: string, 
       return true;
     } else {
       const errBody = await resp.text().catch(() => "(unreadable)");
-      console.error(`[Benmi] replyWithLiffRedirect FAILED: status=${resp.status} body=${errBody}`);
+      console.error(`[${brand}] replyWithLiffRedirect FAILED: status=${resp.status} body=${errBody}`);
       return false;
     }
   } catch (e: any) {
-    console.error(`[Benmi] replyWithLiffRedirect EXCEPTION: error=${e.message}`);
+    console.error(`[${brand}] replyWithLiffRedirect EXCEPTION: error=${e.message}`);
     return false;
   }
 }
 
-export function handleQuickReply(text: string): string | null {
+export function handleQuickReply(text: string, tenantCtx?: TenantContext | null): string | null {
   const msg = String(text || "").toLowerCase();
-  if (msg.includes("營業時間"))
-    return "我們的營業時間：11:00-21:00（一到五），7:30-21:00（六日）。";
-  if (msg.includes("地址") || msg.includes("在哪"))
-    return "新北市土城區中央路二段135號";
-  if (msg.includes("外送嗎"))
-    return "Benmi 最新外送說明如下：\n" +
-           "🛵 滿 2,000 元： 不限距離，土城全區皆享免運！\n" +
-           "🛵 滿 800 元：\n" +
-           "距離店址 2公里內 ➔ 免運 \n" +
-           "距離店址 超過2公里 ➔ 酌收 80元 運費。\n" +
-           "🛵 未滿 800 元： 也別擔心！歡迎直接點擊 UberEats 平台直接下單，美味一樣送到家 👇 👉 https://cutt.ly/Mt9w2fAD";
+
+  // 1. Dynamic Quick Replies from TenantContext
+  if (tenantCtx?.quickReplies && tenantCtx.quickReplies.length > 0) {
+    for (const item of tenantCtx.quickReplies) {
+      if (item.triggers.some(trig => msg.includes(trig.toLowerCase()))) {
+        return item.reply;
+      }
+    }
+  }
+
+  // 2. Fallback to hardcoded keywords if matching Benmi defaults
+  if (msg.includes("營業時間")) {
+    return tenantCtx?.operatingHours
+      ? `我們的營業時間：${tenantCtx.operatingHours}`
+      : "我們的營業時間：11:00-21:00（一到五），7:30-21:00（六日）。";
+  }
+  if (msg.includes("地址") || msg.includes("在哪")) {
+    return tenantCtx?.storeAddress || "新北市土城區中央路二段135號";
+  }
+  if (msg.includes("外送嗎")) {
+    return tenantCtx?.deliveryPolicy ||
+      "Benmi 最新外送說明如下：\n" +
+      "🛵 滿 2,000 元： 不限距離，土城全區皆享免運！\n" +
+      "🛵 滿 800 元：\n" +
+      "距離店址 2公里內 ➔ 免運 \n" +
+      "距離店址 超過2公里 ➔ 酌收 80元 運費。\n" +
+      "🛵 未滿 800 元： 也別擔心！歡迎直接點擊 UberEats 平台直接下單，美味一樣送到家 👇 👉 https://cutt.ly/Mt9w2fAD";
+  }
+
   return null;
 }
 
@@ -241,9 +283,16 @@ export function normalizeCustomerReply(text: string) {
   return { hasAgree, hasCancel, hasDifferent };
 }
 
-export async function handleLineWebhook(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+export async function handleLineWebhook(
+  request: Request,
+  env: Env,
+  ctx: ExecutionContext,
+  tenantCtx?: TenantContext | null
+): Promise<Response> {
   const body: any = await request.json().catch(() => ({}));
   const events = Array.isArray(body.events) ? body.events : [];
+  const tenantId = tenantCtx?.tenantId || getTenantId(request);
+  const brandName = tenantCtx?.brandName || tenantId;
 
   for (const event of events) {
     if (!event || event.type !== "message") continue;
@@ -255,16 +304,14 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
     const userId = source.userId;
     if (!userId) continue;
 
-    const tenantId = getTenantId(request);
     const userText = message.text || "";
     const pendingKey = `pending:${userId}`;
     const draftKey = `draft:${userId}`;
 
     // 0) Priority Catch new order from LIFF text message (Bypasses pending states)
     if (userText.includes("訂單編號：") && userText.includes("📦 訂單內容：")) {
-      // If it is a receipt message from successful API creation, skip parsing/saving to avoid overwriting due to KV latency
       if (userText.includes("[已收到]") || userText.includes("[Đã nhận]")) {
-        console.log(`[Benmi] Webhook received receipt message. Skipping to avoid overwrite.`);
+        console.log(`[${brandName}] Webhook received receipt message. Skipping to avoid overwrite.`);
         try {
           await env.DB.prepare("DELETE FROM pending_actions WHERE tenant_id = ? AND user_id = ?")
             .bind(tenantId, userId).run();
@@ -290,7 +337,6 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
       const timeStr = timeLine ? timeLine.replace("🕒 取餐時間：", "").trim() : "Unknown";
       const totalStr = totalLine ? totalLine.replace("💰 總金額：", "").replace("$", "").trim() : "0";
 
-      // Robust note extraction using absolute string indexing to handle multi-line notes perfectly
       let noteStr = "";
       const noteStart = userText.indexOf("總備註");
       const totalStartIdx = userText.indexOf("💰 總金額");
@@ -298,7 +344,7 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
       if (noteStart !== -1) {
         let colonIdx = userText.indexOf("：", noteStart);
         if (colonIdx === -1) colonIdx = userText.indexOf(":", noteStart);
-        if (colonIdx === -1) colonIdx = noteStart + 3; // fallback if no colon found
+        if (colonIdx === -1) colonIdx = noteStart + 3;
 
         if (totalStartIdx !== -1 && totalStartIdx > colonIdx) {
           noteStr = userText.substring(colonIdx + 1, totalStartIdx).trim();
@@ -309,7 +355,6 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
 
       let custName = "Khách (Web)";
 
-      // Check if order already exists to preserve customer name
       const existingOrder = await env.DB.prepare(
         "SELECT customer_name FROM orders WHERE key = ?"
       ).bind(orderKey).first<{ customer_name: string }>();
@@ -343,7 +388,7 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
       if (ctx && ctx.waitUntil) {
         ctx.waitUntil((async () => {
           try {
-            const token = await getLineToken(env);
+            const token = await getLineToken(env, tenantCtx);
             const profUrl = `https://api.line.me/v2/bot/profile/${userId}`;
             const resp = await fetch(profUrl, { headers: { Authorization: `Bearer ${token}` } });
             if (resp.ok) {
@@ -354,10 +399,10 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
               }
             } else {
               const errBody = await resp.text().catch(() => "(unreadable)");
-              console.error(`[Benmi] Background profile fetch FAILED: status=${resp.status} userId=${userId} body=${errBody}`);
+              console.error(`[${brandName}] Background profile fetch FAILED: status=${resp.status} userId=${userId} body=${errBody}`);
             }
           } catch (e: any) {
-            console.error("[Benmi] Background profile fetch EXCEPTION:", e);
+            console.error(`[${brandName}] Background profile fetch EXCEPTION:`, e);
           }
         })());
       }
@@ -377,30 +422,24 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
       let draft: any = {};
       try { draft = JSON.parse(draftRaw); } catch { }
 
-      // Auto-expire drafts older than 2 hours
       const draftAge = Date.now() - (draft.lastUpdate || 0);
       if (draftAge > 2 * 60 * 60 * 1000) {
         await env.ORDER_STATE.delete(draftKey);
-        // Fall through to normal handling below
       } else {
         const processDraft = async () => {
-          // If already redirected once in the last 30 min, stay silent
           const alreadySent = await env.ORDER_STATE.get(`liff_redirected:${userId}`);
           if (alreadySent) {
-            // Clear the stuck draft so it won't interfere next time
             try { await env.ORDER_STATE.delete(draftKey); } catch { }
             return;
           }
 
           const ctxPrompt = `顧客之前的草稿訂單：「${draft.text || '（空）'}」\n顧客剛剛傳來：「${userText}」\n\n請問顧客這句話是：在【繼續點餐/追加餐點/回答取餐時間/確認訂單】嗎？\n如果是 → 回覆「ORDER」\n如果不是（在發問、聊天、詢問食材等）→ 回覆「IGNORE」\n請只回覆 ORDER 或 IGNORE。`;
-          const ctxRes = await callAI(ctxPrompt, env);
+          const ctxRes = await callAI(ctxPrompt, env, tenantCtx);
           const upper = (ctxRes || "").toUpperCase();
           if (upper.includes("ORDER") || !ctxRes) {
-            // ORDER intent detected, or AI failed → redirect to LIFF as safe fallback
             try { await env.ORDER_STATE.delete(draftKey); } catch { }
-            await replyWithLiffRedirect(replyToken, userId, env);
+            await replyWithLiffRedirect(replyToken, userId, env, tenantCtx);
           } else {
-            // IGNORE: clear draft so bot doesn't trap future messages
             try { await env.ORDER_STATE.delete(draftKey); } catch { }
           }
         };
@@ -415,11 +454,10 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
 
     // 1) Pending flow priority
     const pMap = await getPendingMap(env, tenantId, userId);
-    // Find latest pending entry for this user
     const pKeys = Object.keys(pMap).sort((a, b) => (pMap[b].createdAt || 0) - (pMap[a].createdAt || 0));
 
     if (pKeys.length > 0) {
-      const orderKey = pKeys[0]; // Respond to the most recent one
+      const orderKey = pKeys[0];
       const pending = pMap[orderKey];
       const questionText = pending?.questionText || "";
       const lowerText = userText.trim().toLowerCase();
@@ -443,14 +481,12 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
           };
           const pendingType = pending?.type;
 
-          // If handled:
           const finishPending = async () => {
             await env.DB.prepare(
               "DELETE FROM pending_actions WHERE tenant_id = ? AND user_id = ? AND order_key = ?"
             ).bind(tenantId, userId, orderKey).run();
           };
 
-          // Xử lý độ trễ lan truyền của Cloudflare KV
           const currentReason = pending?.reason || order.reason || "";
           const currentNote = pending?.note || order.note || "";
 
@@ -460,9 +496,9 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
             const isCancel = lowerText.includes("不要") || lowerText.includes("取消") || lowerText.includes("不用");
 
             if (isCancel) {
-              order.status = "REJECTED"; // Tự động huỷ
-              await replyText(replyToken, `收到，謝謝您！`, env);
-              const cleanup = async () => { await saveOrder(env, order, tenantId); await finishPending(); await syncToGoogleSheets(order, env); };
+              order.status = "REJECTED";
+              await replyText(replyToken, `收到，謝謝您！`, env, tenantCtx);
+              const cleanup = async () => { await saveOrder(env, order, tenantId); await finishPending(); await syncToGoogleSheets(order, env, tenantCtx); };
               if (ctx && ctx.waitUntil) ctx.waitUntil(cleanup()); else await cleanup();
             }
             else if (exactMatch) {
@@ -477,22 +513,22 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
               }
               order.reason = "";
               order.note = "";
-              order.status = "NEW"; // Tái xuất hiện thông báo đơn mới trên Dashboard
-              await replyText(replyToken, `收到您的同意！取餐時間已為您更改為 ${newSuggestedTime}`, env);
+              order.status = "NEW";
+              await replyText(replyToken, `收到您的同意！取餐時間已為您更改為 ${newSuggestedTime}`, env, tenantCtx);
               const cleanup = async () => { await saveOrder(env, order, tenantId); await finishPending(); };
               if (ctx && ctx.waitUntil) ctx.waitUntil(cleanup()); else await cleanup();
             }
             else {
-              await replyText(replyToken, `請簡單回覆「好 / 同意」以確認，或回覆「不要了 / 取消」取消訂單。`, env);
+              await replyText(replyToken, `請簡單回覆「好 / 同意」以確認，或回覆「不要了 / 取消」取消訂單。`, env, tenantCtx);
             }
-            continue; // KẾT THÚC LUỒNG XỬ LÝ RIÊNG
+            continue;
           }
 
-          // CÁC TRƯỜNG HỢP KHÁC (ví dụ: Hết món, Đổi món): DÙNG AI ĐỂ XỬ LÝ
+          // CÁC TRƯỜNG HỢP KHÁC: DÙNG AI ĐỂ XỬ LÝ
           let aiSaysNo = false;
           if (questionText) {
             const prompt = `店家剛才詢問顧客：「${questionText}」\n顧客的回覆是：「${userText}」\n請問顧客的回覆是否針對問題做出了決定（如已明確選擇換的口味、同意、拒絕等）？\n注意：如果問題 is about flavor, but customer replied yes without specifying flavor, return NO.\nNếu khách hàng hỏi ngược, return NO. Nếu khách hàng chọn cụ thể hoặc đồng ý hủy, return YES. STRICTLY return YES or NO.`;
-            const aiRes = await callAI(prompt, env);
+            const aiRes = await callAI(prompt, env, tenantCtx);
             if (aiRes) {
               const up = aiRes.toUpperCase();
               if (up.includes("NO") && !up.includes("YES")) {
@@ -505,16 +541,16 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
             const isCancel = lowerText.includes("不要了") || lowerText.includes("取消") || lowerText.includes("不用了") || lowerText === "不要";
 
             if (isCancel) {
-              order.status = "REJECTED"; // Tự động huỷ
-              await replyText(replyToken, `好的，已為您取消訂單 #${orderKey}。`, env);
-              const cleanup = async () => { await saveOrder(env, order, tenantId); await finishPending(); await syncToGoogleSheets(order, env); };
+              order.status = "REJECTED";
+              await replyText(replyToken, `好的，已為您取消訂單 #${orderKey}。`, env, tenantCtx);
+              const cleanup = async () => { await saveOrder(env, order, tenantId); await finishPending(); await syncToGoogleSheets(order, env, tenantCtx); };
               if (ctx && ctx.waitUntil) ctx.waitUntil(cleanup()); else await cleanup();
               continue;
             }
 
             if (aiSaysNo) {
-              await replyText(replyToken, `請您明確告訴我們想換什麼品項，或者回覆「取消」直接取消訂單。`, env);
-              continue; // Yêu cầu khách nhập rõ ràng
+              await replyText(replyToken, `請您明確告訴我們想換什麼品項，或者回覆「取消」直接取消訂單。`, env, tenantCtx);
+              continue;
             }
 
             if (currentReason === "口味售完") {
@@ -522,23 +558,22 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
               order.reason = "";
               order.note = "";
               order.status = "NEW";
-              await replyText(replyToken, `收到您的回覆！我們會依您的需求修改訂單。`, env);
+              await replyText(replyToken, `收到您的回覆！我們會依您的需求修改訂單。`, env, tenantCtx);
               const cleanup = async () => { await saveOrder(env, order, tenantId); await finishPending(); };
               if (ctx && ctx.waitUntil) ctx.waitUntil(cleanup()); else await cleanup();
               continue;
             }
 
-            // Fallback for explicitly agreed non-flavor changes
             const isAgree = lowerText === "好" || lowerText === "同意" || lowerText === "ok";
             if (isAgree) {
               order.status = "ACCEPTED";
-              await replyText(replyToken, `Benmi 收到您的同意！我們會開始準備您的訂單 #${orderKey}。🥖`, env);
+              await replyText(replyToken, `${brandName} 收到您的同意！我們會開始準備您的訂單 #${orderKey}。🥖`, env, tenantCtx);
               const cleanup = async () => { await saveOrder(env, order, tenantId); await finishPending(); };
               if (ctx && ctx.waitUntil) ctx.waitUntil(cleanup()); else await cleanup();
               continue;
             }
 
-            await replyText(replyToken, `請再明確回覆您的決定。`, env);
+            await replyText(replyToken, `請再明確回覆您的決定。`, env, tenantCtx);
             continue;
           }
 
@@ -551,10 +586,11 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
               const reason = order.reason || "（未提供原因）";
               await replyText(
                 replyToken,
-                `非常抱歉！Benmi 無法接下您的訂單 #${orderKey}。\n原因：${reason}\n感謝您訂購 Benmi，歡迎您下次再訂購。`,
-                env
+                `非常抱歉！${brandName} 無法接下您的訂單 #${orderKey}。\n原因：${reason}\n感謝您訂購 ${brandName}，歡迎您下次再訂購。`,
+                env,
+                tenantCtx
               );
-              const cleanup = async () => { await saveOrder(env, order, tenantId); await finishPending(); await syncToGoogleSheets(order, env); };
+              const cleanup = async () => { await saveOrder(env, order, tenantId); await finishPending(); await syncToGoogleSheets(order, env, tenantCtx); };
               if (ctx && ctx.waitUntil) ctx.waitUntil(cleanup()); else await cleanup();
               continue;
             }
@@ -564,55 +600,52 @@ export async function handleLineWebhook(request: Request, env: Env, ctx: Executi
               await replyText(
                 replyToken,
                 `謝謝您的回覆！我已將訂單 #${orderKey} 回到「等待店家接單」狀態，店家會再為您確認。`,
-                env
+                env,
+                tenantCtx
               );
               const cleanup = async () => { await saveOrder(env, order, tenantId); await finishPending(); };
               if (ctx && ctx.waitUntil) ctx.waitUntil(cleanup()); else await cleanup();
               continue;
             }
 
-            await replyText(replyToken, `請回覆「同意」或「不同意」。`, env);
+            await replyText(replyToken, `請回覆「同意」或「不同意」。`, env, tenantCtx);
             continue;
           }
         }
       }
 
-      // pending exists but invalid state
       try {
         await env.DB.prepare("DELETE FROM pending_actions WHERE tenant_id = ? AND user_id = ?")
           .bind(tenantId, userId).run();
       } catch { }
-      await replyText(replyToken, `目前有點狀況，請稍後再確認一次。`, env);
+      await replyText(replyToken, `目前有點狀況，請稍後再確認一次。`, env, tenantCtx);
       continue;
     }
 
     // 2) Quick reply
-    const quick = handleQuickReply(userText);
+    const quick = handleQuickReply(userText, tenantCtx);
     if (quick) {
-      await replyText(replyToken, quick, env);
+      await replyText(replyToken, quick, env, tenantCtx);
       continue;
     }
 
-    // 3) AI fallback - Detect ordering intent and redirect to LIFF (once per 30 min)
+    // 3) AI fallback - Detect ordering intent and redirect to LIFF
     const aiPromise = async () => {
-      // If already redirected once in the last 30 min, stay silent — let human staff handle
       const alreadySent = await env.ORDER_STATE.get(`liff_redirected:${userId}`);
       if (alreadySent) return;
 
       const intentPrompt = `顧客傳來：「${userText}」\n這句話是在向店家「下訂單點餐」嗎（包含提到想要某個餐點、詢問如何點餐、說要訂餐等）？\n如果是 → 回覆「YES」\n如果不是（單純發問、聊天、抱怨等）→ 回覆「NO」\n請只回覆 YES 或 NO。`;
-      const intentRes = await callAI(intentPrompt, env);
+      const intentRes = await callAI(intentPrompt, env, tenantCtx);
       const resUpper = (intentRes || "").toUpperCase();
 
       if (resUpper.includes("YES")) {
-        await replyWithLiffRedirect(replyToken, userId, env);
+        await replyWithLiffRedirect(replyToken, userId, env, tenantCtx);
         return;
       }
 
-      // If AI explicitly said NO: stay silent, let human staff handle
       if (resUpper.includes("NO")) return;
 
-      // If AI failed (null/error/empty): send LIFF redirect as safe fallback
-      await replyWithLiffRedirect(replyToken, userId, env);
+      await replyWithLiffRedirect(replyToken, userId, env, tenantCtx);
     };
     if (ctx && ctx.waitUntil) {
       ctx.waitUntil(aiPromise());
