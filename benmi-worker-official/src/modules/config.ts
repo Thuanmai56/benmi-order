@@ -2,8 +2,10 @@ import { Env } from '../types/env';
 import { json } from '../utils/http';
 import { getTenantId } from './menu';
 
-export async function getConfig(request: Request, env: Env): Promise<Response> {
-  const tenantId = getTenantId(request);
+import { TenantContext } from '../types/tenant';
+
+export async function getConfig(request: Request, env: Env, tenantCtx?: TenantContext | null): Promise<Response> {
+  const tenantId = tenantCtx?.tenantId || getTenantId(request);
   const cacheKey = `tenant:${tenantId}:config`;
 
   let stored: any = {};
@@ -23,14 +25,14 @@ export async function getConfig(request: Request, env: Env): Promise<Response> {
   }
   
   return json({ 
-    liffId: stored.liffId || env.LIFF_ID || null,
-    operatingHours: stored.operatingHours || null
+    liffId: stored.liffId || tenantCtx?.liffId || env.LIFF_ID || null,
+    operatingHours: stored.operatingHours || tenantCtx?.operatingHours || null
   });
 }
 
-export async function updateConfig(request: Request, env: Env): Promise<Response> {
+export async function updateConfig(request: Request, env: Env, tenantCtx?: TenantContext | null): Promise<Response> {
   try {
-    const tenantId = getTenantId(request);
+    const tenantId = tenantCtx?.tenantId || getTenantId(request);
     const cacheKey = `tenant:${tenantId}:config`;
     const payload: any = await request.json();
     

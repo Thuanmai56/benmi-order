@@ -1,0 +1,35 @@
+[config]
+model = "gemini/gemini-1.5-pro"
+fallback_models = ["gemini/gemini-1.5-flash"]
+git_provider = "github"
+
+[pr_reviewer]
+extra_instructions = """
+Bạn là một Senior Code Reviewer chuyên nghiệp cho dự án benmi-order (sử dụng Cloudflare Workers, TypeScript, D1 Database, Hono framework).
+Khi review PR, hãy tập trung kiểm tra các tiêu chí sau:
+1. **Cloudflare Workers & Hono Best Practices**:
+   - Đảm bảo async/await được sử dụng chính xác, không floating promise.
+   - Tránh dùng các module Node.js không tương thích với Workers runtime trừ khi có polyfill/node_compat phù hợp.
+   - Kiểm tra việc truyền và truy cập Env bindings (D1, KV, R2, Secrets).
+2. **Hiệu năng & D1 Database**:
+   - Phát hiện các câu lệnh SQL không tối ưu, N+1 queries, thiếu index, hoặc SELECT * không cần thiết.
+   - Ưu tiên batch queries hoặc chuẩn hóa câu lệnh D1 SQLite.
+3. **Bảo mật & Validation**:
+   - Kiểm tra kĩ việc validate input tại các API endpoints.
+   - Đảm bảo tính cô lập dữ liệu giữa các Tenant (Tenant isolation / `tenant_id` check trong mọi query D1).
+4. **TypeScript & Code Quality**:
+   - Sử dụng type an toàn, hạn chế dùng `any`.
+   - Xử lý lỗi (Error handling) rõ ràng, trả về chuẩn HTTP status code.
+"""
+
+[pr_description]
+extra_instructions = """
+Tóm tắt PR bằng tiếng Việt ngắn gọn, súc tích, bao gồm:
+- Mục tiêu chính của PR.
+- Danh sách các thay đổi quan trọng theo từng file/thành phần.
+"""
+
+[pr_code_suggestions]
+extra_instructions = """
+Đưa ra các gợi ý refactor code cụ thể, sạch sẽ, tuân thủ đúng chuẩn TypeScript và Cloudflare Workers. Giải thích ngắn gọn lý do bằng tiếng Việt.
+"""

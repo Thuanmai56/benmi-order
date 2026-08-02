@@ -5,6 +5,8 @@ import { syncToGoogleSheets } from '../integrations/googleSheets';
 import { pushLineMessage } from './line';
 import { getTenantId } from './menu';
 
+import { TenantContext } from '../types/tenant';
+
 function jsonWithETag(data: any, version: string, status: number = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
@@ -19,9 +21,14 @@ function jsonWithETag(data: any, version: string, status: number = 200): Respons
 export const ORDER_INDEX_LATEST = "order_index:latest";
 export const MAX_INDEX = 200;
 
-export async function createOrder(request: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
+export async function createOrder(
+  request: Request,
+  env: Env,
+  ctx?: ExecutionContext,
+  tenantCtx?: TenantContext | null
+): Promise<Response> {
   const data: any = await request.json();
-  const tenantId = getTenantId(request);
+  const tenantId = tenantCtx?.tenantId || getTenantId(request);
 
   // Taiwan time UTC+8
   const nowTaiwan = new Date(Date.now() + 8 * 3600000);
@@ -55,9 +62,9 @@ export async function createOrder(request: Request, env: Env, ctx?: ExecutionCon
 
     const sendPush = async () => {
       try {
-        await pushLineMessage(order.userId!, confirmText, env);
+        await pushLineMessage(order.userId!, confirmText, env, tenantCtx);
       } catch (e) {
-        console.error(`[Benmi] createOrder pushLineMessage Error:`, e);
+        console.error(`[${tenantCtx?.brandName || 'Order'}] createOrder pushLineMessage Error:`, e);
       }
     };
 
@@ -97,9 +104,15 @@ export async function getPendingMap(env: Env, tenantId: string, userId: string):
   }
 }
 
-export async function updateOrder(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+export async function updateOrder(
+  request: Request,
+  env: Env,
+  ctx?: ExecutionContext,
+  tenantCtx?: TenantContext | null
+): Promise<Response> {
   const data: any = await request.json();
-  const tenantId = getTenantId(request);
+  const tenantId = tenantCtx?.tenantId || getTenantId(request);
+  const brandName = tenantCtx?.brandName || "Store";
 
   const orderRow = await env.DB.prepare(
     "SELECT * FROM orders WHERE key = ?"
@@ -140,7 +153,7 @@ export async function updateOrder(request: Request, env: Env, ctx: ExecutionCont
         ).bind(tenantId, order.userId, order.key).run();
       } catch { }
       if (!wasWaiting) {
-        await pushLineMessage(order.userId, `Benmi 已收到您的訂單 #${order.key}，謝謝您！`, env);
+        await pushLineMessage(order.userId, `${brandName} 已收到您的訂單 #${order.key}，謝謝您！`, env, tenantCtx);
       }
     }
     return json({ success: true });
@@ -181,7 +194,7 @@ export async function updateOrder(request: Request, env: Env, ctx: ExecutionCont
         const reason = order.reason || "未提供原因";
         const note = order.note || "";
         notifyText =
-          `Benmi 已收到您的訂單 #${order.key}， need to do small modification.\n` +
+          `${brandName} 已收到您的訂單 #${order.key}， need to do small modification.\n` +
           `原因：${reason}\n` +
           (note ? `備註：${note}\n` : "") +
           `\n請回覆「同意」以接受變更， or 回覆「取消 / 不要了」以取消訂單。`;
@@ -198,7 +211,7 @@ export async function updateOrder(request: Request, env: Env, ctx: ExecutionCont
            created_at = CURRENT_TIMESTAMP`
       ).bind(tenantId, order.userId, order.key, "CHANGE", notifyText, order.reason || "", order.note || "").run();
 
-      await pushLineMessage(order.userId, notifyText, env);
+      await pushLineMessage(order.userId, notifyText, env, tenantCtx);
     }
 
     return json({ success: true });
@@ -209,7 +222,7 @@ export async function updateOrder(request: Request, env: Env, ctx: ExecutionCont
     if (order.reason === "取消並不回復客戶") {
       order.status = "REJECTED";
       await saveOrder(env, order, tenantId);
-      if (ctx && ctx.waitUntil) ctx.waitUntil(syncToGoogleSheets(order, env));
+      if (ctx && ctx.waitUntil) ctx.waitUntil(syncToGoogleSheets(order, env, tenantCtx));
       return json({ success: true });
     }
 
@@ -219,7 +232,7 @@ export async function updateOrder(request: Request, env: Env, ctx: ExecutionCont
     if (order.userId) {
       const reason = order.reason || "未提供原因";
       const notifyText =
-        `非常抱歉！Benmi 目前無法接下您的訂單 #${order.key}。\n` +
+        `非常抱歉！${brandName} 目前無法接下您的訂單 #${order.key}。\n` +
         `原因：${reason}\n` +
         `\n請回覆「同意」以取消訂單， or 回覆「不同意」以重新確認。`;
 
@@ -234,7 +247,7 @@ export async function updateOrder(request: Request, env: Env, ctx: ExecutionCont
            created_at = CURRENT_TIMESTAMP`
       ).bind(tenantId, order.userId, order.key, "REJECT", notifyText, order.reason || "", order.note || "").run();
 
-      await pushLineMessage(order.userId, notifyText, env);
+      await pushLineMessage(order.userId, notifyText, env, tenantCtx);
     }
 
     return json({ success: true });
@@ -251,10 +264,10 @@ export async function updateOrder(request: Request, env: Env, ctx: ExecutionCont
           "DELETE FROM pending_actions WHERE tenant_id = ? AND user_id = ? AND order_key = ?"
         ).bind(tenantId, order.userId, order.key).run();
       } catch { }
-      await pushLineMessage(order.userId, `Benmi：由於未收到您的回覆，訂單 #${order.key} 已自動取消。期待下次為您服務！`, env);
+      await pushLineMessage(order.userId, `${brandName}：由於未收到您的回覆，訂單 #${order.key} 已自動取消。期待下次為您服務！`, env, tenantCtx);
     }
 
-    if (ctx && ctx.waitUntil) ctx.waitUntil(syncToGoogleSheets(order, env));
+    if (ctx && ctx.waitUntil) ctx.waitUntil(syncToGoogleSheets(order, env, tenantCtx));
     return json({ success: true });
   }
 
@@ -267,7 +280,7 @@ export async function updateOrder(request: Request, env: Env, ctx: ExecutionCont
     order.status = "PICKED_UP";
     await saveOrder(env, order, tenantId);
 
-    if (ctx && ctx.waitUntil) ctx.waitUntil(syncToGoogleSheets(order, env));
+    if (ctx && ctx.waitUntil) ctx.waitUntil(syncToGoogleSheets(order, env, tenantCtx));
     return json({ success: true });
   }
 

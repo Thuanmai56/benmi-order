@@ -1,15 +1,16 @@
 import { Env } from '../types/env';
+import { TenantContext } from '../types/tenant';
 import { resolveSecret } from '../utils/secrets';
 
 // Gọi Groq API (Kênh chính)
-async function callGroq(prompt: string, env: Env, signal: AbortSignal): Promise<string | null> {
-  const apiKey = await resolveSecret(env.GROQ_API_KEY);
-  if (!apiKey) {
-    console.warn("[Benmi] callGroq: GROQ_API_KEY is missing");
-    return null;
-  }
+async function callGroq(
+  prompt: string,
+  apiKey: string,
+  model: string,
+  signal: AbortSignal
+): Promise<string | null> {
+  if (!apiKey) return null;
 
-  const model = env.GROQ_MODEL || "llama-3.1-8b-instant";
   const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -27,7 +28,7 @@ async function callGroq(prompt: string, env: Env, signal: AbortSignal): Promise<
 
   if (!resp.ok) {
     const errorBody = await resp.text().catch(() => "");
-    console.error(`[Benmi] callGroq FAILED: status=${resp.status} body=${errorBody}`);
+    console.error(`[AI] callGroq FAILED: status=${resp.status} body=${errorBody}`);
     return null;
   }
 
@@ -36,14 +37,14 @@ async function callGroq(prompt: string, env: Env, signal: AbortSignal): Promise<
 }
 
 // Gọi OpenRouter API (Kênh Fallback)
-async function callOpenRouterFallback(prompt: string, env: Env, signal: AbortSignal): Promise<string | null> {
-  const apiKey = await resolveSecret(env.OPENROUTER_API_KEY);
-  if (!apiKey) {
-    console.warn("[Benmi] callOpenRouterFallback: OPENROUTER_API_KEY is missing, no fallback possible");
-    return null;
-  }
+async function callOpenRouterFallback(
+  prompt: string,
+  apiKey: string,
+  model: string,
+  signal: AbortSignal
+): Promise<string | null> {
+  if (!apiKey) return null;
 
-  const model = env.OPENROUTER_MODEL || "google/gemini-2.5-flash:free";
   const resp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -61,7 +62,7 @@ async function callOpenRouterFallback(prompt: string, env: Env, signal: AbortSig
 
   if (!resp.ok) {
     const errorBody = await resp.text().catch(() => "");
-    console.error(`[Benmi] callOpenRouterFallback FAILED: status=${resp.status} body=${errorBody}`);
+    console.error(`[AI] callOpenRouterFallback FAILED: status=${resp.status} body=${errorBody}`);
     return null;
   }
 
@@ -69,8 +70,13 @@ async function callOpenRouterFallback(prompt: string, env: Env, signal: AbortSig
   return result?.choices?.[0]?.message?.content || null;
 }
 
-// Hàm Call AI chính (Bao bọc cả hai kênh)
-export async function callAI(prompt: string, env: Env, timeoutMs: number = 8000): Promise<string | null> {
+// Hàm Call AI chính (Bao bọc cả hai kênh + Hỗ trợ Per-Tenant AI Keys)
+export async function callAI(
+  prompt: string,
+  env: Env,
+  tenantCtx?: TenantContext | null,
+  timeoutMs: number = 8000
+): Promise<string | null> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -78,22 +84,30 @@ export async function callAI(prompt: string, env: Env, timeoutMs: number = 8000)
     const startTime = Date.now();
     let result: string | null = null;
 
+    // Determine Groq API Key & Model
+    const groqKey = tenantCtx?.groqApiKey || (await resolveSecret(env.GROQ_API_KEY)) || null;
+    const groqModel = tenantCtx?.groqModel || env.GROQ_MODEL || "llama-3.1-8b-instant";
+
+    // Determine OpenRouter API Key & Model
+    const openrouterKey = tenantCtx?.openrouterApiKey || (await resolveSecret(env.OPENROUTER_API_KEY)) || null;
+    const openrouterModel = tenantCtx?.openrouterModel || env.OPENROUTER_MODEL || "google/gemini-2.5-flash:free";
+
     // 1. Thử gọi Groq
-    if (env.GROQ_API_KEY) {
-      result = await callGroq(prompt, env, controller.signal);
+    if (groqKey) {
+      result = await callGroq(prompt, groqKey, groqModel, controller.signal);
     }
-    
-    // 2. Nếu Groq thất bại hoặc không có key, tự động chuyển vùng gọi sang OpenRouter
-    if (!result) {
-      if (env.GROQ_API_KEY) {
-        console.warn(`[Benmi] Groq failed. Falling back to OpenRouter...`);
-      } else {
-        console.log(`[Benmi] GROQ_API_KEY is not configured. Using OpenRouter as primary...`);
+
+    // 2. Nếu Groq thất bại hoặc không có key, tự động chuyển sang OpenRouter
+    if (!result && openrouterKey) {
+      if (groqKey) {
+        console.warn(`[AI] Groq failed. Falling back to OpenRouter...`);
       }
-      result = await callOpenRouterFallback(prompt, env, controller.signal);
-      console.log(`[Benmi] OpenRouter fallback result in ${Date.now() - startTime}ms`);
-    } else {
-      console.log(`[Benmi] Groq call success in ${Date.now() - startTime}ms`);
+      result = await callOpenRouterFallback(prompt, openrouterKey, openrouterModel, controller.signal);
+      if (result) {
+        console.log(`[AI] OpenRouter fallback success in ${Date.now() - startTime}ms`);
+      }
+    } else if (result) {
+      console.log(`[AI] Groq call success in ${Date.now() - startTime}ms`);
     }
 
     clearTimeout(timeoutId);
@@ -101,9 +115,9 @@ export async function callAI(prompt: string, env: Env, timeoutMs: number = 8000)
   } catch (e: any) {
     clearTimeout(timeoutId);
     if (e.name === "AbortError") {
-      console.error(`[Benmi] callAI TIMEOUT after ${timeoutMs}ms`);
+      console.error(`[AI] callAI TIMEOUT after ${timeoutMs}ms`);
     } else {
-      console.error("[Benmi] callAI EXCEPTION:", e.message);
+      console.error("[AI] callAI EXCEPTION:", e.message);
     }
     return null;
   }

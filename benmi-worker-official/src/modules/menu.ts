@@ -92,9 +92,10 @@ export async function getMenu(request: Request, env: Env): Promise<Response> {
       out_of_stock_until: string | null;
     }>;
 
-    // Nếu không có dữ liệu nào trong D1 cho Tenant này, trả về DEFAULT_MENU
+    // Nếu không có dữ liệu nào trong D1 cho Tenant này, trả về DEFAULT_MENU cho benmi, còn tenant khác trả về menu rỗng
     if (categories.length === 0 || items.length === 0) {
-      return json(DEFAULT_MENU);
+      if (tenantId === "benmi") return json(DEFAULT_MENU);
+      return json({ out_of_stock: [] });
     }
 
     // 3. Xây dựng cấu trúc JSON Menu tương thích ngược
