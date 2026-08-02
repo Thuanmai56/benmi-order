@@ -1570,6 +1570,12 @@
     setInterval(() => {
       if (activeTab === "live" || activeTab === "history") fetchOrders();
     }, 1500);
+
+    // Dynamic timer to automatically update ETA & elapsed time ("已到 / X 分鐘前") without clicking
+    setInterval(() => {
+      if (activeTab === "live" || activeTab === "history") renderAll();
+    }, 10000);
+
     fetchOrders();
   </script>
 </body>

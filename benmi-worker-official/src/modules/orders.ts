@@ -380,23 +380,9 @@ export async function getOrders(request: Request, env: Env): Promise<Response> {
     return jsonWithETag(memCached.orders, currentVersion);
   }
 
-  // 4. RAM Cache Miss -> Kiểm tra KV Cache
-  if (env.ORDER_STATE) {
-    try {
-      const cached = await env.ORDER_STATE.get(cacheKey);
-      if (cached) {
-        const parsedOrders: Order[] = JSON.parse(cached);
-        memoryOrdersCache.set(tenantId, { orders: parsedOrders, timestamp: Date.now() });
-        return jsonWithETag(parsedOrders, currentVersion);
-      }
-    } catch (e) {
-      console.error("[getOrders] KV Cache read error:", e);
-    }
-  }
-
   if (!env.DB) return jsonWithETag([], currentVersion);
 
-  // 5. RAM & KV Cache Miss -> Truy vấn từ D1 Database
+  // 4. RAM Cache Miss -> Truy vấn trực tiếp từ D1 Database (Không dùng KV orders_cache nữa để đảm bảo đơn hiện tức thì)
   try {
     const { results } = await env.DB.prepare(
       "SELECT key, customer_name, pickup_time, status, total_amount, order_content, reason, note, created_at FROM orders WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 200"
@@ -416,14 +402,6 @@ export async function getOrders(request: Request, env: Env): Promise<Response> {
     }));
 
     memoryOrdersCache.set(tenantId, { orders, timestamp: Date.now() });
-
-    if (env.ORDER_STATE) {
-      try {
-        await env.ORDER_STATE.put(cacheKey, JSON.stringify(orders), { expirationTtl: 60 });
-      } catch (e) {
-        console.error("[getOrders] KV Cache write error:", e);
-      }
-    }
 
     return jsonWithETag(orders, currentVersion);
   } catch (e: any) {
@@ -471,7 +449,6 @@ export async function saveOrder(env: Env, order: Order, tenantId: string): Promi
 
   if (env.ORDER_STATE) {
     try {
-      await env.ORDER_STATE.delete(`tenant:${tenantId}:orders_cache`);
       await env.ORDER_STATE.put(`tenant:${tenantId}:orders_version`, newVersion);
     } catch (e) {
       console.error("[saveOrder] KV Cache update error:", e);
