@@ -4,6 +4,9 @@ import { getTenantId } from './menu';
 
 import { TenantContext } from '../types/tenant';
 
+/**
+ * Fetches store configuration for the active tenant context.
+ */
 export async function getConfig(request: Request, env: Env, tenantCtx?: TenantContext | null): Promise<Response> {
   const tenantId = tenantCtx?.tenantId || getTenantId(request);
   const cacheKey = `tenant:${tenantId}:config`;
