@@ -54,27 +54,6 @@ export async function createOrder(
 
   await saveOrder(env, order, tenantId);
 
-  // Push confirmation message to LINE user asynchronously (omitting order content detail to prevent duplicate message)
-  if (order.userId) {
-    let confirmText = `✅ [已收到] 訂單編號：${order.key}\n🕒 取餐時間：${order.time}`;
-    if (order.note) confirmText += `\n📝 總備註：${order.note}`;
-    confirmText += `\n💰 總金額：$${order.total}`;
-
-    const sendPush = async () => {
-      try {
-        await pushLineMessage(order.userId!, confirmText, env, tenantCtx);
-      } catch (e) {
-        console.error(`[${tenantCtx?.brandName || 'Order'}] createOrder pushLineMessage Error:`, e);
-      }
-    };
-
-    if (ctx && ctx.waitUntil) {
-      ctx.waitUntil(sendPush());
-    } else {
-      await sendPush();
-    }
-  }
-
   return json({ success: true, key: orderKey });
 }
 
@@ -459,11 +438,16 @@ export async function saveOrder(env: Env, order: Order, tenantId: string): Promi
     `INSERT INTO orders (key, tenant_id, user_id, customer_name, pickup_time, status, total_amount, order_content, reason, note, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime(?, 'unixepoch'), datetime('now'))
      ON CONFLICT(key) DO UPDATE SET
-       status = excluded.status,
+       status = CASE
+         WHEN orders.status IN ('ACCEPTED', 'DONE', 'REJECTED', 'PICKED_UP', 'WAITING_CUSTOMER_CHANGE', 'WAITING_CUSTOMER_REJECT') AND excluded.status = 'NEW'
+         THEN orders.status
+         ELSE excluded.status
+       END,
+       customer_name = CASE WHEN excluded.customer_name != 'Khách (Web)' THEN excluded.customer_name ELSE orders.customer_name END,
        total_amount = excluded.total_amount,
        order_content = excluded.order_content,
-       reason = excluded.reason,
-       note = excluded.note,
+       reason = CASE WHEN excluded.reason != '' THEN excluded.reason ELSE orders.reason END,
+       note = CASE WHEN excluded.note != '' THEN excluded.note ELSE orders.note END,
        updated_at = datetime('now')`
   ).bind(
     order.key,

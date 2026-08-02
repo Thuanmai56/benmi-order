@@ -356,10 +356,23 @@ export async function handleLineWebhook(
       let custName = "Khách (Web)";
 
       const existingOrder = await env.DB.prepare(
-        "SELECT customer_name FROM orders WHERE key = ?"
-      ).bind(orderKey).first<{ customer_name: string }>();
-      if (existingOrder?.customer_name && existingOrder.customer_name !== "Khách (Web)") {
-        custName = existingOrder.customer_name;
+        "SELECT status, customer_name FROM orders WHERE key = ?"
+      ).bind(orderKey).first<{ status: string; customer_name: string }>();
+
+      if (existingOrder) {
+        if (existingOrder.customer_name && existingOrder.customer_name !== "Khách (Web)") {
+          custName = existingOrder.customer_name;
+        }
+        // If order already exists and status has changed from NEW, do not re-create/overwrite status back to NEW
+        if (existingOrder.status !== "NEW") {
+          console.log(`[${brandName}] Order ${orderKey} already processed with status ${existingOrder.status}. Skipping webhook re-creation.`);
+          try {
+            await env.DB.prepare("DELETE FROM pending_actions WHERE tenant_id = ? AND user_id = ?")
+              .bind(tenantId, userId).run();
+          } catch { }
+          try { await env.ORDER_STATE.delete(draftKey); } catch { }
+          continue;
+        }
       }
 
       const contentStart = userText.indexOf("📦 訂單內容：");
@@ -384,7 +397,7 @@ export async function handleLineWebhook(
 
       await saveOrder(env, orderData, tenantId);
 
-      // Fetch real LINE name in background and update DB
+      // Fetch real LINE name in background and update customer_name safely in DB
       if (ctx && ctx.waitUntil) {
         ctx.waitUntil((async () => {
           try {
@@ -394,8 +407,9 @@ export async function handleLineWebhook(
             if (resp.ok) {
               const p: any = await resp.json();
               if (p && p.displayName) {
-                orderData.customer = p.displayName;
-                await saveOrder(env, orderData, tenantId);
+                await env.DB.prepare(
+                  "UPDATE orders SET customer_name = ? WHERE key = ?"
+                ).bind(p.displayName, orderKey).run();
               }
             } else {
               const errBody = await resp.text().catch(() => "(unreadable)");
