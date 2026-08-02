@@ -6,6 +6,7 @@ import { pushLineMessage } from './line';
 import { getTenantId } from './menu';
 
 import { TenantContext } from '../types/tenant';
+import { validateOrderTransition } from './orderStateMachine';
 
 function jsonWithETag(data: any, version: string, status: number = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -114,6 +115,17 @@ export async function updateOrder(
 
   if (data.reason !== undefined) order.reason = data.reason;
   if (data.note !== undefined) order.note = data.note;
+
+  // Validate state transition using Order State Machine
+  let targetStatus = incoming;
+  if (incoming === "CHANGED") targetStatus = "WAITING_CUSTOMER_CHANGE";
+  if (incoming === "REJECTED" && data.reason !== "取消並不回復客戶") targetStatus = "WAITING_CUSTOMER_REJECT";
+  if (incoming === "FORCE_REJECT") targetStatus = "REJECTED";
+
+  const transitionCheck = validateOrderTransition(order.status, targetStatus);
+  if (!transitionCheck.valid) {
+    return json({ error: transitionCheck.reason }, 400);
+  }
 
   // Employee 接單
   if (incoming === "ACCEPTED") {
