@@ -3,38 +3,60 @@ model = "gemini/gemini-3.6-flash"
 fallback_models = ["gemini/gemini-1.5-flash"]
 custom_model_max_tokens = 1000000
 git_provider = "github"
+enable_experimental_repo_map = true
+ignore_glob = [
+  "package-lock.json",
+  "dist/**",
+  "docs/**",
+  "*.png",
+  "*.svg",
+  "skills-lock.json",
+  "production_menu_seed.sql"
+]
 
 [github_action_config]
 auto_review = true
 auto_describe = true
 auto_improve = true
+enable_custom_labels = true
 
 [pr_reviewer]
+extra_lines_before = 30
+extra_lines_after = 30
 require_score_review = true
 require_tests_review = true
 require_estimate_effort_to_review = true
 require_security_review = true
 num_code_suggestions = 4
 extra_instructions = """
-Bạn là một Senior Code Reviewer chuyên nghiệp cho dự án benmi-order (sử dụng Cloudflare Workers, TypeScript, D1 Database, Hono framework).
-Hãy luôn đưa ra nhận xét chi tiết bằng tiếng Việt bao gồm:
-1. **Phân tích tổng quan tác động của PR**.
-2. **Kiểm tra chuẩn Cloudflare Workers & Hono**: Async/await, Workers runtime compatibility, Env bindings.
-3. **Kiểm tra D1 Database**: Tránh N+1 query, kiểm tra index, đảm bảo tenant_id isolation.
-4. **Kiểm tra TypeScript**: Hạn chế any type, xử lý lỗi rõ ràng.
+Bạn là một Senior Code Reviewer cho dự án benmi-order (Cloudflare Workers, Hono, D1 Database, Multi-tenant Architecture).
+
+QUY TẮC ĐÁNH GIÁ ĐỘ TỰ TIN (MACHINE LEARNING CONFIDENCE SCORING):
+- Mọi nhận xét/gợi ý code BẮT BUỘC phải gắn kèm chỉ số Confidence Score [0% - 100%].
+- CHỈ ĐƯỢC PHÉP báo cáo các lỗi có Confidence Score >= 85% (nơi bạn xác định được kịch bản lỗi rõ ràng với đoạn code dẫn đến sập runtime / rò rỉ dữ liệu).
+- Nếu Confidence Score từ 60% đến 84%, ghi rõ là `[Cảnh báo tiềm ẩn - Confidence: XX%]`.
+- LOẠI BỎ HOÀN TOÀN các nhận xét có Confidence Score < 60% để tránh nhận xét cảm tính / rác (False Positives).
+
+QUY TẮC BẢO MẬT & KIẾN TRÚC BENMI-ORDER:
+1. **Multi-Tenant Isolation (CRITICAL)**: Mọi query SQL vào D1 Database bắt buộc phải chứa `WHERE tenant_id = ?`. Cảnh báo đỏ nguy hiểm nếu thiếu.
+2. **Cloudflare Workers & Hono Best Practices**: Đảm bảo async/await chính xác, không floating promises, kiểm tra ETag cache versioning trong KV (`ORDER_STATE`).
+3. **TypeScript Strict Types**: Tuyệt đối hạn chế dùng `any`.
 """
 
 [pr_description]
 publish_labels = true
 extra_instructions = """
-Tóm tắt PR bằng tiếng Việt ngắn gọn, súc tích, bao gồm:
-- Mục tiêu chính của PR.
-- Danh sách các thay đổi quan trọng theo từng file/thành phần.
+Tóm tắt PR bằng tiếng Việt ngắn gọn, súc tích:
+- Mục tiêu cốt lõi của PR.
+- Bảng phân loại các thay đổi theo từng file/thành phần.
 """
 
 [pr_code_suggestions]
 num_code_suggestions = 4
 summarize_only = false
 extra_instructions = """
-Đưa ra các gợi ý refactor code cụ thể, sạch sẽ, tuân thủ đúng chuẩn TypeScript và Cloudflare Workers. Giải thích lý do bằng tiếng Việt.
+Mọi gợi ý refactor code BẮT BUỘC phải bao gồm:
+1. **Confidence Score**: [Ví dụ: Confidence 95%]
+2. **Kịch bản Lỗi Cụ thể (Concrete Trigger Scenario)**: Dữ liệu hoặc Runtime nào gây lỗi.
+3. **Mã nguồn Refactor chuẩn**: Đoạn code TypeScript/SQL sửa đổi hoàn chỉnh kèm giải thích tiếng Việt.
 """
