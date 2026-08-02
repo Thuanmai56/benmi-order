@@ -67,7 +67,14 @@ export default {
     if (request.method === "POST" && path === "/api/auth/templink") return handleCreateTempLink(request, env, tenantCtx);
     if (request.method === "GET" && path === "/api/auth/templink") return handleVerifyTempLink(request, env, tenantCtx);
     if (request.method === "GET" && path === "/api/debug") return debugKV(env, url);
-    if (request.method === "GET" && path === "/api/migrate/orders-kv-to-d1") return handleOrdersMigration(request, env);
+    if (request.method === "GET" && path === "/api/health") {
+      return json({
+        status: "ok",
+        service: "benmi-worker",
+        tenantId: tenantCtx?.tenantId || tenantId,
+        timestamp: new Date().toISOString(),
+      });
+    }
 
     return new Response("Not Found", { status: 404, headers: corsHeaders() });
   }
