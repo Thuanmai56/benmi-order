@@ -22,5 +22,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GEMINI_KEY: ${{ secrets.GEMINI_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_KEY }}
+          GOOGLE_API_KEY: ${{ secrets.GEMINI_KEY }}
           PR_AGENT.MODEL: "gemini/gemini-1.5-pro"
 
