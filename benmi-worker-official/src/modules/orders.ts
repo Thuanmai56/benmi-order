@@ -54,9 +54,9 @@ export async function createOrder(
 
   await saveOrder(env, order, tenantId);
 
-  // Push confirmation message to LINE user asynchronously
+  // Push confirmation message to LINE user asynchronously (omitting order content detail to prevent duplicate message)
   if (order.userId) {
-    let confirmText = `✅ [已收到] 訂單編號：${order.key}\n📦 訂單內容：\n${order.content}\n\n🕒 取餐時間：${order.time}`;
+    let confirmText = `✅ [已收到] 訂單編號：${order.key}\n🕒 取餐時間：${order.time}`;
     if (order.note) confirmText += `\n📝 總備註：${order.note}`;
     confirmText += `\n💰 總金額：$${order.total}`;
 
