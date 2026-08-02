@@ -354,3 +354,13 @@ export async function updateMenu(request: Request, env: Env): Promise<Response> 
     return json({ error: e.message || "Invalid data" }, 400);
   }
 }
+
+/**
+ * Safely extracts menu items for a specified category from the store menu.
+ */
+export function getMenuCategoryItems(categoryKey: keyof Menu, menu: Menu = DEFAULT_MENU): Record<string, number> {
+  if (!menu || !menu[categoryKey]) {
+    return {};
+  }
+  return menu[categoryKey];
+}
