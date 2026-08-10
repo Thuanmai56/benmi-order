@@ -2,12 +2,22 @@ import { Env } from '../types/env';
 import { TenantContext } from '../types/tenant';
 import { resolveSecret } from '../utils/secrets';
 
+function buildMessages(prompt: string, systemPrompt?: string) {
+  const messages: Array<{ role: string; content: string }> = [];
+  if (systemPrompt && systemPrompt.trim() !== "") {
+    messages.push({ role: "system", content: systemPrompt.trim() });
+  }
+  messages.push({ role: "user", content: prompt });
+  return messages;
+}
+
 // Gọi Groq API (Kênh chính)
 async function callGroq(
   prompt: string,
   apiKey: string,
   model: string,
-  signal: AbortSignal
+  signal: AbortSignal,
+  systemPrompt?: string
 ): Promise<string | null> {
   if (!apiKey) return null;
 
@@ -19,7 +29,7 @@ async function callGroq(
     },
     body: JSON.stringify({
       model,
-      messages: [{ role: "user", content: prompt }],
+      messages: buildMessages(prompt, systemPrompt),
       temperature: 0,
       max_tokens: 10
     }),
@@ -41,7 +51,8 @@ async function callOpenRouterFallback(
   prompt: string,
   apiKey: string,
   model: string,
-  signal: AbortSignal
+  signal: AbortSignal,
+  systemPrompt?: string
 ): Promise<string | null> {
   if (!apiKey) return null;
 
@@ -53,7 +64,7 @@ async function callOpenRouterFallback(
     },
     body: JSON.stringify({
       model,
-      messages: [{ role: "user", content: prompt }],
+      messages: buildMessages(prompt, systemPrompt),
       temperature: 0,
       max_tokens: 10
     }),
@@ -70,12 +81,13 @@ async function callOpenRouterFallback(
   return result?.choices?.[0]?.message?.content || null;
 }
 
-// Hàm Call AI chính (Bao bọc cả hai kênh + Hỗ trợ Per-Tenant AI Keys)
+// Hàm Call AI chính (Bao bọc cả hai kênh + Hỗ trợ Per-Tenant AI Keys + System Prompt)
 export async function callAI(
   prompt: string,
   env: Env,
   tenantCtx?: TenantContext | null,
-  timeoutMs: number = 8000
+  timeoutMs: number = 8000,
+  systemPrompt?: string
 ): Promise<string | null> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -94,7 +106,7 @@ export async function callAI(
 
     // 1. Thử gọi Groq
     if (groqKey) {
-      result = await callGroq(prompt, groqKey, groqModel, controller.signal);
+      result = await callGroq(prompt, groqKey, groqModel, controller.signal, systemPrompt);
     }
 
     // 2. Nếu Groq thất bại hoặc không có key, tự động chuyển sang OpenRouter
@@ -102,7 +114,7 @@ export async function callAI(
       if (groqKey) {
         console.warn(`[AI] Groq failed. Falling back to OpenRouter...`);
       }
-      result = await callOpenRouterFallback(prompt, openrouterKey, openrouterModel, controller.signal);
+      result = await callOpenRouterFallback(prompt, openrouterKey, openrouterModel, controller.signal, systemPrompt);
       if (result) {
         console.log(`[AI] OpenRouter fallback success in ${Date.now() - startTime}ms`);
       }
