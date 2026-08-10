@@ -62,8 +62,27 @@ function shortItems(content) {
   return lines.slice(0, 6).join("\n");
 }
 
-function switchTab(tab) {
+function getInitialTab() {
+  const hash = window.location.hash.replace("#", "").trim();
+  const saved = localStorage.getItem("benmi_active_tab");
+  const candidate = hash || saved || "live";
+  return ["live", "history", "menu", "settings"].includes(candidate) ? candidate : "live";
+}
+
+function switchTab(tab, updateUrl = true) {
+  if (!["live", "history", "menu", "settings"].includes(tab)) tab = "live";
   activeTab = tab;
+
+  if (updateUrl) {
+    try {
+      localStorage.setItem("benmi_active_tab", tab);
+      const newUrl = `${window.location.pathname}${window.location.search}#${tab}`;
+      if (window.location.hash !== `#${tab}`) {
+        history.replaceState(null, "", newUrl);
+      }
+    } catch (e) {}
+  }
+
   ["live", "history", "menu", "settings"].forEach(t => {
     const navBtn = document.getElementById(`tab-${t}`);
     if (navBtn) navBtn.classList.toggle("active", t === tab);
@@ -79,6 +98,13 @@ function switchTab(tab) {
     loadOperatingHours();
   }
 }
+
+window.addEventListener("hashchange", () => {
+  const tabFromHash = window.location.hash.replace("#", "").trim();
+  if (["live", "history", "menu", "settings"].includes(tabFromHash) && tabFromHash !== activeTab) {
+    switchTab(tabFromHash, false);
+  }
+});
 
 async function fetchOrders() {
   try {

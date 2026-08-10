@@ -354,6 +354,8 @@
   <script src="js/orders-settings.js"></script>
   <script src="js/orders-menu.js"></script>
   <script>
+    switchTab(getInitialTab());
+
     setInterval(() => {
       if (activeTab === "live" || activeTab === "history") fetchOrders();
     }, 1500);
