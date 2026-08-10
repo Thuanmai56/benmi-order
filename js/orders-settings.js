@@ -51,7 +51,7 @@ function renderOperatingHours() {
         </div>`;
     });
     row.innerHTML = `
-      <div style="display:flex; justify-space-between; align-items:center;">
+      <div style="display:flex; justify-content: space-between; align-items:center;">
         <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:16px;">
           <input type="checkbox" ${isOpen ? 'checked' : ''} onchange="toggleDayStatus(${dayIdx}, this.checked)" style="width:18px; height:18px;">
           <span style="font-weight:900; color:${isOpen ? '#111' : '#999'};">${DAY_NAMES[dayIdx]}</span>
