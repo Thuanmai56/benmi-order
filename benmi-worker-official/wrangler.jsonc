@@ -56,7 +56,7 @@
   ],
   "env": {
     "test": {
-      "name": "spring-smoke-46ba", // test worker
+      "name": "platform-worker-staging",
       "vars": {
         "LIFF_ID": "2009555608-DMioljsI",
         "LIFF_URL": "https://liff.line.me/2009555608-DMioljsI"
