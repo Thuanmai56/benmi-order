@@ -2,11 +2,7 @@ let storeOperatingHours = null;
 const DAY_NAMES = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
 
 function openSettings() {
-  activeTab = "settings";
-  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-  document.querySelectorAll(".content").forEach(c => c.style.display = "none");
-  document.getElementById("view-settings").style.display = "block";
-  loadOperatingHours();
+  switchTab("settings");
 }
 
 async function loadOperatingHours() {

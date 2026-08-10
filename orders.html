@@ -16,13 +16,28 @@
         <div class="brand-title">🥖 Benmi Dashboard</div>
         <div class="brand-sub">Live orders</div>
       </div>
-      <div class="tabs">
-        <button class="tab active" id="tab-live" onclick="switchTab('live')">Live</button>
-        <button class="tab" id="tab-history" onclick="switchTab('history')">Lịch sử</button>
-        <button class="mini-btn" onclick="testSound()">Test Sound</button>
-        <button class="mini-btn" onclick="openMenuSettings()">Menu</button>
-        <button class="mini-btn" onclick="openSettings()">Cài đặt</button>
-      </div>
+      <nav class="navbar">
+        <button class="nav-item active" id="tab-live" onclick="switchTab('live')">
+          <span class="nav-icon">⚡</span>
+          <span class="nav-label">Live</span>
+        </button>
+        <button class="nav-item" id="tab-history" onclick="switchTab('history')">
+          <span class="nav-icon">📜</span>
+          <span class="nav-label">Lịch sử</span>
+        </button>
+        <button class="nav-item" id="tab-menu" onclick="switchTab('menu')">
+          <span class="nav-icon">🥖</span>
+          <span class="nav-label">Menu</span>
+        </button>
+        <button class="nav-item" id="tab-settings" onclick="switchTab('settings')">
+          <span class="nav-icon">⚙️</span>
+          <span class="nav-label">Cài đặt</span>
+        </button>
+        <button class="nav-item sound-btn" onclick="testSound()" title="Kiểm tra âm thanh">
+          <span class="nav-icon">🔊</span>
+          <span class="nav-label">Test Audio</span>
+        </button>
+      </nav>
     </div>
 
     <div class="content" id="view-live">

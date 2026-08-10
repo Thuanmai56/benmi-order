@@ -51,6 +51,49 @@ body {
   font-weight: 800;
 }
 
+.navbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  overflow-x: auto;
+  padding: 4px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.nav-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: #374151;
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-weight: 1000;
+  cursor: pointer;
+  font-size: 15px;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.nav-item:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.nav-item.active {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(0, 185, 0, 0.08);
+  border-width: 2px;
+}
+
+.nav-item.sound-btn {
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+}
+
 .tabs {
   display: flex;
   gap: 10px;
@@ -461,13 +504,100 @@ body {
   accent-color: var(--primary);
 }
 
-@media (max-width: 767px) {
+/* Responsive Layout for iPad / Tablets and Mobile */
+@media (max-width: 1023px) {
+  .app {
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .topbar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+  }
+
+  .navbar {
+    width: 100%;
+    justify-content: flex-start;
+    padding-bottom: 4px;
+  }
+
   .split {
+    grid-template-columns: 1fr !important;
+    height: auto;
+    gap: 16px;
+  }
+
+  .panel {
+    height: auto;
+    max-height: none;
+  }
+
+  .panel-body {
+    max-height: none;
+    overflow-y: visible;
+  }
+
+  .tile {
     grid-template-columns: 1fr;
+    gap: 12px;
   }
 
   .tile-actions {
-    min-width: 140px;
+    min-width: 100%;
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+
+  .tile-actions .btn {
+    flex: 1;
+  }
+}
+
+@media (max-width: 639px) {
+  .brand-title {
+    font-size: 18px;
+  }
+
+  .brand-sub {
+    font-size: 13px;
+  }
+
+  .nav-item {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .nav-label {
+    font-size: 13px;
+  }
+
+  .content {
+    padding: 10px 8px;
+  }
+
+  .modal-content {
+    width: 96vw;
+    padding: 16px;
+    border-radius: 16px;
+    max-height: 92vh;
+  }
+
+  .modal-actions {
+    grid-template-columns: 1fr !important;
+    gap: 8px;
+  }
+
+  .modal-actions button {
+    width: 100%;
+  }
+
+  .detail-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
   }
 }
 

@@ -31,11 +31,7 @@ const BENMI_CATS = [
 ];
 
 function openMenuSettings() {
-  activeTab = "menu";
-  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-  document.querySelectorAll(".content").forEach(c => c.style.display = "none");
-  document.getElementById("view-menu").style.display = "block";
-  if (!currentMenuData) loadMenuData();
+  switchTab("menu");
 }
 
 async function loadMenuData() {

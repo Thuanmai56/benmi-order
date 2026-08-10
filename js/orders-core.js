@@ -64,13 +64,20 @@ function shortItems(content) {
 
 function switchTab(tab) {
   activeTab = tab;
-  document.getElementById("tab-live").classList.toggle("active", tab === "live");
-  document.getElementById("tab-history").classList.toggle("active", tab === "history");
-  document.getElementById("view-live").style.display = tab === "live" ? "block" : "none";
-  document.getElementById("view-history").style.display = tab === "history" ? "block" : "none";
-  document.getElementById("view-settings").style.display = "none";
-  document.getElementById("view-menu").style.display = "none";
+  ["live", "history", "menu", "settings"].forEach(t => {
+    const navBtn = document.getElementById(`tab-${t}`);
+    if (navBtn) navBtn.classList.toggle("active", t === tab);
+    const viewEl = document.getElementById(`view-${t}`);
+    if (viewEl) viewEl.style.display = t === tab ? "block" : "none";
+  });
+
   if (tab === "live" || tab === "history") renderAll();
+  if (tab === "menu" && typeof loadMenuData === "function" && typeof currentMenuData !== "undefined" && !currentMenuData) {
+    loadMenuData();
+  }
+  if (tab === "settings" && typeof loadOperatingHours === "function") {
+    loadOperatingHours();
+  }
 }
 
 async function fetchOrders() {
