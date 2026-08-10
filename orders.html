@@ -622,6 +622,38 @@
       return map;
     }
 
+    function getTodayTaiwanStr() {
+      const nowTaiwan = new Date(Date.now() + 8 * 3600000);
+      const yyyy = nowTaiwan.getUTCFullYear();
+      const mm = String(nowTaiwan.getUTCMonth() + 1).padStart(2, "0");
+      const dd = String(nowTaiwan.getUTCDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function createHistoryTile(order) {
+      const tile = document.createElement("div");
+      tile.className = "tile";
+      tile.onclick = () => openReview(order.key);
+      const badge = order.status === "PICKED_UP"
+        ? `<span class="badge done">PICKED</span>`
+        : `<span class="badge">${escapeHtml(order.status)}</span>`;
+
+      tile.innerHTML = `
+        <div>
+          <div class="tile-top">
+            <span class="tile-customer">${escapeHtml(order.customer || "Khách")}</span>
+            ${badge}
+            <span class="tile-meta">#${escapeHtml(order.key)}</span>
+          </div>
+          <div class="tile-items">${escapeHtml(shortItems(order.content))}</div>
+        </div>
+        <div class="tile-actions">
+          <button class="btn btn-ghost btn-block" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">Xem</button>
+        </div>
+      `;
+      return tile;
+    }
+
     function renderHistory(orders) {
       const container = document.getElementById("list-history");
       container.innerHTML = "";
@@ -631,48 +663,80 @@
       }
 
       const grouped = groupByDate(orders);
-      // Sort groups by date descending
       const sortedDates = Array.from(grouped.keys()).sort((a, b) => b.localeCompare(a));
+      const todayStr = getTodayTaiwanStr();
 
-      for (const date of sortedDates) {
-        let items = grouped.get(date);
-        // Sort items: newest picked up at top (descending), fallback to newest created at top
-        items.sort((a, b) => {
+      const todayOrders = grouped.get(todayStr) || [];
+      const pastDates = sortedDates.filter(d => d !== todayStr);
+
+      // 1. Render Today's Section (Default Expanded)
+      const todayHeader = document.createElement("div");
+      todayHeader.className = "history-date-header";
+      todayHeader.innerText = `📅 Hôm nay: ${todayStr} (${todayOrders.length} đơn)`;
+      container.appendChild(todayHeader);
+
+      if (todayOrders.length > 0) {
+        todayOrders.sort((a, b) => {
           const timeA = a.pickedUpAt || a.createdAt || 0;
           const timeB = b.pickedUpAt || b.createdAt || 0;
           return timeB - timeA;
         });
-
-        const header = document.createElement("div");
-        header.style.padding = "10px 8px 2px";
-        header.style.fontWeight = "1100";
-        header.style.color = "#111827";
-        header.innerText = `${date} (${items.length})`;
-        container.appendChild(header);
-
-        items.forEach(order => {
-          const tile = document.createElement("div");
-          tile.className = "tile";
-          tile.onclick = () => openReview(order.key);
-          const badge = order.status === "PICKED_UP"
-            ? `<span class="badge done">PICKED</span>`
-            : `<span class="badge">${escapeHtml(order.status)}</span>`;
-
-          tile.innerHTML = `
-            <div>
-              <div class="tile-top">
-                <span class="tile-customer">${escapeHtml(order.customer || "Khách")}</span>
-                ${badge}
-                <span class="tile-meta">#${escapeHtml(order.key)}</span>
-              </div>
-              <div class="tile-items">${escapeHtml(shortItems(order.content))}</div>
-            </div>
-            <div class="tile-actions">
-              <button class="btn btn-ghost btn-block" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">Xem</button>
-            </div>
-          `;
-          container.appendChild(tile);
+        todayOrders.forEach(order => {
+          container.appendChild(createHistoryTile(order));
         });
+      } else {
+        const emptyToday = document.createElement("div");
+        emptyToday.style.padding = "10px 8px 14px";
+        emptyToday.style.color = "#9ca3af";
+        emptyToday.style.fontSize = "14px";
+        emptyToday.innerText = "Hôm nay chưa có đơn hoàn thành hoặc hủy";
+        container.appendChild(emptyToday);
+      }
+
+      // 2. Render Past Days Collapsible Section
+      if (pastDates.length > 0) {
+        let totalPastCount = 0;
+        pastDates.forEach(d => {
+          totalPastCount += (grouped.get(d) || []).length;
+        });
+
+        const details = document.createElement("details");
+        details.className = "history-past-details";
+
+        const summary = document.createElement("summary");
+        summary.className = "history-past-summary";
+        summary.innerHTML = `
+          <div class="summary-title">
+            <span>📁 Lịch sử các ngày trước</span>
+            <span class="summary-badge">${pastDates.length} ngày · ${totalPastCount} đơn</span>
+          </div>
+          <span class="summary-chevron">▼</span>
+        `;
+        details.appendChild(summary);
+
+        const pastContent = document.createElement("div");
+        pastContent.className = "history-past-content";
+
+        pastDates.forEach(date => {
+          let items = grouped.get(date) || [];
+          items.sort((a, b) => {
+            const timeA = a.pickedUpAt || a.createdAt || 0;
+            const timeB = b.pickedUpAt || b.createdAt || 0;
+            return timeB - timeA;
+          });
+
+          const dateHeader = document.createElement("div");
+          dateHeader.className = "history-date-header";
+          dateHeader.innerText = `📅 ${date} (${items.length} đơn)`;
+          pastContent.appendChild(dateHeader);
+
+          items.forEach(order => {
+            pastContent.appendChild(createHistoryTile(order));
+          });
+        });
+
+        details.appendChild(pastContent);
+        container.appendChild(details);
       }
     }
 

@@ -469,3 +469,82 @@ body {
     min-width: 140px;
   }
 }
+
+/* Order History Collapsible Styles */
+.history-past-details {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #ffffff;
+  margin-top: 14px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.history-past-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  font-weight: 1100;
+  font-size: 16px;
+  color: #111827;
+  background: #f9fafb;
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  transition: background 0.15s ease;
+}
+
+.history-past-summary::-webkit-details-marker {
+  display: none;
+}
+
+.history-past-summary:hover {
+  background: #f3f4f6;
+}
+
+.history-past-summary .summary-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.history-past-summary .summary-badge {
+  background: #e5e7eb;
+  color: #374151;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 1000;
+}
+
+.history-past-summary .summary-chevron {
+  transition: transform 0.2s ease;
+  font-size: 14px;
+  color: #6b7280;
+  display: inline-block;
+}
+
+.history-past-details[open] .history-past-summary .summary-chevron {
+  transform: rotate(180deg);
+}
+
+.history-past-content {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-top: 1px solid var(--border);
+  background: #fafafa;
+}
+
+.history-date-header {
+  padding: 12px 8px 6px;
+  font-weight: 1100;
+  font-size: 16px;
+  color: #111827;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
