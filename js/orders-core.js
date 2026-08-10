@@ -1,4 +1,6 @@
-const WORKER_BASE = "https://benmi-worker-official.thuanmnc.workers.dev";
+const WORKER_BASE = (window.location.hostname.includes("staging") || window.location.hostname.includes("localhost") || window.location.hostname.includes("127.0.0.1"))
+  ? "https://platform-worker-staging.thuanmnc.workers.dev"
+  : "https://benmi-worker-official.thuanmnc.workers.dev";
 
 function getTenantIdFromUrl() {
   const params = new URLSearchParams(window.location.search);
