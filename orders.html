@@ -671,7 +671,7 @@
     function renderHistory(orders) {
       const container = document.getElementById("list-history");
       container.innerHTML = "";
-      if (orders.length === 0) {
+      if (!orders || orders.length === 0) {
         container.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">Chưa có lịch sử</div>`;
         return;
       }
@@ -680,41 +680,123 @@
       const sortedDates = Array.from(grouped.keys()).sort((a, b) => b.localeCompare(a));
       const todayStr = getTodayTaiwanStr();
 
-      for (const date of sortedDates) {
-        let items = grouped.get(date) || [];
-        items.sort((a, b) => {
+      const todayOrders = grouped.get(todayStr) || [];
+      const pastDates = sortedDates.filter(d => d !== todayStr);
+
+      // 1. Render Today's Section (Directly visible at top)
+      const todaySection = document.createElement("div");
+      todaySection.className = "history-today-section";
+
+      const todayHeader = document.createElement("div");
+      todayHeader.style.padding = "8px 8px 12px";
+      todayHeader.style.fontWeight = "1100";
+      todayHeader.style.fontSize = "18px";
+      todayHeader.style.color = "#111827";
+      todayHeader.innerText = `📅 Hôm nay (${todayStr}) — ${todayOrders.length} đơn`;
+      todaySection.appendChild(todayHeader);
+
+      if (todayOrders.length > 0) {
+        todayOrders.sort((a, b) => {
           const timeA = a.pickedUpAt || a.createdAt || 0;
           const timeB = b.pickedUpAt || b.createdAt || 0;
           return timeB - timeA;
         });
+        const todayGrid = document.createElement("div");
+        todayGrid.style.display = "flex";
+        todayGrid.style.flexDirection = "column";
+        todayGrid.style.gap = "12px";
+        todayOrders.forEach(order => {
+          todayGrid.appendChild(createHistoryTile(order));
+        });
+        todaySection.appendChild(todayGrid);
+      } else {
+        const emptyToday = document.createElement("div");
+        emptyToday.style.padding = "16px";
+        emptyToday.style.background = "#f9fafb";
+        emptyToday.style.borderRadius = "14px";
+        emptyToday.style.color = "#6b7280";
+        emptyToday.style.fontSize = "15px";
+        emptyToday.style.border = "1px dashed #e5e7eb";
+        emptyToday.innerText = "Hôm nay chưa có đơn hoàn thành hoặc hủy";
+        todaySection.appendChild(emptyToday);
+      }
 
-        const isToday = (date === todayStr);
-        const details = document.createElement("details");
-        details.className = "history-date-details";
-        if (isToday) {
-          details.setAttribute("open", "");
-        }
+      container.appendChild(todaySection);
 
-        const summary = document.createElement("summary");
-        summary.className = "history-date-summary";
-        const dateLabel = isToday ? `📅 Hôm nay (${date})` : `📅 ${date}`;
-        summary.innerHTML = `
-          <div class="summary-title">
-            <span>${dateLabel}</span>
-            <span class="summary-badge">${items.length} đơn</span>
-          </div>
-          <span class="summary-chevron">▼</span>
-        `;
-        details.appendChild(summary);
-
-        const dateContent = document.createElement("div");
-        dateContent.className = "history-date-content";
-        items.forEach(order => {
-          dateContent.appendChild(createHistoryTile(order));
+      // 2. Render Past Days Section (Collapsible with Toggle Button)
+      if (pastDates.length > 0) {
+        let totalPastOrders = 0;
+        pastDates.forEach(d => {
+          totalPastOrders += (grouped.get(d) || []).length;
         });
 
-        details.appendChild(dateContent);
-        container.appendChild(details);
+        const pastWrapper = document.createElement("div");
+        pastWrapper.style.marginTop = "24px";
+
+        const toggleBtn = document.createElement("button");
+        toggleBtn.className = "btn btn-ghost btn-block";
+        toggleBtn.style.display = "flex";
+        toggleBtn.style.justifyContent = "space-between";
+        toggleBtn.style.alignItems = "center";
+        toggleBtn.style.padding = "16px 20px";
+        toggleBtn.style.fontSize = "16px";
+        toggleBtn.style.fontWeight = "1100";
+        toggleBtn.style.borderRadius = "16px";
+        toggleBtn.style.border = "1px solid var(--border)";
+        toggleBtn.style.background = "#ffffff";
+        toggleBtn.style.boxShadow = "0 1px 3px rgba(0,0,0,0.05)";
+        toggleBtn.style.cursor = "pointer";
+
+        toggleBtn.innerHTML = `
+          <span>📁 Xem lịch sử các ngày trước (${pastDates.length} ngày · ${totalPastOrders} đơn)</span>
+          <span id="past-toggle-icon" style="font-size: 14px; color: #6b7280; transition: transform 0.2s ease;">▼</span>
+        `;
+
+        const pastContainer = document.createElement("div");
+        pastContainer.style.display = "none";
+        pastContainer.style.marginTop = "16px";
+        pastContainer.style.flexDirection = "column";
+        pastContainer.style.gap = "20px";
+
+        pastDates.forEach(date => {
+          let items = grouped.get(date) || [];
+          items.sort((a, b) => {
+            const timeA = a.pickedUpAt || a.createdAt || 0;
+            const timeB = b.pickedUpAt || b.createdAt || 0;
+            return timeB - timeA;
+          });
+
+          const dateBlock = document.createElement("div");
+          const dateHeader = document.createElement("div");
+          dateHeader.style.padding = "8px 8px 6px";
+          dateHeader.style.fontWeight = "1100";
+          dateHeader.style.fontSize = "16px";
+          dateHeader.style.color = "#374151";
+          dateHeader.innerText = `📅 ${date} (${items.length} đơn)`;
+          dateBlock.appendChild(dateHeader);
+
+          const dateGrid = document.createElement("div");
+          dateGrid.style.display = "flex";
+          dateGrid.style.flexDirection = "column";
+          dateGrid.style.gap = "12px";
+          items.forEach(order => {
+            dateGrid.appendChild(createHistoryTile(order));
+          });
+          dateBlock.appendChild(dateGrid);
+
+          pastContainer.appendChild(dateBlock);
+        });
+
+        toggleBtn.onclick = () => {
+          const isHidden = (pastContainer.style.display === "none" || !pastContainer.style.display);
+          pastContainer.style.display = isHidden ? "flex" : "none";
+          const icon = toggleBtn.querySelector("#past-toggle-icon");
+          if (icon) icon.style.transform = isHidden ? "rotate(180deg)" : "rotate(0deg)";
+        };
+
+        pastWrapper.appendChild(toggleBtn);
+        pastWrapper.appendChild(pastContainer);
+        container.appendChild(pastWrapper);
       }
     }
 
