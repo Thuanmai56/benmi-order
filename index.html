@@ -721,7 +721,7 @@
                     liffFallback: false
                 };
 
-                const res = await fetch(`${WORKER_BASE}/api/create`, {
+                const res = await fetch(`${WORKER_BASE}/api/create?tenant_id=${getTenantIdFromUrl()}`, {
                     method: "POST",
                     headers: {"Content-Type": "application/json"},
                     body: JSON.stringify(orderPayload)
@@ -772,7 +772,7 @@
                             note: mainNote,
                             liffFallback: true
                         };
-                        const res = await fetch(`${WORKER_BASE}/api/create`, {
+                        const res = await fetch(`${WORKER_BASE}/api/create?tenant_id=${getTenantIdFromUrl()}`, {
                             method: "POST",
                             headers: {"Content-Type": "application/json"},
                             body: JSON.stringify(orderPayload)
