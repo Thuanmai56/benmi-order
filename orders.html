@@ -602,20 +602,34 @@
       });
     }
 
+    function getOrderDateStr(o) {
+      let rawMs = NaN;
+      if (o?.createdAt) {
+        if (typeof o.createdAt === "number") {
+          rawMs = o.createdAt;
+        } else {
+          rawMs = new Date(o.createdAt).getTime();
+        }
+      }
+      if (Number.isNaN(rawMs) && o?.time && typeof o.time === "string") {
+        const match = o.time.match(/^(\d{4}-\d{2}-\d{2})/);
+        if (match) return match[1];
+        rawMs = new Date(o.time).getTime();
+      }
+      if (Number.isNaN(rawMs)) return "Unknown";
+
+      // Convert ms to Taiwan (UTC+8) YYYY-MM-DD
+      const nowTaiwan = new Date(rawMs + 8 * 3600000);
+      const yyyy = nowTaiwan.getUTCFullYear();
+      const mm = String(nowTaiwan.getUTCMonth() + 1).padStart(2, "0");
+      const dd = String(nowTaiwan.getUTCDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
     function groupByDate(orders) {
       const map = new Map();
       orders.forEach(o => {
-        let d = "Unknown";
-        if (o.createdAt) {
-          const dt = new Date(o.createdAt);
-          const nowTaiwan = new Date(dt.getTime() + 8 * 3600000);
-          const yyyy = nowTaiwan.getUTCFullYear();
-          const mm = String(nowTaiwan.getUTCMonth() + 1).padStart(2, "0");
-          const dd = String(nowTaiwan.getUTCDate()).padStart(2, "0");
-          d = `${yyyy}-${mm}-${dd}`;
-        } else if (o?.time && typeof o.time === "string" && o.time.match(/^\d{4}-\d{2}-\d{2}/)) {
-          d = o.time.slice(0, 10);
-        }
+        const d = getOrderDateStr(o);
         if (!map.has(d)) map.set(d, []);
         map.get(d).push(o);
       });
@@ -666,76 +680,40 @@
       const sortedDates = Array.from(grouped.keys()).sort((a, b) => b.localeCompare(a));
       const todayStr = getTodayTaiwanStr();
 
-      const todayOrders = grouped.get(todayStr) || [];
-      const pastDates = sortedDates.filter(d => d !== todayStr);
-
-      // 1. Render Today's Section (Default Expanded)
-      const todayHeader = document.createElement("div");
-      todayHeader.className = "history-date-header";
-      todayHeader.innerText = `📅 Hôm nay: ${todayStr} (${todayOrders.length} đơn)`;
-      container.appendChild(todayHeader);
-
-      if (todayOrders.length > 0) {
-        todayOrders.sort((a, b) => {
+      for (const date of sortedDates) {
+        let items = grouped.get(date) || [];
+        items.sort((a, b) => {
           const timeA = a.pickedUpAt || a.createdAt || 0;
           const timeB = b.pickedUpAt || b.createdAt || 0;
           return timeB - timeA;
         });
-        todayOrders.forEach(order => {
-          container.appendChild(createHistoryTile(order));
-        });
-      } else {
-        const emptyToday = document.createElement("div");
-        emptyToday.style.padding = "10px 8px 14px";
-        emptyToday.style.color = "#9ca3af";
-        emptyToday.style.fontSize = "14px";
-        emptyToday.innerText = "Hôm nay chưa có đơn hoàn thành hoặc hủy";
-        container.appendChild(emptyToday);
-      }
 
-      // 2. Render Past Days Collapsible Section
-      if (pastDates.length > 0) {
-        let totalPastCount = 0;
-        pastDates.forEach(d => {
-          totalPastCount += (grouped.get(d) || []).length;
-        });
-
+        const isToday = (date === todayStr);
         const details = document.createElement("details");
-        details.className = "history-past-details";
+        details.className = "history-date-details";
+        if (isToday) {
+          details.setAttribute("open", "");
+        }
 
         const summary = document.createElement("summary");
-        summary.className = "history-past-summary";
+        summary.className = "history-date-summary";
+        const dateLabel = isToday ? `📅 Hôm nay (${date})` : `📅 ${date}`;
         summary.innerHTML = `
           <div class="summary-title">
-            <span>📁 Lịch sử các ngày trước</span>
-            <span class="summary-badge">${pastDates.length} ngày · ${totalPastCount} đơn</span>
+            <span>${dateLabel}</span>
+            <span class="summary-badge">${items.length} đơn</span>
           </div>
           <span class="summary-chevron">▼</span>
         `;
         details.appendChild(summary);
 
-        const pastContent = document.createElement("div");
-        pastContent.className = "history-past-content";
-
-        pastDates.forEach(date => {
-          let items = grouped.get(date) || [];
-          items.sort((a, b) => {
-            const timeA = a.pickedUpAt || a.createdAt || 0;
-            const timeB = b.pickedUpAt || b.createdAt || 0;
-            return timeB - timeA;
-          });
-
-          const dateHeader = document.createElement("div");
-          dateHeader.className = "history-date-header";
-          dateHeader.innerText = `📅 ${date} (${items.length} đơn)`;
-          pastContent.appendChild(dateHeader);
-
-          items.forEach(order => {
-            pastContent.appendChild(createHistoryTile(order));
-          });
+        const dateContent = document.createElement("div");
+        dateContent.className = "history-date-content";
+        items.forEach(order => {
+          dateContent.appendChild(createHistoryTile(order));
         });
 
-        details.appendChild(pastContent);
+        details.appendChild(dateContent);
         container.appendChild(details);
       }
     }

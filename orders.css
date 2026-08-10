@@ -471,16 +471,16 @@ body {
 }
 
 /* Order History Collapsible Styles */
-.history-past-details {
+.history-date-details {
   border: 1px solid var(--border);
   border-radius: 16px;
   background: #ffffff;
-  margin-top: 14px;
+  margin-bottom: 12px;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
-.history-past-summary {
+.history-date-summary {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -495,21 +495,21 @@ body {
   transition: background 0.15s ease;
 }
 
-.history-past-summary::-webkit-details-marker {
+.history-date-summary::-webkit-details-marker {
   display: none;
 }
 
-.history-past-summary:hover {
+.history-date-summary:hover {
   background: #f3f4f6;
 }
 
-.history-past-summary .summary-title {
+.history-date-summary .summary-title {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.history-past-summary .summary-badge {
+.history-date-summary .summary-badge {
   background: #e5e7eb;
   color: #374151;
   padding: 4px 10px;
@@ -518,18 +518,18 @@ body {
   font-weight: 1000;
 }
 
-.history-past-summary .summary-chevron {
+.history-date-summary .summary-chevron {
   transition: transform 0.2s ease;
   font-size: 14px;
   color: #6b7280;
   display: inline-block;
 }
 
-.history-past-details[open] .history-past-summary .summary-chevron {
+.history-date-details[open] .history-date-summary .summary-chevron {
   transform: rotate(180deg);
 }
 
-.history-past-content {
+.history-date-content {
   padding: 12px;
   display: flex;
   flex-direction: column;
@@ -538,13 +538,4 @@ body {
   background: #fafafa;
 }
 
-.history-date-header {
-  padding: 12px 8px 6px;
-  font-weight: 1100;
-  font-size: 16px;
-  color: #111827;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
 
