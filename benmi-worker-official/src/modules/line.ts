@@ -3,7 +3,7 @@ import { TenantContext } from '../types/tenant';
 import { Order } from '../types/index';
 import { corsHeaders } from '../utils/http';
 import { resolveSecret } from '../utils/secrets';
-import { saveOrder, getPendingMap } from './orders';
+import { saveOrder, getPendingMap, getOrderQueueAhead, getUserLatestActiveOrder } from './orders';
 import { callAI } from '../integrations/groq';
 import { syncToGoogleSheets } from '../integrations/googleSheets';
 import { getTenantId, getMenuData, formatMenuForPrompt } from './menu';
@@ -83,6 +83,312 @@ export async function replyText(
     console.error(`[${brand}] replyText EXCEPTION: error=${e.message}`);
     return false;
   }
+}
+
+export async function pushLineFlexMessage(
+  userId: string,
+  altText: string,
+  contents: any,
+  env: Env,
+  tenantCtx?: TenantContext | null
+): Promise<boolean> {
+  const token = await getLineToken(env, tenantCtx);
+  const brand = tenantCtx?.brandName || "Bot";
+  if (!token || !userId) return false;
+
+  try {
+    const res = await fetch("https://api.line.me/v2/bot/message/push", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        to: userId,
+        messages: [{ type: "flex", altText, contents }],
+      }),
+    });
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => "(unreadable)");
+      console.error(`[${brand}] pushLineFlexMessage FAILED: status=${res.status} userId=${userId} body=${body}`);
+      return false;
+    }
+    return true;
+  } catch (e: any) {
+    console.error(`[${brand}] pushLineFlexMessage EXCEPTION: userId=${userId} error=${e.message}`);
+    return false;
+  }
+}
+
+export async function replyLineFlexMessage(
+  replyToken: string,
+  altText: string,
+  contents: any,
+  env: Env,
+  tenantCtx?: TenantContext | null
+): Promise<boolean> {
+  const token = await getLineToken(env, tenantCtx);
+  const brand = tenantCtx?.brandName || "Bot";
+  if (!token || !replyToken) return false;
+
+  try {
+    const res = await fetch("https://api.line.me/v2/bot/message/reply", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        replyToken,
+        messages: [{ type: "flex", altText, contents }],
+      }),
+    });
+
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => "(unreadable)");
+      console.error(`[${brand}] replyLineFlexMessage FAILED: status=${res.status} body=${errBody}`);
+      return false;
+    }
+    return true;
+  } catch (e: any) {
+    console.error(`[${brand}] replyLineFlexMessage EXCEPTION: error=${e.message}`);
+    return false;
+  }
+}
+
+export function buildOrderFlexMessage(order: Order, tenantCtx?: TenantContext | null): any {
+  const brandColor = tenantCtx?.brandColor || "#00b900";
+
+  const contentLines = (order.content || "").split("\n").filter(l => l.trim().length > 0);
+  const contentComponents = contentLines.slice(0, 12).map(line => ({
+    type: "text",
+    text: line,
+    size: "sm",
+    color: line.startsWith("↳") ? "#666666" : "#111111",
+    weight: line.includes("x ") ? "bold" : "regular",
+    wrap: true
+  }));
+
+  return {
+    type: "bubble",
+    size: "mega",
+    header: {
+      type: "box",
+      layout: "vertical",
+      backgroundColor: brandColor,
+      paddingAll: "15px",
+      contents: [
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            { type: "text", text: "🛍️ 訂單明細", weight: "bold", color: "#ffffff", size: "lg", flex: 1 },
+            { type: "text", text: `#${order.key}`, color: "#ffffff", size: "sm", align: "end", flex: 1 }
+          ]
+        }
+      ]
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      paddingAll: "15px",
+      spacing: "md",
+      contents: [
+        {
+          type: "box",
+          layout: "vertical",
+          spacing: "xs",
+          contents: [
+            { type: "text", text: "📦 訂單內容：", weight: "bold", size: "sm", color: "#333333" },
+            ...contentComponents
+          ]
+        },
+        ...(order.note ? [
+          { type: "separator", margin: "md" },
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: "📝 備註：", size: "xs", color: "#888888", flex: 3 },
+              { type: "text", text: order.note, size: "xs", color: "#333333", wrap: true, flex: 7 }
+            ]
+          }
+        ] : []),
+        { type: "separator", margin: "md" },
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            { type: "text", text: "🕒 取餐時間：", size: "sm", color: "#666666", flex: 4 },
+            { type: "text", text: order.time, size: "sm", weight: "bold", color: "#111111", align: "end", flex: 6 }
+          ]
+        },
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            { type: "text", text: "💰 總金額：", size: "sm", color: "#666666", flex: 4 },
+            { type: "text", text: `$${order.total}`, size: "md", weight: "bold", color: "#e53e3e", align: "end", flex: 6 }
+          ]
+        }
+      ]
+    },
+    footer: {
+      type: "box",
+      layout: "vertical",
+      paddingAll: "12px",
+      contents: [
+        {
+          type: "button",
+          style: "primary",
+          color: brandColor,
+          height: "sm",
+          action: {
+            type: "postback",
+            label: "🔍 查詢製作進度",
+            data: `action=check_progress&order_key=${order.key}`,
+            displayText: `🔍 查詢訂單進度 (${order.key})`
+          }
+        }
+      ]
+    }
+  };
+}
+
+export function buildProgressFlexMessage(order: Order, queueAheadCount: number, tenantCtx?: TenantContext | null): any {
+  const brandColor = tenantCtx?.brandColor || "#00b900";
+  
+  let statusTitle = "待店家確認";
+  let statusBadgeColor = "#f59e0b";
+  let statusIcon = "⏳";
+  let queueText = "";
+
+  if (order.status === "NEW") {
+    statusTitle = "待店家確認 (Chờ xác nhận)";
+    statusBadgeColor = "#f59e0b";
+    statusIcon = "⏳";
+    queueText = queueAheadCount > 0
+      ? `前方還有 ${queueAheadCount} 張訂單正在排隊`
+      : "前方已無排隊訂單，即將為您確認！";
+  } else if (order.status === "ACCEPTED") {
+    statusTitle = "店家製作中 (Đang làm món)";
+    statusBadgeColor = "#3b82f6";
+    statusIcon = "🍳";
+    queueText = queueAheadCount > 0
+      ? `前方還有 ${queueAheadCount} 張訂單正在排隊製作`
+      : "🔥 前方已無排隊訂單，您的餐點正由店家製作中！";
+  } else if (order.status === "DONE") {
+    statusTitle = "製作完成，可取餐！ (Đã làm xong)";
+    statusBadgeColor = "#10b981";
+    statusIcon = "🎉";
+    queueText = "您的餐點已準備完畢，請儘快前來取餐！";
+  } else if (order.status === "PICKED_UP") {
+    statusTitle = "已完成取餐 (Đã lấy hàng)";
+    statusBadgeColor = "#6b7280";
+    statusIcon = "✅";
+    queueText = "感謝您的訂購，歡迎下次光臨！";
+  } else if (order.status === "WAITING_CUSTOMER_CHANGE" || order.status === "WAITING_CUSTOMER_REJECT") {
+    statusTitle = "訂單變更/確認中";
+    statusBadgeColor = "#ec4899";
+    statusIcon = "⚠️";
+    queueText = "請查看 LINE 對話紀錄並回覆店家。";
+  } else if (order.status === "REJECTED") {
+    statusTitle = "訂單已取消";
+    statusBadgeColor = "#ef4444";
+    statusIcon = "❌";
+    queueText = "該訂單已被取消。";
+  }
+
+  return {
+    type: "bubble",
+    size: "mega",
+    header: {
+      type: "box",
+      layout: "vertical",
+      backgroundColor: brandColor,
+      paddingAll: "15px",
+      contents: [
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            { type: "text", text: "📋 訂單製作進度", weight: "bold", color: "#ffffff", size: "lg", flex: 1 },
+            { type: "text", text: `#${order.key}`, color: "#ffffff", size: "sm", align: "end", flex: 1 }
+          ]
+        }
+      ]
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      paddingAll: "15px",
+      spacing: "md",
+      contents: [
+        {
+          type: "box",
+          layout: "vertical",
+          backgroundColor: "#f9fafb",
+          cornerRadius: "md",
+          paddingAll: "12px",
+          spacing: "xs",
+          contents: [
+            {
+              type: "box",
+              layout: "horizontal",
+              contents: [
+                { type: "text", text: `${statusIcon} 當前狀態：`, size: "sm", color: "#666666", flex: 4 },
+                { type: "text", text: statusTitle, size: "sm", weight: "bold", color: statusBadgeColor, align: "end", flex: 6 }
+              ]
+            },
+            {
+              type: "text",
+              text: queueText,
+              size: "xs",
+              color: "#374151",
+              wrap: true,
+              margin: "sm"
+            }
+          ]
+        },
+        { type: "separator", margin: "md" },
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            { type: "text", text: "🕒 預計取餐時間：", size: "xs", color: "#666666", flex: 5 },
+            { type: "text", text: order.time, size: "xs", weight: "bold", color: "#111111", align: "end", flex: 5 }
+          ]
+        },
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            { type: "text", text: "💰 總金額：", size: "xs", color: "#666666", flex: 5 },
+            { type: "text", text: `$${order.total}`, size: "xs", weight: "bold", color: "#e53e3e", align: "end", flex: 5 }
+          ]
+        }
+      ]
+    },
+    footer: {
+      type: "box",
+      layout: "vertical",
+      paddingAll: "12px",
+      contents: [
+        {
+          type: "button",
+          style: "secondary",
+          height: "sm",
+          action: {
+            type: "postback",
+            label: "🔄 重新整理進度",
+            data: `action=check_progress&order_key=${order.key}`,
+            displayText: `🔄 重新整理進度 (${order.key})`
+          }
+        }
+      ]
+    }
+  };
 }
 
 export async function replyWithLiffRedirect(
@@ -295,20 +601,65 @@ export async function handleLineWebhook(
   const brandName = tenantCtx?.brandName || tenantId;
 
   for (const event of events) {
-    if (!event || event.type !== "message") continue;
-    const message = event.message || {};
-    if (message.type !== "text") continue;
+    if (!event) continue;
 
     const replyToken = event.replyToken;
     const source = event.source || {};
     const userId = source.userId;
     if (!userId) continue;
 
+    // 0.1) Handle postback events (e.g. Progress Check button tap)
+    if (event.type === "postback") {
+      const dataStr = event.postback?.data || "";
+      if (dataStr.includes("action=check_progress")) {
+        let orderKey = "";
+        const match = dataStr.match(/order_key=([^&]+)/);
+        if (match) {
+          orderKey = match[1];
+        }
+
+        const res = orderKey ? await getOrderQueueAhead(env, tenantId, orderKey) : await getUserLatestActiveOrder(env, tenantId, userId);
+        if (res && res.order) {
+          const flex = buildProgressFlexMessage(res.order, res.queueAhead, tenantCtx);
+          await replyLineFlexMessage(replyToken, `📋 訂單進度 #${res.order.key}`, flex, env, tenantCtx);
+        } else {
+          await replyText(replyToken, "找不到您的相關訂單紀錄。 (Không tìm thấy thông tin đơn hàng)", env, tenantCtx);
+        }
+        continue;
+      }
+    }
+
+    if (event.type !== "message") continue;
+    const message = event.message || {};
+    if (message.type !== "text") continue;
+
     const userText = message.text || "";
     const pendingKey = `pending:${userId}`;
     const draftKey = `draft:${userId}`;
 
-    // 0) Priority Catch new order from LIFF text message (Bypasses pending states)
+    // 0.2) Handle text progress triggers (e.g. 查詢進度 / 進度 / tiến độ / check progress)
+    const lowerText = userText.toLowerCase();
+    if (
+      (lowerText.includes("進度") || lowerText.includes("tiến độ") || lowerText.includes("check progress")) &&
+      !userText.includes("訂單編號：")
+    ) {
+      let orderKey = "";
+      const match = userText.match(/B\d{4}-\d{4}-\d{4}/) || userText.match(/BD\d+-\d+-\d+/);
+      if (match) {
+        orderKey = match[0];
+      }
+
+      const res = orderKey ? await getOrderQueueAhead(env, tenantId, orderKey) : await getUserLatestActiveOrder(env, tenantId, userId);
+      if (res && res.order) {
+        const flex = buildProgressFlexMessage(res.order, res.queueAhead, tenantCtx);
+        await replyLineFlexMessage(replyToken, `📋 訂單進度 #${res.order.key}`, flex, env, tenantCtx);
+      } else {
+        await replyText(replyToken, "目前查無您的進行中訂單。 (Không tìm thấy đơn hàng đang thực hiện)", env, tenantCtx);
+      }
+      continue;
+    }
+
+    // 0.3) Priority Catch new order from LIFF text message (Bypasses pending states)
     if (userText.includes("訂單編號：") && userText.includes("📦 訂單內容：")) {
       if (userText.includes("[已收到]") || userText.includes("[Đã nhận]")) {
         console.log(`[${brandName}] Webhook received receipt message. Skipping to avoid overwrite.`);
@@ -396,6 +747,18 @@ export async function handleLineWebhook(
       };
 
       await saveOrder(env, orderData, tenantId);
+
+      // Push Flex message with order details and progress check button to customer
+      try {
+        const flexBubble = buildOrderFlexMessage(orderData, tenantCtx);
+        if (replyToken) {
+          await replyLineFlexMessage(replyToken, `🧾 訂單明細 #${orderKey}`, flexBubble, env, tenantCtx);
+        } else {
+          await pushLineFlexMessage(userId, `🧾 訂單明細 #${orderKey}`, flexBubble, env, tenantCtx);
+        }
+      } catch (flexErr) {
+        console.error(`[${brandName}] Push flex order receipt error:`, flexErr);
+      }
 
       // Fetch real LINE name in background and update customer_name safely in DB
       if (ctx && ctx.waitUntil) {

@@ -63,7 +63,9 @@ function openReview(orderKey) {
   document.getElementById("review-customer").innerText = order.customer || "-";
   document.getElementById("review-pickup").innerText = order.time || "-";
   document.getElementById("review-eta").innerText = formatEta(order.time);
-  document.getElementById("review-status").innerText = order.status || "-";
+  document.getElementById("review-status").innerHTML = formatStatusHtml(order.status);
+  const totalEl = document.getElementById("review-total");
+  if (totalEl) totalEl.innerText = formatOrderTotal(order);
   document.getElementById("review-content").innerHTML = formatContentHtml(order);
 
   const actionsNew = document.getElementById("review-actions");
@@ -162,16 +164,127 @@ async function reviewAccept(btn) {
   switchTab("live");
 }
 
+let changeModalBaseDate = null;
+let changeModalProposedDeltaMinutes = 15;
+
+function parseOrderTimeToDate(timeStr) {
+  if (!timeStr || typeof timeStr !== "string") return new Date();
+
+  // Match YYYY-MM-DD HH:mm
+  const dateTimeMatch = timeStr.match(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})/);
+  if (dateTimeMatch) {
+    const iso = `${dateTimeMatch[1]}T${dateTimeMatch[2]}:00`;
+    const d = new Date(iso);
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  // Match HH:mm
+  const timeMatch = timeStr.match(/(\d{1,2}):(\d{2})/);
+  if (timeMatch) {
+    const now = new Date();
+    now.setHours(parseInt(timeMatch[1], 10), parseInt(timeMatch[2], 10), 0, 0);
+    return now;
+  }
+
+  return new Date();
+}
+
+function formatHHmm(dateObj) {
+  if (!dateObj || isNaN(dateObj.getTime())) return "12:00";
+  const h = String(dateObj.getHours()).padStart(2, "0");
+  const m = String(dateObj.getMinutes()).padStart(2, "0");
+  return `${h}:${m}`;
+}
+
+function updateProposedTimeUI() {
+  if (!changeModalBaseDate) {
+    changeModalBaseDate = new Date();
+  }
+
+  // Update time display labels on preset buttons
+  [10, 15, 20, 30, 45, 60].forEach(min => {
+    const el = document.getElementById(`preset-time-${min}`);
+    if (el) {
+      const targetDate = new Date(changeModalBaseDate.getTime() + min * 60000);
+      el.innerText = formatHHmm(targetDate);
+    }
+  });
+
+  // Update active state highlight on preset buttons
+  document.querySelectorAll(".time-preset-btn").forEach(btn => {
+    const min = parseInt(btn.getAttribute("data-minutes"), 10);
+    btn.classList.toggle("active", min === changeModalProposedDeltaMinutes);
+  });
+
+  // Calculate proposed target date
+  const targetDate = new Date(changeModalBaseDate.getTime() + changeModalProposedDeltaMinutes * 60000);
+  const formattedTime = formatHHmm(targetDate);
+
+  const timePicker = document.getElementById("change-time-picker");
+  if (timePicker) {
+    timePicker.value = formattedTime;
+  }
+
+  const noteInput = document.getElementById("change-note");
+  if (noteInput) {
+    noteInput.value = formattedTime;
+  }
+}
+
+function selectTimePreset(minutes) {
+  changeModalProposedDeltaMinutes = minutes;
+  updateProposedTimeUI();
+}
+
+function stepProposedTime(deltaMinutes) {
+  changeModalProposedDeltaMinutes += deltaMinutes;
+  updateProposedTimeUI();
+}
+
+function onTimePickerChange() {
+  const timePicker = document.getElementById("change-time-picker");
+  if (!timePicker || !timePicker.value) return;
+
+  const parts = timePicker.value.split(":");
+  if (parts.length < 2) return;
+
+  const pickedH = parseInt(parts[0], 10);
+  const pickedM = parseInt(parts[1], 10);
+
+  const pickedDate = new Date(changeModalBaseDate.getTime());
+  pickedDate.setHours(pickedH, pickedM, 0, 0);
+
+  const diffMs = pickedDate.getTime() - changeModalBaseDate.getTime();
+  changeModalProposedDeltaMinutes = Math.round(diffMs / 60000);
+
+  updateProposedTimeUI();
+}
+
 function reviewOpenChange() {
   if (!reviewingOrder?.key) return;
   const savedKey = reviewingOrder.key;
+  const orderTimeStr = reviewingOrder.time || "";
+
   closeModal();
   currentOrderKey = savedKey;
+
+  const orderKeyEl = document.getElementById("change-order-key");
+  if (orderKeyEl) orderKeyEl.innerText = savedKey;
+
+  const origTimeEl = document.getElementById("change-original-time");
+  if (origTimeEl) origTimeEl.innerText = orderTimeStr || "Chưa xác định";
+
+  changeModalBaseDate = parseOrderTimeToDate(orderTimeStr);
+  changeModalProposedDeltaMinutes = 15;
+
   document.getElementById("change-reason").value = "時間需調整";
   document.getElementById("change-note").value = "";
   const checkboxes = document.querySelectorAll(".sold-item");
   if (checkboxes) checkboxes.forEach(cb => cb.checked = false);
+
   onChangeReasonChange();
+  updateProposedTimeUI();
+
   document.getElementById("changeModal").style.display = "flex";
 }
 
@@ -202,15 +315,20 @@ async function reviewForceCancel(btn) {
 function onChangeReasonChange() {
   const reason = document.getElementById("change-reason").value;
   const note = document.getElementById("change-note");
+  const timeDiv = document.getElementById("change-time-div");
   const itemsDiv = document.getElementById("change-items-div");
 
   if (reason === "時間需調整") {
-    note.style.display = "block";
-    itemsDiv.style.display = "none";
-    note.placeholder = "建議時間/Gợi ý thời gian mới (VD: 11:00)";
+    if (timeDiv) timeDiv.style.display = "block";
+    if (note) {
+      note.style.display = "block";
+      note.placeholder = "Ghi chú thời gian mới (VD: 11:15)";
+    }
+    if (itemsDiv) itemsDiv.style.display = "none";
   } else {
-    note.style.display = "none";
-    itemsDiv.style.display = "block";
+    if (timeDiv) timeDiv.style.display = "none";
+    if (note) note.style.display = "none";
+    if (itemsDiv) itemsDiv.style.display = "block";
   }
 }
 
@@ -222,7 +340,7 @@ async function confirmAction(type, btn) {
   let note = isChange ? document.getElementById("change-note").value.trim() : undefined;
 
   if (isChange && reason === "時間需調整" && !note) {
-    alert("Vui lòng nhập thời gian gợi ý mới (Ví dụ: 11:00)!");
+    alert("Vui lòng chọn thời gian gợi ý mới!");
     return;
   }
 
@@ -238,3 +356,4 @@ async function confirmAction(type, btn) {
   await updateStatus(key, status, { reason, note }, btn);
   closeModal();
 }
+

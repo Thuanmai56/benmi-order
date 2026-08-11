@@ -5,6 +5,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Benmi Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/orders-base.css" />
   <link rel="stylesheet" href="css/orders-history.css" />
 </head>
@@ -191,6 +194,10 @@
           <div class="detail-label">狀態</div>
           <div class="detail-value" id="review-status">-</div>
         </div>
+        <div class="detail-box">
+          <div class="detail-label">總金額 / Total</div>
+          <div class="detail-value" id="review-total" style="color: #059669; font-weight: 1100;">-</div>
+        </div>
       </div>
 
       <div class="detail-content" id="review-content">-</div>
@@ -226,20 +233,78 @@
 
   <!-- Change modal -->
   <div id="changeModal" class="modal">
-    <div class="modal-content">
+    <div class="modal-content" style="max-width: 520px;">
       <div class="modal-title">
         <h3>需要更改 (Yêu cầu thay đổi)</h3>
         <div class="modal-close" onclick="closeModal()">✕</div>
       </div>
-      <label style="display:block; margin-top: 10px; font-weight: 1100; font-size: 20px;">原因 / 建議:</label>
+
+      <div class="change-order-info" id="change-order-info">
+        <div class="info-row">
+          <span class="info-label">Mã đơn / Order:</span>
+          <span class="info-val mono" id="change-order-key">-</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Giờ lấy ban đầu:</span>
+          <span class="info-val" id="change-original-time" style="color: var(--brand-red); font-weight: 1000;">-</span>
+        </div>
+      </div>
+
+      <label style="display:block; margin-top: 14px; font-weight: 1100; font-size: 20px;">原因 / Lý do thay đổi:</label>
       <select id="change-reason"
-        style="width:100%; padding: 16px; margin-top: 10px; border-radius: 12px; border: 1px solid var(--border); font-size: 22px;"
+        style="width:100%; padding: 14px; margin-top: 8px; border-radius: 12px; border: 1.5px solid var(--border); font-size: 20px; font-weight: 900;"
         onchange="onChangeReasonChange()">
-        <option value="時間需調整">時間太趕，需延後</option>
-        <option value="口味售完">該口味已售完</option>
+        <option value="時間需調整">時間太趕，需延後 (Lùi giờ nhận hàng)</option>
+        <option value="口味售完">該口味已售完 (Hết món)</option>
       </select>
-      <textarea id="change-note" rows="3" placeholder="建議時間/Gợi ý thời gian mới (VD: 11:00)"
-        style="width:100%; padding: 16px; margin-top: 16px; border-radius: 12px; border: 1px solid var(--border); font-size: 22px;"></textarea>
+
+      <div id="change-time-div" style="margin-top: 14px;">
+        <div class="preset-title" style="font-size: 17px; font-weight: 1000; color: #374151; margin-bottom: 8px;">⚡ Chọn nhanh số phút lùi thêm:</div>
+        <div class="time-preset-grid">
+          <button type="button" class="time-preset-btn" data-minutes="10" onclick="selectTimePreset(10)">
+            <span class="preset-min">+10m</span>
+            <span class="preset-time" id="preset-time-10">--:--</span>
+          </button>
+          <button type="button" class="time-preset-btn active" data-minutes="15" onclick="selectTimePreset(15)">
+            <span class="preset-min">+15m</span>
+            <span class="preset-time" id="preset-time-15">--:--</span>
+          </button>
+          <button type="button" class="time-preset-btn" data-minutes="20" onclick="selectTimePreset(20)">
+            <span class="preset-min">+20m</span>
+            <span class="preset-time" id="preset-time-20">--:--</span>
+          </button>
+          <button type="button" class="time-preset-btn" data-minutes="30" onclick="selectTimePreset(30)">
+            <span class="preset-min">+30m</span>
+            <span class="preset-time" id="preset-time-30">--:--</span>
+          </button>
+          <button type="button" class="time-preset-btn" data-minutes="45" onclick="selectTimePreset(45)">
+            <span class="preset-min">+45m</span>
+            <span class="preset-time" id="preset-time-45">--:--</span>
+          </button>
+          <button type="button" class="time-preset-btn" data-minutes="60" onclick="selectTimePreset(60)">
+            <span class="preset-min">+60m</span>
+            <span class="preset-time" id="preset-time-60">--:--</span>
+          </button>
+        </div>
+
+        <div class="time-adjust-row" style="margin-top: 14px;">
+          <div class="stepper-group">
+            <button type="button" class="time-stepper-btn" onclick="stepProposedTime(-10)">-10m</button>
+            <button type="button" class="time-stepper-btn" onclick="stepProposedTime(-5)">-5m</button>
+          </div>
+          <div class="picker-group">
+            <div class="picker-label">Giờ đề xuất mới:</div>
+            <input type="time" id="change-time-picker" class="time-picker-input" onchange="onTimePickerChange()">
+          </div>
+          <div class="stepper-group">
+            <button type="button" class="time-stepper-btn" onclick="stepProposedTime(5)">+5m</button>
+            <button type="button" class="time-stepper-btn" onclick="stepProposedTime(10)">+10m</button>
+          </div>
+        </div>
+      </div>
+
+      <textarea id="change-note" rows="2" placeholder="Ghi chú thời gian mới / Note"
+        style="width:100%; padding: 12px 14px; margin-top: 12px; border-radius: 12px; border: 1.5px solid var(--border); font-size: 20px; font-weight: 800;"></textarea>
 
       <div id="change-items-div" style="display: none;">
         <div style="margin-top: 16px; font-weight: 1000; font-size: 18px; margin-bottom: 12px;">Chọn món đã hết:</div>
@@ -260,8 +325,8 @@
       </div>
 
       <div class="modal-actions two" style="margin-top: 16px;">
-        <button class="btn btn-yellow" onclick="confirmAction('CHANGE', this)">傳送建議</button>
-        <button class="btn btn-ghost" onclick="closeModal()">取消</button>
+        <button class="btn btn-yellow" onclick="confirmAction('CHANGE', this)">傳送建議 (Gửi đề xuất)</button>
+        <button class="btn btn-ghost" onclick="closeModal()">取消 (Hủy)</button>
       </div>
     </div>
   </div>

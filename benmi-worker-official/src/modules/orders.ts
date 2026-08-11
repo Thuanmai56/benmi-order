@@ -2,7 +2,7 @@ import { Env } from '../types/env';
 import { Order } from '../types/index';
 import { corsHeaders, json } from '../utils/http';
 import { syncToGoogleSheets } from '../integrations/googleSheets';
-import { pushLineMessage } from './line';
+import { pushLineMessage, pushLineFlexMessage, buildOrderFlexMessage } from './line';
 import { getTenantId } from './menu';
 
 import { TenantContext } from '../types/tenant';
@@ -54,6 +54,23 @@ export async function createOrder(
   };
 
   await saveOrder(env, order, tenantId);
+
+  // Push Flex message with order details and progress check button to customer
+  if (order.userId) {
+    const sendFlex = async () => {
+      try {
+        const flex = buildOrderFlexMessage(order, tenantCtx);
+        await pushLineFlexMessage(order.userId, `🧾 訂單明細 #${order.key}`, flex, env, tenantCtx);
+      } catch (e) {
+        console.error(`[createOrder] Push flex error:`, e);
+      }
+    };
+    if (ctx && ctx.waitUntil) {
+      ctx.waitUntil(sendFlex());
+    } else {
+      sendFlex();
+    }
+  }
 
   return json({ success: true, key: orderKey });
 }
@@ -458,4 +475,64 @@ export async function handleOrdersMigration(request: Request, env: Env): Promise
     return json({ success: false, error: err.message, logs }, 500);
   }
 }
+
+export async function getOrderQueueAhead(env: Env, tenantId: string, orderKey: string): Promise<{ order: Order | null; queueAhead: number }> {
+  if (!env.DB) return { order: null, queueAhead: 0 };
+  try {
+    const row = await env.DB.prepare(
+      "SELECT key, customer_name, pickup_time, status, total_amount, order_content, reason, note, created_at, user_id FROM orders WHERE key = ?"
+    ).bind(orderKey).first<any>();
+
+    if (!row) return { order: null, queueAhead: 0 };
+
+    const order: Order = {
+      key: row.key,
+      customer: row.customer_name,
+      time: row.pickup_time,
+      content: row.order_content,
+      status: row.status,
+      createdAt: new Date(row.created_at + "Z").getTime(),
+      userId: row.user_id || undefined,
+      total: row.total_amount,
+      reason: row.reason || "",
+      note: row.note || ""
+    };
+
+    if (order.status === 'DONE' || order.status === 'PICKED_UP' || order.status === 'REJECTED') {
+      return { order, queueAhead: 0 };
+    }
+
+    const countRow = await env.DB.prepare(
+      `SELECT COUNT(*) as cnt FROM orders
+       WHERE tenant_id = ?
+         AND status IN ('NEW', 'ACCEPTED')
+         AND created_at < ?
+         AND created_at >= DATETIME('now', '-24 hours')`
+    ).bind(tenantId, row.created_at).first<{ cnt: number }>();
+
+    return { order, queueAhead: countRow?.cnt || 0 };
+  } catch (e: any) {
+    console.error("[getOrderQueueAhead] error:", e);
+    return { order: null, queueAhead: 0 };
+  }
+}
+
+export async function getUserLatestActiveOrder(env: Env, tenantId: string, userId: string): Promise<{ order: Order | null; queueAhead: number }> {
+  if (!env.DB) return { order: null, queueAhead: 0 };
+  try {
+    const row = await env.DB.prepare(
+      `SELECT key FROM orders 
+       WHERE tenant_id = ? AND user_id = ?
+       ORDER BY created_at DESC LIMIT 1`
+    ).bind(tenantId, userId).first<any>();
+
+    if (!row) return { order: null, queueAhead: 0 };
+
+    return await getOrderQueueAhead(env, tenantId, row.key);
+  } catch (e: any) {
+    console.error("[getUserLatestActiveOrder] error:", e);
+    return { order: null, queueAhead: 0 };
+  }
+}
+
 

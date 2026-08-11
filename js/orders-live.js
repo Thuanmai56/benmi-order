@@ -33,6 +33,7 @@ function renderListLeft(orders) {
         <div class="tile-top">
           <span class="tile-customer">${escapeHtml(order.customer || "Khách")}</span>
           ${badge}
+          <span class="tile-meta" style="font-weight: 1100; color: #059669;">${formatOrderTotal(order)}</span>
           <span class="tile-meta">#${escapeHtml(order.key)}</span>
         </div>
         <div class="tile-top" style="margin-top: 6px;">
@@ -69,6 +70,7 @@ function renderListRight(orders) {
         <div class="tile-top">
           <span class="tile-customer">${escapeHtml(order.customer || "Khách")}</span>
           <span class="badge done">READY</span>
+          <span class="tile-meta" style="font-weight: 1100; color: #059669;">${formatOrderTotal(order)}</span>
           <span class="tile-meta">#${escapeHtml(order.key)}</span>
         </div>
         <div class="tile-top" style="margin-top: 6px;">

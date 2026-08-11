@@ -64,6 +64,44 @@ function shortItems(content) {
   return lines.slice(0, 6).join("\n");
 }
 
+function formatOrderTotal(order) {
+  if (!order) return "-";
+  if (typeof order.total === "number" && !Number.isNaN(order.total) && order.total > 0) {
+    return `$${order.total.toLocaleString()}`;
+  }
+  if (order.content) {
+    const match = String(order.content).match(/💰\s*總金額：\s*\$?(\d+)/) || String(order.content).match(/\$(\d+)/);
+    if (match && match[1]) {
+      return `$${parseInt(match[1], 10).toLocaleString()}`;
+    }
+  }
+  if (typeof order.total === "number" && !Number.isNaN(order.total)) {
+    return `$${order.total}`;
+  }
+  return "-";
+}
+
+function formatStatusHtml(status) {
+  switch (status) {
+    case "NEW":
+      return `<span class="badge new" style="font-size: 15px; padding: 4px 10px; display: inline-block;">NEW</span>`;
+    case "ACCEPTED":
+      return `<span class="badge wait" style="font-size: 15px; padding: 4px 10px; background: #dbeafe; color: #1e40af; display: inline-block;">DOING</span>`;
+    case "DONE":
+      return `<span class="badge done" style="font-size: 15px; padding: 4px 10px; display: inline-block;">READY</span>`;
+    case "PICKED_UP":
+      return `<span class="badge done" style="font-size: 15px; padding: 4px 10px; background: #e5e7eb; color: #374151; display: inline-block;">PICKED UP</span>`;
+    case "WAITING_CUSTOMER_CHANGE":
+      return `<span class="badge wait" style="font-size: 13px; padding: 4px 8px; background: #fef3c7; color: #92400e; display: inline-block; white-space: normal; text-align: center;">Chờ đổi</span>`;
+    case "WAITING_CUSTOMER_REJECT":
+      return `<span class="badge wait" style="font-size: 13px; padding: 4px 8px; background: #fee2e2; color: #991b1b; display: inline-block; white-space: normal; text-align: center;">Chờ hủy</span>`;
+    case "REJECTED":
+      return `<span class="badge danger" style="font-size: 15px; padding: 4px 10px; background: #fee2e2; color: #991b1b; display: inline-block;">REJECTED</span>`;
+    default:
+      return `<span style="font-size: 16px; font-weight: bold;">${escapeHtml(status || "-")}</span>`;
+  }
+}
+
 function getInitialTab() {
   const hash = window.location.hash.replace("#", "").trim();
   const saved = localStorage.getItem("benmi_active_tab");

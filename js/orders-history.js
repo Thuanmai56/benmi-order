@@ -53,6 +53,7 @@ function createHistoryTile(order) {
       <div class="tile-top">
         <span class="tile-customer">${escapeHtml(order.customer || "Khách")}</span>
         ${badge}
+        <span class="tile-meta" style="font-weight: 1100; color: #059669;">${formatOrderTotal(order)}</span>
         <span class="tile-meta">#${escapeHtml(order.key)}</span>
       </div>
       <div class="tile-items">${escapeHtml(shortItems(order.content))}</div>
@@ -122,6 +123,18 @@ function renderHistory(orders) {
       card.open = true;
     }
 
+    const dayTotal = items.reduce((sum, o) => {
+      let val = 0;
+      if (typeof o.total === "number" && !Number.isNaN(o.total)) {
+        val = o.total;
+      } else if (o.content) {
+        const match = String(o.content).match(/💰\s*總金額：\s*\$?(\d+)/) || String(o.content).match(/\$(\d+)/);
+        if (match && match[1]) val = parseInt(match[1], 10);
+      }
+      return sum + val;
+    }, 0);
+    const dayTotalHtml = dayTotal > 0 ? `<span class="summary-badge" style="background: #dcfce7; color: #166534; font-weight: bold;">💰 $${dayTotal.toLocaleString()}</span>` : "";
+
     const summary = document.createElement("summary");
     summary.className = "history-date-summary";
     const dateTitle = isToday ? `Hôm nay (${date})` : date;
@@ -131,6 +144,7 @@ function renderHistory(orders) {
         <span style="font-size: 17px;">${icon}</span>
         <span style="font-weight: 1100;">${dateTitle}</span>
         <span class="summary-badge">${items.length} đơn</span>
+        ${dayTotalHtml}
       </div>
       <span class="summary-chevron">▼</span>
     `;
