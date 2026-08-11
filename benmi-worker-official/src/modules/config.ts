@@ -26,7 +26,8 @@ export async function getConfig(request: Request, env: Env, tenantCtx?: TenantCo
   
   return json({ 
     liffId: stored.liffId || tenantCtx?.liffId || env.LIFF_ID || null,
-    operatingHours: stored.operatingHours || tenantCtx?.operatingHours || null
+    operatingHours: stored.operatingHours || tenantCtx?.operatingHours || null,
+    allowScheduledPickup: stored.allowScheduledPickup !== undefined ? stored.allowScheduledPickup : true
   });
 }
 
@@ -48,6 +49,9 @@ export async function updateConfig(request: Request, env: Env, tenantCtx?: Tenan
     }
     if (payload.liffId !== undefined) {
       stored.liffId = payload.liffId;
+    }
+    if (payload.allowScheduledPickup !== undefined) {
+      stored.allowScheduledPickup = payload.allowScheduledPickup;
     }
     
     await env.ORDER_STATE.put(cacheKey, JSON.stringify(stored));

@@ -78,12 +78,14 @@
                 <div style="text-align:center; color:#9ca3af;">(目前沒有已選商品)</div>
             </div>
 
-            <div class="section-title">🕒 取餐時間</div>
-            <div class="input-group">
-                <label style="font-weight: 800; color: var(--primary);">⚠️ 請選擇取餐日期 / 時間</label>
-                <div class="datetime-row">
-                    <input type="date" id="pickup-date">
-                    <input type="time" id="pickup-time">
+            <div id="pickup-time-section">
+                <div class="section-title">🕒 取餐時間</div>
+                <div class="input-group">
+                    <label style="font-weight: 800; color: var(--primary);">⚠️ 請選擇取餐日期 / 時間</label>
+                    <div class="datetime-row">
+                        <input type="date" id="pickup-date">
+                        <input type="time" id="pickup-time">
+                    </div>
                 </div>
             </div>
 
@@ -144,8 +146,19 @@
                 if (resMenu.ok) menu = await resMenu.json();
                 if (resImage.ok) imageList = await resImage.json();
                 if (resConfig.ok) storeConfig = await resConfig.json();
+                applyPickupConfig();
             } catch (e) {
                 console.error("Failed to fetch menu or config", e);
+            }
+        }
+
+        function applyPickupConfig() {
+            const pickupSection = document.getElementById('pickup-time-section');
+            if (!pickupSection) return;
+            if (storeConfig && storeConfig.allowScheduledPickup === false) {
+                pickupSection.style.display = 'none';
+            } else {
+                pickupSection.style.display = 'block';
             }
         }
 
@@ -593,68 +606,85 @@
             const hasItem = Object.values(cart).some(q => q > 0);
             if (!hasItem) return customAlert('請選擇品項');
 
-            const dateInput = document.getElementById('pickup-date').value;
-            const timeInput = document.getElementById('pickup-time').value;
+            let dateInput = document.getElementById('pickup-date') ? document.getElementById('pickup-date').value : '';
+            let timeInput = document.getElementById('pickup-time') ? document.getElementById('pickup-time').value : '';
 
-            if (!dateInput || !timeInput) {
-                const timeSection = document.getElementById('sec-checkout');
-                if (timeSection) {
-                    timeSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    timeSection.style.outline = '3px solid var(--primary)';
-                    timeSection.style.borderRadius = '16px';
-                    setTimeout(() => { timeSection.style.outline = 'none'; }, 2000);
+            const isScheduledEnabled = !(storeConfig && storeConfig.allowScheduledPickup === false);
+
+            if (!isScheduledEnabled) {
+                const now = new Date();
+                const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+                const twTime = new Date(utc + (8 * 3600000));
+
+                if (!isStoreOpen(twTime)) {
+                    return customAlert('店家目前非營業時間 (休息中)，無法下單');
                 }
-                setTimeout(() => {
-                    if (!dateInput) document.getElementById('pickup-date').focus();
-                    else document.getElementById('pickup-time').focus();
-                }, 400);
-                return customAlert('請先選取取餐日期和時間 ↓');
-            }
 
-            const now = new Date();
-            const selectedDateTime = new Date(`${dateInput}T${timeInput}`);
-            if (selectedDateTime < now) return customAlert('不能選擇過去的時間，請重新選擇');
-
-            const pickupDate = new Date(dateInput);
-            const dayOfWeek = pickupDate.getDay();
-            const [hours, minutes] = timeInput.split(':').map(Number);
-            const timeValue = hours + minutes / 60;
-
-            let isValidTime = false;
-            let displayHoursMsg = "";
-            
-            if (storeConfig && storeConfig.operatingHours) {
-                const shifts = storeConfig.operatingHours[dayOfWeek] || [];
-                if (shifts.length > 0) {
-                    for (let shift of shifts) {
-                        const [sH, sM] = shift.start.split(':').map(Number);
-                        const [eH, eM] = shift.end.split(':').map(Number);
-                        const startVal = sH + sM / 60;
-                        const endVal = eH + eM / 60;
-                        if (timeValue >= startVal && timeValue <= endVal) {
-                            isValidTime = true;
-                            break;
-                        }
-                    }
-                    displayHoursMsg = shifts.map(s => `${s.start} - ${s.end}`).join(", ");
-                }
+                dateInput = twTime.toISOString().split('T')[0];
+                const hours = String(twTime.getHours()).padStart(2, '0');
+                const mins = String(twTime.getMinutes()).padStart(2, '0');
+                timeInput = `${hours}:${mins}`;
             } else {
-                const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-                if (isWeekend) {
-                    if (timeValue >= 9 && timeValue <= 21) isValidTime = true;
-                    displayHoursMsg = "9:00 - 21:00";
-                } else {
-                    if (timeValue >= 11 && timeValue <= 21) isValidTime = true;
-                    displayHoursMsg = "11:00 - 21:00";
+                if (!dateInput || !timeInput) {
+                    const timeSection = document.getElementById('sec-checkout');
+                    if (timeSection) {
+                        timeSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        timeSection.style.outline = '3px solid var(--primary)';
+                        timeSection.style.borderRadius = '16px';
+                        setTimeout(() => { timeSection.style.outline = 'none'; }, 2000);
+                    }
+                    setTimeout(() => {
+                        if (!dateInput) document.getElementById('pickup-date').focus();
+                        else document.getElementById('pickup-time').focus();
+                    }, 400);
+                    return customAlert('請先選取取餐日期和時間 ↓');
                 }
-            }
-            
-            if (!isValidTime) {
-                if (displayHoursMsg === "") {
-                    return customAlert('當天店家公休，請選擇其他日期');
+
+                const now = new Date();
+                const selectedDateTime = new Date(`${dateInput}T${timeInput}`);
+                if (selectedDateTime < now) return customAlert('不能選擇過去的時間，請重新選擇');
+
+                const pickupDate = new Date(dateInput);
+                const dayOfWeek = pickupDate.getDay();
+                const [hours, minutes] = timeInput.split(':').map(Number);
+                const timeValue = hours + minutes / 60;
+
+                let isValidTime = false;
+                let displayHoursMsg = "";
+                
+                if (storeConfig && storeConfig.operatingHours) {
+                    const shifts = storeConfig.operatingHours[dayOfWeek] || [];
+                    if (shifts.length > 0) {
+                        for (let shift of shifts) {
+                            const [sH, sM] = shift.start.split(':').map(Number);
+                            const [eH, eM] = shift.end.split(':').map(Number);
+                            const startVal = sH + sM / 60;
+                            const endVal = eH + eM / 60;
+                            if (timeValue >= startVal && timeValue <= endVal) {
+                                isValidTime = true;
+                                break;
+                            }
+                        }
+                        displayHoursMsg = shifts.map(s => `${s.start} - ${s.end}`).join(", ");
+                    }
                 } else {
-                    const days = ["日", "一", "二", "三", "四", "五", "六"];
-                    return customAlert(`週${days[dayOfWeek]}的營業時間為 ${displayHoursMsg}，請重新選擇取餐時間`);
+                    const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+                    if (isWeekend) {
+                        if (timeValue >= 9 && timeValue <= 21) isValidTime = true;
+                        displayHoursMsg = "9:00 - 21:00";
+                    } else {
+                        if (timeValue >= 11 && timeValue <= 21) isValidTime = true;
+                        displayHoursMsg = "11:00 - 21:00";
+                    }
+                }
+                
+                if (!isValidTime) {
+                    if (displayHoursMsg === "") {
+                        return customAlert('當天店家公休，請選擇其他日期');
+                    } else {
+                        const days = ["日", "一", "二", "三", "四", "五", "六"];
+                        return customAlert(`週${days[dayOfWeek]}的營業時間為 ${displayHoursMsg}，請重新選擇取餐時間`);
+                    }
                 }
             }
 
@@ -918,6 +948,7 @@
 
             renderMenu();
             renderStoreOperatingHours();
+            applyPickupConfig();
 
             try {
                 const saved = localStorage.getItem('benmi_cart_save');

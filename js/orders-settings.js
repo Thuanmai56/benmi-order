@@ -1,4 +1,5 @@
 let storeOperatingHours = null;
+let allowScheduledPickup = true;
 const DAY_NAMES = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
 
 function openSettings() {
@@ -11,13 +12,47 @@ async function loadOperatingHours() {
     if (res.ok) {
       const data = await res.json();
       storeOperatingHours = data.operatingHours || createDefaultOperatingHours();
+      allowScheduledPickup = data.allowScheduledPickup !== undefined ? data.allowScheduledPickup : true;
     } else {
       storeOperatingHours = createDefaultOperatingHours();
+      allowScheduledPickup = true;
     }
   } catch (e) {
     storeOperatingHours = createDefaultOperatingHours();
+    allowScheduledPickup = true;
   }
   renderOperatingHours();
+  renderScheduledPickupSetting();
+}
+
+function renderScheduledPickupSetting() {
+  const el = document.getElementById("setting-allow-scheduled-pickup");
+  if (el) {
+    el.checked = allowScheduledPickup;
+  }
+}
+
+async function saveScheduledPickupSetting() {
+  const el = document.getElementById("setting-allow-scheduled-pickup");
+  if (!el) return;
+  const isChecked = el.checked;
+  const btn = document.getElementById("btn-save-pickup-setting");
+  const oldText = btn ? btn.innerText : "";
+  if (btn) { btn.innerText = "儲存中..."; btn.disabled = true; }
+  try {
+    const res = await fetch(`${WORKER_BASE}/api/config?tenant_id=${getTenantIdFromUrl()}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ allowScheduledPickup: isChecked })
+    });
+    if (!res.ok) throw new Error("API returned " + res.status);
+    allowScheduledPickup = isChecked;
+    alert("預約取餐設定儲存成功！");
+  } catch (e) {
+    alert("儲存失敗：" + e.message);
+  } finally {
+    if (btn) { btn.innerText = oldText; btn.disabled = false; }
+  }
 }
 
 function createDefaultOperatingHours() {
