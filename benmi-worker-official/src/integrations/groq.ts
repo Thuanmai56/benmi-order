@@ -2,10 +2,22 @@ import { Env } from '../types/env';
 import { TenantContext } from '../types/tenant';
 import { resolveSecret } from '../utils/secrets';
 
-function buildMessages(prompt: string, systemPrompt?: string) {
+export interface FewShotExample {
+  role: "user" | "assistant";
+  content: string;
+}
+
+function buildMessages(
+  prompt: string,
+  systemPrompt?: string,
+  fewShotExamples?: FewShotExample[]
+) {
   const messages: Array<{ role: string; content: string }> = [];
   if (systemPrompt && systemPrompt.trim() !== "") {
     messages.push({ role: "system", content: systemPrompt.trim() });
+  }
+  if (fewShotExamples && fewShotExamples.length > 0) {
+    messages.push(...fewShotExamples);
   }
   messages.push({ role: "user", content: prompt });
   return messages;
@@ -17,7 +29,8 @@ async function callGroq(
   apiKey: string,
   model: string,
   signal: AbortSignal,
-  systemPrompt?: string
+  systemPrompt?: string,
+  fewShotExamples?: FewShotExample[]
 ): Promise<string | null> {
   if (!apiKey) return null;
 
@@ -29,7 +42,7 @@ async function callGroq(
     },
     body: JSON.stringify({
       model,
-      messages: buildMessages(prompt, systemPrompt),
+      messages: buildMessages(prompt, systemPrompt, fewShotExamples),
       temperature: 0,
       max_tokens: 10
     }),
@@ -52,7 +65,8 @@ async function callOpenRouterFallback(
   apiKey: string,
   model: string,
   signal: AbortSignal,
-  systemPrompt?: string
+  systemPrompt?: string,
+  fewShotExamples?: FewShotExample[]
 ): Promise<string | null> {
   if (!apiKey) return null;
 
@@ -64,7 +78,7 @@ async function callOpenRouterFallback(
     },
     body: JSON.stringify({
       model,
-      messages: buildMessages(prompt, systemPrompt),
+      messages: buildMessages(prompt, systemPrompt, fewShotExamples),
       temperature: 0,
       max_tokens: 10
     }),
@@ -87,7 +101,8 @@ export async function callAI(
   env: Env,
   tenantCtx?: TenantContext | null,
   timeoutMs: number = 8000,
-  systemPrompt?: string
+  systemPrompt?: string,
+  fewShotExamples?: FewShotExample[]
 ): Promise<string | null> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -106,7 +121,7 @@ export async function callAI(
 
     // 1. Thử gọi Groq
     if (groqKey) {
-      result = await callGroq(prompt, groqKey, groqModel, controller.signal, systemPrompt);
+      result = await callGroq(prompt, groqKey, groqModel, controller.signal, systemPrompt, fewShotExamples);
     }
 
     // 2. Nếu Groq thất bại hoặc không có key, tự động chuyển sang OpenRouter
@@ -114,7 +129,7 @@ export async function callAI(
       if (groqKey) {
         console.warn(`[AI] Groq failed. Falling back to OpenRouter...`);
       }
-      result = await callOpenRouterFallback(prompt, openrouterKey, openrouterModel, controller.signal, systemPrompt);
+      result = await callOpenRouterFallback(prompt, openrouterKey, openrouterModel, controller.signal, systemPrompt, fewShotExamples);
       if (result) {
         console.log(`[AI] OpenRouter fallback success in ${Date.now() - startTime}ms`);
       }
