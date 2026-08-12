@@ -129,7 +129,7 @@ export async function handleAdminRoute(request: Request, env: Env, path: string)
         liff_id || null,
         liff_url || null,
         groq_api_key || null,
-        groq_model || 'llama-3.1-8b-instant',
+        groq_model || 'openai/gpt-oss-20b',
         openrouter_api_key || null,
         openrouter_model || 'google/gemini-2.5-flash:free',
         brand_name,

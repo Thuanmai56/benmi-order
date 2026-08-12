@@ -98,7 +98,7 @@ export async function callAI(
 
     // Determine Groq API Key & Model
     const groqKey = tenantCtx?.groqApiKey || (await resolveSecret(env.GROQ_API_KEY)) || null;
-    const groqModel = tenantCtx?.groqModel || env.GROQ_MODEL || "llama-3.1-8b-instant";
+    const groqModel = tenantCtx?.groqModel || env.GROQ_MODEL || "openai/gpt-oss-20b";
 
     // Determine OpenRouter API Key & Model
     const openrouterKey = tenantCtx?.openrouterApiKey || (await resolveSecret(env.OPENROUTER_API_KEY)) || null;
