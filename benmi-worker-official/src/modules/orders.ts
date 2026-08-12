@@ -211,29 +211,39 @@ export async function updateOrder(
     return json({ success: true });
   }
 
-  // Employee 無法接單 (Hủy / Từ chối đơn)
+  // Employee 無法接單 -> 等客戶「同意/不同意」
   if (incoming === "REJECTED") {
-    order.status = "REJECTED";
+    if (order.reason === "取消並不回復客戶") {
+      order.status = "REJECTED";
+      await saveOrder(env, order, tenantId);
+      if (ctx && ctx.waitUntil) ctx.waitUntil(syncToGoogleSheets(order, env, tenantCtx));
+      return json({ success: true });
+    }
+
+    order.status = "WAITING_CUSTOMER_REJECT";
     await saveOrder(env, order, tenantId);
 
     if (order.userId) {
-      try {
-        await env.DB.prepare(
-          "DELETE FROM pending_actions WHERE tenant_id = ? AND user_id = ? AND order_key = ?"
-        ).bind(tenantId, order.userId, order.key).run();
-      } catch { }
+      const reason = order.reason || "未提供原因";
+      const notifyText =
+        `非常抱歉！${brandName} 目前無法接下您的訂單 #${order.key}。\n` +
+        `原因：${reason}\n` +
+        `\n請回覆「同意」以取消訂單， or 回覆「不同意」以重新確認。`;
 
-      if (order.reason !== "取消並不回復客戶") {
-        const reason = order.reason || "未提供原因";
-        const notifyText =
-          `非常抱歉！${brandName} 目前無法接下您的訂單 #${order.key}。\n` +
-          `原因：${reason}\n` +
-          `感謝您訂購 ${brandName}，歡迎您下次再訂購。`;
-        await pushLineMessage(order.userId, notifyText, env, tenantCtx);
-      }
+      await env.DB.prepare(
+        `INSERT INTO pending_actions (tenant_id, user_id, order_key, action_type, question_text, reason, note)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(tenant_id, user_id, order_key) DO UPDATE SET
+           action_type = excluded.action_type,
+           question_text = excluded.question_text,
+           reason = excluded.reason,
+           note = excluded.note,
+           created_at = CURRENT_TIMESTAMP`
+      ).bind(tenantId, order.userId, order.key, "REJECT", notifyText, order.reason || "", order.note || "").run();
+
+      await pushLineMessage(order.userId, notifyText, env, tenantCtx);
     }
 
-    if (ctx && ctx.waitUntil) ctx.waitUntil(syncToGoogleSheets(order, env, tenantCtx));
     return json({ success: true });
   }
 
