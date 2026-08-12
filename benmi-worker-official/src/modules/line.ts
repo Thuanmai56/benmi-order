@@ -873,8 +873,8 @@ export async function handleLineWebhook(
 
           // TÁCH RIÊNG TRƯỜNG HỢP "ĐỔI GIỜ NHẬN HÀNG" KHÔNG DÙNG AI
           if (pendingType === "CHANGE" && currentReason === "時間需調整") {
-            const exactMatch = lowerText === "好" || lowerText === "同意" || lowerText === "ok" || lowerText === "可以" || lowerText === "好的";
-            const isCancel = lowerText.includes("不要") || lowerText.includes("取消") || lowerText.includes("不用");
+            const exactMatch = lowerText === "好" || lowerText === "同意" || lowerText === "ok" || lowerText === "可以" || lowerText === "好的" || lowerText === "okey" || lowerText === "được" || lowerText === "duoc" || lowerText === "đồng ý" || lowerText === "dong y" || lowerText === "yes";
+            const isCancel = lowerText.includes("不要") || lowerText.includes("取消") || lowerText.includes("不用") || lowerText.includes("hủy") || lowerText.includes("huy") || lowerText.includes("cancel");
 
             if (isCancel) {
               order.status = "REJECTED";

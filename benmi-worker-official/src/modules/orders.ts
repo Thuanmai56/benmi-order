@@ -139,7 +139,6 @@ export async function updateOrder(
       await saveOrder(env, order, tenantId); // Sync DB
       return json({ success: true });
     }
-    const wasWaiting = order.status && order.status.startsWith("WAITING");
     order.status = "ACCEPTED";
     await saveOrder(env, order, tenantId);
 
@@ -149,9 +148,7 @@ export async function updateOrder(
           "DELETE FROM pending_actions WHERE tenant_id = ? AND user_id = ? AND order_key = ?"
         ).bind(tenantId, order.userId, order.key).run();
       } catch { }
-      if (!wasWaiting) {
-        await pushLineMessage(order.userId, `${brandName} 已收到您的訂單 #${order.key}，謝謝您！`, env, tenantCtx);
-      }
+      await pushLineMessage(order.userId, `${brandName} 已收到您的訂單 #${order.key}，謝謝您！`, env, tenantCtx);
     }
     return json({ success: true });
   }
@@ -383,15 +380,16 @@ export async function saveOrder(env: Env, order: Order, tenantId: string): Promi
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime(?, 'unixepoch'), datetime('now'))
      ON CONFLICT(key) DO UPDATE SET
        status = CASE
-         WHEN orders.status IN ('ACCEPTED', 'DONE', 'REJECTED', 'PICKED_UP', 'WAITING_CUSTOMER_CHANGE', 'WAITING_CUSTOMER_REJECT') AND excluded.status = 'NEW'
+         WHEN orders.status IN ('ACCEPTED', 'DONE', 'REJECTED', 'PICKED_UP') AND excluded.status = 'NEW'
          THEN orders.status
          ELSE excluded.status
        END,
+       pickup_time = excluded.pickup_time,
        customer_name = CASE WHEN excluded.customer_name != 'Khách (Web)' THEN excluded.customer_name ELSE orders.customer_name END,
        total_amount = excluded.total_amount,
        order_content = excluded.order_content,
-       reason = CASE WHEN excluded.reason != '' THEN excluded.reason ELSE orders.reason END,
-       note = CASE WHEN excluded.note != '' THEN excluded.note ELSE orders.note END,
+       reason = excluded.reason,
+       note = excluded.note,
        updated_at = datetime('now')`
   ).bind(
     order.key,
