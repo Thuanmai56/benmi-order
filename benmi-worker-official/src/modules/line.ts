@@ -581,11 +581,14 @@ export function handleQuickReply(text: string, tenantCtx?: TenantContext | null)
 export function normalizeCustomerReply(text: string) {
   const t = String(text || "").trim().toLowerCase();
   const hasAgree =
-    t.includes("同意") || t.includes("agree") || t === "ok" || t === "okay" || t === "yes" || t === "好";
+    t.includes("同意") || t.includes("agree") || t === "ok" || t === "okay" || t === "okey" || t === "yes" || t === "好" || t === "好的" || t === "可以" ||
+    t === "được" || t === "duoc" || t.includes("đồng ý") || t.includes("dong y");
   const hasCancel =
-    t.includes("取消") || t.includes("cancel") || t.includes("不要了") || t.includes("不用了");
+    t.includes("取消") || t.includes("cancel") || t.includes("不要了") || t.includes("不用了") || t === "不要" ||
+    t.includes("hủy") || t.includes("huy");
   const hasDifferent =
-    t.includes("不同意") || t.includes("disagree") || t === "no" || t === "not" || t.includes("不要");
+    t.includes("不同意") || t.includes("disagree") || t === "no" || t === "not" || t.includes("不要") ||
+    t.includes("không đồng ý") || t.includes("khong dong y");
   return { hasAgree, hasCancel, hasDifferent };
 }
 
@@ -923,7 +926,7 @@ export async function handleLineWebhook(
           }
 
           if (pendingType === "CHANGE") {
-            const isCancel = lowerText.includes("不要了") || lowerText.includes("取消") || lowerText.includes("不用了") || lowerText === "不要";
+            const isCancel = lowerText.includes("不要了") || lowerText.includes("取消") || lowerText.includes("不用了") || lowerText === "不要" || lowerText.includes("hủy") || lowerText.includes("huy") || lowerText.includes("cancel");
 
             if (isCancel) {
               order.status = "REJECTED";
@@ -949,7 +952,7 @@ export async function handleLineWebhook(
               continue;
             }
 
-            const isAgree = lowerText === "好" || lowerText === "同意" || lowerText === "ok";
+            const isAgree = lowerText === "好" || lowerText === "同意" || lowerText === "ok" || lowerText === "okey" || lowerText === "yes" || lowerText === "可以" || lowerText === "好的" || lowerText === "được" || lowerText === "duoc" || lowerText === "đồng ý" || lowerText === "dong y";
             if (isAgree) {
               order.status = "ACCEPTED";
               await replyText(replyToken, `${brandName} 收到您的同意！我們會開始準備您的訂單 #${orderKey}。🥖`, env, tenantCtx);
@@ -963,8 +966,8 @@ export async function handleLineWebhook(
           }
 
           if (pendingType === "REJECT") {
-            const isAgree = lowerText === "同意" || lowerText === "好" || lowerText === "ok";
-            const isDifferent = lowerText.includes("不同意") || lowerText.includes("不要") || lowerText === "取消";
+            const isAgree = lowerText === "同意" || lowerText === "好" || lowerText === "ok" || lowerText === "okey" || lowerText === "yes" || lowerText === "可以" || lowerText === "好的" || lowerText === "được" || lowerText === "duoc" || lowerText === "đồng ý" || lowerText === "dong y";
+            const isDifferent = lowerText.includes("不同意") || lowerText.includes("不要") || lowerText === "取消" || lowerText.includes("không đồng ý") || lowerText.includes("khong dong y");
 
             if (isAgree) {
               order.status = "REJECTED";
