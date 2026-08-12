@@ -80,12 +80,16 @@
 
             <div id="pickup-time-section">
                 <div class="section-title">🕒 取餐時間</div>
-                <div class="input-group">
+                <div class="input-group" id="pickup-time-picker-group">
                     <label style="font-weight: 800; color: var(--primary);">⚠️ 請選擇取餐日期 / 時間</label>
                     <div class="datetime-row">
                         <input type="date" id="pickup-date">
                         <input type="time" id="pickup-time">
                     </div>
+                </div>
+                <div id="pickup-time-asap-notice" style="display:none; padding: 12px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; color: #1e40af; font-weight: 800; font-size: 15px; align-items: center; gap: 8px; margin-bottom: 12px;">
+                    <span style="font-size: 18px;">⚡</span>
+                    <span>即時取餐 (店家儘速製作)</span>
                 </div>
             </div>
 
@@ -153,12 +157,15 @@
         }
 
         function applyPickupConfig() {
-            const pickupSection = document.getElementById('pickup-time-section');
-            if (!pickupSection) return;
+            const pickerGroup = document.getElementById('pickup-time-picker-group');
+            const asapNotice = document.getElementById('pickup-time-asap-notice');
+            if (!pickerGroup || !asapNotice) return;
             if (storeConfig && storeConfig.allowScheduledPickup === false) {
-                pickupSection.style.display = 'none';
+                pickerGroup.style.display = 'none';
+                asapNotice.style.display = 'flex';
             } else {
-                pickupSection.style.display = 'block';
+                pickerGroup.style.display = 'block';
+                asapNotice.style.display = 'none';
             }
         }
 
@@ -624,14 +631,36 @@
                 const hours = String(twTime.getHours()).padStart(2, '0');
                 const mins = String(twTime.getMinutes()).padStart(2, '0');
                 timeInput = `${hours}:${mins}`;
-            } else {
+            }
+
+            const checkoutSec = document.getElementById('sec-checkout');
+            if (checkoutSec) {
+                const rect = checkoutSec.getBoundingClientRect();
+                if (rect.top > (window.innerHeight || document.documentElement.clientHeight) - 100) {
+                    checkoutSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    checkoutSec.style.outline = '3px solid var(--primary)';
+                    checkoutSec.style.borderRadius = '16px';
+                    setTimeout(() => { checkoutSec.style.outline = 'none'; }, 2000);
+
+                    if (isScheduledEnabled && (!document.getElementById('pickup-date').value || !document.getElementById('pickup-time').value)) {
+                        setTimeout(() => {
+                            if (!document.getElementById('pickup-date').value) document.getElementById('pickup-date').focus();
+                            else document.getElementById('pickup-time').focus();
+                        }, 400);
+                        return customAlert('請先選取取餐日期和時間 ↓');
+                    } else {
+                        return customAlert('請確認購物車內容與取餐資訊 ↓');
+                    }
+                }
+            }
+
+            if (isScheduledEnabled) {
                 if (!dateInput || !timeInput) {
-                    const timeSection = document.getElementById('sec-checkout');
-                    if (timeSection) {
-                        timeSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        timeSection.style.outline = '3px solid var(--primary)';
-                        timeSection.style.borderRadius = '16px';
-                        setTimeout(() => { timeSection.style.outline = 'none'; }, 2000);
+                    if (checkoutSec) {
+                        checkoutSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        checkoutSec.style.outline = '3px solid var(--primary)';
+                        checkoutSec.style.borderRadius = '16px';
+                        setTimeout(() => { checkoutSec.style.outline = 'none'; }, 2000);
                     }
                     setTimeout(() => {
                         if (!dateInput) document.getElementById('pickup-date').focus();
@@ -731,7 +760,11 @@
                 }
             }
 
-            msg += `\n\n🕒 取餐時間：${dateInput} ${timeInput}`;
+            if (!isScheduledEnabled) {
+                msg += `\n\n🕒 取餐時間：${dateInput} ${timeInput} (即時取餐)`;
+            } else {
+                msg += `\n\n🕒 取餐時間：${dateInput} ${timeInput}`;
+            }
             const mainNote = document.getElementById('note').value;
             if (mainNote) msg += `\n📝 總備註：${mainNote}`;
             msg += `\n💰 總金額：$${currentTotal}`;
