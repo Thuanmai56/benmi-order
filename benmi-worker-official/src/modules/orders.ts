@@ -476,6 +476,35 @@ export async function handleOrdersMigration(request: Request, env: Env): Promise
   }
 }
 
+function parsePickupTimeToMs(timeStr: string, createdAtStr: string): number {
+  const createdDate = createdAtStr ? new Date(createdAtStr + "Z") : new Date();
+  const createdMs = !isNaN(createdDate.getTime()) ? createdDate.getTime() : Date.now();
+
+  if (!timeStr || typeof timeStr !== "string") return createdMs;
+
+  const dateTimeMatch = timeStr.match(/(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})/);
+  if (dateTimeMatch) {
+    const iso = `${dateTimeMatch[1]}T${dateTimeMatch[2]}:00+08:00`;
+    const d = new Date(iso);
+    if (!isNaN(d.getTime())) return d.getTime();
+  }
+
+  const timeMatch = timeStr.match(/(\d{1,2}):(\d{2})/);
+  if (timeMatch) {
+    const twDate = new Date(createdMs + 8 * 3600000);
+    const yyyy = twDate.getUTCFullYear();
+    const mm = String(twDate.getUTCMonth() + 1).padStart(2, "0");
+    const dd = String(twDate.getUTCDate()).padStart(2, "0");
+    const hh = String(parseInt(timeMatch[1], 10)).padStart(2, "0");
+    const min = String(parseInt(timeMatch[2], 10)).padStart(2, "0");
+    const iso = `${yyyy}-${mm}-${dd}T${hh}:${min}:00+08:00`;
+    const d = new Date(iso);
+    if (!isNaN(d.getTime())) return d.getTime();
+  }
+
+  return createdMs;
+}
+
 export async function getOrderQueueAhead(env: Env, tenantId: string, orderKey: string): Promise<{ order: Order | null; queueAhead: number }> {
   if (!env.DB) return { order: null, queueAhead: 0 };
   try {
@@ -502,15 +531,32 @@ export async function getOrderQueueAhead(env: Env, tenantId: string, orderKey: s
       return { order, queueAhead: 0 };
     }
 
-    const countRow = await env.DB.prepare(
-      `SELECT COUNT(*) as cnt FROM orders
+    const activeRows = await env.DB.prepare(
+      `SELECT key, pickup_time, created_at FROM orders
        WHERE tenant_id = ?
          AND status IN ('NEW', 'ACCEPTED')
-         AND created_at < ?
          AND created_at >= DATETIME('now', '-24 hours')`
-    ).bind(tenantId, row.created_at).first<{ cnt: number }>();
+    ).bind(tenantId).all<any>();
 
-    return { order, queueAhead: countRow?.cnt || 0 };
+    const targetPickupMs = parsePickupTimeToMs(row.pickup_time, row.created_at);
+    const targetCreatedMs = new Date(row.created_at + "Z").getTime();
+
+    let queueAhead = 0;
+    if (activeRows && activeRows.results) {
+      for (const item of activeRows.results) {
+        if (item.key === row.key) continue;
+        const itemPickupMs = parsePickupTimeToMs(item.pickup_time, item.created_at);
+        const itemCreatedMs = new Date(item.created_at + "Z").getTime();
+
+        if (itemPickupMs < targetPickupMs) {
+          queueAhead++;
+        } else if (itemPickupMs === targetPickupMs && itemCreatedMs < targetCreatedMs) {
+          queueAhead++;
+        }
+      }
+    }
+
+    return { order, queueAhead };
   } catch (e: any) {
     console.error("[getOrderQueueAhead] error:", e);
     return { order: null, queueAhead: 0 };
