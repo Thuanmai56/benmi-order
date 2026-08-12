@@ -581,11 +581,14 @@ export function handleQuickReply(text: string, tenantCtx?: TenantContext | null)
 export function normalizeCustomerReply(text: string) {
   const t = String(text || "").trim().toLowerCase();
   const hasAgree =
-    t.includes("同意") || t.includes("agree") || t === "ok" || t === "okay" || t === "yes" || t === "好";
+    t.includes("同意") || t.includes("agree") || t === "ok" || t === "okay" || t === "okey" || t === "yes" || t === "好" || t === "好的" || t === "可以" ||
+    t.includes("đồng ý") || t.includes("dong y") || t === "được" || t === "duoc" || t.includes("dạ") || t.includes("da") || t.includes("đã hiểu") || t.includes("da hieu");
   const hasCancel =
-    t.includes("取消") || t.includes("cancel") || t.includes("不要了") || t.includes("不用了");
+    t.includes("取消") || t.includes("cancel") || t.includes("不要了") || t.includes("不用了") || t === "不要" ||
+    t.includes("hủy") || t.includes("huy") || t.includes("bỏ") || t.includes("bo");
   const hasDifferent =
-    t.includes("不同意") || t.includes("disagree") || t === "no" || t === "not" || t.includes("不要");
+    t.includes("不同意") || t.includes("disagree") || t === "no" || t === "not" ||
+    t.includes("không đồng ý") || t.includes("khong dong y") || t.includes("khong được") || t.includes("khong duoc");
   return { hasAgree, hasCancel, hasDifferent };
 }
 
@@ -923,9 +926,9 @@ export async function handleLineWebhook(
           }
 
           if (pendingType === "CHANGE") {
-            const isCancel = lowerText.includes("不要了") || lowerText.includes("取消") || lowerText.includes("不用了") || lowerText === "不要";
+            const { hasAgree, hasCancel } = normalizeCustomerReply(userText);
 
-            if (isCancel) {
+            if (hasCancel) {
               order.status = "REJECTED";
               await replyText(replyToken, `好的，已為您取消訂單 #${orderKey}。`, env, tenantCtx);
               const cleanup = async () => { await saveOrder(env, order, tenantId); await finishPending(); await syncToGoogleSheets(order, env, tenantCtx); };
@@ -933,7 +936,7 @@ export async function handleLineWebhook(
               continue;
             }
 
-            if (aiSaysNo) {
+            if (aiSaysNo && !hasAgree) {
               await replyText(replyToken, `請您明確告訴我們想換什麼品項，或者回覆「取消」直接取消訂單。`, env, tenantCtx);
               continue;
             }
@@ -949,9 +952,10 @@ export async function handleLineWebhook(
               continue;
             }
 
-            const isAgree = lowerText === "好" || lowerText === "同意" || lowerText === "ok";
-            if (isAgree) {
-              order.status = "ACCEPTED";
+            if (hasAgree) {
+              order.status = "NEW";
+              order.reason = "";
+              order.note = "";
               await replyText(replyToken, `${brandName} 收到您的同意！我們會開始準備您的訂單 #${orderKey}。🥖`, env, tenantCtx);
               const cleanup = async () => { await saveOrder(env, order, tenantId); await finishPending(); };
               if (ctx && ctx.waitUntil) ctx.waitUntil(cleanup()); else await cleanup();
@@ -963,24 +967,9 @@ export async function handleLineWebhook(
           }
 
           if (pendingType === "REJECT") {
-            const isAgree = lowerText === "同意" || lowerText === "好" || lowerText === "ok";
-            const isDifferent = lowerText.includes("不同意") || lowerText.includes("不要") || lowerText === "取消";
+            const { hasAgree, hasCancel, hasDifferent } = normalizeCustomerReply(userText);
 
-            if (isAgree) {
-              order.status = "REJECTED";
-              const reason = order.reason || "（未提供原因）";
-              await replyText(
-                replyToken,
-                `非常抱歉！${brandName} 無法接下您的訂單 #${orderKey}。\n原因：${reason}\n感謝您訂購 ${brandName}，歡迎您下次再訂購。`,
-                env,
-                tenantCtx
-              );
-              const cleanup = async () => { await saveOrder(env, order, tenantId); await finishPending(); await syncToGoogleSheets(order, env, tenantCtx); };
-              if (ctx && ctx.waitUntil) ctx.waitUntil(cleanup()); else await cleanup();
-              continue;
-            }
-
-            if (isDifferent) {
+            if (hasDifferent) {
               order.status = "NEW";
               await replyText(
                 replyToken,
@@ -993,7 +982,17 @@ export async function handleLineWebhook(
               continue;
             }
 
-            await replyText(replyToken, `請回覆「同意」或「不同意」。`, env, tenantCtx);
+            // Customer agrees, cancels, or acknowledges -> finalize rejection cleanly
+            order.status = "REJECTED";
+            const reason = order.reason || "（未提供原因）";
+            await replyText(
+              replyToken,
+              `非常抱歉！${brandName} 無法接下您的訂單 #${orderKey}。\n原因：${reason}\n感謝您訂購 ${brandName}，歡迎您下次再訂購。`,
+              env,
+              tenantCtx
+            );
+            const cleanup = async () => { await saveOrder(env, order, tenantId); await finishPending(); await syncToGoogleSheets(order, env, tenantCtx); };
+            if (ctx && ctx.waitUntil) ctx.waitUntil(cleanup()); else await cleanup();
             continue;
           }
         }
