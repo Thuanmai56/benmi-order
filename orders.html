@@ -253,94 +253,102 @@
 
   <!-- Change modal -->
   <div id="changeModal" class="modal">
-    <div class="modal-content" style="max-width: 520px;">
+    <div class="modal-content" style="max-width: 780px;">
       <div class="modal-title">
         <h3>需要更改 (Yêu cầu thay đổi)</h3>
         <div class="modal-close" onclick="closeModal()">✕</div>
       </div>
 
-      <div class="change-order-info" id="change-order-info">
-        <div class="info-row">
-          <span class="info-label">Mã đơn / Order:</span>
-          <span class="info-val mono" id="change-order-key">-</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Giờ lấy ban đầu:</span>
-          <span class="info-val" id="change-original-time" style="color: var(--brand-red); font-weight: 1000;">-</span>
-        </div>
-      </div>
-
-      <label style="display:block; margin-top: 14px; font-weight: 1100; font-size: 20px;">原因 / Lý do thay đổi:</label>
-      <select id="change-reason"
-        style="width:100%; padding: 14px; margin-top: 8px; border-radius: 12px; border: 1.5px solid var(--border); font-size: 20px; font-weight: 900;"
-        onchange="onChangeReasonChange()">
-        <option value="時間需調整">時間太趕，需延後 (Lùi giờ nhận hàng)</option>
-        <option value="口味售完">該口味已售完 (Hết món)</option>
-      </select>
-
-      <div id="change-time-div" style="margin-top: 14px;">
-        <div class="preset-title" style="font-size: 17px; font-weight: 1000; color: #374151; margin-bottom: 8px;">⚡ Chọn nhanh số phút lùi thêm:</div>
-        <div class="time-preset-grid">
-          <button type="button" class="time-preset-btn" data-minutes="10" onclick="selectTimePreset(10)">
-            <span class="preset-min">+10m</span>
-            <span class="preset-time" id="preset-time-10">--:--</span>
-          </button>
-          <button type="button" class="time-preset-btn active" data-minutes="15" onclick="selectTimePreset(15)">
-            <span class="preset-min">+15m</span>
-            <span class="preset-time" id="preset-time-15">--:--</span>
-          </button>
-          <button type="button" class="time-preset-btn" data-minutes="20" onclick="selectTimePreset(20)">
-            <span class="preset-min">+20m</span>
-            <span class="preset-time" id="preset-time-20">--:--</span>
-          </button>
-          <button type="button" class="time-preset-btn" data-minutes="30" onclick="selectTimePreset(30)">
-            <span class="preset-min">+30m</span>
-            <span class="preset-time" id="preset-time-30">--:--</span>
-          </button>
-          <button type="button" class="time-preset-btn" data-minutes="45" onclick="selectTimePreset(45)">
-            <span class="preset-min">+45m</span>
-            <span class="preset-time" id="preset-time-45">--:--</span>
-          </button>
-          <button type="button" class="time-preset-btn" data-minutes="60" onclick="selectTimePreset(60)">
-            <span class="preset-min">+60m</span>
-            <span class="preset-time" id="preset-time-60">--:--</span>
-          </button>
-        </div>
-
-        <div class="time-adjust-row" style="margin-top: 14px;">
-          <div class="stepper-group">
-            <button type="button" class="time-stepper-btn" onclick="stepProposedTime(-10)">-10m</button>
-            <button type="button" class="time-stepper-btn" onclick="stepProposedTime(-5)">-5m</button>
+      <div class="change-modal-body">
+        <!-- Left column: Order info, Reason select, Notes -->
+        <div class="change-modal-col">
+          <div class="change-order-info" id="change-order-info" style="margin-top:0;">
+            <div class="info-row">
+              <span class="info-label">Mã đơn / Order:</span>
+              <span class="info-val mono" id="change-order-key">-</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Giờ lấy ban đầu:</span>
+              <span class="info-val" id="change-original-time" style="color: var(--brand-red); font-weight: 1000;">-</span>
+            </div>
           </div>
-          <div class="picker-group">
-            <div class="picker-label">Giờ đề xuất mới:</div>
-            <input type="time" id="change-time-picker" class="time-picker-input" onchange="onTimePickerChange()">
-          </div>
-          <div class="stepper-group">
-            <button type="button" class="time-stepper-btn" onclick="stepProposedTime(5)">+5m</button>
-            <button type="button" class="time-stepper-btn" onclick="stepProposedTime(10)">+10m</button>
-          </div>
+
+          <label style="display:block; margin-top: 12px; font-weight: 1100; font-size: 17px; color: #374151;">原因 / Lý do thay đổi:</label>
+          <select id="change-reason"
+            style="width:100%; padding: 10px 12px; margin-top: 4px; border-radius: 12px; border: 1.5px solid var(--border); font-size: 18px; font-weight: 900;"
+            onchange="onChangeReasonChange()">
+            <option value="時間需調整">時間太趕，需延後 (Lùi giờ nhận hàng)</option>
+            <option value="口味售完">該口味已售完 (Hết món)</option>
+          </select>
+
+          <textarea id="change-note" rows="3" placeholder="Ghi chú thời gian mới / Note"
+            style="width:100%; padding: 10px 12px; margin-top: 10px; border-radius: 12px; border: 1.5px solid var(--border); font-size: 17px; font-weight: 800;"></textarea>
         </div>
-      </div>
 
-      <textarea id="change-note" rows="2" placeholder="Ghi chú thời gian mới / Note"
-        style="width:100%; padding: 12px 14px; margin-top: 12px; border-radius: 12px; border: 1.5px solid var(--border); font-size: 20px; font-weight: 800;"></textarea>
+        <!-- Right column: Time Adjustment or Out of stock items -->
+        <div class="change-modal-col">
+          <div id="change-time-div">
+            <div class="preset-title" style="font-size: 15px; font-weight: 1000; color: #374151; margin-bottom: 6px;">⚡ Chọn nhanh số phút lùi thêm:</div>
+            <div class="time-preset-grid">
+              <button type="button" class="time-preset-btn" data-minutes="10" onclick="selectTimePreset(10)">
+                <span class="preset-min">+10m</span>
+                <span class="preset-time" id="preset-time-10">--:--</span>
+              </button>
+              <button type="button" class="time-preset-btn active" data-minutes="15" onclick="selectTimePreset(15)">
+                <span class="preset-min">+15m</span>
+                <span class="preset-time" id="preset-time-15">--:--</span>
+              </button>
+              <button type="button" class="time-preset-btn" data-minutes="20" onclick="selectTimePreset(20)">
+                <span class="preset-min">+20m</span>
+                <span class="preset-time" id="preset-time-20">--:--</span>
+              </button>
+              <button type="button" class="time-preset-btn" data-minutes="30" onclick="selectTimePreset(30)">
+                <span class="preset-min">+30m</span>
+                <span class="preset-time" id="preset-time-30">--:--</span>
+              </button>
+              <button type="button" class="time-preset-btn" data-minutes="45" onclick="selectTimePreset(45)">
+                <span class="preset-min">+45m</span>
+                <span class="preset-time" id="preset-time-45">--:--</span>
+              </button>
+              <button type="button" class="time-preset-btn" data-minutes="60" onclick="selectTimePreset(60)">
+                <span class="preset-min">+60m</span>
+                <span class="preset-time" id="preset-time-60">--:--</span>
+              </button>
+            </div>
 
-      <div id="change-items-div" style="display: none;">
-        <div style="margin-top: 16px; font-weight: 1000; font-size: 18px; margin-bottom: 12px;">Chọn món đã hết:</div>
-        <div class="checkbox-grid">
-          <label class="checkbox-label"><input type="checkbox" value="燒肉" class="sold-item"> 燒肉</label>
-          <label class="checkbox-label"><input type="checkbox" value="火腿" class="sold-item"> 火腿</label>
-          <label class="checkbox-label"><input type="checkbox" value="雞肉" class="sold-item"> 雞肉</label>
-          <label class="checkbox-label"><input type="checkbox" value="烤肉" class="sold-item"> 烤肉</label>
-          <label class="checkbox-label"><input type="checkbox" value="雙層烤肉" class="sold-item"> 雙層烤肉</label>
-          <label class="checkbox-label"><input type="checkbox" value="綜合" class="sold-item"> 綜合</label>
-          <label class="checkbox-label"><input type="checkbox" value="起司" class="sold-item"> 起司</label>
-          <label class="checkbox-label"><input type="checkbox" value="越南咖啡" class="sold-item"> 越南咖啡</label>
-          <label class="checkbox-label"><input type="checkbox" value="豆漿" class="sold-item"> 豆漿</label>
-          <label class="checkbox-label"><input type="checkbox" value="紅茶" class="sold-item"> 紅茶</label>
-          <label class="checkbox-label"><input type="checkbox" value="可樂" class="sold-item"> 可樂</label>
-          <label class="checkbox-label"><input type="checkbox" value="雪碧" class="sold-item"> 雪碧</label>
+            <div class="time-adjust-row" style="margin-top: 10px;">
+              <div class="stepper-group">
+                <button type="button" class="time-stepper-btn" onclick="stepProposedTime(-10)">-10m</button>
+                <button type="button" class="time-stepper-btn" onclick="stepProposedTime(-5)">-5m</button>
+              </div>
+              <div class="picker-group">
+                <div class="picker-label">Giờ đề xuất mới:</div>
+                <input type="time" id="change-time-picker" class="time-picker-input" onchange="onTimePickerChange()">
+              </div>
+              <div class="stepper-group">
+                <button type="button" class="time-stepper-btn" onclick="stepProposedTime(5)">+5m</button>
+                <button type="button" class="time-stepper-btn" onclick="stepProposedTime(10)">+10m</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="change-items-div" style="display: none;">
+            <div style="font-weight: 1000; font-size: 16px; margin-bottom: 8px;">Chọn món đã hết:</div>
+            <div class="checkbox-grid" style="margin-top: 0;">
+              <label class="checkbox-label"><input type="checkbox" value="燒肉" class="sold-item"> 燒肉</label>
+              <label class="checkbox-label"><input type="checkbox" value="火腿" class="sold-item"> 火腿</label>
+              <label class="checkbox-label"><input type="checkbox" value="雞肉" class="sold-item"> 雞肉</label>
+              <label class="checkbox-label"><input type="checkbox" value="烤肉" class="sold-item"> 烤肉</label>
+              <label class="checkbox-label"><input type="checkbox" value="雙層烤肉" class="sold-item"> 雙層烤肉</label>
+              <label class="checkbox-label"><input type="checkbox" value="綜合" class="sold-item"> 綜合</label>
+              <label class="checkbox-label"><input type="checkbox" value="起司" class="sold-item"> 起司</label>
+              <label class="checkbox-label"><input type="checkbox" value="越南咖啡" class="sold-item"> 越南咖啡</label>
+              <label class="checkbox-label"><input type="checkbox" value="豆漿" class="sold-item"> 豆漿</label>
+              <label class="checkbox-label"><input type="checkbox" value="紅茶" class="sold-item"> 紅茶</label>
+              <label class="checkbox-label"><input type="checkbox" value="可樂" class="sold-item"> 可樂</label>
+              <label class="checkbox-label"><input type="checkbox" value="雪碧" class="sold-item"> 雪碧</label>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -353,21 +361,24 @@
 
   <!-- Reject modal -->
   <div id="rejectModal" class="modal">
-    <div class="modal-content">
+    <div class="modal-content" style="max-width: 580px;">
       <div class="modal-title">
         <h3>無法接單 (Không thể nhận đơn)</h3>
         <div class="modal-close" onclick="closeModal()">✕</div>
       </div>
-      <select id="reject-reason"
-        style="width:100%; padding: 16px; margin-top: 16px; border-radius: 12px; border: 1px solid var(--border); font-size: 22px;">
-        <option value="今日已售完">今日已售完</option>
-        <option value="訂單過多">訂單過多，暫不接單</option>
-        <option value="已過營業時間">已過營業時間</option>
-        <option value="取消並不回復客戶">取消並不回復客戶 / Hủy không báo khách</option>
-      </select>
-      <div class="modal-actions two">
-        <button class="btn btn-danger" onclick="confirmAction('REJECT', this)">確認拒絕</button>
-        <button class="btn btn-ghost" onclick="closeModal()">取消</button>
+      <div style="margin-top: 12px;">
+        <label style="display:block; font-weight: 1100; font-size: 17px; color: #374151; margin-bottom: 8px;">原因 / Lý do từ chối:</label>
+        <select id="reject-reason"
+          style="width:100%; padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--border); font-size: 19px; font-weight: 900;">
+          <option value="今日已售完">今日已售完 (Hôm nay đã hết món)</option>
+          <option value="訂單過多">訂單過多，暫不接單 (Quá nhiều đơn, tạm ngưng nhận)</option>
+          <option value="已過營業時間">已過營業時間 (Đã qua giờ làm việc)</option>
+          <option value="取消並不回復客戶">取消並不回復客戶 (Hủy không báo khách)</option>
+        </select>
+      </div>
+      <div class="modal-actions two" style="margin-top: 16px;">
+        <button class="btn btn-danger" onclick="confirmAction('REJECT', this)">確認拒絕 (Xác nhận từ chối)</button>
+        <button class="btn btn-ghost" onclick="closeModal()">取消 (Hủy)</button>
       </div>
     </div>
   </div>
