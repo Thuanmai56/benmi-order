@@ -812,9 +812,9 @@ export async function handleLineWebhook(
 
           const menuData = await getMenuData(env, tenantId);
           const menuContext = formatMenuForPrompt(menuData);
-          const systemPrompt = `You are an AI order classification system for ${brandName}.\n\n${menuContext}\n\nStrictly analyze if the customer message is related to ordering items on this store menu or answering order details.`;
+          const systemPrompt = `你是 ${brandName} 的 AI 訂單意圖判斷系統。\n\n${menuContext}\n\n請嚴格分析顧客訊息是否與在此店家菜單點餐或回答訂單細節相關。`;
 
-          const ctxPrompt = `顧客之前的草稿訂單：「${draft.text || '（空）'}」\n顧客剛剛傳來：「${userText}」\n\n請問顧客這句話是：在【繼續點餐/追加餐點/回答取餐時間/確認訂單】嗎？\n如果是 → 回覆「ORDER」\n如果不是（發問、聊天、詢問食材等）→ 回覆「IGNORE」\n請只回覆 ORDER 或 IGNORE。`;
+          const ctxPrompt = `顧客之前的草稿訂單：「${draft.text || '（空）'}」\n顧客剛剛傳來：「${userText}」\n\n請問顧客這句話是：在【繼續點餐 / 追加餐點 / 回答取餐時間 / 確認訂單】嗎？\n如果是 → 回覆「ORDER」\n如果不是（單純發問、聊天、詢問食材等）→ 回覆「IGNORE」\n請嚴格只回覆 ORDER 或 IGNORE。`;
           const ctxRes = await callAI(ctxPrompt, env, tenantCtx, 8000, systemPrompt);
           const upper = (ctxRes || "").toUpperCase();
           if (upper.includes("ORDER") || !ctxRes) {
@@ -910,9 +910,9 @@ export async function handleLineWebhook(
           if (questionText) {
             const menuData = await getMenuData(env, tenantId);
             const menuContext = formatMenuForPrompt(menuData);
-            const systemPrompt = `You are an AI order assistant for ${brandName}.\n\n${menuContext}\n\nAnalyze customer answers against the store menu items and availability.`;
+            const systemPrompt = `你是 ${brandName} 的 AI 訂單助理。\n\n${menuContext}\n\n請對照店家菜單品項與庫存狀況，分析顧客的回覆內容。`;
 
-            const prompt = `店家剛才詢問顧客：「${questionText}」\n顧客的回覆是：「${userText}」\n請問顧客的回覆是否針對問題做出了決定（如已明確選擇換的口味、同意、拒絕等）？\n注意：如果問題 is about flavor, but customer replied yes without specifying flavor, return NO.\nNếu khách hàng hỏi ngược, return NO. Nếu khách hàng chọn cụ thể hoặc đồng ý hủy, return YES. STRICTLY return YES or NO.`;
+            const prompt = `店家剛才詢問顧客：「${questionText}」\n顧客的回覆是：「${userText}」\n\n請問顧客的回覆是否已針對問題做出明確決定（例如：已明確選擇欲更換的口味、同意變更、同意取消等）？\n注意：\n1. 若問題是詢問更換口味，但顧客僅回覆「好/同意」而未說明要換什麼口味，請回覆 NO。\n2. 若顧客是反問問題，請回覆 NO。\n3. 若顧客已明確選擇具體品項或同意取消，請回覆 YES。\n請嚴格只回覆 YES 或 NO。`;
             const aiRes = await callAI(prompt, env, tenantCtx, 8000, systemPrompt);
             if (aiRes) {
               const up = aiRes.toUpperCase();
@@ -1021,9 +1021,9 @@ export async function handleLineWebhook(
 
       const menuData = await getMenuData(env, tenantId);
       const menuContext = formatMenuForPrompt(menuData);
-      const systemPrompt = `You are an AI assistant for ${brandName}.\n\n${menuContext}\n\nYour goal is to evaluate if a customer's message indicates an intent to order food/drinks from this store menu.`;
+      const systemPrompt = `你是 ${brandName} 的 AI 助理。\n\n${menuContext}\n\n你的任務是評估顧客訊息是否具有向本店家點餐或訂購餐點飲料的意圖。`;
 
-      const intentPrompt = `顧客傳來：「${userText}」\n這句話是在向店家「下訂單點餐」嗎（包含提到想要某個餐點、詢問如何點餐、說要訂餐等）？\n如果是 → 回覆「YES」\n如果不是（單純發問、聊天、抱怨等）→ 回覆「NO」\n請只回覆 YES 或 NO。`;
+      const intentPrompt = `顧客傳來：「${userText}」\n\n這句話是在向店家「下訂單點餐」嗎（包含提到想要點某個餐點、詢問如何點餐、說要訂餐等）？\n如果是 → 回覆「YES」\n如果不是（單純發問、聊天、抱怨等）→ 回覆「NO」\n請嚴格只回覆 YES 或 NO。`;
       const intentRes = await callAI(intentPrompt, env, tenantCtx, 8000, systemPrompt);
       const resUpper = (intentRes || "").toUpperCase();
 
