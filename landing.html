@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- SEO & Open Graph Meta Tags -->
+  <title>專為台灣 F&B 店家打造的 LINE 點餐系統 | 提升外帶效率與熟客回購率</title>
+  <meta name="description" content="免下載 APP、免排隊。顧客用 LINE 即可輕鬆點餐！專為小型餐飲、飲料店、外帶櫃檯設計，助您輕鬆管理訂單、留住熟客。">
+  <meta name="keywords" content="LINE點餐系統, 餐飲POS, 外帶預訂, 雲端點餐, 台灣餐飲科技, 飲料店點餐系統">
+  <meta property="og:title" content="專為台灣 F&B 店家打造的 LINE 點餐系統">
+  <meta property="og:description" content="免下載 APP、免排隊等候。讓顧客在 LINE 上輕鬆預訂，提升外帶效率與顧客滿意度！">
+  <meta property="og:type" content="website">
+
+  <!-- Google Fonts: Outfit & Noto Sans TC -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            lineGreen: '#06C755',
+            lineGreenHover: '#05B24C',
+            slateDark: '#0F172A',
+            slateCard: '#1E293B',
+            softGray: '#F8FAFC'
+          },
+          fontFamily: {
+            sans: ['Noto Sans TC', 'Outfit', 'sans-serif'],
+            display: ['Outfit', 'Noto Sans TC', 'sans-serif'],
+          },
+          boxShadow: {
+            'line-glow': '0 10px 30px -5px rgba(6, 199, 85, 0.35)',
+            'line-glow-lg': '0 20px 40px -10px rgba(6, 199, 85, 0.45)',
+            'card-hover': '0 20px 35px -10px rgba(15, 23, 42, 0.08)'
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom Keyframe Animations */
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 10px 25px -5px rgba(6, 199, 85, 0.35); }
+      50% { box-shadow: 0 15px 35px 5px rgba(6, 199, 85, 0.55); }
+    }
+    .animate-pulse-glow {
+      animation: pulseGlow 3s infinite ease-in-out;
+    }
+    .glass-nav {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+  </style>
+</head>
+<body class="font-sans text-slate-800 bg-white antialiased selection:bg-lineGreen selection:text-white overflow-x-hidden">
+
+  <!-- ================= Sticky Header Nav ================= -->
+  <header class="sticky top-0 z-50 glass-nav border-b border-slate-100 transition-all duration-300">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-20">
+        <!-- Logo -->
+        <a href="#" class="flex items-center gap-3 group focus:outline-none" aria-label="Blab 品牌首頁">
+          <div class="w-10 h-10 rounded-xl bg-lineGreen flex items-center justify-center text-white shadow-md shadow-lineGreen/30 group-hover:scale-105 transition-transform duration-300">
+            <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24">
+              <path d="M12 2C6.48 2 2 5.92 2 10.75c0 4.29 3.51 7.89 8.27 8.57.32.07.76.22.87.5.1.25.07.65.03.9-.11.66-.4 1.7-.44 1.86-.06.31-.29 1.21 1.06.66 1.35-.55 7.29-4.3 9.94-7.36C23.25 14.18 24 12.56 24 10.75 24 5.92 19.52 2 12 2z"/>
+            </svg>
+          </div>
+          <span class="font-display font-bold text-2xl tracking-tight text-slate-900 group-hover:text-lineGreen transition-colors">
+            Blab
+          </span>
+        </a>
+
+        <!-- Desktop Navigation -->
+        <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
+          <a href="#benefits" class="hover:text-lineGreen transition-colors py-2">核心優勢</a>
+          <a href="#how-it-works" class="hover:text-lineGreen transition-colors py-2">運作流程</a>
+          <a href="#contact" class="hover:text-lineGreen transition-colors py-2">專人諮詢</a>
+        </nav>
+
+        <!-- Header CTA Button -->
+        <div class="hidden md:flex items-center">
+          <a href="https://line.me/ti/p/8k-DsB-f5Y" target="_blank" rel="noopener noreferrer" id="header-cta-btn"
+             class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-lineGreen hover:bg-lineGreenHover text-white font-medium text-sm transition-all duration-300 shadow-md hover:shadow-line-glow hover:-translate-y-0.5">
+            <span>💬 立即諮詢</span>
+          </a>
+        </div>
+
+        <!-- Mobile Menu Toggle Button -->
+        <button id="mobile-menu-btn" class="md:hidden p-2 rounded-lg text-slate-600 hover:text-slate-900 focus:outline-none" aria-label="切換導航選單">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path id="menu-icon-open" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+            <path id="menu-icon-close" class="hidden" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Mobile Menu Dropdown -->
+      <div id="mobile-menu" class="hidden md:hidden pb-6 pt-2 border-t border-slate-100 flex flex-col gap-4">
+        <a href="#benefits" class="mobile-nav-link text-slate-700 hover:text-lineGreen font-medium px-2 py-1">核心優勢</a>
+        <a href="#how-it-works" class="mobile-nav-link text-slate-700 hover:text-lineGreen font-medium px-2 py-1">運作流程</a>
+        <a href="#contact" class="mobile-nav-link text-slate-700 hover:text-lineGreen font-medium px-2 py-1">專人諮詢</a>
+        <a href="https://line.me/ti/p/8k-DsB-f5Y" target="_blank" rel="noopener noreferrer" 
+           class="inline-flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-lineGreen text-white font-medium text-center shadow-md">
+          <span>💬 立即加 LINE 免費諮詢</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+
+  <!-- ================= 1. HERO SECTION ================= -->
+  <section class="relative pt-12 pb-20 md:pt-20 md:pb-32 overflow-hidden bg-gradient-to-b from-slate-50/80 via-white to-white">
+    <!-- Subtle Background Decorative Orbs -->
+    <div class="absolute top-0 right-0 -mt-12 -mr-12 w-96 h-96 rounded-full bg-lineGreen/10 blur-3xl pointer-events-none"></div>
+    <div class="absolute bottom-10 left-0 -ml-20 w-80 h-80 rounded-full bg-emerald-300/10 blur-3xl pointer-events-none"></div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+        
+        <!-- Hero Text & Primary CTA -->
+        <div class="lg:col-span-7 text-center lg:text-left">
+          <!-- Tag Pill -->
+          <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-lineGreen/10 border border-lineGreen/20 text-lineGreen text-xs sm:text-sm font-semibold mb-6">
+            <span class="w-2 h-2 rounded-full bg-lineGreen animate-ping"></span>
+            <span>專為台灣在地餐飲與外帶店家打造</span>
+          </div>
+
+          <!-- Main Headline -->
+          <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 leading-[1.25] tracking-tight mb-6">
+            專為小型餐飲/外帶店打造的 <br class="hidden sm:inline" />
+            <span class="bg-clip-text text-transparent bg-gradient-to-r from-slate-900 via-emerald-800 to-lineGreen">
+              LINE 雲端點餐系統
+            </span>
+          </h1>
+
+          <!-- Sub-headline -->
+          <p class="text-base sm:text-lg lg:text-xl text-slate-600 font-normal leading-relaxed max-w-2xl mx-auto lg:mx-0 mb-8 sm:mb-10">
+            免下載 APP、免排隊等候。讓顧客在 LINE 上輕鬆預訂，提升外帶效率與顧客滿意度！
+          </p>
+
+          <!-- Action CTA Group -->
+          <div class="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
+            <a href="https://line.me/ti/p/8k-DsB-f5Y" target="_blank" rel="noopener noreferrer" id="hero-main-cta"
+               class="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-lineGreen hover:bg-lineGreenHover text-white font-bold text-lg transition-all duration-300 shadow-line-glow hover:shadow-line-glow-lg hover:-translate-y-1 active:translate-y-0 active:scale-[0.98] group">
+              <svg class="w-6 h-6 fill-current group-hover:scale-110 transition-transform duration-300" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 5.92 2 10.75c0 4.29 3.51 7.89 8.27 8.57.32.07.76.22.87.5.1.25.07.65.03.9-.11.66-.4 1.7-.44 1.86-.06.31-.29 1.21 1.06.66 1.35-.55 7.29-4.3 9.94-7.36C23.25 14.18 24 12.56 24 10.75 24 5.92 19.52 2 12 2z"/>
+              </svg>
+              <span>💬 立即加 LINE 免費諮詢</span>
+            </a>
+          </div>
+
+          <!-- Trust Badges Under CTA -->
+          <div class="mt-8 pt-6 border-t border-slate-200/60 flex flex-wrap items-center justify-center lg:justify-start gap-6 text-xs sm:text-sm text-slate-500 font-medium">
+            <div class="flex items-center gap-1.5">
+              <svg class="w-4 h-4 text-lineGreen" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+              <span>無合約綁定負擔</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <svg class="w-4 h-4 text-lineGreen" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+              <span>顧客零學習成本</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <svg class="w-4 h-4 text-lineGreen" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+              <span>高效率即時通知</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hero Image / App Showcase -->
+        <div class="lg:col-span-5 flex justify-center">
+          <div class="relative w-full max-w-md">
+            <!-- Glow backdrop -->
+            <div class="absolute -inset-1 bg-gradient-to-r from-lineGreen to-emerald-400 rounded-3xl blur-2xl opacity-25"></div>
+            
+            <!-- Image Card Container -->
+            <div class="relative bg-white p-3 sm:p-4 rounded-3xl shadow-2xl border border-slate-100 overflow-hidden transform hover:scale-[1.02] transition-transform duration-500">
+              <img src="./hero_app_mockup.png" 
+                   alt="LINE 雲端點餐系統手機示意圖" 
+                   class="w-full h-auto rounded-2xl object-cover"
+                   loading="eager"
+                   width="500"
+                   height="600">
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ================= 2. KEY BENEFITS SECTION ================= -->
+  <section id="benefits" class="py-20 bg-slate-50/50 relative border-t border-slate-100">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <!-- Section Header -->
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <span class="text-lineGreen font-bold text-sm tracking-wider uppercase mb-2 block">Why Choose Us</span>
+        <h2 class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+          解決外帶與現場排隊痛點，全面提升經營效益
+        </h2>
+        <p class="mt-4 text-slate-600 text-base sm:text-lg">
+          專為台灣餐飲外帶環境設計，針對車位難停、電話接單混亂等常見困擾提供最佳解法。
+        </p>
+      </div>
+
+      <!-- 3-Grid Benefit Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        
+        <!-- Benefit Card 1 -->
+        <div class="group bg-white p-8 rounded-3xl border border-slate-200/70 shadow-sm hover:shadow-card-hover hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between">
+          <div>
+            <!-- Icon Container -->
+            <div class="w-14 h-14 rounded-2xl bg-emerald-50 text-lineGreen flex items-center justify-center mb-6 group-hover:bg-lineGreen group-hover:text-white transition-colors duration-300">
+              <!-- SVG Icon: Car / Takeout Drop -->
+              <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+              </svg>
+            </div>
+            
+            <h3 class="text-xl font-bold text-slate-900 mb-3 group-hover:text-lineGreen transition-colors">
+              到店免下車，取了就走
+            </h3>
+            
+            <p class="text-slate-600 text-sm sm:text-base leading-relaxed">
+              解決店家周邊不好停車的痛點。顧客提前在 LINE 上預訂並約定時間，抵達現場快速取餐。
+            </p>
+          </div>
+          
+          <div class="mt-6 pt-4 border-t border-slate-100 flex items-center text-xs font-semibold text-lineGreen">
+            <span>改善臨停與取餐體驗</span>
+          </div>
+        </div>
+
+        <!-- Benefit Card 2 -->
+        <div class="group bg-white p-8 rounded-3xl border border-slate-200/70 shadow-sm hover:shadow-card-hover hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between">
+          <div>
+            <!-- Icon Container -->
+            <div class="w-14 h-14 rounded-2xl bg-emerald-50 text-lineGreen flex items-center justify-center mb-6 group-hover:bg-lineGreen group-hover:text-white transition-colors duration-300">
+              <!-- SVG Icon: Clock / Peak hour stream -->
+              <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </div>
+            
+            <h3 class="text-xl font-bold text-slate-900 mb-3 group-hover:text-lineGreen transition-colors">
+              尖峰時段高效分流
+            </h3>
+            
+            <p class="text-slate-600 text-sm sm:text-base leading-relaxed">
+              實時顯示前方等待單數，顧客自助看圖點餐，大幅降低接電話記錯單的風險。
+            </p>
+          </div>
+
+          <div class="mt-6 pt-4 border-t border-slate-100 flex items-center text-xs font-semibold text-lineGreen">
+            <span>零聽錯單、提高接單量</span>
+          </div>
+        </div>
+
+        <!-- Benefit Card 3 -->
+        <div class="group bg-white p-8 rounded-3xl border border-slate-200/70 shadow-sm hover:shadow-card-hover hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between">
+          <div>
+            <!-- Icon Container -->
+            <div class="w-14 h-14 rounded-2xl bg-emerald-50 text-lineGreen flex items-center justify-center mb-6 group-hover:bg-lineGreen group-hover:text-white transition-colors duration-300">
+              <!-- SVG Icon: Users / Direct profit -->
+              <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+              </svg>
+            </div>
+            
+            <h3 class="text-xl font-bold text-slate-900 mb-3 group-hover:text-lineGreen transition-colors">
+              輕鬆累積店家專屬熟客
+            </h3>
+            
+            <p class="text-slate-600 text-sm sm:text-base leading-relaxed">
+              無縫將點餐顧客圈入 LINE 官方帳號，便於後續經營回購，利潤 100% 留給店家。
+            </p>
+          </div>
+
+          <div class="mt-6 pt-4 border-t border-slate-100 flex items-center text-xs font-semibold text-lineGreen">
+            <span>不需被外送平台高抽成</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ================= 3. HOW IT WORKS SECTION ================= -->
+  <section id="how-it-works" class="py-20 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <span class="text-lineGreen font-bold text-sm tracking-wider uppercase mb-2 block">Simple Workflow</span>
+        <h2 class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+          簡單三步驟，顧客點餐到取餐
+        </h2>
+        <p class="mt-4 text-slate-600 text-base sm:text-lg">
+          無縫銜接顧客與櫃檯，流暢體驗只需幾秒鐘
+        </p>
+      </div>
+
+      <!-- 3-Step Process Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
+        
+        <!-- Connecting Line for Desktop -->
+        <div class="hidden md:block absolute top-1/2 left-1/6 right-1/6 h-0.5 bg-slate-200 -translate-y-8 z-0"></div>
+
+        <!-- Step 1 -->
+        <div class="relative z-10 bg-white p-8 rounded-3xl border border-slate-100 shadow-sm text-center flex flex-col items-center">
+          <div class="w-16 h-16 rounded-2xl bg-lineGreen text-white font-display font-bold text-2xl flex items-center justify-center mb-6 shadow-lg shadow-lineGreen/30 ring-4 ring-white">
+            1
+          </div>
+          <h3 class="text-lg font-bold text-slate-900 mb-2">顧客開啟 LINE 菜單點餐</h3>
+          <p class="text-slate-500 text-sm leading-relaxed">
+            免下載第三方 APP，加入官方帳號點擊「我要點餐」即可查看精彩圖文菜單並完成下單。
+          </p>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="relative z-10 bg-white p-8 rounded-3xl border border-slate-100 shadow-sm text-center flex flex-col items-center">
+          <div class="w-16 h-16 rounded-2xl bg-lineGreen text-white font-display font-bold text-2xl flex items-center justify-center mb-6 shadow-lg shadow-lineGreen/30 ring-4 ring-white">
+            2
+          </div>
+          <h3 class="text-lg font-bold text-slate-900 mb-2">櫃檯即時收到訂單通知與確認</h3>
+          <p class="text-slate-500 text-sm leading-relaxed">
+            系統即時響鈴提醒櫃檯人員，一鍵確認接單並自動傳送預計取餐時間給顧客。
+          </p>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="relative z-10 bg-white p-8 rounded-3xl border border-slate-100 shadow-sm text-center flex flex-col items-center">
+          <div class="w-16 h-16 rounded-2xl bg-lineGreen text-white font-display font-bold text-2xl flex items-center justify-center mb-6 shadow-lg shadow-lineGreen/30 ring-4 ring-white">
+            3
+          </div>
+          <h3 class="text-lg font-bold text-slate-900 mb-2">顧客依約定時間到店快速取餐</h3>
+          <p class="text-slate-500 text-sm leading-relaxed">
+            顧客收到取餐通知後抵達店家，出示手機畫面即可拿了就走，節省雙方寶貴時間。
+          </p>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- ================= 4. CONTACT & INQUIRY SECTION ================= -->
+  <section id="contact" class="py-20 bg-slate-900 text-white relative overflow-hidden">
+    <!-- Subtle Gradient Glowing background -->
+    <div class="absolute -top-24 -right-24 w-96 h-96 bg-lineGreen/20 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute -bottom-24 -left-24 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
+      
+      <!-- Heading -->
+      <h2 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight mb-6">
+        想為您的店家導入 LINE 點餐系統嗎？
+      </h2>
+      
+      <!-- Sub-text -->
+      <p class="text-slate-300 text-base sm:text-lg lg:text-xl font-normal leading-relaxed max-w-2xl mx-auto mb-10">
+        歡迎隨時與我們聯繫，將有專人為您提供免費諮詢與協助！
+      </p>
+
+      <!-- Contact Action Elements -->
+      <div class="flex flex-col items-center gap-6">
+        <!-- Prominent LINE Green Button -->
+        <a href="https://line.me/ti/p/8k-DsB-f5Y" target="_blank" rel="noopener noreferrer" id="contact-main-cta"
+           class="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-10 py-5 rounded-2xl bg-lineGreen hover:bg-lineGreenHover text-white font-bold text-xl transition-all duration-300 shadow-line-glow-lg hover:scale-105 active:scale-100 group animate-pulse-glow">
+          <svg class="w-7 h-7 fill-current group-hover:rotate-12 transition-transform duration-300" viewBox="0 0 24 24">
+            <path d="M12 2C6.48 2 2 5.92 2 10.75c0 4.29 3.51 7.89 8.27 8.57.32.07.76.22.87.5.1.25.07.65.03.9-.11.66-.4 1.7-.44 1.86-.06.31-.29 1.21 1.06.66 1.35-.55 7.29-4.3 9.94-7.36C23.25 14.18 24 12.56 24 10.75 24 5.92 19.52 2 12 2z"/>
+          </svg>
+          <span>💬 加入 LINE 專人諮詢</span>
+        </a>
+
+        <!-- Secondary Subtle Contact Text -->
+        <div class="flex items-center gap-2 text-slate-400 text-sm sm:text-base font-medium mt-2">
+          <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 002-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+          </svg>
+          <span>Email: <a href="mailto:blab.taiwan@gmail.com" class="hover:text-white transition-colors underline underline-offset-4">blab.taiwan@gmail.com</a></span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="bg-slate-950 text-slate-500 py-8 border-t border-slate-900">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs sm:text-sm">
+      <p class="text-center sm:text-left">
+        &copy; 2026 Blab. All rights reserved.
+      </p>
+      <a href="#" class="hover:text-slate-300 transition-colors flex items-center gap-1">
+        <span>回到頁首</span>
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
+        </svg>
+      </a>
+    </div>
+  </footer>
+
+
+  <!-- ================= INTERACTIVE JAVASCRIPT ================= -->
+  <script>
+    // Mobile Navigation Toggle Logic
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    const mobileMenu = document.getElementById('mobile-menu');
+    const menuIconOpen = document.getElementById('menu-icon-open');
+    const menuIconClose = document.getElementById('menu-icon-close');
+    const mobileNavLinks = document.querySelectorAll('.mobile-nav-link');
+
+    if (mobileMenuBtn) {
+      mobileMenuBtn.addEventListener('click', () => {
+        const isOpen = !mobileMenu.classList.contains('hidden');
+        if (isOpen) {
+          mobileMenu.classList.add('hidden');
+          menuIconOpen.classList.remove('hidden');
+          menuIconClose.classList.add('hidden');
+        } else {
+          mobileMenu.classList.remove('hidden');
+          menuIconOpen.classList.add('hidden');
+          menuIconClose.classList.remove('hidden');
+        }
+      });
+    }
+
+    // Close mobile menu when clicking any nav item
+    mobileNavLinks.forEach(link => {
+      link.addEventListener('click', () => {
+        if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
+          mobileMenu.classList.add('hidden');
+          menuIconOpen.classList.remove('hidden');
+          menuIconClose.classList.add('hidden');
+        }
+      });
+    });
+  </script>
+
+</body>
+</html>
