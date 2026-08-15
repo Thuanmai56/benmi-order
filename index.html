@@ -835,11 +835,7 @@
                 }
             }
 
-            if (!isScheduledEnabled) {
-                msg += `\n\n🕒 取餐時間：${dateInput} ${timeInput} (即時取餐 / 依現場排單製作)`;
-            } else {
-                msg += `\n\n🕒 取餐時間：${dateInput} ${timeInput}`;
-            }
+            msg += `\n\n🕒 取餐時間：${dateInput} ${timeInput}`;
             const mainNote = document.getElementById('note').value;
             if (mainNote) msg += `\n📝 總備註：${mainNote}`;
             msg += `\n💰 總金額：$${currentTotal}`;

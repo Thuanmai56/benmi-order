@@ -221,7 +221,7 @@ export function buildOrderFlexMessage(order: Order, tenantCtx?: TenantContext | 
           layout: "horizontal",
           contents: [
             { type: "text", text: "🕒 取餐時間：", size: "sm", color: "#666666", flex: 3 },
-            { type: "text", text: order.time, size: "sm", weight: "bold", color: "#111111", align: "end", flex: 7, wrap: true }
+            { type: "text", text: String(order.time || "").replace(/\s*\([^)]*\)/g, '').trim(), size: "sm", weight: "bold", color: "#111111", align: "end", flex: 7, wrap: true }
           ]
         },
         {
@@ -348,7 +348,7 @@ export function buildProgressFlexMessage(order: Order, queueAheadCount: number, 
           layout: "horizontal",
           contents: [
             { type: "text", text: "🕒 取餐時間：", size: "sm", color: "#6b7280", flex: 3 },
-            { type: "text", text: order.time, size: "sm", weight: "bold", color: "#111827", align: "end", flex: 7, wrap: true }
+            { type: "text", text: String(order.time || "").replace(/\s*\([^)]*\)/g, '').trim(), size: "sm", weight: "bold", color: "#111827", align: "end", flex: 7, wrap: true }
           ]
         }
       ]
@@ -673,7 +673,7 @@ export async function handleLineWebhook(
       const timeKey = hh + min;
       const tempRandomId = Math.floor(1000 + Math.random() * 9000);
       const orderKey = keyLine ? keyLine.replace("訂單編號：", "").trim() : `BD${todayKey}-${timeKey}-${tempRandomId}`;
-      const timeStr = timeLine ? timeLine.replace("🕒 取餐時間：", "").trim() : "Unknown";
+      const timeStr = timeLine ? timeLine.replace("🕒 取餐時間：", "").replace(/\s*\([^)]*\)/g, '').trim() : "Unknown";
       const totalStr = totalLine ? totalLine.replace("💰 總金額：", "").replace("$", "").trim() : "0";
 
       let noteStr = "";

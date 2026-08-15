@@ -44,10 +44,12 @@ export async function createOrder(
   const tempRandomId = Math.floor(1000 + Math.random() * 9000);
   const orderKey = data.orderId || data.key || `B${dateStr}-${tempRandomId}`;
 
+  const cleanTime = String(data.time || "").replace(/\s*\([^)]*\)/g, '').trim();
+
   const order: Order = {
     key: orderKey,
     customer: data.customer || "顧客",
-    time: data.time,
+    time: cleanTime,
     content: data.content,
     status: "NEW",
     createdAt: Date.now(),

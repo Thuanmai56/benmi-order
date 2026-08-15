@@ -1279,6 +1279,11 @@
       return lines.slice(0, 6).join("\n");
     }
 
+    function formatPickupTimeDisplay(timeStr) {
+      if (!timeStr) return "-";
+      return String(timeStr).replace(/\s*\([^)]*\)/g, '').trim() || "-";
+    }
+
     function formatOrderTotal(order) {
       if (order?.total !== undefined && order?.total !== null && !isNaN(order.total) && Number(order.total) > 0) {
         return `$${Number(order.total).toLocaleString()}`;
@@ -1433,7 +1438,7 @@
               <span class="tile-meta">#${escapeHtml(order.key)}</span>
             </div>
             <div class="tile-top" style="margin-top: 6px;">
-              <span class="tile-meta">${t('pickupLabel')} ${escapeHtml(order.time || "-")}</span>
+              <span class="tile-meta">${t('pickupLabel')} ${escapeHtml(formatPickupTimeDisplay(order.time))}</span>
               ${totalFormatted !== '-' ? `<span class="tile-meta" style="color: var(--primary); font-weight: 1000;">${escapeHtml(totalFormatted)}</span>` : ''}
               <span class="tile-meta" style="color: var(--brand-red); font-weight: 1100;">${escapeHtml(eta)}</span>
             </div>
@@ -1471,7 +1476,7 @@
               <span class="tile-meta">#${escapeHtml(order.key)}</span>
             </div>
             <div class="tile-top" style="margin-top: 6px;">
-              <span class="tile-meta">${t('pickupLabel')} ${escapeHtml(order.time || "-")}</span>
+              <span class="tile-meta">${t('pickupLabel')} ${escapeHtml(formatPickupTimeDisplay(order.time))}</span>
               ${totalFormatted !== '-' ? `<span class="tile-meta" style="color: var(--primary); font-weight: 1000;">${escapeHtml(totalFormatted)}</span>` : ''}
               <span class="tile-meta" style="color: var(--brand-red); font-weight: 1100;">${escapeHtml(eta)}</span>
             </div>
@@ -1620,7 +1625,7 @@
                 <span class="tile-meta">#${escapeHtml(order.key)}</span>
               </div>
               <div class="tile-top" style="margin-top: 6px;">
-                <span class="tile-meta">${t('pickupLabel')} ${escapeHtml(order.time || "-")}</span>
+                <span class="tile-meta">${t('pickupLabel')} ${escapeHtml(formatPickupTimeDisplay(order.time))}</span>
                 ${totalFormatted !== '-' ? `<span class="tile-meta" style="color: var(--primary); font-weight: 1000;">${escapeHtml(totalFormatted)}</span>` : ''}
               </div>
               <div class="tile-items">${escapeHtml(shortItems(order.content))}</div>
@@ -1756,7 +1761,7 @@
 
       document.getElementById("review-order-key").innerText = order.key || "-";
       document.getElementById("review-customer").innerText = order.customer || "-";
-      document.getElementById("review-pickup").innerText = order.time || "-";
+      document.getElementById("review-pickup").innerText = formatPickupTimeDisplay(order.time);
       document.getElementById("review-eta").innerText = formatEta(order.time);
       document.getElementById("review-total").innerText = formatOrderTotal(order);
       document.getElementById("review-status").innerText = order.status || "-";
