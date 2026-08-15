@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS tenant_config (
     liff_url TEXT,
     -- AI Integration
     groq_api_key TEXT,
-    groq_model TEXT DEFAULT 'llama-3.1-8b-instant',
+    groq_model TEXT DEFAULT 'openai/gpt-oss-120b',
     openrouter_api_key TEXT,
     openrouter_model TEXT DEFAULT 'google/gemini-2.5-flash:free',
     -- Branding

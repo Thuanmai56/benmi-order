@@ -2,7 +2,7 @@ import { Env } from '../types/env';
 import { Order } from '../types/index';
 import { corsHeaders, json } from '../utils/http';
 import { syncToGoogleSheets } from '../integrations/googleSheets';
-import { pushLineMessage } from './line';
+import { pushLineMessage, pushLineFlexMessage, buildOrderFlexMessage } from './line';
 import { getTenantId } from './menu';
 
 import { TenantContext } from '../types/tenant';
@@ -31,6 +31,10 @@ export async function createOrder(
   const data: any = await request.json();
   const tenantId = tenantCtx?.tenantId || getTenantId(request);
 
+  if (tenantCtx?.storeStatus === 'paused') {
+    return json({ error: "店家目前暫停接單中，暫無法接收新訂單", code: "STORE_PAUSED" }, 400);
+  }
+
   // Taiwan time UTC+8
   const nowTaiwan = new Date(Date.now() + 8 * 3600000);
   const mm = String(nowTaiwan.getUTCMonth() + 1).padStart(2, "0");
@@ -40,10 +44,12 @@ export async function createOrder(
   const tempRandomId = Math.floor(1000 + Math.random() * 9000);
   const orderKey = data.orderId || data.key || `B${dateStr}-${tempRandomId}`;
 
+  const cleanTime = String(data.time || "").replace(/\s*\([^)]*\)/g, '').trim();
+
   const order: Order = {
     key: orderKey,
     customer: data.customer || "顧客",
-    time: data.time,
+    time: cleanTime,
     content: data.content,
     status: "NEW",
     createdAt: Date.now(),
@@ -122,7 +128,6 @@ export async function updateOrder(
       await saveOrder(env, order, tenantId); // Sync DB
       return json({ success: true });
     }
-    const wasWaiting = order.status && order.status.startsWith("WAITING");
     order.status = "ACCEPTED";
     await saveOrder(env, order, tenantId);
 
@@ -132,9 +137,7 @@ export async function updateOrder(
           "DELETE FROM pending_actions WHERE tenant_id = ? AND user_id = ? AND order_key = ?"
         ).bind(tenantId, order.userId, order.key).run();
       } catch { }
-      if (!wasWaiting) {
-        await pushLineMessage(order.userId, `${brandName} 已收到您的訂單 #${order.key}，謝謝您！`, env, tenantCtx);
-      }
+      await pushLineMessage(order.userId, `${brandName} 已收到您的訂單 #${order.key}，謝謝您！`, env, tenantCtx);
     }
     return json({ success: true });
   }
@@ -276,15 +279,32 @@ export async function getWaitingCount(request: Request, env: Env): Promise<Respo
   if (!env.DB) return jsonWithETag({ waitingCount: 0 }, "0");
 
   try {
-    const row = await env.DB.prepare(
-      `SELECT COUNT(*) as cnt, MAX(updated_at) as last_updated FROM orders 
+    const activeRows = await env.DB.prepare(
+      `SELECT key, pickup_time, order_content, created_at, updated_at FROM orders 
        WHERE tenant_id = ? 
          AND status = 'ACCEPTED'
          AND created_at >= DATETIME('now', '-24 hours')`
-    ).bind(tenantId).first<{ cnt: number; last_updated: string | null }>();
+    ).bind(tenantId).all<any>();
 
-    const waitingCount = row?.cnt || 0;
-    const lastUpdated = row?.last_updated || "0";
+    const now = Date.now();
+    // Các đơn trong hàng đợi hiện tại: đơn có giờ nhận từ quá khứ (đang làm/chưa xong) đến trong vòng 30 phút tới
+    const thresholdMs = now + 30 * 60 * 1000;
+
+    let waitingCount = 0;
+    let lastUpdated = "0";
+
+    if (activeRows && activeRows.results) {
+      for (const item of activeRows.results) {
+        if (item.updated_at && item.updated_at > lastUpdated) {
+          lastUpdated = item.updated_at;
+        }
+        const itemPickupMs = parsePickupTimeToMs(item.pickup_time, item.created_at, item.order_content);
+        if (itemPickupMs <= thresholdMs) {
+          waitingCount++;
+        }
+      }
+    }
+
     const currentVersion = `${waitingCount}_${lastUpdated}`;
 
     const clientETag = request.headers.get("if-none-match")?.replace(/^W\//, '').replace(/"/g, '');
@@ -312,9 +332,9 @@ export async function getOrders(request: Request, env: Env): Promise<Response> {
   if (!env.DB) return jsonWithETag([], "0");
 
   try {
-    // 1. Tính toán ETag version tức thì dựa trên dữ liệu mới nhất trong D1
+    // 1. Tính toán ETag version tức thì dựa trên dữ liệu 30 ngày gần nhất trong D1
     const verRow = await env.DB.prepare(
-      "SELECT MAX(updated_at) as last_updated, COUNT(*) as cnt FROM orders WHERE tenant_id = ?"
+      "SELECT MAX(updated_at) as last_updated, COUNT(*) as cnt FROM orders WHERE tenant_id = ? AND created_at >= DATETIME('now', '-30 days')"
     ).bind(tenantId).first<{ last_updated: string | null; cnt: number }>();
 
     const lastUpdated = verRow?.last_updated || "0";
@@ -334,9 +354,9 @@ export async function getOrders(request: Request, env: Env): Promise<Response> {
       });
     }
 
-    // 3. ETag thay đổi -> Truy vấn danh sách 200 đơn hàng mới nhất từ D1 Database
+    // 3. ETag thay đổi -> Truy vấn danh sách đơn hàng 30 ngày gần nhất từ D1 Database (tối đa 1000 đơn)
     const { results } = await env.DB.prepare(
-      "SELECT key, customer_name, pickup_time, status, total_amount, order_content, reason, note, created_at FROM orders WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 200"
+      "SELECT key, customer_name, pickup_time, status, total_amount, order_content, reason, note, created_at FROM orders WHERE tenant_id = ? AND created_at >= DATETIME('now', '-30 days') ORDER BY created_at DESC LIMIT 1000"
     ).bind(tenantId).all<any>();
 
     const orders: Order[] = (results || []).map(row => ({
@@ -366,15 +386,16 @@ export async function saveOrder(env: Env, order: Order, tenantId: string): Promi
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime(?, 'unixepoch'), datetime('now'))
      ON CONFLICT(key) DO UPDATE SET
        status = CASE
-         WHEN orders.status IN ('ACCEPTED', 'DONE', 'REJECTED', 'PICKED_UP', 'WAITING_CUSTOMER_CHANGE', 'WAITING_CUSTOMER_REJECT') AND excluded.status = 'NEW'
+         WHEN orders.status IN ('ACCEPTED', 'DONE', 'REJECTED', 'PICKED_UP') AND excluded.status = 'NEW'
          THEN orders.status
          ELSE excluded.status
        END,
+       pickup_time = excluded.pickup_time,
        customer_name = CASE WHEN excluded.customer_name != 'Khách (Web)' THEN excluded.customer_name ELSE orders.customer_name END,
        total_amount = excluded.total_amount,
        order_content = excluded.order_content,
-       reason = CASE WHEN excluded.reason != '' THEN excluded.reason ELSE orders.reason END,
-       note = CASE WHEN excluded.note != '' THEN excluded.note ELSE orders.note END,
+       reason = excluded.reason,
+       note = excluded.note,
        updated_at = datetime('now')`
   ).bind(
     order.key,
@@ -458,4 +479,128 @@ export async function handleOrdersMigration(request: Request, env: Env): Promise
     return json({ success: false, error: err.message, logs }, 500);
   }
 }
+
+export function parsePickupTimeToMs(timeStr: string | null | undefined, createdAtStr: string | null | undefined, orderContent?: string): number {
+  const createdDate = createdAtStr ? new Date(createdAtStr.endsWith("Z") ? createdAtStr : createdAtStr + "Z") : new Date();
+  const createdMs = !isNaN(createdDate.getTime()) ? createdDate.getTime() : Date.now();
+
+  let targetStr = (timeStr || "").trim();
+
+  // If timeStr is missing, "Unknown", or only date without time, try finding "取餐時間" in orderContent
+  if ((!targetStr || targetStr === "Unknown" || !targetStr.match(/\d{1,2}:\d{2}/)) && orderContent) {
+    const match = orderContent.match(/取餐時間[：:]\s*([^\n\r]+)/);
+    if (match && match[1]) {
+      targetStr = match[1].trim();
+    }
+  }
+
+  // 1. Matches "YYYY-MM-DD" + "HH:mm" (even if followed by extra text like "(即時取餐)")
+  const dateTimeMatch = targetStr.match(/(\d{4}-\d{2}-\d{2})[T\s]+(\d{1,2}):(\d{2})/);
+  if (dateTimeMatch) {
+    const yyyyMmDd = dateTimeMatch[1];
+    const hh = dateTimeMatch[2].padStart(2, "0");
+    const min = dateTimeMatch[3].padStart(2, "0");
+    const iso = `${yyyyMmDd}T${hh}:${min}:00+08:00`;
+    const d = new Date(iso);
+    if (!isNaN(d.getTime())) return d.getTime();
+  }
+
+  // 2. Matches only "HH:mm" -> attach the YYYY-MM-DD from created_at in Taiwan UTC+8 timezone
+  const timeMatch = targetStr.match(/(\d{1,2}):(\d{2})/);
+  if (timeMatch) {
+    const twDate = new Date(createdMs + 8 * 3600000);
+    const yyyy = twDate.getUTCFullYear();
+    const mm = String(twDate.getUTCMonth() + 1).padStart(2, "0");
+    const dd = String(twDate.getUTCDate()).padStart(2, "0");
+    const hh = String(parseInt(timeMatch[1], 10)).padStart(2, "0");
+    const min = String(parseInt(timeMatch[2], 10)).padStart(2, "0");
+    const iso = `${yyyy}-${mm}-${dd}T${hh}:${min}:00+08:00`;
+    const d = new Date(iso);
+    if (!isNaN(d.getTime())) return d.getTime();
+  }
+
+  // 3. Fallback: if only date "YYYY-MM-DD" with no time at all, it was placed as ASAP at createdMs
+  return createdMs;
+}
+
+export async function getOrderQueueAhead(env: Env, tenantId: string, orderKey: string): Promise<{ order: Order | null; queueAhead: number }> {
+  if (!env.DB) return { order: null, queueAhead: 0 };
+  try {
+    const row = await env.DB.prepare(
+      "SELECT key, customer_name, pickup_time, status, total_amount, order_content, reason, note, created_at, user_id FROM orders WHERE key = ?"
+    ).bind(orderKey).first<any>();
+
+    if (!row) return { order: null, queueAhead: 0 };
+
+    const order: Order = {
+      key: row.key,
+      customer: row.customer_name,
+      time: row.pickup_time,
+      content: row.order_content,
+      status: row.status,
+      createdAt: new Date(row.created_at + "Z").getTime(),
+      userId: row.user_id || undefined,
+      total: row.total_amount,
+      reason: row.reason || "",
+      note: row.note || ""
+    };
+
+    if (order.status === 'DONE' || order.status === 'PICKED_UP' || order.status === 'REJECTED') {
+      return { order, queueAhead: 0 };
+    }
+
+    const activeRows = await env.DB.prepare(
+      `SELECT key, pickup_time, order_content, created_at FROM orders
+       WHERE tenant_id = ?
+         AND status IN ('NEW', 'ACCEPTED')
+         AND created_at >= DATETIME('now', '-24 hours')`
+    ).bind(tenantId).all<any>();
+
+    const targetPickupMs = parsePickupTimeToMs(row.pickup_time, row.created_at, row.order_content);
+    const targetCreatedMs = new Date(row.created_at + "Z").getTime();
+
+    let queueAhead = 0;
+    if (activeRows && activeRows.results) {
+      for (const item of activeRows.results) {
+        if (item.key === row.key) continue;
+        const itemPickupMs = parsePickupTimeToMs(item.pickup_time, item.created_at, item.order_content);
+        const itemCreatedMs = new Date(item.created_at + "Z").getTime();
+
+        // Xếp theo thứ tự thời gian nhận hàng (pickup_time):
+        // 1. Đơn có giờ nhận hàng sớm hơn được ưu tiên làm trước (xếp lên trước)
+        // 2. Nếu cùng giờ nhận hàng, đơn nào đặt trước (created_at trước) thì làm trước
+        if (itemPickupMs < targetPickupMs) {
+          queueAhead++;
+        } else if (itemPickupMs === targetPickupMs && itemCreatedMs < targetCreatedMs) {
+          queueAhead++;
+        }
+      }
+    }
+
+    return { order, queueAhead };
+  } catch (e: any) {
+    console.error("[getOrderQueueAhead] error:", e);
+    return { order: null, queueAhead: 0 };
+  }
+}
+
+export async function getUserLatestActiveOrder(env: Env, tenantId: string, userId: string): Promise<{ order: Order | null; queueAhead: number }> {
+  if (!env.DB) return { order: null, queueAhead: 0 };
+  try {
+    const row = await env.DB.prepare(
+      `SELECT key FROM orders 
+       WHERE tenant_id = ? AND user_id = ?
+         AND status IN ('NEW', 'ACCEPTED', 'WAITING_CUSTOMER_CHANGE', 'WAITING_CUSTOMER_REJECT', 'DONE')
+       ORDER BY created_at DESC LIMIT 1`
+    ).bind(tenantId, userId).first<any>();
+
+    if (!row) return { order: null, queueAhead: 0 };
+
+    return await getOrderQueueAhead(env, tenantId, row.key);
+  } catch (e: any) {
+    console.error("[getUserLatestActiveOrder] error:", e);
+    return { order: null, queueAhead: 0 };
+  }
+}
+
 

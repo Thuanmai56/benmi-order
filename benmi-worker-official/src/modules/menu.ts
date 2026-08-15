@@ -364,3 +364,97 @@ export function getMenuCategoryItems(categoryKey: keyof Menu, menu: Menu = DEFAU
   }
   return menu[categoryKey];
 }
+
+/**
+ * Retrieves store menu data directly for internal AI/worker processing.
+ */
+export async function getMenuData(env: Env, tenantId: string): Promise<Menu> {
+  const cacheKey = `tenant:${tenantId}:menu`;
+  try {
+    if (env.ORDER_STATE) {
+      const cached = await env.ORDER_STATE.get(cacheKey);
+      if (cached) return JSON.parse(cached);
+    }
+  } catch (e) {
+    console.error(`[Menu] KV cache read failed for tenant ${tenantId}:`, e);
+  }
+
+  if (env.DB) {
+    try {
+      const [categoriesRes, itemsRes] = await env.DB.batch([
+        env.DB.prepare("SELECT id, name, slug FROM menu_categories WHERE tenant_id = ? ORDER BY sort_order ASC").bind(tenantId),
+        env.DB.prepare("SELECT id, category_id, name, price, description, out_of_stock_until FROM menu_items WHERE tenant_id = ? ORDER BY sort_order ASC").bind(tenantId)
+      ]);
+
+      const categories = categoriesRes.results as Array<{ id: string; name: string; slug: string }>;
+      const items = itemsRes.results as Array<{
+        id: string;
+        category_id: string;
+        name: string;
+        price: number;
+        description: string | null;
+        out_of_stock_until: string | null;
+      }>;
+
+      if (categories.length > 0 && items.length > 0) {
+        const catMap = new Map<string, string>();
+        const menuData: Menu = { out_of_stock: [] };
+
+        for (const cat of categories) {
+          menuData[cat.slug] = {};
+          catMap.set(cat.id, cat.slug);
+        }
+
+        const now = new Date();
+        for (const item of items) {
+          const categorySlug = catMap.get(item.category_id);
+          if (!categorySlug) continue;
+          menuData[categorySlug][item.name] = item.price;
+
+          if (item.out_of_stock_until && new Date(item.out_of_stock_until) > now) {
+            menuData.out_of_stock!.push(`${categorySlug}:${item.name}`);
+          }
+        }
+
+        return menuData;
+      }
+    } catch (e) {
+      console.error(`[Menu] D1 read failed for tenant ${tenantId}:`, e);
+    }
+  }
+
+  return DEFAULT_MENU;
+}
+
+/**
+ * Formats live store menu into a clean structured prompt text for AI system prompt context.
+ */
+export function formatMenuForPrompt(menuData: Menu): string {
+  const categoryNames: Record<string, string> = {
+    small: "小麵包 (Bánh mì nhỏ / Small Banh Mi)",
+    large: "大麵包 (Bánh mì lớn / Large Banh Mi)",
+    combo: "套餐 (Combo + Đồ uống / Set Combo)",
+    drinks: "單點飲料 (Đồ uống / Drinks)",
+    topping: "加料 (Topping / Extra Items)"
+  };
+
+  const oosSet = new Set(menuData.out_of_stock || []);
+  const lines: string[] = ["📋 門市現有菜單 (STORE MENU - LIVE REAL-TIME):"];
+
+  const categories = ["large", "small", "combo", "drinks", "topping"];
+  for (const catKey of categories) {
+    const items = menuData[catKey];
+    if (!items || Object.keys(items).length === 0) continue;
+
+    const catTitle = categoryNames[catKey] || catKey;
+    lines.push(`\n- ${catTitle}:`);
+
+    for (const [name, price] of Object.entries(items)) {
+      const isOos = oosSet.has(`${catKey}:${name}`);
+      const oosTag = isOos ? " [🔴 售完 HẾT HÀNG]" : " [🟢 正常供應 CÒN HÀNG]";
+      lines.push(`  + ${name}: $${price}${oosTag}`);
+    }
+  }
+
+  return lines.join("\n");
+}
