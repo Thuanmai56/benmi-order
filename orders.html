@@ -1010,6 +1010,19 @@
       return lines.slice(0, 6).join("\n");
     }
 
+    function formatOrderTotal(order) {
+      if (order?.total !== undefined && order?.total !== null && !isNaN(order.total) && Number(order.total) > 0) {
+        return `$${Number(order.total).toLocaleString()}`;
+      }
+      if (order?.content) {
+        const match = String(order.content).match(/💰\s*總金額[：:]\s*\$?(\d+)/) || String(order.content).match(/Tổng\s*(?:tiền)?[：:]\s*(\d+)/i);
+        if (match) {
+          return `$${Number(match[1]).toLocaleString()}`;
+        }
+      }
+      return order?.total !== undefined && order?.total !== null && order?.total !== "" ? `$${order.total}` : "-";
+    }
+
     function switchTab(tab) {
       activeTab = tab;
       document.getElementById("tab-live").classList.toggle("active", tab === "live");
