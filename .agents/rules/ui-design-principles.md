@@ -8,6 +8,10 @@ Khi thực hiện thiết kế, chỉnh sửa layout, CSS hoặc thêm tính nă
   - Nút bấm, thao tác chạm to rõ, dễ bấm nhanh bằng ngón tay, modal/popup và layout dạng cột/lưới tối ưu cho tỷ lệ màn hình máy tính bảng ngang & dọc.
 - **Ưu tiên 2**: Responsive hoàn chỉnh cho **Desktop / PC**.
 - **Ưu tiên 3**: Responsive cho **Mobile**.
+- **Nguyên tắc Đa Ngôn Ngữ (I18N Support)**:
+  - `orders.html` hỗ trợ chuyển đổi đa ngôn ngữ (**繁體中文 `zh-TW`** và **Tiếng Việt `vi`**).
+  - Mọi thành phần UI mới (nút bấm, tiêu đề, modal, thông báo alert, tooltip, placeholder) **BẮT BUỘC** phải khai báo đầy đủ key trong cả 2 từ điển `I18N["zh-TW"]` và `I18N["vi"]`, đồng thời ánh xạ trong hàm `applyLanguageToDOM()`.
+  - **Tuyệt đối không pha trộn ngôn ngữ**: Từ điển `zh-TW` chỉ chứa tiếng Trung phồn thể thuần túy (không chèn thêm phụ đề/chú thích tiếng Việt như `(Mở quán)`), và từ điển `vi` chứa tiếng Việt chuẩn xác cho POS.
 
 ### 2. Trang Thực Đơn & Đặt Món Cho Khách (`index.html` / `index.css` / Menu LIFF)
 - **Ưu tiên 1 (Chính - Mobile-first)**:
