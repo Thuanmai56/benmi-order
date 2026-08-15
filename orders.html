@@ -21,7 +21,10 @@
         <button class="mini-btn" id="tab-sound" onclick="testSound()">測試音效</button>
         <button class="mini-btn" id="tab-menu" onclick="openMenuSettings()">菜單</button>
         <button class="mini-btn" id="tab-settings" onclick="openSettings()">設定</button>
-        <button class="mini-btn lang-switcher" id="btn-lang-toggle" onclick="toggleLanguage()" style="font-weight: 900; background: #e0f2fe; color: #0369a1; border-color: #bae6fd;">Tiếng Việt</button>
+        <select class="lang-select" id="select-lang" onchange="setLanguage(this.value)">
+          <option value="zh-TW">繁體中文</option>
+          <option value="vi">Tiếng Việt</option>
+        </select>
       </div>
     </div>
 
@@ -692,8 +695,8 @@
       if (!dict) return;
 
       // Topbar
-      const btnLang = document.getElementById("btn-lang-toggle");
-      if (btnLang) btnLang.innerText = dict.langBtn;
+      const selectLang = document.getElementById("select-lang");
+      if (selectLang) selectLang.value = currentLang;
       const brandSub = document.getElementById("i18n-brand-sub");
       if (brandSub) brandSub.innerText = dict.brandSub;
       const tabLive = document.getElementById("tab-live");

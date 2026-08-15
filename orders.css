@@ -86,6 +86,27 @@ body {
   white-space: nowrap;
 }
 
+.lang-select {
+  border: 1px solid var(--border);
+  background: #fff;
+  color: #111827;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+  outline: none;
+  font-family: inherit;
+  transition: all 0.15s ease;
+  height: 40px;
+  box-sizing: border-box;
+}
+
+.lang-select:hover,
+.lang-select:focus {
+  border-color: var(--primary);
+}
+
 .status-pill {
   padding: 10px 14px;
   border-radius: 999px;
