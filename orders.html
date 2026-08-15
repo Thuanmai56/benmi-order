@@ -614,27 +614,27 @@
         </div>
 
         <div style="display:flex; flex-direction:column; gap: 10px;">
-          <div style="display:flex; align-items:center; justify-content:space-between; background:#fff; border: 1px solid var(--border); padding: 12px 16px; border-radius: 10px;">
-            <div style="display:flex; align-items:center; gap: 10px;">
-              <span style="font-size: 24px;">💬</span>
+          <a href="https://line.me/ti/p/8k-DsB-f5Y" target="_blank" rel="noopener noreferrer" style="text-decoration:none; display:flex; align-items:center; justify-content:space-between; background:#fff; border: 1.5px solid #86efac; padding: 14px 16px; border-radius: 12px; transition: all 0.15s ease; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <div style="display:flex; align-items:center; gap: 12px;">
+              <span style="font-size: 28px; line-height: 1;">💬</span>
               <div>
-                <div style="font-weight: 900; font-size: 15px;">BLAB Customer Support</div>
-                <div style="font-size: 13px; color: var(--muted);">LINE Official / Online Support</div>
+                <div style="font-weight: 900; font-size: 15px; color: #111827;">BLAB Customer Support</div>
+                <div style="font-size: 13px; color: #16a34a; font-weight: 600; margin-top: 2px;">LINE Official / Online Support</div>
               </div>
             </div>
-            <button class="btn btn-ghost" style="padding: 6px 14px; font-size: 14px;" onclick="copyToClipboard('https://blab.tw', '已複製 BLAB 官方支援網址！', 'Đã sao chép liên kết hỗ trợ BLAB!')">聯絡支援</button>
-          </div>
+            <button class="btn btn-primary" style="padding: 8px 16px; font-size: 14px; pointer-events:none;" id="i18n-btn-modal-blab-line">開啟 LINE</button>
+          </a>
 
-          <div style="display:flex; align-items:center; justify-content:space-between; background:#fff; border: 1px solid var(--border); padding: 12px 16px; border-radius: 10px;">
-            <div style="display:flex; align-items:center; gap: 10px;">
-              <span style="font-size: 24px;">📊</span>
+          <a href="https://line.me/ti/p/8k-DsB-f5Y" target="_blank" rel="noopener noreferrer" style="text-decoration:none; display:flex; align-items:center; justify-content:space-between; background:#fff; border: 1px solid var(--border); padding: 14px 16px; border-radius: 12px; transition: all 0.15s ease; cursor: pointer;">
+            <div style="display:flex; align-items:center; gap: 12px;">
+              <span style="font-size: 28px; line-height: 1;">📊</span>
               <div>
-                <div style="font-weight: 900; font-size: 15px;" id="i18n-blab-export-title">月度報表 / 雲端匯出服務</div>
-                <div style="font-size: 13px; color: var(--muted);" id="i18n-blab-export-sub">專案工程師協助調閱歷史資料庫</div>
+                <div style="font-weight: 900; font-size: 15px; color: #111827;" id="i18n-blab-export-title">月度報表 / 雲端匯出服務</div>
+                <div style="font-size: 13px; color: var(--muted); margin-top: 2px;" id="i18n-blab-export-sub">請聯繫 BLAB 團隊協助調閱歷史資料</div>
               </div>
             </div>
-            <span class="badge" style="background: #fef3c7; color: #b45309; font-weight: 900; padding: 4px 10px;" id="i18n-badge-dev-modal">開發中</span>
-          </div>
+            <button class="btn btn-ghost" style="padding: 8px 16px; font-size: 14px; pointer-events:none;" id="i18n-btn-modal-blab-export">聯絡 BLAB</button>
+          </a>
         </div>
       </div>
       <div class="modal-actions" style="margin-top: 8px; padding-top: 8px;">
@@ -677,12 +677,13 @@
         orderUnit: "單",
         historyOlderTitle: "查看 30 天前的歷史訂單",
         historyOlderSub: "如需調閱更早歷史紀錄或匯出月報表，請聯繫 BLAB 團隊",
-        badgeDev: "開發中",
         btnContactBlab: "聯繫 BLAB",
         modalBlabTitle: "歷史訂單進階調閱",
-        modalBlabDesc: "系統預設提供近 30 天即時訂單記錄。超過 30 天之歷史資料封存於雲端資料庫，如需查詢或匯出完整財務報表，請聯繫 BLAB 支援團隊為您處理。",
+        modalBlabDesc: "系統預設提供近 30 天即時訂單記錄。超過 30 天之歷史資料封存於雲端資料庫，如需查詢或匯出完整財務報表，請聯繫 BLAB 團隊為您處理。",
         blabExportTitle: "月度報表 / 雲端匯出服務",
-        blabExportSub: "專案工程師協助調閱歷史資料庫",
+        blabExportSub: "請聯繫 BLAB 團隊協助調閱歷史資料",
+        btnModalBlabLine: "開啟 LINE 支援",
+        btnModalBlabExport: "聯絡 BLAB",
         btnModalBlabClose: "我知道了",
         // Badges & Buttons
         badgeNew: "新訂單",
@@ -808,13 +809,14 @@
         todayTag: "Hôm nay",
         orderUnit: "đơn",
         historyOlderTitle: "Xem đơn hàng trên 30 ngày",
-        historyOlderSub: "Quý khách cần xuất báo cáo dữ liệu lịch sử vui lòng liên hệ BLAB",
-        badgeDev: "Đang phát triển",
+        historyOlderSub: "Quý khách cần xuất báo cáo hoặc tra cứu lịch sử vui lòng liên hệ đội ngũ BLAB",
         btnContactBlab: "Liên hệ BLAB",
         modalBlabTitle: "Tra cứu dữ liệu lịch sử > 30 ngày",
-        modalBlabDesc: "Hệ thống hiển thị dữ liệu 30 ngày gần nhất. Dữ liệu trên 30 ngày được lưu trữ an toàn trên đám mây, quý khách cần tra cứu hoặc xuất báo cáo đối soát vui lòng liên hệ đội ngũ BLAB!",
+        modalBlabDesc: "Hệ thống hiển thị dữ liệu 30 ngày gần nhất. Dữ liệu trên 30 ngày được lưu trữ an toàn trên đám mây, quý khách cần tra cứu hoặc xuất báo cáo đối soát vui lòng liên hệ đội ngũ BLAB.",
         blabExportTitle: "Báo cáo theo tháng / Dữ liệu đám mây",
-        blabExportSub: "Đội ngũ kỹ thuật hỗ trợ xuất dữ liệu lịch sử",
+        blabExportSub: "Vui lòng liên hệ đội ngũ BLAB để được hỗ trợ",
+        btnModalBlabLine: "Mở LINE hỗ trợ",
+        btnModalBlabExport: "Liên hệ BLAB",
         btnModalBlabClose: "Đã hiểu",
         // Badges & Buttons
         badgeNew: "MỚI",
@@ -1011,8 +1013,10 @@
       if (blabExpT) blabExpT.innerText = dict.blabExportTitle;
       const blabExpS = document.getElementById("i18n-blab-export-sub");
       if (blabExpS) blabExpS.innerText = dict.blabExportSub;
-      const badgeDevM = document.getElementById("i18n-badge-dev-modal");
-      if (badgeDevM) badgeDevM.innerText = dict.badgeDev;
+      const btnMBlabLine = document.getElementById("i18n-btn-modal-blab-line");
+      if (btnMBlabLine) btnMBlabLine.innerText = dict.btnModalBlabLine;
+      const btnMBlabExp = document.getElementById("i18n-btn-modal-blab-export");
+      if (btnMBlabExp) btnMBlabExp.innerText = dict.btnModalBlabExport;
       const btnMBlabCls = document.getElementById("i18n-btn-modal-blab-close");
       if (btnMBlabCls) btnMBlabCls.innerText = dict.btnModalBlabClose;
 
@@ -1651,7 +1655,6 @@
           <div>
             <div class="history-older-title">
               <span>${t('historyOlderTitle')}</span>
-              <span class="history-dev-badge">${t('badgeDev')}</span>
             </div>
             <div class="history-older-sub">${t('historyOlderSub')}</div>
           </div>
