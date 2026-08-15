@@ -161,7 +161,7 @@ export function buildOrderFlexMessage(order: Order, tenantCtx?: TenantContext | 
   const brandColor = tenantCtx?.brandColor || "#00b900";
 
   const contentLines = (order.content || "").split("\n").filter(l => l.trim().length > 0);
-  const contentComponents = contentLines.slice(0, 12).map(line => ({
+  const contentComponents = contentLines.slice(0, 50).map(line => ({
     type: "text",
     text: line,
     size: "sm",
@@ -183,8 +183,8 @@ export function buildOrderFlexMessage(order: Order, tenantCtx?: TenantContext | 
           type: "box",
           layout: "horizontal",
           contents: [
-            { type: "text", text: "🛍️ 訂單明細", weight: "bold", color: "#ffffff", size: "lg", flex: 1 },
-            { type: "text", text: `#${order.key}`, color: "#ffffff", size: "sm", align: "end", flex: 1 }
+            { type: "text", text: "🛍️ 訂單明細", weight: "bold", color: "#ffffff", size: "lg", flex: 0 },
+            { type: "text", text: `#${order.key}`, color: "#ffffff", size: "sm", align: "end", flex: 1, gravity: "center" }
           ]
         }
       ]
@@ -220,16 +220,16 @@ export function buildOrderFlexMessage(order: Order, tenantCtx?: TenantContext | 
           type: "box",
           layout: "horizontal",
           contents: [
-            { type: "text", text: "🕒 取餐時間：", size: "sm", color: "#666666", flex: 4 },
-            { type: "text", text: order.time, size: "sm", weight: "bold", color: "#111111", align: "end", flex: 6 }
+            { type: "text", text: "🕒 取餐時間：", size: "sm", color: "#666666", flex: 3 },
+            { type: "text", text: order.time, size: "sm", weight: "bold", color: "#111111", align: "end", flex: 7, wrap: true }
           ]
         },
         {
           type: "box",
           layout: "horizontal",
           contents: [
-            { type: "text", text: "💰 總金額：", size: "sm", color: "#666666", flex: 4 },
-            { type: "text", text: `$${order.total}`, size: "md", weight: "bold", color: "#e53e3e", align: "end", flex: 6 }
+            { type: "text", text: "💰 總金額：", size: "sm", color: "#666666", flex: 3 },
+            { type: "text", text: `$${order.total}`, size: "md", weight: "bold", color: "#e53e3e", align: "end", flex: 7 }
           ]
         }
       ]
@@ -265,26 +265,26 @@ export function buildProgressFlexMessage(order: Order, queueAheadCount: number, 
   let queueText = "";
 
   if (order.status === "NEW") {
-    statusTitle = "待店家確認 (Chờ xác nhận)";
+    statusTitle = "待店家確認";
     statusBadgeColor = "#f59e0b";
     statusIcon = "⏳";
     queueText = queueAheadCount > 0
       ? `前方還有 ${queueAheadCount} 張訂單正在排隊`
       : "前方已無排隊訂單，即將為您確認！";
   } else if (order.status === "ACCEPTED") {
-    statusTitle = "店家製作中 (Đang làm món)";
+    statusTitle = "店家製作中";
     statusBadgeColor = "#3b82f6";
     statusIcon = "🍳";
     queueText = queueAheadCount > 0
       ? `前方還有 ${queueAheadCount} 張訂單正在排隊製作`
       : "🔥 前方已無排隊訂單，您的餐點正由店家製作中！";
   } else if (order.status === "DONE") {
-    statusTitle = "製作完成，可取餐！ (Đã làm xong)";
+    statusTitle = "製作完成，可取餐！";
     statusBadgeColor = "#10b981";
     statusIcon = "🎉";
     queueText = "您的餐點已準備完畢，請儘快前來取餐！";
   } else if (order.status === "PICKED_UP") {
-    statusTitle = "已完成取餐 (Đã lấy hàng)";
+    statusTitle = "已完成取餐";
     statusBadgeColor = "#6b7280";
     statusIcon = "✅";
     queueText = "感謝您的訂購，歡迎下次光臨！";
@@ -313,8 +313,8 @@ export function buildProgressFlexMessage(order: Order, queueAheadCount: number, 
           type: "box",
           layout: "horizontal",
           contents: [
-            { type: "text", text: "📋 訂單進度狀態", weight: "bold", color: "#ffffff", size: "md", flex: 1 },
-            { type: "text", text: `#${order.key}`, color: "#ffffff", size: "sm", align: "end", flex: 1 }
+            { type: "text", text: "📋 訂單進度狀態", weight: "bold", color: "#ffffff", size: "md", flex: 0 },
+            { type: "text", text: `#${order.key}`, color: "#ffffff", size: "sm", align: "end", flex: 1, gravity: "center" }
           ]
         }
       ]
@@ -329,7 +329,7 @@ export function buildProgressFlexMessage(order: Order, queueAheadCount: number, 
           type: "box",
           layout: "horizontal",
           contents: [
-            { type: "text", text: `${statusIcon} ${statusTitle}`, weight: "bold", size: "lg", color: statusBadgeColor, flex: 1 }
+            { type: "text", text: `${statusIcon} ${statusTitle}`, weight: "bold", size: "lg", color: statusBadgeColor, flex: 1, wrap: true }
           ]
         },
         {
@@ -347,8 +347,8 @@ export function buildProgressFlexMessage(order: Order, queueAheadCount: number, 
           type: "box",
           layout: "horizontal",
           contents: [
-            { type: "text", text: "🕒 取餐時間：", size: "sm", color: "#6b7280", flex: 4 },
-            { type: "text", text: order.time, size: "sm", weight: "bold", color: "#111827", align: "end", flex: 6 }
+            { type: "text", text: "🕒 取餐時間：", size: "sm", color: "#6b7280", flex: 3 },
+            { type: "text", text: order.time, size: "sm", weight: "bold", color: "#111827", align: "end", flex: 7, wrap: true }
           ]
         }
       ]
@@ -486,7 +486,7 @@ export async function replyWithLiffRedirect(
           height: "md",
           action: {
             type: "uri",
-            label: "👉 前往線上點餐 (Đặt món ngay)",
+            label: "👉 前往線上點餐",
             uri: liffUrl
           }
         }
@@ -611,7 +611,7 @@ export async function handleLineWebhook(
           const flex = buildProgressFlexMessage(res.order, res.queueAhead, tenantCtx);
           await replyLineFlexMessage(replyToken, `📋 訂單進度 #${res.order.key}`, flex, env, tenantCtx);
         } else {
-          await replyText(replyToken, "找不到您的相關訂單紀錄。 (Không tìm thấy thông tin đơn hàng)", env, tenantCtx);
+          await replyText(replyToken, "找不到您的相關訂單紀錄。", env, tenantCtx);
         }
         continue;
       }
@@ -642,7 +642,7 @@ export async function handleLineWebhook(
         const flex = buildProgressFlexMessage(res.order, res.queueAhead, tenantCtx);
         await replyLineFlexMessage(replyToken, `📋 訂單進度 #${res.order.key}`, flex, env, tenantCtx);
       } else {
-        await replyText(replyToken, "目前查無您的進行中訂單。 (Không tìm thấy đơn hàng đang thực hiện)", env, tenantCtx);
+        await replyText(replyToken, "目前查無您的進行中訂單。", env, tenantCtx);
       }
       continue;
     }
@@ -692,14 +692,14 @@ export async function handleLineWebhook(
         }
       }
 
-      let custName = "Khách (Web)";
+      let custName = "顧客 (線上)";
 
       const existingOrder = await env.DB.prepare(
         "SELECT status, customer_name FROM orders WHERE key = ?"
       ).bind(orderKey).first<{ status: string; customer_name: string }>();
 
       if (existingOrder) {
-        if (existingOrder.customer_name && existingOrder.customer_name !== "Khách (Web)") {
+        if (existingOrder.customer_name && existingOrder.customer_name !== "顧客 (線上)" && existingOrder.customer_name !== "Khách (Web)") {
           custName = existingOrder.customer_name;
         }
         // If order already exists and status has changed from NEW, do not re-create/overwrite status back to NEW
@@ -970,7 +970,7 @@ export async function handleLineWebhook(
             }
 
             if (currentReason === "口味售完") {
-              order.content = `【顧客換單】：${userText}\n----原本訂單/Đơn cũ 👇----\n${order.content}`;
+              order.content = `【顧客換單】：${userText}\n----原本訂單 👇----\n${order.content}`;
               order.reason = "";
               order.note = "";
               order.status = "NEW";
