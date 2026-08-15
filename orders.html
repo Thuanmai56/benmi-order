@@ -227,6 +227,10 @@
             <div class="detail-value" id="review-eta" style="color: var(--brand-red);">-</div>
           </div>
           <div class="detail-box">
+            <div class="detail-label" id="i18n-label-total">總金額</div>
+            <div class="detail-value" id="review-total" style="color: var(--primary); font-weight: 1100;">-</div>
+          </div>
+          <div class="detail-box">
             <div class="detail-label" id="i18n-label-status">狀態</div>
             <div class="detail-value" id="review-status">-</div>
           </div>
@@ -555,6 +559,7 @@
         labelCustomer: "LINE 顧客",
         labelPickup: "取餐時間",
         labelEta: "剩餘時間",
+        labelTotal: "總金額",
         labelStatus: "狀態",
         btnAccept: "接單",
         btnChange: "需要更改",
@@ -655,6 +660,7 @@
         labelCustomer: "Khách LINE",
         labelPickup: "Giờ lấy",
         labelEta: "Thời gian còn",
+        labelTotal: "Tổng tiền",
         labelStatus: "Trạng thái",
         btnAccept: "Nhận đơn",
         btnChange: "Yêu cầu thay đổi",
@@ -814,6 +820,8 @@
       if (lPickup) lPickup.innerText = dict.labelPickup;
       const lEta = document.getElementById("i18n-label-eta");
       if (lEta) lEta.innerText = dict.labelEta;
+      const lTotal = document.getElementById("i18n-label-total");
+      if (lTotal) lTotal.innerText = dict.labelTotal;
       const lStatus = document.getElementById("i18n-label-status");
       if (lStatus) lStatus.innerText = dict.labelStatus;
 
@@ -1115,6 +1123,7 @@
       orders.forEach(order => {
         const isNew = order.status === "NEW";
         const eta = formatEta(order.time);
+        const totalFormatted = formatOrderTotal(order);
 
         const tile = document.createElement("div");
         tile.className = `tile ${isNew ? "new" : ""}`;
@@ -1143,6 +1152,7 @@
             </div>
             <div class="tile-top" style="margin-top: 6px;">
               <span class="tile-meta">${t('pickupLabel')} ${escapeHtml(order.time || "-")}</span>
+              ${totalFormatted !== '-' ? `<span class="tile-meta" style="color: var(--primary); font-weight: 1000;">${escapeHtml(totalFormatted)}</span>` : ''}
               <span class="tile-meta" style="color: var(--brand-red); font-weight: 1100;">${escapeHtml(eta)}</span>
             </div>
             <div class="tile-items">${escapeHtml(shortItems(order.content))}</div>
@@ -1166,6 +1176,7 @@
 
       orders.forEach(order => {
         const eta = formatEta(order.time);
+        const totalFormatted = formatOrderTotal(order);
         const tile = document.createElement("div");
         tile.className = "tile";
         tile.onclick = () => openReview(order.key);
@@ -1179,6 +1190,7 @@
             </div>
             <div class="tile-top" style="margin-top: 6px;">
               <span class="tile-meta">${t('pickupLabel')} ${escapeHtml(order.time || "-")}</span>
+              ${totalFormatted !== '-' ? `<span class="tile-meta" style="color: var(--primary); font-weight: 1000;">${escapeHtml(totalFormatted)}</span>` : ''}
               <span class="tile-meta" style="color: var(--brand-red); font-weight: 1100;">${escapeHtml(eta)}</span>
             </div>
             <div class="tile-items">${escapeHtml(shortItems(order.content))}</div>
@@ -1246,6 +1258,7 @@
           const badge = order.status === "PICKED_UP"
             ? `<span class="badge done">${t('badgePicked')}</span>`
             : `<span class="badge">${escapeHtml(order.status)}</span>`;
+          const totalFormatted = formatOrderTotal(order);
 
           tile.innerHTML = `
             <div>
@@ -1253,6 +1266,10 @@
                 <span class="tile-customer">${escapeHtml(order.customer || "Khách")}</span>
                 ${badge}
                 <span class="tile-meta">#${escapeHtml(order.key)}</span>
+              </div>
+              <div class="tile-top" style="margin-top: 6px;">
+                <span class="tile-meta">${t('pickupLabel')} ${escapeHtml(order.time || "-")}</span>
+                ${totalFormatted !== '-' ? `<span class="tile-meta" style="color: var(--primary); font-weight: 1000;">${escapeHtml(totalFormatted)}</span>` : ''}
               </div>
               <div class="tile-items">${escapeHtml(shortItems(order.content))}</div>
             </div>
@@ -1325,6 +1342,7 @@
       document.getElementById("review-customer").innerText = order.customer || "-";
       document.getElementById("review-pickup").innerText = order.time || "-";
       document.getElementById("review-eta").innerText = formatEta(order.time);
+      document.getElementById("review-total").innerText = formatOrderTotal(order);
       document.getElementById("review-status").innerText = order.status || "-";
       document.getElementById("review-content").innerHTML = formatContentHtml(order);
 
@@ -1367,6 +1385,11 @@
 
       if (order.note) {
         inner += `<div style="color: #555; font-size: 18px; margin-top: 12px; font-weight: 800;">📝 ${escapeHtml(order.note)}</div>`;
+      }
+
+      const totalDisplay = formatOrderTotal(order);
+      if (totalDisplay !== "-") {
+        inner += `<div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding-top:12px; border-top:1.5px dashed rgba(0,185,0,0.35); font-weight:1000; font-size:22px; color:#111827;"><span>${t('labelTotal')}:</span><span style="color:var(--primary); font-size:26px; font-weight:1100;">${totalDisplay}</span></div>`;
       }
 
       return `<div style="background:rgba(0,185,0,0.07); border:1.5px solid rgba(0,185,0,0.25); border-radius:16px; padding:18px; line-height:1.7;">${inner}</div>`;
