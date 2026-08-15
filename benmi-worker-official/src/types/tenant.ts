@@ -23,6 +23,7 @@ export interface TenantContext {
   operatingHours: string | null;
   deliveryPolicy: string | null;
   allowScheduledPickup?: boolean;
+  storeStatus?: 'open' | 'busy' | 'paused';
   quickReplies: QuickReply[];
   defaultPassword: string;
   locale: string;

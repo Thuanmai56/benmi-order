@@ -31,6 +31,10 @@ export async function createOrder(
   const data: any = await request.json();
   const tenantId = tenantCtx?.tenantId || getTenantId(request);
 
+  if (tenantCtx?.storeStatus === 'paused') {
+    return json({ error: "店家目前暫停接單中，暫無法接收新訂單", code: "STORE_PAUSED" }, 400);
+  }
+
   // Taiwan time UTC+8
   const nowTaiwan = new Date(Date.now() + 8 * 3600000);
   const mm = String(nowTaiwan.getUTCMonth() + 1).padStart(2, "0");

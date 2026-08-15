@@ -15,6 +15,60 @@
         <div class="brand-title">🥖 Benmi Dashboard</div>
         <div class="brand-sub" id="i18n-brand-sub">即時訂單</div>
       </div>
+
+      <!-- Uber-style Store Status Dropdown Widget -->
+      <div class="store-status-dropdown" id="store-status-dropdown">
+        <button type="button" class="store-status-pill open" id="store-status-btn" onclick="toggleStoreStatusMenu(event)">
+          <span class="status-dot dot-open"></span>
+          <span class="status-label" id="store-status-label">營業中</span>
+          <svg class="status-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </button>
+        <div class="store-status-menu" id="store-status-menu">
+          <div class="status-menu-header" id="i18n-status-menu-header">門市接單狀態 (Store Status)</div>
+          
+          <div class="status-option active" data-status="open" onclick="setStoreStatus('open')">
+            <div class="status-option-left">
+              <span class="status-dot dot-open"></span>
+              <div>
+                <div class="status-opt-title" id="i18n-status-opt-open">🟢 營業中 (Mở quán)</div>
+                <div class="status-opt-desc" id="i18n-status-desc-open">正常接單，顧客依一般時間預約</div>
+              </div>
+            </div>
+            <svg class="status-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </div>
+
+          <div class="status-option" data-status="busy" onclick="setStoreStatus('busy')">
+            <div class="status-option-left">
+              <span class="status-dot dot-busy"></span>
+              <div>
+                <div class="status-opt-title" id="i18n-status-opt-busy">🟠 繁忙中 (Đang bận +1h)</div>
+                <div class="status-opt-desc" id="i18n-status-desc-busy">新訂單製作時間自動延長 1 小時</div>
+              </div>
+            </div>
+            <svg class="status-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </div>
+
+          <div class="status-option" data-status="paused" onclick="setStoreStatus('paused')">
+            <div class="status-option-left">
+              <span class="status-dot dot-paused"></span>
+              <div>
+                <div class="status-opt-title" id="i18n-status-opt-paused">🔴 暫停接單 (Tạm dừng)</div>
+                <div class="status-opt-desc" id="i18n-status-desc-paused">暫停接收新訂單，顧客端無法下單</div>
+              </div>
+            </div>
+            <svg class="status-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </div>
+        </div>
+      </div>
+
       <div class="tabs">
         <button class="tab active" id="tab-live" onclick="switchTab('live')">即時</button>
         <button class="tab" id="tab-history" onclick="switchTab('history')">歷史</button>
@@ -107,6 +161,37 @@
           <div class="panel-title" id="i18n-settings-title">系統設定 (Settings)</div>
         </div>
         <div class="panel-body" style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
+
+          <!-- Store Status Setting -->
+          <div style="border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: #fff;">
+            <div style="padding: 16px 20px; background: #f3f4f6; border-bottom: 1px solid var(--border);">
+              <div style="font-weight: 1100; font-size: 18px;" id="i18n-setting-store-status-title">🏪 門市接單狀態 (Store Status)</div>
+              <div style="font-size: 13px; color: var(--muted); font-weight: 600; margin-top: 2px;" id="i18n-setting-store-status-sub">如 Uber 營運模式：隨時切換一般營業、繁忙延後或暫停接單模式</div>
+            </div>
+            <div class="store-status-options-grid" style="padding: 20px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+              <div class="status-select-box active" id="status-box-open" onclick="setStoreStatus('open')">
+                <div class="status-box-header">
+                  <span class="status-dot dot-open"></span>
+                  <span class="status-box-name" id="i18n-box-open-title">🟢 正常營業 (Mở quán)</span>
+                </div>
+                <div class="status-box-desc" id="i18n-box-open-desc">正常接收新訂單，依照標準預約或排隊時間</div>
+              </div>
+              <div class="status-select-box" id="status-box-busy" onclick="setStoreStatus('busy')">
+                <div class="status-box-header">
+                  <span class="status-dot dot-busy"></span>
+                  <span class="status-box-name" id="i18n-box-busy-title">🟠 門市繁忙 (Đang bận)</span>
+                </div>
+                <div class="status-box-desc" id="i18n-box-busy-desc">新訂單自動 +1 小時製作時間</div>
+              </div>
+              <div class="status-select-box" id="status-box-paused" onclick="setStoreStatus('paused')">
+                <div class="status-box-header">
+                  <span class="status-dot dot-paused"></span>
+                  <span class="status-box-name" id="i18n-box-paused-title">🔴 暫停接單 (Tạm dừng)</span>
+                </div>
+                <div class="status-box-desc" id="i18n-box-paused-desc">暫停接收新訂單，顧客端無法下單</div>
+              </div>
+            </div>
+          </div>
 
           <!-- Order Mode & Pickup Time Setting -->
           <div style="border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: #fff;">
@@ -667,6 +752,24 @@
         btnBack: "返回",
         // Settings
         settingsTitle: "系統設定 (Settings)",
+        settingStoreStatusTitle: "🏪 門市接單狀態 (Store Status)",
+        settingStoreStatusSub: "如 Uber 營運模式：隨時切換一般營業、繁忙延後或暫停接單模式",
+        boxOpenTitle: "🟢 正常營業 (Mở quán)",
+        boxOpenDesc: "正常接收新訂單，依照標準預約或排隊時間",
+        boxBusyTitle: "🟠 門市繁忙 (Đang bận)",
+        boxBusyDesc: "新訂單自動 +1 小時製作時間",
+        boxPausedTitle: "🔴 暫停接單 (Tạm dừng)",
+        boxPausedDesc: "暫停接收新訂單，顧客端無法下單",
+        statusOpen: "營業中",
+        statusBusy: "繁忙中 (+1小時)",
+        statusPaused: "暫停接單",
+        statusMenuHeader: "門市接單狀態 (Store Status)",
+        statusOptOpenTitle: "🟢 營業中 (Mở quán)",
+        statusOptOpenDesc: "正常接單，顧客依一般時間預約",
+        statusOptBusyTitle: "🟠 繁忙中 (Đang bận +1h)",
+        statusOptBusyDesc: "新訂單製作時間自動延長 1 小時",
+        statusOptPausedTitle: "🔴 暫停接單 (Tạm dừng)",
+        statusOptPausedDesc: "暫停接收新訂單，顧客端無法下單",
         orderModeTitle: "🛒 點餐模式 / 取餐時間設定",
         orderModeSub: "自訂允許顧客預約時間或現場排隊即時製作 (ASAP)",
         btnSaveSetting: "儲存設定",
@@ -781,6 +884,24 @@
         btnBack: "Quay lại",
         // Settings
         settingsTitle: "Cài đặt hệ thống (Settings)",
+        settingStoreStatusTitle: "🏪 Trạng thái hoạt động của quán (Store Status)",
+        settingStoreStatusSub: "Như Uber: Chuyển đổi linh hoạt giữa Mở quán, Đang bận (+1h) hoặc Tạm dừng nhận đơn",
+        boxOpenTitle: "🟢 Mở quán (Bình thường)",
+        boxOpenDesc: "Nhận đơn bình thường theo thời gian hẹn hoặc xếp hàng",
+        boxBusyTitle: "🟠 Đang bận (+1 giờ)",
+        boxBusyDesc: "Tự động cộng thêm 1 giờ cho mỗi đơn mới",
+        boxPausedTitle: "🔴 Tạm dừng nhận đơn",
+        boxPausedDesc: "Tạm dừng nhận đơn mới, khách không thể gửi đơn",
+        statusOpen: "Đang mở quán",
+        statusBusy: "Đang bận (+1 giờ)",
+        statusPaused: "Tạm dừng nhận đơn",
+        statusMenuHeader: "Trạng thái nhận đơn (Store Status)",
+        statusOptOpenTitle: "🟢 Mở quán (Nhận đơn bình thường)",
+        statusOptOpenDesc: "Nhận đơn mới bình thường theo thời gian chuẩn",
+        statusOptBusyTitle: "🟠 Đang bận (Tự động +1 giờ)",
+        statusOptBusyDesc: "Quán đang bận, tự động kéo dài thời gian làm thêm 1 tiếng cho mỗi đơn mới",
+        statusOptPausedTitle: "🔴 Tạm dừng nhận đơn",
+        statusOptPausedDesc: "Tạm dừng nhận đơn mới, khách hàng không thể gửi đơn",
         orderModeTitle: "🛒 Chế độ nhận đơn & Hẹn giờ",
         orderModeSub: "Tùy chỉnh cho phép khách hẹn giờ lấy hoặc nhận đơn làm ngay xếp theo thứ tự (ASAP)",
         btnSaveSetting: "Lưu thiết lập",
@@ -1008,6 +1129,41 @@
       // Settings
       const setT = document.getElementById("i18n-settings-title");
       if (setT) setT.innerText = dict.settingsTitle;
+      const setStT = document.getElementById("i18n-setting-store-status-title");
+      if (setStT) setStT.innerText = dict.settingStoreStatusTitle;
+      const setStS = document.getElementById("i18n-setting-store-status-sub");
+      if (setStS) setStS.innerText = dict.settingStoreStatusSub;
+      const boxOpenT = document.getElementById("i18n-box-open-title");
+      if (boxOpenT) boxOpenT.innerText = dict.boxOpenTitle;
+      const boxOpenD = document.getElementById("i18n-box-open-desc");
+      if (boxOpenD) boxOpenD.innerText = dict.boxOpenDesc;
+      const boxBusyT = document.getElementById("i18n-box-busy-title");
+      if (boxBusyT) boxBusyT.innerText = dict.boxBusyTitle;
+      const boxBusyD = document.getElementById("i18n-box-busy-desc");
+      if (boxBusyD) boxBusyD.innerText = dict.boxBusyDesc;
+      const boxPausedT = document.getElementById("i18n-box-paused-title");
+      if (boxPausedT) boxPausedT.innerText = dict.boxPausedTitle;
+      const boxPausedD = document.getElementById("i18n-box-paused-desc");
+      if (boxPausedD) boxPausedD.innerText = dict.boxPausedDesc;
+
+      // Store Status Dropdown
+      const stMenuH = document.getElementById("i18n-status-menu-header");
+      if (stMenuH) stMenuH.innerText = dict.statusMenuHeader;
+      const stOptOpenT = document.getElementById("i18n-status-opt-open");
+      if (stOptOpenT) stOptOpenT.innerText = dict.statusOptOpenTitle;
+      const stOptOpenD = document.getElementById("i18n-status-desc-open");
+      if (stOptOpenD) stOptOpenD.innerText = dict.statusOptOpenDesc;
+      const stOptBusyT = document.getElementById("i18n-status-opt-busy");
+      if (stOptBusyT) stOptBusyT.innerText = dict.statusOptBusyTitle;
+      const stOptBusyD = document.getElementById("i18n-status-desc-busy");
+      if (stOptBusyD) stOptBusyD.innerText = dict.statusOptBusyDesc;
+      const stOptPausedT = document.getElementById("i18n-status-opt-paused");
+      if (stOptPausedT) stOptPausedT.innerText = dict.statusOptPausedTitle;
+      const stOptPausedD = document.getElementById("i18n-status-desc-paused");
+      if (stOptPausedD) stOptPausedD.innerText = dict.statusOptPausedDesc;
+
+      renderStoreStatusUI(currentStoreStatus);
+
       const ordMT = document.getElementById("i18n-ordermode-title");
       if (ordMT) ordMT.innerText = dict.orderModeTitle;
       const ordMS = document.getElementById("i18n-ordermode-sub");
@@ -1970,13 +2126,94 @@
       await playNewOrderSound();
     }
 
-    // --- SETTINGS & OPERATING HOURS ---
+    // --- STORE STATUS & SETTINGS & OPERATING HOURS ---
+    let currentStoreStatus = 'open';
     let storeOperatingHours = null;
     let allowScheduledPickup = true;
     const DAY_NAMES = {
       "zh-TW": ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"],
       "vi": ["Chủ nhật", "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7"]
     };
+
+    function toggleStoreStatusMenu(e) {
+      if (e) e.stopPropagation();
+      const dd = document.getElementById("store-status-dropdown");
+      if (dd) dd.classList.toggle("open");
+    }
+
+    // Click outside to close store status menu
+    document.addEventListener("click", (e) => {
+      const dd = document.getElementById("store-status-dropdown");
+      if (dd && !dd.contains(e.target)) {
+        dd.classList.remove("open");
+      }
+    });
+
+    function renderStoreStatusUI(status) {
+      currentStoreStatus = status || 'open';
+      const btn = document.getElementById("store-status-btn");
+      const label = document.getElementById("store-status-label");
+      
+      if (btn) {
+        btn.className = `store-status-pill ${currentStoreStatus}`;
+      }
+      if (label) {
+        if (currentStoreStatus === 'open') label.innerText = t('statusOpen');
+        else if (currentStoreStatus === 'busy') label.innerText = t('statusBusy');
+        else if (currentStoreStatus === 'paused') label.innerText = t('statusPaused');
+      }
+
+      // Update options in dropdown menu
+      document.querySelectorAll(".status-option").forEach(opt => {
+        opt.classList.toggle("active", opt.dataset.status === currentStoreStatus);
+      });
+
+      // Update boxes in Settings panel
+      document.querySelectorAll(".status-select-box").forEach(box => {
+        box.classList.toggle("active", box.id === `status-box-${currentStoreStatus}`);
+      });
+    }
+
+    async function setStoreStatus(newStatus) {
+      if (!['open', 'busy', 'paused'].includes(newStatus)) return;
+      const prevStatus = currentStoreStatus;
+      renderStoreStatusUI(newStatus);
+      const dd = document.getElementById("store-status-dropdown");
+      if (dd) dd.classList.remove("open");
+
+      try {
+        const res = await fetch(`${WORKER_BASE}/api/config?tenant_id=${getTenantIdFromUrl()}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ storeStatus: newStatus })
+        });
+        if (!res.ok) throw new Error("API returned " + res.status);
+      } catch (e) {
+        alert(t("saveFail") + e.message);
+        renderStoreStatusUI(prevStatus);
+      }
+    }
+
+    async function loadStoreStatus() {
+      try {
+        const res = await fetch(`${WORKER_BASE}/api/config?tenant_id=${getTenantIdFromUrl()}&_t=${Date.now()}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.storeStatus) {
+            currentStoreStatus = data.storeStatus;
+          }
+          if (data.allowScheduledPickup !== undefined) {
+            allowScheduledPickup = data.allowScheduledPickup;
+          }
+          if (data.operatingHours) {
+            storeOperatingHours = data.operatingHours;
+          }
+        }
+      } catch (e) {
+        console.error("loadStoreStatus error:", e);
+      }
+      renderStoreStatusUI(currentStoreStatus);
+    }
 
     function openSettings() {
       activeTab = "settings";
@@ -1993,6 +2230,7 @@
           const data = await res.json();
           storeOperatingHours = data.operatingHours || createDefaultOperatingHours();
           allowScheduledPickup = data.allowScheduledPickup !== undefined ? data.allowScheduledPickup : true;
+          if (data.storeStatus) currentStoreStatus = data.storeStatus;
         } else {
           storeOperatingHours = createDefaultOperatingHours();
           allowScheduledPickup = true;
@@ -2001,6 +2239,7 @@
         storeOperatingHours = createDefaultOperatingHours();
         allowScheduledPickup = true;
       }
+      renderStoreStatusUI(currentStoreStatus);
       renderOperatingHours();
       renderScheduledPickupSetting();
     }
@@ -2635,9 +2874,10 @@
       if (activeTab === "live" || activeTab === "history") renderAll();
     }, 10000);
 
-    // Initialize language & fetch orders
+    // Initialize language, store status & fetch orders
     applyLanguageToDOM();
     fetchOrders();
+    loadStoreStatus();
   </script>
 </body>
 

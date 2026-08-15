@@ -42,6 +42,23 @@
         </div>
     </div>
 
+    <!-- Store Status Dynamic Alert Banners -->
+    <div id="store-paused-banner" style="display: none; margin: 10px 14px -6px; padding: 14px 16px; background: #fef2f2; border: 1.5px solid #fca5a5; border-radius: 14px; color: #991b1b; align-items: center; gap: 12px; box-shadow: 0 2px 8px rgba(220, 38, 38, 0.08);">
+        <span style="font-size: 26px; line-height: 1;">⛔</span>
+        <div>
+            <div style="font-weight: 900; font-size: 15px; letter-spacing: 0.2px;">店家目前暫停接單中 / Tạm dừng nhận đơn</div>
+            <div style="font-size: 13px; color: #b91c1c; margin-top: 3px; font-weight: 600; line-height: 1.35;">目前暫不接受新訂單，敬請見諒！<br><span style="font-size: 12px; opacity: 0.9;">Quán đang tạm ngưng nhận đơn mới.</span></div>
+        </div>
+    </div>
+
+    <div id="store-busy-banner" style="display: none; margin: 10px 14px -6px; padding: 14px 16px; background: #fffbeb; border: 1.5px solid #fcd34d; border-radius: 14px; color: #92400e; align-items: center; gap: 12px; box-shadow: 0 2px 8px rgba(217, 119, 6, 0.08);">
+        <span style="font-size: 26px; line-height: 1;">⏳</span>
+        <div>
+            <div style="font-weight: 900; font-size: 15px; letter-spacing: 0.2px;">門市繁忙中（製作時間 +1 小時） / Quán đang bận (+1h)</div>
+            <div style="font-size: 13px; color: #b45309; margin-top: 3px; font-weight: 600; line-height: 1.35;">現場訂單較多，新訂單取餐時間預計延長 1 小時，感謝您的體諒！<br><span style="font-size: 12px; opacity: 0.9;">Thời gian nhận bánh kéo dài thêm 1 tiếng do quán đang bận.</span></div>
+        </div>
+    </div>
+
     <nav class="sticky-nav" id="main-nav">
         <div class="nav-btn active" onclick="scrollToSec('sec-large')">大麵包</div>
         <div class="nav-btn" onclick="scrollToSec('sec-small')">小麵包</div>
@@ -191,8 +208,10 @@
             const timeEl = document.getElementById('asap-current-time');
             if (!timeEl) return;
             const tw = getTaiwanDate();
-            const { fullStr } = formatTaiwanDateTime(tw);
-            timeEl.innerText = fullStr;
+            const isBusy = (storeConfig && storeConfig.storeStatus === 'busy');
+            const targetTime = isBusy ? new Date(tw.getTime() + 60 * 60000) : tw;
+            const { fullStr } = formatTaiwanDateTime(targetTime);
+            timeEl.innerText = isBusy ? `${fullStr}（繁忙：約 1 小時後）` : fullStr;
         }
 
         function applyPickupConfig() {
@@ -207,6 +226,7 @@
                 pickerGroup.style.display = 'block';
                 asapNotice.style.display = 'none';
             }
+            checkStoreStatus();
         }
 
         // Recommended items
@@ -650,6 +670,10 @@
         async function submitOrder() {
             if (isSubmitting) return;
 
+            if (storeConfig && storeConfig.storeStatus === 'paused') {
+                return customAlert('店家目前暫停接單中，暫無法下單<br><span style="font-size:13px; color:#dc2626;">(Quán đang tạm ngưng nhận đơn mới)</span>');
+            }
+
             const hasItem = Object.values(cart).some(q => q > 0);
             if (!hasItem) return customAlert('請選擇品項');
 
@@ -665,7 +689,9 @@
                     return customAlert('店家目前非營業時間 (休息中)，無法下單');
                 }
 
-                const { dateStr, timeStr } = formatTaiwanDateTime(twTime);
+                const isBusy = (storeConfig && storeConfig.storeStatus === 'busy');
+                const targetTime = isBusy ? new Date(twTime.getTime() + 60 * 60000) : twTime;
+                const { dateStr, timeStr } = formatTaiwanDateTime(targetTime);
                 dateInput = dateStr;
                 timeInput = timeStr;
             }
@@ -706,9 +732,21 @@
                     return customAlert('請先選取取餐日期和時間 ↓');
                 }
 
-                const now = new Date();
+                const twNow = getTaiwanDate();
                 const selectedDateTime = new Date(`${dateInput}T${timeInput}`);
-                if (selectedDateTime < now) return customAlert('不能選擇過去的時間，請重新選擇');
+                if (selectedDateTime < twNow) return customAlert('不能選擇過去的時間，請重新選擇');
+
+                // If store is busy and ordering for today, require pickup time >= now + 60 mins
+                if (storeConfig && storeConfig.storeStatus === 'busy') {
+                    const { dateStr: todayStr } = formatTaiwanDateTime(twNow);
+                    if (dateInput === todayStr) {
+                        const minAllowedTime = new Date(twNow.getTime() + 60 * 60000);
+                        if (selectedDateTime < minAllowedTime) {
+                            const { timeStr: minTimeStr } = formatTaiwanDateTime(minAllowedTime);
+                            return customAlert(`目前門市繁忙，最快可取餐時間為 ${minTimeStr}（需至少 1 小時後）<br><span style="font-size:13px; color:#b45309;">(Quán đang bận, vui lòng chọn từ ${minTimeStr} trở đi)</span>`);
+                        }
+                    }
+                }
 
                 const pickupDate = new Date(dateInput);
                 const dayOfWeek = pickupDate.getDay();
@@ -943,20 +981,53 @@
         }
 
         function checkStoreStatus() {
-            const now = new Date();
-            // Chuyển đổi giờ địa phương của client sang giờ UTC+8 (Đài Loan)
-            const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-            const twTime = new Date(utc + (8 * 3600000));
-            
+            const twTime = getTaiwanDate();
             const isOpen = isStoreOpen(twTime);
-
             const statusEl = document.getElementById('store-status');
-            if (isOpen) {
-                statusEl.innerText = '營業中';
-                statusEl.className = 'store-status';
+            const pausedBanner = document.getElementById('store-paused-banner');
+            const busyBanner = document.getElementById('store-busy-banner');
+            const submitBtn = document.getElementById('btn-submit');
+            const storeStatus = (storeConfig && storeConfig.storeStatus) ? storeConfig.storeStatus : 'open';
+
+            if (storeStatus === 'paused') {
+                if (statusEl) {
+                    statusEl.innerText = '暫停接單';
+                    statusEl.className = 'store-status paused';
+                }
+                if (pausedBanner) pausedBanner.style.display = 'flex';
+                if (busyBanner) busyBanner.style.display = 'none';
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerText = '⛔ 店家暫停接單中';
+                    submitBtn.style.background = '#9ca3af';
+                    submitBtn.style.cursor = 'not-allowed';
+                }
+            } else if (storeStatus === 'busy') {
+                if (statusEl) {
+                    statusEl.innerText = isOpen ? '繁忙中 (+1h)' : '休息中';
+                    statusEl.className = isOpen ? 'store-status busy' : 'store-status closed';
+                }
+                if (pausedBanner) pausedBanner.style.display = 'none';
+                if (busyBanner) busyBanner.style.display = 'flex';
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = '確認下單';
+                    submitBtn.style.background = '';
+                    submitBtn.style.cursor = '';
+                }
             } else {
-                statusEl.innerText = '休息中';
-                statusEl.className = 'store-status closed';
+                if (statusEl) {
+                    statusEl.innerText = isOpen ? '營業中' : '休息中';
+                    statusEl.className = isOpen ? 'store-status' : 'store-status closed';
+                }
+                if (pausedBanner) pausedBanner.style.display = 'none';
+                if (busyBanner) busyBanner.style.display = 'none';
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = '確認下單';
+                    submitBtn.style.background = '';
+                    submitBtn.style.cursor = '';
+                }
             }
         }
 

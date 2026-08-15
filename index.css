@@ -119,6 +119,14 @@ body {
     background-color: #9ca3af;
 }
 
+.store-status.busy {
+    background-color: #d97706;
+}
+
+.store-status.paused {
+    background-color: #dc2626;
+}
+
 .store-detail-row {
     display: flex;
     align-items: flex-start;
