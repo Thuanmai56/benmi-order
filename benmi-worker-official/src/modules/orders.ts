@@ -290,15 +290,32 @@ export async function getWaitingCount(request: Request, env: Env): Promise<Respo
   if (!env.DB) return jsonWithETag({ waitingCount: 0 }, "0");
 
   try {
-    const row = await env.DB.prepare(
-      `SELECT COUNT(*) as cnt, MAX(updated_at) as last_updated FROM orders 
+    const activeRows = await env.DB.prepare(
+      `SELECT key, pickup_time, order_content, created_at, updated_at FROM orders 
        WHERE tenant_id = ? 
          AND status = 'ACCEPTED'
          AND created_at >= DATETIME('now', '-24 hours')`
-    ).bind(tenantId).first<{ cnt: number; last_updated: string | null }>();
+    ).bind(tenantId).all<any>();
 
-    const waitingCount = row?.cnt || 0;
-    const lastUpdated = row?.last_updated || "0";
+    const now = Date.now();
+    // Các đơn trong hàng đợi hiện tại: đơn có giờ nhận từ quá khứ (đang làm/chưa xong) đến trong vòng 30 phút tới
+    const thresholdMs = now + 30 * 60 * 1000;
+
+    let waitingCount = 0;
+    let lastUpdated = "0";
+
+    if (activeRows && activeRows.results) {
+      for (const item of activeRows.results) {
+        if (item.updated_at && item.updated_at > lastUpdated) {
+          lastUpdated = item.updated_at;
+        }
+        const itemPickupMs = parsePickupTimeToMs(item.pickup_time, item.created_at, item.order_content);
+        if (itemPickupMs <= thresholdMs) {
+          waitingCount++;
+        }
+      }
+    }
+
     const currentVersion = `${waitingCount}_${lastUpdated}`;
 
     const clientETag = request.headers.get("if-none-match")?.replace(/^W\//, '').replace(/"/g, '');
@@ -474,20 +491,33 @@ export async function handleOrdersMigration(request: Request, env: Env): Promise
   }
 }
 
-function parsePickupTimeToMs(timeStr: string, createdAtStr: string): number {
-  const createdDate = createdAtStr ? new Date(createdAtStr + "Z") : new Date();
+export function parsePickupTimeToMs(timeStr: string | null | undefined, createdAtStr: string | null | undefined, orderContent?: string): number {
+  const createdDate = createdAtStr ? new Date(createdAtStr.endsWith("Z") ? createdAtStr : createdAtStr + "Z") : new Date();
   const createdMs = !isNaN(createdDate.getTime()) ? createdDate.getTime() : Date.now();
 
-  if (!timeStr || typeof timeStr !== "string") return createdMs;
+  let targetStr = (timeStr || "").trim();
 
-  const dateTimeMatch = timeStr.match(/(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})/);
+  // If timeStr is missing, "Unknown", or only date without time, try finding "取餐時間" in orderContent
+  if ((!targetStr || targetStr === "Unknown" || !targetStr.match(/\d{1,2}:\d{2}/)) && orderContent) {
+    const match = orderContent.match(/取餐時間[：:]\s*([^\n\r]+)/);
+    if (match && match[1]) {
+      targetStr = match[1].trim();
+    }
+  }
+
+  // 1. Matches "YYYY-MM-DD" + "HH:mm" (even if followed by extra text like "(即時取餐)")
+  const dateTimeMatch = targetStr.match(/(\d{4}-\d{2}-\d{2})[T\s]+(\d{1,2}):(\d{2})/);
   if (dateTimeMatch) {
-    const iso = `${dateTimeMatch[1]}T${dateTimeMatch[2]}:00+08:00`;
+    const yyyyMmDd = dateTimeMatch[1];
+    const hh = dateTimeMatch[2].padStart(2, "0");
+    const min = dateTimeMatch[3].padStart(2, "0");
+    const iso = `${yyyyMmDd}T${hh}:${min}:00+08:00`;
     const d = new Date(iso);
     if (!isNaN(d.getTime())) return d.getTime();
   }
 
-  const timeMatch = timeStr.match(/(\d{1,2}):(\d{2})/);
+  // 2. Matches only "HH:mm" -> attach the YYYY-MM-DD from created_at in Taiwan UTC+8 timezone
+  const timeMatch = targetStr.match(/(\d{1,2}):(\d{2})/);
   if (timeMatch) {
     const twDate = new Date(createdMs + 8 * 3600000);
     const yyyy = twDate.getUTCFullYear();
@@ -500,6 +530,7 @@ function parsePickupTimeToMs(timeStr: string, createdAtStr: string): number {
     if (!isNaN(d.getTime())) return d.getTime();
   }
 
+  // 3. Fallback: if only date "YYYY-MM-DD" with no time at all, it was placed as ASAP at createdMs
   return createdMs;
 }
 
@@ -530,22 +561,25 @@ export async function getOrderQueueAhead(env: Env, tenantId: string, orderKey: s
     }
 
     const activeRows = await env.DB.prepare(
-      `SELECT key, pickup_time, created_at FROM orders
+      `SELECT key, pickup_time, order_content, created_at FROM orders
        WHERE tenant_id = ?
          AND status IN ('NEW', 'ACCEPTED')
          AND created_at >= DATETIME('now', '-24 hours')`
     ).bind(tenantId).all<any>();
 
-    const targetPickupMs = parsePickupTimeToMs(row.pickup_time, row.created_at);
+    const targetPickupMs = parsePickupTimeToMs(row.pickup_time, row.created_at, row.order_content);
     const targetCreatedMs = new Date(row.created_at + "Z").getTime();
 
     let queueAhead = 0;
     if (activeRows && activeRows.results) {
       for (const item of activeRows.results) {
         if (item.key === row.key) continue;
-        const itemPickupMs = parsePickupTimeToMs(item.pickup_time, item.created_at);
+        const itemPickupMs = parsePickupTimeToMs(item.pickup_time, item.created_at, item.order_content);
         const itemCreatedMs = new Date(item.created_at + "Z").getTime();
 
+        // Xếp theo thứ tự thời gian nhận hàng (pickup_time):
+        // 1. Đơn có giờ nhận hàng sớm hơn được ưu tiên làm trước (xếp lên trước)
+        // 2. Nếu cùng giờ nhận hàng, đơn nào đặt trước (created_at trước) thì làm trước
         if (itemPickupMs < targetPickupMs) {
           queueAhead++;
         } else if (itemPickupMs === targetPickupMs && itemCreatedMs < targetCreatedMs) {
@@ -567,6 +601,7 @@ export async function getUserLatestActiveOrder(env: Env, tenantId: string, userI
     const row = await env.DB.prepare(
       `SELECT key FROM orders 
        WHERE tenant_id = ? AND user_id = ?
+         AND status IN ('NEW', 'ACCEPTED', 'WAITING_CUSTOMER_CHANGE', 'WAITING_CUSTOMER_REJECT', 'DONE')
        ORDER BY created_at DESC LIMIT 1`
     ).bind(tenantId, userId).first<any>();
 

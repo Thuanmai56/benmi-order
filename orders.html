@@ -976,19 +976,38 @@
         .replace(/'/g, "&#039;");
     }
 
-    function parsePickupTimeMs(timeStr) {
-      if (!timeStr || typeof timeStr !== "string") return NaN;
-      const m = timeStr.match(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})/);
-      if (!m) return NaN;
-      const iso = `${m[1]}T${m[2]}:00`;
-      const ms = new Date(iso).getTime();
-      return Number.isNaN(ms) ? NaN : ms;
+    function parsePickupTimeMs(timeStr, createdAtMs) {
+      if (!timeStr || typeof timeStr !== "string") return Number(createdAtMs) || NaN;
+      const m = timeStr.match(/(\d{4}-\d{2}-\d{2})[T\s]+(\d{1,2}):(\d{2})/);
+      if (m) {
+        const hh = m[2].padStart(2, "0");
+        const min = m[3].padStart(2, "0");
+        const iso = `${m[1]}T${hh}:${min}:00`;
+        const ms = new Date(iso).getTime();
+        if (!Number.isNaN(ms)) return ms;
+      }
+      const timeOnly = timeStr.match(/(\d{1,2}):(\d{2})/);
+      if (timeOnly) {
+        const base = createdAtMs ? new Date(createdAtMs) : new Date();
+        const yyyy = base.getFullYear();
+        const mm = String(base.getMonth() + 1).padStart(2, "0");
+        const dd = String(base.getDate()).padStart(2, "0");
+        const hh = String(parseInt(timeOnly[1], 10)).padStart(2, "0");
+        const min = String(parseInt(timeOnly[2], 10)).padStart(2, "0");
+        const iso = `${yyyy}-${mm}-${dd}T${hh}:${min}:00`;
+        const ms = new Date(iso).getTime();
+        if (!Number.isNaN(ms)) return ms;
+      }
+      return Number(createdAtMs) || NaN;
     }
 
     function sortByPickupTimeAsc(a, b) {
-      const at = parsePickupTimeMs(a?.time);
-      const bt = parsePickupTimeMs(b?.time);
-      if (Number.isNaN(at) || Number.isNaN(bt)) return (a?.createdAt || 0) - (b?.createdAt || 0);
+      const at = parsePickupTimeMs(a?.time, a?.createdAt);
+      const bt = parsePickupTimeMs(b?.time, b?.createdAt);
+      if (Number.isNaN(at) && Number.isNaN(bt)) return (a?.createdAt || 0) - (b?.createdAt || 0);
+      if (Number.isNaN(at)) return (a?.createdAt || 0) - bt;
+      if (Number.isNaN(bt)) return at - (b?.createdAt || 0);
+      if (at === bt) return (a?.createdAt || 0) - (b?.createdAt || 0);
       return at - bt;
     }
 
