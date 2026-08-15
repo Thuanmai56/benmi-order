@@ -343,9 +343,9 @@ export async function getOrders(request: Request, env: Env): Promise<Response> {
   if (!env.DB) return jsonWithETag([], "0");
 
   try {
-    // 1. Tính toán ETag version tức thì dựa trên dữ liệu mới nhất trong D1
+    // 1. Tính toán ETag version tức thì dựa trên dữ liệu 30 ngày gần nhất trong D1
     const verRow = await env.DB.prepare(
-      "SELECT MAX(updated_at) as last_updated, COUNT(*) as cnt FROM orders WHERE tenant_id = ?"
+      "SELECT MAX(updated_at) as last_updated, COUNT(*) as cnt FROM orders WHERE tenant_id = ? AND created_at >= DATETIME('now', '-30 days')"
     ).bind(tenantId).first<{ last_updated: string | null; cnt: number }>();
 
     const lastUpdated = verRow?.last_updated || "0";
@@ -365,9 +365,9 @@ export async function getOrders(request: Request, env: Env): Promise<Response> {
       });
     }
 
-    // 3. ETag thay đổi -> Truy vấn danh sách 200 đơn hàng mới nhất từ D1 Database
+    // 3. ETag thay đổi -> Truy vấn danh sách đơn hàng 30 ngày gần nhất từ D1 Database (tối đa 1000 đơn)
     const { results } = await env.DB.prepare(
-      "SELECT key, customer_name, pickup_time, status, total_amount, order_content, reason, note, created_at FROM orders WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 200"
+      "SELECT key, customer_name, pickup_time, status, total_amount, order_content, reason, note, created_at FROM orders WHERE tenant_id = ? AND created_at >= DATETIME('now', '-30 days') ORDER BY created_at DESC LIMIT 1000"
     ).bind(tenantId).all<any>();
 
     const orders: Order[] = (results || []).map(row => ({

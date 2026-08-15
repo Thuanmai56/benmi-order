@@ -987,3 +987,168 @@ body {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* History Accordion & BLAB Contact Card (Tablet-first UI) */
+.history-date-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.history-date-header {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.history-date-header:hover {
+  border-color: #cbd5e1;
+  background: #fcfdfe;
+}
+
+.history-date-header:active {
+  transform: scale(0.995);
+  background: #f8fafc;
+}
+
+.history-date-header.expanded {
+  border-color: var(--primary);
+  background: #fafffa;
+}
+
+.history-date-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.history-date-icon {
+  font-size: 18px;
+}
+
+.history-date-text {
+  font-size: 16px;
+  font-weight: 1000;
+  color: #111827;
+}
+
+.history-today-tag {
+  background: #dbeafe;
+  color: #1d4ed8;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 1000;
+  letter-spacing: 0.3px;
+}
+
+.history-date-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.history-chevron {
+  color: #64748b;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.history-chevron.open {
+  transform: rotate(180deg);
+  color: var(--primary);
+}
+
+.history-date-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-left: 2px;
+}
+
+/* Older Data Card (BLAB Contact) */
+.history-older-card {
+  background: linear-gradient(135deg, #f8fafc 0%, #edf2f7 100%);
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 14px;
+  padding: 16px 20px;
+  margin-top: 14px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.history-older-card:hover {
+  border-color: var(--primary);
+  background: #f7fee7;
+}
+
+.history-older-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.history-older-icon {
+  font-size: 28px;
+}
+
+.history-older-title {
+  font-size: 15px;
+  font-weight: 1000;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.history-dev-badge {
+  background: #fef3c7;
+  color: #b45309;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.history-older-sub {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.history-older-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 900;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .history-older-card {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: left;
+  }
+  .history-older-btn {
+    justify-content: center;
+  }
+}
+

@@ -79,13 +79,22 @@
 
     <div class="content" id="view-history" style="display:none;">
       <div class="panel" style="height: 100%;">
-        <div class="panel-header">
+        <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
           <div>
             <div class="panel-title" id="i18n-history-title">訂單歷史</div>
-            <div class="panel-sub" id="i18n-history-sub">依日期分組</div>
+            <div class="panel-sub" id="i18n-history-sub">近 30 天訂單紀錄 (依日期分組)</div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <div class="badge" id="history-total-summary-badge" style="background: rgba(0, 185, 0, 0.1); color: var(--primary); font-weight: 1000; font-size: 15px; padding: 6px 14px; border-radius: 999px;">
+              0 單 · 總額: $0
+            </div>
+            <button class="mini-btn" id="btn-toggle-all-history" onclick="toggleAllHistoryGroups()" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; font-size: 14px; border-radius: 8px;">
+              <span id="btn-toggle-all-icon">📂</span>
+              <span id="btn-toggle-all-text">展開全部</span>
+            </button>
           </div>
         </div>
-        <div class="panel-body" id="list-history">
+        <div class="panel-body" id="list-history" style="padding: 12px 14px; display: flex; flex-direction: column; gap: 12px;">
           <div style="text-align:center; padding: 22px; color:#999;" id="list-history-loading">載入中...</div>
         </div>
       </div>
@@ -504,6 +513,51 @@
     </div>
   </div>
 
+  <!-- Modal Tra Cứu Lịch Sử Nâng Cao / Liên Hệ BLAB -->
+  <div class="modal" id="blabContactModal" style="display:none;">
+    <div class="modal-card" style="max-width: 520px;">
+      <div class="modal-header" style="border-bottom: 1px solid var(--border); padding-bottom: 14px; display: flex; justify-content: space-between; align-items: center;">
+        <div class="modal-title" style="display:flex; align-items:center; gap: 8px; font-weight: 1000; font-size: 18px;">
+          <span>📦</span>
+          <span id="i18n-modal-blab-title">歷史訂單進階調閱</span>
+        </div>
+        <button class="btn-close" onclick="closeBlabContactModal()" style="border:none; background:none; font-size: 20px; cursor:pointer; color:#94a3b8; padding: 4px 8px;">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 18px 0; display:flex; flex-direction:column; gap: 16px;">
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; font-size: 15px; line-height: 1.6; color: #334155;" id="i18n-modal-blab-desc">
+          系統預設提供近 30 天即時訂單記錄。超過 30 天之歷史資料封存於雲端資料庫，如需查詢或匯出完整財務報表，請聯繫 BLAB 支援團隊為您處理。
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap: 10px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; background:#fff; border: 1px solid var(--border); padding: 12px 16px; border-radius: 10px;">
+            <div style="display:flex; align-items:center; gap: 10px;">
+              <span style="font-size: 24px;">💬</span>
+              <div>
+                <div style="font-weight: 900; font-size: 15px;">BLAB Customer Support</div>
+                <div style="font-size: 13px; color: var(--muted);">LINE Official / Online Support</div>
+              </div>
+            </div>
+            <button class="btn btn-ghost" style="padding: 6px 14px; font-size: 14px;" onclick="copyToClipboard('https://blab.tw', '已複製 BLAB 官方支援網址！', 'Đã sao chép liên kết hỗ trợ BLAB!')">聯絡支援</button>
+          </div>
+
+          <div style="display:flex; align-items:center; justify-content:space-between; background:#fff; border: 1px solid var(--border); padding: 12px 16px; border-radius: 10px;">
+            <div style="display:flex; align-items:center; gap: 10px;">
+              <span style="font-size: 24px;">📊</span>
+              <div>
+                <div style="font-weight: 900; font-size: 15px;" id="i18n-blab-export-title">月度報表 / 雲端匯出服務</div>
+                <div style="font-size: 13px; color: var(--muted);" id="i18n-blab-export-sub">專案工程師協助調閱歷史資料庫</div>
+              </div>
+            </div>
+            <span class="badge" style="background: #fef3c7; color: #b45309; font-weight: 900; padding: 4px 10px;" id="i18n-badge-dev-modal">開發中</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions" style="margin-top: 8px; border-top: none; padding-top: 0;">
+        <button class="btn btn-primary btn-block" onclick="closeBlabContactModal()" id="i18n-btn-modal-blab-close">我知道了 (Đóng)</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const WORKER_BASE = (window.location.hostname.includes("staging") || window.location.hostname.includes("test") || window.location.hostname.includes("localhost") || window.location.hostname.includes("127.0.0.1"))
       ? "https://platform-worker-staging.thuanmnc.workers.dev"
@@ -531,7 +585,20 @@
         empty: "無訂單",
         emptyHistory: "尚無歷史訂單",
         historyTitle: "訂單歷史",
-        historySub: "依日期分組",
+        historySub: "近 30 天訂單紀錄 (依日期分組)",
+        btnExpandAll: "展開全部",
+        btnCollapseAll: "收合全部",
+        todayTag: "今天",
+        orderUnit: "單",
+        historyOlderTitle: "查看 30 天前的歷史訂單",
+        historyOlderSub: "如需調閱更早歷史紀錄或匯出月報表，請聯繫 BLAB 團隊",
+        badgeDev: "開發中",
+        btnContactBlab: "聯繫 BLAB",
+        modalBlabTitle: "歷史訂單進階調閱",
+        modalBlabDesc: "系統預設提供近 30 天即時訂單記錄。超過 30 天之歷史資料封存於雲端資料庫，如需查詢或匯出完整財務報表，請聯繫 BLAB 支援團隊為您處理。",
+        blabExportTitle: "月度報表 / 雲端匯出服務",
+        blabExportSub: "專案工程師協助調閱歷史資料庫",
+        btnModalBlabClose: "我知道了",
         // Badges & Buttons
         badgeNew: "新訂單",
         badgeDoing: "製作中",
@@ -632,7 +699,20 @@
         empty: "Chưa có đơn",
         emptyHistory: "Chưa có lịch sử đơn hàng",
         historyTitle: "Lịch sử đơn hàng",
-        historySub: "Theo ngày",
+        historySub: "Đơn hàng 30 ngày gần nhất (theo ngày)",
+        btnExpandAll: "Mở tất cả",
+        btnCollapseAll: "Thu gọn",
+        todayTag: "Hôm nay",
+        orderUnit: "đơn",
+        historyOlderTitle: "Xem đơn hàng trên 30 ngày",
+        historyOlderSub: "Quý khách cần xuất báo cáo dữ liệu lịch sử vui lòng liên hệ BLAB",
+        badgeDev: "Đang phát triển",
+        btnContactBlab: "Liên hệ BLAB",
+        modalBlabTitle: "Tra cứu dữ liệu lịch sử > 30 ngày",
+        modalBlabDesc: "Hệ thống hiển thị dữ liệu 30 ngày gần nhất. Dữ liệu trên 30 ngày được lưu trữ an toàn trên đám mây, quý khách cần tra cứu hoặc xuất báo cáo đối soát vui lòng liên hệ đội ngũ BLAB!",
+        blabExportTitle: "Báo cáo theo tháng / Dữ liệu đám mây",
+        blabExportSub: "Đội ngũ kỹ thuật hỗ trợ xuất dữ liệu lịch sử",
+        btnModalBlabClose: "Đã hiểu",
         // Badges & Buttons
         badgeNew: "MỚI",
         badgeDoing: "ĐANG LÀM",
@@ -800,6 +880,20 @@
       if (histTitle) histTitle.innerText = dict.historyTitle;
       const histSub = document.getElementById("i18n-history-sub");
       if (histSub) histSub.innerText = dict.historySub;
+
+      // BLAB Modal
+      const mBlabT = document.getElementById("i18n-modal-blab-title");
+      if (mBlabT) mBlabT.innerText = dict.modalBlabTitle;
+      const mBlabD = document.getElementById("i18n-modal-blab-desc");
+      if (mBlabD) mBlabD.innerText = dict.modalBlabDesc;
+      const blabExpT = document.getElementById("i18n-blab-export-title");
+      if (blabExpT) blabExpT.innerText = dict.blabExportTitle;
+      const blabExpS = document.getElementById("i18n-blab-export-sub");
+      if (blabExpS) blabExpS.innerText = dict.blabExportSub;
+      const badgeDevM = document.getElementById("i18n-badge-dev-modal");
+      if (badgeDevM) badgeDevM.innerText = dict.badgeDev;
+      const btnMBlabCls = document.getElementById("i18n-btn-modal-blab-close");
+      if (btnMBlabCls) btnMBlabCls.innerText = dict.btnModalBlabClose;
 
       // Alert modal
       const alertSub = document.getElementById("new-alert-sub");
@@ -1235,19 +1329,32 @@
       });
     }
 
+    let lastHistoryOrders = [];
+    let expandedHistoryDates = new Set();
+    let isHistoryStateInitialized = false;
+
+    function getTaiwanTodayStr() {
+      const nowTw = new Date(Date.now() + 8 * 3600000);
+      const yyyy = nowTw.getUTCFullYear();
+      const mm = String(nowTw.getUTCMonth() + 1).padStart(2, "0");
+      const dd = String(nowTw.getUTCDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
     function groupByDate(orders) {
       const map = new Map();
       orders.forEach(o => {
         let d = "Unknown";
-        if (o.createdAt) {
+        if (o.time && typeof o.time === "string" && o.time.match(/\d{4}-\d{2}-\d{2}/)) {
+          const m = o.time.match(/\d{4}-\d{2}-\d{2}/);
+          d = m[0];
+        } else if (o.createdAt) {
           const dt = new Date(o.createdAt);
           const nowTaiwan = new Date(dt.getTime() + 8 * 3600000);
           const yyyy = nowTaiwan.getUTCFullYear();
           const mm = String(nowTaiwan.getUTCMonth() + 1).padStart(2, "0");
           const dd = String(nowTaiwan.getUTCDate()).padStart(2, "0");
           d = `${yyyy}-${mm}-${dd}`;
-        } else if (o?.time && typeof o.time === "string" && o.time.match(/^\d{4}-\d{2}-\d{2}/)) {
-          d = o.time.slice(0, 10);
         }
         if (!map.has(d)) map.set(d, []);
         map.get(d).push(o);
@@ -1256,19 +1363,49 @@
     }
 
     function renderHistory(orders) {
+      lastHistoryOrders = orders;
       const container = document.getElementById("list-history");
       container.innerHTML = "";
+
+      const todayStr = getTaiwanTodayStr();
+
+      // Mặc định khởi tạo: chỉ mở ngày hôm nay, các ngày cũ thu gọn
+      if (!isHistoryStateInitialized) {
+        expandedHistoryDates = new Set([todayStr]);
+        isHistoryStateInitialized = true;
+      }
+
       if (orders.length === 0) {
         container.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">${t('emptyHistory')}</div>`;
+        const summaryBadge = document.getElementById("history-total-summary-badge");
+        if (summaryBadge) summaryBadge.innerText = `0 ${t('orderUnit')} · ${t('labelTotal')}: $0`;
         return;
+      }
+
+      // Tính tổng tiền & tổng số đơn trong 30 ngày
+      let totalAmount30Days = 0;
+      orders.forEach(o => {
+        totalAmount30Days += (Number(o.total) || 0);
+      });
+
+      const summaryBadge = document.getElementById("history-total-summary-badge");
+      if (summaryBadge) {
+        summaryBadge.innerText = `${orders.length} ${t('orderUnit')} · ${t('labelTotal')}: $${totalAmount30Days.toLocaleString()}`;
       }
 
       const grouped = groupByDate(orders);
       // Sort groups by date descending
       const sortedDates = Array.from(grouped.keys()).sort((a, b) => b.localeCompare(a));
 
+      // Cập nhật trạng thái nút "Mở tất cả / Thu gọn"
+      const isAllExpanded = sortedDates.length > 0 && sortedDates.every(d => expandedHistoryDates.has(d));
+      const toggleAllText = document.getElementById("btn-toggle-all-text");
+      const toggleAllIcon = document.getElementById("btn-toggle-all-icon");
+      if (toggleAllText) toggleAllText.innerText = isAllExpanded ? t('btnCollapseAll') : t('btnExpandAll');
+      if (toggleAllIcon) toggleAllIcon.innerText = isAllExpanded ? '📁' : '📂';
+
       for (const date of sortedDates) {
-        let items = grouped.get(date);
+        let items = grouped.get(date) || [];
         // Sort items: newest picked up at top (descending), fallback to newest created at top
         items.sort((a, b) => {
           const timeA = a.pickedUpAt || a.createdAt || 0;
@@ -1276,12 +1413,39 @@
           return timeB - timeA;
         });
 
+        const isToday = (date === todayStr);
+        const isExpanded = expandedHistoryDates.has(date);
+        const dayTotal = items.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+
+        const groupEl = document.createElement("div");
+        groupEl.className = "history-date-group";
+        groupEl.id = `history-group-${date}`;
+
+        // Header (Accordion Toggle)
         const header = document.createElement("div");
-        header.style.padding = "10px 8px 2px";
-        header.style.fontWeight = "1100";
-        header.style.color = "#111827";
-        header.innerText = `${date} (${items.length})`;
-        container.appendChild(header);
+        header.className = `history-date-header ${isExpanded ? 'expanded' : ''}`;
+        header.onclick = () => toggleHistoryDateGroup(date);
+        header.innerHTML = `
+          <div class="history-date-left">
+            <span class="history-date-icon">📅</span>
+            <span class="history-date-text">${escapeHtml(date)}</span>
+            ${isToday ? `<span class="history-today-tag">${t('todayTag')}</span>` : ''}
+          </div>
+          <div class="history-date-right">
+            <span class="badge" style="background:#f3f4f6; color:#374151; font-weight:800; font-size:13px;">${items.length} ${t('orderUnit')}</span>
+            <span class="badge" style="background:rgba(0,185,0,0.1); color:var(--primary); font-weight:1000; font-size:14px;">$${dayTotal.toLocaleString()}</span>
+            <svg class="history-chevron ${isExpanded ? 'open' : ''}" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </div>
+        `;
+        groupEl.appendChild(header);
+
+        // Body (Order Tiles)
+        const body = document.createElement("div");
+        body.className = "history-date-body";
+        body.id = `history-body-${date}`;
+        body.style.display = isExpanded ? "flex" : "none";
 
         items.forEach(order => {
           const tile = document.createElement("div");
@@ -1309,9 +1473,73 @@
               <button class="btn btn-ghost btn-block" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">${t('btnView')}</button>
             </div>
           `;
-          container.appendChild(tile);
+          body.appendChild(tile);
         });
+
+        groupEl.appendChild(body);
+        container.appendChild(groupEl);
       }
+
+      // Footer Banner: Older Data / Contact BLAB
+      const olderCard = document.createElement("div");
+      olderCard.className = "history-older-card";
+      olderCard.onclick = openBlabContactModal;
+      olderCard.innerHTML = `
+        <div class="history-older-left">
+          <div class="history-older-icon">📦</div>
+          <div>
+            <div class="history-older-title">
+              <span>${t('historyOlderTitle')}</span>
+              <span class="history-dev-badge">${t('badgeDev')}</span>
+            </div>
+            <div class="history-older-sub">${t('historyOlderSub')}</div>
+          </div>
+        </div>
+        <button class="btn btn-primary history-older-btn" onclick="event.stopPropagation(); openBlabContactModal()">
+          <span>💬</span>
+          <span>${t('btnContactBlab')}</span>
+        </button>
+      `;
+      container.appendChild(olderCard);
+    }
+
+    function toggleHistoryDateGroup(date) {
+      if (expandedHistoryDates.has(date)) {
+        expandedHistoryDates.delete(date);
+      } else {
+        expandedHistoryDates.add(date);
+      }
+      renderHistory(lastHistoryOrders);
+    }
+
+    function toggleAllHistoryGroups() {
+      const grouped = groupByDate(lastHistoryOrders);
+      const allDates = Array.from(grouped.keys());
+      const isAllExpanded = allDates.length > 0 && allDates.every(d => expandedHistoryDates.has(d));
+      if (isAllExpanded) {
+        expandedHistoryDates.clear();
+      } else {
+        expandedHistoryDates = new Set(allDates);
+      }
+      renderHistory(lastHistoryOrders);
+    }
+
+    function openBlabContactModal() {
+      const modal = document.getElementById("blabContactModal");
+      if (modal) modal.style.display = "flex";
+    }
+
+    function closeBlabContactModal() {
+      const modal = document.getElementById("blabContactModal");
+      if (modal) modal.style.display = "none";
+    }
+
+    function copyToClipboard(text, msgZh, msgVi) {
+      navigator.clipboard.writeText(text).then(() => {
+        alert(currentLang === 'vi' ? msgVi : msgZh);
+      }).catch(() => {
+        alert(text);
+      });
     }
 
     function updateNewAlert() {
