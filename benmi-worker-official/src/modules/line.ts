@@ -210,8 +210,8 @@ export function buildOrderFlexMessage(order: Order, tenantCtx?: TenantContext | 
             type: "box",
             layout: "horizontal",
             contents: [
-              { type: "text", text: "📝 備註：", size: "xs", color: "#888888", flex: 3 },
-              { type: "text", text: order.note, size: "xs", color: "#333333", wrap: true, flex: 7 }
+              { type: "text", text: "📝 備註：", size: "xs", color: "#888888", flex: 0 },
+              { type: "text", text: order.note, size: "xs", color: "#333333", wrap: true, flex: 1 }
             ]
           }
         ] : []),
@@ -220,16 +220,16 @@ export function buildOrderFlexMessage(order: Order, tenantCtx?: TenantContext | 
           type: "box",
           layout: "horizontal",
           contents: [
-            { type: "text", text: "🕒 取餐時間：", size: "sm", color: "#666666", flex: 3 },
-            { type: "text", text: String(order.time || "").replace(/\s*\([^)]*\)/g, '').trim(), size: "sm", weight: "bold", color: "#111111", align: "end", flex: 7, wrap: true }
+            { type: "text", text: "🕒 取餐時間：", size: "sm", color: "#666666", flex: 0 },
+            { type: "text", text: String(order.time || "").replace(/\s*\([^)]*\)/g, '').trim(), size: "sm", weight: "bold", color: "#111111", align: "end", flex: 1, wrap: true }
           ]
         },
         {
           type: "box",
           layout: "horizontal",
           contents: [
-            { type: "text", text: "💰 總金額：", size: "sm", color: "#666666", flex: 3 },
-            { type: "text", text: `$${order.total}`, size: "md", weight: "bold", color: "#e53e3e", align: "end", flex: 7 }
+            { type: "text", text: "💰 總金額：", size: "sm", color: "#666666", flex: 0 },
+            { type: "text", text: `$${order.total}`, size: "md", weight: "bold", color: "#e53e3e", align: "end", flex: 1 }
           ]
         }
       ]
@@ -347,8 +347,8 @@ export function buildProgressFlexMessage(order: Order, queueAheadCount: number, 
           type: "box",
           layout: "horizontal",
           contents: [
-            { type: "text", text: "🕒 取餐時間：", size: "sm", color: "#6b7280", flex: 3 },
-            { type: "text", text: String(order.time || "").replace(/\s*\([^)]*\)/g, '').trim(), size: "sm", weight: "bold", color: "#111827", align: "end", flex: 7, wrap: true }
+            { type: "text", text: "🕒 取餐時間：", size: "sm", color: "#6b7280", flex: 0 },
+            { type: "text", text: String(order.time || "").replace(/\s*\([^)]*\)/g, '').trim(), size: "sm", weight: "bold", color: "#111827", align: "end", flex: 1, wrap: true }
           ]
         }
       ]
