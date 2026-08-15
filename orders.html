@@ -26,13 +26,13 @@
           </svg>
         </button>
         <div class="store-status-menu" id="store-status-menu">
-          <div class="status-menu-header" id="i18n-status-menu-header">門市接單狀態 (Store Status)</div>
+          <div class="status-menu-header" id="i18n-status-menu-header">門市接單狀態</div>
           
           <div class="status-option active" data-status="open" onclick="setStoreStatus('open')">
             <div class="status-option-left">
               <span class="status-dot dot-open"></span>
               <div>
-                <div class="status-opt-title" id="i18n-status-opt-open">🟢 營業中 (Mở quán)</div>
+                <div class="status-opt-title" id="i18n-status-opt-open">🟢 營業中</div>
                 <div class="status-opt-desc" id="i18n-status-desc-open">正常接單，顧客依一般時間預約</div>
               </div>
             </div>
@@ -45,7 +45,7 @@
             <div class="status-option-left">
               <span class="status-dot dot-busy"></span>
               <div>
-                <div class="status-opt-title" id="i18n-status-opt-busy">🟠 繁忙中 (Đang bận +1h)</div>
+                <div class="status-opt-title" id="i18n-status-opt-busy">🟠 繁忙中 (+1小時)</div>
                 <div class="status-opt-desc" id="i18n-status-desc-busy">新訂單製作時間自動延長 1 小時</div>
               </div>
             </div>
@@ -58,7 +58,7 @@
             <div class="status-option-left">
               <span class="status-dot dot-paused"></span>
               <div>
-                <div class="status-opt-title" id="i18n-status-opt-paused">🔴 暫停接單 (Tạm dừng)</div>
+                <div class="status-opt-title" id="i18n-status-opt-paused">🔴 暫停接單</div>
                 <div class="status-opt-desc" id="i18n-status-desc-paused">暫停接收新訂單，顧客端無法下單</div>
               </div>
             </div>
@@ -158,35 +158,35 @@
     <div class="content" id="view-settings" style="display:none; max-width: 860px; margin: 0 auto; width: 100%;">
       <div class="panel" style="height: auto; padding-bottom: 24px;">
         <div class="panel-header">
-          <div class="panel-title" id="i18n-settings-title">系統設定 (Settings)</div>
+          <div class="panel-title" id="i18n-settings-title">系統設定</div>
         </div>
         <div class="panel-body" style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
 
           <!-- Store Status Setting -->
           <div style="border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: #fff;">
             <div style="padding: 16px 20px; background: #f3f4f6; border-bottom: 1px solid var(--border);">
-              <div style="font-weight: 1100; font-size: 18px;" id="i18n-setting-store-status-title">🏪 門市接單狀態 (Store Status)</div>
-              <div style="font-size: 13px; color: var(--muted); font-weight: 600; margin-top: 2px;" id="i18n-setting-store-status-sub">如 Uber 營運模式：隨時切換一般營業、繁忙延後或暫停接單模式</div>
+              <div style="font-weight: 1100; font-size: 18px;" id="i18n-setting-store-status-title">🏪 門市接單狀態</div>
+              <div style="font-size: 13px; color: var(--muted); font-weight: 600; margin-top: 2px;" id="i18n-setting-store-status-sub">隨時切換一般營業、繁忙延後或暫停接單模式</div>
             </div>
             <div class="store-status-options-grid" style="padding: 20px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
               <div class="status-select-box active" id="status-box-open" onclick="setStoreStatus('open')">
                 <div class="status-box-header">
                   <span class="status-dot dot-open"></span>
-                  <span class="status-box-name" id="i18n-box-open-title">🟢 正常營業 (Mở quán)</span>
+                  <span class="status-box-name" id="i18n-box-open-title">🟢 正常營業</span>
                 </div>
                 <div class="status-box-desc" id="i18n-box-open-desc">正常接收新訂單，依照標準預約或排隊時間</div>
               </div>
               <div class="status-select-box" id="status-box-busy" onclick="setStoreStatus('busy')">
                 <div class="status-box-header">
                   <span class="status-dot dot-busy"></span>
-                  <span class="status-box-name" id="i18n-box-busy-title">🟠 門市繁忙 (Đang bận)</span>
+                  <span class="status-box-name" id="i18n-box-busy-title">🟠 門市繁忙 (+1小時)</span>
                 </div>
-                <div class="status-box-desc" id="i18n-box-busy-desc">新訂單自動 +1 小時製作時間</div>
+                <div class="status-box-desc" id="i18n-box-busy-desc">新訂單自動延長 1 小時製作時間</div>
               </div>
               <div class="status-select-box" id="status-box-paused" onclick="setStoreStatus('paused')">
                 <div class="status-box-header">
                   <span class="status-dot dot-paused"></span>
-                  <span class="status-box-name" id="i18n-box-paused-title">🔴 暫停接單 (Tạm dừng)</span>
+                  <span class="status-box-name" id="i18n-box-paused-title">🔴 暫停接單</span>
                 </div>
                 <div class="status-box-desc" id="i18n-box-paused-desc">暫停接收新訂單，顧客端無法下單</div>
               </div>
@@ -752,31 +752,31 @@
         btnConfirmReject: "確認拒絕",
         btnBack: "返回",
         // Settings
-        settingsTitle: "系統設定 (Settings)",
-        settingStoreStatusTitle: "🏪 門市接單狀態 (Store Status)",
-        settingStoreStatusSub: "如 Uber 營運模式：隨時切換一般營業、繁忙延後或暫停接單模式",
-        boxOpenTitle: "🟢 正常營業 (Mở quán)",
+        settingsTitle: "系統設定",
+        settingStoreStatusTitle: "🏪 門市接單狀態",
+        settingStoreStatusSub: "隨時切換一般營業、繁忙延後或暫停接單模式",
+        boxOpenTitle: "🟢 正常營業",
         boxOpenDesc: "正常接收新訂單，依照標準預約或排隊時間",
-        boxBusyTitle: "🟠 門市繁忙 (Đang bận)",
-        boxBusyDesc: "新訂單自動 +1 小時製作時間",
-        boxPausedTitle: "🔴 暫停接單 (Tạm dừng)",
+        boxBusyTitle: "🟠 門市繁忙 (+1小時)",
+        boxBusyDesc: "新訂單自動延長 1 小時製作時間",
+        boxPausedTitle: "🔴 暫停接單",
         boxPausedDesc: "暫停接收新訂單，顧客端無法下單",
         statusOpen: "營業中",
         statusBusy: "繁忙中 (+1小時)",
         statusPaused: "暫停接單",
-        statusMenuHeader: "門市接單狀態 (Store Status)",
-        statusOptOpenTitle: "🟢 營業中 (Mở quán)",
+        statusMenuHeader: "門市接單狀態",
+        statusOptOpenTitle: "🟢 營業中",
         statusOptOpenDesc: "正常接單，顧客依一般時間預約",
-        statusOptBusyTitle: "🟠 繁忙中 (Đang bận +1h)",
+        statusOptBusyTitle: "🟠 繁忙中 (+1小時)",
         statusOptBusyDesc: "新訂單製作時間自動延長 1 小時",
-        statusOptPausedTitle: "🔴 暫停接單 (Tạm dừng)",
+        statusOptPausedTitle: "🔴 暫停接單",
         statusOptPausedDesc: "暫停接收新訂單，顧客端無法下單",
         orderModeTitle: "🛒 點餐模式 / 取餐時間設定",
         orderModeSub: "自訂允許顧客預約時間或現場排隊即時製作 (ASAP)",
         btnSaveSetting: "儲存設定",
-        modeScheduledTitle: "🕒 允許預約取餐 (預設)",
+        modeScheduledTitle: "🕒 允許預約取餐",
         modeScheduledSub: "顧客可在點餐頁面自選取餐日期與時間，適合預先排程準備餐點的店家。",
-        modeAsapTitle: "⚡ 關閉預約 - 即時排隊製作模式 (Real-time Queue)",
+        modeAsapTitle: "⚡ 關閉預約 - 即時排隊製作模式",
         modeAsapSub: "隱藏預約時間選項。顧客下單後將立即依照現場排隊順序製作 (ASAP)。",
         hoursTitle: "⏰ 營業時間",
         btnSaveHours: "儲存時間",
@@ -885,10 +885,10 @@
         btnConfirmReject: "Xác nhận từ chối",
         btnBack: "Quay lại",
         // Settings
-        settingsTitle: "Cài đặt hệ thống (Settings)",
-        settingStoreStatusTitle: "🏪 Trạng thái hoạt động của quán (Store Status)",
-        settingStoreStatusSub: "Như Uber: Chuyển đổi linh hoạt giữa Mở quán, Đang bận (+1h) hoặc Tạm dừng nhận đơn",
-        boxOpenTitle: "🟢 Mở quán (Bình thường)",
+        settingsTitle: "Cài đặt hệ thống",
+        settingStoreStatusTitle: "🏪 Trạng thái nhận đơn của quán",
+        settingStoreStatusSub: "Chuyển đổi linh hoạt giữa Mở quán, Đang bận (+1h) hoặc Tạm dừng nhận đơn",
+        boxOpenTitle: "🟢 Mở quán",
         boxOpenDesc: "Nhận đơn bình thường theo thời gian hẹn hoặc xếp hàng",
         boxBusyTitle: "🟠 Đang bận (+1 giờ)",
         boxBusyDesc: "Tự động cộng thêm 1 giờ cho mỗi đơn mới",
@@ -897,19 +897,19 @@
         statusOpen: "Đang mở quán",
         statusBusy: "Đang bận (+1 giờ)",
         statusPaused: "Tạm dừng nhận đơn",
-        statusMenuHeader: "Trạng thái nhận đơn (Store Status)",
-        statusOptOpenTitle: "🟢 Mở quán (Nhận đơn bình thường)",
+        statusMenuHeader: "Trạng thái nhận đơn",
+        statusOptOpenTitle: "🟢 Mở quán",
         statusOptOpenDesc: "Nhận đơn mới bình thường theo thời gian chuẩn",
-        statusOptBusyTitle: "🟠 Đang bận (Tự động +1 giờ)",
+        statusOptBusyTitle: "🟠 Đang bận (+1 giờ)",
         statusOptBusyDesc: "Quán đang bận, tự động kéo dài thời gian làm thêm 1 tiếng cho mỗi đơn mới",
         statusOptPausedTitle: "🔴 Tạm dừng nhận đơn",
         statusOptPausedDesc: "Tạm dừng nhận đơn mới, khách hàng không thể gửi đơn",
         orderModeTitle: "🛒 Chế độ nhận đơn & Hẹn giờ",
         orderModeSub: "Tùy chỉnh cho phép khách hẹn giờ lấy hoặc nhận đơn làm ngay xếp theo thứ tự (ASAP)",
         btnSaveSetting: "Lưu thiết lập",
-        modeScheduledTitle: "🕒 Bật hẹn giờ lấy món (Mặc định)",
+        modeScheduledTitle: "🕒 Bật hẹn giờ lấy món",
         modeScheduledSub: "Khách hàng có thể tự chọn ngày và giờ muốn đến lấy bánh trên trang đặt hàng. Thích hợp với các quán chuẩn bị theo giờ hẹn của khách.",
-        modeAsapTitle: "⚡ Tắt hẹn giờ - Nhận đơn làm ngay theo hàng đợi (Real-time Queue)",
+        modeAsapTitle: "⚡ Tắt hẹn giờ - Nhận đơn làm ngay theo hàng đợi (ASAP)",
         modeAsapSub: "Ẩn mục chọn ngày giờ. Khách đặt xong đơn sẽ được tiếp nhận và xử lý làm ngay theo thứ tự xếp hàng (ASAP).",
         hoursTitle: "⏰ Giờ hoạt động",
         btnSaveHours: "Lưu thời gian",
