@@ -745,12 +745,15 @@ export async function handleLineWebhook(
 
       await saveOrder(env, orderData, tenantId);
 
-      // Send short free reply confirmation to customer
+      // Reply Progress Flex Message (Order confirmation + status check button) to customer (Free reply)
       if (replyToken) {
         try {
-          await replyText(replyToken, `✅ 店家已收到您的訂單 #${orderKey}！店員將儘速為您確認，請稍候 🙏`, env, tenantCtx);
+          const queueRes = await getOrderQueueAhead(env, tenantId, orderKey);
+          const queueAheadCount = queueRes ? queueRes.queueAhead : 0;
+          const flexBubble = buildProgressFlexMessage(orderData, queueAheadCount, tenantCtx);
+          await replyLineFlexMessage(replyToken, `📋 訂單進度 #${orderKey}`, flexBubble, env, tenantCtx);
         } catch (replyErr) {
-          console.error(`[${brandName}] Reply confirmation error:`, replyErr);
+          console.error(`[${brandName}] Reply progress flex confirmation error:`, replyErr);
         }
       }
 
