@@ -259,18 +259,16 @@ export function buildOrderFlexMessage(order: Order, tenantCtx?: TenantContext | 
 export function buildProgressFlexMessage(order: Order, queueAheadCount: number, tenantCtx?: TenantContext | null): any {
   const brandColor = tenantCtx?.brandColor || "#00b900";
 
-  let statusTitle = "待店家確認";
-  let statusBadgeColor = "#f59e0b";
-  let statusIcon = "⏳";
+  let statusTitle = "訂單已成功送出";
+  let statusBadgeColor = "#10b981";
+  let statusIcon = "✅";
   let queueText = "";
 
   if (order.status === "NEW") {
-    statusTitle = "待店家確認";
-    statusBadgeColor = "#f59e0b";
-    statusIcon = "⏳";
-    queueText = queueAheadCount > 0
-      ? `前方還有 ${queueAheadCount} 張訂單正在排隊`
-      : "前方已無排隊訂單，即將為您確認！";
+    statusTitle = "訂單已成功送出";
+    statusBadgeColor = "#10b981";
+    statusIcon = "✅";
+    queueText = "店家已收到您的訂單，店員將儘速為您確認！";
   } else if (order.status === "ACCEPTED") {
     statusTitle = "店家製作中";
     statusBadgeColor = "#3b82f6";
