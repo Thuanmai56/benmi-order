@@ -299,25 +299,48 @@
         <!-- Time Adjustment Section -->
         <div id="change-time-div">
           <div class="time-adjust-block">
-            <div class="time-input-row">
-              <div>
-                <div class="time-label-title" id="i18n-change-time-title">⏰ 建議新取餐時間:</div>
-                <div class="time-label-sub" id="i18n-change-time-sub">輸入新時間或點擊下方快速加分</div>
+            <div class="time-summary-row">
+              <div class="orig-time-badge">
+                <span class="orig-time-label" id="i18n-orig-time-label">客戶原定取餐時間</span>
+                <span class="orig-time-val" id="change-orig-time-val">11:30</span>
               </div>
-              <div>
-                <input type="text" id="change-note" placeholder="例: 11:30" class="change-note-input" />
+              <div class="stepper-control">
+                <button type="button" class="stepper-btn" onclick="adjustTimeMinutes(-5)" title="-5m">－</button>
+                <input type="text" id="change-note" readonly class="change-note-display" value="11:40" />
+                <button type="button" class="stepper-btn" onclick="adjustTimeMinutes(5)" title="+5m">＋</button>
               </div>
             </div>
             
             <div class="presets-container">
-              <div class="presets-header" id="i18n-change-quick-select">快速選擇加分鐘數:</div>
+              <div class="presets-header">
+                <span id="i18n-change-quick-select">點擊快速選擇延後時間:</span>
+                <span style="font-size:12px; font-weight:700; color:var(--muted);" id="i18n-calc-sub">（以現在/原定時間計算）</span>
+              </div>
               <div class="presets-grid">
-                <button type="button" class="preset-chip" onclick="applyTimePreset(5)">+5m</button>
-                <button type="button" class="preset-chip" onclick="applyTimePreset(10)">+10m</button>
-                <button type="button" class="preset-chip" onclick="applyTimePreset(15)">+15m</button>
-                <button type="button" class="preset-chip" onclick="applyTimePreset(20)">+20m</button>
-                <button type="button" class="preset-chip" onclick="applyTimePreset(30)">+30m</button>
-                <button type="button" class="preset-chip" onclick="applyTimePreset(45)">+45m</button>
+                <button type="button" class="preset-card" data-mins="5" onclick="applyTimePreset(5)">
+                  <span class="preset-add">+5m</span>
+                  <span class="preset-target-time" id="preset-target-5">--:--</span>
+                </button>
+                <button type="button" class="preset-card active" data-mins="10" onclick="applyTimePreset(10)">
+                  <span class="preset-add">+10m</span>
+                  <span class="preset-target-time" id="preset-target-10">--:--</span>
+                </button>
+                <button type="button" class="preset-card" data-mins="15" onclick="applyTimePreset(15)">
+                  <span class="preset-add">+15m</span>
+                  <span class="preset-target-time" id="preset-target-15">--:--</span>
+                </button>
+                <button type="button" class="preset-card" data-mins="20" onclick="applyTimePreset(20)">
+                  <span class="preset-add">+20m</span>
+                  <span class="preset-target-time" id="preset-target-20">--:--</span>
+                </button>
+                <button type="button" class="preset-card" data-mins="30" onclick="applyTimePreset(30)">
+                  <span class="preset-add">+30m</span>
+                  <span class="preset-target-time" id="preset-target-30">--:--</span>
+                </button>
+                <button type="button" class="preset-card" data-mins="45" onclick="applyTimePreset(45)">
+                  <span class="preset-add">+45m</span>
+                  <span class="preset-target-time" id="preset-target-45">--:--</span>
+                </button>
               </div>
             </div>
           </div>
@@ -546,10 +569,12 @@
         changeTabTimeSub: "建議延後取餐時間",
         changeTabSoldout: "該口味已售完",
         changeTabSoldoutSub: "選擇已售完的品項",
+        origTimeLabel: "客戶原定取餐時間",
+        calcFromNowSub: "（以現在/原定時間計算）",
         changeTimeTitle: "⏰ 建議新取餐時間:",
         changeTimeSub: "輸入新時間或點擊下方快速加分",
         changeTimePlaceholder: "例: 11:30",
-        changeQuickSelect: "快速選擇加分鐘數:",
+        changeQuickSelect: "點擊快速選擇延後時間:",
         soldoutTitle: "點擊選擇已售完品項:",
         soldoutClear: "取消全選",
         btnSendSuggest: "傳送建議",
@@ -644,10 +669,12 @@
         changeTabTimeSub: "Đề xuất dời giờ lấy bánh",
         changeTabSoldout: "Đã hết món",
         changeTabSoldoutSub: "Chọn món đã hết hàng",
+        origTimeLabel: "Khách hẹn ban đầu",
+        calcFromNowSub: "（Tính từ giờ hẹn hoặc hiện tại）",
         changeTimeTitle: "⏰ Đề xuất giờ lấy mới:",
         changeTimeSub: "Nhập giờ mới hoặc chọn nhanh cộng phút bên dưới",
         changeTimePlaceholder: "VD: 11:30",
-        changeQuickSelect: "Chọn nhanh cộng thêm phút:",
+        changeQuickSelect: "Chọn nhanh mốc dời giờ:",
         soldoutTitle: "Chọn các món đã hết:",
         soldoutClear: "Bỏ chọn tất cả",
         btnSendSuggest: "Gửi đề xuất",
@@ -829,12 +856,10 @@
       if (chgTabST) chgTabST.innerText = dict.changeTabSoldout;
       const chgTabSS = document.getElementById("i18n-change-tab-soldout-sub");
       if (chgTabSS) chgTabSS.innerText = dict.changeTabSoldoutSub;
-      const chgTimeT = document.getElementById("i18n-change-time-title");
-      if (chgTimeT) chgTimeT.innerText = dict.changeTimeTitle;
-      const chgTimeS = document.getElementById("i18n-change-time-sub");
-      if (chgTimeS) chgTimeS.innerText = dict.changeTimeSub;
-      const chgNote = document.getElementById("change-note");
-      if (chgNote) chgNote.placeholder = dict.changeTimePlaceholder;
+      const origTL = document.getElementById("i18n-orig-time-label");
+      if (origTL) origTL.innerText = dict.origTimeLabel;
+      const calcSub = document.getElementById("i18n-calc-sub");
+      if (calcSub) calcSub.innerText = dict.calcFromNowSub;
       const chgQuick = document.getElementById("i18n-change-quick-select");
       if (chgQuick) chgQuick.innerText = dict.changeQuickSelect;
       const soldT = document.getElementById("i18n-soldout-title");
@@ -842,7 +867,15 @@
       const btnSoldClr = document.getElementById("btn-soldout-clear");
       if (btnSoldClr) btnSoldClr.innerText = dict.soldoutClear;
       const btnChgSnd = document.getElementById("btn-change-send");
-      if (btnChgSnd) btnChgSnd.innerText = dict.btnSendSuggest;
+      if (btnChgSnd) {
+        const curVal = document.getElementById("change-note") ? document.getElementById("change-note").value : "";
+        const reason = document.getElementById("change-reason") ? document.getElementById("change-reason").value : "";
+        if (reason === "時間需調整" && curVal) {
+          btnChgSnd.innerText = `${dict.btnSendSuggest} (${curVal})`;
+        } else {
+          btnChgSnd.innerText = dict.btnSendSuggest;
+        }
+      }
       const btnChgCan = document.getElementById("btn-change-cancel");
       if (btnChgCan) btnChgCan.innerText = dict.btnCancel;
 
@@ -1390,6 +1423,8 @@
         sel.value = val;
         onChangeReasonChange();
       }
+      const noteEl = document.getElementById("change-note");
+      updateChangeSubmitButton(noteEl ? noteEl.value : "");
     }
 
     function selectRejectReason(val) {
@@ -1406,28 +1441,94 @@
       });
     }
 
-    function applyTimePreset(minutes) {
-      let baseTime = null;
+    function getOrderBaseTime() {
+      const now = new Date();
+      let orderDate = new Date();
+      let hasOrderTime = false;
       if (reviewingOrder?.time) {
         const match = String(reviewingOrder.time).match(/(\d{1,2}):(\d{2})/);
         if (match) {
           const h = parseInt(match[1], 10);
           const m = parseInt(match[2], 10);
-          const now = new Date();
-          now.setHours(h, m, 0, 0);
-          baseTime = now;
+          orderDate.setHours(h, m, 0, 0);
+          hasOrderTime = true;
         }
       }
-      if (!baseTime) {
-        baseTime = new Date();
+      // Base time is max of (orderTime, now)
+      if (hasOrderTime && orderDate.getTime() > now.getTime()) {
+        return orderDate;
       }
+      return now;
+    }
+
+    function formatTimeHHMM(date) {
+      const h = String(date.getHours()).padStart(2, "0");
+      const m = String(date.getMinutes()).padStart(2, "0");
+      return `${h}:${m}`;
+    }
+
+    function renderTimePresets() {
+      const baseTime = getOrderBaseTime();
+      const origTimeEl = document.getElementById("change-orig-time-val");
+      if (origTimeEl) {
+        origTimeEl.innerText = reviewingOrder?.time || formatTimeHHMM(baseTime);
+      }
+
+      const presetMinutes = [5, 10, 15, 20, 30, 45];
+      presetMinutes.forEach(mins => {
+        const target = new Date(baseTime.getTime() + mins * 60000);
+        const el = document.getElementById(`preset-target-${mins}`);
+        if (el) el.innerText = formatTimeHHMM(target);
+      });
+    }
+
+    function applyTimePreset(minutes) {
+      const baseTime = getOrderBaseTime();
       const target = new Date(baseTime.getTime() + minutes * 60000);
-      const targetH = String(target.getHours()).padStart(2, "0");
-      const targetM = String(target.getMinutes()).padStart(2, "0");
+      const targetStr = formatTimeHHMM(target);
+      
       const noteEl = document.getElementById("change-note");
-      if (noteEl) {
-        noteEl.value = `${targetH}:${targetM}`;
-        noteEl.focus();
+      if (noteEl) noteEl.value = targetStr;
+
+      document.querySelectorAll(".preset-card").forEach(card => {
+        card.classList.toggle("active", parseInt(card.dataset.mins, 10) === minutes);
+      });
+
+      updateChangeSubmitButton(targetStr);
+    }
+
+    function adjustTimeMinutes(deltaMinutes) {
+      const noteEl = document.getElementById("change-note");
+      if (!noteEl) return;
+      let curr = new Date();
+      const match = String(noteEl.value).match(/(\d{1,2}):(\d{2})/);
+      if (match) {
+        curr.setHours(parseInt(match[1], 10), parseInt(match[2], 10), 0, 0);
+      } else {
+        curr = getOrderBaseTime();
+      }
+      const target = new Date(curr.getTime() + deltaMinutes * 60000);
+      const targetStr = formatTimeHHMM(target);
+      noteEl.value = targetStr;
+
+      // Check if targetStr matches any preset card
+      const baseTime = getOrderBaseTime();
+      const diffMins = Math.round((target.getTime() - baseTime.getTime()) / 60000);
+      document.querySelectorAll(".preset-card").forEach(card => {
+        card.classList.toggle("active", parseInt(card.dataset.mins, 10) === diffMins);
+      });
+
+      updateChangeSubmitButton(targetStr);
+    }
+
+    function updateChangeSubmitButton(timeStr) {
+      const btn = document.getElementById("btn-change-send");
+      if (!btn) return;
+      const reason = document.getElementById("change-reason").value;
+      if (reason === "時間需調整" && timeStr) {
+        btn.innerText = `${t('btnSendSuggest')} (${timeStr})`;
+      } else {
+        btn.innerText = t('btnSendSuggest');
       }
     }
 
@@ -1444,9 +1545,10 @@
       reviewingOrder = savedOrder;
       currentOrderKey = savedKey;           // Restore after closeModal
       document.getElementById("change-reason").value = "時間需調整";
-      document.getElementById("change-note").value = "";
       clearSoldOutItems();
       onChangeReasonChange();
+      renderTimePresets();
+      applyTimePreset(10);
       document.getElementById("changeModal").style.display = "flex";
     }
 
