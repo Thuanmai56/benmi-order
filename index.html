@@ -87,9 +87,21 @@
                         <input type="time" id="pickup-time">
                     </div>
                 </div>
-                <div id="pickup-time-asap-notice" style="display:none; padding: 12px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; color: #1e40af; font-weight: 800; font-size: 15px; align-items: center; gap: 8px; margin-bottom: 12px;">
-                    <span style="font-size: 18px;">⚡</span>
-                    <span>即時取餐 (店家儘速製作)</span>
+                <div id="pickup-time-asap-notice" style="display:none; padding: 14px 16px; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 14px; color: #166534; margin-bottom: 12px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                        <div style="display: flex; align-items: center; gap: 8px; font-weight: 900; font-size: 16px;">
+                            <span style="font-size: 20px;">⚡</span>
+                            <span>即時排隊製作模式</span>
+                        </div>
+                        <span style="font-size: 12px; background: #dcfce7; color: #15803d; padding: 3px 10px; border-radius: 99px; font-weight: 800;">現場排單</span>
+                    </div>
+                    <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #86efac; display: flex; align-items: center; justify-content: space-between; font-size: 15px;">
+                        <span style="color: #374151; font-weight: 700;">預計下單時間：</span>
+                        <span id="asap-current-time" style="font-weight: 900; color: #15803d; font-size: 16px; font-family: ui-monospace, monospace;">-</span>
+                    </div>
+                    <div style="margin-top: 6px; font-size: 12px; color: #4b5563; font-weight: 600; line-height: 1.4;">
+                        ※ 訂單送出後將以當前時間排單，門市人員會依序儘速為您新鮮現做。
+                    </div>
                 </div>
             </div>
 
@@ -156,13 +168,41 @@
             }
         }
 
+        function getTaiwanDate() {
+            const now = new Date();
+            const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+            return new Date(utc + (8 * 3600000));
+        }
+
+        function formatTaiwanDateTime(d) {
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            const hh = String(d.getHours()).padStart(2, '0');
+            const min = String(d.getMinutes()).padStart(2, '0');
+            return {
+                dateStr: `${yyyy}-${mm}-${dd}`,
+                timeStr: `${hh}:${min}`,
+                fullStr: `${yyyy}-${mm}-${dd} ${hh}:${min}`
+            };
+        }
+
+        function updateAsapTimeDisplay() {
+            const timeEl = document.getElementById('asap-current-time');
+            if (!timeEl) return;
+            const tw = getTaiwanDate();
+            const { fullStr } = formatTaiwanDateTime(tw);
+            timeEl.innerText = fullStr;
+        }
+
         function applyPickupConfig() {
             const pickerGroup = document.getElementById('pickup-time-picker-group');
             const asapNotice = document.getElementById('pickup-time-asap-notice');
             if (!pickerGroup || !asapNotice) return;
             if (storeConfig && storeConfig.allowScheduledPickup === false) {
                 pickerGroup.style.display = 'none';
-                asapNotice.style.display = 'flex';
+                asapNotice.style.display = 'block';
+                updateAsapTimeDisplay();
             } else {
                 pickerGroup.style.display = 'block';
                 asapNotice.style.display = 'none';
@@ -619,18 +659,15 @@
             const isScheduledEnabled = !(storeConfig && storeConfig.allowScheduledPickup === false);
 
             if (!isScheduledEnabled) {
-                const now = new Date();
-                const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-                const twTime = new Date(utc + (8 * 3600000));
+                const twTime = getTaiwanDate();
 
                 if (!isStoreOpen(twTime)) {
                     return customAlert('店家目前非營業時間 (休息中)，無法下單');
                 }
 
-                dateInput = twTime.toISOString().split('T')[0];
-                const hours = String(twTime.getHours()).padStart(2, '0');
-                const mins = String(twTime.getMinutes()).padStart(2, '0');
-                timeInput = `${hours}:${mins}`;
+                const { dateStr, timeStr } = formatTaiwanDateTime(twTime);
+                dateInput = dateStr;
+                timeInput = timeStr;
             }
 
             const checkoutSec = document.getElementById('sec-checkout');
@@ -761,7 +798,7 @@
             }
 
             if (!isScheduledEnabled) {
-                msg += `\n\n🕒 取餐時間：${dateInput} ${timeInput} (即時取餐)`;
+                msg += `\n\n🕒 取餐時間：${dateInput} ${timeInput} (即時取餐 / 依現場排單製作)`;
             } else {
                 msg += `\n\n🕒 取餐時間：${dateInput} ${timeInput}`;
             }
@@ -1007,6 +1044,7 @@
             setInterval(fetchMenu, 15000); // Tự động cập nhật trạng thái hết hàng/còn hàng mỗi 15 giây
             fetchWaitingCounter();
             setInterval(fetchWaitingCounter, 30000);
+            setInterval(updateAsapTimeDisplay, 1000); // Cập nhật thời gian hiển thị chế độ đặt ngay
         }
 
         let indexOrdersETag = "";
