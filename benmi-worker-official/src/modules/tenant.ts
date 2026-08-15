@@ -46,6 +46,7 @@ export async function resolveTenantContext(
           storeAddress: row.store_address || null,
           operatingHours: row.operating_hours || null,
           deliveryPolicy: row.delivery_policy || null,
+          allowScheduledPickup: row.allow_scheduled_pickup !== undefined && row.allow_scheduled_pickup !== null ? Boolean(row.allow_scheduled_pickup) : true,
           quickReplies,
           defaultPassword: row.default_password || '12345678',
           locale: row.locale || 'zh-TW',

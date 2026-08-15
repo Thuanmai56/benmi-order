@@ -76,8 +76,39 @@
         </div>
         <div class="panel-body" style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
 
+          <!-- Order Mode & Pickup Time Setting -->
+          <div style="border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: #fff;">
+            <div
+              style="padding: 16px 20px; background: #f3f4f6; border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <div style="font-weight: 1100; font-size: 18px;">🛒 Chế độ nhận đơn & Hẹn giờ (點餐模式 / 取餐時間設定)</div>
+                <div style="font-size: 13px; color: var(--muted); font-weight: 600; margin-top: 2px;">Tùy chỉnh cho phép khách hẹn giờ lấy hoặc nhận đơn làm ngay xếp theo thứ tự (ASAP)</div>
+              </div>
+              <button class="btn btn-primary" style="padding: 10px 20px; font-size: 15px; border-radius: 8px;"
+                onclick="saveScheduledPickupSetting()" id="btn-save-pickup-setting">Lưu thiết lập</button>
+            </div>
+            
+            <div style="padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+              <label class="setting-mode-card" id="mode-card-scheduled" style="display: flex; align-items: flex-start; gap: 14px; padding: 16px; border-radius: 12px; border: 2px solid var(--border); cursor: pointer; transition: all 0.15s ease;">
+                <input type="radio" name="order-mode-radio" id="setting-allow-scheduled-true" value="true" onchange="onPickupModeChange(true)" style="width: 20px; height: 20px; margin-top: 3px; accent-color: var(--primary);">
+                <div>
+                  <div style="font-weight: 1100; font-size: 16px; color: #111827;">🕒 Bật hẹn giờ lấy món (允許預約取餐 - Mặc định)</div>
+                  <div style="font-size: 14px; color: #4b5563; margin-top: 4px; line-height: 1.4;">Khách hàng có thể tự chọn ngày và giờ muốn đến lấy bánh trên trang đặt hàng. Thích hợp với các quán chuẩn bị theo giờ hẹn của khách.</div>
+                </div>
+              </label>
+
+              <label class="setting-mode-card" id="mode-card-asap" style="display: flex; align-items: flex-start; gap: 14px; padding: 16px; border-radius: 12px; border: 2px solid var(--border); cursor: pointer; transition: all 0.15s ease;">
+                <input type="radio" name="order-mode-radio" id="setting-allow-scheduled-false" value="false" onchange="onPickupModeChange(false)" style="width: 20px; height: 20px; margin-top: 3px; accent-color: var(--primary);">
+                <div>
+                  <div style="font-weight: 1100; font-size: 16px; color: #111827;">⚡ Tắt hẹn giờ - Nhận đơn làm ngay theo hàng đợi (即時製作 / 排隊模式 - Real-time Queue)</div>
+                  <div style="font-size: 14px; color: #4b5563; margin-top: 4px; line-height: 1.4;">Ẩn mục chọn ngày giờ. Khách đặt xong đơn sẽ được tiếp nhận và xử lý làm ngay theo thứ tự xếp hàng (ASAP).</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
           <!-- Operating Hours -->
-          <div style="border: 1px solid var(--border); border-radius: 12px; overflow: hidden;">
+          <div style="border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: #fff;">
             <div
               style="padding: 16px 20px; background: #f3f4f6; border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
               <div style="font-weight: 1100; font-size: 18px;">⏰ 營業時間 (Giờ hoạt động)</div>
@@ -1124,6 +1155,7 @@
 
     // --- SETTINGS & OPERATING HOURS ---
     let storeOperatingHours = null;
+    let allowScheduledPickup = true;
     const DAY_NAMES = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
 
     function openSettings() {
@@ -1140,13 +1172,69 @@
         if (res.ok) {
           const data = await res.json();
           storeOperatingHours = data.operatingHours || createDefaultOperatingHours();
+          allowScheduledPickup = data.allowScheduledPickup !== undefined ? data.allowScheduledPickup : true;
         } else {
           storeOperatingHours = createDefaultOperatingHours();
+          allowScheduledPickup = true;
         }
       } catch (e) {
         storeOperatingHours = createDefaultOperatingHours();
+        allowScheduledPickup = true;
       }
       renderOperatingHours();
+      renderScheduledPickupSetting();
+    }
+
+    function renderScheduledPickupSetting() {
+      const radioTrue = document.getElementById("setting-allow-scheduled-true");
+      const radioFalse = document.getElementById("setting-allow-scheduled-false");
+      if (radioTrue && radioFalse) {
+        radioTrue.checked = (allowScheduledPickup === true);
+        radioFalse.checked = (allowScheduledPickup === false);
+      }
+      updateModeCardStyles(allowScheduledPickup);
+    }
+
+    function updateModeCardStyles(isScheduled) {
+      const cardScheduled = document.getElementById("mode-card-scheduled");
+      const cardAsap = document.getElementById("mode-card-asap");
+      if (cardScheduled && cardAsap) {
+        if (isScheduled) {
+          cardScheduled.style.borderColor = "var(--primary)";
+          cardScheduled.style.background = "rgba(0, 185, 0, 0.05)";
+          cardAsap.style.borderColor = "var(--border)";
+          cardAsap.style.background = "#fff";
+        } else {
+          cardAsap.style.borderColor = "var(--primary)";
+          cardAsap.style.background = "rgba(0, 185, 0, 0.05)";
+          cardScheduled.style.borderColor = "var(--border)";
+          cardScheduled.style.background = "#fff";
+        }
+      }
+    }
+
+    function onPickupModeChange(isScheduled) {
+      allowScheduledPickup = isScheduled;
+      updateModeCardStyles(isScheduled);
+    }
+
+    async function saveScheduledPickupSetting() {
+      const btn = document.getElementById("btn-save-pickup-setting");
+      const oldText = btn ? btn.innerText : "";
+      if (btn) { btn.innerText = "Đang lưu..."; btn.disabled = true; }
+      try {
+        const res = await fetch(`${WORKER_BASE}/api/config?tenant_id=${getTenantIdFromUrl()}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ allowScheduledPickup: allowScheduledPickup })
+        });
+        if (!res.ok) throw new Error("API returned " + res.status);
+        alert("Đã lưu thiết lập chế độ nhận đơn thành công!");
+      } catch (e) {
+        alert("Lưu thất bại: " + e.message);
+      } finally {
+        if (btn) { btn.innerText = oldText; btn.disabled = false; }
+      }
     }
 
     function createDefaultOperatingHours() {
