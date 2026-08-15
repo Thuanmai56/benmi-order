@@ -21,10 +21,29 @@
         <button class="mini-btn" id="tab-sound" onclick="testSound()">測試音效</button>
         <button class="mini-btn" id="tab-menu" onclick="openMenuSettings()">菜單</button>
         <button class="mini-btn" id="tab-settings" onclick="openSettings()">設定</button>
-        <select class="lang-select" id="select-lang" onchange="setLanguage(this.value)">
-          <option value="zh-TW">繁體中文</option>
-          <option value="vi">Tiếng Việt</option>
-        </select>
+        <!-- Custom Language Dropdown -->
+        <div class="lang-dropdown" id="lang-dropdown">
+          <button type="button" class="lang-dropdown-btn" id="lang-dropdown-btn" onclick="toggleLangDropdown(event)">
+            <span id="current-lang-label">繁體中文</span>
+            <svg class="lang-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+          <div class="lang-dropdown-menu" id="lang-dropdown-menu">
+            <div class="lang-dropdown-item active" data-lang="zh-TW" onclick="selectLanguage('zh-TW')">
+              <span>繁體中文</span>
+              <svg class="lang-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </div>
+            <div class="lang-dropdown-item" data-lang="vi" onclick="selectLanguage('vi')">
+              <span>Tiếng Việt</span>
+              <svg class="lang-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -674,10 +693,25 @@
       return str;
     }
 
-    function toggleLanguage() {
-      const nextLang = currentLang === "zh-TW" ? "vi" : "zh-TW";
-      setLanguage(nextLang);
+    function toggleLangDropdown(e) {
+      if (e) e.stopPropagation();
+      const dd = document.getElementById("lang-dropdown");
+      if (dd) dd.classList.toggle("open");
     }
+
+    function selectLanguage(lang) {
+      setLanguage(lang);
+      const dd = document.getElementById("lang-dropdown");
+      if (dd) dd.classList.remove("open");
+    }
+
+    // Click outside to close dropdown
+    document.addEventListener("click", (e) => {
+      const dd = document.getElementById("lang-dropdown");
+      if (dd && !dd.contains(e.target)) {
+        dd.classList.remove("open");
+      }
+    });
 
     function setLanguage(lang) {
       currentLang = lang;
@@ -695,8 +729,14 @@
       if (!dict) return;
 
       // Topbar
-      const selectLang = document.getElementById("select-lang");
-      if (selectLang) selectLang.value = currentLang;
+      const labelMap = { "zh-TW": "繁體中文", "vi": "Tiếng Việt" };
+      const currentLabel = document.getElementById("current-lang-label");
+      if (currentLabel) currentLabel.innerText = labelMap[currentLang] || currentLang;
+
+      document.querySelectorAll(".lang-dropdown-item").forEach(item => {
+        item.classList.toggle("active", item.dataset.lang === currentLang);
+      });
+
       const brandSub = document.getElementById("i18n-brand-sub");
       if (brandSub) brandSub.innerText = dict.brandSub;
       const tabLive = document.getElementById("tab-live");
