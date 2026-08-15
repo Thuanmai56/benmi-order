@@ -469,6 +469,10 @@ body {
   width: min(480px, 95vw);
 }
 
+#blabContactModal .modal-content {
+  width: min(520px, 95vw);
+}
+
 .modal-title {
   flex-shrink: 0;
   display: flex;
