@@ -3,10 +3,10 @@ import { TenantContext } from '../types/tenant';
 import { Order } from '../types/index';
 import { corsHeaders } from '../utils/http';
 import { resolveSecret } from '../utils/secrets';
-import { saveOrder, getPendingMap, getOrderQueueAhead, getUserLatestActiveOrder } from './orders';
-import { callAI, FewShotExample } from '../integrations/groq';
+import { saveOrder, getPendingMap } from './orders';
+import { callAI } from '../integrations/groq';
 import { syncToGoogleSheets } from '../integrations/googleSheets';
-import { getTenantId, getMenuData, formatMenuForPrompt } from './menu';
+import { getTenantId } from './menu';
 
 async function getLineToken(env: Env, tenantCtx?: TenantContext | null): Promise<string> {
   if (tenantCtx?.lineChannelToken) {
@@ -83,312 +83,6 @@ export async function replyText(
     console.error(`[${brand}] replyText EXCEPTION: error=${e.message}`);
     return false;
   }
-}
-
-export async function pushLineFlexMessage(
-  userId: string,
-  altText: string,
-  contents: any,
-  env: Env,
-  tenantCtx?: TenantContext | null
-): Promise<boolean> {
-  const token = await getLineToken(env, tenantCtx);
-  const brand = tenantCtx?.brandName || "Bot";
-  if (!token || !userId) return false;
-
-  try {
-    const res = await fetch("https://api.line.me/v2/bot/message/push", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        to: userId,
-        messages: [{ type: "flex", altText, contents }],
-      }),
-    });
-
-    if (!res.ok) {
-      const body = await res.text().catch(() => "(unreadable)");
-      console.error(`[${brand}] pushLineFlexMessage FAILED: status=${res.status} userId=${userId} body=${body}`);
-      return false;
-    }
-    return true;
-  } catch (e: any) {
-    console.error(`[${brand}] pushLineFlexMessage EXCEPTION: userId=${userId} error=${e.message}`);
-    return false;
-  }
-}
-
-export async function replyLineFlexMessage(
-  replyToken: string,
-  altText: string,
-  contents: any,
-  env: Env,
-  tenantCtx?: TenantContext | null
-): Promise<boolean> {
-  const token = await getLineToken(env, tenantCtx);
-  const brand = tenantCtx?.brandName || "Bot";
-  if (!token || !replyToken) return false;
-
-  try {
-    const res = await fetch("https://api.line.me/v2/bot/message/reply", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        replyToken,
-        messages: [{ type: "flex", altText, contents }],
-      }),
-    });
-
-    if (!res.ok) {
-      const errBody = await res.text().catch(() => "(unreadable)");
-      console.error(`[${brand}] replyLineFlexMessage FAILED: status=${res.status} body=${errBody}`);
-      return false;
-    }
-    return true;
-  } catch (e: any) {
-    console.error(`[${brand}] replyLineFlexMessage EXCEPTION: error=${e.message}`);
-    return false;
-  }
-}
-
-export function buildOrderFlexMessage(order: Order, tenantCtx?: TenantContext | null): any {
-  const brandColor = tenantCtx?.brandColor || "#00b900";
-
-  const contentLines = (order.content || "").split("\n").filter(l => l.trim().length > 0);
-  const contentComponents = contentLines.slice(0, 12).map(line => ({
-    type: "text",
-    text: line,
-    size: "sm",
-    color: line.startsWith("↳") ? "#666666" : "#111111",
-    weight: line.includes("x ") ? "bold" : "regular",
-    wrap: true
-  }));
-
-  return {
-    type: "bubble",
-    size: "mega",
-    header: {
-      type: "box",
-      layout: "vertical",
-      backgroundColor: brandColor,
-      paddingAll: "15px",
-      contents: [
-        {
-          type: "box",
-          layout: "horizontal",
-          contents: [
-            { type: "text", text: "🛍️ 訂單明細", weight: "bold", color: "#ffffff", size: "lg", flex: 1 },
-            { type: "text", text: `#${order.key}`, color: "#ffffff", size: "sm", align: "end", flex: 1 }
-          ]
-        }
-      ]
-    },
-    body: {
-      type: "box",
-      layout: "vertical",
-      paddingAll: "15px",
-      spacing: "md",
-      contents: [
-        {
-          type: "box",
-          layout: "vertical",
-          spacing: "xs",
-          contents: [
-            { type: "text", text: "📦 訂單內容：", weight: "bold", size: "sm", color: "#333333" },
-            ...contentComponents
-          ]
-        },
-        ...(order.note ? [
-          { type: "separator", margin: "md" },
-          {
-            type: "box",
-            layout: "horizontal",
-            contents: [
-              { type: "text", text: "📝 備註：", size: "xs", color: "#888888", flex: 3 },
-              { type: "text", text: order.note, size: "xs", color: "#333333", wrap: true, flex: 7 }
-            ]
-          }
-        ] : []),
-        { type: "separator", margin: "md" },
-        {
-          type: "box",
-          layout: "horizontal",
-          contents: [
-            { type: "text", text: "🕒 取餐時間：", size: "sm", color: "#666666", flex: 4 },
-            { type: "text", text: order.time, size: "sm", weight: "bold", color: "#111111", align: "end", flex: 6 }
-          ]
-        },
-        {
-          type: "box",
-          layout: "horizontal",
-          contents: [
-            { type: "text", text: "💰 總金額：", size: "sm", color: "#666666", flex: 4 },
-            { type: "text", text: `$${order.total}`, size: "md", weight: "bold", color: "#e53e3e", align: "end", flex: 6 }
-          ]
-        }
-      ]
-    },
-    footer: {
-      type: "box",
-      layout: "vertical",
-      paddingAll: "12px",
-      contents: [
-        {
-          type: "button",
-          style: "primary",
-          color: brandColor,
-          height: "sm",
-          action: {
-            type: "postback",
-            label: "🔍 查詢製作進度",
-            data: `action=check_progress&order_key=${order.key}`,
-            displayText: `🔍 查詢訂單進度 (${order.key})`
-          }
-        }
-      ]
-    }
-  };
-}
-
-export function buildProgressFlexMessage(order: Order, queueAheadCount: number, tenantCtx?: TenantContext | null): any {
-  const brandColor = tenantCtx?.brandColor || "#00b900";
-  
-  let statusTitle = "待店家確認";
-  let statusBadgeColor = "#f59e0b";
-  let statusIcon = "⏳";
-  let queueText = "";
-
-  if (order.status === "NEW") {
-    statusTitle = "待店家確認 (Chờ xác nhận)";
-    statusBadgeColor = "#f59e0b";
-    statusIcon = "⏳";
-    queueText = queueAheadCount > 0
-      ? `前方還有 ${queueAheadCount} 張訂單正在排隊`
-      : "前方已無排隊訂單，即將為您確認！";
-  } else if (order.status === "ACCEPTED") {
-    statusTitle = "店家製作中 (Đang làm món)";
-    statusBadgeColor = "#3b82f6";
-    statusIcon = "🍳";
-    queueText = queueAheadCount > 0
-      ? `前方還有 ${queueAheadCount} 張訂單正在排隊製作`
-      : "🔥 前方已無排隊訂單，您的餐點正由店家製作中！";
-  } else if (order.status === "DONE") {
-    statusTitle = "製作完成，可取餐！ (Đã làm xong)";
-    statusBadgeColor = "#10b981";
-    statusIcon = "🎉";
-    queueText = "您的餐點已準備完畢，請儘快前來取餐！";
-  } else if (order.status === "PICKED_UP") {
-    statusTitle = "已完成取餐 (Đã lấy hàng)";
-    statusBadgeColor = "#6b7280";
-    statusIcon = "✅";
-    queueText = "感謝您的訂購，歡迎下次光臨！";
-  } else if (order.status === "WAITING_CUSTOMER_CHANGE" || order.status === "WAITING_CUSTOMER_REJECT") {
-    statusTitle = "訂單變更/確認中";
-    statusBadgeColor = "#ec4899";
-    statusIcon = "⚠️";
-    queueText = "請查看 LINE 對話紀錄並回覆店家。";
-  } else if (order.status === "REJECTED") {
-    statusTitle = "訂單已取消";
-    statusBadgeColor = "#ef4444";
-    statusIcon = "❌";
-    queueText = "該訂單已被取消。";
-  }
-
-  return {
-    type: "bubble",
-    size: "mega",
-    header: {
-      type: "box",
-      layout: "vertical",
-      backgroundColor: brandColor,
-      paddingAll: "15px",
-      contents: [
-        {
-          type: "box",
-          layout: "horizontal",
-          contents: [
-            { type: "text", text: "📋 訂單製作進度", weight: "bold", color: "#ffffff", size: "lg", flex: 1 },
-            { type: "text", text: `#${order.key}`, color: "#ffffff", size: "sm", align: "end", flex: 1 }
-          ]
-        }
-      ]
-    },
-    body: {
-      type: "box",
-      layout: "vertical",
-      paddingAll: "15px",
-      spacing: "md",
-      contents: [
-        {
-          type: "box",
-          layout: "vertical",
-          backgroundColor: "#f9fafb",
-          cornerRadius: "md",
-          paddingAll: "12px",
-          spacing: "xs",
-          contents: [
-            {
-              type: "box",
-              layout: "horizontal",
-              contents: [
-                { type: "text", text: `${statusIcon} 當前狀態：`, size: "sm", color: "#666666", flex: 4 },
-                { type: "text", text: statusTitle, size: "sm", weight: "bold", color: statusBadgeColor, align: "end", flex: 6 }
-              ]
-            },
-            {
-              type: "text",
-              text: queueText,
-              size: "xs",
-              color: "#374151",
-              wrap: true,
-              margin: "sm"
-            }
-          ]
-        },
-        { type: "separator", margin: "md" },
-        {
-          type: "box",
-          layout: "horizontal",
-          contents: [
-            { type: "text", text: "🕒 預計取餐時間：", size: "xs", color: "#666666", flex: 5 },
-            { type: "text", text: order.time, size: "xs", weight: "bold", color: "#111111", align: "end", flex: 5 }
-          ]
-        },
-        {
-          type: "box",
-          layout: "horizontal",
-          contents: [
-            { type: "text", text: "💰 總金額：", size: "xs", color: "#666666", flex: 5 },
-            { type: "text", text: `$${order.total}`, size: "xs", weight: "bold", color: "#e53e3e", align: "end", flex: 5 }
-          ]
-        }
-      ]
-    },
-    footer: {
-      type: "box",
-      layout: "vertical",
-      paddingAll: "12px",
-      contents: [
-        {
-          type: "button",
-          style: "secondary",
-          height: "sm",
-          action: {
-            type: "postback",
-            label: "🔄 重新整理進度",
-            data: `action=check_progress&order_key=${order.key}`,
-            displayText: `🔄 重新整理進度 (${order.key})`
-          }
-        }
-      ]
-    }
-  };
 }
 
 export async function replyWithLiffRedirect(
@@ -601,65 +295,20 @@ export async function handleLineWebhook(
   const brandName = tenantCtx?.brandName || tenantId;
 
   for (const event of events) {
-    if (!event) continue;
+    if (!event || event.type !== "message") continue;
+    const message = event.message || {};
+    if (message.type !== "text") continue;
 
     const replyToken = event.replyToken;
     const source = event.source || {};
     const userId = source.userId;
     if (!userId) continue;
 
-    // 0.1) Handle postback events (e.g. Progress Check button tap)
-    if (event.type === "postback") {
-      const dataStr = event.postback?.data || "";
-      if (dataStr.includes("action=check_progress")) {
-        let orderKey = "";
-        const match = dataStr.match(/order_key=([^&]+)/);
-        if (match) {
-          orderKey = match[1];
-        }
-
-        const res = orderKey ? await getOrderQueueAhead(env, tenantId, orderKey) : await getUserLatestActiveOrder(env, tenantId, userId);
-        if (res && res.order) {
-          const flex = buildProgressFlexMessage(res.order, res.queueAhead, tenantCtx);
-          await replyLineFlexMessage(replyToken, `📋 訂單進度 #${res.order.key}`, flex, env, tenantCtx);
-        } else {
-          await replyText(replyToken, "找不到您的相關訂單紀錄。 (Không tìm thấy thông tin đơn hàng)", env, tenantCtx);
-        }
-        continue;
-      }
-    }
-
-    if (event.type !== "message") continue;
-    const message = event.message || {};
-    if (message.type !== "text") continue;
-
     const userText = message.text || "";
     const pendingKey = `pending:${userId}`;
     const draftKey = `draft:${userId}`;
 
-    // 0.2) Handle text progress triggers (e.g. 查詢進度 / 進度 / tiến độ / check progress)
-    const lowerText = userText.toLowerCase();
-    if (
-      (lowerText.includes("進度") || lowerText.includes("tiến độ") || lowerText.includes("check progress")) &&
-      !userText.includes("訂單編號：")
-    ) {
-      let orderKey = "";
-      const match = userText.match(/B\d{4}-\d{4}-\d{4}/) || userText.match(/BD\d+-\d+-\d+/);
-      if (match) {
-        orderKey = match[0];
-      }
-
-      const res = orderKey ? await getOrderQueueAhead(env, tenantId, orderKey) : await getUserLatestActiveOrder(env, tenantId, userId);
-      if (res && res.order) {
-        const flex = buildProgressFlexMessage(res.order, res.queueAhead, tenantCtx);
-        await replyLineFlexMessage(replyToken, `📋 訂單進度 #${res.order.key}`, flex, env, tenantCtx);
-      } else {
-        await replyText(replyToken, "目前查無您的進行中訂單。 (Không tìm thấy đơn hàng đang thực hiện)", env, tenantCtx);
-      }
-      continue;
-    }
-
-    // 0.3) Priority Catch new order from LIFF text message (Bypasses pending states)
+    // 0) Priority Catch new order from LIFF text message (Bypasses pending states)
     if (userText.includes("訂單編號：") && userText.includes("📦 訂單內容：")) {
       if (userText.includes("[已收到]") || userText.includes("[Đã nhận]")) {
         console.log(`[${brandName}] Webhook received receipt message. Skipping to avoid overwrite.`);
@@ -748,18 +397,6 @@ export async function handleLineWebhook(
 
       await saveOrder(env, orderData, tenantId);
 
-      // Push Flex message with order details and progress check button to customer
-      try {
-        const flexBubble = buildOrderFlexMessage(orderData, tenantCtx);
-        if (replyToken) {
-          await replyLineFlexMessage(replyToken, `🧾 訂單明細 #${orderKey}`, flexBubble, env, tenantCtx);
-        } else {
-          await pushLineFlexMessage(userId, `🧾 訂單明細 #${orderKey}`, flexBubble, env, tenantCtx);
-        }
-      } catch (flexErr) {
-        console.error(`[${brandName}] Push flex order receipt error:`, flexErr);
-      }
-
       // Fetch real LINE name in background and update customer_name safely in DB
       if (ctx && ctx.waitUntil) {
         ctx.waitUntil((async () => {
@@ -810,12 +447,8 @@ export async function handleLineWebhook(
             return;
           }
 
-          const menuData = await getMenuData(env, tenantId);
-          const menuContext = formatMenuForPrompt(menuData);
-          const systemPrompt = `你是 ${brandName} 的 AI 訂單意圖判斷系統。\n\n${menuContext}\n\n請嚴格分析顧客訊息是否與在此店家菜單點餐或回答訂單細節相關。`;
-
-          const ctxPrompt = `顧客之前的草稿訂單：「${draft.text || '（空）'}」\n顧客剛剛傳來：「${userText}」\n\n請問顧客這句話是：在【繼續點餐 / 追加餐點 / 回答取餐時間 / 確認訂單】嗎？\n如果是 → 回覆「ORDER」\n如果不是（單純發問、聊天、詢問食材等）→ 回覆「IGNORE」\n請嚴格只回覆 ORDER 或 IGNORE。`;
-          const ctxRes = await callAI(ctxPrompt, env, tenantCtx, 8000, systemPrompt);
+          const ctxPrompt = `顧客之前的草稿訂單：「${draft.text || '（空）'}」\n顧客剛剛傳來：「${userText}」\n\n請問顧客這句話是：在【繼續點餐/追加餐點/回答取餐時間/確認訂單】嗎？\n如果是 → 回覆「ORDER」\n如果不是（在發問、聊天、詢問食材等）→ 回覆「IGNORE」\n請只回覆 ORDER 或 IGNORE。`;
+          const ctxRes = await callAI(ctxPrompt, env, tenantCtx);
           const upper = (ctxRes || "").toUpperCase();
           if (upper.includes("ORDER") || !ctxRes) {
             try { await env.ORDER_STATE.delete(draftKey); } catch { }
@@ -873,8 +506,8 @@ export async function handleLineWebhook(
 
           // TÁCH RIÊNG TRƯỜNG HỢP "ĐỔI GIỜ NHẬN HÀNG" KHÔNG DÙNG AI
           if (pendingType === "CHANGE" && currentReason === "時間需調整") {
-            const exactMatch = lowerText === "好" || lowerText === "同意" || lowerText === "ok" || lowerText === "可以" || lowerText === "好的" || lowerText === "okey" || lowerText === "được" || lowerText === "duoc" || lowerText === "đồng ý" || lowerText === "dong y" || lowerText === "yes";
-            const isCancel = lowerText.includes("不要") || lowerText.includes("取消") || lowerText.includes("不用") || lowerText.includes("hủy") || lowerText.includes("huy") || lowerText.includes("cancel");
+            const exactMatch = lowerText === "好" || lowerText === "同意" || lowerText === "ok" || lowerText === "可以" || lowerText === "好的";
+            const isCancel = lowerText.includes("不要") || lowerText.includes("取消") || lowerText.includes("不用");
 
             if (isCancel) {
               order.status = "REJECTED";
@@ -908,55 +541,8 @@ export async function handleLineWebhook(
           // CÁC TRƯỜNG HỢP KHÁC: DÙNG AI ĐỂ XỬ LÝ
           let aiSaysNo = false;
           if (questionText) {
-            const menuData = await getMenuData(env, tenantId);
-            const menuContext = formatMenuForPrompt(menuData);
-            const systemPrompt = `你是 ${brandName} 的 AI 訂單助理。\n\n${menuContext}\n\n請對照店家菜單品項與庫存狀況，分析顧客的回覆內容。`;
-
-            const prompt = `店家剛才詢問顧客：「${questionText}」\n顧客的回覆是：「${userText}」\n\n請問顧客的回覆是否已針對問題做出明確決定（例如：已明確選擇欲更換的口味、同意變更、同意取消等）？\n注意：\n1. 若問題是詢問更換口味，但顧客僅回覆「好/同意」而未說明要換什麼口味，請回覆 NO。\n2. 若顧客是反問問題，請回覆 NO。\n3. 若顧客已明確選擇具體品項或同意取消，請回覆 YES。\n請嚴格只回覆 YES 或 NO。`;
-            const changeFewShot: FewShotExample[] = [
-              {
-                role: "user",
-                content: `店家剛才詢問顧客：「不好意思 越南咖啡我們現在賣完了，請問可以幫您換別的嗎？」\n顧客的回覆是：「換雞肉」\n\n請問顧客的回覆是否已針對問題做出明確決定（例如：已明確選擇欲更換的口味、同意變更、同意取消等）？\n注意：\n1. 若問題是詢問更換口味，但顧客僅回覆「好/同意」而未說明要換什麼口味，請回覆 NO。\n2. 若顧客是反問問題，請回覆 NO。\n3. 若顧客已明確選擇具體品項或同意取消，請回覆 YES。\n請嚴格只回覆 YES 或 NO。`
-              },
-              {
-                role: "assistant",
-                content: "YES"
-              },
-              {
-                role: "user",
-                content: `店家剛才詢問顧客：「不好意思 越南咖啡我們現在賣完了，請問可以幫您換別的嗎？」\n顧客的回覆是：「換雞肉好了」\n\n請問顧客的回覆是否已針對問題做出明確決定（例如：已明確選擇欲更換的口味、同意變更、同意取消等）？\n注意：\n1. 若問題是詢問更換口味，但顧客僅回覆「好/同意」而未說明要換什麼口味，請回覆 NO。\n2. 若顧客是反問問題，請回覆 NO。\n3. 若顧客已明確選擇具體品項或同意取消，請回覆 YES。\n請嚴格只回覆 YES 或 NO。`
-              },
-              {
-                role: "assistant",
-                content: "YES"
-              },
-              {
-                role: "user",
-                content: `店家剛才詢問顧客：「不好意思 燒肉賣完了，請問可以幫您換別的嗎？」\n顧客的回覆是：「換烤肉麵包」\n\n請問顧客的回覆是否已針對問題做出明確決定（例如：已明確選擇欲更換的口味、同意變更、同意取消等）？\n注意：\n1. 若問題是詢問更換口味，但顧客僅回覆「好/同意」而未說明要換什麼口味，請回覆 NO。\n2. 若顧客是反問問題，請回覆 NO。\n3. 若顧客已明確選擇具體品項或同意取消，請回覆 YES。\n請嚴格只回覆 YES 或 NO。`
-              },
-              {
-                role: "assistant",
-                content: "YES"
-              },
-              {
-                role: "user",
-                content: `店家剛才詢問顧客：「不好意思 越南咖啡我們現在賣完了，請問可以幫您換別的嗎？」\n顧客的回覆是：「不要換」\n\n請問顧客的回覆是否已針對問題做出明確決定（例如：已明確選擇欲更換的口味、同意變更、同意取消等）？\n注意：\n1. 若問題是詢問更換口味，但顧客僅回覆「好/同意」而未說明要換什麼口味，請回覆 NO。\n2. 若顧客是反問問題，請回覆 NO。\n3. 若顧客已明確選擇具體品項或同意取消，請回覆 YES。\n請嚴格只回覆 YES 或 NO。`
-              },
-              {
-                role: "assistant",
-                content: "YES"
-              },
-              {
-                role: "user",
-                content: `店家剛才詢問顧客：「不好意思 越南咖啡賣完了，請問想換成拿鐵還是美式？」\n顧客的回覆是：「好」\n\n請問顧客的回覆是否已針對問題做出明確決定（例如：已明確選擇欲更換的口味、同意變更、同意取消等）？\n注意：\n1. 若問題是詢問更換口味，但顧客僅回覆「好/同意」而未說明要換什麼口味，請回覆 NO。\n2. 若顧客是反問問題，請回覆 NO。\n3. 若顧客已明確選擇具體品項或同意取消，請回覆 YES。\n請嚴格只回覆 YES 或 NO。`
-              },
-              {
-                role: "assistant",
-                content: "NO"
-              }
-            ];
-
-            const aiRes = await callAI(prompt, env, tenantCtx, 8000, systemPrompt, changeFewShot);
+            const prompt = `店家剛才詢問顧客：「${questionText}」\n顧客的回覆是：「${userText}」\n請問顧客的回覆是否針對問題做出了決定（如已明確選擇換的口味、同意、拒絕等）？\n注意：如果問題 is about flavor, but customer replied yes without specifying flavor, return NO.\nNếu khách hàng hỏi ngược, return NO. Nếu khách hàng chọn cụ thể hoặc đồng ý hủy, return YES. STRICTLY return YES or NO.`;
+            const aiRes = await callAI(prompt, env, tenantCtx);
             if (aiRes) {
               const up = aiRes.toUpperCase();
               if (up.includes("NO") && !up.includes("YES")) {
@@ -1062,12 +648,8 @@ export async function handleLineWebhook(
       const alreadySent = await env.ORDER_STATE.get(`liff_redirected:${userId}`);
       if (alreadySent) return;
 
-      const menuData = await getMenuData(env, tenantId);
-      const menuContext = formatMenuForPrompt(menuData);
-      const systemPrompt = `你是 ${brandName} 的 AI 助理。\n\n${menuContext}\n\n你的任務是評估顧客訊息是否具有向本店家點餐或訂購餐點飲料的意圖。`;
-
-      const intentPrompt = `顧客傳來：「${userText}」\n\n這句話是在向店家「下訂單點餐」嗎（包含提到想要點某個餐點、詢問如何點餐、說要訂餐等）？\n如果是 → 回覆「YES」\n如果不是（單純發問、聊天、抱怨等）→ 回覆「NO」\n請嚴格只回覆 YES 或 NO。`;
-      const intentRes = await callAI(intentPrompt, env, tenantCtx, 8000, systemPrompt);
+      const intentPrompt = `顧客傳來：「${userText}」\n這句話是在向店家「下訂單點餐」嗎（包含提到想要某個餐點、詢問如何點餐、說要訂餐等）？\n如果是 → 回覆「YES」\n如果不是（單純發問、聊天、抱怨等）→ 回覆「NO」\n請只回覆 YES 或 NO。`;
+      const intentRes = await callAI(intentPrompt, env, tenantCtx);
       const resUpper = (intentRes || "").toUpperCase();
 
       if (resUpper.includes("YES")) {
