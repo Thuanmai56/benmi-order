@@ -275,7 +275,7 @@ export function buildProgressFlexMessage(order: Order, queueAheadCount: number, 
     statusIcon = "🍳";
     queueText = queueAheadCount > 0
       ? `前方還有 ${queueAheadCount} 張訂單正在排隊製作`
-      : "🔥 前方已無排隊訂單，您的餐點正由店家製作中！";
+      : "🔥 您的餐點正由店家製作中！";
   } else if (order.status === "DONE") {
     statusTitle = "製作完成，可取餐！";
     statusBadgeColor = "#10b981";
