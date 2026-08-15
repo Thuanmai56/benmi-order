@@ -656,6 +656,110 @@
         }
 
         // --- ORDER SUBMIT ---
+        function buildCustomerOrderFlex(orderNum, contentLines, pickupTime, total, note) {
+            const brandColor = "#00b900";
+            const contentComponents = contentLines.slice(0, 45).map(line => {
+                const isSub = line.trim().startsWith("↳");
+                return {
+                    type: "text",
+                    text: line,
+                    size: isSub ? "xs" : "sm",
+                    color: isSub ? "#666666" : "#111111",
+                    weight: isSub ? "regular" : "bold",
+                    wrap: true
+                };
+            });
+
+            return {
+                type: "flex",
+                altText: `[Benmi 點餐] 訂單 #${orderNum} ($${total})`,
+                contents: {
+                    type: "bubble",
+                    size: "mega",
+                    header: {
+                        type: "box",
+                        layout: "vertical",
+                        backgroundColor: brandColor,
+                        paddingAll: "15px",
+                        contents: [
+                            {
+                                type: "box",
+                                layout: "horizontal",
+                                contents: [
+                                    { type: "text", text: "🛍️ 點餐明細", weight: "bold", color: "#ffffff", size: "lg", flex: 0 },
+                                    { type: "text", text: `#${orderNum}`, color: "#ffffff", size: "sm", align: "end", flex: 1, gravity: "center" }
+                                ]
+                            }
+                        ]
+                    },
+                    body: {
+                        type: "box",
+                        layout: "vertical",
+                        paddingAll: "15px",
+                        spacing: "md",
+                        contents: [
+                            {
+                                type: "box",
+                                layout: "vertical",
+                                spacing: "xs",
+                                contents: [
+                                    { type: "text", text: "📦 訂單內容：", weight: "bold", size: "sm", color: "#333333" },
+                                    ...contentComponents
+                                ]
+                            },
+                            ...(note ? [
+                                { type: "separator", margin: "md" },
+                                {
+                                    type: "box",
+                                    layout: "horizontal",
+                                    contents: [
+                                        { type: "text", text: "📝 總備註：", size: "xs", color: "#888888", flex: 0 },
+                                        { type: "text", text: note, size: "xs", color: "#333333", wrap: true, flex: 1 }
+                                    ]
+                                }
+                            ] : []),
+                            { type: "separator", margin: "md" },
+                            {
+                                type: "box",
+                                layout: "horizontal",
+                                contents: [
+                                    { type: "text", text: "🕒 取餐時間：", size: "sm", color: "#666666", flex: 0 },
+                                    { type: "text", text: String(pickupTime || "").replace(/\s*\([^)]*\)/g, '').trim(), size: "sm", weight: "bold", color: "#111111", align: "end", flex: 1, wrap: true }
+                                ]
+                            },
+                            {
+                                type: "box",
+                                layout: "horizontal",
+                                contents: [
+                                    { type: "text", text: "💰 總金額：", size: "sm", color: "#666666", flex: 0 },
+                                    { type: "text", text: `$${total}`, size: "md", weight: "bold", color: "#e53e3e", align: "end", flex: 1 }
+                                ]
+                            }
+                        ]
+                    },
+                    footer: {
+                        type: "box",
+                        layout: "vertical",
+                        paddingAll: "12px",
+                        contents: [
+                            {
+                                type: "button",
+                                style: "primary",
+                                color: brandColor,
+                                height: "sm",
+                                action: {
+                                    type: "postback",
+                                    label: "🔍 查詢製作進度",
+                                    data: `action=check_progress&order_key=${orderNum}`,
+                                    displayText: `🔍 查詢訂單進度 (${orderNum})`
+                                }
+                            }
+                        ]
+                    }
+                }
+            };
+        }
+
         function generateOrderNumber() {
             const now = new Date();
             const twTime = new Date(now.getTime() + 8 * 3600000);
@@ -801,7 +905,7 @@
             const orderNum = generateOrderNumber();
             const zhNumbers = ['第一份', '第二份', '第三份', '第四份', '第五份', '第六份', '第七份', '第八份', '第九份', '第十份'];
 
-            let msg = `訂單編號：${orderNum}\n📦 訂單內容：\n`;
+            const orderContentLines = [];
 
             for (let key in cart) {
                 if (cart[key] > 0) {
@@ -810,14 +914,14 @@
                         cat === 'large' ? origName + ' 大' :
                             cat === 'combo' ? '套餐 ' + origName : origName;
 
-                    msg += `\n${cart[key]}份 x ${displayName}`;
+                    orderContentLines.push(`${cart[key]}份 x ${displayName}`);
 
                     if (cat === 'combo') {
                         let drinks = comboDrinkData[origName] || [];
                         let drinkCounts = {};
                         drinks.slice(0, cart[key]).forEach(d => { drinkCounts[d] = (drinkCounts[d] || 0) + 1; });
                         let drinkStr = Object.entries(drinkCounts).map(([n, c]) => `${n} x${c}`).join('、');
-                        if (drinkStr) msg += `\n   ↳ 飲料：${drinkStr}`;
+                        if (drinkStr) orderContentLines.push(`   ↳ 飲料：${drinkStr}`);
                     }
 
                     if (customizeData[key]) {
@@ -828,17 +932,17 @@
                             if (c.note && c.note.trim() !== '') parts.push(c.note.trim());
                             if (parts.length > 0) {
                                 let zhIdx = zhNumbers[i] || `第 ${i + 1} 份`;
-                                msg += `\n   ↳ ${zhIdx}: ${parts.join(', ')}`;
+                                orderContentLines.push(`   ↳ ${zhIdx}: ${parts.join(', ')}`);
                             }
                         });
                     }
                 }
             }
 
-            msg += `\n\n🕒 取餐時間：${dateInput} ${timeInput}`;
             const mainNote = document.getElementById('note').value;
-            if (mainNote) msg += `\n📝 總備註：${mainNote}`;
-            msg += `\n💰 總金額：$${currentTotal}`;
+            const cleanContent = orderContentLines.join('\n');
+            const pickupTime = `${dateInput} ${timeInput}`;
+            const customerFlexMsg = buildCustomerOrderFlex(orderNum, orderContentLines, pickupTime, currentTotal, mainNote);
 
             if (!liff.isLoggedIn()) {
                 localStorage.setItem('benmi_cart_save', JSON.stringify({ cart, customizeData, comboDrinkData }));
@@ -849,11 +953,11 @@
             try {
                 const profile = await liff.getProfile();
                 const orderPayload = {
-                    key: orderNum, // Đồng bộ mã đơn hàng
+                    key: orderNum,
                     userId: profile.userId,
                     customer: profile.displayName,
-                    time: `${dateInput} ${timeInput}`,
-                    content: msg.split('\n\n🕒')[0].replace('[Benmi 點餐]\n', ''),
+                    time: pickupTime,
+                    content: cleanContent,
                     total: currentTotal,
                     note: mainNote,
                     liffFallback: false
@@ -869,12 +973,12 @@
                     throw new Error(`API returned status ${res.status}`);
                 }
 
-                // Gửi tin nhắn lưu vết (Chờ hoàn tất trước khi báo cho khách & đóng ứng dụng)
+                // Gửi Flex Message trực tiếp từ tài khoản của khách hàng
                 if (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient() && liff.isApiAvailable && liff.isApiAvailable('sendMessages')) {
                     try {
-                        await liff.sendMessages([{ type: 'text', text: '✅ [已收到] ' + msg }]);
+                        await liff.sendMessages([customerFlexMsg]);
                     } catch (e) {
-                        console.error("liff.sendMessages failed:", e);
+                        console.error("liff.sendMessages flex failed:", e);
                     }
                 }
 
@@ -890,22 +994,22 @@
                 
                 // Fallback: Thử gửi tin nhắn LINE trước để kích hoạt Webhook
                 try {
-                    await liff.sendMessages([{ type: 'text', text: msg }]);
+                    await liff.sendMessages([customerFlexMsg]);
                     customAlert('<div style="margin-bottom: 15px;"><svg width="64" height="64" viewBox="0 0 24 24" fill="#10b981"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></div><div style="font-size: 18px; line-height: 1.4; color: #111;">訂單已送出，店員會馬上跟您確認，請稍等</div>', () => {
                         liff.closeWindow();
                     });
                 } catch (liffErr) {
                     console.error("LIFF sendMessages fallback also failed:", liffErr);
                     
-                    // Fallback cuối cùng: Thử gọi lại API trực tiếp với cờ liffFallback = true để gửi Push Message
+                    // Fallback cuối cùng: Thử gọi lại API trực tiếp với cờ liffFallback = true
                     try {
                         const profile = await liff.getProfile();
                         const orderPayload = {
                             key: orderNum,
                             userId: profile.userId,
                             customer: profile.displayName,
-                            time: `${dateInput} ${timeInput}`,
-                            content: msg.split('\n\n🕒')[0].replace('[Benmi 點餐]\n', ''),
+                            time: pickupTime,
+                            content: cleanContent,
                             total: currentTotal,
                             note: mainNote,
                             liffFallback: true
@@ -928,12 +1032,13 @@
                     if (liffErr.code === "400" || String(liffErr).includes("liffId")) {
                         customAlert('⚠️ 傳送失敗：Vui lòng dùng ứng dụng LINE trên điện thoại để đặt hàng, hoặc báo nhân viên xử lý lỗi.');
                     } else {
-                        customAlert('傳送失敗，請重試 (Lỗi LIFF)');
+                        customAlert('⚠️ 系統傳送異常，請告知店員您的訂單內容：<br><br>' + cleanContent.replace(/\n/g, '<br>'));
                     }
-                    isSubmitting = false;
-                    submitBtn.disabled = false;
-                    submitBtn.innerText = '確認下單';
                 }
+            } finally {
+                isSubmitting = false;
+                submitBtn.disabled = false;
+                submitBtn.innerText = '送出訂單';
             }
         }
 

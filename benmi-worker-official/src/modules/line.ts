@@ -619,6 +619,15 @@ export async function handleLineWebhook(
 
     if (event.type !== "message") continue;
     const message = event.message || {};
+
+    // Handle user Flex message sent via LIFF sendMessages
+    if (message.type === "flex") {
+      if (replyToken) {
+        await replyText(replyToken, "✅ 店家已收到您的訂單！店員將儘速為您確認，請稍候 🙏", env, tenantCtx);
+      }
+      continue;
+    }
+
     if (message.type !== "text") continue;
 
     const userText = message.text || "";
@@ -736,16 +745,13 @@ export async function handleLineWebhook(
 
       await saveOrder(env, orderData, tenantId);
 
-      // Push Flex message with order details and progress check button to customer
-      try {
-        const flexBubble = buildOrderFlexMessage(orderData, tenantCtx);
-        if (replyToken) {
-          await replyLineFlexMessage(replyToken, `🧾 訂單明細 #${orderKey}`, flexBubble, env, tenantCtx);
-        } else {
-          await pushLineFlexMessage(userId, `🧾 訂單明細 #${orderKey}`, flexBubble, env, tenantCtx);
+      // Send short free reply confirmation to customer
+      if (replyToken) {
+        try {
+          await replyText(replyToken, `✅ 店家已收到您的訂單 #${orderKey}！店員將儘速為您確認，請稍候 🙏`, env, tenantCtx);
+        } catch (replyErr) {
+          console.error(`[${brandName}] Reply confirmation error:`, replyErr);
         }
-      } catch (flexErr) {
-        console.error(`[${brandName}] Push flex order receipt error:`, flexErr);
       }
 
       // Fetch real LINE name in background and update customer_name safely in DB

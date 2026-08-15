@@ -61,23 +61,6 @@ export async function createOrder(
 
   await saveOrder(env, order, tenantId);
 
-  // Push Flex message with order details and progress check button to customer
-  if (order.userId) {
-    const sendFlex = async () => {
-      try {
-        const flex = buildOrderFlexMessage(order, tenantCtx);
-        await pushLineFlexMessage(order.userId, `🧾 訂單明細 #${order.key}`, flex, env, tenantCtx);
-      } catch (e) {
-        console.error(`[createOrder] Push flex error:`, e);
-      }
-    };
-    if (ctx && ctx.waitUntil) {
-      ctx.waitUntil(sendFlex());
-    } else {
-      sendFlex();
-    }
-  }
-
   return json({ success: true, key: orderKey });
 }
 
