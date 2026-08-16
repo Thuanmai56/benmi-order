@@ -168,7 +168,7 @@
         </div>
     </div>
 
-    <div id="custom-alert" class="custom-alert-overlay">
+    <div id="custom-alert" class="custom-alert-overlay" onclick="if(event.target === this) closeCustomAlert()">
         <div class="custom-alert-box">
             <div class="custom-alert-header">提醒</div>
             <div id="custom-alert-message" class="custom-alert-body"></div>
@@ -290,14 +290,20 @@
         }, observerOptions);
 
         // --- ALERT & LIGHTBOX ---
-        function customAlert(msg, callback = null) {
+        function customAlert(msg, callback = null, title = '提醒') {
+            const titleEl = document.querySelector('#custom-alert .custom-alert-header');
+            if (titleEl) titleEl.innerText = title;
             document.getElementById('custom-alert-message').innerHTML = msg;
             document.getElementById('custom-alert').style.display = 'flex';
-            window.alertCallback = callback;
+            alertCallback = callback;
         }
         function closeCustomAlert() {
             document.getElementById('custom-alert').style.display = 'none';
-            if (alertCallback) { alertCallback(); alertCallback = null; }
+            if (typeof alertCallback === 'function') {
+                const cb = alertCallback;
+                alertCallback = null;
+                cb();
+            }
         }
 
         function openImageLightbox(src) {
@@ -824,8 +830,10 @@
             isSubmitting = true;
             let orderSubmittedSuccessfully = false;
             const submitBtn = document.getElementById('btn-submit');
-            submitBtn.disabled = true;
-            submitBtn.innerText = '處理中...';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = '處理中...';
+            }
 
             const currentTotal = updateTotal();
             const orderNum = generateOrderNumber();
@@ -876,6 +884,45 @@
                 return;
             }
 
+            const showSuccessAndExit = () => {
+                const successHtml = `
+                    <div style="margin-bottom: 16px;">
+                        <div style="width: 60px; height: 60px; margin: 0 auto; background: #ecfdf5; border: 2px solid #a7f3d0; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                        </div>
+                    </div>
+                    <div style="font-size: 19px; font-weight: 900; color: #111827; margin-bottom: 6px;">訂單已送出成功！</div>
+                    <div style="font-size: 14px; line-height: 1.5; color: #4b5563;">店家已收到您的訂單，店員會馬上為您確認，請稍候 🙏<br><span style="font-size: 12px; color: #9ca3af;">Đơn hàng đã được gửi thành công.</span></div>
+                `;
+                customAlert(successHtml, () => {
+                    if (typeof liff !== 'undefined' && liff.closeWindow) {
+                        try {
+                            liff.closeWindow();
+                        } catch (e) {
+                            console.warn("liff.closeWindow failed:", e);
+                        }
+                    }
+                    try {
+                        window.close();
+                    } catch (e) {}
+                }, '下單成功');
+            };
+
+            const markOrderCompleted = () => {
+                orderSubmittedSuccessfully = true;
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerText = '訂單已送出';
+                }
+                cart = {};
+                customizeData = {};
+                comboDrinkData = {};
+                updateTotal();
+                localStorage.removeItem('benmi_cart_save');
+            };
+
             try {
                 const profile = await liff.getProfile();
                 const orderPayload = {
@@ -899,9 +946,7 @@
                     throw new Error(`API returned status ${res.status}`);
                 }
 
-                orderSubmittedSuccessfully = true;
-                submitBtn.disabled = true;
-                submitBtn.innerText = '訂單已送出';
+                markOrderCompleted();
 
                 // Gửi tin nhắn text từ phía khách hàng để kích hoạt Webhook trả lời thẻ tiến độ
                 if (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient() && liff.isApiAvailable && liff.isApiAvailable('sendMessages')) {
@@ -912,22 +957,8 @@
                     }
                 }
 
-                // Gửi thành công: Báo cho khách và đóng cửa sổ khi khách bấm xác nhận
-                customAlert(`
-                    <div style="margin-bottom: 16px;">
-                        <div style="width: 60px; height: 60px; margin: 0 auto; background: #ecfdf5; border: 2px solid #a7f3d0; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="20 6 9 17 4 12"></polyline>
-                            </svg>
-                        </div>
-                    </div>
-                    <div style="font-size: 19px; font-weight: 900; color: #111827; margin-bottom: 6px;">訂單已送出成功！</div>
-                    <div style="font-size: 14px; line-height: 1.5; color: #4b5563;">店家已收到您的訂單，店員會馬上為您確認，請稍候 🙏<br><span style="font-size: 12px; color: #9ca3af;">Đơn hàng đã được gửi thành công.</span></div>
-                `, () => {
-                    if (typeof liff !== 'undefined' && liff.closeWindow) {
-                        liff.closeWindow();
-                    }
-                });
+                // Gửi thành công: Báo cho khách và đóng cửa sổ khi khách bấm xác nhận / tắt popup
+                showSuccessAndExit();
 
             } catch (err) {
                 console.warn("Primary API flow failed, falling back to LINE message flow:", err);
@@ -935,24 +966,8 @@
                 // Fallback: Thử gửi tin nhắn LINE trước để kích hoạt Webhook
                 try {
                     await liff.sendMessages([{ type: 'text', text: msg }]);
-                    orderSubmittedSuccessfully = true;
-                    submitBtn.disabled = true;
-                    submitBtn.innerText = '訂單已送出';
-                    customAlert(`
-                        <div style="margin-bottom: 16px;">
-                            <div style="width: 60px; height: 60px; margin: 0 auto; background: #ecfdf5; border: 2px solid #a7f3d0; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="20 6 9 17 4 12"></polyline>
-                                </svg>
-                            </div>
-                        </div>
-                        <div style="font-size: 19px; font-weight: 900; color: #111827; margin-bottom: 6px;">訂單已送出成功！</div>
-                        <div style="font-size: 14px; line-height: 1.5; color: #4b5563;">店家已收到您的訂單，店員會馬上為您確認，請稍候 🙏<br><span style="font-size: 12px; color: #9ca3af;">Đơn hàng đã được gửi thành công.</span></div>
-                    `, () => {
-                        if (typeof liff !== 'undefined' && liff.closeWindow) {
-                            liff.closeWindow();
-                        }
-                    });
+                    markOrderCompleted();
+                    showSuccessAndExit();
                 } catch (liffErr) {
                     console.error("LIFF sendMessages fallback also failed:", liffErr);
                     
@@ -975,24 +990,8 @@
                             body: JSON.stringify(orderPayload)
                         });
                         if (res.ok) {
-                            orderSubmittedSuccessfully = true;
-                            submitBtn.disabled = true;
-                            submitBtn.innerText = '訂單已送出';
-                            customAlert(`
-                                <div style="margin-bottom: 16px;">
-                                    <div style="width: 60px; height: 60px; margin: 0 auto; background: #ecfdf5; border: 2px solid #a7f3d0; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                                        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                            <polyline points="20 6 9 17 4 12"></polyline>
-                                        </svg>
-                                    </div>
-                                </div>
-                                <div style="font-size: 19px; font-weight: 900; color: #111827; margin-bottom: 6px;">訂單已送出成功！</div>
-                                <div style="font-size: 14px; line-height: 1.5; color: #4b5563;">店家已收到您的訂單，店員會馬上為您確認，請稍候 🙏<br><span style="font-size: 12px; color: #9ca3af;">Đơn hàng đã được gửi thành công.</span></div>
-                            `, () => {
-                                if (typeof liff !== 'undefined' && liff.closeWindow) {
-                                    liff.closeWindow();
-                                }
-                            });
+                            markOrderCompleted();
+                            showSuccessAndExit();
                             return;
                         }
                     } catch (retryErr) {
@@ -1008,11 +1007,16 @@
             } finally {
                 if (!orderSubmittedSuccessfully) {
                     isSubmitting = false;
-                    submitBtn.disabled = false;
-                    submitBtn.innerText = '送出訂單';
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerText = '確認下單';
+                    }
                 } else {
-                    submitBtn.disabled = true;
-                    submitBtn.innerText = '訂單已送出';
+                    isSubmitting = true;
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.innerText = '訂單已送出';
+                    }
                 }
             }
         }
@@ -1085,7 +1089,7 @@
                 }
                 if (pausedBanner) pausedBanner.style.display = 'none';
                 if (busyBanner) busyBanner.style.display = 'flex';
-                if (submitBtn) {
+                if (submitBtn && !isSubmitting) {
                     submitBtn.disabled = false;
                     submitBtn.innerText = '確認下單';
                     submitBtn.style.background = '';
@@ -1098,7 +1102,7 @@
                 }
                 if (pausedBanner) pausedBanner.style.display = 'none';
                 if (busyBanner) busyBanner.style.display = 'none';
-                if (submitBtn) {
+                if (submitBtn && !isSubmitting) {
                     submitBtn.disabled = false;
                     submitBtn.innerText = '確認下單';
                     submitBtn.style.background = '';
