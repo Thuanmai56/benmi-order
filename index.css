@@ -620,30 +620,18 @@ select:focus {
     }
 }
 
-/* BLAB Branding & B2B Leads */
-.powered-by-blab-badge {
-    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.powered-by-blab-badge:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(6, 199, 85, 0.3), 0 4px 14px rgba(15, 23, 42, 0.4);
-    border-color: rgba(6, 199, 85, 0.4);
-}
-
-.powered-by-blab-badge:active {
-    transform: scale(0.98);
-}
-
-.b2b-lead-btn {
+/* Subtle & Professional BLAB Footer Credit */
+.powered-by-blab-link {
     transition: all 0.2s ease;
 }
 
-.b2b-lead-btn:hover {
+.powered-by-blab-link:hover {
+    background: rgba(0, 0, 0, 0.06);
+    border-color: rgba(0, 0, 0, 0.12);
+    color: #1e293b;
     transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(6, 199, 85, 0.45);
 }
 
-.b2b-lead-btn:active {
-    transform: scale(0.97);
+.powered-by-blab-link:active {
+    transform: scale(0.98);
 }
