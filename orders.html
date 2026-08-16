@@ -72,7 +72,6 @@
       <div class="tabs">
         <button class="tab active" id="tab-live" onclick="switchTab('live')">即時</button>
         <button class="tab" id="tab-history" onclick="switchTab('history')">歷史</button>
-        <button class="mini-btn" id="tab-sound" onclick="testSound()">測試音效</button>
         <button class="mini-btn" id="tab-menu" onclick="openMenuSettings()">菜單</button>
         <button class="mini-btn" id="tab-settings" onclick="openSettings()">設定</button>
         <!-- Custom Language Dropdown -->
@@ -643,6 +642,29 @@
     </div>
   </div>
 
+  <!-- Start Shift / Audio Unlock Modal -->
+  <div id="startShiftModal" class="modal" style="display: none; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(8px); z-index: 9999;">
+    <div class="modal-content" style="max-width: 440px; text-align: center; padding: 28px 24px; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.25);">
+      <div style="width: 64px; height: 64px; margin: 0 auto 16px; background: #ecfdf5; border: 2px solid #a7f3d0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px;">
+        🔔
+      </div>
+      
+      <h2 style="font-size: 22px; font-weight: 900; color: #111827; margin: 0 0 8px;" id="i18n-start-shift-title">
+        開始接收訂單
+      </h2>
+      
+      <p style="font-size: 15px; color: #4b5563; line-height: 1.6; margin: 0 0 24px;" id="i18n-start-shift-desc">
+        點擊下方按鈕以啟動即時訂單提示音與工作階段，確保第一時間收到顧客點餐通知。
+      </p>
+
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <button type="button" class="btn btn-primary btn-block" style="padding: 14px 20px; font-size: 16px; font-weight: 800; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35); cursor: pointer;" onclick="startOrderShift()" id="i18n-btn-start-shift">
+          <span>🚀</span> <span id="i18n-btn-start-shift-text">開始接單 (啟用提示音)</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const WORKER_BASE = (window.location.hostname.includes("staging") || window.location.hostname.includes("test") || window.location.hostname.includes("localhost") || window.location.hostname.includes("127.0.0.1"))
       ? "https://platform-worker-staging.thuanmnc.workers.dev"
@@ -685,6 +707,9 @@
         btnModalBlabLine: "開啟 LINE 支援",
         btnModalBlabExport: "聯絡 BLAB",
         btnModalBlabClose: "我知道了",
+        startShiftTitle: "開始接收訂單",
+        startShiftDesc: "點擊下方按鈕以啟動即時訂單提示音與工作階段，確保第一時間收到顧客點餐通知。",
+        btnStartShift: "開始接單 (啟用提示音)",
         // Badges & Buttons
         badgeNew: "新訂單",
         badgeDoing: "製作中",
@@ -818,6 +843,9 @@
         btnModalBlabLine: "Mở LINE hỗ trợ",
         btnModalBlabExport: "Liên hệ BLAB",
         btnModalBlabClose: "Đã hiểu",
+        startShiftTitle: "Bắt đầu nhận đơn",
+        startShiftDesc: "Nhấn nút bên dưới để kích hoạt chuông báo và sẵn sàng nhận đơn hàng mới từ khách hàng.",
+        btnStartShift: "Bắt đầu nhận đơn (Bật chuông)",
         // Badges & Buttons
         badgeNew: "MỚI",
         badgeDoing: "ĐANG LÀM",
@@ -1019,6 +1047,14 @@
       if (btnMBlabExp) btnMBlabExp.innerText = dict.btnModalBlabExport;
       const btnMBlabCls = document.getElementById("i18n-btn-modal-blab-close");
       if (btnMBlabCls) btnMBlabCls.innerText = dict.btnModalBlabClose;
+
+      // Start Shift Modal
+      const startShiftT = document.getElementById("i18n-start-shift-title");
+      if (startShiftT) startShiftT.innerText = dict.startShiftTitle;
+      const startShiftD = document.getElementById("i18n-start-shift-desc");
+      if (startShiftD) startShiftD.innerText = dict.startShiftDesc;
+      const btnStartShiftText = document.getElementById("i18n-btn-start-shift-text");
+      if (btnStartShiftText) btnStartShiftText.innerText = dict.btnStartShift;
 
       // Alert modal
       const alertSub = document.getElementById("new-alert-sub");
@@ -2129,6 +2165,37 @@
       }
     }
 
+    function getTodayDateString() {
+      const now = new Date();
+      const tw = new Date(now.getTime() + 8 * 3600000);
+      return tw.toISOString().split('T')[0];
+    }
+
+    async function startOrderShift() {
+      await unlockSound();
+      playAlarmCycle();
+      const today = getTodayDateString();
+      sessionStorage.setItem('pos_session_started', 'true');
+      sessionStorage.setItem('pos_session_date', today);
+      const modal = document.getElementById("startShiftModal");
+      if (modal) modal.style.display = "none";
+    }
+
+    function checkInitialSessionModal() {
+      const isStarted = sessionStorage.getItem('pos_session_started');
+      const sessionDate = sessionStorage.getItem('pos_session_date');
+      const today = getTodayDateString();
+
+      if (isStarted === 'true' && sessionDate === today) {
+        soundUnlocked = true;
+        const modal = document.getElementById("startShiftModal");
+        if (modal) modal.style.display = "none";
+      } else {
+        const modal = document.getElementById("startShiftModal");
+        if (modal) modal.style.display = "flex";
+      }
+    }
+
     async function testSound() {
       await unlockSound();
       await playNewOrderSound();
@@ -2868,7 +2935,11 @@
     }
 
     function closeModal() {
-      document.querySelectorAll(".modal").forEach(m => m.style.display = "none");
+      document.querySelectorAll(".modal").forEach(m => {
+        if (m.id !== "startShiftModal") {
+          m.style.display = "none";
+        }
+      });
       reviewingOrder = null;
       currentOrderKey = null;
     }
@@ -2886,6 +2957,7 @@
     applyLanguageToDOM();
     fetchOrders();
     loadStoreStatus();
+    checkInitialSessionModal();
   </script>
 </body>
 

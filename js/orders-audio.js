@@ -77,6 +77,37 @@ async function playNewOrderSound() {
   }
 }
 
+function getTodayDateString() {
+  const now = new Date();
+  const tw = new Date(now.getTime() + 8 * 3600000);
+  return tw.toISOString().split('T')[0];
+}
+
+async function startOrderShift() {
+  await unlockSound();
+  playAlarmCycle();
+  const today = getTodayDateString();
+  sessionStorage.setItem('pos_session_started', 'true');
+  sessionStorage.setItem('pos_session_date', today);
+  const modal = document.getElementById("startShiftModal");
+  if (modal) modal.style.display = "none";
+}
+
+function checkInitialSessionModal() {
+  const isStarted = sessionStorage.getItem('pos_session_started');
+  const sessionDate = sessionStorage.getItem('pos_session_date');
+  const today = getTodayDateString();
+
+  if (isStarted === 'true' && sessionDate === today) {
+    soundUnlocked = true;
+    const modal = document.getElementById("startShiftModal");
+    if (modal) modal.style.display = "none";
+  } else {
+    const modal = document.getElementById("startShiftModal");
+    if (modal) modal.style.display = "flex";
+  }
+}
+
 async function testSound() {
   await unlockSound();
   await playNewOrderSound();

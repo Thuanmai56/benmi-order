@@ -137,7 +137,6 @@ export async function updateOrder(
           "DELETE FROM pending_actions WHERE tenant_id = ? AND user_id = ? AND order_key = ?"
         ).bind(tenantId, order.userId, order.key).run();
       } catch { }
-      await pushLineMessage(order.userId, `${brandName} 已收到您的訂單 #${order.key}，謝謝您！`, env, tenantCtx);
     }
     return json({ success: true });
   }
