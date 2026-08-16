@@ -178,7 +178,7 @@ async function updateStatus(key, status, extra = {}, btn = null) {
   }
 
   try {
-    const tenantParam = currentTenantId ? `?tenant_id=${encodeURIComponent(currentTenantId)}` : `?tenant_id=${getTenantIdFromUrl()}`;
+    const tenantParam = `?tenant_id=${encodeURIComponent(getTenantIdFromUrl())}`;
     const response = await fetch(`${WORKER_BASE}/api/update${tenantParam}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
