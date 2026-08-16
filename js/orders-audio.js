@@ -9,12 +9,14 @@ let alarmTimeoutIds = [];
 
 // Unlock audio on initial user gestures (Chrome Web Audio autoplay policy)
 async function unlockSound() {
-  soundUnlocked = true;
   try {
     const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
     if (!AudioContextCtor) return;
     if (!audioCtx) audioCtx = new AudioContextCtor();
     if (audioCtx.state === "suspended") await audioCtx.resume();
+    if (audioCtx.state === "running") {
+      soundUnlocked = true;
+    }
   } catch (e) {
     console.error("unlockSound failed:", e);
   }
@@ -60,8 +62,15 @@ function playAlarmCycle() {
   alarmTimeoutIds.push(setTimeout(() => playTone(880, 320, "square", 0.24), 680));
 }
 
-function startContinuousAlarm() {
-  if (!soundUnlocked) return;
+async function startContinuousAlarm() {
+  if (!soundUnlocked) {
+    // Attempt to resume if possible
+    try {
+      if (audioCtx && audioCtx.state === "suspended") await audioCtx.resume();
+      if (audioCtx && audioCtx.state === "running") soundUnlocked = true;
+    } catch (e) {}
+  }
+  if (!soundUnlocked || !audioCtx || audioCtx.state !== "running") return;
   if (alarmIntervalId) return;
   playAlarmCycle();
   alarmIntervalId = setInterval(() => {
@@ -70,12 +79,12 @@ function startContinuousAlarm() {
 }
 
 async function playNewOrderSound() {
-  if (!soundUnlocked) return;
   try {
     const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
     if (!AudioContextCtor) return;
     if (!audioCtx) audioCtx = new AudioContextCtor();
     if (audioCtx.state === "suspended") await audioCtx.resume();
+    if (audioCtx.state === "running") soundUnlocked = true;
     playAlarmCycle();
   } catch (e) {
     console.error(e);
@@ -104,7 +113,8 @@ function checkInitialSessionModal() {
   const today = getTodayDateString();
 
   if (isStarted === 'true' && sessionDate === today) {
-    soundUnlocked = true;
+    // Session restored from previous load; do not assume sound is unlocked
+    // AudioContext will be unlocked automatically on first user gesture (click/touch)
     const modal = document.getElementById("startShiftModal");
     if (modal) modal.style.display = "none";
   } else {
