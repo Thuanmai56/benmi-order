@@ -1,8 +1,19 @@
-// --- MENU EDITOR LOGIC (ALing-POS style, Benmi fixed categories) ---
+// ==========================================
+// Benmi POS - Module: Menu Editor & Stock
+// ==========================================
+
 let currentMenuData = null;   // Array form for editor
 let rawMenuData = null;       // Original object form from API
 let activeCategoryIndex = -1;
 let isMenuDirty = false;
+
+const BENMI_CATS = [
+  { id: "small", label: "小麵包 (Bánh mì nhỏ)" },
+  { id: "large", label: "大麵包 (Bánh mì lớn)" },
+  { id: "combo", label: "套餐 (Combo + Nước)" },
+  { id: "drinks", label: "單點飲料 (Đồ uống)" },
+  { id: "topping", label: "加料 (Topping)" }
+];
 
 function markMenuDirty() {
   isMenuDirty = true;
@@ -22,20 +33,18 @@ function clearMenuDirty() {
   }
 }
 
-const BENMI_CATS = [
-  { id: "small", label: "小麵包 (Bánh mì nhỏ)" },
-  { id: "large", label: "大麵包 (Bánh mì lớn)" },
-  { id: "combo", label: "套餐 (Combo + Nước)" },
-  { id: "drinks", label: "單點飲料 (Đồ uống)" },
-  { id: "topping", label: "加料 (Topping)" }
-];
-
 function openMenuSettings() {
-  switchTab("menu");
+  activeTab = "menu";
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".content").forEach(c => c.style.display = "none");
+  const viewMenu = document.getElementById("view-menu");
+  if (viewMenu) viewMenu.style.display = "block";
+  if (!currentMenuData) loadMenuData();
 }
 
 async function loadMenuData() {
-  document.getElementById("menu-editor-body").innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">Đang tải menu...</div>`;
+  const bodyEl = document.getElementById("menu-editor-body");
+  if (bodyEl) bodyEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">Đang tải menu...</div>`;
   try {
     const res = await fetch(`${WORKER_BASE}/api/menu?tenant_id=${getTenantIdFromUrl()}&_t=${Date.now()}`);
     if (!res.ok) throw new Error("Failed to load");
@@ -51,8 +60,9 @@ async function loadMenuData() {
     }));
     activeCategoryIndex = -1;
     renderMenuCategories();
-    document.getElementById("menu-editor-body").innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">請先從左側選擇分類</div>`;
-    document.getElementById("menu-editor-title").innerText = "分類項目";
+    if (bodyEl) bodyEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">請先從左側選擇分類</div>`;
+    const titleEl = document.getElementById("menu-editor-title");
+    if (titleEl) titleEl.innerText = "分類項目";
   } catch (e) {
     alert("無法載入菜單資料：" + e.message);
   }
@@ -88,9 +98,11 @@ function renderMenuCategories() {
 function renderMenuCategoryEditor(index) {
   if (!currentMenuData || !currentMenuData[index]) return;
   const cat = currentMenuData[index];
-  document.getElementById("menu-editor-title").innerText = cat.title + " (全部 " + cat.items.length + " 項)";
+  const titleEl = document.getElementById("menu-editor-title");
+  if (titleEl) titleEl.innerText = cat.title + " (全部 " + cat.items.length + " 項)";
 
   const container = document.getElementById("menu-editor-body");
+  if (!container) return;
   container.innerHTML = "";
 
   let draggedItemIndex = null;
@@ -169,17 +181,18 @@ function addNewMenuItem() {
 }
 
 function syncMenuDataFromDOM() {
+  if (!currentMenuData) return;
   document.querySelectorAll("#menu-editor-body input[data-name-cidx]").forEach(inp => {
-    const cIdx = parseInt(inp.getAttribute("data-name-cidx"));
-    const iIdx = parseInt(inp.getAttribute("data-name-iidx"));
+    const cIdx = parseInt(inp.getAttribute("data-name-cidx"), 10);
+    const iIdx = parseInt(inp.getAttribute("data-name-iidx"), 10);
     if (currentMenuData[cIdx] && currentMenuData[cIdx].items[iIdx]) {
       currentMenuData[cIdx].items[iIdx].name = inp.value;
     }
   });
   document.querySelectorAll("#menu-editor-body input[data-cidx]").forEach(inp => {
-    const cIdx = parseInt(inp.getAttribute("data-cidx"));
-    const iIdx = parseInt(inp.getAttribute("data-iidx"));
-    const val = inp.value.trim() === "" ? null : parseInt(inp.value);
+    const cIdx = parseInt(inp.getAttribute("data-cidx"), 10);
+    const iIdx = parseInt(inp.getAttribute("data-iidx"), 10);
+    const val = inp.value.trim() === "" ? null : parseInt(inp.value, 10);
     if (currentMenuData[cIdx] && currentMenuData[cIdx].items[iIdx]) {
       currentMenuData[cIdx].items[iIdx].price = val;
     }
@@ -246,7 +259,7 @@ async function restoreDefaultMenu() {
     });
     if (!res.ok) throw new Error("API returned " + res.status);
     alert("Đã khôi phục menu gốc thành công!");
-    loadMenuData();
+    loadMenuData(); // Reload from server
   } catch (e) {
     alert("Lỗi khi khôi phục menu: " + e.message);
   }
@@ -290,6 +303,7 @@ function handleImageSelect(event) {
   reader.onload = function (e) {
     const img = new Image();
     img.onload = function () {
+      // Resize if too large
       const MAX_WIDTH = 800;
       const MAX_HEIGHT = 800;
       let width = img.width;
@@ -313,13 +327,14 @@ function handleImageSelect(event) {
       const ctx = canvas.getContext("2d");
       ctx.drawImage(img, 0, 0, width, height);
 
+      // Get base64 (webp is usually smaller)
       const dataUri = canvas.toDataURL("image/webp", 0.8);
       uploadImage(dataUri);
-    }
+    };
     img.src = e.target.result;
   };
   reader.readAsDataURL(file);
-  event.target.value = '';
+  event.target.value = ''; // reset
 }
 
 async function uploadImage(dataUri) {
@@ -366,22 +381,25 @@ let currentStockCidx = null;
 let currentStockIidx = null;
 
 function openStockModal(cIdx, iIdx) {
+  // Lưu lại các thay đổi người dùng đang nhập dở trên input
   syncMenuDataFromDOM();
 
   currentStockCidx = cIdx;
   currentStockIidx = iIdx;
-  
+
   const item = currentMenuData[cIdx].items[iIdx];
   document.getElementById("stock-modal-title").innerText = `Kho hàng: ${item.name}`;
-  
+
+  // Set values
   const statusSelect = document.getElementById("stock-status-select");
   statusSelect.value = item.isOos ? "out_of_stock" : "in_stock";
-  
+
+  // Reset duration & date
   document.getElementById("stock-duration-select").value = "today";
   document.getElementById("oos-until-date").value = "";
-  
+
   handleStockStatusChange();
-  
+
   document.getElementById("stockModal").style.display = "flex";
 }
 
@@ -406,7 +424,7 @@ function handleStockDurationChange() {
   const duration = document.getElementById("stock-duration-select").value;
   const dateContainer = document.getElementById("oos-date-container");
   const status = document.getElementById("stock-status-select").value;
-  
+
   if (status === "out_of_stock" && duration === "multiple_days") {
     dateContainer.style.display = "block";
   } else {
@@ -416,7 +434,8 @@ function handleStockDurationChange() {
 
 async function saveStockStatus() {
   if (currentStockCidx === null || currentStockIidx === null) return;
-  
+
+  // Đồng bộ dữ liệu hiện tại từ DOM
   syncMenuDataFromDOM();
 
   const categorySlug = currentMenuData[currentStockCidx].id;
@@ -424,7 +443,7 @@ async function saveStockStatus() {
   const status = document.getElementById("stock-status-select").value;
   const duration = document.getElementById("stock-duration-select").value;
   const untilDate = document.getElementById("oos-until-date").value;
-  
+
   if (status === "out_of_stock" && duration === "multiple_days" && !untilDate) {
     alert("Vui lòng chọn ngày khôi phục bán!");
     return;
@@ -450,8 +469,9 @@ async function saveStockStatus() {
       throw new Error(errData.error || "Update failed");
     }
 
+    // Cập nhật local state
     item.isOos = (status === "out_of_stock");
-    
+
     const targetCidx = currentStockCidx;
     closeStockModal();
     renderMenuCategoryEditor(targetCidx);

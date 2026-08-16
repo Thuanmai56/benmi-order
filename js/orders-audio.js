@@ -1,9 +1,13 @@
+// ==========================================
+// Benmi POS - Module: Audio & Shift Modal
+// ==========================================
+
 let soundUnlocked = false;
 let audioCtx = null;
 let alarmIntervalId = null;
 let alarmTimeoutIds = [];
 
-// Unlock audio after a user gesture (Chrome autoplay policy)
+// Unlock audio on initial user gestures (Chrome Web Audio autoplay policy)
 async function unlockSound() {
   soundUnlocked = true;
   try {
@@ -15,6 +19,7 @@ async function unlockSound() {
     console.error("unlockSound failed:", e);
   }
 }
+
 document.addEventListener("click", unlockSound, { once: true });
 document.addEventListener("touchstart", unlockSound, { once: true });
 document.addEventListener("keydown", unlockSound, { once: true });
@@ -74,6 +79,37 @@ async function playNewOrderSound() {
     playAlarmCycle();
   } catch (e) {
     console.error(e);
+  }
+}
+
+function getTodayDateString() {
+  const now = new Date();
+  const tw = new Date(now.getTime() + 8 * 3600000);
+  return tw.toISOString().split('T')[0];
+}
+
+async function startOrderShift() {
+  await unlockSound();
+  playAlarmCycle();
+  const today = getTodayDateString();
+  sessionStorage.setItem('pos_session_started', 'true');
+  sessionStorage.setItem('pos_session_date', today);
+  const modal = document.getElementById("startShiftModal");
+  if (modal) modal.style.display = "none";
+}
+
+function checkInitialSessionModal() {
+  const isStarted = sessionStorage.getItem('pos_session_started');
+  const sessionDate = sessionStorage.getItem('pos_session_date');
+  const today = getTodayDateString();
+
+  if (isStarted === 'true' && sessionDate === today) {
+    soundUnlocked = true;
+    const modal = document.getElementById("startShiftModal");
+    if (modal) modal.style.display = "none";
+  } else {
+    const modal = document.getElementById("startShiftModal");
+    if (modal) modal.style.display = "flex";
   }
 }
 

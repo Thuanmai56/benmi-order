@@ -1,4 +1,8 @@
-const WORKER_BASE = (window.location.hostname.includes("staging") || window.location.hostname.includes("localhost") || window.location.hostname.includes("127.0.0.1"))
+// ==========================================
+// Benmi POS - Module: Core & Polling Engine
+// ==========================================
+
+const WORKER_BASE = (window.location.hostname.includes("staging") || window.location.hostname.includes("test") || window.location.hostname.includes("localhost") || window.location.hostname.includes("127.0.0.1"))
   ? "https://platform-worker-staging.thuanmnc.workers.dev"
   : "https://benmi-worker-official.thuanmnc.workers.dev";
 
@@ -7,6 +11,7 @@ function getTenantIdFromUrl() {
   return params.get("tenant_id") || "benmi";
 }
 
+// Global POS State
 let latestOrders = [];
 let pendingNewOrders = [];
 let reviewingOrder = null;
@@ -15,7 +20,6 @@ let activeTab = "live";
 let newAlertSnoozeUntilMs = 0;
 let snoozedNewOrderKeys = new Set();
 let localOverrides = {};
-
 const knownOrderKeys = new Set();
 const processingKeys = new Set();
 let isFirstLoad = true;
@@ -30,19 +34,38 @@ function escapeHtml(s) {
     .replace(/'/g, "&#039;");
 }
 
-function parsePickupTimeMs(timeStr) {
-  if (!timeStr || typeof timeStr !== "string") return NaN;
-  const m = timeStr.match(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})/);
-  if (!m) return NaN;
-  const iso = `${m[1]}T${m[2]}:00`;
-  const ms = new Date(iso).getTime();
-  return Number.isNaN(ms) ? NaN : ms;
+function parsePickupTimeMs(timeStr, createdAtMs) {
+  if (!timeStr || typeof timeStr !== "string") return Number(createdAtMs) || NaN;
+  const m = timeStr.match(/(\d{4}-\d{2}-\d{2})[T\s]+(\d{1,2}):(\d{2})/);
+  if (m) {
+    const hh = m[2].padStart(2, "0");
+    const min = m[3].padStart(2, "0");
+    const iso = `${m[1]}T${hh}:${min}:00`;
+    const ms = new Date(iso).getTime();
+    if (!Number.isNaN(ms)) return ms;
+  }
+  const timeOnly = timeStr.match(/(\d{1,2}):(\d{2})/);
+  if (timeOnly) {
+    const base = createdAtMs ? new Date(createdAtMs) : new Date();
+    const yyyy = base.getFullYear();
+    const mm = String(base.getMonth() + 1).padStart(2, "0");
+    const dd = String(base.getDate()).padStart(2, "0");
+    const hh = String(parseInt(timeOnly[1], 10)).padStart(2, "0");
+    const min = String(parseInt(timeOnly[2], 10)).padStart(2, "0");
+    const iso = `${yyyy}-${mm}-${dd}T${hh}:${min}:00`;
+    const ms = new Date(iso).getTime();
+    if (!Number.isNaN(ms)) return ms;
+  }
+  return Number(createdAtMs) || NaN;
 }
 
 function sortByPickupTimeAsc(a, b) {
-  const at = parsePickupTimeMs(a?.time);
-  const bt = parsePickupTimeMs(b?.time);
-  if (Number.isNaN(at) || Number.isNaN(bt)) return (a?.createdAt || 0) - (b?.createdAt || 0);
+  const at = parsePickupTimeMs(a?.time, a?.createdAt);
+  const bt = parsePickupTimeMs(b?.time, b?.createdAt);
+  if (Number.isNaN(at) && Number.isNaN(bt)) return (a?.createdAt || 0) - (b?.createdAt || 0);
+  if (Number.isNaN(at)) return (a?.createdAt || 0) - bt;
+  if (Number.isNaN(bt)) return at - (b?.createdAt || 0);
+  if (at === bt) return (a?.createdAt || 0) - (b?.createdAt || 0);
   return at - bt;
 }
 
@@ -51,11 +74,11 @@ function formatEta(timeStr) {
   if (Number.isNaN(target)) return "-";
   const diffMs = target - Date.now();
   const diffMin = Math.round(diffMs / 60000);
-  if (diffMin <= 0) return `已到 / ${Math.abs(diffMin)} 分鐘前`;
-  if (diffMin < 60) return `剩 ${diffMin} 分鐘`;
+  if (diffMin <= 0) return t("etaArrived", { min: Math.abs(diffMin) });
+  if (diffMin < 60) return t("etaMinutes", { min: diffMin });
   const h = Math.floor(diffMin / 60);
   const m = diffMin % 60;
-  return `剩 ${h} 小時 ${m} 分`;
+  return t("etaHours", { h, m });
 }
 
 function shortItems(content) {
@@ -64,87 +87,35 @@ function shortItems(content) {
   return lines.slice(0, 6).join("\n");
 }
 
+function formatPickupTimeDisplay(timeStr) {
+  if (!timeStr) return "-";
+  return String(timeStr).replace(/\s*\([^)]*\)/g, '').trim() || "-";
+}
+
 function formatOrderTotal(order) {
-  if (!order) return "-";
-  if (typeof order.total === "number" && !Number.isNaN(order.total) && order.total > 0) {
-    return `$${order.total.toLocaleString()}`;
+  if (order?.total !== undefined && order?.total !== null && !isNaN(order.total) && Number(order.total) > 0) {
+    return `$${Number(order.total).toLocaleString()}`;
   }
-  if (order.content) {
-    const match = String(order.content).match(/💰\s*總金額：\s*\$?(\d+)/) || String(order.content).match(/\$(\d+)/);
-    if (match && match[1]) {
-      return `$${parseInt(match[1], 10).toLocaleString()}`;
+  if (order?.content) {
+    const match = String(order.content).match(/💰\s*總金額[：:]\s*\$?(\d+)/) || String(order.content).match(/Tổng\s*(?:tiền)?[：:]\s*(\d+)/i);
+    if (match) {
+      return `$${Number(match[1]).toLocaleString()}`;
     }
   }
-  if (typeof order.total === "number" && !Number.isNaN(order.total)) {
-    return `$${order.total}`;
-  }
-  return "-";
+  return order?.total !== undefined && order?.total !== null && order?.total !== "" ? `$${order.total}` : "-";
 }
 
-function formatStatusHtml(status) {
-  switch (status) {
-    case "NEW":
-      return `<span class="badge new" style="font-size: 15px; padding: 4px 10px; display: inline-block;">NEW</span>`;
-    case "ACCEPTED":
-      return `<span class="badge wait" style="font-size: 15px; padding: 4px 10px; background: #dbeafe; color: #1e40af; display: inline-block;">DOING</span>`;
-    case "DONE":
-      return `<span class="badge done" style="font-size: 15px; padding: 4px 10px; display: inline-block;">READY</span>`;
-    case "PICKED_UP":
-      return `<span class="badge done" style="font-size: 15px; padding: 4px 10px; background: #e5e7eb; color: #374151; display: inline-block;">PICKED UP</span>`;
-    case "WAITING_CUSTOMER_CHANGE":
-      return `<span class="badge wait" style="font-size: 13px; padding: 4px 8px; background: #fef3c7; color: #92400e; display: inline-block; white-space: normal; text-align: center;">Chờ đổi</span>`;
-    case "WAITING_CUSTOMER_REJECT":
-      return `<span class="badge wait" style="font-size: 13px; padding: 4px 8px; background: #fee2e2; color: #991b1b; display: inline-block; white-space: normal; text-align: center;">Chờ hủy</span>`;
-    case "REJECTED":
-      return `<span class="badge danger" style="font-size: 15px; padding: 4px 10px; background: #fee2e2; color: #991b1b; display: inline-block;">REJECTED</span>`;
-    default:
-      return `<span style="font-size: 16px; font-weight: bold;">${escapeHtml(status || "-")}</span>`;
-  }
-}
-
-function getInitialTab() {
-  const hash = window.location.hash.replace("#", "").trim();
-  const saved = localStorage.getItem("benmi_active_tab");
-  const candidate = hash || saved || "live";
-  return ["live", "history", "menu", "settings"].includes(candidate) ? candidate : "live";
-}
-
-function switchTab(tab, updateUrl = true) {
-  if (!["live", "history", "menu", "settings"].includes(tab)) tab = "live";
+function switchTab(tab) {
   activeTab = tab;
-
-  if (updateUrl) {
-    try {
-      localStorage.setItem("benmi_active_tab", tab);
-      const newUrl = `${window.location.pathname}${window.location.search}#${tab}`;
-      if (window.location.hash !== `#${tab}`) {
-        history.replaceState(null, "", newUrl);
-      }
-    } catch (e) {}
-  }
-
-  ["live", "history", "menu", "settings"].forEach(t => {
-    const navBtn = document.getElementById(`tab-${t}`);
-    if (navBtn) navBtn.classList.toggle("active", t === tab);
-    const viewEl = document.getElementById(`view-${t}`);
-    if (viewEl) viewEl.style.display = t === tab ? "block" : "none";
-  });
-
-  if (tab === "live" || tab === "history") renderAll();
-  if (tab === "menu" && typeof loadMenuData === "function" && typeof currentMenuData !== "undefined" && !currentMenuData) {
-    loadMenuData();
-  }
-  if (tab === "settings" && typeof loadOperatingHours === "function") {
-    loadOperatingHours();
-  }
+  document.getElementById("tab-live").classList.toggle("active", tab === "live");
+  document.getElementById("tab-history").classList.toggle("active", tab === "history");
+  document.getElementById("view-live").style.display = tab === "live" ? "block" : "none";
+  document.getElementById("view-history").style.display = tab === "history" ? "block" : "none";
+  document.getElementById("view-settings").style.display = "none";
+  document.getElementById("view-menu").style.display = "none";
+  if (tab === "live") renderAll();
+  if (tab === "history" && typeof loadHistorySummary === "function") loadHistorySummary();
 }
-
-window.addEventListener("hashchange", () => {
-  const tabFromHash = window.location.hash.replace("#", "").trim();
-  if (["live", "history", "menu", "settings"].includes(tabFromHash) && tabFromHash !== activeTab) {
-    switchTab(tabFromHash, false);
-  }
-});
 
 async function fetchOrders() {
   try {
@@ -155,6 +126,7 @@ async function fetchOrders() {
 
     const response = await fetch(`${WORKER_BASE}/api/orders`, { headers });
     if (response.status === 304) {
+      // No order updates since last poll
       return;
     }
     if (!response.ok) throw new Error(`fetch failed: ${response.status}`);
@@ -186,11 +158,49 @@ async function fetchOrders() {
   } catch (e) {
     console.error(e);
     const leftEl = document.getElementById("list-left");
-    if (leftEl) leftEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#d32f2f;">Không tải được: ${escapeHtml(e?.message || e)}</div>`;
+    if (leftEl) leftEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#d32f2f;">${escapeHtml(e?.message || e)}</div>`;
     const rightEl = document.getElementById("list-right");
-    if (rightEl) rightEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#d32f2f;">Không tải được</div>`;
+    if (rightEl) rightEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#d32f2f;">-</div>`;
     const histEl = document.getElementById("list-history");
-    if (histEl) histEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#d32f2f;">Không tải được</div>`;
+    if (histEl) histEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#d32f2f;">-</div>`;
+  }
+}
+
+async function updateStatus(key, status, extra = {}, btn = null) {
+  if (!key) return;
+  if (processingKeys.has(key)) return;
+  processingKeys.add(key);
+
+  const oldText = btn ? btn.innerText : "";
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = "Đang xử lý...";
+  }
+
+  try {
+    const tenantParam = currentTenantId ? `?tenant_id=${encodeURIComponent(currentTenantId)}` : `?tenant_id=${getTenantIdFromUrl()}`;
+    const response = await fetch(`${WORKER_BASE}/api/update${tenantParam}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key, status, ...extra })
+    });
+    if (!response.ok) throw new Error(`update failed: ${response.status}`);
+
+    // Apply local override immediately for responsiveness
+    localOverrides[key] = { status, time: Date.now() };
+    renderAll();
+
+    // Keep in sync with server
+    await fetchOrders();
+  } catch (e) {
+    console.error(e);
+    alert("處理失敗，請稍後再試。");
+  } finally {
+    processingKeys.delete(key);
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = oldText;
+    }
   }
 }
 
@@ -204,7 +214,6 @@ function renderAll() {
     if (override && (now - override.time < 15000)) {
       return { ...o, status: override.status };
     }
-    // Cleanup old overrides
     if (override && (now - override.time >= 15000)) {
       delete localOverrides[o.key];
     }
@@ -226,15 +235,43 @@ function renderAll() {
     .slice()
     .sort((a, b) => (b?.createdAt || 0) - (a?.createdAt || 0));
 
-  const countLeft = document.getElementById("count-left");
-  if (countLeft) countLeft.innerText = String(leftOrders.length);
-  const countRight = document.getElementById("count-right");
-  if (countRight) countRight.innerText = String(rightOrders.length);
+  const cLeft = document.getElementById("count-left");
+  if (cLeft) cLeft.innerText = String(leftOrders.length);
+  const cRight = document.getElementById("count-right");
+  if (cRight) cRight.innerText = String(rightOrders.length);
 
   if (activeTab === "live") {
     if (typeof renderListLeft === "function") renderListLeft(leftOrders);
     if (typeof renderListRight === "function") renderListRight(rightOrders);
   } else if (activeTab === "history") {
-    if (typeof renderHistory === "function") renderHistory(historyOrders);
+    if (typeof renderHistory === "function") renderHistory();
   }
 }
+
+function copyToClipboard(text, msgZh, msgVi) {
+  navigator.clipboard.writeText(text).then(() => {
+    alert(currentLang === 'vi' ? msgVi : msgZh);
+  }).catch(() => {
+    alert(text);
+  });
+}
+
+function closeModal() {
+  document.querySelectorAll(".modal").forEach(m => {
+    if (m.id !== "startShiftModal") {
+      m.style.display = "none";
+    }
+  });
+  reviewingOrder = null;
+  currentOrderKey = null;
+}
+
+// 1.5s Polling loop for active order updates
+setInterval(() => {
+  if (activeTab === "live" || activeTab === "history") fetchOrders();
+}, 1500);
+
+// Dynamic 10s timer to automatically refresh ETA time countdowns
+setInterval(() => {
+  if (activeTab === "live" || activeTab === "history") renderAll();
+}, 10000);

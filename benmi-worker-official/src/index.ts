@@ -1,7 +1,7 @@
 import { Env } from './types/env';
 import { corsHeaders, json } from './utils/http';
 import { handleLineWebhook } from './modules/line';
-import { createOrder, updateOrder, getOrders, getWaitingCount, handleOrdersMigration } from './modules/orders';
+import { createOrder, updateOrder, getOrders, getWaitingCount, getHistorySummary, getOrdersByDate, getHistoryAll, handleOrdersMigration } from './modules/orders';
 import { getConfig, updateConfig } from './modules/config';
 import { getMenu, updateMenu, updateStockStatus, getTenantId } from './modules/menu';
 import { handleAuth, handleAuthChange, handleCreateTempLink, handleVerifyTempLink } from './modules/auth';
@@ -53,6 +53,9 @@ export default {
     if (request.method === "POST" && path === "/api/update") return updateOrder(request, env, ctx, tenantCtx);
     if (request.method === "GET" && path === "/api/orders/waiting-count") return getWaitingCount(request, env);
     if (request.method === "GET" && path === "/api/orders") return getOrders(request, env);
+    if (request.method === "GET" && path === "/api/orders/history-summary") return getHistorySummary(request, env);
+    if (request.method === "GET" && path === "/api/orders/by-date") return getOrdersByDate(request, env);
+    if (request.method === "GET" && path === "/api/orders/history-all") return getHistoryAll(request, env);
     if (request.method === "GET" && path === "/api/config") return getConfig(request, env, tenantCtx);
     if (request.method === "POST" && path === "/api/config") return updateConfig(request, env, tenantCtx);
     if (request.method === "GET" && path === "/api/menu") return getMenu(request, env);

@@ -1,54 +1,6 @@
-function updateNewAlert() {
-  const count = pendingNewOrders.length;
-  const alertEl = document.getElementById("new-alert");
-  const titleEl = document.getElementById("new-alert-title");
-  if (!alertEl || !titleEl) return;
-
-  if (count <= 0) {
-    alertEl.style.display = "none";
-    newAlertSnoozeUntilMs = 0;
-    snoozedNewOrderKeys = new Set();
-    if (typeof stopContinuousAlarm === "function") stopContinuousAlarm();
-    return;
-  }
-
-  const reviewModal = document.getElementById("reviewModal");
-  const changeModal = document.getElementById("changeModal");
-  const rejectModal = document.getElementById("rejectModal");
-
-  const isReviewing =
-    (reviewModal && reviewModal.style.display === "flex") ||
-    (changeModal && changeModal.style.display === "flex") ||
-    (rejectModal && rejectModal.style.display === "flex");
-
-  if (Date.now() < newAlertSnoozeUntilMs || isReviewing) {
-    const hasBrandNew = pendingNewOrders.some(o => o?.key && !snoozedNewOrderKeys.has(o.key));
-    if (!hasBrandNew) {
-      alertEl.style.display = "none";
-      if (typeof stopContinuousAlarm === "function") stopContinuousAlarm();
-      return;
-    }
-  }
-  titleEl.innerText = `${count} 單 新訂單`;
-  alertEl.style.display = "flex";
-  if (typeof startContinuousAlarm === "function") startContinuousAlarm();
-}
-
-function dismissNewAlert() {
-  newAlertSnoozeUntilMs = Date.now() + 30_000;
-  snoozedNewOrderKeys = new Set(pendingNewOrders.map(o => o?.key).filter(Boolean));
-  const alertEl = document.getElementById("new-alert");
-  if (alertEl) alertEl.style.display = "none";
-  if (typeof stopContinuousAlarm === "function") stopContinuousAlarm();
-}
-
-function reviewNextNewOrder() {
-  if (pendingNewOrders.length <= 0) {
-    dismissNewAlert();
-    return;
-  }
-  openReview(pendingNewOrders[0].key);
-}
+// ==========================================
+// Benmi POS - Module: Modals & Change/Reject
+// ==========================================
 
 function openReview(orderKey) {
   const order = (latestOrders || []).find(o => o && o.key === orderKey);
@@ -59,14 +11,20 @@ function openReview(orderKey) {
     dismissNewAlert();
   }
 
-  document.getElementById("review-order-key").innerText = order.key || "-";
-  document.getElementById("review-customer").innerText = order.customer || "-";
-  document.getElementById("review-pickup").innerText = order.time || "-";
-  document.getElementById("review-eta").innerText = formatEta(order.time);
-  document.getElementById("review-status").innerHTML = formatStatusHtml(order.status);
-  const totalEl = document.getElementById("review-total");
-  if (totalEl) totalEl.innerText = formatOrderTotal(order);
-  document.getElementById("review-content").innerHTML = formatContentHtml(order);
+  const elKey = document.getElementById("review-order-key");
+  if (elKey) elKey.innerText = order.key || "-";
+  const elCust = document.getElementById("review-customer");
+  if (elCust) elCust.innerText = order.customer || "-";
+  const elPick = document.getElementById("review-pickup");
+  if (elPick) elPick.innerText = formatPickupTimeDisplay(order.time);
+  const elEta = document.getElementById("review-eta");
+  if (elEta) elEta.innerText = formatEta(order.time);
+  const elTot = document.getElementById("review-total");
+  if (elTot) elTot.innerText = formatOrderTotal(order);
+  const elSt = document.getElementById("review-status");
+  if (elSt) elSt.innerText = order.status || "-";
+  const elCont = document.getElementById("review-content");
+  if (elCont) elCont.innerHTML = formatContentHtml(order);
 
   const actionsNew = document.getElementById("review-actions");
   const actionsAccepted = document.getElementById("review-actions-accepted");
@@ -88,247 +46,174 @@ function openReview(orderKey) {
     if (actionsWaiting) actionsWaiting.style.display = "grid";
   }
 
-  const reviewModal = document.getElementById("reviewModal");
-  if (reviewModal) reviewModal.style.display = "flex";
+  const revModal = document.getElementById("reviewModal");
+  if (revModal) revModal.style.display = "flex";
 }
 
-function formatContentHtml(order) {
-  const raw = String(order.content || "");
-  if (order.reason === "Đơn qua tin nhắn") {
-    return `<div style="background:rgba(0,185,0,0.07); border:1.5px solid rgba(0,185,0,0.25); border-radius:16px; padding:18px; white-space:pre-wrap; line-height:1.7; font-size:22px;">${escapeHtml(raw)}</div>`;
+function selectChangeReason(val) {
+  const sel = document.getElementById("change-reason");
+  if (sel) {
+    sel.value = val;
+    onChangeReasonChange();
   }
-  const lines = raw.split("\n").map(l => l.trimEnd()).filter(l => l.trim() !== "");
-  if (lines.length === 0) return `<div style="background:rgba(0,185,0,0.07); border:1.5px solid rgba(0,185,0,0.25); border-radius:16px; padding:18px;">-</div>`;
-
-  let inner = lines.map(line => {
-    const t = line.trimStart();
-    const isSub = t.startsWith("-") || t.startsWith("•") || t.startsWith("↳") || t.startsWith("－");
-    return `<div style="${isSub ? 'padding-left:16px; color:#4b5563; font-size:20px;' : 'font-weight:800; margin-top:8px; font-size:22px;'}">${escapeHtml(line)}</div>`;
-  }).join("");
-
-  if (order.note) {
-    inner += `<div style="color: #555; font-size: 18px; margin-top: 12px; font-weight: 800;">📝 ${escapeHtml(order.note)}</div>`;
-  }
-
-  return `<div style="background:rgba(0,185,0,0.07); border:1.5px solid rgba(0,185,0,0.25); border-radius:16px; padding:18px; line-height:1.7;">${inner}</div>`;
+  const noteEl = document.getElementById("change-note");
+  updateChangeSubmitButton(noteEl ? noteEl.value : "");
 }
 
-function closeModal() {
-  document.querySelectorAll(".modal").forEach(m => m.style.display = "none");
-  reviewingOrder = null;
-  currentOrderKey = null;
+function selectRejectReason(val) {
+  const sel = document.getElementById("reject-reason");
+  if (sel) {
+    sel.value = val;
+  }
+  document.querySelectorAll(".reject-card").forEach(card => {
+    if (card.dataset.val === val || (card.dataset.val === "訂單過多" && val.startsWith("訂單過多"))) {
+      card.classList.add("active");
+    } else {
+      card.classList.remove("active");
+    }
+  });
 }
 
-async function updateStatus(key, status, extra = {}, btn = null) {
-  if (!key) return;
-  if (processingKeys.has(key)) return;
-  processingKeys.add(key);
-
-  const oldText = btn ? btn.innerText : "";
-  if (btn) {
-    btn.disabled = true;
-    btn.innerText = "Đang xử lý...";
-  }
-
-  try {
-    const response = await fetch(`${WORKER_BASE}/api/update`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key, status, ...extra })
-    });
-    if (!response.ok) throw new Error(`update failed: ${response.status}`);
-
-    // Apply local override immediately for responsiveness
-    localOverrides[key] = { status, time: Date.now() };
-    renderAll();
-
-    // Still fetch to keep in sync
-    await fetchOrders();
-  } catch (e) {
-    console.error(e);
-    alert("處理失敗，請稍後再試。");
-  } finally {
-    processingKeys.delete(key);
-    if (btn) {
-      btn.disabled = false;
-      btn.innerText = oldText;
+function getOrderBaseTime() {
+  const now = new Date();
+  let orderDate = new Date();
+  let hasOrderTime = false;
+  if (reviewingOrder?.time) {
+    const match = String(reviewingOrder.time).match(/(\d{1,2}):(\d{2})/);
+    if (match) {
+      const h = parseInt(match[1], 10);
+      const m = parseInt(match[2], 10);
+      orderDate.setHours(h, m, 0, 0);
+      hasOrderTime = true;
     }
   }
-}
-
-async function reviewAccept(btn) {
-  if (!reviewingOrder?.key) return;
-  await updateStatus(reviewingOrder.key, "ACCEPTED", {}, btn);
-  closeModal();
-  dismissNewAlert();
-  switchTab("live");
-}
-
-let changeModalBaseDate = null;
-let changeModalProposedDeltaMinutes = 15;
-
-function parseOrderTimeToDate(timeStr) {
-  if (!timeStr || typeof timeStr !== "string") return new Date();
-
-  // Match YYYY-MM-DD HH:mm
-  const dateTimeMatch = timeStr.match(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})/);
-  if (dateTimeMatch) {
-    const iso = `${dateTimeMatch[1]}T${dateTimeMatch[2]}:00`;
-    const d = new Date(iso);
-    if (!isNaN(d.getTime())) return d;
+  // Base time is max of (orderTime, now)
+  if (hasOrderTime && orderDate.getTime() > now.getTime()) {
+    return orderDate;
   }
-
-  // Match HH:mm
-  const timeMatch = timeStr.match(/(\d{1,2}):(\d{2})/);
-  if (timeMatch) {
-    const now = new Date();
-    now.setHours(parseInt(timeMatch[1], 10), parseInt(timeMatch[2], 10), 0, 0);
-    return now;
-  }
-
-  return new Date();
+  return now;
 }
 
-function formatHHmm(dateObj) {
-  if (!dateObj || isNaN(dateObj.getTime())) return "12:00";
-  const h = String(dateObj.getHours()).padStart(2, "0");
-  const m = String(dateObj.getMinutes()).padStart(2, "0");
+function formatTimeHHMM(date) {
+  const h = String(date.getHours()).padStart(2, "0");
+  const m = String(date.getMinutes()).padStart(2, "0");
   return `${h}:${m}`;
 }
 
-function updateProposedTimeUI() {
-  if (!changeModalBaseDate) {
-    changeModalBaseDate = new Date();
+function renderTimePresets() {
+  const baseTime = getOrderBaseTime();
+  const origTimeEl = document.getElementById("change-orig-time-val");
+  if (origTimeEl) {
+    origTimeEl.innerText = reviewingOrder?.time || formatTimeHHMM(baseTime);
   }
 
-  // Update time display labels on preset buttons
-  [10, 15, 20, 30, 45, 60].forEach(min => {
-    const el = document.getElementById(`preset-time-${min}`);
-    if (el) {
-      const targetDate = new Date(changeModalBaseDate.getTime() + min * 60000);
-      el.innerText = formatHHmm(targetDate);
-    }
+  const presetMinutes = [5, 10, 15, 20, 30, 45];
+  presetMinutes.forEach(mins => {
+    const target = new Date(baseTime.getTime() + mins * 60000);
+    const el = document.getElementById(`preset-target-${mins}`);
+    if (el) el.innerText = formatTimeHHMM(target);
+  });
+}
+
+function applyTimePreset(minutes) {
+  const baseTime = getOrderBaseTime();
+  const target = new Date(baseTime.getTime() + minutes * 60000);
+  const targetStr = formatTimeHHMM(target);
+  
+  const noteEl = document.getElementById("change-note");
+  if (noteEl) noteEl.value = targetStr;
+
+  document.querySelectorAll(".preset-card").forEach(card => {
+    card.classList.toggle("active", parseInt(card.dataset.mins, 10) === minutes);
   });
 
-  // Update active state highlight on preset buttons
-  document.querySelectorAll(".time-preset-btn").forEach(btn => {
-    const min = parseInt(btn.getAttribute("data-minutes"), 10);
-    btn.classList.toggle("active", min === changeModalProposedDeltaMinutes);
+  updateChangeSubmitButton(targetStr);
+}
+
+function adjustTimeMinutes(deltaMinutes) {
+  const noteEl = document.getElementById("change-note");
+  if (!noteEl) return;
+  let curr = new Date();
+  const match = String(noteEl.value).match(/(\d{1,2}):(\d{2})/);
+  if (match) {
+    curr.setHours(parseInt(match[1], 10), parseInt(match[2], 10), 0, 0);
+  } else {
+    curr = getOrderBaseTime();
+  }
+  const target = new Date(curr.getTime() + deltaMinutes * 60000);
+  const targetStr = formatTimeHHMM(target);
+  noteEl.value = targetStr;
+
+  // Check if targetStr matches any preset card
+  const baseTime = getOrderBaseTime();
+  const diffMins = Math.round((target.getTime() - baseTime.getTime()) / 60000);
+  document.querySelectorAll(".preset-card").forEach(card => {
+    card.classList.toggle("active", parseInt(card.dataset.mins, 10) === diffMins);
   });
 
-  // Calculate proposed target date
-  const targetDate = new Date(changeModalBaseDate.getTime() + changeModalProposedDeltaMinutes * 60000);
-  const formattedTime = formatHHmm(targetDate);
+  updateChangeSubmitButton(targetStr);
+}
 
-  const timePicker = document.getElementById("change-time-picker");
-  if (timePicker) {
-    timePicker.value = formattedTime;
+function updateChangeSubmitButton(timeStr) {
+  const btn = document.getElementById("btn-change-send");
+  if (!btn) return;
+  const reason = document.getElementById("change-reason").value;
+  if (reason === "時間需調整" && timeStr) {
+    btn.innerText = `${t('btnSendSuggest')} (${timeStr})`;
+  } else {
+    btn.innerText = t('btnSendSuggest');
   }
-
-  const noteInput = document.getElementById("change-note");
-  if (noteInput) {
-    noteInput.value = formattedTime;
-  }
 }
 
-function selectTimePreset(minutes) {
-  changeModalProposedDeltaMinutes = minutes;
-  updateProposedTimeUI();
-}
-
-function stepProposedTime(deltaMinutes) {
-  changeModalProposedDeltaMinutes += deltaMinutes;
-  updateProposedTimeUI();
-}
-
-function onTimePickerChange() {
-  const timePicker = document.getElementById("change-time-picker");
-  if (!timePicker || !timePicker.value) return;
-
-  const parts = timePicker.value.split(":");
-  if (parts.length < 2) return;
-
-  const pickedH = parseInt(parts[0], 10);
-  const pickedM = parseInt(parts[1], 10);
-
-  const pickedDate = new Date(changeModalBaseDate.getTime());
-  pickedDate.setHours(pickedH, pickedM, 0, 0);
-
-  const diffMs = pickedDate.getTime() - changeModalBaseDate.getTime();
-  changeModalProposedDeltaMinutes = Math.round(diffMs / 60000);
-
-  updateProposedTimeUI();
+function clearSoldOutItems() {
+  const checkboxes = document.querySelectorAll(".sold-item");
+  if (checkboxes) checkboxes.forEach(cb => cb.checked = false);
 }
 
 function reviewOpenChange() {
   if (!reviewingOrder?.key) return;
-  const savedKey = reviewingOrder.key;
-  const orderTimeStr = reviewingOrder.time || "";
-
+  const savedKey = reviewingOrder.key;  // Save key BEFORE closeModal wipes it
+  const savedOrder = reviewingOrder;
   closeModal();
-  currentOrderKey = savedKey;
-
-  const orderKeyEl = document.getElementById("change-order-key");
-  if (orderKeyEl) orderKeyEl.innerText = savedKey;
-
-  const origTimeEl = document.getElementById("change-original-time");
-  if (origTimeEl) origTimeEl.innerText = orderTimeStr || "Chưa xác định";
-
-  changeModalBaseDate = parseOrderTimeToDate(orderTimeStr);
-  changeModalProposedDeltaMinutes = 15;
-
+  reviewingOrder = savedOrder;
+  currentOrderKey = savedKey;           // Restore after closeModal
   document.getElementById("change-reason").value = "時間需調整";
-  document.getElementById("change-note").value = "";
-  const checkboxes = document.querySelectorAll(".sold-item");
-  if (checkboxes) checkboxes.forEach(cb => cb.checked = false);
-
+  clearSoldOutItems();
   onChangeReasonChange();
-  updateProposedTimeUI();
-
+  renderTimePresets();
+  applyTimePreset(10);
   document.getElementById("changeModal").style.display = "flex";
 }
 
 function reviewOpenReject() {
   if (!reviewingOrder?.key) return;
-  const savedKey = reviewingOrder.key;
+  const savedKey = reviewingOrder.key;  // Save key BEFORE closeModal wipes it
+  const savedOrder = reviewingOrder;
   closeModal();
-  currentOrderKey = savedKey;
+  reviewingOrder = savedOrder;
+  currentOrderKey = savedKey;           // Restore after closeModal
   document.getElementById("reject-reason").selectedIndex = 0;
+  selectRejectReason("今日已售完");
   document.getElementById("rejectModal").style.display = "flex";
-}
-
-async function markReadyFromReview(btn) {
-  if (!reviewingOrder?.key) return;
-  await updateStatus(reviewingOrder.key, "DONE", {}, btn);
-  closeModal();
-  switchTab("live");
-}
-
-async function reviewForceCancel(btn) {
-  if (!reviewingOrder?.key) return;
-  if (!confirm("Hủy đơn hàng này do khách không phản hồi?")) return;
-  await updateStatus(reviewingOrder.key, "FORCE_REJECT", {}, btn);
-  closeModal();
-  switchTab("live");
 }
 
 function onChangeReasonChange() {
   const reason = document.getElementById("change-reason").value;
-  const note = document.getElementById("change-note");
   const timeDiv = document.getElementById("change-time-div");
   const itemsDiv = document.getElementById("change-items-div");
+  const tabTime = document.getElementById("tab-reason-time");
+  const tabSold = document.getElementById("tab-reason-soldout");
 
   if (reason === "時間需調整") {
     if (timeDiv) timeDiv.style.display = "block";
-    if (note) {
-      note.style.display = "block";
-      note.placeholder = "Ghi chú thời gian mới (VD: 11:15)";
-    }
     if (itemsDiv) itemsDiv.style.display = "none";
+    if (tabTime) tabTime.classList.add("active");
+    if (tabSold) tabSold.classList.remove("active");
   } else {
     if (timeDiv) timeDiv.style.display = "none";
-    if (note) note.style.display = "none";
     if (itemsDiv) itemsDiv.style.display = "block";
+    if (tabTime) tabTime.classList.remove("active");
+    if (tabSold) tabSold.classList.add("active");
   }
 }
 
@@ -340,14 +225,14 @@ async function confirmAction(type, btn) {
   let note = isChange ? document.getElementById("change-note").value.trim() : undefined;
 
   if (isChange && reason === "時間需調整" && !note) {
-    alert("Vui lòng chọn thời gian gợi ý mới!");
+    alert(t("alertInputTime"));
     return;
   }
 
   if (isChange && reason === "口味售完") {
     const checked = Array.from(document.querySelectorAll(".sold-item:checked")).map(cb => cb.value);
     if (checked.length === 0) {
-      alert("Vui lòng chọn ít nhất một món đã hết!");
+      alert(t("alertSelectSoldout"));
       return;
     }
     note = checked.join(",");
@@ -357,3 +242,12 @@ async function confirmAction(type, btn) {
   closeModal();
 }
 
+function openBlabContactModal() {
+  const modal = document.getElementById("blabContactModal");
+  if (modal) modal.style.display = "flex";
+}
+
+function closeBlabContactModal() {
+  const modal = document.getElementById("blabContactModal");
+  if (modal) modal.style.display = "none";
+}
