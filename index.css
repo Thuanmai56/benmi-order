@@ -158,6 +158,32 @@ body {
     background-color: #dc2626;
 }
 
+/* Store Status Alert Banners */
+.store-alert-banner {
+    max-width: 600px;
+    width: calc(100% - 28px);
+    margin: 14px auto 16px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    align-items: center;
+    gap: 12px;
+    box-sizing: border-box;
+}
+
+.store-alert-banner.paused {
+    background: #fef2f2;
+    border: 1.5px solid #fca5a5;
+    color: #991b1b;
+    box-shadow: 0 2px 8px rgba(220, 38, 38, 0.08);
+}
+
+.store-alert-banner.busy {
+    background: #fffbeb;
+    border: 1.5px solid #fcd34d;
+    color: #92400e;
+    box-shadow: 0 2px 8px rgba(217, 119, 6, 0.08);
+}
+
 .store-detail-row {
     display: flex;
     align-items: flex-start;

@@ -57,19 +57,19 @@
     </div>
 
     <!-- Store Status Dynamic Alert Banners -->
-    <div id="store-paused-banner" style="display: none; max-width: 600px; margin: 10px auto -6px; padding: 14px 16px; background: #fef2f2; border: 1.5px solid #fca5a5; border-radius: 14px; color: #991b1b; align-items: center; gap: 12px; box-shadow: 0 2px 8px rgba(220, 38, 38, 0.08);">
-        <span style="font-size: 26px; line-height: 1;">⛔</span>
-        <div>
+    <div id="store-paused-banner" class="store-alert-banner paused" style="display: none;">
+        <span style="font-size: 26px; line-height: 1; flex-shrink: 0;">⛔</span>
+        <div style="flex: 1;">
             <div style="font-weight: 900; font-size: 15px; letter-spacing: 0.2px;">店家目前暫停接單中 / Tạm dừng nhận đơn</div>
-            <div style="font-size: 13px; color: #b91c1c; margin-top: 3px; font-weight: 600; line-height: 1.35;">目前暫不接受新訂單，敬請見諒！<br><span style="font-size: 12px; opacity: 0.9;">Quán đang tạm ngưng nhận đơn mới.</span></div>
+            <div style="font-size: 13px; color: #b91c1c; margin-top: 4px; font-weight: 600; line-height: 1.45;">目前暫不接受新訂單，敬請見諒！<br><span style="font-size: 12px; opacity: 0.9;">Quán đang tạm ngưng nhận đơn mới.</span></div>
         </div>
     </div>
 
-    <div id="store-busy-banner" style="display: none; max-width: 600px; margin: 10px auto -6px; padding: 14px 16px; background: #fffbeb; border: 1.5px solid #fcd34d; border-radius: 14px; color: #92400e; align-items: center; gap: 12px; box-shadow: 0 2px 8px rgba(217, 119, 6, 0.08);">
-        <span style="font-size: 26px; line-height: 1;">⏳</span>
-        <div>
+    <div id="store-busy-banner" class="store-alert-banner busy" style="display: none;">
+        <span style="font-size: 26px; line-height: 1; flex-shrink: 0;">⏳</span>
+        <div style="flex: 1;">
             <div style="font-weight: 900; font-size: 15px; letter-spacing: 0.2px;">門市繁忙中（製作時間 +1 小時） / Quán đang bận (+1h)</div>
-            <div style="font-size: 13px; color: #b45309; margin-top: 3px; font-weight: 600; line-height: 1.35;">現場訂單較多，新訂單取餐時間預計延長 1 小時，感謝您的體諒！<br><span style="font-size: 12px; opacity: 0.9;">Thời gian nhận bánh kéo dài thêm 1 tiếng do quán đang bận.</span></div>
+            <div style="font-size: 13px; color: #b45309; margin-top: 4px; font-weight: 600; line-height: 1.45;">現場訂單較多，新訂單取餐時間預計延長 1 小時，感謝您的體諒！<br><span style="font-size: 12px; opacity: 0.9;">Thời gian nhận bánh kéo dài thêm 1 tiếng do quán đang bận.</span></div>
         </div>
     </div>
 
