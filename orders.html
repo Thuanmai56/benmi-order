@@ -139,7 +139,7 @@
           </div>
           <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
             <div class="badge" id="history-total-summary-badge" style="background: rgba(0, 185, 0, 0.1); color: var(--primary); font-weight: 1000; font-size: 15px; padding: 6px 14px; border-radius: 999px;">
-              0 單 · 總額: $0
+              0 單
             </div>
             <button class="mini-btn" id="btn-toggle-all-history" onclick="toggleAllHistoryGroups()" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; font-size: 14px; border-radius: 8px;">
               <span id="btn-toggle-all-icon">📂</span>
@@ -1579,19 +1579,13 @@
       if (orders.length === 0) {
         container.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">${t('emptyHistory')}</div>`;
         const summaryBadge = document.getElementById("history-total-summary-badge");
-        if (summaryBadge) summaryBadge.innerText = `0 ${t('orderUnit')} · ${t('labelTotal')}: $0`;
+        if (summaryBadge) summaryBadge.innerText = `0 ${t('orderUnit')}`;
         return;
       }
 
-      // Tính tổng tiền & tổng số đơn trong 30 ngày
-      let totalAmount30Days = 0;
-      orders.forEach(o => {
-        totalAmount30Days += (Number(o.total) || 0);
-      });
-
       const summaryBadge = document.getElementById("history-total-summary-badge");
       if (summaryBadge) {
-        summaryBadge.innerText = `${orders.length} ${t('orderUnit')} · ${t('labelTotal')}: $${totalAmount30Days.toLocaleString()}`;
+        summaryBadge.innerText = `${orders.length} ${t('orderUnit')}`;
       }
 
       const grouped = groupByDate(orders);
