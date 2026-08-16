@@ -44,14 +44,40 @@ async function loadHistorySummary() {
   }
 
   try {
-    const tenantParam = currentTenantId ? `?tenant_id=${encodeURIComponent(currentTenantId)}` : "";
-    const res = await fetch(`${WORKER_BASE}/api/orders/history-summary${tenantParam}`);
+    const tenantId = getTenantIdFromUrl();
+    const res = await fetch(`${WORKER_BASE}/api/orders/history-summary?tenant_id=${encodeURIComponent(tenantId)}`);
     if (res.ok) {
       historySummaryList = await res.json();
       if (!Array.isArray(historySummaryList)) historySummaryList = [];
     }
   } catch (e) {
     console.error("loadHistorySummary failed:", e);
+  }
+
+  // Graceful fallback if summary list is empty but latestOrders has completed orders
+  if ((!Array.isArray(historySummaryList) || historySummaryList.length === 0) && Array.isArray(latestOrders)) {
+    const completed = latestOrders.filter(o => o && ["PICKED_UP", "REJECTED"].includes(o.status));
+    if (completed.length > 0) {
+      const map = new Map();
+      completed.forEach(o => {
+        let d = "Unknown";
+        if (o?.createdAt) {
+          const dt = new Date(o.createdAt);
+          const nowTaiwan = new Date(dt.getTime() + 8 * 3600000);
+          d = `${nowTaiwan.getUTCFullYear()}-${String(nowTaiwan.getUTCMonth() + 1).padStart(2, "0")}-${String(nowTaiwan.getUTCDate()).padStart(2, "0")}`;
+        }
+        if (!map.has(d)) map.set(d, []);
+        map.get(d).push(o);
+      });
+      historySummaryList = Array.from(map.entries()).map(([date, items]) => ({
+        date,
+        count: items.length,
+        total: items.reduce((sum, o) => sum + (Number(o.total) || 0), 0)
+      })).sort((a, b) => b.date.localeCompare(a.date));
+      map.forEach((orders, d) => {
+        historyDayCache.set(d, orders);
+      });
+    }
   }
 
   renderHistory();
@@ -68,8 +94,8 @@ async function fetchHistoryForDate(date) {
   renderHistory();
 
   try {
-    const tenantParam = currentTenantId ? `&tenant_id=${encodeURIComponent(currentTenantId)}` : "";
-    const res = await fetch(`${WORKER_BASE}/api/orders/by-date?date=${encodeURIComponent(date)}${tenantParam}`);
+    const tenantId = getTenantIdFromUrl();
+    const res = await fetch(`${WORKER_BASE}/api/orders/by-date?date=${encodeURIComponent(date)}&tenant_id=${encodeURIComponent(tenantId)}`);
     if (res.ok) {
       const orders = await res.json();
       historyDayCache.set(date, Array.isArray(orders) ? orders : []);
@@ -243,8 +269,8 @@ async function toggleAllHistoryGroups() {
     if (toggleAllText) toggleAllText.innerText = "Loading...";
 
     try {
-      const tenantParam = currentTenantId ? `?tenant_id=${encodeURIComponent(currentTenantId)}` : "";
-      const res = await fetch(`${WORKER_BASE}/api/orders/history-all${tenantParam}`);
+      const tenantId = getTenantIdFromUrl();
+      const res = await fetch(`${WORKER_BASE}/api/orders/history-all?tenant_id=${encodeURIComponent(tenantId)}`);
       if (res.ok) {
         const allOrders = await res.json();
         if (Array.isArray(allOrders)) {
