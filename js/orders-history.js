@@ -1,114 +1,80 @@
-function getOrderDateStr(o) {
-  let rawMs = NaN;
-  if (o?.createdAt) {
-    if (typeof o.createdAt === "number") {
-      rawMs = o.createdAt;
-    } else {
-      rawMs = new Date(o.createdAt).getTime();
-    }
-  }
-  if (Number.isNaN(rawMs) && o?.time && typeof o.time === "string") {
-    const match = o.time.match(/^(\d{4}-\d{2}-\d{2})/);
-    if (match) return match[1];
-    rawMs = new Date(o.time).getTime();
-  }
-  if (Number.isNaN(rawMs)) return "Unknown";
+// ==========================================
+// Benmi POS - Module: Order History (30 Days)
+// ==========================================
 
-  // Convert ms to Taiwan (UTC+8) YYYY-MM-DD
-  const nowTaiwan = new Date(rawMs + 8 * 3600000);
-  const yyyy = nowTaiwan.getUTCFullYear();
-  const mm = String(nowTaiwan.getUTCMonth() + 1).padStart(2, "0");
-  const dd = String(nowTaiwan.getUTCDate()).padStart(2, "0");
+let lastHistoryOrders = [];
+let expandedHistoryDates = new Set();
+let isHistoryStateInitialized = false;
+
+function getTaiwanTodayStr() {
+  const nowTw = new Date(Date.now() + 8 * 3600000);
+  const yyyy = nowTw.getUTCFullYear();
+  const mm = String(nowTw.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(nowTw.getUTCDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
 }
 
 function groupByDate(orders) {
   const map = new Map();
   orders.forEach(o => {
-    const d = getOrderDateStr(o);
+    let d = "Unknown";
+    if (o.time && typeof o.time === "string" && o.time.match(/\d{4}-\d{2}-\d{2}/)) {
+      const m = o.time.match(/\d{4}-\d{2}-\d{2}/);
+      d = m[0];
+    } else if (o.createdAt) {
+      const dt = new Date(o.createdAt);
+      const nowTaiwan = new Date(dt.getTime() + 8 * 3600000);
+      const yyyy = nowTaiwan.getUTCFullYear();
+      const mm = String(nowTaiwan.getUTCMonth() + 1).padStart(2, "0");
+      const dd = String(nowTaiwan.getUTCDate()).padStart(2, "0");
+      d = `${yyyy}-${mm}-${dd}`;
+    }
     if (!map.has(d)) map.set(d, []);
     map.get(d).push(o);
   });
   return map;
 }
 
-function getTodayTaiwanStr() {
-  const nowTaiwan = new Date(Date.now() + 8 * 3600000);
-  const yyyy = nowTaiwan.getUTCFullYear();
-  const mm = String(nowTaiwan.getUTCMonth() + 1).padStart(2, "0");
-  const dd = String(nowTaiwan.getUTCDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
-}
-
-function createHistoryTile(order) {
-  const tile = document.createElement("div");
-  tile.className = "tile";
-  tile.onclick = () => openReview(order.key);
-  const badge = order.status === "PICKED_UP"
-    ? `<span class="badge done">PICKED</span>`
-    : `<span class="badge">${escapeHtml(order.status)}</span>`;
-
-  tile.innerHTML = `
-    <div>
-      <div class="tile-top">
-        <span class="tile-customer">${escapeHtml(order.customer || "Khách")}</span>
-        ${badge}
-        <span class="tile-meta" style="font-weight: 1100; color: #059669;">${formatOrderTotal(order)}</span>
-        <span class="tile-meta">#${escapeHtml(order.key)}</span>
-      </div>
-      <div class="tile-items">${escapeHtml(shortItems(order.content))}</div>
-    </div>
-    <div class="tile-actions">
-      <button class="btn btn-ghost btn-block" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">Xem</button>
-    </div>
-  `;
-  return tile;
-}
-
-function expandAllHistory() {
-  document.querySelectorAll("#list-history .history-date-card").forEach(el => {
-    el.open = true;
-  });
-}
-
-function collapsePastHistory() {
-  document.querySelectorAll("#list-history .history-date-card").forEach(el => {
-    if (el.dataset.isToday !== "true") {
-      el.open = false;
-    } else {
-      el.open = true;
-    }
-  });
-}
-
 function renderHistory(orders) {
+  lastHistoryOrders = orders;
   const container = document.getElementById("list-history");
+  if (!container) return;
   container.innerHTML = "";
-  if (!orders || orders.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">Chưa có lịch sử</div>`;
+
+  const todayStr = getTaiwanTodayStr();
+
+  // Mặc định khởi tạo: chỉ mở ngày hôm nay, các ngày cũ thu gọn
+  if (!isHistoryStateInitialized) {
+    expandedHistoryDates = new Set([todayStr]);
+    isHistoryStateInitialized = true;
+  }
+
+  if (orders.length === 0) {
+    container.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">${t('emptyHistory')}</div>`;
+    const summaryBadge = document.getElementById("history-total-summary-badge");
+    if (summaryBadge) summaryBadge.innerText = `0 ${t('orderUnit')}`;
     return;
   }
 
-  const grouped = groupByDate(orders);
-  const sortedDates = Array.from(grouped.keys()).sort((a, b) => b.localeCompare(a));
-  const todayStr = getTodayTaiwanStr();
+  const summaryBadge = document.getElementById("history-total-summary-badge");
+  if (summaryBadge) {
+    summaryBadge.innerText = `${orders.length} ${t('orderUnit')}`;
+  }
 
-  // Top Control Toolbar
-  const toolbar = document.createElement("div");
-  toolbar.className = "history-toolbar";
-  toolbar.innerHTML = `
-    <div class="history-toolbar-info">
-      📊 Tổng lịch sử: <strong>${sortedDates.length} ngày</strong> (${orders.length} đơn)
-    </div>
-    <div class="history-toolbar-actions">
-      <button class="mini-btn" onclick="expandAllHistory()">📂 Mở tất cả</button>
-      <button class="mini-btn" onclick="collapsePastHistory()">📁 Thu gọn ngày trước</button>
-    </div>
-  `;
-  container.appendChild(toolbar);
+  const grouped = groupByDate(orders);
+  // Sort groups by date descending
+  const sortedDates = Array.from(grouped.keys()).sort((a, b) => b.localeCompare(a));
+
+  // Cập nhật trạng thái nút "Mở tất cả / Thu gọn"
+  const isAllExpanded = sortedDates.length > 0 && sortedDates.every(d => expandedHistoryDates.has(d));
+  const toggleAllText = document.getElementById("btn-toggle-all-text");
+  const toggleAllIcon = document.getElementById("btn-toggle-all-icon");
+  if (toggleAllText) toggleAllText.innerText = isAllExpanded ? t('btnCollapseAll') : t('btnExpandAll');
+  if (toggleAllIcon) toggleAllIcon.innerText = isAllExpanded ? '📁' : '📂';
 
   for (const date of sortedDates) {
     let items = grouped.get(date) || [];
+    // Sort items: newest picked up at top (descending), fallback to newest created at top
     items.sort((a, b) => {
       const timeA = a.pickedUpAt || a.createdAt || 0;
       const timeB = b.pickedUpAt || b.createdAt || 0;
@@ -116,47 +82,111 @@ function renderHistory(orders) {
     });
 
     const isToday = (date === todayStr);
-    const card = document.createElement("details");
-    card.className = "history-date-card";
-    card.dataset.isToday = String(isToday);
-    if (isToday) {
-      card.open = true;
-    }
+    const isExpanded = expandedHistoryDates.has(date);
+    const dayTotal = items.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
 
-    const dayTotal = items.reduce((sum, o) => {
-      let val = 0;
-      if (typeof o.total === "number" && !Number.isNaN(o.total)) {
-        val = o.total;
-      } else if (o.content) {
-        const match = String(o.content).match(/💰\s*總金額：\s*\$?(\d+)/) || String(o.content).match(/\$(\d+)/);
-        if (match && match[1]) val = parseInt(match[1], 10);
-      }
-      return sum + val;
-    }, 0);
-    const dayTotalHtml = dayTotal > 0 ? `<span class="summary-badge" style="background: #dcfce7; color: #166534; font-weight: bold;">💰 $${dayTotal.toLocaleString()}</span>` : "";
+    const groupEl = document.createElement("div");
+    groupEl.className = "history-date-group";
+    groupEl.id = `history-group-${date}`;
 
-    const summary = document.createElement("summary");
-    summary.className = "history-date-summary";
-    const dateTitle = isToday ? `Hôm nay (${date})` : date;
-    const icon = isToday ? "⭐" : "📅";
-    summary.innerHTML = `
-      <div class="summary-left">
-        <span style="font-size: 17px;">${icon}</span>
-        <span style="font-weight: 1100;">${dateTitle}</span>
-        <span class="summary-badge">${items.length} đơn</span>
-        ${dayTotalHtml}
+    // Header (Accordion Toggle)
+    const header = document.createElement("div");
+    header.className = `history-date-header ${isExpanded ? 'expanded' : ''}`;
+    header.onclick = () => toggleHistoryDateGroup(date);
+    header.innerHTML = `
+      <div class="history-date-left">
+        <span class="history-date-icon">📅</span>
+        <span class="history-date-text">${escapeHtml(date)}</span>
+        ${isToday ? `<span class="history-today-tag">${t('todayTag')}</span>` : ''}
       </div>
-      <span class="summary-chevron">▼</span>
+      <div class="history-date-right">
+        <span class="badge" style="background:#f3f4f6; color:#374151; font-weight:800; font-size:13px;">${items.length} ${t('orderUnit')}</span>
+        <span class="badge" style="background:rgba(0,185,0,0.1); color:var(--primary); font-weight:1000; font-size:14px;">$${dayTotal.toLocaleString()}</span>
+        <svg class="history-chevron ${isExpanded ? 'open' : ''}" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </div>
     `;
-    card.appendChild(summary);
+    groupEl.appendChild(header);
 
-    const cardContent = document.createElement("div");
-    cardContent.className = "history-date-content";
+    // Body (Order Tiles)
+    const body = document.createElement("div");
+    body.className = "history-date-body";
+    body.id = `history-body-${date}`;
+    body.style.display = isExpanded ? "flex" : "none";
+
     items.forEach(order => {
-      cardContent.appendChild(createHistoryTile(order));
+      const tile = document.createElement("div");
+      tile.className = "tile";
+      tile.onclick = () => openReview(order.key);
+      const badge = order.status === "PICKED_UP"
+        ? `<span class="badge done">${t('badgePicked')}</span>`
+        : `<span class="badge">${escapeHtml(order.status)}</span>`;
+      const totalFormatted = formatOrderTotal(order);
+
+      tile.innerHTML = `
+        <div>
+          <div class="tile-top">
+            <span class="tile-customer">${escapeHtml(order.customer || "Khách")}</span>
+            ${badge}
+            <span class="tile-meta">#${escapeHtml(order.key)}</span>
+          </div>
+          <div class="tile-top" style="margin-top: 6px;">
+            <span class="tile-meta">${t('pickupLabel')} ${escapeHtml(formatPickupTimeDisplay(order.time))}</span>
+            ${totalFormatted !== '-' ? `<span class="tile-meta" style="color: var(--primary); font-weight: 1000;">${escapeHtml(totalFormatted)}</span>` : ''}
+          </div>
+          <div class="tile-items">${escapeHtml(shortItems(order.content))}</div>
+        </div>
+        <div class="tile-actions">
+          <button class="btn btn-ghost btn-block" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">${t('btnView')}</button>
+        </div>
+      `;
+      body.appendChild(tile);
     });
 
-    card.appendChild(cardContent);
-    container.appendChild(card);
+    groupEl.appendChild(body);
+    container.appendChild(groupEl);
   }
+
+  // Footer Banner: Older Data / Contact BLAB
+  const olderCard = document.createElement("div");
+  olderCard.className = "history-older-card";
+  olderCard.onclick = openBlabContactModal;
+  olderCard.innerHTML = `
+    <div class="history-older-left">
+      <div class="history-older-icon">📦</div>
+      <div>
+        <div class="history-older-title">
+          <span>${t('historyOlderTitle')}</span>
+        </div>
+        <div class="history-older-sub">${t('historyOlderSub')}</div>
+      </div>
+    </div>
+    <button class="btn btn-primary history-older-btn" onclick="event.stopPropagation(); openBlabContactModal()">
+      <span>💬</span>
+      <span>${t('btnContactBlab')}</span>
+    </button>
+  `;
+  container.appendChild(olderCard);
+}
+
+function toggleHistoryDateGroup(date) {
+  if (expandedHistoryDates.has(date)) {
+    expandedHistoryDates.delete(date);
+  } else {
+    expandedHistoryDates.add(date);
+  }
+  renderHistory(lastHistoryOrders);
+}
+
+function toggleAllHistoryGroups() {
+  const grouped = groupByDate(lastHistoryOrders);
+  const allDates = Array.from(grouped.keys());
+  const isAllExpanded = allDates.length > 0 && allDates.every(d => expandedHistoryDates.has(d));
+  if (isAllExpanded) {
+    expandedHistoryDates.clear();
+  } else {
+    expandedHistoryDates = new Set(allDates);
+  }
+  renderHistory(lastHistoryOrders);
 }

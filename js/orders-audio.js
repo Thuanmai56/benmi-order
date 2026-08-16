@@ -1,9 +1,13 @@
+// ==========================================
+// Benmi POS - Module: Audio & Shift Modal
+// ==========================================
+
 let soundUnlocked = false;
 let audioCtx = null;
 let alarmIntervalId = null;
 let alarmTimeoutIds = [];
 
-// Unlock audio after a user gesture (Chrome autoplay policy)
+// Unlock audio on initial user gestures (Chrome Web Audio autoplay policy)
 async function unlockSound() {
   soundUnlocked = true;
   try {
@@ -15,6 +19,7 @@ async function unlockSound() {
     console.error("unlockSound failed:", e);
   }
 }
+
 document.addEventListener("click", unlockSound, { once: true });
 document.addEventListener("touchstart", unlockSound, { once: true });
 document.addEventListener("keydown", unlockSound, { once: true });
