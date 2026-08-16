@@ -32,11 +32,25 @@
                 <span class="detail-icon">📍</span>
                 <span>新北市土城區中央路二段135號</span>
             </div>
-            <div class="store-detail-row">
+            <div class="store-detail-row store-hours-row" onclick="toggleStoreHours(event)" style="cursor: pointer;">
                 <span class="detail-icon">🕒</span>
-                <div class="time-block" id="store-hours-display">
-                    <div>週一~週五&nbsp;&nbsp;11:00-21:00</div>
-                    <div>週六、週日&nbsp;&nbsp;9:00-21:00</div>
+                <div style="flex: 1;">
+                    <div class="store-hours-toggle" style="display: flex; align-items: center; justify-content: space-between; user-select: none; gap: 8px; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                            <span style="font-weight: 700; color: #111;">營業時間</span>
+                            <span id="hours-today-preview" style="font-size: 13px; font-weight: 600; color: #059669; background: #f0fdf4; padding: 2px 8px; border-radius: 6px; border: 1px solid #bbf7d0;">載入中...</span>
+                        </div>
+                        <div id="hours-toggle-btn" class="hours-toggle-btn">
+                            <span id="hours-toggle-text">展開</span>
+                            <svg id="hours-arrow-icon" class="hours-arrow-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="time-block" id="store-hours-display" style="display: none; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e2e8f0; font-size: 13.5px; line-height: 1.6; color: #374151;">
+                        <div>週一~週五&nbsp;&nbsp;11:00-21:00</div>
+                        <div>週六、週日&nbsp;&nbsp;9:00-21:00</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -793,6 +807,7 @@
             }
 
             isSubmitting = true;
+            let orderSubmittedSuccessfully = false;
             const submitBtn = document.getElementById('btn-submit');
             submitBtn.disabled = true;
             submitBtn.innerText = '處理中...';
@@ -869,6 +884,10 @@
                     throw new Error(`API returned status ${res.status}`);
                 }
 
+                orderSubmittedSuccessfully = true;
+                submitBtn.disabled = true;
+                submitBtn.innerText = '訂單已送出';
+
                 // Gửi tin nhắn text từ phía khách hàng để kích hoạt Webhook trả lời thẻ tiến độ
                 if (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient() && liff.isApiAvailable && liff.isApiAvailable('sendMessages')) {
                     try {
@@ -878,8 +897,18 @@
                     }
                 }
 
-                // Gửi thành công: Báo cho khách và đóng cửa sổ
-                customAlert('<div style="margin-bottom: 15px;"><svg width="64" height="64" viewBox="0 0 24 24" fill="#10b981"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></div><div style="font-size: 18px; line-height: 1.4; color: #111;">訂單已送出，店員會馬上跟您確認，請稍等</div>', () => {
+                // Gửi thành công: Báo cho khách và đóng cửa sổ khi khách bấm xác nhận
+                customAlert(`
+                    <div style="margin-bottom: 16px;">
+                        <div style="width: 60px; height: 60px; margin: 0 auto; background: #ecfdf5; border: 2px solid #a7f3d0; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                        </div>
+                    </div>
+                    <div style="font-size: 19px; font-weight: 900; color: #111827; margin-bottom: 6px;">訂單已送出成功！</div>
+                    <div style="font-size: 14px; line-height: 1.5; color: #4b5563;">店家已收到您的訂單，店員會馬上為您確認，請稍候 🙏<br><span style="font-size: 12px; color: #9ca3af;">Đơn hàng đã được gửi thành công.</span></div>
+                `, () => {
                     if (typeof liff !== 'undefined' && liff.closeWindow) {
                         liff.closeWindow();
                     }
@@ -891,8 +920,23 @@
                 // Fallback: Thử gửi tin nhắn LINE trước để kích hoạt Webhook
                 try {
                     await liff.sendMessages([{ type: 'text', text: msg }]);
-                    customAlert('<div style="margin-bottom: 15px;"><svg width="64" height="64" viewBox="0 0 24 24" fill="#10b981"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></div><div style="font-size: 18px; line-height: 1.4; color: #111;">訂單已送出，店員會馬上跟您確認，請稍等</div>', () => {
-                        liff.closeWindow();
+                    orderSubmittedSuccessfully = true;
+                    submitBtn.disabled = true;
+                    submitBtn.innerText = '訂單已送出';
+                    customAlert(`
+                        <div style="margin-bottom: 16px;">
+                            <div style="width: 60px; height: 60px; margin: 0 auto; background: #ecfdf5; border: 2px solid #a7f3d0; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+                        <div style="font-size: 19px; font-weight: 900; color: #111827; margin-bottom: 6px;">訂單已送出成功！</div>
+                        <div style="font-size: 14px; line-height: 1.5; color: #4b5563;">店家已收到您的訂單，店員會馬上為您確認，請稍候 🙏<br><span style="font-size: 12px; color: #9ca3af;">Đơn hàng đã được gửi thành công.</span></div>
+                    `, () => {
+                        if (typeof liff !== 'undefined' && liff.closeWindow) {
+                            liff.closeWindow();
+                        }
                     });
                 } catch (liffErr) {
                     console.error("LIFF sendMessages fallback also failed:", liffErr);
@@ -916,8 +960,23 @@
                             body: JSON.stringify(orderPayload)
                         });
                         if (res.ok) {
-                            customAlert('<div style="margin-bottom: 15px;"><svg width="64" height="64" viewBox="0 0 24 24" fill="#10b981"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></div><div style="font-size: 18px; line-height: 1.4; color: #111;">訂單已送出，店員會馬上跟您確認</div>', () => {
-                                liff.closeWindow();
+                            orderSubmittedSuccessfully = true;
+                            submitBtn.disabled = true;
+                            submitBtn.innerText = '訂單已送出';
+                            customAlert(`
+                                <div style="margin-bottom: 16px;">
+                                    <div style="width: 60px; height: 60px; margin: 0 auto; background: #ecfdf5; border: 2px solid #a7f3d0; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div style="font-size: 19px; font-weight: 900; color: #111827; margin-bottom: 6px;">訂單已送出成功！</div>
+                                <div style="font-size: 14px; line-height: 1.5; color: #4b5563;">店家已收到您的訂單，店員會馬上為您確認，請稍候 🙏<br><span style="font-size: 12px; color: #9ca3af;">Đơn hàng đã được gửi thành công.</span></div>
+                            `, () => {
+                                if (typeof liff !== 'undefined' && liff.closeWindow) {
+                                    liff.closeWindow();
+                                }
                             });
                             return;
                         }
@@ -932,9 +991,14 @@
                     }
                 }
             } finally {
-                isSubmitting = false;
-                submitBtn.disabled = false;
-                submitBtn.innerText = '送出訂單';
+                if (!orderSubmittedSuccessfully) {
+                    isSubmitting = false;
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = '送出訂單';
+                } else {
+                    submitBtn.disabled = true;
+                    submitBtn.innerText = '訂單已送出';
+                }
             }
         }
 
@@ -1028,10 +1092,30 @@
             }
         }
 
+        function toggleStoreHours(e) {
+            if (e) e.stopPropagation();
+            const displayEl = document.getElementById('store-hours-display');
+            const arrowEl = document.getElementById('hours-arrow-icon');
+            const toggleTextEl = document.getElementById('hours-toggle-text');
+            if (displayEl) {
+                const isHidden = (displayEl.style.display === 'none' || !displayEl.style.display);
+                displayEl.style.display = isHidden ? 'block' : 'none';
+                if (arrowEl) arrowEl.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+                if (toggleTextEl) toggleTextEl.innerText = isHidden ? '收合' : '展開';
+            }
+        }
+
         function renderStoreOperatingHours() {
             const displayEl = document.getElementById('store-hours-display');
+            const todayPreviewEl = document.getElementById('hours-today-preview');
             if (!displayEl) return;
             
+            const twTime = getTaiwanDate();
+            const todayIdx = twTime.getDay(); // 0 = Sunday, 1 = Monday, ...
+            
+            let todayHoursStr = "";
+            let isTodayOpen = false;
+
             if (storeConfig && storeConfig.operatingHours) {
                 const hrs = storeConfig.operatingHours;
                 const days = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
@@ -1042,6 +1126,15 @@
                     if (shifts.length === 0) return "公休";
                     return shifts.map(s => `${s.start}-${s.end}`).join(", ");
                 };
+
+                const todayShifts = hrs[todayIdx] || [];
+                if (todayShifts.length > 0) {
+                    todayHoursStr = todayShifts.map(s => `${s.start}-${s.end}`).join(", ");
+                    isTodayOpen = true;
+                } else {
+                    todayHoursStr = "今日公休";
+                    isTodayOpen = false;
+                }
                 
                 const monStr = getShiftsStr(1);
                 const tueStr = getShiftsStr(2);
@@ -1055,18 +1148,45 @@
                 const weekendsEqual = (satStr === sunStr);
                 
                 if (weekdaysEqual && weekendsEqual) {
-                    html = `<div>週一~週五&nbsp;&nbsp;${monStr}</div>
-                            <div>週六、週日&nbsp;&nbsp;${satStr}</div>`;
+                    const isWeekday = (todayIdx >= 1 && todayIdx <= 5);
+                    const tagW = isWeekday ? '<span style="font-size: 11px; background: #ecfdf5; color: #059669; padding: 1px 6px; border-radius: 99px; margin-left: 6px; border: 1px solid #a7f3d0;">今天</span>' : '';
+                    const tagE = !isWeekday ? '<span style="font-size: 11px; background: #ecfdf5; color: #059669; padding: 1px 6px; border-radius: 99px; margin-left: 6px; border: 1px solid #a7f3d0;">今天</span>' : '';
+                    html = `<div ${isWeekday ? 'style="font-weight: 700; color: #059669;"' : ''}>週一~週五&nbsp;&nbsp;${monStr}${tagW}</div>
+                            <div ${!isWeekday ? 'style="font-weight: 700; color: #059669;"' : ''}>週六、週日&nbsp;&nbsp;${satStr}${tagE}</div>`;
                 } else {
                     for (let i = 1; i <= 7; i++) {
                         const dayIdx = i === 7 ? 0 : i;
-                        html += `<div>${days[dayIdx]}&nbsp;&nbsp;${getShiftsStr(dayIdx)}</div>`;
+                        const isCurrentDay = (dayIdx === todayIdx);
+                        const highlightStyle = isCurrentDay ? 'style="font-weight: 700; color: #059669;"' : '';
+                        const tag = isCurrentDay ? '<span style="font-size: 11px; background: #ecfdf5; color: #059669; padding: 1px 6px; border-radius: 99px; margin-left: 6px; border: 1px solid #a7f3d0;">今天</span>' : '';
+                        html += `<div ${highlightStyle}>${days[dayIdx]}&nbsp;&nbsp;${getShiftsStr(dayIdx)}${tag}</div>`;
                     }
                 }
                 displayEl.innerHTML = html;
             } else {
+                if (todayIdx >= 1 && todayIdx <= 5) {
+                    todayHoursStr = "11:00-21:00";
+                    isTodayOpen = true;
+                } else {
+                    todayHoursStr = "9:00-21:00";
+                    isTodayOpen = true;
+                }
                 displayEl.innerHTML = `<div>週一~週五&nbsp;&nbsp;11:00-21:00</div>
                                        <div>週六、週日&nbsp;&nbsp;9:00-21:00</div>`;
+            }
+
+            if (todayPreviewEl) {
+                if (isTodayOpen) {
+                    todayPreviewEl.innerHTML = `今日 <strong style="color: #111827;">${todayHoursStr}</strong>`;
+                    todayPreviewEl.style.background = '#f0fdf4';
+                    todayPreviewEl.style.color = '#059669';
+                    todayPreviewEl.style.borderColor = '#bbf7d0';
+                } else {
+                    todayPreviewEl.innerHTML = `<strong style="color: #dc2626;">今日公休</strong>`;
+                    todayPreviewEl.style.background = '#fef2f2';
+                    todayPreviewEl.style.color = '#dc2626';
+                    todayPreviewEl.style.borderColor = '#fca5a5';
+                }
             }
         }
 
@@ -1133,7 +1253,7 @@
                 if (badge) {
                     const count = data.waitingCount || 0;
                     if (count > 0) {
-                        badge.innerText = `目前前方等待單數：${count} 單`;
+                        badge.innerHTML = `<span style="font-size: 15px; line-height: 1;">⏳</span> <span>前方排隊：<strong style="color: #78350f; font-size: 15px;">${count}</strong> 單</span>`;
                         badge.style.display = "inline-flex";
                     } else {
                         badge.style.display = "none";
