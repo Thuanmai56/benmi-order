@@ -43,6 +43,10 @@ async function loadHistorySummary() {
     }
   }
 
+  if (!historySummaryList || historySummaryList.length === 0) {
+    container.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;" id="list-history-loading">⏳ ${typeof t === 'function' ? (t('loadingHistory') || '載入中...') : '載入中...'}</div>`;
+  }
+
   try {
     const tenantId = getTenantIdFromUrl();
     const res = await fetch(`${WORKER_BASE}/api/orders/history-summary?tenant_id=${encodeURIComponent(tenantId)}`);

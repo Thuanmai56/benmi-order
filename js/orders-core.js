@@ -124,7 +124,8 @@ async function fetchOrders() {
       headers["If-None-Match"] = lastOrdersETag;
     }
 
-    const response = await fetch(`${WORKER_BASE}/api/orders`, { headers });
+    const tenantId = getTenantIdFromUrl();
+    const response = await fetch(`${WORKER_BASE}/api/orders?tenant_id=${encodeURIComponent(tenantId)}`, { headers });
     if (response.status === 304) {
       // No order updates since last poll
       return;
@@ -161,8 +162,6 @@ async function fetchOrders() {
     if (leftEl) leftEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#d32f2f;">${escapeHtml(e?.message || e)}</div>`;
     const rightEl = document.getElementById("list-right");
     if (rightEl) rightEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#d32f2f;">-</div>`;
-    const histEl = document.getElementById("list-history");
-    if (histEl) histEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#d32f2f;">-</div>`;
   }
 }
 
