@@ -113,7 +113,8 @@ function switchTab(tab) {
   document.getElementById("view-history").style.display = tab === "history" ? "block" : "none";
   document.getElementById("view-settings").style.display = "none";
   document.getElementById("view-menu").style.display = "none";
-  if (tab === "live" || tab === "history") renderAll();
+  if (tab === "live") renderAll();
+  if (tab === "history" && typeof loadHistorySummary === "function") loadHistorySummary();
 }
 
 async function fetchOrders() {
@@ -205,7 +206,7 @@ function renderAll() {
     if (typeof renderListLeft === "function") renderListLeft(leftOrders);
     if (typeof renderListRight === "function") renderListRight(rightOrders);
   } else if (activeTab === "history") {
-    if (typeof renderHistory === "function") renderHistory(historyOrders);
+    if (typeof renderHistory === "function") renderHistory();
   }
 }
 
