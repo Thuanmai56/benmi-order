@@ -32,6 +32,13 @@ body {
     position: relative;
 }
 
+.store-header-top,
+.store-details {
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
 .store-header-top {
     display: flex;
     align-items: center;
@@ -182,6 +189,7 @@ body {
     z-index: 100;
     background: white;
     display: flex;
+    justify-content: center;
     overflow-x: auto;
     scroll-behavior: smooth;
     border-bottom: 1px solid #ddd;
@@ -416,16 +424,26 @@ select:focus {
 .footer {
     position: fixed;
     bottom: 0;
+    left: 0;
+    right: 0;
     width: 100%;
     background: white;
+    box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.08);
+    display: flex;
+    justify-content: center;
+    z-index: 100;
+    box-sizing: border-box;
+}
+
+.footer-inner {
+    max-width: 600px;
+    width: 100%;
     padding: 16px 24px;
     padding-bottom: calc(16px + env(safe-area-inset-bottom));
-    box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.08);
     display: flex;
     justify-content: space-between;
     align-items: center;
     box-sizing: border-box;
-    z-index: 100;
 }
 
 .total-wrap {
@@ -484,6 +502,8 @@ select:focus {
     background: white;
     padding: 24px;
     width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
     border-radius: 24px 24px 0 0;
     max-height: 85vh;
     overflow-y: auto;
