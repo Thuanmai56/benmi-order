@@ -170,43 +170,6 @@ function formatContentHtml(order) {
   return `<div style="background:rgba(0,185,0,0.07); border:1.5px solid rgba(0,185,0,0.25); border-radius:16px; padding:18px; line-height:1.7;">${inner}</div>`;
 }
 
-async function updateStatus(key, status, extra = {}, btn = null) {
-  if (!key) return;
-  if (processingKeys.has(key)) return;
-  processingKeys.add(key);
-
-  const oldText = btn ? btn.innerText : "";
-  if (btn) {
-    btn.disabled = true;
-    btn.innerText = "Đang xử lý...";
-  }
-
-  try {
-    const response = await fetch(`${WORKER_BASE}/api/update?tenant_id=${getTenantIdFromUrl()}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key, status, ...extra })
-    });
-    if (!response.ok) throw new Error(`update failed: ${response.status}`);
-
-    // Apply local override immediately for responsiveness
-    localOverrides[key] = { status, time: Date.now() };
-    renderAll();
-
-    // Keep in sync with server
-    await fetchOrders();
-  } catch (e) {
-    console.error(e);
-    alert("處理失敗，請稍後再試。");
-  } finally {
-    processingKeys.delete(key);
-    if (btn) {
-      btn.disabled = false;
-      btn.innerText = oldText;
-    }
-  }
-}
-
 async function reviewAccept(btn) {
   if (!reviewingOrder?.key) return;
   await updateStatus(reviewingOrder.key, "ACCEPTED", {}, btn);

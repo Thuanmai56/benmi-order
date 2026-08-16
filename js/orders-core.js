@@ -166,6 +166,44 @@ async function fetchOrders() {
   }
 }
 
+async function updateStatus(key, status, extra = {}, btn = null) {
+  if (!key) return;
+  if (processingKeys.has(key)) return;
+  processingKeys.add(key);
+
+  const oldText = btn ? btn.innerText : "";
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = "Đang xử lý...";
+  }
+
+  try {
+    const tenantParam = currentTenantId ? `?tenant_id=${encodeURIComponent(currentTenantId)}` : `?tenant_id=${getTenantIdFromUrl()}`;
+    const response = await fetch(`${WORKER_BASE}/api/update${tenantParam}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key, status, ...extra })
+    });
+    if (!response.ok) throw new Error(`update failed: ${response.status}`);
+
+    // Apply local override immediately for responsiveness
+    localOverrides[key] = { status, time: Date.now() };
+    renderAll();
+
+    // Keep in sync with server
+    await fetchOrders();
+  } catch (e) {
+    console.error(e);
+    alert("處理失敗，請稍後再試。");
+  } finally {
+    processingKeys.delete(key);
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = oldText;
+    }
+  }
+}
+
 function renderAll() {
   if (!Array.isArray(latestOrders)) return;
 
