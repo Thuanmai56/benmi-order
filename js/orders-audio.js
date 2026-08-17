@@ -91,28 +91,13 @@ function getTodayDateString() {
 async function startOrderShift() {
   await unlockSound();
   playAlarmCycle();
-  const today = getTodayDateString();
-  const tenantId = (typeof getTenantIdFromUrl === 'function') ? getTenantIdFromUrl() : 'benmi';
-  sessionStorage.setItem('pos_session_started_' + tenantId, 'true');
-  sessionStorage.setItem('pos_session_date_' + tenantId, today);
   const modal = document.getElementById("startShiftModal");
   if (modal) modal.style.display = "none";
 }
 
 function checkInitialSessionModal() {
-  const tenantId = (typeof getTenantIdFromUrl === 'function') ? getTenantIdFromUrl() : 'benmi';
-  const isStarted = sessionStorage.getItem('pos_session_started_' + tenantId);
-  const sessionDate = sessionStorage.getItem('pos_session_date_' + tenantId);
-  const today = getTodayDateString();
-
-  if (isStarted === 'true' && sessionDate === today) {
-    soundUnlocked = true;
-    const modal = document.getElementById("startShiftModal");
-    if (modal) modal.style.display = "none";
-  } else {
-    const modal = document.getElementById("startShiftModal");
-    if (modal) modal.style.display = "flex";
-  }
+  const modal = document.getElementById("startShiftModal");
+  if (modal) modal.style.display = "flex";
 }
 
 async function testSound() {
