@@ -81,7 +81,7 @@
     </nav>
 
     <div class="container">
-        <!-- Catalog Container: Supports both static Benmi markup & dynamic other tenants -->
+        <!-- Catalog Container -->
         <div id="catalog-sections">
             <div class="section-container" id="sec-large">
                 <div class="section-title">🍔 大麵包</div>
@@ -834,23 +834,23 @@
             container.appendChild(box);
         }
 
-        // --- CUSTOMIZE POPUP ---
+        // --- CUSTOMIZE POPUP (BOTH BENMI & DYNAMIC TENANTS USE MODERN RADIO PILLS & CHIPS) ---
         function toggleCustomize(category, origName) {
             const key = category + '_' + origName;
             const qty = cart[key];
             if (!qty) return;
 
+            if (!customizeData[key]) customizeData[key] = [];
+
+            const overlay = document.createElement('div');
+            overlay.className = 'popup-overlay';
+            overlay.onclick = (e) => { if (e.target === overlay) closePopup(); };
+
+            const box = document.createElement('div');
+            box.className = 'popup-box';
+
             if (isBenmiTenant) {
-                // Exact Benmi Popup Modal
-                if (!customizeData[key]) customizeData[key] = [];
-
-                const overlay = document.createElement('div');
-                overlay.className = 'popup-overlay';
-                overlay.onclick = (e) => { if (e.target === overlay) closePopup(); };
-
-                const box = document.createElement('div');
-                box.className = 'popup-box';
-
+                // Benmi Modal with Radio Pills for Spicy & Checkbox Chips for Topping
                 const displayName = category === 'small' ? origName + ' 小' :
                     category === 'large' ? origName + ' 大' :
                         '套餐 ' + origName;
@@ -862,42 +862,65 @@
                     </div>
                 `;
 
-                const labelStyle = `font-size: 13px; font-weight: 800; color: var(--muted); display: block; margin: 16px 0 4px 0;`;
-
                 for (let i = 0; i < qty; i++) {
                     let data = customizeData[key][i] || { topping: '', spicy: '不辣', note: '' };
                     if (!customizeData[key][i]) customizeData[key][i] = data;
 
-                    let toppingOptions = '<option value="">不加料</option>';
+                    const section = document.createElement('div');
+                    section.className = 'modifier-section';
+
+                    let sectionInner = `<div style="font-weight: 900; color: var(--primary); font-size: 16px; margin-bottom: 12px;">第 ${i + 1} 份</div>`;
+
+                    // 1. Spicy Radio Pills
+                    sectionInner += `
+                        <div class="modifier-group-title">
+                            <span>辣度 (Độ cay)</span>
+                            <span class="modifier-required-badge">必選</span>
+                        </div>
+                        <div class="modifier-pills-row">
+                    `;
+                    const spicyOptions = ['不辣', '微辣', '中辣', '大辣'];
+                    spicyOptions.forEach(sp => {
+                        const isSelected = (data.spicy === sp);
+                        sectionInner += `
+                            <div class="modifier-pill ${isSelected ? 'active' : ''}" 
+                                 onclick="selectBenmiSpicy('${key}', ${i}, '${sp}', this)">
+                                ${sp}
+                            </div>
+                        `;
+                    });
+                    sectionInner += `</div>`;
+
+                    // 2. Topping Options
+                    sectionInner += `
+                        <div class="modifier-group-title">
+                            <span>加料 (Topping)</span>
+                            <span class="modifier-optional-badge">可選</span>
+                        </div>
+                        <div class="modifier-checkbox-grid">
+                    `;
                     for (let t in menu.topping) {
                         const isToppingOos = menu.out_of_stock && menu.out_of_stock.includes(`topping:${t}`);
-                        const isDisabled = isToppingOos && data.topping !== t ? 'disabled' : '';
-                        const oosLabel = isToppingOos ? ' (已售完/Hết)' : '';
-                        toppingOptions += `<option value="${t}" ${data.topping === t ? 'selected' : ''} ${isDisabled}>${t}${oosLabel} +$${menu.topping[t]}</option>`;
+                        const isChecked = (data.topping === t);
+                        const price = menu.topping[t];
+                        sectionInner += `
+                            <div class="modifier-checkbox-chip ${isChecked ? 'active' : ''} ${isToppingOos ? 'disabled' : ''}" 
+                                 onclick="toggleBenmiTopping('${key}', ${i}, '${t}', this)">
+                                <span>${t}</span>
+                                <span style="font-size: 12px; opacity: 0.85;">+$${price}</span>
+                            </div>
+                        `;
                     }
+                    sectionInner += `</div>`;
 
-                    const section = document.createElement('div');
-                    section.style.cssText = 'margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid #f3f4f6;';
-                    section.innerHTML = `
-                        <div style="font-weight: 900; color: var(--primary); font-size: 16px; margin-bottom: 12px;">第 ${i + 1} 份</div>
-                        <div style="display:flex; gap:12px;">
-                            <div style="flex:1;">
-                                <label style="${labelStyle}">加料</label>
-                                <select onchange="saveCustomize('${key}',${i},'topping',this.value)">${toppingOptions}</select>
-                            </div>
-                            <div style="flex:1;">
-                                <label style="${labelStyle}">辣度</label>
-                                <select onchange="saveCustomize('${key}',${i},'spicy',this.value)">
-                                    <option value="不辣" ${data.spicy === '不辣' ? 'selected' : ''}>不辣</option>
-                                    <option value="微辣" ${data.spicy === '微辣' ? 'selected' : ''}>微辣</option>
-                                    <option value="中辣" ${data.spicy === '中辣' ? 'selected' : ''}>中辣</option>
-                                    <option value="大辣" ${data.spicy === '大辣' ? 'selected' : ''}>大辣</option>
-                                </select>
-                            </div>
-                        </div>
-                        <label style="${labelStyle}">個別備註</label>
-                        <input type="text" value="${data.note || ''}" placeholder="如：不要香菜" onkeyup="saveCustomizeNote('${key}',${i},this.value)" onchange="saveCustomizeNote('${key}',${i},this.value)">
+                    // 3. Individual Note
+                    sectionInner += `
+                        <label style="font-size: 13px; font-weight: 800; color: var(--muted); display: block; margin: 14px 0 4px 0;">個別備註</label>
+                        <input type="text" value="${data.note || ''}" placeholder="如：不要香菜" 
+                               oninput="saveBenmiCustomNote('${key}', ${i}, this.value)">
                     `;
+
+                    section.innerHTML = sectionInner;
                     box.appendChild(section);
                 }
 
@@ -920,14 +943,6 @@
                 currentPopup = overlay;
             } else {
                 // Dynamic Tenant Schema-Driven Popup
-                if (!customizeData[key]) customizeData[key] = [];
-
-                const overlay = document.createElement('div');
-                overlay.className = 'popup-overlay';
-                overlay.onclick = (e) => { if (e.target === overlay) closePopup(); };
-
-                const box = document.createElement('div');
-                box.className = 'popup-box';
                 box.innerHTML = `
                     <div class="popup-header">
                         <span>${origName} 客製化設定</span>
@@ -1022,19 +1037,41 @@
             }
         }
 
-        function saveCustomize(key, index, field, value) {
+        // Benmi modifier helpers
+        function selectBenmiSpicy(key, index, spicyVal, el) {
             if (!customizeData[key]) customizeData[key] = [];
-            if (!customizeData[key][index]) customizeData[key][index] = {};
-            customizeData[key][index][field] = value;
+            if (!customizeData[key][index]) customizeData[key][index] = { topping: '', spicy: '不辣', note: '' };
+            customizeData[key][index].spicy = spicyVal;
+
+            const parentRow = el.parentElement;
+            if (parentRow) parentRow.querySelectorAll('.modifier-pill').forEach(p => p.classList.remove('active'));
+            el.classList.add('active');
             updateTotal();
         }
 
-        function saveCustomizeNote(key, index, value) {
+        function toggleBenmiTopping(key, index, topName, el) {
             if (!customizeData[key]) customizeData[key] = [];
-            if (!customizeData[key][index]) customizeData[key][index] = {};
-            customizeData[key][index]['note'] = value;
+            if (!customizeData[key][index]) customizeData[key][index] = { topping: '', spicy: '不辣', note: '' };
+
+            if (customizeData[key][index].topping === topName) {
+                customizeData[key][index].topping = '';
+                el.classList.remove('active');
+            } else {
+                customizeData[key][index].topping = topName;
+                const parentGrid = el.parentElement;
+                if (parentGrid) parentGrid.querySelectorAll('.modifier-checkbox-chip').forEach(c => c.classList.remove('active'));
+                el.classList.add('active');
+            }
+            updateTotal();
         }
 
+        function saveBenmiCustomNote(key, index, val) {
+            if (!customizeData[key]) customizeData[key] = [];
+            if (!customizeData[key][index]) customizeData[key][index] = { topping: '', spicy: '不辣', note: '' };
+            customizeData[key][index].note = val;
+        }
+
+        // Dynamic tenant modifier helpers
         function selectSingleModifier(key, portionIdx, modSlug, optName, el) {
             if (!customizeData[key]) customizeData[key] = [];
             if (!customizeData[key][portionIdx]) customizeData[key][portionIdx] = { single: {}, multiple: {}, note: '' };
