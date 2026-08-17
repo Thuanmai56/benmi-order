@@ -9,6 +9,7 @@ import { getImageList, getImage, updateImage, deleteImage } from './modules/imag
 import { debugKV } from './modules/debug';
 import { resolveTenantContext } from './modules/tenant';
 import { handleAdminRoute } from './modules/admin';
+import { getTenantBootstrap } from './modules/bootstrap';
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -49,6 +50,7 @@ export default {
     const tenantCtx = await resolveTenantContext(tenantId, env);
 
     // 4. API Endpoints
+    if (request.method === "GET" && (path === "/api/tenant/bootstrap" || path === "/api/bootstrap")) return getTenantBootstrap(request, env);
     if (request.method === "POST" && path === "/api/create") return createOrder(request, env, ctx, tenantCtx);
     if (request.method === "POST" && path === "/api/update") return updateOrder(request, env, ctx, tenantCtx);
     if (request.method === "GET" && path === "/api/orders/waiting-count") return getWaitingCount(request, env);

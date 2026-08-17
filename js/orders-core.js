@@ -11,6 +11,24 @@ function getTenantIdFromUrl() {
   return params.get("tenant_id") || "benmi";
 }
 
+async function initTenantBranding() {
+  const tenantId = getTenantIdFromUrl();
+  if (tenantId !== 'benmi') {
+    try {
+      const res = await fetch(`${WORKER_BASE}/api/tenant/bootstrap?tenant_id=${tenantId}&_t=${Date.now()}`);
+      if (res.ok) {
+        const data = await res.json();
+        const bTitle = document.getElementById('brand-title');
+        if (bTitle && data.tenant && data.tenant.brandName) {
+          bTitle.innerText = `🍳 ${data.tenant.brandName} Dashboard`;
+          document.title = `${data.tenant.brandName} Dashboard`;
+        }
+      }
+    } catch(e) {}
+  }
+}
+initTenantBranding();
+
 // Global POS State
 let latestOrders = [];
 let pendingNewOrders = [];

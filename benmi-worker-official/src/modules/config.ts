@@ -2,6 +2,7 @@ import { Env } from '../types/env';
 import { json } from '../utils/http';
 import { getTenantId } from './menu';
 import { TenantContext } from '../types/tenant';
+import { invalidateBootstrapCache } from './bootstrap';
 
 export async function getConfig(
   request: Request,
@@ -102,6 +103,7 @@ export async function updateConfig(
     if (env.ORDER_STATE) {
       try {
         await env.ORDER_STATE.delete(`tenant:${tenantId}:config_cache`);
+        await invalidateBootstrapCache(tenantId, env);
       } catch (cacheErr) {
         console.error(`[updateConfig] Cache invalidation failed for tenant ${tenantId}:`, cacheErr);
       }

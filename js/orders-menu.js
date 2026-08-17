@@ -46,25 +46,76 @@ async function loadMenuData() {
   const bodyEl = document.getElementById("menu-editor-body");
   if (bodyEl) bodyEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">Đang tải menu...</div>`;
   try {
-    const res = await fetch(`${WORKER_BASE}/api/menu?tenant_id=${getTenantIdFromUrl()}&_t=${Date.now()}`);
-    if (!res.ok) throw new Error("Failed to load");
-    rawMenuData = await res.json();
-    // Convert object format to editable array format
-    currentMenuData = BENMI_CATS.map(cat => ({
+    const tenantId = getTenantIdFromUrl();
+    const res = await fetch(`${WORKER_BASE}/api/tenant/bootstrap?tenant_id=${tenantId}&_t=${Date.now()}`);
+    if (!res.ok) throw new Error("Failed to load bootstrap");
+    const data = await res.json();
+
+    const categories = [];
+    if (data.catalog) {
+      data.catalog.forEach(cat => {
+        categories.push({
+          id: cat.slug,
+          title: cat.name,
+          items: cat.items.map(it => ({
+            name: it.name,
+            price: it.price,
+            isOos: it.isOutOfStock,
+            originalName: it.name
+          }))
+        });
+      });
+    }
+    if (data.modifiers) {
+      data.modifiers.forEach(mod => {
+        if (!categories.some(c => c.id === mod.slug)) {
+          categories.push({
+            id: mod.slug,
+            title: `[Tùy biến] ${mod.name}`,
+            items: mod.options.map(opt => ({
+              name: opt.name,
+              price: opt.price,
+              isOos: opt.isOutOfStock,
+              originalName: opt.name
+            }))
+          });
+        }
+      });
+    }
+
+    currentMenuData = categories.length > 0 ? categories : BENMI_CATS.map(cat => ({
       id: cat.id,
       title: cat.label,
-      items: Object.entries(rawMenuData[cat.id] || {}).map(([name, price]) => {
-        const isOos = rawMenuData.out_of_stock && rawMenuData.out_of_stock.includes(`${cat.id}:${name}`);
-        return { name, price, isOos, originalName: name };
-      })
+      items: []
     }));
+
     activeCategoryIndex = -1;
     renderMenuCategories();
     if (bodyEl) bodyEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">請先從左側選擇分類</div>`;
     const titleEl = document.getElementById("menu-editor-title");
     if (titleEl) titleEl.innerText = "分類項目";
   } catch (e) {
-    alert("無法載入菜單資料：" + e.message);
+    console.warn("Bootstrap load failed, falling back to legacy /api/menu:", e);
+    try {
+      const res = await fetch(`${WORKER_BASE}/api/menu?tenant_id=${getTenantIdFromUrl()}&_t=${Date.now()}`);
+      if (!res.ok) throw new Error("Failed to load");
+      rawMenuData = await res.json();
+      currentMenuData = BENMI_CATS.map(cat => ({
+        id: cat.id,
+        title: cat.label,
+        items: Object.entries(rawMenuData[cat.id] || {}).map(([name, price]) => {
+          const isOos = rawMenuData.out_of_stock && rawMenuData.out_of_stock.includes(`${cat.id}:${name}`);
+          return { name, price, isOos, originalName: name };
+        })
+      }));
+      activeCategoryIndex = -1;
+      renderMenuCategories();
+      if (bodyEl) bodyEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">請先從左側選擇分類</div>`;
+      const titleEl = document.getElementById("menu-editor-title");
+      if (titleEl) titleEl.innerText = "分類項目";
+    } catch (err2) {
+      alert("無法載入菜單資料：" + err2.message);
+    }
   }
 }
 

@@ -661,3 +661,112 @@ select:focus {
 .powered-by-blab-link:active {
     transform: scale(0.98);
 }
+
+/* Dynamic Multi-Tenant Modifiers & Options */
+.modifier-section {
+    margin-bottom: 22px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.modifier-group-title {
+    font-size: 14px;
+    font-weight: 800;
+    color: #374151;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.modifier-required-badge {
+    font-size: 11px;
+    font-weight: 700;
+    color: #dc2626;
+    background: #fee2e2;
+    padding: 2px 8px;
+    border-radius: 99px;
+}
+
+.modifier-optional-badge {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    background: #f3f4f6;
+    padding: 2px 8px;
+    border-radius: 99px;
+}
+
+.modifier-pills-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.modifier-pill {
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1.5px solid #e5e7eb;
+    background: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.modifier-pill:hover {
+    border-color: #cbd5e1;
+    background: #f8fafc;
+}
+
+.modifier-pill.active {
+    border-color: var(--primary);
+    background: #f0fdf4;
+    color: var(--primary);
+    box-shadow: 0 0 0 1px var(--primary);
+}
+
+.modifier-checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.modifier-checkbox-chip {
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1.5px solid #e5e7eb;
+    background: #fff;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.modifier-checkbox-chip.active {
+    border-color: var(--primary);
+    background: #f0fdf4;
+    color: var(--primary);
+    box-shadow: 0 0 0 1px var(--primary);
+}
+
+.modifier-checkbox-chip.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+    background: #f3f4f6;
+    border-color: #e5e7eb;
+}
+

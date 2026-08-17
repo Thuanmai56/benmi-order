@@ -1,6 +1,7 @@
 import { Env } from '../types/env';
 import { Menu } from '../types/index';
 import { json } from '../utils/http';
+import { invalidateBootstrapCache } from './bootstrap';
 
 export const DEFAULT_MENU: Menu = {
   small: { "燒肉": 56, "火腿": 56, "雞肉": 68, "烤肉": 72, "雙層烤肉": 78, "綜合": 79 },
@@ -216,6 +217,7 @@ export async function updateStockStatus(request: Request, env: Env): Promise<Res
     // 2. Invalidate bộ nhớ đệm KV của tenant
     const cacheKey = `tenant:${tenantId}:menu`;
     await env.ORDER_STATE.delete(cacheKey);
+    await invalidateBootstrapCache(tenantId, env);
 
     return json({ success: true, message: "Stock status updated and cache invalidated." });
 
@@ -347,6 +349,7 @@ export async function updateMenu(request: Request, env: Env): Promise<Response> 
     // 3. Xóa cache đa hộ thuê để force reload ở lượt đọc sau
     const cacheKey = `tenant:${tenantId}:menu`;
     await env.ORDER_STATE.delete(cacheKey);
+    await invalidateBootstrapCache(tenantId, env);
 
     return json({ success: true });
   } catch (e: any) {
