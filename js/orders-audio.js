@@ -92,15 +92,17 @@ async function startOrderShift() {
   await unlockSound();
   playAlarmCycle();
   const today = getTodayDateString();
-  sessionStorage.setItem('pos_session_started', 'true');
-  sessionStorage.setItem('pos_session_date', today);
+  const tenantId = (typeof getTenantIdFromUrl === 'function') ? getTenantIdFromUrl() : 'benmi';
+  sessionStorage.setItem('pos_session_started_' + tenantId, 'true');
+  sessionStorage.setItem('pos_session_date_' + tenantId, today);
   const modal = document.getElementById("startShiftModal");
   if (modal) modal.style.display = "none";
 }
 
 function checkInitialSessionModal() {
-  const isStarted = sessionStorage.getItem('pos_session_started');
-  const sessionDate = sessionStorage.getItem('pos_session_date');
+  const tenantId = (typeof getTenantIdFromUrl === 'function') ? getTenantIdFromUrl() : 'benmi';
+  const isStarted = sessionStorage.getItem('pos_session_started_' + tenantId);
+  const sessionDate = sessionStorage.getItem('pos_session_date_' + tenantId);
   const today = getTodayDateString();
 
   if (isStarted === 'true' && sessionDate === today) {

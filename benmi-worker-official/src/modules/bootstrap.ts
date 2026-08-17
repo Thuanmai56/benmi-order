@@ -74,7 +74,7 @@ const BENMI_TRANSLATIONS: Record<string, string> = {
 const BENMI_RECOMMENDED = ['雙層烤肉', '綜合', '5 大雙層烤肉+飲料', '6 大綜合+飲料'];
 const ZHADAN_RECOMMENDED = ['原味炸蛋蔥餅', '雙芝士炸蛋蔥餅', '雞腿肉卷炸蛋蔥餅'];
 
-function parseOperatingHours(raw: string | null, tenantId: string): Record<string, Array<{ start: string; end: string }>> {
+export function parseOperatingHours(raw: string | null, tenantId: string): Record<string, Array<{ start: string; end: string }>> {
   const result: Record<string, Array<{ start: string; end: string }>> = {};
 
   if (!raw || raw.trim() === '') {

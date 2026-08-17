@@ -136,12 +136,13 @@ function switchTab(tab) {
 
 async function fetchOrders() {
   try {
-    const headers = {};
+    const tenantId = getTenantIdFromUrl();
+    const headers = { "X-Tenant-ID": tenantId };
     if (lastOrdersETag) {
       headers["If-None-Match"] = lastOrdersETag;
     }
 
-    const response = await fetch(`${WORKER_BASE}/api/orders`, { headers });
+    const response = await fetch(`${WORKER_BASE}/api/orders?tenant_id=${tenantId}`, { headers });
     if (response.status === 304) {
       // No order updates since last poll
       return;

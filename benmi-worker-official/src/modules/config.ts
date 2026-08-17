@@ -2,7 +2,7 @@ import { Env } from '../types/env';
 import { json } from '../utils/http';
 import { getTenantId } from './menu';
 import { TenantContext } from '../types/tenant';
-import { invalidateBootstrapCache } from './bootstrap';
+import { invalidateBootstrapCache, parseOperatingHours } from './bootstrap';
 
 export async function getConfig(
   request: Request,
@@ -24,13 +24,7 @@ export async function getConfig(
       ).bind(tenantId).first<any>();
 
       if (row) {
-        if (row.operating_hours) {
-          try {
-            operatingHours = JSON.parse(row.operating_hours);
-          } catch {
-            operatingHours = row.operating_hours;
-          }
-        }
+        operatingHours = parseOperatingHours(row.operating_hours, tenantId);
         if (row.allow_scheduled_pickup !== undefined && row.allow_scheduled_pickup !== null) {
           allowScheduledPickup = Boolean(row.allow_scheduled_pickup);
         }
@@ -44,6 +38,10 @@ export async function getConfig(
     } catch (e) {
       console.error(`[getConfig] D1 query failed for tenant ${tenantId}:`, e);
     }
+  }
+
+  if (!operatingHours) {
+    operatingHours = parseOperatingHours(null, tenantId);
   }
 
   return json({

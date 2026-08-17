@@ -70,6 +70,31 @@ async function setStoreStatus(newStatus) {
   }
 }
 
+function ensureParsedOperatingHours(raw) {
+  if (!raw) return createDefaultOperatingHours();
+  if (typeof raw === 'string') {
+    try {
+      raw = JSON.parse(raw);
+    } catch {
+      const match = raw.match(/(\d{1,2}:\d{2})\s*[-~至到]\s*(\d{1,2}:\d{2})/);
+      const start = match ? match[1].padStart(5, '0') : "11:00";
+      const end = match ? match[2].padStart(5, '0') : "21:00";
+      const res = {};
+      for (let i = 0; i < 7; i++) res[i] = [{ start, end }];
+      return res;
+    }
+  }
+  if (typeof raw === 'object' && raw !== null) {
+    const res = {};
+    for (let i = 0; i < 7; i++) {
+      const s = raw[i] || raw[String(i)] || [];
+      res[i] = Array.isArray(s) ? s : [];
+    }
+    return res;
+  }
+  return createDefaultOperatingHours();
+}
+
 async function loadStoreStatus() {
   try {
     const res = await fetch(`${WORKER_BASE}/api/config?tenant_id=${getTenantIdFromUrl()}&_t=${Date.now()}`);
@@ -81,9 +106,7 @@ async function loadStoreStatus() {
       if (data.allowScheduledPickup !== undefined) {
         allowScheduledPickup = data.allowScheduledPickup;
       }
-      if (data.operatingHours) {
-        storeOperatingHours = data.operatingHours;
-      }
+      storeOperatingHours = ensureParsedOperatingHours(data.operatingHours);
     }
   } catch (e) {
     console.error("loadStoreStatus error:", e);
@@ -105,7 +128,7 @@ async function loadOperatingHours() {
     const res = await fetch(`${WORKER_BASE}/api/config?tenant_id=${getTenantIdFromUrl()}&_t=${Date.now()}`);
     if (res.ok) {
       const data = await res.json();
-      storeOperatingHours = data.operatingHours || createDefaultOperatingHours();
+      storeOperatingHours = ensureParsedOperatingHours(data.operatingHours);
       allowScheduledPickup = data.allowScheduledPickup !== undefined ? data.allowScheduledPickup : true;
       if (data.storeStatus) currentStoreStatus = data.storeStatus;
     } else {
