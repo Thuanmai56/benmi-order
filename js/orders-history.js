@@ -127,7 +127,7 @@ function renderHistory(orders) {
       tile.innerHTML = `
         <div>
           <div class="tile-top">
-            <span class="tile-customer">${escapeHtml(order.customer || "Khách")}</span>
+            <span class="tile-customer">${escapeHtml(order.customer || t('defaultCustomer'))}</span>
             ${badge}
             <span class="tile-meta">#${escapeHtml(order.key)}</span>
           </div>

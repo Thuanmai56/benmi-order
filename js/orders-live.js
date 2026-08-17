@@ -37,7 +37,7 @@ function renderListLeft(orders) {
     tile.innerHTML = `
       <div>
         <div class="tile-top">
-          <span class="tile-customer">${escapeHtml(order.customer || "Khách")}</span>
+          <span class="tile-customer">${escapeHtml(order.customer || t('defaultCustomer'))}</span>
           ${badge}
           <span class="tile-meta">#${escapeHtml(order.key)}</span>
         </div>
@@ -76,7 +76,7 @@ function renderListRight(orders) {
     tile.innerHTML = `
       <div>
         <div class="tile-top">
-          <span class="tile-customer">${escapeHtml(order.customer || "Khách")}</span>
+          <span class="tile-customer">${escapeHtml(order.customer || t('defaultCustomer'))}</span>
           <span class="badge done">${t('badgeReady')}</span>
           <span class="tile-meta">#${escapeHtml(order.key)}</span>
         </div>
@@ -178,7 +178,7 @@ async function updateStatus(key, status, extra = {}, btn = null) {
   const oldText = btn ? btn.innerText : "";
   if (btn) {
     btn.disabled = true;
-    btn.innerText = "Đang xử lý...";
+    btn.innerText = t("processing");
   }
 
   try {
@@ -197,7 +197,7 @@ async function updateStatus(key, status, extra = {}, btn = null) {
     await fetchOrders();
   } catch (e) {
     console.error(e);
-    alert("處理失敗，請稍後再試。");
+    alert(t("processFail"));
   } finally {
     processingKeys.delete(key);
     if (btn) {

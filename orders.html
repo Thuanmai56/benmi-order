@@ -247,7 +247,7 @@
           <div class="panel-header">
             <div>
               <div class="panel-title" id="i18n-menu-cat-title">菜單分類</div>
-              <div class="panel-sub" id="i18n-menu-cat-sub" style="color: var(--brand-red); margin-top:4px;">5 nhóm cố định của Benmi</div>
+              <div class="panel-sub" id="i18n-menu-cat-sub" style="color: var(--muted); margin-top:4px;">點擊左側分類以管理品項</div>
             </div>
             <button class="mini-btn" id="btn-menu-refresh" onclick="loadMenuData()">重整</button>
           </div>
@@ -264,7 +264,7 @@
             </div>
             <div style="display:flex; gap:8px;">
               <button class="btn btn-ghost" id="btn-menu-restore" style="padding: 8px 16px; font-size: 14px; color: var(--brand-red);"
-                onclick="restoreDefaultMenu()">Khôi phục Menu gốc</button>
+                onclick="restoreDefaultMenu()">恢復預設菜單</button>
               <button class="btn btn-yellow" id="btn-menu-add-item" style="padding: 8px 16px; font-size: 14px;" onclick="addNewMenuItem()">+
                 新增項目</button>
               <button class="btn btn-primary" id="btn-menu-save" style="padding: 8px 16px; font-size: 14px;"
@@ -532,25 +532,24 @@
   <div id="imageModal" class="modal">
     <div class="modal-content" style="max-width: 520px;">
       <div class="modal-title">
-        <h3 id="image-modal-title">Quản lý Ảnh</h3>
+        <h3 id="image-modal-title">圖片管理</h3>
         <div class="modal-close" onclick="closeModal()">✕</div>
       </div>
       <div class="modal-body">
         <div style="margin-top: 10px; text-align: center;">
           <img id="image-preview" src=""
             style="max-width: 100%; max-height: 180px; border-radius: 12px; display: none; margin: 0 auto 12px; object-fit: cover; border: 1px solid #eee;">
-          <div id="image-status" style="margin-bottom: 12px; font-weight: 900; color: #666;">Đang kiểm tra ảnh...</div>
+          <div id="image-status" style="margin-bottom: 12px; font-weight: 900; color: #666;">正在檢查圖片...</div>
         </div>
         <input type="file" id="image-file-input" accept="image/png, image/jpeg, image/webp" style="display: none;"
           onchange="handleImageSelect(event)">
       </div>
       <div class="modal-actions two">
-        <button class="btn btn-primary" onclick="document.getElementById('image-file-input').click()">Chọn Ảnh</button>
-        <button class="btn btn-danger" id="btn-delete-image" style="display: none;" onclick="deleteItemImage()">Xóa
-          Ảnh</button>
+        <button class="btn btn-primary" id="btn-image-select" onclick="document.getElementById('image-file-input').click()">選擇圖片</button>
+        <button class="btn btn-danger" id="btn-delete-image" style="display: none;" onclick="deleteItemImage()">刪除圖片</button>
       </div>
       <div class="modal-actions" style="grid-template-columns: 1fr; margin-top: 8px; border-top: none; padding-top: 0;">
-        <button class="btn btn-ghost btn-block" onclick="closeModal()">Đóng</button>
+        <button class="btn btn-ghost btn-block" id="btn-image-close" onclick="closeModal()">關閉</button>
       </div>
     </div>
   </div>
@@ -559,40 +558,39 @@
   <div id="stockModal" class="modal">
     <div class="modal-content" style="max-width: 480px;">
       <div class="modal-title">
-        <h3 id="stock-modal-title">Cài đặt Trạng thái Kho</h3>
+        <h3 id="stock-modal-title">庫存狀態設定</h3>
         <div class="modal-close" onclick="closeStockModal()">✕</div>
       </div>
       <div class="modal-body">
         <div style="margin-top: 10px;">
-          <label style="display: block; font-weight: 900; margin-bottom: 8px; font-size: 15px;">Trạng thái:</label>
+          <label style="display: block; font-weight: 900; margin-bottom: 8px; font-size: 15px;" id="i18n-stock-label-status">狀態：</label>
           <select id="stock-status-select"
             style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px;"
             onchange="handleStockStatusChange()">
-            <option value="in_stock">🟢 Còn hàng (In Stock)</option>
-            <option value="out_of_stock">🔴 Hết hàng (Out of Stock)</option>
+            <option value="in_stock" id="stock-opt-in-stock">🟢 正常供應 (In Stock)</option>
+            <option value="out_of_stock" id="stock-opt-out-stock">🔴 暫時售完 (Out of Stock)</option>
           </select>
         </div>
         <div id="oos-options-container" style="margin-top: 16px; display: none;">
-          <label style="display: block; font-weight: 900; margin-bottom: 8px; font-size: 15px;">Thời hạn hết hàng:</label>
+          <label style="display: block; font-weight: 900; margin-bottom: 8px; font-size: 15px;" id="i18n-stock-label-duration">售完時限：</label>
           <select id="stock-duration-select"
             style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px;"
             onchange="handleStockDurationChange()">
-            <option value="today">Hôm nay (Tự hồi phục lúc 4h sáng mai)</option>
-            <option value="multiple_days">Nhiều ngày (Chọn ngày khôi phục)</option>
-            <option value="indefinite">Vô thời hạn (Chờ mở thủ công)</option>
+            <option value="today" id="stock-opt-today">今日 (明日凌晨 4:00 自動恢復)</option>
+            <option value="multiple_days" id="stock-opt-multiple-days">指定日期 (選擇恢復日期)</option>
+            <option value="indefinite" id="stock-opt-indefinite">無限期 (手動恢復)</option>
           </select>
 
           <div id="oos-date-container" style="margin-top: 16px; display: none;">
-            <label style="display: block; font-weight: 900; margin-bottom: 8px; font-size: 15px;">Ngày khôi phục
-              bán:</label>
+            <label style="display: block; font-weight: 900; margin-bottom: 8px; font-size: 15px;" id="i18n-stock-label-date">恢復供應日期：</label>
             <input type="date" id="oos-until-date"
               style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px;">
           </div>
         </div>
       </div>
       <div class="modal-actions two" style="margin-top: 14px;">
-        <button class="btn btn-primary btn-block" onclick="saveStockStatus()">Lưu Thay Đổi</button>
-        <button class="btn btn-ghost btn-block" onclick="closeStockModal()">Hủy</button>
+        <button class="btn btn-primary btn-block" id="btn-stock-save" onclick="saveStockStatus()">儲存變更</button>
+        <button class="btn btn-ghost btn-block" id="btn-stock-cancel" onclick="closeStockModal()">取消</button>
       </div>
     </div>
   </div>
