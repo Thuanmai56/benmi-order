@@ -369,9 +369,23 @@
             const alertBox = document.getElementById('custom-alert');
             if (alertBox) alertBox.style.display = 'none';
             if (window.alertCallback) {
-                window.alertCallback();
+                const cb = window.alertCallback;
                 window.alertCallback = null;
+                cb();
             }
+        }
+
+        function closeAndExitLiff() {
+            try {
+                if (typeof liff !== 'undefined' && liff.closeWindow) {
+                    liff.closeWindow();
+                }
+            } catch (e) {
+                console.warn("liff.closeWindow failed:", e);
+            }
+            try {
+                window.close();
+            } catch (e) {}
         }
 
         function openImageLightbox(src) {
@@ -1279,8 +1293,12 @@
             isSubmitting = true;
             let orderSubmittedSuccessfully = false;
             const submitBtn = document.getElementById('btn-submit');
-            submitBtn.disabled = true;
-            submitBtn.innerText = '處理中...';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = '處理中...';
+                submitBtn.style.cursor = 'not-allowed';
+                submitBtn.style.opacity = '0.7';
+            }
 
             const currentTotal = updateTotal();
             const orderNum = generateOrderNumber();
@@ -1402,8 +1420,12 @@
                 if (!res.ok) throw new Error(`API returned status ${res.status}`);
 
                 orderSubmittedSuccessfully = true;
-                submitBtn.disabled = true;
-                submitBtn.innerText = '訂單已送出';
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerText = '訂單已送出';
+                    submitBtn.style.cursor = 'not-allowed';
+                    submitBtn.style.opacity = '0.6';
+                }
 
                 if (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient() && liff.isApiAvailable && liff.isApiAvailable('sendMessages')) {
                     try {
@@ -1424,9 +1446,7 @@
                     <div style="font-size: 19px; font-weight: 900; color: #111827; margin-bottom: 6px;">訂單已送出成功！</div>
                     <div style="font-size: 14px; line-height: 1.5; color: #4b5563;">店家已收到您的訂單，店員會馬上為您確認，請稍候 🙏<br><span style="font-size: 12px; color: #9ca3af;">Đơn hàng đã được gửi thành công.</span></div>
                 `, () => {
-                    if (typeof liff !== 'undefined' && liff.closeWindow) {
-                        liff.closeWindow();
-                    }
+                    closeAndExitLiff();
                 });
 
             } catch (err) {
@@ -1434,8 +1454,12 @@
                 try {
                     await liff.sendMessages([{ type: 'text', text: msg }]);
                     orderSubmittedSuccessfully = true;
-                    submitBtn.disabled = true;
-                    submitBtn.innerText = '訂單已送出';
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.innerText = '訂單已送出';
+                        submitBtn.style.cursor = 'not-allowed';
+                        submitBtn.style.opacity = '0.6';
+                    }
                     customAlert(`
                         <div style="margin-bottom: 16px;">
                             <div style="width: 60px; height: 60px; margin: 0 auto; background: #ecfdf5; border: 2px solid #a7f3d0; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
@@ -1447,9 +1471,7 @@
                         <div style="font-size: 19px; font-weight: 900; color: #111827; margin-bottom: 6px;">訂單已送出成功！</div>
                         <div style="font-size: 14px; line-height: 1.5; color: #4b5563;">店家已收到您的訂單，店員會馬上為您確認，請稍候 🙏<br><span style="font-size: 12px; color: #9ca3af;">Đơn hàng đã được gửi thành công.</span></div>
                     `, () => {
-                        if (typeof liff !== 'undefined' && liff.closeWindow) {
-                            liff.closeWindow();
-                        }
+                        closeAndExitLiff();
                     });
                 } catch (liffErr) {
                     customAlert('⚠️ 系統傳送異常，請告知店員您的訂單內容：<br><br>' + msg.replace(/\n/g, '<br>'));
@@ -1457,8 +1479,12 @@
             } finally {
                 if (!orderSubmittedSuccessfully) {
                     isSubmitting = false;
-                    submitBtn.disabled = false;
-                    submitBtn.innerText = '送出訂單';
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerText = '確認下單';
+                        submitBtn.style.cursor = 'pointer';
+                        submitBtn.style.opacity = '1';
+                    }
                 }
             }
         }
