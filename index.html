@@ -664,11 +664,32 @@
                         if (cat === 'combo') { itemPrice = menu.combo[origName] || 0; displayName = '套餐 ' + displayName; }
                         if (cat === 'drinks') { itemPrice = menu.drinks[origName] || 0; }
 
-                        let lineTotal = qty * itemPrice;
+                        let itemModifiersTotal = 0;
+                        let portionsHTML = '';
+
+                        if (customizeData[key]) {
+                            customizeData[key].slice(0, qty).forEach((c, i) => {
+                                let parts = [];
+                                if (c.topping && c.topping !== '') {
+                                    let topPrice = menu.topping[c.topping] || 0;
+                                    itemModifiersTotal += topPrice;
+                                    parts.push('加' + c.topping + ' (+$' + topPrice + ')');
+                                }
+                                if (c.spicy && c.spicy !== '不辣') parts.push(c.spicy);
+                                if (c.note && c.note.trim() !== '') parts.push(c.note.trim());
+
+                                if (parts.length > 0) {
+                                    let zhIdx = zhNumbers[i] || `第 ${i + 1} 份`;
+                                    portionsHTML += `<div style="font-size:13px; color:#6b7280; margin-left:10px; margin-bottom:6px;">↳ ${zhIdx}: ${parts.join(', ')}</div>`;
+                                }
+                            });
+                        }
+
+                        let lineTotal = (qty * itemPrice) + itemModifiersTotal;
 
                         summaryHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:8px;">
                             <div style="font-weight:800;">${qty}x ${displayName}</div>
-                            <div>$${lineTotal}</div>
+                            <div style="font-weight:700;">$${lineTotal}</div>
                         </div>`;
 
                         if (cat === 'combo') {
@@ -679,23 +700,7 @@
                             if (drinkStr) summaryHTML += `<div style="font-size:13px; color:#6b7280; margin-left:10px; margin-bottom:6px;">↳ 飲料：${drinkStr}</div>`;
                         }
 
-                        if (customizeData[key]) {
-                            customizeData[key].slice(0, qty).forEach((c, i) => {
-                                let parts = [];
-                                if (c.topping && c.topping !== '') {
-                                    let topPrice = menu.topping[c.topping] || 0;
-                                    lineTotal += topPrice;
-                                    parts.push('加' + c.topping + ' (+$' + topPrice + ')');
-                                }
-                                if (c.spicy && c.spicy !== '不辣') parts.push(c.spicy);
-                                if (c.note && c.note.trim() !== '') parts.push(c.note.trim());
-
-                                if (parts.length > 0) {
-                                    let zhIdx = zhNumbers[i] || `第 ${i + 1} 份`;
-                                    summaryHTML += `<div style="font-size:13px; color:#6b7280; margin-left:10px; margin-bottom:6px;">↳ ${zhIdx}: ${parts.join(', ')}</div>`;
-                                }
-                            });
-                        }
+                        summaryHTML += portionsHTML;
                         total += lineTotal;
                         summaryHTML += `<div style="border-bottom: 1px dashed #eee; margin-bottom: 8px;"></div>`;
                     }
@@ -722,14 +727,8 @@
                         totalQty += qty;
 
                         const itemBasePrice = priceMap[key] || 0;
-                        let itemLineTotal = qty * itemBasePrice;
-
-                        summaryHTML += `
-                            <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                                <div style="font-weight:800; color: #111;">${qty}x ${itemName}</div>
-                                <div style="font-weight:700;">$${itemLineTotal}</div>
-                            </div>
-                        `;
+                        let itemModifiersTotal = 0;
+                        let portionsHTML = '';
 
                         if (customizeData[key]) {
                             customizeData[key].slice(0, qty).forEach((c, i) => {
@@ -739,8 +738,12 @@
                                         const val = c.single[s];
                                         if (val && val !== '不辣' && val !== '不需要') {
                                             const addP = modPriceMap[val] || 0;
-                                            if (addP > 0) { itemLineTotal += addP; parts.push(`${val} (+$${addP})`); }
-                                            else { parts.push(val); }
+                                            if (addP > 0) {
+                                                itemModifiersTotal += addP;
+                                                parts.push(`${val} (+$${addP})`);
+                                            } else {
+                                                parts.push(val);
+                                            }
                                         }
                                     }
                                 }
@@ -748,7 +751,7 @@
                                     for (let topName in c.multiple) {
                                         if (c.multiple[topName]) {
                                             const topPrice = modPriceMap[topName] || 0;
-                                            itemLineTotal += topPrice;
+                                            itemModifiersTotal += topPrice;
                                             parts.push(`加${topName} (+$${topPrice})`);
                                         }
                                     }
@@ -757,11 +760,22 @@
 
                                 if (parts.length > 0) {
                                     const zhIdx = zhNumbers[i] || `第 ${i + 1} 份`;
-                                    summaryHTML += `<div style="font-size:13px; color:#6b7280; margin-left:10px; margin-bottom:6px;">↳ ${zhIdx}: ${parts.join(', ')}</div>`;
+                                    portionsHTML += `<div style="font-size:13px; color:#6b7280; margin-left:10px; margin-bottom:6px;">↳ ${zhIdx}: ${parts.join(', ')}</div>`;
                                 }
                             });
                         }
-                        total += itemLineTotal;
+
+                        let lineTotal = (qty * itemBasePrice) + itemModifiersTotal;
+
+                        summaryHTML += `
+                            <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                                <div style="font-weight:800; color: #111;">${qty}x ${itemName}</div>
+                                <div style="font-weight:700;">$${lineTotal}</div>
+                            </div>
+                        `;
+
+                        summaryHTML += portionsHTML;
+                        total += lineTotal;
                         summaryHTML += `<div style="border-bottom: 1px dashed #eee; margin-bottom: 8px;"></div>`;
                     }
                 }
