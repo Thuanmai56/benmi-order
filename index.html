@@ -4,34 +4,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title id="page-title">Benmi 點餐</title>
+    <title id="page-title">線上點餐</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="index.css">
+    <script>
+        (function () {
+            const params = new URLSearchParams(window.location.search);
+            const tenantId = params.get("tenant_id") || "benmi";
+            window.__INITIAL_TENANT_ID = tenantId;
+            if (tenantId === "benmi") {
+                document.title = "Benmi 點餐";
+            } else {
+                try {
+                    const cached = localStorage.getItem("tenant_theme_" + tenantId);
+                    if (cached) {
+                        const t = JSON.parse(cached);
+                        if (t.brandName) document.title = t.brandName + " 點餐";
+                        if (t.brandColor) document.documentElement.style.setProperty('--primary', t.brandColor);
+                        if (t.brandColorDark) document.documentElement.style.setProperty('--primary-dark', t.brandColorDark);
+                    } else {
+                        document.title = "線上點餐";
+                    }
+                } catch (e) {}
+            }
+        })();
+    </script>
 </head>
 
 <body>
     <div class="store-header" id="store-header-box">
         <div class="store-header-top">
-            <div class="store-logo-wrapper">
-                <img id="store-logo" src="./benmi_logo.png" alt="Logo" class="store-logo">
+            <div class="store-logo-wrapper" id="store-logo-wrapper" style="display: none;">
+                <img id="store-logo" src="" alt="Logo" class="store-logo">
             </div>
             <div class="store-info">
-                <h1 class="store-name" id="store-name">本米</h1>
-                <p class="store-subtitle" id="store-subtitle">Bánh mì Việt Nam<br>越式法國麵包</p>
+                <h1 class="store-name" id="store-name"></h1>
+                <p class="store-subtitle" id="store-subtitle"></p>
             </div>
             <div class="store-status-wrapper">
-                <div id="store-status" class="store-status">營業中</div>
+                <div id="store-status" class="store-status" style="display: none;">營業中</div>
                 <div id="waiting-counter-badge" class="waiting-badge" style="display: none;"></div>
             </div>
         </div>
         <div class="store-details">
-            <div class="store-detail-row">
+            <div class="store-detail-row" id="store-address-row" style="display: none;">
                 <span class="detail-icon">📍</span>
-                <span id="store-address">新北市土城區中央路二段135號</span>
+                <span id="store-address"></span>
             </div>
-            <div class="store-detail-row store-hours-row" onclick="toggleStoreHours(event)" style="cursor: pointer;">
+            <div class="store-detail-row store-hours-row" id="store-hours-row" onclick="toggleStoreHours(event)" style="cursor: pointer; display: none;">
                 <span class="detail-icon">🕒</span>
                 <div style="flex: 1;">
                     <div class="store-hours-toggle" style="display: flex; align-items: center; justify-content: space-between; user-select: none; gap: 8px; flex-wrap: wrap;">
@@ -46,14 +68,62 @@
                             </svg>
                         </div>
                     </div>
-                    <div class="time-block" id="store-hours-display" style="display: none; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e2e8f0; font-size: 13.5px; line-height: 1.6; color: #374151;">
-                        <div>週一~週五&nbsp;&nbsp;11:00-21:00</div>
-                        <div>週六、週日&nbsp;&nbsp;9:00-21:00</div>
-                    </div>
+                    <div class="time-block" id="store-hours-display" style="display: none; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e2e8f0; font-size: 13.5px; line-height: 1.6; color: #374151;"></div>
                 </div>
             </div>
         </div>
     </div>
+    <script>
+        (function() {
+            const tenantId = window.__INITIAL_TENANT_ID || "benmi";
+            const BENMI_DEFAULT_THEME = {
+                brandName: "本米",
+                brandSubtitle: "Bánh mì Việt Nam<br>越式法國麵包",
+                storeAddress: "新北市土城區中央路二段135號",
+                logoUrl: "./benmi_logo.png"
+            };
+
+            let theme = (tenantId === "benmi") ? BENMI_DEFAULT_THEME : null;
+            if (!theme) {
+                try {
+                    const cached = localStorage.getItem("tenant_theme_" + tenantId);
+                    if (cached) theme = JSON.parse(cached);
+                } catch(e) {}
+            }
+
+            if (theme) {
+                document.title = (theme.brandName || "點餐系統") + " 點餐";
+                const pageTitle = document.getElementById("page-title");
+                if (pageTitle) pageTitle.innerText = (theme.brandName || "點餐系統") + " 點餐";
+
+                const nameEl = document.getElementById("store-name");
+                if (nameEl && theme.brandName) nameEl.innerText = theme.brandName;
+
+                const subEl = document.getElementById("store-subtitle");
+                if (subEl && theme.brandSubtitle) subEl.innerHTML = theme.brandSubtitle.replace(/\n/g, "<br>");
+
+                const addrEl = document.getElementById("store-address");
+                const addrRow = document.getElementById("store-address-row");
+                if (addrEl && theme.storeAddress) {
+                    addrEl.innerText = theme.storeAddress;
+                    if (addrRow) addrRow.style.display = "flex";
+                }
+
+                const logoEl = document.getElementById("store-logo");
+                const logoWrapper = document.getElementById("store-logo-wrapper");
+                if (logoEl && theme.logoUrl) {
+                    logoEl.src = theme.logoUrl;
+                    if (logoWrapper) logoWrapper.style.display = "flex";
+                }
+
+                const statusEl = document.getElementById("store-status");
+                if (statusEl) statusEl.style.display = "block";
+
+                const hoursRow = document.getElementById("store-hours-row");
+                if (hoursRow) hoursRow.style.display = "flex";
+            }
+        })();
+    </script>
 
     <!-- Store Status Dynamic Alert Banners -->
     <div id="store-paused-banner" class="store-alert-banner paused" style="display: none;">
@@ -72,35 +142,14 @@
         </div>
     </div>
 
-    <nav class="sticky-nav" id="main-nav">
-        <div class="nav-btn active" onclick="scrollToSec('sec-large')">大麵包</div>
-        <div class="nav-btn" onclick="scrollToSec('sec-small')">小麵包</div>
-        <div class="nav-btn" onclick="scrollToSec('sec-combo')">套餐</div>
-        <div class="nav-btn" onclick="scrollToSec('sec-drink')">飲料</div>
-        <div class="nav-btn" onclick="scrollToSec('sec-checkout')">結帳</div>
-    </nav>
+    <nav class="sticky-nav" id="main-nav"></nav>
 
     <div class="container">
         <!-- Catalog Container -->
         <div id="catalog-sections">
-            <div class="section-container" id="sec-large">
-                <div class="section-title">🍔 大麵包</div>
-                <div class="grid" id="large-list"></div>
-            </div>
-
-            <div class="section-container" id="sec-small">
-                <div class="section-title">🥖 小麵包</div>
-                <div class="grid" id="small-list"></div>
-            </div>
-
-            <div class="section-container" id="sec-combo">
-                <div class="section-title">🎁 特惠套餐 (含飲料)</div>
-                <div class="grid" id="combo-list"></div>
-            </div>
-
-            <div class="section-container" id="sec-drink">
-                <div class="section-title">🥤 單點飲料</div>
-                <div class="grid" id="drink-list"></div>
+            <div id="catalog-loading" style="text-align: center; padding: 48px 0; color: #9ca3af; font-size: 15px;">
+                <div style="display:inline-block; width:30px; height:30px; border:3px solid #e5e7eb; border-top-color:var(--primary); border-radius:50%; animation: spin 0.8s linear infinite; margin-bottom:10px;"></div>
+                <div>載入菜單中...</div>
             </div>
         </div>
 
@@ -266,7 +315,13 @@
         }
 
         function applyTenantTheme(tenant) {
-            if (!tenant || isBenmiTenant) return;
+            if (!tenant) return;
+            const tenantId = getTenantIdFromUrl();
+            if (tenantId !== 'benmi') {
+                try {
+                    localStorage.setItem("tenant_theme_" + tenantId, JSON.stringify(tenant));
+                } catch(e) {}
+            }
             if (tenant.brandColor) {
                 document.documentElement.style.setProperty('--primary', tenant.brandColor);
             }
@@ -284,10 +339,28 @@
             if (subEl) subEl.innerHTML = tenant.brandSubtitle ? tenant.brandSubtitle.replace(/\n/g, '<br>') : '';
 
             const addrEl = document.getElementById('store-address');
-            if (addrEl) addrEl.innerText = tenant.storeAddress || '';
+            const addrRow = document.getElementById('store-address-row');
+            if (addrEl) {
+                addrEl.innerText = tenant.storeAddress || '';
+                if (addrRow) addrRow.style.display = tenant.storeAddress ? 'flex' : 'none';
+            }
 
             const logoEl = document.getElementById('store-logo');
-            if (logoEl && tenant.logoUrl) logoEl.src = tenant.logoUrl;
+            const logoWrapper = document.getElementById('store-logo-wrapper');
+            if (logoEl) {
+                if (tenant.logoUrl) {
+                    logoEl.src = tenant.logoUrl;
+                    if (logoWrapper) logoWrapper.style.display = 'flex';
+                } else {
+                    if (logoWrapper) logoWrapper.style.display = 'none';
+                }
+            }
+
+            const statusEl = document.getElementById('store-status');
+            if (statusEl) statusEl.style.display = 'block';
+
+            const hoursRow = document.getElementById('store-hours-row');
+            if (hoursRow) hoursRow.style.display = 'flex';
         }
 
         // --- TIME & TIMEZONE HELPERS ---
@@ -496,6 +569,43 @@
         }
 
         function renderMenuBenmi() {
+            if (!menu) return;
+
+            // 1. Setup Benmi Navigation Tabs
+            const nav = document.getElementById('main-nav');
+            if (nav) {
+                nav.innerHTML = `
+                    <div class="nav-btn active" onclick="scrollToSec('sec-large')">大麵包</div>
+                    <div class="nav-btn" onclick="scrollToSec('sec-small')">小麵包</div>
+                    <div class="nav-btn" onclick="scrollToSec('sec-combo')">套餐</div>
+                    <div class="nav-btn" onclick="scrollToSec('sec-drink')">飲料</div>
+                    <div class="nav-btn" onclick="scrollToSec('sec-checkout')">結帳</div>
+                `;
+            }
+
+            // 2. Setup Benmi Section Containers
+            const container = document.getElementById('catalog-sections');
+            if (container) {
+                container.innerHTML = `
+                    <div class="section-container" id="sec-large">
+                        <div class="section-title">🍔 大麵包</div>
+                        <div class="grid" id="large-list"></div>
+                    </div>
+                    <div class="section-container" id="sec-small">
+                        <div class="section-title">🥖 小麵包</div>
+                        <div class="grid" id="small-list"></div>
+                    </div>
+                    <div class="section-container" id="sec-combo">
+                        <div class="section-title">🎁 特惠套餐 (含飲料)</div>
+                        <div class="grid" id="combo-list"></div>
+                    </div>
+                    <div class="section-container" id="sec-drink">
+                        <div class="section-title">🥤 單點飲料</div>
+                        <div class="grid" id="drink-list"></div>
+                    </div>
+                `;
+            }
+
             for (let name in menu.large) createItem(name + ' 大', menu.large[name], 'large', 'large-list', name, recommended.has(name));
             for (let name in menu.small) createItem(name + ' 小', menu.small[name], 'small', 'small-list', name, recommended.has(name));
             for (let name in menu.combo) createItem('套餐 ' + name, menu.combo[name], 'combo', 'combo-list', name, recommendedCombo.has(name));

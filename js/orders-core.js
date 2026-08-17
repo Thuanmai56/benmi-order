@@ -13,19 +13,39 @@ function getTenantIdFromUrl() {
 
 async function initTenantBranding() {
   const tenantId = getTenantIdFromUrl();
-  if (tenantId !== 'benmi') {
-    try {
-      const res = await fetch(`${WORKER_BASE}/api/tenant/bootstrap?tenant_id=${tenantId}&_t=${Date.now()}`);
-      if (res.ok) {
-        const data = await res.json();
-        const bTitle = document.getElementById('brand-title');
-        if (bTitle && data.tenant && data.tenant.brandName) {
+  const bTitle = document.getElementById('brand-title');
+  if (tenantId === 'benmi') {
+    if (bTitle) bTitle.innerText = "🥖 Benmi Dashboard";
+    document.title = "Benmi Dashboard";
+    return;
+  }
+
+  try {
+    const cached = localStorage.getItem("tenant_theme_" + tenantId);
+    if (cached) {
+      const data = JSON.parse(cached);
+      if (bTitle && data.brandName) {
+        bTitle.innerText = `🍳 ${data.brandName} Dashboard`;
+        document.title = `${data.brandName} Dashboard`;
+      }
+    }
+  } catch(e) {}
+
+  try {
+    const res = await fetch(`${WORKER_BASE}/api/tenant/bootstrap?tenant_id=${tenantId}&_t=${Date.now()}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.tenant) {
+        try {
+          localStorage.setItem("tenant_theme_" + tenantId, JSON.stringify(data.tenant));
+        } catch(e) {}
+        if (bTitle && data.tenant.brandName) {
           bTitle.innerText = `🍳 ${data.tenant.brandName} Dashboard`;
           document.title = `${data.tenant.brandName} Dashboard`;
         }
       }
-    } catch(e) {}
-  }
+    }
+  } catch(e) {}
 }
 initTenantBranding();
 
