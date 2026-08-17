@@ -22,6 +22,8 @@ INSERT OR IGNORE INTO tenant_config (
     locale,
     allow_scheduled_pickup,
     store_status,
+    liff_id,
+    liff_url,
     is_active
 ) VALUES (
     'zhadantongxue',
@@ -35,6 +37,8 @@ INSERT OR IGNORE INTO tenant_config (
     'zh-TW',
     1,
     'open',
+    '2009560906-c5taZfiY',
+    'https://liff.line.me/2009560906-c5taZfiY',
     1
 );
 

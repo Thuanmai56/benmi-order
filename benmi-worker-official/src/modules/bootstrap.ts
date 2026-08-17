@@ -137,8 +137,8 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
     const storeAddress = tenantCtx?.storeAddress || (tenantId === 'zhadantongxue' ? '加盟/訂購專線: 0902271718' : '新北市土城區中央路二段135號');
     const operatingHours = tenantCtx?.operatingHours || (tenantId === 'zhadantongxue' ? '11:00-21:00' : '11:00-21:00（一到五），7:30-21:00（六日）');
     const deliveryPolicy = tenantCtx?.deliveryPolicy || null;
-    const liffId = tenantCtx?.liffId || (tenantId === 'benmi' ? env.LIFF_ID || null : null);
-    const liffUrl = tenantCtx?.liffUrl || (tenantId === 'benmi' ? env.LIFF_URL || null : null);
+    const liffId = tenantCtx?.liffId || env.LIFF_ID || '2009560906-c5taZfiY';
+    const liffUrl = tenantCtx?.liffUrl || env.LIFF_URL || 'https://liff.line.me/2009560906-c5taZfiY';
     const locale = tenantCtx?.locale || 'zh-TW';
 
     const logoUrl = tenantId === 'zhadantongxue' ? './zhadan_logo.png' : './benmi_logo.png';

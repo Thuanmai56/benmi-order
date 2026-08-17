@@ -1806,11 +1806,14 @@
 
         // --- INIT APP ---
         async function initApp() {
+            const isStaging = (window.location.hostname.includes("staging") || window.location.hostname.includes("test") || window.location.hostname.includes("localhost") || window.location.hostname.includes("127.0.0.1"));
+            const defaultLiffId = isStaging ? "2009555608-DMioljsI" : "2009560906-c5taZfiY";
+
             if (isBenmiTenant) {
                 await fetchMenu();
                 try {
-                    const liffId = (storeConfig && storeConfig.liffId) ? storeConfig.liffId : '2009560906-c5taZfiY';
-                    await liff.init({ liffId });
+                    const liffId = storeConfig?.liffId || defaultLiffId;
+                    if (liffId) await liff.init({ liffId });
                 } catch(e) {
                     console.error("LIFF Init Error", e);
                 }
@@ -1837,7 +1840,7 @@
             } else {
                 await fetchMenu();
                 try {
-                    const liffId = storeConfig?.liffId;
+                    const liffId = storeConfig?.liffId || defaultLiffId;
                     if (liffId) await liff.init({ liffId });
                 } catch(e) {
                     console.error("LIFF Init Error", e);
