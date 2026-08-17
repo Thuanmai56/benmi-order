@@ -1,6 +1,7 @@
 import { Env } from '../types/env';
 import { json, corsHeaders } from '../utils/http';
 import { getTenantId } from './menu';
+import { invalidateBootstrapCache } from './bootstrap';
 
 export async function getImageList(request: Request, env: Env): Promise<Response> {
   try {
@@ -83,6 +84,7 @@ export async function updateImage(request: Request, env: Env): Promise<Response>
       await env.ORDER_STATE.put(listKey, JSON.stringify(list));
     }
 
+    await invalidateBootstrapCache(tenantId, env);
     return json({ success: true });
   } catch (e) {
     return json({ error: "Invalid data" }, 400);
@@ -111,6 +113,7 @@ export async function deleteImage(request: Request, env: Env): Promise<Response>
     list = list.filter(n => n !== name);
     await env.ORDER_STATE.put(listKey, JSON.stringify(list));
 
+    await invalidateBootstrapCache(tenantId, env);
     return json({ success: true });
   } catch (e) {
     return json({ error: "Server error" }, 500);

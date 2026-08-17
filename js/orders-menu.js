@@ -288,6 +288,11 @@ async function saveMenuData() {
 }
 
 async function restoreDefaultMenu() {
+  const tenantId = getTenantIdFromUrl();
+  if (tenantId !== 'benmi') {
+    alert("Tính năng khôi phục mặc định hiện chỉ áp dụng cho Benmi.");
+    return;
+  }
   if (!confirm("Bạn có chắc chắn muốn KHÔI PHỤC MENU về trạng thái gốc mặc định không? Tất cả các món bạn đã sửa sẽ bị ghi đè!")) return;
 
   const DEFAULT_MENU = {
