@@ -1528,11 +1528,14 @@
                     submitBtn.style.opacity = '0.6';
                 }
 
-                if (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient() && liff.isApiAvailable && liff.isApiAvailable('sendMessages')) {
+                // Optional: Attempt to send message to LINE chat if in client
+                if (typeof liff !== 'undefined' && liff.isInClient) {
                     try {
-                        await liff.sendMessages([{ type: 'text', text: msg }]);
-                    } catch (e) {
-                        console.error("liff.sendMessages failed:", e);
+                        if (liff.isInClient() && typeof liff.sendMessages === 'function') {
+                            await liff.sendMessages([{ type: 'text', text: msg }]);
+                        }
+                    } catch (liffMsgErr) {
+                        console.warn("liff.sendMessages notice:", liffMsgErr);
                     }
                 }
 
@@ -1559,7 +1562,7 @@
             } catch (err) {
                 console.warn("Primary API flow failed, falling back to LINE message flow:", err);
                 try {
-                    if (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient() && liff.sendMessages) {
+                    if (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient() && typeof liff.sendMessages === 'function') {
                         await liff.sendMessages([{ type: 'text', text: msg }]);
                         orderSubmittedSuccessfully = true;
                         if (submitBtn) {
