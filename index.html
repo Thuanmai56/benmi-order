@@ -1286,7 +1286,7 @@
             }
 
             const hasItem = Object.values(cart).some(q => q > 0);
-            if (!hasItem) return customAlert('請選擇品項');
+            if (!hasItem) return customAlert('請先選擇餐點品項加入購物車');
 
             let dateInput = document.getElementById('pickup-date') ? document.getElementById('pickup-date').value : '';
             let timeInput = document.getElementById('pickup-time') ? document.getElementById('pickup-time').value : '';
@@ -1303,31 +1303,9 @@
                 const { dateStr, timeStr } = formatTaiwanDateTime(targetTime);
                 dateInput = dateStr;
                 timeInput = timeStr;
-            }
-
-            const checkoutSec = document.getElementById('sec-checkout');
-            if (checkoutSec) {
-                const rect = checkoutSec.getBoundingClientRect();
-                if (rect.top > (window.innerHeight || document.documentElement.clientHeight) - 100) {
-                    checkoutSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    checkoutSec.style.outline = '3px solid var(--primary)';
-                    checkoutSec.style.borderRadius = '16px';
-                    setTimeout(() => { checkoutSec.style.outline = 'none'; }, 2000);
-
-                    if (isScheduledEnabled && (!document.getElementById('pickup-date').value || !document.getElementById('pickup-time').value)) {
-                        setTimeout(() => {
-                            if (!document.getElementById('pickup-date').value) document.getElementById('pickup-date').focus();
-                            else document.getElementById('pickup-time').focus();
-                        }, 400);
-                        return customAlert('請先選取取餐日期和時間 ↓');
-                    } else {
-                        return customAlert('請確認購物車內容與取餐資訊 ↓');
-                    }
-                }
-            }
-
-            if (isScheduledEnabled) {
+            } else {
                 if (!dateInput || !timeInput) {
+                    const checkoutSec = document.getElementById('sec-checkout');
                     if (checkoutSec) {
                         checkoutSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
                         checkoutSec.style.outline = '3px solid var(--primary)';
@@ -1335,15 +1313,20 @@
                         setTimeout(() => { checkoutSec.style.outline = 'none'; }, 2000);
                     }
                     setTimeout(() => {
-                        if (!dateInput) document.getElementById('pickup-date').focus();
-                        else document.getElementById('pickup-time').focus();
+                        if (!dateInput && document.getElementById('pickup-date')) document.getElementById('pickup-date').focus();
+                        else if (document.getElementById('pickup-time')) document.getElementById('pickup-time').focus();
                     }, 400);
-                    return customAlert('請先選取取餐日期和時間 ↓');
+                    return customAlert('請選擇取餐日期與時間 ↓');
                 }
 
                 const twNow = getTaiwanDate();
-                const selectedDateTime = new Date(`${dateInput}T${timeInput}`);
-                if (selectedDateTime < twNow) return customAlert('不能選擇過去的時間，請重新選擇');
+                const [pYear, pMonth, pDay] = dateInput.split('-').map(Number);
+                const [pHour, pMin] = timeInput.split(':').map(Number);
+                const selectedDateTime = new Date(pYear, pMonth - 1, pDay, pHour, pMin, 0);
+
+                if (selectedDateTime < twNow) {
+                    return customAlert('不能選擇過去的時間，請重新選擇取餐時間');
+                }
 
                 if (storeConfig && storeConfig.storeStatus === 'busy') {
                     const { dateStr: todayStr } = formatTaiwanDateTime(twNow);
@@ -1356,10 +1339,9 @@
                     }
                 }
 
-                const pickupDate = new Date(dateInput);
+                const pickupDate = new Date(pYear, pMonth - 1, pDay);
                 const dayOfWeek = pickupDate.getDay();
-                const [hours, minutes] = timeInput.split(':').map(Number);
-                const timeValue = hours + minutes / 60;
+                const timeValue = pHour + pMin / 60;
 
                 let isValidTime = false;
                 let displayHoursMsg = "";
@@ -1400,9 +1382,10 @@
                 }
             }
 
+            const submitBtn = document.getElementById('btn-submit');
             isSubmitting = true;
             let orderSubmittedSuccessfully = false;
-            const submitBtn = document.getElementById('btn-submit');
+
             if (submitBtn) {
                 submitBtn.disabled = true;
                 submitBtn.innerText = '處理中...';
@@ -1410,101 +1393,109 @@
                 submitBtn.style.opacity = '0.7';
             }
 
-            const currentTotal = updateTotal();
-            const orderNum = generateOrderNumber();
-            const zhNumbers = ['第一份', '第二份', '第三份', '第四份', '第五份', '第六份', '第七份', '第八份', '第九份', '第十份'];
-
-            let msg = `訂單編號：${orderNum}\n📦 訂單內容：\n`;
-
-            if (isBenmiTenant) {
-                for (let key in cart) {
-                    if (cart[key] > 0) {
-                        let [cat, origName] = key.split('_');
-                        let displayName = cat === 'small' ? origName + ' 小' :
-                            cat === 'large' ? origName + ' 大' :
-                                cat === 'combo' ? '套餐 ' + origName : origName;
-
-                        msg += `\n${cart[key]}份 x ${displayName}`;
-
-                        if (cat === 'combo') {
-                            let drinks = comboDrinkData[origName] || [];
-                            let drinkCounts = {};
-                            drinks.slice(0, cart[key]).forEach(d => { drinkCounts[d] = (drinkCounts[d] || 0) + 1; });
-                            let drinkStr = Object.entries(drinkCounts).map(([n, c]) => `${n} x${c}`).join('、');
-                            if (drinkStr) msg += `\n   ↳ 飲料：${drinkStr}`;
-                        }
-
-                        if (customizeData[key]) {
-                            customizeData[key].slice(0, cart[key]).forEach((c, i) => {
-                                let parts = [];
-                                if (c.topping && c.topping !== '') parts.push('加' + c.topping);
-                                if (c.spicy && c.spicy !== '不辣') parts.push(c.spicy);
-                                if (c.note && c.note.trim() !== '') parts.push(c.note.trim());
-                                if (parts.length > 0) {
-                                    let zhIdx = zhNumbers[i] || `第 ${i + 1} 份`;
-                                    msg += `\n   ↳ ${zhIdx}: ${parts.join(', ')}`;
-                                }
-                            });
-                        }
-                    }
-                }
-            } else {
-                for (let key in cart) {
-                    if (cart[key] > 0) {
-                        let [catSlug, origName] = key.split('_');
-                        msg += `\n${cart[key]}份 x ${origName}`;
-
-                        if (customizeData[key]) {
-                            customizeData[key].slice(0, cart[key]).forEach((c, i) => {
-                                const parts = [];
-                                if (c.single) {
-                                    for (let s in c.single) {
-                                        if (c.single[s] && c.single[s] !== '不辣' && c.single[s] !== '不需要') {
-                                            parts.push(c.single[s]);
-                                        }
-                                    }
-                                }
-                                if (c.multiple) {
-                                    for (let t in c.multiple) {
-                                        if (c.multiple[t]) parts.push(`加${t}`);
-                                    }
-                                }
-                                if (c.note && c.note.trim() !== '') parts.push(c.note.trim());
-                                if (parts.length > 0) {
-                                    let zhIdx = zhNumbers[i] || `第 ${i + 1} 份`;
-                                    msg += `\n   ↳ ${zhIdx}: ${parts.join(', ')}`;
-                                }
-                            });
-                        }
-                    }
-                }
-            }
-
-            msg += `\n\n🕒 取餐時間：${dateInput} ${timeInput}`;
-            const mainNote = document.getElementById('note').value;
-            if (mainNote) msg += `\n📝 總備註：${mainNote}`;
-            msg += `\n💰 總金額：$${currentTotal}`;
-
-            const tenantId = getTenantIdFromUrl();
-
-            if (typeof liff !== 'undefined' && liff.isLoggedIn && !liff.isLoggedIn()) {
-                const storageKey = isBenmiTenant ? 'benmi_cart_save' : `cart_save_${tenantId}`;
-                localStorage.setItem(storageKey, JSON.stringify({ cart, customizeData, comboDrinkData }));
-                liff.login({ redirectUri: window.location.href });
-                return;
-            }
-
             try {
+                const tenantId = getTenantIdFromUrl();
+
+                if (typeof liff !== 'undefined' && liff.isInClient) {
+                    try {
+                        if (liff.isInClient() && liff.isLoggedIn && !liff.isLoggedIn()) {
+                            const storageKey = isBenmiTenant ? 'benmi_cart_save' : `cart_save_${tenantId}`;
+                            localStorage.setItem(storageKey, JSON.stringify({ cart, customizeData, comboDrinkData }));
+                            liff.login({ redirectUri: window.location.href });
+                            return;
+                        }
+                    } catch (liffAuthErr) {
+                        console.warn("LIFF Auth check ignored:", liffAuthErr);
+                    }
+                }
+
                 let customerName = "顧客";
                 let userId = "guest_" + Date.now();
 
                 if (typeof liff !== 'undefined' && liff.getProfile) {
                     try {
                         const profile = await liff.getProfile();
-                        customerName = profile.displayName;
-                        userId = profile.userId;
+                        if (profile) {
+                            customerName = profile.displayName || customerName;
+                            userId = profile.userId || userId;
+                        }
                     } catch(e) {}
                 }
+
+                const currentTotal = updateTotal();
+                const orderNum = generateOrderNumber();
+                const zhNumbers = ['第一份', '第二份', '第三份', '第四份', '第五份', '第六份', '第七份', '第八份', '第九份', '第十份'];
+
+                let msg = `[${document.getElementById('store-name')?.innerText || '線上'} 點餐]\n訂單編號：${orderNum}\n📦 訂單內容：\n`;
+
+                if (isBenmiTenant) {
+                    for (let key in cart) {
+                        if (cart[key] > 0) {
+                            let [cat, origName] = key.split('_');
+                            let displayName = cat === 'small' ? origName + ' 小' :
+                                cat === 'large' ? origName + ' 大' :
+                                    cat === 'combo' ? '套餐 ' + origName : origName;
+
+                            msg += `\n${cart[key]}份 x ${displayName}`;
+
+                            if (cat === 'combo') {
+                                let drinks = comboDrinkData[origName] || [];
+                                let drinkCounts = {};
+                                drinks.slice(0, cart[key]).forEach(d => { drinkCounts[d] = (drinkCounts[d] || 0) + 1; });
+                                let drinkStr = Object.entries(drinkCounts).map(([n, c]) => `${n} x${c}`).join('、');
+                                if (drinkStr) msg += `\n   ↳ 飲料：${drinkStr}`;
+                            }
+
+                            if (customizeData[key]) {
+                                customizeData[key].slice(0, cart[key]).forEach((c, i) => {
+                                    let parts = [];
+                                    if (c.topping && c.topping !== '') parts.push('加' + c.topping);
+                                    if (c.spicy && c.spicy !== '不辣') parts.push(c.spicy);
+                                    if (c.note && c.note.trim() !== '') parts.push(c.note.trim());
+                                    if (parts.length > 0) {
+                                        let zhIdx = zhNumbers[i] || `第 ${i + 1} 份`;
+                                        msg += `\n   ↳ ${zhIdx}: ${parts.join(', ')}`;
+                                    }
+                                });
+                            }
+                        }
+                    }
+                } else {
+                    for (let key in cart) {
+                        if (cart[key] > 0) {
+                            let [catSlug, origName] = key.split('_');
+                            msg += `\n${cart[key]}份 x ${origName}`;
+
+                            if (customizeData[key]) {
+                                customizeData[key].slice(0, cart[key]).forEach((c, i) => {
+                                    const parts = [];
+                                    if (c.single) {
+                                        for (let s in c.single) {
+                                            if (c.single[s] && c.single[s] !== '不辣' && c.single[s] !== '不需要') {
+                                                parts.push(c.single[s]);
+                                            }
+                                        }
+                                    }
+                                    if (c.multiple) {
+                                        for (let t in c.multiple) {
+                                            if (c.multiple[t]) parts.push(`加${t}`);
+                                        }
+                                    }
+                                    if (c.note && c.note.trim() !== '') parts.push(c.note.trim());
+                                    if (parts.length > 0) {
+                                        let zhIdx = zhNumbers[i] || `第 ${i + 1} 份`;
+                                        msg += `\n   ↳ ${zhIdx}: ${parts.join(', ')}`;
+                                    }
+                                });
+                            }
+                        }
+                    }
+                }
+
+                msg += `\n\n🕒 取餐時間：${dateInput} ${timeInput}`;
+                const mainNote = document.getElementById('note') ? document.getElementById('note').value : '';
+                if (mainNote) msg += `\n📝 總備註：${mainNote}`;
+                msg += `\n💰 總金額：$${currentTotal}`;
 
                 const orderPayload = {
                     key: orderNum,
@@ -1545,6 +1536,12 @@
                     }
                 }
 
+                // Reset cart on success
+                cart = {};
+                customizeData = {};
+                comboDrinkData = {};
+                updateTotal();
+
                 customAlert(`
                     <div style="margin-bottom: 16px;">
                         <div style="width: 60px; height: 60px; margin: 0 auto; background: #ecfdf5; border: 2px solid #a7f3d0; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
@@ -1562,29 +1559,37 @@
             } catch (err) {
                 console.warn("Primary API flow failed, falling back to LINE message flow:", err);
                 try {
-                    await liff.sendMessages([{ type: 'text', text: msg }]);
-                    orderSubmittedSuccessfully = true;
-                    if (submitBtn) {
-                        submitBtn.disabled = true;
-                        submitBtn.innerText = '訂單已送出';
-                        submitBtn.style.cursor = 'not-allowed';
-                        submitBtn.style.opacity = '0.6';
-                    }
-                    customAlert(`
-                        <div style="margin-bottom: 16px;">
-                            <div style="width: 60px; height: 60px; margin: 0 auto; background: #ecfdf5; border: 2px solid #a7f3d0; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="20 6 9 17 4 12"></polyline>
-                                </svg>
+                    if (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient() && liff.sendMessages) {
+                        await liff.sendMessages([{ type: 'text', text: msg }]);
+                        orderSubmittedSuccessfully = true;
+                        if (submitBtn) {
+                            submitBtn.disabled = true;
+                            submitBtn.innerText = '訂單已送出';
+                            submitBtn.style.cursor = 'not-allowed';
+                            submitBtn.style.opacity = '0.6';
+                        }
+                        cart = {};
+                        customizeData = {};
+                        comboDrinkData = {};
+                        updateTotal();
+                        customAlert(`
+                            <div style="margin-bottom: 16px;">
+                                <div style="width: 60px; height: 60px; margin: 0 auto; background: #ecfdf5; border: 2px solid #a7f3d0; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                </div>
                             </div>
-                        </div>
-                        <div style="font-size: 19px; font-weight: 900; color: #111827; margin-bottom: 6px;">訂單已送出成功！</div>
-                        <div style="font-size: 14px; line-height: 1.5; color: #4b5563;">店家已收到您的訂單，店員會馬上為您確認，請稍候 🙏<br><span style="font-size: 12px; color: #9ca3af;">Đơn hàng đã được gửi thành công.</span></div>
-                    `, () => {
-                        closeAndExitLiff();
-                    });
+                            <div style="font-size: 19px; font-weight: 900; color: #111827; margin-bottom: 6px;">訂單已送出成功！</div>
+                            <div style="font-size: 14px; line-height: 1.5; color: #4b5563;">店家已收到您的訂單，店員會馬上為您確認，請稍候 🙏<br><span style="font-size: 12px; color: #9ca3af;">Đơn hàng đã được gửi thành công.</span></div>
+                        `, () => {
+                            closeAndExitLiff();
+                        });
+                    } else {
+                        throw err;
+                    }
                 } catch (liffErr) {
-                    customAlert('⚠️ 系統傳送異常，請告知店員您的訂單內容：<br><br>' + msg.replace(/\n/g, '<br>'));
+                    customAlert('⚠️ 訂單送出失敗，請檢查網路連線或稍後再試：<br><br>' + (err.message || '連線逾時'));
                 }
             } finally {
                 if (!orderSubmittedSuccessfully) {
@@ -1600,11 +1605,20 @@
         }
 
         function setTodayDate() {
-            const today = new Date();
-            const offsetDate = new Date(today.getTime() + 8 * 3600000);
-            const dateStr = offsetDate.toISOString().split('T')[0];
+            const twNow = getTaiwanDate();
+            const { dateStr, timeStr } = formatTaiwanDateTime(twNow);
             const dateEl = document.getElementById('pickup-date');
-            if (dateEl) { dateEl.value = dateStr; dateEl.min = dateStr; }
+            const timeEl = document.getElementById('pickup-time');
+            if (dateEl) {
+                dateEl.value = dateStr;
+                dateEl.min = dateStr;
+            }
+            if (timeEl && !timeEl.value) {
+                // Default pickup time: 20 minutes from now
+                const defaultPickup = new Date(twNow.getTime() + 20 * 60000);
+                const { timeStr: defTimeStr } = formatTaiwanDateTime(defaultPickup);
+                timeEl.value = defTimeStr;
+            }
         }
 
         function isStoreOpen(twTime) {
