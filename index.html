@@ -422,7 +422,7 @@
             if (!el) return true;
             const rect = el.getBoundingClientRect();
             const windowHeight = (window.innerHeight || document.documentElement.clientHeight);
-            return (rect.top <= windowHeight * 0.75 && rect.bottom >= 80);
+            return (rect.top <= windowHeight * 0.85);
         }
 
         function updateFooterButtonState() {
@@ -1345,6 +1345,8 @@
             }
 
             const isScheduledEnabled = !(storeConfig && storeConfig.allowScheduledPickup === false);
+            let dateInput = "";
+            let timeInput = "";
 
             if (!isScheduledEnabled) {
                 const twTime = getTaiwanDate();
@@ -1357,6 +1359,9 @@
                 dateInput = dateStr;
                 timeInput = timeStr;
             } else {
+                dateInput = document.getElementById('pickup-date') ? document.getElementById('pickup-date').value : '';
+                timeInput = document.getElementById('pickup-time') ? document.getElementById('pickup-time').value : '';
+
                 if (!dateInput || !timeInput) {
                     const checkoutSec = document.getElementById('sec-checkout');
                     if (checkoutSec) {
