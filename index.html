@@ -170,8 +170,8 @@
                 <div class="input-group" id="pickup-time-picker-group">
                     <label style="font-weight: 800; color: var(--primary);">⚠️ 請選擇取餐日期 / 時間</label>
                     <div class="datetime-row">
-                        <input type="date" id="pickup-date">
-                        <input type="time" id="pickup-time">
+                        <input type="date" id="pickup-date" autocomplete="off">
+                        <input type="time" id="pickup-time" autocomplete="off">
                     </div>
                 </div>
                 <div id="pickup-time-asap-notice" style="display:none; padding: 14px 16px; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 14px; color: #166534; margin-bottom: 12px;">
@@ -1610,20 +1610,35 @@
             }
         }
 
-        function setTodayDate() {
+        function setTodayDate(forceReset = false) {
             const twNow = getTaiwanDate();
-            const { dateStr, timeStr } = formatTaiwanDateTime(twNow);
+            const { dateStr } = formatTaiwanDateTime(twNow);
             const dateEl = document.getElementById('pickup-date');
             const timeEl = document.getElementById('pickup-time');
             if (dateEl) {
-                dateEl.value = dateStr;
                 dateEl.min = dateStr;
+                if (forceReset || !dateEl.value || dateEl.value < dateStr) {
+                    dateEl.value = dateStr;
+                }
             }
-            if (timeEl && !timeEl.value) {
-                // Default pickup time: 20 minutes from now
-                const defaultPickup = new Date(twNow.getTime() + 20 * 60000);
+            if (timeEl) {
+                const isBusy = (storeConfig && storeConfig.storeStatus === 'busy');
+                const offsetMinutes = isBusy ? 60 : 20;
+                const defaultPickup = new Date(twNow.getTime() + offsetMinutes * 60000);
                 const { timeStr: defTimeStr } = formatTaiwanDateTime(defaultPickup);
-                timeEl.value = defTimeStr;
+
+                if (forceReset || !timeEl.value) {
+                    timeEl.value = defTimeStr;
+                } else if (dateEl && dateEl.value === dateStr && timeEl.value) {
+                    // Self-healing: if cached time is in the past (less than current time + 5m), reset to default
+                    const parts = timeEl.value.split(':').map(Number);
+                    if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+                        const selectedTime = new Date(twNow.getFullYear(), twNow.getMonth(), twNow.getDate(), parts[0], parts[1]);
+                        if (selectedTime.getTime() < twNow.getTime() + 5 * 60000) {
+                            timeEl.value = defTimeStr;
+                        }
+                    }
+                }
             }
         }
 
@@ -1871,13 +1886,22 @@
                 } catch(e) {}
             }
 
-            setTodayDate();
+            setTodayDate(true);
             checkStoreStatus();
             setInterval(checkStoreStatus, 60000);
             setInterval(fetchMenu, 15000);
             fetchWaitingCounter();
             setInterval(fetchWaitingCounter, 30000);
             setInterval(updateAsapTimeDisplay, 1000);
+
+            window.addEventListener('pageshow', () => {
+                setTodayDate(true);
+            });
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') {
+                    setTodayDate(false);
+                }
+            });
         }
 
         let indexOrdersETag = "";
