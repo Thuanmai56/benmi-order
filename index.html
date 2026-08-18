@@ -168,13 +168,26 @@
             <div id="pickup-time-section">
                 <div class="section-title">🕒 取餐時間</div>
                 <div class="input-group" id="pickup-time-picker-group">
-                    <label id="pickup-time-label" style="font-weight: 800; color: var(--primary);">⚠️ 請選擇取餐日期 / 時間</label>
+                    <label style="font-weight: 800; color: var(--primary);">⚠️ 請選擇取餐日期 / 時間</label>
                     <div class="datetime-row">
                         <input type="date" id="pickup-date" autocomplete="off">
                         <input type="time" id="pickup-time" autocomplete="off">
                     </div>
-                    <div id="pickup-time-hint" style="display: none; font-size: 13px; color: #6b7280; margin-top: 6px; font-weight: 600;">
-                        ※ 門市依序新鮮現做，已自動為您預估最快可取餐時間
+                </div>
+                <div id="pickup-time-asap-notice" style="display:none; padding: 14px 16px; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 14px; color: #166534; margin-bottom: 12px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                        <div style="display: flex; align-items: center; gap: 8px; font-weight: 900; font-size: 16px;">
+                            <span style="font-size: 20px;">⚡</span>
+                            <span>即時排隊製作模式</span>
+                        </div>
+                        <span style="font-size: 12px; background: #dcfce7; color: #15803d; padding: 3px 10px; border-radius: 99px; font-weight: 800;">現場排單</span>
+                    </div>
+                    <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #86efac; display: flex; align-items: center; justify-content: space-between; font-size: 15px;">
+                        <span style="color: #374151; font-weight: 700;">預計下單時間：</span>
+                        <span id="asap-current-time" style="font-weight: 900; color: #15803d; font-size: 16px; font-family: ui-monospace, monospace;">-</span>
+                    </div>
+                    <div style="margin-top: 6px; font-size: 12px; color: #4b5563; font-weight: 600; line-height: 1.4;">
+                        ※ 訂單送出後將以當前時間排單，門市人員會依序儘速為您新鮮現做。
                     </div>
                 </div>
             </div>
@@ -373,50 +386,27 @@
             };
         }
 
+        function updateAsapTimeDisplay() {
+            const timeEl = document.getElementById('asap-current-time');
+            if (!timeEl) return;
+            const tw = getTaiwanDate();
+            const isBusy = (storeConfig && storeConfig.storeStatus === 'busy');
+            const targetTime = isBusy ? new Date(tw.getTime() + 60 * 60000) : tw;
+            const { fullStr } = formatTaiwanDateTime(targetTime);
+            timeEl.innerText = isBusy ? `${fullStr}（繁忙：約 1 小時後）` : fullStr;
+        }
+
         function applyPickupConfig() {
             const pickerGroup = document.getElementById('pickup-time-picker-group');
-            const label = document.getElementById('pickup-time-label');
-            const dateInput = document.getElementById('pickup-date');
-            const timeInput = document.getElementById('pickup-time');
-            const hint = document.getElementById('pickup-time-hint');
-
-            if (!pickerGroup || !dateInput || !timeInput) return;
-            pickerGroup.style.display = 'block';
-
-            const isScheduled = !(storeConfig && storeConfig.allowScheduledPickup === false);
-
-            if (isScheduled) {
-                dateInput.readOnly = false;
-                timeInput.readOnly = false;
-                dateInput.style.pointerEvents = 'auto';
-                timeInput.style.pointerEvents = 'auto';
-                dateInput.style.background = '#fff';
-                timeInput.style.background = '#fff';
-                dateInput.style.borderColor = 'var(--border)';
-                timeInput.style.borderColor = 'var(--border)';
-                if (label) {
-                    label.innerHTML = '⚠️ 請選擇取餐日期 / 時間';
-                    label.style.color = 'var(--primary)';
-                }
-                if (hint) hint.style.display = 'none';
+            const asapNotice = document.getElementById('pickup-time-asap-notice');
+            if (!pickerGroup || !asapNotice) return;
+            if (storeConfig && storeConfig.allowScheduledPickup === false) {
+                pickerGroup.style.display = 'none';
+                asapNotice.style.display = 'block';
+                updateAsapTimeDisplay();
             } else {
-                setTodayDate(true);
-                dateInput.readOnly = true;
-                timeInput.readOnly = true;
-                dateInput.style.pointerEvents = 'none';
-                timeInput.style.pointerEvents = 'none';
-                dateInput.style.background = '#f8fafc';
-                timeInput.style.background = '#f8fafc';
-                dateInput.style.borderColor = '#cbd5e1';
-                timeInput.style.borderColor = '#cbd5e1';
-                if (label) {
-                    label.innerHTML = '🕒 預計取餐時間（現場依序製作）';
-                    label.style.color = '#334155';
-                }
-                if (hint) {
-                    hint.style.display = 'block';
-                    hint.innerHTML = '※ 門市依序新鮮現做，已自動為您預估最快可取餐時間';
-                }
+                pickerGroup.style.display = 'block';
+                asapNotice.style.display = 'none';
             }
             checkStoreStatus();
         }
@@ -1356,36 +1346,39 @@
                 return;
             }
 
-            const isScheduled = !(storeConfig && storeConfig.allowScheduledPickup === false);
+            const isScheduledEnabled = !(storeConfig && storeConfig.allowScheduledPickup === false);
 
-            if (!isScheduled) {
-                setTodayDate(true);
-            }
-
-            let dateInput = document.getElementById('pickup-date') ? document.getElementById('pickup-date').value : '';
-            let timeInput = document.getElementById('pickup-time') ? document.getElementById('pickup-time').value : '';
-
-            if (!dateInput || !timeInput) {
-                const checkoutSec = document.getElementById('sec-checkout');
-                if (checkoutSec) {
-                    checkoutSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    checkoutSec.style.outline = '3px solid var(--primary)';
-                    checkoutSec.style.borderRadius = '16px';
-                    setTimeout(() => { checkoutSec.style.outline = 'none'; }, 2000);
+            if (!isScheduledEnabled) {
+                const twTime = getTaiwanDate();
+                if (!isStoreOpen(twTime)) {
+                    return customAlert('店家目前非營業時間 (休息中)，無法下單');
                 }
-                setTimeout(() => {
-                    if (!dateInput && document.getElementById('pickup-date')) document.getElementById('pickup-date').focus();
-                    else if (document.getElementById('pickup-time')) document.getElementById('pickup-time').focus();
-                }, 400);
-                return customAlert('請選擇取餐日期與時間 ↓');
-            }
+                const isBusy = (storeConfig && storeConfig.storeStatus === 'busy');
+                const targetTime = isBusy ? new Date(twTime.getTime() + 60 * 60000) : twTime;
+                const { dateStr, timeStr } = formatTaiwanDateTime(targetTime);
+                dateInput = dateStr;
+                timeInput = timeStr;
+            } else {
+                if (!dateInput || !timeInput) {
+                    const checkoutSec = document.getElementById('sec-checkout');
+                    if (checkoutSec) {
+                        checkoutSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        checkoutSec.style.outline = '3px solid var(--primary)';
+                        checkoutSec.style.borderRadius = '16px';
+                        setTimeout(() => { checkoutSec.style.outline = 'none'; }, 2000);
+                    }
+                    setTimeout(() => {
+                        if (!dateInput && document.getElementById('pickup-date')) document.getElementById('pickup-date').focus();
+                        else if (document.getElementById('pickup-time')) document.getElementById('pickup-time').focus();
+                    }, 400);
+                    return customAlert('請選擇取餐日期與時間 ↓');
+                }
 
-            const twNow = getTaiwanDate();
-            const [pYear, pMonth, pDay] = dateInput.split('-').map(Number);
-            const [pHour, pMin] = timeInput.split(':').map(Number);
-            const selectedDateTime = new Date(pYear, pMonth - 1, pDay, pHour, pMin, 0);
+                const twNow = getTaiwanDate();
+                const [pYear, pMonth, pDay] = dateInput.split('-').map(Number);
+                const [pHour, pMin] = timeInput.split(':').map(Number);
+                const selectedDateTime = new Date(pYear, pMonth - 1, pDay, pHour, pMin, 0);
 
-            if (isScheduled) {
                 if (selectedDateTime < twNow) {
                     return customAlert('不能選擇過去的時間，請重新選擇取餐時間');
                 }
@@ -1400,7 +1393,6 @@
                         }
                     }
                 }
-            }
 
                 const pickupDate = new Date(pYear, pMonth - 1, pDay);
                 const dayOfWeek = pickupDate.getDay();
@@ -1443,6 +1435,7 @@
                         return customAlert(`週${days[dayOfWeek]}的營業時間為 ${displayHoursMsg}，請重新選擇取餐時間`);
                     }
                 }
+            }
 
             const submitBtn = document.getElementById('btn-submit');
             isSubmitting = true;
@@ -1951,6 +1944,7 @@
             setInterval(fetchMenu, 15000);
             fetchWaitingCounter();
             setInterval(fetchWaitingCounter, 30000);
+            setInterval(updateAsapTimeDisplay, 1000);
 
             window.addEventListener('pageshow', () => {
                 setTodayDate(true);
