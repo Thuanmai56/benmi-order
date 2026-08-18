@@ -990,7 +990,7 @@ export async function handleLineWebhook(
             const isAgree = lowerText === "好" || lowerText === "同意" || lowerText === "ok";
             if (isAgree) {
               order.status = "ACCEPTED";
-              await replyText(replyToken, `${brandName} 收到您的同意！我們會開始準備您的訂單 #${orderKey}。🥖`, env, tenantCtx);
+              await replyText(replyToken, `${brandName} 收到您的同意！我們會開始準備您的訂單 #${orderKey}。✨`, env, tenantCtx);
               const cleanup = async () => { await saveOrder(env, order, tenantId); await finishPending(); };
               if (ctx && ctx.waitUntil) ctx.waitUntil(cleanup()); else await cleanup();
               continue;
