@@ -45,11 +45,10 @@ INSERT OR IGNORE INTO tenant_config (
 -- 2. Danh mục Thực đơn (Menu Categories)
 INSERT OR IGNORE INTO menu_categories (id, tenant_id, name, slug, sort_order) VALUES
 ('cat_zd_main',     'zhadantongxue', '招牌炸蛋蔥餅', 'main',     1),
-('cat_zd_snack',    'zhadantongxue', '點心小吃',     'snack',    2),
-('cat_zd_spicy',    'zhadantongxue', '加辣選項',     'spicy',    3),
-('cat_zd_egg',      'zhadantongxue', '雞蛋選項',     'egg',      4),
-('cat_zd_lettuce',  'zhadantongxue', '生菜選項',     'lettuce',  5),
-('cat_zd_topping',  'zhadantongxue', '加料選項',     'topping',  6);
+('cat_zd_spicy',    'zhadantongxue', '加辣選項',     'spicy',    2),
+('cat_zd_egg',      'zhadantongxue', '雞蛋選項',     'egg',      3),
+('cat_zd_lettuce',  'zhadantongxue', '生菜選項',     'lettuce',  4),
+('cat_zd_topping',  'zhadantongxue', '加料選項',     'topping',  5);
 
 -- 3. Chi tiết Món ăn (Menu Items)
 
@@ -63,11 +62,8 @@ INSERT OR IGNORE INTO menu_items (id, tenant_id, category_id, name, price, descr
 ('zd_item_06', 'zhadantongxue', 'cat_zd_main', '雙熱狗炸蛋蔥餅', 60, '經典雙熱狗組合', 6),
 ('zd_item_07', 'zhadantongxue', 'cat_zd_main', '黑椒豬排炸蛋蔥餅', 65, '厚切黑椒豬排', 7),
 ('zd_item_08', 'zhadantongxue', 'cat_zd_main', '雞腿肉卷炸蛋蔥餅', 70, '雞腿足足100g', 8),
-('zd_item_09', 'zhadantongxue', 'cat_zd_main', '台灣香腸炸蛋蔥餅', 80, '香腸足足15cm', 9);
-
--- 3.2. Danh mục Ăn vặt: 點心小吃 (Ảnh 1)
-INSERT OR IGNORE INTO menu_items (id, tenant_id, category_id, name, price, description, sort_order) VALUES
-('zd_item_10', 'zhadantongxue', 'cat_zd_snack', '泰式月亮蝦餅 (6片)', 50, '外酥內嫩泰式風味', 1);
+('zd_item_09', 'zhadantongxue', 'cat_zd_main', '台灣香腸炸蛋蔥餅', 80, '香腸足足15cm', 9),
+('zd_item_10', 'zhadantongxue', 'cat_zd_main', '泰式月亮蝦餅 (6片)', 50, '外酥內嫩泰式風味', 10);
 
 -- 3.3. Tùy chọn Độ cay: 加辣選項 (Ảnh 2)
 INSERT OR IGNORE INTO menu_items (id, tenant_id, category_id, name, price, sort_order) VALUES

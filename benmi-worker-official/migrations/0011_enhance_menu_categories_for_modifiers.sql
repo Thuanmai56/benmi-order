@@ -16,6 +16,6 @@ UPDATE menu_categories SET category_type = 'catalog', name = '🥤 單點飲料'
 UPDATE menu_categories SET category_type = 'modifier', name = '加料選項', selection_type = 'single', is_required = 0 WHERE slug = 'topping' AND tenant_id = 'benmi';
 
 -- 3. Cập nhật phân loại chuẩn cho Zhadantongxue
-UPDATE menu_categories SET category_type = 'catalog' WHERE slug IN ('main', 'snack') AND tenant_id = 'zhadantongxue';
+UPDATE menu_categories SET category_type = 'catalog' WHERE slug = 'main' AND tenant_id = 'zhadantongxue';
 UPDATE menu_categories SET category_type = 'modifier', selection_type = 'single', is_required = 1, min_selection = 1, max_selection = 1 WHERE slug IN ('spicy', 'egg', 'lettuce') AND tenant_id = 'zhadantongxue';
 UPDATE menu_categories SET category_type = 'modifier', selection_type = 'multiple', is_required = 0, min_selection = 0, max_selection = 10 WHERE slug = 'topping' AND tenant_id = 'zhadantongxue';
