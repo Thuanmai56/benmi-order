@@ -165,6 +165,96 @@ function updateChangeSubmitButton(timeStr) {
   }
 }
 
+let tenantMenuItemsCache = null;
+
+async function fetchTenantMenuItems() {
+  if (tenantMenuItemsCache && tenantMenuItemsCache.length > 0) {
+    return tenantMenuItemsCache;
+  }
+  const tenantId = getTenantIdFromUrl();
+  try {
+    const res = await fetch(`${WORKER_BASE}/api/tenant/bootstrap?tenant_id=${tenantId}&_t=${Date.now()}`);
+    if (res.ok) {
+      const data = await res.json();
+      const itemsMap = new Map();
+
+      if (Array.isArray(data.categories)) {
+        data.categories.forEach(cat => {
+          if (Array.isArray(cat.items)) {
+            cat.items.forEach(item => {
+              if (item && item.name && !itemsMap.has(item.name)) {
+                itemsMap.set(item.name, {
+                  name: item.name,
+                  category: cat.name || cat.title || ""
+                });
+              }
+            });
+          }
+        });
+      }
+
+      if (Array.isArray(data.items)) {
+        data.items.forEach(item => {
+          if (item && item.name && !itemsMap.has(item.name)) {
+            itemsMap.set(item.name, {
+              name: item.name,
+              category: ""
+            });
+          }
+        });
+      }
+
+      if (itemsMap.size > 0) {
+        tenantMenuItemsCache = Array.from(itemsMap.values());
+        return tenantMenuItemsCache;
+      }
+    }
+  } catch (e) {
+    console.warn("[SoldOutGrid] fetchTenantMenuItems error:", e);
+  }
+
+  return [];
+}
+
+async function renderSoldOutItemsGrid(order = null) {
+  const grid = document.getElementById("change-soldout-grid");
+  if (!grid) return;
+
+  const menuItems = await fetchTenantMenuItems();
+  if (!menuItems || menuItems.length === 0) {
+    grid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; color: #9ca3af; padding: 16px;">(尚無菜單品項)</div>`;
+    return;
+  }
+
+  // Detect ordered items from reviewingOrder if available
+  const orderItemNames = new Set();
+  if (order && order.content) {
+    menuItems.forEach(item => {
+      if (order.content.includes(item.name)) {
+        orderItemNames.add(item.name);
+      }
+    });
+  }
+
+  // Sort items: items appearing in current order come first
+  const sortedItems = [...menuItems].sort((a, b) => {
+    const aInOrder = orderItemNames.has(a.name) ? 1 : 0;
+    const bInOrder = orderItemNames.has(b.name) ? 1 : 0;
+    return bInOrder - aInOrder;
+  });
+
+  grid.innerHTML = sortedItems.map(item => {
+    const isInOrder = orderItemNames.has(item.name);
+    const badgeHtml = isInOrder ? `<span style="font-size: 11px; background: #fef3c7; color: #92400e; padding: 2px 6px; border-radius: 4px; font-weight: 800; margin-left: 4px;">本單</span>` : '';
+    return `
+      <label class="checkbox-card" style="${isInOrder ? 'border-color: #f59e0b; background: #fffdf5;' : ''}">
+        <input type="checkbox" value="${escapeHtml(item.name)}" class="sold-item">
+        <span>${escapeHtml(item.name)}</span>${badgeHtml}
+      </label>
+    `;
+  }).join("");
+}
+
 function clearSoldOutItems() {
   const checkboxes = document.querySelectorAll(".sold-item");
   if (checkboxes) checkboxes.forEach(cb => cb.checked = false);
@@ -178,6 +268,7 @@ function reviewOpenChange() {
   reviewingOrder = savedOrder;
   currentOrderKey = savedKey;           // Restore after closeModal
   document.getElementById("change-reason").value = "時間需調整";
+  renderSoldOutItemsGrid(savedOrder);
   clearSoldOutItems();
   onChangeReasonChange();
   renderTimePresets();
@@ -214,8 +305,12 @@ function onChangeReasonChange() {
     if (itemsDiv) itemsDiv.style.display = "block";
     if (tabTime) tabTime.classList.remove("active");
     if (tabSold) tabSold.classList.add("active");
+    renderSoldOutItemsGrid(reviewingOrder);
   }
 }
+
+// Pre-fetch menu items for instant modal responsiveness
+fetchTenantMenuItems();
 
 async function confirmAction(type, btn) {
   const key = currentOrderKey;
