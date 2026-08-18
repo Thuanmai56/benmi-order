@@ -168,10 +168,13 @@
             <div id="pickup-time-section">
                 <div class="section-title">🕒 取餐時間</div>
                 <div class="input-group" id="pickup-time-picker-group">
-                    <label style="font-weight: 800; color: var(--primary);">⚠️ 請選擇取餐日期 / 時間</label>
+                    <label id="pickup-time-label" style="font-weight: 800; color: var(--primary);">⚠️ 請選擇取餐日期 / 時間</label>
                     <div class="datetime-row">
                         <input type="date" id="pickup-date" autocomplete="off">
                         <input type="time" id="pickup-time" autocomplete="off">
+                    </div>
+                    <div id="pickup-time-hint" style="display: none; font-size: 13px; color: #6b7280; margin-top: 6px; font-weight: 600;">
+                        ※ 門市依序新鮮現做，已自動為您預估最快可取餐時間
                     </div>
                 </div>
             </div>
@@ -372,7 +375,49 @@
 
         function applyPickupConfig() {
             const pickerGroup = document.getElementById('pickup-time-picker-group');
-            if (pickerGroup) pickerGroup.style.display = 'block';
+            const label = document.getElementById('pickup-time-label');
+            const dateInput = document.getElementById('pickup-date');
+            const timeInput = document.getElementById('pickup-time');
+            const hint = document.getElementById('pickup-time-hint');
+
+            if (!pickerGroup || !dateInput || !timeInput) return;
+            pickerGroup.style.display = 'block';
+
+            const isScheduled = !(storeConfig && storeConfig.allowScheduledPickup === false);
+
+            if (isScheduled) {
+                dateInput.readOnly = false;
+                timeInput.readOnly = false;
+                dateInput.style.pointerEvents = 'auto';
+                timeInput.style.pointerEvents = 'auto';
+                dateInput.style.background = '#fff';
+                timeInput.style.background = '#fff';
+                dateInput.style.borderColor = 'var(--border)';
+                timeInput.style.borderColor = 'var(--border)';
+                if (label) {
+                    label.innerHTML = '⚠️ 請選擇取餐日期 / 時間';
+                    label.style.color = 'var(--primary)';
+                }
+                if (hint) hint.style.display = 'none';
+            } else {
+                setTodayDate(true);
+                dateInput.readOnly = true;
+                timeInput.readOnly = true;
+                dateInput.style.pointerEvents = 'none';
+                timeInput.style.pointerEvents = 'none';
+                dateInput.style.background = '#f8fafc';
+                timeInput.style.background = '#f8fafc';
+                dateInput.style.borderColor = '#cbd5e1';
+                timeInput.style.borderColor = '#cbd5e1';
+                if (label) {
+                    label.innerHTML = '🕒 預計取餐時間（現場依序製作）';
+                    label.style.color = '#334155';
+                }
+                if (hint) {
+                    hint.style.display = 'block';
+                    hint.innerHTML = '※ 門市依序新鮮現做，已自動為您預估最快可取餐時間';
+                }
+            }
             checkStoreStatus();
         }
 
@@ -1311,6 +1356,12 @@
                 return;
             }
 
+            const isScheduled = !(storeConfig && storeConfig.allowScheduledPickup === false);
+
+            if (!isScheduled) {
+                setTodayDate(true);
+            }
+
             let dateInput = document.getElementById('pickup-date') ? document.getElementById('pickup-date').value : '';
             let timeInput = document.getElementById('pickup-time') ? document.getElementById('pickup-time').value : '';
 
@@ -1329,11 +1380,12 @@
                 return customAlert('請選擇取餐日期與時間 ↓');
             }
 
-                const twNow = getTaiwanDate();
-                const [pYear, pMonth, pDay] = dateInput.split('-').map(Number);
-                const [pHour, pMin] = timeInput.split(':').map(Number);
-                const selectedDateTime = new Date(pYear, pMonth - 1, pDay, pHour, pMin, 0);
+            const twNow = getTaiwanDate();
+            const [pYear, pMonth, pDay] = dateInput.split('-').map(Number);
+            const [pHour, pMin] = timeInput.split(':').map(Number);
+            const selectedDateTime = new Date(pYear, pMonth - 1, pDay, pHour, pMin, 0);
 
+            if (isScheduled) {
                 if (selectedDateTime < twNow) {
                     return customAlert('不能選擇過去的時間，請重新選擇取餐時間');
                 }
@@ -1348,6 +1400,7 @@
                         }
                     }
                 }
+            }
 
                 const pickupDate = new Date(pYear, pMonth - 1, pDay);
                 const dayOfWeek = pickupDate.getDay();
