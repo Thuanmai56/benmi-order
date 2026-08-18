@@ -71,14 +71,6 @@ const BENMI_TRANSLATIONS: Record<string, string> = {
   "雪碧": "Cocacola / Sprite"
 };
 
-const BENMI_RECOMMENDED = ['雙層烤肉', '綜合', '5 大雙層烤肉+飲料', '6 大綜合+飲料'];
-const ZHADAN_RECOMMENDED: string[] = [];
-
-const ZHADAN_ITEM_BADGES: Record<string, string> = {
-  '雞腿肉卷炸蛋蔥餅': '雞肉足足100g',
-  '台灣香腸炸蛋蔥餅': '香腸足足15cm'
-};
-
 export function parseOperatingHours(raw: string | null, tenantId: string): Record<string, Array<{ start: string; end: string }>> {
   const result: Record<string, Array<{ start: string; end: string }>> = {};
 
@@ -169,7 +161,9 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
              ORDER BY sort_order ASC`
           ).bind(tenantId),
           env.DB.prepare(
-            `SELECT id, category_id, name, price, description, out_of_stock_until, sort_order 
+            `SELECT id, category_id, name, price, description, out_of_stock_until, sort_order,
+                    COALESCE(badge_text, '') AS badge_text,
+                    COALESCE(is_recommended, 0) AS is_recommended
              FROM menu_items 
              WHERE tenant_id = ? 
              ORDER BY sort_order ASC`
@@ -183,7 +177,6 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
     }
 
     const now = new Date();
-    const recommendedSet = new Set(tenantId === 'zhadantongxue' ? ZHADAN_RECOMMENDED : BENMI_RECOMMENDED);
 
     // 4. Organize Items by Category
     const itemsByCatId = new Map<string, any[]>();
@@ -192,7 +185,9 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
         itemsByCatId.set(item.category_id, []);
       }
       const isOos = Boolean(item.out_of_stock_until && new Date(item.out_of_stock_until) > now);
-      const itemBadge = tenantId === 'zhadantongxue' ? (ZHADAN_ITEM_BADGES[item.name] || null) : null;
+      const isRec = Boolean(item.is_recommended);
+      const badge = item.badge_text ? item.badge_text : (isRec ? '👍 推薦' : null);
+
       itemsByCatId.get(item.category_id)!.push({
         id: item.id,
         name: item.name,
@@ -200,8 +195,9 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
         description: item.description || null,
         imageUrl: `/api/image?tenant_id=${tenantId}&name=${encodeURIComponent(item.name)}`,
         isOutOfStock: isOos,
-        isRecommended: recommendedSet.has(item.name),
-        badge: itemBadge,
+        isRecommended: isRec,
+        badgeText: item.badge_text || null,
+        badge: badge,
         sortOrder: item.sort_order || 0
       });
     }
@@ -283,7 +279,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
       catalog,
       modifiers,
       translations: tenantId === 'benmi' ? BENMI_TRANSLATIONS : undefined,
-      recommended: tenantId === 'zhadantongxue' ? ZHADAN_RECOMMENDED : BENMI_RECOMMENDED
+      recommended: items.filter(it => it.is_recommended || it.badge_text).map(it => it.name)
     };
 
     // 6. Cache in KV Edge Cache

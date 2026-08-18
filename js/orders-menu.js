@@ -63,6 +63,8 @@ async function loadMenuData() {
             name: it.name,
             price: it.price,
             isOos: it.isOutOfStock,
+            badgeText: it.badgeText || (it.badge || ''),
+            isRecommended: it.isRecommended || false,
             originalName: it.name
           }))
         });
@@ -78,6 +80,8 @@ async function loadMenuData() {
               name: opt.name,
               price: opt.price,
               isOos: opt.isOutOfStock,
+              badgeText: opt.badgeText || (opt.badge || ''),
+              isRecommended: opt.isRecommended || false,
               originalName: opt.name
             }))
           });
@@ -107,7 +111,7 @@ async function loadMenuData() {
         title: cat.label,
         items: Object.entries(rawMenuData[cat.id] || {}).map(([name, price]) => {
           const isOos = rawMenuData.out_of_stock && rawMenuData.out_of_stock.includes(`${cat.id}:${name}`);
-          return { name, price, isOos, originalName: name };
+          return { name, price: typeof price === 'object' ? price.price : price, badgeText: typeof price === 'object' ? (price.badge_text || '') : '', isOos, originalName: name };
         })
       }));
       activeCategoryIndex = -1;
@@ -199,11 +203,16 @@ function renderMenuCategoryEditor(index) {
     row.innerHTML = `
       <div style="color: #ccc; font-size: 22px; cursor: grab; flex-shrink:0;">☰</div>
       <input type="text" value="${escapeHtml(item.name)}" data-name-cidx="${index}" data-name-iidx="${iIdx}" oninput="markMenuDirty()"
-        style="flex: 2; min-width: 120px; font-size: 17px; font-weight: 900; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-family:inherit; box-sizing:border-box;">
+        placeholder="${t("newItemPlaceholder")}" style="flex: 2; min-width: 120px; font-size: 17px; font-weight: 900; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-family:inherit; box-sizing:border-box;">
       <label style="display:flex; align-items:center; gap:6px; font-weight:900; flex-shrink:0;">
         <span style="font-size:18px;">$</span>
         <input type="number" value="${item.price !== null && item.price !== undefined ? item.price : ''}" data-cidx="${index}" data-iidx="${iIdx}" oninput="markMenuDirty()"
-          placeholder="${t("priceHiddenPlaceholder")}" style="width: 90px; font-size: 17px; font-weight: 900; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-family:inherit; box-sizing:border-box;">
+          placeholder="${t("priceHiddenPlaceholder")}" style="width: 80px; font-size: 17px; font-weight: 900; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-family:inherit; box-sizing:border-box;">
+      </label>
+      <label style="display:flex; align-items:center; gap:4px; font-weight:900; flex-shrink:0;" title="標籤 / 推薦 (例如: 雞肉足足100g, 👍 推薦)">
+        <span style="font-size:15px; color:#ef4444;">🏷️</span>
+        <input type="text" value="${escapeHtml(item.badgeText || '')}" data-badge-cidx="${index}" data-badge-iidx="${iIdx}" oninput="markMenuDirty()"
+          placeholder="標籤/推薦" style="width: 110px; font-size: 14px; font-weight: 700; padding: 10px 8px; border: 1px solid #cbd5e1; border-radius: 8px; font-family:inherit; box-sizing:border-box; color: #b91c1c; background: #fff5f5;">
       </label>
       <button class="btn" style="padding: 8px 14px; font-size:14px; flex-shrink:0; background: ${oosBg}; color: ${oosColor}; border: 1px solid ${oosBorder}; border-radius: 8px; font-weight: 900;"
         onclick="openStockModal(${index}, ${iIdx})">${oosText}</button>
@@ -227,7 +236,7 @@ function removeMenuItemAt(cIdx, iIdx) {
 function addNewMenuItem() {
   if (activeCategoryIndex < 0 || !currentMenuData) return;
   syncMenuDataFromDOM();
-  currentMenuData[activeCategoryIndex].items.unshift({ name: t("newItemPlaceholder"), price: 0 });
+  currentMenuData[activeCategoryIndex].items.unshift({ name: t("newItemPlaceholder"), price: 0, badgeText: "" });
   markMenuDirty();
   renderMenuCategoryEditor(activeCategoryIndex);
   renderMenuCategories();
@@ -250,6 +259,13 @@ function syncMenuDataFromDOM() {
       currentMenuData[cIdx].items[iIdx].price = val;
     }
   });
+  document.querySelectorAll("#menu-editor-body input[data-badge-cidx]").forEach(inp => {
+    const cIdx = parseInt(inp.getAttribute("data-badge-cidx"), 10);
+    const iIdx = parseInt(inp.getAttribute("data-badge-iidx"), 10);
+    if (currentMenuData[cIdx] && currentMenuData[cIdx].items[iIdx]) {
+      currentMenuData[cIdx].items[iIdx].badgeText = inp.value.trim();
+    }
+  });
 }
 
 async function saveMenuData() {
@@ -257,13 +273,17 @@ async function saveMenuData() {
   if (!confirm(t("confirmSaveMenu"))) return;
   syncMenuDataFromDOM();
 
-  // Convert back to Benmi object format
+  // Convert to rich item map format for API
   const output = {};
   currentMenuData.forEach(cat => {
     output[cat.id] = {};
     cat.items.forEach(item => {
       if (item.name && item.name.trim() !== "" && item.price !== null) {
-        output[cat.id][item.name.trim()] = item.price;
+        output[cat.id][item.name.trim()] = {
+          price: item.price,
+          badge_text: item.badgeText || null,
+          is_recommended: (item.badgeText && item.badgeText.includes('推薦')) || item.isRecommended ? 1 : 0
+        };
       }
     });
   });

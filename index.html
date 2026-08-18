@@ -712,15 +712,7 @@
                 div.style.pointerEvents = 'none';
             }
 
-            let badgeText = item.badge || '';
-            if (!badgeText) {
-                if (item.name.includes('雞腿') || item.name.includes('雞肉')) {
-                    badgeText = '雞肉足足100g';
-                } else if (item.name.includes('香腸')) {
-                    badgeText = '香腸足足15cm';
-                }
-            }
-
+            const badgeText = item.badge || item.badgeText || (item.isRecommended ? '👍 推薦' : '');
             const badgeHTML = badgeText ? `<span class="badge">${badgeText}</span>` : '';
 
             const tenantId = getTenantIdFromUrl();

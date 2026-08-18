@@ -280,7 +280,18 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
     if (itemsMap && typeof itemsMap === "object") {
       let itemSortOrder = 1;
       for (const itemName of Object.keys(itemsMap)) {
-        const price = Number(itemsMap[itemName]);
+        const itemVal = itemsMap[itemName];
+        let price = 0;
+        let badgeText: string | null = null;
+        let isRec = 0;
+
+        if (typeof itemVal === "object" && itemVal !== null) {
+          price = Number(itemVal.price);
+          badgeText = itemVal.badge_text || itemVal.badgeText || null;
+          isRec = itemVal.is_recommended || itemVal.isRecommended ? 1 : 0;
+        } else {
+          price = Number(itemVal);
+        }
         if (isNaN(price)) continue;
 
         let itemId = itemIdMap.get(`${catId}:${itemName}`);
@@ -291,10 +302,14 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
 
         statements.push(
           env.DB.prepare(
-            `INSERT INTO menu_items (id, tenant_id, category_id, name, price, sort_order)
-             VALUES (?, ?, ?, ?, ?, ?)
-             ON CONFLICT(id) DO UPDATE SET price = excluded.price, sort_order = excluded.sort_order`
-          ).bind(itemId, tenantId, catId, itemName, price, itemSortOrder++)
+            `INSERT INTO menu_items (id, tenant_id, category_id, name, price, badge_text, is_recommended, sort_order)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+             ON CONFLICT(id) DO UPDATE SET 
+               price = excluded.price, 
+               badge_text = excluded.badge_text, 
+               is_recommended = excluded.is_recommended, 
+               sort_order = excluded.sort_order`
+          ).bind(itemId, tenantId, catId, itemName, price, badgeText, isRec, itemSortOrder++)
         );
       }
     }
