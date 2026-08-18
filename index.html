@@ -174,22 +174,6 @@
                         <input type="time" id="pickup-time" autocomplete="off">
                     </div>
                 </div>
-                <div id="pickup-time-asap-notice" style="display:none; padding: 14px 16px; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 14px; color: #166534; margin-bottom: 12px;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-                        <div style="display: flex; align-items: center; gap: 8px; font-weight: 900; font-size: 16px;">
-                            <span style="font-size: 20px;">⚡</span>
-                            <span>即時排隊製作模式</span>
-                        </div>
-                        <span style="font-size: 12px; background: #dcfce7; color: #15803d; padding: 3px 10px; border-radius: 99px; font-weight: 800;">現場排單</span>
-                    </div>
-                    <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #86efac; display: flex; align-items: center; justify-content: space-between; font-size: 15px;">
-                        <span style="color: #374151; font-weight: 700;">預計下單時間：</span>
-                        <span id="asap-current-time" style="font-weight: 900; color: #15803d; font-size: 16px; font-family: ui-monospace, monospace;">-</span>
-                    </div>
-                    <div style="margin-top: 6px; font-size: 12px; color: #4b5563; font-weight: 600; line-height: 1.4;">
-                        ※ 訂單送出後將以當前時間排單，門市人員會依序儘速為您新鮮現做。
-                    </div>
-                </div>
             </div>
 
             <div class="section-title">📝 其他要求</div>
@@ -386,28 +370,9 @@
             };
         }
 
-        function updateAsapTimeDisplay() {
-            const timeEl = document.getElementById('asap-current-time');
-            if (!timeEl) return;
-            const tw = getTaiwanDate();
-            const isBusy = (storeConfig && storeConfig.storeStatus === 'busy');
-            const targetTime = isBusy ? new Date(tw.getTime() + 60 * 60000) : tw;
-            const { fullStr } = formatTaiwanDateTime(targetTime);
-            timeEl.innerText = isBusy ? `${fullStr}（繁忙：約 1 小時後）` : fullStr;
-        }
-
         function applyPickupConfig() {
             const pickerGroup = document.getElementById('pickup-time-picker-group');
-            const asapNotice = document.getElementById('pickup-time-asap-notice');
-            if (!pickerGroup || !asapNotice) return;
-            if (storeConfig && storeConfig.allowScheduledPickup === false) {
-                pickerGroup.style.display = 'none';
-                asapNotice.style.display = 'block';
-                updateAsapTimeDisplay();
-            } else {
-                pickerGroup.style.display = 'block';
-                asapNotice.style.display = 'none';
-            }
+            if (pickerGroup) pickerGroup.style.display = 'block';
             checkStoreStatus();
         }
 
@@ -1349,33 +1314,20 @@
             let dateInput = document.getElementById('pickup-date') ? document.getElementById('pickup-date').value : '';
             let timeInput = document.getElementById('pickup-time') ? document.getElementById('pickup-time').value : '';
 
-            const isScheduledEnabled = !(storeConfig && storeConfig.allowScheduledPickup === false);
-
-            if (!isScheduledEnabled) {
-                const twTime = getTaiwanDate();
-                if (!isStoreOpen(twTime)) {
-                    return customAlert('店家目前非營業時間 (休息中)，無法下單');
+            if (!dateInput || !timeInput) {
+                const checkoutSec = document.getElementById('sec-checkout');
+                if (checkoutSec) {
+                    checkoutSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    checkoutSec.style.outline = '3px solid var(--primary)';
+                    checkoutSec.style.borderRadius = '16px';
+                    setTimeout(() => { checkoutSec.style.outline = 'none'; }, 2000);
                 }
-                const isBusy = (storeConfig && storeConfig.storeStatus === 'busy');
-                const targetTime = isBusy ? new Date(twTime.getTime() + 60 * 60000) : twTime;
-                const { dateStr, timeStr } = formatTaiwanDateTime(targetTime);
-                dateInput = dateStr;
-                timeInput = timeStr;
-            } else {
-                if (!dateInput || !timeInput) {
-                    const checkoutSec = document.getElementById('sec-checkout');
-                    if (checkoutSec) {
-                        checkoutSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        checkoutSec.style.outline = '3px solid var(--primary)';
-                        checkoutSec.style.borderRadius = '16px';
-                        setTimeout(() => { checkoutSec.style.outline = 'none'; }, 2000);
-                    }
-                    setTimeout(() => {
-                        if (!dateInput && document.getElementById('pickup-date')) document.getElementById('pickup-date').focus();
-                        else if (document.getElementById('pickup-time')) document.getElementById('pickup-time').focus();
-                    }, 400);
-                    return customAlert('請選擇取餐日期與時間 ↓');
-                }
+                setTimeout(() => {
+                    if (!dateInput && document.getElementById('pickup-date')) document.getElementById('pickup-date').focus();
+                    else if (document.getElementById('pickup-time')) document.getElementById('pickup-time').focus();
+                }, 400);
+                return customAlert('請選擇取餐日期與時間 ↓');
+            }
 
                 const twNow = getTaiwanDate();
                 const [pYear, pMonth, pDay] = dateInput.split('-').map(Number);
@@ -1947,7 +1899,6 @@
             setInterval(fetchMenu, 15000);
             fetchWaitingCounter();
             setInterval(fetchWaitingCounter, 30000);
-            setInterval(updateAsapTimeDisplay, 1000);
 
             window.addEventListener('pageshow', () => {
                 setTodayDate(true);
