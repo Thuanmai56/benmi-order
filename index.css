@@ -187,11 +187,12 @@ body {
 .store-detail-row {
     display: flex;
     align-items: flex-start;
-    gap: 12px;
-    font-size: 15px;
-    margin-bottom: 12px;
+    gap: 8px;
+    font-size: 14.5px;
+    line-height: 22px;
+    margin-bottom: 10px;
     font-weight: 500;
-    opacity: 0.95;
+    color: #374151;
 }
 
 .store-detail-row:last-child {
@@ -199,8 +200,15 @@ body {
 }
 
 .detail-icon {
-    font-size: 18px;
-    margin-top: -2px;
+    font-size: 16px;
+    line-height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    margin-top: 0;
 }
 
 .time-block {
