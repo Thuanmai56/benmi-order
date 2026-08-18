@@ -722,7 +722,7 @@
 
             const qty = cart[`${catSlug}_${item.name}`] || 0;
             const footerHTML = getDynamicItemFooterHTML(catSlug, item.name, item.price, isOos);
-            const hasModifiers = bootstrapData?.modifiers && bootstrapData.modifiers.length > 0 && catSlug !== 'drinks';
+            const hasModifiers = bootstrapData?.modifiers && bootstrapData.modifiers.length > 0 && catSlug !== 'drinks' && catSlug !== 'snack';
             const customizeBtnHTML = `
                 <button class="customize-btn" id="customize-btn-${catSlug}-${item.name}" onclick="toggleCustomize('${catSlug}','${item.name}')" style="pointer-events: auto; display: ${(!isOos && qty > 0 && hasModifiers) ? 'block' : 'none'};">✏️ 客製化（加料 / 辣度 / 備註）</button>
             `;
@@ -778,7 +778,7 @@
                     const custBtn = card.querySelector('.customize-btn');
                     if (custBtn) {
                         const qty = cart[`${cat.slug}_${item.name}`] || 0;
-                        const hasModifiers = bootstrapData?.modifiers && bootstrapData.modifiers.length > 0 && cat.slug !== 'drinks';
+                        const hasModifiers = bootstrapData?.modifiers && bootstrapData.modifiers.length > 0 && cat.slug !== 'drinks' && cat.slug !== 'snack';
                         custBtn.style.display = (!item.isOutOfStock && qty > 0 && hasModifiers) ? 'block' : 'none';
                     }
                 });

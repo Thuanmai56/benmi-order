@@ -176,20 +176,19 @@ async function fetchTenantMenuItems() {
       const data = await res.json();
       const itemsMap = new Map();
 
-      if (Array.isArray(data.categories)) {
-        data.categories.forEach(cat => {
-          if (Array.isArray(cat.items)) {
-            cat.items.forEach(item => {
-              if (item && item.name && !itemsMap.has(item.name)) {
-                itemsMap.set(item.name, {
-                  name: item.name,
-                  category: cat.name || cat.title || ""
-                });
-              }
-            });
-          }
-        });
-      }
+      const catalogList = Array.isArray(data.catalog) ? data.catalog : (Array.isArray(data.categories) ? data.categories : []);
+      catalogList.forEach(cat => {
+        if (Array.isArray(cat.items)) {
+          cat.items.forEach(item => {
+            if (item && item.name && !itemsMap.has(item.name)) {
+              itemsMap.set(item.name, {
+                name: item.name,
+                category: cat.name || cat.title || ""
+              });
+            }
+          });
+        }
+      });
 
       if (Array.isArray(data.items)) {
         data.items.forEach(item => {
