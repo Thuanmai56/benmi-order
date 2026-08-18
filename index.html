@@ -133,16 +133,16 @@
     <div id="store-paused-banner" class="store-alert-banner paused" style="display: none;">
         <span style="font-size: 26px; line-height: 1; flex-shrink: 0;">⛔</span>
         <div style="flex: 1;">
-            <div style="font-weight: 900; font-size: 15px; letter-spacing: 0.2px;">店家目前暫停接單中 / Tạm dừng nhận đơn</div>
-            <div style="font-size: 13px; color: #b91c1c; margin-top: 4px; font-weight: 600; line-height: 1.45;">目前暫不接受新訂單，敬請見諒！<br><span style="font-size: 12px; opacity: 0.9;">Quán đang tạm ngưng nhận đơn mới.</span></div>
+            <div style="font-weight: 900; font-size: 15px; letter-spacing: 0.2px;">店家目前暫停接單中</div>
+            <div style="font-size: 13px; color: #b91c1c; margin-top: 4px; font-weight: 600; line-height: 1.45;">目前門市暫不接受新訂單，敬請見諒！</div>
         </div>
     </div>
 
     <div id="store-busy-banner" class="store-alert-banner busy" style="display: none;">
         <span style="font-size: 26px; line-height: 1; flex-shrink: 0;">⏳</span>
         <div style="flex: 1;">
-            <div style="font-weight: 900; font-size: 15px; letter-spacing: 0.2px;">門市繁忙中（製作時間 +1 小時） / Quán đang bận (+1h)</div>
-            <div style="font-size: 13px; color: #b45309; margin-top: 4px; font-weight: 600; line-height: 1.45;">現場訂單較多，新訂單取餐時間預計延長 1 小時，感謝您的體諒！<br><span style="font-size: 12px; opacity: 0.9;">Thời gian nhận bánh kéo dài thêm 1 tiếng do quán đang bận.</span></div>
+            <div style="font-weight: 900; font-size: 15px; letter-spacing: 0.2px;">門市繁忙中（製作時間 +1 小時）</div>
+            <div style="font-size: 13px; color: #b45309; margin-top: 4px; font-weight: 600; line-height: 1.45;">現場訂單較多，新訂單取餐時間預計延長 1 小時，感謝您的體諒！</div>
         </div>
     </div>
 
@@ -270,17 +270,17 @@
         const recommendedCombo = new Set(['5 大雙層烤肉+飲料', '6 大綜合+飲料']);
 
         const itemTranslations = {
-            "燒肉": "Braised pork / Thịt nguội",
-            "火腿": "Ham / Chả",
-            "雞肉": "Chicken / Thịt gà",
-            "烤肉": "Grilled Meat / Thịt nướng",
-            "雙層烤肉": "Double Cheesebanhmi / Thịt nướng phô mai",
-            "綜合": "Mixed / Thập cẩm",
-            "越南咖啡": "Coffee with Condensed Milk / Cà phê sữa",
-            "豆漿": "Soy milk / Sữa đậu nành",
-            "紅茶": "Black Tea / Hồng trà",
-            "可樂": "Cocacola / Sprite",
-            "雪碧": "Cocacola / Sprite"
+            "燒肉": "Braised Pork",
+            "火腿": "Vietnamese Ham",
+            "雞肉": "Shredded Chicken",
+            "烤肉": "Grilled Meat",
+            "雙層烤肉": "Double Cheese & Meat",
+            "綜合": "Combination Special",
+            "越南咖啡": "Vietnamese Milk Coffee",
+            "豆漿": "Soy Milk",
+            "紅茶": "Black Tea",
+            "可樂": "Coca-Cola",
+            "雪碧": "Sprite"
         };
 
         // --- FETCH DATA ---
@@ -523,7 +523,7 @@
             const qty = cart[category + '_' + origName] || 0;
             return isOos ? `
                 <div class="card-price" style="color: #9ca3af;">$${price}</div>
-                <div style="color: #dc2626; font-weight: 900; font-size: 14px; background: #fee2e2; padding: 4px 10px; border-radius: 6px;">已售完 / Hết hàng</div>
+                <div style="color: #dc2626; font-weight: 900; font-size: 14px; background: #fee2e2; padding: 4px 10px; border-radius: 6px;">今日已售完</div>
             ` : `
                 <div class="card-price">$${price}</div>
                 <div class="qty-control">
@@ -752,7 +752,7 @@
             const qty = cart[`${catSlug}_${itemName}`] || 0;
             return isOos ? `
                 <div class="card-price" style="color: #9ca3af;">$${price}</div>
-                <div style="color: #dc2626; font-weight: 900; font-size: 14px; background: #fee2e2; padding: 4px 10px; border-radius: 6px;">已售完 / Hết hàng</div>
+                <div style="color: #dc2626; font-weight: 900; font-size: 14px; background: #fee2e2; padding: 4px 10px; border-radius: 6px;">今日已售完</div>
             ` : `
                 <div class="card-price">$${price}</div>
                 <div class="qty-control">
@@ -1002,7 +1002,7 @@
                     let opt = document.createElement('option');
                     opt.value = d;
                     const isDrinkOos = menu.out_of_stock && menu.out_of_stock.includes(`drinks:${d}`);
-                    opt.text = `第 ${i} 份：${d}${isDrinkOos ? ' (已售完/Hết)' : ''}`;
+                    opt.text = `第 ${i} 份：${d}${isDrinkOos ? ' (已售完)' : ''}`;
                     if (isDrinkOos && comboDrinkData[origName][i - 1] !== d) {
                         opt.disabled = true;
                     }
@@ -1058,7 +1058,7 @@
                     // 1. Spicy Radio Pills
                     sectionInner += `
                         <div class="modifier-group-title">
-                            <span>辣度 (Độ cay)</span>
+                            <span>選擇辣度</span>
                             <span class="modifier-required-badge">必選</span>
                         </div>
                         <div class="modifier-pills-row">
@@ -1328,7 +1328,7 @@
             if (isSubmitting) return;
 
             if (storeConfig && storeConfig.storeStatus === 'paused') {
-                return customAlert('店家目前暫停接單中，暫無法下單<br><span style="font-size:13px; color:#dc2626;">(Quán đang tạm ngưng nhận đơn mới)</span>');
+                return customAlert('店家目前暫停接單中，暫時無法下單，敬請見諒！');
             }
 
             const hasItem = Object.values(cart).some(q => q > 0);
@@ -1389,7 +1389,7 @@
                         const minAllowedTime = new Date(twNow.getTime() + 60 * 60000);
                         if (selectedDateTime < minAllowedTime) {
                             const { timeStr: minTimeStr } = formatTaiwanDateTime(minAllowedTime);
-                            return customAlert(`目前門市繁忙，最快可取餐時間為 ${minTimeStr}（需至少 1 小時後）<br><span style="font-size:13px; color:#b45309;">(Quán đang bận, vui lòng chọn từ ${minTimeStr} trở đi)</span>`);
+                            return customAlert(`目前門市繁忙，最快可取餐時間為 ${minTimeStr}（需至少 1 小時後）`);
                         }
                     }
                 }
