@@ -76,20 +76,20 @@ function selectRejectReason(val) {
 
 function getOrderBaseTime() {
   const now = new Date();
-  let orderDate = new Date();
-  let hasOrderTime = false;
   if (reviewingOrder?.time) {
-    const match = String(reviewingOrder.time).match(/(\d{1,2}):(\d{2})/);
-    if (match) {
-      const h = parseInt(match[1], 10);
-      const m = parseInt(match[2], 10);
+    const timeStr = String(reviewingOrder.time);
+    const dateMatch = timeStr.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+    const timeMatch = timeStr.match(/(\d{1,2}):(\d{2})/);
+    if (timeMatch) {
+      const h = parseInt(timeMatch[1], 10);
+      const m = parseInt(timeMatch[2], 10);
+      const orderDate = new Date();
+      if (dateMatch) {
+        orderDate.setFullYear(parseInt(dateMatch[1], 10), parseInt(dateMatch[2], 10) - 1, parseInt(dateMatch[3], 10));
+      }
       orderDate.setHours(h, m, 0, 0);
-      hasOrderTime = true;
+      return orderDate;
     }
-  }
-  // Base time is max of (orderTime, now)
-  if (hasOrderTime && orderDate.getTime() > now.getTime()) {
-    return orderDate;
   }
   return now;
 }
@@ -104,7 +104,7 @@ function renderTimePresets() {
   const baseTime = getOrderBaseTime();
   const origTimeEl = document.getElementById("change-orig-time-val");
   if (origTimeEl) {
-    origTimeEl.innerText = reviewingOrder?.time || formatTimeHHMM(baseTime);
+    origTimeEl.innerText = formatTimeHHMM(baseTime);
   }
 
   const presetMinutes = [5, 10, 15, 20, 30, 45];
@@ -133,19 +133,17 @@ function applyTimePreset(minutes) {
 function adjustTimeMinutes(deltaMinutes) {
   const noteEl = document.getElementById("change-note");
   if (!noteEl) return;
-  let curr = new Date();
+  const baseTime = getOrderBaseTime();
+  let curr = new Date(baseTime.getTime());
   const match = String(noteEl.value).match(/(\d{1,2}):(\d{2})/);
   if (match) {
     curr.setHours(parseInt(match[1], 10), parseInt(match[2], 10), 0, 0);
-  } else {
-    curr = getOrderBaseTime();
   }
   const target = new Date(curr.getTime() + deltaMinutes * 60000);
   const targetStr = formatTimeHHMM(target);
   noteEl.value = targetStr;
 
   // Check if targetStr matches any preset card
-  const baseTime = getOrderBaseTime();
   const diffMins = Math.round((target.getTime() - baseTime.getTime()) / 60000);
   document.querySelectorAll(".preset-card").forEach(card => {
     card.classList.toggle("active", parseInt(card.dataset.mins, 10) === diffMins);
