@@ -31,22 +31,29 @@
 <body>
   <div class="app">
     <div class="topbar">
-      <div class="brand">
-        <div class="brand-title" id="brand-title">Dashboard</div>
-        <div class="brand-sub" id="i18n-brand-sub">即時訂單</div>
+      <div class="brand" style="display: flex; align-items: center; gap: 10px;">
+        <img id="brand-logo" src="./benmi_logo.png" alt="Logo" style="width: 38px; height: 38px; border-radius: 8px; object-fit: cover; border: 1px solid rgba(0,0,0,0.08); flex-shrink: 0;">
+        <div>
+          <div class="brand-title" id="brand-title">Dashboard</div>
+          <div class="brand-sub" id="i18n-brand-sub">即時訂單</div>
+        </div>
       </div>
       <script>
         (function() {
           const tenantId = window.__INITIAL_TENANT_ID || "benmi";
           const bTitle = document.getElementById("brand-title");
+          const bLogo = document.getElementById("brand-logo");
           if (tenantId === "benmi") {
             if (bTitle) bTitle.innerText = "🥖 Benmi Dashboard";
+            if (bLogo) bLogo.src = "./benmi_logo.png";
           } else {
+            if (bLogo) bLogo.src = "./zhadan_logo.png";
             try {
               const cached = localStorage.getItem("tenant_theme_" + tenantId);
               if (cached) {
                 const data = JSON.parse(cached);
                 if (bTitle && data.brandName) bTitle.innerText = `🍳 ${data.brandName} Dashboard`;
+                if (bLogo && data.logoUrl) bLogo.src = data.logoUrl;
               }
             } catch(e) {}
           }

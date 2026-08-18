@@ -14,11 +14,15 @@ function getTenantIdFromUrl() {
 async function initTenantBranding() {
   const tenantId = getTenantIdFromUrl();
   const bTitle = document.getElementById('brand-title');
+  const bLogo = document.getElementById('brand-logo');
   if (tenantId === 'benmi') {
     if (bTitle) bTitle.innerText = "🥖 Benmi Dashboard";
+    if (bLogo) bLogo.src = "./benmi_logo.png";
     document.title = "Benmi Dashboard";
     return;
   }
+
+  if (bLogo) bLogo.src = "./zhadan_logo.png";
 
   try {
     const cached = localStorage.getItem("tenant_theme_" + tenantId);
@@ -27,6 +31,9 @@ async function initTenantBranding() {
       if (bTitle && data.brandName) {
         bTitle.innerText = `🍳 ${data.brandName} Dashboard`;
         document.title = `${data.brandName} Dashboard`;
+      }
+      if (bLogo && data.logoUrl) {
+        bLogo.src = data.logoUrl;
       }
     }
   } catch(e) {}
@@ -42,6 +49,9 @@ async function initTenantBranding() {
         if (bTitle && data.tenant.brandName) {
           bTitle.innerText = `🍳 ${data.tenant.brandName} Dashboard`;
           document.title = `${data.tenant.brandName} Dashboard`;
+        }
+        if (bLogo && data.tenant.logoUrl) {
+          bLogo.src = data.tenant.logoUrl;
         }
       }
     }
