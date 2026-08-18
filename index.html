@@ -14,21 +14,19 @@
             const params = new URLSearchParams(window.location.search);
             const tenantId = params.get("tenant_id") || "benmi";
             window.__INITIAL_TENANT_ID = tenantId;
-            if (tenantId === "benmi") {
-                document.title = "Benmi 點餐";
-            } else {
-                try {
-                    const cached = localStorage.getItem("tenant_theme_" + tenantId);
-                    if (cached) {
-                        const t = JSON.parse(cached);
-                        if (t.brandName) document.title = t.brandName + " 點餐";
-                        if (t.brandColor) document.documentElement.style.setProperty('--primary', t.brandColor);
-                        if (t.brandColorDark) document.documentElement.style.setProperty('--primary-dark', t.brandColorDark);
-                    } else {
-                        document.title = "線上點餐";
-                    }
-                } catch (e) {}
-            }
+            try {
+                const cached = localStorage.getItem("tenant_branding_" + tenantId) || localStorage.getItem("tenant_theme_" + tenantId);
+                if (cached) {
+                    const t = JSON.parse(cached);
+                    if (t.brandName) document.title = t.brandName + " 點餐";
+                    if (t.brandColor) document.documentElement.style.setProperty('--primary', t.brandColor);
+                    if (t.brandColorDark) document.documentElement.style.setProperty('--primary-dark', t.brandColorDark);
+                } else if (tenantId === "benmi") {
+                    document.title = "Benmi 點餐";
+                } else {
+                    document.title = "線上點餐";
+                }
+            } catch (e) {}
         })();
     </script>
 </head>
@@ -317,11 +315,10 @@
         function applyTenantTheme(tenant) {
             if (!tenant) return;
             const tenantId = getTenantIdFromUrl();
-            if (tenantId !== 'benmi') {
-                try {
-                    localStorage.setItem("tenant_theme_" + tenantId, JSON.stringify(tenant));
-                } catch(e) {}
-            }
+            try {
+                localStorage.setItem("tenant_branding_" + tenantId, JSON.stringify(tenant));
+                localStorage.setItem("tenant_theme_" + tenantId, JSON.stringify(tenant));
+            } catch(e) {}
             if (tenant.brandColor) {
                 document.documentElement.style.setProperty('--primary', tenant.brandColor);
             }

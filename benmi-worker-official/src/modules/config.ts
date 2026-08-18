@@ -70,18 +70,21 @@ export async function updateConfig(
     const storeStatusVal = payload.storeStatus !== undefined ? payload.storeStatus : null;
     const liffIdVal = payload.liffId !== undefined ? payload.liffId : null;
 
+    const logoUrlVal = payload.logoUrl !== undefined ? payload.logoUrl : null;
+
     // 1. Update D1 database
     if (env.DB) {
       const brandName = tenantCtx?.brandName || (tenantId === 'benmi' ? 'Benmi 越式法國麵包' : tenantId);
 
       await env.DB.prepare(`
-        INSERT INTO tenant_config (tenant_id, brand_name, operating_hours, allow_scheduled_pickup, store_status, liff_id, updated_at)
-        VALUES (?, ?, ?, COALESCE(?, 1), COALESCE(?, 'open'), ?, CURRENT_TIMESTAMP)
+        INSERT INTO tenant_config (tenant_id, brand_name, operating_hours, allow_scheduled_pickup, store_status, liff_id, logo_url, updated_at)
+        VALUES (?, ?, ?, COALESCE(?, 1), COALESCE(?, 'open'), ?, ?, CURRENT_TIMESTAMP)
         ON CONFLICT(tenant_id) DO UPDATE SET
           operating_hours = CASE WHEN ? IS NOT NULL THEN ? ELSE tenant_config.operating_hours END,
           allow_scheduled_pickup = CASE WHEN ? IS NOT NULL THEN ? ELSE tenant_config.allow_scheduled_pickup END,
           store_status = CASE WHEN ? IS NOT NULL THEN ? ELSE tenant_config.store_status END,
           liff_id = CASE WHEN ? IS NOT NULL THEN ? ELSE tenant_config.liff_id END,
+          logo_url = CASE WHEN ? IS NOT NULL THEN ? ELSE tenant_config.logo_url END,
           updated_at = CURRENT_TIMESTAMP
       `).bind(
         tenantId,
@@ -90,10 +93,12 @@ export async function updateConfig(
         allowPickupInt,
         storeStatusVal,
         liffIdVal,
+        logoUrlVal,
         opHoursStr, opHoursStr,
         allowPickupInt, allowPickupInt,
         storeStatusVal, storeStatusVal,
-        liffIdVal, liffIdVal
+        liffIdVal, liffIdVal,
+        logoUrlVal, logoUrlVal
       ).run();
     }
 

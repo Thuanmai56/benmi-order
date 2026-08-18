@@ -131,17 +131,18 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
   try {
     // 2. Fetch Tenant Context
     const tenantCtx = await resolveTenantContext(tenantId, env);
-    const brandName = tenantCtx?.brandName || (tenantId === 'zhadantongxue' ? '炸蛋同学 招牌炸蛋葱饼' : 'Benmi 越式法國麵包');
-    const brandColor = tenantCtx?.brandColor || (tenantId === 'zhadantongxue' ? '#f59e0b' : '#00b900');
-    const brandSubtitle = tenantId === 'zhadantongxue' ? '酥脆爆汁 蛋香濃郁' : 'Bánh mì Việt Nam / 越式法國麵包';
-    const storeAddress = tenantCtx?.storeAddress || (tenantId === 'zhadantongxue' ? '加盟/訂購專線: 0902271718' : '新北市土城區中央路二段135號');
-    const operatingHours = tenantCtx?.operatingHours || (tenantId === 'zhadantongxue' ? '11:00-21:00' : '11:00-21:00（一到五），7:30-21:00（六日）');
+    const brandName = tenantCtx?.brandName || (tenantId === 'benmi' ? 'Benmi 越式法國麵包' : tenantId);
+    const brandColor = tenantCtx?.brandColor || '#00b900';
+    const brandColorDark = (tenantId === 'benmi') ? '#009900' : brandColor;
+    const brandSubtitle = tenantCtx?.brandSubtitle || (tenantId === 'benmi' ? 'Bánh mì Việt Nam / 越式法國麵包' : '');
+    const storeAddress = tenantCtx?.storeAddress || (tenantId === 'benmi' ? '新北市土城區中央路二段135號' : null);
+    const operatingHours = tenantCtx?.operatingHours || null;
     const deliveryPolicy = tenantCtx?.deliveryPolicy || null;
-    const liffId = tenantCtx?.liffId || env.LIFF_ID || '2009560906-c5taZfiY';
-    const liffUrl = tenantCtx?.liffUrl || env.LIFF_URL || 'https://liff.line.me/2009560906-c5taZfiY';
+    const liffId = tenantCtx?.liffId || env.LIFF_ID || null;
+    const liffUrl = tenantCtx?.liffUrl || env.LIFF_URL || null;
     const locale = tenantCtx?.locale || 'zh-TW';
 
-    const logoUrl = tenantId === 'zhadantongxue' ? './zhadan_logo.png' : './benmi_logo.png';
+    const logoUrl = tenantCtx?.logoUrl || (tenantId === 'benmi' ? './benmi_logo.png' : null);
 
     // 3. Batch Query D1 Database
     let categories: any[] = [];
@@ -260,7 +261,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
         brandName,
         brandSubtitle,
         brandColor,
-        brandColorDark: tenantId === 'zhadantongxue' ? '#d97706' : '#047857',
+        brandColorDark: brandColorDark || '#047857',
         logoUrl,
         storeAddress,
         operatingHours,

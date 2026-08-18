@@ -11,48 +11,51 @@ function getTenantIdFromUrl() {
   return params.get("tenant_id") || "benmi";
 }
 
-async function initTenantBranding() {
-  const tenantId = getTenantIdFromUrl();
+function applyTenantBranding(tenant) {
+  if (!tenant) return;
+  const brandName = tenant.brandName || "Dashboard";
   const bTitle = document.getElementById('brand-title');
   const bLogo = document.getElementById('brand-logo');
-  if (tenantId === 'benmi') {
-    if (bTitle) bTitle.innerText = "🥖 Benmi Dashboard";
-    if (bLogo) bLogo.src = "./benmi_logo.png";
-    document.title = "Benmi Dashboard";
-    return;
+
+  if (bTitle) bTitle.innerText = `${brandName} Dashboard`;
+  document.title = `${brandName} Dashboard`;
+
+  if (bLogo) {
+    if (tenant.logoUrl) {
+      bLogo.src = tenant.logoUrl;
+      bLogo.style.display = "block";
+    } else {
+      bLogo.style.display = "none";
+    }
   }
 
-  if (bLogo) bLogo.src = "./zhadan_logo.png";
+  if (tenant.brandColor) {
+    document.documentElement.style.setProperty('--primary', tenant.brandColor);
+  }
+}
 
+async function initTenantBranding() {
+  const tenantId = getTenantIdFromUrl();
+
+  // 1. Instant Cache Render (0ms latency, eliminates any flash of unstyled content)
   try {
-    const cached = localStorage.getItem("tenant_theme_" + tenantId);
+    const cached = localStorage.getItem("tenant_branding_" + tenantId) || localStorage.getItem("tenant_theme_" + tenantId);
     if (cached) {
-      const data = JSON.parse(cached);
-      if (bTitle && data.brandName) {
-        bTitle.innerText = `🍳 ${data.brandName} Dashboard`;
-        document.title = `${data.brandName} Dashboard`;
-      }
-      if (bLogo && data.logoUrl) {
-        bLogo.src = data.logoUrl;
-      }
+      applyTenantBranding(JSON.parse(cached));
     }
   } catch(e) {}
 
+  // 2. Fetch fresh config from Server and update cache
   try {
     const res = await fetch(`${WORKER_BASE}/api/tenant/bootstrap?tenant_id=${tenantId}&_t=${Date.now()}`);
     if (res.ok) {
       const data = await res.json();
       if (data.tenant) {
         try {
+          localStorage.setItem("tenant_branding_" + tenantId, JSON.stringify(data.tenant));
           localStorage.setItem("tenant_theme_" + tenantId, JSON.stringify(data.tenant));
         } catch(e) {}
-        if (bTitle && data.tenant.brandName) {
-          bTitle.innerText = `🍳 ${data.tenant.brandName} Dashboard`;
-          document.title = `${data.tenant.brandName} Dashboard`;
-        }
-        if (bLogo && data.tenant.logoUrl) {
-          bLogo.src = data.tenant.logoUrl;
-        }
+        applyTenantBranding(data.tenant);
       }
     }
   } catch(e) {}

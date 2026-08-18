@@ -17,7 +17,9 @@ export interface TenantContext {
   openrouterModel: string;
   // Branding
   brandName: string;
+  brandSubtitle?: string | null;
   brandColor: string;
+  logoUrl?: string | null;
   storeAddress: string | null;
   // Business Config
   operatingHours: string | null;
