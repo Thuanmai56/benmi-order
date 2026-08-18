@@ -668,7 +668,7 @@ export async function handleLineWebhook(
 
       const lines = userText.split("\n");
       const keyLine = lines.find((l: string) => l.includes("訂單編號："));
-      const timeLine = lines.find((l: string) => l.includes("🕒 取餐時間："));
+      const timeLine = lines.find((l: string) => l.includes("🕒 取餐時間：") || l.includes("🕒 訂餐時間：") || l.includes("取餐時間") || l.includes("訂餐時間"));
       const totalLine = lines.find((l: string) => l.includes("💰 總金額："));
 
       const nowTaiwan = new Date(Date.now() + 8 * 3600000);
@@ -680,7 +680,7 @@ export async function handleLineWebhook(
       const timeKey = hh + min;
       const tempRandomId = Math.floor(1000 + Math.random() * 9000);
       const orderKey = keyLine ? keyLine.replace("訂單編號：", "").trim() : `BD${todayKey}-${timeKey}-${tempRandomId}`;
-      const timeStr = timeLine ? timeLine.replace("🕒 取餐時間：", "").replace(/\s*\([^)]*\)/g, '').trim() : "Unknown";
+      const timeStr = timeLine ? timeLine.replace(/🕒\s*(?:取餐時間|訂餐時間)[：:]\s*/, "").replace(/\s*\([^)]*\)/g, '').trim() : "Unknown";
       const totalStr = totalLine ? totalLine.replace("💰 總金額：", "").replace("$", "").trim() : "0";
 
       let noteStr = "";
@@ -722,7 +722,9 @@ export async function handleLineWebhook(
       }
 
       const contentStart = userText.indexOf("📦 訂單內容：");
-      const contentEnd = userText.indexOf("🕒 取餐時間：");
+      let contentEnd = userText.indexOf("🕒 取餐時間：");
+      if (contentEnd === -1) contentEnd = userText.indexOf("🕒 訂餐時間：");
+      if (contentEnd === -1) contentEnd = userText.indexOf("🕒");
       let extractedContent = userText;
       if (contentStart > -1 && contentEnd > contentStart) {
         extractedContent = userText.substring(contentStart + 8, contentEnd).replace("📦 訂單內容：", "").trim();

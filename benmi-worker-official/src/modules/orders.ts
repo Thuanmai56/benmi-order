@@ -485,9 +485,9 @@ export function parsePickupTimeToMs(timeStr: string | null | undefined, createdA
 
   let targetStr = (timeStr || "").trim();
 
-  // If timeStr is missing, "Unknown", or only date without time, try finding "取餐時間" in orderContent
+  // If timeStr is missing, "Unknown", or only date without time, try finding "取餐時間" or "訂餐時間" in orderContent
   if ((!targetStr || targetStr === "Unknown" || !targetStr.match(/\d{1,2}:\d{2}/)) && orderContent) {
-    const match = orderContent.match(/取餐時間[：:]\s*([^\n\r]+)/);
+    const match = orderContent.match(/(?:取餐時間|訂餐時間)[：:]\s*([^\n\r]+)/);
     if (match && match[1]) {
       targetStr = match[1].trim();
     }

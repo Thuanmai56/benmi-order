@@ -1545,7 +1545,9 @@
                     }
                 }
 
-                msg += `\n\n🕒 取餐時間：${dateInput} ${timeInput}`;
+                const isScheduledEnabled = !(storeConfig && storeConfig.allowScheduledPickup === false);
+                const timeLabel = isScheduledEnabled ? '取餐時間' : '訂餐時間';
+                msg += `\n\n🕒 ${timeLabel}：${dateInput} ${timeInput}`;
                 const mainNote = document.getElementById('note') ? document.getElementById('note').value : '';
                 if (mainNote) msg += `\n📝 總備註：${mainNote}`;
                 msg += `\n💰 總金額：$${currentTotal}`;
