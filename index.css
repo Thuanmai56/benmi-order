@@ -211,6 +211,12 @@ body {
     margin-top: 0;
 }
 
+.detail-svg-icon {
+    display: inline-block;
+    vertical-align: middle;
+    flex-shrink: 0;
+}
+
 .time-block {
     display: flex;
     flex-direction: column;
