@@ -289,40 +289,6 @@ async function saveMenuData() {
   }
 }
 
-async function restoreDefaultMenu() {
-  const tenantId = getTenantIdFromUrl();
-  if (tenantId !== 'benmi') {
-    alert(t("restoreOnlyBenmi"));
-    return;
-  }
-  if (!confirm(t("confirmRestoreMenu"))) return;
-
-  const DEFAULT_MENU = {
-    small: { "燒肉": 56, "火腿": 56, "雞肉": 68, "烤肉": 72, "雙層烤肉": 78, "綜合": 79 },
-    large: { "燒肉": 80, "火腿": 80, "雞肉": 100, "烤肉": 105, "雙層烤肉": 115, "綜合": 130 },
-    combo: {
-      "1 大燒肉+飲料": 90, "2 大火腿+飲料": 90, "3 大雞肉+飲料": 118, "4 大烤肉+飲料": 128,
-      "5 大雙層烤肉+飲料": 135, "6 大綜合+飲料": 142, "7 小燒肉+飲料": 77, "8 小雞肉+飲料": 88,
-      "9 小烤肉+飲料": 95, "10 小雙層烤肉+飲料": 99, "11 小綜合+飲料": 100
-    },
-    drinks: { "越南咖啡": 48, "豆漿": 37, "紅茶": 37, "可樂": 37, "雪碧": 37 },
-    topping: { "起司": 15, "火腿": 20, "燒肉": 20, "烤肉": 25, "雞肉": 25 }
-  };
-
-  try {
-    const res = await fetch(`${WORKER_BASE}/api/menu?tenant_id=${getTenantIdFromUrl()}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(DEFAULT_MENU)
-    });
-    if (!res.ok) throw new Error("API returned " + res.status);
-    alert(t("restoreSuccess"));
-    loadMenuData(); // Reload from server
-  } catch (e) {
-    alert(t("restoreFail") + e.message);
-  }
-}
-
 // --- Image Management ---
 let currentImageItemName = null;
 

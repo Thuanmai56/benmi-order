@@ -690,8 +690,6 @@ function applyLanguageToDOM() {
   if (menuEdT && (!currentMenuData || activeCategoryIndex < 0)) menuEdT.innerText = dict.menuEditorTitle;
   const menuEdS = document.getElementById("i18n-menu-edit-sub");
   if (menuEdS) menuEdS.innerText = dict.menuEditSub;
-  const btnMenuRest = document.getElementById("btn-menu-restore");
-  if (btnMenuRest) btnMenuRest.innerText = dict.btnMenuRestore;
   const btnMenuAdd = document.getElementById("btn-menu-add-item");
   if (btnMenuAdd) btnMenuAdd.innerText = dict.btnMenuAddItem;
   const btnMenuSv = document.getElementById("btn-menu-save");
