@@ -220,7 +220,7 @@
                     style="display:none; position:absolute; top:-6px; right:-10px; background:var(--red); color:#fff; font-size:11px; font-weight:900; border-radius:99px; padding: 2px 6px; min-width:18px; text-align:center;">0</span>
                 <span class="total-price">$<span id="total-price">0</span></span>
             </div>
-            <button class="btn-send" id="btn-submit" onclick="submitOrder()">確認下單</button>
+            <button class="btn-send" id="btn-submit" onclick="handleFooterAction()">前往結帳 ➔</button>
         </div>
     </div>
 
@@ -417,6 +417,43 @@
             if (el) el.scrollIntoView({ behavior: 'smooth' });
         }
 
+        function isCheckoutSectionVisible() {
+            const el = document.getElementById('sec-checkout');
+            if (!el) return true;
+            const rect = el.getBoundingClientRect();
+            const windowHeight = (window.innerHeight || document.documentElement.clientHeight);
+            return (rect.top <= windowHeight * 0.75 && rect.bottom >= 80);
+        }
+
+        function updateFooterButtonState() {
+            const btn = document.getElementById('btn-submit');
+            if (!btn || btn.disabled || (typeof isSubmitting !== 'undefined' && isSubmitting)) return;
+            if (isCheckoutSectionVisible()) {
+                btn.innerText = '確認下單';
+            } else {
+                btn.innerText = '前往結帳 ➔';
+            }
+        }
+
+        function handleFooterAction() {
+            const hasItem = Object.values(cart).some(q => q > 0);
+            if (!hasItem) return customAlert('請先選擇餐點品項加入購物車');
+
+            if (!isCheckoutSectionVisible()) {
+                scrollToSec('sec-checkout');
+                const checkoutSec = document.getElementById('sec-checkout');
+                if (checkoutSec) {
+                    checkoutSec.style.transition = 'box-shadow 0.3s ease, border-color 0.3s ease';
+                    checkoutSec.style.boxShadow = '0 0 0 3px var(--primary), 0 10px 25px rgba(0,0,0,0.1)';
+                    setTimeout(() => { checkoutSec.style.boxShadow = ''; }, 1500);
+                }
+                updateFooterButtonState();
+                return;
+            }
+
+            submitOrder();
+        }
+
         const observerOptions = { root: null, rootMargin: '-80px 0px -70% 0px', threshold: 0 };
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
@@ -430,7 +467,12 @@
                     }
                 }
             });
+            updateFooterButtonState();
         }, observerOptions);
+
+        window.addEventListener('scroll', () => {
+            updateFooterButtonState();
+        }, { passive: true });
 
         // --- ALERT & LIGHTBOX ---
         function customAlert(msg, callback = null) {
@@ -929,6 +971,7 @@
                 badge.style.display = totalQty > 0 ? 'block' : 'none';
             }
 
+            updateFooterButtonState();
             return total;
         }
 
@@ -1290,6 +1333,18 @@
 
             const hasItem = Object.values(cart).some(q => q > 0);
             if (!hasItem) return customAlert('請先選擇餐點品項加入購物車');
+
+            if (!isCheckoutSectionVisible()) {
+                scrollToSec('sec-checkout');
+                const checkoutSec = document.getElementById('sec-checkout');
+                if (checkoutSec) {
+                    checkoutSec.style.transition = 'box-shadow 0.3s ease, border-color 0.3s ease';
+                    checkoutSec.style.boxShadow = '0 0 0 3px var(--primary), 0 10px 25px rgba(0,0,0,0.1)';
+                    setTimeout(() => { checkoutSec.style.boxShadow = ''; }, 1500);
+                }
+                updateFooterButtonState();
+                return;
+            }
 
             let dateInput = document.getElementById('pickup-date') ? document.getElementById('pickup-date').value : '';
             let timeInput = document.getElementById('pickup-time') ? document.getElementById('pickup-time').value : '';
