@@ -712,9 +712,16 @@
                 div.style.pointerEvents = 'none';
             }
 
-            const badgeHTML = item.isRecommended ? `<span class="badge">👍 推薦</span>` : '';
-            const trans = (bootstrapData?.translations && bootstrapData.translations[item.name]) || item.description || '';
-            const transHTML = trans ? `<div style="font-size: 13px; color: #9ca3af; margin-top: 2px;">${trans}</div>` : '';
+            let badgeText = item.badge || '';
+            if (!badgeText) {
+                if (item.name.includes('雞腿') || item.name.includes('雞肉')) {
+                    badgeText = '雞肉足足100g';
+                } else if (item.name.includes('香腸')) {
+                    badgeText = '香腸足足15cm';
+                }
+            }
+
+            const badgeHTML = badgeText ? `<span class="badge">${badgeText}</span>` : '';
 
             const tenantId = getTenantIdFromUrl();
             const imgHTML = item.imageUrl
@@ -734,7 +741,6 @@
                     <div class="card-info">
                         <div>
                             <div class="card-title">${item.name} ${badgeHTML}</div>
-                            ${transHTML}
                         </div>
                         <div class="card-footer">
                             ${footerHTML}

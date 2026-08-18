@@ -72,7 +72,12 @@ const BENMI_TRANSLATIONS: Record<string, string> = {
 };
 
 const BENMI_RECOMMENDED = ['雙層烤肉', '綜合', '5 大雙層烤肉+飲料', '6 大綜合+飲料'];
-const ZHADAN_RECOMMENDED = ['原味炸蛋蔥餅', '雙芝士炸蛋蔥餅', '雞腿肉卷炸蛋蔥餅'];
+const ZHADAN_RECOMMENDED: string[] = [];
+
+const ZHADAN_ITEM_BADGES: Record<string, string> = {
+  '雞腿肉卷炸蛋蔥餅': '雞肉足足100g',
+  '台灣香腸炸蛋蔥餅': '香腸足足15cm'
+};
 
 export function parseOperatingHours(raw: string | null, tenantId: string): Record<string, Array<{ start: string; end: string }>> {
   const result: Record<string, Array<{ start: string; end: string }>> = {};
@@ -187,6 +192,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
         itemsByCatId.set(item.category_id, []);
       }
       const isOos = Boolean(item.out_of_stock_until && new Date(item.out_of_stock_until) > now);
+      const itemBadge = tenantId === 'zhadantongxue' ? (ZHADAN_ITEM_BADGES[item.name] || null) : null;
       itemsByCatId.get(item.category_id)!.push({
         id: item.id,
         name: item.name,
@@ -195,6 +201,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
         imageUrl: `/api/image?tenant_id=${tenantId}&name=${encodeURIComponent(item.name)}`,
         isOutOfStock: isOos,
         isRecommended: recommendedSet.has(item.name),
+        badge: itemBadge,
         sortOrder: item.sort_order || 0
       });
     }
