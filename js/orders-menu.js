@@ -325,8 +325,10 @@ async function openImageModal(categoryId, itemName) {
     const res = await fetch(`${WORKER_BASE}/api/image_list?tenant_id=${getTenantIdFromUrl()}&_t=${Date.now()}`);
     if (res.ok) {
       const list = await res.json();
-      if (list.includes(currentImageItemName)) {
-        document.getElementById("image-preview").src = `${WORKER_BASE}/api/image?tenant_id=${getTenantIdFromUrl()}&name=${encodeURIComponent(currentImageItemName)}&_t=${Date.now()}`;
+      const hasImg = list.includes(currentImageItemName) || list.includes(itemName);
+      if (hasImg) {
+        const resolvedName = list.includes(currentImageItemName) ? currentImageItemName : itemName;
+        document.getElementById("image-preview").src = `${WORKER_BASE}/api/image?tenant_id=${getTenantIdFromUrl()}&name=${encodeURIComponent(resolvedName)}&_t=${Date.now()}`;
         document.getElementById("image-preview").style.display = "block";
         document.getElementById("btn-delete-image").style.display = "block";
         document.getElementById("image-status").innerText = t("imageHasImage");
@@ -405,12 +407,24 @@ async function deleteItemImage() {
   if (!confirm(t("confirmDeleteImage"))) return;
   document.getElementById("image-status").innerText = t("imageDeleting");
   try {
-    const res = await fetch(`${WORKER_BASE}/api/image?tenant_id=${getTenantIdFromUrl()}`, {
+    const tenantId = getTenantIdFromUrl();
+    const res = await fetch(`${WORKER_BASE}/api/image?tenant_id=${tenantId}`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: currentImageItemName })
     });
     if (!res.ok) throw new Error("Delete failed");
+
+    const bareName = currentImageItemName.includes('_') ? currentImageItemName.split('_').slice(1).join('_') : null;
+    if (bareName) {
+      try {
+        await fetch(`${WORKER_BASE}/api/image?tenant_id=${tenantId}`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: bareName })
+        });
+      } catch (e) {}
+    }
 
     document.getElementById("image-preview").style.display = "none";
     document.getElementById("btn-delete-image").style.display = "none";

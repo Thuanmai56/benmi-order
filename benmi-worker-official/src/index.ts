@@ -60,8 +60,8 @@ export default {
     if (request.method === "GET" && path === "/api/menu") return getMenu(request, env);
     if (request.method === "POST" && path === "/api/menu") return updateMenu(request, env);
     if (request.method === "POST" && path === "/api/menu/stock-status") return updateStockStatus(request, env);
-    if (request.method === "GET" && path === "/api/image_list") return getImageList(request, env);
-    if (request.method === "GET" && path === "/api/image") return getImage(request, env);
+    if ((request.method === "GET" || request.method === "HEAD") && path === "/api/image_list") return getImageList(request, env);
+    if ((request.method === "GET" || request.method === "HEAD") && path === "/api/image") return getImage(request, env);
     if (request.method === "POST" && path === "/api/image") return updateImage(request, env);
     if (request.method === "DELETE" && path === "/api/image") return deleteImage(request, env);
     if ((request.method === "POST" || request.method === "GET") && path === "/api/auth") return handleAuth(request, env, url, tenantCtx);

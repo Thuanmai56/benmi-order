@@ -27,6 +27,43 @@ export async function getImage(request: Request, env: Env): Promise<Response> {
 
     const tenantId = getTenantId(request);
     let dataUri = await env.ORDER_STATE.get(`tenant:${tenantId}:image:${name}`);
+
+    if (!dataUri) {
+      // Try common category prefixes
+      const prefixes = ["main", "snack", "small", "large", "combo", "drinks"];
+      for (const prefix of prefixes) {
+        dataUri = await env.ORDER_STATE.get(`tenant:${tenantId}:image:${prefix}_${name}`);
+        if (dataUri) break;
+      }
+    }
+
+    if (!dataUri && name.includes("_")) {
+      // If name has a prefix (e.g. main_原味炸蛋蔥餅), try bare name
+      const bare = name.split("_").slice(1).join("_");
+      dataUri = await env.ORDER_STATE.get(`tenant:${tenantId}:image:${bare}`);
+    }
+
+    // If still not found, try dynamic search in image_list
+    if (!dataUri) {
+      const listKey = `tenant:${tenantId}:image_list`;
+      let listRaw = await env.ORDER_STATE.get(listKey);
+      if (!listRaw && tenantId === "benmi") {
+        listRaw = await env.ORDER_STATE.get("image_list");
+      }
+      if (listRaw) {
+        try {
+          const list: string[] = JSON.parse(listRaw);
+          const matchedKey = list.find(k => k === name || k.endsWith(`_${name}`) || (name.includes('_') && k === name.split('_').slice(1).join('_')));
+          if (matchedKey) {
+            dataUri = await env.ORDER_STATE.get(`tenant:${tenantId}:image:${matchedKey}`);
+            if (!dataUri && tenantId === "benmi") {
+              dataUri = await env.ORDER_STATE.get(`image:${matchedKey}`);
+            }
+          }
+        } catch (e) { }
+      }
+    }
+
     if (!dataUri && tenantId === "benmi") {
       dataUri = await env.ORDER_STATE.get(`image:${name}`);
     }
