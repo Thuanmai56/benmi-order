@@ -170,8 +170,8 @@
                 <div class="input-group" id="pickup-time-picker-group">
                     <label style="font-weight: 800; color: var(--primary);">⚠️ 請選擇取餐日期 / 時間</label>
                     <div class="datetime-row">
-                        <input type="date" id="pickup-date" autocomplete="off">
-                        <input type="time" id="pickup-time" autocomplete="off">
+                        <input type="date" id="pickup-date" autocomplete="off" onchange="isPickupTimeManuallyChanged=true">
+                        <input type="time" id="pickup-time" autocomplete="off" onchange="isPickupTimeManuallyChanged=true">
                     </div>
                 </div>
                 <div id="pickup-time-asap-notice" style="display:none; padding: 14px 16px; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 14px; color: #166534; margin-bottom: 12px;">
@@ -367,10 +367,27 @@
         }
 
         // --- TIME & TIMEZONE HELPERS ---
+        let isPickupTimeManuallyChanged = false;
+
         function getTaiwanDate() {
             const now = new Date();
-            const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-            return new Date(utc + (8 * 3600000));
+            try {
+                const formatter = new Intl.DateTimeFormat("en-US", {
+                    timeZone: "Asia/Taipei",
+                    year: "numeric", month: "numeric", day: "numeric",
+                    hour: "numeric", minute: "numeric", second: "numeric",
+                    hour12: false
+                });
+                const parts = formatter.formatToParts(now);
+                const m = {};
+                parts.forEach(p => m[p.type] = p.value);
+                const h = parseInt(m.hour, 10) % 24;
+                return new Date(parseInt(m.year, 10), parseInt(m.month, 10) - 1, parseInt(m.day, 10), h, parseInt(m.minute, 10), parseInt(m.second, 10));
+            } catch (e) {
+                // Fallback for older environments
+                const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+                return new Date(utc + (8 * 3600000));
+            }
         }
 
         function formatTaiwanDateTime(d) {
@@ -390,10 +407,9 @@
             const timeEl = document.getElementById('asap-current-time');
             if (!timeEl) return;
             const tw = getTaiwanDate();
+            const { fullStr } = formatTaiwanDateTime(tw);
             const isBusy = (storeConfig && storeConfig.storeStatus === 'busy');
-            const targetTime = isBusy ? new Date(tw.getTime() + 60 * 60000) : tw;
-            const { fullStr } = formatTaiwanDateTime(targetTime);
-            timeEl.innerText = isBusy ? `${fullStr}（繁忙：約 1 小時後）` : fullStr;
+            timeEl.innerText = isBusy ? `${fullStr}（門市繁忙：約 1 小時後完成）` : fullStr;
         }
 
         function applyPickupConfig() {
@@ -1361,14 +1377,25 @@
                 if (!isStoreOpen(twTime)) {
                     return customAlert('店家目前非營業時間 (休息中)，無法下單');
                 }
-                const isBusy = (storeConfig && storeConfig.storeStatus === 'busy');
-                const targetTime = isBusy ? new Date(twTime.getTime() + 60 * 60000) : twTime;
-                const { dateStr, timeStr } = formatTaiwanDateTime(targetTime);
+                const { dateStr, timeStr } = formatTaiwanDateTime(twTime);
                 dateInput = dateStr;
                 timeInput = timeStr;
             } else {
-                dateInput = document.getElementById('pickup-date') ? document.getElementById('pickup-date').value : '';
-                timeInput = document.getElementById('pickup-time') ? document.getElementById('pickup-time').value : '';
+                const twNow = getTaiwanDate();
+                const isBusy = (storeConfig && storeConfig.storeStatus === 'busy');
+                const offsetMinutes = isBusy ? 60 : 20;
+
+                if (!isPickupTimeManuallyChanged) {
+                    const freshPickup = new Date(twNow.getTime() + offsetMinutes * 60000);
+                    const { dateStr: fDate, timeStr: fTime } = formatTaiwanDateTime(freshPickup);
+                    dateInput = fDate;
+                    timeInput = fTime;
+                    if (document.getElementById('pickup-date')) document.getElementById('pickup-date').value = fDate;
+                    if (document.getElementById('pickup-time')) document.getElementById('pickup-time').value = fTime;
+                } else {
+                    dateInput = document.getElementById('pickup-date') ? document.getElementById('pickup-date').value : '';
+                    timeInput = document.getElementById('pickup-time') ? document.getElementById('pickup-time').value : '';
+                }
 
                 if (!dateInput || !timeInput) {
                     const checkoutSec = document.getElementById('sec-checkout');
@@ -1385,7 +1412,6 @@
                     return customAlert('請選擇取餐日期與時間 ↓');
                 }
 
-                const twNow = getTaiwanDate();
                 const [pYear, pMonth, pDay] = dateInput.split('-').map(Number);
                 const [pHour, pMin] = timeInput.split(':').map(Number);
                 const selectedDateTime = new Date(pYear, pMonth - 1, pDay, pHour, pMin, 0);
@@ -1692,15 +1718,16 @@
                 const defaultPickup = new Date(twNow.getTime() + offsetMinutes * 60000);
                 const { timeStr: defTimeStr } = formatTaiwanDateTime(defaultPickup);
 
-                if (forceReset || !timeEl.value) {
+                if (forceReset || !timeEl.value || !isPickupTimeManuallyChanged) {
                     timeEl.value = defTimeStr;
                 } else if (dateEl && dateEl.value === dateStr && timeEl.value) {
-                    // Self-healing: if cached time is in the past (less than current time + 5m), reset to default
+                    // Self-healing: if cached/selected time is in the past (less than current time + 2m), reset to default rolling time
                     const parts = timeEl.value.split(':').map(Number);
                     if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
                         const selectedTime = new Date(twNow.getFullYear(), twNow.getMonth(), twNow.getDate(), parts[0], parts[1]);
-                        if (selectedTime.getTime() < twNow.getTime() + 5 * 60000) {
+                        if (selectedTime.getTime() < twNow.getTime() + 2 * 60000) {
                             timeEl.value = defTimeStr;
+                            isPickupTimeManuallyChanged = false;
                         }
                     }
                 }
@@ -1958,6 +1985,7 @@
             fetchWaitingCounter();
             setInterval(fetchWaitingCounter, 30000);
             setInterval(updateAsapTimeDisplay, 1000);
+            setInterval(() => setTodayDate(false), 30000);
 
             window.addEventListener('pageshow', () => {
                 setTodayDate(true);
