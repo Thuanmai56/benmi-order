@@ -3,8 +3,6 @@
  * Quản lý quy trình đặt hàng, kiểm tra hợp lệ, hẹn giờ lấy món và gửi đơn hàng.
  */
 
-let isSubmitting = false;
-
 // 1. Kiểm tra vị trí hiển thị của khu vực thanh toán
 function isCheckoutSectionVisible() {
     const el = document.getElementById('sec-checkout');

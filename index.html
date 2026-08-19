@@ -239,7 +239,6 @@
     </div>
 
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-    <script src="js/client-checkout.js"></script>
     <script>
         // --- WORKER BASE & TENANT RESOLUTION ---
         const WORKER_BASE = (window.location.hostname.includes("staging") || window.location.hostname.includes("test") || window.location.hostname.includes("localhost") || window.location.hostname.includes("127.0.0.1"))
@@ -264,7 +263,7 @@
         let comboDrinkData = {};
         let currentPopup = null;
         let alertCallback = null;
-        let isSubmitting = false;
+        window.isSubmitting = false;
 
         // Recommended items for Benmi
         const recommended = new Set(['雙層烤肉', '綜合']);
@@ -1604,6 +1603,7 @@
 
         initApp();
     </script>
+    <script src="js/client-checkout.js"></script>
 </body>
 
 </html>
