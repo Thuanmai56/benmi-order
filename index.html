@@ -1381,21 +1381,8 @@
                 dateInput = dateStr;
                 timeInput = timeStr;
             } else {
-                const twNow = getTaiwanDate();
-                const isBusy = (storeConfig && storeConfig.storeStatus === 'busy');
-                const offsetMinutes = isBusy ? 60 : 20;
-
-                if (!isPickupTimeManuallyChanged) {
-                    const freshPickup = new Date(twNow.getTime() + offsetMinutes * 60000);
-                    const { dateStr: fDate, timeStr: fTime } = formatTaiwanDateTime(freshPickup);
-                    dateInput = fDate;
-                    timeInput = fTime;
-                    if (document.getElementById('pickup-date')) document.getElementById('pickup-date').value = fDate;
-                    if (document.getElementById('pickup-time')) document.getElementById('pickup-time').value = fTime;
-                } else {
-                    dateInput = document.getElementById('pickup-date') ? document.getElementById('pickup-date').value : '';
-                    timeInput = document.getElementById('pickup-time') ? document.getElementById('pickup-time').value : '';
-                }
+                dateInput = document.getElementById('pickup-date') ? document.getElementById('pickup-date').value : '';
+                timeInput = document.getElementById('pickup-time') ? document.getElementById('pickup-time').value : '';
 
                 if (!dateInput || !timeInput) {
                     const checkoutSec = document.getElementById('sec-checkout');
@@ -1409,7 +1396,7 @@
                         if (!dateInput && document.getElementById('pickup-date')) document.getElementById('pickup-date').focus();
                         else if (document.getElementById('pickup-time')) document.getElementById('pickup-time').focus();
                     }, 400);
-                    return customAlert('請選擇取餐日期與時間 ↓');
+                    return customAlert('請選擇取餐時間 ↓');
                 }
 
                 const [pYear, pMonth, pDay] = dateInput.split('-').map(Number);
@@ -1705,31 +1692,10 @@
             const twNow = getTaiwanDate();
             const { dateStr } = formatTaiwanDateTime(twNow);
             const dateEl = document.getElementById('pickup-date');
-            const timeEl = document.getElementById('pickup-time');
             if (dateEl) {
                 dateEl.min = dateStr;
                 if (forceReset || !dateEl.value || dateEl.value < dateStr) {
                     dateEl.value = dateStr;
-                }
-            }
-            if (timeEl) {
-                const isBusy = (storeConfig && storeConfig.storeStatus === 'busy');
-                const offsetMinutes = isBusy ? 60 : 20;
-                const defaultPickup = new Date(twNow.getTime() + offsetMinutes * 60000);
-                const { timeStr: defTimeStr } = formatTaiwanDateTime(defaultPickup);
-
-                if (forceReset || !timeEl.value || !isPickupTimeManuallyChanged) {
-                    timeEl.value = defTimeStr;
-                } else if (dateEl && dateEl.value === dateStr && timeEl.value) {
-                    // Self-healing: if cached/selected time is in the past (less than current time + 2m), reset to default rolling time
-                    const parts = timeEl.value.split(':').map(Number);
-                    if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-                        const selectedTime = new Date(twNow.getFullYear(), twNow.getMonth(), twNow.getDate(), parts[0], parts[1]);
-                        if (selectedTime.getTime() < twNow.getTime() + 2 * 60000) {
-                            timeEl.value = defTimeStr;
-                            isPickupTimeManuallyChanged = false;
-                        }
-                    }
                 }
             }
         }
