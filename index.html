@@ -1085,11 +1085,12 @@
                         const isToppingOos = menu.out_of_stock && menu.out_of_stock.includes(`topping:${t}`);
                         const isChecked = (data.topping === t);
                         const price = menu.topping[t];
+                        const oosBadge = isToppingOos ? `<span class="modifier-oos-tag">已售完</span>` : `<span style="font-size: 12px; opacity: 0.85;">+$${price}</span>`;
                         sectionInner += `
                             <div class="modifier-checkbox-chip ${isChecked ? 'active' : ''} ${isToppingOos ? 'disabled' : ''}" 
-                                 onclick="toggleBenmiTopping('${key}', ${i}, '${t}', this)">
+                                 onclick="${isToppingOos ? '' : `toggleBenmiTopping('${key}', ${i}, '${t}', this)`}">
                                 <span>${t}</span>
-                                <span style="font-size: 12px; opacity: 0.85;">+$${price}</span>
+                                ${oosBadge}
                             </div>
                         `;
                     }
@@ -1138,7 +1139,7 @@
                     if (!customizeData[key][i]) {
                         const defaultSingle = {};
                         modifiers.filter(m => m.selectionType === 'single').forEach(m => {
-                            const defOpt = m.options.find(o => o.isDefault) || m.options[0];
+                            const defOpt = m.options.find(o => o.isDefault && !o.isOutOfStock) || m.options.find(o => !o.isOutOfStock) || m.options[0];
                             if (defOpt) defaultSingle[m.slug] = defOpt.name;
                         });
                         customizeData[key][i] = { single: defaultSingle, multiple: {}, note: '' };
@@ -1162,12 +1163,14 @@
                         if (mod.selectionType === 'single') {
                             sectionInner += `<div class="modifier-pills-row">`;
                             mod.options.forEach(opt => {
+                                const isOos = Boolean(opt.isOutOfStock);
                                 const isSelected = (currentPortion.single && currentPortion.single[mod.slug] === opt.name);
                                 const priceText = opt.price > 0 ? ` (+$${opt.price})` : '';
+                                const oosBadge = isOos ? `<span class="modifier-oos-tag">已售完</span>` : '';
                                 sectionInner += `
-                                    <div class="modifier-pill ${isSelected ? 'active' : ''} ${opt.isOutOfStock ? 'disabled' : ''}" 
-                                         onclick="selectSingleModifier('${key}', ${i}, '${mod.slug}', '${opt.name}', this)">
-                                        ${opt.name}${priceText}
+                                    <div class="modifier-pill ${isSelected ? 'active' : ''} ${isOos ? 'disabled' : ''}" 
+                                         onclick="${isOos ? '' : `selectSingleModifier('${key}', ${i}, '${mod.slug}', '${opt.name}', this)`}">
+                                        <span>${opt.name}${priceText}</span>${oosBadge}
                                     </div>
                                 `;
                             });
@@ -1175,11 +1178,12 @@
                         } else if (mod.selectionType === 'multiple') {
                             sectionInner += `<div class="modifier-checkbox-grid">`;
                             mod.options.forEach(opt => {
+                                const isOos = Boolean(opt.isOutOfStock);
                                 const isChecked = Boolean(currentPortion.multiple && currentPortion.multiple[opt.name]);
-                                const priceText = opt.price > 0 ? `+$${opt.price}` : '$0';
+                                const priceText = isOos ? `<span class="modifier-oos-tag">已售完</span>` : (opt.price > 0 ? `+$${opt.price}` : '$0');
                                 sectionInner += `
-                                    <div class="modifier-checkbox-chip ${isChecked ? 'active' : ''} ${opt.isOutOfStock ? 'disabled' : ''}" 
-                                         onclick="toggleMultipleModifier('${key}', ${i}, '${opt.name}', this)">
+                                    <div class="modifier-checkbox-chip ${isChecked ? 'active' : ''} ${isOos ? 'disabled' : ''}" 
+                                         onclick="${isOos ? '' : `toggleMultipleModifier('${key}', ${i}, '${opt.name}', this)`}">
                                         <span>${opt.name}</span>
                                         <span style="font-size: 12px; opacity: 0.85;">${priceText}</span>
                                     </div>
@@ -1221,6 +1225,7 @@
 
         // Benmi modifier helpers
         function selectBenmiSpicy(key, index, spicyVal, el) {
+            if (el && el.classList.contains('disabled')) return;
             if (!customizeData[key]) customizeData[key] = [];
             if (!customizeData[key][index]) customizeData[key][index] = { topping: '', spicy: '不辣', note: '' };
             customizeData[key][index].spicy = spicyVal;
@@ -1232,6 +1237,7 @@
         }
 
         function toggleBenmiTopping(key, index, topName, el) {
+            if (el && el.classList.contains('disabled')) return;
             if (!customizeData[key]) customizeData[key] = [];
             if (!customizeData[key][index]) customizeData[key][index] = { topping: '', spicy: '不辣', note: '' };
 
@@ -1255,6 +1261,7 @@
 
         // Dynamic tenant modifier helpers
         function selectSingleModifier(key, portionIdx, modSlug, optName, el) {
+            if (el && el.classList.contains('disabled')) return;
             if (!customizeData[key]) customizeData[key] = [];
             if (!customizeData[key][portionIdx]) customizeData[key][portionIdx] = { single: {}, multiple: {}, note: '' };
             if (!customizeData[key][portionIdx].single) customizeData[key][portionIdx].single = {};
@@ -1267,6 +1274,7 @@
         }
 
         function toggleMultipleModifier(key, portionIdx, optName, el) {
+            if (el && el.classList.contains('disabled')) return;
             if (!customizeData[key]) customizeData[key] = [];
             if (!customizeData[key][portionIdx]) customizeData[key][portionIdx] = { single: {}, multiple: {}, note: '' };
             if (!customizeData[key][portionIdx].multiple) customizeData[key][portionIdx].multiple = {};
