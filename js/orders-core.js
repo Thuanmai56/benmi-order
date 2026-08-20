@@ -28,10 +28,7 @@ function applyTenantBranding(tenant) {
       bLogo.style.display = "none";
     }
   }
-
-  if (tenant.brandColor) {
-    document.documentElement.style.setProperty('--primary', tenant.brandColor);
-  }
+  document.documentElement.style.setProperty('--primary', '#00b900');
 }
 
 async function initTenantBranding() {

@@ -129,8 +129,8 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
     // 2. Fetch Tenant Context
     const tenantCtx = await resolveTenantContext(tenantId, env);
     const brandName = tenantCtx?.brandName || (tenantId === 'benmi' ? 'Benmi 越式法國麵包' : tenantId);
-    const brandColor = tenantCtx?.brandColor || '#00b900';
-    const brandColorDark = (tenantId === 'benmi') ? '#009900' : brandColor;
+    const brandColor = '#00b900';
+    const brandColorDark = '#009900';
     const brandSubtitle = tenantCtx?.brandSubtitle || (tenantId === 'benmi' ? 'Bánh mì Việt Nam / 越式法國麵包' : '');
     const storeAddress = tenantCtx?.storeAddress || (tenantId === 'benmi' ? '新北市土城區中央路二段135號' : null);
     const operatingHours = tenantCtx?.operatingHours || null;

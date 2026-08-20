@@ -19,8 +19,6 @@
                 if (cached) {
                     const t = JSON.parse(cached);
                     if (t.brandName) document.title = t.brandName + " 點餐";
-                    if (t.brandColor) document.documentElement.style.setProperty('--primary', t.brandColor);
-                    if (t.brandColorDark) document.documentElement.style.setProperty('--primary-dark', t.brandColorDark);
                 } else if (tenantId === "benmi") {
                     document.title = "Benmi 點餐";
                 } else {
@@ -325,12 +323,8 @@
                 localStorage.setItem("tenant_branding_" + tenantId, JSON.stringify(tenant));
                 localStorage.setItem("tenant_theme_" + tenantId, JSON.stringify(tenant));
             } catch(e) {}
-            if (tenant.brandColor) {
-                document.documentElement.style.setProperty('--primary', tenant.brandColor);
-            }
-            if (tenant.brandColorDark) {
-                document.documentElement.style.setProperty('--primary-dark', tenant.brandColorDark);
-            }
+            document.documentElement.style.setProperty('--primary', '#00b900');
+            document.documentElement.style.setProperty('--primary-dark', '#009900');
             document.title = (tenant.brandName || "點餐系統") + " 點餐";
             const titleEl = document.getElementById('page-title');
             if (titleEl) titleEl.innerText = (tenant.brandName || "點餐系統") + " 點餐";
