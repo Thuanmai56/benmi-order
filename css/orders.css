@@ -295,12 +295,13 @@ body {
 .tile {
   border: 1px solid var(--border);
   border-radius: 14px;
-  padding: 12px 14px;
+  padding: 12px 0 12px 14px;
   display: flex;
   align-items: stretch;
-  gap: 12px;
+  gap: 0;
   cursor: pointer;
   background: #fff;
+  overflow: hidden;
   transition: all 0.15s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 }
@@ -322,6 +323,7 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  padding-right: 4px;
 }
 
 .tile-top {
@@ -387,26 +389,37 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  align-items: center;
+  align-items: stretch;
+  align-self: stretch;
   flex-shrink: 0;
-  min-width: 105px;
-  max-width: 115px;
+  min-width: 100px;
+  max-width: 112px;
+  border-left: 1px solid var(--border);
+  margin-left: 12px;
+  padding: 0;
+  overflow: hidden;
 }
 
 .tile-action-btn {
+  flex: 1;
   width: 100%;
-  padding: 12px 10px;
-  border-radius: 10px;
-  font-size: 14.5px;
+  padding: 0 10px;
+  border-radius: 0;
+  font-size: 14px;
   font-weight: 900;
   text-align: center;
   justify-content: center;
   white-space: nowrap;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  line-height: 1.2;
 }
 
 .tile-action-btn:active {
-  transform: scale(0.96);
+  opacity: 0.8;
+  transform: none;
 }
 
 .btn {
