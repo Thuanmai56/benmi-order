@@ -286,8 +286,8 @@ export async function getWaitingCount(request: Request, env: Env): Promise<Respo
     ).bind(tenantId).all<any>();
 
     const now = Date.now();
-    // Các đơn trong hàng đợi hiện tại: đơn có giờ nhận từ quá khứ (đang làm/chưa xong) đến trong vòng 30 phút tới
-    const thresholdMs = now + 30 * 60 * 1000;
+    // Các đơn trong hàng đợi hiện tại: đơn có giờ nhận từ quá khứ (đang làm/chưa xong) đến trong vòng 1 giờ tới (60 phút)
+    const thresholdMs = now + 60 * 60 * 1000;
 
     let waitingCount = 0;
     let lastUpdated = "0";
