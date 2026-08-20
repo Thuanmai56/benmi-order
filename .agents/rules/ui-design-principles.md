@@ -1,3 +1,7 @@
+---
+trigger: always_on
+---
+
 # Triết Lý Thiết Kế Giao Diện (UI/UX Design Philosophy)
 
 Khi thực hiện thiết kế, chỉnh sửa layout, CSS hoặc thêm tính năng mới trên giao diện web, luôn tuân thủ nghiêm ngặt thứ tự ưu tiên thiết bị sau:

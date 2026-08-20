@@ -4,17 +4,54 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Benmi Dashboard</title>
+  <title id="pos-page-title">Dashboard</title>
   <link rel="stylesheet" href="css/orders.css" />
+    <script>
+      (function () {
+        const params = new URLSearchParams(window.location.search);
+        const tenantId = params.get("tenant_id") || "benmi";
+        window.__INITIAL_TENANT_ID = tenantId;
+        try {
+          const cached = localStorage.getItem("tenant_branding_" + tenantId) || localStorage.getItem("tenant_theme_" + tenantId);
+          if (cached) {
+            const data = JSON.parse(cached);
+            if (data.brandName) {
+              document.title = data.brandName + " Dashboard";
+            }
+          }
+        } catch (e) {}
+      })();
+    </script>
 </head>
 
 <body>
   <div class="app">
     <div class="topbar">
-      <div class="brand">
-        <div class="brand-title">🥖 Benmi Dashboard</div>
-        <div class="brand-sub" id="i18n-brand-sub">即時訂單</div>
+      <div class="brand" style="display: flex; align-items: center; gap: 10px;">
+        <img id="brand-logo" src="" alt="Logo" style="display: none; width: 38px; height: 38px; border-radius: 8px; object-fit: cover; border: 1px solid rgba(0,0,0,0.08); flex-shrink: 0;">
+        <div>
+          <div class="brand-title" id="brand-title">Dashboard</div>
+          <div class="brand-sub" id="i18n-brand-sub">即時訂單</div>
+        </div>
       </div>
+      <script>
+        (function() {
+          const tenantId = window.__INITIAL_TENANT_ID || "benmi";
+          const bTitle = document.getElementById("brand-title");
+          const bLogo = document.getElementById("brand-logo");
+          try {
+            const cached = localStorage.getItem("tenant_branding_" + tenantId) || localStorage.getItem("tenant_theme_" + tenantId);
+            if (cached) {
+              const data = JSON.parse(cached);
+              if (bTitle && data.brandName) bTitle.innerText = data.brandName + " Dashboard";
+              if (bLogo && data.logoUrl) {
+                bLogo.src = data.logoUrl;
+                bLogo.style.display = "block";
+              }
+            }
+          } catch(e) {}
+        })();
+      </script>
 
       <!-- Uber-style Store Status Dropdown Widget -->
       <div class="store-status-dropdown" id="store-status-dropdown">
@@ -247,7 +284,7 @@
           <div class="panel-header">
             <div>
               <div class="panel-title" id="i18n-menu-cat-title">菜單分類</div>
-              <div class="panel-sub" id="i18n-menu-cat-sub" style="color: var(--brand-red); margin-top:4px;">5 nhóm cố định của Benmi</div>
+              <div class="panel-sub" id="i18n-menu-cat-sub" style="color: var(--muted); margin-top:4px;">點擊左側分類以管理品項</div>
             </div>
             <button class="mini-btn" id="btn-menu-refresh" onclick="loadMenuData()">重整</button>
           </div>
@@ -263,8 +300,6 @@
               <div class="panel-sub" id="i18n-menu-edit-sub">拖曳排序 ✦ 點擊欄位直接修改</div>
             </div>
             <div style="display:flex; gap:8px;">
-              <button class="btn btn-ghost" id="btn-menu-restore" style="padding: 8px 16px; font-size: 14px; color: var(--brand-red);"
-                onclick="restoreDefaultMenu()">Khôi phục Menu gốc</button>
               <button class="btn btn-yellow" id="btn-menu-add-item" style="padding: 8px 16px; font-size: 14px;" onclick="addNewMenuItem()">+
                 新增項目</button>
               <button class="btn btn-primary" id="btn-menu-save" style="padding: 8px 16px; font-size: 14px;"
@@ -399,11 +434,11 @@
             <div class="time-summary-row">
               <div class="orig-time-badge">
                 <span class="orig-time-label" id="i18n-orig-time-label">客戶原定取餐時間</span>
-                <span class="orig-time-val" id="change-orig-time-val">11:30</span>
+                <span class="orig-time-val" id="change-orig-time-val">--:--</span>
               </div>
               <div class="stepper-control">
                 <button type="button" class="stepper-btn" onclick="adjustTimeMinutes(-5)" title="-5m">－</button>
-                <input type="text" id="change-note" readonly class="change-note-display" value="11:40" />
+                <input type="text" id="change-note" readonly class="change-note-display" value="--:--" />
                 <button type="button" class="stepper-btn" onclick="adjustTimeMinutes(5)" title="+5m">＋</button>
               </div>
             </div>
@@ -449,19 +484,8 @@
             <div style="font-weight: 1000; font-size: 16px; color: #111827;" id="i18n-soldout-title">點擊選擇已售完品項:</div>
             <button type="button" class="mini-text-btn" id="btn-soldout-clear" onclick="clearSoldOutItems()">取消全選</button>
           </div>
-          <div class="checkbox-grid">
-            <label class="checkbox-card"><input type="checkbox" value="燒肉" class="sold-item"> <span>燒肉</span></label>
-            <label class="checkbox-card"><input type="checkbox" value="火腿" class="sold-item"> <span>火腿</span></label>
-            <label class="checkbox-card"><input type="checkbox" value="雞肉" class="sold-item"> <span>雞肉</span></label>
-            <label class="checkbox-card"><input type="checkbox" value="烤肉" class="sold-item"> <span>烤肉</span></label>
-            <label class="checkbox-card"><input type="checkbox" value="雙層烤肉" class="sold-item"> <span>雙層烤肉</span></label>
-            <label class="checkbox-card"><input type="checkbox" value="綜合" class="sold-item"> <span>綜合</span></label>
-            <label class="checkbox-card"><input type="checkbox" value="起司" class="sold-item"> <span>起司</span></label>
-            <label class="checkbox-card"><input type="checkbox" value="越南咖啡" class="sold-item"> <span>越南咖啡</span></label>
-            <label class="checkbox-card"><input type="checkbox" value="豆漿" class="sold-item"> <span>豆漿</span></label>
-            <label class="checkbox-card"><input type="checkbox" value="紅茶" class="sold-item"> <span>紅茶</span></label>
-            <label class="checkbox-card"><input type="checkbox" value="可樂" class="sold-item"> <span>可樂</span></label>
-            <label class="checkbox-card"><input type="checkbox" value="雪碧" class="sold-item"> <span>雪碧</span></label>
+          <div class="checkbox-grid" id="change-soldout-grid">
+            <!-- Dynamically populated from tenant menu -->
           </div>
         </div>
       </div>
@@ -532,25 +556,24 @@
   <div id="imageModal" class="modal">
     <div class="modal-content" style="max-width: 520px;">
       <div class="modal-title">
-        <h3 id="image-modal-title">Quản lý Ảnh</h3>
+        <h3 id="image-modal-title">圖片管理</h3>
         <div class="modal-close" onclick="closeModal()">✕</div>
       </div>
       <div class="modal-body">
         <div style="margin-top: 10px; text-align: center;">
           <img id="image-preview" src=""
             style="max-width: 100%; max-height: 180px; border-radius: 12px; display: none; margin: 0 auto 12px; object-fit: cover; border: 1px solid #eee;">
-          <div id="image-status" style="margin-bottom: 12px; font-weight: 900; color: #666;">Đang kiểm tra ảnh...</div>
+          <div id="image-status" style="margin-bottom: 12px; font-weight: 900; color: #666;">正在檢查圖片...</div>
         </div>
         <input type="file" id="image-file-input" accept="image/png, image/jpeg, image/webp" style="display: none;"
           onchange="handleImageSelect(event)">
       </div>
       <div class="modal-actions two">
-        <button class="btn btn-primary" onclick="document.getElementById('image-file-input').click()">Chọn Ảnh</button>
-        <button class="btn btn-danger" id="btn-delete-image" style="display: none;" onclick="deleteItemImage()">Xóa
-          Ảnh</button>
+        <button class="btn btn-primary" id="btn-image-select" onclick="document.getElementById('image-file-input').click()">選擇圖片</button>
+        <button class="btn btn-danger" id="btn-delete-image" style="display: none;" onclick="deleteItemImage()">刪除圖片</button>
       </div>
       <div class="modal-actions" style="grid-template-columns: 1fr; margin-top: 8px; border-top: none; padding-top: 0;">
-        <button class="btn btn-ghost btn-block" onclick="closeModal()">Đóng</button>
+        <button class="btn btn-ghost btn-block" id="btn-image-close" onclick="closeModal()">關閉</button>
       </div>
     </div>
   </div>
@@ -559,40 +582,39 @@
   <div id="stockModal" class="modal">
     <div class="modal-content" style="max-width: 480px;">
       <div class="modal-title">
-        <h3 id="stock-modal-title">Cài đặt Trạng thái Kho</h3>
+        <h3 id="stock-modal-title">庫存狀態設定</h3>
         <div class="modal-close" onclick="closeStockModal()">✕</div>
       </div>
       <div class="modal-body">
         <div style="margin-top: 10px;">
-          <label style="display: block; font-weight: 900; margin-bottom: 8px; font-size: 15px;">Trạng thái:</label>
+          <label style="display: block; font-weight: 900; margin-bottom: 8px; font-size: 15px;" id="i18n-stock-label-status">狀態：</label>
           <select id="stock-status-select"
             style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px;"
             onchange="handleStockStatusChange()">
-            <option value="in_stock">🟢 Còn hàng (In Stock)</option>
-            <option value="out_of_stock">🔴 Hết hàng (Out of Stock)</option>
+            <option value="in_stock" id="stock-opt-in-stock">🟢 正常供應 (In Stock)</option>
+            <option value="out_of_stock" id="stock-opt-out-stock">🔴 暫時售完 (Out of Stock)</option>
           </select>
         </div>
         <div id="oos-options-container" style="margin-top: 16px; display: none;">
-          <label style="display: block; font-weight: 900; margin-bottom: 8px; font-size: 15px;">Thời hạn hết hàng:</label>
+          <label style="display: block; font-weight: 900; margin-bottom: 8px; font-size: 15px;" id="i18n-stock-label-duration">售完時限：</label>
           <select id="stock-duration-select"
             style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px;"
             onchange="handleStockDurationChange()">
-            <option value="today">Hôm nay (Tự hồi phục lúc 4h sáng mai)</option>
-            <option value="multiple_days">Nhiều ngày (Chọn ngày khôi phục)</option>
-            <option value="indefinite">Vô thời hạn (Chờ mở thủ công)</option>
+            <option value="today" id="stock-opt-today">今日 (明日凌晨 4:00 自動恢復)</option>
+            <option value="multiple_days" id="stock-opt-multiple-days">指定日期 (選擇恢復日期)</option>
+            <option value="indefinite" id="stock-opt-indefinite">無限期 (手動恢復)</option>
           </select>
 
           <div id="oos-date-container" style="margin-top: 16px; display: none;">
-            <label style="display: block; font-weight: 900; margin-bottom: 8px; font-size: 15px;">Ngày khôi phục
-              bán:</label>
+            <label style="display: block; font-weight: 900; margin-bottom: 8px; font-size: 15px;" id="i18n-stock-label-date">恢復供應日期：</label>
             <input type="date" id="oos-until-date"
               style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px;">
           </div>
         </div>
       </div>
       <div class="modal-actions two" style="margin-top: 14px;">
-        <button class="btn btn-primary btn-block" onclick="saveStockStatus()">Lưu Thay Đổi</button>
-        <button class="btn btn-ghost btn-block" onclick="closeStockModal()">Hủy</button>
+        <button class="btn btn-primary btn-block" id="btn-stock-save" onclick="saveStockStatus()">儲存變更</button>
+        <button class="btn btn-ghost btn-block" id="btn-stock-cancel" onclick="closeStockModal()">取消</button>
       </div>
     </div>
   </div>

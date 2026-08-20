@@ -159,6 +159,8 @@ export async function replyLineFlexMessage(
 
 export function buildOrderFlexMessage(order: Order, tenantCtx?: TenantContext | null): any {
   const brandColor = tenantCtx?.brandColor || "#00b900";
+  const isScheduled = tenantCtx?.allowScheduledPickup !== false;
+  const timeLabel = isScheduled ? "🕒 取餐時間：" : "🕒 訂餐時間：";
 
   const contentLines = (order.content || "").split("\n").filter(l => l.trim().length > 0);
   const contentComponents = contentLines.slice(0, 50).map(line => ({
@@ -220,7 +222,7 @@ export function buildOrderFlexMessage(order: Order, tenantCtx?: TenantContext | 
           type: "box",
           layout: "horizontal",
           contents: [
-            { type: "text", text: "🕒 取餐時間：", size: "sm", color: "#666666", flex: 0 },
+            { type: "text", text: timeLabel, size: "sm", color: "#666666", flex: 0 },
             { type: "text", text: String(order.time || "").replace(/\s*\([^)]*\)/g, '').trim(), size: "sm", weight: "bold", color: "#111111", align: "end", flex: 1, wrap: true }
           ]
         },
@@ -258,6 +260,8 @@ export function buildOrderFlexMessage(order: Order, tenantCtx?: TenantContext | 
 
 export function buildProgressFlexMessage(order: Order, queueAheadCount: number, tenantCtx?: TenantContext | null): any {
   const brandColor = tenantCtx?.brandColor || "#00b900";
+  const isScheduled = tenantCtx?.allowScheduledPickup !== false;
+  const timeLabel = isScheduled ? "🕒 取餐時間：" : "🕒 訂餐時間：";
 
   let statusTitle = "訂單已成功送出";
   let statusBadgeColor = "#10b981";
@@ -345,7 +349,7 @@ export function buildProgressFlexMessage(order: Order, queueAheadCount: number, 
           type: "box",
           layout: "horizontal",
           contents: [
-            { type: "text", text: "🕒 取餐時間：", size: "sm", color: "#6b7280", flex: 0 },
+            { type: "text", text: timeLabel, size: "sm", color: "#6b7280", flex: 0 },
             { type: "text", text: String(order.time || "").replace(/\s*\([^)]*\)/g, '').trim(), size: "sm", weight: "bold", color: "#111827", align: "end", flex: 1, wrap: true }
           ]
         }
@@ -668,7 +672,7 @@ export async function handleLineWebhook(
 
       const lines = userText.split("\n");
       const keyLine = lines.find((l: string) => l.includes("訂單編號："));
-      const timeLine = lines.find((l: string) => l.includes("🕒 取餐時間："));
+      const timeLine = lines.find((l: string) => l.includes("🕒 取餐時間：") || l.includes("🕒 訂餐時間：") || l.includes("取餐時間") || l.includes("訂餐時間"));
       const totalLine = lines.find((l: string) => l.includes("💰 總金額："));
 
       const nowTaiwan = new Date(Date.now() + 8 * 3600000);
@@ -680,7 +684,7 @@ export async function handleLineWebhook(
       const timeKey = hh + min;
       const tempRandomId = Math.floor(1000 + Math.random() * 9000);
       const orderKey = keyLine ? keyLine.replace("訂單編號：", "").trim() : `BD${todayKey}-${timeKey}-${tempRandomId}`;
-      const timeStr = timeLine ? timeLine.replace("🕒 取餐時間：", "").replace(/\s*\([^)]*\)/g, '').trim() : "Unknown";
+      const timeStr = timeLine ? timeLine.replace(/🕒\s*(?:取餐時間|訂餐時間)[：:]\s*/, "").replace(/\s*\([^)]*\)/g, '').trim() : "Unknown";
       const totalStr = totalLine ? totalLine.replace("💰 總金額：", "").replace("$", "").trim() : "0";
 
       let noteStr = "";
@@ -722,7 +726,9 @@ export async function handleLineWebhook(
       }
 
       const contentStart = userText.indexOf("📦 訂單內容：");
-      const contentEnd = userText.indexOf("🕒 取餐時間：");
+      let contentEnd = userText.indexOf("🕒 取餐時間：");
+      if (contentEnd === -1) contentEnd = userText.indexOf("🕒 訂餐時間：");
+      if (contentEnd === -1) contentEnd = userText.indexOf("🕒");
       let extractedContent = userText;
       if (contentStart > -1 && contentEnd > contentStart) {
         extractedContent = userText.substring(contentStart + 8, contentEnd).replace("📦 訂單內容：", "").trim();
@@ -990,7 +996,7 @@ export async function handleLineWebhook(
             const isAgree = lowerText === "好" || lowerText === "同意" || lowerText === "ok";
             if (isAgree) {
               order.status = "ACCEPTED";
-              await replyText(replyToken, `${brandName} 收到您的同意！我們會開始準備您的訂單 #${orderKey}。🥖`, env, tenantCtx);
+              await replyText(replyToken, `${brandName} 收到您的同意！我們會開始準備您的訂單 #${orderKey}。✨`, env, tenantCtx);
               const cleanup = async () => { await saveOrder(env, order, tenantId); await finishPending(); };
               if (ctx && ctx.waitUntil) ctx.waitUntil(cleanup()); else await cleanup();
               continue;

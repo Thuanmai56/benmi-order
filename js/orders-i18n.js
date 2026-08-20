@@ -49,6 +49,9 @@ const I18N = {
     btnPickedUp: "已取餐",
     btnWaitingReply: "等待客戶回覆",
     btnView: "查看",
+    defaultCustomer: "顧客",
+    processing: "處理中...",
+    processFail: "處理失敗，請稍後再試。",
     // Time & ETA
     pickupLabel: "取餐:",
     etaArrived: "已到 / {min} 分鐘前",
@@ -137,7 +140,67 @@ const I18N = {
     closedDay: "公休",
     saving: "儲存中...",
     saveSuccess: "設定儲存成功！",
-    saveFail: "儲存失敗："
+    saveFail: "儲存失敗：",
+    // Menu Editor
+    menuCatTitle: "菜單分類",
+    menuCatSub: "點擊左側分類以管理品項",
+    btnMenuRefresh: "重整",
+    menuEditorTitle: "分類項目",
+    menuEditSub: "拖曳排序 ✦ 點擊欄位直接修改",
+    btnMenuRestore: "恢復預設菜單",
+    btnMenuAddItem: "+ 新增項目",
+    btnMenuSave: "儲存變更",
+    btnMenuDirty: "儲存變更 (尚未儲存 *)",
+    menuSelectPrompt: "請先從左側選擇分類",
+    menuLoading: "載入菜單中...",
+    menuItemTotalCount: "(全部 {count} 項)",
+    menuItemUnit: "項",
+    modifierPrefix: "[客製化]",
+    stockStatusInStock: "🟢 正常供應",
+    stockStatusOutOfStock: "🔴 暫時售完",
+    btnItemImage: "📷 圖片",
+    btnItemDelete: "刪除",
+    confirmDeleteItem: "確定要刪除這個項目嗎？",
+    newItemPlaceholder: "新項目",
+    confirmSaveMenu: "確定要儲存所有變更嗎？這會直接即時影響顧客端點餐頁面。",
+    menuSaving: "儲存中...",
+    menuSaveSuccess: "菜單儲存成功！",
+    menuSaveFail: "儲存失敗：",
+    restoreOnlyBenmi: "恢復預設菜單功能目前僅支援 Benmi。",
+    confirmRestoreMenu: "您確定要將菜單恢復為原始預設狀態嗎？所有已修改的項目都將被覆蓋！",
+    restoreSuccess: "已成功恢復預設菜單！",
+    restoreFail: "恢復菜單失敗：",
+    menuLoadFail: "無法載入菜單資料：",
+    priceHiddenPlaceholder: "隱藏",
+    // Image Modal
+    imageModalTitle: "圖片管理",
+    imageModalItem: "圖片：{name}",
+    imageChecking: "正在檢查圖片...",
+    imageHasImage: "此品項已有圖片",
+    imageNoImage: "此品項尚未設定圖片",
+    imageLoadFail: "載入圖片失敗",
+    btnImageSelect: "選擇圖片",
+    btnImageDelete: "刪除圖片",
+    imageUploading: "正在上傳圖片...",
+    imageUploadSuccess: "圖片上傳成功！",
+    imageUploadFail: "上傳圖片失敗：",
+    confirmDeleteImage: "確定要刪除這張圖片嗎？",
+    imageDeleting: "正在刪除圖片...",
+    imageDeleteFail: "刪除圖片失敗：",
+    // Stock Modal
+    stockModalTitle: "庫存狀態設定",
+    stockModalItem: "庫存設定：{name}",
+    stockLabelStatus: "狀態：",
+    stockOptInStock: "🟢 正常供應 (In Stock)",
+    stockOptOutOfStock: "🔴 暫時售完 (Out of Stock)",
+    stockLabelDuration: "售完時限：",
+    stockOptToday: "今日 (明日凌晨 4:00 自動恢復)",
+    stockOptMultipleDays: "指定日期 (選擇恢復日期)",
+    stockOptIndefinite: "無限期 (手動恢復)",
+    stockLabelDate: "恢復供應日期：",
+    btnStockSave: "儲存變更",
+    alertSelectOosDate: "請選擇恢復供應日期！",
+    stockUpdateFail: "庫存狀態更新失敗："
   },
   "vi": {
     langBtn: "繁體中文",
@@ -185,6 +248,9 @@ const I18N = {
     btnPickedUp: "Đã lấy",
     btnWaitingReply: "Chờ khách phản hồi",
     btnView: "Xem",
+    defaultCustomer: "Khách",
+    processing: "Đang xử lý...",
+    processFail: "Xử lý thất bại, vui lòng thử lại sau.",
     // Time & ETA
     pickupLabel: "Lấy:",
     etaArrived: "Đã đến / {min} phút trước",
@@ -273,7 +339,67 @@ const I18N = {
     closedDay: "Nghỉ",
     saving: "Đang lưu...",
     saveSuccess: "Đã lưu thiết lập thành công!",
-    saveFail: "Lưu thất bại: "
+    saveFail: "Lưu thất bại: ",
+    // Menu Editor
+    menuCatTitle: "Danh mục thực đơn",
+    menuCatSub: "Chọn danh mục bên trái để quản lý món",
+    btnMenuRefresh: "Làm mới",
+    menuEditorTitle: "Danh sách món",
+    menuEditSub: "Kéo thả để sắp xếp ✦ Nhấn vào ô để sửa trực tiếp",
+    btnMenuRestore: "Khôi phục Menu gốc",
+    btnMenuAddItem: "+ Thêm món mới",
+    btnMenuSave: "Lưu thay đổi",
+    btnMenuDirty: "Lưu thay đổi (Chưa lưu *)",
+    menuSelectPrompt: "Vui lòng chọn danh mục ở bên trái",
+    menuLoading: "Đang tải thực đơn...",
+    menuItemTotalCount: "(Tất cả {count} món)",
+    menuItemUnit: "món",
+    modifierPrefix: "[Tùy biến]",
+    stockStatusInStock: "🟢 Còn hàng",
+    stockStatusOutOfStock: "🔴 Hết hàng",
+    btnItemImage: "📷 Ảnh",
+    btnItemDelete: "Xóa",
+    confirmDeleteItem: "Bạn có chắc muốn xóa món này không?",
+    newItemPlaceholder: "Món mới",
+    confirmSaveMenu: "Bạn có chắc chắn muốn lưu mọi thay đổi không? Thay đổi sẽ cập nhật ngay lập tức lên trang đặt hàng của khách.",
+    menuSaving: "Đang lưu...",
+    menuSaveSuccess: "Lưu thực đơn thành công!",
+    menuSaveFail: "Lưu thất bại: ",
+    restoreOnlyBenmi: "Tính năng khôi phục mặc định hiện chỉ áp dụng cho Benmi.",
+    confirmRestoreMenu: "Bạn có chắc chắn muốn KHÔI PHỤC MENU về trạng thái gốc mặc định không? Tất cả các món bạn đã sửa sẽ bị ghi đè!",
+    restoreSuccess: "Đã khôi phục menu gốc thành công!",
+    restoreFail: "Khôi phục menu thất bại: ",
+    menuLoadFail: "Không thể tải dữ liệu thực đơn: ",
+    priceHiddenPlaceholder: "Ẩn",
+    // Image Modal
+    imageModalTitle: "Quản lý hình ảnh",
+    imageModalItem: "Ảnh: {name}",
+    imageChecking: "Đang kiểm tra ảnh...",
+    imageHasImage: "Món này đã có ảnh",
+    imageNoImage: "Món này chưa có ảnh",
+    imageLoadFail: "Lỗi khi tải ảnh",
+    btnImageSelect: "Chọn ảnh",
+    btnImageDelete: "Xóa ảnh",
+    imageUploading: "Đang tải ảnh lên...",
+    imageUploadSuccess: "Tải ảnh thành công!",
+    imageUploadFail: "Lỗi tải ảnh: ",
+    confirmDeleteImage: "Bạn có chắc muốn xóa ảnh này không?",
+    imageDeleting: "Đang xóa ảnh...",
+    imageDeleteFail: "Lỗi xóa ảnh: ",
+    // Stock Modal
+    stockModalTitle: "Cài đặt trạng thái kho",
+    stockModalItem: "Cài đặt kho: {name}",
+    stockLabelStatus: "Trạng thái:",
+    stockOptInStock: "🟢 Còn hàng (In Stock)",
+    stockOptOutOfStock: "🔴 Hết hàng (Out of Stock)",
+    stockLabelDuration: "Thời hạn hết hàng:",
+    stockOptToday: "Hôm nay (Tự hồi phục lúc 4h sáng mai)",
+    stockOptMultipleDays: "Nhiều ngày (Chọn ngày khôi phục)",
+    stockOptIndefinite: "Vô thời hạn (Chờ mở thủ công)",
+    stockLabelDate: "Ngày khôi phục bán:",
+    btnStockSave: "Lưu thay đổi",
+    alertSelectOosDate: "Vui lòng chọn ngày khôi phục bán!",
+    stockUpdateFail: "Lỗi cập nhật trạng thái kho: "
   }
 };
 
@@ -552,4 +678,63 @@ function applyLanguageToDOM() {
   if (hrsT) hrsT.innerText = dict.hoursTitle;
   const btnSaveHrs = document.getElementById("btn-save-hours");
   if (btnSaveHrs) btnSaveHrs.innerText = dict.btnSaveHours;
+
+  // Menu Editor
+  const menuCatT = document.getElementById("i18n-menu-cat-title");
+  if (menuCatT) menuCatT.innerText = dict.menuCatTitle;
+  const menuCatS = document.getElementById("i18n-menu-cat-sub");
+  if (menuCatS) menuCatS.innerText = dict.menuCatSub;
+  const btnMenuRef = document.getElementById("btn-menu-refresh");
+  if (btnMenuRef) btnMenuRef.innerText = dict.btnMenuRefresh;
+  const menuEdT = document.getElementById("menu-editor-title");
+  if (menuEdT && (!currentMenuData || activeCategoryIndex < 0)) menuEdT.innerText = dict.menuEditorTitle;
+  const menuEdS = document.getElementById("i18n-menu-edit-sub");
+  if (menuEdS) menuEdS.innerText = dict.menuEditSub;
+  const btnMenuAdd = document.getElementById("btn-menu-add-item");
+  if (btnMenuAdd) btnMenuAdd.innerText = dict.btnMenuAddItem;
+  const btnMenuSv = document.getElementById("btn-menu-save");
+  if (btnMenuSv) {
+    if (typeof isMenuDirty !== "undefined" && isMenuDirty) {
+      btnMenuSv.innerText = dict.btnMenuDirty;
+    } else {
+      btnMenuSv.innerText = dict.btnMenuSave;
+    }
+  }
+  const menuPrompt = document.getElementById("i18n-menu-select-prompt");
+  if (menuPrompt) menuPrompt.innerText = dict.menuSelectPrompt;
+
+  // Image Modal
+  const imgModT = document.getElementById("image-modal-title");
+  if (imgModT && (!currentImageItemName)) imgModT.innerText = dict.imageModalTitle;
+  const btnImgSel = document.getElementById("btn-image-select");
+  if (btnImgSel) btnImgSel.innerText = dict.btnImageSelect;
+  const btnImgDel = document.getElementById("btn-delete-image");
+  if (btnImgDel) btnImgDel.innerText = dict.btnImageDelete;
+  const btnImgCls = document.getElementById("btn-image-close");
+  if (btnImgCls) btnImgCls.innerText = dict.btnClose;
+
+  // Stock Modal
+  const stkModT = document.getElementById("stock-modal-title");
+  if (stkModT && currentStockCidx === null) stkModT.innerText = dict.stockModalTitle;
+  const stkLblSt = document.getElementById("i18n-stock-label-status");
+  if (stkLblSt) stkLblSt.innerText = dict.stockLabelStatus;
+  const stkOptIn = document.getElementById("stock-opt-in-stock");
+  if (stkOptIn) stkOptIn.innerText = dict.stockOptInStock;
+  const stkOptOut = document.getElementById("stock-opt-out-stock");
+  if (stkOptOut) stkOptOut.innerText = dict.stockOptOutOfStock;
+  const stkLblDur = document.getElementById("i18n-stock-label-duration");
+  if (stkLblDur) stkLblDur.innerText = dict.stockLabelDuration;
+  const stkOptTd = document.getElementById("stock-opt-today");
+  if (stkOptTd) stkOptTd.innerText = dict.stockOptToday;
+  const stkOptMd = document.getElementById("stock-opt-multiple-days");
+  if (stkOptMd) stkOptMd.innerText = dict.stockOptMultipleDays;
+  const stkOptInd = document.getElementById("stock-opt-indefinite");
+  if (stkOptInd) stkOptInd.innerText = dict.stockOptIndefinite;
+  const stkLblDt = document.getElementById("i18n-stock-label-date");
+  if (stkLblDt) stkLblDt.innerText = dict.stockLabelDate;
+  const btnStkSv = document.getElementById("btn-stock-save");
+  if (btnStkSv) btnStkSv.innerText = dict.btnStockSave;
+  const btnStkCan = document.getElementById("btn-stock-cancel");
+  if (btnStkCan) btnStkCan.innerText = dict.btnCancel;
 }
+

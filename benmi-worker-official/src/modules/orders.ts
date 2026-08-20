@@ -162,7 +162,7 @@ export async function updateOrder(
       let notifyText = "";
       if (order.reason === "時間需調整") {
         const t = order.note || "稍後";
-        notifyText = `時間有點趕，請問可以改成${t}嗎？\n\n(回覆「好 / 同意」以確認， or 回覆「不要了」取消訂單)`;
+        notifyText = `時間有點趕，請問可以改成${t}嗎？\n\n(回覆「好 / 同意」以確認，或回覆「不要了」取消訂單)`;
       } else if (order.reason === "口味售完") {
         const items = (order.note || "").split(",");
         let joinedItems = items[0] || "";
@@ -176,10 +176,10 @@ export async function updateOrder(
         const reason = order.reason || "未提供原因";
         const note = order.note || "";
         notifyText =
-          `${brandName} 已收到您的訂單 #${order.key}， need to do small modification.\n` +
+          `${brandName} 已收到您的訂單 #${order.key}，但需要微調訂單內容：\n` +
           `原因：${reason}\n` +
           (note ? `備註：${note}\n` : "") +
-          `\n請回覆「同意」以接受變更， or 回覆「取消 / 不要了」以取消訂單。`;
+          `\n請回覆「同意」以接受變更，或回覆「取消 / 不要了」以取消訂單。`;
       }
 
       await env.DB.prepare(
@@ -216,7 +216,7 @@ export async function updateOrder(
       const notifyText =
         `非常抱歉！${brandName} 目前無法接下您的訂單 #${order.key}。\n` +
         `原因：${reason}\n` +
-        `\n請回覆「同意」以取消訂單， or 回覆「不同意」以重新確認。`;
+        `\n請回覆「同意」以取消訂單，或回覆「不同意」以重新確認。`;
 
       await env.DB.prepare(
         `INSERT INTO pending_actions (tenant_id, user_id, order_key, action_type, question_text, reason, note)
@@ -594,9 +594,9 @@ export function parsePickupTimeToMs(timeStr: string | null | undefined, createdA
 
   let targetStr = (timeStr || "").trim();
 
-  // If timeStr is missing, "Unknown", or only date without time, try finding "取餐時間" in orderContent
+  // If timeStr is missing, "Unknown", or only date without time, try finding "取餐時間" or "訂餐時間" in orderContent
   if ((!targetStr || targetStr === "Unknown" || !targetStr.match(/\d{1,2}:\d{2}/)) && orderContent) {
-    const match = orderContent.match(/取餐時間[：:]\s*([^\n\r]+)/);
+    const match = orderContent.match(/(?:取餐時間|訂餐時間)[：:]\s*([^\n\r]+)/);
     if (match && match[1]) {
       targetStr = match[1].trim();
     }

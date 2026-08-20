@@ -1,6 +1,7 @@
 import { Env } from '../types/env';
 import { Menu } from '../types/index';
 import { json } from '../utils/http';
+import { invalidateBootstrapCache } from './bootstrap';
 
 export const DEFAULT_MENU: Menu = {
   small: { "燒肉": 56, "火腿": 56, "雞肉": 68, "烤肉": 72, "雙層烤肉": 78, "綜合": 79 },
@@ -206,8 +207,8 @@ export async function updateStockStatus(request: Request, env: Env): Promise<Res
        SET out_of_stock_until = ?, updated_at = datetime('now') 
        WHERE tenant_id = ? 
          AND name = ? 
-         AND category_id = (SELECT id FROM menu_categories WHERE tenant_id = ? AND slug = ?)`
-    ).bind(outOfStockUntil, tenantId, name, tenantId, category_slug).run();
+         AND category_id = (SELECT id FROM menu_categories WHERE tenant_id = ? AND (slug = ? OR id = ?))`
+    ).bind(outOfStockUntil, tenantId, name, tenantId, category_slug, category_slug).run();
 
     if (dbRes.meta.changes === 0) {
       return json({ error: "Menu item not found or unauthorized" }, 404);
@@ -216,6 +217,7 @@ export async function updateStockStatus(request: Request, env: Env): Promise<Res
     // 2. Invalidate bộ nhớ đệm KV của tenant
     const cacheKey = `tenant:${tenantId}:menu`;
     await env.ORDER_STATE.delete(cacheKey);
+    await invalidateBootstrapCache(tenantId, env);
 
     return json({ success: true, message: "Stock status updated and cache invalidated." });
 
@@ -228,7 +230,7 @@ export async function updateStockStatus(request: Request, env: Env): Promise<Res
 async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<void> {
   // 1. Nạp danh mục và món ăn hiện có để ánh xạ ID tránh xung đột unique
   const { results: existingCats } = await env.DB.prepare(
-    "SELECT id, slug FROM menu_categories WHERE tenant_id = ?"
+    "SELECT id, slug, name FROM menu_categories WHERE tenant_id = ?"
   ).bind(tenantId).all();
 
   const { results: existingItems } = await env.DB.prepare(
@@ -236,8 +238,10 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
   ).bind(tenantId).all();
 
   const catIdMap = new Map<string, string>();
+  const catNameMap = new Map<string, string>();
   for (const cat of (existingCats || [])) {
     catIdMap.set(cat.slug as string, cat.id as string);
+    if (cat.name) catNameMap.set(cat.slug as string, cat.name as string);
   }
 
   const itemIdMap = new Map<string, string>();
@@ -246,12 +250,16 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
   }
 
   const statements: any[] = [];
-  const defaultCategoryNames: Record<string, string> = {
-    small: "Kích thước Nhỏ",
-    large: "Kích thước Lớn",
-    combo: "Set Combo",
-    drinks: "Đồ uống",
-    topping: "Topping thêm"
+  const defaultCategoryNamesZh: Record<string, string> = {
+    main: "招牌炸蛋蔥餅",
+    spicy: "加辣選項",
+    egg: "雞蛋選項",
+    lettuce: "生菜選項",
+    topping: "加料選項",
+    small: "🥖 小麵包",
+    large: "🍔 大麵包",
+    combo: "🎁 特惠套餐 (含飲料)",
+    drinks: "🥤 單點飲料"
   };
 
   const activeCategoryIds: string[] = [];
@@ -265,12 +273,12 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
     }
     activeCategoryIds.push(catId);
 
-    const catName = defaultCategoryNames[slug] || (slug.charAt(0).toUpperCase() + slug.slice(1));
+    const catName = catNameMap.get(slug) || defaultCategoryNamesZh[slug] || slug;
     statements.push(
       env.DB.prepare(
         `INSERT INTO menu_categories (id, tenant_id, name, slug, sort_order)
          VALUES (?, ?, ?, ?, ?)
-         ON CONFLICT(id) DO UPDATE SET name = excluded.name, sort_order = excluded.sort_order`
+         ON CONFLICT(id) DO UPDATE SET sort_order = excluded.sort_order`
       ).bind(catId, tenantId, catName, slug, catSortOrder++)
     );
 
@@ -278,7 +286,18 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
     if (itemsMap && typeof itemsMap === "object") {
       let itemSortOrder = 1;
       for (const itemName of Object.keys(itemsMap)) {
-        const price = Number(itemsMap[itemName]);
+        const itemVal = itemsMap[itemName];
+        let price = 0;
+        let badgeText: string | null = null;
+        let isRec = 0;
+
+        if (typeof itemVal === "object" && itemVal !== null) {
+          price = Number(itemVal.price);
+          badgeText = itemVal.badge_text || itemVal.badgeText || null;
+          isRec = itemVal.is_recommended || itemVal.isRecommended ? 1 : 0;
+        } else {
+          price = Number(itemVal);
+        }
         if (isNaN(price)) continue;
 
         let itemId = itemIdMap.get(`${catId}:${itemName}`);
@@ -289,10 +308,14 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
 
         statements.push(
           env.DB.prepare(
-            `INSERT INTO menu_items (id, tenant_id, category_id, name, price, sort_order)
-             VALUES (?, ?, ?, ?, ?, ?)
-             ON CONFLICT(id) DO UPDATE SET price = excluded.price, sort_order = excluded.sort_order`
-          ).bind(itemId, tenantId, catId, itemName, price, itemSortOrder++)
+            `INSERT INTO menu_items (id, tenant_id, category_id, name, price, badge_text, is_recommended, sort_order)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+             ON CONFLICT(id) DO UPDATE SET 
+               price = excluded.price, 
+               badge_text = excluded.badge_text, 
+               is_recommended = excluded.is_recommended, 
+               sort_order = excluded.sort_order`
+          ).bind(itemId, tenantId, catId, itemName, price, badgeText, isRec, itemSortOrder++)
         );
       }
     }
@@ -347,6 +370,7 @@ export async function updateMenu(request: Request, env: Env): Promise<Response> 
     // 3. Xóa cache đa hộ thuê để force reload ở lượt đọc sau
     const cacheKey = `tenant:${tenantId}:menu`;
     await env.ORDER_STATE.delete(cacheKey);
+    await invalidateBootstrapCache(tenantId, env);
 
     return json({ success: true });
   } catch (e: any) {

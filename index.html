@@ -4,41 +4,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Benmi 點餐</title>
+    <title id="page-title">線上點餐</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="index.css">
+    <script>
+        (function () {
+            const params = new URLSearchParams(window.location.search);
+            const tenantId = params.get("tenant_id") || "benmi";
+            window.__INITIAL_TENANT_ID = tenantId;
+            try {
+                const cached = localStorage.getItem("tenant_branding_" + tenantId) || localStorage.getItem("tenant_theme_" + tenantId);
+                if (cached) {
+                    const t = JSON.parse(cached);
+                    if (t.brandName) document.title = t.brandName + " 點餐";
+                    if (t.brandColor) document.documentElement.style.setProperty('--primary', t.brandColor);
+                    if (t.brandColorDark) document.documentElement.style.setProperty('--primary-dark', t.brandColorDark);
+                } else if (tenantId === "benmi") {
+                    document.title = "Benmi 點餐";
+                } else {
+                    document.title = "線上點餐";
+                }
+            } catch (e) {}
+        })();
+    </script>
 </head>
 
 <body>
-    <div class="store-header">
+    <div class="store-header" id="store-header-box">
         <div class="store-header-top">
-            <div class="store-logo-wrapper">
-                <!-- Vui lòng đảm bảo file benmi_logo.png nằm cùng thư mục -->
-                <img src="./benmi_logo.png" alt="Benmi Logo" class="store-logo">
+            <div class="store-logo-wrapper" id="store-logo-wrapper" style="display: none;">
+                <img id="store-logo" src="" alt="Logo" class="store-logo">
             </div>
             <div class="store-info">
-                <h1 class="store-name">本米</h1>
-                <p class="store-subtitle">Bánh mì Việt Nam<br>越式法國麵包</p>
+                <h1 class="store-name" id="store-name"></h1>
+                <p class="store-subtitle" id="store-subtitle"></p>
             </div>
             <div class="store-status-wrapper">
-                <div id="store-status" class="store-status">營業中</div>
+                <div id="store-status" class="store-status" style="display: none;">營業中</div>
                 <div id="waiting-counter-badge" class="waiting-badge" style="display: none;"></div>
             </div>
         </div>
         <div class="store-details">
-            <div class="store-detail-row">
-                <span class="detail-icon">📍</span>
-                <span>新北市土城區中央路二段135號</span>
+            <div class="store-detail-row" id="store-address-row" style="display: none; align-items: center; gap: 8px;">
+                <svg class="detail-svg-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+                <span id="store-address" style="font-size: 14.5px; font-weight: 500; color: #374151; line-height: 1.4;"></span>
             </div>
-            <div class="store-detail-row store-hours-row" onclick="toggleStoreHours(event)" style="cursor: pointer;">
-                <span class="detail-icon">🕒</span>
-                <div style="flex: 1;">
+            <div class="store-detail-row store-hours-row" id="store-hours-row" onclick="toggleStoreHours(event)" style="cursor: pointer; display: none;">
+                <div style="flex: 1; min-width: 0;">
                     <div class="store-hours-toggle" style="display: flex; align-items: center; justify-content: space-between; user-select: none; gap: 8px; flex-wrap: wrap;">
-                        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                            <span style="font-weight: 700; color: #111;">營業時間</span>
-                            <span id="hours-today-preview" style="font-size: 13px; font-weight: 600; color: #059669; background: #f0fdf4; padding: 2px 8px; border-radius: 6px; border: 1px solid #bbf7d0;">載入中...</span>
+                        <div style="display: flex; align-items: center; gap: 7px; flex-wrap: wrap;">
+                            <svg class="detail-svg-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4b5563" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            <span style="font-weight: 700; color: #111; font-size: 14.5px; line-height: 1.4;">營業時間</span>
+                            <span id="hours-today-preview" style="font-size: 13px; font-weight: 600; color: #059669; background: #f0fdf4; padding: 2px 8px; border-radius: 6px; border: 1px solid #bbf7d0; line-height: 1.4;">載入中...</span>
                         </div>
                         <div id="hours-toggle-btn" class="hours-toggle-btn">
                             <span id="hours-toggle-text">展開</span>
@@ -47,65 +72,96 @@
                             </svg>
                         </div>
                     </div>
-                    <div class="time-block" id="store-hours-display" style="display: none; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e2e8f0; font-size: 13.5px; line-height: 1.6; color: #374151;">
-                        <div>週一~週五&nbsp;&nbsp;11:00-21:00</div>
-                        <div>週六、週日&nbsp;&nbsp;9:00-21:00</div>
-                    </div>
+                    <div class="time-block" id="store-hours-display" style="display: none; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e2e8f0; font-size: 13.5px; line-height: 1.6; color: #374151; padding-left: 23px;"></div>
                 </div>
             </div>
         </div>
     </div>
+    <script>
+        (function() {
+            const tenantId = window.__INITIAL_TENANT_ID || "benmi";
+            const BENMI_DEFAULT_THEME = {
+                brandName: "本米",
+                brandSubtitle: "Bánh mì Việt Nam<br>越式法國麵包",
+                storeAddress: "新北市土城區中央路二段135號",
+                logoUrl: "./benmi_logo.png"
+            };
+
+            let theme = (tenantId === "benmi") ? BENMI_DEFAULT_THEME : null;
+            if (!theme) {
+                try {
+                    const cached = localStorage.getItem("tenant_theme_" + tenantId);
+                    if (cached) theme = JSON.parse(cached);
+                } catch(e) {}
+            }
+
+            if (theme) {
+                document.title = (theme.brandName || "點餐系統") + " 點餐";
+                const pageTitle = document.getElementById("page-title");
+                if (pageTitle) pageTitle.innerText = (theme.brandName || "點餐系統") + " 點餐";
+
+                const nameEl = document.getElementById("store-name");
+                if (nameEl && theme.brandName) nameEl.innerText = theme.brandName;
+
+                const subEl = document.getElementById("store-subtitle");
+                if (subEl && theme.brandSubtitle) subEl.innerHTML = theme.brandSubtitle.replace(/\n/g, "<br>");
+
+                const addrEl = document.getElementById("store-address");
+                const addrRow = document.getElementById("store-address-row");
+                if (addrEl && theme.storeAddress) {
+                    addrEl.innerText = theme.storeAddress;
+                    if (addrRow) addrRow.style.display = "flex";
+                }
+
+                const logoEl = document.getElementById("store-logo");
+                const logoWrapper = document.getElementById("store-logo-wrapper");
+                if (logoEl && theme.logoUrl) {
+                    logoEl.src = theme.logoUrl;
+                    if (logoWrapper) logoWrapper.style.display = "flex";
+                }
+
+                const statusEl = document.getElementById("store-status");
+                if (statusEl) statusEl.style.display = "block";
+
+                const hoursRow = document.getElementById("store-hours-row");
+                if (hoursRow) hoursRow.style.display = "flex";
+            }
+        })();
+    </script>
 
     <!-- Store Status Dynamic Alert Banners -->
     <div id="store-paused-banner" class="store-alert-banner paused" style="display: none;">
         <span style="font-size: 26px; line-height: 1; flex-shrink: 0;">⛔</span>
         <div style="flex: 1;">
-            <div style="font-weight: 900; font-size: 15px; letter-spacing: 0.2px;">店家目前暫停接單中 / Tạm dừng nhận đơn</div>
-            <div style="font-size: 13px; color: #b91c1c; margin-top: 4px; font-weight: 600; line-height: 1.45;">目前暫不接受新訂單，敬請見諒！<br><span style="font-size: 12px; opacity: 0.9;">Quán đang tạm ngưng nhận đơn mới.</span></div>
+            <div style="font-weight: 900; font-size: 15px; letter-spacing: 0.2px;">店家目前暫停接單中</div>
+            <div style="font-size: 13px; color: #b91c1c; margin-top: 4px; font-weight: 600; line-height: 1.45;">目前門市暫不接受新訂單，敬請見諒！</div>
         </div>
     </div>
 
     <div id="store-busy-banner" class="store-alert-banner busy" style="display: none;">
         <span style="font-size: 26px; line-height: 1; flex-shrink: 0;">⏳</span>
         <div style="flex: 1;">
-            <div style="font-weight: 900; font-size: 15px; letter-spacing: 0.2px;">門市繁忙中（製作時間 +1 小時） / Quán đang bận (+1h)</div>
-            <div style="font-size: 13px; color: #b45309; margin-top: 4px; font-weight: 600; line-height: 1.45;">現場訂單較多，新訂單取餐時間預計延長 1 小時，感謝您的體諒！<br><span style="font-size: 12px; opacity: 0.9;">Thời gian nhận bánh kéo dài thêm 1 tiếng do quán đang bận.</span></div>
+            <div style="font-weight: 900; font-size: 15px; letter-spacing: 0.2px;">門市繁忙中（製作時間 +1 小時）</div>
+            <div style="font-size: 13px; color: #b45309; margin-top: 4px; font-weight: 600; line-height: 1.45;">現場訂單較多，新訂單取餐時間預計延長 1 小時，感謝您的體諒！</div>
         </div>
     </div>
 
-    <nav class="sticky-nav" id="main-nav">
-        <div class="nav-btn active" onclick="scrollToSec('sec-large')">大麵包</div>
-        <div class="nav-btn" onclick="scrollToSec('sec-small')">小麵包</div>
-        <div class="nav-btn" onclick="scrollToSec('sec-combo')">套餐</div>
-        <div class="nav-btn" onclick="scrollToSec('sec-drink')">飲料</div>
-        <div class="nav-btn" onclick="scrollToSec('sec-checkout')">結帳</div>
-    </nav>
+    <nav class="sticky-nav" id="main-nav"></nav>
 
     <div class="container">
-        <div class="section-container" id="sec-large">
-            <div class="section-title">🍔 大麵包</div>
-            <div class="grid" id="large-list"></div>
+        <!-- Catalog Container -->
+        <div id="catalog-sections">
+            <div id="catalog-loading" style="text-align: center; padding: 48px 0; color: #9ca3af; font-size: 15px;">
+                <div style="display:inline-block; width:30px; height:30px; border:3px solid #e5e7eb; border-top-color:var(--primary); border-radius:50%; animation: spin 0.8s linear infinite; margin-bottom:10px;"></div>
+                <div>載入菜單中...</div>
+            </div>
         </div>
 
-        <div class="section-container" id="sec-small">
-            <div class="section-title">🥖 小麵包</div>
-            <div class="grid" id="small-list"></div>
-        </div>
-
-        <div class="section-container" id="sec-combo">
-            <div class="section-title">🎁 特惠套餐 (含飲料)</div>
-            <div class="grid" id="combo-list"></div>
-        </div>
-
-        <div class="section-container" id="sec-drink">
-            <div class="section-title">🥤 單點飲料</div>
-            <div class="grid" id="drink-list"></div>
-        </div>
-
+        <!-- Checkout Section -->
         <div class="section-container" id="sec-checkout" style="margin-top: 20px;">
             <div class="section-title">🛍️ 購物車清單</div>
             <div id="cart-summary"
-                style="margin-bottom: 20px; padding: 12px; background: #fff; border-radius: 12px; border: 1px solid var(--border); font-size: 15px; color: #444;">
+                style="margin-bottom: 20px; padding: 14px; background: #fff; border-radius: 14px; border: 1px solid var(--border); font-size: 15px; color: #444;">
                 <div style="text-align:center; color:#9ca3af;">(目前沒有已選商品)</div>
             </div>
 
@@ -114,8 +170,8 @@
                 <div class="input-group" id="pickup-time-picker-group">
                     <label style="font-weight: 800; color: var(--primary);">⚠️ 請選擇取餐日期 / 時間</label>
                     <div class="datetime-row">
-                        <input type="date" id="pickup-date">
-                        <input type="time" id="pickup-time">
+                        <input type="date" id="pickup-date" autocomplete="off" onchange="isPickupTimeManuallyChanged=true">
+                        <input type="time" id="pickup-time" autocomplete="off" onchange="isPickupTimeManuallyChanged=true">
                     </div>
                 </div>
                 <div id="pickup-time-asap-notice" style="display:none; padding: 14px 16px; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 14px; color: #166534; margin-bottom: 12px;">
@@ -138,7 +194,7 @@
 
             <div class="section-title">📝 其他要求</div>
             <div class="input-group">
-                <textarea id="note" rows="3" placeholder="例如：切半、不辣、不要香菜"></textarea>
+                <textarea id="note" rows="3" placeholder="例如：不要香菜、醬料分開裝"></textarea>
             </div>
         </div>
 
@@ -164,11 +220,11 @@
                     style="display:none; position:absolute; top:-6px; right:-10px; background:var(--red); color:#fff; font-size:11px; font-weight:900; border-radius:99px; padding: 2px 6px; min-width:18px; text-align:center;">0</span>
                 <span class="total-price">$<span id="total-price">0</span></span>
             </div>
-            <button class="btn-send" id="btn-submit" onclick="submitOrder()">確認下單</button>
+            <button class="btn-send" id="btn-submit" onclick="handleFooterAction()">前往結帳 ➔</button>
         </div>
     </div>
 
-    <div id="custom-alert" class="custom-alert-overlay" onclick="if(event.target === this) closeCustomAlert()">
+    <div id="custom-alert" class="custom-alert-overlay">
         <div class="custom-alert-box">
             <div class="custom-alert-header">提醒</div>
             <div id="custom-alert-message" class="custom-alert-body"></div>
@@ -184,40 +240,154 @@
 
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script>
-
-        // --- MENU DATA ---
+        // --- WORKER BASE & TENANT RESOLUTION ---
         const WORKER_BASE = (window.location.hostname.includes("staging") || window.location.hostname.includes("test") || window.location.hostname.includes("localhost") || window.location.hostname.includes("127.0.0.1"))
             ? "https://platform-worker-staging.thuanmnc.workers.dev"
             : "https://benmi-worker-official.thuanmnc.workers.dev";
+
         function getTenantIdFromUrl() {
             const params = new URLSearchParams(window.location.search);
             return params.get("tenant_id") || "benmi";
         }
+
+        const isBenmiTenant = (getTenantIdFromUrl() === "benmi");
+
+        // State
         let menu = { small: {}, large: {}, combo: {}, drinks: {}, topping: {} };
         let imageList = [];
         let storeConfig = null;
+        let bootstrapData = null;
 
+        let cart = {};
+        let customizeData = {};
+        let comboDrinkData = {};
+        let currentPopup = null;
+        let alertCallback = null;
+        window.isSubmitting = false;
+
+        // Recommended items for Benmi
+        const recommended = new Set(['雙層烤肉', '綜合']);
+        const recommendedCombo = new Set(['5 大雙層烤肉+飲料', '6 大綜合+飲料']);
+
+        const itemTranslations = {
+            "燒肉": "Braised Pork",
+            "火腿": "Vietnamese Ham",
+            "雞肉": "Shredded Chicken",
+            "烤肉": "Grilled Meat",
+            "雙層烤肉": "Double Cheese & Meat",
+            "綜合": "Combination Special",
+            "越南咖啡": "Vietnamese Milk Coffee",
+            "豆漿": "Soy Milk",
+            "紅茶": "Black Tea",
+            "可樂": "Coca-Cola",
+            "雪碧": "Sprite"
+        };
+
+        // --- FETCH DATA ---
         async function fetchMenu() {
             try {
                 const tenantId = getTenantIdFromUrl();
-                const [resMenu, resImage, resConfig] = await Promise.all([
-                    fetch(`${WORKER_BASE}/api/menu?tenant_id=${tenantId}&_t=${Date.now()}`, { cache: 'no-store' }),
-                    fetch(`${WORKER_BASE}/api/image_list?tenant_id=${tenantId}&_t=${Date.now()}`, { cache: 'no-store' }),
-                    fetch(`${WORKER_BASE}/api/config?tenant_id=${tenantId}&_t=${Date.now()}`, { cache: 'no-store' })
-                ]);
-                if (resMenu.ok) menu = await resMenu.json();
-                if (resImage.ok) imageList = await resImage.json();
-                if (resConfig.ok) storeConfig = await resConfig.json();
+                if (isBenmiTenant) {
+                    const [resMenu, resImage, resConfig] = await Promise.all([
+                        fetch(`${WORKER_BASE}/api/menu?tenant_id=${tenantId}&_t=${Date.now()}`, { cache: 'no-store' }),
+                        fetch(`${WORKER_BASE}/api/image_list?tenant_id=${tenantId}&_t=${Date.now()}`, { cache: 'no-store' }),
+                        fetch(`${WORKER_BASE}/api/config?tenant_id=${tenantId}&_t=${Date.now()}`, { cache: 'no-store' })
+                    ]);
+                    if (resMenu.ok) menu = await resMenu.json();
+                    if (resImage.ok) imageList = await resImage.json();
+                    if (resConfig.ok) storeConfig = await resConfig.json();
+                    updateMenuOosUI();
+                } else {
+                    const res = await fetch(`${WORKER_BASE}/api/tenant/bootstrap?tenant_id=${tenantId}&_t=${Date.now()}`, { cache: 'no-store' });
+                    if (res.ok) {
+                        bootstrapData = await res.json();
+                        storeConfig = bootstrapData.tenant ? {
+                            allowScheduledPickup: bootstrapData.tenant.allowScheduledPickup,
+                            storeStatus: bootstrapData.tenant.storeStatus,
+                            operatingHours: bootstrapData.tenant.parsedHours,
+                            liffId: bootstrapData.tenant.liffId
+                        } : null;
+                        applyTenantTheme(bootstrapData.tenant);
+                        updateDynamicStockAndPrices();
+                    }
+                }
                 applyPickupConfig();
+                checkStoreStatus();
             } catch (e) {
                 console.error("Failed to fetch menu or config", e);
             }
         }
 
+        function applyTenantTheme(tenant) {
+            if (!tenant) return;
+            const tenantId = getTenantIdFromUrl();
+            try {
+                localStorage.setItem("tenant_branding_" + tenantId, JSON.stringify(tenant));
+                localStorage.setItem("tenant_theme_" + tenantId, JSON.stringify(tenant));
+            } catch(e) {}
+            if (tenant.brandColor) {
+                document.documentElement.style.setProperty('--primary', tenant.brandColor);
+            }
+            if (tenant.brandColorDark) {
+                document.documentElement.style.setProperty('--primary-dark', tenant.brandColorDark);
+            }
+            document.title = (tenant.brandName || "點餐系統") + " 點餐";
+            const titleEl = document.getElementById('page-title');
+            if (titleEl) titleEl.innerText = (tenant.brandName || "點餐系統") + " 點餐";
+
+            const nameEl = document.getElementById('store-name');
+            if (nameEl) nameEl.innerText = tenant.brandName || '';
+
+            const subEl = document.getElementById('store-subtitle');
+            if (subEl) subEl.innerHTML = tenant.brandSubtitle ? tenant.brandSubtitle.replace(/\n/g, '<br>') : '';
+
+            const addrEl = document.getElementById('store-address');
+            const addrRow = document.getElementById('store-address-row');
+            if (addrEl) {
+                addrEl.innerText = tenant.storeAddress || '';
+                if (addrRow) addrRow.style.display = tenant.storeAddress ? 'flex' : 'none';
+            }
+
+            const logoEl = document.getElementById('store-logo');
+            const logoWrapper = document.getElementById('store-logo-wrapper');
+            if (logoEl) {
+                if (tenant.logoUrl) {
+                    logoEl.src = tenant.logoUrl;
+                    if (logoWrapper) logoWrapper.style.display = 'flex';
+                } else {
+                    if (logoWrapper) logoWrapper.style.display = 'none';
+                }
+            }
+
+            const statusEl = document.getElementById('store-status');
+            if (statusEl) statusEl.style.display = 'block';
+
+            const hoursRow = document.getElementById('store-hours-row');
+            if (hoursRow) hoursRow.style.display = 'flex';
+        }
+
+        // --- TIME & TIMEZONE HELPERS ---
+        let isPickupTimeManuallyChanged = false;
+
         function getTaiwanDate() {
             const now = new Date();
-            const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-            return new Date(utc + (8 * 3600000));
+            try {
+                const formatter = new Intl.DateTimeFormat("en-US", {
+                    timeZone: "Asia/Taipei",
+                    year: "numeric", month: "numeric", day: "numeric",
+                    hour: "numeric", minute: "numeric", second: "numeric",
+                    hour12: false
+                });
+                const parts = formatter.formatToParts(now);
+                const m = {};
+                parts.forEach(p => m[p.type] = p.value);
+                const h = parseInt(m.hour, 10) % 24;
+                return new Date(parseInt(m.year, 10), parseInt(m.month, 10) - 1, parseInt(m.day, 10), h, parseInt(m.minute, 10), parseInt(m.second, 10));
+            } catch (e) {
+                // Fallback for older environments
+                const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+                return new Date(utc + (8 * 3600000));
+            }
         }
 
         function formatTaiwanDateTime(d) {
@@ -237,10 +407,9 @@
             const timeEl = document.getElementById('asap-current-time');
             if (!timeEl) return;
             const tw = getTaiwanDate();
+            const { fullStr } = formatTaiwanDateTime(tw);
             const isBusy = (storeConfig && storeConfig.storeStatus === 'busy');
-            const targetTime = isBusy ? new Date(tw.getTime() + 60 * 60000) : tw;
-            const { fullStr } = formatTaiwanDateTime(targetTime);
-            timeEl.innerText = isBusy ? `${fullStr}（繁忙：約 1 小時後）` : fullStr;
+            timeEl.innerText = isBusy ? `${fullStr}（門市繁忙：約 1 小時後完成）` : fullStr;
         }
 
         function applyPickupConfig() {
@@ -258,20 +427,10 @@
             checkStoreStatus();
         }
 
-        // Recommended items
-        const recommended = new Set(['雙層烤肉', '綜合']);
-        const recommendedCombo = new Set(['5 大雙層烤肉+飲料', '6 大綜合+飲料']);
-
-        let cart = {};
-        let customizeData = {};
-        let comboDrinkData = {};
-        let currentPopup = null;
-        let alertCallback = null;
-        let isSubmitting = false;
-
-        // --- NAV / SCROLL ---
+        // --- SCROLL & NAV ---
         function scrollToSec(id) {
-            document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+            const el = document.getElementById(id);
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
         }
 
         const observerOptions = { root: null, rootMargin: '-80px 0px -70% 0px', threshold: 0 };
@@ -283,57 +442,67 @@
                     if (targetBtn) {
                         targetBtn.classList.add('active');
                         const nav = document.getElementById('main-nav');
-                        nav.scrollTo({ left: targetBtn.offsetLeft - 20, behavior: 'smooth' });
+                        if (nav) nav.scrollTo({ left: targetBtn.offsetLeft - 20, behavior: 'smooth' });
                     }
                 }
             });
+            updateFooterButtonState();
         }, observerOptions);
 
+        window.addEventListener('scroll', () => {
+            updateFooterButtonState();
+        }, { passive: true });
+
         // --- ALERT & LIGHTBOX ---
-        function customAlert(msg, callback = null, title = '提醒') {
-            const titleEl = document.querySelector('#custom-alert .custom-alert-header');
-            if (titleEl) titleEl.innerText = title;
-            document.getElementById('custom-alert-message').innerHTML = msg;
-            document.getElementById('custom-alert').style.display = 'flex';
-            alertCallback = callback;
+        function customAlert(msg, callback = null) {
+            const msgEl = document.getElementById('custom-alert-message');
+            if (msgEl) msgEl.innerHTML = msg;
+            const alertBox = document.getElementById('custom-alert');
+            if (alertBox) alertBox.style.display = 'flex';
+            window.alertCallback = callback;
         }
+
         function closeCustomAlert() {
-            document.getElementById('custom-alert').style.display = 'none';
-            if (typeof alertCallback === 'function') {
-                const cb = alertCallback;
-                alertCallback = null;
+            const alertBox = document.getElementById('custom-alert');
+            if (alertBox) alertBox.style.display = 'none';
+            if (window.alertCallback) {
+                const cb = window.alertCallback;
+                window.alertCallback = null;
                 cb();
             }
         }
 
+        function closeAndExitLiff() {
+            try {
+                if (typeof liff !== 'undefined' && liff.closeWindow) {
+                    liff.closeWindow();
+                }
+            } catch (e) {
+                console.warn("liff.closeWindow failed:", e);
+            }
+            try {
+                window.close();
+            } catch (e) {}
+        }
+
         function openImageLightbox(src) {
-            document.getElementById('lightbox-img').src = src;
-            document.getElementById('image-lightbox').style.display = 'flex';
+            const img = document.getElementById('lightbox-img');
+            if (img) img.src = src;
+            const lightbox = document.getElementById('image-lightbox');
+            if (lightbox) lightbox.style.display = 'flex';
         }
+
         function closeImageLightbox() {
-            document.getElementById('image-lightbox').style.display = 'none';
+            const lightbox = document.getElementById('image-lightbox');
+            if (lightbox) lightbox.style.display = 'none';
         }
 
-        // --- MENU RENDER ---
-        const itemTranslations = {
-            "燒肉": "Braised pork / Thịt nguội",
-            "火腿": "Ham / Chả",
-            "雞肉": "Chicken / Thịt gà",
-            "烤肉": "Grilled Meat / Thịt nướng",
-            "雙層烤肉": "Double Cheesebanhmi / Thịt nướng phô mai",
-            "綜合": "Mixed / Thập cẩm",
-            "越南咖啡": "Coffee with Condensed Milk / Cà phê sữa",
-            "豆漿": "Soy milk / Sữa đậu nành",
-            "紅茶": "Black Tea / Hồng trà",
-            "可樂": "Cocacola / Sprite",
-            "雪碧": "Cocacola / Sprite"
-        };
-
+        // --- BENMI RENDERING ---
         function getFooterHTML(category, origName, price, isOos) {
             const qty = cart[category + '_' + origName] || 0;
             return isOos ? `
                 <div class="card-price" style="color: #9ca3af;">$${price}</div>
-                <div style="color: #dc2626; font-weight: 900; font-size: 14px; background: #fee2e2; padding: 4px 10px; border-radius: 6px;">已售完 / Hết hàng</div>
+                <div style="color: #dc2626; font-weight: 900; font-size: 14px; background: #fee2e2; padding: 4px 10px; border-radius: 6px;">今日已售完</div>
             ` : `
                 <div class="card-price">$${price}</div>
                 <div class="qty-control">
@@ -353,12 +522,11 @@
                     const elId = `item-${category}-${origName}`;
                     const div = document.getElementById(elId);
                     if (!div) return;
-                    
+
                     const isOos = menu.out_of_stock && menu.out_of_stock.includes(`${category}:${origName}`);
-                    
                     div.style.opacity = isOos ? '0.65' : '1';
                     div.style.pointerEvents = isOos ? 'none' : 'auto';
-                    
+
                     const footer = div.querySelector('.card-footer');
                     if (footer) {
                         const price = itemsMap[origName];
@@ -367,7 +535,7 @@
                             footer.innerHTML = footerHTML;
                         }
                     }
-                    
+
                     const custBtn = div.querySelector('.customize-btn');
                     if (custBtn) {
                         const qty = cart[category + '_' + origName] || 0;
@@ -379,6 +547,7 @@
 
         function createItem(displayName, price, category, containerId, origName, isRecommended) {
             const container = document.getElementById(containerId);
+            if (!container) return;
             const div = document.createElement('div');
             div.className = 'card';
             div.id = `item-${category}-${origName}`;
@@ -386,8 +555,8 @@
             const badgeHTML = isRecommended ? `<span class="badge">👍 推薦</span>` : '';
 
             const imageKey = `${category}_${origName}`;
-            const hasImage = imageList.includes(imageKey);
-            const imgHTML = hasImage ? `<img class="item-img" src="${WORKER_BASE}/api/image?tenant_id=${getTenantIdFromUrl()}&name=${encodeURIComponent(imageKey)}&v=2" alt="${origName}" loading="lazy" onclick="openImageLightbox(this.src)" style="cursor: zoom-in;">` : '';
+            const hasImage = imageList.includes(imageKey) || imageList.includes(origName);
+            const imgHTML = hasImage ? `<img class="item-img" src="${WORKER_BASE}/api/image?tenant_id=${getTenantIdFromUrl()}&name=${encodeURIComponent(imageKey)}&v=2" alt="${origName}" loading="lazy" onclick="openImageLightbox(this.src)" style="cursor: zoom-in;" onerror="this.style.display='none'">` : '';
 
             const trans = itemTranslations[origName] || '';
             const transHTML = trans ? `<div style="font-size: 13px; color: #9ca3af; margin-top: 2px;">${trans}</div>` : '';
@@ -395,11 +564,10 @@
             const isOos = menu.out_of_stock && menu.out_of_stock.includes(`${category}:${origName}`);
             if (isOos) {
                 div.style.opacity = '0.65';
-                div.style.pointerEvents = 'none'; // prevent image zoom or any click on the card
+                div.style.pointerEvents = 'none';
             }
 
             const footerHTML = getFooterHTML(category, origName, price, isOos);
-
             const qty = cart[category + '_' + origName] || 0;
             const customizeBtnHTML = `
                 <button class="customize-btn" id="customize-btn-${category}-${origName}" onclick="toggleCustomize('${category}','${origName}')" style="pointer-events: auto; display: ${(!isOos && qty > 0 && category !== 'drinks') ? 'block' : 'none'};">✏️ 客製化（加料 / 辣度 / 備註）</button>
@@ -424,13 +592,176 @@
             container.appendChild(div);
         }
 
-        function renderMenu() {
+        function renderMenuBenmi() {
+            if (!menu) return;
+
+            // 1. Setup Benmi Navigation Tabs
+            const nav = document.getElementById('main-nav');
+            if (nav) {
+                nav.innerHTML = `
+                    <div class="nav-btn active" onclick="scrollToSec('sec-large')">大麵包</div>
+                    <div class="nav-btn" onclick="scrollToSec('sec-small')">小麵包</div>
+                    <div class="nav-btn" onclick="scrollToSec('sec-combo')">套餐</div>
+                    <div class="nav-btn" onclick="scrollToSec('sec-drink')">飲料</div>
+                    <div class="nav-btn" onclick="scrollToSec('sec-checkout')">結帳</div>
+                `;
+            }
+
+            // 2. Setup Benmi Section Containers
+            const container = document.getElementById('catalog-sections');
+            if (container) {
+                container.innerHTML = `
+                    <div class="section-container" id="sec-large">
+                        <div class="section-title">🍔 大麵包</div>
+                        <div class="grid" id="large-list"></div>
+                    </div>
+                    <div class="section-container" id="sec-small">
+                        <div class="section-title">🥖 小麵包</div>
+                        <div class="grid" id="small-list"></div>
+                    </div>
+                    <div class="section-container" id="sec-combo">
+                        <div class="section-title">🎁 特惠套餐 (含飲料)</div>
+                        <div class="grid" id="combo-list"></div>
+                    </div>
+                    <div class="section-container" id="sec-drink">
+                        <div class="section-title">🥤 單點飲料</div>
+                        <div class="grid" id="drink-list"></div>
+                    </div>
+                `;
+            }
+
             for (let name in menu.large) createItem(name + ' 大', menu.large[name], 'large', 'large-list', name, recommended.has(name));
             for (let name in menu.small) createItem(name + ' 小', menu.small[name], 'small', 'small-list', name, recommended.has(name));
             for (let name in menu.combo) createItem('套餐 ' + name, menu.combo[name], 'combo', 'combo-list', name, recommendedCombo.has(name));
             for (let name in menu.drinks) createItem(name, menu.drinks[name], 'drinks', 'drink-list', name, false);
 
             document.querySelectorAll('.section-container').forEach(sec => observer.observe(sec));
+        }
+
+        // --- DYNAMIC TENANT RENDERING (FOR OTHER TENANTS LIKE ZHADANTONGXUE) ---
+        function renderDynamicCatalog() {
+            if (!bootstrapData || !bootstrapData.catalog) return;
+
+            // 1. Navigation Tabs
+            const nav = document.getElementById('main-nav');
+            let navHTML = '';
+            bootstrapData.catalog.forEach((cat, idx) => {
+                navHTML += `<div class="nav-btn ${idx === 0 ? 'active' : ''}" onclick="scrollToSec('sec-${cat.slug}')">${cat.name}</div>`;
+            });
+            navHTML += `<div class="nav-btn" onclick="scrollToSec('sec-checkout')">結帳</div>`;
+            nav.innerHTML = navHTML;
+
+            // 2. Section Containers
+            const container = document.getElementById('catalog-sections');
+            container.innerHTML = '';
+
+            bootstrapData.catalog.forEach(cat => {
+                const sec = document.createElement('div');
+                sec.className = 'section-container';
+                sec.id = `sec-${cat.slug}`;
+
+                const titleDiv = document.createElement('div');
+                titleDiv.className = 'section-title';
+                titleDiv.innerText = cat.name;
+                sec.appendChild(titleDiv);
+
+                const gridDiv = document.createElement('div');
+                gridDiv.className = 'grid';
+                gridDiv.id = `grid-${cat.slug}`;
+
+                cat.items.forEach(item => {
+                    gridDiv.appendChild(createDynamicItemCard(cat.slug, item));
+                });
+
+                sec.appendChild(gridDiv);
+                container.appendChild(sec);
+            });
+
+            document.querySelectorAll('.section-container').forEach(sec => observer.observe(sec));
+        }
+
+        function createDynamicItemCard(catSlug, item) {
+            const div = document.createElement('div');
+            div.className = 'card';
+            div.id = `item-${catSlug}-${item.name}`;
+
+            const isOos = item.isOutOfStock;
+            if (isOos) {
+                div.style.opacity = '0.65';
+                div.style.pointerEvents = 'none';
+            }
+
+            const badgeText = item.badge || item.badgeText || (item.isRecommended ? '👍 推薦' : '');
+            const badgeHTML = badgeText ? `<span class="badge">${badgeText}</span>` : '';
+
+            const tenantId = getTenantIdFromUrl();
+            const imgHTML = item.imageUrl
+                ? `<img class="item-img" src="${WORKER_BASE}${item.imageUrl}&v=2" alt="${item.name}" loading="lazy" onclick="openImageLightbox(this.src)" style="cursor: zoom-in;" onerror="this.style.display='none'">`
+                : '';
+
+            const qty = cart[`${catSlug}_${item.name}`] || 0;
+            const footerHTML = getDynamicItemFooterHTML(catSlug, item.name, item.price, isOos);
+            const hasModifiers = bootstrapData?.modifiers && bootstrapData.modifiers.length > 0 && catSlug !== 'drinks';
+            const customizeBtnHTML = `
+                <button class="customize-btn" id="customize-btn-${catSlug}-${item.name}" onclick="toggleCustomize('${catSlug}','${item.name}')" style="pointer-events: auto; display: ${(!isOos && qty > 0 && hasModifiers) ? 'block' : 'none'};">✏️ 客製化（加料 / 辣度 / 備註）</button>
+            `;
+
+            div.innerHTML = `
+                <div class="card-main" style="${isOos ? 'pointer-events: none;' : ''}">
+                    ${imgHTML}
+                    <div class="card-info">
+                        <div>
+                            <div class="card-title">${item.name} ${badgeHTML}</div>
+                        </div>
+                        <div class="card-footer">
+                            ${footerHTML}
+                        </div>
+                    </div>
+                </div>
+                ${customizeBtnHTML}
+                <div id="combo-container-${catSlug}-${item.name}"></div>
+            `;
+
+            return div;
+        }
+
+        function getDynamicItemFooterHTML(catSlug, itemName, price, isOos) {
+            const qty = cart[`${catSlug}_${itemName}`] || 0;
+            return isOos ? `
+                <div class="card-price" style="color: #9ca3af;">$${price}</div>
+                <div style="color: #dc2626; font-weight: 900; font-size: 14px; background: #fee2e2; padding: 4px 10px; border-radius: 6px;">今日已售完</div>
+            ` : `
+                <div class="card-price">$${price}</div>
+                <div class="qty-control">
+                    <button class="btn-qty" onclick="updateQty('${catSlug}','${itemName}',-1)">-</button>
+                    <span class="qty-text" id="qty-${catSlug}-${itemName}" style="${qty > 0 ? 'color: var(--primary);' : ''}">${qty}</span>
+                    <button class="btn-qty" onclick="updateQty('${catSlug}','${itemName}',1)">+</button>
+                </div>
+            `;
+        }
+
+        function updateDynamicStockAndPrices() {
+            if (!bootstrapData || !bootstrapData.catalog) return;
+            bootstrapData.catalog.forEach(cat => {
+                cat.items.forEach(item => {
+                    const card = document.getElementById(`item-${cat.slug}-${item.name}`);
+                    if (!card) return;
+                    card.style.opacity = item.isOutOfStock ? '0.65' : '1';
+                    card.style.pointerEvents = item.isOutOfStock ? 'none' : 'auto';
+
+                    const footer = card.querySelector('.card-footer');
+                    if (footer) {
+                        footer.innerHTML = getDynamicItemFooterHTML(cat.slug, item.name, item.price, item.isOutOfStock);
+                    }
+
+                    const custBtn = card.querySelector('.customize-btn');
+                    if (custBtn) {
+                        const qty = cart[`${cat.slug}_${item.name}`] || 0;
+                        const hasModifiers = bootstrapData?.modifiers && bootstrapData.modifiers.length > 0 && cat.slug !== 'drinks';
+                        custBtn.style.display = (!item.isOutOfStock && qty > 0 && hasModifiers) ? 'block' : 'none';
+                    }
+                });
+            });
         }
 
         // --- CART LOGIC ---
@@ -440,11 +771,20 @@
             if (cart[key] < 0) cart[key] = 0;
 
             const qtySpan = document.getElementById('qty-' + category + '-' + origName);
-            qtySpan.innerText = cart[key];
-            qtySpan.style.color = cart[key] > 0 ? 'var(--primary)' : 'inherit';
+            if (qtySpan) {
+                qtySpan.innerText = cart[key];
+                qtySpan.style.color = cart[key] > 0 ? 'var(--primary)' : 'inherit';
+            }
 
             const btn = document.getElementById('customize-btn-' + category + '-' + origName);
-            if (btn) btn.style.display = (cart[key] > 0 && category !== 'drinks') ? 'block' : 'none';
+            if (btn) {
+                if (isBenmiTenant) {
+                    btn.style.display = (cart[key] > 0 && category !== 'drinks') ? 'block' : 'none';
+                } else {
+                    const hasModifiers = bootstrapData?.modifiers && bootstrapData.modifiers.length > 0 && category !== 'drinks';
+                    btn.style.display = (cart[key] > 0 && hasModifiers) ? 'block' : 'none';
+                }
+            }
 
             if (category === 'combo') renderComboDrinksInline(origName, cart[key]);
             updateTotal();
@@ -456,57 +796,139 @@
             let summaryHTML = '';
             const zhNumbers = ['第一份', '第二份', '第三份', '第四份', '第五份', '第六份', '第七份', '第八份', '第九份', '第十份'];
 
-            for (let key in cart) {
-                if (cart[key] > 0) {
-                    let [cat, origName] = key.split('_');
-                    let qty = cart[key];
-                    totalQty += qty;
+            if (isBenmiTenant) {
+                for (let key in cart) {
+                    if (cart[key] > 0) {
+                        let [cat, origName] = key.split('_');
+                        let qty = cart[key];
+                        totalQty += qty;
 
-                    let itemPrice = 0;
-                    let displayName = origName;
-                    if (cat === 'small') { itemPrice = menu.small[origName] || 0; displayName += ' 小'; }
-                    if (cat === 'large') { itemPrice = menu.large[origName] || 0; displayName += ' 大'; }
-                    if (cat === 'combo') { itemPrice = menu.combo[origName] || 0; displayName = '套餐 ' + displayName; }
-                    if (cat === 'drinks') { itemPrice = menu.drinks[origName] || 0; }
+                        let itemPrice = 0;
+                        let displayName = origName;
+                        if (cat === 'small') { itemPrice = menu.small[origName] || 0; displayName += ' 小'; }
+                        if (cat === 'large') { itemPrice = menu.large[origName] || 0; displayName += ' 大'; }
+                        if (cat === 'combo') { itemPrice = menu.combo[origName] || 0; displayName = '套餐 ' + displayName; }
+                        if (cat === 'drinks') { itemPrice = menu.drinks[origName] || 0; }
 
-                    let lineTotal = qty * itemPrice;
+                        let itemModifiersTotal = 0;
+                        let portionsHTML = '';
 
-                    summaryHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                <div style="font-weight:800;">${qty}x ${displayName}</div>
-                <div>$${lineTotal}</div>
-            </div>`;
+                        if (customizeData[key]) {
+                            customizeData[key].slice(0, qty).forEach((c, i) => {
+                                let parts = [];
+                                if (c.topping && c.topping !== '') {
+                                    let topPrice = menu.topping[c.topping] || 0;
+                                    itemModifiersTotal += topPrice;
+                                    parts.push('加' + c.topping + ' (+$' + topPrice + ')');
+                                }
+                                if (c.spicy && c.spicy !== '不辣') parts.push(c.spicy);
+                                if (c.note && c.note.trim() !== '') parts.push(c.note.trim());
 
-                    if (cat === 'combo') {
-                        let drinks = comboDrinkData[origName] || [];
-                        let drinkCounts = {};
-                        drinks.slice(0, qty).forEach(d => { drinkCounts[d] = (drinkCounts[d] || 0) + 1; });
-                        let drinkStr = Object.entries(drinkCounts).map(([n, c]) => `${n} x${c}`).join('、');
-                        if (drinkStr) summaryHTML += `<div style="font-size:13px; color:#6b7280; margin-left:10px; margin-bottom:6px;">↳ 飲料：${drinkStr}</div>`;
+                                if (parts.length > 0) {
+                                    let zhIdx = zhNumbers[i] || `第 ${i + 1} 份`;
+                                    portionsHTML += `<div style="font-size:13px; color:#6b7280; margin-left:10px; margin-bottom:6px;">↳ ${zhIdx}: ${parts.join(', ')}</div>`;
+                                }
+                            });
+                        }
+
+                        let lineTotal = (qty * itemPrice) + itemModifiersTotal;
+
+                        summaryHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                            <div style="font-weight:800;">${qty}x ${displayName}</div>
+                            <div style="font-weight:700;">$${lineTotal}</div>
+                        </div>`;
+
+                        if (cat === 'combo') {
+                            let drinks = comboDrinkData[origName] || [];
+                            let drinkCounts = {};
+                            drinks.slice(0, qty).forEach(d => { drinkCounts[d] = (drinkCounts[d] || 0) + 1; });
+                            let drinkStr = Object.entries(drinkCounts).map(([n, c]) => `${n} x${c}`).join('、');
+                            if (drinkStr) summaryHTML += `<div style="font-size:13px; color:#6b7280; margin-left:10px; margin-bottom:6px;">↳ 飲料：${drinkStr}</div>`;
+                        }
+
+                        summaryHTML += portionsHTML;
+                        total += lineTotal;
+                        summaryHTML += `<div style="border-bottom: 1px dashed #eee; margin-bottom: 8px;"></div>`;
                     }
+                }
+            } else {
+                // Dynamic Tenant Total Calculation
+                const priceMap = {};
+                if (bootstrapData?.catalog) {
+                    bootstrapData.catalog.forEach(cat => {
+                        cat.items.forEach(it => { priceMap[`${cat.slug}_${it.name}`] = it.price; });
+                    });
+                }
+                const modPriceMap = {};
+                if (bootstrapData?.modifiers) {
+                    bootstrapData.modifiers.forEach(mod => {
+                        mod.options.forEach(opt => { modPriceMap[opt.name] = opt.price || 0; });
+                    });
+                }
 
-                    if (customizeData[key]) {
-                        customizeData[key].slice(0, qty).forEach((c, i) => {
-                            let parts = [];
-                            if (c.topping && c.topping !== '') {
-                                let topPrice = menu.topping[c.topping] || 0;
-                                lineTotal += topPrice;
-                                parts.push('加' + c.topping + ' (+$' + topPrice + ')');
-                            }
-                            if (c.spicy && c.spicy !== '不辣') parts.push(c.spicy);
-                            if (c.note && c.note.trim() !== '') parts.push(c.note.trim());
+                for (let key in cart) {
+                    if (cart[key] > 0) {
+                        const [catSlug, itemName] = key.split('_');
+                        const qty = cart[key];
+                        totalQty += qty;
 
-                            if (parts.length > 0) {
-                                let zhIdx = zhNumbers[i] || `第 ${i + 1} 份`;
-                                summaryHTML += `<div style="font-size:13px; color:#6b7280; margin-left:10px; margin-bottom:6px;">↳ ${zhIdx}: ${parts.join(', ')}</div>`;
-                            }
-                        });
+                        const itemBasePrice = priceMap[key] || 0;
+                        let itemModifiersTotal = 0;
+                        let portionsHTML = '';
+
+                        if (customizeData[key]) {
+                            customizeData[key].slice(0, qty).forEach((c, i) => {
+                                const parts = [];
+                                if (c.single) {
+                                    for (let s in c.single) {
+                                        const val = c.single[s];
+                                        if (val && val !== '不辣' && val !== '不需要') {
+                                            const addP = modPriceMap[val] || 0;
+                                            if (addP > 0) {
+                                                itemModifiersTotal += addP;
+                                                parts.push(`${val} (+$${addP})`);
+                                            } else {
+                                                parts.push(val);
+                                            }
+                                        }
+                                    }
+                                }
+                                if (c.multiple) {
+                                    for (let topName in c.multiple) {
+                                        if (c.multiple[topName]) {
+                                            const topPrice = modPriceMap[topName] || 0;
+                                            itemModifiersTotal += topPrice;
+                                            parts.push(`加${topName} (+$${topPrice})`);
+                                        }
+                                    }
+                                }
+                                if (c.note && c.note.trim() !== '') parts.push(c.note.trim());
+
+                                if (parts.length > 0) {
+                                    const zhIdx = zhNumbers[i] || `第 ${i + 1} 份`;
+                                    portionsHTML += `<div style="font-size:13px; color:#6b7280; margin-left:10px; margin-bottom:6px;">↳ ${zhIdx}: ${parts.join(', ')}</div>`;
+                                }
+                            });
+                        }
+
+                        let lineTotal = (qty * itemBasePrice) + itemModifiersTotal;
+
+                        summaryHTML += `
+                            <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                                <div style="font-weight:800; color: #111;">${qty}x ${itemName}</div>
+                                <div style="font-weight:700;">$${lineTotal}</div>
+                            </div>
+                        `;
+
+                        summaryHTML += portionsHTML;
+                        total += lineTotal;
+                        summaryHTML += `<div style="border-bottom: 1px dashed #eee; margin-bottom: 8px;"></div>`;
                     }
-                    total += lineTotal;
-                    summaryHTML += `<div style="border-bottom: 1px dashed #eee; margin-bottom: 8px;"></div>`;
                 }
             }
 
-            document.getElementById('total-price').innerText = total;
+            const totalEl = document.getElementById('total-price');
+            if (totalEl) totalEl.innerText = total;
 
             const summaryContainer = document.getElementById('cart-summary');
             if (summaryContainer) {
@@ -514,23 +936,23 @@
                     summaryContainer.innerHTML = '<div style="text-align:center; color:#9ca3af;">(目前沒有已選商品)</div>';
                 } else {
                     summaryHTML += `<div style="display:flex; justify-content:space-between; font-weight:900; margin-top:12px; font-size:16px;">
-                <div>總計</div><div style="color:var(--primary);">$${total}</div>
-            </div>`;
+                        <div>總計</div><div style="color:var(--primary);">$${total}</div>
+                    </div>`;
                     summaryContainer.innerHTML = summaryHTML;
                 }
             }
 
-            // Update cart badge
             const badge = document.getElementById('cart-badge');
             if (badge) {
                 badge.innerText = totalQty;
                 badge.style.display = totalQty > 0 ? 'block' : 'none';
             }
 
+            updateFooterButtonState();
             return total;
         }
 
-        // --- COMBO DRINKS ---
+        // --- COMBO DRINKS (BENMI) ---
         function renderComboDrinksInline(origName, qty) {
             const containerId = 'combo-container-combo-' + origName;
             const container = document.getElementById(containerId);
@@ -540,20 +962,24 @@
 
             if (!comboDrinkData[origName]) comboDrinkData[origName] = [];
 
+            const drinksMap = menu.drinks || {};
+            const drinkKeys = Object.keys(drinksMap);
+            if (drinkKeys.length === 0) return;
+
             const box = document.createElement('div');
             box.className = 'combo-drinks';
             box.innerHTML = '<strong>🥤 選擇附贈飲料</strong>';
 
             for (let i = 1; i <= qty; i++) {
-                let firstDrink = Object.keys(menu.drinks).find(d => !menu.out_of_stock || !menu.out_of_stock.includes(`drinks:${d}`)) || Object.keys(menu.drinks)[0];
+                let firstDrink = drinkKeys.find(d => !menu.out_of_stock || !menu.out_of_stock.includes(`drinks:${d}`)) || drinkKeys[0];
                 if (!comboDrinkData[origName][i - 1]) comboDrinkData[origName][i - 1] = firstDrink;
 
                 let sel = document.createElement('select');
-                for (let d in menu.drinks) {
+                for (let d in drinksMap) {
                     let opt = document.createElement('option');
                     opt.value = d;
                     const isDrinkOos = menu.out_of_stock && menu.out_of_stock.includes(`drinks:${d}`);
-                    opt.text = `第 ${i} 份：${d}${isDrinkOos ? ' (已售完/Hết)' : ''}`;
+                    opt.text = `第 ${i} 份：${d}${isDrinkOos ? ' (已售完)' : ''}`;
                     if (isDrinkOos && comboDrinkData[origName][i - 1] !== d) {
                         opt.disabled = true;
                     }
@@ -569,7 +995,7 @@
             container.appendChild(box);
         }
 
-        // --- CUSTOMIZE POPUP ---
+        // --- CUSTOMIZE POPUP (BOTH BENMI & DYNAMIC TENANTS USE MODERN RADIO PILLS & CHIPS) ---
         function toggleCustomize(category, origName) {
             const key = category + '_' + origName;
             const qty = cart[key];
@@ -584,88 +1010,269 @@
             const box = document.createElement('div');
             box.className = 'popup-box';
 
-            const displayName = category === 'small' ? origName + ' 小' :
-                category === 'large' ? origName + ' 大' :
-                    '套餐 ' + origName;
+            if (isBenmiTenant) {
+                // Benmi Modal with Radio Pills for Spicy & Checkbox Chips for Topping
+                const displayName = category === 'small' ? origName + ' 小' :
+                    category === 'large' ? origName + ' 大' :
+                        '套餐 ' + origName;
 
-            box.innerHTML = `
-        <div class="popup-header">
-            <span>${displayName} 客製化</span>
-            <div class="close-btn" onclick="closePopup()">✕</div>
-        </div>`;
+                box.innerHTML = `
+                    <div class="popup-header">
+                        <span>${displayName} 客製化</span>
+                        <div class="close-btn" onclick="closePopup()">✕</div>
+                    </div>
+                `;
 
-            const labelStyle = `font-size: 13px; font-weight: 800; color: var(--muted); display: block; margin: 16px 0 4px 0;`;
+                for (let i = 0; i < qty; i++) {
+                    let data = customizeData[key][i] || { topping: '', spicy: '不辣', note: '' };
+                    if (!customizeData[key][i]) customizeData[key][i] = data;
 
-            for (let i = 0; i < qty; i++) {
-                let data = customizeData[key][i] || { topping: '', spicy: '不辣', note: '' };
-                if (!customizeData[key][i]) customizeData[key][i] = data;
+                    const section = document.createElement('div');
+                    section.className = 'modifier-section';
 
-                let toppingOptions = '<option value="">不加料</option>';
-                for (let t in menu.topping) {
-                    const isToppingOos = menu.out_of_stock && menu.out_of_stock.includes(`topping:${t}`);
-                    const isDisabled = isToppingOos && data.topping !== t ? 'disabled' : '';
-                    const oosLabel = isToppingOos ? ' (已售完/Hết)' : '';
-                    toppingOptions += `<option value="${t}" ${data.topping === t ? 'selected' : ''} ${isDisabled}>${t}${oosLabel} +$${menu.topping[t]}</option>`;
+                    let sectionInner = `<div style="font-weight: 900; color: var(--primary); font-size: 16px; margin-bottom: 12px;">第 ${i + 1} 份</div>`;
+
+                    // 1. Spicy Radio Pills
+                    sectionInner += `
+                        <div class="modifier-group-title">
+                            <span>選擇辣度</span>
+                            <span class="modifier-required-badge">必選</span>
+                        </div>
+                        <div class="modifier-pills-row">
+                    `;
+                    const spicyOptions = ['不辣', '微辣', '中辣', '大辣'];
+                    spicyOptions.forEach(sp => {
+                        const isSelected = (data.spicy === sp);
+                        sectionInner += `
+                            <div class="modifier-pill ${isSelected ? 'active' : ''}" 
+                                 onclick="selectBenmiSpicy('${key}', ${i}, '${sp}', this)">
+                                ${sp}
+                            </div>
+                        `;
+                    });
+                    sectionInner += `</div>`;
+
+                    // 2. Topping Options
+                    sectionInner += `
+                        <div class="modifier-group-title">
+                            <span>加料 (Topping)</span>
+                            <span class="modifier-optional-badge">可選</span>
+                        </div>
+                        <div class="modifier-checkbox-grid">
+                    `;
+                    for (let t in menu.topping) {
+                        const isToppingOos = menu.out_of_stock && menu.out_of_stock.includes(`topping:${t}`);
+                        const isChecked = (data.topping === t);
+                        const price = menu.topping[t];
+                        const oosBadge = isToppingOos ? `<span class="modifier-oos-tag">已售完</span>` : `<span style="font-size: 12px; opacity: 0.85;">+$${price}</span>`;
+                        sectionInner += `
+                            <div class="modifier-checkbox-chip ${isChecked ? 'active' : ''} ${isToppingOos ? 'disabled' : ''}" 
+                                 onclick="${isToppingOos ? '' : `toggleBenmiTopping('${key}', ${i}, '${t}', this)`}">
+                                <span>${t}</span>
+                                ${oosBadge}
+                            </div>
+                        `;
+                    }
+                    sectionInner += `</div>`;
+
+                    // 3. Individual Note
+                    sectionInner += `
+                        <label style="font-size: 13px; font-weight: 800; color: var(--muted); display: block; margin: 14px 0 4px 0;">個別備註</label>
+                        <input type="text" value="${data.note || ''}" placeholder="如：不要香菜" 
+                               oninput="saveBenmiCustomNote('${key}', ${i}, this.value)">
+                    `;
+
+                    section.innerHTML = sectionInner;
+                    box.appendChild(section);
                 }
 
-                const section = document.createElement('div');
-                section.style.cssText = 'margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid #f3f4f6;';
-                section.innerHTML = `
-            <div style="font-weight: 900; color: var(--primary); font-size: 16px; margin-bottom: 12px;">第 ${i + 1} 份</div>
-            <div style="display:flex; gap:12px;">
-                <div style="flex:1;">
-                    <label style="${labelStyle}">加料</label>
-                    <select onchange="saveCustomize('${key}',${i},'topping',this.value)">${toppingOptions}</select>
-                </div>
-                <div style="flex:1;">
-                    <label style="${labelStyle}">辣度</label>
-                    <select onchange="saveCustomize('${key}',${i},'spicy',this.value)">
-                        <option value="不辣" ${data.spicy === '不辣' ? 'selected' : ''}>不辣</option>
-                        <option value="微辣" ${data.spicy === '微辣' ? 'selected' : ''}>微辣</option>
-                        <option value="中辣" ${data.spicy === '中辣' ? 'selected' : ''}>中辣</option>
-                        <option value="大辣" ${data.spicy === '大辣' ? 'selected' : ''}>大辣</option>
-                    </select>
-                </div>
-            </div>
-            <label style="${labelStyle}">個別備註</label>
-            <input type="text" value="${data.note || ''}" placeholder="如：不要香菜" onkeyup="saveCustomizeNote('${key}',${i},this.value)" onchange="saveCustomizeNote('${key}',${i},this.value)">
-        `;
-                box.appendChild(section);
+                const okBtn = document.createElement('button');
+                okBtn.innerText = '完成設定';
+                okBtn.className = 'btn-send';
+                okBtn.style.cssText = 'width:100%; margin-top:8px;';
+                okBtn.onclick = () => { closePopup(); updateTotal(); };
+                box.appendChild(okBtn);
+
+                overlay.appendChild(box);
+                overlay._savedScrollY = window.scrollY;
+                document.body.style.position = 'fixed';
+                document.body.style.top = `-${overlay._savedScrollY}px`;
+                document.body.style.left = '0';
+                document.body.style.right = '0';
+                document.body.style.width = '100%';
+
+                document.body.appendChild(overlay);
+                currentPopup = overlay;
+            } else {
+                // Dynamic Tenant Schema-Driven Popup
+                box.innerHTML = `
+                    <div class="popup-header">
+                        <span>${origName} 客製化設定</span>
+                        <div class="close-btn" onclick="closePopup()">✕</div>
+                    </div>
+                `;
+
+                const modifiers = bootstrapData?.modifiers || [];
+
+                for (let i = 0; i < qty; i++) {
+                    if (!customizeData[key][i]) {
+                        const defaultSingle = {};
+                        modifiers.filter(m => m.selectionType === 'single').forEach(m => {
+                            const defOpt = m.options.find(o => o.isDefault && !o.isOutOfStock) || m.options.find(o => !o.isOutOfStock) || m.options[0];
+                            if (defOpt) defaultSingle[m.slug] = defOpt.name;
+                        });
+                        customizeData[key][i] = { single: defaultSingle, multiple: {}, note: '' };
+                    }
+
+                    const currentPortion = customizeData[key][i];
+                    const section = document.createElement('div');
+                    section.className = 'modifier-section';
+
+                    let sectionInner = `<div style="font-weight: 900; color: var(--primary); font-size: 16px; margin-bottom: 12px;">第 ${i + 1} 份</div>`;
+
+                    modifiers.forEach(mod => {
+                        const reqBadge = mod.isRequired ? `<span class="modifier-required-badge">必選</span>` : `<span class="modifier-optional-badge">可選</span>`;
+                        sectionInner += `
+                            <div class="modifier-group-title">
+                                <span>${mod.name}</span>
+                                ${reqBadge}
+                            </div>
+                        `;
+
+                        if (mod.selectionType === 'single') {
+                            sectionInner += `<div class="modifier-pills-row">`;
+                            mod.options.forEach(opt => {
+                                const isOos = Boolean(opt.isOutOfStock);
+                                const isSelected = (currentPortion.single && currentPortion.single[mod.slug] === opt.name);
+                                const priceText = opt.price > 0 ? ` (+$${opt.price})` : '';
+                                const oosBadge = isOos ? `<span class="modifier-oos-tag">已售完</span>` : '';
+                                sectionInner += `
+                                    <div class="modifier-pill ${isSelected ? 'active' : ''} ${isOos ? 'disabled' : ''}" 
+                                         onclick="${isOos ? '' : `selectSingleModifier('${key}', ${i}, '${mod.slug}', '${opt.name}', this)`}">
+                                        <span>${opt.name}${priceText}</span>${oosBadge}
+                                    </div>
+                                `;
+                            });
+                            sectionInner += `</div>`;
+                        } else if (mod.selectionType === 'multiple') {
+                            sectionInner += `<div class="modifier-checkbox-grid">`;
+                            mod.options.forEach(opt => {
+                                const isOos = Boolean(opt.isOutOfStock);
+                                const isChecked = Boolean(currentPortion.multiple && currentPortion.multiple[opt.name]);
+                                const priceText = isOos ? `<span class="modifier-oos-tag">已售完</span>` : (opt.price > 0 ? `+$${opt.price}` : '$0');
+                                sectionInner += `
+                                    <div class="modifier-checkbox-chip ${isChecked ? 'active' : ''} ${isOos ? 'disabled' : ''}" 
+                                         onclick="${isOos ? '' : `toggleMultipleModifier('${key}', ${i}, '${opt.name}', this)`}">
+                                        <span>${opt.name}</span>
+                                        <span style="font-size: 12px; opacity: 0.85;">${priceText}</span>
+                                    </div>
+                                `;
+                            });
+                            sectionInner += `</div>`;
+                        }
+                    });
+
+                    sectionInner += `
+                        <label style="font-size: 13px; font-weight: 800; color: var(--muted); display: block; margin: 14px 0 4px 0;">個別備註</label>
+                        <input type="text" value="${currentPortion.note || ''}" placeholder="例如：不要香菜、醬料分開裝" 
+                               oninput="saveCustomNote('${key}', ${i}, this.value)">
+                    `;
+
+                    section.innerHTML = sectionInner;
+                    box.appendChild(section);
+                }
+
+                const okBtn = document.createElement('button');
+                okBtn.innerText = '完成設定';
+                okBtn.className = 'btn-send';
+                okBtn.style.cssText = 'width:100%; margin-top:8px;';
+                okBtn.onclick = () => { closePopup(); updateTotal(); };
+                box.appendChild(okBtn);
+
+                overlay.appendChild(box);
+                overlay._savedScrollY = window.scrollY;
+                document.body.style.position = 'fixed';
+                document.body.style.top = `-${overlay._savedScrollY}px`;
+                document.body.style.left = '0';
+                document.body.style.right = '0';
+                document.body.style.width = '100%';
+
+                document.body.appendChild(overlay);
+                currentPopup = overlay;
             }
-
-            const okBtn = document.createElement('button');
-            okBtn.innerText = '完成設定';
-            okBtn.className = 'btn-send';
-            okBtn.style.cssText = 'width:100%; margin-top:8px;';
-            okBtn.onclick = () => { closePopup(); updateTotal(); };
-            box.appendChild(okBtn);
-
-            overlay.appendChild(box);
-            
-            // Save scroll position and lock body
-            overlay._savedScrollY = window.scrollY;
-            document.body.style.position = 'fixed';
-            document.body.style.top = `-${overlay._savedScrollY}px`;
-            document.body.style.left = '0';
-            document.body.style.right = '0';
-            document.body.style.width = '100%';
-            
-            document.body.appendChild(overlay);
-            currentPopup = overlay;
         }
 
-        function saveCustomize(key, index, field, value) {
+        // Benmi modifier helpers
+        function selectBenmiSpicy(key, index, spicyVal, el) {
+            if (el && el.classList.contains('disabled')) return;
             if (!customizeData[key]) customizeData[key] = [];
-            if (!customizeData[key][index]) customizeData[key][index] = {};
-            customizeData[key][index][field] = value;
+            if (!customizeData[key][index]) customizeData[key][index] = { topping: '', spicy: '不辣', note: '' };
+            customizeData[key][index].spicy = spicyVal;
+
+            const parentRow = el.parentElement;
+            if (parentRow) parentRow.querySelectorAll('.modifier-pill').forEach(p => p.classList.remove('active'));
+            el.classList.add('active');
             updateTotal();
         }
 
-        // Separate note handler to avoid popup re-render on mobile
-        function saveCustomizeNote(key, index, value) {
+        function toggleBenmiTopping(key, index, topName, el) {
+            if (el && el.classList.contains('disabled')) return;
             if (!customizeData[key]) customizeData[key] = [];
-            if (!customizeData[key][index]) customizeData[key][index] = {};
-            customizeData[key][index]['note'] = value;
+            if (!customizeData[key][index]) customizeData[key][index] = { topping: '', spicy: '不辣', note: '' };
+
+            if (customizeData[key][index].topping === topName) {
+                customizeData[key][index].topping = '';
+                el.classList.remove('active');
+            } else {
+                customizeData[key][index].topping = topName;
+                const parentGrid = el.parentElement;
+                if (parentGrid) parentGrid.querySelectorAll('.modifier-checkbox-chip').forEach(c => c.classList.remove('active'));
+                el.classList.add('active');
+            }
+            updateTotal();
+        }
+
+        function saveBenmiCustomNote(key, index, val) {
+            if (!customizeData[key]) customizeData[key] = [];
+            if (!customizeData[key][index]) customizeData[key][index] = { topping: '', spicy: '不辣', note: '' };
+            customizeData[key][index].note = val;
+        }
+
+        // Dynamic tenant modifier helpers
+        function selectSingleModifier(key, portionIdx, modSlug, optName, el) {
+            if (el && el.classList.contains('disabled')) return;
+            if (!customizeData[key]) customizeData[key] = [];
+            if (!customizeData[key][portionIdx]) customizeData[key][portionIdx] = { single: {}, multiple: {}, note: '' };
+            if (!customizeData[key][portionIdx].single) customizeData[key][portionIdx].single = {};
+            customizeData[key][portionIdx].single[modSlug] = optName;
+
+            const parentRow = el.parentElement;
+            if (parentRow) parentRow.querySelectorAll('.modifier-pill').forEach(p => p.classList.remove('active'));
+            el.classList.add('active');
+            updateTotal();
+        }
+
+        function toggleMultipleModifier(key, portionIdx, optName, el) {
+            if (el && el.classList.contains('disabled')) return;
+            if (!customizeData[key]) customizeData[key] = [];
+            if (!customizeData[key][portionIdx]) customizeData[key][portionIdx] = { single: {}, multiple: {}, note: '' };
+            if (!customizeData[key][portionIdx].multiple) customizeData[key][portionIdx].multiple = {};
+
+            const isCurrentlyChecked = Boolean(customizeData[key][portionIdx].multiple[optName]);
+            if (isCurrentlyChecked) {
+                delete customizeData[key][portionIdx].multiple[optName];
+                el.classList.remove('active');
+            } else {
+                customizeData[key][portionIdx].multiple[optName] = true;
+                el.classList.add('active');
+            }
+            updateTotal();
+        }
+
+        function saveCustomNote(key, portionIdx, val) {
+            if (!customizeData[key]) customizeData[key] = [];
+            if (!customizeData[key][portionIdx]) customizeData[key][portionIdx] = { single: {}, multiple: {}, note: '' };
+            customizeData[key][portionIdx].note = val;
         }
 
         function closePopup() {
@@ -676,357 +1283,31 @@
                 document.body.style.left = '';
                 document.body.style.right = '';
                 document.body.style.width = '';
-                
+
                 currentPopup.remove();
                 currentPopup = null;
-                
-                // Force synchronous layout update then restore scroll without animation
+
                 setTimeout(() => {
-                    const originalScrollBehavior = document.documentElement.style.scrollBehavior;
+                    const origScroll = document.documentElement.style.scrollBehavior;
                     document.documentElement.style.scrollBehavior = 'auto';
                     window.scrollTo(0, savedY);
-                    document.documentElement.style.scrollBehavior = originalScrollBehavior;
+                    document.documentElement.style.scrollBehavior = origScroll;
                 }, 10);
             }
         }
 
-        // --- ORDER SUBMIT ---
-        function generateOrderNumber() {
-            const now = new Date();
-            const twTime = new Date(now.getTime() + 8 * 3600000);
-            const month = String(twTime.getUTCMonth() + 1).padStart(2, '0');
-            const day = String(twTime.getUTCDate()).padStart(2, '0');
-            const hours = String(twTime.getUTCHours()).padStart(2, '0');
-            const mins = String(twTime.getUTCMinutes()).padStart(2, '0');
-            const randomSeq = Math.floor(1000 + Math.random() * 9000);
-            return `B${month}${day}-${hours}${mins}-${randomSeq}`;
-        }
 
-        async function submitOrder() {
-            if (isSubmitting) return;
 
-            if (storeConfig && storeConfig.storeStatus === 'paused') {
-                return customAlert('店家目前暫停接單中，暫無法下單<br><span style="font-size:13px; color:#dc2626;">(Quán đang tạm ngưng nhận đơn mới)</span>');
-            }
-
-            const hasItem = Object.values(cart).some(q => q > 0);
-            if (!hasItem) return customAlert('請選擇品項');
-
-            let dateInput = document.getElementById('pickup-date') ? document.getElementById('pickup-date').value : '';
-            let timeInput = document.getElementById('pickup-time') ? document.getElementById('pickup-time').value : '';
-
-            const isScheduledEnabled = !(storeConfig && storeConfig.allowScheduledPickup === false);
-
-            if (!isScheduledEnabled) {
-                const twTime = getTaiwanDate();
-
-                if (!isStoreOpen(twTime)) {
-                    return customAlert('店家目前非營業時間 (休息中)，無法下單');
-                }
-
-                const isBusy = (storeConfig && storeConfig.storeStatus === 'busy');
-                const targetTime = isBusy ? new Date(twTime.getTime() + 60 * 60000) : twTime;
-                const { dateStr, timeStr } = formatTaiwanDateTime(targetTime);
-                dateInput = dateStr;
-                timeInput = timeStr;
-            }
-
-            const checkoutSec = document.getElementById('sec-checkout');
-            if (checkoutSec) {
-                const rect = checkoutSec.getBoundingClientRect();
-                if (rect.top > (window.innerHeight || document.documentElement.clientHeight) - 100) {
-                    checkoutSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    checkoutSec.style.outline = '3px solid var(--primary)';
-                    checkoutSec.style.borderRadius = '16px';
-                    setTimeout(() => { checkoutSec.style.outline = 'none'; }, 2000);
-
-                    if (isScheduledEnabled && (!document.getElementById('pickup-date').value || !document.getElementById('pickup-time').value)) {
-                        setTimeout(() => {
-                            if (!document.getElementById('pickup-date').value) document.getElementById('pickup-date').focus();
-                            else document.getElementById('pickup-time').focus();
-                        }, 400);
-                        return customAlert('請先選取取餐日期和時間 ↓');
-                    } else {
-                        return customAlert('請確認購物車內容與取餐資訊 ↓');
-                    }
-                }
-            }
-
-            if (isScheduledEnabled) {
-                if (!dateInput || !timeInput) {
-                    if (checkoutSec) {
-                        checkoutSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        checkoutSec.style.outline = '3px solid var(--primary)';
-                        checkoutSec.style.borderRadius = '16px';
-                        setTimeout(() => { checkoutSec.style.outline = 'none'; }, 2000);
-                    }
-                    setTimeout(() => {
-                        if (!dateInput) document.getElementById('pickup-date').focus();
-                        else document.getElementById('pickup-time').focus();
-                    }, 400);
-                    return customAlert('請先選取取餐日期和時間 ↓');
-                }
-
-                const twNow = getTaiwanDate();
-                const selectedDateTime = new Date(`${dateInput}T${timeInput}`);
-                if (selectedDateTime < twNow) return customAlert('不能選擇過去的時間，請重新選擇');
-
-                // If store is busy and ordering for today, require pickup time >= now + 60 mins
-                if (storeConfig && storeConfig.storeStatus === 'busy') {
-                    const { dateStr: todayStr } = formatTaiwanDateTime(twNow);
-                    if (dateInput === todayStr) {
-                        const minAllowedTime = new Date(twNow.getTime() + 60 * 60000);
-                        if (selectedDateTime < minAllowedTime) {
-                            const { timeStr: minTimeStr } = formatTaiwanDateTime(minAllowedTime);
-                            return customAlert(`目前門市繁忙，最快可取餐時間為 ${minTimeStr}（需至少 1 小時後）<br><span style="font-size:13px; color:#b45309;">(Quán đang bận, vui lòng chọn từ ${minTimeStr} trở đi)</span>`);
-                        }
-                    }
-                }
-
-                const pickupDate = new Date(dateInput);
-                const dayOfWeek = pickupDate.getDay();
-                const [hours, minutes] = timeInput.split(':').map(Number);
-                const timeValue = hours + minutes / 60;
-
-                let isValidTime = false;
-                let displayHoursMsg = "";
-                
-                if (storeConfig && storeConfig.operatingHours) {
-                    const shifts = storeConfig.operatingHours[dayOfWeek] || [];
-                    if (shifts.length > 0) {
-                        for (let shift of shifts) {
-                            const [sH, sM] = shift.start.split(':').map(Number);
-                            const [eH, eM] = shift.end.split(':').map(Number);
-                            const startVal = sH + sM / 60;
-                            const endVal = eH + eM / 60;
-                            if (timeValue >= startVal && timeValue <= endVal) {
-                                isValidTime = true;
-                                break;
-                            }
-                        }
-                        displayHoursMsg = shifts.map(s => `${s.start} - ${s.end}`).join(", ");
-                    }
-                } else {
-                    const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-                    if (isWeekend) {
-                        if (timeValue >= 9 && timeValue <= 21) isValidTime = true;
-                        displayHoursMsg = "9:00 - 21:00";
-                    } else {
-                        if (timeValue >= 11 && timeValue <= 21) isValidTime = true;
-                        displayHoursMsg = "11:00 - 21:00";
-                    }
-                }
-                
-                if (!isValidTime) {
-                    if (displayHoursMsg === "") {
-                        return customAlert('當天店家公休，請選擇其他日期');
-                    } else {
-                        const days = ["日", "一", "二", "三", "四", "五", "六"];
-                        return customAlert(`週${days[dayOfWeek]}的營業時間為 ${displayHoursMsg}，請重新選擇取餐時間`);
-                    }
-                }
-            }
-
-            isSubmitting = true;
-            let orderSubmittedSuccessfully = false;
-            const submitBtn = document.getElementById('btn-submit');
-            if (submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.innerText = '處理中...';
-            }
-
-            const currentTotal = updateTotal();
-            const orderNum = generateOrderNumber();
-            const zhNumbers = ['第一份', '第二份', '第三份', '第四份', '第五份', '第六份', '第七份', '第八份', '第九份', '第十份'];
-
-            let msg = `訂單編號：${orderNum}\n📦 訂單內容：\n`;
-
-            for (let key in cart) {
-                if (cart[key] > 0) {
-                    let [cat, origName] = key.split('_');
-                    let displayName = cat === 'small' ? origName + ' 小' :
-                        cat === 'large' ? origName + ' 大' :
-                            cat === 'combo' ? '套餐 ' + origName : origName;
-
-                    msg += `\n${cart[key]}份 x ${displayName}`;
-
-                    if (cat === 'combo') {
-                        let drinks = comboDrinkData[origName] || [];
-                        let drinkCounts = {};
-                        drinks.slice(0, cart[key]).forEach(d => { drinkCounts[d] = (drinkCounts[d] || 0) + 1; });
-                        let drinkStr = Object.entries(drinkCounts).map(([n, c]) => `${n} x${c}`).join('、');
-                        if (drinkStr) msg += `\n   ↳ 飲料：${drinkStr}`;
-                    }
-
-                    if (customizeData[key]) {
-                        customizeData[key].slice(0, cart[key]).forEach((c, i) => {
-                            let parts = [];
-                            if (c.topping && c.topping !== '') parts.push('加' + c.topping);
-                            if (c.spicy && c.spicy !== '不辣') parts.push(c.spicy);
-                            if (c.note && c.note.trim() !== '') parts.push(c.note.trim());
-                            if (parts.length > 0) {
-                                let zhIdx = zhNumbers[i] || `第 ${i + 1} 份`;
-                                msg += `\n   ↳ ${zhIdx}: ${parts.join(', ')}`;
-                            }
-                        });
-                    }
-                }
-            }
-
-            msg += `\n\n🕒 取餐時間：${dateInput} ${timeInput}`;
-            const mainNote = document.getElementById('note').value;
-            if (mainNote) msg += `\n📝 總備註：${mainNote}`;
-            msg += `\n💰 總金額：$${currentTotal}`;
-
-            if (!liff.isLoggedIn()) {
-                localStorage.setItem('benmi_cart_save', JSON.stringify({ cart, customizeData, comboDrinkData }));
-                liff.login({ redirectUri: window.location.href });
-                return;
-            }
-
-            const showSuccessAndExit = () => {
-                const successHtml = `
-                    <div style="margin-bottom: 16px;">
-                        <div style="width: 60px; height: 60px; margin: 0 auto; background: #ecfdf5; border: 2px solid #a7f3d0; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="20 6 9 17 4 12"></polyline>
-                            </svg>
-                        </div>
-                    </div>
-                    <div style="font-size: 19px; font-weight: 900; color: #111827; margin-bottom: 6px;">訂單已送出成功！</div>
-                    <div style="font-size: 14px; line-height: 1.5; color: #4b5563;">店家已收到您的訂單，您可以直接在 LINE 查看訂單狀態 🙏</div>
-                `;
-                customAlert(successHtml, () => {
-                    if (typeof liff !== 'undefined' && liff.closeWindow) {
-                        try {
-                            liff.closeWindow();
-                        } catch (e) {
-                            console.warn("liff.closeWindow failed:", e);
-                        }
-                    }
-                    try {
-                        window.close();
-                    } catch (e) {}
-                }, '下單成功');
-            };
-
-            const markOrderCompleted = () => {
-                orderSubmittedSuccessfully = true;
-                if (submitBtn) {
-                    submitBtn.disabled = true;
-                    submitBtn.innerText = '訂單已送出';
-                }
-                cart = {};
-                customizeData = {};
-                comboDrinkData = {};
-                updateTotal();
-                localStorage.removeItem('benmi_cart_save');
-            };
-
-            try {
-                const profile = await liff.getProfile();
-                const orderPayload = {
-                    key: orderNum,
-                    userId: profile.userId,
-                    customer: profile.displayName,
-                    time: `${dateInput} ${timeInput}`,
-                    content: msg.split('\n\n🕒')[0].replace('[Benmi 點餐]\n', ''),
-                    total: currentTotal,
-                    note: mainNote,
-                    liffFallback: false
-                };
-
-                const res = await fetch(`${WORKER_BASE}/api/create?tenant_id=${getTenantIdFromUrl()}`, {
-                    method: "POST",
-                    headers: {"Content-Type": "application/json"},
-                    body: JSON.stringify(orderPayload)
-                });
-
-                if (!res.ok) {
-                    throw new Error(`API returned status ${res.status}`);
-                }
-
-                markOrderCompleted();
-
-                // Gửi tin nhắn text từ phía khách hàng để kích hoạt Webhook trả lời thẻ tiến độ
-                if (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient() && liff.isApiAvailable && liff.isApiAvailable('sendMessages')) {
-                    try {
-                        await liff.sendMessages([{ type: 'text', text: msg }]);
-                    } catch (e) {
-                        console.error("liff.sendMessages failed:", e);
-                    }
-                }
-
-                // Gửi thành công: Báo cho khách và đóng cửa sổ khi khách bấm xác nhận / tắt popup
-                showSuccessAndExit();
-
-            } catch (err) {
-                console.warn("Primary API flow failed, falling back to LINE message flow:", err);
-                
-                // Fallback: Thử gửi tin nhắn LINE trước để kích hoạt Webhook
-                try {
-                    await liff.sendMessages([{ type: 'text', text: msg }]);
-                    markOrderCompleted();
-                    showSuccessAndExit();
-                } catch (liffErr) {
-                    console.error("LIFF sendMessages fallback also failed:", liffErr);
-                    
-                    // Fallback cuối cùng: Thử gọi lại API trực tiếp với cờ liffFallback = true
-                    try {
-                        const profile = await liff.getProfile();
-                        const orderPayload = {
-                            key: orderNum,
-                            userId: profile.userId,
-                            customer: profile.displayName,
-                            time: `${dateInput} ${timeInput}`,
-                            content: msg.split('\n\n🕒')[0].replace('[Benmi 點餐]\n', ''),
-                            total: currentTotal,
-                            note: mainNote,
-                            liffFallback: true
-                        };
-                        const res = await fetch(`${WORKER_BASE}/api/create?tenant_id=${getTenantIdFromUrl()}`, {
-                            method: "POST",
-                            headers: {"Content-Type": "application/json"},
-                            body: JSON.stringify(orderPayload)
-                        });
-                        if (res.ok) {
-                            markOrderCompleted();
-                            showSuccessAndExit();
-                            return;
-                        }
-                    } catch (retryErr) {
-                        console.error("Final retry API failed:", retryErr);
-                    }
-
-                    if (liffErr.code === "400" || String(liffErr).includes("liffId")) {
-                        customAlert('⚠️ 傳送失敗：Vui lòng dùng ứng dụng LINE trên điện thoại để đặt hàng, hoặc báo nhân viên xử lý lỗi.');
-                    } else {
-                        customAlert('⚠️ 系統傳送異常，請告知店員您的訂單內容：<br><br>' + msg.replace(/\n/g, '<br>'));
-                    }
-                }
-            } finally {
-                if (!orderSubmittedSuccessfully) {
-                    isSubmitting = false;
-                    if (submitBtn) {
-                        submitBtn.disabled = false;
-                        submitBtn.innerText = '確認下單';
-                    }
-                } else {
-                    isSubmitting = true;
-                    if (submitBtn) {
-                        submitBtn.disabled = true;
-                        submitBtn.innerText = '訂單已送出';
-                    }
-                }
-            }
-        }
-
-        function setTodayDate() {
-            const today = new Date();
-            const offsetDate = new Date(today.getTime() + 8 * 3600000);
-            const dateStr = offsetDate.toISOString().split('T')[0];
+        function setTodayDate(forceReset = false) {
+            const twNow = getTaiwanDate();
+            const { dateStr } = formatTaiwanDateTime(twNow);
             const dateEl = document.getElementById('pickup-date');
-            if (dateEl) { dateEl.value = dateStr; dateEl.min = dateStr; }
+            if (dateEl) {
+                dateEl.min = dateStr;
+                if (forceReset || !dateEl.value || dateEl.value < dateStr) {
+                    dateEl.value = dateStr;
+                }
+            }
         }
 
         function isStoreOpen(twTime) {
@@ -1089,7 +1370,7 @@
                 }
                 if (pausedBanner) pausedBanner.style.display = 'none';
                 if (busyBanner) busyBanner.style.display = 'flex';
-                if (submitBtn && !isSubmitting) {
+                if (submitBtn) {
                     submitBtn.disabled = false;
                     submitBtn.innerText = '確認下單';
                     submitBtn.style.background = '';
@@ -1102,7 +1383,7 @@
                 }
                 if (pausedBanner) pausedBanner.style.display = 'none';
                 if (busyBanner) busyBanner.style.display = 'none';
-                if (submitBtn && !isSubmitting) {
+                if (submitBtn) {
                     submitBtn.disabled = false;
                     submitBtn.innerText = '確認下單';
                     submitBtn.style.background = '';
@@ -1130,7 +1411,7 @@
             if (!displayEl) return;
             
             const twTime = getTaiwanDate();
-            const todayIdx = twTime.getDay(); // 0 = Sunday, 1 = Monday, ...
+            const todayIdx = twTime.getDay();
             
             let todayHoursStr = "";
             let isTodayOpen = false;
@@ -1209,60 +1490,97 @@
             }
         }
 
+        // --- INIT APP ---
         async function initApp() {
-            // Khởi chạy fetchMenu song song
-            const menuPromise = fetchMenu();
+            const isStaging = (window.location.hostname.includes("staging") || window.location.hostname.includes("test") || window.location.hostname.includes("localhost") || window.location.hostname.includes("127.0.0.1"));
+            const defaultLiffId = isStaging ? "2009555608-DMioljsI" : "2009560906-c5taZfiY";
 
-            // Đợi dữ liệu menu & config được fetch xong để lấy storeConfig
-            await menuPromise;
+            if (isBenmiTenant) {
+                await fetchMenu();
+                try {
+                    const liffId = storeConfig?.liffId || defaultLiffId;
+                    if (liffId) await liff.init({ liffId });
+                } catch(e) {
+                    console.error("LIFF Init Error", e);
+                }
+                renderMenuBenmi();
+                renderStoreOperatingHours();
+                applyPickupConfig();
 
-            try {
-                const liffId = (storeConfig && storeConfig.liffId) ? storeConfig.liffId : '2009560906-c5taZfiY';
-                await liff.init({ liffId });
-            } catch(e) {
-                console.error("LIFF Init Error", e);
-            }
-
-            renderMenu();
-            renderStoreOperatingHours();
-            applyPickupConfig();
-
-            try {
-                const saved = localStorage.getItem('benmi_cart_save');
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    cart = parsed.cart || {};
-                    customizeData = parsed.customizeData || {};
-                    comboDrinkData = parsed.comboDrinkData || {};
-                    localStorage.removeItem('benmi_cart_save');
-                    
-                    for (let key in cart) {
-                        if (cart[key] > 0) {
-                            const [cat, origName] = key.split('_');
-                            updateQty(cat, origName, 0);
+                try {
+                    const saved = localStorage.getItem('benmi_cart_save');
+                    if (saved) {
+                        const parsed = JSON.parse(saved);
+                        cart = parsed.cart || {};
+                        customizeData = parsed.customizeData || {};
+                        comboDrinkData = parsed.comboDrinkData || {};
+                        localStorage.removeItem('benmi_cart_save');
+                        for (let key in cart) {
+                            if (cart[key] > 0) {
+                                const [cat, origName] = key.split('_');
+                                updateQty(cat, origName, 0);
+                            }
                         }
                     }
+                } catch(e) {}
+            } else {
+                await fetchMenu();
+                try {
+                    const liffId = storeConfig?.liffId || defaultLiffId;
+                    if (liffId) await liff.init({ liffId });
+                } catch(e) {
+                    console.error("LIFF Init Error", e);
                 }
-            } catch(e) {}
+                renderDynamicCatalog();
+                renderStoreOperatingHours();
+                applyPickupConfig();
 
-            setTodayDate();
+                try {
+                    const tenantId = getTenantIdFromUrl();
+                    const saved = localStorage.getItem(`cart_save_${tenantId}`);
+                    if (saved) {
+                        const parsed = JSON.parse(saved);
+                        cart = parsed.cart || {};
+                        customizeData = parsed.customizeData || {};
+                        comboDrinkData = parsed.comboDrinkData || {};
+                        localStorage.removeItem(`cart_save_${tenantId}`);
+                        for (let key in cart) {
+                            if (cart[key] > 0) {
+                                const [cat, origName] = key.split('_');
+                                updateQty(cat, origName, 0);
+                            }
+                        }
+                    }
+                } catch(e) {}
+            }
+
+            setTodayDate(true);
             checkStoreStatus();
-            setInterval(checkStoreStatus, 60000); // Cập nhật trạng thái mỗi phút
-            setInterval(fetchMenu, 15000); // Tự động cập nhật trạng thái hết hàng/còn hàng mỗi 15 giây
+            setInterval(checkStoreStatus, 60000);
+            setInterval(fetchMenu, 15000);
             fetchWaitingCounter();
             setInterval(fetchWaitingCounter, 30000);
-            setInterval(updateAsapTimeDisplay, 1000); // Cập nhật thời gian hiển thị chế độ đặt ngay
+            setInterval(updateAsapTimeDisplay, 1000);
+            setInterval(() => setTodayDate(false), 30000);
+
+            window.addEventListener('pageshow', () => {
+                setTodayDate(true);
+            });
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') {
+                    setTodayDate(false);
+                }
+            });
         }
 
         let indexOrdersETag = "";
-
         async function fetchWaitingCounter() {
             try {
                 const headers = {};
                 if (indexOrdersETag) headers["If-None-Match"] = indexOrdersETag;
-                const res = await fetch(`${WORKER_BASE}/api/orders/waiting-count`, { headers });
-                if (res.status === 304) return;
-                if (!res.ok) return;
+                const tenantId = getTenantIdFromUrl();
+                const res = await fetch(`${WORKER_BASE}/api/orders/waiting-count?tenant_id=${tenantId}`, { headers });
+                if (res.status === 304 || !res.ok) return;
 
                 const etag = res.headers.get("ETag");
                 if (etag) indexOrdersETag = etag;
@@ -1282,9 +1600,10 @@
                 console.error("Error fetching waiting counter:", e);
             }
         }
-        initApp();
 
+        initApp();
     </script>
+    <script src="js/client-checkout.js"></script>
 </body>
 
 </html>

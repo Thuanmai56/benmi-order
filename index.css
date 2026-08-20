@@ -187,11 +187,12 @@ body {
 .store-detail-row {
     display: flex;
     align-items: flex-start;
-    gap: 12px;
-    font-size: 15px;
-    margin-bottom: 12px;
+    gap: 8px;
+    font-size: 14.5px;
+    line-height: 22px;
+    margin-bottom: 10px;
     font-weight: 500;
-    opacity: 0.95;
+    color: #374151;
 }
 
 .store-detail-row:last-child {
@@ -199,8 +200,21 @@ body {
 }
 
 .detail-icon {
-    font-size: 18px;
-    margin-top: -2px;
+    font-size: 16px;
+    line-height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    margin-top: 0;
+}
+
+.detail-svg-icon {
+    display: inline-block;
+    vertical-align: middle;
+    flex-shrink: 0;
 }
 
 .time-block {
@@ -661,3 +675,156 @@ select:focus {
 .powered-by-blab-link:active {
     transform: scale(0.98);
 }
+
+/* Dynamic Multi-Tenant Modifiers & Options */
+.modifier-section {
+    margin-bottom: 22px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.modifier-group-title {
+    font-size: 14px;
+    font-weight: 800;
+    color: #374151;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.modifier-required-badge {
+    font-size: 11px;
+    font-weight: 700;
+    color: #dc2626;
+    background: #fee2e2;
+    padding: 2px 8px;
+    border-radius: 99px;
+}
+
+.modifier-optional-badge {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    background: #f3f4f6;
+    padding: 2px 8px;
+    border-radius: 99px;
+}
+
+.modifier-pills-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.modifier-pill {
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1.5px solid #e5e7eb;
+    background: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.modifier-pill:hover {
+    border-color: #cbd5e1;
+    background: #f8fafc;
+}
+
+.modifier-pill.active {
+    border-color: var(--primary);
+    background: #f0fdf4;
+    color: var(--primary);
+    box-shadow: 0 0 0 1px var(--primary);
+}
+
+.modifier-checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.modifier-checkbox-chip {
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1.5px solid #e5e7eb;
+    background: #fff;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.modifier-checkbox-chip.active {
+    border-color: var(--primary);
+    background: #f0fdf4;
+    color: var(--primary);
+    box-shadow: 0 0 0 1px var(--primary);
+}
+
+.modifier-pill.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+    background: #f3f4f6;
+    border-color: #e5e7eb;
+    color: #9ca3af;
+    cursor: not-allowed;
+}
+
+.modifier-checkbox-chip.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+    background: #f3f4f6;
+    border-color: #e5e7eb;
+    color: #9ca3af;
+    cursor: not-allowed;
+}
+
+.modifier-oos-tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 800;
+    color: #ef4444;
+    background: #fee2e2;
+    padding: 1px 6px;
+    border-radius: 4px;
+    margin-left: 4px;
+    vertical-align: middle;
+}
+
+@keyframes pulse-attention {
+    0% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+        border-color: #ef4444;
+    }
+    50% {
+        box-shadow: 0 0 0 8px rgba(239, 68, 68, 0.25);
+        border-color: #dc2626;
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+        border-color: #ef4444;
+    }
+}
+
+.attention-pulse {
+    animation: pulse-attention 1.2s infinite ease-in-out;
+    border: 2px solid #ef4444 !important;
+    background: #fff5f5 !important;
+}
+

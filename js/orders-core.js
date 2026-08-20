@@ -11,6 +11,57 @@ function getTenantIdFromUrl() {
   return params.get("tenant_id") || "benmi";
 }
 
+function applyTenantBranding(tenant) {
+  if (!tenant) return;
+  const brandName = tenant.brandName || "Dashboard";
+  const bTitle = document.getElementById('brand-title');
+  const bLogo = document.getElementById('brand-logo');
+
+  if (bTitle) bTitle.innerText = `${brandName} Dashboard`;
+  document.title = `${brandName} Dashboard`;
+
+  if (bLogo) {
+    if (tenant.logoUrl) {
+      bLogo.src = tenant.logoUrl;
+      bLogo.style.display = "block";
+    } else {
+      bLogo.style.display = "none";
+    }
+  }
+
+  if (tenant.brandColor) {
+    document.documentElement.style.setProperty('--primary', tenant.brandColor);
+  }
+}
+
+async function initTenantBranding() {
+  const tenantId = getTenantIdFromUrl();
+
+  // 1. Instant Cache Render (0ms latency, eliminates any flash of unstyled content)
+  try {
+    const cached = localStorage.getItem("tenant_branding_" + tenantId) || localStorage.getItem("tenant_theme_" + tenantId);
+    if (cached) {
+      applyTenantBranding(JSON.parse(cached));
+    }
+  } catch(e) {}
+
+  // 2. Fetch fresh config from Server and update cache
+  try {
+    const res = await fetch(`${WORKER_BASE}/api/tenant/bootstrap?tenant_id=${tenantId}&_t=${Date.now()}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.tenant) {
+        try {
+          localStorage.setItem("tenant_branding_" + tenantId, JSON.stringify(data.tenant));
+          localStorage.setItem("tenant_theme_" + tenantId, JSON.stringify(data.tenant));
+        } catch(e) {}
+        applyTenantBranding(data.tenant);
+      }
+    }
+  } catch(e) {}
+}
+initTenantBranding();
+
 // Global POS State
 let latestOrders = [];
 let pendingNewOrders = [];
@@ -19,6 +70,7 @@ let currentOrderKey = null;
 let activeTab = "live";
 let newAlertSnoozeUntilMs = 0;
 let snoozedNewOrderKeys = new Set();
+let newAlertSnoozeTimerId = null;
 let localOverrides = {};
 const knownOrderKeys = new Set();
 const processingKeys = new Set();
@@ -113,21 +165,21 @@ function switchTab(tab) {
   document.getElementById("view-history").style.display = tab === "history" ? "block" : "none";
   document.getElementById("view-settings").style.display = "none";
   document.getElementById("view-menu").style.display = "none";
-  if (tab === "live") renderAll();
-  if (tab === "history" && typeof loadHistorySummary === "function") loadHistorySummary();
+  if (tab === "live" || tab === "history") renderAll();
 }
 
 async function fetchOrders() {
   try {
-    const headers = {};
+    const tenantId = getTenantIdFromUrl();
+    const headers = { "X-Tenant-ID": tenantId };
     if (lastOrdersETag) {
       headers["If-None-Match"] = lastOrdersETag;
     }
 
-    const tenantId = getTenantIdFromUrl();
-    const response = await fetch(`${WORKER_BASE}/api/orders?tenant_id=${encodeURIComponent(tenantId)}`, { headers });
+    const response = await fetch(`${WORKER_BASE}/api/orders?tenant_id=${tenantId}`, { headers });
     if (response.status === 304) {
-      // No order updates since last poll
+      // Even on 304, re-check snooze expiration for new alert
+      if (typeof updateNewAlert === "function") updateNewAlert();
       return;
     }
     if (!response.ok) throw new Error(`fetch failed: ${response.status}`);
@@ -162,44 +214,8 @@ async function fetchOrders() {
     if (leftEl) leftEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#d32f2f;">${escapeHtml(e?.message || e)}</div>`;
     const rightEl = document.getElementById("list-right");
     if (rightEl) rightEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#d32f2f;">-</div>`;
-  }
-}
-
-async function updateStatus(key, status, extra = {}, btn = null) {
-  if (!key) return;
-  if (processingKeys.has(key)) return;
-  processingKeys.add(key);
-
-  const oldText = btn ? btn.innerText : "";
-  if (btn) {
-    btn.disabled = true;
-    btn.innerText = "Đang xử lý...";
-  }
-
-  try {
-    const tenantParam = `?tenant_id=${encodeURIComponent(getTenantIdFromUrl())}`;
-    const response = await fetch(`${WORKER_BASE}/api/update${tenantParam}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key, status, ...extra })
-    });
-    if (!response.ok) throw new Error(`update failed: ${response.status}`);
-
-    // Apply local override immediately for responsiveness
-    localOverrides[key] = { status, time: Date.now() };
-    renderAll();
-
-    // Keep in sync with server
-    await fetchOrders();
-  } catch (e) {
-    console.error(e);
-    alert("處理失敗，請稍後再試。");
-  } finally {
-    processingKeys.delete(key);
-    if (btn) {
-      btn.disabled = false;
-      btn.innerText = oldText;
-    }
+    const histEl = document.getElementById("list-history");
+    if (histEl) histEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#d32f2f;">-</div>`;
   }
 }
 
@@ -263,14 +279,20 @@ function closeModal() {
   });
   reviewingOrder = null;
   currentOrderKey = null;
+  if (typeof updateNewAlert === "function") updateNewAlert();
 }
 
-// 1.5s Polling loop for active order updates
+// 1.5s Polling loop for active order updates - ALWAYS runs across all dashboard tabs!
 setInterval(() => {
-  if (activeTab === "live" || activeTab === "history") fetchOrders();
+  fetchOrders();
 }, 1500);
 
 // Dynamic 10s timer to automatically refresh ETA time countdowns
 setInterval(() => {
   if (activeTab === "live" || activeTab === "history") renderAll();
 }, 10000);
+
+// 1s timer to ensure new alert and alarms are evaluated without delay
+setInterval(() => {
+  if (typeof updateNewAlert === "function") updateNewAlert();
+}, 1000);

@@ -37,7 +37,7 @@ function renderListLeft(orders) {
     tile.innerHTML = `
       <div>
         <div class="tile-top">
-          <span class="tile-customer">${escapeHtml(order.customer || "Khách")}</span>
+          <span class="tile-customer">${escapeHtml(order.customer || t('defaultCustomer'))}</span>
           ${badge}
           <span class="tile-meta">#${escapeHtml(order.key)}</span>
         </div>
@@ -76,7 +76,7 @@ function renderListRight(orders) {
     tile.innerHTML = `
       <div>
         <div class="tile-top">
-          <span class="tile-customer">${escapeHtml(order.customer || "Khách")}</span>
+          <span class="tile-customer">${escapeHtml(order.customer || t('defaultCustomer'))}</span>
           <span class="badge done">${t('badgeReady')}</span>
           <span class="tile-meta">#${escapeHtml(order.key)}</span>
         </div>
@@ -105,6 +105,10 @@ function updateNewAlert() {
     alertEl.style.display = "none";
     newAlertSnoozeUntilMs = 0;
     snoozedNewOrderKeys = new Set();
+    if (typeof newAlertSnoozeTimerId !== 'undefined' && newAlertSnoozeTimerId) {
+      clearTimeout(newAlertSnoozeTimerId);
+      newAlertSnoozeTimerId = null;
+    }
     if (typeof stopContinuousAlarm === "function") stopContinuousAlarm();
     return;
   }
@@ -115,7 +119,14 @@ function updateNewAlert() {
     (document.getElementById("changeModal") && document.getElementById("changeModal").style.display === "flex") ||
     (document.getElementById("rejectModal") && document.getElementById("rejectModal").style.display === "flex");
 
-  if (Date.now() < newAlertSnoozeUntilMs || isReviewing) {
+  if (isReviewing) {
+    alertEl.style.display = "none";
+    if (typeof stopContinuousAlarm === "function") stopContinuousAlarm();
+    return;
+  }
+
+  if (Date.now() < newAlertSnoozeUntilMs) {
+    // If a brand-new order arrived that wasn't in the snoozed set, wake up immediately!
     const hasBrandNew = pendingNewOrders.some(o => o?.key && !snoozedNewOrderKeys.has(o.key));
     if (!hasBrandNew) {
       alertEl.style.display = "none";
@@ -123,6 +134,8 @@ function updateNewAlert() {
       return;
     }
   }
+
+  // Otherwise, snooze has expired or was interrupted by new order -> show modal & alarm!
   titleEl.innerText = t("alertTitle", { count });
   alertEl.style.display = "flex";
   if (typeof startContinuousAlarm === "function") startContinuousAlarm();
@@ -134,6 +147,14 @@ function dismissNewAlert() {
   const alertEl = document.getElementById("new-alert");
   if (alertEl) alertEl.style.display = "none";
   if (typeof stopContinuousAlarm === "function") stopContinuousAlarm();
+
+  if (typeof newAlertSnoozeTimerId !== 'undefined' && newAlertSnoozeTimerId) {
+    clearTimeout(newAlertSnoozeTimerId);
+  }
+  newAlertSnoozeTimerId = setTimeout(() => {
+    newAlertSnoozeUntilMs = 0;
+    updateNewAlert();
+  }, 30_000);
 }
 
 function reviewNextNewOrder() {
@@ -168,6 +189,43 @@ function formatContentHtml(order) {
   }
 
   return `<div style="background:rgba(0,185,0,0.07); border:1.5px solid rgba(0,185,0,0.25); border-radius:16px; padding:18px; line-height:1.7;">${inner}</div>`;
+}
+
+async function updateStatus(key, status, extra = {}, btn = null) {
+  if (!key) return;
+  if (processingKeys.has(key)) return;
+  processingKeys.add(key);
+
+  const oldText = btn ? btn.innerText : "";
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = t("processing");
+  }
+
+  try {
+    const response = await fetch(`${WORKER_BASE}/api/update?tenant_id=${getTenantIdFromUrl()}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key, status, ...extra })
+    });
+    if (!response.ok) throw new Error(`update failed: ${response.status}`);
+
+    // Apply local override immediately for responsiveness
+    localOverrides[key] = { status, time: Date.now() };
+    renderAll();
+
+    // Keep in sync with server
+    await fetchOrders();
+  } catch (e) {
+    console.error(e);
+    alert(t("processFail"));
+  } finally {
+    processingKeys.delete(key);
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = oldText;
+    }
+  }
 }
 
 async function reviewAccept(btn) {

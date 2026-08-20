@@ -7,20 +7,22 @@ let rawMenuData = null;       // Original object form from API
 let activeCategoryIndex = -1;
 let isMenuDirty = false;
 
-const BENMI_CATS = [
-  { id: "small", label: "小麵包 (Bánh mì nhỏ)" },
-  { id: "large", label: "大麵包 (Bánh mì lớn)" },
-  { id: "combo", label: "套餐 (Combo + Nước)" },
-  { id: "drinks", label: "單點飲料 (Đồ uống)" },
-  { id: "topping", label: "加料 (Topping)" }
-];
+function getBenmiDefaultCategories() {
+  return [
+    { id: "small", label: currentLang === 'vi' ? "Bánh mì nhỏ" : "小麵包" },
+    { id: "large", label: currentLang === 'vi' ? "Bánh mì lớn" : "大麵包" },
+    { id: "combo", label: currentLang === 'vi' ? "Combo kèm đồ uống" : "特惠套餐" },
+    { id: "drinks", label: currentLang === 'vi' ? "Đồ uống" : "單點飲料" },
+    { id: "topping", label: currentLang === 'vi' ? "Topping thêm" : "加料選項" }
+  ];
+}
 
 function markMenuDirty() {
   isMenuDirty = true;
   const btn = document.querySelector("#view-menu .btn-primary");
   if (btn) {
     btn.style.backgroundColor = "var(--brand-red)";
-    btn.innerText = "Lưu thay đổi (Chưa lưu *)";
+    btn.innerText = t("btnMenuDirty");
   }
 }
 
@@ -29,7 +31,7 @@ function clearMenuDirty() {
   const btn = document.querySelector("#view-menu .btn-primary");
   if (btn) {
     btn.style.backgroundColor = ""; // revert to CSS default
-    btn.innerText = "Lưu thay đổi (Lưu Menu)";
+    btn.innerText = t("btnMenuSave");
   }
 }
 
@@ -44,27 +46,82 @@ function openMenuSettings() {
 
 async function loadMenuData() {
   const bodyEl = document.getElementById("menu-editor-body");
-  if (bodyEl) bodyEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">Đang tải menu...</div>`;
+  if (bodyEl) bodyEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">${t("menuLoading")}</div>`;
   try {
-    const res = await fetch(`${WORKER_BASE}/api/menu?tenant_id=${getTenantIdFromUrl()}&_t=${Date.now()}`);
-    if (!res.ok) throw new Error("Failed to load");
-    rawMenuData = await res.json();
-    // Convert object format to editable array format
-    currentMenuData = BENMI_CATS.map(cat => ({
+    const tenantId = getTenantIdFromUrl();
+    const res = await fetch(`${WORKER_BASE}/api/tenant/bootstrap?tenant_id=${tenantId}&_t=${Date.now()}`);
+    if (!res.ok) throw new Error("Failed to load bootstrap");
+    const data = await res.json();
+
+    const categories = [];
+    if (data.catalog) {
+      data.catalog.forEach(cat => {
+        categories.push({
+          id: cat.slug,
+          title: cat.name,
+          items: cat.items.map(it => ({
+            name: it.name,
+            price: it.price,
+            isOos: it.isOutOfStock,
+            badgeText: it.badgeText || (it.badge || ''),
+            isRecommended: it.isRecommended || false,
+            originalName: it.name
+          }))
+        });
+      });
+    }
+    if (data.modifiers) {
+      data.modifiers.forEach(mod => {
+        if (!categories.some(c => c.id === mod.slug)) {
+          categories.push({
+            id: mod.slug,
+            title: `${t("modifierPrefix")} ${mod.name}`,
+            items: mod.options.map(opt => ({
+              name: opt.name,
+              price: opt.price,
+              isOos: opt.isOutOfStock,
+              badgeText: opt.badgeText || (opt.badge || ''),
+              isRecommended: opt.isRecommended || false,
+              originalName: opt.name
+            }))
+          });
+        }
+      });
+    }
+
+    currentMenuData = categories.length > 0 ? categories : getBenmiDefaultCategories().map(cat => ({
       id: cat.id,
       title: cat.label,
-      items: Object.entries(rawMenuData[cat.id] || {}).map(([name, price]) => {
-        const isOos = rawMenuData.out_of_stock && rawMenuData.out_of_stock.includes(`${cat.id}:${name}`);
-        return { name, price, isOos, originalName: name };
-      })
+      items: []
     }));
+
     activeCategoryIndex = -1;
     renderMenuCategories();
-    if (bodyEl) bodyEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">請先從左側選擇分類</div>`;
+    if (bodyEl) bodyEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">${t("menuSelectPrompt")}</div>`;
     const titleEl = document.getElementById("menu-editor-title");
-    if (titleEl) titleEl.innerText = "分類項目";
+    if (titleEl) titleEl.innerText = t("menuEditorTitle");
   } catch (e) {
-    alert("無法載入菜單資料：" + e.message);
+    console.warn("Bootstrap load failed, falling back to legacy /api/menu:", e);
+    try {
+      const res = await fetch(`${WORKER_BASE}/api/menu?tenant_id=${getTenantIdFromUrl()}&_t=${Date.now()}`);
+      if (!res.ok) throw new Error("Failed to load");
+      rawMenuData = await res.json();
+      currentMenuData = getBenmiDefaultCategories().map(cat => ({
+        id: cat.id,
+        title: cat.label,
+        items: Object.entries(rawMenuData[cat.id] || {}).map(([name, price]) => {
+          const isOos = rawMenuData.out_of_stock && rawMenuData.out_of_stock.includes(`${cat.id}:${name}`);
+          return { name, price: typeof price === 'object' ? price.price : price, badgeText: typeof price === 'object' ? (price.badge_text || '') : '', isOos, originalName: name };
+        })
+      }));
+      activeCategoryIndex = -1;
+      renderMenuCategories();
+      if (bodyEl) bodyEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">${t("menuSelectPrompt")}</div>`;
+      const titleEl = document.getElementById("menu-editor-title");
+      if (titleEl) titleEl.innerText = t("menuEditorTitle");
+    } catch (err2) {
+      alert(t("menuLoadFail") + err2.message);
+    }
   }
 }
 
@@ -83,7 +140,7 @@ function renderMenuCategories() {
     `;
     div.innerHTML = `
       <span>${escapeHtml(cat.title)}</span>
-      <span style="font-size: 13px; font-weight: 900; color: var(--muted);">${cat.items.length} 項</span>
+      <span style="font-size: 13px; font-weight: 900; color: var(--muted);">${cat.items.length} ${t("menuItemUnit")}</span>
     `;
     div.onclick = () => {
       syncMenuDataFromDOM();
@@ -99,7 +156,7 @@ function renderMenuCategoryEditor(index) {
   if (!currentMenuData || !currentMenuData[index]) return;
   const cat = currentMenuData[index];
   const titleEl = document.getElementById("menu-editor-title");
-  if (titleEl) titleEl.innerText = cat.title + " (全部 " + cat.items.length + " 項)";
+  if (titleEl) titleEl.innerText = `${cat.title} ${t("menuItemTotalCount", { count: cat.items.length })}`;
 
   const container = document.getElementById("menu-editor-body");
   if (!container) return;
@@ -141,28 +198,33 @@ function renderMenuCategoryEditor(index) {
     const oosBg = item.isOos ? '#fee2e2' : '#d1fae5';
     const oosColor = item.isOos ? '#b91c1c' : '#065f46';
     const oosBorder = item.isOos ? '#fca5a5' : '#6ee7b7';
-    const oosText = item.isOos ? '🔴 Hết' : '🟢 Còn';
+    const oosText = item.isOos ? t("stockStatusOutOfStock") : t("stockStatusInStock");
 
     row.innerHTML = `
       <div style="color: #ccc; font-size: 22px; cursor: grab; flex-shrink:0;">☰</div>
       <input type="text" value="${escapeHtml(item.name)}" data-name-cidx="${index}" data-name-iidx="${iIdx}" oninput="markMenuDirty()"
-        style="flex: 2; min-width: 120px; font-size: 17px; font-weight: 900; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-family:inherit; box-sizing:border-box;">
+        placeholder="${t("newItemPlaceholder")}" style="flex: 2; min-width: 120px; font-size: 17px; font-weight: 900; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-family:inherit; box-sizing:border-box;">
       <label style="display:flex; align-items:center; gap:6px; font-weight:900; flex-shrink:0;">
         <span style="font-size:18px;">$</span>
         <input type="number" value="${item.price !== null && item.price !== undefined ? item.price : ''}" data-cidx="${index}" data-iidx="${iIdx}" oninput="markMenuDirty()"
-          placeholder="隱藏" style="width: 90px; font-size: 17px; font-weight: 900; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-family:inherit; box-sizing:border-box;">
+          placeholder="${t("priceHiddenPlaceholder")}" style="width: 80px; font-size: 17px; font-weight: 900; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-family:inherit; box-sizing:border-box;">
+      </label>
+      <label style="display:flex; align-items:center; gap:4px; font-weight:900; flex-shrink:0;" title="標籤 / 推薦 (例如: 雞肉足足100g, 👍 推薦)">
+        <span style="font-size:15px; color:#ef4444;">🏷️</span>
+        <input type="text" value="${escapeHtml(item.badgeText || '')}" data-badge-cidx="${index}" data-badge-iidx="${iIdx}" oninput="markMenuDirty()"
+          placeholder="標籤/推薦" style="width: 110px; font-size: 14px; font-weight: 700; padding: 10px 8px; border: 1px solid #cbd5e1; border-radius: 8px; font-family:inherit; box-sizing:border-box; color: #b91c1c; background: #fff5f5;">
       </label>
       <button class="btn" style="padding: 8px 14px; font-size:14px; flex-shrink:0; background: ${oosBg}; color: ${oosColor}; border: 1px solid ${oosBorder}; border-radius: 8px; font-weight: 900;"
         onclick="openStockModal(${index}, ${iIdx})">${oosText}</button>
-      <button class="btn btn-ghost" style="padding: 8px 14px; font-size:14px; flex-shrink:0;" onclick="openImageModal('${cat.id}', '${escapeHtml(item.name)}')">📷 Ảnh</button>
-      <button class="btn btn-ghost" style="padding: 8px 14px; color: var(--brand-red); font-size:14px; flex-shrink:0;" onclick="removeMenuItemAt(${index}, ${iIdx})">刪除</button>
+      <button class="btn btn-ghost" style="padding: 8px 14px; font-size:14px; flex-shrink:0;" onclick="openImageModal('${cat.id}', '${escapeHtml(item.name)}')">${t("btnItemImage")}</button>
+      <button class="btn btn-ghost" style="padding: 8px 14px; color: var(--brand-red); font-size:14px; flex-shrink:0;" onclick="removeMenuItemAt(${index}, ${iIdx})">${t("btnItemDelete")}</button>
     `;
     container.appendChild(row);
   });
 }
 
 function removeMenuItemAt(cIdx, iIdx) {
-  if (confirm("確定要刪除這個項目嗎?")) {
+  if (confirm(t("confirmDeleteItem"))) {
     syncMenuDataFromDOM();
     currentMenuData[cIdx].items.splice(iIdx, 1);
     markMenuDirty();
@@ -174,7 +236,7 @@ function removeMenuItemAt(cIdx, iIdx) {
 function addNewMenuItem() {
   if (activeCategoryIndex < 0 || !currentMenuData) return;
   syncMenuDataFromDOM();
-  currentMenuData[activeCategoryIndex].items.unshift({ name: "新項目", price: 0 });
+  currentMenuData[activeCategoryIndex].items.unshift({ name: t("newItemPlaceholder"), price: 0, badgeText: "" });
   markMenuDirty();
   renderMenuCategoryEditor(activeCategoryIndex);
   renderMenuCategories();
@@ -197,27 +259,38 @@ function syncMenuDataFromDOM() {
       currentMenuData[cIdx].items[iIdx].price = val;
     }
   });
+  document.querySelectorAll("#menu-editor-body input[data-badge-cidx]").forEach(inp => {
+    const cIdx = parseInt(inp.getAttribute("data-badge-cidx"), 10);
+    const iIdx = parseInt(inp.getAttribute("data-badge-iidx"), 10);
+    if (currentMenuData[cIdx] && currentMenuData[cIdx].items[iIdx]) {
+      currentMenuData[cIdx].items[iIdx].badgeText = inp.value.trim();
+    }
+  });
 }
 
 async function saveMenuData() {
   if (!currentMenuData) return;
-  if (!confirm("確定要儲存所有變更嗎？這會直接即時影響顧客端點餐頁面。")) return;
+  if (!confirm(t("confirmSaveMenu"))) return;
   syncMenuDataFromDOM();
 
-  // Convert back to Benmi object format
+  // Convert to rich item map format for API
   const output = {};
   currentMenuData.forEach(cat => {
     output[cat.id] = {};
     cat.items.forEach(item => {
       if (item.name && item.name.trim() !== "" && item.price !== null) {
-        output[cat.id][item.name.trim()] = item.price;
+        output[cat.id][item.name.trim()] = {
+          price: item.price,
+          badge_text: item.badgeText || null,
+          is_recommended: (item.badgeText && item.badgeText.includes('推薦')) || item.isRecommended ? 1 : 0
+        };
       }
     });
   });
 
   const btn = document.querySelector("#view-menu .btn-primary");
   const oldText = btn ? btn.innerText : "";
-  if (btn) { btn.innerText = "儲存中..."; btn.disabled = true; }
+  if (btn) { btn.innerText = t("menuSaving"); btn.disabled = true; }
 
   try {
     const res = await fetch(`${WORKER_BASE}/api/menu?tenant_id=${getTenantIdFromUrl()}`, {
@@ -227,41 +300,12 @@ async function saveMenuData() {
     });
     if (!res.ok) throw new Error("API returned " + res.status);
     clearMenuDirty();
-    alert("儲存成功！");
+    alert(t("menuSaveSuccess"));
     renderMenuCategories();
   } catch (e) {
-    alert("儲存失敗：" + e.message);
+    alert(t("menuSaveFail") + e.message);
   } finally {
-    if (btn) { btn.innerText = "Lưu thay đổi (Lưu Menu)"; btn.disabled = false; }
-  }
-}
-
-async function restoreDefaultMenu() {
-  if (!confirm("Bạn có chắc chắn muốn KHÔI PHỤC MENU về trạng thái gốc mặc định không? Tất cả các món bạn đã sửa sẽ bị ghi đè!")) return;
-
-  const DEFAULT_MENU = {
-    small: { "燒肉": 56, "火腿": 56, "雞肉": 68, "烤肉": 72, "雙層烤肉": 78, "綜合": 79 },
-    large: { "燒肉": 80, "火腿": 80, "雞肉": 100, "烤肉": 105, "雙層烤肉": 115, "綜合": 130 },
-    combo: {
-      "1 大燒肉+飲料": 90, "2 大火腿+飲料": 90, "3 大雞肉+飲料": 118, "4 大烤肉+飲料": 128,
-      "5 大雙層烤肉+飲料": 135, "6 大綜合+飲料": 142, "7 小燒肉+飲料": 77, "8 小雞肉+飲料": 88,
-      "9 小烤肉+飲料": 95, "10 小雙層烤肉+飲料": 99, "11 小綜合+飲料": 100
-    },
-    drinks: { "越南咖啡": 48, "豆漿": 37, "紅茶": 37, "可樂": 37, "雪碧": 37 },
-    topping: { "起司": 15, "火腿": 20, "燒肉": 20, "烤肉": 25, "雞肉": 25 }
-  };
-
-  try {
-    const res = await fetch(`${WORKER_BASE}/api/menu?tenant_id=${getTenantIdFromUrl()}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(DEFAULT_MENU)
-    });
-    if (!res.ok) throw new Error("API returned " + res.status);
-    alert("Đã khôi phục menu gốc thành công!");
-    loadMenuData(); // Reload from server
-  } catch (e) {
-    alert("Lỗi khi khôi phục menu: " + e.message);
+    if (btn) { btn.innerText = t("btnMenuSave"); btn.disabled = false; }
   }
 }
 
@@ -270,10 +314,10 @@ let currentImageItemName = null;
 
 async function openImageModal(categoryId, itemName) {
   currentImageItemName = `${categoryId}_${itemName}`;
-  document.getElementById("image-modal-title").innerText = `Ảnh: ${itemName}`;
+  document.getElementById("image-modal-title").innerText = t("imageModalItem", { name: itemName });
   document.getElementById("image-preview").style.display = "none";
   document.getElementById("btn-delete-image").style.display = "none";
-  document.getElementById("image-status").innerText = "Đang kiểm tra ảnh...";
+  document.getElementById("image-status").innerText = t("imageChecking");
 
   document.getElementById("imageModal").style.display = "flex";
 
@@ -281,17 +325,19 @@ async function openImageModal(categoryId, itemName) {
     const res = await fetch(`${WORKER_BASE}/api/image_list?tenant_id=${getTenantIdFromUrl()}&_t=${Date.now()}`);
     if (res.ok) {
       const list = await res.json();
-      if (list.includes(currentImageItemName)) {
-        document.getElementById("image-preview").src = `${WORKER_BASE}/api/image?tenant_id=${getTenantIdFromUrl()}&name=${encodeURIComponent(currentImageItemName)}&_t=${Date.now()}`;
+      const hasImg = list.includes(currentImageItemName) || list.includes(itemName);
+      if (hasImg) {
+        const resolvedName = list.includes(currentImageItemName) ? currentImageItemName : itemName;
+        document.getElementById("image-preview").src = `${WORKER_BASE}/api/image?tenant_id=${getTenantIdFromUrl()}&name=${encodeURIComponent(resolvedName)}&_t=${Date.now()}`;
         document.getElementById("image-preview").style.display = "block";
         document.getElementById("btn-delete-image").style.display = "block";
-        document.getElementById("image-status").innerText = "Món này đã có ảnh";
+        document.getElementById("image-status").innerText = t("imageHasImage");
       } else {
-        document.getElementById("image-status").innerText = "Món này chưa có ảnh";
+        document.getElementById("image-status").innerText = t("imageNoImage");
       }
     }
   } catch (e) {
-    document.getElementById("image-status").innerText = "Lỗi khi tải ảnh";
+    document.getElementById("image-status").innerText = t("imageLoadFail");
   }
 }
 
@@ -338,7 +384,7 @@ function handleImageSelect(event) {
 }
 
 async function uploadImage(dataUri) {
-  document.getElementById("image-status").innerText = "Đang tải ảnh lên...";
+  document.getElementById("image-status").innerText = t("imageUploading");
   try {
     const res = await fetch(`${WORKER_BASE}/api/image?tenant_id=${getTenantIdFromUrl()}`, {
       method: "POST",
@@ -350,29 +396,38 @@ async function uploadImage(dataUri) {
     document.getElementById("image-preview").src = dataUri;
     document.getElementById("image-preview").style.display = "block";
     document.getElementById("btn-delete-image").style.display = "block";
-    document.getElementById("image-status").innerText = "Tải ảnh thành công!";
+    document.getElementById("image-status").innerText = t("imageUploadSuccess");
   } catch (e) {
-    alert("Lỗi tải ảnh: " + e.message);
-    document.getElementById("image-status").innerText = "Lỗi khi tải ảnh";
+    alert(t("imageUploadFail") + e.message);
+    document.getElementById("image-status").innerText = t("imageLoadFail");
   }
 }
 
 async function deleteItemImage() {
-  if (!confirm("Bạn có chắc muốn xóa ảnh này?")) return;
-  document.getElementById("image-status").innerText = "Đang xóa ảnh...";
+  if (!confirm(t("confirmDeleteImage"))) return;
+  const statusEl = document.getElementById("image-status");
+  const previewEl = document.getElementById("image-preview");
+  const deleteBtn = document.getElementById("btn-delete-image");
+
+  if (statusEl) statusEl.innerText = t("imageDeleting");
   try {
-    const res = await fetch(`${WORKER_BASE}/api/image?tenant_id=${getTenantIdFromUrl()}`, {
+    const tenantId = getTenantIdFromUrl();
+    const res = await fetch(`${WORKER_BASE}/api/image?tenant_id=${tenantId}`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: currentImageItemName })
     });
     if (!res.ok) throw new Error("Delete failed");
 
-    document.getElementById("image-preview").style.display = "none";
-    document.getElementById("btn-delete-image").style.display = "none";
-    document.getElementById("image-status").innerText = "Món này chưa có ảnh";
+    if (previewEl) {
+      previewEl.src = "";
+      previewEl.style.display = "none";
+    }
+    if (deleteBtn) deleteBtn.style.display = "none";
+    if (statusEl) statusEl.innerText = t("imageNoImage");
   } catch (e) {
-    alert("Lỗi xóa ảnh: " + e.message);
+    alert(t("imageDeleteFail") + e.message);
+    if (statusEl) statusEl.innerText = t("imageLoadFail");
   }
 }
 
@@ -381,14 +436,14 @@ let currentStockCidx = null;
 let currentStockIidx = null;
 
 function openStockModal(cIdx, iIdx) {
-  // Lưu lại các thay đổi người dùng đang nhập dở trên input
+  // Sync changes currently typed in DOM
   syncMenuDataFromDOM();
 
   currentStockCidx = cIdx;
   currentStockIidx = iIdx;
 
   const item = currentMenuData[cIdx].items[iIdx];
-  document.getElementById("stock-modal-title").innerText = `Kho hàng: ${item.name}`;
+  document.getElementById("stock-modal-title").innerText = t("stockModalItem", { name: item.name });
 
   // Set values
   const statusSelect = document.getElementById("stock-status-select");
@@ -435,7 +490,7 @@ function handleStockDurationChange() {
 async function saveStockStatus() {
   if (currentStockCidx === null || currentStockIidx === null) return;
 
-  // Đồng bộ dữ liệu hiện tại từ DOM
+  // Sync current data from DOM
   syncMenuDataFromDOM();
 
   const categorySlug = currentMenuData[currentStockCidx].id;
@@ -445,7 +500,7 @@ async function saveStockStatus() {
   const untilDate = document.getElementById("oos-until-date").value;
 
   if (status === "out_of_stock" && duration === "multiple_days" && !untilDate) {
-    alert("Vui lòng chọn ngày khôi phục bán!");
+    alert(t("alertSelectOosDate"));
     return;
   }
 
@@ -469,13 +524,13 @@ async function saveStockStatus() {
       throw new Error(errData.error || "Update failed");
     }
 
-    // Cập nhật local state
+    // Update local state
     item.isOos = (status === "out_of_stock");
 
     const targetCidx = currentStockCidx;
     closeStockModal();
     renderMenuCategoryEditor(targetCidx);
   } catch (e) {
-    alert("Lỗi cập nhật trạng thái kho: " + e.message);
+    alert(t("stockUpdateFail") + e.message);
   }
 }

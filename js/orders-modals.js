@@ -76,20 +76,20 @@ function selectRejectReason(val) {
 
 function getOrderBaseTime() {
   const now = new Date();
-  let orderDate = new Date();
-  let hasOrderTime = false;
   if (reviewingOrder?.time) {
-    const match = String(reviewingOrder.time).match(/(\d{1,2}):(\d{2})/);
-    if (match) {
-      const h = parseInt(match[1], 10);
-      const m = parseInt(match[2], 10);
+    const timeStr = String(reviewingOrder.time);
+    const dateMatch = timeStr.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+    const timeMatch = timeStr.match(/(\d{1,2}):(\d{2})/);
+    if (timeMatch) {
+      const h = parseInt(timeMatch[1], 10);
+      const m = parseInt(timeMatch[2], 10);
+      const orderDate = new Date();
+      if (dateMatch) {
+        orderDate.setFullYear(parseInt(dateMatch[1], 10), parseInt(dateMatch[2], 10) - 1, parseInt(dateMatch[3], 10));
+      }
       orderDate.setHours(h, m, 0, 0);
-      hasOrderTime = true;
+      return orderDate;
     }
-  }
-  // Base time is max of (orderTime, now)
-  if (hasOrderTime && orderDate.getTime() > now.getTime()) {
-    return orderDate;
   }
   return now;
 }
@@ -104,7 +104,7 @@ function renderTimePresets() {
   const baseTime = getOrderBaseTime();
   const origTimeEl = document.getElementById("change-orig-time-val");
   if (origTimeEl) {
-    origTimeEl.innerText = reviewingOrder?.time || formatTimeHHMM(baseTime);
+    origTimeEl.innerText = formatTimeHHMM(baseTime);
   }
 
   const presetMinutes = [5, 10, 15, 20, 30, 45];
@@ -133,19 +133,17 @@ function applyTimePreset(minutes) {
 function adjustTimeMinutes(deltaMinutes) {
   const noteEl = document.getElementById("change-note");
   if (!noteEl) return;
-  let curr = new Date();
+  const baseTime = getOrderBaseTime();
+  let curr = new Date(baseTime.getTime());
   const match = String(noteEl.value).match(/(\d{1,2}):(\d{2})/);
   if (match) {
     curr.setHours(parseInt(match[1], 10), parseInt(match[2], 10), 0, 0);
-  } else {
-    curr = getOrderBaseTime();
   }
   const target = new Date(curr.getTime() + deltaMinutes * 60000);
   const targetStr = formatTimeHHMM(target);
   noteEl.value = targetStr;
 
   // Check if targetStr matches any preset card
-  const baseTime = getOrderBaseTime();
   const diffMins = Math.round((target.getTime() - baseTime.getTime()) / 60000);
   document.querySelectorAll(".preset-card").forEach(card => {
     card.classList.toggle("active", parseInt(card.dataset.mins, 10) === diffMins);
@@ -165,6 +163,95 @@ function updateChangeSubmitButton(timeStr) {
   }
 }
 
+let tenantMenuItemsCache = null;
+
+async function fetchTenantMenuItems() {
+  if (tenantMenuItemsCache && tenantMenuItemsCache.length > 0) {
+    return tenantMenuItemsCache;
+  }
+  const tenantId = getTenantIdFromUrl();
+  try {
+    const res = await fetch(`${WORKER_BASE}/api/tenant/bootstrap?tenant_id=${tenantId}&_t=${Date.now()}`);
+    if (res.ok) {
+      const data = await res.json();
+      const itemsMap = new Map();
+
+      const catalogList = Array.isArray(data.catalog) ? data.catalog : (Array.isArray(data.categories) ? data.categories : []);
+      catalogList.forEach(cat => {
+        if (Array.isArray(cat.items)) {
+          cat.items.forEach(item => {
+            if (item && item.name && !itemsMap.has(item.name)) {
+              itemsMap.set(item.name, {
+                name: item.name,
+                category: cat.name || cat.title || ""
+              });
+            }
+          });
+        }
+      });
+
+      if (Array.isArray(data.items)) {
+        data.items.forEach(item => {
+          if (item && item.name && !itemsMap.has(item.name)) {
+            itemsMap.set(item.name, {
+              name: item.name,
+              category: ""
+            });
+          }
+        });
+      }
+
+      if (itemsMap.size > 0) {
+        tenantMenuItemsCache = Array.from(itemsMap.values());
+        return tenantMenuItemsCache;
+      }
+    }
+  } catch (e) {
+    console.warn("[SoldOutGrid] fetchTenantMenuItems error:", e);
+  }
+
+  return [];
+}
+
+async function renderSoldOutItemsGrid(order = null) {
+  const grid = document.getElementById("change-soldout-grid");
+  if (!grid) return;
+
+  const menuItems = await fetchTenantMenuItems();
+  if (!menuItems || menuItems.length === 0) {
+    grid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; color: #9ca3af; padding: 16px;">(尚無菜單品項)</div>`;
+    return;
+  }
+
+  // Detect ordered items from reviewingOrder if available
+  const orderItemNames = new Set();
+  if (order && order.content) {
+    menuItems.forEach(item => {
+      if (order.content.includes(item.name)) {
+        orderItemNames.add(item.name);
+      }
+    });
+  }
+
+  // Sort items: items appearing in current order come first
+  const sortedItems = [...menuItems].sort((a, b) => {
+    const aInOrder = orderItemNames.has(a.name) ? 1 : 0;
+    const bInOrder = orderItemNames.has(b.name) ? 1 : 0;
+    return bInOrder - aInOrder;
+  });
+
+  grid.innerHTML = sortedItems.map(item => {
+    const isInOrder = orderItemNames.has(item.name);
+    const badgeHtml = isInOrder ? `<span style="font-size: 11px; background: #fef3c7; color: #92400e; padding: 2px 6px; border-radius: 4px; font-weight: 800; margin-left: 4px;">本單</span>` : '';
+    return `
+      <label class="checkbox-card" style="${isInOrder ? 'border-color: #f59e0b; background: #fffdf5;' : ''}">
+        <input type="checkbox" value="${escapeHtml(item.name)}" class="sold-item">
+        <span>${escapeHtml(item.name)}</span>${badgeHtml}
+      </label>
+    `;
+  }).join("");
+}
+
 function clearSoldOutItems() {
   const checkboxes = document.querySelectorAll(".sold-item");
   if (checkboxes) checkboxes.forEach(cb => cb.checked = false);
@@ -178,6 +265,7 @@ function reviewOpenChange() {
   reviewingOrder = savedOrder;
   currentOrderKey = savedKey;           // Restore after closeModal
   document.getElementById("change-reason").value = "時間需調整";
+  renderSoldOutItemsGrid(savedOrder);
   clearSoldOutItems();
   onChangeReasonChange();
   renderTimePresets();
@@ -214,8 +302,12 @@ function onChangeReasonChange() {
     if (itemsDiv) itemsDiv.style.display = "block";
     if (tabTime) tabTime.classList.remove("active");
     if (tabSold) tabSold.classList.add("active");
+    renderSoldOutItemsGrid(reviewingOrder);
   }
 }
+
+// Pre-fetch menu items for instant modal responsiveness
+fetchTenantMenuItems();
 
 async function confirmAction(type, btn) {
   const key = currentOrderKey;
