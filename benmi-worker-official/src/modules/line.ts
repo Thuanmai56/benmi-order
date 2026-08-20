@@ -12,6 +12,9 @@ async function getLineToken(env: Env, tenantCtx?: TenantContext | null): Promise
   if (tenantCtx?.lineChannelToken) {
     return tenantCtx.lineChannelToken;
   }
+  if (tenantCtx?.tenantId === 'jidangaodashu' && env.LINE_CHANNEL_TOKEN_BLAB) {
+    return await resolveSecret(env.LINE_CHANNEL_TOKEN_BLAB);
+  }
   return await resolveSecret(env.LINE_CHANNEL_TOKEN);
 }
 
