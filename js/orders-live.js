@@ -25,26 +25,26 @@ function renderListLeft(orders) {
 
     if (isNew) {
       badge = `<span class="badge new">${t('badgeNew')}</span>`;
-      rightActions = `<button class="btn btn-ghost btn-block" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">${t('btnReview')}</button>`;
+      rightActions = `<button class="btn btn-ghost tile-action-btn" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">${t('btnReview')}</button>`;
     } else if (order.status === "ACCEPTED") {
       badge = `<span class="badge wait">${t('badgeDoing')}</span>`;
-      rightActions = `<button class="btn btn-primary btn-block" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','DONE', {}, this)">${t('btnReady')}</button>`;
+      rightActions = `<button class="btn btn-primary tile-action-btn" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','DONE', {}, this)">${t('btnReady')}</button>`;
     } else {
       badge = `<span class="badge wait" style="background:#e5e7eb; color:#4b5563;">${t('badgeWaiting')}</span>`;
-      rightActions = `<button class="btn btn-block" style="background:#f3f4f6; color:#9ca3af; cursor:not-allowed;" disabled>${t('btnWaitingReply')}</button>`;
+      rightActions = `<button class="btn tile-action-btn" style="background:#f3f4f6; color:#9ca3af; cursor:not-allowed;" disabled>${t('btnWaitingReply')}</button>`;
     }
 
     tile.innerHTML = `
-      <div>
+      <div class="tile-info">
         <div class="tile-top">
           <span class="tile-customer">${escapeHtml(order.customer || t('defaultCustomer'))}</span>
           ${badge}
-          <span class="tile-meta">#${escapeHtml(order.key)}</span>
+          <span class="tile-meta tile-order-key">#${escapeHtml(order.key)}</span>
         </div>
-        <div class="tile-top" style="margin-top: 6px;">
-          <span class="tile-meta">${t('pickupLabel')} ${escapeHtml(formatPickupTimeDisplay(order.time))}</span>
-          ${totalFormatted !== '-' ? `<span class="tile-meta" style="color: var(--primary); font-weight: 1000;">${escapeHtml(totalFormatted)}</span>` : ''}
-          <span class="tile-meta" style="color: var(--brand-red); font-weight: 1100;">${escapeHtml(eta)}</span>
+        <div class="tile-meta-row">
+          <span class="tile-meta-tag"><span style="color:var(--muted);">🕒</span> ${escapeHtml(formatPickupTimeDisplay(order.time))}</span>
+          ${totalFormatted !== '-' ? `<span class="tile-meta-tag tile-price">${escapeHtml(totalFormatted)}</span>` : ''}
+          <span class="tile-meta-tag tile-eta">${escapeHtml(eta)}</span>
         </div>
         <div class="tile-items">${escapeHtml(shortItems(order.content))}</div>
       </div>
@@ -74,21 +74,21 @@ function renderListRight(orders) {
     tile.onclick = () => openReview(order.key);
 
     tile.innerHTML = `
-      <div>
+      <div class="tile-info">
         <div class="tile-top">
           <span class="tile-customer">${escapeHtml(order.customer || t('defaultCustomer'))}</span>
           <span class="badge done">${t('badgeReady')}</span>
-          <span class="tile-meta">#${escapeHtml(order.key)}</span>
+          <span class="tile-meta tile-order-key">#${escapeHtml(order.key)}</span>
         </div>
-        <div class="tile-top" style="margin-top: 6px;">
-          <span class="tile-meta">${t('pickupLabel')} ${escapeHtml(formatPickupTimeDisplay(order.time))}</span>
-          ${totalFormatted !== '-' ? `<span class="tile-meta" style="color: var(--primary); font-weight: 1000;">${escapeHtml(totalFormatted)}</span>` : ''}
-          <span class="tile-meta" style="color: var(--brand-red); font-weight: 1100;">${escapeHtml(eta)}</span>
+        <div class="tile-meta-row">
+          <span class="tile-meta-tag"><span style="color:var(--muted);">🕒</span> ${escapeHtml(formatPickupTimeDisplay(order.time))}</span>
+          ${totalFormatted !== '-' ? `<span class="tile-meta-tag tile-price">${escapeHtml(totalFormatted)}</span>` : ''}
+          <span class="tile-meta-tag tile-eta">${escapeHtml(eta)}</span>
         </div>
         <div class="tile-items">${escapeHtml(shortItems(order.content))}</div>
       </div>
       <div class="tile-actions">
-        <button class="btn btn-yellow btn-block" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','PICKED_UP', {}, this)">${t('btnPickedUp')}</button>
+        <button class="btn btn-yellow tile-action-btn" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','PICKED_UP', {}, this)">${t('btnPickedUp')}</button>
       </div>
     `;
     container.appendChild(tile);

@@ -141,7 +141,27 @@ function shortItems(content) {
 
 function formatPickupTimeDisplay(timeStr) {
   if (!timeStr) return "-";
-  return String(timeStr).replace(/\s*\([^)]*\)/g, '').trim() || "-";
+  const clean = String(timeStr).replace(/\s*\([^)]*\)/g, '').trim();
+  if (!clean) return "-";
+  
+  // If format is "YYYY-MM-DD HH:mm", check if YYYY-MM-DD is today in Taiwan time
+  const m = clean.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{1,2}:\d{2})$/);
+  if (m) {
+    const today = new Date();
+    const twDate = new Date(today.getTime() + 8 * 3600000);
+    const twY = twDate.getUTCFullYear();
+    const twM = String(twDate.getUTCMonth() + 1).padStart(2, "0");
+    const twD = String(twDate.getUTCDate()).padStart(2, "0");
+    const datePart = `${m[1]}-${m[2]}-${m[3]}`;
+    const todayPart = `${twY}-${twM}-${twD}`;
+    
+    if (datePart === todayPart) {
+      return m[4];
+    } else {
+      return `${m[2]}/${m[3]} ${m[4]}`;
+    }
+  }
+  return clean;
 }
 
 function formatOrderTotal(order) {

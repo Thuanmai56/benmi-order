@@ -221,23 +221,40 @@ body {
 }
 
 .panel-header {
-  padding: 16px 18px;
+  padding: 12px 16px;
   border-bottom: 1px solid #eee;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
+}
+
+.panel-header-title-group {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .panel-title {
   font-weight: 1100;
-  font-size: 20px;
+  font-size: 18px;
+  white-space: nowrap;
 }
 
 .panel-sub {
   color: var(--muted);
-  font-size: 14px;
-  font-weight: 900;
-  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.panel-sub-inline {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .panel-body {
@@ -246,16 +263,16 @@ body {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .badge {
   display: inline-flex;
   align-items: center;
-  padding: 6px 12px;
+  padding: 5px 10px;
   border-radius: 999px;
-  font-size: 14px;
-  font-weight: 1100;
+  font-size: 13.5px;
+  font-weight: 1000;
   background: #f3f4f6;
   color: #111827;
 }
@@ -277,45 +294,90 @@ body {
 
 .tile {
   border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 16px;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 14px;
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
   cursor: pointer;
   background: #fff;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.tile:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
 }
 
 .tile.new {
-  border-color: rgba(211, 47, 47, 0.35);
-  box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.08) inset;
+  border-color: rgba(211, 47, 47, 0.4);
+  box-shadow: 0 0 0 2px rgba(211, 47, 47, 0.1) inset;
+  background: #fffafa;
+}
+
+.tile-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .tile-top {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px 12px;
-  align-items: baseline;
+  gap: 6px 8px;
+  align-items: center;
 }
 
 .tile-customer {
-  font-weight: 1100;
-  font-size: 18px;
+  font-weight: 1000;
+  font-size: 17px;
+  color: #0f172a;
 }
 
-.tile-meta {
-  color: var(--muted);
-  font-size: 14px;
-  font-weight: 900;
+.tile-order-key {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 800;
+  font-family: ui-monospace, monospace;
+}
+
+.tile-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.tile-meta-tag {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #334155;
+}
+
+.tile-price {
+  color: var(--primary);
+  font-weight: 1000;
+  font-size: 14.5px;
+}
+
+.tile-eta {
+  color: var(--brand-red);
+  font-weight: 1000;
+  font-size: 13.5px;
 }
 
 .tile-items {
-  margin-top: 8px;
-  color: #111827;
-  font-size: 16px;
-  line-height: 1.45;
+  margin-top: 6px;
+  color: #1e293b;
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1.4;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
   white-space: pre-line;
@@ -324,17 +386,35 @@ body {
 .tile-actions {
   display: flex;
   flex-direction: column;
-  gap: 10px;
   justify-content: center;
-  min-width: 180px;
+  align-items: center;
+  flex-shrink: 0;
+  min-width: 105px;
+  max-width: 115px;
+}
+
+.tile-action-btn {
+  width: 100%;
+  padding: 12px 10px;
+  border-radius: 10px;
+  font-size: 14.5px;
+  font-weight: 900;
+  text-align: center;
+  justify-content: center;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.tile-action-btn:active {
+  transform: scale(0.96);
 }
 
 .btn {
   border: none;
-  padding: 14px 16px;
-  border-radius: 14px;
-  font-weight: 1100;
-  font-size: 17px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-weight: 1000;
+  font-size: 16px;
   cursor: pointer;
   transition: transform 0.05s ease, opacity 0.2s ease;
   display: inline-flex;
@@ -958,7 +1038,7 @@ body {
   }
 
   .tile-actions {
-    min-width: 140px;
+    min-width: 100px;
   }
 
   .change-type-tabs {
