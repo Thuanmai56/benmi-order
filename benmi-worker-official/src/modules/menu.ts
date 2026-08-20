@@ -230,7 +230,7 @@ export async function updateStockStatus(request: Request, env: Env): Promise<Res
 async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<void> {
   // 1. Nạp danh mục và món ăn hiện có để ánh xạ ID tránh xung đột unique
   const { results: existingCats } = await env.DB.prepare(
-    "SELECT id, slug FROM menu_categories WHERE tenant_id = ?"
+    "SELECT id, slug, name FROM menu_categories WHERE tenant_id = ?"
   ).bind(tenantId).all();
 
   const { results: existingItems } = await env.DB.prepare(
@@ -238,8 +238,10 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
   ).bind(tenantId).all();
 
   const catIdMap = new Map<string, string>();
+  const catNameMap = new Map<string, string>();
   for (const cat of (existingCats || [])) {
     catIdMap.set(cat.slug as string, cat.id as string);
+    if (cat.name) catNameMap.set(cat.slug as string, cat.name as string);
   }
 
   const itemIdMap = new Map<string, string>();
@@ -248,12 +250,16 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
   }
 
   const statements: any[] = [];
-  const defaultCategoryNames: Record<string, string> = {
-    small: "Kích thước Nhỏ",
-    large: "Kích thước Lớn",
-    combo: "Set Combo",
-    drinks: "Đồ uống",
-    topping: "Topping thêm"
+  const defaultCategoryNamesZh: Record<string, string> = {
+    main: "招牌炸蛋蔥餅",
+    spicy: "加辣選項",
+    egg: "雞蛋選項",
+    lettuce: "生菜選項",
+    topping: "加料選項",
+    small: "🥖 小麵包",
+    large: "🍔 大麵包",
+    combo: "🎁 特惠套餐 (含飲料)",
+    drinks: "🥤 單點飲料"
   };
 
   const activeCategoryIds: string[] = [];
@@ -267,12 +273,12 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
     }
     activeCategoryIds.push(catId);
 
-    const catName = defaultCategoryNames[slug] || (slug.charAt(0).toUpperCase() + slug.slice(1));
+    const catName = catNameMap.get(slug) || defaultCategoryNamesZh[slug] || slug;
     statements.push(
       env.DB.prepare(
         `INSERT INTO menu_categories (id, tenant_id, name, slug, sort_order)
          VALUES (?, ?, ?, ?, ?)
-         ON CONFLICT(id) DO UPDATE SET name = excluded.name, sort_order = excluded.sort_order`
+         ON CONFLICT(id) DO UPDATE SET sort_order = excluded.sort_order`
       ).bind(catId, tenantId, catName, slug, catSortOrder++)
     );
 
