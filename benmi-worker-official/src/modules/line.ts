@@ -159,6 +159,8 @@ export async function replyLineFlexMessage(
 
 export function buildOrderFlexMessage(order: Order, tenantCtx?: TenantContext | null): any {
   const brandColor = tenantCtx?.brandColor || "#00b900";
+  const isScheduled = tenantCtx?.allowScheduledPickup !== false;
+  const timeLabel = isScheduled ? "🕒 取餐時間：" : "🕒 訂餐時間：";
 
   const contentLines = (order.content || "").split("\n").filter(l => l.trim().length > 0);
   const contentComponents = contentLines.slice(0, 50).map(line => ({
@@ -220,7 +222,7 @@ export function buildOrderFlexMessage(order: Order, tenantCtx?: TenantContext | 
           type: "box",
           layout: "horizontal",
           contents: [
-            { type: "text", text: "🕒 取餐時間：", size: "sm", color: "#666666", flex: 0 },
+            { type: "text", text: timeLabel, size: "sm", color: "#666666", flex: 0 },
             { type: "text", text: String(order.time || "").replace(/\s*\([^)]*\)/g, '').trim(), size: "sm", weight: "bold", color: "#111111", align: "end", flex: 1, wrap: true }
           ]
         },
@@ -258,6 +260,8 @@ export function buildOrderFlexMessage(order: Order, tenantCtx?: TenantContext | 
 
 export function buildProgressFlexMessage(order: Order, queueAheadCount: number, tenantCtx?: TenantContext | null): any {
   const brandColor = tenantCtx?.brandColor || "#00b900";
+  const isScheduled = tenantCtx?.allowScheduledPickup !== false;
+  const timeLabel = isScheduled ? "🕒 取餐時間：" : "🕒 訂餐時間：";
 
   let statusTitle = "訂單已成功送出";
   let statusBadgeColor = "#10b981";
@@ -345,7 +349,7 @@ export function buildProgressFlexMessage(order: Order, queueAheadCount: number, 
           type: "box",
           layout: "horizontal",
           contents: [
-            { type: "text", text: "🕒 取餐時間：", size: "sm", color: "#6b7280", flex: 0 },
+            { type: "text", text: timeLabel, size: "sm", color: "#6b7280", flex: 0 },
             { type: "text", text: String(order.time || "").replace(/\s*\([^)]*\)/g, '').trim(), size: "sm", weight: "bold", color: "#111827", align: "end", flex: 1, wrap: true }
           ]
         }
