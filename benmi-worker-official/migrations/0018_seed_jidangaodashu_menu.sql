@@ -31,8 +31,8 @@ INSERT OR REPLACE INTO tenant_config (
     'zh-TW',
     0,
     'open',
-    '2009560906-c5taZfiY',
-    'https://liff.line.me/2009560906-c5taZfiY',
+    '2009555608-DMioljsI',
+    'https://liff.line.me/2009555608-DMioljsI',
     1
 );
 
