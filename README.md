@@ -1,53 +1,43 @@
-# Guideline Phát Triển & Quy Trình Deploy - Bánh Mì Order (Benmi)
+# Benmi & Multi-Tenant Order Platform Architecture & Deployment Guide
 
-Tài liệu này hướng dẫn chi tiết về cấu trúc hệ thống và quy trình triển khai (deploy) ứng dụng đặt bánh mì Benmi. Mục đích của guideline này là giúp các thành viên (kể cả không có chuyên môn sâu về kỹ thuật) có thể thực hiện deploy mà không bị nhầm lẫn giữa môi trường **Test** và **Production**.
+Tài liệu này mô tả chi tiết kiến trúc đa môi trường (**STAGING / TEST** và **PRODUCTION**), cấu trúc multi-tenant, cơ chế tự động nhận diện biến môi trường (Zero Manual Hardcode Config), và quy trình deploy cho hệ thống đặt món qua LINE LIFF & POS Dashboard.
 
 ---
 
-## 1. Cấu Trúc Deploy Hệ Thống (System Overview)
+## 1. Kiến Trúc Tổng Quan (System Architecture)
 
-Hệ thống của chúng ta gồm 3 thành phần chính:
-1. **FrontEnd (Trang web giao diện):**
-   * `index.html`: Trang bán hàng dành cho Khách hàng (Customer) để đặt món qua LINE LIFF.
-   * `orders.html`: Trang nhận và xác nhận đơn hàng dành cho Nhân viên (Staff).
-   * **Cách deploy:** Tự động thông qua liên kết giữa GitHub và Cloudflare Pages.
-2. **BackEnd (API và xử lý dữ liệu):**
-   * `benmi-worker-official/src/worker.js`: Cloudflare Worker cung cấp API cho FrontEnd và tiếp nhận Webhook từ LINE.
-   * **Cách deploy:** Thủ công (Manual) bằng cách copy-paste mã nguồn trực tiếp vào Cloudflare Web Dashboard.
-3. **Database (Lưu trữ):**
-   * Cloudflare KV (`ORDER_STATE`): Lưu trữ thực đơn (menu), trạng thái đơn hàng, và cấu hình cửa hàng.
-
-### Sơ đồ thành phần (Component Diagram)
+Hệ thống bao gồm 2 tầng chính:
+- **FrontEnd (Cloudflare Pages):** Gồm trang đặt món khách hàng (`index.html`) và Bảng quản lý đơn hàng POS (`orders.html`), phân tách logic thành các module JS tinh gọn (`js/client-checkout.js`, `js/orders-core.js`, `js/orders-live.js`, `js/orders-menu.js`, v.v.).
+- **BackEnd (Cloudflare Workers, D1 & KV):** Xử lý API, xác thực LINE Webhook, đồng bộ đơn hàng theo thời gian thực (ETag & Cache Optimization) và quản lý cấu hình từng quán (Multi-tenant).
 
 ```mermaid
 graph TD
     subgraph github ["GitHub Repo: benmi-order"]
-        BranchTest["Branch: test"]
+        BranchStaging["Branch: staging / test"]
         BranchMain["Branch: main"]
     end
 
-    subgraph pages ["Cloudflare Pages (chung 1 cụm):<br>benmi-order.pages.dev"]
-        SubTest["Subdomain TEST:<br>test.benmi-order.pages.dev"]
-        SubProd["Domain PROD:<br>benmi-order.pages.dev"]
+    subgraph pages ["Cloudflare Pages (benmi-order.pages.dev)"]
+        SubTest["Môi trường TEST:<br>test.benmi-order.pages.dev"]
+        SubProd["Môi trường PRODUCTION:<br>benmi-order.pages.dev"]
     end
 
-    BranchTest -- "auto deploy" --> SubTest
+    BranchStaging -- "auto deploy" --> SubTest
     BranchMain -- "auto deploy" --> SubProd
 
-    subgraph test_env ["Môi trường TEST"]
+    subgraph test_env ["Môi trường TEST / STAGING"]
         A1[LINE Account Test] <--> SubTest
-        SubTest <--> C1["Worker TEST:<br>spring-smoke-46ba.thuanmnc.workers.dev"]
-        C1 <--> D1[("KV TEST:<br>ORDER_STATE")]
+        SubTest <--> C1["Worker STAGING:<br>platform-worker-staging.thuanmnc.workers.dev"]
+        C1 <--> D1_DB[("D1 DB: blab-db-test")]
+        C1 <--> KV1[("KV: ORDER_STATE (test)")]
     end
 
     subgraph prod_env ["Môi trường PRODUCTION"]
-        A2[LINE Account Product] <--> SubProd
-        SubProd <--> C2["Worker PROD:<br>benmi-worker-official.thuanmnc.workers.dev"]
-        C2 <--> D2[("KV PROD:<br>ORDER_STATE")]
+        A2[LINE Account Production] <--> SubProd
+        SubProd <--> C2["Worker PRODUCTION:<br>benmi-worker-official.thuanmnc.workers.dev"]
+        C2 <--> D2_DB[("D1 DB: blab-db-production")]
+        C2 <--> KV2[("KV: ORDER_STATE (prod)")]
     end
-
-    BranchTest -- "auto deploy (Workers Builds)" --> C1
-    BranchMain -. "copy-paste thủ công" .-> C2
 
     style github fill:#f5f5f5,stroke:#333,stroke-width:2px
     style pages fill:#fff3e0,stroke:#e65100,stroke-width:2px
@@ -57,113 +47,75 @@ graph TD
 
 ---
 
-## 2. Bảng Tra Cứu Giá Trị Môi Trường (Environment Quick Reference)
+## 2. Bảng Tra Cứu Môi Trường & Tự Động Nhận Diện
 
-Các biến môi trường như `WORKER_BASE` và `LIFFID` hiện đang được **hardcode** (ghi trực tiếp) trong code FrontEnd. Khi deploy lên môi trường nào, bạn cần đảm bảo sửa các giá trị này cho đúng.
+Hệ thống sử dụng cơ chế **Tự động nhận diện môi trường (Dynamic Environment Resolution)**, lập trình viên và quản trị viên **không cần chỉnh sửa hardcode bất kỳ biến nào trong code** khi chuyển đổi giữa Staging và Production.
 
-| Tên biến & File cần sửa | Môi trường TEST | Môi trường PRODUCTION |
+| Thông số | Môi trường TEST / STAGING | Môi trường PRODUCTION |
 | :--- | :--- | :--- |
-| **WORKER_BASE**<br>*(trong `index.html` & `orders.html`)* | `https://spring-smoke-46ba.thuanmnc.workers.dev` | `https://benmi-worker-official.thuanmnc.workers.dev` |
-| **liffId**<br>*(trong `index.html`)* | `2009555608-DMioljsI` | `2009560906-c5taZfiY` |
-| **Branch trên GitHub** | `test` | `main` |
-| **Domain FrontEnd tương ứng** | [test.benmi-order.pages.dev](https://test.benmi-order.pages.dev) | [benmi-order.pages.dev](https://benmi-order.pages.dev) |
+| **Domain FrontEnd** | [test.benmi-order.pages.dev](https://test.benmi-order.pages.dev) | [benmi-order.pages.dev](https://benmi-order.pages.dev) |
+| **Worker API URL (`WORKER_BASE`)** | `https://platform-worker-staging.thuanmnc.workers.dev` | `https://benmi-worker-official.thuanmnc.workers.dev` |
+| **Default Fallback LIFF ID** | `2009555608-DMioljsI` | `2009560906-c5taZfiY` |
+| **Cơ sở dữ liệu D1** | `blab-db-test` | `blab-db-production` |
+| **Branch GitHub tương ứng** | `staging` / `test` | `main` |
+
+### Cơ chế Tự Động:
+1. **`WORKER_BASE`**: Tự động trỏ sang `platform-worker-staging` khi chạy trên `localhost`, `127.0.0.1`, hoặc domain có chứa `staging`/`test`. Ngược lại tự động trỏ về `benmi-worker-official` trên Production.
+2. **`liffId`**: Được nạp động trực tiếp từ cấu hình của từng tenant (`tenant_config` / `/api/tenant/bootstrap`). Nếu chưa có, tự động dùng fallback LIFF ID tương ứng với môi trường.
+3. **Tenant Routing**: Hỗ trợ qua tham số URL `?tenant_id=<id>` (ví dụ `?tenant_id=benmi` hoặc `?tenant_id=zhadantongxue`).
 
 ---
 
-## 3. Chiến Lược & Quy Trình Triển Khai (Deployment Strategy)
-
-Quy trình phát triển và deploy tuân theo các bước sau:
-1. Lập trình tính năng mới trên một nhánh phụ (feature branch) hoặc sửa trực tiếp.
-2. Kiểm tra trên môi trường **TEST** (FrontEnd tự động deploy khi push/merge vào `test`, BackEnd deploy thủ công).
-3. Sau khi test thành công, tạo Pull Request để merge vào `main` (PRODUCTION).
-4. Kiểm tra trên môi trường **PRODUCTION**.
-
-### Sơ đồ quy trình deploy (Deployment Flowchart)
+## 3. Quy Trình Triển Khai Chuẩn (Standard Deployment Workflow)
 
 ```mermaid
 flowchart TD
-    Start([Bắt đầu phát triển]) --> CreateBranch[Tạo Feature Branch từ test hoặc code trực tiếp]
-    CreateBranch --> Coding[Lập trình & Thay đổi code]
+    Start([Bắt đầu phát triển]) --> CodeChange[Lập trình & Kiểm thử trên staging]
+    CodeChange --> DeployWorkerTest["Deploy Worker Staging:<br>cd benmi-worker-official && npx wrangler deploy --env test"]
+    DeployWorkerTest --> PushStaging["Push lên GitHub branch staging:<br>Cloudflare Pages tự deploy test.benmi-order.pages.dev"]
+    PushStaging --> VerifyTest{Kiểm thử trên Staging OK?}
     
-    subgraph deploy_test ["Deploy lên TEST"]
-        Coding --> SetTestEnv["Sửa biến env sang TEST trong code:<br>- WORKER_BASE (index.html, orders.html)<br>- liffId (index.html)"]
-        SetTestEnv --> PushTest[Push/Merge vào branch test trên GitHub]
-        PushTest --> PagesTest["FrontEnd tự động deploy lên:<br>test.benmi-order.pages.dev"]
-        PushTest --> DeployWorkerTest["Worker TEST tự động deploy lên:<br>spring-smoke-46ba<br>(nhờ Cloudflare Workers Builds)"]
-    end
-
-    DeployWorkerTest --> Testing{Chạy thử nghiệm OK?}
+    VerifyTest -- Có lỗi --> FixBug[Sửa lỗi]
+    FixBug --> CodeChange
     
-    subgraph deploy_prod ["Deploy lên PRODUCTION"]
-        Testing -- Đúng --> SetProdEnv["Sửa biến env sang PRODUCTION trong code:<br>- WORKER_BASE (index.html, orders.html)<br>- liffId (index.html)"]
-        SetProdEnv --> CreatePR[Tạo Pull Request từ test vào main]
-        CreatePR --> MergeMain[Merge vào branch main trên GitHub]
-        MergeMain --> PagesProd["FrontEnd tự động deploy lên:<br>benmi-order.pages.dev"]
-        MergeMain --> CopyWorkerProd[Mở file src/worker.js trên branch main & Copy toàn bộ code]
-        CopyWorkerProd --> PasteWorkerProd["Vào Cloudflare Web -> Chọn Worker: benmi-worker-official<br>-> Chọn Quick Edit -> Dán code vào"]
-        PasteWorkerProd --> DeployWorkerProd[Click Save and Deploy]
-    end
-
-    DeployWorkerProd --> Verify[Kiểm tra lại trên Product LINE Account]
-    Verify --> End([Hoàn thành Deploy])
-    
-    Testing -- Sai / Có lỗi --> FixBug[Sửa lỗi trên code]
-    FixBug --> Coding
+    VerifyTest -- OK, sẵn sàng Release --> ApplyD1Prod["1. Apply D1 Migrations Production:<br>npx wrangler d1 migrations apply blab-db-production --remote"]
+    ApplyD1Prod --> DeployWorkerProd["2. Deploy Worker Production:<br>cd benmi-worker-official && npx wrangler deploy"]
+    DeployWorkerProd --> MergeMain["3. Merge staging vào main & Push:<br>git checkout main && git merge staging && git push origin main"]
+    MergeMain --> PagesProd["Cloudflare Pages tự động deploy Production benmi-order.pages.dev"]
+    PagesProd --> End([Hoàn thành Deploy Production])
 ```
 
 ---
 
-## 4. Hướng Dẫn Deploy Chi Tiết Từng Bước
+## 4. Hướng Dẫn Lệnh Deploy Chi Tiết
 
-### Bước 1: Deploy và Kiểm thử trên môi trường TEST
+### A. Deploy lên TEST / STAGING:
+```bash
+# 1. Apply migration D1 Test (nếu có migration mới):
+cd benmi-worker-official
+CI=true CLOUDFLARE_ACCOUNT_ID=525bb177ae7306325d13269246769f50 npx wrangler d1 migrations apply blab-db-test --remote --env test
 
-1. **Cập nhật FrontEnd:**
-   * Mở file `index.html` và `orders.html`.
-   * Tìm dòng định nghĩa `WORKER_BASE` và sửa thành:
-     ```javascript
-     const WORKER_BASE = "https://spring-smoke-46ba.thuanmnc.workers.dev";
-     ```
-   * Mở file `index.html`, tìm hàm `initApp()` và sửa `liffId` thành:
-     ```javascript
-     await liff.init({ liffId: '2009555608-DMioljsI' });
-     ```
-   * Thực hiện commit và push/merge code vào branch `test`. Cloudflare Pages sẽ tự động nhận biết và deploy giao diện web.
-2. **Cập nhật BackEnd (Worker):**
-   * Do bạn đã thiết lập **Workers Builds (GitHub Integration)**, Cloudflare Worker TEST (`spring-smoke-46ba`) sẽ **tự động deploy** ngay khi bạn push/merge code vào branch `test` (thông qua lệnh `npx wrangler deploy --env test`). Bạn không cần phải copy-paste code thủ công nữa!
-3. **Thử nghiệm:**
-   * Truy cập [test.benmi-order.pages.dev](https://test.benmi-order.pages.dev) bằng tài khoản LINE Test để đặt thử bánh mì và kiểm tra trang nhận đơn tại [test.benmi-order.pages.dev/orders.html](https://test.benmi-order.pages.dev/orders.html).
+# 2. Deploy Worker Staging:
+npx wrangler deploy --env test
 
----
+# 3. Deploy FrontEnd Staging:
+git add .
+git commit -m "feat/fix: mô tả thay đổi"
+git push origin staging
+```
 
-### Bước 2: Deploy lên môi trường PRODUCTION (Chạy thật)
+### B. Deploy lên PRODUCTION:
+```bash
+# 1. Apply migration D1 Production:
+cd benmi-worker-official
+CI=true CLOUDFLARE_ACCOUNT_ID=525bb177ae7306325d13269246769f50 npx wrangler d1 migrations apply blab-db-production --remote
 
-Chỉ thực hiện bước này sau khi môi trường TEST đã hoạt động hoàn toàn ổn định và không còn lỗi.
+# 2. Deploy Worker Production:
+npx wrangler deploy
 
-1. **Cập nhật FrontEnd:**
-   * Sửa các biến trong code trở lại giá trị Production:
-     * `WORKER_BASE` trong `index.html` và `orders.html` sửa thành:
-       ```javascript
-       const WORKER_BASE = "https://benmi-worker-official.thuanmnc.workers.dev";
-       ```
-     * `liffId` trong `index.html` sửa thành:
-       ```javascript
-       await liff.init({ liffId: '2009560906-c5taZfiY' });
-       ```
-   * Tạo một **Pull Request (PR)** từ branch `test` vào branch `main`.
-   * Kiểm duyệt PR (đảm bảo các biến env đã được đổi thành Production) và **Merge** vào branch `main`.
-   * Cloudflare Pages sẽ tự động deploy code của branch `main` lên [benmi-order.pages.dev](https://benmi-order.pages.dev).
-2. **Cập nhật BackEnd (Worker):**
-   * Mở file `benmi-worker-official/src/worker.js` trên branch `main` và copy toàn bộ nội dung.
-   * Truy cập vào trang quản trị Cloudflare.
-   * Đi tới **Workers & Pages** > Chọn Worker **`benmi-worker-official`**.
-   * Nhấn nút **Quick Edit**.
-   * Xóa code cũ, dán code mới vào và nhấn **Save and Deploy**.
-3. **Kiểm tra cuối cùng:**
-   * Mở ứng dụng LINE Official Account thật, thử đặt món để chắc chắn hệ thống vận hành trơn tru.
-
----
-
-> [!IMPORTANT]  
-> **Lưu ý cực kỳ quan trọng:** Luôn luôn kiểm tra kỹ các biến `WORKER_BASE` và `liffId` trước khi push/merge code. Việc nhầm lẫn biến TEST sang PRODUCTION có thể làm gián đoạn quá trình nhận đơn hàng của cửa hàng thật, hoặc làm đơn hàng thử nghiệm nhảy vào dữ liệu thật.
-
----
+# 3. Merge & Deploy FrontEnd Production:
+git checkout main
+git merge staging
+git push origin main
+git checkout staging
+```
