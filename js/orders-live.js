@@ -27,13 +27,13 @@ function renderListLeft(orders) {
 
     if (isNew) {
       badge = `<span class="badge new">${t('badgeNew')}</span>`;
-      rightActions = `<button class="btn btn-ghost tile-action-btn" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">${t('btnReview')}</button>`;
+      rightActions = `<button class="btn btn-ghost tile-action-btn" style="background:#e0f2fe; color:#0369a1;" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">${t('btnReview')}</button>`;
     } else if (order.status === "ACCEPTED") {
       badge = `<span class="badge wait">${t('badgeDoing')}</span>`;
       rightActions = `<button class="btn btn-primary tile-action-btn" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','DONE', {}, this)">${t('btnReady')}</button>`;
     } else {
       badge = `<span class="badge wait" style="background:#e5e7eb; color:#4b5563;">${t('badgeWaiting')}</span>`;
-      rightActions = `<button class="btn tile-action-btn" style="background:#f3f4f6; color:#9ca3af; cursor:not-allowed;" disabled>${t('btnWaitingReply')}</button>`;
+      rightActions = `<button class="btn tile-action-btn" style="background:#f1f5f9; color:#94a3af; cursor:not-allowed;" disabled>${t('btnWaitingReply')}</button>`;
     }
 
     tile.innerHTML = `
@@ -44,11 +44,11 @@ function renderListLeft(orders) {
           ${badge}
         </div>
         <div class="tile-meta-row">
-          <span class="tile-meta-tag"><span style="color:var(--muted);">🕒</span> ${escapeHtml(formatPickupTimeDisplay(order.time))}</span>
+          <span class="tile-meta-tag"><span style="color:var(--muted); margin-right:4px;">🕒</span>${escapeHtml(formatPickupTimeDisplay(order.time))}</span>
           <span class="tile-meta-tag tile-eta">${escapeHtml(eta)}</span>
         </div>
         <div class="tile-count-row">
-          <span class="tile-item-count">🧾 ${itemCountStr}</span>
+          <span class="tile-item-count"><span style="margin-right:4px;">🧾</span>${itemCountStr}</span>
           ${totalFormatted !== '-' ? `<span class="tile-price">${escapeHtml(totalFormatted)}</span>` : ''}
         </div>
       </div>
@@ -87,11 +87,11 @@ function renderListRight(orders) {
           <span class="badge done">${t('badgeReady')}</span>
         </div>
         <div class="tile-meta-row">
-          <span class="tile-meta-tag"><span style="color:var(--muted);">🕒</span> ${escapeHtml(formatPickupTimeDisplay(order.time))}</span>
+          <span class="tile-meta-tag"><span style="color:var(--muted); margin-right:4px;">🕒</span>${escapeHtml(formatPickupTimeDisplay(order.time))}</span>
           <span class="tile-meta-tag tile-eta">${escapeHtml(eta)}</span>
         </div>
         <div class="tile-count-row">
-          <span class="tile-item-count">🧾 ${itemCountStr}</span>
+          <span class="tile-item-count"><span style="margin-right:4px;">🧾</span>${itemCountStr}</span>
           ${totalFormatted !== '-' ? `<span class="tile-price">${escapeHtml(totalFormatted)}</span>` : ''}
         </div>
       </div>

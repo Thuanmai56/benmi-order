@@ -295,16 +295,15 @@ body {
 .tile {
   border: 1px solid var(--border);
   border-radius: 14px;
-  padding: 12px 0 12px 14px;
+  padding: 0;
   display: flex;
   align-items: stretch;
-  gap: 0;
   cursor: pointer;
   background: #fff;
   overflow: hidden;
   transition: all 0.15s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
-  min-height: 80px;
+  min-height: 84px;
 }
 
 .tile:hover {
@@ -324,19 +323,20 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding-right: 4px;
+  gap: 6px;
+  padding: 10px 12px 10px 14px;
 }
 
 .tile-top {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 8px;
+  gap: 6px 10px;
   align-items: center;
 }
 
 .tile-customer {
   font-weight: 1000;
-  font-size: 17px;
+  font-size: 16.5px;
   color: #0f172a;
 }
 
@@ -350,12 +350,13 @@ body {
 .tile-meta-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 10px;
+  gap: 6px 12px;
   align-items: center;
-  margin-top: 4px;
 }
 
 .tile-meta-tag {
+  display: inline-flex;
+  align-items: center;
   font-size: 13.5px;
   font-weight: 800;
   color: #334155;
@@ -364,7 +365,7 @@ body {
 .tile-price {
   color: var(--primary);
   font-weight: 1000;
-  font-size: 13.5px;
+  font-size: 14px;
 }
 
 .tile-eta {
@@ -376,50 +377,48 @@ body {
 .tile-count-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-top: 6px;
+  gap: 12px;
 }
 
 .tile-item-count {
   font-size: 13px;
   font-weight: 800;
-  color: #64748b;
+  color: #475569;
 }
 
 .tile-actions {
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: stretch;
   align-self: stretch;
   flex-shrink: 0;
   min-width: 100px;
-  max-width: 112px;
-  border-left: 1px solid var(--border);
-  margin-left: 12px;
+  max-width: 115px;
   padding: 0;
-  overflow: hidden;
+  margin: 0;
 }
 
 .tile-action-btn {
   flex: 1;
   width: 100%;
-  padding: 0 10px;
-  border-radius: 0;
-  font-size: 14px;
-  font-weight: 900;
+  height: 100%;
+  padding: 8px 10px;
+  border-radius: 0 13px 13px 0 !important;
+  font-size: 14.5px;
+  font-weight: 1000;
   text-align: center;
   justify-content: center;
-  white-space: nowrap;
+  align-items: center;
+  display: flex;
+  white-space: normal;
+  word-break: keep-all;
   box-shadow: none;
   border: none;
-  display: flex;
-  align-items: center;
-  line-height: 1.2;
+  line-height: 1.25;
 }
 
 .tile-action-btn:active {
-  opacity: 0.8;
+  opacity: 0.85;
   transform: none;
 }
 
