@@ -1,6 +1,6 @@
 # Benmi & Multi-Tenant Order Platform Architecture & Deployment Guide
 
-Tài liệu này mô tả chi tiết kiến trúc đa môi trường (**STAGING / TEST** và **PRODUCTION**), cấu trúc multi-tenant, cơ chế tự động nhận diện biến môi trường (Zero Manual Hardcode Config), và quy trình deploy cho hệ thống đặt món qua LINE LIFF & POS Dashboard.
+Tài liệu này mô tả chi tiết kiến trúc đa môi trường (**STAGING** và **PRODUCTION**), cấu trúc multi-tenant, cơ chế tự động nhận diện biến môi trường (Zero Manual Hardcode Config), và quy trình deploy cho hệ thống đặt món qua LINE LIFF & POS Dashboard.
 
 ---
 
@@ -13,21 +13,21 @@ Hệ thống bao gồm 2 tầng chính:
 ```mermaid
 graph TD
     subgraph github ["GitHub Repo: benmi-order"]
-        BranchStaging["Branch: staging / test"]
+        BranchStaging["Branch: staging"]
         BranchMain["Branch: main"]
     end
 
     subgraph pages ["Cloudflare Pages (benmi-order.pages.dev)"]
-        SubTest["Môi trường TEST:<br>test.benmi-order.pages.dev"]
+        SubStaging["Môi trường STAGING:<br>staging.benmi-order.pages.dev"]
         SubProd["Môi trường PRODUCTION:<br>benmi-order.pages.dev"]
     end
 
-    BranchStaging -- "auto deploy" --> SubTest
+    BranchStaging -- "auto deploy" --> SubStaging
     BranchMain -- "auto deploy" --> SubProd
 
-    subgraph test_env ["Môi trường TEST / STAGING"]
-        A1[LINE Account Test] <--> SubTest
-        SubTest <--> C1["Worker STAGING:<br>platform-worker-staging.thuanmnc.workers.dev"]
+    subgraph test_env ["Môi trường STAGING"]
+        A1[LINE Account Test] <--> SubStaging
+        SubStaging <--> C1["Worker STAGING:<br>platform-worker-staging.thuanmnc.workers.dev"]
         C1 <--> D1_DB[("D1 DB: blab-db-test")]
         C1 <--> KV1[("KV: ORDER_STATE (test)")]
     end
@@ -51,18 +51,18 @@ graph TD
 
 Hệ thống sử dụng cơ chế **Tự động nhận diện môi trường (Dynamic Environment Resolution)**, lập trình viên và quản trị viên **không cần chỉnh sửa hardcode bất kỳ biến nào trong code** khi chuyển đổi giữa Staging và Production.
 
-| Thông số | Môi trường TEST / STAGING | Môi trường PRODUCTION |
+| Thông số | Môi trường STAGING | Môi trường PRODUCTION |
 | :--- | :--- | :--- |
-| **Domain FrontEnd** | [test.benmi-order.pages.dev](https://test.benmi-order.pages.dev) | [benmi-order.pages.dev](https://benmi-order.pages.dev) |
+| **Domain FrontEnd** | [staging.benmi-order.pages.dev](https://staging.benmi-order.pages.dev) | [benmi-order.pages.dev](https://benmi-order.pages.dev) |
 | **Worker API URL (`WORKER_BASE`)** | `https://platform-worker-staging.thuanmnc.workers.dev` | `https://benmi-worker-official.thuanmnc.workers.dev` |
 | **Default Fallback LIFF ID** | `2009555608-DMioljsI` | `2009560906-c5taZfiY` |
 | **Cơ sở dữ liệu D1** | `blab-db-test` | `blab-db-production` |
-| **Branch GitHub tương ứng** | `staging` / `test` | `main` |
+| **Branch GitHub tương ứng** | `staging` | `main` |
 
 ### Cơ chế Tự Động:
 1. **`WORKER_BASE`**: Tự động trỏ sang `platform-worker-staging` khi chạy trên `localhost`, `127.0.0.1`, hoặc domain có chứa `staging`/`test`. Ngược lại tự động trỏ về `benmi-worker-official` trên Production.
 2. **`liffId`**: Được nạp động trực tiếp từ cấu hình của từng tenant (`tenant_config` / `/api/tenant/bootstrap`). Nếu chưa có, tự động dùng fallback LIFF ID tương ứng với môi trường.
-3. **Tenant Routing**: Hỗ trợ qua tham số URL `?tenant_id=<id>` (ví dụ `?tenant_id=benmi` hoặc `?tenant_id=zhadantongxue`).
+3. **Tenant Routing**: Hỗ trợ qua tham số URL `?tenant_id=<id>` (ví dụ `?tenant_id=benmi` hoặc `?tenant_id=zhadantongxue` hoặc `?tenant_id=jidangaodashu`).
 
 ---
 
@@ -72,7 +72,7 @@ Hệ thống sử dụng cơ chế **Tự động nhận diện môi trường (
 flowchart TD
     Start([Bắt đầu phát triển]) --> CodeChange[Lập trình & Kiểm thử trên staging]
     CodeChange --> DeployWorkerTest["Deploy Worker Staging:<br>cd benmi-worker-official && npx wrangler deploy --env test"]
-    DeployWorkerTest --> PushStaging["Push lên GitHub branch staging:<br>Cloudflare Pages tự deploy test.benmi-order.pages.dev"]
+    DeployWorkerTest --> PushStaging["Push lên GitHub branch staging:<br>Cloudflare Pages tự deploy staging.benmi-order.pages.dev"]
     PushStaging --> VerifyTest{Kiểm thử trên Staging OK?}
     
     VerifyTest -- Có lỗi --> FixBug[Sửa lỗi]
@@ -89,11 +89,11 @@ flowchart TD
 
 ## 4. Hướng Dẫn Lệnh Deploy Chi Tiết
 
-### A. Deploy lên TEST / STAGING:
+### A. Deploy lên STAGING:
 ```bash
-# 1. Apply migration D1 Test (nếu có migration mới):
+# 1. Apply migration D1 Test / Staging (nếu có migration mới):
 cd benmi-worker-official
-CI=true CLOUDFLARE_ACCOUNT_ID=525bb177ae7306325d13269246769f50 npx wrangler d1 migrations apply blab-db-test --remote --env test
+npx wrangler d1 migrations apply blab-db-test --remote --env test
 
 # 2. Deploy Worker Staging:
 npx wrangler deploy --env test
@@ -108,7 +108,7 @@ git push origin staging
 ```bash
 # 1. Apply migration D1 Production:
 cd benmi-worker-official
-CI=true CLOUDFLARE_ACCOUNT_ID=525bb177ae7306325d13269246769f50 npx wrangler d1 migrations apply blab-db-production --remote
+npx wrangler d1 migrations apply blab-db-production --remote
 
 # 2. Deploy Worker Production:
 npx wrangler deploy
