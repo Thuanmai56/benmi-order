@@ -304,6 +304,7 @@ body {
   overflow: hidden;
   transition: all 0.15s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  height: 88px;
 }
 
 .tile:hover {
@@ -363,7 +364,7 @@ body {
 .tile-price {
   color: var(--primary);
   font-weight: 1000;
-  font-size: 14.5px;
+  font-size: 13.5px;
 }
 
 .tile-eta {
@@ -372,17 +373,17 @@ body {
   font-size: 13.5px;
 }
 
-.tile-items {
+.tile-count-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin-top: 6px;
-  color: #1e293b;
-  font-size: 14.5px;
-  font-weight: 600;
-  line-height: 1.4;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  white-space: pre-line;
+}
+
+.tile-item-count {
+  font-size: 13px;
+  font-weight: 800;
+  color: #64748b;
 }
 
 .tile-actions {

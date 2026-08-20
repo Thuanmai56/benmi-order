@@ -139,6 +139,18 @@ function shortItems(content) {
   return lines.slice(0, 6).join("\n");
 }
 
+function countItemsFromContent(content) {
+  if (!content) return 0;
+  const lines = String(content).split("\n").map(s => s.trim()).filter(Boolean);
+  let total = 0;
+  for (const line of lines) {
+    // Match "1份 x 商品名" or "2份x商品名"
+    const m = line.match(/^(\d+)\s*份\s*[xX×]\s*.+/);
+    if (m) total += parseInt(m[1], 10);
+  }
+  return total;
+}
+
 function formatPickupTimeDisplay(timeStr) {
   if (!timeStr) return "-";
   const clean = String(timeStr).replace(/\s*\([^)]*\)/g, '').trim();

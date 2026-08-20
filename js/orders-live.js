@@ -15,6 +15,8 @@ function renderListLeft(orders) {
     const isNew = order.status === "NEW";
     const eta = formatEta(order.time);
     const totalFormatted = formatOrderTotal(order);
+    const itemCount = countItemsFromContent(order.content);
+    const itemCountStr = t("tileItemCount", { count: itemCount > 0 ? itemCount : "?" });
 
     const tile = document.createElement("div");
     tile.className = `tile ${isNew ? "new" : ""}`;
@@ -38,15 +40,17 @@ function renderListLeft(orders) {
       <div class="tile-info">
         <div class="tile-top">
           <span class="tile-customer">${escapeHtml(order.customer || t('defaultCustomer'))}</span>
+          <span class="tile-order-key">#${escapeHtml(order.key)}</span>
           ${badge}
-          <span class="tile-meta tile-order-key">#${escapeHtml(order.key)}</span>
         </div>
         <div class="tile-meta-row">
           <span class="tile-meta-tag"><span style="color:var(--muted);">🕒</span> ${escapeHtml(formatPickupTimeDisplay(order.time))}</span>
-          ${totalFormatted !== '-' ? `<span class="tile-meta-tag tile-price">${escapeHtml(totalFormatted)}</span>` : ''}
           <span class="tile-meta-tag tile-eta">${escapeHtml(eta)}</span>
         </div>
-        <div class="tile-items">${escapeHtml(shortItems(order.content))}</div>
+        <div class="tile-count-row">
+          <span class="tile-item-count">🧾 ${itemCountStr}</span>
+          ${totalFormatted !== '-' ? `<span class="tile-price">${escapeHtml(totalFormatted)}</span>` : ''}
+        </div>
       </div>
       <div class="tile-actions">
         ${rightActions}
@@ -69,6 +73,8 @@ function renderListRight(orders) {
   orders.forEach(order => {
     const eta = formatEta(order.time);
     const totalFormatted = formatOrderTotal(order);
+    const itemCount = countItemsFromContent(order.content);
+    const itemCountStr = t("tileItemCount", { count: itemCount > 0 ? itemCount : "?" });
     const tile = document.createElement("div");
     tile.className = "tile";
     tile.onclick = () => openReview(order.key);
@@ -77,15 +83,17 @@ function renderListRight(orders) {
       <div class="tile-info">
         <div class="tile-top">
           <span class="tile-customer">${escapeHtml(order.customer || t('defaultCustomer'))}</span>
+          <span class="tile-order-key">#${escapeHtml(order.key)}</span>
           <span class="badge done">${t('badgeReady')}</span>
-          <span class="tile-meta tile-order-key">#${escapeHtml(order.key)}</span>
         </div>
         <div class="tile-meta-row">
           <span class="tile-meta-tag"><span style="color:var(--muted);">🕒</span> ${escapeHtml(formatPickupTimeDisplay(order.time))}</span>
-          ${totalFormatted !== '-' ? `<span class="tile-meta-tag tile-price">${escapeHtml(totalFormatted)}</span>` : ''}
           <span class="tile-meta-tag tile-eta">${escapeHtml(eta)}</span>
         </div>
-        <div class="tile-items">${escapeHtml(shortItems(order.content))}</div>
+        <div class="tile-count-row">
+          <span class="tile-item-count">🧾 ${itemCountStr}</span>
+          ${totalFormatted !== '-' ? `<span class="tile-price">${escapeHtml(totalFormatted)}</span>` : ''}
+        </div>
       </div>
       <div class="tile-actions">
         <button class="btn btn-yellow tile-action-btn" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','PICKED_UP', {}, this)">${t('btnPickedUp')}</button>

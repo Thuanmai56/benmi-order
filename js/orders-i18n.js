@@ -54,6 +54,7 @@ const I18N = {
     processFail: "處理失敗，請稍後再試。",
     // Time & ETA
     pickupLabel: "取餐:",
+    tileItemCount: "{count} 項",
     etaArrived: "已到 / {min} 分鐘前",
     etaMinutes: "剩 {min} 分鐘",
     etaHours: "剩 {h} 小時 {m} 分",
@@ -253,6 +254,7 @@ const I18N = {
     processFail: "Xử lý thất bại, vui lòng thử lại sau.",
     // Time & ETA
     pickupLabel: "Lấy:",
+    tileItemCount: "{count} món",
     etaArrived: "Đã đến / {min} phút trước",
     etaMinutes: "Còn {min} phút",
     etaHours: "Còn {h} giờ {m} phút",
