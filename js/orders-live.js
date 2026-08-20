@@ -105,6 +105,10 @@ function updateNewAlert() {
     alertEl.style.display = "none";
     newAlertSnoozeUntilMs = 0;
     snoozedNewOrderKeys = new Set();
+    if (typeof newAlertSnoozeTimerId !== 'undefined' && newAlertSnoozeTimerId) {
+      clearTimeout(newAlertSnoozeTimerId);
+      newAlertSnoozeTimerId = null;
+    }
     if (typeof stopContinuousAlarm === "function") stopContinuousAlarm();
     return;
   }
@@ -115,7 +119,14 @@ function updateNewAlert() {
     (document.getElementById("changeModal") && document.getElementById("changeModal").style.display === "flex") ||
     (document.getElementById("rejectModal") && document.getElementById("rejectModal").style.display === "flex");
 
-  if (Date.now() < newAlertSnoozeUntilMs || isReviewing) {
+  if (isReviewing) {
+    alertEl.style.display = "none";
+    if (typeof stopContinuousAlarm === "function") stopContinuousAlarm();
+    return;
+  }
+
+  if (Date.now() < newAlertSnoozeUntilMs) {
+    // If a brand-new order arrived that wasn't in the snoozed set, wake up immediately!
     const hasBrandNew = pendingNewOrders.some(o => o?.key && !snoozedNewOrderKeys.has(o.key));
     if (!hasBrandNew) {
       alertEl.style.display = "none";
@@ -123,6 +134,8 @@ function updateNewAlert() {
       return;
     }
   }
+
+  // Otherwise, snooze has expired or was interrupted by new order -> show modal & alarm!
   titleEl.innerText = t("alertTitle", { count });
   alertEl.style.display = "flex";
   if (typeof startContinuousAlarm === "function") startContinuousAlarm();
@@ -134,6 +147,14 @@ function dismissNewAlert() {
   const alertEl = document.getElementById("new-alert");
   if (alertEl) alertEl.style.display = "none";
   if (typeof stopContinuousAlarm === "function") stopContinuousAlarm();
+
+  if (typeof newAlertSnoozeTimerId !== 'undefined' && newAlertSnoozeTimerId) {
+    clearTimeout(newAlertSnoozeTimerId);
+  }
+  newAlertSnoozeTimerId = setTimeout(() => {
+    newAlertSnoozeUntilMs = 0;
+    updateNewAlert();
+  }, 30_000);
 }
 
 function reviewNextNewOrder() {

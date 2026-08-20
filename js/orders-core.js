@@ -70,6 +70,7 @@ let currentOrderKey = null;
 let activeTab = "live";
 let newAlertSnoozeUntilMs = 0;
 let snoozedNewOrderKeys = new Set();
+let newAlertSnoozeTimerId = null;
 let localOverrides = {};
 const knownOrderKeys = new Set();
 const processingKeys = new Set();
@@ -177,7 +178,8 @@ async function fetchOrders() {
 
     const response = await fetch(`${WORKER_BASE}/api/orders?tenant_id=${tenantId}`, { headers });
     if (response.status === 304) {
-      // No order updates since last poll
+      // Even on 304, re-check snooze expiration for new alert
+      if (typeof updateNewAlert === "function") updateNewAlert();
       return;
     }
     if (!response.ok) throw new Error(`fetch failed: ${response.status}`);
@@ -277,14 +279,20 @@ function closeModal() {
   });
   reviewingOrder = null;
   currentOrderKey = null;
+  if (typeof updateNewAlert === "function") updateNewAlert();
 }
 
-// 1.5s Polling loop for active order updates
+// 1.5s Polling loop for active order updates - ALWAYS runs across all dashboard tabs!
 setInterval(() => {
-  if (activeTab === "live" || activeTab === "history") fetchOrders();
+  fetchOrders();
 }, 1500);
 
 // Dynamic 10s timer to automatically refresh ETA time countdowns
 setInterval(() => {
   if (activeTab === "live" || activeTab === "history") renderAll();
 }, 10000);
+
+// 1s timer to ensure new alert and alarms are evaluated without delay
+setInterval(() => {
+  if (typeof updateNewAlert === "function") updateNewAlert();
+}, 1000);
