@@ -132,15 +132,10 @@ function renderMenuCategories() {
   if (!currentMenuData) return;
   currentMenuData.forEach((cat, index) => {
     const div = document.createElement("div");
-    div.style.cssText = `
-      padding: 16px; border-bottom: 1px solid #eee; cursor: pointer; font-weight: 1000; font-size: 16px;
-      background: ${activeCategoryIndex === index ? '#f3f4f6' : '#fff'};
-      border-left: 4px solid ${activeCategoryIndex === index ? 'var(--brand-red)' : 'transparent'};
-      display: flex; justify-content: space-between; align-items: center;
-    `;
+    div.className = `menu-cat-item ${activeCategoryIndex === index ? 'active' : ''}`;
     div.innerHTML = `
-      <span>${escapeHtml(cat.title)}</span>
-      <span style="font-size: 13px; font-weight: 900; color: var(--muted);">${cat.items.length} ${t("menuItemUnit")}</span>
+      <span class="menu-cat-title">${escapeHtml(cat.title)}</span>
+      <span class="menu-cat-count">${cat.items.length} ${t("menuItemUnit")}</span>
     `;
     div.onclick = () => {
       syncMenuDataFromDOM();
@@ -166,7 +161,7 @@ function renderMenuCategoryEditor(index) {
 
   cat.items.forEach((item, iIdx) => {
     const row = document.createElement("div");
-    row.style.cssText = "background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 12px; display: flex; align-items: center; gap: 12px; transition: opacity 0.2s; cursor: grab;";
+    row.className = "menu-item-row";
     row.draggable = true;
 
     row.addEventListener("dragstart", (e) => {
@@ -201,23 +196,25 @@ function renderMenuCategoryEditor(index) {
     const oosText = item.isOos ? t("stockStatusOutOfStock") : t("stockStatusInStock");
 
     row.innerHTML = `
-      <div style="color: #ccc; font-size: 22px; cursor: grab; flex-shrink:0;">☰</div>
-      <input type="text" value="${escapeHtml(item.name)}" data-name-cidx="${index}" data-name-iidx="${iIdx}" oninput="markMenuDirty()"
-        placeholder="${t("newItemPlaceholder")}" style="flex: 2; min-width: 120px; font-size: 17px; font-weight: 900; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-family:inherit; box-sizing:border-box;">
-      <label style="display:flex; align-items:center; gap:6px; font-weight:900; flex-shrink:0;">
-        <span style="font-size:18px;">$</span>
-        <input type="number" value="${item.price !== null && item.price !== undefined ? item.price : ''}" data-cidx="${index}" data-iidx="${iIdx}" oninput="markMenuDirty()"
-          placeholder="${t("priceHiddenPlaceholder")}" style="width: 80px; font-size: 17px; font-weight: 900; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-family:inherit; box-sizing:border-box;">
+      <div class="menu-item-drag">☰</div>
+      <input type="text" class="menu-item-name-input" value="${escapeHtml(item.name)}" data-name-cidx="${index}" data-name-iidx="${iIdx}" oninput="markMenuDirty()"
+        placeholder="${t("newItemPlaceholder")}">
+      <label class="menu-item-price-label">
+        <span>$</span>
+        <input type="number" class="menu-item-price-input" value="${item.price !== null && item.price !== undefined ? item.price : ''}" data-cidx="${index}" data-iidx="${iIdx}" oninput="markMenuDirty()"
+          placeholder="${t("priceHiddenPlaceholder")}">
       </label>
-      <label style="display:flex; align-items:center; gap:4px; font-weight:900; flex-shrink:0;" title="標籤 / 推薦 (例如: 雞肉足足100g, 👍 推薦)">
-        <span style="font-size:15px; color:#ef4444;">🏷️</span>
-        <input type="text" value="${escapeHtml(item.badgeText || '')}" data-badge-cidx="${index}" data-badge-iidx="${iIdx}" oninput="markMenuDirty()"
-          placeholder="標籤/推薦" style="width: 110px; font-size: 14px; font-weight: 700; padding: 10px 8px; border: 1px solid #cbd5e1; border-radius: 8px; font-family:inherit; box-sizing:border-box; color: #b91c1c; background: #fff5f5;">
+      <label class="menu-item-badge-label" title="標籤 / 推薦 (例如: 雞肉足足100g, 👍 推薦)">
+        <span style="font-size:14px; color:#ef4444;">🏷️</span>
+        <input type="text" class="menu-item-badge-input" value="${escapeHtml(item.badgeText || '')}" data-badge-cidx="${index}" data-badge-iidx="${iIdx}" oninput="markMenuDirty()"
+          placeholder="標籤/推薦">
       </label>
-      <button class="btn" style="padding: 8px 14px; font-size:14px; flex-shrink:0; background: ${oosBg}; color: ${oosColor}; border: 1px solid ${oosBorder}; border-radius: 8px; font-weight: 900;"
-        onclick="openStockModal(${index}, ${iIdx})">${oosText}</button>
-      <button class="btn btn-ghost" style="padding: 8px 14px; font-size:14px; flex-shrink:0;" onclick="openImageModal('${cat.id}', '${escapeHtml(item.name)}')">${t("btnItemImage")}</button>
-      <button class="btn btn-ghost" style="padding: 8px 14px; color: var(--brand-red); font-size:14px; flex-shrink:0;" onclick="removeMenuItemAt(${index}, ${iIdx})">${t("btnItemDelete")}</button>
+      <div class="menu-item-actions">
+        <button class="menu-item-btn" style="background: ${oosBg}; color: ${oosColor}; border: 1px solid ${oosBorder};"
+          onclick="openStockModal(${index}, ${iIdx})">${oosText}</button>
+        <button class="menu-item-btn btn-ghost" style="border: 1px solid #cbd5e1; background:#fff;" onclick="openImageModal('${cat.id}', '${escapeHtml(item.name)}')">${t("btnItemImage")}</button>
+        <button class="menu-item-btn btn-ghost" style="border: 1px solid #fee2e2; background: #fff5f5; color: var(--brand-red);" onclick="removeMenuItemAt(${index}, ${iIdx})">${t("btnItemDelete")}</button>
+      </div>
     `;
     container.appendChild(row);
   });
