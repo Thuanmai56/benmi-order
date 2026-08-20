@@ -555,8 +555,8 @@
             const badgeHTML = isRecommended ? `<span class="badge">👍 推薦</span>` : '';
 
             const imageKey = `${category}_${origName}`;
-            const hasImage = imageList.includes(imageKey);
-            const imgHTML = hasImage ? `<img class="item-img" src="${WORKER_BASE}/api/image?tenant_id=${getTenantIdFromUrl()}&name=${encodeURIComponent(imageKey)}&v=2" alt="${origName}" loading="lazy" onclick="openImageLightbox(this.src)" style="cursor: zoom-in;">` : '';
+            const hasImage = imageList.includes(imageKey) || imageList.includes(origName);
+            const imgHTML = hasImage ? `<img class="item-img" src="${WORKER_BASE}/api/image?tenant_id=${getTenantIdFromUrl()}&name=${encodeURIComponent(imageKey)}&v=2" alt="${origName}" loading="lazy" onclick="openImageLightbox(this.src)" style="cursor: zoom-in;" onerror="this.style.display='none'">` : '';
 
             const trans = itemTranslations[origName] || '';
             const transHTML = trans ? `<div style="font-size: 13px; color: #9ca3af; margin-top: 2px;">${trans}</div>` : '';

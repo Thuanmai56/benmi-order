@@ -178,6 +178,19 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
 
     const now = new Date();
 
+    // Load image_list to accurately attach imageUrl only to items with uploaded image
+    let imageList: string[] = [];
+    if (env.ORDER_STATE) {
+      const listKey = `tenant:${tenantId}:image_list`;
+      let listRaw = await env.ORDER_STATE.get(listKey);
+      if (!listRaw && tenantId === "benmi") {
+        listRaw = await env.ORDER_STATE.get("image_list");
+      }
+      if (listRaw) {
+        try { imageList = JSON.parse(listRaw); } catch (e) { }
+      }
+    }
+
     // 4. Organize Items by Category
     const itemsByCatId = new Map<string, any[]>();
     for (const item of items) {
@@ -188,12 +201,16 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
       const isRec = Boolean(item.is_recommended);
       const badge = item.badge_text ? item.badge_text : (isRec ? '👍 推薦' : null);
 
+      const hasImage = imageList.includes(item.name) ||
+                       imageList.some(k => k.endsWith(`_${item.name}`) || (k.includes('_') && k.split('_').slice(1).join('_') === item.name));
+      const imageUrl = hasImage ? `/api/image?tenant_id=${tenantId}&name=${encodeURIComponent(item.name)}` : null;
+
       itemsByCatId.get(item.category_id)!.push({
         id: item.id,
         name: item.name,
         price: item.price,
         description: item.description || null,
-        imageUrl: `/api/image?tenant_id=${tenantId}&name=${encodeURIComponent(item.name)}`,
+        imageUrl: imageUrl,
         isOutOfStock: isOos,
         isRecommended: isRec,
         badgeText: item.badge_text || null,

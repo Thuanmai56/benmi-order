@@ -30,7 +30,7 @@ export async function getImage(request: Request, env: Env): Promise<Response> {
 
     if (!dataUri) {
       // Try common category prefixes
-      const prefixes = ["main", "snack", "small", "large", "combo", "drinks"];
+      const prefixes = ["main", "snack", "small", "large", "combo", "drinks", "topping"];
       for (const prefix of prefixes) {
         dataUri = await env.ORDER_STATE.get(`tenant:${tenantId}:image:${prefix}_${name}`);
         if (dataUri) break;
@@ -84,7 +84,7 @@ export async function getImage(request: Request, env: Env): Promise<Response> {
       headers: {
         ...corsHeaders(),
         "Content-Type": mime,
-        "Cache-Control": "public, max-age=86400"
+        "Cache-Control": "public, max-age=60, stale-while-revalidate=300"
       }
     });
   } catch (e) {
@@ -108,6 +108,10 @@ export async function updateImage(request: Request, env: Env): Promise<Response>
 
     await env.ORDER_STATE.put(imageKey, dataUri);
 
+    if (tenantId === "benmi") {
+      await env.ORDER_STATE.put(`image:${name}`, dataUri);
+    }
+
     let list: string[] = [];
     let listRaw = await env.ORDER_STATE.get(listKey);
     if (!listRaw && tenantId === "benmi") {
@@ -119,6 +123,9 @@ export async function updateImage(request: Request, env: Env): Promise<Response>
     if (!list.includes(name)) {
       list.push(name);
       await env.ORDER_STATE.put(listKey, JSON.stringify(list));
+    }
+    if (tenantId === "benmi") {
+      await env.ORDER_STATE.put("image_list", JSON.stringify(list));
     }
 
     await invalidateBootstrapCache(tenantId, env);
@@ -134,11 +141,29 @@ export async function deleteImage(request: Request, env: Env): Promise<Response>
     if (!name) return json({ error: "Missing name" }, 400);
 
     const tenantId = getTenantId(request);
-    const imageKey = `tenant:${tenantId}:image:${name}`;
+    const bareName = name.includes("_") ? name.split("_").slice(1).join("_") : name;
+    const prefixes = ["main", "snack", "small", "large", "combo", "drinks", "topping"];
+
+    // 1. Gather all potential KV keys to delete
+    const keysToDelete = new Set<string>();
+    keysToDelete.add(`tenant:${tenantId}:image:${name}`);
+    keysToDelete.add(`tenant:${tenantId}:image:${bareName}`);
+    for (const prefix of prefixes) {
+      keysToDelete.add(`tenant:${tenantId}:image:${prefix}_${bareName}`);
+      keysToDelete.add(`tenant:${tenantId}:image:${prefix}_${name}`);
+    }
+    if (tenantId === "benmi") {
+      keysToDelete.add(`image:${name}`);
+      keysToDelete.add(`image:${bareName}`);
+      for (const prefix of prefixes) {
+        keysToDelete.add(`image:${prefix}_${bareName}`);
+      }
+    }
+
+    await Promise.all(Array.from(keysToDelete).map(k => env.ORDER_STATE.delete(k)));
+
+    // 2. Clean up tenant image_list
     const listKey = `tenant:${tenantId}:image_list`;
-
-    await env.ORDER_STATE.delete(imageKey);
-
     let list: string[] = [];
     let listRaw = await env.ORDER_STATE.get(listKey);
     if (!listRaw && tenantId === "benmi") {
@@ -147,11 +172,22 @@ export async function deleteImage(request: Request, env: Env): Promise<Response>
     if (listRaw) {
       try { list = JSON.parse(listRaw); } catch (e) { }
     }
-    list = list.filter(n => n !== name);
+
+    list = list.filter(n => {
+      if (n === name || n === bareName) return false;
+      const nBare = n.includes("_") ? n.split("_").slice(1).join("_") : n;
+      if (nBare === bareName || nBare === name) return false;
+      return true;
+    });
+
     await env.ORDER_STATE.put(listKey, JSON.stringify(list));
 
+    if (tenantId === "benmi") {
+      await env.ORDER_STATE.put("image_list", JSON.stringify(list));
+    }
+
     await invalidateBootstrapCache(tenantId, env);
-    return json({ success: true });
+    return json({ success: true, remaining: list });
   } catch (e) {
     return json({ error: "Server error" }, 500);
   }

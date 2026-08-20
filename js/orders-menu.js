@@ -405,7 +405,11 @@ async function uploadImage(dataUri) {
 
 async function deleteItemImage() {
   if (!confirm(t("confirmDeleteImage"))) return;
-  document.getElementById("image-status").innerText = t("imageDeleting");
+  const statusEl = document.getElementById("image-status");
+  const previewEl = document.getElementById("image-preview");
+  const deleteBtn = document.getElementById("btn-delete-image");
+
+  if (statusEl) statusEl.innerText = t("imageDeleting");
   try {
     const tenantId = getTenantIdFromUrl();
     const res = await fetch(`${WORKER_BASE}/api/image?tenant_id=${tenantId}`, {
@@ -415,22 +419,15 @@ async function deleteItemImage() {
     });
     if (!res.ok) throw new Error("Delete failed");
 
-    const bareName = currentImageItemName.includes('_') ? currentImageItemName.split('_').slice(1).join('_') : null;
-    if (bareName) {
-      try {
-        await fetch(`${WORKER_BASE}/api/image?tenant_id=${tenantId}`, {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: bareName })
-        });
-      } catch (e) {}
+    if (previewEl) {
+      previewEl.src = "";
+      previewEl.style.display = "none";
     }
-
-    document.getElementById("image-preview").style.display = "none";
-    document.getElementById("btn-delete-image").style.display = "none";
-    document.getElementById("image-status").innerText = t("imageNoImage");
+    if (deleteBtn) deleteBtn.style.display = "none";
+    if (statusEl) statusEl.innerText = t("imageNoImage");
   } catch (e) {
     alert(t("imageDeleteFail") + e.message);
+    if (statusEl) statusEl.innerText = t("imageLoadFail");
   }
 }
 
