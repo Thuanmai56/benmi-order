@@ -259,7 +259,7 @@ function renderAll() {
     if (typeof renderListLeft === "function") renderListLeft(leftOrders);
     if (typeof renderListRight === "function") renderListRight(rightOrders);
   } else if (activeTab === "history") {
-    if (typeof renderHistory === "function") renderHistory();
+    if (typeof renderHistory === "function") renderHistory(historyOrders);
   }
 }
 

@@ -143,10 +143,6 @@ function renderHistory(orders) {
       `;
       body.appendChild(tile);
     });
-    if (todayHistoryOrders.length > 0) {
-      historyDayCache.set(todayStr, todayHistoryOrders);
-    }
-  }
 
     groupEl.appendChild(body);
     container.appendChild(groupEl);
