@@ -117,28 +117,36 @@ function renderHistory(orders) {
 
     items.forEach(order => {
       const tile = document.createElement("div");
-      tile.className = "tile";
+      tile.className = "history-tile";
       tile.onclick = () => openReview(order.key);
-      const badge = order.status === "PICKED_UP"
-        ? `<span class="badge done">${t('badgePicked')}</span>`
-        : `<span class="badge">${escapeHtml(order.status)}</span>`;
+      const isPickedUp = order.status === "PICKED_UP";
+      const isRejected = order.status === "REJECTED" || order.status === "FORCE_REJECT";
+      let badge = "";
+      if (isPickedUp) {
+        badge = `<span class="badge done">${t('badgePicked')}</span>`;
+      } else if (isRejected) {
+        badge = `<span class="badge new" style="background:#fee2e2; color:#b91c1c;">${t('badgeRejected')}</span>`;
+      } else {
+        badge = `<span class="badge">${escapeHtml(order.status)}</span>`;
+      }
       const totalFormatted = formatOrderTotal(order);
+      const itemsSummary = shortItems(order.content) || "";
 
       tile.innerHTML = `
-        <div>
-          <div class="tile-top">
-            <span class="tile-customer">${escapeHtml(order.customer || t('defaultCustomer'))}</span>
+        <div class="history-tile-info">
+          <div class="history-tile-top">
+            <span class="history-tile-customer">${escapeHtml(order.customer || t('defaultCustomer'))}</span>
+            <span class="history-tile-key">#${escapeHtml(order.key)}</span>
             ${badge}
-            <span class="tile-meta">#${escapeHtml(order.key)}</span>
           </div>
-          <div class="tile-top" style="margin-top: 6px;">
-            <span class="tile-meta">${t('pickupLabel')} ${escapeHtml(formatPickupTimeDisplay(order.time))}</span>
-            ${totalFormatted !== '-' ? `<span class="tile-meta" style="color: var(--primary); font-weight: 1000;">${escapeHtml(totalFormatted)}</span>` : ''}
+          <div class="history-tile-meta-row">
+            <span class="history-tile-meta"><span style="color:var(--muted); margin-right:4px;">🕒</span>${t('pickupLabel')} ${escapeHtml(formatPickupTimeDisplay(order.time))}</span>
+            ${totalFormatted !== '-' ? `<span class="history-tile-price">${escapeHtml(totalFormatted)}</span>` : ''}
           </div>
-          <div class="tile-items">${escapeHtml(shortItems(order.content))}</div>
+          ${itemsSummary ? `<div class="history-tile-items">🧾 ${escapeHtml(itemsSummary)}</div>` : ''}
         </div>
-        <div class="tile-actions">
-          <button class="btn btn-ghost btn-block" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">${t('btnView')}</button>
+        <div class="history-tile-actions">
+          <button class="history-tile-btn" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">${t('btnView')}</button>
         </div>
       `;
       body.appendChild(tile);

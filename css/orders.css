@@ -1212,6 +1212,158 @@ body {
   padding-left: 2px;
 }
 
+/* ==========================================
+   Dedicated History Tile Component (.history-tile)
+   ========================================== */
+.history-tile {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 0;
+  display: flex;
+  align-items: stretch;
+  cursor: pointer;
+  background: #fff;
+  overflow: hidden;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  min-height: 80px;
+  box-sizing: border-box;
+}
+
+.history-tile:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.history-tile-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  padding: 10px 14px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.history-tile-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  width: 100%;
+}
+
+.history-tile-customer {
+  font-weight: 1000;
+  font-size: 15.5px;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+  min-width: 0;
+}
+
+.history-tile-key {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+  font-family: ui-monospace, monospace;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.history-tile-top .badge {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 12px;
+  padding: 3px 8px;
+  line-height: 1.2;
+}
+
+.history-tile-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  width: 100%;
+}
+
+.history-tile-meta {
+  font-size: 13px;
+  font-weight: 800;
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.history-tile-price {
+  color: var(--primary);
+  font-weight: 1000;
+  font-size: 14px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.history-tile-items {
+  font-size: 13px;
+  font-weight: 700;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  width: 100%;
+}
+
+.history-tile-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  align-self: stretch;
+  flex-shrink: 0;
+  width: 90px;
+  min-width: 75px;
+  max-width: 100px;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+.history-tile-btn {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  padding: 6px 10px;
+  border-radius: 0 13px 13px 0 !important;
+  background: #f8fafc;
+  color: #475569;
+  border: none;
+  font-size: 14px;
+  font-weight: 900;
+  text-align: center;
+  justify-content: center;
+  align-items: center;
+  display: flex;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.history-tile-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.history-tile-btn:active {
+  background: #e2e8f0;
+}
+
 /* Older Data Card (BLAB Contact) */
 .history-older-card {
   background: linear-gradient(135deg, #f8fafc 0%, #edf2f7 100%);
