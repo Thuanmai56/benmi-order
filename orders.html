@@ -5,9 +5,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title id="pos-page-title">Dashboard</title>
-  <link rel="stylesheet" href="css/orders.css" />
+  <link rel="stylesheet" href="css/orders.css?v=20260820_3" />
     <script>
       (function () {
+        document.documentElement.style.setProperty('--primary', '#00b900');
+        document.documentElement.style.setProperty('--primary-dark', '#009900');
         const params = new URLSearchParams(window.location.search);
         const tenantId = params.get("tenant_id") || "benmi";
         window.__INITIAL_TENANT_ID = tenantId;
@@ -688,14 +690,14 @@
   </div>
 
   <!-- Benmi POS Modular Architecture Scripts -->
-  <script src="js/orders-i18n.js"></script>
-  <script src="js/orders-core.js"></script>
-  <script src="js/orders-audio.js"></script>
-  <script src="js/orders-live.js"></script>
-  <script src="js/orders-modals.js"></script>
-  <script src="js/orders-history.js"></script>
-  <script src="js/orders-settings.js"></script>
-  <script src="js/orders-menu.js"></script>
+  <script src="js/orders-i18n.js?v=20260820_3"></script>
+  <script src="js/orders-core.js?v=20260820_3"></script>
+  <script src="js/orders-audio.js?v=20260820_3"></script>
+  <script src="js/orders-live.js?v=20260820_3"></script>
+  <script src="js/orders-modals.js?v=20260820_3"></script>
+  <script src="js/orders-history.js?v=20260820_3"></script>
+  <script src="js/orders-settings.js?v=20260820_3"></script>
+  <script src="js/orders-menu.js?v=20260820_3"></script>
 
   <!-- POS Bootstrap & Initialization -->
   <script>
