@@ -207,8 +207,8 @@ export async function updateStockStatus(request: Request, env: Env): Promise<Res
        SET out_of_stock_until = ?, updated_at = datetime('now') 
        WHERE tenant_id = ? 
          AND name = ? 
-         AND category_id = (SELECT id FROM menu_categories WHERE tenant_id = ? AND slug = ?)`
-    ).bind(outOfStockUntil, tenantId, name, tenantId, category_slug).run();
+         AND category_id = (SELECT id FROM menu_categories WHERE tenant_id = ? AND (slug = ? OR id = ?))`
+    ).bind(outOfStockUntil, tenantId, name, tenantId, category_slug, category_slug).run();
 
     if (dbRes.meta.changes === 0) {
       return json({ error: "Menu item not found or unauthorized" }, 404);
