@@ -142,6 +142,14 @@ const I18N = {
     settingAddressSub: "顯示於顧客點餐頁面與 LINE 官方帳號回覆",
     settingAddressPlaceholder: "請輸入門市地址 (例: 新北市新店區中興路二段200-1號)",
     btnSaveAddress: "儲存地址",
+    settingLogoTitle: "🖼️ 門市 Logo",
+    settingLogoSub: "顯示於顧客點餐頁面頂部與 POS 系統",
+    btnChooseLogo: "選擇圖片",
+    btnSaveLogo: "儲存 Logo",
+    btnDeleteLogo: "刪除 Logo",
+    logoUploadPrompt: "請先選擇要上傳的 Logo 圖片",
+    confirmDeleteLogo: "確定要刪除門市 Logo 嗎？",
+    logoDeleteSuccess: "已成功移除門市 Logo！",
     btnAddShift: "+ 新增時段",
     closedDay: "公休",
     saving: "儲存中...",
@@ -359,6 +367,14 @@ const I18N = {
     settingAddressSub: "Hiển thị trên trang đặt món của khách và tin nhắn tự động LINE",
     settingAddressPlaceholder: "Nhập địa chỉ cửa hàng (VD: 新北市新店區中興路二段200-1號)",
     btnSaveAddress: "Lưu địa chỉ",
+    settingLogoTitle: "🖼️ Logo cửa hàng",
+    settingLogoSub: "Hiển thị ở đầu trang đặt món của khách và hệ thống POS",
+    btnChooseLogo: "Chọn ảnh",
+    btnSaveLogo: "Lưu Logo",
+    btnDeleteLogo: "Xóa Logo",
+    logoUploadPrompt: "Vui lòng chọn ảnh Logo trước khi lưu",
+    confirmDeleteLogo: "Bạn có chắc muốn xóa Logo cửa hàng không?",
+    logoDeleteSuccess: "Đã xóa Logo cửa hàng thành công!",
     btnAddShift: "+ Thêm khung giờ",
     closedDay: "Nghỉ",
     saving: "Đang lưu...",
@@ -723,6 +739,17 @@ function applyLanguageToDOM() {
   if (setAddrInp) setAddrInp.placeholder = dict.settingAddressPlaceholder;
   const btnSaveAddr = document.getElementById("btn-save-address-setting");
   if (btnSaveAddr) btnSaveAddr.innerText = dict.btnSaveAddress;
+
+  const setLogoT = document.getElementById("i18n-setting-logo-title");
+  if (setLogoT) setLogoT.innerText = dict.settingLogoTitle;
+  const setLogoS = document.getElementById("i18n-setting-logo-sub");
+  if (setLogoS) setLogoS.innerText = dict.settingLogoSub;
+  const btnChooseLogo = document.getElementById("btn-setting-choose-logo");
+  if (btnChooseLogo) btnChooseLogo.innerText = dict.btnChooseLogo;
+  const btnSaveLogo = document.getElementById("btn-save-logo-setting");
+  if (btnSaveLogo) btnSaveLogo.innerText = dict.btnSaveLogo;
+  const btnDeleteLogo = document.getElementById("btn-delete-logo-setting");
+  if (btnDeleteLogo) btnDeleteLogo.innerText = dict.btnDeleteLogo;
 
   // Menu Editor
   const menuCatT = document.getElementById("i18n-menu-cat-title");

@@ -135,13 +135,22 @@ async function loadOperatingHours() {
         const addrInput = document.getElementById("setting-store-address-input");
         if (addrInput) addrInput.value = data.storeAddress || "";
       }
+      if (data.logoUrl) {
+        currentStoreLogoUrl = data.logoUrl;
+        renderStoreLogoUI(data.logoUrl);
+      } else {
+        currentStoreLogoUrl = null;
+        renderStoreLogoUI(null);
+      }
     } else {
       storeOperatingHours = createDefaultOperatingHours();
       allowScheduledPickup = true;
+      renderStoreLogoUI(null);
     }
   } catch (e) {
     storeOperatingHours = createDefaultOperatingHours();
     allowScheduledPickup = true;
+    renderStoreLogoUI(null);
   }
   renderStoreStatusUI(currentStoreStatus);
   renderOperatingHours();
@@ -311,6 +320,148 @@ async function saveStoreAddressSetting() {
     });
     if (!res.ok) throw new Error("API returned " + res.status);
     alert(t("saveSuccess"));
+  } catch (e) {
+    alert(t("saveFail") + e.message);
+  } finally {
+    if (btn) { btn.innerText = oldText; btn.disabled = false; }
+  }
+}
+
+// --- Logo Management ---
+function renderStoreLogoUI(url) {
+  const preview = document.getElementById("setting-logo-preview");
+  const placeholder = document.getElementById("setting-logo-placeholder");
+  const delBtn = document.getElementById("btn-delete-logo-setting");
+  if (url) {
+    if (preview) { preview.src = url; preview.style.display = "block"; }
+    if (placeholder) placeholder.style.display = "none";
+    if (delBtn) delBtn.style.display = "inline-block";
+  } else {
+    if (preview) { preview.src = ""; preview.style.display = "none"; }
+    if (placeholder) placeholder.style.display = "block";
+    if (delBtn) delBtn.style.display = "none";
+  }
+}
+
+function handleSettingLogoSelect(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const rawDataUri = e.target.result;
+    // Compress image client-side if needed using Canvas (max 512px)
+    const img = new Image();
+    img.onload = () => {
+      const maxDim = 512;
+      let w = img.width;
+      let h = img.height;
+      if (w > maxDim || h > maxDim) {
+        if (w > h) {
+          h = Math.round((h * maxDim) / w);
+          w = maxDim;
+        } else {
+          w = Math.round((w * maxDim) / h);
+          h = maxDim;
+        }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, w, h);
+      pendingLogoDataUri = canvas.toDataURL("image/png");
+      renderStoreLogoUI(pendingLogoDataUri);
+    };
+    img.src = rawDataUri;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function saveStoreLogoSetting() {
+  if (!pendingLogoDataUri && !currentStoreLogoUrl) {
+    alert(t("logoUploadPrompt"));
+    return;
+  }
+
+  const btn = document.getElementById("btn-save-logo-setting");
+  const oldText = btn ? btn.innerText : "";
+  if (btn) { btn.innerText = t("saving"); btn.disabled = true; }
+
+  const tenantId = getTenantIdFromUrl();
+
+  try {
+    let finalLogoUrl = currentStoreLogoUrl;
+
+    // If there is a new image selected, upload it via /api/image
+    if (pendingLogoDataUri) {
+      const imgRes = await fetch(`${WORKER_BASE}/api/image?tenant_id=${tenantId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "store_logo",
+          dataUri: pendingLogoDataUri
+        })
+      });
+      if (!imgRes.ok) throw new Error("Upload logo image failed: " + imgRes.status);
+      finalLogoUrl = `${WORKER_BASE}/api/image?tenant_id=${tenantId}&name=store_logo&_t=${Date.now()}`;
+    }
+
+    // Update config with logoUrl
+    const res = await fetch(`${WORKER_BASE}/api/config?tenant_id=${tenantId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ logoUrl: finalLogoUrl })
+    });
+    if (!res.ok) throw new Error("API returned " + res.status);
+
+    currentStoreLogoUrl = finalLogoUrl;
+    pendingLogoDataUri = null;
+    renderStoreLogoUI(finalLogoUrl);
+
+    // Update topbar brand-logo immediately
+    const bLogo = document.getElementById("brand-logo");
+    if (bLogo && finalLogoUrl) {
+      bLogo.src = finalLogoUrl;
+      bLogo.style.display = "block";
+    }
+
+    alert(t("saveSuccess"));
+  } catch (e) {
+    alert(t("saveFail") + e.message);
+  } finally {
+    if (btn) { btn.innerText = oldText; btn.disabled = false; }
+  }
+}
+
+async function deleteStoreLogoSetting() {
+  if (!confirm(t("confirmDeleteLogo"))) return;
+
+  const btn = document.getElementById("btn-delete-logo-setting");
+  const oldText = btn ? btn.innerText : "";
+  if (btn) { btn.innerText = t("saving"); btn.disabled = true; }
+
+  const tenantId = getTenantIdFromUrl();
+
+  try {
+    const res = await fetch(`${WORKER_BASE}/api/config?tenant_id=${tenantId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ logoUrl: "" })
+    });
+    if (!res.ok) throw new Error("API returned " + res.status);
+
+    currentStoreLogoUrl = null;
+    pendingLogoDataUri = null;
+    renderStoreLogoUI(null);
+
+    const bLogo = document.getElementById("brand-logo");
+    if (bLogo) {
+      bLogo.src = "";
+      bLogo.style.display = "none";
+    }
+
+    alert(t("logoDeleteSuccess"));
   } catch (e) {
     alert(t("saveFail") + e.message);
   } finally {
