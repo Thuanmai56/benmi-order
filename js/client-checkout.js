@@ -228,7 +228,7 @@ function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, ma
     msg += `\n📍 用餐方式：${diningLabel}`;
 
     if (isDineIn) {
-        msg += `\n\n🕒 取餐時間：現場內用（現點現做）`;
+        msg += `\n\n🕒 點餐時間：${dateInput} ${timeInput}`;
         if (tableNumber) {
             msg += `\n🪑 用餐桌號：${tableNumber}`;
         }
@@ -403,7 +403,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
             key: orderNum,
             userId: userId,
             customer: customerName,
-            time: isDineIn ? (tableNumber ? `${dateInput} ${timeInput} (現場內用 - 桌號: ${tableNumber})` : `${dateInput} ${timeInput} (現場內用)`) : `${dateInput} ${timeInput}`,
+            time: `${dateInput} ${timeInput}`,
             dining_option: isDineIn ? 'dine_in' : 'takeaway',
             table_number: tableNumber || undefined,
             content: msg.split('\n\n🕒')[0].replace(/\[.*?點餐\]\n/g, '').replace('[Benmi 點餐]\n', ''),

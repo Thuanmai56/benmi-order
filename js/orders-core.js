@@ -130,6 +130,21 @@ function formatEta(timeStr) {
   return t("etaHours", { h, m });
 }
 
+function formatDineInElapsedTime(order) {
+  let createdMs = order?.createdAt;
+  if (!createdMs && order?.time) {
+    createdMs = parsePickupTimeMs(order.time);
+  }
+  if (!createdMs || Number.isNaN(createdMs)) return t("dineInElapsedJustNow");
+  const diffMs = Date.now() - createdMs;
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin <= 0) return t("dineInElapsedJustNow");
+  if (diffMin < 60) return t("dineInElapsedMinutes", { min: diffMin });
+  const h = Math.floor(diffMin / 60);
+  const m = diffMin % 60;
+  return t("dineInElapsedHours", { h, m });
+}
+
 function shortItems(content) {
   if (!content) return "";
   const lines = String(content).split("\n").map(s => s.trim()).filter(Boolean);

@@ -207,7 +207,7 @@
             </div>
 
             <div id="pickup-time-section">
-                <div class="section-title">🕒 取餐時間</div>
+                <div class="section-title" id="pickup-time-section-title">🕒 取餐時間</div>
                 
                 <!-- Dine-In Table Number Input -->
                 <div class="input-group" id="dinein-table-input-group" style="display: none; margin-bottom: 14px;">
@@ -234,7 +234,11 @@
                         </div>
                         <span style="font-size: 12px; background: #ede9fe; color: #6d28d9; padding: 3px 10px; border-radius: 99px; font-weight: 800;">現點現做</span>
                     </div>
-                    <div style="margin-top: 8px; font-size: 12px; color: #6d28d9; font-weight: 600; line-height: 1.45;">
+                    <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #c4b5fd; display: flex; align-items: center; justify-content: space-between; font-size: 15px;">
+                        <span style="color: #5b21b6; font-weight: 700;">點餐時間：</span>
+                        <span id="dinein-current-time" style="font-weight: 900; color: #5b21b6; font-size: 16px; font-family: ui-monospace, monospace;">-</span>
+                    </div>
+                    <div style="margin-top: 6px; font-size: 12px; color: #6d28d9; font-weight: 600; line-height: 1.45;">
                         ※ 訂單送出後廚房將立即依照排單順序為您製作，出餐時請留意叫號或您的取餐號碼。
                     </div>
                 </div>
@@ -483,11 +487,12 @@
 
         function updateAsapTimeDisplay() {
             const timeEl = document.getElementById('asap-current-time');
-            if (!timeEl) return;
+            const dineinTimeEl = document.getElementById('dinein-current-time');
             const tw = getTaiwanDate();
             const { fullStr } = formatTaiwanDateTime(tw);
             const isBusy = (storeConfig && storeConfig.storeStatus === 'busy');
-            timeEl.innerText = isBusy ? `${fullStr}（門市繁忙：約 1 小時後完成）` : fullStr;
+            if (timeEl) timeEl.innerText = isBusy ? `${fullStr}（門市繁忙：約 1 小時後完成）` : fullStr;
+            if (dineinTimeEl) dineinTimeEl.innerText = fullStr;
         }
 
         function applyPickupConfig() {
@@ -496,6 +501,7 @@
             const dineInNotice = document.getElementById('pickup-time-dinein-notice');
             const diningWrapper = document.getElementById('dining-option-wrapper');
             const checkoutDiningGroup = document.getElementById('checkout-dining-option-group');
+            const secTitle = document.getElementById('pickup-time-section-title');
 
             const hasDineInFeature = (storeConfig && Array.isArray(storeConfig.features))
                 ? storeConfig.features.includes('dine_in')
@@ -513,11 +519,14 @@
             const tableGroup = document.getElementById('dinein-table-input-group');
 
             if (window.currentDiningOption === 'dine_in') {
+                if (secTitle) secTitle.innerText = '🕒 點餐時間';
                 if (pickerGroup) pickerGroup.style.display = 'none';
                 if (asapNotice) asapNotice.style.display = 'none';
                 if (dineInNotice) dineInNotice.style.display = 'block';
                 if (tableGroup) tableGroup.style.display = 'block';
+                updateAsapTimeDisplay();
             } else {
+                if (secTitle) secTitle.innerText = '🕒 取餐時間';
                 if (dineInNotice) dineInNotice.style.display = 'none';
                 if (tableGroup) tableGroup.style.display = 'none';
                 if (storeConfig && storeConfig.allowScheduledPickup === false) {
@@ -1365,7 +1374,7 @@
 
         initApp();
     </script>
-    <script src="js/client-checkout.js?v=20260822_unified_1"></script>
+    <script src="js/client-checkout.js?v=20260822_dinein_elapsed_1"></script>
 </body>
 
 </html>

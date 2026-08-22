@@ -124,9 +124,10 @@ function renderListLeft(orders) {
       ? `<span class="badge badge-dine-in" style="font-size:11.5px; padding:2px 7px; margin-left:4px;">🍽️ ${t('badgeDineIn')}${escapeHtml(tableLabel)}</span>`
       : `<span class="badge badge-takeaway" style="font-size:11.5px; padding:2px 7px; margin-left:4px;">🛍️ ${t('badgeTakeaway')}</span>`;
 
-    const pickupDisplay = isDineIn && (!order.time || order.time === "Unknown" || order.time.includes("現場內用"))
-      ? `🍽️ ${t('dineIn')} (ASAP)`
+    const pickupDisplay = isDineIn
+      ? (formatPickupTimeDisplay(order.time) !== '-' ? formatPickupTimeDisplay(order.time) : t('dineIn'))
       : formatPickupTimeDisplay(order.time);
+    const etaDisplay = isDineIn ? formatDineInElapsedTime(order) : formatEta(order.time);
 
     tile.innerHTML = `
       <div class="tile-info">
@@ -138,7 +139,7 @@ function renderListLeft(orders) {
         </div>
         <div class="tile-meta-row">
           <span class="tile-meta-tag"><span style="color:var(--muted); margin-right:4px;">🕒</span>${escapeHtml(pickupDisplay)}</span>
-          <span class="tile-meta-tag tile-eta">${escapeHtml(eta)}</span>
+          <span class="tile-meta-tag tile-eta" style="${isDineIn ? 'color:#7c3aed; font-weight:800;' : ''}">${escapeHtml(etaDisplay)}</span>
         </div>
         <div class="tile-count-row">
           <span class="tile-item-count"><span style="margin-right:4px;">🧾</span>${itemCountStr}</span>
@@ -187,9 +188,10 @@ function renderListRight(orders) {
       ? `<span class="badge badge-dine-in" style="font-size:11.5px; padding:2px 7px; margin-left:4px;">🍽️ ${t('badgeDineIn')}${escapeHtml(tableLabel)}</span>`
       : `<span class="badge badge-takeaway" style="font-size:11.5px; padding:2px 7px; margin-left:4px;">🛍️ ${t('badgeTakeaway')}</span>`;
 
-    const pickupDisplay = isDineIn && (!order.time || order.time === "Unknown" || order.time.includes("現場內用"))
-      ? `🍽️ ${t('dineIn')} (ASAP)`
+    const pickupDisplay = isDineIn
+      ? (formatPickupTimeDisplay(order.time) !== '-' ? formatPickupTimeDisplay(order.time) : t('dineIn'))
       : formatPickupTimeDisplay(order.time);
+    const etaDisplay = isDineIn ? formatDineInElapsedTime(order) : formatEta(order.time);
 
     tile.innerHTML = `
       <div class="tile-info">
@@ -201,7 +203,7 @@ function renderListRight(orders) {
         </div>
         <div class="tile-meta-row">
           <span class="tile-meta-tag"><span style="color:var(--muted); margin-right:4px;">🕒</span>${escapeHtml(pickupDisplay)}</span>
-          <span class="tile-meta-tag tile-eta">${escapeHtml(eta)}</span>
+          <span class="tile-meta-tag tile-eta" style="${isDineIn ? 'color:#7c3aed; font-weight:800;' : ''}">${escapeHtml(etaDisplay)}</span>
         </div>
         <div class="tile-count-row">
           <span class="tile-item-count"><span style="margin-right:4px;">🧾</span>${itemCountStr}</span>

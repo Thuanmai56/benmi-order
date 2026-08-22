@@ -11,6 +11,13 @@ function openReview(orderKey) {
     dismissNewAlert();
   }
 
+  const isDineIn = typeof isOrderDineIn === "function" ? isOrderDineIn(order) : order.diningOption === "dine_in";
+
+  const elPickLabel = document.getElementById("i18n-label-pickup");
+  if (elPickLabel) elPickLabel.innerText = isDineIn ? t("dineInTimeLabel") : t("labelPickup");
+  const elEtaLabel = document.getElementById("i18n-label-eta");
+  if (elEtaLabel) elEtaLabel.innerText = isDineIn ? t("dineInElapsedHeader") : t("labelEta");
+
   const elKey = document.getElementById("review-order-key");
   if (elKey) elKey.innerText = order.key || "-";
   const elCust = document.getElementById("review-customer");
@@ -18,14 +25,16 @@ function openReview(orderKey) {
   const elPick = document.getElementById("review-pickup");
   if (elPick) elPick.innerText = formatPickupTimeDisplay(order.time);
   const elEta = document.getElementById("review-eta");
-  if (elEta) elEta.innerText = formatEta(order.time);
+  if (elEta) {
+    elEta.innerText = isDineIn ? formatDineInElapsedTime(order) : formatEta(order.time);
+    elEta.style.color = isDineIn ? "#7c3aed" : "var(--brand-red)";
+  }
   const elTot = document.getElementById("review-total");
   if (elTot) elTot.innerText = formatOrderTotal(order);
   const elSt = document.getElementById("review-status");
   if (elSt) elSt.innerText = order.status || "-";
   const elDining = document.getElementById("review-dining");
   if (elDining) {
-    const isDineIn = typeof isOrderDineIn === "function" ? isOrderDineIn(order) : order.diningOption === "dine_in";
     const tableNum = typeof getOrderTableNumber === "function" ? getOrderTableNumber(order) : (order.tableNumber || "");
     const tableSuffix = tableNum ? (currentLang === "vi" ? ` (Bàn ${tableNum})` : ` (桌號：${tableNum})`) : "";
     elDining.innerHTML = isDineIn

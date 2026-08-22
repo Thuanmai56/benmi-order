@@ -59,6 +59,11 @@ const I18N = {
     etaArrived: "已到 / {min} 分鐘前",
     etaMinutes: "剩 {min} 分鐘",
     etaHours: "剩 {h} 小時 {m} 分",
+    dineInElapsedJustNow: "剛剛下單",
+    dineInElapsedMinutes: "{min} 分鐘前下單",
+    dineInElapsedHours: "{h} 小時 {m} 分前下單",
+    dineInTimeLabel: "點餐時間",
+    dineInElapsedHeader: "下單進度",
     // Alert modal
     alertTitle: "{count} 單 新訂單",
     alertSub: "點擊 “Review 訂單” 查看詳情並接單",
@@ -323,6 +328,11 @@ const I18N = {
     etaArrived: "Đã đến / {min} phút trước",
     etaMinutes: "Còn {min} phút",
     etaHours: "Còn {h} giờ {m} phút",
+    dineInElapsedJustNow: "Vừa gửi đơn",
+    dineInElapsedMinutes: "Gửi đơn {min} phút trước",
+    dineInElapsedHours: "Gửi đơn {h} giờ {m} phút trước",
+    dineInTimeLabel: "Thời gian gửi đơn",
+    dineInElapsedHeader: "Thời gian đã qua",
     // Alert modal
     alertTitle: "{count} Đơn hàng mới",
     alertSub: "Nhấn “Xem đơn” để xem chi tiết và nhận đơn",
