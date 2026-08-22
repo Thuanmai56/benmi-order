@@ -192,6 +192,17 @@ export async function appendOrder(
       }
     }
 
+    // 9. Sync to Google Sheets
+    try {
+      if (ctx && ctx.waitUntil) {
+        ctx.waitUntil(syncToGoogleSheets(updatedOrder, env, tenantCtx));
+      } else {
+        await syncToGoogleSheets(updatedOrder, env, tenantCtx);
+      }
+    } catch (sheetErr) {
+      console.error("[appendOrder] Google Sheets sync failed:", sheetErr);
+    }
+
     return json({
       success: true,
       key: parentKey,
@@ -257,7 +268,11 @@ export async function updateOrder(
     reason: orderRow.reason || "",
     note: orderRow.note || "",
     diningOption: (orderRow.dining_option as any) || 'takeaway',
-    tableNumber: orderRow.table_number || undefined
+    tableNumber: orderRow.table_number || undefined,
+    roundCount: Number(orderRow.round_count) || 1,
+    round_count: Number(orderRow.round_count) || 1,
+    lastAppendedAt: orderRow.last_appended_at || null,
+    last_appended_at: orderRow.last_appended_at || null
   };
   const incoming = data.status;
 
@@ -785,7 +800,7 @@ export async function getOrderQueueAhead(env: Env, tenantId: string, orderKey: s
   if (!env.DB) return { order: null, queueAhead: 0 };
   try {
     const row = await env.DB.prepare(
-      "SELECT key, customer_name, pickup_time, status, total_amount, order_content, reason, note, created_at, user_id FROM orders WHERE key = ?"
+      "SELECT key, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, round_count, last_appended_at, created_at, user_id FROM orders WHERE key = ?"
     ).bind(orderKey).first<any>();
 
     if (!row) return { order: null, queueAhead: 0 };
@@ -800,7 +815,13 @@ export async function getOrderQueueAhead(env: Env, tenantId: string, orderKey: s
       userId: row.user_id || undefined,
       total: row.total_amount,
       reason: row.reason || "",
-      note: row.note || ""
+      note: row.note || "",
+      diningOption: (row.dining_option as any) || 'takeaway',
+      tableNumber: row.table_number || undefined,
+      roundCount: Number(row.round_count) || 1,
+      round_count: Number(row.round_count) || 1,
+      lastAppendedAt: row.last_appended_at || null,
+      last_appended_at: row.last_appended_at || null
     };
 
     if (order.status === 'DONE' || order.status === 'PICKED_UP' || order.status === 'REJECTED') {

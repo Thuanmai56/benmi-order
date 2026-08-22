@@ -56,6 +56,28 @@ function initAppendModeIfPresent() {
     }
 }
 
+function cancelAppendMode() {
+    window.isAppendMode = false;
+    window.parentOrderKey = null;
+    window.appendTableNumber = null;
+
+    const bannerEl = document.getElementById('append-mode-banner');
+    if (bannerEl) bannerEl.style.display = 'none';
+
+    // Khôi phục ô nhập số bàn
+    const tableInput = document.getElementById('dinein-table-number');
+    if (tableInput) {
+        tableInput.readOnly = false;
+        tableInput.style.backgroundColor = '#fff';
+        tableInput.style.color = '#1e1b4b';
+        tableInput.style.cursor = 'text';
+    }
+
+    // Khôi phục bộ chuyển đổi Dine-In / Takeaway
+    if (typeof applyPickupConfig === 'function') applyPickupConfig();
+    if (typeof updateFooterButtonState === 'function') updateFooterButtonState();
+}
+
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initAppendModeIfPresent);
 } else {

@@ -138,6 +138,11 @@ function renderHistory(orders) {
         ? `<span class="badge badge-dine-in" style="font-size:11px; padding:2px 6px; margin-left:4px;">🍽️ ${t('badgeDineIn')}${escapeHtml(tableLabel)}</span>`
         : `<span class="badge badge-takeaway" style="font-size:11px; padding:2px 6px; margin-left:4px;">🛍️ ${t('badgeTakeaway')}</span>`;
 
+      const roundCount = Number(order.round_count || order.roundCount) || 1;
+      const appendBadge = (isDineIn && roundCount > 1)
+        ? `<span class="badge badge-append" style="font-size:11px; padding:2px 6px; margin-left:4px;">➕ ${t('badgeAppendRound', { n: roundCount })}</span>`
+        : "";
+
       const pickupDisplay = isDineIn
         ? `${t('dineInTimeLabel')}: ${formatPickupTimeDisplay(order.time)}`
         : `${t('pickupLabel')} ${formatPickupTimeDisplay(order.time)}`;
@@ -148,6 +153,7 @@ function renderHistory(orders) {
             <span class="history-tile-customer">${escapeHtml(order.customer || t('defaultCustomer'))}</span>
             <span class="history-tile-key">#${escapeHtml(order.key)}</span>
             ${diningBadge}
+            ${appendBadge}
             ${badge}
           </div>
           <div class="history-tile-meta-row">

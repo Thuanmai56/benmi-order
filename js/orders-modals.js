@@ -3,7 +3,7 @@
 // ==========================================
 
 function openReview(orderKey) {
-  const order = (latestOrders || []).find(o => o && o.key === orderKey);
+  const order = (latestOrders || []).find(o => o && o.key === orderKey) || (typeof lastHistoryOrders !== "undefined" ? (lastHistoryOrders || []).find(o => o && o.key === orderKey) : null);
   if (!order) return;
   reviewingOrder = order;
 
