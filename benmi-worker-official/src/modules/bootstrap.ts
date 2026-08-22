@@ -236,7 +236,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
           id: cat.id,
           slug: cat.slug,
           name: cat.name,
-          selectionType: cat.selection_type || (cat.slug === 'topping' && tenantId === 'zhadantongxue' ? 'multiple' : 'single'),
+          selectionType: (cat.slug === 'topping' ? 'multiple' : (cat.selection_type || 'single')),
           isRequired: Boolean(cat.is_required),
           minSelection: cat.min_selection || 0,
           maxSelection: cat.max_selection || 1,

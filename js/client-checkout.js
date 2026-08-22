@@ -166,8 +166,8 @@ function generateOrderNumber() {
     let prefix = 'B';
     if (typeof storeConfig !== 'undefined' && storeConfig && storeConfig.orderPrefix) {
         prefix = storeConfig.orderPrefix.toUpperCase();
-    } else if (!isBenmiTenant) {
-        prefix = tenantId ? tenantId.charAt(0).toUpperCase() : 'O';
+    } else {
+        prefix = tenantId ? tenantId.charAt(0).toUpperCase() : 'B';
     }
 
     const suffix = generateBase32Suffix(4);
@@ -179,66 +179,43 @@ function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, ma
     const zhNumbers = ['第一份', '第二份', '第三份', '第四份', '第五份', '第六份', '第七份', '第八份', '第九份', '第十份'];
     let msg = `[${document.getElementById('store-name')?.innerText || '線上'} 點餐]\n訂單編號：${orderNum}\n📦 訂單內容：\n`;
 
-    if (isBenmiTenant) {
-        for (let key in cart) {
-            if (cart[key] > 0) {
-                let [cat, origName] = key.split('_');
-                let displayName = cat === 'small' ? origName + ' 小' :
-                    cat === 'large' ? origName + ' 大' :
-                        cat === 'combo' ? '套餐 ' + origName : origName;
+    for (let key in cart) {
+        if (cart[key] > 0) {
+            let [catSlug, origName] = key.split('_');
+            msg += `\n${cart[key]}份 x ${origName}`;
 
-                msg += `\n${cart[key]}份 x ${displayName}`;
-
-                if (cat === 'combo') {
-                    let drinks = comboDrinkData[origName] || [];
-                    let drinkCounts = {};
-                    drinks.slice(0, cart[key]).forEach(d => { drinkCounts[d] = (drinkCounts[d] || 0) + 1; });
-                    let drinkStr = Object.entries(drinkCounts).map(([n, c]) => `${n} x${c}`).join('、');
-                    if (drinkStr) msg += `\n   ↳ 飲料：${drinkStr}`;
-                }
-
-                if (customizeData[key]) {
-                    customizeData[key].slice(0, cart[key]).forEach((c, i) => {
-                        let parts = [];
-                        if (c.topping && c.topping !== '') parts.push('加' + c.topping);
-                        if (c.spicy && c.spicy !== '不辣') parts.push(c.spicy);
-                        if (c.note && c.note.trim() !== '') parts.push(c.note.trim());
-                        if (parts.length > 0) {
-                            let zhIdx = zhNumbers[i] || `第 ${i + 1} 份`;
-                            msg += `\n   ↳ ${zhIdx}: ${parts.join(', ')}`;
-                        }
-                    });
-                }
+            if (catSlug === 'combo') {
+                let drinks = comboDrinkData[origName] || [];
+                let drinkCounts = {};
+                drinks.slice(0, cart[key]).forEach(d => { drinkCounts[d] = (drinkCounts[d] || 0) + 1; });
+                let drinkStr = Object.entries(drinkCounts).map(([n, c]) => `${n} x${c}`).join('、');
+                if (drinkStr) msg += `\n   ↳ 飲料：${drinkStr}`;
             }
-        }
-    } else {
-        for (let key in cart) {
-            if (cart[key] > 0) {
-                let [catSlug, origName] = key.split('_');
-                msg += `\n${cart[key]}份 x ${origName}`;
 
-                if (customizeData[key]) {
-                    customizeData[key].slice(0, cart[key]).forEach((c, i) => {
-                        const parts = [];
-                        if (c.single) {
-                            for (let s in c.single) {
-                                if (c.single[s] && c.single[s] !== '不辣' && c.single[s] !== '不需要') {
-                                    parts.push(c.single[s]);
-                                }
+            if (customizeData[key]) {
+                customizeData[key].slice(0, cart[key]).forEach((c, i) => {
+                    const parts = [];
+                    if (c.single) {
+                        for (let s in c.single) {
+                            if (c.single[s] && c.single[s] !== '不辣' && c.single[s] !== '不需要') {
+                                parts.push(c.single[s]);
                             }
                         }
-                        if (c.multiple) {
-                            for (let t in c.multiple) {
-                                if (c.multiple[t]) parts.push(`加${t}`);
-                            }
+                    }
+                    if (c.multiple) {
+                        for (let t in c.multiple) {
+                            if (c.multiple[t]) parts.push(`加${t}`);
                         }
-                        if (c.note && c.note.trim() !== '') parts.push(c.note.trim());
-                        if (parts.length > 0) {
-                            let zhIdx = zhNumbers[i] || `第 ${i + 1} 份`;
-                            msg += `\n   ↳ ${zhIdx}: ${parts.join(', ')}`;
-                        }
-                    });
-                }
+                    }
+                    if (c.topping && c.topping !== '') parts.push('加' + c.topping);
+                    if (c.spicy && c.spicy !== '不辣') parts.push(c.spicy);
+                    if (c.note && c.note.trim() !== '') parts.push(c.note.trim());
+
+                    if (parts.length > 0) {
+                        let zhIdx = zhNumbers[i] || `第 ${i + 1} 份`;
+                        msg += `\n   ↳ ${zhIdx}: ${parts.join(', ')}`;
+                    }
+                });
             }
         }
     }
@@ -388,10 +365,10 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
         const tenantId = getTenantIdFromUrl();
 
         // Kiểm tra đăng nhập LIFF nếu trong môi trường LINE
-        if (typeof liff !== 'undefined' && liff.isInClient) {
+        if (typeof liff !== 'undefined') {
             try {
                 if (liff.isInClient() && liff.isLoggedIn && !liff.isLoggedIn()) {
-                    const storageKey = isBenmiTenant ? 'benmi_cart_save' : `cart_save_${tenantId}`;
+                    const storageKey = `cart_save_${tenantId}`;
                     localStorage.setItem(storageKey, JSON.stringify({ cart, customizeData, comboDrinkData }));
                     liff.login({ redirectUri: window.location.href });
                     return;

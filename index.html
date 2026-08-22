@@ -317,11 +317,7 @@
             return params.get("tenant_id") || "benmi";
         }
 
-        const isBenmiTenant = (getTenantIdFromUrl() === "benmi");
-
         // State
-        let menu = { small: {}, large: {}, combo: {}, drinks: {}, topping: {} };
-        let imageList = [];
         let storeConfig = null;
         let bootstrapData = null;
 
@@ -331,10 +327,6 @@
         let currentPopup = null;
         let alertCallback = null;
         window.isSubmitting = false;
-
-        // Recommended items for Benmi
-        const recommended = new Set(['雙層烤肉', '綜合']);
-        const recommendedCombo = new Set(['5 大雙層烤肉+飲料', '6 大綜合+飲料']);
 
         const itemTranslations = {
             "燒肉": "Braised Pork",
@@ -354,32 +346,20 @@
         async function fetchMenu() {
             try {
                 const tenantId = getTenantIdFromUrl();
-                if (isBenmiTenant) {
-                    const [resMenu, resImage, resConfig] = await Promise.all([
-                        fetch(`${WORKER_BASE}/api/menu?tenant_id=${tenantId}&_t=${Date.now()}`, { cache: 'no-store' }),
-                        fetch(`${WORKER_BASE}/api/image_list?tenant_id=${tenantId}&_t=${Date.now()}`, { cache: 'no-store' }),
-                        fetch(`${WORKER_BASE}/api/config?tenant_id=${tenantId}&_t=${Date.now()}`, { cache: 'no-store' })
-                    ]);
-                    if (resMenu.ok) menu = await resMenu.json();
-                    if (resImage.ok) imageList = await resImage.json();
-                    if (resConfig.ok) storeConfig = await resConfig.json();
-                    updateMenuOosUI();
-                } else {
-                    const res = await fetch(`${WORKER_BASE}/api/tenant/bootstrap?tenant_id=${tenantId}&_t=${Date.now()}`, { cache: 'no-store' });
-                    if (res.ok) {
-                        bootstrapData = await res.json();
-                        storeConfig = bootstrapData.tenant ? {
-                            allowScheduledPickup: bootstrapData.tenant.allowScheduledPickup,
-                            allowDineIn: bootstrapData.tenant.allowDineIn,
-                            features: bootstrapData.tenant.features || [],
-                            orderPrefix: bootstrapData.tenant.orderPrefix,
-                            storeStatus: bootstrapData.tenant.storeStatus,
-                            operatingHours: bootstrapData.tenant.parsedHours,
-                            liffId: bootstrapData.tenant.liffId
-                        } : null;
-                        applyTenantTheme(bootstrapData.tenant);
-                        updateDynamicStockAndPrices();
-                    }
+                const res = await fetch(`${WORKER_BASE}/api/tenant/bootstrap?tenant_id=${tenantId}&_t=${Date.now()}`, { cache: 'no-store' });
+                if (res.ok) {
+                    bootstrapData = await res.json();
+                    storeConfig = bootstrapData.tenant ? {
+                        allowScheduledPickup: bootstrapData.tenant.allowScheduledPickup,
+                        allowDineIn: bootstrapData.tenant.allowDineIn,
+                        features: bootstrapData.tenant.features || [],
+                        orderPrefix: bootstrapData.tenant.orderPrefix,
+                        storeStatus: bootstrapData.tenant.storeStatus,
+                        operatingHours: bootstrapData.tenant.parsedHours,
+                        liffId: bootstrapData.tenant.liffId
+                    } : null;
+                    applyTenantTheme(bootstrapData.tenant);
+                    updateDynamicStockAndPrices();
                 }
                 applyPickupConfig();
                 checkStoreStatus();
@@ -625,182 +605,7 @@
             if (lightbox) lightbox.style.display = 'none';
         }
 
-        // --- BENMI RENDERING ---
-        function getFooterHTML(category, origName, price, isOos) {
-            const qty = cart[category + '_' + origName] || 0;
-            return isOos ? `
-                <div class="card-price" style="color: #9ca3af;">$${price}</div>
-                <div style="color: #dc2626; font-weight: 900; font-size: 14px; background: #fee2e2; padding: 4px 10px; border-radius: 6px;">今日已售完</div>
-            ` : `
-                <div class="card-price">$${price}</div>
-                <div class="qty-control">
-                    <button class="btn-qty" onclick="updateQty('${category}','${origName}',-1)">-</button>
-                    <span class="qty-text" id="qty-${category}-${origName}" style="${qty > 0 ? 'color: var(--primary);' : ''}">${qty}</span>
-                    <button class="btn-qty" onclick="updateQty('${category}','${origName}',1)">+</button>
-                </div>
-            `;
-        }
-
-        function updateMenuOosUI() {
-            if (!menu) return;
-            const ignoredCats = ['out_of_stock', 'spicy', 'topping', 'egg', 'lettuce', '_category_names'];
-            const categories = Object.keys(menu).filter(k => !ignoredCats.includes(k) && typeof menu[k] === 'object' && menu[k] !== null);
-            categories.forEach(category => {
-                const itemsMap = menu[category] || {};
-                Object.keys(itemsMap).forEach(origName => {
-                    if (origName.startsWith('_')) return;
-                    const elId = `item-${category}-${origName}`;
-                    const div = document.getElementById(elId);
-                    if (!div) return;
-
-                    const isOos = menu.out_of_stock && menu.out_of_stock.includes(`${category}:${origName}`);
-                    div.style.opacity = isOos ? '0.65' : '1';
-                    div.style.pointerEvents = isOos ? 'none' : 'auto';
-
-                    const footer = div.querySelector('.card-footer');
-                    if (footer) {
-                        const price = itemsMap[origName];
-                        const footerHTML = getFooterHTML(category, origName, price, isOos);
-                        if (footer.innerHTML.trim() !== footerHTML.trim()) {
-                            footer.innerHTML = footerHTML;
-                        }
-                    }
-
-                    const custBtn = div.querySelector('.customize-btn');
-                    if (custBtn) {
-                        const qty = cart[category + '_' + origName] || 0;
-                        custBtn.style.display = (isOos || category === 'drinks' || !(qty > 0)) ? 'none' : 'block';
-                    }
-                });
-            });
-        }
-
-        function createItem(displayName, price, category, containerId, origName, isRecommended) {
-            const container = document.getElementById(containerId);
-            if (!container) return;
-            const div = document.createElement('div');
-            div.className = 'card';
-            div.id = `item-${category}-${origName}`;
-
-            const badgeHTML = isRecommended ? `<span class="badge">👍 推薦</span>` : '';
-
-            const imageKey = `${category}_${origName}`;
-            const hasImage = imageList.includes(imageKey) || imageList.includes(origName);
-            const imgHTML = hasImage ? `<img class="item-img" src="${WORKER_BASE}/api/image?tenant_id=${getTenantIdFromUrl()}&name=${encodeURIComponent(imageKey)}&v=2" alt="${origName}" loading="lazy" onclick="openImageLightbox(this.src)" style="cursor: zoom-in;" onerror="this.style.display='none'">` : '';
-
-            const trans = itemTranslations[origName] || '';
-            const transHTML = trans ? `<div style="font-size: 13px; color: #9ca3af; margin-top: 2px;">${trans}</div>` : '';
-
-            const isOos = menu.out_of_stock && menu.out_of_stock.includes(`${category}:${origName}`);
-            if (isOos) {
-                div.style.opacity = '0.65';
-                div.style.pointerEvents = 'none';
-            }
-
-            const footerHTML = getFooterHTML(category, origName, price, isOos);
-            const qty = cart[category + '_' + origName] || 0;
-            const customizeBtnHTML = `
-                <button class="customize-btn" id="customize-btn-${category}-${origName}" onclick="toggleCustomize('${category}','${origName}')" style="pointer-events: auto; display: ${(!isOos && qty > 0 && category !== 'drinks') ? 'block' : 'none'};">✏️ 客製化（加料 / 辣度 / 備註）</button>
-            `;
-
-            div.innerHTML = `
-                <div class="card-main" style="${isOos ? 'pointer-events: none;' : ''}">
-                    ${imgHTML}
-                    <div class="card-info">
-                        <div>
-                            <div class="card-title">${displayName} ${badgeHTML}</div>
-                            ${transHTML}
-                        </div>
-                        <div class="card-footer">
-                            ${footerHTML}
-                        </div>
-                    </div>
-                </div>
-                ${customizeBtnHTML}
-                <div id="combo-container-${category}-${origName}"></div>
-            `;
-            container.appendChild(div);
-        }
-
-        function renderMenuBenmi() {
-            if (!menu) return;
-
-            const standardCats = ['large', 'small', 'combo', 'drinks'];
-            const ignoredCats = ['out_of_stock', 'spicy', 'topping', 'egg', 'lettuce', '_category_names'];
-
-            // Lấy danh sách các phân loại sản phẩm mới được tạo thêm trong POS
-            const customCats = Object.keys(menu).filter(k => !standardCats.includes(k) && !ignoredCats.includes(k) && typeof menu[k] === 'object' && menu[k] !== null);
-
-            // 1. Setup Benmi Navigation Tabs
-            const nav = document.getElementById('main-nav');
-            if (nav) {
-                let navHTML = `
-                    <div class="nav-btn active" onclick="scrollToSec('sec-large')">大麵包</div>
-                    <div class="nav-btn" onclick="scrollToSec('sec-small')">小麵包</div>
-                    <div class="nav-btn" onclick="scrollToSec('sec-combo')">套餐</div>
-                    <div class="nav-btn" onclick="scrollToSec('sec-drink')">飲料</div>
-                `;
-                customCats.forEach(catKey => {
-                    const catTitle = (menu._category_names && menu._category_names[catKey]) || catKey;
-                    navHTML += `<div class="nav-btn" onclick="scrollToSec('sec-${catKey}')">${catTitle}</div>`;
-                });
-                navHTML += `<div class="nav-btn" onclick="scrollToSec('sec-checkout')">結帳</div>`;
-                nav.innerHTML = navHTML;
-            }
-
-            // 2. Setup Benmi Section Containers
-            const container = document.getElementById('catalog-sections');
-            if (container) {
-                let secHTML = `
-                    <div class="section-container" id="sec-large">
-                        <div class="section-title">🍔 大麵包</div>
-                        <div class="grid" id="large-list"></div>
-                    </div>
-                    <div class="section-container" id="sec-small">
-                        <div class="section-title">🥖 小麵包</div>
-                        <div class="grid" id="small-list"></div>
-                    </div>
-                    <div class="section-container" id="sec-combo">
-                        <div class="section-title">🎁 特惠套餐 (含飲料)</div>
-                        <div class="grid" id="combo-list"></div>
-                    </div>
-                    <div class="section-container" id="sec-drink">
-                        <div class="section-title">🥤 單點飲料</div>
-                        <div class="grid" id="drink-list"></div>
-                    </div>
-                `;
-                customCats.forEach(catKey => {
-                    const catTitle = (menu._category_names && menu._category_names[catKey]) || catKey;
-                    secHTML += `
-                        <div class="section-container" id="sec-${catKey}">
-                            <div class="section-title">🍽️ ${catTitle}</div>
-                            <div class="grid" id="${catKey}-list"></div>
-                        </div>
-                    `;
-                });
-                container.innerHTML = secHTML;
-            }
-
-            for (let name in menu.large) createItem(name + ' 大', menu.large[name], 'large', 'large-list', name, recommended.has(name));
-            for (let name in menu.small) createItem(name + ' 小', menu.small[name], 'small', 'small-list', name, recommended.has(name));
-            for (let name in menu.combo) createItem('套餐 ' + name, menu.combo[name], 'combo', 'combo-list', name, recommendedCombo.has(name));
-            for (let name in menu.drinks) createItem(name, menu.drinks[name], 'drinks', 'drink-list', name, false);
-
-            // Render món thuộc các phân loại mới
-            customCats.forEach(catKey => {
-                if (menu[catKey]) {
-                    for (let name in menu[catKey]) {
-                        if (!name.startsWith('_')) {
-                            createItem(name, menu[catKey][name], catKey, `${catKey}-list`, name, false);
-                        }
-                    }
-                }
-            });
-
-            document.querySelectorAll('.section-container').forEach(sec => observer.observe(sec));
-        }
-
-        // --- DYNAMIC TENANT RENDERING (FOR OTHER TENANTS LIKE ZHADANTONGXUE) ---
+        // --- DYNAMIC CATALOG RENDERING (UNIFIED FOR ALL TENANTS) ---
         function renderDynamicCatalog() {
             if (!bootstrapData || !bootstrapData.catalog) return;
 
@@ -856,10 +661,12 @@
             const badgeText = item.badge || item.badgeText || (item.isRecommended ? '👍 推薦' : '');
             const badgeHTML = badgeText ? `<span class="badge">${badgeText}</span>` : '';
 
-            const tenantId = getTenantIdFromUrl();
             const imgHTML = item.imageUrl
                 ? `<img class="item-img" src="${WORKER_BASE}${item.imageUrl}&v=2" alt="${item.name}" loading="lazy" onclick="openImageLightbox(this.src)" style="cursor: zoom-in;" onerror="this.style.display='none'">`
                 : '';
+
+            const trans = (bootstrapData?.translations && bootstrapData.translations[item.name]) || itemTranslations[item.name] || item.description || '';
+            const transHTML = trans ? `<div style="font-size: 13px; color: #9ca3af; margin-top: 2px;">${trans}</div>` : '';
 
             const qty = cart[`${catSlug}_${item.name}`] || 0;
             const footerHTML = getDynamicItemFooterHTML(catSlug, item.name, item.price, isOos);
@@ -874,6 +681,7 @@
                     <div class="card-info">
                         <div>
                             <div class="card-title">${item.name} ${badgeHTML}</div>
+                            ${transHTML}
                         </div>
                         <div class="card-footer">
                             ${footerHTML}
@@ -940,12 +748,8 @@
 
             const btn = document.getElementById('customize-btn-' + category + '-' + origName);
             if (btn) {
-                if (isBenmiTenant) {
-                    btn.style.display = (cart[key] > 0 && category !== 'drinks') ? 'block' : 'none';
-                } else {
-                    const hasModifiers = bootstrapData?.modifiers && bootstrapData.modifiers.length > 0 && category !== 'drinks';
-                    btn.style.display = (cart[key] > 0 && hasModifiers) ? 'block' : 'none';
-                }
+                const hasModifiers = bootstrapData?.modifiers && bootstrapData.modifiers.length > 0 && category !== 'drinks';
+                btn.style.display = (cart[key] > 0 && hasModifiers) ? 'block' : 'none';
             }
 
             if (category === 'combo') renderComboDrinksInline(origName, cart[key]);
@@ -958,135 +762,84 @@
             let summaryHTML = '';
             const zhNumbers = ['第一份', '第二份', '第三份', '第四份', '第五份', '第六份', '第七份', '第八份', '第九份', '第十份'];
 
-            if (isBenmiTenant) {
-                for (let key in cart) {
-                    if (cart[key] > 0) {
-                        let [cat, origName] = key.split('_');
-                        let qty = cart[key];
-                        totalQty += qty;
+            const priceMap = {};
+            if (bootstrapData?.catalog) {
+                bootstrapData.catalog.forEach(cat => {
+                    cat.items.forEach(it => { priceMap[`${cat.slug}_${it.name}`] = it.price; });
+                });
+            }
+            const modPriceMap = {};
+            if (bootstrapData?.modifiers) {
+                bootstrapData.modifiers.forEach(mod => {
+                    mod.options.forEach(opt => { modPriceMap[opt.name] = opt.price || 0; });
+                });
+            }
 
-                        let itemPrice = 0;
-                        let displayName = origName;
-                        if (cat === 'small') { itemPrice = menu.small[origName] || 0; displayName += ' 小'; }
-                        else if (cat === 'large') { itemPrice = menu.large[origName] || 0; displayName += ' 大'; }
-                        else if (cat === 'combo') { itemPrice = menu.combo[origName] || 0; displayName = '套餐 ' + displayName; }
-                        else if (cat === 'drinks') { itemPrice = menu.drinks[origName] || 0; }
-                        else if (menu && menu[cat] && menu[cat][origName] !== undefined) { itemPrice = menu[cat][origName] || 0; }
+            for (let key in cart) {
+                if (cart[key] > 0) {
+                    const [catSlug, itemName] = key.split('_');
+                    const qty = cart[key];
+                    totalQty += qty;
 
-                        let itemModifiersTotal = 0;
-                        let portionsHTML = '';
+                    const itemBasePrice = priceMap[key] || 0;
+                    let itemModifiersTotal = 0;
+                    let portionsHTML = '';
 
-                        if (customizeData[key]) {
-                            customizeData[key].slice(0, qty).forEach((c, i) => {
-                                let parts = [];
-                                if (c.topping && c.topping !== '') {
-                                    let topPrice = menu.topping[c.topping] || 0;
-                                    itemModifiersTotal += topPrice;
-                                    parts.push('加' + c.topping + ' (+$' + topPrice + ')');
+                    if (customizeData[key]) {
+                        customizeData[key].slice(0, qty).forEach((c, i) => {
+                            const parts = [];
+                            if (c.single) {
+                                for (let s in c.single) {
+                                    const val = c.single[s];
+                                    if (val && val !== '不辣' && val !== '不需要') {
+                                        const addP = modPriceMap[val] || 0;
+                                        if (addP > 0) {
+                                            itemModifiersTotal += addP;
+                                            parts.push(`${val} (+$${addP})`);
+                                        } else {
+                                            parts.push(val);
+                                        }
+                                    }
                                 }
-                                if (c.spicy && c.spicy !== '不辣') parts.push(c.spicy);
-                                if (c.note && c.note.trim() !== '') parts.push(c.note.trim());
-
-                                if (parts.length > 0) {
-                                    let zhIdx = zhNumbers[i] || `第 ${i + 1} 份`;
-                                    portionsHTML += `<div style="font-size:13px; color:#6b7280; margin-left:10px; margin-bottom:6px;">↳ ${zhIdx}: ${parts.join(', ')}</div>`;
+                            }
+                            if (c.multiple) {
+                                for (let topName in c.multiple) {
+                                    if (c.multiple[topName]) {
+                                        const topPrice = modPriceMap[topName] || 0;
+                                        itemModifiersTotal += topPrice;
+                                        parts.push(`加${topName} (+$${topPrice})`);
+                                    }
                                 }
-                            });
-                        }
+                            }
+                            if (c.note && c.note.trim() !== '') parts.push(c.note.trim());
 
-                        let lineTotal = (qty * itemPrice) + itemModifiersTotal;
+                            if (parts.length > 0) {
+                                const zhIdx = zhNumbers[i] || `第 ${i + 1} 份`;
+                                portionsHTML += `<div style="font-size:13px; color:#6b7280; margin-left:10px; margin-bottom:6px;">↳ ${zhIdx}: ${parts.join(', ')}</div>`;
+                            }
+                        });
+                    }
 
-                        summaryHTML += `<div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                            <div style="font-weight:800;">${qty}x ${displayName}</div>
+                    let lineTotal = (qty * itemBasePrice) + itemModifiersTotal;
+
+                    summaryHTML += `
+                        <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                            <div style="font-weight:800; color: #111;">${qty}x ${itemName}</div>
                             <div style="font-weight:700;">$${lineTotal}</div>
-                        </div>`;
+                        </div>
+                    `;
 
-                        if (cat === 'combo') {
-                            let drinks = comboDrinkData[origName] || [];
-                            let drinkCounts = {};
-                            drinks.slice(0, qty).forEach(d => { drinkCounts[d] = (drinkCounts[d] || 0) + 1; });
-                            let drinkStr = Object.entries(drinkCounts).map(([n, c]) => `${n} x${c}`).join('、');
-                            if (drinkStr) summaryHTML += `<div style="font-size:13px; color:#6b7280; margin-left:10px; margin-bottom:6px;">↳ 飲料：${drinkStr}</div>`;
-                        }
-
-                        summaryHTML += portionsHTML;
-                        total += lineTotal;
-                        summaryHTML += `<div style="border-bottom: 1px dashed #eee; margin-bottom: 8px;"></div>`;
+                    if (catSlug === 'combo') {
+                        let drinks = comboDrinkData[itemName] || [];
+                        let drinkCounts = {};
+                        drinks.slice(0, qty).forEach(d => { drinkCounts[d] = (drinkCounts[d] || 0) + 1; });
+                        let drinkStr = Object.entries(drinkCounts).map(([n, c]) => `${n} x${c}`).join('、');
+                        if (drinkStr) summaryHTML += `<div style="font-size:13px; color:#6b7280; margin-left:10px; margin-bottom:6px;">↳ 飲料：${drinkStr}</div>`;
                     }
-                }
-            } else {
-                // Dynamic Tenant Total Calculation
-                const priceMap = {};
-                if (bootstrapData?.catalog) {
-                    bootstrapData.catalog.forEach(cat => {
-                        cat.items.forEach(it => { priceMap[`${cat.slug}_${it.name}`] = it.price; });
-                    });
-                }
-                const modPriceMap = {};
-                if (bootstrapData?.modifiers) {
-                    bootstrapData.modifiers.forEach(mod => {
-                        mod.options.forEach(opt => { modPriceMap[opt.name] = opt.price || 0; });
-                    });
-                }
 
-                for (let key in cart) {
-                    if (cart[key] > 0) {
-                        const [catSlug, itemName] = key.split('_');
-                        const qty = cart[key];
-                        totalQty += qty;
-
-                        const itemBasePrice = priceMap[key] || 0;
-                        let itemModifiersTotal = 0;
-                        let portionsHTML = '';
-
-                        if (customizeData[key]) {
-                            customizeData[key].slice(0, qty).forEach((c, i) => {
-                                const parts = [];
-                                if (c.single) {
-                                    for (let s in c.single) {
-                                        const val = c.single[s];
-                                        if (val && val !== '不辣' && val !== '不需要') {
-                                            const addP = modPriceMap[val] || 0;
-                                            if (addP > 0) {
-                                                itemModifiersTotal += addP;
-                                                parts.push(`${val} (+$${addP})`);
-                                            } else {
-                                                parts.push(val);
-                                            }
-                                        }
-                                    }
-                                }
-                                if (c.multiple) {
-                                    for (let topName in c.multiple) {
-                                        if (c.multiple[topName]) {
-                                            const topPrice = modPriceMap[topName] || 0;
-                                            itemModifiersTotal += topPrice;
-                                            parts.push(`加${topName} (+$${topPrice})`);
-                                        }
-                                    }
-                                }
-                                if (c.note && c.note.trim() !== '') parts.push(c.note.trim());
-
-                                if (parts.length > 0) {
-                                    const zhIdx = zhNumbers[i] || `第 ${i + 1} 份`;
-                                    portionsHTML += `<div style="font-size:13px; color:#6b7280; margin-left:10px; margin-bottom:6px;">↳ ${zhIdx}: ${parts.join(', ')}</div>`;
-                                }
-                            });
-                        }
-
-                        let lineTotal = (qty * itemBasePrice) + itemModifiersTotal;
-
-                        summaryHTML += `
-                            <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                                <div style="font-weight:800; color: #111;">${qty}x ${itemName}</div>
-                                <div style="font-weight:700;">$${lineTotal}</div>
-                            </div>
-                        `;
-
-                        summaryHTML += portionsHTML;
-                        total += lineTotal;
-                        summaryHTML += `<div style="border-bottom: 1px dashed #eee; margin-bottom: 8px;"></div>`;
-                    }
+                    summaryHTML += portionsHTML;
+                    total += lineTotal;
+                    summaryHTML += `<div style="border-bottom: 1px dashed #eee; margin-bottom: 8px;"></div>`;
                 }
             }
 
@@ -1115,7 +868,7 @@
             return total;
         }
 
-        // --- COMBO DRINKS (BENMI) ---
+        // --- COMBO DRINKS (OPTIONAL INLINE DRINK SELECTOR) ---
         function renderComboDrinksInline(origName, qty) {
             const containerId = 'combo-container-combo-' + origName;
             const container = document.getElementById(containerId);
@@ -1125,28 +878,28 @@
 
             if (!comboDrinkData[origName]) comboDrinkData[origName] = [];
 
-            const drinksMap = menu.drinks || {};
-            const drinkKeys = Object.keys(drinksMap);
-            if (drinkKeys.length === 0) return;
+            const drinksCategory = bootstrapData?.catalog?.find(c => c.slug === 'drinks');
+            const drinkItems = drinksCategory ? drinksCategory.items : [];
+            if (drinkItems.length === 0) return;
 
             const box = document.createElement('div');
             box.className = 'combo-drinks';
             box.innerHTML = '<strong>🥤 選擇附贈飲料</strong>';
 
             for (let i = 1; i <= qty; i++) {
-                let firstDrink = drinkKeys.find(d => !menu.out_of_stock || !menu.out_of_stock.includes(`drinks:${d}`)) || drinkKeys[0];
-                if (!comboDrinkData[origName][i - 1]) comboDrinkData[origName][i - 1] = firstDrink;
+                let firstDrink = drinkItems.find(d => !d.isOutOfStock) || drinkItems[0];
+                const firstDrinkName = firstDrink ? firstDrink.name : '';
+                if (!comboDrinkData[origName][i - 1]) comboDrinkData[origName][i - 1] = firstDrinkName;
 
                 let sel = document.createElement('select');
-                for (let d in drinksMap) {
+                for (let d of drinkItems) {
                     let opt = document.createElement('option');
-                    opt.value = d;
-                    const isDrinkOos = menu.out_of_stock && menu.out_of_stock.includes(`drinks:${d}`);
-                    opt.text = `第 ${i} 份：${d}${isDrinkOos ? ' (已售完)' : ''}`;
-                    if (isDrinkOos && comboDrinkData[origName][i - 1] !== d) {
+                    opt.value = d.name;
+                    opt.text = `第 ${i} 份：${d.name}${d.isOutOfStock ? ' (已售完)' : ''}`;
+                    if (d.isOutOfStock && comboDrinkData[origName][i - 1] !== d.name) {
                         opt.disabled = true;
                     }
-                    if (comboDrinkData[origName][i - 1] === d) opt.selected = true;
+                    if (comboDrinkData[origName][i - 1] === d.name) opt.selected = true;
                     sel.appendChild(opt);
                 }
                 sel.onchange = () => {
@@ -1158,7 +911,7 @@
             container.appendChild(box);
         }
 
-        // --- CUSTOMIZE POPUP (BOTH BENMI & DYNAMIC TENANTS USE MODERN RADIO PILLS & CHIPS) ---
+        // --- CUSTOMIZE POPUP (SCHEMA-DRIVEN MODIFIERS POPUP) ---
         function toggleCustomize(category, origName) {
             const key = category + '_' + origName;
             const qty = cart[key];
@@ -1172,208 +925,138 @@
 
             const box = document.createElement('div');
             box.className = 'popup-box';
+            box.innerHTML = `
+                <div class="popup-header">
+                    <span>${origName} 客製化設定</span>
+                    <div class="close-btn" onclick="closePopup()">✕</div>
+                </div>
+            `;
 
-            if (isBenmiTenant) {
-                // Benmi Modal with Radio Pills for Spicy & Checkbox Chips for Topping
-                const displayName = category === 'small' ? origName + ' 小' :
-                    category === 'large' ? origName + ' 大' :
-                        '套餐 ' + origName;
+            const modifiers = bootstrapData?.modifiers || [];
 
-                box.innerHTML = `
-                    <div class="popup-header">
-                        <span>${displayName} 客製化</span>
-                        <div class="close-btn" onclick="closePopup()">✕</div>
-                    </div>
-                `;
-
-                for (let i = 0; i < qty; i++) {
-                    let data = customizeData[key][i] || { topping: '', spicy: '不辣', note: '' };
-                    if (!customizeData[key][i]) customizeData[key][i] = data;
-
-                    const section = document.createElement('div');
-                    section.className = 'modifier-section';
-
-                    let sectionInner = `<div style="font-weight: 900; color: var(--primary); font-size: 16px; margin-bottom: 12px;">第 ${i + 1} 份</div>`;
-
-                    // 1. Spicy Radio Pills
-                    sectionInner += `
-                        <div class="modifier-group-title">
-                            <span>選擇辣度</span>
-                            <span class="modifier-required-badge">必選</span>
-                        </div>
-                        <div class="modifier-pills-row">
-                    `;
-                    const spicyOptions = ['不辣', '微辣', '中辣', '大辣'];
-                    spicyOptions.forEach(sp => {
-                        const isSelected = (data.spicy === sp);
-                        sectionInner += `
-                            <div class="modifier-pill ${isSelected ? 'active' : ''}" 
-                                 onclick="selectBenmiSpicy('${key}', ${i}, '${sp}', this)">
-                                ${sp}
-                            </div>
-                        `;
+            for (let i = 0; i < qty; i++) {
+                if (!customizeData[key][i]) {
+                    const defaultSingle = {};
+                    modifiers.filter(m => m.selectionType === 'single').forEach(m => {
+                        const defOpt = m.options.find(o => o.isDefault && !o.isOutOfStock) || m.options.find(o => !o.isOutOfStock) || m.options[0];
+                        if (defOpt) defaultSingle[m.slug] = defOpt.name;
                     });
-                    sectionInner += `</div>`;
-
-                    // 2. Topping Options
-                    sectionInner += `
-                        <div class="modifier-group-title">
-                            <span>加料 (Topping)</span>
-                            <span class="modifier-optional-badge">可選</span>
-                        </div>
-                        <div class="modifier-checkbox-grid">
-                    `;
-                    for (let t in menu.topping) {
-                        const isToppingOos = menu.out_of_stock && menu.out_of_stock.includes(`topping:${t}`);
-                        const isChecked = (data.topping === t);
-                        const price = menu.topping[t];
-                        const oosBadge = isToppingOos ? `<span class="modifier-oos-tag">已售完</span>` : `<span style="font-size: 12px; opacity: 0.85;">+$${price}</span>`;
-                        sectionInner += `
-                            <div class="modifier-checkbox-chip ${isChecked ? 'active' : ''} ${isToppingOos ? 'disabled' : ''}" 
-                                 onclick="${isToppingOos ? '' : `toggleBenmiTopping('${key}', ${i}, '${t}', this)`}">
-                                <span>${t}</span>
-                                ${oosBadge}
-                            </div>
-                        `;
-                    }
-                    sectionInner += `</div>`;
-
-                    // 3. Individual Note
-                    sectionInner += `
-                        <label style="font-size: 13px; font-weight: 800; color: var(--muted); display: block; margin: 14px 0 4px 0;">個別備註</label>
-                        <input type="text" value="${data.note || ''}" placeholder="如：不要香菜" 
-                               oninput="saveBenmiCustomNote('${key}', ${i}, this.value)">
-                    `;
-
-                    section.innerHTML = sectionInner;
-                    box.appendChild(section);
+                    customizeData[key][i] = { single: defaultSingle, multiple: {}, note: '' };
                 }
 
-                const okBtn = document.createElement('button');
-                okBtn.innerText = '完成設定';
-                okBtn.className = 'btn-send';
-                okBtn.style.cssText = 'width:100%; margin-top:8px;';
-                okBtn.onclick = () => { closePopup(); updateTotal(); };
-                box.appendChild(okBtn);
+                const currentPortion = customizeData[key][i];
+                const section = document.createElement('div');
+                section.className = 'modifier-section';
 
-                overlay.appendChild(box);
-                overlay._savedScrollY = window.scrollY;
-                document.body.style.position = 'fixed';
-                document.body.style.top = `-${overlay._savedScrollY}px`;
-                document.body.style.left = '0';
-                document.body.style.right = '0';
-                document.body.style.width = '100%';
+                let sectionInner = `<div style="font-weight: 900; color: var(--primary); font-size: 16px; margin-bottom: 12px;">第 ${i + 1} 份</div>`;
 
-                document.body.appendChild(overlay);
-                currentPopup = overlay;
-            } else {
-                // Dynamic Tenant Schema-Driven Popup
-                box.innerHTML = `
-                    <div class="popup-header">
-                        <span>${origName} 客製化設定</span>
-                        <div class="close-btn" onclick="closePopup()">✕</div>
-                    </div>
-                `;
+                modifiers.forEach(mod => {
+                    const reqBadge = mod.isRequired ? `<span class="modifier-required-badge">必選</span>` : `<span class="modifier-optional-badge">可選</span>`;
+                    sectionInner += `
+                        <div class="modifier-group-title">
+                            <span>${mod.name}</span>
+                            ${reqBadge}
+                        </div>
+                    `;
 
-                const modifiers = bootstrapData?.modifiers || [];
-
-                for (let i = 0; i < qty; i++) {
-                    if (!customizeData[key][i]) {
-                        const defaultSingle = {};
-                        modifiers.filter(m => m.selectionType === 'single').forEach(m => {
-                            const defOpt = m.options.find(o => o.isDefault && !o.isOutOfStock) || m.options.find(o => !o.isOutOfStock) || m.options[0];
-                            if (defOpt) defaultSingle[m.slug] = defOpt.name;
+                    if (mod.selectionType === 'single') {
+                        sectionInner += `<div class="modifier-pills-row">`;
+                        mod.options.forEach(opt => {
+                            const isOos = Boolean(opt.isOutOfStock);
+                            const isSelected = (currentPortion.single && currentPortion.single[mod.slug] === opt.name);
+                            const priceText = opt.price > 0 ? ` (+$${opt.price})` : '';
+                            const oosBadge = isOos ? `<span class="modifier-oos-tag">已售完</span>` : '';
+                            sectionInner += `
+                                <div class="modifier-pill ${isSelected ? 'active' : ''} ${isOos ? 'disabled' : ''}" 
+                                     onclick="${isOos ? '' : `selectSingleModifier('${key}', ${i}, '${mod.slug}', '${opt.name}', this)`}">
+                                    <span>${opt.name}${priceText}</span>${oosBadge}
+                                </div>
+                            `;
                         });
-                        customizeData[key][i] = { single: defaultSingle, multiple: {}, note: '' };
+                        sectionInner += `</div>`;
+                    } else if (mod.selectionType === 'multiple') {
+                        sectionInner += `<div class="modifier-checkbox-grid">`;
+                        mod.options.forEach(opt => {
+                            const isOos = Boolean(opt.isOutOfStock);
+                            const isChecked = Boolean(currentPortion.multiple && currentPortion.multiple[opt.name]);
+                            const priceText = isOos ? `<span class="modifier-oos-tag">已售完</span>` : (opt.price > 0 ? `+$${opt.price}` : '$0');
+                            sectionInner += `
+                                <div class="modifier-checkbox-chip ${isChecked ? 'active' : ''} ${isOos ? 'disabled' : ''}" 
+                                     onclick="${isOos ? '' : `toggleMultipleModifier('${key}', ${i}, '${opt.name}', this)`}">
+                                    <span>${opt.name}</span>
+                                    <span style="font-size: 12px; opacity: 0.85;">${priceText}</span>
+                                </div>
+                            `;
+                        });
+                        sectionInner += `</div>`;
                     }
+                });
 
-                    const currentPortion = customizeData[key][i];
-                    const section = document.createElement('div');
-                    section.className = 'modifier-section';
+                sectionInner += `
+                    <label style="font-size: 13px; font-weight: 800; color: var(--muted); display: block; margin: 14px 0 4px 0;">個別備註</label>
+                    <input type="text" value="${currentPortion.note || ''}" placeholder="例如：不要香菜、醬料分開裝" 
+                           oninput="saveCustomNote('${key}', ${i}, this.value)">
+                `;
 
-                    let sectionInner = `<div style="font-weight: 900; color: var(--primary); font-size: 16px; margin-bottom: 12px;">第 ${i + 1} 份</div>`;
-
-                    modifiers.forEach(mod => {
-                        const reqBadge = mod.isRequired ? `<span class="modifier-required-badge">必選</span>` : `<span class="modifier-optional-badge">可選</span>`;
-                        sectionInner += `
-                            <div class="modifier-group-title">
-                                <span>${mod.name}</span>
-                                ${reqBadge}
-                            </div>
-                        `;
-
-                        if (mod.selectionType === 'single') {
-                            sectionInner += `<div class="modifier-pills-row">`;
-                            mod.options.forEach(opt => {
-                                const isOos = Boolean(opt.isOutOfStock);
-                                const isSelected = (currentPortion.single && currentPortion.single[mod.slug] === opt.name);
-                                const priceText = opt.price > 0 ? ` (+$${opt.price})` : '';
-                                const oosBadge = isOos ? `<span class="modifier-oos-tag">已售完</span>` : '';
-                                sectionInner += `
-                                    <div class="modifier-pill ${isSelected ? 'active' : ''} ${isOos ? 'disabled' : ''}" 
-                                         onclick="${isOos ? '' : `selectSingleModifier('${key}', ${i}, '${mod.slug}', '${opt.name}', this)`}">
-                                        <span>${opt.name}${priceText}</span>${oosBadge}
-                                    </div>
-                                `;
-                            });
-                            sectionInner += `</div>`;
-                        } else if (mod.selectionType === 'multiple') {
-                            sectionInner += `<div class="modifier-checkbox-grid">`;
-                            mod.options.forEach(opt => {
-                                const isOos = Boolean(opt.isOutOfStock);
-                                const isChecked = Boolean(currentPortion.multiple && currentPortion.multiple[opt.name]);
-                                const priceText = isOos ? `<span class="modifier-oos-tag">已售完</span>` : (opt.price > 0 ? `+$${opt.price}` : '$0');
-                                sectionInner += `
-                                    <div class="modifier-checkbox-chip ${isChecked ? 'active' : ''} ${isOos ? 'disabled' : ''}" 
-                                         onclick="${isOos ? '' : `toggleMultipleModifier('${key}', ${i}, '${opt.name}', this)`}">
-                                        <span>${opt.name}</span>
-                                        <span style="font-size: 12px; opacity: 0.85;">${priceText}</span>
-                                    </div>
-                                `;
-                            });
-                            sectionInner += `</div>`;
-                        }
-                    });
-
-                    sectionInner += `
-                        <label style="font-size: 13px; font-weight: 800; color: var(--muted); display: block; margin: 14px 0 4px 0;">個別備註</label>
-                        <input type="text" value="${currentPortion.note || ''}" placeholder="例如：不要香菜、醬料分開裝" 
-                               oninput="saveCustomNote('${key}', ${i}, this.value)">
-                    `;
-
-                    section.innerHTML = sectionInner;
-                    box.appendChild(section);
-                }
-
-                const okBtn = document.createElement('button');
-                okBtn.innerText = '完成設定';
-                okBtn.className = 'btn-send';
-                okBtn.style.cssText = 'width:100%; margin-top:8px;';
-                okBtn.onclick = () => { closePopup(); updateTotal(); };
-                box.appendChild(okBtn);
-
-                overlay.appendChild(box);
-                overlay._savedScrollY = window.scrollY;
-                document.body.style.position = 'fixed';
-                document.body.style.top = `-${overlay._savedScrollY}px`;
-                document.body.style.left = '0';
-                document.body.style.right = '0';
-                document.body.style.width = '100%';
-
-                document.body.appendChild(overlay);
-                currentPopup = overlay;
+                section.innerHTML = sectionInner;
+                box.appendChild(section);
             }
+
+            const okBtn = document.createElement('button');
+            okBtn.innerText = '完成設定';
+            okBtn.className = 'btn-send';
+            okBtn.style.cssText = 'width:100%; margin-top:8px;';
+            okBtn.onclick = () => { closePopup(); updateTotal(); };
+            box.appendChild(okBtn);
+
+            overlay.appendChild(box);
+            overlay._savedScrollY = window.scrollY;
+            document.body.style.position = 'fixed';
+            document.body.style.top = `-${overlay._savedScrollY}px`;
+            document.body.style.left = '0';
+            document.body.style.right = '0';
+            document.body.style.width = '100%';
+
+            document.body.appendChild(overlay);
+            currentPopup = overlay;
         }
 
-        // Benmi modifier helpers
-        function selectBenmiSpicy(key, index, spicyVal, el) {
+        // Dynamic tenant modifier helpers
+        function selectSingleModifier(key, portionIdx, modSlug, optName, el) {
             if (el && el.classList.contains('disabled')) return;
             if (!customizeData[key]) customizeData[key] = [];
-            if (!customizeData[key][index]) customizeData[key][index] = { topping: '', spicy: '不辣', note: '' };
-            customizeData[key][index].spicy = spicyVal;
+            if (!customizeData[key][portionIdx]) customizeData[key][portionIdx] = { single: {}, multiple: {}, note: '' };
+            if (!customizeData[key][portionIdx].single) customizeData[key][portionIdx].single = {};
+            customizeData[key][portionIdx].single[modSlug] = optName;
 
             const parentRow = el.parentElement;
             if (parentRow) parentRow.querySelectorAll('.modifier-pill').forEach(p => p.classList.remove('active'));
+            el.classList.add('active');
+            updateTotal();
+        }
+
+        function toggleMultipleModifier(key, portionIdx, optName, el) {
+            if (el && el.classList.contains('disabled')) return;
+            if (!customizeData[key]) customizeData[key] = [];
+            if (!customizeData[key][portionIdx]) customizeData[key][portionIdx] = { single: {}, multiple: {}, note: '' };
+            if (!customizeData[key][portionIdx].multiple) customizeData[key][portionIdx].multiple = {};
+
+            const isCurrentlyChecked = Boolean(customizeData[key][portionIdx].multiple[optName]);
+            if (isCurrentlyChecked) {
+                delete customizeData[key][portionIdx].multiple[optName];
+                el.classList.remove('active');
+            } else {
+                customizeData[key][portionIdx].multiple[optName] = true;
+                el.classList.add('active');
+            }
+            updateTotal();
+        }
+
+        function saveCustomNote(key, portionIdx, val) {
+            if (!customizeData[key]) customizeData[key] = [];
+            if (!customizeData[key][portionIdx]) customizeData[key][portionIdx] = { single: {}, multiple: {}, note: '' };
+            customizeData[key][portionIdx].note = val;
+        }').forEach(p => p.classList.remove('active'));
             el.classList.add('active');
             updateTotal();
         }
@@ -1658,64 +1341,36 @@
             const isStaging = (window.location.hostname.includes("staging") || window.location.hostname.includes("test") || window.location.hostname.includes("localhost") || window.location.hostname.includes("127.0.0.1"));
             const defaultLiffId = isStaging ? "2009555608-DMioljsI" : "2009560906-c5taZfiY";
 
-            if (isBenmiTenant) {
-                await fetchMenu();
-                try {
-                    const liffId = storeConfig?.liffId || defaultLiffId;
-                    if (liffId) await liff.init({ liffId });
-                } catch(e) {
-                    console.error("LIFF Init Error", e);
+            await fetchMenu();
+            try {
+                const liffId = storeConfig?.liffId || defaultLiffId;
+                if (liffId && typeof liff !== 'undefined' && liff.init) {
+                    await liff.init({ liffId });
                 }
-                renderMenuBenmi();
-                renderStoreOperatingHours();
-                applyPickupConfig();
-
-                try {
-                    const saved = localStorage.getItem('benmi_cart_save');
-                    if (saved) {
-                        const parsed = JSON.parse(saved);
-                        cart = parsed.cart || {};
-                        customizeData = parsed.customizeData || {};
-                        comboDrinkData = parsed.comboDrinkData || {};
-                        localStorage.removeItem('benmi_cart_save');
-                        for (let key in cart) {
-                            if (cart[key] > 0) {
-                                const [cat, origName] = key.split('_');
-                                updateQty(cat, origName, 0);
-                            }
-                        }
-                    }
-                } catch(e) {}
-            } else {
-                await fetchMenu();
-                try {
-                    const liffId = storeConfig?.liffId || defaultLiffId;
-                    if (liffId) await liff.init({ liffId });
-                } catch(e) {
-                    console.error("LIFF Init Error", e);
-                }
-                renderDynamicCatalog();
-                renderStoreOperatingHours();
-                applyPickupConfig();
-
-                try {
-                    const tenantId = getTenantIdFromUrl();
-                    const saved = localStorage.getItem(`cart_save_${tenantId}`);
-                    if (saved) {
-                        const parsed = JSON.parse(saved);
-                        cart = parsed.cart || {};
-                        customizeData = parsed.customizeData || {};
-                        comboDrinkData = parsed.comboDrinkData || {};
-                        localStorage.removeItem(`cart_save_${tenantId}`);
-                        for (let key in cart) {
-                            if (cart[key] > 0) {
-                                const [cat, origName] = key.split('_');
-                                updateQty(cat, origName, 0);
-                            }
-                        }
-                    }
-                } catch(e) {}
+            } catch(e) {
+                console.error("LIFF Init Error", e);
             }
+            renderDynamicCatalog();
+            renderStoreOperatingHours();
+            applyPickupConfig();
+
+            try {
+                const tenantId = getTenantIdFromUrl();
+                const saved = localStorage.getItem(`cart_save_${tenantId}`);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    cart = parsed.cart || {};
+                    customizeData = parsed.customizeData || {};
+                    comboDrinkData = parsed.comboDrinkData || {};
+                    localStorage.removeItem(`cart_save_${tenantId}`);
+                    for (let key in cart) {
+                        if (cart[key] > 0) {
+                            const [cat, origName] = key.split('_');
+                            updateQty(cat, origName, 0);
+                        }
+                    }
+                }
+            } catch(e) {}
 
             setTodayDate(true);
             checkStoreStatus();
@@ -1766,7 +1421,7 @@
 
         initApp();
     </script>
-    <script src="js/client-checkout.js?v=20260822_tableno_1"></script>
+    <script src="js/client-checkout.js?v=20260822_unified_1"></script>
 </body>
 
 </html>
