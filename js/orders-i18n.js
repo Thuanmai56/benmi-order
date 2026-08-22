@@ -151,6 +151,18 @@ const I18N = {
     menuCatTitle: "菜單分類",
     menuCatSub: "點擊左側分類以管理品項",
     btnMenuRefresh: "重整",
+    btnMenuAddCategory: "+ 新增分類",
+    btnCategoryDelete: "刪除分類",
+    btnCategoryRename: "重新命名",
+    addCategoryModalTitle: "新增菜單分類",
+    categoryNameLabel: "分類名稱",
+    categoryNamePlaceholder: "例: 豆漿 意仁漿, 經典主食",
+    categoryTypeLabel: "分類類型",
+    categoryTypeCatalog: "🍽️ 菜單品項 (主餐 / 飲料)",
+    categoryTypeModifier: "⚙️ 客製化選項 (加辣 / 加料 / 甜度)",
+    confirmDeleteCategory: "確定要刪除整個「{name}」分類及其內部所有品項嗎？",
+    promptCategoryNameEmpty: "請輸入有效的分類名稱！",
+    promptCategoryNamePrompt: "請輸入新的分類名稱：",
     menuEditorTitle: "分類項目",
     menuEditSub: "拖曳排序 ✦ 點擊欄位直接修改",
     btnMenuRestore: "恢復預設菜單",
@@ -356,6 +368,18 @@ const I18N = {
     menuCatTitle: "Danh mục thực đơn",
     menuCatSub: "Chọn danh mục bên trái để quản lý món",
     btnMenuRefresh: "Làm mới",
+    btnMenuAddCategory: "+ Thêm phân loại",
+    btnCategoryDelete: "Xóa phân loại",
+    btnCategoryRename: "Đổi tên phân loại",
+    addCategoryModalTitle: "Thêm phân loại thực đơn mới",
+    categoryNameLabel: "Tên phân loại",
+    categoryNamePlaceholder: "VD: 豆漿 意仁漿, Món ăn kèm",
+    categoryTypeLabel: "Loại phân loại",
+    categoryTypeCatalog: "🍽️ Danh mục món (Món chính / Đồ uống)",
+    categoryTypeModifier: "⚙️ Tùy biến chọn kèm (Thêm cay / Topping)",
+    confirmDeleteCategory: "Bạn có chắc muốn xóa toàn bộ phân loại「{name}」và các món bên trong không?",
+    promptCategoryNameEmpty: "Vui lòng nhập tên phân loại hợp lệ!",
+    promptCategoryNamePrompt: "Nhập tên phân loại mới:",
     menuEditorTitle: "Danh sách món",
     menuEditSub: "Kéo thả để sắp xếp ✦ Nhấn vào ô để sửa trực tiếp",
     btnMenuRestore: "Khôi phục Menu gốc",
@@ -707,6 +731,28 @@ function applyLanguageToDOM() {
   if (menuCatS) menuCatS.innerText = dict.menuCatSub;
   const btnMenuRef = document.getElementById("btn-menu-refresh");
   if (btnMenuRef) btnMenuRef.innerText = dict.btnMenuRefresh;
+  const btnMenuAddCat = document.getElementById("btn-menu-add-cat");
+  if (btnMenuAddCat) btnMenuAddCat.innerText = dict.btnMenuAddCategory;
+  const btnCatDel = document.getElementById("btn-category-delete");
+  if (btnCatDel) btnCatDel.innerText = dict.btnCategoryDelete;
+  const btnCatRen = document.getElementById("btn-category-rename");
+  if (btnCatRen) btnCatRen.innerText = dict.btnCategoryRename;
+  const addCatModT = document.getElementById("i18n-add-cat-modal-title");
+  if (addCatModT) addCatModT.innerText = dict.addCategoryModalTitle;
+  const addCatLblN = document.getElementById("i18n-add-cat-label-name");
+  if (addCatLblN) addCatLblN.innerText = dict.categoryNameLabel;
+  const addCatInpN = document.getElementById("add-cat-input-name");
+  if (addCatInpN) addCatInpN.placeholder = dict.categoryNamePlaceholder;
+  const addCatLblT = document.getElementById("i18n-add-cat-label-type");
+  if (addCatLblT) addCatLblT.innerText = dict.categoryTypeLabel;
+  const addCatOptCat = document.getElementById("i18n-add-cat-opt-catalog");
+  if (addCatOptCat) addCatOptCat.innerText = dict.categoryTypeCatalog;
+  const addCatOptMod = document.getElementById("i18n-add-cat-opt-modifier");
+  if (addCatOptMod) addCatOptMod.innerText = dict.categoryTypeModifier;
+  const btnAddCatCnf = document.getElementById("btn-add-cat-confirm");
+  if (btnAddCatCnf) btnAddCatCnf.innerText = dict.btnConfirm || "確認";
+  const btnAddCatCan = document.getElementById("btn-add-cat-cancel");
+  if (btnAddCatCan) btnAddCatCan.innerText = dict.btnCancel || "取消";
   const menuEdT = document.getElementById("menu-editor-title");
   if (menuEdT && (!currentMenuData || activeCategoryIndex < 0)) menuEdT.innerText = dict.menuEditorTitle;
   const menuEdS = document.getElementById("i18n-menu-edit-sub");

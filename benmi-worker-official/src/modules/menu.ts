@@ -273,19 +273,26 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
     }
     activeCategoryIds.push(catId);
 
-    const catName = catNameMap.get(slug) || defaultCategoryNamesZh[slug] || slug;
+    const itemsMap = menuData[slug];
+    const customCatName = (itemsMap && (itemsMap.__title || itemsMap._name)) || null;
+    const customCatType = (itemsMap && (itemsMap.__type || itemsMap._type)) || 'catalog';
+    const catName = customCatName || catNameMap.get(slug) || defaultCategoryNamesZh[slug] || slug;
+
     statements.push(
       env.DB.prepare(
-        `INSERT INTO menu_categories (id, tenant_id, name, slug, sort_order)
-         VALUES (?, ?, ?, ?, ?)
-         ON CONFLICT(id) DO UPDATE SET sort_order = excluded.sort_order`
-      ).bind(catId, tenantId, catName, slug, catSortOrder++)
+        `INSERT INTO menu_categories (id, tenant_id, name, slug, category_type, sort_order)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET 
+           name = excluded.name, 
+           category_type = excluded.category_type,
+           sort_order = excluded.sort_order`
+      ).bind(catId, tenantId, catName, slug, customCatType, catSortOrder++)
     );
 
-    const itemsMap = menuData[slug];
     if (itemsMap && typeof itemsMap === "object") {
       let itemSortOrder = 1;
       for (const itemName of Object.keys(itemsMap)) {
+        if (itemName.startsWith("_")) continue;
         const itemVal = itemsMap[itemName];
         let price = 0;
         let badgeText: string | null = null;

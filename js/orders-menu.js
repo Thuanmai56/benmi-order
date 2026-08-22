@@ -59,6 +59,7 @@ async function loadMenuData() {
         categories.push({
           id: cat.slug,
           title: cat.name,
+          type: 'catalog',
           items: cat.items.map(it => ({
             name: it.name,
             price: it.price,
@@ -75,7 +76,8 @@ async function loadMenuData() {
         if (!categories.some(c => c.id === mod.slug)) {
           categories.push({
             id: mod.slug,
-            title: `${t("modifierPrefix")} ${mod.name}`,
+            title: mod.name,
+            type: 'modifier',
             items: mod.options.map(opt => ({
               name: opt.name,
               price: opt.price,
@@ -92,14 +94,19 @@ async function loadMenuData() {
     currentMenuData = categories.length > 0 ? categories : getBenmiDefaultCategories().map(cat => ({
       id: cat.id,
       title: cat.label,
+      type: 'catalog',
       items: []
     }));
 
     activeCategoryIndex = -1;
     renderMenuCategories();
-    if (bodyEl) bodyEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">${t("menuSelectPrompt")}</div>`;
+    if (bodyEl) bodyEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;" id="i18n-menu-select-prompt">${t("menuSelectPrompt")}</div>`;
     const titleEl = document.getElementById("menu-editor-title");
     if (titleEl) titleEl.innerText = t("menuEditorTitle");
+    const renameBtn = document.getElementById("btn-category-rename");
+    const deleteBtn = document.getElementById("btn-category-delete");
+    if (renameBtn) renameBtn.style.display = "none";
+    if (deleteBtn) deleteBtn.style.display = "none";
   } catch (e) {
     console.warn("Bootstrap load failed, falling back to legacy /api/menu:", e);
     try {
@@ -109,6 +116,7 @@ async function loadMenuData() {
       currentMenuData = getBenmiDefaultCategories().map(cat => ({
         id: cat.id,
         title: cat.label,
+        type: 'catalog',
         items: Object.entries(rawMenuData[cat.id] || {}).map(([name, price]) => {
           const isOos = rawMenuData.out_of_stock && rawMenuData.out_of_stock.includes(`${cat.id}:${name}`);
           return { name, price: typeof price === 'object' ? price.price : price, badgeText: typeof price === 'object' ? (price.badge_text || '') : '', isOos, originalName: name };
@@ -116,9 +124,13 @@ async function loadMenuData() {
       }));
       activeCategoryIndex = -1;
       renderMenuCategories();
-      if (bodyEl) bodyEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">${t("menuSelectPrompt")}</div>`;
+      if (bodyEl) bodyEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;" id="i18n-menu-select-prompt">${t("menuSelectPrompt")}</div>`;
       const titleEl = document.getElementById("menu-editor-title");
       if (titleEl) titleEl.innerText = t("menuEditorTitle");
+      const renameBtn = document.getElementById("btn-category-rename");
+      const deleteBtn = document.getElementById("btn-category-delete");
+      if (renameBtn) renameBtn.style.display = "none";
+      if (deleteBtn) deleteBtn.style.display = "none";
     } catch (err2) {
       alert(t("menuLoadFail") + err2.message);
     }
@@ -133,8 +145,12 @@ function renderMenuCategories() {
   currentMenuData.forEach((cat, index) => {
     const div = document.createElement("div");
     div.className = `menu-cat-item ${activeCategoryIndex === index ? 'active' : ''}`;
+    const badge = cat.type === 'modifier' ? `<span style="font-size: 11px; padding: 2px 6px; background: #e0e7ff; color: #4338ca; border-radius: 4px; font-weight: 700; margin-right: 6px;">${t("modifierPrefix")}</span>` : '';
     div.innerHTML = `
-      <span class="menu-cat-title">${escapeHtml(cat.title)}</span>
+      <div style="display:flex; align-items:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;">
+        ${badge}
+        <span class="menu-cat-title">${escapeHtml(cat.title)}</span>
+      </div>
       <span class="menu-cat-count">${cat.items.length} ${t("menuItemUnit")}</span>
     `;
     div.onclick = () => {
@@ -148,7 +164,18 @@ function renderMenuCategories() {
 }
 
 function renderMenuCategoryEditor(index) {
-  if (!currentMenuData || !currentMenuData[index]) return;
+  const renameBtn = document.getElementById("btn-category-rename");
+  const deleteBtn = document.getElementById("btn-category-delete");
+
+  if (!currentMenuData || !currentMenuData[index]) {
+    if (renameBtn) renameBtn.style.display = "none";
+    if (deleteBtn) deleteBtn.style.display = "none";
+    return;
+  }
+
+  if (renameBtn) renameBtn.style.display = "inline-flex";
+  if (deleteBtn) deleteBtn.style.display = "inline-flex";
+
   const cat = currentMenuData[index];
   const titleEl = document.getElementById("menu-editor-title");
   if (titleEl) titleEl.innerText = `${cat.title} ${t("menuItemTotalCount", { count: cat.items.length })}`;
@@ -273,7 +300,10 @@ async function saveMenuData() {
   // Convert to rich item map format for API
   const output = {};
   currentMenuData.forEach(cat => {
-    output[cat.id] = {};
+    output[cat.id] = {
+      __title: cat.title,
+      __type: cat.type || 'catalog'
+    };
     cat.items.forEach(item => {
       if (item.name && item.name.trim() !== "" && item.price !== null) {
         output[cat.id][item.name.trim()] = {
@@ -304,6 +334,95 @@ async function saveMenuData() {
   } finally {
     if (btn) { btn.innerText = t("btnMenuSave"); btn.disabled = false; }
   }
+}
+
+// --- Category Management ---
+function openAddCategoryModal() {
+  const inp = document.getElementById("add-cat-input-name");
+  if (inp) inp.value = "";
+  const modal = document.getElementById("addCategoryModal");
+  if (modal) {
+    modal.style.display = "flex";
+    if (inp) setTimeout(() => inp.focus(), 50);
+  }
+}
+
+function closeAddCategoryModal() {
+  const modal = document.getElementById("addCategoryModal");
+  if (modal) modal.style.display = "none";
+}
+
+function confirmAddCategory() {
+  const inp = document.getElementById("add-cat-input-name");
+  const name = inp ? inp.value.trim() : "";
+  if (!name) {
+    alert(t("promptCategoryNameEmpty"));
+    return;
+  }
+  const typeSelect = document.getElementById("add-cat-select-type");
+  const type = typeSelect ? typeSelect.value : "catalog";
+
+  // Generate clean unique slug
+  let baseSlug = name.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+  if (!baseSlug) baseSlug = "cat";
+  const slug = `${baseSlug}_${Date.now().toString(36)}`;
+
+  if (!currentMenuData) currentMenuData = [];
+  syncMenuDataFromDOM();
+
+  const newCat = {
+    id: slug,
+    title: name,
+    type: type,
+    items: []
+  };
+
+  currentMenuData.push(newCat);
+  activeCategoryIndex = currentMenuData.length - 1;
+  markMenuDirty();
+  closeAddCategoryModal();
+  renderMenuCategories();
+  renderMenuCategoryEditor(activeCategoryIndex);
+}
+
+function promptRenameCategory() {
+  if (activeCategoryIndex < 0 || !currentMenuData || !currentMenuData[activeCategoryIndex]) return;
+  const currentCat = currentMenuData[activeCategoryIndex];
+  const newTitle = prompt(t("promptCategoryNamePrompt"), currentCat.title);
+  if (newTitle !== null) {
+    const trimmed = newTitle.trim();
+    if (!trimmed) {
+      alert(t("promptCategoryNameEmpty"));
+      return;
+    }
+    syncMenuDataFromDOM();
+    currentCat.title = trimmed;
+    markMenuDirty();
+    renderMenuCategories();
+    renderMenuCategoryEditor(activeCategoryIndex);
+  }
+}
+
+function deleteActiveCategory() {
+  if (activeCategoryIndex < 0 || !currentMenuData || !currentMenuData[activeCategoryIndex]) return;
+  const cat = currentMenuData[activeCategoryIndex];
+  if (!confirm(t("confirmDeleteCategory", { name: cat.title }))) return;
+
+  syncMenuDataFromDOM();
+  currentMenuData.splice(activeCategoryIndex, 1);
+  activeCategoryIndex = -1;
+  markMenuDirty();
+  renderMenuCategories();
+
+  const titleEl = document.getElementById("menu-editor-title");
+  if (titleEl) titleEl.innerText = t("menuEditorTitle");
+  const bodyEl = document.getElementById("menu-editor-body");
+  if (bodyEl) bodyEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;" id="i18n-menu-select-prompt">${t("menuSelectPrompt")}</div>`;
+  
+  const renameBtn = document.getElementById("btn-category-rename");
+  const deleteBtn = document.getElementById("btn-category-delete");
+  if (renameBtn) renameBtn.style.display = "none";
+  if (deleteBtn) deleteBtn.style.display = "none";
 }
 
 // --- Image Management ---
