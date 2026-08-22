@@ -71,14 +71,13 @@ function initAppendModeIfPresent() {
         const checkoutToggleGroup = document.getElementById('checkout-dining-option-group');
         if (checkoutToggleGroup) checkoutToggleGroup.style.display = 'none';
 
-        // Lock table number input
+        // Hide table number input in append mode (table is already bound to parent order)
+        const tableGroup = document.getElementById('dinein-table-input-group');
+        if (tableGroup) tableGroup.style.display = 'none';
+
         const tableInput = document.getElementById('dinein-table-number');
         if (tableInput && paramTableNumber) {
             tableInput.value = paramTableNumber;
-            tableInput.readOnly = true;
-            tableInput.style.backgroundColor = '#f3f4f6';
-            tableInput.style.color = '#5b21b6';
-            tableInput.style.cursor = 'not-allowed';
         }
 
         // Update submit button text
@@ -98,8 +97,13 @@ function cancelAppendMode() {
     if (bannerEl) bannerEl.style.display = 'none';
 
     // Khôi phục ô nhập số bàn
+    const tableGroup = document.getElementById('dinein-table-input-group');
+    if (tableGroup && window.currentDiningOption === 'dine_in') {
+        tableGroup.style.display = 'block';
+    }
     const tableInput = document.getElementById('dinein-table-number');
     if (tableInput) {
+        tableInput.value = '';
         tableInput.readOnly = false;
         tableInput.style.backgroundColor = '#fff';
         tableInput.style.color = '#1e1b4b';
@@ -426,17 +430,19 @@ async function submitOrder() {
     let timeInput = "";
 
     if (isDineIn) {
-        // Kiểm tra bắt buộc nhập số bàn khi ăn tại quán
-        const tableInput = document.getElementById('dinein-table-number');
-        const tableNumber = tableInput ? tableInput.value.trim() : '';
-        if (!tableNumber) {
-            if (tableInput) {
-                tableInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                tableInput.focus();
-                tableInput.classList.add('attention-pulse');
-                setTimeout(() => tableInput.classList.remove('attention-pulse'), 1500);
+        // Chỉ bắt buộc nhập số bàn khi tạo đơn mới (KHÔNG yêu cầu khi gọi thêm món vì đã gắn theo đơn cũ)
+        if (!window.isAppendMode) {
+            const tableInput = document.getElementById('dinein-table-number');
+            const tableNumber = tableInput ? tableInput.value.trim() : '';
+            if (!tableNumber) {
+                if (tableInput) {
+                    tableInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    tableInput.focus();
+                    tableInput.classList.add('attention-pulse');
+                    setTimeout(() => tableInput.classList.remove('attention-pulse'), 1500);
+                }
+                return customAlert('請填寫您的用餐桌號，方便門市人員為您送餐！');
             }
-            return customAlert('請填寫您的用餐桌號，方便門市人員為您送餐！');
         }
 
         const { dateStr, timeStr } = formatTaiwanDateTime(twNow);
