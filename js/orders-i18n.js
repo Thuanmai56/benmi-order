@@ -150,7 +150,7 @@ const I18N = {
     // Menu Editor
     menuCatTitle: "菜單分類",
     menuCatSub: "點擊左側分類以管理品項",
-    btnMenuRefresh: "重整",
+    btnMenuRefresh: "🔄 重整",
     btnMenuAddCategory: "+ 新增分類",
     btnCategoryDelete: "刪除分類",
     btnCategoryRename: "重新命名",
@@ -367,7 +367,7 @@ const I18N = {
     // Menu Editor
     menuCatTitle: "Danh mục thực đơn",
     menuCatSub: "Chọn danh mục bên trái để quản lý món",
-    btnMenuRefresh: "Làm mới",
+    btnMenuRefresh: "🔄 Làm mới",
     btnMenuAddCategory: "+ Thêm phân loại",
     btnCategoryDelete: "Xóa phân loại",
     btnCategoryRename: "Đổi tên phân loại",
