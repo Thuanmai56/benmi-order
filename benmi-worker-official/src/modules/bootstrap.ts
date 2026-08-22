@@ -19,6 +19,7 @@ export interface BootstrapResponse {
     allowScheduledPickup: boolean;
     allowDineIn: boolean;
     features: string[];
+    orderPrefix?: string;
     storeStatus: string;
     liffId: string | null;
     liffUrl: string | null;
@@ -294,6 +295,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
         allowScheduledPickup: tenantCtx?.allowScheduledPickup !== undefined ? tenantCtx.allowScheduledPickup : true,
         allowDineIn: tenantCtx?.allowDineIn !== undefined ? tenantCtx.allowDineIn : true,
         features: tenantCtx?.features || [],
+        orderPrefix: tenantCtx?.orderPrefix || (tenantId === 'benmi' ? 'B' : tenantId.charAt(0).toUpperCase()),
         storeStatus: tenantCtx?.storeStatus || 'open',
         liffId,
         liffUrl,

@@ -66,6 +66,7 @@ export async function resolveTenantContext(
           locale: row.locale || 'zh-TW',
           googleSheetsUrl: row.google_sheets_url || null,
           features: Array.isArray(features) ? features : [],
+          orderPrefix: row.order_prefix || null,
         };
 
         // Cache in KV
@@ -123,6 +124,7 @@ export async function resolveTenantContext(
       locale: 'zh-TW',
       googleSheetsUrl: env.GOOGLE_SHEETS_URL || null,
       features: ['dine_in'],
+      orderPrefix: 'B',
     };
 
     return fallbackCtx;

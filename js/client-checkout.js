@@ -145,16 +145,33 @@ function customConfirm(htmlMsg, onConfirm, onCancel = null) {
     };
 }
 
-// 7. Sinh mã đơn hàng
+// 7. Sinh mã đơn hàng chuẩn gọn (10 ký tự: {PREFIX}{MMDD}-{SUFFIX}, ví dụ: B0822-7K9M)
+const ORDER_ID_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+
+function generateBase32Suffix(length = 4) {
+    let suffix = "";
+    for (let i = 0; i < length; i++) {
+        const idx = Math.floor(Math.random() * ORDER_ID_ALPHABET.length);
+        suffix += ORDER_ID_ALPHABET[idx];
+    }
+    return suffix;
+}
+
 function generateOrderNumber() {
     const now = getTaiwanDate();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
-    const hours = String(now.getHours()).padStart(2, '0');
-    const mins = String(now.getMinutes()).padStart(2, '0');
-    const randomSeq = Math.floor(100 + Math.random() * 900);
-    const prefix = isBenmiTenant ? 'B' : (getTenantIdFromUrl() === 'zhadantongxue' ? 'Z' : 'O');
-    return `${prefix}${month}${day}-${hours}${mins}-${randomSeq}`;
+    const tenantId = getTenantIdFromUrl();
+
+    let prefix = 'B';
+    if (typeof storeConfig !== 'undefined' && storeConfig && storeConfig.orderPrefix) {
+        prefix = storeConfig.orderPrefix.toUpperCase();
+    } else if (!isBenmiTenant) {
+        prefix = tenantId ? tenantId.charAt(0).toUpperCase() : 'O';
+    }
+
+    const suffix = generateBase32Suffix(4);
+    return `${prefix}${month}${day}-${suffix}`;
 }
 
 // 8. Định dạng nội dung tin nhắn đơn hàng

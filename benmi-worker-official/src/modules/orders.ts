@@ -5,7 +5,7 @@ import { syncToGoogleSheets } from '../integrations/googleSheets';
 import { pushLineMessage, pushLineFlexMessage, buildOrderFlexMessage } from './line';
 import { getTenantId } from './menu';
 
-import { TenantContext, tenantHasFeature } from '../types/tenant';
+import { TenantContext, tenantHasFeature, resolveTenantOrderPrefix, generateStandardOrderId } from '../types/tenant';
 
 function jsonWithETag(data: any, version: string, status: number = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -35,14 +35,9 @@ export async function createOrder(
     return json({ error: "店家目前暫停接單中，暫無法接收新訂單", code: "STORE_PAUSED" }, 400);
   }
 
-  // Taiwan time UTC+8
-  const nowTaiwan = new Date(Date.now() + 8 * 3600000);
-  const mm = String(nowTaiwan.getUTCMonth() + 1).padStart(2, "0");
-  const dd = String(nowTaiwan.getUTCDate()).padStart(2, "0");
-  const dateStr = `${mm}${dd}`; // MMDD
-
-  const tempRandomId = Math.floor(1000 + Math.random() * 9000);
-  const orderKey = data.orderId || data.key || `B${dateStr}-${tempRandomId}`;
+  const prefix = resolveTenantOrderPrefix(tenantCtx, tenantId);
+  const fallbackOrderKey = generateStandardOrderId(prefix);
+  const orderKey = data.orderId || data.key || fallbackOrderKey;
 
   const cleanTime = String(data.time || "").replace(/\s*\([^)]*\)/g, '').trim();
   let diningOption: DiningOption = (data.dining_option === 'dine_in' || data.diningOption === 'dine_in') ? 'dine_in' : 'takeaway';

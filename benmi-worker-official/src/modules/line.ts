@@ -1,5 +1,5 @@
 import { Env } from '../types/env';
-import { TenantContext } from '../types/tenant';
+import { TenantContext, resolveTenantOrderPrefix, generateStandardOrderId } from '../types/tenant';
 import { Order, DiningOption } from '../types/index';
 import { corsHeaders } from '../utils/http';
 import { resolveSecret } from '../utils/secrets';
@@ -665,7 +665,7 @@ export async function handleLineWebhook(
       !userText.includes("訂單編號：")
     ) {
       let orderKey = "";
-      const match = userText.match(/B\d{4}-\d{4}-\d{4}/) || userText.match(/BD\d+-\d+-\d+/);
+      const match = userText.match(/(?:[A-Z0-9]{1,4}\d{4}-[A-Z0-9]{4}|[A-Z0-9]+\d{4}-\d{4}-\d{4}|BD\d+-\d+-\d+)/i);
       if (match) {
         orderKey = match[0];
       }
@@ -697,15 +697,9 @@ export async function handleLineWebhook(
       const timeLine = lines.find((l: string) => l.includes("🕒 取餐時間：") || l.includes("🕒 訂餐時間：") || l.includes("取餐時間") || l.includes("訂餐時間"));
       const totalLine = lines.find((l: string) => l.includes("💰 總金額："));
 
-      const nowTaiwan = new Date(Date.now() + 8 * 3600000);
-      const mm = String(nowTaiwan.getUTCMonth() + 1).padStart(2, "0");
-      const dd = String(nowTaiwan.getUTCDate()).padStart(2, "0");
-      const hh = String(nowTaiwan.getUTCHours()).padStart(2, "0");
-      const min = String(nowTaiwan.getUTCMinutes()).padStart(2, "0");
-      const todayKey = mm + dd;
-      const timeKey = hh + min;
-      const tempRandomId = Math.floor(1000 + Math.random() * 9000);
-      const orderKey = keyLine ? keyLine.replace("訂單編號：", "").trim() : `BD${todayKey}-${timeKey}-${tempRandomId}`;
+      const prefix = resolveTenantOrderPrefix(tenantCtx, tenantId);
+      const fallbackOrderKey = generateStandardOrderId(prefix);
+      const orderKey = keyLine ? keyLine.replace("訂單編號：", "").trim() : fallbackOrderKey;
       const timeStr = timeLine ? timeLine.replace(/🕒\s*(?:取餐時間|訂餐時間)[：:]\s*/, "").replace(/\s*\([^)]*\)/g, '').trim() : "Unknown";
       const totalStr = totalLine ? totalLine.replace("💰 總金額：", "").replace("$", "").trim() : "0";
 
