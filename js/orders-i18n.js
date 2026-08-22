@@ -138,6 +138,10 @@ const I18N = {
     modeAsapSub: "隱藏預約時間選項。顧客下單後將立即依照現場排隊順序製作 (ASAP)。",
     hoursTitle: "⏰ 營業時間",
     btnSaveHours: "儲存時間",
+    settingAddressTitle: "📍 門市地址",
+    settingAddressSub: "顯示於顧客點餐頁面與 LINE 官方帳號回覆",
+    settingAddressPlaceholder: "請輸入門市地址 (例: 新北市新店區中興路二段200-1號)",
+    btnSaveAddress: "儲存地址",
     btnAddShift: "+ 新增時段",
     closedDay: "公休",
     saving: "儲存中...",
@@ -339,6 +343,10 @@ const I18N = {
     modeAsapSub: "Ẩn mục chọn ngày giờ. Khách đặt xong đơn sẽ được tiếp nhận và xử lý làm ngay theo thứ tự xếp hàng (ASAP).",
     hoursTitle: "⏰ Giờ hoạt động",
     btnSaveHours: "Lưu thời gian",
+    settingAddressTitle: "📍 Địa chỉ cửa hàng",
+    settingAddressSub: "Hiển thị trên trang đặt món của khách và tin nhắn tự động LINE",
+    settingAddressPlaceholder: "Nhập địa chỉ cửa hàng (VD: 新北市新店區中興路二段200-1號)",
+    btnSaveAddress: "Lưu địa chỉ",
     btnAddShift: "+ Thêm khung giờ",
     closedDay: "Nghỉ",
     saving: "Đang lưu...",
@@ -682,6 +690,15 @@ function applyLanguageToDOM() {
   if (hrsT) hrsT.innerText = dict.hoursTitle;
   const btnSaveHrs = document.getElementById("btn-save-hours");
   if (btnSaveHrs) btnSaveHrs.innerText = dict.btnSaveHours;
+
+  const setAddrT = document.getElementById("i18n-setting-address-title");
+  if (setAddrT) setAddrT.innerText = dict.settingAddressTitle;
+  const setAddrS = document.getElementById("i18n-setting-address-sub");
+  if (setAddrS) setAddrS.innerText = dict.settingAddressSub;
+  const setAddrInp = document.getElementById("setting-store-address-input");
+  if (setAddrInp) setAddrInp.placeholder = dict.settingAddressPlaceholder;
+  const btnSaveAddr = document.getElementById("btn-save-address-setting");
+  if (btnSaveAddr) btnSaveAddr.innerText = dict.btnSaveAddress;
 
   // Menu Editor
   const menuCatT = document.getElementById("i18n-menu-cat-title");

@@ -131,6 +131,10 @@ async function loadOperatingHours() {
       storeOperatingHours = ensureParsedOperatingHours(data.operatingHours);
       allowScheduledPickup = data.allowScheduledPickup !== undefined ? data.allowScheduledPickup : true;
       if (data.storeStatus) currentStoreStatus = data.storeStatus;
+      if (data.storeAddress !== undefined) {
+        const addrInput = document.getElementById("setting-store-address-input");
+        if (addrInput) addrInput.value = data.storeAddress || "";
+      }
     } else {
       storeOperatingHours = createDefaultOperatingHours();
       allowScheduledPickup = true;
@@ -283,6 +287,27 @@ async function saveOperatingHours() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ operatingHours: storeOperatingHours })
+    });
+    if (!res.ok) throw new Error("API returned " + res.status);
+    alert(t("saveSuccess"));
+  } catch (e) {
+    alert(t("saveFail") + e.message);
+  } finally {
+    if (btn) { btn.innerText = oldText; btn.disabled = false; }
+  }
+}
+
+async function saveStoreAddressSetting() {
+  const addrInput = document.getElementById("setting-store-address-input");
+  const newAddress = addrInput ? addrInput.value.trim() : "";
+  const btn = document.getElementById("btn-save-address-setting");
+  const oldText = btn ? btn.innerText : "";
+  if (btn) { btn.innerText = t("saving"); btn.disabled = true; }
+  try {
+    const res = await fetch(`${WORKER_BASE}/api/config?tenant_id=${getTenantIdFromUrl()}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ storeAddress: newAddress })
     });
     if (!res.ok) throw new Error("API returned " + res.status);
     alert(t("saveSuccess"));
