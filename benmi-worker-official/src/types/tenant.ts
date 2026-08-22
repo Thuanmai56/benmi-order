@@ -33,4 +33,11 @@ export interface TenantContext {
   locale: string;
   // Google Sheets
   googleSheetsUrl: string | null;
+  // Subscription & Packaging Features
+  features: string[];
+}
+
+export function tenantHasFeature(ctx: TenantContext | null | undefined, featureKey: string): boolean {
+  if (!ctx || !Array.isArray(ctx.features)) return false;
+  return ctx.features.includes(featureKey);
 }

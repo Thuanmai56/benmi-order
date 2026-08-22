@@ -31,6 +31,15 @@ export async function resolveTenantContext(
 
       if (row) {
         const quickReplies = row.quick_replies ? JSON.parse(row.quick_replies) : [];
+        let features: string[] = [];
+        try {
+          if (row.features) {
+            features = typeof row.features === 'string' ? JSON.parse(row.features) : row.features;
+          }
+        } catch (e) {
+          features = [];
+        }
+
         const ctx: TenantContext = {
           tenantId,
           lineChannelToken: row.line_channel_token || '',
@@ -56,6 +65,7 @@ export async function resolveTenantContext(
           defaultPassword: row.default_password || '12345678',
           locale: row.locale || 'zh-TW',
           googleSheetsUrl: row.google_sheets_url || null,
+          features: Array.isArray(features) ? features : [],
         };
 
         // Cache in KV
@@ -112,6 +122,7 @@ export async function resolveTenantContext(
       defaultPassword: '12345678',
       locale: 'zh-TW',
       googleSheetsUrl: env.GOOGLE_SHEETS_URL || null,
+      features: ['dine_in'],
     };
 
     return fallbackCtx;

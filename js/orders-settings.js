@@ -6,6 +6,8 @@ let currentStoreStatus = 'open';
 let storeOperatingHours = null;
 let allowScheduledPickup = true;
 let allowDineIn = true;
+let currentTenantFeatures = ['dine_in'];
+window.currentTenantFeatures = currentTenantFeatures;
 
 const DAY_NAMES = {
   "zh-TW": ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"],
@@ -110,12 +112,20 @@ async function loadStoreStatus() {
       if (data.allowDineIn !== undefined) {
         allowDineIn = data.allowDineIn;
       }
+      if (data.features) {
+        currentTenantFeatures = Array.isArray(data.features) ? data.features : (typeof data.features === 'string' ? JSON.parse(data.features) : []);
+        window.currentTenantFeatures = currentTenantFeatures;
+      }
       storeOperatingHours = ensureParsedOperatingHours(data.operatingHours);
     }
   } catch (e) {
     console.error("loadStoreStatus error:", e);
   }
   renderStoreStatusUI(currentStoreStatus);
+  if (typeof updateDiningFilterStats === "function" && typeof orders !== "undefined") {
+    updateDiningFilterStats(orders);
+  }
+  renderDineInSetting();
 }
 
 function openSettings() {
@@ -136,6 +146,10 @@ async function loadOperatingHours() {
       storeOperatingHours = ensureParsedOperatingHours(data.operatingHours);
       allowScheduledPickup = data.allowScheduledPickup !== undefined ? data.allowScheduledPickup : true;
       allowDineIn = data.allowDineIn !== undefined ? data.allowDineIn : true;
+      if (data.features) {
+        currentTenantFeatures = Array.isArray(data.features) ? data.features : (typeof data.features === 'string' ? JSON.parse(data.features) : []);
+        window.currentTenantFeatures = currentTenantFeatures;
+      }
       if (data.storeStatus) currentStoreStatus = data.storeStatus;
       if (data.storeAddress !== undefined) {
         const addrInput = document.getElementById("setting-store-address-input");
@@ -223,6 +237,32 @@ async function saveScheduledPickupSetting() {
 }
 
 function renderDineInSetting() {
+  const isFeatureEnabled = Array.isArray(window.currentTenantFeatures)
+    ? window.currentTenantFeatures.includes('dine_in')
+    : (Array.isArray(currentTenantFeatures) ? currentTenantFeatures.includes('dine_in') : true);
+
+  const unlockedBody = document.getElementById("setting-dinein-unlocked-body");
+  const lockedBody = document.getElementById("setting-dinein-locked-body");
+  const saveBtn = document.getElementById("btn-save-dinein-setting");
+  const tocItem = document.getElementById("toc-item-dinein");
+
+  if (!isFeatureEnabled) {
+    if (unlockedBody) unlockedBody.style.display = "none";
+    if (lockedBody) lockedBody.style.display = "flex";
+    if (saveBtn) saveBtn.style.display = "none";
+    if (tocItem) {
+      tocItem.innerHTML = `<span>🔒</span> <span id="i18n-toc-dinein">${t('tocDineIn')}</span>`;
+    }
+    return;
+  }
+
+  if (unlockedBody) unlockedBody.style.display = "flex";
+  if (lockedBody) lockedBody.style.display = "none";
+  if (saveBtn) saveBtn.style.display = "block";
+  if (tocItem) {
+    tocItem.innerHTML = `<span>🍽️</span> <span id="i18n-toc-dinein">${t('tocDineIn')}</span>`;
+  }
+
   const radioTrue = document.getElementById("setting-allow-dinein-true");
   const radioFalse = document.getElementById("setting-allow-dinein-false");
   if (radioTrue && radioFalse) {

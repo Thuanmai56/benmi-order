@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="index.css?v=20260822_dining_1">
+    <link rel="stylesheet" href="index.css?v=20260822_feat_1">
     <script>
         (function () {
             const params = new URLSearchParams(window.location.search);
@@ -358,6 +358,7 @@
                         storeConfig = bootstrapData.tenant ? {
                             allowScheduledPickup: bootstrapData.tenant.allowScheduledPickup,
                             allowDineIn: bootstrapData.tenant.allowDineIn,
+                            features: bootstrapData.tenant.features || [],
                             storeStatus: bootstrapData.tenant.storeStatus,
                             operatingHours: bootstrapData.tenant.parsedHours,
                             liffId: bootstrapData.tenant.liffId
@@ -505,7 +506,10 @@
             const diningWrapper = document.getElementById('dining-option-wrapper');
             const checkoutDiningGroup = document.getElementById('checkout-dining-option-group');
 
-            const isDineInAllowed = !(storeConfig && storeConfig.allowDineIn === false);
+            const hasDineInFeature = (storeConfig && Array.isArray(storeConfig.features))
+                ? storeConfig.features.includes('dine_in')
+                : true;
+            const isDineInAllowed = hasDineInFeature && !(storeConfig && storeConfig.allowDineIn === false);
             if (!isDineInAllowed) {
                 window.currentDiningOption = 'takeaway';
                 if (diningWrapper) diningWrapper.style.display = 'none';

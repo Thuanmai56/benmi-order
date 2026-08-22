@@ -5,7 +5,7 @@ import { syncToGoogleSheets } from '../integrations/googleSheets';
 import { pushLineMessage, pushLineFlexMessage, buildOrderFlexMessage } from './line';
 import { getTenantId } from './menu';
 
-import { TenantContext } from '../types/tenant';
+import { TenantContext, tenantHasFeature } from '../types/tenant';
 
 function jsonWithETag(data: any, version: string, status: number = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -45,7 +45,13 @@ export async function createOrder(
   const orderKey = data.orderId || data.key || `B${dateStr}-${tempRandomId}`;
 
   const cleanTime = String(data.time || "").replace(/\s*\([^)]*\)/g, '').trim();
-  const diningOption: DiningOption = (data.dining_option === 'dine_in' || data.diningOption === 'dine_in') ? 'dine_in' : 'takeaway';
+  let diningOption: DiningOption = (data.dining_option === 'dine_in' || data.diningOption === 'dine_in') ? 'dine_in' : 'takeaway';
+
+  // Feature gate check: if tenant lacks 'dine_in' feature, automatically fallback to 'takeaway'
+  if (diningOption === 'dine_in' && tenantCtx && !tenantHasFeature(tenantCtx, 'dine_in')) {
+    console.warn(`[Orders] Tenant '${tenantId}' lacks 'dine_in' feature package. Auto-fallback to 'takeaway'.`);
+    diningOption = 'takeaway';
+  }
 
   const order: Order = {
     key: orderKey,

@@ -260,7 +260,10 @@ const I18N = {
     settingDineInFalseSub: "隱藏內用選項，所有訂單一律為外帶自取。",
     btnSaveDineInSetting: "儲存設定",
     dineInSaveSuccess: "內用設定已成功儲存！",
-    dineInSaveFail: "內用設定儲存失敗："
+    dineInSaveFail: "內用設定儲存失敗：",
+    featureLockedTitle: "🔒 進階功能 (未啟用)",
+    featureLockedDesc: "此功能為 BLAB 進階模組，如需啟用「內用接單」請聯繫 BLAB 團隊升級方案。",
+    btnContactUpgrade: "聯繫升級方案"
   },
   "vi": {
     langBtn: "繁體中文",
@@ -519,7 +522,10 @@ const I18N = {
     settingDineInFalseSub: "Ẩn tùy chọn ăn tại quán trên menu, tất cả đơn hàng đều là mang đi.",
     btnSaveDineInSetting: "Lưu thiết lập",
     dineInSaveSuccess: "Đã lưu thiết lập ăn tại quán thành công!",
-    dineInSaveFail: "Lưu thiết lập thất bại: "
+    dineInSaveFail: "Lưu thiết lập thất bại: ",
+    featureLockedTitle: "🔒 Tính năng nâng cao (Chưa kích hoạt)",
+    featureLockedDesc: "Tính năng này thuộc gói mô-đun nâng cao. Để kích hoạt 'Ăn tại quán', vui lòng liên hệ BLAB để nâng cấp gói.",
+    btnContactUpgrade: "Liên hệ nâng cấp gói"
   }
 };
 
@@ -949,5 +955,12 @@ function applyLanguageToDOM() {
   if (modeDineInFT) modeDineInFT.innerText = dict.settingDineInFalseTitle;
   const modeDineInFS = document.getElementById("i18n-mode-dinein-false-sub");
   if (modeDineInFS) modeDineInFS.innerText = dict.settingDineInFalseSub;
+
+  const featLockT = document.getElementById("i18n-feature-locked-title");
+  if (featLockT) featLockT.innerText = dict.featureLockedTitle;
+  const featLockD = document.getElementById("i18n-feature-locked-desc");
+  if (featLockD) featLockD.innerText = dict.featureLockedDesc;
+  const btnContUpg = document.getElementById("i18n-btn-contact-upgrade");
+  if (btnContUpg) btnContUpg.innerHTML = `<span>💬</span> <span>${dict.btnContactUpgrade}</span>`;
 }
 

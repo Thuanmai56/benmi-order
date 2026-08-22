@@ -26,6 +26,26 @@ function setDiningFilter(filter) {
 }
 
 function updateDiningFilterStats(allLiveOrders) {
+  const isFeatureEnabled = Array.isArray(window.currentTenantFeatures)
+    ? window.currentTenantFeatures.includes('dine_in')
+    : true;
+
+  const filterDineInBtn = document.getElementById("filter-btn-dine-in");
+  const dineInStatEl = document.getElementById("stat-pill-dinein");
+
+  if (!isFeatureEnabled) {
+    if (filterDineInBtn) filterDineInBtn.style.display = "none";
+    if (dineInStatEl) dineInStatEl.style.display = "none";
+    if (currentDiningFilter === "dine_in") {
+      currentDiningFilter = "all";
+      const filterAllBtn = document.getElementById("filter-btn-all");
+      if (filterAllBtn) filterAllBtn.classList.add("active");
+    }
+  } else {
+    if (filterDineInBtn) filterDineInBtn.style.display = "inline-flex";
+    if (dineInStatEl) dineInStatEl.style.display = "inline-flex";
+  }
+
   let takeawayCount = 0;
   let dineInCount = 0;
 
@@ -40,7 +60,6 @@ function updateDiningFilterStats(allLiveOrders) {
   const takeawayStatEl = document.getElementById("stat-pill-takeaway");
   if (takeawayStatEl) takeawayStatEl.innerText = `🛍️ ${takeawayCount}`;
 
-  const dineInStatEl = document.getElementById("stat-pill-dinein");
   if (dineInStatEl) dineInStatEl.innerText = `🍽️ ${dineInCount}`;
 }
 
