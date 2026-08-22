@@ -3,6 +3,65 @@
  * Quản lý quy trình đặt hàng, kiểm tra hợp lệ, hẹn giờ lấy món và gửi đơn hàng.
  */
 
+// Append Mode Global State
+window.isAppendMode = false;
+window.parentOrderKey = null;
+window.appendTableNumber = null;
+
+function initAppendModeIfPresent() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const parentOrderKey = urlParams.get('parent_order_key');
+    const paramTableNumber = urlParams.get('table_number');
+    const mode = urlParams.get('mode');
+
+    if (parentOrderKey && (mode === 'append' || mode === 'add')) {
+        window.isAppendMode = true;
+        window.parentOrderKey = parentOrderKey;
+        window.appendTableNumber = paramTableNumber || '';
+
+        // Show Banner
+        const bannerEl = document.getElementById('append-mode-banner');
+        if (bannerEl) {
+            bannerEl.style.display = 'flex';
+            const tableEl = document.getElementById('append-mode-table');
+            if (tableEl) tableEl.innerText = paramTableNumber ? `桌號 ${paramTableNumber}` : '現場內用';
+            const keyEl = document.getElementById('append-mode-key');
+            if (keyEl) keyEl.innerText = `#${parentOrderKey}`;
+        }
+
+        // Lock Dining Option to Dine-In
+        if (typeof setCustomerDiningOption === 'function') {
+            setCustomerDiningOption('dine_in');
+        }
+        const toggleWrapper = document.getElementById('dining-option-wrapper');
+        if (toggleWrapper) toggleWrapper.style.display = 'none';
+        const checkoutToggleGroup = document.getElementById('checkout-dining-option-group');
+        if (checkoutToggleGroup) checkoutToggleGroup.style.display = 'none';
+
+        // Lock table number input
+        const tableInput = document.getElementById('dinein-table-number');
+        if (tableInput && paramTableNumber) {
+            tableInput.value = paramTableNumber;
+            tableInput.readOnly = true;
+            tableInput.style.backgroundColor = '#f3f4f6';
+            tableInput.style.color = '#5b21b6';
+            tableInput.style.cursor = 'not-allowed';
+        }
+
+        // Update submit button text
+        const submitBtn = document.getElementById('btn-submit');
+        if (submitBtn) {
+            submitBtn.innerText = '確認加點';
+        }
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAppendModeIfPresent);
+} else {
+    initAppendModeIfPresent();
+}
+
 // 1. Kiểm tra vị trí hiển thị của khu vực thanh toán
 function isCheckoutSectionVisible() {
     const el = document.getElementById('sec-checkout');
@@ -16,6 +75,11 @@ function isCheckoutSectionVisible() {
 function updateFooterButtonState() {
     const btn = document.getElementById('btn-submit');
     if (!btn || btn.disabled || isSubmitting) return;
+
+    if (window.isAppendMode) {
+        btn.innerText = '確認加點';
+        return;
+    }
 
     if (isCheckoutSectionVisible()) {
         btn.innerText = '確認下單';
@@ -398,6 +462,76 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
         const isDineIn = (window.currentDiningOption === 'dine_in');
         const tableInput = document.getElementById('dinein-table-number');
         const tableNumber = (isDineIn && tableInput) ? tableInput.value.trim() : '';
+
+        // 10.1 Xử lý riêng cho luồng 加點餐點 (Append Mode)
+        if (window.isAppendMode && window.parentOrderKey) {
+            const appendPayload = {
+                parent_order_key: window.parentOrderKey,
+                user_id: userId,
+                customer_name: customerName,
+                appended_content: msg.split('\n\n🕒')[0].replace(/\[.*?點餐\]\n/g, '').replace('[Benmi 點餐]\n', ''),
+                appended_total: currentTotal,
+                note: mainNote,
+                tenant_id: tenantId
+            };
+
+            const res = await fetch(`${WORKER_BASE}/api/orders/append?tenant_id=${tenantId}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Tenant-ID": tenantId
+                },
+                body: JSON.stringify(appendPayload),
+                signal: abortController.signal
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.error || `API returned status ${res.status}`);
+            }
+
+            orderSubmittedSuccessfully = true;
+
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = '加點已送出';
+                submitBtn.style.cursor = 'not-allowed';
+                submitBtn.style.opacity = '0.6';
+            }
+
+            // Tùy chọn: Gửi tin nhắn vào chat LINE nếu đang mở trong LINE App
+            if (typeof liff !== 'undefined' && liff.isInClient) {
+                try {
+                    if (liff.isInClient() && typeof liff.sendMessages === 'function') {
+                        await liff.sendMessages([{ type: 'text', text: `[加點餐點 #${window.parentOrderKey}]\n${msg}` }]);
+                    }
+                } catch (liffMsgErr) {
+                    console.warn("liff.sendMessages notice:", liffMsgErr);
+                }
+            }
+
+            // Xóa sạch giỏ hàng khi thành công
+            cart = {};
+            customizeData = {};
+            comboDrinkData = {};
+            if (typeof updateTotal === 'function') updateTotal();
+
+            customAlert(`
+                <div style="margin-bottom: 16px;">
+                    <div style="width: 60px; height: 60px; margin: 0 auto; background: #faf5ff; border: 2px solid #c084fc; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px;">
+                        🍽️
+                    </div>
+                </div>
+                <div style="font-size: 19px; font-weight: 900; color: #111827; margin-bottom: 6px;">加點送出成功！</div>
+                <div style="font-size: 14.5px; line-height: 1.5; color: #4b5563;">店家已收到您的加點品項，將立即為您製作 🙏</div>
+            `, () => {
+                if (typeof closeAndExitLiff === 'function') closeAndExitLiff();
+            });
+
+            return;
+        }
 
         const orderPayload = {
             key: orderNum,

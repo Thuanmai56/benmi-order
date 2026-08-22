@@ -270,7 +270,14 @@ const I18N = {
     dineInSaveFail: "內用設定儲存失敗：",
     featureLockedTitle: "🔒 進階功能 (未啟用)",
     featureLockedDesc: "此功能為 BLAB 進階模組，如需啟用「內用接單」請聯繫 BLAB 團隊升級方案。",
-    btnContactUpgrade: "聯繫升級方案"
+    btnContactUpgrade: "聯繫升級方案",
+    // Multi-Round Append Orders
+    badgeAppendRound: "第 {n} 輪加點",
+    badgeAppendShort: "加點",
+    roundBlockTitle: "第 {n} 輪餐點",
+    roundBlockLatest: "最新加點",
+    roundBlockInitial: "第 1 輪 (最初點餐)",
+    alertNewAppended: "🔔 桌號 {table} (單號 #{key}) 有新加點餐點！"
   },
   "vi": {
     langBtn: "繁體中文",
@@ -539,7 +546,14 @@ const I18N = {
     dineInSaveFail: "Lưu thiết lập thất bại: ",
     featureLockedTitle: "🔒 Tính năng nâng cao (Chưa kích hoạt)",
     featureLockedDesc: "Tính năng này thuộc gói mô-đun nâng cao. Để kích hoạt 'Ăn tại quán', vui lòng liên hệ BLAB để nâng cấp gói.",
-    btnContactUpgrade: "Liên hệ nâng cấp gói"
+    btnContactUpgrade: "Liên hệ nâng cấp gói",
+    // Multi-Round Append Orders
+    badgeAppendRound: "Đợt {n} gọi thêm",
+    badgeAppendShort: "Gọi thêm",
+    roundBlockTitle: "Đợt {n}",
+    roundBlockLatest: "Mới gọi thêm",
+    roundBlockInitial: "Đợt 1 (Đơn ban đầu)",
+    alertNewAppended: "🔔 Bàn {table} (Đơn #{key}) vừa gọi thêm món mới!"
   }
 };
 

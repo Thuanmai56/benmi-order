@@ -184,6 +184,34 @@ body {
     box-shadow: 0 2px 8px rgba(217, 119, 6, 0.08);
 }
 
+/* Dining Append Mode Banner */
+.append-mode-banner {
+    max-width: 600px;
+    width: calc(100% - 28px);
+    margin: 14px auto 16px;
+    padding: 14px 18px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-sizing: border-box;
+    background: linear-gradient(135deg, #7c3aed, #6d28d9);
+    color: #ffffff;
+    box-shadow: 0 4px 16px rgba(124, 58, 237, 0.28);
+    border: 1.5px solid #a78bfa;
+}
+
+.append-mode-icon {
+    font-size: 26px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.append-mode-banner strong {
+    color: #fef08a;
+    font-weight: 900;
+}
+
 .store-detail-row {
     display: flex;
     align-items: flex-start;

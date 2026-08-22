@@ -70,6 +70,7 @@ let snoozedNewOrderKeys = new Set();
 let newAlertSnoozeTimerId = null;
 let localOverrides = {};
 const knownOrderKeys = new Set();
+const knownOrderRounds = new Map();
 const processingKeys = new Set();
 let isFirstLoad = true;
 let lastOrdersETag = "";
@@ -243,10 +244,27 @@ async function fetchOrders() {
     const newArrivals = latestOrders.filter(o => o && o.key && !knownOrderKeys.has(o.key));
     newArrivals.forEach(o => { if (o?.key) knownOrderKeys.add(o.key); });
 
-    // NEW orders => fullscreen alert
+    // Track round count increases on existing orders (Appended rounds)
+    let hasNewlyAppendedRound = false;
+    latestOrders.forEach(o => {
+      if (o?.key) {
+        const currentRound = Number(o.round_count || o.roundCount) || 1;
+        if (!isFirstLoad && knownOrderRounds.has(o.key)) {
+          const prevRound = knownOrderRounds.get(o.key);
+          if (currentRound > prevRound) {
+            hasNewlyAppendedRound = true;
+          }
+        }
+        knownOrderRounds.set(o.key, currentRound);
+      }
+    });
+
+    // NEW orders or newly appended rounds => alert sound
     pendingNewOrders = latestOrders.filter(o => o && o.status === "NEW").slice().sort(sortByPickupTimeAsc);
-    if (!isFirstLoad && newArrivals.length > 0 && pendingNewOrders.length > 0) {
+    if (!isFirstLoad && (newArrivals.length > 0 && pendingNewOrders.length > 0)) {
       if (typeof startContinuousAlarm === "function") startContinuousAlarm();
+    } else if (!isFirstLoad && hasNewlyAppendedRound) {
+      if (typeof playNewOrderSound === "function") playNewOrderSound();
     }
     isFirstLoad = false;
     if (typeof updateNewAlert === "function") updateNewAlert();

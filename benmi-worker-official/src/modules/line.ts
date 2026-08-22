@@ -381,16 +381,167 @@ export function buildProgressFlexMessage(order: Order, queueAheadCount: number, 
       type: "box",
       layout: "vertical",
       paddingAll: "12px",
-      contents: [
-        {
+      contents: (() => {
+        const liffBaseUrl = tenantCtx?.liffUrl || (tenantCtx?.liffId ? `https://liff.line.me/${tenantCtx.liffId}` : "https://liff.line.me/");
+        const tenantId = tenantCtx?.tenantId || "benmi";
+        const tableNum = order.tableNumber || "";
+        const buttons: any[] = [];
+
+        if (isDineIn && (order.status === "NEW" || order.status === "ACCEPTED" || order.status === "DONE")) {
+          const appendUrl = `${liffBaseUrl}?tenant_id=${encodeURIComponent(tenantId)}&parent_order_key=${encodeURIComponent(order.key)}&table_number=${encodeURIComponent(tableNum)}&mode=append`;
+          buttons.push({
+            type: "button",
+            style: "primary",
+            color: "#7c3aed",
+            height: "sm",
+            action: {
+              type: "uri",
+              label: "➕ 加點餐點",
+              uri: appendUrl
+            }
+          });
+        }
+
+        buttons.push({
           type: "button",
           style: "secondary",
           height: "sm",
+          margin: buttons.length > 0 ? "sm" : "none",
           action: {
             type: "postback",
             label: "🔄 重新整理進度",
             data: `action=check_progress&order_key=${order.key}`,
             displayText: `🔄 重新整理進度 (${order.key})`
+          }
+        });
+
+        return buttons;
+      })()
+    }
+  };
+}
+
+export function buildAppendConfirmationFlexMessage(
+  order: Order,
+  newItemsText: string,
+  addedAmount: number,
+  roundNumber: number,
+  tenantCtx?: TenantContext | null
+): any {
+  const brandColor = "#7c3aed";
+  const tableNumber = order.tableNumber || "-";
+  const contentLines = (newItemsText || "").split("\n").filter(l => l.trim().length > 0);
+  const contentComponents = contentLines.slice(0, 30).map(line => ({
+    type: "text",
+    text: line,
+    size: "sm",
+    color: line.startsWith("↳") ? "#666666" : "#111111",
+    weight: line.includes("x ") ? "bold" : "regular",
+    wrap: true
+  }));
+
+  const liffBaseUrl = tenantCtx?.liffUrl || (tenantCtx?.liffId ? `https://liff.line.me/${tenantCtx.liffId}` : "https://liff.line.me/");
+  const tenantId = tenantCtx?.tenantId || "benmi";
+
+  return {
+    type: "bubble",
+    size: "mega",
+    header: {
+      type: "box",
+      layout: "vertical",
+      backgroundColor: brandColor,
+      paddingAll: "15px",
+      contents: [
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            { type: "text", text: `🍽️ 加點成功 (第 ${roundNumber} 輪)`, weight: "bold", color: "#ffffff", size: "lg", flex: 0 },
+            { type: "text", text: `#${order.key}`, color: "#ffffff", size: "sm", align: "end", flex: 1, gravity: "center" }
+          ]
+        }
+      ]
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      paddingAll: "16px",
+      spacing: "md",
+      contents: [
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            { type: "text", text: "🪑 桌號：", size: "sm", color: "#666666", flex: 0 },
+            { type: "text", text: `桌號 ${tableNumber}`, size: "sm", weight: "bold", color: "#7c3aed", align: "end", flex: 1 }
+          ]
+        },
+        { type: "separator", margin: "xs" },
+        {
+          type: "box",
+          layout: "vertical",
+          spacing: "xs",
+          contents: [
+            { type: "text", text: `➕ 本次加點品項 (第 ${roundNumber} 輪)：`, weight: "bold", size: "sm", color: "#333333" },
+            ...contentComponents
+          ]
+        },
+        ...(order.note ? [
+          { type: "separator", margin: "md" },
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: "📝 備註：", size: "xs", color: "#888888", flex: 0 },
+              { type: "text", text: order.note, size: "xs", color: "#333333", wrap: true, flex: 1 }
+            ]
+          }
+        ] : []),
+        { type: "separator", margin: "md" },
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            { type: "text", text: "➕ 本次加點金額：", size: "sm", color: "#666666", flex: 0 },
+            { type: "text", text: `+$${addedAmount}`, size: "sm", weight: "bold", color: "#7c3aed", align: "end", flex: 1 }
+          ]
+        },
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            { type: "text", text: "💰 累計總金額：", size: "sm", color: "#666666", flex: 0 },
+            { type: "text", text: `$${order.total}`, size: "md", weight: "bold", color: "#e53e3e", align: "end", flex: 1 }
+          ]
+        }
+      ]
+    },
+    footer: {
+      type: "box",
+      layout: "vertical",
+      paddingAll: "12px",
+      contents: [
+        {
+          type: "button",
+          style: "primary",
+          color: brandColor,
+          height: "sm",
+          action: {
+            type: "uri",
+            label: "➕ 再次加點",
+            uri: `${liffBaseUrl}?tenant_id=${encodeURIComponent(tenantId)}&parent_order_key=${encodeURIComponent(order.key)}&table_number=${encodeURIComponent(tableNumber)}&mode=append`
+          }
+        },
+        {
+          type: "button",
+          style: "secondary",
+          height: "sm",
+          margin: "sm",
+          action: {
+            type: "postback",
+            label: "🔍 查詢製作進度",
+            data: `action=check_progress&order_key=${order.key}`,
+            displayText: `🔍 查詢訂單進度 (${order.key})`
           }
         }
       ]

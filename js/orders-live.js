@@ -124,6 +124,11 @@ function renderListLeft(orders) {
       ? `<span class="badge badge-dine-in" style="font-size:11.5px; padding:2px 7px; margin-left:4px;">🍽️ ${t('badgeDineIn')}${escapeHtml(tableLabel)}</span>`
       : `<span class="badge badge-takeaway" style="font-size:11.5px; padding:2px 7px; margin-left:4px;">🛍️ ${t('badgeTakeaway')}</span>`;
 
+    const roundCount = Number(order.round_count || order.roundCount) || 1;
+    const appendBadge = (isDineIn && roundCount > 1)
+      ? `<span class="badge badge-append" style="font-size:11.5px; padding:2px 7px; margin-left:4px;">➕ ${t('badgeAppendRound', { n: roundCount })}</span>`
+      : "";
+
     const pickupDisplay = isDineIn
       ? (formatPickupTimeDisplay(order.time) !== '-' ? formatPickupTimeDisplay(order.time) : t('dineIn'))
       : formatPickupTimeDisplay(order.time);
@@ -135,6 +140,7 @@ function renderListLeft(orders) {
           <span class="tile-customer">${escapeHtml(order.customer || t('defaultCustomer'))}</span>
           <span class="tile-order-key">#${escapeHtml(order.key)}</span>
           ${diningBadge}
+          ${appendBadge}
           ${badge}
         </div>
         <div class="tile-meta-row">
@@ -188,6 +194,11 @@ function renderListRight(orders) {
       ? `<span class="badge badge-dine-in" style="font-size:11.5px; padding:2px 7px; margin-left:4px;">🍽️ ${t('badgeDineIn')}${escapeHtml(tableLabel)}</span>`
       : `<span class="badge badge-takeaway" style="font-size:11.5px; padding:2px 7px; margin-left:4px;">🛍️ ${t('badgeTakeaway')}</span>`;
 
+    const roundCount = Number(order.round_count || order.roundCount) || 1;
+    const appendBadge = (isDineIn && roundCount > 1)
+      ? `<span class="badge badge-append" style="font-size:11.5px; padding:2px 7px; margin-left:4px;">➕ ${t('badgeAppendRound', { n: roundCount })}</span>`
+      : "";
+
     const pickupDisplay = isDineIn
       ? (formatPickupTimeDisplay(order.time) !== '-' ? formatPickupTimeDisplay(order.time) : t('dineIn'))
       : formatPickupTimeDisplay(order.time);
@@ -199,6 +210,7 @@ function renderListRight(orders) {
           <span class="tile-customer">${escapeHtml(order.customer || t('defaultCustomer'))}</span>
           <span class="tile-order-key">#${escapeHtml(order.key)}</span>
           ${diningBadge}
+          ${appendBadge}
           <span class="badge done">${t('badgeReady')}</span>
         </div>
         <div class="tile-meta-row">
@@ -293,25 +305,78 @@ function formatContentHtml(order) {
   if (order?.reason === "Đơn qua tin nhắn") {
     return `<div style="background:rgba(0,185,0,0.07); border:1.5px solid rgba(0,185,0,0.25); border-radius:16px; padding:18px; white-space:pre-wrap; line-height:1.7; font-size:22px;">${escapeHtml(raw)}</div>`;
   }
-  const lines = raw.split("\n").map(l => l.trimEnd()).filter(l => l.trim() !== "");
-  if (lines.length === 0) return `<div style="background:rgba(0,185,0,0.07); border:1.5px solid rgba(0,185,0,0.25); border-radius:16px; padding:18px;">-</div>`;
 
-  let inner = lines.map(line => {
-    const text = line.trimStart();
-    const isSub = text.startsWith("-") || text.startsWith("•") || text.startsWith("↳") || text.startsWith("－");
-    return `<div style="${isSub ? 'padding-left:16px; color:#4b5563; font-size:20px;' : 'font-weight:800; margin-top:8px; font-size:22px;'}">${escapeHtml(line)}</div>`;
-  }).join("");
+  // Multi-round detection: [第 X 輪 or [Đợt X
+  const hasMultiRound = raw.includes("[第") || raw.includes("[Đợt");
+  let contentHtml = "";
 
+  if (hasMultiRound) {
+    const lines = raw.split("\n");
+    const rounds = [];
+    let currentRoundHeader = "";
+    let currentRoundLines = [];
+
+    lines.forEach(line => {
+      const trimmed = line.trim();
+      if ((trimmed.startsWith("[第") || trimmed.startsWith("[Đợt")) && trimmed.endsWith("]")) {
+        if (currentRoundHeader || currentRoundLines.length > 0) {
+          rounds.push({ header: currentRoundHeader, lines: currentRoundLines });
+        }
+        currentRoundHeader = trimmed;
+        currentRoundLines = [];
+      } else if (trimmed !== "") {
+        currentRoundLines.push(line);
+      }
+    });
+
+    if (currentRoundHeader || currentRoundLines.length > 0) {
+      rounds.push({ header: currentRoundHeader, lines: currentRoundLines });
+    }
+
+    contentHtml = rounds.map((rd, idx) => {
+      const isLatest = (rounds.length > 1 && idx === rounds.length - 1);
+      const headerText = rd.header
+        ? rd.header.replace(/^\[/, '').replace(/\]$/, '')
+        : (idx === 0 ? t('roundBlockInitial') : t('roundBlockTitle', { n: idx + 1 }));
+
+      const linesHtml = rd.lines.map(line => {
+        const text = line.trimStart();
+        const isSub = text.startsWith("-") || text.startsWith("•") || text.startsWith("↳") || text.startsWith("－");
+        return `<div style="${isSub ? 'padding-left:16px; color:#4b5563; font-size:20px;' : 'font-weight:800; margin-top:8px; font-size:22px;'}">${escapeHtml(line)}</div>`;
+      }).join("");
+
+      return `
+        <div class="round-section-block ${isLatest ? 'round-section-latest' : ''}" style="${isLatest ? 'background:#fbf7ff; border:2px solid #a855f7; border-radius:14px; padding:14px 16px; margin-bottom:12px; box-shadow:0 2px 8px rgba(168,85,247,0.15);' : 'background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:14px; padding:14px 16px; margin-bottom:12px;'}">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:6px; border-bottom:${isLatest ? '1.5px solid #e9d5ff' : '1px solid #e2e8f0'};">
+            <span style="font-weight:900; font-size:18px; color:${isLatest ? '#6b21a8' : '#334155'};">🍽️ ${escapeHtml(headerText)}</span>
+            ${isLatest ? `<span style="background:#7e22ce; color:#ffffff; font-size:12px; font-weight:800; padding:2px 8px; border-radius:6px; letter-spacing:0.3px;">🔥 ${t('roundBlockLatest')}</span>` : ''}
+          </div>
+          ${linesHtml}
+        </div>
+      `;
+    }).join("");
+  } else {
+    const lines = raw.split("\n").map(l => l.trimEnd()).filter(l => l.trim() !== "");
+    if (lines.length === 0) return `<div style="background:rgba(0,185,0,0.07); border:1.5px solid rgba(0,185,0,0.25); border-radius:16px; padding:18px;">-</div>`;
+
+    contentHtml = lines.map(line => {
+      const text = line.trimStart();
+      const isSub = text.startsWith("-") || text.startsWith("•") || text.startsWith("↳") || text.startsWith("－");
+      return `<div style="${isSub ? 'padding-left:16px; color:#4b5563; font-size:20px;' : 'font-weight:800; margin-top:8px; font-size:22px;'}">${escapeHtml(line)}</div>`;
+    }).join("");
+  }
+
+  let footer = "";
   if (order?.note) {
-    inner += `<div style="color: #555; font-size: 18px; margin-top: 12px; font-weight: 800;">📝 ${escapeHtml(order.note)}</div>`;
+    footer += `<div style="color: #555; font-size: 18px; margin-top: 12px; font-weight: 800;">📝 ${escapeHtml(order.note)}</div>`;
   }
 
   const totalDisplay = formatOrderTotal(order);
   if (totalDisplay !== "-") {
-    inner += `<div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding-top:12px; border-top:1.5px dashed rgba(0,185,0,0.35); font-weight:1000; font-size:22px; color:#111827;"><span>${t('labelTotal')}:</span><span style="color:var(--primary); font-size:26px; font-weight:1100;">${totalDisplay}</span></div>`;
+    footer += `<div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding-top:12px; border-top:1.5px dashed rgba(0,185,0,0.35); font-weight:1000; font-size:22px; color:#111827;"><span>${t('labelTotal')}:</span><span style="color:var(--primary); font-size:26px; font-weight:1100;">${totalDisplay}</span></div>`;
   }
 
-  return `<div style="background:rgba(0,185,0,0.07); border:1.5px solid rgba(0,185,0,0.25); border-radius:16px; padding:18px; line-height:1.7;">${inner}</div>`;
+  return `<div style="background:rgba(0,185,0,0.07); border:1.5px solid rgba(0,185,0,0.25); border-radius:16px; padding:18px; line-height:1.7;">${contentHtml}${footer}</div>`;
 }
 
 async function updateStatus(key, status, extra = {}, btn = null) {

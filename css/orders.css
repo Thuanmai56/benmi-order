@@ -304,6 +304,31 @@ body {
   border: 1px solid #a7f3d0;
 }
 
+.badge.badge-append {
+  background: #f3e8ff;
+  color: #7e22ce;
+  border: 1.5px solid #c084fc;
+}
+
+.round-section-block {
+  transition: all 0.2s ease;
+}
+
+.round-section-latest {
+  animation: pulseLatestRound 2s infinite ease-in-out;
+}
+
+@keyframes pulseLatestRound {
+  0%, 100% {
+    border-color: #a855f7;
+    box-shadow: 0 2px 8px rgba(168, 85, 247, 0.15);
+  }
+  50% {
+    border-color: #7e22ce;
+    box-shadow: 0 4px 14px rgba(126, 34, 206, 0.28);
+  }
+}
+
 /* Dining Filter Bar (Tablet & Counter POS) */
 .dining-filter-bar {
   display: flex;

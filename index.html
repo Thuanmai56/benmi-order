@@ -141,6 +141,15 @@
         })();
     </script>
 
+    <!-- Dine-In Append Mode Banner -->
+    <div id="append-mode-banner" class="append-mode-banner" style="display: none;">
+        <span class="append-mode-icon">🍽️</span>
+        <div style="flex: 1;">
+            <div id="append-mode-title" style="font-weight: 900; font-size: 15px; letter-spacing: 0.2px;">正在加點餐點</div>
+            <div id="append-mode-desc" style="font-size: 13px; color: #ede9fe; margin-top: 2px; font-weight: 600; line-height: 1.4;">正在為 <strong id="append-mode-table">-</strong> (<span id="append-mode-key">#-</span>) 加點</div>
+        </div>
+    </div>
+
     <!-- Store Status Dynamic Alert Banners -->
     <div id="store-paused-banner" class="store-alert-banner paused" style="display: none;">
         <span style="font-size: 26px; line-height: 1; flex-shrink: 0;">⛔</span>
@@ -503,17 +512,23 @@
             const checkoutDiningGroup = document.getElementById('checkout-dining-option-group');
             const secTitle = document.getElementById('pickup-time-section-title');
 
-            const hasDineInFeature = (storeConfig && Array.isArray(storeConfig.features))
-                ? storeConfig.features.includes('dine_in')
-                : true;
-            const isDineInAllowed = hasDineInFeature && !(storeConfig && storeConfig.allowDineIn === false);
-            if (!isDineInAllowed) {
-                window.currentDiningOption = 'takeaway';
+            if (window.isAppendMode) {
+                window.currentDiningOption = 'dine_in';
                 if (diningWrapper) diningWrapper.style.display = 'none';
                 if (checkoutDiningGroup) checkoutDiningGroup.style.display = 'none';
             } else {
-                if (diningWrapper) diningWrapper.style.display = 'block';
-                if (checkoutDiningGroup) checkoutDiningGroup.style.display = 'block';
+                const hasDineInFeature = (storeConfig && Array.isArray(storeConfig.features))
+                    ? storeConfig.features.includes('dine_in')
+                    : true;
+                const isDineInAllowed = hasDineInFeature && !(storeConfig && storeConfig.allowDineIn === false);
+                if (!isDineInAllowed) {
+                    window.currentDiningOption = 'takeaway';
+                    if (diningWrapper) diningWrapper.style.display = 'none';
+                    if (checkoutDiningGroup) checkoutDiningGroup.style.display = 'none';
+                } else {
+                    if (diningWrapper) diningWrapper.style.display = 'block';
+                    if (checkoutDiningGroup) checkoutDiningGroup.style.display = 'block';
+                }
             }
 
             const tableGroup = document.getElementById('dinein-table-input-group');

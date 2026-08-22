@@ -1,8 +1,8 @@
 import { Env } from '../types/env';
-import { Order, DiningOption } from '../types/index';
+import { Order, DiningOption, AppendOrderPayload } from '../types/index';
 import { corsHeaders, json } from '../utils/http';
 import { syncToGoogleSheets } from '../integrations/googleSheets';
-import { pushLineMessage, pushLineFlexMessage, buildOrderFlexMessage } from './line';
+import { pushLineMessage, pushLineFlexMessage, buildOrderFlexMessage, buildAppendConfirmationFlexMessage } from './line';
 import { getTenantId } from './menu';
 
 import { TenantContext, tenantHasFeature, resolveTenantOrderPrefix, generateStandardOrderId } from '../types/tenant';
@@ -62,12 +62,146 @@ export async function createOrder(
     reason: data.reason || "",
     note: data.note || "",
     diningOption: diningOption,
-    tableNumber: tableNumber
+    tableNumber: tableNumber,
+    roundCount: 1,
+    round_count: 1
   };
 
   await saveOrder(env, order, tenantId);
 
   return json({ success: true, key: orderKey });
+}
+
+export async function appendOrder(
+  request: Request,
+  env: Env,
+  ctx?: ExecutionContext,
+  tenantCtx?: TenantContext | null
+): Promise<Response> {
+  try {
+    const payload: AppendOrderPayload = await request.json();
+    const tenantId = tenantCtx?.tenantId || payload.tenant_id || getTenantId(request);
+    const parentKey = payload.parent_order_key;
+    const appendedContent = payload.appended_content;
+    const appendedTotal = Number(payload.appended_total) || 0;
+    const note = payload.note ? String(payload.note).trim() : "";
+
+    if (!parentKey || !appendedContent || appendedTotal <= 0) {
+      return json({ error: "參數不完整 / Incomplete parameters", code: "INVALID_PARAMS" }, 400);
+    }
+
+    if (!env.DB) {
+      return json({ error: "Database not configured", code: "NO_DB" }, 500);
+    }
+
+    // 1. Fetch parent order
+    const row = await env.DB.prepare(
+      "SELECT * FROM orders WHERE key = ? AND tenant_id = ?"
+    ).bind(parentKey, tenantId).first<any>();
+
+    if (!row) {
+      return json({ error: "找不到原訂單 / Order not found", code: "ORDER_NOT_FOUND" }, 404);
+    }
+
+    // 2. Lock boundary: Cannot append if order is PICKED_UP or REJECTED
+    if (row.status === 'PICKED_UP' || row.status === 'REJECTED') {
+      return json({
+        error: "訂單已完成或已取消，無法再加點，請重新開啟新訂單 / Đơn hàng đã kết thúc hoặc đã hủy, không thể gọi thêm",
+        code: "ORDER_LOCKED"
+      }, 400);
+    }
+
+    // 3. Compute next round & time
+    const currentRound = Number(row.round_count) || 1;
+    const nextRound = currentRound + 1;
+
+    const nowTw = new Date(Date.now() + 8 * 3600000);
+    const timeStr = `${String(nowTw.getUTCHours()).padStart(2, "0")}:${String(nowTw.getUTCMinutes()).padStart(2, "0")}`;
+
+    // 4. Multi-round content formatting
+    let existingContent = String(row.order_content || "").trim();
+    if (!existingContent.includes("[第 1 輪") && !existingContent.includes("[Đợt 1")) {
+      existingContent = `[第 1 輪 / Đợt 1]\n${existingContent}`;
+    }
+    const newContentBlock = `\n\n[第 ${nextRound} 輪 加點 / Đợt ${nextRound} - ${timeStr}]\n${appendedContent.trim()}`;
+    const updatedContent = existingContent + newContentBlock;
+
+    // 5. Combine note & update total
+    const combinedNote = note
+      ? (row.note ? `${row.note} | [加點${nextRound}]: ${note}` : `[加點${nextRound}]: ${note}`)
+      : (row.note || "");
+    const newTotal = (Number(row.total_amount) || 0) + appendedTotal;
+
+    // 6. Persist to D1
+    await env.DB.prepare(
+      `UPDATE orders SET
+         order_content = ?,
+         total_amount = ?,
+         status = 'ACCEPTED',
+         round_count = ?,
+         last_appended_at = datetime('now'),
+         note = ?,
+         updated_at = datetime('now')
+       WHERE key = ? AND tenant_id = ?`
+    ).bind(
+      updatedContent,
+      newTotal,
+      nextRound,
+      combinedNote,
+      parentKey,
+      tenantId
+    ).run();
+
+    // 7. Construct updated order object for notification & response
+    const updatedOrder: Order = {
+      key: parentKey,
+      customer: row.customer_name || "顧客",
+      time: row.pickup_time || "",
+      content: updatedContent,
+      status: "ACCEPTED",
+      createdAt: row.created_at ? new Date(row.created_at + "Z").getTime() : Date.now(),
+      userId: row.user_id || payload.user_id,
+      total: newTotal,
+      reason: row.reason || "",
+      note: combinedNote,
+      diningOption: (row.dining_option as any) || 'dine_in',
+      tableNumber: row.table_number || null,
+      roundCount: nextRound,
+      round_count: nextRound,
+      lastAppendedAt: new Date().toISOString()
+    };
+
+    // 8. Send Flex Message confirmation to LINE user
+    const targetUserId = updatedOrder.userId;
+    if (targetUserId && !targetUserId.startsWith("guest_")) {
+      try {
+        const flexMsg = buildAppendConfirmationFlexMessage(
+          updatedOrder,
+          appendedContent,
+          appendedTotal,
+          nextRound,
+          tenantCtx
+        );
+        if (ctx && ctx.waitUntil) {
+          ctx.waitUntil(pushLineFlexMessage(targetUserId, `🍽️ 加點成功通知 (第 ${nextRound} 輪)`, flexMsg, env, tenantCtx));
+        } else {
+          await pushLineFlexMessage(targetUserId, `🍽️ 加點成功通知 (第 ${nextRound} 輪)`, flexMsg, env, tenantCtx);
+        }
+      } catch (lineErr) {
+        console.error("[appendOrder] LINE push notification failed:", lineErr);
+      }
+    }
+
+    return json({
+      success: true,
+      key: parentKey,
+      round_count: nextRound,
+      total_amount: newTotal
+    });
+  } catch (e: any) {
+    console.error("[appendOrder] Error:", e);
+    return json({ error: e.message || "Failed to append order", code: "INTERNAL_ERROR" }, 500);
+  }
 }
 
 export async function getPendingMap(env: Env, tenantId: string, userId: string): Promise<Record<string, any>> {
@@ -355,7 +489,11 @@ function mapOrderRows(results: any[]): Order[] {
       reason: row.reason || "",
       note: row.note || "",
       diningOption: (row.dining_option as any) || 'takeaway',
-      tableNumber: row.table_number || undefined
+      tableNumber: row.table_number || undefined,
+      roundCount: Number(row.round_count) || 1,
+      round_count: Number(row.round_count) || 1,
+      lastAppendedAt: row.last_appended_at || null,
+      last_appended_at: row.last_appended_at || null
     };
   });
 }
@@ -394,7 +532,7 @@ export async function getOrders(request: Request, env: Env): Promise<Response> {
     const startOfTodayUTC = new Date(new Date(`${todayTwStr}T00:00:00+08:00`).getTime()).toISOString().replace("T", " ").replace(/\.\d+Z$/, "");
 
     const { results } = await env.DB.prepare(
-      `SELECT key, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, created_at 
+      `SELECT key, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, round_count, last_appended_at, created_at 
        FROM orders 
        WHERE tenant_id = ? 
          AND (status IN ('NEW', 'ACCEPTED', 'WAITING_CUSTOMER_CHANGE', 'WAITING_CUSTOMER_REJECT', 'DONE') 
@@ -448,24 +586,18 @@ export async function getOrdersByDate(request: Request, env: Env): Promise<Respo
   const url = new URL(request.url);
   const dateStr = url.searchParams.get("date");
   if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-    return json({ error: "Invalid date parameter. Format: YYYY-MM-DD" }, 400);
+    return json({ error: "Invalid date format, expected YYYY-MM-DD" }, 400);
   }
 
   try {
-    const startDate = new Date(`${dateStr}T00:00:00+08:00`);
-    const endDate = new Date(startDate.getTime() + 24 * 3600000);
-
-    const startUTC = startDate.toISOString().replace("T", " ").replace(/\.\d+Z$/, "");
-    const endUTC = endDate.toISOString().replace("T", " ").replace(/\.\d+Z$/, "");
-
     const { results } = await env.DB.prepare(
-      `SELECT key, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, created_at 
+      `SELECT key, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, round_count, last_appended_at, created_at 
        FROM orders 
        WHERE tenant_id = ? 
-         AND created_at >= ? AND created_at < ?
          AND status IN ('PICKED_UP', 'REJECTED')
-       ORDER BY created_at DESC`
-    ).bind(tenantId, startUTC, endUTC).all<any>();
+         AND DATE(DATETIME(created_at, '+8 hours')) = ?
+       ORDER BY created_at DESC LIMIT 500`
+    ).bind(tenantId, dateStr).all<any>();
 
     const orders = mapOrderRows(results || []);
     return json(orders);
@@ -481,12 +613,12 @@ export async function getHistoryAll(request: Request, env: Env): Promise<Respons
 
   try {
     const { results } = await env.DB.prepare(
-      `SELECT key, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, created_at 
+      `SELECT key, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, round_count, last_appended_at, created_at 
        FROM orders 
        WHERE tenant_id = ? 
          AND status IN ('PICKED_UP', 'REJECTED')
          AND created_at >= DATETIME('now', '-30 days')
-       ORDER BY created_at DESC LIMIT 3000`
+       ORDER BY created_at DESC LIMIT 1000`
     ).bind(tenantId).all<any>();
 
     const orders = mapOrderRows(results || []);
@@ -500,8 +632,8 @@ export async function getHistoryAll(request: Request, env: Env): Promise<Respons
 export async function saveOrder(env: Env, order: Order, tenantId: string): Promise<void> {
   // Save order to D1
   await env.DB.prepare(
-    `INSERT INTO orders (key, tenant_id, user_id, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime(?, 'unixepoch'), datetime('now'))
+    `INSERT INTO orders (key, tenant_id, user_id, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, round_count, last_appended_at, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, 1), ?, datetime(?, 'unixepoch'), datetime('now'))
      ON CONFLICT(key) DO UPDATE SET
        status = CASE
          WHEN orders.status IN ('ACCEPTED', 'DONE', 'REJECTED', 'PICKED_UP') AND excluded.status = 'NEW'
@@ -516,6 +648,8 @@ export async function saveOrder(env: Env, order: Order, tenantId: string): Promi
        note = excluded.note,
        dining_option = excluded.dining_option,
        table_number = excluded.table_number,
+       round_count = CASE WHEN excluded.round_count > orders.round_count THEN excluded.round_count ELSE orders.round_count END,
+       last_appended_at = CASE WHEN excluded.last_appended_at IS NOT NULL THEN excluded.last_appended_at ELSE orders.last_appended_at END,
        updated_at = datetime('now')`
   ).bind(
     order.key,
@@ -530,6 +664,8 @@ export async function saveOrder(env: Env, order: Order, tenantId: string): Promi
     order.note || "",
     order.diningOption || "takeaway",
     order.tableNumber || null,
+    order.roundCount || order.round_count || 1,
+    order.lastAppendedAt || order.last_appended_at || null,
     Math.floor((order.createdAt || Date.now()) / 1000)
   ).run();
 }

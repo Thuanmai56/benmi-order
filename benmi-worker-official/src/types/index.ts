@@ -13,6 +13,20 @@ export interface Order {
   note?: string;
   diningOption?: DiningOption;
   tableNumber?: string | null;
+  roundCount?: number;
+  round_count?: number;
+  lastAppendedAt?: string | null;
+  last_appended_at?: string | null;
+}
+
+export interface AppendOrderPayload {
+  parent_order_key: string;
+  user_id?: string;
+  customer_name?: string;
+  appended_content: string;
+  appended_total: number;
+  note?: string;
+  tenant_id?: string;
 }
 
 export interface Menu {
