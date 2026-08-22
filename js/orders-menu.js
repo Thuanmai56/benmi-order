@@ -365,9 +365,9 @@ async function confirmAddCategory() {
   const type = typeSelect ? typeSelect.value : "catalog";
 
   // Generate clean unique slug
-  let baseSlug = name.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+  let baseSlug = name.toLowerCase().replace(/[^a-z0-9]/g, '').replace(/_+/g, '');
   if (!baseSlug) baseSlug = "cat";
-  const slug = `${baseSlug}_${Date.now().toString(36)}`;
+  const slug = `${baseSlug}-${Date.now().toString(36)}`;
 
   if (!currentMenuData) currentMenuData = [];
   syncMenuDataFromDOM();

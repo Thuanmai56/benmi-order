@@ -774,6 +774,29 @@
         }
 
         // --- CART LOGIC ---
+        function parseCartKey(key) {
+            if (!key) return { catSlug: '', origName: '', itemName: '' };
+            if (typeof bootstrapData !== 'undefined' && bootstrapData && bootstrapData.catalog) {
+                for (const cat of bootstrapData.catalog) {
+                    const prefix = `${cat.slug}_`;
+                    if (key.startsWith(prefix)) {
+                        const name = key.substring(prefix.length);
+                        return { catSlug: cat.slug, origName: name, itemName: name };
+                    }
+                }
+            }
+            const idx = key.indexOf('_');
+            if (idx === -1) {
+                return { catSlug: '', origName: key, itemName: key };
+            }
+            const name = key.substring(idx + 1);
+            return {
+                catSlug: key.substring(0, idx),
+                origName: name,
+                itemName: name
+            };
+        }
+
         function updateQty(category, origName, change) {
             const key = category + '_' + origName;
             cart[key] = (cart[key] || 0) + change;
@@ -792,6 +815,7 @@
             }
 
             if (category === 'combo') renderComboDrinksInline(origName, cart[key]);
+
             updateTotal();
         }
 
@@ -816,7 +840,7 @@
 
             for (let key in cart) {
                 if (cart[key] > 0) {
-                    const [catSlug, itemName] = key.split('_');
+                    const { catSlug, itemName } = parseCartKey(key);
                     const qty = cart[key];
                     totalQty += qty;
 
@@ -1349,8 +1373,8 @@
                     localStorage.removeItem(`cart_save_${tenantId}`);
                     for (let key in cart) {
                         if (cart[key] > 0) {
-                            const [cat, origName] = key.split('_');
-                            updateQty(cat, origName, 0);
+                            const { catSlug, origName } = parseCartKey(key);
+                            updateQty(catSlug, origName, 0);
                         }
                     }
                 }
@@ -1405,7 +1429,7 @@
 
         initApp();
     </script>
-    <script src="js/client-checkout.js?v=20260823_append_done_2"></script>
+    <script src="js/client-checkout.js?v=20260823_cat_item_name_1"></script>
 </body>
 
 </html>

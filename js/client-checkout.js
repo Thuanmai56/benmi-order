@@ -297,14 +297,38 @@ function generateOrderNumber() {
     return `${prefix}${month}${day}-${suffix}`;
 }
 
-// 8. Định dạng nội dung tin nhắn đơn hàng
+// 8. Hàm phân giải khóa giỏ hàng chính xác theo danh mục và tên món
+function parseCartKey(key) {
+    if (!key) return { catSlug: '', origName: '', itemName: '' };
+    if (typeof bootstrapData !== 'undefined' && bootstrapData && bootstrapData.catalog) {
+        for (const cat of bootstrapData.catalog) {
+            const prefix = `${cat.slug}_`;
+            if (key.startsWith(prefix)) {
+                const name = key.substring(prefix.length);
+                return { catSlug: cat.slug, origName: name, itemName: name };
+            }
+        }
+    }
+    const idx = key.indexOf('_');
+    if (idx === -1) {
+        return { catSlug: '', origName: key, itemName: key };
+    }
+    const name = key.substring(idx + 1);
+    return {
+        catSlug: key.substring(0, idx),
+        origName: name,
+        itemName: name
+    };
+}
+
+// 8.1 Định dạng nội dung tin nhắn đơn hàng
 function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, mainNote) {
     const zhNumbers = ['第一份', '第二份', '第三份', '第四份', '第五份', '第六份', '第七份', '第八份', '第九份', '第十份'];
     let msg = `[${document.getElementById('store-name')?.innerText || '線上'} 點餐]\n訂單編號：${orderNum}\n📦 訂單內容：\n`;
 
     for (let key in cart) {
         if (cart[key] > 0) {
-            let [catSlug, origName] = key.split('_');
+            const { catSlug, origName } = parseCartKey(key);
             msg += `\n${cart[key]}份 x ${origName}`;
 
             if (catSlug === 'combo') {
@@ -366,12 +390,12 @@ function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, ma
     return msg;
 }
 
-// 8.1 Định dạng danh sách món cho luồng Gọi thêm (không kèm tiền tổng hoặc mã đơn ảo)
+// 8.2 Định dạng danh sách món cho luồng Gọi thêm (không kèm tiền tổng hoặc mã đơn ảo)
 function formatAppendItemsOnlyText() {
     const lines = [];
     for (let key in cart) {
         if (cart[key] > 0) {
-            let [catSlug, origName] = key.split('_');
+            const { catSlug, origName } = parseCartKey(key);
             lines.push(`${cart[key]}份 x ${origName}`);
 
             if (catSlug === 'combo') {
