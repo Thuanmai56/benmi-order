@@ -1929,8 +1929,6 @@ body {
   gap: 16px;
   height: 100%;
   min-height: 0;
-  max-width: 1100px;
-  margin: 0 auto;
   width: 100%;
 }
 
@@ -1951,6 +1949,8 @@ body {
   flex-direction: column;
   gap: 6px;
   overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .settings-toc-item {
@@ -2003,6 +2003,24 @@ body {
   gap: 24px;
   overflow-y: auto;
   scroll-behavior: smooth;
+  flex: 1;
+  min-height: 0;
+}
+
+.settings-card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+@media (max-width: 1024px) {
+  .store-status-options-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
 }
 
 @media (max-width: 960px) {
