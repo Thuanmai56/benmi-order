@@ -554,11 +554,11 @@
                     }
                 }
             });
-            updateFooterButtonState();
+            if (typeof updateFooterButtonState === 'function') updateFooterButtonState();
         }, observerOptions);
 
         window.addEventListener('scroll', () => {
-            updateFooterButtonState();
+            if (typeof updateFooterButtonState === 'function') updateFooterButtonState();
         }, { passive: true });
 
         // --- ALERT & LIGHTBOX ---
@@ -668,11 +668,14 @@
             const trans = (bootstrapData?.translations && bootstrapData.translations[item.name]) || itemTranslations[item.name] || item.description || '';
             const transHTML = trans ? `<div style="font-size: 13px; color: #9ca3af; margin-top: 2px;">${trans}</div>` : '';
 
+            const safeItemName = item.name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            const safeCatSlug = catSlug.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
             const qty = cart[`${catSlug}_${item.name}`] || 0;
             const footerHTML = getDynamicItemFooterHTML(catSlug, item.name, item.price, isOos);
             const hasModifiers = bootstrapData?.modifiers && bootstrapData.modifiers.length > 0 && catSlug !== 'drinks';
             const customizeBtnHTML = `
-                <button class="customize-btn" id="customize-btn-${catSlug}-${item.name}" onclick="toggleCustomize('${catSlug}','${item.name}')" style="pointer-events: auto; display: ${(!isOos && qty > 0 && hasModifiers) ? 'block' : 'none'};">✏️ 客製化（加料 / 辣度 / 備註）</button>
+                <button class="customize-btn" id="customize-btn-${catSlug}-${item.name}" onclick="toggleCustomize('${safeCatSlug}','${safeItemName}')" style="pointer-events: auto; display: ${(!isOos && qty > 0 && hasModifiers) ? 'block' : 'none'};">✏️ 客製化（加料 / 辣度 / 備註）</button>
             `;
 
             div.innerHTML = `
@@ -697,15 +700,17 @@
 
         function getDynamicItemFooterHTML(catSlug, itemName, price, isOos) {
             const qty = cart[`${catSlug}_${itemName}`] || 0;
+            const safeItemName = itemName.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            const safeCatSlug = catSlug.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
             return isOos ? `
                 <div class="card-price" style="color: #9ca3af;">$${price}</div>
                 <div style="color: #dc2626; font-weight: 900; font-size: 14px; background: #fee2e2; padding: 4px 10px; border-radius: 6px;">今日已售完</div>
             ` : `
                 <div class="card-price">$${price}</div>
                 <div class="qty-control">
-                    <button class="btn-qty" onclick="updateQty('${catSlug}','${itemName}',-1)">-</button>
+                    <button class="btn-qty" onclick="updateQty('${safeCatSlug}','${safeItemName}',-1)">-</button>
                     <span class="qty-text" id="qty-${catSlug}-${itemName}" style="${qty > 0 ? 'color: var(--primary);' : ''}">${qty}</span>
-                    <button class="btn-qty" onclick="updateQty('${catSlug}','${itemName}',1)">+</button>
+                    <button class="btn-qty" onclick="updateQty('${safeCatSlug}','${safeItemName}',1)">+</button>
                 </div>
             `;
         }
@@ -864,7 +869,7 @@
                 badge.style.display = totalQty > 0 ? 'block' : 'none';
             }
 
-            updateFooterButtonState();
+            if (typeof updateFooterButtonState === 'function') updateFooterButtonState();
             return total;
         }
 
@@ -959,6 +964,7 @@
                         </div>
                     `;
 
+                    const safeModSlug = mod.slug.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
                     if (mod.selectionType === 'single') {
                         sectionInner += `<div class="modifier-pills-row">`;
                         mod.options.forEach(opt => {
@@ -966,9 +972,11 @@
                             const isSelected = (currentPortion.single && currentPortion.single[mod.slug] === opt.name);
                             const priceText = opt.price > 0 ? ` (+$${opt.price})` : '';
                             const oosBadge = isOos ? `<span class="modifier-oos-tag">已售完</span>` : '';
+                            const safeOptName = opt.name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                            const safeKey = key.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
                             sectionInner += `
                                 <div class="modifier-pill ${isSelected ? 'active' : ''} ${isOos ? 'disabled' : ''}" 
-                                     onclick="${isOos ? '' : `selectSingleModifier('${key}', ${i}, '${mod.slug}', '${opt.name}', this)`}">
+                                     onclick="${isOos ? '' : `selectSingleModifier('${safeKey}', ${i}, '${safeModSlug}', '${safeOptName}', this)`}">
                                     <span>${opt.name}${priceText}</span>${oosBadge}
                                 </div>
                             `;
@@ -980,9 +988,11 @@
                             const isOos = Boolean(opt.isOutOfStock);
                             const isChecked = Boolean(currentPortion.multiple && currentPortion.multiple[opt.name]);
                             const priceText = isOos ? `<span class="modifier-oos-tag">已售完</span>` : (opt.price > 0 ? `+$${opt.price}` : '$0');
+                            const safeOptName = opt.name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                            const safeKey = key.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
                             sectionInner += `
                                 <div class="modifier-checkbox-chip ${isChecked ? 'active' : ''} ${isOos ? 'disabled' : ''}" 
-                                     onclick="${isOos ? '' : `toggleMultipleModifier('${key}', ${i}, '${opt.name}', this)`}">
+                                     onclick="${isOos ? '' : `toggleMultipleModifier('${safeKey}', ${i}, '${safeOptName}', this)`}">
                                     <span>${opt.name}</span>
                                     <span style="font-size: 12px; opacity: 0.85;">${priceText}</span>
                                 </div>
@@ -1019,69 +1029,6 @@
 
             document.body.appendChild(overlay);
             currentPopup = overlay;
-        }
-
-        // Dynamic tenant modifier helpers
-        function selectSingleModifier(key, portionIdx, modSlug, optName, el) {
-            if (el && el.classList.contains('disabled')) return;
-            if (!customizeData[key]) customizeData[key] = [];
-            if (!customizeData[key][portionIdx]) customizeData[key][portionIdx] = { single: {}, multiple: {}, note: '' };
-            if (!customizeData[key][portionIdx].single) customizeData[key][portionIdx].single = {};
-            customizeData[key][portionIdx].single[modSlug] = optName;
-
-            const parentRow = el.parentElement;
-            if (parentRow) parentRow.querySelectorAll('.modifier-pill').forEach(p => p.classList.remove('active'));
-            el.classList.add('active');
-            updateTotal();
-        }
-
-        function toggleMultipleModifier(key, portionIdx, optName, el) {
-            if (el && el.classList.contains('disabled')) return;
-            if (!customizeData[key]) customizeData[key] = [];
-            if (!customizeData[key][portionIdx]) customizeData[key][portionIdx] = { single: {}, multiple: {}, note: '' };
-            if (!customizeData[key][portionIdx].multiple) customizeData[key][portionIdx].multiple = {};
-
-            const isCurrentlyChecked = Boolean(customizeData[key][portionIdx].multiple[optName]);
-            if (isCurrentlyChecked) {
-                delete customizeData[key][portionIdx].multiple[optName];
-                el.classList.remove('active');
-            } else {
-                customizeData[key][portionIdx].multiple[optName] = true;
-                el.classList.add('active');
-            }
-            updateTotal();
-        }
-
-        function saveCustomNote(key, portionIdx, val) {
-            if (!customizeData[key]) customizeData[key] = [];
-            if (!customizeData[key][portionIdx]) customizeData[key][portionIdx] = { single: {}, multiple: {}, note: '' };
-            customizeData[key][portionIdx].note = val;
-        }').forEach(p => p.classList.remove('active'));
-            el.classList.add('active');
-            updateTotal();
-        }
-
-        function toggleBenmiTopping(key, index, topName, el) {
-            if (el && el.classList.contains('disabled')) return;
-            if (!customizeData[key]) customizeData[key] = [];
-            if (!customizeData[key][index]) customizeData[key][index] = { topping: '', spicy: '不辣', note: '' };
-
-            if (customizeData[key][index].topping === topName) {
-                customizeData[key][index].topping = '';
-                el.classList.remove('active');
-            } else {
-                customizeData[key][index].topping = topName;
-                const parentGrid = el.parentElement;
-                if (parentGrid) parentGrid.querySelectorAll('.modifier-checkbox-chip').forEach(c => c.classList.remove('active'));
-                el.classList.add('active');
-            }
-            updateTotal();
-        }
-
-        function saveBenmiCustomNote(key, index, val) {
-            if (!customizeData[key]) customizeData[key] = [];
-            if (!customizeData[key][index]) customizeData[key][index] = { topping: '', spicy: '不辣', note: '' };
-            customizeData[key][index].note = val;
         }
 
         // Dynamic tenant modifier helpers
