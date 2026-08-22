@@ -73,6 +73,13 @@
                     <div class="time-block" id="store-hours-display" style="display: none; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e2e8f0; font-size: 13.5px; line-height: 1.6; color: #374151; padding-left: 23px;"></div>
                 </div>
             </div>
+            <div class="store-detail-row" id="store-announcement-row" style="display: none; align-items: flex-start; gap: 8px;">
+                <svg class="detail-svg-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4b5563" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 3px;">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                </svg>
+                <span id="store-announcement" style="font-size: 14.5px; font-weight: 500; color: #374151; line-height: 1.4; word-break: break-word; flex: 1;"></span>
+            </div>
         </div>
     </div>
     <script>
@@ -123,6 +130,13 @@
 
                 const hoursRow = document.getElementById("store-hours-row");
                 if (hoursRow) hoursRow.style.display = "flex";
+
+                const annEl = document.getElementById("store-announcement");
+                const annRow = document.getElementById("store-announcement-row");
+                if (annEl && theme.announcement) {
+                    annEl.innerText = theme.announcement;
+                    if (annRow) annRow.style.display = "flex";
+                }
             }
         })();
     </script>
@@ -358,6 +372,13 @@
 
             const hoursRow = document.getElementById('store-hours-row');
             if (hoursRow) hoursRow.style.display = 'flex';
+
+            const annEl = document.getElementById('store-announcement');
+            const annRow = document.getElementById('store-announcement-row');
+            if (annEl) {
+                annEl.innerText = tenant.announcement || '';
+                if (annRow) annRow.style.display = tenant.announcement ? 'flex' : 'none';
+            }
         }
 
         // --- TIME & TIMEZONE HELPERS ---

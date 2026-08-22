@@ -12,6 +12,7 @@ export interface BootstrapResponse {
     brandColorDark: string;
     logoUrl: string | null;
     storeAddress: string | null;
+    announcement?: string | null;
     operatingHours: string | null;
     parsedHours: Record<string, Array<{ start: string; end: string }>>;
     deliveryPolicy: string | null;
@@ -284,6 +285,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
         brandColorDark: brandColorDark || '#047857',
         logoUrl,
         storeAddress,
+        announcement: tenantCtx?.announcement || null,
         operatingHours,
         parsedHours: parseOperatingHours(operatingHours, tenantId),
         deliveryPolicy,

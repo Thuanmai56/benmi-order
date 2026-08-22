@@ -21,6 +21,7 @@ export interface TenantContext {
   brandColor: string;
   logoUrl?: string | null;
   storeAddress: string | null;
+  announcement?: string | null;
   // Business Config
   operatingHours: string | null;
   deliveryPolicy: string | null;

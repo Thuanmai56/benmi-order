@@ -15,12 +15,13 @@ export async function getConfig(
   let allowScheduledPickup = true;
   let storeStatus = 'open';
   let liffId: string | null = null;
+  let announcement: string | null = null;
 
   // 1. Read exclusively from D1 Database
   if (env.DB) {
     try {
       const row = await env.DB.prepare(
-        "SELECT operating_hours, allow_scheduled_pickup, store_status, liff_id FROM tenant_config WHERE tenant_id = ?"
+        "SELECT operating_hours, allow_scheduled_pickup, store_status, liff_id, announcement FROM tenant_config WHERE tenant_id = ?"
       ).bind(tenantId).first<any>();
 
       if (row) {
@@ -33,6 +34,9 @@ export async function getConfig(
         }
         if (row.liff_id) {
           liffId = row.liff_id;
+        }
+        if (row.announcement !== undefined) {
+          announcement = row.announcement;
         }
       }
     } catch (e) {
@@ -48,7 +52,8 @@ export async function getConfig(
     liffId: liffId || tenantCtx?.liffId || env.LIFF_ID || null,
     operatingHours: operatingHours,
     allowScheduledPickup: allowScheduledPickup,
-    storeStatus: storeStatus || tenantCtx?.storeStatus || 'open'
+    storeStatus: storeStatus || tenantCtx?.storeStatus || 'open',
+    announcement: announcement !== null ? announcement : (tenantCtx?.announcement || null)
   });
 }
 
@@ -72,14 +77,15 @@ export async function updateConfig(
 
     const logoUrlVal = payload.logoUrl !== undefined ? payload.logoUrl : null;
     const storeAddressVal = payload.storeAddress !== undefined ? payload.storeAddress : null;
+    const announcementVal = payload.announcement !== undefined ? payload.announcement : null;
 
     // 1. Update D1 database
     if (env.DB) {
       const brandName = tenantCtx?.brandName || (tenantId === 'benmi' ? 'Benmi 越式法國麵包' : tenantId);
 
       await env.DB.prepare(`
-        INSERT INTO tenant_config (tenant_id, brand_name, operating_hours, allow_scheduled_pickup, store_status, liff_id, logo_url, store_address, updated_at)
-        VALUES (?, ?, ?, COALESCE(?, 1), COALESCE(?, 'open'), ?, ?, ?, CURRENT_TIMESTAMP)
+        INSERT INTO tenant_config (tenant_id, brand_name, operating_hours, allow_scheduled_pickup, store_status, liff_id, logo_url, store_address, announcement, updated_at)
+        VALUES (?, ?, ?, COALESCE(?, 1), COALESCE(?, 'open'), ?, ?, ?, ?, CURRENT_TIMESTAMP)
         ON CONFLICT(tenant_id) DO UPDATE SET
           operating_hours = CASE WHEN ? IS NOT NULL THEN ? ELSE tenant_config.operating_hours END,
           allow_scheduled_pickup = CASE WHEN ? IS NOT NULL THEN ? ELSE tenant_config.allow_scheduled_pickup END,
@@ -87,6 +93,7 @@ export async function updateConfig(
           liff_id = CASE WHEN ? IS NOT NULL THEN ? ELSE tenant_config.liff_id END,
           logo_url = CASE WHEN ? IS NOT NULL THEN ? ELSE tenant_config.logo_url END,
           store_address = CASE WHEN ? IS NOT NULL THEN ? ELSE tenant_config.store_address END,
+          announcement = CASE WHEN ? IS NOT NULL THEN ? ELSE tenant_config.announcement END,
           updated_at = CURRENT_TIMESTAMP
       `).bind(
         tenantId,
@@ -97,12 +104,14 @@ export async function updateConfig(
         liffIdVal,
         logoUrlVal,
         storeAddressVal,
+        announcementVal,
         opHoursStr, opHoursStr,
         allowPickupInt, allowPickupInt,
         storeStatusVal, storeStatusVal,
         liffIdVal, liffIdVal,
         logoUrlVal, logoUrlVal,
-        storeAddressVal, storeAddressVal
+        storeAddressVal, storeAddressVal,
+        announcementVal, announcementVal
       ).run();
     }
 

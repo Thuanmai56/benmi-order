@@ -136,6 +136,10 @@ async function loadOperatingHours() {
         const addrInput = document.getElementById("setting-store-address-input");
         if (addrInput) addrInput.value = data.storeAddress || "";
       }
+      if (data.announcement !== undefined) {
+        const annInput = document.getElementById("setting-store-announcement-input");
+        if (annInput) annInput.value = data.announcement || "";
+      }
       if (data.logoUrl) {
         currentStoreLogoUrl = data.logoUrl;
         renderStoreLogoUI(data.logoUrl);
@@ -328,6 +332,27 @@ async function saveStoreAddressSetting() {
   }
 }
 
+async function saveStoreAnnouncementSetting() {
+  const annInput = document.getElementById("setting-store-announcement-input");
+  const newAnnouncement = annInput ? annInput.value.trim() : "";
+  const btn = document.getElementById("btn-save-announcement-setting");
+  const oldText = btn ? btn.innerText : "";
+  if (btn) { btn.innerText = t("saving"); btn.disabled = true; }
+  try {
+    const res = await fetch(`${WORKER_BASE}/api/config?tenant_id=${getTenantIdFromUrl()}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ announcement: newAnnouncement })
+    });
+    if (!res.ok) throw new Error("API returned " + res.status);
+    alert(t("saveSuccess"));
+  } catch (e) {
+    alert(t("saveFail") + e.message);
+  } finally {
+    if (btn) { btn.innerText = oldText; btn.disabled = false; }
+  }
+}
+
 // --- Logo Management ---
 function renderStoreLogoUI(url) {
   const preview = document.getElementById("setting-logo-preview");
@@ -476,6 +501,7 @@ const SETTINGS_SECTIONS = [
   { id: "setting-card-ordermode", tocId: "toc-item-ordermode" },
   { id: "setting-card-hours", tocId: "toc-item-hours" },
   { id: "setting-card-address", tocId: "toc-item-address" },
+  { id: "setting-card-announcement", tocId: "toc-item-announcement" },
   { id: "setting-card-logo", tocId: "toc-item-logo" }
 ];
 

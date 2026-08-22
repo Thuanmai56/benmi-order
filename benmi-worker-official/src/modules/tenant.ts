@@ -46,6 +46,7 @@ export async function resolveTenantContext(
           brandColor: row.brand_color || '#00b900',
           logoUrl: row.logo_url || null,
           storeAddress: row.store_address || null,
+          announcement: row.announcement || null,
           operatingHours: row.operating_hours || null,
           deliveryPolicy: row.delivery_policy || null,
           allowScheduledPickup: row.allow_scheduled_pickup !== undefined && row.allow_scheduled_pickup !== null ? Boolean(row.allow_scheduled_pickup) : true,

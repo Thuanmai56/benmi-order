@@ -217,6 +217,10 @@
               <span class="toc-icon">📍</span>
               <span id="i18n-toc-address">門市地址設定</span>
             </div>
+            <div class="settings-toc-item" id="toc-item-announcement" onclick="scrollToSettingSection('setting-card-announcement')">
+              <span class="toc-icon">📢</span>
+              <span id="i18n-toc-announcement">門市公告設定</span>
+            </div>
             <div class="settings-toc-item" id="toc-item-logo" onclick="scrollToSettingSection('setting-card-logo')">
               <span class="toc-icon">🖼️</span>
               <span id="i18n-toc-logo">門市 Logo</span>
@@ -321,6 +325,24 @@
                 <input type="text" id="setting-store-address-input" class="input"
                   style="width: 100%; box-sizing: border-box; padding: 12px 14px; font-size: 15px; font-weight: 600; border: 1.5px solid var(--border); border-radius: 10px; outline: none; transition: border-color 0.15s ease;"
                   placeholder="請輸入門市地址" />
+              </div>
+            </div>
+
+            <!-- Store Announcement Setting -->
+            <div class="settings-card" id="setting-card-announcement">
+              <div
+                style="padding: 16px 20px; background: #f3f4f6; border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                  <div style="font-weight: 1100; font-size: 18px;" id="i18n-setting-announcement-title">📢 門市公告設定</div>
+                  <div style="font-size: 13px; color: var(--muted); font-weight: 600; margin-top: 2px;" id="i18n-setting-announcement-sub">顯示於顧客點餐頁面 Header 最下方，留空則自動隱藏</div>
+                </div>
+                <button class="btn btn-primary" style="padding: 10px 20px; font-size: 15px; border-radius: 8px;"
+                  onclick="saveStoreAnnouncementSetting()" id="btn-save-announcement-setting">儲存公告</button>
+              </div>
+              <div style="padding: 20px;">
+                <textarea id="setting-store-announcement-input" class="input"
+                  style="width: 100%; box-sizing: border-box; padding: 12px 14px; font-size: 15px; font-weight: 600; border: 1.5px solid var(--border); border-radius: 10px; outline: none; transition: border-color 0.15s ease; min-height: 80px; resize: vertical; font-family: inherit;"
+                  placeholder="請輸入門市公告（例如：今日特餐全面 9 折 / 國定假日公休公告...）"></textarea>
               </div>
             </div>
 
@@ -812,14 +834,14 @@
   </div>
 
   <!-- Benmi POS Modular Architecture Scripts -->
-  <script src="js/orders-i18n.js?v=20260822_7"></script>
-  <script src="js/orders-core.js?v=20260822_7"></script>
-  <script src="js/orders-audio.js?v=20260822_7"></script>
-  <script src="js/orders-live.js?v=20260822_7"></script>
-  <script src="js/orders-modals.js?v=20260822_7"></script>
-  <script src="js/orders-history.js?v=20260822_7"></script>
-  <script src="js/orders-settings.js?v=20260822_7"></script>
-  <script src="js/orders-menu.js?v=20260822_7"></script>
+  <script src="js/orders-i18n.js?v=20260822_announcement_1"></script>
+  <script src="js/orders-core.js?v=20260822_announcement_1"></script>
+  <script src="js/orders-audio.js?v=20260822_announcement_1"></script>
+  <script src="js/orders-live.js?v=20260822_announcement_1"></script>
+  <script src="js/orders-modals.js?v=20260822_announcement_1"></script>
+  <script src="js/orders-history.js?v=20260822_announcement_1"></script>
+  <script src="js/orders-settings.js?v=20260822_announcement_1"></script>
+  <script src="js/orders-menu.js?v=20260822_announcement_1"></script>
 
   <!-- POS Bootstrap & Initialization -->
   <script>

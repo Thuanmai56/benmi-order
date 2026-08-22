@@ -148,6 +148,11 @@ const I18N = {
     settingAddressSub: "顯示於顧客點餐頁面與 LINE 官方帳號回覆",
     settingAddressPlaceholder: "請輸入門市地址",
     btnSaveAddress: "儲存地址",
+    tocAnnouncement: "門市公告設定",
+    settingAnnouncementTitle: "📢 門市公告設定",
+    settingAnnouncementSub: "顯示於顧客點餐頁面 Header 最下方，留空則自動隱藏",
+    settingAnnouncementPlaceholder: "請輸入門市公告（例如：今日特餐全面 9 折 / 國定假日公休公告...）",
+    btnSaveAnnouncement: "儲存公告",
     settingLogoTitle: "🖼️ 門市 Logo",
     settingLogoSub: "顯示於顧客點餐頁面頂部與 POS 系統",
     btnChooseLogo: "選擇圖片",
@@ -379,6 +384,11 @@ const I18N = {
     settingAddressSub: "Hiển thị trên trang đặt món của khách và tin nhắn tự động LINE",
     settingAddressPlaceholder: "Nhập địa chỉ cửa hàng",
     btnSaveAddress: "Lưu địa chỉ",
+    tocAnnouncement: "Thông báo cửa hàng",
+    settingAnnouncementTitle: "📢 Thông báo của quán",
+    settingAnnouncementSub: "Hiển thị dưới cùng của Header trên trang đặt món của khách, để trống sẽ tự động ẩn",
+    settingAnnouncementPlaceholder: "Nhập thông báo cửa hàng (ví dụ: Hôm nay có món mới / Nghỉ lễ 2/9...)",
+    btnSaveAnnouncement: "Lưu thông báo",
     settingLogoTitle: "🖼️ Logo cửa hàng",
     settingLogoSub: "Hiển thị ở đầu trang đặt món của khách và hệ thống POS",
     btnChooseLogo: "Chọn ảnh",
@@ -734,6 +744,8 @@ function applyLanguageToDOM() {
   if (tocHours) tocHours.innerText = dict.tocHours;
   const tocAddress = document.getElementById("i18n-toc-address");
   if (tocAddress) tocAddress.innerText = dict.tocAddress;
+  const tocAnn = document.getElementById("i18n-toc-announcement");
+  if (tocAnn) tocAnn.innerText = dict.tocAnnouncement;
   const tocLogo = document.getElementById("i18n-toc-logo");
   if (tocLogo) tocLogo.innerText = dict.tocLogo;
 
@@ -764,6 +776,15 @@ function applyLanguageToDOM() {
   if (setAddrInp) setAddrInp.placeholder = dict.settingAddressPlaceholder;
   const btnSaveAddr = document.getElementById("btn-save-address-setting");
   if (btnSaveAddr) btnSaveAddr.innerText = dict.btnSaveAddress;
+
+  const setAnnT = document.getElementById("i18n-setting-announcement-title");
+  if (setAnnT) setAnnT.innerText = dict.settingAnnouncementTitle;
+  const setAnnS = document.getElementById("i18n-setting-announcement-sub");
+  if (setAnnS) setAnnS.innerText = dict.settingAnnouncementSub;
+  const setAnnInp = document.getElementById("setting-store-announcement-input");
+  if (setAnnInp) setAnnInp.placeholder = dict.settingAnnouncementPlaceholder;
+  const btnSaveAnn = document.getElementById("btn-save-announcement-setting");
+  if (btnSaveAnn) btnSaveAnn.innerText = dict.btnSaveAnnouncement;
 
   const setLogoT = document.getElementById("i18n-setting-logo-title");
   if (setLogoT) setLogoT.innerText = dict.settingLogoTitle;
