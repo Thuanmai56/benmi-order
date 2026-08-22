@@ -8,8 +8,41 @@ window.isAppendMode = false;
 window.parentOrderKey = null;
 window.appendTableNumber = null;
 
+function getUrlParamsWithLiffState() {
+    const rawSearch = window.location.search;
+    const directParams = new URLSearchParams(rawSearch);
+    
+    // 1. Kiểm tra liff.state nếu LINE mã hóa tham số vào liff.state
+    const liffState = directParams.get('liff.state');
+    if (liffState) {
+        try {
+            const decoded = decodeURIComponent(liffState);
+            const queryPart = decoded.includes('?') ? decoded.split('?')[1] : decoded;
+            const stateParams = new URLSearchParams(queryPart);
+            if (stateParams.has('parent_order_key') || stateParams.has('mode') || stateParams.has('table_number')) {
+                return stateParams;
+            }
+        } catch (e) {
+            console.warn("Failed to parse liff.state:", e);
+        }
+    }
+
+    // 2. Kiểm tra hash nếu tham số được truyền sau dấu #
+    if (window.location.hash) {
+        try {
+            const hashPart = window.location.hash.substring(1);
+            const hashParams = new URLSearchParams(hashPart);
+            if (hashParams.has('parent_order_key') || hashParams.has('mode') || hashParams.has('table_number')) {
+                return hashParams;
+            }
+        } catch (e) {}
+    }
+
+    return directParams;
+}
+
 function initAppendModeIfPresent() {
-    const urlParams = new URLSearchParams(window.location.search);
+    const urlParams = getUrlParamsWithLiffState();
     const parentOrderKey = urlParams.get('parent_order_key');
     const paramTableNumber = urlParams.get('table_number');
     const mode = urlParams.get('mode');

@@ -326,7 +326,17 @@
             : "https://benmi-worker-official.thuanmnc.workers.dev";
 
         function getTenantIdFromUrl() {
-            const params = new URLSearchParams(window.location.search);
+            const rawSearch = window.location.search;
+            const params = new URLSearchParams(rawSearch);
+            const liffState = params.get('liff.state');
+            if (liffState) {
+                try {
+                    const decoded = decodeURIComponent(liffState);
+                    const queryPart = decoded.includes('?') ? decoded.split('?')[1] : decoded;
+                    const stateParams = new URLSearchParams(queryPart);
+                    if (stateParams.has('tenant_id')) return stateParams.get('tenant_id');
+                } catch(e) {}
+            }
             return params.get("tenant_id") || "benmi";
         }
 

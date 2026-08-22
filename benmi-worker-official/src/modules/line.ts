@@ -252,20 +252,43 @@ export function buildOrderFlexMessage(order: Order, tenantCtx?: TenantContext | 
       type: "box",
       layout: "vertical",
       paddingAll: "12px",
-      contents: [
-        {
+      contents: (() => {
+        const liffBaseUrl = tenantCtx?.liffUrl || (tenantCtx?.liffId ? `https://liff.line.me/${tenantCtx.liffId}` : "https://liff.line.me/");
+        const tenantId = tenantCtx?.tenantId || "benmi";
+        const tableNum = order.tableNumber || "";
+        const buttons: any[] = [];
+
+        if (isDineIn) {
+          const appendUrl = `${liffBaseUrl}?tenant_id=${encodeURIComponent(tenantId)}&parent_order_key=${encodeURIComponent(order.key)}&table_number=${encodeURIComponent(tableNum)}&mode=append`;
+          buttons.push({
+            type: "button",
+            style: "primary",
+            color: "#7c3aed",
+            height: "sm",
+            action: {
+              type: "uri",
+              label: "➕ 加點餐點",
+              uri: appendUrl
+            }
+          });
+        }
+
+        buttons.push({
           type: "button",
-          style: "primary",
-          color: brandColor,
+          style: isDineIn ? "secondary" : "primary",
+          color: isDineIn ? undefined : brandColor,
           height: "sm",
+          margin: buttons.length > 0 ? "sm" : "none",
           action: {
             type: "postback",
             label: "🔍 查詢製作進度",
             data: `action=check_progress&order_key=${order.key}`,
             displayText: `🔍 查詢訂單進度 (${order.key})`
           }
-        }
-      ]
+        });
+
+        return buttons;
+      })()
     }
   };
 }

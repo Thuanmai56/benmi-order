@@ -49,6 +49,69 @@ export async function createOrder(
   }
 
   const tableNumber = data.table_number || data.tableNumber || null;
+  const userId = data.userId;
+
+  // AUTO-MERGE CHECK FOR DINE-IN ORDERS:
+  // Nếu là đơn ăn tại quán (dine_in) và đã có đơn đang mở (NEW, ACCEPTED, DONE):
+  // Tự động gộp vào đơn cũ (chuyển thành Đợt 2, 3...) thay vì tạo đơn mới toanh!
+  if (diningOption === 'dine_in' && env.DB) {
+    let targetParentKey = data.parent_order_key || data.parentOrderKey || null;
+
+    // 1. Kiểm tra theo userId (nếu khách dùng LINE)
+    if (!targetParentKey && userId && !userId.startsWith("guest_")) {
+      try {
+        const activeOrderRow = await env.DB.prepare(
+          `SELECT key FROM orders 
+           WHERE tenant_id = ? AND user_id = ? AND dining_option = 'dine_in'
+             AND status IN ('NEW', 'ACCEPTED', 'DONE')
+           ORDER BY created_at DESC LIMIT 1`
+        ).bind(tenantId, userId).first<any>();
+
+        if (activeOrderRow && activeOrderRow.key) {
+          targetParentKey = activeOrderRow.key;
+          console.log(`[createOrder] Auto-merging into active user dine-in order: ${targetParentKey}`);
+        }
+      } catch (checkErr) {
+        console.error("[createOrder] Error checking active user order:", checkErr);
+      }
+    }
+
+    // 2. Kiểm tra theo Số Bàn (nếu khách là guest tại bàn trong 4 giờ gần nhất)
+    if (!targetParentKey && tableNumber) {
+      try {
+        const activeTableOrder = await env.DB.prepare(
+          `SELECT key FROM orders 
+           WHERE tenant_id = ? AND table_number = ? AND dining_option = 'dine_in'
+             AND status IN ('NEW', 'ACCEPTED', 'DONE')
+             AND created_at >= DATETIME('now', '-4 hours')
+           ORDER BY created_at DESC LIMIT 1`
+        ).bind(tenantId, String(tableNumber).trim()).first<any>();
+
+        if (activeTableOrder && activeTableOrder.key) {
+          targetParentKey = activeTableOrder.key;
+          console.log(`[createOrder] Auto-merging into active table dine-in order: ${targetParentKey}`);
+        }
+      } catch (tableErr) {
+        console.error("[createOrder] Error checking active table order:", tableErr);
+      }
+    }
+
+    // Nếu tìm thấy đơn cha đang mở -> Thực hiện gộp đơn (append)
+    if (targetParentKey) {
+      return await executeAppendOrderInternal(
+        env,
+        tenantId,
+        targetParentKey,
+        data.content,
+        Number(data.total) || 0,
+        data.note || "",
+        userId,
+        data.customer,
+        ctx,
+        tenantCtx
+      );
+    }
+  }
 
   const order: Order = {
     key: orderKey,
@@ -72,6 +135,144 @@ export async function createOrder(
   return json({ success: true, key: orderKey });
 }
 
+export async function executeAppendOrderInternal(
+  env: Env,
+  tenantId: string,
+  parentKey: string,
+  appendedContent: string,
+  appendedTotal: number,
+  note: string,
+  userId?: string,
+  customerName?: string,
+  ctx?: ExecutionContext,
+  tenantCtx?: TenantContext | null
+): Promise<Response> {
+  if (!parentKey || !appendedContent || appendedTotal <= 0) {
+    return json({ error: "參數不完整 / Incomplete parameters", code: "INVALID_PARAMS" }, 400);
+  }
+
+  if (!env.DB) {
+    return json({ error: "Database not configured", code: "NO_DB" }, 500);
+  }
+
+  // 1. Fetch parent order
+  const row = await env.DB.prepare(
+    "SELECT * FROM orders WHERE key = ? AND tenant_id = ?"
+  ).bind(parentKey, tenantId).first<any>();
+
+  if (!row) {
+    return json({ error: "找不到原訂單 / Order not found", code: "ORDER_NOT_FOUND" }, 404);
+  }
+
+  // 2. Lock boundary: Cannot append if order is PICKED_UP or REJECTED
+  if (row.status === 'PICKED_UP' || row.status === 'REJECTED') {
+    return json({
+      error: "訂單已完成或已取消，無法再加點，請重新開啟新訂單 / Đơn hàng đã kết thúc hoặc đã hủy, không thể gọi thêm",
+      code: "ORDER_LOCKED"
+    }, 400);
+  }
+
+  // 3. Compute next round & time
+  const currentRound = Number(row.round_count) || 1;
+  const nextRound = currentRound + 1;
+
+  const nowTw = new Date(Date.now() + 8 * 3600000);
+  const timeStr = `${String(nowTw.getUTCHours()).padStart(2, "0")}:${String(nowTw.getUTCMinutes()).padStart(2, "0")}`;
+
+  // 4. Multi-round content formatting
+  let existingContent = String(row.order_content || "").trim();
+  if (!existingContent.includes("[第 1 輪") && !existingContent.includes("[Đợt 1")) {
+    existingContent = `[第 1 輪 / Đợt 1]\n${existingContent}`;
+  }
+  const newContentBlock = `\n\n[第 ${nextRound} 輪 加點 / Đợt ${nextRound} - ${timeStr}]\n${appendedContent.trim()}`;
+  const updatedContent = existingContent + newContentBlock;
+
+  // 5. Combine note & update total
+  const combinedNote = note
+    ? (row.note ? `${row.note} | [加點${nextRound}]: ${note}` : `[加點${nextRound}]: ${note}`)
+    : (row.note || "");
+  const newTotal = (Number(row.total_amount) || 0) + appendedTotal;
+
+  // 6. Persist to D1: Luôn chuyển trạng thái về ACCEPTED (kể cả đơn cũ đang là DONE) để POS & Bếp thấy món mới
+  await env.DB.prepare(
+    `UPDATE orders SET
+       order_content = ?,
+       total_amount = ?,
+       status = 'ACCEPTED',
+       round_count = ?,
+       last_appended_at = datetime('now'),
+       note = ?,
+       updated_at = datetime('now')
+     WHERE key = ? AND tenant_id = ?`
+  ).bind(
+    updatedContent,
+    newTotal,
+    nextRound,
+    combinedNote,
+    parentKey,
+    tenantId
+  ).run();
+
+  // 7. Construct updated order object for notification & response
+  const updatedOrder: Order = {
+    key: parentKey,
+    customer: row.customer_name || customerName || "顧客",
+    time: row.pickup_time || "",
+    content: updatedContent,
+    status: "ACCEPTED",
+    createdAt: row.created_at ? new Date(row.created_at + "Z").getTime() : Date.now(),
+    userId: row.user_id || userId,
+    total: newTotal,
+    reason: row.reason || "",
+    note: combinedNote,
+    diningOption: (row.dining_option as any) || 'dine_in',
+    tableNumber: row.table_number || null,
+    roundCount: nextRound,
+    round_count: nextRound,
+    lastAppendedAt: new Date().toISOString()
+  };
+
+  // 8. Send Flex Message confirmation to LINE user
+  const targetUserId = updatedOrder.userId;
+  if (targetUserId && !targetUserId.startsWith("guest_")) {
+    try {
+      const flexMsg = buildAppendConfirmationFlexMessage(
+        updatedOrder,
+        appendedContent,
+        appendedTotal,
+        nextRound,
+        tenantCtx
+      );
+      if (ctx && ctx.waitUntil) {
+        ctx.waitUntil(pushLineFlexMessage(targetUserId, `🍽️ 加點成功通知 (第 ${nextRound} 輪)`, flexMsg, env, tenantCtx));
+      } else {
+        await pushLineFlexMessage(targetUserId, `🍽️ 加點成功通知 (第 ${nextRound} 輪)`, flexMsg, env, tenantCtx);
+      }
+    } catch (lineErr) {
+      console.error("[appendOrder] LINE push notification failed:", lineErr);
+    }
+  }
+
+  // 9. Sync to Google Sheets
+  try {
+    if (ctx && ctx.waitUntil) {
+      ctx.waitUntil(syncToGoogleSheets(updatedOrder, env, tenantCtx));
+    } else {
+      await syncToGoogleSheets(updatedOrder, env, tenantCtx);
+    }
+  } catch (sheetErr) {
+    console.error("[appendOrder] Google Sheets sync failed:", sheetErr);
+  }
+
+  return json({
+    success: true,
+    key: parentKey,
+    round_count: nextRound,
+    total_amount: newTotal,
+    status: 'ACCEPTED'
+  });
+}
+
 export async function appendOrder(
   request: Request,
   env: Env,
@@ -85,130 +286,21 @@ export async function appendOrder(
     const appendedContent = payload.appended_content;
     const appendedTotal = Number(payload.appended_total) || 0;
     const note = payload.note ? String(payload.note).trim() : "";
+    const userId = payload.user_id;
+    const customerName = payload.customer_name;
 
-    if (!parentKey || !appendedContent || appendedTotal <= 0) {
-      return json({ error: "參數不完整 / Incomplete parameters", code: "INVALID_PARAMS" }, 400);
-    }
-
-    if (!env.DB) {
-      return json({ error: "Database not configured", code: "NO_DB" }, 500);
-    }
-
-    // 1. Fetch parent order
-    const row = await env.DB.prepare(
-      "SELECT * FROM orders WHERE key = ? AND tenant_id = ?"
-    ).bind(parentKey, tenantId).first<any>();
-
-    if (!row) {
-      return json({ error: "找不到原訂單 / Order not found", code: "ORDER_NOT_FOUND" }, 404);
-    }
-
-    // 2. Lock boundary: Cannot append if order is PICKED_UP or REJECTED
-    if (row.status === 'PICKED_UP' || row.status === 'REJECTED') {
-      return json({
-        error: "訂單已完成或已取消，無法再加點，請重新開啟新訂單 / Đơn hàng đã kết thúc hoặc đã hủy, không thể gọi thêm",
-        code: "ORDER_LOCKED"
-      }, 400);
-    }
-
-    // 3. Compute next round & time
-    const currentRound = Number(row.round_count) || 1;
-    const nextRound = currentRound + 1;
-
-    const nowTw = new Date(Date.now() + 8 * 3600000);
-    const timeStr = `${String(nowTw.getUTCHours()).padStart(2, "0")}:${String(nowTw.getUTCMinutes()).padStart(2, "0")}`;
-
-    // 4. Multi-round content formatting
-    let existingContent = String(row.order_content || "").trim();
-    if (!existingContent.includes("[第 1 輪") && !existingContent.includes("[Đợt 1")) {
-      existingContent = `[第 1 輪 / Đợt 1]\n${existingContent}`;
-    }
-    const newContentBlock = `\n\n[第 ${nextRound} 輪 加點 / Đợt ${nextRound} - ${timeStr}]\n${appendedContent.trim()}`;
-    const updatedContent = existingContent + newContentBlock;
-
-    // 5. Combine note & update total
-    const combinedNote = note
-      ? (row.note ? `${row.note} | [加點${nextRound}]: ${note}` : `[加點${nextRound}]: ${note}`)
-      : (row.note || "");
-    const newTotal = (Number(row.total_amount) || 0) + appendedTotal;
-
-    // 6. Persist to D1
-    await env.DB.prepare(
-      `UPDATE orders SET
-         order_content = ?,
-         total_amount = ?,
-         status = 'ACCEPTED',
-         round_count = ?,
-         last_appended_at = datetime('now'),
-         note = ?,
-         updated_at = datetime('now')
-       WHERE key = ? AND tenant_id = ?`
-    ).bind(
-      updatedContent,
-      newTotal,
-      nextRound,
-      combinedNote,
+    return await executeAppendOrderInternal(
+      env,
+      tenantId,
       parentKey,
-      tenantId
-    ).run();
-
-    // 7. Construct updated order object for notification & response
-    const updatedOrder: Order = {
-      key: parentKey,
-      customer: row.customer_name || "顧客",
-      time: row.pickup_time || "",
-      content: updatedContent,
-      status: "ACCEPTED",
-      createdAt: row.created_at ? new Date(row.created_at + "Z").getTime() : Date.now(),
-      userId: row.user_id || payload.user_id,
-      total: newTotal,
-      reason: row.reason || "",
-      note: combinedNote,
-      diningOption: (row.dining_option as any) || 'dine_in',
-      tableNumber: row.table_number || null,
-      roundCount: nextRound,
-      round_count: nextRound,
-      lastAppendedAt: new Date().toISOString()
-    };
-
-    // 8. Send Flex Message confirmation to LINE user
-    const targetUserId = updatedOrder.userId;
-    if (targetUserId && !targetUserId.startsWith("guest_")) {
-      try {
-        const flexMsg = buildAppendConfirmationFlexMessage(
-          updatedOrder,
-          appendedContent,
-          appendedTotal,
-          nextRound,
-          tenantCtx
-        );
-        if (ctx && ctx.waitUntil) {
-          ctx.waitUntil(pushLineFlexMessage(targetUserId, `🍽️ 加點成功通知 (第 ${nextRound} 輪)`, flexMsg, env, tenantCtx));
-        } else {
-          await pushLineFlexMessage(targetUserId, `🍽️ 加點成功通知 (第 ${nextRound} 輪)`, flexMsg, env, tenantCtx);
-        }
-      } catch (lineErr) {
-        console.error("[appendOrder] LINE push notification failed:", lineErr);
-      }
-    }
-
-    // 9. Sync to Google Sheets
-    try {
-      if (ctx && ctx.waitUntil) {
-        ctx.waitUntil(syncToGoogleSheets(updatedOrder, env, tenantCtx));
-      } else {
-        await syncToGoogleSheets(updatedOrder, env, tenantCtx);
-      }
-    } catch (sheetErr) {
-      console.error("[appendOrder] Google Sheets sync failed:", sheetErr);
-    }
-
-    return json({
-      success: true,
-      key: parentKey,
-      round_count: nextRound,
-      total_amount: newTotal
-    });
+      appendedContent,
+      appendedTotal,
+      note,
+      userId,
+      customerName,
+      ctx,
+      tenantCtx
+    );
   } catch (e: any) {
     console.error("[appendOrder] Error:", e);
     return json({ error: e.message || "Failed to append order", code: "INTERNAL_ERROR" }, 500);
