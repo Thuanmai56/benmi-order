@@ -187,28 +187,7 @@ export async function executeAppendOrderInternal(
     lastAppendedAt: new Date().toISOString()
   };
 
-  // 8. Send Flex Message confirmation to LINE user
-  const targetUserId = updatedOrder.userId;
-  if (targetUserId && !targetUserId.startsWith("guest_")) {
-    try {
-      const flexMsg = buildAppendConfirmationFlexMessage(
-        updatedOrder,
-        appendedContent,
-        appendedTotal,
-        nextRound,
-        tenantCtx
-      );
-      if (ctx && ctx.waitUntil) {
-        ctx.waitUntil(pushLineFlexMessage(targetUserId, `🍽️ 加點成功通知 (第 ${nextRound} 輪)`, flexMsg, env, tenantCtx));
-      } else {
-        await pushLineFlexMessage(targetUserId, `🍽️ 加點成功通知 (第 ${nextRound} 輪)`, flexMsg, env, tenantCtx);
-      }
-    } catch (lineErr) {
-      console.error("[appendOrder] LINE push notification failed:", lineErr);
-    }
-  }
-
-  // 9. Sync to Google Sheets
+  // 8. Sync to Google Sheets
   try {
     if (ctx && ctx.waitUntil) {
       ctx.waitUntil(syncToGoogleSheets(updatedOrder, env, tenantCtx));

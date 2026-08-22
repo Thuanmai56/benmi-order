@@ -854,6 +854,76 @@ export async function handleLineWebhook(
       continue;
     }
 
+    // 0.25) Handle Append Order text message from LIFF: Reply with Append Confirmation Flex Message
+    if (userText.includes("[加點") || userText.includes("加點餐點") || userText.includes("加點成功")) {
+      console.log(`[${brandName}] Webhook received append notification message. Replying with Append Flex confirmation.`);
+      try {
+        await env.DB.prepare("DELETE FROM pending_actions WHERE tenant_id = ? AND user_id = ?")
+          .bind(tenantId, userId).run();
+      } catch { }
+      try { await env.ORDER_STATE.delete(draftKey); } catch { }
+
+      let orderKey = "";
+      const match = userText.match(/(?:[A-Z0-9]{1,4}\d{4}-[A-Z0-9]{4}|[A-Z0-9]+\d{4}-\d{4}-\d{4}|BD\d+-\d+-\d+)/i);
+      if (match) {
+        orderKey = match[0];
+      }
+
+      if (orderKey && env.DB) {
+        const row = await env.DB.prepare(
+          "SELECT * FROM orders WHERE key = ? AND tenant_id = ?"
+        ).bind(orderKey, tenantId).first<any>();
+
+        if (row && replyToken) {
+          const order: Order = {
+            key: row.key,
+            customer: row.customer_name || "顧客",
+            time: row.pickup_time || "",
+            content: row.order_content || "",
+            status: row.status,
+            createdAt: row.created_at ? new Date(row.created_at + "Z").getTime() : Date.now(),
+            userId: row.user_id || undefined,
+            total: row.total_amount,
+            reason: row.reason || "",
+            note: row.note || "",
+            diningOption: (row.dining_option as any) || 'dine_in',
+            tableNumber: row.table_number || undefined,
+            roundCount: Number(row.round_count) || 1,
+            round_count: Number(row.round_count) || 1,
+            lastAppendedAt: row.last_appended_at || null
+          };
+
+          let addedAmount = 0;
+          const addedMatch = userText.match(/(?:本次加點|加點金額)[：:]\s*\+?\$?(\d+)/);
+          if (addedMatch) {
+            addedAmount = parseInt(addedMatch[1], 10) || 0;
+          }
+
+          let itemsText = "";
+          const itemsStart = userText.indexOf("現場加點品項：");
+          const itemsEnd = userText.indexOf("💰");
+          if (itemsStart > -1) {
+            if (itemsEnd > itemsStart) {
+              itemsText = userText.substring(itemsStart + 7, itemsEnd).trim();
+            } else {
+              itemsText = userText.substring(itemsStart + 7).trim();
+            }
+          }
+
+          const flexBubble = buildAppendConfirmationFlexMessage(
+            order,
+            itemsText || "加點品項",
+            addedAmount,
+            order.roundCount || 1,
+            tenantCtx
+          );
+
+          await replyLineFlexMessage(replyToken, `🍽️ 加點成功 (第 ${order.roundCount} 輪)`, flexBubble, env, tenantCtx);
+        }
+      }
+      continue;
+    }
+
     // 0.3) Priority Catch new order from LIFF text message (Bypasses pending states)
     if (userText.includes("訂單編號：") && userText.includes("📦 訂單內容：")) {
       if (userText.includes("[已收到]") || userText.includes("[Đã nhận]") || userText.includes("[加點") || userText.includes("加點餐點") || userText.includes("加點成功")) {
