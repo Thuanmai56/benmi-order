@@ -1,6 +1,6 @@
 import { Env } from '../types/env';
 import { TenantContext } from '../types/tenant';
-import { Order } from '../types/index';
+import { Order, DiningOption } from '../types/index';
 import { corsHeaders } from '../utils/http';
 import { resolveSecret } from '../utils/secrets';
 import { saveOrder, getPendingMap, getOrderQueueAhead, getUserLatestActiveOrder } from './orders';
@@ -160,7 +160,10 @@ export async function replyLineFlexMessage(
 export function buildOrderFlexMessage(order: Order, tenantCtx?: TenantContext | null): any {
   const brandColor = tenantCtx?.brandColor || "#00b900";
   const isScheduled = tenantCtx?.allowScheduledPickup !== false;
-  const timeLabel = isScheduled ? "🕒 取餐時間：" : "🕒 訂餐時間：";
+  const isDineIn = order.diningOption === "dine_in" || (order.content || "").includes("📍 用餐方式：🍽️ 內用") || (order.content || "").includes("【內用】");
+  const headerTitle = isDineIn ? "🍽️ 內用訂單明細" : "🛍️ 外帶訂單明細";
+  const diningLabel = isDineIn ? "🍽️ 內用 (現場製作)" : "🛍️ 外帶自取";
+  const timeLabel = isDineIn ? "🕒 點餐時間：" : (isScheduled ? "🕒 取餐時間：" : "🕒 訂餐時間：");
 
   const contentLines = (order.content || "").split("\n").filter(l => l.trim().length > 0);
   const contentComponents = contentLines.slice(0, 50).map(line => ({
@@ -185,7 +188,7 @@ export function buildOrderFlexMessage(order: Order, tenantCtx?: TenantContext | 
           type: "box",
           layout: "horizontal",
           contents: [
-            { type: "text", text: "🛍️ 訂單明細", weight: "bold", color: "#ffffff", size: "lg", flex: 0 },
+            { type: "text", text: headerTitle, weight: "bold", color: "#ffffff", size: "lg", flex: 0 },
             { type: "text", text: `#${order.key}`, color: "#ffffff", size: "sm", align: "end", flex: 1, gravity: "center" }
           ]
         }
@@ -197,6 +200,15 @@ export function buildOrderFlexMessage(order: Order, tenantCtx?: TenantContext | 
       paddingAll: "15px",
       spacing: "md",
       contents: [
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            { type: "text", text: "📍 用餐方式：", size: "sm", color: "#666666", flex: 0 },
+            { type: "text", text: diningLabel, size: "sm", weight: "bold", color: isDineIn ? "#7c3aed" : "#059669", align: "end", flex: 1 }
+          ]
+        },
+        { type: "separator", margin: "xs" },
         {
           type: "box",
           layout: "vertical",
@@ -261,7 +273,9 @@ export function buildOrderFlexMessage(order: Order, tenantCtx?: TenantContext | 
 export function buildProgressFlexMessage(order: Order, queueAheadCount: number, tenantCtx?: TenantContext | null): any {
   const brandColor = tenantCtx?.brandColor || "#00b900";
   const isScheduled = tenantCtx?.allowScheduledPickup !== false;
-  const timeLabel = isScheduled ? "🕒 取餐時間：" : "🕒 訂餐時間：";
+  const isDineIn = order.diningOption === "dine_in" || (order.content || "").includes("📍 用餐方式：🍽️ 內用") || (order.content || "").includes("【內用】");
+  const diningLabel = isDineIn ? "🍽️ 內用 (現場製作)" : "🛍️ 外帶自取";
+  const timeLabel = isDineIn ? "🕒 點餐時間：" : (isScheduled ? "🕒 取餐時間：" : "🕒 訂餐時間：");
 
   let statusTitle = "訂單已成功送出";
   let statusBadgeColor = "#10b981";
@@ -281,12 +295,12 @@ export function buildProgressFlexMessage(order: Order, queueAheadCount: number, 
       ? `前方還有 ${queueAheadCount} 張訂單正在排隊製作`
       : "🔥 您的餐點正由店家製作中！";
   } else if (order.status === "DONE") {
-    statusTitle = "製作完成，可取餐！";
+    statusTitle = isDineIn ? "餐點製作完成，請於現場領取！" : "製作完成，可取餐！";
     statusBadgeColor = "#10b981";
     statusIcon = "🎉";
-    queueText = "您的餐點已準備完畢，請儘快前來取餐！";
+    queueText = isDineIn ? "您的餐點已準備完畢，請至櫃檯領取用餐！" : "您的餐點已準備完畢，請儘快前來取餐！";
   } else if (order.status === "PICKED_UP") {
-    statusTitle = "已完成取餐";
+    statusTitle = isDineIn ? "已完成用餐/取餐" : "已完成取餐";
     statusBadgeColor = "#6b7280";
     statusIcon = "✅";
     queueText = "感謝您的訂購，歡迎下次光臨！";
@@ -345,6 +359,14 @@ export function buildProgressFlexMessage(order: Order, queueAheadCount: number, 
           ]
         },
         { type: "separator", margin: "sm" },
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            { type: "text", text: "📍 用餐方式：", size: "sm", color: "#6b7280", flex: 0 },
+            { type: "text", text: diningLabel, size: "sm", weight: "bold", color: isDineIn ? "#7c3aed" : "#059669", align: "end", flex: 1 }
+          ]
+        },
         {
           type: "box",
           layout: "horizontal",
@@ -734,6 +756,9 @@ export async function handleLineWebhook(
         extractedContent = userText.substring(contentStart + 8, contentEnd).replace("📦 訂單內容：", "").trim();
       }
 
+      const isDineIn = userText.includes("📍 用餐方式：🍽️ 內用") || userText.includes("用餐方式：內用") || userText.includes("【內用】");
+      const diningOption: DiningOption = isDineIn ? "dine_in" : "takeaway";
+
       const orderData: Order = {
         key: orderKey,
         customer: custName,
@@ -744,7 +769,8 @@ export async function handleLineWebhook(
         userId: userId,
         total: parseInt(totalStr, 10) || 0,
         reason: "",
-        note: noteStr
+        note: noteStr,
+        diningOption: diningOption
       };
 
       await saveOrder(env, orderData, tenantId);

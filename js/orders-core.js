@@ -284,6 +284,10 @@ function renderAll() {
   const cRight = document.getElementById("count-right");
   if (cRight) cRight.innerText = String(rightOrders.length);
 
+  if (typeof updateDiningFilterStats === "function") {
+    updateDiningFilterStats(leftOrders.concat(rightOrders));
+  }
+
   if (activeTab === "live") {
     if (typeof renderListLeft === "function") renderListLeft(leftOrders);
     if (typeof renderListRight === "function") renderListRight(rightOrders);

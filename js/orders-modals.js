@@ -23,6 +23,13 @@ function openReview(orderKey) {
   if (elTot) elTot.innerText = formatOrderTotal(order);
   const elSt = document.getElementById("review-status");
   if (elSt) elSt.innerText = order.status || "-";
+  const elDining = document.getElementById("review-dining");
+  if (elDining) {
+    const isDineIn = typeof isOrderDineIn === "function" ? isOrderDineIn(order) : order.diningOption === "dine_in";
+    elDining.innerHTML = isDineIn
+      ? `<span style="color:#6d28d9; font-weight:1000;">🍽️ ${t('dineIn')}</span>`
+      : `<span style="color:#047857; font-weight:1000;">🛍️ ${t('takeaway')}</span>`;
+  }
   const elCont = document.getElementById("review-content");
   if (elCont) elCont.innerHTML = formatContentHtml(order);
 

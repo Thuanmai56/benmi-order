@@ -237,7 +237,30 @@ const I18N = {
     stockLabelDate: "恢復供應日期：",
     btnStockSave: "儲存變更",
     alertSelectOosDate: "請選擇恢復供應日期！",
-    stockUpdateFail: "庫存狀態更新失敗："
+    stockUpdateFail: "庫存狀態更新失敗：",
+    // Dining Options & Filter
+    diningOption: "用餐方式",
+    takeaway: "外帶",
+    dineIn: "內用",
+    filterAll: "全部",
+    filterTakeaway: "🛍️ 外帶",
+    filterDineIn: "🍽️ 內用",
+    badgeTakeaway: "外帶",
+    badgeDineIn: "內用",
+    labelDiningOption: "用餐方式",
+    printDineIn: "【內用】",
+    printTakeaway: "【外帶】",
+    // Dine In Setting
+    tocDineIn: "內用接單模式",
+    settingDineInTitle: "🍽️ 內用接單設定",
+    settingDineInSub: "自訂是否允許顧客選擇「內用」或僅接受「外帶」",
+    settingDineInTrueTitle: "🍽️ 開啟內用與外帶 (預設)",
+    settingDineInTrueSub: "顧客可在點餐頁面自由切換「外帶」或「內用」模式。",
+    settingDineInFalseTitle: "🛍️ 僅限外帶 (關閉內用)",
+    settingDineInFalseSub: "隱藏內用選項，所有訂單一律為外帶自取。",
+    btnSaveDineInSetting: "儲存設定",
+    dineInSaveSuccess: "內用設定已成功儲存！",
+    dineInSaveFail: "內用設定儲存失敗："
   },
   "vi": {
     langBtn: "繁體中文",
@@ -473,7 +496,30 @@ const I18N = {
     stockLabelDate: "Ngày khôi phục bán:",
     btnStockSave: "Lưu thay đổi",
     alertSelectOosDate: "Vui lòng chọn ngày khôi phục bán!",
-    stockUpdateFail: "Lỗi cập nhật trạng thái kho: "
+    stockUpdateFail: "Lỗi cập nhật trạng thái kho: ",
+    // Dining Options & Filter
+    diningOption: "Hình thức",
+    takeaway: "Mang đi",
+    dineIn: "Ăn tại quán",
+    filterAll: "Tất cả",
+    filterTakeaway: "🛍️ Mang đi",
+    filterDineIn: "🍽️ Ăn tại quán",
+    badgeTakeaway: "Mang đi",
+    badgeDineIn: "Ăn tại quán",
+    labelDiningOption: "Hình thức",
+    printDineIn: "【ĂN TẠI QUÁN】",
+    printTakeaway: "【MANG ĐI】",
+    // Dine In Setting
+    tocDineIn: "Thiết lập ăn tại quán",
+    settingDineInTitle: "🍽️ Thiết lập ăn tại quán",
+    settingDineInSub: "Bật/tắt tùy chọn ăn tại quán hoặc chỉ bán mang đi",
+    settingDineInTrueTitle: "🍽️ Mở cả Ăn tại quán & Mang đi (Mặc định)",
+    settingDineInTrueSub: "Khách có thể tự do chuyển đổi giữa Ăn tại quán và Mang đi.",
+    settingDineInFalseTitle: "🛍️ Chỉ bán mang đi (Tắt ăn tại quán)",
+    settingDineInFalseSub: "Ẩn tùy chọn ăn tại quán trên menu, tất cả đơn hàng đều là mang đi.",
+    btnSaveDineInSetting: "Lưu thiết lập",
+    dineInSaveSuccess: "Đã lưu thiết lập ăn tại quán thành công!",
+    dineInSaveFail: "Lưu thiết lập thất bại: "
   }
 };
 
@@ -515,6 +561,7 @@ function setLanguage(lang) {
   if (typeof activeTab !== "undefined" && activeTab === "settings") {
     if (typeof renderOperatingHours === "function") renderOperatingHours();
     if (typeof renderScheduledPickupSetting === "function") renderScheduledPickupSetting();
+    if (typeof renderDineInSetting === "function") renderDineInSetting();
   }
 }
 
@@ -876,5 +923,31 @@ function applyLanguageToDOM() {
   if (btnStkSv) btnStkSv.innerText = dict.btnStockSave;
   const btnStkCan = document.getElementById("btn-stock-cancel");
   if (btnStkCan) btnStkCan.innerText = dict.btnCancel;
+
+  // Dining Filter Buttons
+  const btnFilterAll = document.getElementById("filter-btn-all");
+  if (btnFilterAll) btnFilterAll.innerText = dict.filterAll;
+  const btnFilterTakeaway = document.getElementById("filter-btn-takeaway");
+  if (btnFilterTakeaway) btnFilterTakeaway.innerText = dict.filterTakeaway;
+  const btnFilterDineIn = document.getElementById("filter-btn-dine-in");
+  if (btnFilterDineIn) btnFilterDineIn.innerText = dict.filterDineIn;
+
+  // Dine-in Settings
+  const tocDineIn = document.getElementById("i18n-toc-dinein");
+  if (tocDineIn) tocDineIn.innerText = dict.tocDineIn;
+  const setDineInT = document.getElementById("i18n-setting-dinein-title");
+  if (setDineInT) setDineInT.innerText = dict.settingDineInTitle;
+  const setDineInS = document.getElementById("i18n-setting-dinein-sub");
+  if (setDineInS) setDineInS.innerText = dict.settingDineInSub;
+  const btnSaveDineIn = document.getElementById("btn-save-dinein-setting");
+  if (btnSaveDineIn) btnSaveDineIn.innerText = dict.btnSaveDineInSetting;
+  const modeDineInTT = document.getElementById("i18n-mode-dinein-true-title");
+  if (modeDineInTT) modeDineInTT.innerText = dict.settingDineInTrueTitle;
+  const modeDineInTS = document.getElementById("i18n-mode-dinein-true-sub");
+  if (modeDineInTS) modeDineInTS.innerText = dict.settingDineInTrueSub;
+  const modeDineInFT = document.getElementById("i18n-mode-dinein-false-title");
+  if (modeDineInFT) modeDineInFT.innerText = dict.settingDineInFalseTitle;
+  const modeDineInFS = document.getElementById("i18n-mode-dinein-false-sub");
+  if (modeDineInFS) modeDineInFS.innerText = dict.settingDineInFalseSub;
 }
 

@@ -1,3 +1,5 @@
+export type DiningOption = 'takeaway' | 'dine_in';
+
 export interface Order {
   key: string;
   customer: string;
@@ -5,10 +7,11 @@ export interface Order {
   content: string;
   status: 'NEW' | 'ACCEPTED' | 'DONE' | 'PICKED_UP' | 'WAITING_CUSTOMER_CHANGE' | 'WAITING_CUSTOMER_REJECT' | 'REJECTED';
   createdAt: number;
-  userId: string;
+  userId?: string;
   total: number;
   reason?: string;
   note?: string;
+  diningOption?: DiningOption;
 }
 
 export interface Menu {

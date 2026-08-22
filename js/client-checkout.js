@@ -226,9 +226,17 @@ function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, ma
         }
     }
 
-    const isScheduledEnabled = !(storeConfig && storeConfig.allowScheduledPickup === false);
-    const timeLabel = isScheduledEnabled ? '取餐時間' : '訂餐時間';
-    msg += `\n\n🕒 ${timeLabel}：${dateInput} ${timeInput}`;
+    const isDineIn = (window.currentDiningOption === 'dine_in');
+    const diningLabel = isDineIn ? '🍽️ 內用' : '🛍️ 外帶';
+    msg += `\n📍 用餐方式：${diningLabel}`;
+
+    if (isDineIn) {
+        msg += `\n\n🕒 取餐時間：現場內用（現點現做）`;
+    } else {
+        const isScheduledEnabled = !(storeConfig && storeConfig.allowScheduledPickup === false);
+        const timeLabel = isScheduledEnabled ? '取餐時間' : '訂餐時間';
+        msg += `\n\n🕒 ${timeLabel}：${dateInput} ${timeInput}`;
+    }
     if (mainNote) msg += `\n📝 總備註：${mainNote}`;
     msg += `\n💰 總金額：$${currentTotal}`;
 
@@ -247,12 +255,13 @@ async function submitOrder() {
     if (!hasItem) return customAlert('請先選擇餐點品項加入購物車');
 
     const twNow = getTaiwanDate();
+    const isDineIn = (window.currentDiningOption === 'dine_in');
     const isScheduledEnabled = !(storeConfig && storeConfig.allowScheduledPickup === false);
     let dateInput = "";
     let timeInput = "";
 
-    if (!isScheduledEnabled) {
-        // Tắt hẹn giờ -> Lấy ngày giờ thực tế
+    if (isDineIn || !isScheduledEnabled) {
+        // 內用 hoặc Tắt hẹn giờ -> Lấy ngày giờ thực tế
         const { dateStr, timeStr } = formatTaiwanDateTime(twNow);
         dateInput = dateStr;
         timeInput = timeStr;
@@ -260,18 +269,19 @@ async function submitOrder() {
         // Nếu quán đang đóng cửa -> Hỏi xác nhận đặt trước
         if (!isStoreOpen(twNow)) {
             const nextInfo = getNextOpeningInfo(twNow);
+            const actionText = isDineIn ? "內用訂單" : "訂單";
             customConfirm(
                 `<div style="font-size: 16px; font-weight: 900; margin-bottom: 8px;">🌙 店家目前休息中</div>` +
                 `<div style="font-size: 14px; color: #4b5563; line-height: 1.5;">` +
                 `店家預計於 <b>${nextInfo.dayText} ${nextInfo.timeStr}</b> 開始接單製作。<br>` +
-                `您確定要現在預先送出訂單嗎？` +
+                `您確定要現在預先送出${actionText}嗎？` +
                 `</div>`,
                 () => { doSubmitOrderExecution(dateInput, timeInput); }
             );
             return;
         }
     } else {
-        // Bật hẹn giờ -> Yêu cầu chọn ngày & giờ
+        // Bật hẹn giờ cho 外帶 -> Yêu cầu chọn ngày & giờ
         dateInput = document.getElementById('pickup-date') ? document.getElementById('pickup-date').value : '';
         timeInput = document.getElementById('pickup-time') ? document.getElementById('pickup-time').value : '';
 
@@ -356,12 +366,14 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
         const orderNum = generateOrderNumber();
         const mainNote = document.getElementById('note') ? document.getElementById('note').value : '';
         const msg = formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, mainNote);
+        const isDineIn = (window.currentDiningOption === 'dine_in');
 
         const orderPayload = {
             key: orderNum,
             userId: userId,
             customer: customerName,
-            time: `${dateInput} ${timeInput}`,
+            time: isDineIn ? `${dateInput} ${timeInput} (現場內用)` : `${dateInput} ${timeInput}`,
+            dining_option: isDineIn ? 'dine_in' : 'takeaway',
             content: msg.split('\n\n🕒')[0].replace(/\[.*?點餐\]\n/g, '').replace('[Benmi 點餐]\n', ''),
             total: currentTotal,
             note: mainNote,

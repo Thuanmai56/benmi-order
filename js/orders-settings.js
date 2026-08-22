@@ -5,6 +5,7 @@
 let currentStoreStatus = 'open';
 let storeOperatingHours = null;
 let allowScheduledPickup = true;
+let allowDineIn = true;
 
 const DAY_NAMES = {
   "zh-TW": ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"],
@@ -106,6 +107,9 @@ async function loadStoreStatus() {
       if (data.allowScheduledPickup !== undefined) {
         allowScheduledPickup = data.allowScheduledPickup;
       }
+      if (data.allowDineIn !== undefined) {
+        allowDineIn = data.allowDineIn;
+      }
       storeOperatingHours = ensureParsedOperatingHours(data.operatingHours);
     }
   } catch (e) {
@@ -131,6 +135,7 @@ async function loadOperatingHours() {
       const data = await res.json();
       storeOperatingHours = ensureParsedOperatingHours(data.operatingHours);
       allowScheduledPickup = data.allowScheduledPickup !== undefined ? data.allowScheduledPickup : true;
+      allowDineIn = data.allowDineIn !== undefined ? data.allowDineIn : true;
       if (data.storeStatus) currentStoreStatus = data.storeStatus;
       if (data.storeAddress !== undefined) {
         const addrInput = document.getElementById("setting-store-address-input");
@@ -150,16 +155,19 @@ async function loadOperatingHours() {
     } else {
       storeOperatingHours = createDefaultOperatingHours();
       allowScheduledPickup = true;
+      allowDineIn = true;
       renderStoreLogoUI(null);
     }
   } catch (e) {
     storeOperatingHours = createDefaultOperatingHours();
     allowScheduledPickup = true;
+    allowDineIn = true;
     renderStoreLogoUI(null);
   }
   renderStoreStatusUI(currentStoreStatus);
   renderOperatingHours();
   renderScheduledPickupSetting();
+  renderDineInSetting();
 }
 
 function renderScheduledPickupSetting() {
@@ -209,6 +217,58 @@ async function saveScheduledPickupSetting() {
     alert(t("saveSuccess"));
   } catch (e) {
     alert(t("saveFail") + e.message);
+  } finally {
+    if (btn) { btn.innerText = oldText; btn.disabled = false; }
+  }
+}
+
+function renderDineInSetting() {
+  const radioTrue = document.getElementById("setting-allow-dinein-true");
+  const radioFalse = document.getElementById("setting-allow-dinein-false");
+  if (radioTrue && radioFalse) {
+    radioTrue.checked = (allowDineIn === true);
+    radioFalse.checked = (allowDineIn === false);
+  }
+  updateDineInCardStyles(allowDineIn);
+}
+
+function updateDineInCardStyles(isAllowed) {
+  const cardTrue = document.getElementById("mode-card-dinein-true");
+  const cardFalse = document.getElementById("mode-card-dinein-false");
+  if (cardTrue && cardFalse) {
+    if (isAllowed) {
+      cardTrue.style.borderColor = "var(--primary)";
+      cardTrue.style.background = "rgba(0, 185, 0, 0.05)";
+      cardFalse.style.borderColor = "var(--border)";
+      cardFalse.style.background = "#fff";
+    } else {
+      cardFalse.style.borderColor = "var(--primary)";
+      cardFalse.style.background = "rgba(0, 185, 0, 0.05)";
+      cardTrue.style.borderColor = "var(--border)";
+      cardTrue.style.background = "#fff";
+    }
+  }
+}
+
+function onDineInModeChange(isAllowed) {
+  allowDineIn = isAllowed;
+  updateDineInCardStyles(isAllowed);
+}
+
+async function saveDineInSetting() {
+  const btn = document.getElementById("btn-save-dinein-setting");
+  const oldText = btn ? btn.innerText : "";
+  if (btn) { btn.innerText = t("saving"); btn.disabled = true; }
+  try {
+    const res = await fetch(`${WORKER_BASE}/api/config?tenant_id=${getTenantIdFromUrl()}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ allowDineIn: allowDineIn })
+    });
+    if (!res.ok) throw new Error("API returned " + res.status);
+    alert(t("dineInSaveSuccess") || t("saveSuccess"));
+  } catch (e) {
+    alert((t("dineInSaveFail") || t("saveFail")) + e.message);
   } finally {
     if (btn) { btn.innerText = oldText; btn.disabled = false; }
   }

@@ -17,6 +17,7 @@ export interface BootstrapResponse {
     parsedHours: Record<string, Array<{ start: string; end: string }>>;
     deliveryPolicy: string | null;
     allowScheduledPickup: boolean;
+    allowDineIn: boolean;
     storeStatus: string;
     liffId: string | null;
     liffUrl: string | null;
@@ -290,6 +291,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
         parsedHours: parseOperatingHours(operatingHours, tenantId),
         deliveryPolicy,
         allowScheduledPickup: tenantCtx?.allowScheduledPickup !== undefined ? tenantCtx.allowScheduledPickup : true,
+        allowDineIn: tenantCtx?.allowDineIn !== undefined ? tenantCtx.allowDineIn : true,
         storeStatus: tenantCtx?.storeStatus || 'open',
         liffId,
         liffUrl,

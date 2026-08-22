@@ -131,16 +131,25 @@ function renderHistory(orders) {
       }
       const totalFormatted = formatOrderTotal(order);
       const itemsSummary = shortItems(order.content) || "";
+      const isDineIn = typeof isOrderDineIn === "function" ? isOrderDineIn(order) : order.diningOption === "dine_in";
+      const diningBadge = isDineIn
+        ? `<span class="badge badge-dine-in" style="font-size:11px; padding:2px 6px; margin-left:4px;">🍽️ ${t('badgeDineIn')}</span>`
+        : `<span class="badge badge-takeaway" style="font-size:11px; padding:2px 6px; margin-left:4px;">🛍️ ${t('badgeTakeaway')}</span>`;
+
+      const pickupDisplay = isDineIn && (!order.time || order.time === "Unknown" || order.time.includes("現場內用"))
+        ? `🍽️ ${t('dineIn')} (ASAP)`
+        : `${t('pickupLabel')} ${formatPickupTimeDisplay(order.time)}`;
 
       tile.innerHTML = `
         <div class="history-tile-info">
           <div class="history-tile-top">
             <span class="history-tile-customer">${escapeHtml(order.customer || t('defaultCustomer'))}</span>
             <span class="history-tile-key">#${escapeHtml(order.key)}</span>
+            ${diningBadge}
             ${badge}
           </div>
           <div class="history-tile-meta-row">
-            <span class="history-tile-meta"><span style="color:var(--muted); margin-right:4px;">🕒</span>${t('pickupLabel')} ${escapeHtml(formatPickupTimeDisplay(order.time))}</span>
+            <span class="history-tile-meta"><span style="color:var(--muted); margin-right:4px;">🕒</span>${escapeHtml(pickupDisplay)}</span>
             ${totalFormatted !== '-' ? `<span class="history-tile-price">${escapeHtml(totalFormatted)}</span>` : ''}
           </div>
           ${itemsSummary ? `<div class="history-tile-items">🧾 ${escapeHtml(itemsSummary)}</div>` : ''}

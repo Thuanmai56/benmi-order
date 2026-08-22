@@ -2,21 +2,71 @@
 // Benmi POS - Module: Live Orders & Processing
 // ==========================================
 
+let currentDiningFilter = "all"; // 'all' | 'takeaway' | 'dine_in'
+
+function isOrderDineIn(order) {
+  if (!order) return false;
+  return order.diningOption === "dine_in" ||
+         (order.content || "").includes("📍 用餐方式：🍽️ 內用") ||
+         (order.content || "").includes("【內用】") ||
+         (order.time || "").includes("現場內用");
+}
+
+function setDiningFilter(filter) {
+  currentDiningFilter = filter;
+  const filterAllBtn = document.getElementById("filter-btn-all");
+  const filterTakeawayBtn = document.getElementById("filter-btn-takeaway");
+  const filterDineInBtn = document.getElementById("filter-btn-dine-in");
+
+  if (filterAllBtn) filterAllBtn.classList.toggle("active", filter === "all");
+  if (filterTakeawayBtn) filterTakeawayBtn.classList.toggle("active", filter === "takeaway");
+  if (filterDineInBtn) filterDineInBtn.classList.toggle("active", filter === "dine_in");
+
+  renderAll();
+}
+
+function updateDiningFilterStats(allLiveOrders) {
+  let takeawayCount = 0;
+  let dineInCount = 0;
+
+  (allLiveOrders || []).forEach(order => {
+    if (isOrderDineIn(order)) {
+      dineInCount++;
+    } else {
+      takeawayCount++;
+    }
+  });
+
+  const takeawayStatEl = document.getElementById("stat-pill-takeaway");
+  if (takeawayStatEl) takeawayStatEl.innerText = `🛍️ ${takeawayCount}`;
+
+  const dineInStatEl = document.getElementById("stat-pill-dinein");
+  if (dineInStatEl) dineInStatEl.innerText = `🍽️ ${dineInCount}`;
+}
+
 function renderListLeft(orders) {
   const container = document.getElementById("list-left");
   if (!container) return;
   container.innerHTML = "";
-  if (orders.length === 0) {
+
+  const filteredOrders = (orders || []).filter(order => {
+    if (currentDiningFilter === "all") return true;
+    const dineIn = isOrderDineIn(order);
+    return currentDiningFilter === "dine_in" ? dineIn : !dineIn;
+  });
+
+  if (filteredOrders.length === 0) {
     container.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">${t('empty')}</div>`;
     return;
   }
 
-  orders.forEach(order => {
+  filteredOrders.forEach(order => {
     const isNew = order.status === "NEW";
     const eta = formatEta(order.time);
     const totalFormatted = formatOrderTotal(order);
     const itemCount = countItemsFromContent(order.content);
     const itemCountStr = t("tileItemCount", { count: itemCount > 0 ? itemCount : "?" });
+    const isDineIn = isOrderDineIn(order);
 
     const tile = document.createElement("div");
     tile.className = `tile ${isNew ? "new" : ""}`;
@@ -36,15 +86,24 @@ function renderListLeft(orders) {
       rightActions = `<button class="btn tile-action-btn" style="background:#f1f5f9; color:#94a3af; cursor:not-allowed;" disabled>${t('btnWaitingReply')}</button>`;
     }
 
+    const diningBadge = isDineIn
+      ? `<span class="badge badge-dine-in" style="font-size:11.5px; padding:2px 7px; margin-left:4px;">🍽️ ${t('badgeDineIn')}</span>`
+      : `<span class="badge badge-takeaway" style="font-size:11.5px; padding:2px 7px; margin-left:4px;">🛍️ ${t('badgeTakeaway')}</span>`;
+
+    const pickupDisplay = isDineIn && (!order.time || order.time === "Unknown" || order.time.includes("現場內用"))
+      ? `🍽️ ${t('dineIn')} (ASAP)`
+      : formatPickupTimeDisplay(order.time);
+
     tile.innerHTML = `
       <div class="tile-info">
         <div class="tile-top">
           <span class="tile-customer">${escapeHtml(order.customer || t('defaultCustomer'))}</span>
           <span class="tile-order-key">#${escapeHtml(order.key)}</span>
+          ${diningBadge}
           ${badge}
         </div>
         <div class="tile-meta-row">
-          <span class="tile-meta-tag"><span style="color:var(--muted); margin-right:4px;">🕒</span>${escapeHtml(formatPickupTimeDisplay(order.time))}</span>
+          <span class="tile-meta-tag"><span style="color:var(--muted); margin-right:4px;">🕒</span>${escapeHtml(pickupDisplay)}</span>
           <span class="tile-meta-tag tile-eta">${escapeHtml(eta)}</span>
         </div>
         <div class="tile-count-row">
@@ -65,29 +124,47 @@ function renderListRight(orders) {
   const container = document.getElementById("list-right");
   if (!container) return;
   container.innerHTML = "";
-  if (orders.length === 0) {
+
+  const filteredOrders = (orders || []).filter(order => {
+    if (currentDiningFilter === "all") return true;
+    const dineIn = isOrderDineIn(order);
+    return currentDiningFilter === "dine_in" ? dineIn : !dineIn;
+  });
+
+  if (filteredOrders.length === 0) {
     container.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">${t('empty')}</div>`;
     return;
   }
 
-  orders.forEach(order => {
+  filteredOrders.forEach(order => {
     const eta = formatEta(order.time);
     const totalFormatted = formatOrderTotal(order);
     const itemCount = countItemsFromContent(order.content);
     const itemCountStr = t("tileItemCount", { count: itemCount > 0 ? itemCount : "?" });
+    const isDineIn = isOrderDineIn(order);
+
     const tile = document.createElement("div");
     tile.className = "tile";
     tile.onclick = () => openReview(order.key);
+
+    const diningBadge = isDineIn
+      ? `<span class="badge badge-dine-in" style="font-size:11.5px; padding:2px 7px; margin-left:4px;">🍽️ ${t('badgeDineIn')}</span>`
+      : `<span class="badge badge-takeaway" style="font-size:11.5px; padding:2px 7px; margin-left:4px;">🛍️ ${t('badgeTakeaway')}</span>`;
+
+    const pickupDisplay = isDineIn && (!order.time || order.time === "Unknown" || order.time.includes("現場內用"))
+      ? `🍽️ ${t('dineIn')} (ASAP)`
+      : formatPickupTimeDisplay(order.time);
 
     tile.innerHTML = `
       <div class="tile-info">
         <div class="tile-top">
           <span class="tile-customer">${escapeHtml(order.customer || t('defaultCustomer'))}</span>
           <span class="tile-order-key">#${escapeHtml(order.key)}</span>
+          ${diningBadge}
           <span class="badge done">${t('badgeReady')}</span>
         </div>
         <div class="tile-meta-row">
-          <span class="tile-meta-tag"><span style="color:var(--muted); margin-right:4px;">🕒</span>${escapeHtml(formatPickupTimeDisplay(order.time))}</span>
+          <span class="tile-meta-tag"><span style="color:var(--muted); margin-right:4px;">🕒</span>${escapeHtml(pickupDisplay)}</span>
           <span class="tile-meta-tag tile-eta">${escapeHtml(eta)}</span>
         </div>
         <div class="tile-count-row">

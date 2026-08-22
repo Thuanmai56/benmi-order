@@ -3,9 +3,8 @@
 
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title id="pos-page-title">Dashboard</title>
-  <link rel="stylesheet" href="css/orders.css?v=20260822_1" />
+  <link rel="stylesheet" href="css/orders.css?v=20260822_dining_1" />
     <script>
       (function () {
         document.documentElement.style.setProperty('--primary', '#00b900');
@@ -140,6 +139,19 @@
     </div>
 
     <div class="content" id="view-live">
+      <!-- Dining Filter Bar (Tablet-first) -->
+      <div class="dining-filter-bar" id="dining-filter-bar">
+        <div class="dining-filter-group">
+          <button type="button" class="dining-filter-btn active" id="filter-btn-all" onclick="setDiningFilter('all')">全部</button>
+          <button type="button" class="dining-filter-btn" id="filter-btn-takeaway" onclick="setDiningFilter('takeaway')">🛍️ 外帶</button>
+          <button type="button" class="dining-filter-btn" id="filter-btn-dine-in" onclick="setDiningFilter('dine_in')">🍽️ 內用</button>
+        </div>
+        <div class="dining-filter-stats" id="dining-filter-stats">
+          <span class="stat-pill takeaway" id="stat-pill-takeaway">🛍️ 0</span>
+          <span class="stat-pill dine-in" id="stat-pill-dinein">🍽️ 0</span>
+        </div>
+      </div>
+
       <div class="split">
         <div class="panel">
           <div class="panel-header">
@@ -208,6 +220,10 @@
             <div class="settings-toc-item" id="toc-item-ordermode" onclick="scrollToSettingSection('setting-card-ordermode')">
               <span class="toc-icon">🛒</span>
               <span id="i18n-toc-ordermode">點餐取餐模式</span>
+            </div>
+            <div class="settings-toc-item" id="toc-item-dinein" onclick="scrollToSettingSection('setting-card-dinein')">
+              <span class="toc-icon">🍽️</span>
+              <span id="i18n-toc-dinein">內用接單模式</span>
             </div>
             <div class="settings-toc-item" id="toc-item-hours" onclick="scrollToSettingSection('setting-card-hours')">
               <span class="toc-icon">⏰</span>
@@ -292,6 +308,37 @@
                   <div>
                     <div style="font-weight: 1100; font-size: 16px; color: #111827;" id="i18n-mode-asap-title">⚡ 關閉預約 - 即時排隊製作模式 (Real-time Queue)</div>
                     <div style="font-size: 14px; color: #4b5563; margin-top: 4px; line-height: 1.4;" id="i18n-mode-asap-sub">隱藏預約時間選項。顧客下單後將立即依照現場排隊順序製作 (ASAP)。</div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Dine-in Mode Setting -->
+            <div class="settings-card" id="setting-card-dinein">
+              <div
+                style="padding: 16px 20px; background: #f3f4f6; border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                  <div style="font-weight: 1100; font-size: 18px;" id="i18n-setting-dinein-title">🍽️ 內用接單設定</div>
+                  <div style="font-size: 13px; color: var(--muted); font-weight: 600; margin-top: 2px;" id="i18n-setting-dinein-sub">自訂是否允許顧客選擇「內用」或僅接受「外帶」</div>
+                </div>
+                <button class="btn btn-primary" style="padding: 10px 20px; font-size: 15px; border-radius: 8px;"
+                  onclick="saveDineInSetting()" id="btn-save-dinein-setting">儲存設定</button>
+              </div>
+              
+              <div style="padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+                <label class="setting-mode-card" id="mode-card-dinein-true" style="display: flex; align-items: flex-start; gap: 14px; padding: 16px; border-radius: 12px; border: 2px solid var(--border); cursor: pointer; transition: all 0.15s ease;">
+                  <input type="radio" name="dinein-mode-radio" id="setting-allow-dinein-true" value="true" onchange="onDineInModeChange(true)" style="width: 20px; height: 20px; margin-top: 3px; accent-color: var(--primary);">
+                  <div>
+                    <div style="font-weight: 1100; font-size: 16px; color: #111827;" id="i18n-mode-dinein-true-title">🍽️ 開啟內用與外帶 (預設)</div>
+                    <div style="font-size: 14px; color: #4b5563; margin-top: 4px; line-height: 1.4;" id="i18n-mode-dinein-true-sub">顧客可在點餐頁面自由切換「外帶」或「內用」模式。</div>
+                  </div>
+                </label>
+
+                <label class="setting-mode-card" id="mode-card-dinein-false" style="display: flex; align-items: flex-start; gap: 14px; padding: 16px; border-radius: 12px; border: 2px solid var(--border); cursor: pointer; transition: all 0.15s ease;">
+                  <input type="radio" name="dinein-mode-radio" id="setting-allow-dinein-false" value="false" onchange="onDineInModeChange(false)" style="width: 20px; height: 20px; margin-top: 3px; accent-color: var(--primary);">
+                  <div>
+                    <div style="font-weight: 1100; font-size: 16px; color: #111827;" id="i18n-mode-dinein-false-title">🛍️ 僅限外帶 (關閉內用)</div>
+                    <div style="font-size: 14px; color: #4b5563; margin-top: 4px; line-height: 1.4;" id="i18n-mode-dinein-false-sub">隱藏內用選項，所有訂單一律為外帶自取。</div>
                   </div>
                 </label>
               </div>
@@ -473,6 +520,10 @@
           <div class="detail-box">
             <div class="detail-label" id="i18n-label-status">狀態</div>
             <div class="detail-value" id="review-status">-</div>
+          </div>
+          <div class="detail-box">
+            <div class="detail-label" id="i18n-label-dining">用餐方式</div>
+            <div class="detail-value" id="review-dining" style="font-weight: 1000;">-</div>
           </div>
         </div>
 
@@ -834,14 +885,14 @@
   </div>
 
   <!-- Benmi POS Modular Architecture Scripts -->
-  <script src="js/orders-i18n.js?v=20260822_announcement_1"></script>
-  <script src="js/orders-core.js?v=20260822_announcement_1"></script>
-  <script src="js/orders-audio.js?v=20260822_announcement_1"></script>
-  <script src="js/orders-live.js?v=20260822_announcement_1"></script>
-  <script src="js/orders-modals.js?v=20260822_announcement_1"></script>
-  <script src="js/orders-history.js?v=20260822_announcement_1"></script>
-  <script src="js/orders-settings.js?v=20260822_announcement_1"></script>
-  <script src="js/orders-menu.js?v=20260822_announcement_1"></script>
+  <script src="js/orders-i18n.js?v=20260822_dining_announcement_1"></script>
+  <script src="js/orders-core.js?v=20260822_dining_announcement_1"></script>
+  <script src="js/orders-audio.js?v=20260822_dining_announcement_1"></script>
+  <script src="js/orders-live.js?v=20260822_dining_announcement_1"></script>
+  <script src="js/orders-modals.js?v=20260822_dining_announcement_1"></script>
+  <script src="js/orders-history.js?v=20260822_dining_announcement_1"></script>
+  <script src="js/orders-settings.js?v=20260822_dining_announcement_1"></script>
+  <script src="js/orders-menu.js?v=20260822_dining_announcement_1"></script>
 
   <!-- POS Bootstrap & Initialization -->
   <script>

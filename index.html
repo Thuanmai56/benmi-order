@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="index.css?v=20260820_3">
+    <link rel="stylesheet" href="index.css?v=20260822_dining_1">
     <script>
         (function () {
             const params = new URLSearchParams(window.location.search);
@@ -158,6 +158,20 @@
         </div>
     </div>
 
+    <!-- Dining Option Switcher (Uber Eats style Segmented Control) -->
+    <div id="dining-option-wrapper" class="dining-option-wrapper" style="display: none;">
+        <div class="dining-segmented-control" role="tablist">
+            <button type="button" class="dining-seg-btn active" id="btn-dining-takeaway" role="tab" aria-selected="true" onclick="setCustomerDiningOption('takeaway')">
+                <span class="dining-seg-icon">🛍️</span>
+                <span class="dining-seg-text">外帶自取</span>
+            </button>
+            <button type="button" class="dining-seg-btn" id="btn-dining-dinein" role="tab" aria-selected="false" onclick="setCustomerDiningOption('dine_in')">
+                <span class="dining-seg-icon">🍽️</span>
+                <span class="dining-seg-text">店內用餐</span>
+            </button>
+        </div>
+    </div>
+
     <nav class="sticky-nav" id="main-nav"></nav>
 
     <div class="container">
@@ -177,6 +191,21 @@
                 <div style="text-align:center; color:#9ca3af;">(目前沒有已選商品)</div>
             </div>
 
+            <!-- Dining Option in Checkout (Synchronized with top switcher) -->
+            <div class="input-group" id="checkout-dining-option-group" style="display: none;">
+                <label style="font-weight: 800; color: #111827; margin-bottom: 8px; display: block;">📍 用餐方式</label>
+                <div class="dining-segmented-control" style="margin-bottom: 14px;">
+                    <button type="button" class="dining-seg-btn active" id="checkout-btn-takeaway" onclick="setCustomerDiningOption('takeaway')">
+                        <span class="dining-seg-icon">🛍️</span>
+                        <span class="dining-seg-text">外帶自取</span>
+                    </button>
+                    <button type="button" class="dining-seg-btn" id="checkout-btn-dinein" onclick="setCustomerDiningOption('dine_in')">
+                        <span class="dining-seg-icon">🍽️</span>
+                        <span class="dining-seg-text">店內用餐</span>
+                    </button>
+                </div>
+            </div>
+
             <div id="pickup-time-section">
                 <div class="section-title">🕒 取餐時間</div>
                 <div class="input-group" id="pickup-time-picker-group">
@@ -184,6 +213,19 @@
                     <div class="datetime-row">
                         <input type="date" id="pickup-date" autocomplete="off" onchange="isPickupTimeManuallyChanged=true">
                         <input type="time" id="pickup-time" autocomplete="off" onchange="isPickupTimeManuallyChanged=true">
+                    </div>
+                </div>
+                <!-- Dine-In Real-time notice -->
+                <div id="pickup-time-dinein-notice" style="display:none; padding: 14px 16px; background: #f5f3ff; border: 1.5px solid #c4b5fd; border-radius: 14px; color: #5b21b6; margin-bottom: 12px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                        <div style="display: flex; align-items: center; gap: 8px; font-weight: 900; font-size: 16px;">
+                            <span style="font-size: 20px;">🍽️</span>
+                            <span>現場內用・即時製作</span>
+                        </div>
+                        <span style="font-size: 12px; background: #ede9fe; color: #6d28d9; padding: 3px 10px; border-radius: 99px; font-weight: 800;">現點現做</span>
+                    </div>
+                    <div style="margin-top: 8px; font-size: 12px; color: #6d28d9; font-weight: 600; line-height: 1.45;">
+                        ※ 訂單送出後廚房將立即依照排單順序為您製作，出餐時請留意叫號或您的取餐號碼。
                     </div>
                 </div>
                 <div id="pickup-time-asap-notice" style="display:none; padding: 14px 16px; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 14px; color: #166534; margin-bottom: 12px;">
@@ -315,6 +357,7 @@
                         bootstrapData = await res.json();
                         storeConfig = bootstrapData.tenant ? {
                             allowScheduledPickup: bootstrapData.tenant.allowScheduledPickup,
+                            allowDineIn: bootstrapData.tenant.allowDineIn,
                             storeStatus: bootstrapData.tenant.storeStatus,
                             operatingHours: bootstrapData.tenant.parsedHours,
                             liffId: bootstrapData.tenant.liffId
@@ -328,6 +371,34 @@
             } catch (e) {
                 console.error("Failed to fetch menu or config", e);
             }
+        }
+
+        // Dining Option State ('takeaway' | 'dine_in')
+        window.currentDiningOption = 'takeaway';
+
+        function setCustomerDiningOption(opt) {
+            if (opt !== 'takeaway' && opt !== 'dine_in') return;
+            window.currentDiningOption = opt;
+
+            // Sync top segmented switcher
+            const btnTopTakeaway = document.getElementById('btn-dining-takeaway');
+            const btnTopDinein = document.getElementById('btn-dining-dinein');
+            if (btnTopTakeaway) {
+                btnTopTakeaway.classList.toggle('active', opt === 'takeaway');
+                btnTopTakeaway.setAttribute('aria-selected', opt === 'takeaway');
+            }
+            if (btnTopDinein) {
+                btnTopDinein.classList.toggle('active', opt === 'dine_in');
+                btnTopDinein.setAttribute('aria-selected', opt === 'dine_in');
+            }
+
+            // Sync checkout section switcher
+            const btnChkTakeaway = document.getElementById('checkout-btn-takeaway');
+            const btnChkDinein = document.getElementById('checkout-btn-dinein');
+            if (btnChkTakeaway) btnChkTakeaway.classList.toggle('active', opt === 'takeaway');
+            if (btnChkDinein) btnChkDinein.classList.toggle('active', opt === 'dine_in');
+
+            applyPickupConfig();
         }
 
         function applyTenantTheme(tenant) {
@@ -430,14 +501,34 @@
         function applyPickupConfig() {
             const pickerGroup = document.getElementById('pickup-time-picker-group');
             const asapNotice = document.getElementById('pickup-time-asap-notice');
-            if (!pickerGroup || !asapNotice) return;
-            if (storeConfig && storeConfig.allowScheduledPickup === false) {
-                pickerGroup.style.display = 'none';
-                asapNotice.style.display = 'block';
-                updateAsapTimeDisplay();
+            const dineInNotice = document.getElementById('pickup-time-dinein-notice');
+            const diningWrapper = document.getElementById('dining-option-wrapper');
+            const checkoutDiningGroup = document.getElementById('checkout-dining-option-group');
+
+            const isDineInAllowed = !(storeConfig && storeConfig.allowDineIn === false);
+            if (!isDineInAllowed) {
+                window.currentDiningOption = 'takeaway';
+                if (diningWrapper) diningWrapper.style.display = 'none';
+                if (checkoutDiningGroup) checkoutDiningGroup.style.display = 'none';
             } else {
-                pickerGroup.style.display = 'block';
-                asapNotice.style.display = 'none';
+                if (diningWrapper) diningWrapper.style.display = 'block';
+                if (checkoutDiningGroup) checkoutDiningGroup.style.display = 'block';
+            }
+
+            if (window.currentDiningOption === 'dine_in') {
+                if (pickerGroup) pickerGroup.style.display = 'none';
+                if (asapNotice) asapNotice.style.display = 'none';
+                if (dineInNotice) dineInNotice.style.display = 'block';
+            } else {
+                if (dineInNotice) dineInNotice.style.display = 'none';
+                if (storeConfig && storeConfig.allowScheduledPickup === false) {
+                    if (pickerGroup) pickerGroup.style.display = 'none';
+                    if (asapNotice) asapNotice.style.display = 'block';
+                    updateAsapTimeDisplay();
+                } else {
+                    if (pickerGroup) pickerGroup.style.display = 'block';
+                    if (asapNotice) asapNotice.style.display = 'none';
+                }
             }
             checkStoreStatus();
         }
@@ -1618,7 +1709,7 @@
 
         initApp();
     </script>
-    <script src="js/client-checkout.js?v=20260820_3"></script>
+    <script src="js/client-checkout.js?v=20260822_dining_1"></script>
 </body>
 
 </html>
