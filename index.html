@@ -208,6 +208,19 @@
 
             <div id="pickup-time-section">
                 <div class="section-title">🕒 取餐時間</div>
+                
+                <!-- Dine-In Table Number Input -->
+                <div class="input-group" id="dinein-table-input-group" style="display: none; margin-bottom: 14px;">
+                    <label style="font-weight: 800; color: #5b21b6; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+                        <span>🪑 用餐桌號</span>
+                        <span style="font-size: 11px; background: #ede9fe; color: #6d28d9; padding: 2px 8px; border-radius: 6px; font-weight: 800;">必填 (送餐依據)</span>
+                    </label>
+                    <input type="text" id="dinein-table-number" placeholder="請輸入桌號 (例如: 1, 05, A2, B3...)" maxlength="20" style="width: 100%; box-sizing: border-box; padding: 12px 14px; font-size: 16px; font-weight: 700; border-radius: 10px; border: 2px solid #c4b5fd; background: #fff; color: #1e1b4b;" autocomplete="off">
+                    <div style="font-size: 12px; color: #6d28d9; margin-top: 4px; font-weight: 500;">
+                        ※ 請查看桌面上標示的桌號貼紙填寫，方便門市人員為您送餐。
+                    </div>
+                </div>
+
                 <div class="input-group" id="pickup-time-picker-group">
                     <label style="font-weight: 800; color: var(--primary);">⚠️ 請選擇取餐日期 / 時間</label>
                     <div class="datetime-row">
@@ -520,12 +533,16 @@
                 if (checkoutDiningGroup) checkoutDiningGroup.style.display = 'block';
             }
 
+            const tableGroup = document.getElementById('dinein-table-input-group');
+
             if (window.currentDiningOption === 'dine_in') {
                 if (pickerGroup) pickerGroup.style.display = 'none';
                 if (asapNotice) asapNotice.style.display = 'none';
                 if (dineInNotice) dineInNotice.style.display = 'block';
+                if (tableGroup) tableGroup.style.display = 'block';
             } else {
                 if (dineInNotice) dineInNotice.style.display = 'none';
+                if (tableGroup) tableGroup.style.display = 'none';
                 if (storeConfig && storeConfig.allowScheduledPickup === false) {
                     if (pickerGroup) pickerGroup.style.display = 'none';
                     if (asapNotice) asapNotice.style.display = 'block';
@@ -1714,7 +1731,7 @@
 
         initApp();
     </script>
-    <script src="js/client-checkout.js?v=20260822_orderid_1"></script>
+    <script src="js/client-checkout.js?v=20260822_tableno_1"></script>
 </body>
 
 </html>

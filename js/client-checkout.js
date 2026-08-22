@@ -244,11 +244,17 @@ function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, ma
     }
 
     const isDineIn = (window.currentDiningOption === 'dine_in');
-    const diningLabel = isDineIn ? '🍽️ 內用' : '🛍️ 外帶';
+    const tableInput = document.getElementById('dinein-table-number');
+    const tableNumber = (isDineIn && tableInput) ? tableInput.value.trim() : '';
+
+    const diningLabel = isDineIn ? (tableNumber ? `🍽️ 內用 (桌號：${tableNumber})` : '🍽️ 內用') : '🛍️ 外帶';
     msg += `\n📍 用餐方式：${diningLabel}`;
 
     if (isDineIn) {
         msg += `\n\n🕒 取餐時間：現場內用（現點現做）`;
+        if (tableNumber) {
+            msg += `\n🪑 用餐桌號：${tableNumber}`;
+        }
     } else {
         const isScheduledEnabled = !(storeConfig && storeConfig.allowScheduledPickup === false);
         const timeLabel = isScheduledEnabled ? '取餐時間' : '訂餐時間';
@@ -277,8 +283,38 @@ async function submitOrder() {
     let dateInput = "";
     let timeInput = "";
 
-    if (isDineIn || !isScheduledEnabled) {
-        // 內用 hoặc Tắt hẹn giờ -> Lấy ngày giờ thực tế
+    if (isDineIn) {
+        // Kiểm tra bắt buộc nhập số bàn khi ăn tại quán
+        const tableInput = document.getElementById('dinein-table-number');
+        const tableNumber = tableInput ? tableInput.value.trim() : '';
+        if (!tableNumber) {
+            if (tableInput) {
+                tableInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                tableInput.focus();
+                tableInput.classList.add('attention-pulse');
+                setTimeout(() => tableInput.classList.remove('attention-pulse'), 1500);
+            }
+            return customAlert('請填寫您的用餐桌號，方便門市人員為您送餐！');
+        }
+
+        const { dateStr, timeStr } = formatTaiwanDateTime(twNow);
+        dateInput = dateStr;
+        timeInput = timeStr;
+
+        if (!isStoreOpen(twNow)) {
+            const nextInfo = getNextOpeningInfo(twNow);
+            customConfirm(
+                `<div style="font-size: 16px; font-weight: 900; margin-bottom: 8px;">🌙 店家目前休息中</div>` +
+                `<div style="font-size: 14px; color: #4b5563; line-height: 1.5;">` +
+                `店家預計於 <b>${nextInfo.dayText} ${nextInfo.timeStr}</b> 開始接單製作。<br>` +
+                `您確定要現在預先送出內用訂單嗎？` +
+                `</div>`,
+                () => { doSubmitOrderExecution(dateInput, timeInput); }
+            );
+            return;
+        }
+    } else if (!isScheduledEnabled) {
+        // Tắt hẹn giờ cho 外帶 -> Lấy ngày giờ thực tế
         const { dateStr, timeStr } = formatTaiwanDateTime(twNow);
         dateInput = dateStr;
         timeInput = timeStr;
@@ -286,12 +322,11 @@ async function submitOrder() {
         // Nếu quán đang đóng cửa -> Hỏi xác nhận đặt trước
         if (!isStoreOpen(twNow)) {
             const nextInfo = getNextOpeningInfo(twNow);
-            const actionText = isDineIn ? "內用訂單" : "訂單";
             customConfirm(
                 `<div style="font-size: 16px; font-weight: 900; margin-bottom: 8px;">🌙 店家目前休息中</div>` +
                 `<div style="font-size: 14px; color: #4b5563; line-height: 1.5;">` +
                 `店家預計於 <b>${nextInfo.dayText} ${nextInfo.timeStr}</b> 開始接單製作。<br>` +
-                `您確定要現在預先送出${actionText}嗎？` +
+                `您確定要現在預先送出訂單嗎？` +
                 `</div>`,
                 () => { doSubmitOrderExecution(dateInput, timeInput); }
             );
@@ -384,13 +419,16 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
         const mainNote = document.getElementById('note') ? document.getElementById('note').value : '';
         const msg = formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, mainNote);
         const isDineIn = (window.currentDiningOption === 'dine_in');
+        const tableInput = document.getElementById('dinein-table-number');
+        const tableNumber = (isDineIn && tableInput) ? tableInput.value.trim() : '';
 
         const orderPayload = {
             key: orderNum,
             userId: userId,
             customer: customerName,
-            time: isDineIn ? `${dateInput} ${timeInput} (現場內用)` : `${dateInput} ${timeInput}`,
+            time: isDineIn ? (tableNumber ? `${dateInput} ${timeInput} (現場內用 - 桌號: ${tableNumber})` : `${dateInput} ${timeInput} (現場內用)`) : `${dateInput} ${timeInput}`,
             dining_option: isDineIn ? 'dine_in' : 'takeaway',
+            table_number: tableNumber || undefined,
             content: msg.split('\n\n🕒')[0].replace(/\[.*?點餐\]\n/g, '').replace('[Benmi 點餐]\n', ''),
             total: currentTotal,
             note: mainNote,

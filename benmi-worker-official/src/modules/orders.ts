@@ -48,6 +48,8 @@ export async function createOrder(
     diningOption = 'takeaway';
   }
 
+  const tableNumber = data.table_number || data.tableNumber || null;
+
   const order: Order = {
     key: orderKey,
     customer: data.customer || "顧客",
@@ -59,7 +61,8 @@ export async function createOrder(
     total: data.total,
     reason: data.reason || "",
     note: data.note || "",
-    diningOption: diningOption
+    diningOption: diningOption,
+    tableNumber: tableNumber
   };
 
   await saveOrder(env, order, tenantId);
@@ -119,7 +122,8 @@ export async function updateOrder(
     total: orderRow.total_amount,
     reason: orderRow.reason || "",
     note: orderRow.note || "",
-    diningOption: (orderRow.dining_option as any) || 'takeaway'
+    diningOption: (orderRow.dining_option as any) || 'takeaway',
+    tableNumber: orderRow.table_number || undefined
   };
   const incoming = data.status;
 
@@ -350,7 +354,8 @@ function mapOrderRows(results: any[]): Order[] {
       total: Number(row.total_amount) || 0,
       reason: row.reason || "",
       note: row.note || "",
-      diningOption: (row.dining_option as any) || 'takeaway'
+      diningOption: (row.dining_option as any) || 'takeaway',
+      tableNumber: row.table_number || undefined
     };
   });
 }
@@ -389,7 +394,7 @@ export async function getOrders(request: Request, env: Env): Promise<Response> {
     const startOfTodayUTC = new Date(new Date(`${todayTwStr}T00:00:00+08:00`).getTime()).toISOString().replace("T", " ").replace(/\.\d+Z$/, "");
 
     const { results } = await env.DB.prepare(
-      `SELECT key, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, created_at 
+      `SELECT key, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, created_at 
        FROM orders 
        WHERE tenant_id = ? 
          AND (status IN ('NEW', 'ACCEPTED', 'WAITING_CUSTOMER_CHANGE', 'WAITING_CUSTOMER_REJECT', 'DONE') 
@@ -454,7 +459,7 @@ export async function getOrdersByDate(request: Request, env: Env): Promise<Respo
     const endUTC = endDate.toISOString().replace("T", " ").replace(/\.\d+Z$/, "");
 
     const { results } = await env.DB.prepare(
-      `SELECT key, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, created_at 
+      `SELECT key, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, created_at 
        FROM orders 
        WHERE tenant_id = ? 
          AND created_at >= ? AND created_at < ?
@@ -476,7 +481,7 @@ export async function getHistoryAll(request: Request, env: Env): Promise<Respons
 
   try {
     const { results } = await env.DB.prepare(
-      `SELECT key, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, created_at 
+      `SELECT key, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, created_at 
        FROM orders 
        WHERE tenant_id = ? 
          AND status IN ('PICKED_UP', 'REJECTED')
@@ -495,8 +500,8 @@ export async function getHistoryAll(request: Request, env: Env): Promise<Respons
 export async function saveOrder(env: Env, order: Order, tenantId: string): Promise<void> {
   // Save order to D1
   await env.DB.prepare(
-    `INSERT INTO orders (key, tenant_id, user_id, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime(?, 'unixepoch'), datetime('now'))
+    `INSERT INTO orders (key, tenant_id, user_id, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime(?, 'unixepoch'), datetime('now'))
      ON CONFLICT(key) DO UPDATE SET
        status = CASE
          WHEN orders.status IN ('ACCEPTED', 'DONE', 'REJECTED', 'PICKED_UP') AND excluded.status = 'NEW'
@@ -510,6 +515,7 @@ export async function saveOrder(env: Env, order: Order, tenantId: string): Promi
        reason = excluded.reason,
        note = excluded.note,
        dining_option = excluded.dining_option,
+       table_number = excluded.table_number,
        updated_at = datetime('now')`
   ).bind(
     order.key,
@@ -523,6 +529,7 @@ export async function saveOrder(env: Env, order: Order, tenantId: string): Promi
     order.reason || "",
     order.note || "",
     order.diningOption || "takeaway",
+    order.tableNumber || null,
     Math.floor((order.createdAt || Date.now()) / 1000)
   ).run();
 }

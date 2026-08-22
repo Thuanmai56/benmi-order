@@ -26,8 +26,10 @@ function openReview(orderKey) {
   const elDining = document.getElementById("review-dining");
   if (elDining) {
     const isDineIn = typeof isOrderDineIn === "function" ? isOrderDineIn(order) : order.diningOption === "dine_in";
+    const tableNum = typeof getOrderTableNumber === "function" ? getOrderTableNumber(order) : (order.tableNumber || "");
+    const tableSuffix = tableNum ? (currentLang === "vi" ? ` (Bàn ${tableNum})` : ` (桌號：${tableNum})`) : "";
     elDining.innerHTML = isDineIn
-      ? `<span style="color:#6d28d9; font-weight:1000;">🍽️ ${t('dineIn')}</span>`
+      ? `<span style="color:#6d28d9; font-weight:1000;">🍽️ ${t('dineIn')}${escapeHtml(tableSuffix)}</span>`
       : `<span style="color:#047857; font-weight:1000;">🛍️ ${t('takeaway')}</span>`;
   }
   const elCont = document.getElementById("review-content");

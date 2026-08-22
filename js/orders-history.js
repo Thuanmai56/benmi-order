@@ -132,8 +132,10 @@ function renderHistory(orders) {
       const totalFormatted = formatOrderTotal(order);
       const itemsSummary = shortItems(order.content) || "";
       const isDineIn = typeof isOrderDineIn === "function" ? isOrderDineIn(order) : order.diningOption === "dine_in";
+      const tableNum = typeof getOrderTableNumber === "function" ? getOrderTableNumber(order) : (order.tableNumber || "");
+      const tableLabel = tableNum ? (currentLang === 'vi' ? ` · Bàn ${tableNum}` : ` · 桌號 ${tableNum}`) : "";
       const diningBadge = isDineIn
-        ? `<span class="badge badge-dine-in" style="font-size:11px; padding:2px 6px; margin-left:4px;">🍽️ ${t('badgeDineIn')}</span>`
+        ? `<span class="badge badge-dine-in" style="font-size:11px; padding:2px 6px; margin-left:4px;">🍽️ ${t('badgeDineIn')}${escapeHtml(tableLabel)}</span>`
         : `<span class="badge badge-takeaway" style="font-size:11px; padding:2px 6px; margin-left:4px;">🛍️ ${t('badgeTakeaway')}</span>`;
 
       const pickupDisplay = isDineIn && (!order.time || order.time === "Unknown" || order.time.includes("現場內用"))

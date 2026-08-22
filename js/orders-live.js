@@ -12,6 +12,19 @@ function isOrderDineIn(order) {
          (order.time || "").includes("現場內用");
 }
 
+function getOrderTableNumber(order) {
+  if (!order) return "";
+  if (order.tableNumber) return String(order.tableNumber).trim();
+  if (order.table_number) return String(order.table_number).trim();
+  const timeMatch = (order.time || "").match(/桌號[：:\s]*([a-zA-Z0-9_-]+)/);
+  if (timeMatch) return timeMatch[1];
+  const contentMatch = (order.content || "").match(/(?:用餐桌號|桌號)[：:\s]*([a-zA-Z0-9_-]+)/);
+  if (contentMatch) return contentMatch[1];
+  const noteMatch = (order.note || "").match(/(?:用餐桌號|桌號)[：:\s]*([a-zA-Z0-9_-]+)/);
+  if (noteMatch) return noteMatch[1];
+  return "";
+}
+
 function setDiningFilter(filter) {
   currentDiningFilter = filter;
   const filterAllBtn = document.getElementById("filter-btn-all");
@@ -105,8 +118,10 @@ function renderListLeft(orders) {
       rightActions = `<button class="btn tile-action-btn" style="background:#f1f5f9; color:#94a3af; cursor:not-allowed;" disabled>${t('btnWaitingReply')}</button>`;
     }
 
+    const tableNum = getOrderTableNumber(order);
+    const tableLabel = tableNum ? (currentLang === 'vi' ? ` · Bàn ${tableNum}` : ` · 桌號 ${tableNum}`) : "";
     const diningBadge = isDineIn
-      ? `<span class="badge badge-dine-in" style="font-size:11.5px; padding:2px 7px; margin-left:4px;">🍽️ ${t('badgeDineIn')}</span>`
+      ? `<span class="badge badge-dine-in" style="font-size:11.5px; padding:2px 7px; margin-left:4px;">🍽️ ${t('badgeDineIn')}${escapeHtml(tableLabel)}</span>`
       : `<span class="badge badge-takeaway" style="font-size:11.5px; padding:2px 7px; margin-left:4px;">🛍️ ${t('badgeTakeaway')}</span>`;
 
     const pickupDisplay = isDineIn && (!order.time || order.time === "Unknown" || order.time.includes("現場內用"))
@@ -166,8 +181,10 @@ function renderListRight(orders) {
     tile.className = "tile";
     tile.onclick = () => openReview(order.key);
 
+    const tableNum = getOrderTableNumber(order);
+    const tableLabel = tableNum ? (currentLang === 'vi' ? ` · Bàn ${tableNum}` : ` · 桌號 ${tableNum}`) : "";
     const diningBadge = isDineIn
-      ? `<span class="badge badge-dine-in" style="font-size:11.5px; padding:2px 7px; margin-left:4px;">🍽️ ${t('badgeDineIn')}</span>`
+      ? `<span class="badge badge-dine-in" style="font-size:11.5px; padding:2px 7px; margin-left:4px;">🍽️ ${t('badgeDineIn')}${escapeHtml(tableLabel)}</span>`
       : `<span class="badge badge-takeaway" style="font-size:11.5px; padding:2px 7px; margin-left:4px;">🛍️ ${t('badgeTakeaway')}</span>`;
 
     const pickupDisplay = isDineIn && (!order.time || order.time === "Unknown" || order.time.includes("現場內用"))

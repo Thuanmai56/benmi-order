@@ -12,6 +12,7 @@ export interface Order {
   reason?: string;
   note?: string;
   diningOption?: DiningOption;
+  tableNumber?: string | null;
 }
 
 export interface Menu {
