@@ -50,67 +50,22 @@ export async function createOrder(
 
   const tableNumber = data.table_number || data.tableNumber || null;
   const userId = data.userId;
+  const parentOrderKey = data.parent_order_key || data.parentOrderKey || null;
 
-  // AUTO-MERGE CHECK FOR DINE-IN ORDERS:
-  // Nếu là đơn ăn tại quán (dine_in) và đã có đơn đang mở (NEW, ACCEPTED, DONE):
-  // Tự động gộp vào đơn cũ (chuyển thành Đợt 2, 3...) thay vì tạo đơn mới toanh!
-  if (diningOption === 'dine_in' && env.DB) {
-    let targetParentKey = data.parent_order_key || data.parentOrderKey || null;
-
-    // 1. Kiểm tra theo userId (nếu khách dùng LINE)
-    if (!targetParentKey && userId && !userId.startsWith("guest_")) {
-      try {
-        const activeOrderRow = await env.DB.prepare(
-          `SELECT key FROM orders 
-           WHERE tenant_id = ? AND user_id = ? AND dining_option = 'dine_in'
-             AND status IN ('NEW', 'ACCEPTED', 'DONE')
-           ORDER BY created_at DESC LIMIT 1`
-        ).bind(tenantId, userId).first<any>();
-
-        if (activeOrderRow && activeOrderRow.key) {
-          targetParentKey = activeOrderRow.key;
-          console.log(`[createOrder] Auto-merging into active user dine-in order: ${targetParentKey}`);
-        }
-      } catch (checkErr) {
-        console.error("[createOrder] Error checking active user order:", checkErr);
-      }
-    }
-
-    // 2. Kiểm tra theo Số Bàn (nếu khách là guest tại bàn trong 4 giờ gần nhất)
-    if (!targetParentKey && tableNumber) {
-      try {
-        const activeTableOrder = await env.DB.prepare(
-          `SELECT key FROM orders 
-           WHERE tenant_id = ? AND table_number = ? AND dining_option = 'dine_in'
-             AND status IN ('NEW', 'ACCEPTED', 'DONE')
-             AND created_at >= DATETIME('now', '-4 hours')
-           ORDER BY created_at DESC LIMIT 1`
-        ).bind(tenantId, String(tableNumber).trim()).first<any>();
-
-        if (activeTableOrder && activeTableOrder.key) {
-          targetParentKey = activeTableOrder.key;
-          console.log(`[createOrder] Auto-merging into active table dine-in order: ${targetParentKey}`);
-        }
-      } catch (tableErr) {
-        console.error("[createOrder] Error checking active table order:", tableErr);
-      }
-    }
-
-    // Nếu tìm thấy đơn cha đang mở -> Thực hiện gộp đơn (append)
-    if (targetParentKey) {
-      return await executeAppendOrderInternal(
-        env,
-        tenantId,
-        targetParentKey,
-        data.content,
-        Number(data.total) || 0,
-        data.note || "",
-        userId,
-        data.customer,
-        ctx,
-        tenantCtx
-      );
-    }
+  // Nếu client chủ động truyền parent_order_key thì chuyển sang xử lý append
+  if (parentOrderKey && env.DB) {
+    return await executeAppendOrderInternal(
+      env,
+      tenantId,
+      parentOrderKey,
+      data.content,
+      Number(data.total) || 0,
+      data.note || "",
+      userId,
+      data.customer,
+      ctx,
+      tenantCtx
+    );
   }
 
   const order: Order = {
