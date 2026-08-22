@@ -121,6 +121,7 @@ function openSettings() {
   const viewSettings = document.getElementById("view-settings");
   if (viewSettings) viewSettings.style.display = "block";
   loadOperatingHours();
+  initSettingsScrollSpy();
 }
 
 async function loadOperatingHours() {
@@ -468,3 +469,73 @@ async function deleteStoreLogoSetting() {
     if (btn) { btn.innerText = oldText; btn.disabled = false; }
   }
 }
+
+// --- Settings Table of Contents (TOC) & ScrollSpy ---
+const SETTINGS_SECTIONS = [
+  { id: "setting-card-status", tocId: "toc-item-status" },
+  { id: "setting-card-ordermode", tocId: "toc-item-ordermode" },
+  { id: "setting-card-hours", tocId: "toc-item-hours" },
+  { id: "setting-card-address", tocId: "toc-item-address" },
+  { id: "setting-card-logo", tocId: "toc-item-logo" }
+];
+
+let isManualSettingScroll = false;
+let settingScrollTimeout = null;
+
+function setActiveTocItem(activeTocId) {
+  document.querySelectorAll(".settings-toc-item").forEach(item => {
+    if (item.id === activeTocId) {
+      item.classList.add("active");
+    } else {
+      item.classList.remove("active");
+    }
+  });
+}
+
+function scrollToSettingSection(sectionId) {
+  const container = document.getElementById("settings-scroll-container");
+  const target = document.getElementById(sectionId);
+  if (!container || !target) return;
+
+  const found = SETTINGS_SECTIONS.find(s => s.id === sectionId);
+  if (found) {
+    setActiveTocItem(found.tocId);
+  }
+
+  isManualSettingScroll = true;
+  if (settingScrollTimeout) clearTimeout(settingScrollTimeout);
+
+  target.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  settingScrollTimeout = setTimeout(() => {
+    isManualSettingScroll = false;
+  }, 800);
+}
+
+function initSettingsScrollSpy() {
+  const container = document.getElementById("settings-scroll-container");
+  if (!container || container.dataset.scrollSpyInit) return;
+  container.dataset.scrollSpyInit = "true";
+
+  container.addEventListener("scroll", () => {
+    if (isManualSettingScroll) return;
+    const containerTop = container.getBoundingClientRect().top;
+
+    let currentActive = SETTINGS_SECTIONS[0];
+    for (const sec of SETTINGS_SECTIONS) {
+      const el = document.getElementById(sec.id);
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        // If element top is within upper portion of container
+        if (rect.top - containerTop <= 120) {
+          currentActive = sec;
+        }
+      }
+    }
+
+    if (currentActive) {
+      setActiveTocItem(currentActive.tocId);
+    }
+  }, { passive: true });
+}
+

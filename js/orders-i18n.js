@@ -111,8 +111,14 @@ const I18N = {
     btnBack: "返回",
     // Settings
     settingsTitle: "系統設定",
-    settingStoreStatusTitle: "🏪 門市接單狀態",
-    settingStoreStatusSub: "隨時切換一般營業、繁忙延後或暫停接單模式",
+    tocSettingsTitle: "設定目錄",
+    tocStoreStatus: "門市接單狀態",
+    tocOrderMode: "點餐取餐模式",
+    tocHours: "營業時間設定",
+    tocAddress: "門市地址設定",
+    tocLogo: "門市 Logo",
+    storeStatusSettingTitle: "🏪 門市接單狀態",
+    storeStatusSettingSub: "隨時切換一般營業、繁忙延後或暫停接單模式",
     boxOpenTitle: "🟢 正常營業",
     boxOpenDesc: "正常接收新訂單，依照標準預約或排隊時間",
     boxBusyTitle: "🟠 門市繁忙 (+1小時)",
@@ -336,6 +342,12 @@ const I18N = {
     btnBack: "Quay lại",
     // Settings
     settingsTitle: "Cài đặt hệ thống",
+    tocSettingsTitle: "Mục lục cài đặt",
+    tocStoreStatus: "Trạng thái nhận đơn",
+    tocOrderMode: "Chế độ nhận đơn",
+    tocHours: "Giờ hoạt động",
+    tocAddress: "Địa chỉ cửa hàng",
+    tocLogo: "Logo cửa hàng",
     settingStoreStatusTitle: "🏪 Trạng thái nhận đơn của quán",
     settingStoreStatusSub: "Chuyển đổi linh hoạt giữa Mở quán, Đang bận (+1h) hoặc Tạm dừng nhận đơn",
     boxOpenTitle: "🟢 Mở quán",
@@ -711,6 +723,19 @@ function applyLanguageToDOM() {
   if (typeof renderStoreStatusUI === "function" && typeof currentStoreStatus !== "undefined") {
     renderStoreStatusUI(currentStoreStatus);
   }
+
+  const tocTitle = document.getElementById("i18n-toc-settings-title");
+  if (tocTitle) tocTitle.innerText = dict.tocSettingsTitle;
+  const tocStatus = document.getElementById("i18n-toc-status");
+  if (tocStatus) tocStatus.innerText = dict.tocStoreStatus;
+  const tocOrderMode = document.getElementById("i18n-toc-ordermode");
+  if (tocOrderMode) tocOrderMode.innerText = dict.tocOrderMode;
+  const tocHours = document.getElementById("i18n-toc-hours");
+  if (tocHours) tocHours.innerText = dict.tocHours;
+  const tocAddress = document.getElementById("i18n-toc-address");
+  if (tocAddress) tocAddress.innerText = dict.tocAddress;
+  const tocLogo = document.getElementById("i18n-toc-logo");
+  if (tocLogo) tocLogo.innerText = dict.tocLogo;
 
   const ordMT = document.getElementById("i18n-ordermode-title");
   if (ordMT) ordMT.innerText = dict.orderModeTitle;
