@@ -292,9 +292,9 @@ function syncMenuDataFromDOM() {
   });
 }
 
-async function saveMenuData() {
+async function saveMenuData(skipConfirm = false) {
   if (!currentMenuData) return;
-  if (!confirm(t("confirmSaveMenu"))) return;
+  if (!skipConfirm && !confirm(t("confirmSaveMenu"))) return;
   syncMenuDataFromDOM();
 
   // Convert to rich item map format for API
@@ -327,7 +327,9 @@ async function saveMenuData() {
     });
     if (!res.ok) throw new Error("API returned " + res.status);
     clearMenuDirty();
-    alert(t("menuSaveSuccess"));
+    if (!skipConfirm) {
+      alert(t("menuSaveSuccess"));
+    }
     renderMenuCategories();
   } catch (e) {
     alert(t("menuSaveFail") + e.message);
@@ -352,7 +354,7 @@ function closeAddCategoryModal() {
   if (modal) modal.style.display = "none";
 }
 
-function confirmAddCategory() {
+async function confirmAddCategory() {
   const inp = document.getElementById("add-cat-input-name");
   const name = inp ? inp.value.trim() : "";
   if (!name) {
@@ -379,10 +381,12 @@ function confirmAddCategory() {
 
   currentMenuData.push(newCat);
   activeCategoryIndex = currentMenuData.length - 1;
-  markMenuDirty();
   closeAddCategoryModal();
   renderMenuCategories();
   renderMenuCategoryEditor(activeCategoryIndex);
+
+  // Auto-save immediately to database & refresh cache
+  await saveMenuData(true);
 }
 
 function promptRenameCategory() {
