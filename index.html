@@ -643,10 +643,12 @@
 
         function updateMenuOosUI() {
             if (!menu) return;
-            const categories = ['small', 'large', 'combo', 'drinks'];
+            const ignoredCats = ['out_of_stock', 'spicy', 'topping', 'egg', 'lettuce', '_category_names'];
+            const categories = Object.keys(menu).filter(k => !ignoredCats.includes(k) && typeof menu[k] === 'object' && menu[k] !== null);
             categories.forEach(category => {
                 const itemsMap = menu[category] || {};
                 Object.keys(itemsMap).forEach(origName => {
+                    if (origName.startsWith('_')) return;
                     const elId = `item-${category}-${origName}`;
                     const div = document.getElementById(elId);
                     if (!div) return;
@@ -723,22 +725,33 @@
         function renderMenuBenmi() {
             if (!menu) return;
 
+            const standardCats = ['large', 'small', 'combo', 'drinks'];
+            const ignoredCats = ['out_of_stock', 'spicy', 'topping', 'egg', 'lettuce', '_category_names'];
+
+            // Lấy danh sách các phân loại sản phẩm mới được tạo thêm trong POS
+            const customCats = Object.keys(menu).filter(k => !standardCats.includes(k) && !ignoredCats.includes(k) && typeof menu[k] === 'object' && menu[k] !== null);
+
             // 1. Setup Benmi Navigation Tabs
             const nav = document.getElementById('main-nav');
             if (nav) {
-                nav.innerHTML = `
+                let navHTML = `
                     <div class="nav-btn active" onclick="scrollToSec('sec-large')">大麵包</div>
                     <div class="nav-btn" onclick="scrollToSec('sec-small')">小麵包</div>
                     <div class="nav-btn" onclick="scrollToSec('sec-combo')">套餐</div>
                     <div class="nav-btn" onclick="scrollToSec('sec-drink')">飲料</div>
-                    <div class="nav-btn" onclick="scrollToSec('sec-checkout')">結帳</div>
                 `;
+                customCats.forEach(catKey => {
+                    const catTitle = (menu._category_names && menu._category_names[catKey]) || catKey;
+                    navHTML += `<div class="nav-btn" onclick="scrollToSec('sec-${catKey}')">${catTitle}</div>`;
+                });
+                navHTML += `<div class="nav-btn" onclick="scrollToSec('sec-checkout')">結帳</div>`;
+                nav.innerHTML = navHTML;
             }
 
             // 2. Setup Benmi Section Containers
             const container = document.getElementById('catalog-sections');
             if (container) {
-                container.innerHTML = `
+                let secHTML = `
                     <div class="section-container" id="sec-large">
                         <div class="section-title">🍔 大麵包</div>
                         <div class="grid" id="large-list"></div>
@@ -756,12 +769,33 @@
                         <div class="grid" id="drink-list"></div>
                     </div>
                 `;
+                customCats.forEach(catKey => {
+                    const catTitle = (menu._category_names && menu._category_names[catKey]) || catKey;
+                    secHTML += `
+                        <div class="section-container" id="sec-${catKey}">
+                            <div class="section-title">🍽️ ${catTitle}</div>
+                            <div class="grid" id="${catKey}-list"></div>
+                        </div>
+                    `;
+                });
+                container.innerHTML = secHTML;
             }
 
             for (let name in menu.large) createItem(name + ' 大', menu.large[name], 'large', 'large-list', name, recommended.has(name));
             for (let name in menu.small) createItem(name + ' 小', menu.small[name], 'small', 'small-list', name, recommended.has(name));
             for (let name in menu.combo) createItem('套餐 ' + name, menu.combo[name], 'combo', 'combo-list', name, recommendedCombo.has(name));
             for (let name in menu.drinks) createItem(name, menu.drinks[name], 'drinks', 'drink-list', name, false);
+
+            // Render món thuộc các phân loại mới
+            customCats.forEach(catKey => {
+                if (menu[catKey]) {
+                    for (let name in menu[catKey]) {
+                        if (!name.startsWith('_')) {
+                            createItem(name, menu[catKey][name], catKey, `${catKey}-list`, name, false);
+                        }
+                    }
+                }
+            });
 
             document.querySelectorAll('.section-container').forEach(sec => observer.observe(sec));
         }
@@ -934,9 +968,10 @@
                         let itemPrice = 0;
                         let displayName = origName;
                         if (cat === 'small') { itemPrice = menu.small[origName] || 0; displayName += ' 小'; }
-                        if (cat === 'large') { itemPrice = menu.large[origName] || 0; displayName += ' 大'; }
-                        if (cat === 'combo') { itemPrice = menu.combo[origName] || 0; displayName = '套餐 ' + displayName; }
-                        if (cat === 'drinks') { itemPrice = menu.drinks[origName] || 0; }
+                        else if (cat === 'large') { itemPrice = menu.large[origName] || 0; displayName += ' 大'; }
+                        else if (cat === 'combo') { itemPrice = menu.combo[origName] || 0; displayName = '套餐 ' + displayName; }
+                        else if (cat === 'drinks') { itemPrice = menu.drinks[origName] || 0; }
+                        else if (menu && menu[cat] && menu[cat][origName] !== undefined) { itemPrice = menu[cat][origName] || 0; }
 
                         let itemModifiersTotal = 0;
                         let portionsHTML = '';

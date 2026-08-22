@@ -101,7 +101,8 @@ export async function getMenu(request: Request, env: Env): Promise<Response> {
 
     // 3. Xây dựng cấu trúc JSON Menu tương thích ngược
     const menuData: Menu = {
-      out_of_stock: []
+      out_of_stock: [],
+      _category_names: {} as any
     };
 
     // Tạo các mảng danh mục rỗng
@@ -109,6 +110,9 @@ export async function getMenu(request: Request, env: Env): Promise<Response> {
     for (const cat of categories) {
       menuData[cat.slug] = {};
       catMap.set(cat.id, cat.slug);
+      if (menuData._category_names) {
+        menuData._category_names[cat.slug] = cat.name;
+      }
     }
 
     const now = new Date();
