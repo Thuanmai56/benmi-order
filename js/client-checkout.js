@@ -362,6 +362,52 @@ function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, ma
     return msg;
 }
 
+// 8.1 Định dạng danh sách món cho luồng Gọi thêm (không kèm tiền tổng hoặc mã đơn ảo)
+function formatAppendItemsOnlyText() {
+    const lines = [];
+    for (let key in cart) {
+        if (cart[key] > 0) {
+            let [catSlug, origName] = key.split('_');
+            lines.push(`${cart[key]}份 x ${origName}`);
+
+            if (catSlug === 'combo') {
+                let drinks = comboDrinkData[origName] || [];
+                let drinkCounts = {};
+                drinks.slice(0, cart[key]).forEach(d => { drinkCounts[d] = (drinkCounts[d] || 0) + 1; });
+                let drinkStr = Object.entries(drinkCounts).map(([n, c]) => `${n} x${c}`).join('、');
+                if (drinkStr) lines.push(`   ↳ 飲料：${drinkStr}`);
+            }
+
+            if (customizeData[key]) {
+                customizeData[key].slice(0, cart[key]).forEach((c, i) => {
+                    const parts = [];
+                    if (c.single) {
+                        for (let s in c.single) {
+                            if (c.single[s] && c.single[s] !== '不辣' && c.single[s] !== '不需要') {
+                                parts.push(c.single[s]);
+                            }
+                        }
+                    }
+                    if (c.multiple) {
+                        for (let t in c.multiple) {
+                            if (c.multiple[t]) parts.push(`加${t}`);
+                        }
+                    }
+                    if (c.topping && c.topping !== '') parts.push('加' + c.topping);
+                    if (c.spicy && c.spicy !== '不辣') parts.push(c.spicy);
+                    if (c.customText && c.customText.trim() !== '') parts.push(c.customText.trim());
+
+                    if (parts.length > 0) {
+                        const prefixLabel = cart[key] > 1 ? `第${i + 1}份` : '';
+                        lines.push(`   ↳ ${prefixLabel}${parts.join('、')}`);
+                    }
+                });
+            }
+        }
+    }
+    return lines.join('\n');
+}
+
 // 9. Thực thi gửi đơn hàng với Timeout 8s & Bảo vệ nút bấm
 async function submitOrder() {
     if (isSubmitting) return;
@@ -520,11 +566,12 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
 
         // 10.1 Xử lý riêng cho luồng 加點餐點 (Append Mode)
         if (window.isAppendMode && window.parentOrderKey) {
+            const rawItemsText = formatAppendItemsOnlyText();
             const appendPayload = {
                 parent_order_key: window.parentOrderKey,
                 user_id: userId,
                 customer_name: customerName,
-                appended_content: msg.split('\n\n🕒')[0].replace(/\[.*?點餐\]\n/g, '').replace('[Benmi 點餐]\n', ''),
+                appended_content: rawItemsText,
                 appended_total: currentTotal,
                 note: mainNote,
                 tenant_id: tenantId
@@ -556,11 +603,13 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                 submitBtn.style.opacity = '0.6';
             }
 
-            // Tùy chọn: Gửi tin nhắn vào chat LINE nếu đang mở trong LINE App
+            // Gửi tin nhắn xác nhận vào chat LINE (Không chứa từ khóa tạo đơn mới để tránh webhook bắt nhầm)
             if (typeof liff !== 'undefined' && liff.isInClient) {
                 try {
                     if (liff.isInClient() && typeof liff.sendMessages === 'function') {
-                        await liff.sendMessages([{ type: 'text', text: `[加點餐點 #${window.parentOrderKey}]\n${msg}` }]);
+                        const notePart = mainNote ? `\n📝 備註：${mainNote}` : '';
+                        const appendChatMsg = `[加點成功 #${window.parentOrderKey}]\n🍽️ 現場加點品項：\n${rawItemsText}${notePart}\n\n💰 本次加點：+$${currentTotal}`;
+                        await liff.sendMessages([{ type: 'text', text: appendChatMsg }]);
                     }
                 } catch (liffMsgErr) {
                     console.warn("liff.sendMessages notice:", liffMsgErr);

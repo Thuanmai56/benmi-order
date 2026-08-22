@@ -856,8 +856,8 @@ export async function handleLineWebhook(
 
     // 0.3) Priority Catch new order from LIFF text message (Bypasses pending states)
     if (userText.includes("訂單編號：") && userText.includes("📦 訂單內容：")) {
-      if (userText.includes("[已收到]") || userText.includes("[Đã nhận]")) {
-        console.log(`[${brandName}] Webhook received receipt message. Skipping to avoid overwrite.`);
+      if (userText.includes("[已收到]") || userText.includes("[Đã nhận]") || userText.includes("[加點") || userText.includes("加點餐點") || userText.includes("加點成功")) {
+        console.log(`[${brandName}] Webhook received receipt/append message. Skipping to avoid duplicate order.`);
         try {
           await env.DB.prepare("DELETE FROM pending_actions WHERE tenant_id = ? AND user_id = ?")
             .bind(tenantId, userId).run();
