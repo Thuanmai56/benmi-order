@@ -678,6 +678,14 @@ function mapOrderRows(results: any[]): Order[] {
       if (!isNaN(t)) parsedCreatedAt = t;
     }
 
+    let parsedLastAppendedAt: number | null = null;
+    if (row.last_appended_at) {
+      const rawStr = String(row.last_appended_at).trim();
+      const isoStr = rawStr.includes("T") ? (rawStr.endsWith("Z") ? rawStr : rawStr + "Z") : rawStr.replace(" ", "T") + "Z";
+      const t = new Date(isoStr).getTime();
+      if (!isNaN(t)) parsedLastAppendedAt = t;
+    }
+
     return {
       key: row.key,
       customer: row.customer_name || "顧客",
@@ -693,8 +701,8 @@ function mapOrderRows(results: any[]): Order[] {
       tableNumber: row.table_number || undefined,
       roundCount: Number(row.round_count) || 1,
       round_count: Number(row.round_count) || 1,
-      lastAppendedAt: row.last_appended_at || null,
-      last_appended_at: row.last_appended_at || null
+      lastAppendedAt: parsedLastAppendedAt || row.last_appended_at || null,
+      last_appended_at: parsedLastAppendedAt || row.last_appended_at || null
     };
   });
 }

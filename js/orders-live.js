@@ -134,7 +134,7 @@ function renderListLeft(orders) {
       : "";
 
     const pickupDisplay = isDineIn
-      ? (formatPickupTimeDisplay(order.time) !== '-' ? formatPickupTimeDisplay(order.time) : t('dineIn'))
+      ? (formatDineInTimeDisplay(order) !== '-' ? formatDineInTimeDisplay(order) : t('dineIn'))
       : formatPickupTimeDisplay(order.time);
     const etaDisplay = isDineIn ? formatDineInElapsedTime(order) : formatEta(order.time);
 
@@ -204,7 +204,7 @@ function renderListRight(orders) {
       : "";
 
     const pickupDisplay = isDineIn
-      ? (formatPickupTimeDisplay(order.time) !== '-' ? formatPickupTimeDisplay(order.time) : t('dineIn'))
+      ? (formatDineInTimeDisplay(order) !== '-' ? formatDineInTimeDisplay(order) : t('dineIn'))
       : formatPickupTimeDisplay(order.time);
     const etaDisplay = isDineIn ? formatDineInElapsedTime(order) : formatEta(order.time);
 

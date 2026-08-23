@@ -115,9 +115,30 @@ function parsePickupTimeMs(timeStr, createdAtMs) {
   return Number(createdAtMs) || NaN;
 }
 
+function getOrderEffectiveDineInTimeMs(order) {
+  if (!order) return Date.now();
+  const appended = order.lastAppendedAt || order.last_appended_at;
+  if (appended) {
+    const ms = typeof appended === "number" ? appended : new Date(String(appended).includes("Z") ? appended : appended + "Z").getTime();
+    if (!Number.isNaN(ms) && ms > 0) return ms;
+  }
+  if (order.createdAt && !Number.isNaN(Number(order.createdAt))) {
+    return Number(order.createdAt);
+  }
+  if (order.time) {
+    const ms = parsePickupTimeMs(order.time);
+    if (!Number.isNaN(ms)) return ms;
+  }
+  return Date.now();
+}
+
 function sortByPickupTimeAsc(a, b) {
-  const at = parsePickupTimeMs(a?.time, a?.createdAt);
-  const bt = parsePickupTimeMs(b?.time, b?.createdAt);
+  const isADineIn = typeof isOrderDineIn === "function" ? isOrderDineIn(a) : a?.diningOption === "dine_in";
+  const isBDineIn = typeof isOrderDineIn === "function" ? isOrderDineIn(b) : b?.diningOption === "dine_in";
+
+  const at = isADineIn ? getOrderEffectiveDineInTimeMs(a) : parsePickupTimeMs(a?.time, a?.createdAt);
+  const bt = isBDineIn ? getOrderEffectiveDineInTimeMs(b) : parsePickupTimeMs(b?.time, b?.createdAt);
+
   if (Number.isNaN(at) && Number.isNaN(bt)) return (a?.createdAt || 0) - (b?.createdAt || 0);
   if (Number.isNaN(at)) return (a?.createdAt || 0) - bt;
   if (Number.isNaN(bt)) return at - (b?.createdAt || 0);
@@ -138,18 +159,40 @@ function formatEta(timeStr) {
 }
 
 function formatDineInElapsedTime(order) {
-  let createdMs = order?.createdAt;
-  if (!createdMs && order?.time) {
-    createdMs = parsePickupTimeMs(order.time);
+  const roundCount = Number(order?.round_count || order?.roundCount) || 1;
+  const isAppended = roundCount > 1 || Boolean(order?.lastAppendedAt || order?.last_appended_at);
+  const refMs = getOrderEffectiveDineInTimeMs(order);
+
+  if (!refMs || Number.isNaN(refMs)) {
+    return isAppended ? t("dineInAppendedJustNow") : t("dineInElapsedJustNow");
   }
-  if (!createdMs || Number.isNaN(createdMs)) return t("dineInElapsedJustNow");
-  const diffMs = Date.now() - createdMs;
+  const diffMs = Date.now() - refMs;
   const diffMin = Math.floor(diffMs / 60000);
-  if (diffMin <= 0) return t("dineInElapsedJustNow");
-  if (diffMin < 60) return t("dineInElapsedMinutes", { min: diffMin });
+  if (diffMin <= 0) {
+    return isAppended ? t("dineInAppendedJustNow") : t("dineInElapsedJustNow");
+  }
+  if (diffMin < 60) {
+    return isAppended ? t("dineInAppendedMinutes", { min: diffMin }) : t("dineInElapsedMinutes", { min: diffMin });
+  }
   const h = Math.floor(diffMin / 60);
   const m = diffMin % 60;
-  return t("dineInElapsedHours", { h, m });
+  return isAppended ? t("dineInAppendedHours", { h, m }) : t("dineInElapsedHours", { h, m });
+}
+
+function formatDineInTimeDisplay(order) {
+  if (!order) return "-";
+  const roundCount = Number(order?.round_count || order?.roundCount) || 1;
+  const appended = order.lastAppendedAt || order.last_appended_at;
+  if (roundCount > 1 && appended) {
+    const appendedMs = typeof appended === "number" ? appended : new Date(String(appended).includes("Z") ? appended : appended + "Z").getTime();
+    if (!Number.isNaN(appendedMs) && appendedMs > 0) {
+      const d = new Date(appendedMs + 8 * 3600000);
+      const hh = String(d.getUTCHours()).padStart(2, "0");
+      const mm = String(d.getUTCMinutes()).padStart(2, "0");
+      return `${hh}:${mm}`;
+    }
+  }
+  return formatPickupTimeDisplay(order.time);
 }
 
 function shortItems(content) {

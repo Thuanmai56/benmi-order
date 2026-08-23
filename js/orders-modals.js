@@ -12,9 +12,17 @@ function openReview(orderKey) {
   }
 
   const isDineIn = typeof isOrderDineIn === "function" ? isOrderDineIn(order) : order.diningOption === "dine_in";
+  const roundCount = Number(order.round_count || order.roundCount) || 1;
+  const isAppended = isDineIn && (roundCount > 1 || Boolean(order.lastAppendedAt || order.last_appended_at));
 
   const elPickLabel = document.getElementById("i18n-label-pickup");
-  if (elPickLabel) elPickLabel.innerText = isDineIn ? t("dineInTimeLabel") : t("labelPickup");
+  if (elPickLabel) {
+    if (isDineIn) {
+      elPickLabel.innerText = isAppended ? t("dineInAppendedTimeLabel") : t("dineInTimeLabel");
+    } else {
+      elPickLabel.innerText = t("labelPickup");
+    }
+  }
   const elEtaLabel = document.getElementById("i18n-label-eta");
   if (elEtaLabel) elEtaLabel.innerText = isDineIn ? t("dineInElapsedHeader") : t("labelEta");
 
@@ -23,7 +31,7 @@ function openReview(orderKey) {
   const elCust = document.getElementById("review-customer");
   if (elCust) elCust.innerText = order.customer || "-";
   const elPick = document.getElementById("review-pickup");
-  if (elPick) elPick.innerText = formatPickupTimeDisplay(order.time);
+  if (elPick) elPick.innerText = isDineIn ? formatDineInTimeDisplay(order) : formatPickupTimeDisplay(order.time);
   const elEta = document.getElementById("review-eta");
   if (elEta) {
     elEta.innerText = isDineIn ? formatDineInElapsedTime(order) : formatEta(order.time);

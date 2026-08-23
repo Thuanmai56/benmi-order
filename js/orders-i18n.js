@@ -86,7 +86,11 @@ const I18N = {
     dineInElapsedJustNow: "剛剛下單",
     dineInElapsedMinutes: "{min} 分鐘前下單",
     dineInElapsedHours: "{h} 小時 {m} 分前下單",
+    dineInAppendedJustNow: "剛剛加點",
+    dineInAppendedMinutes: "{min} 分鐘前加點",
+    dineInAppendedHours: "{h} 小時 {m} 分前加點",
     dineInTimeLabel: "點餐時間",
+    dineInAppendedTimeLabel: "加點時間",
     dineInElapsedHeader: "下單進度",
     // Alert modal
     alertTitle: "{count} 單 新訂單",
@@ -393,7 +397,11 @@ const I18N = {
     dineInElapsedJustNow: "Vừa gửi đơn",
     dineInElapsedMinutes: "Gửi đơn {min} phút trước",
     dineInElapsedHours: "Gửi đơn {h} giờ {m} phút trước",
+    dineInAppendedJustNow: "Vừa gọi thêm",
+    dineInAppendedMinutes: "Gọi thêm {min} phút trước",
+    dineInAppendedHours: "Gọi thêm {h} giờ {m} phút trước",
     dineInTimeLabel: "Thời gian gửi đơn",
+    dineInAppendedTimeLabel: "Thời gian gọi thêm",
     dineInElapsedHeader: "Thời gian đã qua",
     // Alert modal
     alertTitle: "{count} Đơn hàng mới",
