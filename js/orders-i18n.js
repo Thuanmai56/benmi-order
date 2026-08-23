@@ -9,9 +9,31 @@ const I18N = {
     brandSub: "即時訂單",
     tabLive: "即時",
     tabHistory: "歷史",
+    tabReports: "報表",
     tabSound: "測試音效",
     tabMenu: "菜單",
     tabSettings: "設定",
+    reportsTitle: "餐點銷量與營收分析",
+    reportsSub: "即時統計門市各品項銷售數據與加料偏好",
+    rangeToday: "今天",
+    range7d: "近 7 天",
+    range30d: "近 30 天",
+    kpiTopItem: "🏆 熱銷第一名",
+    kpiTotalSold: "📦 總銷售份數",
+    kpiTotalRevenue: "💰 餐點總營收",
+    kpiTotalOrders: "🧾 成交訂單數",
+    completedOrdersSub: "已完成 / 已結帳",
+    tableTitle: "品項銷售明細排行榜",
+    colRank: "排名",
+    colItem: "品項名稱",
+    colCategory: "分類",
+    colQuantity: "銷量",
+    colSales: "營收",
+    colRatio: "佔比",
+    colOptions: "熱門加料與選項",
+    itemUnit: "品項",
+    portionUnit: "份",
+    emptyReports: "此期間尚無銷售數據",
     panelLeftTitle: "待處理",
     panelLeftSub: "近 → 遠 (依取餐時間)",
     panelRightTitle: "已接單",
@@ -294,9 +316,31 @@ const I18N = {
     brandSub: "Đơn hàng trực tiếp",
     tabLive: "Trực tiếp",
     tabHistory: "Lịch sử",
-    tabSound: "Test âm thanh",
+    tabReports: "Báo cáo",
+    tabSound: "Thử âm thanh",
     tabMenu: "Thực đơn",
     tabSettings: "Cài đặt",
+    reportsTitle: "Phân tích doanh số & Doanh thu món",
+    reportsSub: "Thống kê thời gian thực doanh số từng món và tùy biến",
+    rangeToday: "Hôm nay",
+    range7d: "7 ngày qua",
+    range30d: "30 ngày qua",
+    kpiTopItem: "🏆 Top 1 Bán chạy nhất",
+    kpiTotalSold: "📦 Tổng phần đã bán",
+    kpiTotalRevenue: "💰 Tổng doanh thu món",
+    kpiTotalOrders: "🧾 Tổng đơn thành công",
+    completedOrdersSub: "Đã xong / Đã thanh toán",
+    tableTitle: "Bảng xếp hạng chi tiết món bán",
+    colRank: "Hạng",
+    colItem: "Tên món",
+    colCategory: "Danh mục",
+    colQuantity: "Số lượng",
+    colSales: "Doanh thu",
+    colRatio: "Tỷ trọng",
+    colOptions: "Tùy chọn / Topping chọn nhiều",
+    itemUnit: "món",
+    portionUnit: "phần",
+    emptyReports: "Không có dữ liệu bán hàng trong khoảng thời gian này",
     panelLeftTitle: "Chờ xử lý",
     panelLeftSub: "Gần → xa (theo giờ lấy)",
     panelRightTitle: "Đã nhận đơn",
@@ -636,12 +680,38 @@ function applyLanguageToDOM() {
   if (tabLive) tabLive.innerText = dict.tabLive;
   const tabHistory = document.getElementById("tab-history");
   if (tabHistory) tabHistory.innerText = dict.tabHistory;
+  const tabReports = document.getElementById("tab-reports");
+  if (tabReports) tabReports.innerText = dict.tabReports;
   const tabSound = document.getElementById("tab-sound");
   if (tabSound) tabSound.innerText = dict.tabSound;
   const tabMenu = document.getElementById("tab-menu");
   if (tabMenu) tabMenu.innerText = dict.tabMenu;
   const tabSettings = document.getElementById("tab-settings");
   if (tabSettings) tabSettings.innerText = dict.tabSettings;
+
+  // View Reports Elements
+  const repTitle = document.getElementById("i18n-reports-title");
+  if (repTitle) repTitle.innerText = dict.reportsTitle;
+  const repSub = document.getElementById("i18n-reports-sub");
+  if (repSub) repSub.innerText = dict.reportsSub;
+  const rngToday = document.getElementById("i18n-range-today");
+  if (rngToday) rngToday.innerText = dict.rangeToday;
+  const rng7d = document.getElementById("i18n-range-7d");
+  if (rng7d) rng7d.innerText = dict.range7d;
+  const rng30d = document.getElementById("i18n-range-30d");
+  if (rng30d) rng30d.innerText = dict.range30d;
+  const kpiTopItem = document.getElementById("i18n-kpi-top-item");
+  if (kpiTopItem) kpiTopItem.innerText = dict.kpiTopItem;
+  const kpiTotalSold = document.getElementById("i18n-kpi-total-sold");
+  if (kpiTotalSold) kpiTotalSold.innerText = dict.kpiTotalSold;
+  const kpiTotalRev = document.getElementById("i18n-kpi-total-revenue");
+  if (kpiTotalRev) kpiTotalRev.innerText = dict.kpiTotalRevenue;
+  const kpiTotalOrders = document.getElementById("i18n-kpi-total-orders");
+  if (kpiTotalOrders) kpiTotalOrders.innerText = dict.kpiTotalOrders;
+  const compOrdersSub = document.getElementById("i18n-completed-orders-sub");
+  if (compOrdersSub) compOrdersSub.innerText = dict.completedOrdersSub;
+  const repTblTitle = document.getElementById("i18n-table-title");
+  if (repTblTitle) repTblTitle.innerText = dict.tableTitle;
 
   // View Live Headers
   const leftTitle = document.getElementById("i18n-left-title");

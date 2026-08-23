@@ -10,6 +10,7 @@ import { debugKV } from './modules/debug';
 import { resolveTenantContext } from './modules/tenant';
 import { handleAdminRoute } from './modules/admin';
 import { getTenantBootstrap } from './modules/bootstrap';
+import { getItemAnalyticsReport } from './modules/reports';
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -59,6 +60,7 @@ export default {
     if (request.method === "GET" && path === "/api/orders/history-summary") return getHistorySummary(request, env);
     if (request.method === "GET" && path === "/api/orders/by-date") return getOrdersByDate(request, env);
     if (request.method === "GET" && path === "/api/orders/history-all") return getHistoryAll(request, env);
+    if (request.method === "GET" && path === "/api/reports/items-analytics") return getItemAnalyticsReport(request, env);
     if (request.method === "GET" && path === "/api/config") return getConfig(request, env, tenantCtx);
     if (request.method === "POST" && path === "/api/config") return updateConfig(request, env, tenantCtx);
     if (request.method === "GET" && path === "/api/menu") return getMenu(request, env);

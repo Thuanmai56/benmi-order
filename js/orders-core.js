@@ -210,12 +210,25 @@ function formatOrderTotal(order) {
 
 function switchTab(tab) {
   activeTab = tab;
-  document.getElementById("tab-live").classList.toggle("active", tab === "live");
-  document.getElementById("tab-history").classList.toggle("active", tab === "history");
-  document.getElementById("view-live").style.display = tab === "live" ? "block" : "none";
-  document.getElementById("view-history").style.display = tab === "history" ? "block" : "none";
-  document.getElementById("view-settings").style.display = "none";
-  document.getElementById("view-menu").style.display = "none";
+  const tabLive = document.getElementById("tab-live");
+  const tabHistory = document.getElementById("tab-history");
+  const tabReports = document.getElementById("tab-reports");
+  if (tabLive) tabLive.classList.toggle("active", tab === "live");
+  if (tabHistory) tabHistory.classList.toggle("active", tab === "history");
+  if (tabReports) tabReports.classList.toggle("active", tab === "reports");
+
+  const viewLive = document.getElementById("view-live");
+  const viewHistory = document.getElementById("view-history");
+  const viewReports = document.getElementById("view-reports");
+  const viewSettings = document.getElementById("view-settings");
+  const viewMenu = document.getElementById("view-menu");
+
+  if (viewLive) viewLive.style.display = tab === "live" ? "block" : "none";
+  if (viewHistory) viewHistory.style.display = tab === "history" ? "block" : "none";
+  if (viewReports) viewReports.style.display = tab === "reports" ? "block" : "none";
+  if (viewSettings) viewSettings.style.display = "none";
+  if (viewMenu) viewMenu.style.display = "none";
+
   if (tab === "live") {
     renderAll();
   } else if (tab === "history") {
@@ -223,6 +236,10 @@ function switchTab(tab) {
       fetchHistoryOrders();
     } else if (typeof renderHistory === "function") {
       renderHistory(typeof lastHistoryOrders !== "undefined" ? lastHistoryOrders : []);
+    }
+  } else if (tab === "reports") {
+    if (typeof fetchReportData === "function") {
+      fetchReportData(typeof currentReportRange !== "undefined" ? currentReportRange : "today");
     }
   }
 }

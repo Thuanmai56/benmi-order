@@ -1,5 +1,5 @@
 import { Env } from '../types/env';
-import { Order, DiningOption, AppendOrderPayload } from '../types/index';
+import { Order, DiningOption, AppendOrderPayload, OrderItemInput } from '../types/index';
 import { corsHeaders, json } from '../utils/http';
 import { syncToGoogleSheets } from '../integrations/googleSheets';
 import { pushLineMessage, pushLineFlexMessage, buildOrderFlexMessage, buildAppendConfirmationFlexMessage } from './line';
@@ -17,6 +17,28 @@ function jsonWithETag(data: any, version: string, status: number = 200): Respons
       "ETag": `"${version}"`,
     },
   });
+}
+
+export function formatItemsToText(items: OrderItemInput[]): string {
+  if (!items || items.length === 0) return "";
+  return items.map(item => {
+    const qty = Number(item.quantity) || 1;
+    let line = `${qty}份 x ${item.name}`;
+    const rawOptions = item.options || item.selected_options;
+    const options: any[] = Array.isArray(rawOptions) ? rawOptions : (typeof rawOptions === 'string' ? JSON.parse(rawOptions || '[]') : []);
+    if (options.length > 0) {
+      const optLines = options.map((opt: any) => {
+        const choice = opt.choice || opt.name || (typeof opt === 'string' ? opt : "");
+        const priceExtra = opt.price && Number(opt.price) > 0 ? ` (+$${opt.price})` : "";
+        return `  - ${choice}${priceExtra}`;
+      }).join("\n");
+      line += `\n${optLines}`;
+    }
+    if (item.note || item.notes) {
+      line += `\n  - 備註: ${item.note || item.notes}`;
+    }
+    return line;
+  }).join("\n");
 }
 
 export const ORDER_INDEX_LATEST = "order_index:latest";
@@ -51,6 +73,7 @@ export async function createOrder(
   const tableNumber = data.table_number || data.tableNumber || null;
   const userId = data.userId;
   const parentOrderKey = data.parent_order_key || data.parentOrderKey || null;
+  const rawItems: OrderItemInput[] = Array.isArray(data.items) ? data.items : [];
 
   // Nếu client chủ động truyền parent_order_key thì chuyển sang xử lý append
   if (parentOrderKey && env.DB) {
@@ -58,21 +81,27 @@ export async function createOrder(
       env,
       tenantId,
       parentOrderKey,
-      data.content,
+      data.content || formatItemsToText(rawItems),
       Number(data.total) || 0,
       data.note || "",
       userId,
       data.customer,
+      rawItems,
       ctx,
       tenantCtx
     );
+  }
+
+  let orderContent = String(data.content || "").trim();
+  if (!orderContent && rawItems.length > 0) {
+    orderContent = formatItemsToText(rawItems);
   }
 
   const order: Order = {
     key: orderKey,
     customer: data.customer || "顧客",
     time: cleanTime,
-    content: data.content,
+    content: orderContent,
     status: "NEW",
     createdAt: Date.now(),
     userId: data.userId,
@@ -85,7 +114,69 @@ export async function createOrder(
     round_count: 1
   };
 
-  await saveOrder(env, order, tenantId);
+  if (rawItems.length > 0 && env.DB) {
+    const batchStatements: any[] = [
+      env.DB.prepare(
+        `INSERT INTO orders (key, tenant_id, user_id, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, round_count, last_appended_at, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, 'NEW', ?, ?, ?, ?, ?, ?, 1, NULL, datetime(?, 'unixepoch'), datetime('now'))
+         ON CONFLICT(key) DO UPDATE SET
+           status = CASE
+             WHEN orders.status IN ('ACCEPTED', 'DONE', 'REJECTED', 'PICKED_UP', 'PAID') AND excluded.status = 'NEW'
+             THEN orders.status
+             ELSE excluded.status
+           END,
+           pickup_time = excluded.pickup_time,
+           customer_name = CASE WHEN excluded.customer_name != 'Khách (Web)' THEN excluded.customer_name ELSE orders.customer_name END,
+           total_amount = excluded.total_amount,
+           order_content = excluded.order_content,
+           reason = excluded.reason,
+           note = excluded.note,
+           dining_option = excluded.dining_option,
+           table_number = excluded.table_number,
+           round_count = CASE WHEN excluded.round_count > orders.round_count THEN excluded.round_count ELSE orders.round_count END,
+           last_appended_at = CASE WHEN excluded.last_appended_at IS NOT NULL THEN excluded.last_appended_at ELSE orders.last_appended_at END,
+           updated_at = datetime('now')`
+      ).bind(
+        order.key,
+        tenantId,
+        order.userId || null,
+        order.customer,
+        order.time,
+        order.total,
+        order.content,
+        order.reason || "",
+        order.note || "",
+        order.diningOption || "takeaway",
+        order.tableNumber || null,
+        Math.floor((order.createdAt || Date.now()) / 1000)
+      ),
+      ...rawItems.map(item => {
+        const itemQty = Number(item.quantity) || 1;
+        const unitPrice = Number(item.price || item.unit_price) || 0;
+        const subtotal = Number(item.subtotal) || (unitPrice * itemQty);
+        const optionsJson = JSON.stringify(item.options || item.selected_options || []);
+        const itemNote = item.note || item.notes || "";
+        return env.DB.prepare(
+          `INSERT INTO order_items (tenant_id, order_key, round_number, item_id, item_name, category_name, quantity, unit_price, subtotal, selected_options, notes, created_at)
+           VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+        ).bind(
+          tenantId,
+          order.key,
+          item.itemId || item.item_id || null,
+          item.name || "Món",
+          item.category || item.category_name || null,
+          itemQty,
+          unitPrice,
+          subtotal,
+          optionsJson,
+          itemNote
+        );
+      })
+    ];
+    await env.DB.batch(batchStatements);
+  } else {
+    await saveOrder(env, order, tenantId);
+  }
 
   return json({ success: true, key: orderKey });
 }
@@ -99,10 +190,16 @@ export async function executeAppendOrderInternal(
   note: string,
   userId?: string,
   customerName?: string,
+  items?: OrderItemInput[],
   ctx?: ExecutionContext,
   tenantCtx?: TenantContext | null
 ): Promise<Response> {
-  if (!parentKey || !appendedContent || appendedTotal <= 0) {
+  const rawItems: OrderItemInput[] = Array.isArray(items) ? items : [];
+  if (!appendedContent && rawItems.length > 0) {
+    appendedContent = formatItemsToText(rawItems);
+  }
+
+  if (!parentKey || (!appendedContent && rawItems.length === 0) || appendedTotal <= 0) {
     return json({ error: "參數不完整 / Incomplete parameters", code: "INVALID_PARAMS" }, 400);
   }
 
@@ -150,24 +247,71 @@ export async function executeAppendOrderInternal(
   const newTotal = (Number(row.total_amount) || 0) + appendedTotal;
 
   // 6. Persist to D1: Luôn chuyển trạng thái về ACCEPTED (kể cả đơn cũ đang là DONE) để POS & Bếp thấy món mới
-  await env.DB.prepare(
-    `UPDATE orders SET
-       order_content = ?,
-       total_amount = ?,
-       status = 'ACCEPTED',
-       round_count = ?,
-       last_appended_at = datetime('now'),
-       note = ?,
-       updated_at = datetime('now')
-     WHERE key = ? AND tenant_id = ?`
-  ).bind(
-    updatedContent,
-    newTotal,
-    nextRound,
-    combinedNote,
-    parentKey,
-    tenantId
-  ).run();
+  if (rawItems.length > 0) {
+    const batchStatements: any[] = [
+      env.DB.prepare(
+        `UPDATE orders SET
+           order_content = ?,
+           total_amount = ?,
+           status = 'ACCEPTED',
+           round_count = ?,
+           last_appended_at = datetime('now'),
+           note = ?,
+           updated_at = datetime('now')
+         WHERE key = ? AND tenant_id = ?`
+      ).bind(
+        updatedContent,
+        newTotal,
+        nextRound,
+        combinedNote,
+        parentKey,
+        tenantId
+      ),
+      ...rawItems.map(item => {
+        const itemQty = Number(item.quantity) || 1;
+        const unitPrice = Number(item.price || item.unit_price) || 0;
+        const subtotal = Number(item.subtotal) || (unitPrice * itemQty);
+        const optionsJson = JSON.stringify(item.options || item.selected_options || []);
+        const itemNote = item.note || item.notes || "";
+        return env.DB.prepare(
+          `INSERT INTO order_items (tenant_id, order_key, round_number, item_id, item_name, category_name, quantity, unit_price, subtotal, selected_options, notes, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+        ).bind(
+          tenantId,
+          parentKey,
+          nextRound,
+          item.itemId || item.item_id || null,
+          item.name || "Món",
+          item.category || item.category_name || null,
+          itemQty,
+          unitPrice,
+          subtotal,
+          optionsJson,
+          itemNote
+        );
+      })
+    ];
+    await env.DB.batch(batchStatements);
+  } else {
+    await env.DB.prepare(
+      `UPDATE orders SET
+         order_content = ?,
+         total_amount = ?,
+         status = 'ACCEPTED',
+         round_count = ?,
+         last_appended_at = datetime('now'),
+         note = ?,
+         updated_at = datetime('now')
+       WHERE key = ? AND tenant_id = ?`
+    ).bind(
+      updatedContent,
+      newTotal,
+      nextRound,
+      combinedNote,
+      parentKey,
+      tenantId
+    ).run();
+  }
 
   // 7. Construct updated order object for notification & response
   const updatedOrder: Order = {
@@ -218,7 +362,8 @@ export async function appendOrder(
     const payload: AppendOrderPayload = await request.json();
     const tenantId = tenantCtx?.tenantId || payload.tenant_id || getTenantId(request);
     const parentKey = payload.parent_order_key;
-    const appendedContent = payload.appended_content;
+    const rawItems: OrderItemInput[] = Array.isArray(payload.items) ? payload.items : (Array.isArray(payload.appended_items) ? payload.appended_items : []);
+    const appendedContent = payload.appended_content || formatItemsToText(rawItems);
     const appendedTotal = Number(payload.appended_total) || 0;
     const note = payload.note ? String(payload.note).trim() : "";
     const userId = payload.user_id;
@@ -233,6 +378,7 @@ export async function appendOrder(
       note,
       userId,
       customerName,
+      rawItems,
       ctx,
       tenantCtx
     );

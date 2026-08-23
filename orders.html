@@ -110,6 +110,7 @@
       <div class="tabs">
         <button class="tab active" id="tab-live" onclick="switchTab('live')">即時</button>
         <button class="tab" id="tab-history" onclick="switchTab('history')">歷史</button>
+        <button class="tab" id="tab-reports" onclick="switchTab('reports')">報表</button>
         <button class="mini-btn" id="tab-menu" onclick="openMenuSettings()">菜單</button>
         <button class="mini-btn" id="tab-settings" onclick="openSettings()">設定</button>
         <!-- Custom Language Dropdown -->
@@ -200,6 +201,67 @@
         </div>
         <div class="panel-body" id="list-history" style="padding: 12px 14px; display: flex; flex-direction: column; gap: 12px;">
           <div style="text-align:center; padding: 22px; color:#999;" id="list-history-loading">載入中...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reports / Item Analytics Panel -->
+    <div class="content" id="view-reports" style="display:none; max-width:1240px; margin:0 auto; padding:18px 16px 60px;">
+      <!-- Header with Time Range Selector -->
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
+        <div>
+          <h2 style="font-size:22px; font-weight:900; color:var(--text, #1e293b); margin:0 0 4px;" id="i18n-reports-title">餐點銷量與營收分析</h2>
+          <p style="font-size:13.5px; color:var(--muted, #64748b); margin:0;" id="i18n-reports-sub">即時統計門市各品項銷售數據與加料偏好</p>
+        </div>
+        
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div class="report-range-group" style="display:flex; background:#e2e8f0; padding:4px; border-radius:12px; gap:4px;">
+            <button type="button" class="report-range-btn active" data-range="today" onclick="selectReportRange('today')" id="i18n-range-today" style="border:none; padding:7px 14px; border-radius:8px; font-size:14px; font-weight:900; background:var(--primary, #00b900); color:#fff; cursor:pointer;">今天</button>
+            <button type="button" class="report-range-btn" data-range="7d" onclick="selectReportRange('7d')" id="i18n-range-7d" style="border:none; padding:7px 14px; border-radius:8px; font-size:14px; font-weight:600; background:transparent; color:var(--text, #1e293b); cursor:pointer;">近 7 天</button>
+            <button type="button" class="report-range-btn" data-range="30d" onclick="selectReportRange('30d')" id="i18n-range-30d" style="border:none; padding:7px 14px; border-radius:8px; font-size:14px; font-weight:600; background:transparent; color:var(--text, #1e293b); cursor:pointer;">近 30 天</button>
+          </div>
+          <button type="button" class="btn btn-ghost" onclick="refreshReportData()" style="padding:8px 12px; border-radius:10px; border:1px solid #cbd5e1; background:#fff; cursor:pointer;" title="Refresh">
+            <span>🔄</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- KPI Summary Cards -->
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px; margin-bottom:24px;">
+        <div class="kpi-card" style="background:#ffffff; border:1.5px solid #e2e8f0; border-radius:16px; padding:18px 20px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+          <div style="font-size:13px; font-weight:800; color:#64748b; margin-bottom:6px;" id="i18n-kpi-top-item">🏆 熱銷第一名</div>
+          <div style="font-size:22px; font-weight:1000; color:#1e293b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" id="kpi-top-item-name">-</div>
+          <div style="font-size:13px; color:#10b981; font-weight:700; margin-top:4px;" id="kpi-top-item-sales">-</div>
+        </div>
+
+        <div class="kpi-card" style="background:#ffffff; border:1.5px solid #e2e8f0; border-radius:16px; padding:18px 20px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+          <div style="font-size:13px; font-weight:800; color:#64748b; margin-bottom:6px;" id="i18n-kpi-total-sold">📦 總銷售份數</div>
+          <div style="font-size:26px; font-weight:1000; color:#0284c7;" id="kpi-total-sold">0</div>
+          <div style="font-size:12px; color:#94a3b8; margin-top:4px;" id="kpi-date-range">-</div>
+        </div>
+
+        <div class="kpi-card" style="background:#ffffff; border:1.5px solid #e2e8f0; border-radius:16px; padding:18px 20px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+          <div style="font-size:13px; font-weight:800; color:#64748b; margin-bottom:6px;" id="i18n-kpi-total-revenue">💰 餐點總營收</div>
+          <div style="font-size:26px; font-weight:1000; color:#16a34a;" id="kpi-total-revenue">$0</div>
+          <div style="font-size:12px; color:#94a3b8; margin-top:4px;">Doanh thu món bán</div>
+        </div>
+
+        <div class="kpi-card" style="background:#ffffff; border:1.5px solid #e2e8f0; border-radius:16px; padding:18px 20px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+          <div style="font-size:13px; font-weight:800; color:#64748b; margin-bottom:6px;" id="i18n-kpi-total-orders">🧾 成交訂單數</div>
+          <div style="font-size:26px; font-weight:1000; color:#7c3aed;" id="kpi-total-orders">0</div>
+          <div style="font-size:12px; color:#94a3b8; margin-top:4px;" id="i18n-completed-orders-sub">已完成 / 已結帳</div>
+        </div>
+      </div>
+
+      <!-- Item Sales Table Container -->
+      <div style="background:#ffffff; border:1.5px solid #e2e8f0; border-radius:18px; overflow:hidden; box-shadow:0 2px 6px rgba(0,0,0,0.03);">
+        <div style="padding:16px 20px; border-bottom:1.5px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:16px; font-weight:900; color:#1e293b;" id="i18n-table-title">品項銷售明細排行榜</span>
+          <span style="font-size:13px; color:#64748b; font-weight:700;" id="reports-item-count">0 品項</span>
+        </div>
+
+        <div id="reports-table-container" style="overflow-x:auto;">
+          <!-- Dynamically Rendered Table -->
         </div>
       </div>
     </div>
@@ -919,12 +981,13 @@
   </div>
 
   <!-- Benmi POS Modular Architecture Scripts -->
-  <script src="js/orders-i18n.js?v=20260823_dinein_paid_1"></script>
-  <script src="js/orders-core.js?v=20260823_dinein_paid_1"></script>
+  <script src="js/orders-i18n.js?v=20260823_item_analytics_1"></script>
+  <script src="js/orders-core.js?v=20260823_item_analytics_1"></script>
   <script src="js/orders-audio.js?v=20260822_feat_announcement_1"></script>
   <script src="js/orders-live.js?v=20260823_dinein_paid_2"></script>
   <script src="js/orders-modals.js?v=20260823_dinein_paid_1"></script>
   <script src="js/orders-history.js?v=20260823_dinein_paid_1"></script>
+  <script src="js/orders-reports.js?v=20260823_item_analytics_1"></script>
   <script src="js/orders-settings.js?v=20260823_dinein_feat_1"></script>
   <script src="js/orders-menu.js?v=20260823_cat_mod_picker_1"></script>
 

@@ -436,6 +436,82 @@ function formatAppendItemsOnlyText() {
     return lines.join('\n');
 }
 
+// 8.3 Xây dựng mảng items có cấu trúc để phục vụ lưu trữ CSDL & Báo cáo
+function buildStructuredCartItems() {
+    const items = [];
+    for (let key in cart) {
+        if (cart[key] > 0) {
+            const { catSlug, origName } = parseCartKey(key);
+            const qty = cart[key];
+            
+            let basePrice = 0;
+            let categoryName = catSlug || "Món";
+            if (typeof bootstrapData !== 'undefined' && bootstrapData && bootstrapData.catalog) {
+                for (const cat of bootstrapData.catalog) {
+                    if (cat.items) {
+                        for (const itm of cat.items) {
+                            if (itm.name === origName || itm.id === key) {
+                                basePrice = Number(itm.price) || 0;
+                                categoryName = cat.name || catSlug;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            const options = [];
+            const cust = customizeData[key];
+            if (cust && Array.isArray(cust)) {
+                cust.slice(0, qty).forEach((c, idx) => {
+                    if (!c) return;
+                    if (c.single) {
+                        for (let s in c.single) {
+                            if (c.single[s] && c.single[s] !== '不辣' && c.single[s] !== '不需要') {
+                                options.push({ group: s, choice: c.single[s], price: 0 });
+                            }
+                        }
+                    }
+                    if (c.multiple) {
+                        for (let t in c.multiple) {
+                            if (c.multiple[t]) {
+                                options.push({ group: '加料', choice: `加${t}`, price: 0 });
+                            }
+                        }
+                    }
+                    if (c.topping && c.topping !== '') {
+                        options.push({ group: '加料', choice: `加${c.topping}`, price: 0 });
+                    }
+                    if (c.spicy && c.spicy !== '不辣') {
+                        options.push({ group: '辣度', choice: c.spicy, price: 0 });
+                    }
+                    if (c.customText && c.customText.trim() !== '') {
+                        options.push({ group: '備註', choice: c.customText.trim(), price: 0 });
+                    }
+                });
+            }
+
+            if (catSlug === 'combo' && comboDrinkData[origName]) {
+                const drinks = comboDrinkData[origName].slice(0, qty);
+                drinks.forEach(d => {
+                    options.push({ group: '飲料', choice: d, price: 0 });
+                });
+            }
+
+            items.push({
+                itemId: key,
+                name: origName,
+                category: categoryName,
+                quantity: qty,
+                price: basePrice,
+                subtotal: basePrice * qty,
+                options: options
+            });
+        }
+    }
+    return items;
+}
+
 // 9. Thực thi gửi đơn hàng với Timeout 8s & Bảo vệ nút bấm
 async function submitOrder() {
     if (isSubmitting) return;
@@ -454,7 +530,6 @@ async function submitOrder() {
     let timeInput = "";
 
     if (isDineIn) {
-        // Chỉ bắt buộc nhập số bàn khi tạo đơn mới (KHÔNG yêu cầu khi gọi thêm món vì đã gắn theo đơn cũ)
         if (!window.isAppendMode) {
             const tableInput = document.getElementById('dinein-table-number');
             const tableNumber = tableInput ? tableInput.value.trim() : '';
@@ -486,12 +561,10 @@ async function submitOrder() {
             return;
         }
     } else if (!isScheduledEnabled) {
-        // Tắt hẹn giờ cho 外帶 -> Lấy ngày giờ thực tế
         const { dateStr, timeStr } = formatTaiwanDateTime(twNow);
         dateInput = dateStr;
         timeInput = timeStr;
 
-        // Nếu quán đang đóng cửa -> Hỏi xác nhận đặt trước
         if (!isStoreOpen(twNow)) {
             const nextInfo = getNextOpeningInfo(twNow);
             customConfirm(
@@ -505,7 +578,6 @@ async function submitOrder() {
             return;
         }
     } else {
-        // Bật hẹn giờ cho 外帶 -> Yêu cầu chọn ngày & giờ
         dateInput = document.getElementById('pickup-date') ? document.getElementById('pickup-date').value : '';
         timeInput = document.getElementById('pickup-time') ? document.getElementById('pickup-time').value : '';
 
@@ -518,8 +590,14 @@ async function submitOrder() {
         const [pHour, pMin] = timeInput.split(':').map(Number);
         const selectedDateTime = new Date(pYear, pMonth - 1, pDay, pHour, pMin, 0);
 
-        if (selectedDateTime < twNow) {
-            return customAlert('不能選擇過去的時間，請重新選擇取餐時間');
+        const diffMinutes = (selectedDateTime.getTime() - twNow.getTime()) / (1000 * 60);
+
+        if (diffMinutes < -5) {
+            return customAlert('取餐時間不能早於當前時間');
+        }
+
+        if (!isPickupTimeValid(selectedDateTime)) {
+            return customAlert('所選的取餐時間非營業時間，請重新選擇！');
         }
 
         if (storeConfig && storeConfig.storeStatus === 'busy') {
@@ -537,14 +615,10 @@ async function submitOrder() {
     doSubmitOrderExecution(dateInput, timeInput);
 }
 
-// 10. Thực thi API Create Order
+// 10. Hàm nội bộ thực thi POST dữ liệu
 async function doSubmitOrderExecution(dateInput, timeInput) {
-    if (isSubmitting) return;
-
-    const submitBtn = document.getElementById('btn-submit');
     isSubmitting = true;
-    let orderSubmittedSuccessfully = false;
-
+    const submitBtn = document.getElementById('submit-btn');
     if (submitBtn) {
         submitBtn.disabled = true;
         submitBtn.innerText = '處理中...';
@@ -552,14 +626,12 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
         submitBtn.style.opacity = '0.7';
     }
 
-    // Thiết lập Timeout 8s tự động hủy request nếu mạng đơ
     const abortController = new AbortController();
     const timeoutId = setTimeout(() => abortController.abort(), 8000);
 
     try {
         const tenantId = getTenantIdFromUrl();
 
-        // Kiểm tra đăng nhập LIFF nếu trong môi trường LINE
         if (typeof liff !== 'undefined') {
             try {
                 if (liff.isInClient() && liff.isLoggedIn && !liff.isLoggedIn()) {
@@ -593,6 +665,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
         const isDineIn = (window.currentDiningOption === 'dine_in');
         const tableInput = document.getElementById('dinein-table-number');
         const tableNumber = (isDineIn && tableInput) ? tableInput.value.trim() : '';
+        const structuredItems = buildStructuredCartItems();
 
         // 10.1 Xử lý riêng cho luồng 加點餐點 (Append Mode)
         if (window.isAppendMode && window.parentOrderKey) {
@@ -604,7 +677,8 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                 appended_content: rawItemsText,
                 appended_total: currentTotal,
                 note: mainNote,
-                tenant_id: tenantId
+                tenant_id: tenantId,
+                items: structuredItems
             };
 
             const res = await fetch(`${WORKER_BASE}/api/orders/append?tenant_id=${tenantId}`, {
@@ -624,8 +698,6 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                 throw new Error(errData.error || `API returned status ${res.status}`);
             }
 
-            orderSubmittedSuccessfully = true;
-
             if (submitBtn) {
                 submitBtn.disabled = true;
                 submitBtn.innerText = '加點已送出';
@@ -633,7 +705,6 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                 submitBtn.style.opacity = '0.6';
             }
 
-            // Gửi tin nhắn xác nhận vào chat LINE (Không chứa từ khóa tạo đơn mới để tránh webhook bắt nhầm)
             if (typeof liff !== 'undefined' && liff.isInClient) {
                 try {
                     if (liff.isInClient() && typeof liff.sendMessages === 'function') {
@@ -646,7 +717,6 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                 }
             }
 
-            // Xóa sạch giỏ hàng khi thành công
             cart = {};
             customizeData = {};
             comboDrinkData = {};
@@ -678,6 +748,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
             total: currentTotal,
             note: mainNote,
             tenant_id: tenantId,
+            items: structuredItems,
             liffFallback: false
         };
 
