@@ -61,6 +61,7 @@ async function loadMenuData() {
           title: cat.name,
           type: 'catalog',
           allowCustomization: cat.allowCustomization !== undefined ? cat.allowCustomization : (cat.slug !== 'drinks'),
+          appliedModifiers: cat.appliedModifiers || (cat.allowCustomization === false ? [] : ['*']),
           items: cat.items.map(it => ({
             name: it.name,
             price: it.price,
@@ -164,6 +165,11 @@ function renderMenuCategories() {
   });
 }
 
+function getStoreModifiersList() {
+  if (!currentMenuData) return [];
+  return currentMenuData.filter(c => c.type === 'modifier');
+}
+
 function renderMenuCategoryEditor(index) {
   const renameBtn = document.getElementById("btn-category-rename");
   const deleteBtn = document.getElementById("btn-category-delete");
@@ -186,21 +192,44 @@ function renderMenuCategoryEditor(index) {
   container.innerHTML = "";
 
   if (cat.type === 'catalog') {
-    const isChecked = cat.allowCustomization !== false;
+    const storeModifiers = getStoreModifiersList();
+    const appliedMods = cat.appliedModifiers || (cat.allowCustomization === false ? [] : ['*']);
+
     const toggleDiv = document.createElement("div");
-    toggleDiv.className = "category-customization-toggle";
-    toggleDiv.style.cssText = "display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; background: #f8fafc; padding: 12px 16px; border-radius: 10px; border: 1.5px solid #e2e8f0;";
+    toggleDiv.className = "category-customization-box";
+    toggleDiv.style.cssText = "margin-bottom: 20px; background: #f8fafc; padding: 16px; border-radius: 12px; border: 1.5px solid #e2e8f0;";
+    
+    let modifiersHtml = '';
+    if (storeModifiers.length === 0) {
+      modifiersHtml = `<div style="font-size: 13px; color: #94a3b8; padding: 4px 0;">${t("noModifiersInStore")}</div>`;
+    } else {
+      modifiersHtml = `
+        <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+          <button type="button" class="btn btn-ghost" style="padding: 6px 12px; font-size: 13px; font-weight: 700; background: #fff; border: 1.5px solid #cbd5e1; border-radius: 8px; cursor: pointer;" onclick="selectAllCategoryModifiers(${index}, true)">${t("btnSelectAll")}</button>
+          <button type="button" class="btn btn-ghost" style="padding: 6px 12px; font-size: 13px; font-weight: 700; background: #fff; border: 1.5px solid #cbd5e1; border-radius: 8px; color: #64748b; cursor: pointer;" onclick="selectAllCategoryModifiers(${index}, false)">${t("btnUnselectAll")}</button>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+      `;
+
+      storeModifiers.forEach(mod => {
+        const isModSelected = appliedMods.includes('*') || appliedMods.includes(mod.id);
+        const safeModId = mod.id.replace(/'/g, "\\'");
+        modifiersHtml += `
+          <label style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; min-height: 48px; background: ${isModSelected ? '#ecfdf5' : '#fff'}; border: 1.5px solid ${isModSelected ? '#10b981' : '#cbd5e1'}; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 700; color: ${isModSelected ? '#065f46' : '#475569'}; user-select: none;">
+            <input type="checkbox" ${isModSelected ? 'checked' : ''} style="width: 20px; height: 20px; accent-color: #10b981; cursor: pointer;" onchange="toggleCategoryModifierItem(${index}, '${safeModId}', this.checked)">
+            <span>${escapeHtml(mod.title)}</span>
+          </label>
+        `;
+      });
+      modifiersHtml += `</div>`;
+    }
+
     toggleDiv.innerHTML = `
-      <div style="display: flex; flex-direction: column; gap: 2px;">
-        <div style="font-weight: 800; font-size: 14px; color: #1e293b;" id="i18n-allow-customization-label">${t("allowCustomizationLabel")}</div>
-        <div style="font-size: 12px; color: #64748b;" id="i18n-allow-customization-desc">${t("allowCustomizationDesc")}</div>
+      <div style="margin-bottom: 12px;">
+        <div style="font-weight: 800; font-size: 15px; color: #1e293b;" id="i18n-applied-modifiers-title">${t("appliedModifiersTitle")}</div>
+        <div style="font-size: 12px; color: #64748b; margin-top: 2px;" id="i18n-applied-modifiers-desc">${t("appliedModifiersDesc")}</div>
       </div>
-      <label style="position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; cursor: pointer;">
-        <input type="checkbox" id="cat-allow-customization-toggle" ${isChecked ? 'checked' : ''} style="opacity: 0; width: 0; height: 0;" onchange="toggleCategoryCustomization(${index}, this.checked)">
-        <span style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: ${isChecked ? 'var(--primary, #0284c7)' : '#cbd5e1'}; transition: .3s; border-radius: 24px;">
-          <span style="position: absolute; height: 18px; width: 18px; left: ${isChecked ? '23px' : '3px'}; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%;"></span>
-        </span>
-      </label>
+      ${modifiersHtml}
     `;
     container.appendChild(toggleDiv);
   }
@@ -250,7 +279,7 @@ function renderMenuCategoryEditor(index) {
       <label class="menu-item-price-label">
         <span>$</span>
         <input type="number" class="menu-item-price-input" value="${item.price !== null && item.price !== undefined ? item.price : ''}" data-cidx="${index}" data-iidx="${iIdx}" oninput="markMenuDirty()"
-          placeholder="${t("priceHiddenPlaceholder")}">
+        placeholder="${t("priceHiddenPlaceholder")}">
       </label>
       <label class="menu-item-badge-label" title="標籤 / 推薦 (例如: 雞肉足足100g, 👍 推薦)">
         <span style="font-size:14px; color:#ef4444;">🏷️</span>
@@ -324,7 +353,8 @@ async function saveMenuData(skipConfirm = false) {
     output[cat.id] = {
       __title: cat.title,
       __type: cat.type || 'catalog',
-      __allow_customization: cat.allowCustomization !== false ? 1 : 0
+      __allow_customization: cat.allowCustomization !== false ? 1 : 0,
+      __applied_modifiers: cat.appliedModifiers || (cat.allowCustomization === false ? [] : ['*'])
     };
     cat.items.forEach(item => {
       if (item.name && item.name.trim() !== "" && item.price !== null) {
@@ -360,10 +390,37 @@ async function saveMenuData(skipConfirm = false) {
   }
 }
 
-function toggleCategoryCustomization(catIndex, isChecked) {
+function toggleCategoryModifierItem(catIndex, modId, isChecked) {
   if (!currentMenuData || !currentMenuData[catIndex]) return;
   syncMenuDataFromDOM();
-  currentMenuData[catIndex].allowCustomization = isChecked;
+  const cat = currentMenuData[catIndex];
+  const allMods = getStoreModifiersList().map(m => m.id);
+  
+  let currentList = [];
+  if (!cat.appliedModifiers || cat.appliedModifiers.includes('*')) {
+    currentList = [...allMods];
+  } else {
+    currentList = [...cat.appliedModifiers];
+  }
+
+  if (isChecked) {
+    if (!currentList.includes(modId)) currentList.push(modId);
+  } else {
+    currentList = currentList.filter(id => id !== modId);
+  }
+
+  cat.appliedModifiers = (allMods.length > 0 && currentList.length === allMods.length) ? ['*'] : currentList;
+  cat.allowCustomization = currentList.length > 0;
+  markMenuDirty();
+  renderMenuCategoryEditor(catIndex);
+}
+
+function selectAllCategoryModifiers(catIndex, selectAll) {
+  if (!currentMenuData || !currentMenuData[catIndex]) return;
+  syncMenuDataFromDOM();
+  const cat = currentMenuData[catIndex];
+  cat.appliedModifiers = selectAll ? ['*'] : [];
+  cat.allowCustomization = selectAll;
   markMenuDirty();
   renderMenuCategoryEditor(catIndex);
 }
@@ -374,18 +431,24 @@ function openAddCategoryModal() {
   if (inp) inp.value = "";
   const typeSelect = document.getElementById("add-cat-select-type");
   if (typeSelect) typeSelect.value = "catalog";
-  const group = document.getElementById("add-cat-customization-group");
-  if (group) group.style.display = "flex";
-  const custCheck = document.getElementById("add-cat-checkbox-customization");
-  if (custCheck) {
-    custCheck.checked = true;
-    if (custCheck.nextElementSibling) {
-      custCheck.nextElementSibling.style.backgroundColor = "var(--primary, #0284c7)";
-      if (custCheck.nextElementSibling.firstElementChild) {
-        custCheck.nextElementSibling.firstElementChild.style.left = "20px";
-      }
+
+  const modContainer = document.getElementById("add-cat-modifiers-list");
+  const storeMods = getStoreModifiersList();
+  if (modContainer) {
+    if (storeMods.length === 0) {
+      modContainer.innerHTML = `<div style="font-size: 12px; color: #94a3b8;">${t("noModifiersInStore")}</div>`;
+    } else {
+      modContainer.innerHTML = storeMods.map(mod => `
+        <label style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; min-height: 44px; background: #fff; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; color: #334155;">
+          <input type="checkbox" name="add-cat-mod" value="${escapeHtml(mod.id)}" checked style="width: 18px; height: 18px; accent-color: #10b981;">
+          <span>${escapeHtml(mod.title)}</span>
+        </label>
+      `).join('');
     }
   }
+
+  const group = document.getElementById("add-cat-customization-group");
+  if (group) group.style.display = "block";
 
   const modal = document.getElementById("addCategoryModal");
   if (modal) {
@@ -398,7 +461,7 @@ function onAddCategoryTypeChange() {
   const typeSelect = document.getElementById("add-cat-select-type");
   const group = document.getElementById("add-cat-customization-group");
   if (group && typeSelect) {
-    group.style.display = typeSelect.value === "catalog" ? "flex" : "none";
+    group.style.display = typeSelect.value === "catalog" ? "block" : "none";
   }
 }
 
@@ -416,8 +479,14 @@ async function confirmAddCategory() {
   }
   const typeSelect = document.getElementById("add-cat-select-type");
   const type = typeSelect ? typeSelect.value : "catalog";
-  const custCheck = document.getElementById("add-cat-checkbox-customization");
-  const allowCust = type === "catalog" ? (custCheck ? custCheck.checked : true) : false;
+
+  const selectedMods = [];
+  document.querySelectorAll('input[name="add-cat-mod"]:checked').forEach(cb => {
+    selectedMods.push(cb.value);
+  });
+  const allModsCount = getStoreModifiersList().length;
+  const appliedMods = (allModsCount > 0 && selectedMods.length === allModsCount) ? ['*'] : selectedMods;
+  const allowCust = type === "catalog" ? (selectedMods.length > 0) : false;
 
   // Generate clean unique slug
   let baseSlug = name.toLowerCase().replace(/[^a-z0-9]/g, '').replace(/_+/g, '');
@@ -432,6 +501,7 @@ async function confirmAddCategory() {
     title: name,
     type: type,
     allowCustomization: allowCust,
+    appliedModifiers: appliedMods,
     items: []
   };
 

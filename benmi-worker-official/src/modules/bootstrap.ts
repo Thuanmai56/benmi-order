@@ -30,6 +30,7 @@ export interface BootstrapResponse {
     slug: string;
     name: string;
     allowCustomization: boolean;
+    appliedModifiers: string[];
     sortOrder: number;
     items: Array<{
       id: string;
@@ -163,6 +164,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
                     COALESCE(min_selection, 0) AS min_selection, 
                     COALESCE(max_selection, 1) AS max_selection, 
                     COALESCE(allow_customization, 1) AS allow_customization,
+                    COALESCE(applied_modifiers, '') AS applied_modifiers,
                     sort_order 
              FROM menu_categories 
              WHERE tenant_id = ? 
@@ -254,11 +256,23 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
         });
       } else {
         // Catalog Category
+        let appliedModifiers: string[] = ['*'];
+        if (cat.allow_customization === 0) {
+          appliedModifiers = [];
+        } else if (cat.applied_modifiers && cat.applied_modifiers.trim() !== '') {
+          try {
+            appliedModifiers = JSON.parse(cat.applied_modifiers);
+          } catch {
+            appliedModifiers = cat.applied_modifiers.split(',').map((s: string) => s.trim()).filter(Boolean);
+          }
+        }
+
         catalog.push({
           id: cat.id,
           slug: cat.slug,
           name: cat.name,
-          allowCustomization: Boolean(cat.allow_customization ?? 1),
+          allowCustomization: Boolean(cat.allow_customization ?? 1) && appliedModifiers.length > 0,
+          appliedModifiers: appliedModifiers,
           sortOrder: cat.sort_order || 0,
           items: catItems
         });

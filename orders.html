@@ -757,21 +757,18 @@
         </select>
       </div>
 
-      <div id="add-cat-customization-group" style="margin-bottom: 20px; background: #f8fafc; padding: 10px 14px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between;">
-        <div>
+      <div id="add-cat-customization-group" style="margin-bottom: 20px; background: #f8fafc; padding: 12px 14px; border-radius: 10px; border: 1.5px solid #e2e8f0;">
+        <div style="margin-bottom: 8px;">
           <div style="font-weight: 700; font-size: 13px; color: #1e293b;" id="i18n-add-cat-customization-label">
-            允許客製化選項 (加料 / 辣度 / 備註)
+            適用客製化選項 (加料 / 辣度 / 備註)
           </div>
           <div style="font-size: 11px; color: #64748b;" id="i18n-add-cat-customization-desc">
-            開啟後，顧客在點選此分類餐點時可選擇客製化設定
+            預設為全部勾選，亦可依需求勾選
           </div>
         </div>
-        <label style="position: relative; display: inline-block; width: 40px; height: 22px; flex-shrink: 0; cursor: pointer;">
-          <input type="checkbox" id="add-cat-checkbox-customization" checked style="opacity: 0; width: 0; height: 0;" onchange="this.nextElementSibling.style.backgroundColor = this.checked ? 'var(--primary, #0284c7)' : '#cbd5e1'; this.nextElementSibling.firstElementChild.style.left = this.checked ? '20px' : '3px';">
-          <span style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--primary, #0284c7); transition: .3s; border-radius: 22px;">
-            <span style="position: absolute; height: 16px; width: 16px; left: 20px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%;"></span>
-          </span>
-        </label>
+        <div id="add-cat-modifiers-list" style="display: flex; flex-wrap: wrap; gap: 8px;">
+          <!-- Dynamically populated from getStoreModifiersList() -->
+        </div>
       </div>
 
       <div class="modal-actions two">
@@ -917,14 +914,14 @@
   </div>
 
   <!-- Benmi POS Modular Architecture Scripts -->
-  <script src="js/orders-i18n.js?v=20260823_cat_customization_1"></script>
+  <script src="js/orders-i18n.js?v=20260823_cat_mod_picker_1"></script>
   <script src="js/orders-core.js?v=20260822_feat_announcement_1"></script>
   <script src="js/orders-audio.js?v=20260822_feat_announcement_1"></script>
   <script src="js/orders-live.js?v=20260822_feat_announcement_1"></script>
   <script src="js/orders-modals.js?v=20260822_feat_announcement_1"></script>
   <script src="js/orders-history.js?v=20260822_feat_announcement_1"></script>
   <script src="js/orders-settings.js?v=20260822_feat_announcement_1"></script>
-  <script src="js/orders-menu.js?v=20260823_cat_customization_1"></script>
+  <script src="js/orders-menu.js?v=20260823_cat_mod_picker_1"></script>
 
   <!-- POS Bootstrap & Initialization -->
   <script>

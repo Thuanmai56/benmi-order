@@ -283,18 +283,28 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
     const allowCustomization = (itemsMap && (itemsMap.__allow_customization !== undefined || itemsMap._allow_customization !== undefined))
       ? ((itemsMap.__allow_customization ?? itemsMap._allow_customization) ? 1 : 0)
       : (slug === 'drinks' ? 0 : 1);
+
+    let appliedModifiers: string | null = null;
+    if (itemsMap && (itemsMap.__applied_modifiers !== undefined || itemsMap._applied_modifiers !== undefined)) {
+      const rawMods = itemsMap.__applied_modifiers ?? itemsMap._applied_modifiers;
+      appliedModifiers = typeof rawMods === 'string' ? rawMods : JSON.stringify(rawMods);
+    } else if (allowCustomization === 0) {
+      appliedModifiers = '[]';
+    }
+
     const catName = customCatName || catNameMap.get(slug) || defaultCategoryNamesZh[slug] || slug;
 
     statements.push(
       env.DB.prepare(
-        `INSERT INTO menu_categories (id, tenant_id, name, slug, category_type, allow_customization, sort_order)
-         VALUES (?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO menu_categories (id, tenant_id, name, slug, category_type, allow_customization, applied_modifiers, sort_order)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET 
            name = excluded.name, 
            category_type = excluded.category_type,
            allow_customization = excluded.allow_customization,
+           applied_modifiers = excluded.applied_modifiers,
            sort_order = excluded.sort_order`
-      ).bind(catId, tenantId, catName, slug, customCatType, allowCustomization, catSortOrder++)
+      ).bind(catId, tenantId, catName, slug, customCatType, allowCustomization, appliedModifiers, catSortOrder++)
     );
 
     if (itemsMap && typeof itemsMap === "object") {

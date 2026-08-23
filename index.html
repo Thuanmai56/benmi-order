@@ -707,9 +707,8 @@
 
             const qty = cart[`${catSlug}_${item.name}`] || 0;
             const footerHTML = getDynamicItemFooterHTML(catSlug, item.name, item.price, isOos);
-            const catObj = bootstrapData?.catalog?.find(c => c.slug === catSlug);
-            const catAllowsCustomization = catObj ? (catObj.allowCustomization !== false && catObj.slug !== 'drinks') : (catSlug !== 'drinks');
-            const hasModifiers = bootstrapData?.modifiers && bootstrapData.modifiers.length > 0 && catAllowsCustomization;
+            const catModifiers = getCategoryModifiers(catSlug);
+            const hasModifiers = catModifiers.length > 0;
             const customizeBtnHTML = `
                 <button class="customize-btn" id="customize-btn-${catSlug}-${item.name}" onclick="toggleCustomize('${safeCatSlug}','${safeItemName}')" style="pointer-events: auto; display: ${(!isOos && qty > 0 && hasModifiers) ? 'block' : 'none'};">✏️ 客製化（加料 / 辣度 / 備註）</button>
             `;
@@ -768,8 +767,8 @@
                     const custBtn = card.querySelector('.customize-btn');
                     if (custBtn) {
                         const qty = cart[`${cat.slug}_${item.name}`] || 0;
-                        const catAllowsCustomization = (cat.allowCustomization !== false && cat.slug !== 'drinks');
-                        const hasModifiers = bootstrapData?.modifiers && bootstrapData.modifiers.length > 0 && catAllowsCustomization;
+                        const catModifiers = getCategoryModifiers(cat.slug);
+                        const hasModifiers = catModifiers.length > 0;
                         custBtn.style.display = (!item.isOutOfStock && qty > 0 && hasModifiers) ? 'block' : 'none';
                     }
                 });
@@ -813,9 +812,8 @@
 
             const btn = document.getElementById('customize-btn-' + category + '-' + origName);
             if (btn) {
-                const catObj = bootstrapData?.catalog?.find(c => c.slug === category);
-                const catAllowsCustomization = catObj ? (catObj.allowCustomization !== false && catObj.slug !== 'drinks') : (category !== 'drinks');
-                const hasModifiers = bootstrapData?.modifiers && bootstrapData.modifiers.length > 0 && catAllowsCustomization;
+                const catModifiers = getCategoryModifiers(category);
+                const hasModifiers = catModifiers.length > 0;
                 btn.style.display = (cart[key] > 0 && hasModifiers) ? 'block' : 'none';
             }
 
@@ -979,11 +977,25 @@
             container.appendChild(box);
         }
 
+        function getCategoryModifiers(catSlug) {
+            const catObj = bootstrapData?.catalog?.find(c => c.slug === catSlug);
+            if (!catObj) return [];
+            if (catObj.allowCustomization === false) return [];
+            const applied = catObj.appliedModifiers || ['*'];
+            if (applied.length === 0) return [];
+            const allMods = bootstrapData?.modifiers || [];
+            if (applied.includes('*')) return allMods;
+            return allMods.filter(m => applied.includes(m.slug));
+        }
+
         // --- CUSTOMIZE POPUP (SCHEMA-DRIVEN MODIFIERS POPUP) ---
         function toggleCustomize(category, origName) {
             const key = category + '_' + origName;
             const qty = cart[key];
             if (!qty) return;
+
+            const modifiers = getCategoryModifiers(category);
+            if (!modifiers || modifiers.length === 0) return;
 
             if (!customizeData[key]) customizeData[key] = [];
 
@@ -999,8 +1011,6 @@
                     <div class="close-btn" onclick="closePopup()">✕</div>
                 </div>
             `;
-
-            const modifiers = bootstrapData?.modifiers || [];
 
             for (let i = 0; i < qty; i++) {
                 if (!customizeData[key][i]) {
@@ -1434,7 +1444,7 @@
 
         initApp();
     </script>
-    <script src="js/client-checkout.js?v=20260823_cat_customization_1"></script>
+    <script src="js/client-checkout.js?v=20260823_cat_mod_picker_1"></script>
 </body>
 
 </html>
