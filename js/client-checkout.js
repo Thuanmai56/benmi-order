@@ -9,48 +9,68 @@ window.parentOrderKey = null;
 window.appendTableNumber = null;
 
 function getUrlParamsWithLiffState() {
-    const rawSearch = window.location.search;
-    const directParams = new URLSearchParams(rawSearch);
+    const merged = new URLSearchParams();
+
+    // 1. Kiểm tra direct query search params
+    const directParams = new URLSearchParams(window.location.search);
+    for (const [k, v] of directParams.entries()) {
+        if (k !== 'liff.state') merged.set(k, v);
+    }
     
-    // 1. Kiểm tra liff.state nếu LINE mã hóa tham số vào liff.state
+    // 2. Kiểm tra liff.state nếu LINE mã hóa tham số vào liff.state
     const liffState = directParams.get('liff.state');
     if (liffState) {
         try {
             const decoded = decodeURIComponent(liffState);
             const queryPart = decoded.includes('?') ? decoded.split('?')[1] : decoded;
             const stateParams = new URLSearchParams(queryPart);
-            if (stateParams.has('parent_order_key') || stateParams.has('mode') || stateParams.has('table_number')) {
-                return stateParams;
+            for (const [k, v] of stateParams.entries()) {
+                merged.set(k, v);
             }
         } catch (e) {
             console.warn("Failed to parse liff.state:", e);
         }
     }
 
-    // 2. Kiểm tra hash nếu tham số được truyền sau dấu #
+    // 3. Kiểm tra hash nếu tham số được truyền sau dấu #
     if (window.location.hash) {
         try {
-            const hashPart = window.location.hash.substring(1);
-            const hashParams = new URLSearchParams(hashPart);
-            if (hashParams.has('parent_order_key') || hashParams.has('mode') || hashParams.has('table_number')) {
-                return hashParams;
+            const hashRaw = window.location.hash.substring(1);
+            const hashDecoded = decodeURIComponent(hashRaw);
+            const hashQuery = hashDecoded.includes('?') ? hashDecoded.split('?')[1] : hashDecoded;
+            const hashParams = new URLSearchParams(hashQuery);
+            for (const [k, v] of hashParams.entries()) {
+                merged.set(k, v);
             }
         } catch (e) {}
     }
 
-    return directParams;
+    return merged;
 }
 
 function initAppendModeIfPresent() {
     const urlParams = getUrlParamsWithLiffState();
-    const parentOrderKey = urlParams.get('parent_order_key');
-    const paramTableNumber = urlParams.get('table_number');
-    const mode = urlParams.get('mode');
+    let parentOrderKey = urlParams.get('parent_order_key');
+    let paramTableNumber = urlParams.get('table_number');
+    let mode = urlParams.get('mode');
+
+    // Check sessionStorage fallback if page reloaded
+    if (!parentOrderKey) {
+        try {
+            parentOrderKey = sessionStorage.getItem('benmi_append_parent');
+            paramTableNumber = sessionStorage.getItem('benmi_append_table') || paramTableNumber;
+            if (parentOrderKey) mode = 'append';
+        } catch (e) {}
+    }
 
     if (parentOrderKey && (mode === 'append' || mode === 'add')) {
         window.isAppendMode = true;
         window.parentOrderKey = parentOrderKey;
         window.appendTableNumber = paramTableNumber || '';
+        try {
+            sessionStorage.setItem('benmi_append_parent', parentOrderKey);
+            if (paramTableNumber) sessionStorage.setItem('benmi_append_table', paramTableNumber);
+        } catch (e) {}
 
         // Show Banner
         const bannerEl = document.getElementById('append-mode-banner');
@@ -92,6 +112,10 @@ function cancelAppendMode() {
     window.isAppendMode = false;
     window.parentOrderKey = null;
     window.appendTableNumber = null;
+    try {
+        sessionStorage.removeItem('benmi_append_parent');
+        sessionStorage.removeItem('benmi_append_table');
+    } catch(e) {}
 
     const bannerEl = document.getElementById('append-mode-banner');
     if (bannerEl) bannerEl.style.display = 'none';
@@ -671,7 +695,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
         if (window.isAppendMode && window.parentOrderKey) {
             const rawItemsText = formatAppendItemsOnlyText();
             const tableInput = document.getElementById('dinein-table-number');
-            const currentTable = (tableInput && tableInput.value.trim()) || paramTableNumber || window.currentTableNumber || '';
+            const currentTable = (tableInput && tableInput.value.trim()) || window.appendTableNumber || window.currentTableNumber || '';
             const appendPayload = {
                 parent_order_key: window.parentOrderKey,
                 user_id: userId,
@@ -724,6 +748,10 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
             cart = {};
             customizeData = {};
             comboDrinkData = {};
+            try {
+                sessionStorage.removeItem('benmi_append_parent');
+                sessionStorage.removeItem('benmi_append_table');
+            } catch(e) {}
             if (typeof updateTotal === 'function') updateTotal();
 
             customAlert(`
@@ -816,17 +844,27 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
 
         try {
             const currentTotal = typeof updateTotal === 'function' ? updateTotal() : 0;
-            const orderNum = generateOrderNumber();
             const mainNote = document.getElementById('note') ? document.getElementById('note').value : '';
-            const msg = formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, mainNote);
 
             if (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient() && typeof liff.sendMessages === 'function') {
-                await liff.sendMessages([{ type: 'text', text: msg }]);
+                if (window.isAppendMode && window.parentOrderKey) {
+                    const rawItemsText = formatAppendItemsOnlyText();
+                    const tableInput = document.getElementById('dinein-table-number');
+                    const currentTable = (tableInput && tableInput.value.trim()) || window.appendTableNumber || window.currentTableNumber || '';
+                    const tablePart = currentTable ? `\n桌號：${currentTable}` : '';
+                    const notePart = mainNote ? `\n📝 備註：${mainNote}` : '';
+                    const appendChatMsg = `[加點 #${window.parentOrderKey}]${tablePart}\n現場加點品項：\n${rawItemsText}${notePart}\n\n💰 加點金額：+$${currentTotal}`;
+                    await liff.sendMessages([{ type: 'text', text: appendChatMsg }]);
+                } else {
+                    const orderNum = generateOrderNumber();
+                    const msg = formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, mainNote);
+                    await liff.sendMessages([{ type: 'text', text: msg }]);
+                }
                 orderSubmittedSuccessfully = true;
 
                 if (submitBtn) {
                     submitBtn.disabled = true;
-                    submitBtn.innerText = '訂單已送出';
+                    submitBtn.innerText = window.isAppendMode ? '加點已送出' : '訂單已送出';
                     submitBtn.style.cursor = 'not-allowed';
                     submitBtn.style.opacity = '0.6';
                 }
@@ -834,6 +872,10 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                 cart = {};
                 customizeData = {};
                 comboDrinkData = {};
+                try {
+                    sessionStorage.removeItem('benmi_append_parent');
+                    sessionStorage.removeItem('benmi_append_table');
+                } catch(e) {}
                 if (typeof updateTotal === 'function') updateTotal();
 
                 customAlert(`

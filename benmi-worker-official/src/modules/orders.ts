@@ -75,7 +75,7 @@ export async function createOrder(
   const parentOrderKey = data.parent_order_key || data.parentOrderKey || null;
   const rawItems: OrderItemInput[] = Array.isArray(data.items) ? data.items : [];
 
-  // Nếu client chủ động truyền parent_order_key thì chuyển sang xử lý append
+  // 1. Nếu client chủ động truyền parent_order_key thì chuyển sang xử lý append
   if (parentOrderKey && env.DB) {
     return await executeAppendOrderInternal(
       env,
@@ -90,6 +90,37 @@ export async function createOrder(
       ctx,
       tenantCtx
     );
+  }
+
+  // 2. Tự động gộp vào đơn ăn tại quán đang mở (chưa thanh toán / NEW, ACCEPTED, DONE) của cùng khách hàng
+  if (!parentOrderKey && diningOption === 'dine_in' && userId && env.DB) {
+    try {
+      const activeDineIn = await env.DB.prepare(
+        `SELECT key FROM orders 
+         WHERE tenant_id = ? AND user_id = ? AND dining_option = 'dine_in' 
+           AND status IN ('NEW', 'ACCEPTED', 'DONE') 
+           AND created_at >= DATETIME('now', '-12 hours')
+         ORDER BY created_at DESC LIMIT 1`
+      ).bind(tenantId, userId).first<{ key: string }>();
+
+      if (activeDineIn && activeDineIn.key) {
+        return await executeAppendOrderInternal(
+          env,
+          tenantId,
+          activeDineIn.key,
+          data.content || formatItemsToText(rawItems),
+          Number(data.total) || 0,
+          data.note || "",
+          userId,
+          data.customer,
+          rawItems,
+          ctx,
+          tenantCtx
+        );
+      }
+    } catch (autoAppendErr) {
+      console.warn("[createOrder] auto-append lookup failed, falling back to standard create:", autoAppendErr);
+    }
   }
 
   let orderContent = String(data.content || "").trim();

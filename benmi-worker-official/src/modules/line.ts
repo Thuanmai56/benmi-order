@@ -884,9 +884,16 @@ export async function handleLineWebhook(
       try { await env.ORDER_STATE.delete(draftKey); } catch { }
 
       let orderKey = "";
-      const match = userText.match(/(?:[A-Z0-9]{1,4}\d{4}-[A-Z0-9]{4}|[A-Z0-9]+\d{4}-\d{4}-\d{4}|BD\d+-\d+-\d+)/i);
+      const match = userText.match(/(?:[A-Z0-9]{1,6}\d{4}-[A-Z0-9]{2,8}|[A-Z0-9]+\d{4}-\d{4}-\d{4}|BD\d+-\d+-\d+|BM\d+-\d+)/i) || userText.match(/#([A-Za-z0-9_-]+)/);
       if (match) {
-        orderKey = match[0];
+        orderKey = (match[1] || match[0]).replace('#', '').trim();
+      }
+
+      if (!orderKey && env.DB) {
+        const activeRow = await env.DB.prepare(
+          `SELECT key FROM orders WHERE tenant_id = ? AND user_id = ? AND dining_option = 'dine_in' AND status IN ('NEW', 'ACCEPTED', 'DONE') ORDER BY created_at DESC LIMIT 1`
+        ).bind(tenantId, userId).first<{ key: string }>();
+        if (activeRow && activeRow.key) orderKey = activeRow.key;
       }
 
       if (orderKey && env.DB) {
