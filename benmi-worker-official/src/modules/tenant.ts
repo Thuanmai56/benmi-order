@@ -123,7 +123,7 @@ export async function resolveTenantContext(
       defaultPassword: '12345678',
       locale: 'zh-TW',
       googleSheetsUrl: env.GOOGLE_SHEETS_URL || null,
-      features: ['dine_in'],
+      features: ['dine_in', 'reports'],
       orderPrefix: 'B',
     };
 

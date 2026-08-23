@@ -124,16 +124,24 @@ async function loadStoreStatus() {
   if (typeof updateDiningFilterStats === "function" && typeof orders !== "undefined") {
     updateDiningFilterStats(orders);
   }
+  renderLanguageSetting();
   renderDineInSetting();
+  renderReportsSetting();
 }
 
 function openSettings() {
   activeTab = "settings";
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".mini-btn").forEach(t => t.classList.remove("active"));
+  const tabSettings = document.getElementById("tab-settings");
+  if (tabSettings) tabSettings.classList.add("active");
   document.querySelectorAll(".content").forEach(c => c.style.display = "none");
   const viewSettings = document.getElementById("view-settings");
   if (viewSettings) viewSettings.style.display = "block";
   loadOperatingHours();
+  renderLanguageSetting();
+  renderDineInSetting();
+  renderReportsSetting();
   initSettingsScrollSpy();
 }
 
@@ -594,6 +602,57 @@ async function deleteStoreLogoSetting() {
   }
 }
 
+function renderLanguageSetting() {
+  const radioZh = document.getElementById("setting-lang-zh");
+  const radioVi = document.getElementById("setting-lang-vi");
+  const cardZh = document.getElementById("lang-card-zh");
+  const cardVi = document.getElementById("lang-card-vi");
+  if (radioZh) radioZh.checked = (currentLang === "zh-TW");
+  if (radioVi) radioVi.checked = (currentLang === "vi");
+  if (cardZh && cardVi) {
+    if (currentLang === "zh-TW") {
+      cardZh.style.borderColor = "var(--primary)";
+      cardZh.style.background = "rgba(0, 185, 0, 0.05)";
+      cardVi.style.borderColor = "var(--border)";
+      cardVi.style.background = "#fff";
+    } else {
+      cardVi.style.borderColor = "var(--primary)";
+      cardVi.style.background = "rgba(0, 185, 0, 0.05)";
+      cardZh.style.borderColor = "var(--border)";
+      cardZh.style.background = "#fff";
+    }
+  }
+}
+
+function renderReportsSetting() {
+  const isFeatureEnabled = Array.isArray(window.currentTenantFeatures)
+    ? window.currentTenantFeatures.includes('reports')
+    : (Array.isArray(currentTenantFeatures) ? currentTenantFeatures.includes('reports') : false);
+
+  const unlockedBody = document.getElementById("setting-reports-unlocked-body");
+  const lockedBody = document.getElementById("setting-reports-locked-body");
+  const tocItem = document.getElementById("toc-item-reports");
+
+  if (!isFeatureEnabled) {
+    if (unlockedBody) unlockedBody.style.display = "none";
+    if (lockedBody) lockedBody.style.display = "flex";
+    if (tocItem) {
+      tocItem.innerHTML = `<span class="toc-icon">🔒</span> <span id="i18n-toc-reports">${t('tocReports')}</span>`;
+    }
+    return;
+  }
+
+  if (unlockedBody) unlockedBody.style.display = "flex";
+  if (lockedBody) lockedBody.style.display = "none";
+  if (tocItem) {
+    tocItem.innerHTML = `<span class="toc-icon">📊</span> <span id="i18n-toc-reports">${t('tocReports')}</span>`;
+  }
+}
+
+function openReportsFromSettings() {
+  switchTab('reports');
+}
+
 // --- Settings Table of Contents (TOC) & ScrollSpy ---
 const SETTINGS_SECTIONS = [
   { id: "setting-card-status", tocId: "toc-item-status" },
@@ -601,7 +660,10 @@ const SETTINGS_SECTIONS = [
   { id: "setting-card-hours", tocId: "toc-item-hours" },
   { id: "setting-card-address", tocId: "toc-item-address" },
   { id: "setting-card-announcement", tocId: "toc-item-announcement" },
-  { id: "setting-card-logo", tocId: "toc-item-logo" }
+  { id: "setting-card-logo", tocId: "toc-item-logo" },
+  { id: "setting-card-language", tocId: "toc-item-language" },
+  { id: "setting-card-dinein", tocId: "toc-item-dinein" },
+  { id: "setting-card-reports", tocId: "toc-item-reports" }
 ];
 
 let isManualSettingScroll = false;

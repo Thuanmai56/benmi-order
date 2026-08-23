@@ -125,12 +125,12 @@ function renderListLeft(orders) {
     const tableNum = getOrderTableNumber(order);
     const tableLabel = tableNum ? (currentLang === 'vi' ? ` · Bàn ${tableNum}` : ` · 桌號 ${tableNum}`) : "";
     const diningBadge = isDineIn
-      ? `<span class="badge badge-dine-in" style="font-size:11.5px; padding:2px 7px; margin-left:4px;">🍽️ ${t('badgeDineIn')}${escapeHtml(tableLabel)}</span>`
-      : `<span class="badge badge-takeaway" style="font-size:11.5px; padding:2px 7px; margin-left:4px;">🛍️ ${t('badgeTakeaway')}</span>`;
+      ? `<span class="badge badge-dine-in" style="font-size:11px; padding:2px 6px; border-radius:4px; font-weight:800; white-space:nowrap; flex-shrink:0;">🍽️ ${t('badgeDineIn')}${escapeHtml(tableLabel)}</span>`
+      : `<span class="badge badge-takeaway" style="font-size:11px; padding:2px 6px; border-radius:4px; font-weight:800; white-space:nowrap; flex-shrink:0;">${t('badgeTakeaway')}</span>`;
 
     const roundCount = Number(order.round_count || order.roundCount) || 1;
     const appendBadge = (isDineIn && roundCount > 1)
-      ? `<span class="badge badge-append" style="font-size:11.5px; padding:2px 7px; margin-left:4px;">➕ ${t('badgeAppendRound', { n: roundCount })}</span>`
+      ? `<span class="badge badge-append" style="font-size:11px; padding:2px 6px; border-radius:4px; font-weight:800; white-space:nowrap; flex-shrink:0;">${t('badgeAppendRound', { n: roundCount })}</span>`
       : "";
 
     const pickupDisplay = isDineIn
@@ -195,12 +195,12 @@ function renderListRight(orders) {
     const tableNum = getOrderTableNumber(order);
     const tableLabel = tableNum ? (currentLang === 'vi' ? ` · Bàn ${tableNum}` : ` · 桌號 ${tableNum}`) : "";
     const diningBadge = isDineIn
-      ? `<span class="badge badge-dine-in" style="font-size:11.5px; padding:2px 7px; margin-left:4px;">🍽️ ${t('badgeDineIn')}${escapeHtml(tableLabel)}</span>`
-      : `<span class="badge badge-takeaway" style="font-size:11.5px; padding:2px 7px; margin-left:4px;">🛍️ ${t('badgeTakeaway')}</span>`;
+      ? `<span class="badge badge-dine-in" style="font-size:11px; padding:2px 6px; border-radius:4px; font-weight:800; white-space:nowrap; flex-shrink:0;">🍽️ ${t('badgeDineIn')}${escapeHtml(tableLabel)}</span>`
+      : `<span class="badge badge-takeaway" style="font-size:11px; padding:2px 6px; border-radius:4px; font-weight:800; white-space:nowrap; flex-shrink:0;">${t('badgeTakeaway')}</span>`;
 
     const roundCount = Number(order.round_count || order.roundCount) || 1;
     const appendBadge = (isDineIn && roundCount > 1)
-      ? `<span class="badge badge-append" style="font-size:11.5px; padding:2px 7px; margin-left:4px;">➕ ${t('badgeAppendRound', { n: roundCount })}</span>`
+      ? `<span class="badge badge-append" style="font-size:11px; padding:2px 6px; border-radius:4px; font-weight:800; white-space:nowrap; flex-shrink:0;">${t('badgeAppendRound', { n: roundCount })}</span>`
       : "";
 
     const pickupDisplay = isDineIn

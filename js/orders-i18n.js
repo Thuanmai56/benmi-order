@@ -311,8 +311,21 @@ const I18N = {
     featureLockedTitle: "🔒 進階功能 (未啟用)",
     featureLockedDesc: "此功能為 BLAB 進階模組，如需啟用「內用接單」請聯繫 BLAB 團隊升級方案。",
     btnContactUpgrade: "聯繫升級方案",
+    // Language & Reports Settings
+    tocLanguage: "介面語言",
+    tocReports: "銷量與營收報表",
+    settingLangTitle: "🌐 介面語言",
+    settingLangSub: "設定 POS 系統的操作與顯示語言",
+    settingReportsTitle: "📊 銷量與營收報表",
+    settingReportsSub: "查看門市餐點銷售統計、營收排行與加料偏好",
+    reportsUnlockedName: "即時餐點銷量與營收分析",
+    reportsUnlockedDesc: "依時間區間（今日、近7天、近30天）統計門市各品項銷售數量、營收總額及顧客加料分析。",
+    btnOpenReports: "查看銷量報表",
+    reportsLockedTitle: "進階功能 (未啟用)",
+    reportsLockedDesc: "此功能為 BLAB 進階模組，如需啟用「銷量與營收報表分析」請聯繫 BLAB 團隊升級方案。",
+    btnBackToSettings: "← 返回設定",
     // Multi-Round Append Orders
-    badgeAppendRound: "第 {n} 輪加點",
+    badgeAppendRound: "第 {n} 輪",
     badgeAppendShort: "加點",
     roundBlockTitle: "第 {n} 輪餐點",
     roundBlockLatest: "最新加點",
@@ -627,8 +640,21 @@ const I18N = {
     featureLockedTitle: "🔒 Tính năng nâng cao (Chưa kích hoạt)",
     featureLockedDesc: "Tính năng này thuộc gói mô-đun nâng cao. Để kích hoạt 'Ăn tại quán', vui lòng liên hệ BLAB để nâng cấp gói.",
     btnContactUpgrade: "Liên hệ nâng cấp gói",
+    // Language & Reports Settings
+    tocLanguage: "Ngôn ngữ POS",
+    tocReports: "Báo cáo doanh thu",
+    settingLangTitle: "🌐 Ngôn ngữ hiển thị POS",
+    settingLangSub: "Cài đặt ngôn ngữ hiển thị và thao tác của hệ thống POS",
+    settingReportsTitle: "📊 Báo cáo doanh thu & sản lượng món",
+    settingReportsSub: "Xem thống kê bán hàng, doanh thu các món và tùy biến chọn kèm",
+    reportsUnlockedName: "Phân tích doanh thu & sản lượng món thời gian thực",
+    reportsUnlockedDesc: "Thống kê số lượng bán, tổng doanh thu theo mốc thời gian (Hôm nay, 7 ngày, 30 ngày) và phân tích topping/tùy biến.",
+    btnOpenReports: "Xem báo cáo doanh thu",
+    reportsLockedTitle: "Tính năng nâng cao (Chưa kích hoạt)",
+    reportsLockedDesc: "Tính năng thuộc gói BLAB Analytics nâng cao, vui lòng liên hệ đội ngũ BLAB để nâng cấp.",
+    btnBackToSettings: "← Quay lại Cài đặt",
     // Multi-Round Append Orders
-    badgeAppendRound: "Đợt {n} gọi thêm",
+    badgeAppendRound: "Đợt {n}",
     badgeAppendShort: "Gọi thêm",
     roundBlockTitle: "Đợt {n}",
     roundBlockLatest: "Mới gọi thêm",
@@ -937,6 +963,57 @@ function applyLanguageToDOM() {
   if (tocAnn) tocAnn.innerText = dict.tocAnnouncement;
   const tocLogo = document.getElementById("i18n-toc-logo");
   if (tocLogo) tocLogo.innerText = dict.tocLogo;
+  const tocLang = document.getElementById("i18n-toc-language");
+  if (tocLang) tocLang.innerText = dict.tocLanguage;
+  const tocDine = document.getElementById("i18n-toc-dinein");
+  if (tocDine) tocDine.innerText = dict.tocDineIn;
+  const tocRep = document.getElementById("i18n-toc-reports");
+  if (tocRep) tocRep.innerText = dict.tocReports;
+
+  // Language Setting Card
+  const setLangT = document.getElementById("i18n-setting-lang-title");
+  if (setLangT) setLangT.innerText = dict.settingLangTitle;
+  const setLangS = document.getElementById("i18n-setting-lang-sub");
+  if (setLangS) setLangS.innerText = dict.settingLangSub;
+  const radioZh = document.getElementById("setting-lang-zh");
+  const radioVi = document.getElementById("setting-lang-vi");
+  const cardZh = document.getElementById("lang-card-zh");
+  const cardVi = document.getElementById("lang-card-vi");
+  if (radioZh) radioZh.checked = (currentLang === "zh-TW");
+  if (radioVi) radioVi.checked = (currentLang === "vi");
+  if (cardZh && cardVi) {
+    if (currentLang === "zh-TW") {
+      cardZh.style.borderColor = "var(--primary)";
+      cardZh.style.background = "rgba(0, 185, 0, 0.05)";
+      cardVi.style.borderColor = "var(--border)";
+      cardVi.style.background = "#fff";
+    } else {
+      cardVi.style.borderColor = "var(--primary)";
+      cardVi.style.background = "rgba(0, 185, 0, 0.05)";
+      cardZh.style.borderColor = "var(--border)";
+      cardZh.style.background = "#fff";
+    }
+  }
+
+  // Reports Setting Card
+  const setRepT = document.getElementById("i18n-setting-reports-title");
+  if (setRepT) setRepT.innerText = dict.settingReportsTitle;
+  const setRepS = document.getElementById("i18n-setting-reports-sub");
+  if (setRepS) setRepS.innerText = dict.settingReportsSub;
+  const repUnName = document.getElementById("i18n-reports-unlocked-name");
+  if (repUnName) repUnName.innerText = dict.reportsUnlockedName;
+  const repUnDesc = document.getElementById("i18n-reports-unlocked-desc");
+  if (repUnDesc) repUnDesc.innerText = dict.reportsUnlockedDesc;
+  const btnOpRep = document.getElementById("i18n-btn-open-reports");
+  if (btnOpRep) btnOpRep.innerText = dict.btnOpenReports;
+  const repLkT = document.getElementById("i18n-reports-locked-title");
+  if (repLkT) repLkT.innerText = dict.reportsLockedTitle;
+  const repLkD = document.getElementById("i18n-reports-locked-desc");
+  if (repLkD) repLkD.innerText = dict.reportsLockedDesc;
+  const btnUpRep = document.getElementById("i18n-btn-contact-upgrade-rep");
+  if (btnUpRep) btnUpRep.innerText = dict.btnContactUpgrade;
+  const btnBackSet = document.getElementById("i18n-btn-back-settings");
+  if (btnBackSet) btnBackSet.innerText = dict.btnBackToSettings;
 
   const ordMT = document.getElementById("i18n-ordermode-title");
   if (ordMT) ordMT.innerText = dict.orderModeTitle;

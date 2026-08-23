@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <title id="pos-page-title">Dashboard</title>
-  <link rel="stylesheet" href="css/orders.css?v=20260823_cat_mgr_2" />
+  <link rel="stylesheet" href="css/orders.css?v=20260823_settings_rep_lang_1" />
     <script>
       (function () {
         document.documentElement.style.setProperty('--primary', '#00b900');
@@ -110,32 +110,8 @@
       <div class="tabs">
         <button class="tab active" id="tab-live" onclick="switchTab('live')">即時</button>
         <button class="tab" id="tab-history" onclick="switchTab('history')">歷史</button>
-        <button class="tab" id="tab-reports" onclick="switchTab('reports')">報表</button>
         <button class="mini-btn" id="tab-menu" onclick="openMenuSettings()">菜單</button>
         <button class="mini-btn" id="tab-settings" onclick="openSettings()">設定</button>
-        <!-- Custom Language Dropdown -->
-        <div class="lang-dropdown" id="lang-dropdown">
-          <button type="button" class="lang-dropdown-btn" id="lang-dropdown-btn" onclick="toggleLangDropdown(event)">
-            <span id="current-lang-label">繁體中文</span>
-            <svg class="lang-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
-          </button>
-          <div class="lang-dropdown-menu" id="lang-dropdown-menu">
-            <div class="lang-dropdown-item active" data-lang="zh-TW" onclick="selectLanguage('zh-TW')">
-              <span>繁體中文</span>
-              <svg class="lang-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
-            </div>
-            <div class="lang-dropdown-item" data-lang="vi" onclick="selectLanguage('vi')">
-              <span>Tiếng Việt</span>
-              <svg class="lang-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -223,6 +199,7 @@
           <button type="button" class="btn btn-ghost" onclick="refreshReportData()" style="padding:8px 12px; border-radius:10px; border:1px solid #cbd5e1; background:#fff; cursor:pointer;" title="Refresh">
             <span>🔄</span>
           </button>
+          <button type="button" class="btn btn-ghost" style="border:1.5px solid #cbd5e1; background:#fff; color:#475569; font-weight:800; padding:7px 14px; border-radius:10px; font-size:13.5px; cursor:pointer;" onclick="openSettings()" id="i18n-btn-back-settings">← 返回設定</button>
         </div>
       </div>
 
@@ -299,9 +276,17 @@
               <span class="toc-icon">🖼️</span>
               <span id="i18n-toc-logo">門市 Logo</span>
             </div>
+            <div class="settings-toc-item" id="toc-item-language" onclick="scrollToSettingSection('setting-card-language')">
+              <span class="toc-icon">🌐</span>
+              <span id="i18n-toc-language">介面語言</span>
+            </div>
             <div class="settings-toc-item" id="toc-item-dinein" onclick="scrollToSettingSection('setting-card-dinein')">
               <span class="toc-icon">🍽️</span>
               <span id="i18n-toc-dinein">內用接單模式</span>
+            </div>
+            <div class="settings-toc-item" id="toc-item-reports" onclick="scrollToSettingSection('setting-card-reports')">
+              <span class="toc-icon">📊</span>
+              <span id="i18n-toc-reports">銷量與營收報表</span>
             </div>
           </div>
         </div>
@@ -358,33 +343,38 @@
               
               <div style="padding: 20px; display: flex; flex-direction: column; gap: 14px;">
                 <label class="setting-mode-card" id="mode-card-scheduled" style="display: flex; align-items: flex-start; gap: 14px; padding: 16px; border-radius: 12px; border: 2px solid var(--border); cursor: pointer; transition: all 0.15s ease;">
-                  <input type="radio" name="order-mode-radio" id="setting-allow-scheduled-true" value="true" onchange="onPickupModeChange(true)" style="width: 20px; height: 20px; margin-top: 3px; accent-color: var(--primary);">
+                  <input type="radio" name="pickup-mode-radio" id="setting-allow-scheduled-true" value="true" onchange="onPickupModeChange(true)" style="width: 20px; height: 20px; margin-top: 3px; accent-color: var(--primary);">
                   <div>
-                    <div style="font-weight: 1100; font-size: 16px; color: #111827;" id="i18n-mode-scheduled-title">🕒 允許預約取餐 (預設)</div>
-                    <div style="font-size: 14px; color: #4b5563; margin-top: 4px; line-height: 1.4;" id="i18n-mode-scheduled-sub">顧客可在點餐頁面自選取餐日期與時間，適合預先排程準備餐點的店家。</div>
+                    <div style="font-weight: 1100; font-size: 16px; color: #111827;" id="i18n-mode-scheduled-title">📅 允許顧客預約取餐時間 (預設)</div>
+                    <div style="font-size: 14px; color: #4b5563; margin-top: 4px; line-height: 1.4;" id="i18n-mode-scheduled-sub">顧客可自由選擇今天或未來營業時段預約取餐。</div>
                   </div>
                 </label>
 
                 <label class="setting-mode-card" id="mode-card-asap" style="display: flex; align-items: flex-start; gap: 14px; padding: 16px; border-radius: 12px; border: 2px solid var(--border); cursor: pointer; transition: all 0.15s ease;">
-                  <input type="radio" name="order-mode-radio" id="setting-allow-scheduled-false" value="false" onchange="onPickupModeChange(false)" style="width: 20px; height: 20px; margin-top: 3px; accent-color: var(--primary);">
+                  <input type="radio" name="pickup-mode-radio" id="setting-allow-scheduled-false" value="false" onchange="onPickupModeChange(false)" style="width: 20px; height: 20px; margin-top: 3px; accent-color: var(--primary);">
                   <div>
-                    <div style="font-weight: 1100; font-size: 16px; color: #111827;" id="i18n-mode-asap-title">⚡ 關閉預約 - 即時排隊製作模式 (Real-time Queue)</div>
-                    <div style="font-size: 14px; color: #4b5563; margin-top: 4px; line-height: 1.4;" id="i18n-mode-asap-sub">隱藏預約時間選項。顧客下單後將立即依照現場排隊順序製作 (ASAP)。</div>
+                    <div style="font-weight: 1100; font-size: 16px; color: #111827;" id="i18n-mode-asap-title">⚡ 僅限現場排隊 / 盡快製作 (ASAP)</div>
+                    <div style="font-size: 14px; color: #4b5563; margin-top: 4px; line-height: 1.4;" id="i18n-mode-asap-sub">關閉預約時段選單，所有訂單一律為「盡快製作」。</div>
                   </div>
                 </label>
               </div>
             </div>
 
-            <!-- Operating Hours -->
+            <!-- Operating Hours Setting -->
             <div class="settings-card" id="setting-card-hours">
               <div
                 style="padding: 16px 20px; background: #f3f4f6; border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
-                <div style="font-weight: 1100; font-size: 18px;" id="i18n-hours-title">⏰ 營業時間</div>
+                <div>
+                  <div style="font-weight: 1100; font-size: 18px;" id="i18n-hours-title">⏰ 營業時間設定</div>
+                  <div style="font-size: 13px; color: var(--muted); font-weight: 600; margin-top: 2px;" id="i18n-hours-sub">設定每日營業時段與公休日</div>
+                </div>
                 <button class="btn btn-primary" style="padding: 10px 20px; font-size: 15px; border-radius: 8px;"
-                  onclick="saveOperatingHours()" id="btn-save-hours">儲存時間</button>
+                  onclick="saveOperatingHours()" id="btn-save-hours">儲存設定</button>
               </div>
-              <div id="settings-hours-container" style="padding: 16px; display: flex; flex-direction: column; gap: 10px;">
-                <div style="text-align:center; font-size:14px; color:#999;" id="i18n-hours-loading">載入中...</div>
+              <div style="padding: 20px;">
+                <div id="hours-settings-list" style="display: flex; flex-direction: column; gap: 12px;">
+                  <!-- Dynamically rendered by JS -->
+                </div>
               </div>
             </div>
 
@@ -393,16 +383,16 @@
               <div
                 style="padding: 16px 20px; background: #f3f4f6; border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
                 <div>
-                  <div style="font-weight: 1100; font-size: 18px;" id="i18n-setting-address-title">📍 門市地址</div>
-                  <div style="font-size: 13px; color: var(--muted); font-weight: 600; margin-top: 2px;" id="i18n-setting-address-sub">顯示於顧客點餐頁面與 LINE 官方帳號回覆</div>
+                  <div style="font-weight: 1100; font-size: 18px;" id="i18n-setting-address-title">📍 門市地址設定</div>
+                  <div style="font-size: 13px; color: var(--muted); font-weight: 600; margin-top: 2px;" id="i18n-setting-address-sub">顯示於顧客點餐頁面頂部導航資訊</div>
                 </div>
                 <button class="btn btn-primary" style="padding: 10px 20px; font-size: 15px; border-radius: 8px;"
                   onclick="saveStoreAddressSetting()" id="btn-save-address-setting">儲存地址</button>
               </div>
               <div style="padding: 20px;">
-                <textarea id="setting-store-address-input" class="input"
-                  style="width: 100%; box-sizing: border-box; padding: 12px 14px; font-size: 15px; font-weight: 600; border: 1.5px solid var(--border); border-radius: 10px; outline: none; transition: border-color 0.15s ease; min-height: 80px; resize: vertical; font-family: inherit;"
-                  placeholder="請輸入門市地址"></textarea>
+                <input type="text" id="setting-store-address-input" class="input"
+                  style="width: 100%; box-sizing: border-box; padding: 12px 14px; font-size: 15px; font-weight: 600; border: 1.5px solid var(--border); border-radius: 10px; outline: none; transition: border-color 0.15s ease;"
+                  placeholder="請輸入門市地址（例如：新北市土城區中央路二段135號）" />
               </div>
             </div>
 
@@ -412,7 +402,7 @@
                 style="padding: 16px 20px; background: #f3f4f6; border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
                 <div>
                   <div style="font-weight: 1100; font-size: 18px;" id="i18n-setting-announcement-title">📢 門市公告設定</div>
-                  <div style="font-size: 13px; color: var(--muted); font-weight: 600; margin-top: 2px;" id="i18n-setting-announcement-sub">顯示於顧客點餐頁面 Header 最下方，留空則自動隱藏</div>
+                  <div style="font-size: 13px; color: var(--muted); font-weight: 600; margin-top: 2px;" id="i18n-setting-announcement-sub">顯示於顧客點餐頁面橫幅跑馬燈</div>
                 </div>
                 <button class="btn btn-primary" style="padding: 10px 20px; font-size: 15px; border-radius: 8px;"
                   onclick="saveStoreAnnouncementSetting()" id="btn-save-announcement-setting">儲存公告</button>
@@ -457,7 +447,32 @@
               </div>
             </div>
 
-            <!-- Dine-in Mode Setting (Moved to bottom) -->
+            <!-- Language Setting -->
+            <div class="settings-card" id="setting-card-language">
+              <div style="padding: 16px 20px; background: #f3f4f6; border-bottom: 1px solid var(--border);">
+                <div style="font-weight: 1100; font-size: 18px;" id="i18n-setting-lang-title">🌐 介面語言</div>
+                <div style="font-size: 13px; color: var(--muted); font-weight: 600; margin-top: 2px;" id="i18n-setting-lang-sub">設定 POS 系統的操作與顯示語言</div>
+              </div>
+              <div style="padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+                <label class="setting-mode-card" id="lang-card-zh" style="display: flex; align-items: center; gap: 14px; padding: 16px; border-radius: 12px; border: 2px solid var(--border); cursor: pointer; transition: all 0.15s ease;">
+                  <input type="radio" name="pos-language-radio" id="setting-lang-zh" value="zh-TW" onchange="selectLanguage('zh-TW')" style="width: 20px; height: 20px; accent-color: var(--primary);">
+                  <div>
+                    <div style="font-weight: 1100; font-size: 16px; color: #111827;">繁體中文 (Traditional Chinese)</div>
+                    <div style="font-size: 13.5px; color: #64748b; margin-top: 2px;">適合台灣門市與繁體中文操作人員</div>
+                  </div>
+                </label>
+
+                <label class="setting-mode-card" id="lang-card-vi" style="display: flex; align-items: center; gap: 14px; padding: 16px; border-radius: 12px; border: 2px solid var(--border); cursor: pointer; transition: all 0.15s ease;">
+                  <input type="radio" name="pos-language-radio" id="setting-lang-vi" value="vi" onchange="selectLanguage('vi')" style="width: 20px; height: 20px; accent-color: var(--primary);">
+                  <div>
+                    <div style="font-weight: 1100; font-size: 16px; color: #111827;">Tiếng Việt (Vietnamese)</div>
+                    <div style="font-size: 13.5px; color: #64748b; margin-top: 2px;">Giao diện tiếng Việt chuẩn hóa cho nhân viên quầy và thu ngân</div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Dine-in Mode Setting -->
             <div class="settings-card" id="setting-card-dinein">
               <div
                 style="padding: 16px 20px; background: #f3f4f6; border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
@@ -501,6 +516,45 @@
                   </div>
                   <button type="button" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px; font-weight: 800; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25); cursor: pointer; white-space: nowrap;" onclick="openBlabContactModal()" id="i18n-btn-contact-upgrade">
                     <span>💬</span> <span>聯繫升級方案</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Reports Analytics Setting (At the bottom) -->
+            <div class="settings-card" id="setting-card-reports">
+              <div style="padding: 16px 20px; background: #f3f4f6; border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                  <div style="font-weight: 1100; font-size: 18px;" id="i18n-setting-reports-title">📊 銷量與營收報表</div>
+                  <div style="font-size: 13px; color: var(--muted); font-weight: 600; margin-top: 2px;" id="i18n-setting-reports-sub">查看門市餐點銷售統計、營收排行與加料偏好</div>
+                </div>
+              </div>
+              
+              <div id="setting-reports-body" style="padding: 20px;">
+                <!-- Unlocked View -->
+                <div id="setting-reports-unlocked-body" style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 16px 20px; gap: 16px; flex-wrap: wrap;">
+                  <div>
+                    <div style="font-weight: 900; font-size: 16px; color: #0f172a;" id="i18n-reports-unlocked-name">即時餐點銷量與營收分析</div>
+                    <div style="font-size: 13.5px; color: #64748b; margin-top: 4px;" id="i18n-reports-unlocked-desc">依時間區間（今日、近7天、近30天）統計門市各品項銷售數量、營收總額及顧客加料分析。</div>
+                  </div>
+                  <button type="button" class="btn btn-primary" style="padding: 10px 20px; font-size: 15px; font-weight: 800; border-radius: 8px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; white-space: nowrap;" onclick="openReportsFromSettings()">
+                    <span>📊</span> <span id="i18n-btn-open-reports">查看銷量報表</span>
+                  </button>
+                </div>
+
+                <!-- Locked View -->
+                <div id="setting-reports-locked-body" style="display: none; background: linear-gradient(135deg, #f8fafc 0%, #edf2f7 100%); border: 1.5px dashed #cbd5e1; border-radius: 12px; padding: 14px 18px; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
+                  <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 240px;">
+                    <div style="font-size: 22px; width: 40px; height: 40px; border-radius: 50%; background: #ede9fe; color: #6d28d9; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid #ddd6fe;">
+                      🔒
+                    </div>
+                    <div>
+                      <div style="font-weight: 900; font-size: 15px; color: #1e1b4b;" id="i18n-reports-locked-title">進階功能 (未啟用)</div>
+                      <div style="font-size: 13px; color: #64748b; line-height: 1.4; margin-top: 2px;" id="i18n-reports-locked-desc">此功能為 BLAB 進階模組，如需啟用「銷量與營收報表分析」請聯繫 BLAB 團隊升級方案。</div>
+                    </div>
+                  </div>
+                  <button type="button" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px; font-weight: 800; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25); cursor: pointer; white-space: nowrap;" onclick="openBlabContactModal()">
+                    <span>💬</span> <span id="i18n-btn-contact-upgrade-rep">聯繫升級方案</span>
                   </button>
                 </div>
               </div>
@@ -980,15 +1034,15 @@
   </div>
 
   <!-- Benmi POS Modular Architecture Scripts -->
-  <script src="js/orders-i18n.js?v=20260823_cat_mgr_2"></script>
-  <script src="js/orders-core.js?v=20260823_dinein_append_time_1"></script>
+  <script src="js/orders-i18n.js?v=20260823_settings_rep_lang_1"></script>
+  <script src="js/orders-core.js?v=20260823_settings_rep_lang_1"></script>
   <script src="js/orders-audio.js?v=20260822_feat_announcement_1"></script>
-  <script src="js/orders-live.js?v=20260823_dinein_append_time_1"></script>
-  <script src="js/orders-modals.js?v=20260823_dinein_append_time_1"></script>
-  <script src="js/orders-history.js?v=20260823_dinein_paid_1"></script>
-  <script src="js/orders-reports.js?v=20260823_item_analytics_2"></script>
-  <script src="js/orders-settings.js?v=20260823_dinein_feat_1"></script>
-  <script src="js/orders-menu.js?v=20260823_cat_mgr_2"></script>
+  <script src="js/orders-live.js?v=20260823_settings_rep_lang_1"></script>
+  <script src="js/orders-modals.js?v=20260823_settings_rep_lang_1"></script>
+  <script src="js/orders-history.js?v=20260823_settings_rep_lang_1"></script>
+  <script src="js/orders-reports.js?v=20260823_settings_rep_lang_1"></script>
+  <script src="js/orders-settings.js?v=20260823_settings_rep_lang_1"></script>
+  <script src="js/orders-menu.js?v=20260823_settings_rep_lang_1"></script>
 
   <!-- POS Bootstrap & Initialization -->
   <script>
