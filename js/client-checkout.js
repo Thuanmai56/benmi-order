@@ -536,6 +536,13 @@ function buildStructuredCartItems() {
     return items;
 }
 
+function isPickupTimeValid(dateTime) {
+    if (typeof isStoreOpen === 'function') {
+        return isStoreOpen(dateTime);
+    }
+    return true;
+}
+
 // 9. Thực thi gửi đơn hàng với Timeout 8s & Bảo vệ nút bấm
 async function submitOrder() {
     if (isSubmitting) return;
@@ -642,7 +649,7 @@ async function submitOrder() {
 // 10. Hàm nội bộ thực thi POST dữ liệu
 async function doSubmitOrderExecution(dateInput, timeInput) {
     isSubmitting = true;
-    const submitBtn = document.getElementById('submit-btn');
+    const submitBtn = document.getElementById('btn-submit') || document.getElementById('submit-btn');
     if (submitBtn) {
         submitBtn.disabled = true;
         submitBtn.innerText = '處理中...';
