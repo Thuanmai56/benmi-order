@@ -322,7 +322,7 @@ function renderAll() {
     .sort(sortByPickupTimeAsc);
 
   const historyOrders = currentOrders
-    .filter(o => o && ["PICKED_UP", "REJECTED"].includes(o.status))
+    .filter(o => o && ["PICKED_UP", "REJECTED", "PAID"].includes(o.status))
     .slice()
     .sort((a, b) => (b?.createdAt || 0) - (a?.createdAt || 0));
 

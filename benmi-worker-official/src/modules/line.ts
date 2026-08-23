@@ -479,7 +479,7 @@ export function buildAppendConfirmationFlexMessage(
           type: "box",
           layout: "horizontal",
           contents: [
-            { type: "text", text: `🍽️ 加點成功 (第 ${roundNumber} 輪)`, weight: "bold", color: "#ffffff", size: "lg", flex: 0 },
+            { type: "text", text: `🍽️ 加點 (第 ${roundNumber} 輪)`, weight: "bold", color: "#ffffff", size: "lg", flex: 0 },
             { type: "text", text: `#${order.key}`, color: "#ffffff", size: "sm", align: "end", flex: 1, gravity: "center" }
           ]
         }
@@ -918,7 +918,7 @@ export async function handleLineWebhook(
             tenantCtx
           );
 
-          await replyLineFlexMessage(replyToken, `🍽️ 加點成功 (第 ${order.roundCount} 輪)`, flexBubble, env, tenantCtx);
+          await replyLineFlexMessage(replyToken, `🍽️ 加點 (第 ${order.roundCount} 輪)`, flexBubble, env, tenantCtx);
         }
       }
       continue;

@@ -227,7 +227,10 @@ function renderListRight(orders) {
         </div>
       </div>
       <div class="tile-actions">
-        <button class="btn btn-yellow tile-action-btn" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','PICKED_UP', {}, this)">${t('btnPickedUp')}</button>
+        ${isDineIn
+          ? `<button class="btn tile-action-btn" style="background:#7c3aed; color:#ffffff;" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','PAID', {}, this)">${t('btnPaid')}</button>`
+          : `<button class="btn btn-yellow tile-action-btn" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','PICKED_UP', {}, this)">${t('btnPickedUp')}</button>`
+        }
       </div>
     `;
     container.appendChild(tile);

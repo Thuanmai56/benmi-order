@@ -44,10 +44,12 @@ const I18N = {
     badgeReady: "已完成",
     badgeWaiting: "等客戶確認",
     badgePicked: "已取餐",
+    badgePaid: "已結帳",
     badgeRejected: "已取消",
     btnReview: "Review 訂單",
     btnReady: "準備好了",
     btnPickedUp: "已取餐",
+    btnPaid: "已結帳",
     btnWaitingReply: "等待客戶回覆",
     btnView: "查看",
     defaultCustomer: "顧客",
@@ -327,10 +329,12 @@ const I18N = {
     badgeReady: "ĐÃ XONG",
     badgeWaiting: "CHỜ KHÁCH",
     badgePicked: "ĐÃ LẤY",
+    badgePaid: "ĐÃ THANH TOÁN",
     badgeRejected: "ĐÃ HỦY",
     btnReview: "Xem đơn",
     btnReady: "Đã xong",
     btnPickedUp: "Đã lấy",
+    btnPaid: "Đã thanh toán",
     btnWaitingReply: "Chờ khách phản hồi",
     btnView: "Xem",
     defaultCustomer: "Khách",
@@ -719,6 +723,8 @@ function applyLanguageToDOM() {
 
   const btnRevPik = document.getElementById("btn-review-picked");
   if (btnRevPik) btnRevPik.innerText = dict.btnPickedUp;
+  const btnRevPaid = document.getElementById("btn-review-paid");
+  if (btnRevPaid) btnRevPaid.innerText = dict.btnPaid;
   const btnRevCan2 = document.getElementById("btn-review-cancel-2");
   if (btnRevCan2) btnRevCan2.innerText = dict.btnCancelOrder;
   const btnRevCls2 = document.getElementById("btn-review-close-2");

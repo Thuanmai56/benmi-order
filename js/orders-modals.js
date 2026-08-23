@@ -60,6 +60,16 @@ function openReview(orderKey) {
     if (actionsAccepted) actionsAccepted.style.display = "grid";
   } else if (order.status === "DONE") {
     if (actionsDone) actionsDone.style.display = "grid";
+    const btnPik = document.getElementById("btn-review-picked");
+    const btnPaid = document.getElementById("btn-review-paid");
+    const isDineIn = typeof isOrderDineIn === "function" ? isOrderDineIn(order) : order.diningOption === "dine_in";
+    if (isDineIn) {
+      if (btnPik) btnPik.style.display = "none";
+      if (btnPaid) btnPaid.style.display = "inline-flex";
+    } else {
+      if (btnPik) btnPik.style.display = "inline-flex";
+      if (btnPaid) btnPaid.style.display = "none";
+    }
   } else if (order.status === "WAITING_CUSTOMER_CHANGE" || order.status === "WAITING_CUSTOMER_REJECT") {
     if (actionsWaiting) actionsWaiting.style.display = "grid";
   }

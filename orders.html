@@ -564,6 +564,8 @@
       <div class="modal-actions" id="review-actions-done" style="display:none;">
         <button class="btn btn-primary" id="btn-review-picked"
           onclick="updateStatus(reviewingOrder.key, 'PICKED_UP', {}, this).then(() => closeModal());">已取餐</button>
+        <button class="btn" id="btn-review-paid" style="background:#7c3aed; color:#fff; display:none;"
+          onclick="updateStatus(reviewingOrder.key, 'PAID', {}, this).then(() => closeModal());">已結帳</button>
         <button class="btn btn-danger" id="btn-review-cancel-2"
           onclick="if(confirm(t('confirmCancelOrder'))){ updateStatus(reviewingOrder.key, 'REJECTED', { reason: '取消並不回復客戶' }, this).then(() => closeModal()); }">取消訂單</button>
         <button class="btn btn-ghost" id="btn-review-close-2" onclick="closeModal()">關閉</button>
@@ -917,12 +919,12 @@
   </div>
 
   <!-- Benmi POS Modular Architecture Scripts -->
-  <script src="js/orders-i18n.js?v=20260823_cat_mod_picker_1"></script>
-  <script src="js/orders-core.js?v=20260823_history_fix_1"></script>
+  <script src="js/orders-i18n.js?v=20260823_dinein_paid_1"></script>
+  <script src="js/orders-core.js?v=20260823_dinein_paid_1"></script>
   <script src="js/orders-audio.js?v=20260822_feat_announcement_1"></script>
-  <script src="js/orders-live.js?v=20260823_dinein_feat_1"></script>
-  <script src="js/orders-modals.js?v=20260822_feat_announcement_1"></script>
-  <script src="js/orders-history.js?v=20260823_history_fix_1"></script>
+  <script src="js/orders-live.js?v=20260823_dinein_paid_1"></script>
+  <script src="js/orders-modals.js?v=20260823_dinein_paid_1"></script>
+  <script src="js/orders-history.js?v=20260823_dinein_paid_1"></script>
   <script src="js/orders-settings.js?v=20260823_dinein_feat_1"></script>
   <script src="js/orders-menu.js?v=20260823_cat_mod_picker_1"></script>
 

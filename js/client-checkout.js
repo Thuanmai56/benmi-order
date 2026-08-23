@@ -638,7 +638,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                 try {
                     if (liff.isInClient() && typeof liff.sendMessages === 'function') {
                         const notePart = mainNote ? `\n📝 備註：${mainNote}` : '';
-                        const appendChatMsg = `[加點成功 #${window.parentOrderKey}]\n🍽️ 現場加點品項：\n${rawItemsText}${notePart}\n\n💰 本次加點：+$${currentTotal}`;
+                        const appendChatMsg = `[加點 #${window.parentOrderKey}]\n🍽️ 現場加點品項：\n${rawItemsText}${notePart}\n\n💰 本次加點：+$${currentTotal}`;
                         await liff.sendMessages([{ type: 'text', text: appendChatMsg }]);
                     }
                 } catch (liffMsgErr) {

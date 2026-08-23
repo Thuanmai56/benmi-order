@@ -154,9 +154,12 @@ function renderHistory(orders) {
       tile.className = "history-tile";
       tile.onclick = () => openReview(order.key);
       const isPickedUp = order.status === "PICKED_UP";
+      const isPaid = order.status === "PAID";
       const isRejected = order.status === "REJECTED" || order.status === "FORCE_REJECT";
       let badge = "";
-      if (isPickedUp) {
+      if (isPaid) {
+        badge = `<span class="badge done" style="background:#ede9fe; color:#6d28d9; border:1px solid #ddd6fe;">${t('badgePaid')}</span>`;
+      } else if (isPickedUp) {
         badge = `<span class="badge done">${t('badgePicked')}</span>`;
       } else if (isRejected) {
         badge = `<span class="badge new" style="background:#fee2e2; color:#b91c1c;">${t('badgeRejected')}</span>`;

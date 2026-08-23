@@ -119,8 +119,8 @@ export async function executeAppendOrderInternal(
     return json({ error: "找不到原訂單 / Order not found", code: "ORDER_NOT_FOUND" }, 404);
   }
 
-  // 2. Lock boundary: Cannot append if order is PICKED_UP or REJECTED
-  if (row.status === 'PICKED_UP' || row.status === 'REJECTED') {
+  // 2. Lock boundary: Cannot append if order is PICKED_UP, REJECTED, or PAID
+  if (row.status === 'PICKED_UP' || row.status === 'REJECTED' || row.status === 'PAID') {
     return json({
       error: "訂單已完成或已取消，無法再加點，請重新開啟新訂單 / Đơn hàng đã kết thúc hoặc đã hủy, không thể gọi thêm",
       code: "ORDER_LOCKED"
@@ -134,13 +134,14 @@ export async function executeAppendOrderInternal(
   const nowTw = new Date(Date.now() + 8 * 3600000);
   const timeStr = `${String(nowTw.getUTCHours()).padStart(2, "0")}:${String(nowTw.getUTCMinutes()).padStart(2, "0")}`;
 
-  // 4. Multi-round content formatting
-  let existingContent = String(row.order_content || "").trim();
-  if (!existingContent.includes("[第 1 輪") && !existingContent.includes("[Đợt 1")) {
-    existingContent = `[第 1 輪 / Đợt 1]\n${existingContent}`;
+  // 4. Multi-round content formatting (Mới -> Cũ: Đợt mới nhất ở trên cùng)
+  let previousRounds = String(row.order_content || "").trim();
+  if (!previousRounds.includes("[第 1 輪") && !previousRounds.includes("[Đợt 1")) {
+    previousRounds = `[第 1 輪 / Đợt 1]\n${previousRounds}`;
   }
-  const newContentBlock = `\n\n[第 ${nextRound} 輪 加點 / Đợt ${nextRound} - ${timeStr}]\n${appendedContent.trim()}`;
-  const updatedContent = existingContent + newContentBlock;
+  const separator = "--------------------------------";
+  const newRoundBlock = `[第 ${nextRound} 輪 加點 / Đợt ${nextRound} - ${timeStr}]\n${appendedContent.trim()}`;
+  const updatedContent = `${newRoundBlock}\n\n${separator}\n${previousRounds}`;
 
   // 5. Combine note & update total
   const combinedNote = note
@@ -436,13 +437,26 @@ export async function updateOrder(
     return json({ success: true });
   }
 
-  // Employee 已取餐
+  // Employee 已取餐 (PICKED_UP - Dành cho đơn mang đi)
   if (incoming === "PICKED_UP") {
     if (order.status === "PICKED_UP") {
       await saveOrder(env, order, tenantId);
       return json({ success: true });
     }
     order.status = "PICKED_UP";
+    await saveOrder(env, order, tenantId);
+
+    if (ctx && ctx.waitUntil) ctx.waitUntil(syncToGoogleSheets(order, env, tenantCtx));
+    return json({ success: true });
+  }
+
+  // Employee 已結帳 (PAID - Dành cho đơn ăn tại bàn)
+  if (incoming === "PAID") {
+    if (order.status === "PAID") {
+      await saveOrder(env, order, tenantId);
+      return json({ success: true });
+    }
+    order.status = "PAID";
     await saveOrder(env, order, tenantId);
 
     if (ctx && ctx.waitUntil) ctx.waitUntil(syncToGoogleSheets(order, env, tenantCtx));
@@ -603,7 +617,7 @@ export async function getHistorySummary(request: Request, env: Env): Promise<Res
          SUM(total_amount) as total_revenue
        FROM orders
        WHERE tenant_id = ? 
-         AND status IN ('PICKED_UP', 'REJECTED')
+         AND status IN ('PICKED_UP', 'REJECTED', 'PAID')
          AND created_at >= DATETIME('now', '-30 days')
        GROUP BY date_group
        ORDER BY date_group DESC`
@@ -637,7 +651,7 @@ export async function getOrdersByDate(request: Request, env: Env): Promise<Respo
       `SELECT key, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, round_count, last_appended_at, created_at 
        FROM orders 
        WHERE tenant_id = ? 
-         AND status IN ('PICKED_UP', 'REJECTED')
+         AND status IN ('PICKED_UP', 'REJECTED', 'PAID')
          AND DATE(DATETIME(created_at, '+8 hours')) = ?
        ORDER BY created_at DESC LIMIT 500`
     ).bind(tenantId, dateStr).all<any>();
@@ -659,7 +673,7 @@ export async function getHistoryAll(request: Request, env: Env): Promise<Respons
       `SELECT key, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, round_count, last_appended_at, created_at 
        FROM orders 
        WHERE tenant_id = ? 
-         AND status IN ('PICKED_UP', 'REJECTED')
+         AND status IN ('PICKED_UP', 'REJECTED', 'PAID')
          AND created_at >= DATETIME('now', '-30 days')
        ORDER BY created_at DESC LIMIT 1000`
     ).bind(tenantId).all<any>();
@@ -679,7 +693,7 @@ export async function saveOrder(env: Env, order: Order, tenantId: string): Promi
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, 1), ?, datetime(?, 'unixepoch'), datetime('now'))
      ON CONFLICT(key) DO UPDATE SET
        status = CASE
-         WHEN orders.status IN ('ACCEPTED', 'DONE', 'REJECTED', 'PICKED_UP') AND excluded.status = 'NEW'
+         WHEN orders.status IN ('ACCEPTED', 'DONE', 'REJECTED', 'PICKED_UP', 'PAID') AND excluded.status = 'NEW'
          THEN orders.status
          ELSE excluded.status
        END,
