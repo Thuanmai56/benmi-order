@@ -452,16 +452,29 @@ export function buildAppendConfirmationFlexMessage(
   tenantCtx?: TenantContext | null
 ): any {
   const brandColor = "#7c3aed";
-  const tableNumber = order.tableNumber || "-";
+
+  let rawTable = (order.tableNumber || "").trim();
+  if (!rawTable || rawTable === "-") {
+    const tableMatch = (order.content || "").match(/(?:桌號|Bàn)[:\s]*([^\n\r,，]+)/i) ||
+                       (order.note || "").match(/(?:桌號|Bàn)[:\s]*([^\n\r,，]+)/i);
+    if (tableMatch) rawTable = tableMatch[1].trim();
+  }
+  const displayTable = rawTable
+    ? (rawTable.startsWith("桌號") || rawTable.startsWith("Bàn") ? rawTable : `${rawTable} 號桌`)
+    : "-";
+
   const contentLines = (newItemsText || "").split("\n").filter(l => l.trim().length > 0);
-  const contentComponents = contentLines.slice(0, 30).map(line => ({
-    type: "text",
-    text: line,
-    size: "sm",
-    color: line.startsWith("↳") ? "#666666" : "#111111",
-    weight: line.includes("x ") ? "bold" : "regular",
-    wrap: true
-  }));
+  const contentComponents = contentLines.slice(0, 30).map(line => {
+    const isOption = line.startsWith("↳") || line.startsWith("-") || line.startsWith("+");
+    return {
+      type: "text",
+      text: line,
+      size: isOption ? "xs" : "sm",
+      color: isOption ? "#666666" : "#111111",
+      weight: isOption ? "regular" : "bold",
+      wrap: true
+    };
+  });
 
   const liffBaseUrl = tenantCtx?.liffUrl || (tenantCtx?.liffId ? `https://liff.line.me/${tenantCtx.liffId}` : "https://liff.line.me/");
   const tenantId = tenantCtx?.tenantId || "benmi";
@@ -495,18 +508,25 @@ export function buildAppendConfirmationFlexMessage(
           type: "box",
           layout: "horizontal",
           contents: [
-            { type: "text", text: "🪑 桌號：", size: "sm", color: "#666666", flex: 0 },
-            { type: "text", text: `桌號 ${tableNumber}`, size: "sm", weight: "bold", color: "#7c3aed", align: "end", flex: 1 }
+            { type: "text", text: "桌號：", size: "sm", color: "#666666", flex: 0 },
+            { type: "text", text: displayTable, size: "sm", weight: "bold", color: "#7c3aed", align: "end", flex: 1 }
           ]
         },
         { type: "separator", margin: "xs" },
         {
           type: "box",
           layout: "vertical",
-          spacing: "xs",
           contents: [
-            { type: "text", text: `➕ 本次加點品項 (第 ${roundNumber} 輪)：`, weight: "bold", size: "sm", color: "#333333" },
-            ...contentComponents
+            { type: "text", text: "加點品項：", weight: "regular", size: "sm", color: "#666666" },
+            {
+              type: "box",
+              layout: "vertical",
+              margin: "md",
+              spacing: "xs",
+              contents: contentComponents.length > 0 ? contentComponents : [
+                { type: "text", text: "加點品項", weight: "bold", size: "sm", color: "#111111" }
+              ]
+            }
           ]
         },
         ...(order.note ? [
@@ -525,8 +545,8 @@ export function buildAppendConfirmationFlexMessage(
           type: "box",
           layout: "horizontal",
           contents: [
-            { type: "text", text: "➕ 本次加點金額：", size: "sm", color: "#666666", flex: 0 },
-            { type: "text", text: `+$${addedAmount}`, size: "sm", weight: "bold", color: "#7c3aed", align: "end", flex: 1 }
+            { type: "text", text: "加點金額：", size: "sm", color: "#666666", flex: 0 },
+            { type: "text", text: `$${addedAmount}`, size: "sm", weight: "bold", color: "#7c3aed", align: "end", flex: 1 }
           ]
         },
         {
@@ -551,8 +571,8 @@ export function buildAppendConfirmationFlexMessage(
           height: "sm",
           action: {
             type: "uri",
-            label: "➕ 再次加點",
-            uri: `${liffBaseUrl}?tenant_id=${encodeURIComponent(tenantId)}&parent_order_key=${encodeURIComponent(order.key)}&table_number=${encodeURIComponent(tableNumber)}&mode=append`
+            label: "再次加點",
+            uri: `${liffBaseUrl}?tenant_id=${encodeURIComponent(tenantId)}&parent_order_key=${encodeURIComponent(order.key)}&table_number=${encodeURIComponent(rawTable || '')}&mode=append`
           }
         },
         {

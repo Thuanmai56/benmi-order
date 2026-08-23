@@ -201,7 +201,12 @@ const I18N = {
     saveFail: "儲存失敗：",
     // Menu Editor
     menuCatTitle: "菜單分類",
-    menuCatSub: "拖曳或按箭頭排序 ✦ 點擊管理品項",
+    menuCatSub: "點擊左側分類以管理品項",
+    menuCatSubReorder: "拖曳或點擊箭頭以調整分類順序",
+    btnSortCategories: "↕️ 排序",
+    btnSortCategoriesDone: "✓ 完成排序",
+    btnMoveCategoryUp: "▲ 上移",
+    btnMoveCategoryDown: "▼ 下移",
     btnMenuAddCategory: "+ 新增分類",
     btnCategoryDelete: "刪除分類",
     btnCategoryRename: "重新命名",
@@ -511,7 +516,12 @@ const I18N = {
     saveFail: "Lưu thất bại: ",
     // Menu Editor
     menuCatTitle: "Danh mục thực đơn",
-    menuCatSub: "Kéo thả hoặc nhấn mũi tên để đổi thứ tự ✦ Nhấn để sửa món",
+    menuCatSub: "Chọn danh mục bên trái để quản lý món",
+    menuCatSubReorder: "Kéo thả hoặc nhấn mũi tên để đổi thứ tự phân loại",
+    btnSortCategories: "↕️ Sắp xếp",
+    btnSortCategoriesDone: "✓ Xong",
+    btnMoveCategoryUp: "▲ Lên trên",
+    btnMoveCategoryDown: "▼ Xuống dưới",
     btnMenuAddCategory: "+ Thêm phân loại",
     btnCategoryDelete: "Xóa phân loại",
     btnCategoryRename: "Đổi tên phân loại",
@@ -978,11 +988,27 @@ function applyLanguageToDOM() {
   const menuCatT = document.getElementById("i18n-menu-cat-title");
   if (menuCatT) menuCatT.innerText = dict.menuCatTitle;
   const menuCatS = document.getElementById("i18n-menu-cat-sub");
-  if (menuCatS) menuCatS.innerText = dict.menuCatSub;
-  const btnMenuRef = document.getElementById("btn-menu-refresh");
-  if (btnMenuRef) btnMenuRef.innerText = dict.btnMenuRefresh;
+  if (menuCatS) {
+    if (typeof isCategoryReorderMode !== 'undefined' && isCategoryReorderMode) {
+      menuCatS.innerText = dict.menuCatSubReorder;
+    } else {
+      menuCatS.innerText = dict.menuCatSub;
+    }
+  }
+  const btnSortCat = document.getElementById("btn-cat-toggle-reorder");
+  if (btnSortCat) {
+    if (typeof isCategoryReorderMode !== 'undefined' && isCategoryReorderMode) {
+      btnSortCat.innerText = dict.btnSortCategoriesDone;
+    } else {
+      btnSortCat.innerText = dict.btnSortCategories;
+    }
+  }
   const btnMenuAddCat = document.getElementById("btn-menu-add-cat");
   if (btnMenuAddCat) btnMenuAddCat.innerText = dict.btnMenuAddCategory;
+  const btnCatUp = document.getElementById("btn-category-move-up");
+  if (btnCatUp) btnCatUp.innerText = dict.btnMoveCategoryUp;
+  const btnCatDown = document.getElementById("btn-category-move-down");
+  if (btnCatDown) btnCatDown.innerText = dict.btnMoveCategoryDown;
   const btnCatDel = document.getElementById("btn-category-delete");
   if (btnCatDel) btnCatDel.innerText = dict.btnCategoryDelete;
   const btnCatRen = document.getElementById("btn-category-rename");

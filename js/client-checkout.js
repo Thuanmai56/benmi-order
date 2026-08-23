@@ -670,12 +670,15 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
         // 10.1 Xử lý riêng cho luồng 加點餐點 (Append Mode)
         if (window.isAppendMode && window.parentOrderKey) {
             const rawItemsText = formatAppendItemsOnlyText();
+            const tableInput = document.getElementById('dinein-table-number');
+            const currentTable = (tableInput && tableInput.value.trim()) || paramTableNumber || window.currentTableNumber || '';
             const appendPayload = {
                 parent_order_key: window.parentOrderKey,
                 user_id: userId,
                 customer_name: customerName,
                 appended_content: rawItemsText,
                 appended_total: currentTotal,
+                table_number: currentTable || undefined,
                 note: mainNote,
                 tenant_id: tenantId,
                 items: structuredItems
@@ -708,8 +711,9 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
             if (typeof liff !== 'undefined' && liff.isInClient) {
                 try {
                     if (liff.isInClient() && typeof liff.sendMessages === 'function') {
+                        const tablePart = currentTable ? `\n桌號：${currentTable}` : '';
                         const notePart = mainNote ? `\n📝 備註：${mainNote}` : '';
-                        const appendChatMsg = `[加點 #${window.parentOrderKey}]\n🍽️ 現場加點品項：\n${rawItemsText}${notePart}\n\n💰 本次加點：+$${currentTotal}`;
+                        const appendChatMsg = `[加點 #${window.parentOrderKey}]${tablePart}\n現場加點品項：\n${rawItemsText}${notePart}\n\n💰 加點金額：+$${currentTotal}`;
                         await liff.sendMessages([{ type: 'text', text: appendChatMsg }]);
                     }
                 } catch (liffMsgErr) {
