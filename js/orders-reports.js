@@ -48,8 +48,9 @@ async function fetchReportData(range = 'today', forceRefresh = false) {
   }
 
   try {
-    const tenantId = typeof currentTenantId !== "undefined" && currentTenantId ? currentTenantId : "benmi";
-    const res = await fetch(`/api/reports/items-analytics?tenant_id=${encodeURIComponent(tenantId)}&range=${encodeURIComponent(range)}`, {
+    const tenantId = (typeof getTenantIdFromUrl === "function" ? getTenantIdFromUrl() : "") || (typeof currentTenantId !== "undefined" && currentTenantId ? currentTenantId : "benmi");
+    const workerBase = typeof WORKER_BASE !== "undefined" ? WORKER_BASE : "https://platform-worker-staging.thuanmnc.workers.dev";
+    const res = await fetch(`${workerBase}/api/reports/items-analytics?tenant_id=${encodeURIComponent(tenantId)}&range=${encodeURIComponent(range)}&_t=${Date.now()}`, {
       headers: {
         "Accept": "application/json",
         "X-Tenant-ID": tenantId
