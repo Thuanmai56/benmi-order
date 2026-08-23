@@ -137,19 +137,17 @@ function renderListLeft(orders) {
     tile.innerHTML = `
       <div class="tile-info">
         <div class="tile-top">
-          <span class="tile-customer">${escapeHtml(order.customer || t('defaultCustomer'))}</span>
+          <span class="tile-customer" title="${escapeHtml(order.customer || t('defaultCustomer'))}">${escapeHtml(order.customer || t('defaultCustomer'))}</span>
+          <span class="tile-order-key">#${escapeHtml(order.key)}</span>
           ${diningBadge}
           ${appendBadge}
         </div>
-        <div class="tile-sub-row">
-          <span class="tile-order-key">#${escapeHtml(order.key)}</span>
+        <div class="tile-meta-row">
+          <span class="tile-meta-tag"><span style="color:var(--muted); margin-right:4px;">🕒</span>${escapeHtml(pickupDisplay)}</span>
           <span class="tile-meta-tag tile-eta" style="${isDineIn ? 'color:#7c3aed; font-weight:800;' : ''}">${escapeHtml(etaDisplay)}</span>
         </div>
-        <div class="tile-bottom-row">
-          <div class="tile-time-items">
-            <span class="tile-meta-tag"><span style="color:var(--muted); margin-right:3px;">🕒</span>${escapeHtml(pickupDisplay)}</span>
-            <span class="tile-item-count"><span style="margin-right:3px;">🧾</span>${itemCountStr}</span>
-          </div>
+        <div class="tile-count-row">
+          <span class="tile-item-count"><span style="margin-right:4px;">🧾</span>${itemCountStr}</span>
           ${totalFormatted !== '-' ? `<span class="tile-price">${escapeHtml(totalFormatted)}</span>` : ''}
         </div>
       </div>
@@ -208,19 +206,17 @@ function renderListRight(orders) {
     tile.innerHTML = `
       <div class="tile-info">
         <div class="tile-top">
-          <span class="tile-customer">${escapeHtml(order.customer || t('defaultCustomer'))}</span>
+          <span class="tile-customer" title="${escapeHtml(order.customer || t('defaultCustomer'))}">${escapeHtml(order.customer || t('defaultCustomer'))}</span>
+          <span class="tile-order-key">#${escapeHtml(order.key)}</span>
           ${diningBadge}
           ${appendBadge}
         </div>
-        <div class="tile-sub-row">
-          <span class="tile-order-key">#${escapeHtml(order.key)}</span>
+        <div class="tile-meta-row">
+          <span class="tile-meta-tag"><span style="color:var(--muted); margin-right:4px;">🕒</span>${escapeHtml(pickupDisplay)}</span>
           <span class="tile-meta-tag tile-eta" style="${isDineIn ? 'color:#7c3aed; font-weight:800;' : ''}">${escapeHtml(etaDisplay)}</span>
         </div>
-        <div class="tile-bottom-row">
-          <div class="tile-time-items">
-            <span class="tile-meta-tag"><span style="color:var(--muted); margin-right:3px;">🕒</span>${escapeHtml(pickupDisplay)}</span>
-            <span class="tile-item-count"><span style="margin-right:3px;">🧾</span>${itemCountStr}</span>
-          </div>
+        <div class="tile-count-row">
+          <span class="tile-item-count"><span style="margin-right:4px;">🧾</span>${itemCountStr}</span>
           ${totalFormatted !== '-' ? `<span class="tile-price">${escapeHtml(totalFormatted)}</span>` : ''}
         </div>
       </div>

@@ -187,19 +187,17 @@ function renderHistory(orders) {
       tile.innerHTML = `
         <div class="history-tile-info">
           <div class="history-tile-top">
-            <span class="history-tile-customer">${escapeHtml(order.customer || t('defaultCustomer'))}</span>
+            <span class="history-tile-customer" title="${escapeHtml(order.customer || t('defaultCustomer'))}">${escapeHtml(order.customer || t('defaultCustomer'))}</span>
+            <span class="history-tile-key">#${escapeHtml(order.key)}</span>
             ${diningBadge}
             ${appendBadge}
             ${badge}
           </div>
-          <div class="history-tile-sub-row">
-            <span class="history-tile-key">#${escapeHtml(order.key)}</span>
-            <span class="history-tile-meta"><span style="color:var(--muted); margin-right:3px;">🕒</span>${escapeHtml(pickupDisplay)}</span>
-          </div>
-          <div class="history-tile-bottom-row">
-            ${itemsSummary ? `<div class="history-tile-items">🧾 ${escapeHtml(itemsSummary)}</div>` : '<div></div>'}
+          <div class="history-tile-meta-row">
+            <span class="history-tile-meta"><span style="color:var(--muted); margin-right:4px;">🕒</span>${escapeHtml(pickupDisplay)}</span>
             ${totalFormatted !== '-' ? `<span class="history-tile-price">${escapeHtml(totalFormatted)}</span>` : ''}
           </div>
+          ${itemsSummary ? `<div class="history-tile-items">🧾 ${escapeHtml(itemsSummary)}</div>` : ''}
         </div>
         <div class="history-tile-actions">
           <button class="history-tile-btn" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">${t('btnView')}</button>
