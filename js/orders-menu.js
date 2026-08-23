@@ -177,6 +177,29 @@ function closeCategoriesManager() {
   }
 }
 
+function getDragAfterElement(container, y, selector) {
+  const draggableElements = [...container.querySelectorAll(`${selector}:not(.dragging)`)];
+
+  return draggableElements.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    if (offset < 0 && offset > closest.offset) {
+      return { offset: offset, element: child };
+    } else {
+      return closest;
+    }
+  }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+function updateCategoryCardIndexes(cardsList) {
+  if (!cardsList) return;
+  const cards = cardsList.querySelectorAll('.cat-mgr-card');
+  cards.forEach((c, i) => {
+    const idxEl = c.querySelector('.cat-mgr-index');
+    if (idxEl) idxEl.innerText = `#${i + 1}`;
+  });
+}
+
 function renderCategoriesManagerView() {
   const titleEl = document.getElementById("menu-editor-title");
   if (titleEl) titleEl.innerText = `⚙️ ${t("manageCategoriesTitle")}`;
@@ -206,38 +229,55 @@ function renderCategoriesManagerView() {
   if (!currentMenuData || currentMenuData.length === 0) {
     mgrContainer.innerHTML = `<div style="text-align:center; padding: 30px; color:#94a3b8;">${t("noCategoriesPrompt") || "尚無任何分類"}</div>`;
   } else {
-    let draggedIndex = null;
+    const cardsList = document.createElement("div");
+    cardsList.className = "cat-mgr-cards-list";
+
+    cardsList.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      const draggingCard = cardsList.querySelector(".cat-mgr-card.dragging");
+      if (!draggingCard) return;
+      const afterElement = getDragAfterElement(cardsList, e.clientY, '.cat-mgr-card');
+      if (afterElement == null) {
+        cardsList.appendChild(draggingCard);
+      } else {
+        cardsList.insertBefore(draggingCard, afterElement);
+      }
+      updateCategoryCardIndexes(cardsList);
+    });
 
     currentMenuData.forEach((cat, idx) => {
       const card = document.createElement("div");
       card.className = "cat-mgr-card";
       card.draggable = true;
+      card.setAttribute("data-cat-id", cat.id);
 
       card.addEventListener("dragstart", (e) => {
-        draggedIndex = idx;
         e.dataTransfer.effectAllowed = "move";
         setTimeout(() => card.classList.add("dragging"), 0);
       });
+
       card.addEventListener("dragend", () => {
         card.classList.remove("dragging");
-      });
-      card.addEventListener("dragover", (e) => {
-        e.preventDefault();
-        card.style.borderColor = "var(--primary)";
-      });
-      card.addEventListener("dragleave", () => {
-        card.style.borderColor = "#e2e8f0";
-      });
-      card.addEventListener("drop", (e) => {
-        e.preventDefault();
-        card.style.borderColor = "#e2e8f0";
-        if (draggedIndex !== null && draggedIndex !== idx) {
-          const moved = currentMenuData.splice(draggedIndex, 1)[0];
-          currentMenuData.splice(idx, 0, moved);
+
+        // Extract new order from DOM
+        const newOrderIds = [...cardsList.querySelectorAll('.cat-mgr-card')].map(c => c.getAttribute('data-cat-id'));
+        const catMap = new Map(currentMenuData.map(c => [c.id, c]));
+        const reordered = newOrderIds.map(id => catMap.get(id)).filter(Boolean);
+
+        let changed = false;
+        for (let i = 0; i < reordered.length; i++) {
+          if (reordered[i].id !== currentMenuData[i].id) {
+            changed = true;
+            break;
+          }
+        }
+
+        if (changed) {
+          currentMenuData = reordered;
           markMenuDirty();
           renderMenuCategories();
-          renderCategoriesManagerView();
         }
+        renderCategoriesManagerView();
       });
 
       const badge = cat.type === 'modifier'
@@ -258,8 +298,10 @@ function renderCategoriesManagerView() {
         </div>
       `;
 
-      mgrContainer.appendChild(card);
+      cardsList.appendChild(card);
     });
+
+    mgrContainer.appendChild(cardsList);
   }
 
   // Add category button at the bottom of the list
@@ -391,37 +433,44 @@ function renderMenuCategoryEditor(index) {
     container.appendChild(toggleDiv);
   }
 
-  let draggedItemIndex = null;
+  const itemsContainer = document.createElement("div");
+  itemsContainer.className = "menu-items-list";
+  itemsContainer.style.display = "flex";
+  itemsContainer.style.flexDirection = "column";
+  itemsContainer.style.gap = "8px";
+
+  itemsContainer.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    const draggingRow = itemsContainer.querySelector(".menu-item-row.dragging");
+    if (!draggingRow) return;
+    const afterElement = getDragAfterElement(itemsContainer, e.clientY, '.menu-item-row');
+    if (afterElement == null) {
+      itemsContainer.appendChild(draggingRow);
+    } else {
+      itemsContainer.insertBefore(draggingRow, afterElement);
+    }
+  });
 
   cat.items.forEach((item, iIdx) => {
     const row = document.createElement("div");
     row.className = "menu-item-row";
     row.draggable = true;
+    row.setAttribute("data-item-index", iIdx);
 
     row.addEventListener("dragstart", (e) => {
-      draggedItemIndex = iIdx;
+      syncMenuDataFromDOM();
+      row.classList.add("dragging");
       e.dataTransfer.effectAllowed = "move";
-      setTimeout(() => row.style.opacity = "0.4", 0);
     });
-    row.addEventListener("dragend", () => { row.style.opacity = "1"; });
-    row.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      row.style.border = "2px dashed var(--primary)";
-    });
-    row.addEventListener("dragleave", () => {
-      row.style.border = "1px solid var(--border)";
-    });
-    row.addEventListener("drop", (e) => {
-      e.preventDefault();
-      row.style.border = "1px solid var(--border)";
-      if (draggedItemIndex !== null && draggedItemIndex !== iIdx) {
-        syncMenuDataFromDOM();
-        const arr = currentMenuData[index].items;
-        const moved = arr.splice(draggedItemIndex, 1)[0];
-        arr.splice(iIdx, 0, moved);
-        markMenuDirty();
-        renderMenuCategoryEditor(index);
-      }
+    row.addEventListener("dragend", () => {
+      row.classList.remove("dragging");
+      syncMenuDataFromDOM();
+      const currentItems = currentMenuData[index].items;
+      const newOrderIndices = [...itemsContainer.querySelectorAll('.menu-item-row')].map(r => parseInt(r.getAttribute('data-item-index'), 10));
+      const reordered = newOrderIndices.map(idx => currentItems[idx]).filter(Boolean);
+      currentMenuData[index].items = reordered;
+      markMenuDirty();
+      renderMenuCategoryEditor(index);
     });
 
     const oosBg = item.isOos ? '#fee2e2' : '#d1fae5';
@@ -450,8 +499,9 @@ function renderMenuCategoryEditor(index) {
         <button class="menu-item-btn btn-ghost" style="border: 1px solid #fee2e2; background: #fff5f5; color: var(--brand-red);" onclick="removeMenuItemAt(${index}, ${iIdx})">${t("btnItemDelete")}</button>
       </div>
     `;
-    container.appendChild(row);
+    itemsContainer.appendChild(row);
   });
+  container.appendChild(itemsContainer);
 }
 
 function removeMenuItemAt(cIdx, iIdx) {
