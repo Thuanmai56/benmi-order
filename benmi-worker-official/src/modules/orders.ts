@@ -545,14 +545,14 @@ export async function getOrders(request: Request, env: Env): Promise<Response> {
   if (!env.DB) return jsonWithETag([], "0");
 
   try {
-    // 1. Tính toán ETag version tức thì dựa trên dữ liệu D1
+    // 1. Tính toán ETag version tức thì dựa trên Index D1 (Tối ưu O(1) - Chỉ đọc đúng 1 dòng)
     const verRow = await env.DB.prepare(
-      "SELECT MAX(updated_at) as last_updated, COUNT(*) as cnt FROM orders WHERE tenant_id = ?"
-    ).bind(tenantId).first<{ last_updated: string | null; cnt: number }>();
+      "SELECT updated_at, key FROM orders WHERE tenant_id = ? ORDER BY updated_at DESC LIMIT 1"
+    ).bind(tenantId).first<{ updated_at: string | null; key: string | null }>();
 
-    const lastUpdated = verRow?.last_updated || "0";
-    const cnt = verRow?.cnt || 0;
-    const currentVersion = `${lastUpdated}_${cnt}`;
+    const lastUpdated = verRow?.updated_at || "0";
+    const lastKey = verRow?.key || "empty";
+    const currentVersion = `${lastUpdated}_${lastKey}`;
 
     // 2. Client gửi Header "If-None-Match" -> So sánh với D1 version
     const clientETag = request.headers.get("if-none-match")?.replace(/^W\//, '').replace(/"/g, '');
