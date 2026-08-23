@@ -328,7 +328,7 @@ function createDefaultOperatingHours() {
 }
 
 function renderOperatingHours() {
-  const container = document.getElementById("settings-hours-container");
+  const container = document.getElementById("hours-settings-list") || document.getElementById("settings-hours-container");
   if (!container) return;
   container.innerHTML = "";
   const dayNamesList = DAY_NAMES[currentLang] || DAY_NAMES["zh-TW"];
@@ -337,24 +337,24 @@ function renderOperatingHours() {
     const shifts = (storeOperatingHours && storeOperatingHours[dayIdx]) || [];
     const isOpen = shifts.length > 0;
     const row = document.createElement("div");
-    row.style.cssText = "background: #fff; border: 1px solid #eee; border-radius: 8px; padding: 12px;";
+    row.style.cssText = "background: #fff; border: 1.5px solid var(--border, #e2e8f0); border-radius: 12px; padding: 14px 16px; transition: all 0.15s ease;";
     let shiftsHtml = "";
     shifts.forEach((shift, sIdx) => {
       shiftsHtml += `
-        <div style="display:flex; gap:8px; align-items:center; margin-top:10px;">
-          <input type="time" id="sh-start-${dayIdx}-${sIdx}" value="${shift.start}" style="flex:1; padding:8px; font-family:inherit; border:1px solid #ccc; border-radius:6px; font-size:15px;">
-          <span style="font-weight:900;">-</span>
-          <input type="time" id="sh-end-${dayIdx}-${sIdx}" value="${shift.end}" style="flex:1; padding:8px; font-family:inherit; border:1px solid #ccc; border-radius:6px; font-size:15px;">
-          <button onclick="removeShift(${dayIdx}, ${sIdx})" style="background:none; border:none; color:var(--brand-red); cursor:pointer; font-size:20px; padding:0 4px;">✕</button>
+        <div style="display:flex; gap:10px; align-items:center; margin-top:10px;">
+          <input type="time" id="sh-start-${dayIdx}-${sIdx}" value="${shift.start}" style="flex:1; padding:8px 12px; font-family:inherit; border:1.5px solid var(--border, #cbd5e1); border-radius:8px; font-size:15px; font-weight:600; outline:none;">
+          <span style="font-weight:900; color:#64748b;">-</span>
+          <input type="time" id="sh-end-${dayIdx}-${sIdx}" value="${shift.end}" style="flex:1; padding:8px 12px; font-family:inherit; border:1.5px solid var(--border, #cbd5e1); border-radius:8px; font-size:15px; font-weight:600; outline:none;">
+          <button type="button" onclick="removeShift(${dayIdx}, ${sIdx})" style="background:#fee2e2; border:1px solid #fca5a5; color:#dc2626; cursor:pointer; font-size:16px; width:34px; height:34px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">✕</button>
         </div>`;
     });
     row.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center;">
-        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:16px;">
-          <input type="checkbox" ${isOpen ? 'checked' : ''} onchange="toggleDayStatus(${dayIdx}, this.checked)" style="width:18px; height:18px;">
-          <span style="font-weight:900; color:${isOpen ? '#111' : '#999'};">${dayNamesList[dayIdx]}</span>
+        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:16px; font-weight:800; color:#1e293b;">
+          <input type="checkbox" ${isOpen ? 'checked' : ''} onchange="toggleDayStatus(${dayIdx}, this.checked)" style="width:20px; height:20px; accent-color:var(--primary, #00b900);">
+          <span style="color:${isOpen ? '#0f172a' : '#94a3b8'};">${dayNamesList[dayIdx]}</span>
         </label>
-        ${isOpen ? `<button onclick="addShift(${dayIdx})" style="font-size:13px; background:#eff6ff; color:#3b82f6; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-weight:900;">${t('btnAddShift')}</button>` : `<span style="font-size:13px; color:var(--brand-red); font-weight:900;">${t('closedDay')}</span>`}
+        ${isOpen ? `<button type="button" onclick="addShift(${dayIdx})" style="font-size:13px; background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; padding:6px 12px; border-radius:8px; cursor:pointer; font-weight:800;">${t('btnAddShift')}</button>` : `<span style="font-size:13px; color:#ef4444; font-weight:800; background:#fef2f2; padding:4px 8px; border-radius:6px; border:1px solid #fee2e2;">${t('closedDay')}</span>`}
       </div>
       ${isOpen ? `<div id="shifts-box-${dayIdx}">${shiftsHtml}</div>` : ''}`;
     container.appendChild(row);
