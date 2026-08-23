@@ -455,13 +455,21 @@ export function buildAppendConfirmationFlexMessage(
 
   let rawTable = (order.tableNumber || "").trim();
   if (!rawTable || rawTable === "-") {
-    const tableMatch = (order.content || "").match(/(?:桌號|Bàn)[:\s]*([^\n\r,，]+)/i) ||
-                       (order.note || "").match(/(?:桌號|Bàn)[:\s]*([^\n\r,，]+)/i);
+    const tableMatch = (order.content || "").match(/(?:桌號|Bàn)[：:\s]*([^\n\r,，()（）]+)/i) ||
+                       (order.note || "").match(/(?:桌號|Bàn)[：:\s]*([^\n\r,，()（）]+)/i);
     if (tableMatch) rawTable = tableMatch[1].trim();
   }
-  const displayTable = rawTable
-    ? (rawTable.startsWith("桌號") || rawTable.startsWith("Bàn") ? rawTable : `${rawTable} 號桌`)
-    : "-";
+
+  // Làm sạch hoàn toàn dấu ngoặc, dấu hai chấm thừa và nhãn bàn bị lặp lại
+  rawTable = rawTable
+    .replace(/^(?:桌號|Bàn)[：:\s]*/i, "")
+    .replace(/[：:]/g, "")
+    .replace(/[()（）]/g, "")
+    .replace(/號桌/g, "")
+    .replace(/桌/g, "")
+    .trim();
+
+  const displayTable = rawTable || "-";
 
   const contentLines = (newItemsText || "").split("\n").filter(l => l.trim().length > 0);
   const contentComponents = contentLines.slice(0, 30).map(line => {
