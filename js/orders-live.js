@@ -331,7 +331,7 @@ function formatContentHtml(order) {
         }
         currentRoundHeader = trimmed;
         currentRoundLines = [];
-      } else if (trimmed !== "") {
+      } else if (trimmed !== "" && !trimmed.startsWith("----")) {
         currentRoundLines.push(line);
       }
     });
@@ -340,8 +340,19 @@ function formatContentHtml(order) {
       rounds.push({ header: currentRoundHeader, lines: currentRoundLines });
     }
 
+    // Trích xuất số đợt để sắp xếp giảm dần (Đợt mới nhất luôn ở trên cùng)
+    const getRoundNum = (rd, fallbackIdx) => {
+      const m = (rd.header || "").match(/(?:第\s*(\d+)\s*輪|Đợt\s*(\d+))/i);
+      if (m) {
+        return parseInt(m[1] || m[2], 10);
+      }
+      return fallbackIdx + 1;
+    };
+
+    rounds.sort((a, b) => getRoundNum(b, 0) - getRoundNum(a, 0));
+
     contentHtml = rounds.map((rd, idx) => {
-      const isLatest = (rounds.length > 1 && idx === rounds.length - 1);
+      const isLatest = (rounds.length > 1 && idx === 0);
       const headerText = rd.header
         ? rd.header.replace(/^\[/, '').replace(/\]$/, '')
         : (idx === 0 ? t('roundBlockInitial') : t('roundBlockTitle', { n: idx + 1 }));
