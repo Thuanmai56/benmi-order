@@ -43,6 +43,10 @@ graph TD
   - **Chuẩn Đa Ngôn Ngữ (I18N)**: Bắt buộc khai báo đầy đủ key trong cả 2 từ điển `I18N["zh-TW"]` (tiếng Trung phồn thể thuần túy) và `I18N["vi"]` (tiếng Việt chuẩn POS). Tuyệt đối không pha trộn ngôn ngữ.
 - **Trang Thực Đơn Khách Hàng (`index.html` / `index.css` / `js/client-checkout.js`)**:
   - **Ưu tiên 1 (Mobile / LINE LIFF First)**: Tối ưu hiển thị 1 cột, thao tác 1 tay thuận tiện, thanh toán và giỏ hàng cố định dưới đáy màn hình.
+- **Phong Cách Tối Giản & Quy Chuẩn Icon (Minimalist Iconography)**:
+  - **Tối giản & Trang nhã**: Phân cấp thông tin bằng typography và khoảng trống thay vì nhồi nhét icon rườm rà.
+  - **Không dùng emoji/icon trẻ con**: Cấm dùng `🪑`, `➕`, `🛍️`, `📦`, `🎁`... trong tiêu đề, thông báo, LINE Flex message.
+  - **Icon SVG chuẩn thương mại**: Chỉ dùng icon vector SVG nét mảnh cách điệu, 100% miễn phí cho mục đích thương mại (Lucide, Feather, Tabler - MIT/Apache 2.0).
   - Xem chi tiết tại: [ui-design-principles.md](file:///.agents/rules/ui-design-principles.md).
 
 ---
