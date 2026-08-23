@@ -41,12 +41,14 @@ function setDiningFilter(filter) {
 function updateDiningFilterStats(allLiveOrders) {
   const isFeatureEnabled = Array.isArray(window.currentTenantFeatures)
     ? window.currentTenantFeatures.includes('dine_in')
-    : true;
+    : false;
 
+  const diningFilterBar = document.getElementById("dining-filter-bar");
   const filterDineInBtn = document.getElementById("filter-btn-dine-in");
   const dineInStatEl = document.getElementById("stat-pill-dinein");
 
   if (!isFeatureEnabled) {
+    if (diningFilterBar) diningFilterBar.style.display = "none";
     if (filterDineInBtn) filterDineInBtn.style.display = "none";
     if (dineInStatEl) dineInStatEl.style.display = "none";
     if (currentDiningFilter === "dine_in") {
@@ -54,7 +56,9 @@ function updateDiningFilterStats(allLiveOrders) {
       const filterAllBtn = document.getElementById("filter-btn-all");
       if (filterAllBtn) filterAllBtn.classList.add("active");
     }
+    return;
   } else {
+    if (diningFilterBar) diningFilterBar.style.display = "flex";
     if (filterDineInBtn) filterDineInBtn.style.display = "inline-flex";
     if (dineInStatEl) dineInStatEl.style.display = "inline-flex";
   }

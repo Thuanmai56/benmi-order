@@ -5,8 +5,7 @@
 let currentStoreStatus = 'open';
 let storeOperatingHours = null;
 let allowScheduledPickup = true;
-let allowDineIn = true;
-let currentTenantFeatures = ['dine_in'];
+let currentTenantFeatures = [];
 window.currentTenantFeatures = currentTenantFeatures;
 
 const DAY_NAMES = {
@@ -239,7 +238,7 @@ async function saveScheduledPickupSetting() {
 function renderDineInSetting() {
   const isFeatureEnabled = Array.isArray(window.currentTenantFeatures)
     ? window.currentTenantFeatures.includes('dine_in')
-    : (Array.isArray(currentTenantFeatures) ? currentTenantFeatures.includes('dine_in') : true);
+    : (Array.isArray(currentTenantFeatures) ? currentTenantFeatures.includes('dine_in') : false);
 
   const unlockedBody = document.getElementById("setting-dinein-unlocked-body");
   const lockedBody = document.getElementById("setting-dinein-locked-body");

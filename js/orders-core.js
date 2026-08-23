@@ -28,6 +28,12 @@ function applyTenantBranding(tenant) {
       bLogo.style.display = "none";
     }
   }
+
+  if (tenant && Array.isArray(tenant.features)) {
+    window.currentTenantFeatures = tenant.features;
+  } else {
+    window.currentTenantFeatures = [];
+  }
   document.documentElement.style.setProperty('--primary', '#00b900');
 }
 

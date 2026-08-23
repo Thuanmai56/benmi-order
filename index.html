@@ -530,9 +530,7 @@
                 if (diningWrapper) diningWrapper.style.display = 'none';
                 if (checkoutDiningGroup) checkoutDiningGroup.style.display = 'none';
             } else {
-                const hasDineInFeature = (storeConfig && Array.isArray(storeConfig.features))
-                    ? storeConfig.features.includes('dine_in')
-                    : true;
+                const hasDineInFeature = Boolean(storeConfig && Array.isArray(storeConfig.features) && storeConfig.features.includes('dine_in'));
                 const isDineInAllowed = hasDineInFeature && !(storeConfig && storeConfig.allowDineIn === false);
                 if (!isDineInAllowed) {
                     window.currentDiningOption = 'takeaway';
