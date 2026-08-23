@@ -60,6 +60,7 @@ async function loadMenuData() {
           id: cat.slug,
           title: cat.name,
           type: 'catalog',
+          allowCustomization: cat.allowCustomization !== undefined ? cat.allowCustomization : (cat.slug !== 'drinks'),
           items: cat.items.map(it => ({
             name: it.name,
             price: it.price,
@@ -184,6 +185,26 @@ function renderMenuCategoryEditor(index) {
   if (!container) return;
   container.innerHTML = "";
 
+  if (cat.type === 'catalog') {
+    const isChecked = cat.allowCustomization !== false;
+    const toggleDiv = document.createElement("div");
+    toggleDiv.className = "category-customization-toggle";
+    toggleDiv.style.cssText = "display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; background: #f8fafc; padding: 12px 16px; border-radius: 10px; border: 1.5px solid #e2e8f0;";
+    toggleDiv.innerHTML = `
+      <div style="display: flex; flex-direction: column; gap: 2px;">
+        <div style="font-weight: 800; font-size: 14px; color: #1e293b;" id="i18n-allow-customization-label">${t("allowCustomizationLabel")}</div>
+        <div style="font-size: 12px; color: #64748b;" id="i18n-allow-customization-desc">${t("allowCustomizationDesc")}</div>
+      </div>
+      <label style="position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; cursor: pointer;">
+        <input type="checkbox" id="cat-allow-customization-toggle" ${isChecked ? 'checked' : ''} style="opacity: 0; width: 0; height: 0;" onchange="toggleCategoryCustomization(${index}, this.checked)">
+        <span style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: ${isChecked ? 'var(--primary, #0284c7)' : '#cbd5e1'}; transition: .3s; border-radius: 24px;">
+          <span style="position: absolute; height: 18px; width: 18px; left: ${isChecked ? '23px' : '3px'}; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%;"></span>
+        </span>
+      </label>
+    `;
+    container.appendChild(toggleDiv);
+  }
+
   let draggedItemIndex = null;
 
   cat.items.forEach((item, iIdx) => {
@@ -302,7 +323,8 @@ async function saveMenuData(skipConfirm = false) {
   currentMenuData.forEach(cat => {
     output[cat.id] = {
       __title: cat.title,
-      __type: cat.type || 'catalog'
+      __type: cat.type || 'catalog',
+      __allow_customization: cat.allowCustomization !== false ? 1 : 0
     };
     cat.items.forEach(item => {
       if (item.name && item.name.trim() !== "" && item.price !== null) {
@@ -338,14 +360,45 @@ async function saveMenuData(skipConfirm = false) {
   }
 }
 
+function toggleCategoryCustomization(catIndex, isChecked) {
+  if (!currentMenuData || !currentMenuData[catIndex]) return;
+  syncMenuDataFromDOM();
+  currentMenuData[catIndex].allowCustomization = isChecked;
+  markMenuDirty();
+  renderMenuCategoryEditor(catIndex);
+}
+
 // --- Category Management ---
 function openAddCategoryModal() {
   const inp = document.getElementById("add-cat-input-name");
   if (inp) inp.value = "";
+  const typeSelect = document.getElementById("add-cat-select-type");
+  if (typeSelect) typeSelect.value = "catalog";
+  const group = document.getElementById("add-cat-customization-group");
+  if (group) group.style.display = "flex";
+  const custCheck = document.getElementById("add-cat-checkbox-customization");
+  if (custCheck) {
+    custCheck.checked = true;
+    if (custCheck.nextElementSibling) {
+      custCheck.nextElementSibling.style.backgroundColor = "var(--primary, #0284c7)";
+      if (custCheck.nextElementSibling.firstElementChild) {
+        custCheck.nextElementSibling.firstElementChild.style.left = "20px";
+      }
+    }
+  }
+
   const modal = document.getElementById("addCategoryModal");
   if (modal) {
     modal.style.display = "flex";
     if (inp) setTimeout(() => inp.focus(), 50);
+  }
+}
+
+function onAddCategoryTypeChange() {
+  const typeSelect = document.getElementById("add-cat-select-type");
+  const group = document.getElementById("add-cat-customization-group");
+  if (group && typeSelect) {
+    group.style.display = typeSelect.value === "catalog" ? "flex" : "none";
   }
 }
 
@@ -363,6 +416,8 @@ async function confirmAddCategory() {
   }
   const typeSelect = document.getElementById("add-cat-select-type");
   const type = typeSelect ? typeSelect.value : "catalog";
+  const custCheck = document.getElementById("add-cat-checkbox-customization");
+  const allowCust = type === "catalog" ? (custCheck ? custCheck.checked : true) : false;
 
   // Generate clean unique slug
   let baseSlug = name.toLowerCase().replace(/[^a-z0-9]/g, '').replace(/_+/g, '');
@@ -376,6 +431,7 @@ async function confirmAddCategory() {
     id: slug,
     title: name,
     type: type,
+    allowCustomization: allowCust,
     items: []
   };
 

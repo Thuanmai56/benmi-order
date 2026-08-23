@@ -280,17 +280,21 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
     const itemsMap = menuData[slug];
     const customCatName = (itemsMap && (itemsMap.__title || itemsMap._name)) || null;
     const customCatType = (itemsMap && (itemsMap.__type || itemsMap._type)) || 'catalog';
+    const allowCustomization = (itemsMap && (itemsMap.__allow_customization !== undefined || itemsMap._allow_customization !== undefined))
+      ? ((itemsMap.__allow_customization ?? itemsMap._allow_customization) ? 1 : 0)
+      : (slug === 'drinks' ? 0 : 1);
     const catName = customCatName || catNameMap.get(slug) || defaultCategoryNamesZh[slug] || slug;
 
     statements.push(
       env.DB.prepare(
-        `INSERT INTO menu_categories (id, tenant_id, name, slug, category_type, sort_order)
-         VALUES (?, ?, ?, ?, ?, ?)
+        `INSERT INTO menu_categories (id, tenant_id, name, slug, category_type, allow_customization, sort_order)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET 
            name = excluded.name, 
            category_type = excluded.category_type,
+           allow_customization = excluded.allow_customization,
            sort_order = excluded.sort_order`
-      ).bind(catId, tenantId, catName, slug, customCatType, catSortOrder++)
+      ).bind(catId, tenantId, catName, slug, customCatType, allowCustomization, catSortOrder++)
     );
 
     if (itemsMap && typeof itemsMap === "object") {

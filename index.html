@@ -707,7 +707,9 @@
 
             const qty = cart[`${catSlug}_${item.name}`] || 0;
             const footerHTML = getDynamicItemFooterHTML(catSlug, item.name, item.price, isOos);
-            const hasModifiers = bootstrapData?.modifiers && bootstrapData.modifiers.length > 0 && catSlug !== 'drinks';
+            const catObj = bootstrapData?.catalog?.find(c => c.slug === catSlug);
+            const catAllowsCustomization = catObj ? (catObj.allowCustomization !== false && catObj.slug !== 'drinks') : (catSlug !== 'drinks');
+            const hasModifiers = bootstrapData?.modifiers && bootstrapData.modifiers.length > 0 && catAllowsCustomization;
             const customizeBtnHTML = `
                 <button class="customize-btn" id="customize-btn-${catSlug}-${item.name}" onclick="toggleCustomize('${safeCatSlug}','${safeItemName}')" style="pointer-events: auto; display: ${(!isOos && qty > 0 && hasModifiers) ? 'block' : 'none'};">✏️ 客製化（加料 / 辣度 / 備註）</button>
             `;
@@ -766,7 +768,8 @@
                     const custBtn = card.querySelector('.customize-btn');
                     if (custBtn) {
                         const qty = cart[`${cat.slug}_${item.name}`] || 0;
-                        const hasModifiers = bootstrapData?.modifiers && bootstrapData.modifiers.length > 0 && cat.slug !== 'drinks';
+                        const catAllowsCustomization = (cat.allowCustomization !== false && cat.slug !== 'drinks');
+                        const hasModifiers = bootstrapData?.modifiers && bootstrapData.modifiers.length > 0 && catAllowsCustomization;
                         custBtn.style.display = (!item.isOutOfStock && qty > 0 && hasModifiers) ? 'block' : 'none';
                     }
                 });
@@ -810,7 +813,9 @@
 
             const btn = document.getElementById('customize-btn-' + category + '-' + origName);
             if (btn) {
-                const hasModifiers = bootstrapData?.modifiers && bootstrapData.modifiers.length > 0 && category !== 'drinks';
+                const catObj = bootstrapData?.catalog?.find(c => c.slug === category);
+                const catAllowsCustomization = catObj ? (catObj.allowCustomization !== false && catObj.slug !== 'drinks') : (category !== 'drinks');
+                const hasModifiers = bootstrapData?.modifiers && bootstrapData.modifiers.length > 0 && catAllowsCustomization;
                 btn.style.display = (cart[key] > 0 && hasModifiers) ? 'block' : 'none';
             }
 
@@ -1429,7 +1434,7 @@
 
         initApp();
     </script>
-    <script src="js/client-checkout.js?v=20260823_cat_item_name_1"></script>
+    <script src="js/client-checkout.js?v=20260823_cat_customization_1"></script>
 </body>
 
 </html>

@@ -187,6 +187,8 @@ const I18N = {
     confirmDeleteCategory: "確定要刪除整個「{name}」分類及其內部所有品項嗎？",
     promptCategoryNameEmpty: "請輸入有效的分類名稱！",
     promptCategoryNamePrompt: "請輸入新的分類名稱：",
+    allowCustomizationLabel: "允許客製化選項 (加料 / 辣度 / 備註)",
+    allowCustomizationDesc: "開啟後，顧客在點選此分類餐點時可選擇客製化設定",
     menuEditorTitle: "分類項目",
     menuEditSub: "拖曳排序 ✦ 點擊欄位直接修改",
     btnMenuRestore: "恢復預設菜單",
@@ -463,6 +465,8 @@ const I18N = {
     confirmDeleteCategory: "Bạn có chắc muốn xóa toàn bộ phân loại「{name}」và các món bên trong không?",
     promptCategoryNameEmpty: "Vui lòng nhập tên phân loại hợp lệ!",
     promptCategoryNamePrompt: "Nhập tên phân loại mới:",
+    allowCustomizationLabel: "Cho phép tùy chỉnh món (Topping / Độ cay / Ghi chú)",
+    allowCustomizationDesc: "Khi bật, khách hàng có thể tùy chỉnh thêm topping, mức cay cho các món trong loại này",
     menuEditorTitle: "Danh sách món",
     menuEditSub: "Kéo thả để sắp xếp ✦ Nhấn vào ô để sửa trực tiếp",
     btnMenuRestore: "Khôi phục Menu gốc",
@@ -903,6 +907,14 @@ function applyLanguageToDOM() {
   if (addCatOptCat) addCatOptCat.innerText = dict.categoryTypeCatalog;
   const addCatOptMod = document.getElementById("i18n-add-cat-opt-modifier");
   if (addCatOptMod) addCatOptMod.innerText = dict.categoryTypeModifier;
+  const addCatCustLbl = document.getElementById("i18n-add-cat-customization-label");
+  if (addCatCustLbl) addCatCustLbl.innerText = dict.allowCustomizationLabel;
+  const addCatCustDesc = document.getElementById("i18n-add-cat-customization-desc");
+  if (addCatCustDesc) addCatCustDesc.innerText = dict.allowCustomizationDesc;
+  const allowCustLbl = document.getElementById("i18n-allow-customization-label");
+  if (allowCustLbl) allowCustLbl.innerText = dict.allowCustomizationLabel;
+  const allowCustDesc = document.getElementById("i18n-allow-customization-desc");
+  if (allowCustDesc) allowCustDesc.innerText = dict.allowCustomizationDesc;
   const btnAddCatCnf = document.getElementById("btn-add-cat-confirm");
   if (btnAddCatCnf) btnAddCatCnf.innerText = dict.btnConfirm || "確認";
   const btnAddCatCan = document.getElementById("btn-add-cat-cancel");

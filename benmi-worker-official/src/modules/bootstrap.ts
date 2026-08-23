@@ -29,6 +29,7 @@ export interface BootstrapResponse {
     id: string;
     slug: string;
     name: string;
+    allowCustomization: boolean;
     sortOrder: number;
     items: Array<{
       id: string;
@@ -118,8 +119,10 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
   const cacheKey = `tenant:${tenantId}:bootstrap`;
 
   try {
-    // 1. Check KV Edge Cache
-    if (env.ORDER_STATE) {
+    // 1. Check KV Edge Cache (bypass if _t or nocache query param is present)
+    const url = new URL(request.url);
+    const noCache = url.searchParams.has('nocache') || url.searchParams.has('_t');
+    if (!noCache && env.ORDER_STATE) {
       const cached = await env.ORDER_STATE.get(cacheKey);
       if (cached) {
         return json(JSON.parse(cached));
@@ -159,6 +162,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
                     COALESCE(is_required, 0) AS is_required, 
                     COALESCE(min_selection, 0) AS min_selection, 
                     COALESCE(max_selection, 1) AS max_selection, 
+                    COALESCE(allow_customization, 1) AS allow_customization,
                     sort_order 
              FROM menu_categories 
              WHERE tenant_id = ? 
@@ -254,6 +258,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
           id: cat.id,
           slug: cat.slug,
           name: cat.name,
+          allowCustomization: Boolean(cat.allow_customization ?? 1),
           sortOrder: cat.sort_order || 0,
           items: catItems
         });
