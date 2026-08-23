@@ -77,9 +77,9 @@ function renderHistory(orders) {
 
   const todayStr = getTaiwanTodayStr();
 
-  // Mặc định khởi tạo: chỉ mở ngày hôm nay, các ngày cũ thu gọn
+  // Mặc định khởi tạo: tất cả ngày đều đóng (không tự động mở ngày hôm nay)
   if (!isHistoryStateInitialized) {
-    expandedHistoryDates = new Set([todayStr]);
+    expandedHistoryDates = new Set();
     isHistoryStateInitialized = true;
   }
 
@@ -177,7 +177,7 @@ function renderHistory(orders) {
 
       const roundCount = Number(order.round_count || order.roundCount) || 1;
       const appendBadge = (isDineIn && roundCount > 1)
-        ? `<span class="badge badge-append" style="font-size:11px; padding:2px 6px; margin-left:4px;">➕ ${t('badgeAppendRound', { n: roundCount })}</span>`
+        ? `<span class="badge badge-append" style="font-size:11px; padding:2px 6px; border-radius:4px; font-weight:800; white-space:nowrap; flex-shrink:0;">${t('badgeAppendRound', { n: roundCount })}</span>`
         : "";
 
       const pickupDisplay = isDineIn

@@ -1366,9 +1366,10 @@ body {
 .history-tile-top {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
   width: 100%;
+  flex-wrap: wrap;
 }
 
 .history-tile-customer {
@@ -1392,11 +1393,14 @@ body {
 }
 
 .history-tile-top .badge {
-  margin-left: auto;
   flex-shrink: 0;
-  font-size: 12px;
-  padding: 3px 8px;
+  font-size: 11px;
+  padding: 2px 6px;
   line-height: 1.2;
+}
+
+.history-tile-top .badge:last-child {
+  margin-left: auto;
 }
 
 .history-tile-meta-row {
