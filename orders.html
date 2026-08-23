@@ -515,14 +515,13 @@
     <div class="content" id="view-menu" style="display:none;">
       <div class="split menu-split">
         <div class="panel">
-          <div class="panel-header" style="align-items: flex-start;">
+          <div class="panel-header" style="align-items: center;">
             <div style="flex: 1; min-width: 0; padding-right: 8px;">
               <div class="panel-title" id="i18n-menu-cat-title">菜單分類</div>
-              <div class="panel-sub" id="i18n-menu-cat-sub" style="color: var(--muted); margin-top:4px;">點擊左側分類以管理品項</div>
+              <div class="panel-sub" id="i18n-menu-cat-sub" style="color: var(--muted); margin-top:4px;">拖曳或按箭頭排序 ✦ 點擊管理品項</div>
             </div>
-            <div style="display:flex; flex-direction:column; gap:6px; flex-shrink:0;">
-              <button class="btn btn-yellow" id="btn-menu-add-cat" style="padding: 6px 12px; font-size: 13px; font-weight: 800; white-space: nowrap; border-radius: 8px; width: 100%; text-align: center; line-height: 1.2;" onclick="openAddCategoryModal()">+ 新增分類</button>
-              <button class="btn btn-ghost" id="btn-menu-refresh" style="border: 1px solid var(--border); background: #fff; color: #111827; padding: 6px 12px; font-size: 13px; font-weight: 800; white-space: nowrap; border-radius: 8px; width: 100%; text-align: center; line-height: 1.2;" onclick="loadMenuData()">🔄 重整</button>
+            <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+              <button type="button" class="btn btn-yellow" id="btn-menu-add-cat" style="padding: 8px 14px; font-size: 13.5px; font-weight: 800; white-space: nowrap; border-radius: 8px;" onclick="openAddCategoryModal()">+ 新增分類</button>
             </div>
           </div>
           <div class="panel-body" id="menu-categories" style="padding: 0; background: #fff;">
@@ -989,7 +988,7 @@
   <script src="js/orders-history.js?v=20260823_dinein_paid_1"></script>
   <script src="js/orders-reports.js?v=20260823_item_analytics_2"></script>
   <script src="js/orders-settings.js?v=20260823_dinein_feat_1"></script>
-  <script src="js/orders-menu.js?v=20260823_cat_mod_picker_1"></script>
+  <script src="js/orders-menu.js?v=20260823_cat_reorder_1"></script>
 
   <!-- POS Bootstrap & Initialization -->
   <script>

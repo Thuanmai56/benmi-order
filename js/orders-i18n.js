@@ -201,8 +201,7 @@ const I18N = {
     saveFail: "儲存失敗：",
     // Menu Editor
     menuCatTitle: "菜單分類",
-    menuCatSub: "點擊左側分類以管理品項",
-    btnMenuRefresh: "🔄 重整",
+    menuCatSub: "拖曳或按箭頭排序 ✦ 點擊管理品項",
     btnMenuAddCategory: "+ 新增分類",
     btnCategoryDelete: "刪除分類",
     btnCategoryRename: "重新命名",
@@ -512,8 +511,7 @@ const I18N = {
     saveFail: "Lưu thất bại: ",
     // Menu Editor
     menuCatTitle: "Danh mục thực đơn",
-    menuCatSub: "Chọn danh mục bên trái để quản lý món",
-    btnMenuRefresh: "🔄 Làm mới",
+    menuCatSub: "Kéo thả hoặc nhấn mũi tên để đổi thứ tự ✦ Nhấn để sửa món",
     btnMenuAddCategory: "+ Thêm phân loại",
     btnCategoryDelete: "Xóa phân loại",
     btnCategoryRename: "Đổi tên phân loại",

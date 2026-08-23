@@ -139,6 +139,44 @@ async function loadMenuData() {
   }
 }
 
+let draggedCategoryIndex = null;
+
+function moveCategoryUp(index, event) {
+  if (event) event.stopPropagation();
+  if (!currentMenuData || index <= 0) return;
+  syncMenuDataFromDOM();
+  const moved = currentMenuData.splice(index, 1)[0];
+  currentMenuData.splice(index - 1, 0, moved);
+  if (activeCategoryIndex === index) {
+    activeCategoryIndex = index - 1;
+  } else if (activeCategoryIndex === index - 1) {
+    activeCategoryIndex = index;
+  }
+  markMenuDirty();
+  renderMenuCategories();
+  if (activeCategoryIndex >= 0) {
+    renderMenuCategoryEditor(activeCategoryIndex);
+  }
+}
+
+function moveCategoryDown(index, event) {
+  if (event) event.stopPropagation();
+  if (!currentMenuData || index >= currentMenuData.length - 1) return;
+  syncMenuDataFromDOM();
+  const moved = currentMenuData.splice(index, 1)[0];
+  currentMenuData.splice(index + 1, 0, moved);
+  if (activeCategoryIndex === index) {
+    activeCategoryIndex = index + 1;
+  } else if (activeCategoryIndex === index + 1) {
+    activeCategoryIndex = index;
+  }
+  markMenuDirty();
+  renderMenuCategories();
+  if (activeCategoryIndex >= 0) {
+    renderMenuCategoryEditor(activeCategoryIndex);
+  }
+}
+
 function renderMenuCategories() {
   const container = document.getElementById("menu-categories");
   if (!container) return;
@@ -147,13 +185,52 @@ function renderMenuCategories() {
   currentMenuData.forEach((cat, index) => {
     const div = document.createElement("div");
     div.className = `menu-cat-item ${activeCategoryIndex === index ? 'active' : ''}`;
+    div.draggable = true;
+
+    div.addEventListener("dragstart", (e) => {
+      draggedCategoryIndex = index;
+      e.dataTransfer.effectAllowed = "move";
+      setTimeout(() => div.style.opacity = "0.4", 0);
+    });
+    div.addEventListener("dragend", () => {
+      div.style.opacity = "1";
+    });
+    div.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      div.style.borderTop = "2px dashed var(--primary)";
+    });
+    div.addEventListener("dragleave", () => {
+      div.style.borderTop = "";
+    });
+    div.addEventListener("drop", (e) => {
+      e.preventDefault();
+      div.style.borderTop = "";
+      if (draggedCategoryIndex !== null && draggedCategoryIndex !== index) {
+        syncMenuDataFromDOM();
+        const moved = currentMenuData.splice(draggedCategoryIndex, 1)[0];
+        currentMenuData.splice(index, 0, moved);
+        activeCategoryIndex = index;
+        markMenuDirty();
+        renderMenuCategories();
+        renderMenuCategoryEditor(index);
+      }
+    });
+
     const badge = cat.type === 'modifier' ? `<span style="font-size: 11px; padding: 2px 6px; background: #e0e7ff; color: #4338ca; border-radius: 4px; font-weight: 700; margin-right: 6px;">${t("modifierPrefix")}</span>` : '';
+    const isFirst = index === 0;
+    const isLast = index === currentMenuData.length - 1;
+
     div.innerHTML = `
+      <div class="menu-cat-drag" title="Kéo để đổi thứ tự / 拖曳排序">☰</div>
       <div style="display:flex; align-items:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;">
         ${badge}
         <span class="menu-cat-title">${escapeHtml(cat.title)}</span>
       </div>
       <span class="menu-cat-count">${cat.items.length} ${t("menuItemUnit")}</span>
+      <div class="menu-cat-reorder-btns" onclick="event.stopPropagation()">
+        <button type="button" class="btn-cat-reorder" onclick="moveCategoryUp(${index}, event)" ${isFirst ? 'disabled' : ''} title="Di chuyển lên / 上移">▲</button>
+        <button type="button" class="btn-cat-reorder" onclick="moveCategoryDown(${index}, event)" ${isLast ? 'disabled' : ''} title="Di chuyển xuống / 下移">▼</button>
+      </div>
     `;
     div.onclick = () => {
       syncMenuDataFromDOM();
