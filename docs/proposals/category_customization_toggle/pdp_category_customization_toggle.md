@@ -32,30 +32,7 @@ const hasModifiers = bootstrapData?.modifiers && bootstrapData.modifiers.length 
 
 ---
 
-## 2. Hotfix Rollout Strategy (Zero-Conflict Git Plan)
-
-### Chiến Lược Đưa Hotfix Fix Tên Món Lên Production (`main`) Không Gây Conflict:
-
-```mermaid
-gitGraph
-   commit id: "main (prod)"
-   branch hotfix/category-item-name
-   checkout hotfix/category-item-name
-   commit id: "fix: parseCartKey hotfix"
-   checkout main
-   merge hotfix/category-item-name id: "merge hotfix -> main (deploy prod)"
-   checkout staging
-   merge main id: "merge main -> staging (zero conflict)"
-```
-
-1. **Bước 1**: Checkout tạo nhánh `hotfix/category-item-name` từ đỉnh của `main`.
-2. **Bước 2**: Cherry-pick commit `4c2e38a` (chứa sửa đổi hàm `parseCartKey`) sang nhánh hotfix.
-3. **Bước 3**: Merge nhánh hotfix vào `main` -> Deploy lên Cloudflare Production.
-4. **Bước 4**: Merge `main` ngược lại vào `staging`. Vì commit trên `main` và `staging` chia sẻ cùng cây thay đổi, Git 3-way merge sẽ tự động đồng bộ sạch sẽ mà **tuyệt đối không phát sinh conflict**.
-
----
-
-## 3. Architecture & Data Flow
+## 2. Architecture & Data Flow
 
 ```mermaid
 sequenceDiagram
@@ -80,9 +57,9 @@ sequenceDiagram
 
 ---
 
-## 4. Technical Specifications
+## 3. Technical Specifications
 
-### 4.1 Database Migration (`0030_add_category_customization.sql`)
+### 3.1 Database Migration (`0030_add_category_customization.sql`)
 ```sql
 -- Migration: 0030_add_category_customization.sql
 -- Thêm cột allow_customization vào bảng menu_categories (mặc định là 1: Bật tùy chỉnh)
@@ -92,7 +69,7 @@ ALTER TABLE menu_categories ADD COLUMN allow_customization INTEGER DEFAULT 1;
 UPDATE menu_categories SET allow_customization = 0 WHERE slug = 'drinks';
 ```
 
-### 4.2 Backend Worker Updates
+### 3.2 Backend Worker Updates
 
 #### A. Bootstrap Response (`src/modules/bootstrap.ts`)
 ```typescript
@@ -144,7 +121,7 @@ statements.push(
 );
 ```
 
-### 4.3 POS Menu Editor Frontend (`orders.html` & `orders-menu.js`)
+### 3.3 POS Menu Editor Frontend (`orders.html` & `orders-menu.js`)
 
 #### A. Multi-Language Dictionary Update (`orders.html`)
 Tuân thủ nghiêm ngặt nguyên tắc **UI Design Principles** (`.agents/rules/ui-design-principles.md`):
@@ -173,7 +150,7 @@ Trong thanh tiêu đề / cài đặt của danh mục đang mở:
 </div>
 ```
 
-### 4.4 Customer Menu Frontend (`index.html`)
+### 3.4 Customer Menu Frontend (`index.html`)
 
 Thay đổi logic hiển thị nút `✏️ 客製化`:
 ```javascript
@@ -187,18 +164,14 @@ customizeBtn.style.display = (!isOos && qty > 0 && hasModifiers) ? 'block' : 'no
 
 ---
 
-## 5. Execution Plan & Rollout
+## 4. Execution Plan & Rollout
 
-- [ ] **Phase 1 (Production Hotfix)**:
-  - Tạo nhánh `hotfix/category-item-name` từ `main`.
-  - Cherry-pick `4c2e38a` sang `main`, deploy lên Cloudflare Production.
-  - Merge `main` ngược lại vào `staging`.
-- [ ] **Phase 2 (Database & Worker Backend)**:
+- [ ] **Phase 1 (Database & Worker Backend)**:
   - Tạo migration `0030_add_category_customization.sql` trên D1.
   - Cập nhật `bootstrap.ts` và `menu.ts` hỗ trợ trường `allow_customization`.
-- [ ] **Phase 3 (POS & Menu Frontend)**:
+- [ ] **Phase 2 (POS & Menu Frontend)**:
   - Bổ sung Switch toggle và từ điển I18N trong `orders.html` & `orders-menu.js`.
   - Cập nhật điều kiện hiển thị nút `✏️ 客製化` trong `index.html`.
-- [ ] **Phase 4 (Testing & Verification)**:
+- [ ] **Phase 3 (Testing & Verification)**:
   - Kiểm thử tắt tùy chỉnh cho danh mục `小料單賣` -> Xác nhận nút `✏️ 客製化` biến mất.
   - Kiểm thử bật tùy chỉnh cho danh mục `Bánh mì` -> Xác nhận nút `✏️ 客製化` hoạt động bình thường.
