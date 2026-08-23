@@ -958,13 +958,15 @@ export async function handleLineWebhook(
 
       const lines = userText.split("\n");
       const keyLine = lines.find((l: string) => l.includes("訂單編號："));
-      const timeLine = lines.find((l: string) => l.includes("🕒 取餐時間：") || l.includes("🕒 訂餐時間：") || l.includes("取餐時間") || l.includes("訂餐時間"));
+      const timeLine = lines.find((l: string) => l.includes("🕒 取餐時間：") || l.includes("🕒 訂餐時間：") || l.includes("🕒 點餐時間：") || l.includes("取餐時間") || l.includes("訂餐時間") || l.includes("點餐時間"));
       const totalLine = lines.find((l: string) => l.includes("💰 總金額："));
 
       const prefix = resolveTenantOrderPrefix(tenantCtx, tenantId);
       const fallbackOrderKey = generateStandardOrderId(prefix);
       const orderKey = keyLine ? keyLine.replace("訂單編號：", "").trim() : fallbackOrderKey;
-      const timeStr = timeLine ? timeLine.replace(/🕒\s*(?:取餐時間|訂餐時間)[：:]\s*/, "").replace(/\s*\([^)]*\)/g, '').trim() : "Unknown";
+      const nowTw = new Date(Date.now() + 8 * 3600000);
+      const defaultTimeStr = `${nowTw.getUTCFullYear()}-${String(nowTw.getUTCMonth() + 1).padStart(2, "0")}-${String(nowTw.getUTCDate()).padStart(2, "0")} ${String(nowTw.getUTCHours()).padStart(2, "0")}:${String(nowTw.getUTCMinutes()).padStart(2, "0")}`;
+      const timeStr = timeLine ? timeLine.replace(/🕒\s*(?:取餐時間|訂餐時間|點餐時間)[：:]\s*/, "").replace(/\s*\([^)]*\)/g, '').trim() : defaultTimeStr;
       const totalStr = totalLine ? totalLine.replace("💰 總金額：", "").replace("$", "").trim() : "0";
 
       let noteStr = "";

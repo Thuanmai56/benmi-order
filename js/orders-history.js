@@ -181,8 +181,8 @@ function renderHistory(orders) {
         : "";
 
       const pickupDisplay = isDineIn
-        ? `${t('dineInTimeLabel')}: ${formatPickupTimeDisplay(order.time)}`
-        : `${t('pickupLabel')} ${formatPickupTimeDisplay(order.time)}`;
+        ? `${t('dineInTimeLabel')}: ${formatPickupTimeDisplay(order.time, order.createdAt, order.content)}`
+        : `${t('pickupLabel')} ${formatPickupTimeDisplay(order.time, order.createdAt, order.content)}`;
 
       tile.innerHTML = `
         <div class="history-tile-info">

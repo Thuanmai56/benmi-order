@@ -192,7 +192,7 @@ function formatDineInTimeDisplay(order) {
       return `${hh}:${mm}`;
     }
   }
-  return formatPickupTimeDisplay(order.time);
+  return formatPickupTimeDisplay(order.time, order.createdAt, order.content);
 }
 
 function shortItems(content) {
@@ -213,10 +213,44 @@ function countItemsFromContent(content) {
   return total;
 }
 
-function formatPickupTimeDisplay(timeStr) {
-  if (!timeStr) return "-";
-  const clean = String(timeStr).replace(/\s*\([^)]*\)/g, '').trim();
-  if (!clean) return "-";
+function formatPickupTimeDisplay(timeStr, fallbackCreatedAt, orderContent) {
+  let clean = timeStr ? String(timeStr).replace(/\s*\([^)]*\)/g, '').trim() : "";
+  
+  // If clean is empty, "-" or "Unknown", try extracting from orderContent
+  if ((!clean || clean === "Unknown" || clean === "-") && orderContent) {
+    const match = String(orderContent).match(/(?:取餐時間|訂餐時間|點餐時間)[：:]\s*([^\n\r]+)/);
+    if (match && match[1]) {
+      clean = match[1].replace(/\s*\([^)]*\)/g, '').trim();
+    }
+  }
+
+  // If still empty or "Unknown", fallback to createdAt
+  if (!clean || clean === "Unknown" || clean === "-") {
+    if (fallbackCreatedAt) {
+      const dt = typeof fallbackCreatedAt === "number" ? fallbackCreatedAt : new Date(String(fallbackCreatedAt).endsWith("Z") ? fallbackCreatedAt : fallbackCreatedAt + "Z").getTime();
+      if (!Number.isNaN(dt) && dt > 0) {
+        const d = new Date(dt + 8 * 3600000);
+        const yyyy = d.getUTCFullYear();
+        const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+        const dd = String(d.getUTCDate()).padStart(2, "0");
+        const hh = String(d.getUTCHours()).padStart(2, "0");
+        const min = String(d.getUTCMinutes()).padStart(2, "0");
+
+        const today = new Date();
+        const twDate = new Date(today.getTime() + 8 * 3600000);
+        const twY = twDate.getUTCFullYear();
+        const twM = String(twDate.getUTCMonth() + 1).padStart(2, "0");
+        const twD = String(twDate.getUTCDate()).padStart(2, "0");
+
+        if (`${yyyy}-${mm}-${dd}` === `${twY}-${twM}-${twD}`) {
+          return `${hh}:${min}`;
+        } else {
+          return `${mm}/${dd} ${hh}:${min}`;
+        }
+      }
+    }
+    return "-";
+  }
   
   // If format is "YYYY-MM-DD HH:mm", check if YYYY-MM-DD is today in Taiwan time
   const m = clean.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{1,2}:\d{2})$/);

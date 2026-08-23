@@ -131,7 +131,7 @@ function renderListLeft(orders) {
 
     const pickupDisplay = isDineIn
       ? (formatDineInTimeDisplay(order) !== '-' ? formatDineInTimeDisplay(order) : t('dineIn'))
-      : formatPickupTimeDisplay(order.time);
+      : formatPickupTimeDisplay(order.time, order.createdAt, order.content);
     const etaDisplay = isDineIn ? formatDineInElapsedTime(order) : formatEta(order.time);
 
     tile.innerHTML = `
@@ -200,7 +200,7 @@ function renderListRight(orders) {
 
     const pickupDisplay = isDineIn
       ? (formatDineInTimeDisplay(order) !== '-' ? formatDineInTimeDisplay(order) : t('dineIn'))
-      : formatPickupTimeDisplay(order.time);
+      : formatPickupTimeDisplay(order.time, order.createdAt, order.content);
     const etaDisplay = isDineIn ? formatDineInElapsedTime(order) : formatEta(order.time);
 
     tile.innerHTML = `
