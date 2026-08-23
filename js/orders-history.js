@@ -5,6 +5,40 @@
 let lastHistoryOrders = [];
 let expandedHistoryDates = new Set();
 let isHistoryStateInitialized = false;
+let isHistoryLoading = false;
+let historyLastFetchedAt = 0;
+
+async function fetchHistoryOrders(force = false) {
+  const tenantId = getTenantIdFromUrl();
+  const now = Date.now();
+  if (!force && lastHistoryOrders.length > 0 && (now - historyLastFetchedAt < 15000)) {
+    renderHistory(lastHistoryOrders);
+    return;
+  }
+
+  const container = document.getElementById("list-history");
+  if (container && lastHistoryOrders.length === 0) {
+    container.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;" id="list-history-loading">${t('loading')}</div>`;
+  }
+
+  isHistoryLoading = true;
+  try {
+    const res = await fetch(`${WORKER_BASE}/api/orders/history-all?tenant_id=${tenantId}&_t=${Date.now()}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        lastHistoryOrders = data;
+        historyLastFetchedAt = Date.now();
+      }
+    }
+  } catch (e) {
+    console.error("[fetchHistoryOrders] Error:", e);
+  } finally {
+    isHistoryLoading = false;
+  }
+
+  renderHistory(lastHistoryOrders);
+}
 
 function getTaiwanTodayStr() {
   const nowTw = new Date(Date.now() + 8 * 3600000);

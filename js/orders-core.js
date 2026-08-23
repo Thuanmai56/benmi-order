@@ -216,7 +216,15 @@ function switchTab(tab) {
   document.getElementById("view-history").style.display = tab === "history" ? "block" : "none";
   document.getElementById("view-settings").style.display = "none";
   document.getElementById("view-menu").style.display = "none";
-  if (tab === "live" || tab === "history") renderAll();
+  if (tab === "live") {
+    renderAll();
+  } else if (tab === "history") {
+    if (typeof fetchHistoryOrders === "function") {
+      fetchHistoryOrders();
+    } else if (typeof renderHistory === "function") {
+      renderHistory(typeof lastHistoryOrders !== "undefined" ? lastHistoryOrders : []);
+    }
+  }
 }
 
 async function fetchOrders() {
@@ -331,7 +339,20 @@ function renderAll() {
     if (typeof renderListLeft === "function") renderListLeft(leftOrders);
     if (typeof renderListRight === "function") renderListRight(rightOrders);
   } else if (activeTab === "history") {
-    if (typeof renderHistory === "function") renderHistory(historyOrders);
+    if (typeof lastHistoryOrders !== "undefined" && Array.isArray(lastHistoryOrders) && lastHistoryOrders.length > 0) {
+      const existingKeys = new Set(lastHistoryOrders.map(o => o.key));
+      historyOrders.forEach(o => {
+        if (o && o.key && !existingKeys.has(o.key)) {
+          lastHistoryOrders.unshift(o);
+          existingKeys.add(o.key);
+        }
+      });
+      if (typeof renderHistory === "function") renderHistory(lastHistoryOrders);
+    } else if (typeof fetchHistoryOrders === "function") {
+      fetchHistoryOrders();
+    } else if (typeof renderHistory === "function") {
+      renderHistory(historyOrders);
+    }
   }
 }
 
