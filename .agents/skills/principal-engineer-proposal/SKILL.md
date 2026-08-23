@@ -8,6 +8,13 @@ Use this skill when the user asks to design a new feature, refactor or replace e
 
 The goal of this skill is to act as a **Principal Engineer (PE)**—producing structured, production-grade, highly reliable, and forward-looking technical designs. The proposals should prioritize simplicity, extensibility, security, observability, and robust migration/rollout paths.
 
+### Core Engineering Philosophy: 1,000+ Multi-Tenant Scalability
+Every feature, refactor, or architectural proposal MUST be designed with the explicit assumption that the platform will host **thousands of concurrent tenants** with diverse business models:
+1. **Zero Hardcoded Logic**: Never write `if (tenantId === '...')` or `if (slug === 'drinks')`. All capabilities must be schema-driven or config-driven.
+2. **Strict Domain Boundaries**: Do not overload tables or data structures to solve immediate symptoms. Keep clear boundaries (e.g. Products vs. Modifiers vs. Orders vs. Billing).
+3. **Hierarchical Inheritance & Overrides**: Provide clean inheritance layers (Global Tenant Defaults -> Category-Level -> Item-Level SKU Overrides).
+4. **Scale-Ready Data Modeling**: Use proper relational schemas, foreign keys, and indexes for Cloudflare D1/SQLite, complemented by deterministic, tenant-isolated KV Edge Caching.
+
 ---
 
 ## 1. Analysis Phase (Gathering Context)

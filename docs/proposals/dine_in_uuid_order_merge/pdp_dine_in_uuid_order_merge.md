@@ -47,36 +47,117 @@ Hiện tại, khi khách hàng ngồi ăn tại quán (`dine_in`) muốn gọi t
 ## 3. Proposed Architecture (Kiến Trúc Đề Xuất)
 
 ```mermaid
-sequenceDiagram
-    autonumber
-    actor C as Khách Hàng (Phone / LIFF)
-    participant FE as Frontend Menu (index.html)
-    participant BE as Backend Worker (Cloudflare)
-    participant DB as Cloudflare D1 Database
-    participant POS as Thu Ngân (orders.html)
+erDiagram
+    TENANTS ||--|| TENANT_CONFIG : "has configuration"
+    TENANTS ||--o{ MENU_CATEGORIES : "owns categories"
+    TENANTS ||--o{ MENU_ITEMS : "owns items"
+    TENANTS ||--o{ ORDERS : "receives orders"
+    TENANTS ||--o{ PENDING_ACTIONS : "tracks pending"
+    MENU_CATEGORIES ||--o{ MENU_ITEMS : "contains items"
 
-    Note over C,FE: Khách đặt món lần đầu (Đợt 1)
-    C->>FE: Chọn món & Nhập số bàn (Bàn 05)
-    FE->>BE: POST /api/create (kèm new order_uuid: "uuid-1234")
-    BE->>DB: INSERT INTO orders (key, uuid, table_number, status='ACCEPTED', round_count=1)
-    BE-->>FE: { success: true, key: "B0823-ABCD", uuid: "uuid-1234" }
-    FE->>FE: Lưu localStorage: active_order = { key: "B0823-ABCD", uuid: "uuid-1234", table: "05" }
+    TENANTS {
+        TEXT id PK "e.g. benmi, zhadantongxue"
+        TEXT name "Tên định danh tenant"
+        TEXT store_display_name "Tên hiển thị cửa hàng"
+        TEXT line_channel_token_secret "Secret reference"
+        TEXT liff_id "LINE LIFF App ID"
+        TEXT liff_url "URL mở menu trên LINE"
+        TEXT timezone "DEFAULT 'Asia/Taipei'"
+        TEXT message_templates "JSON format tin nhắn"
+        DATETIME created_at
+        DATETIME updated_at
+    }
 
-    Note over C,FE: 15 phút sau: Khách quét lại QR bàn hoặc mở Menu gọi thêm món
-    C->>FE: Mở menu (URL chỉ có ?table=05 hoặc không tham số)
-    FE->>FE: Đọc localStorage thấy active_order ("uuid-1234")
-    FE->>BE: GET /api/orders/active-check?uuid=uuid-1234
-    BE->>DB: SELECT * FROM orders WHERE uuid = 'uuid-1234'
-    DB-->>BE: Đơn đang ở trạng thái ACCEPTED (chưa kết thúc)
-    BE-->>FE: { active: true, order: { key: "B0823-ABCD", table: "05", round_count: 1 } }
-    FE->>FE: Tự động bật Banner tím: "Đang gọi thêm cho Bàn 05 (Đơn #B0823-ABCD)"
-    
-    Note over C,FE: Khách chọn thêm 1 Sữa đậu nành & Bấm gửi
-    FE->>BE: POST /api/orders/append (parent_order_key: "B0823-ABCD", uuid: "uuid-1234")
-    BE->>DB: UPDATE orders: thêm món vào [Đợt 2], total = total + 35k, round_count = 2
-    BE-->>POS: Polling phát chuông báo 🔔: Bàn 05 có Đợt 2 gọi thêm!
-    BE-->>FE: { success: true, round_count: 2 }
-    FE->>C: Thông báo: "✅ Gọi thêm đợt 2 thành công!"
+    TENANT_CONFIG {
+        TEXT tenant_id PK, FK "Khóa ngoại tới tenants(id)"
+        TEXT brand_name "Tên thương hiệu (VD: 炸蛋同學)"
+        TEXT brand_color "Mã màu chủ đạo (VD: #00b900)"
+        TEXT store_address "Địa chỉ & số điện thoại"
+        TEXT operating_hours "JSON ca mở cửa trong tuần"
+        TEXT delivery_policy "Chính sách giao hàng/freeship"
+        TEXT quick_replies "JSON kịch bản chat tự động"
+        TEXT flex_template "Template tin nhắn Flex"
+        TEXT default_password "Mật khẩu POS mặc định"
+        TEXT locale "Ngôn ngữ mặc định (zh-TW, vi)"
+        TEXT google_sheets_url "Đồng bộ đơn Google Sheets"
+        TEXT logo_url "Đường dẫn logo quán"
+        TEXT announcement "Thông báo nổi bật trên Menu"
+        TEXT store_status "'open' | 'closed'"
+        INTEGER is_active "1: Hoạt động, 0: Khóa"
+        INTEGER allow_scheduled_pickup "1: Cho đặt hẹn giờ"
+        INTEGER allow_dine_in "1: Bật ăn tại quán"
+        TEXT features "JSON array tính năng mở rộng"
+        TEXT order_prefix "Tiền tố mã đơn (VD: ZD, BM)"
+        TEXT line_channel_token "Token gửi tin LINE Messaging"
+        TEXT groq_api_key "API Key AI Groq"
+        TEXT groq_model "llama-3.1-8b-instant"
+        TEXT openrouter_api_key "API Key OpenRouter"
+        TEXT openrouter_model "google/gemini-2.5-flash:free"
+        DATETIME created_at
+        DATETIME updated_at
+    }
+
+    MENU_CATEGORIES {
+        TEXT id PK "cat_zd_main, cat_zd_topping..."
+        TEXT tenant_id FK "Khóa ngoại tới tenants(id)"
+        TEXT slug "main, drinks, spicy, topping..."
+        TEXT name "Tên danh mục (VD: 招牌炸蛋蔥餅)"
+        TEXT category_type "'catalog' (món) | 'modifier' (tùy biến)"
+        TEXT selection_type "'single' (chọn 1) | 'multiple' (chọn nhiều)"
+        INTEGER is_required "1: Bắt buộc chọn, 0: Tùy chọn"
+        INTEGER min_selection "Số lượng chọn tối thiểu"
+        INTEGER max_selection "Số lượng chọn tối đa"
+        INTEGER allow_customization "1: Cho tùy biến, 0: Tắt tùy biến"
+        TEXT applied_modifiers "JSON array slugs: ['*'] hoặc ['spicy', 'topping']"
+        INTEGER sort_order "Thứ tự hiển thị"
+        DATETIME created_at
+    }
+
+    MENU_ITEMS {
+        TEXT id PK "ID định danh duy nhất của món"
+        TEXT tenant_id FK "Khóa ngoại tới tenants(id)"
+        TEXT category_id FK "Khóa ngoại tới menu_categories(id)"
+        TEXT name "Tên món (VD: 原味炸蛋蔥餅)"
+        REAL price "Giá bán (>= 0)"
+        TEXT description "Mô tả món ăn"
+        TEXT badge_text "Tag nhãn (VD: （熱銷）, 👍 推薦)"
+        INTEGER is_recommended "1: Món đề xuất nổi bật"
+        DATETIME out_of_stock_until "Thời điểm hết hàng tạm thời"
+        INTEGER sort_order "Thứ tự sắp xếp món trong danh mục"
+        DATETIME created_at
+        DATETIME updated_at
+    }
+
+    ORDERS {
+        TEXT key PK "Mã đơn hàng (VD: ZD-7P9K, BM-2X4M)"
+        TEXT tenant_id FK "Khóa ngoại tới tenants(id)"
+        TEXT user_id "LINE User ID của khách hàng"
+        TEXT customer_name "Tên khách hàng"
+        TEXT pickup_time "Giờ hẹn lấy món / Giờ đặt"
+        TEXT status "'NEW' | 'ACCEPTED' | 'DONE' | 'CANCELLED'"
+        REAL total_amount "Tổng số tiền đơn hàng (>= 0)"
+        TEXT order_content "Chi tiết các món & tùy biến gọi kèm"
+        TEXT dining_option "'dine_in' (Tại quán) | 'takeaway' (Mang về)"
+        TEXT table_number "Số bàn (dành cho Ăn tại quán)"
+        INTEGER round_count "Số đợt gọi món (Đợt 1, Đợt 2...)"
+        TEXT last_appended_at "Thời điểm khách gọi thêm món gần nhất"
+        TEXT reason "Lý do hủy đơn (nếu có)"
+        TEXT note "Ghi chú đơn hàng"
+        DATETIME created_at
+        DATETIME updated_at
+    }
+
+    PENDING_ACTIONS {
+        TEXT tenant_id PK, FK "Khóa ngoại tới tenants(id)"
+        TEXT user_id PK "LINE User ID"
+        TEXT order_key PK "Mã đơn hàng cần xác nhận"
+        TEXT action_type "'CANCEL_ORDER' | 'CONFIRM_APPEND'"
+        TEXT question_text "Câu hỏi bot gửi cho khách"
+        TEXT reason "Lý do hủy / ghi chú"
+        TEXT note "Ghi chú phụ"
+        DATETIME created_at
+    }
+
 ```
 
 ---
