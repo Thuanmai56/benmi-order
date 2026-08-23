@@ -111,7 +111,7 @@ export async function resolveTenantContext(
       operatingHours: '11:00-21:00（一到五），7:30-21:00（六日）',
       deliveryPolicy: '🛵 滿 2,000 元： 不限距離，土城全區皆享免運！\n🛵 滿 800 元：\n距離店址 2公里內 ➔ 免運 \n距離店址 超過2公里 ➔ 酌收 80元 運費。\n🛵 未滿 800 元： 也別擔心！歡迎直接點擊 UberEats 平台直接下單，美味一樣送到家 👇 👉 https://cutt.ly/Mt9w2fAD',
       allowScheduledPickup: true,
-      allowDineIn: true,
+      allowDineIn: false,
       quickReplies: [
         { triggers: ['營業時間'], reply: '我們的營業時間：11:00-21:00（一到五），7:30-21:00（六日）。' },
         { triggers: ['地址', '在哪'], reply: '新北市土城區中央路二段135號' },
@@ -123,7 +123,7 @@ export async function resolveTenantContext(
       defaultPassword: '12345678',
       locale: 'zh-TW',
       googleSheetsUrl: env.GOOGLE_SHEETS_URL || null,
-      features: ['dine_in', 'reports'],
+      features: ['reports'],
       orderPrefix: 'B',
     };
 
