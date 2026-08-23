@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <title id="pos-page-title">Dashboard</title>
-  <link rel="stylesheet" href="css/orders.css?v=20260822_dining_1" />
+  <link rel="stylesheet" href="css/orders.css?v=20260823_cat_mgr_1" />
     <script>
       (function () {
         document.documentElement.style.setProperty('--primary', '#00b900');
@@ -521,8 +521,7 @@
               <div class="panel-sub" id="i18n-menu-cat-sub" style="color: var(--muted); margin-top:4px;">點擊左側分類以管理品項</div>
             </div>
             <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
-              <button type="button" class="btn btn-ghost" id="btn-cat-toggle-reorder" style="border: 1.5px solid #cbd5e1; background: #fff; color: #334155; padding: 7px 12px; font-size: 13px; font-weight: 800; white-space: nowrap; border-radius: 8px;" onclick="toggleCategoryReorderMode()">↕️ 排序</button>
-              <button type="button" class="btn btn-yellow" id="btn-menu-add-cat" style="padding: 7px 12px; font-size: 13px; font-weight: 800; white-space: nowrap; border-radius: 8px;" onclick="openAddCategoryModal()">+ 新增分類</button>
+              <button type="button" class="btn btn-ghost" id="btn-menu-manage-cats" style="border: 1.5px solid #cbd5e1; background: #fff; color: #1e293b; padding: 7px 12px; font-size: 13px; font-weight: 800; white-space: nowrap; border-radius: 8px;" onclick="openCategoriesManager()">⚙️ 管理分類</button>
             </div>
           </div>
           <div class="panel-body" id="menu-categories" style="padding: 0; background: #fff;">
@@ -537,12 +536,12 @@
               <div class="panel-sub" id="i18n-menu-edit-sub">拖曳排序 ✦ 點擊欄位直接修改</div>
             </div>
             <div style="display:flex; gap:6px; align-items:center;">
-              <button class="btn btn-ghost" id="btn-category-move-up" style="border: 1px solid #cbd5e1; background:#fff; padding: 6px 11px; font-size: 13px; display:none;" onclick="moveActiveCategoryUp()">▲ 上移</button>
-              <button class="btn btn-ghost" id="btn-category-move-down" style="border: 1px solid #cbd5e1; background:#fff; padding: 6px 11px; font-size: 13px; display:none;" onclick="moveActiveCategoryDown()">▼ 下移</button>
               <button class="btn btn-ghost" id="btn-category-rename" style="border: 1px solid #cbd5e1; background:#fff; padding: 6px 12px; font-size: 13px; display:none;" onclick="promptRenameCategory()">✏️ 重新命名</button>
               <button class="btn btn-ghost" id="btn-category-delete" style="border: 1px solid #fee2e2; background: #fff5f5; color: var(--brand-red); padding: 6px 12px; font-size: 13px; display:none;" onclick="deleteActiveCategory()">🗑️ 刪除分類</button>
+              <button class="btn btn-yellow" id="btn-menu-add-cat-top" style="padding: 6px 12px; font-size: 13px; display:none;" onclick="openAddCategoryModal()">+ 新增分類</button>
               <button class="btn btn-yellow" id="btn-menu-add-item" style="padding: 6px 12px; font-size: 13px;" onclick="addNewMenuItem()">+ 新增項目</button>
               <button class="btn btn-primary" id="btn-menu-save" style="padding: 6px 12px; font-size: 13px;" onclick="saveMenuData()">儲存變更</button>
+              <button class="btn btn-ghost" id="btn-menu-manage-close" style="border: 1.5px solid #cbd5e1; background:#fff; color: #475569; font-weight: 800; padding: 6px 12px; font-size: 13px; display:none;" onclick="closeCategoriesManager()">✕ 關閉</button>
             </div>
           </div>
           <div class="panel-body" id="menu-editor-body" style="background: #f9fafb;">
@@ -981,7 +980,7 @@
   </div>
 
   <!-- Benmi POS Modular Architecture Scripts -->
-  <script src="js/orders-i18n.js?v=20260823_cat_reorder_2"></script>
+  <script src="js/orders-i18n.js?v=20260823_cat_mgr_1"></script>
   <script src="js/orders-core.js?v=20260823_dinein_append_time_1"></script>
   <script src="js/orders-audio.js?v=20260822_feat_announcement_1"></script>
   <script src="js/orders-live.js?v=20260823_dinein_append_time_1"></script>
@@ -989,7 +988,7 @@
   <script src="js/orders-history.js?v=20260823_dinein_paid_1"></script>
   <script src="js/orders-reports.js?v=20260823_item_analytics_2"></script>
   <script src="js/orders-settings.js?v=20260823_dinein_feat_1"></script>
-  <script src="js/orders-menu.js?v=20260823_cat_reorder_2"></script>
+  <script src="js/orders-menu.js?v=20260823_cat_mgr_1"></script>
 
   <!-- POS Bootstrap & Initialization -->
   <script>

@@ -140,75 +140,137 @@ async function loadMenuData() {
 }
 
 let draggedCategoryIndex = null;
-let isCategoryReorderMode = false;
+let isCategoryManagerOpen = false;
 
-function toggleCategoryReorderMode() {
-  isCategoryReorderMode = !isCategoryReorderMode;
-  const btn = document.getElementById("btn-cat-toggle-reorder");
-  if (btn) {
-    if (isCategoryReorderMode) {
-      btn.innerText = t("btnSortCategoriesDone");
-      btn.style.background = "#ecfdf5";
-      btn.style.borderColor = "#10b981";
-      btn.style.color = "#065f46";
-    } else {
-      btn.innerText = t("btnSortCategories");
-      btn.style.background = "#fff";
-      btn.style.borderColor = "#cbd5e1";
-      btn.style.color = "#334155";
-    }
-  }
-  const subEl = document.getElementById("i18n-menu-cat-sub");
-  if (subEl) {
-    subEl.innerText = isCategoryReorderMode ? t("menuCatSubReorder") : t("menuCatSub");
-  }
-  renderMenuCategories();
-}
-
-function moveActiveCategoryUp() {
-  if (activeCategoryIndex <= 0) return;
-  moveCategoryUp(activeCategoryIndex);
-}
-
-function moveActiveCategoryDown() {
-  if (!currentMenuData || activeCategoryIndex >= currentMenuData.length - 1) return;
-  moveCategoryDown(activeCategoryIndex);
-}
-
-function moveCategoryUp(index, event) {
-  if (event) event.stopPropagation();
-  if (!currentMenuData || index <= 0) return;
+function openCategoriesManager() {
   syncMenuDataFromDOM();
-  const moved = currentMenuData.splice(index, 1)[0];
-  currentMenuData.splice(index - 1, 0, moved);
-  if (activeCategoryIndex === index) {
-    activeCategoryIndex = index - 1;
-  } else if (activeCategoryIndex === index - 1) {
-    activeCategoryIndex = index;
-  }
-  markMenuDirty();
+  isCategoryManagerOpen = true;
+  activeCategoryIndex = -1;
+  renderMenuCategories();
+  renderCategoriesManagerView();
+}
+
+function closeCategoriesManager() {
+  syncMenuDataFromDOM();
+  isCategoryManagerOpen = false;
+  activeCategoryIndex = (currentMenuData && currentMenuData.length > 0) ? 0 : -1;
   renderMenuCategories();
   if (activeCategoryIndex >= 0) {
     renderMenuCategoryEditor(activeCategoryIndex);
+  } else {
+    const titleEl = document.getElementById("menu-editor-title");
+    if (titleEl) titleEl.innerText = t("menuEditorTitle");
+    const subEl = document.getElementById("i18n-menu-edit-sub");
+    if (subEl) subEl.innerText = t("menuEditSub");
+    const bodyEl = document.getElementById("menu-editor-body");
+    if (bodyEl) bodyEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;" id="i18n-menu-select-prompt">${t("menuSelectPrompt")}</div>`;
+    const renameBtn = document.getElementById("btn-category-rename");
+    const deleteBtn = document.getElementById("btn-category-delete");
+    const addItemBtn = document.getElementById("btn-menu-add-item");
+    const addCatTopBtn = document.getElementById("btn-menu-add-cat-top");
+    const closeBtn = document.getElementById("btn-menu-manage-close");
+    if (renameBtn) renameBtn.style.display = "none";
+    if (deleteBtn) deleteBtn.style.display = "none";
+    if (addItemBtn) addItemBtn.style.display = "none";
+    if (addCatTopBtn) addCatTopBtn.style.display = "none";
+    if (closeBtn) closeBtn.style.display = "none";
   }
 }
 
-function moveCategoryDown(index, event) {
-  if (event) event.stopPropagation();
-  if (!currentMenuData || index >= currentMenuData.length - 1) return;
-  syncMenuDataFromDOM();
-  const moved = currentMenuData.splice(index, 1)[0];
-  currentMenuData.splice(index + 1, 0, moved);
-  if (activeCategoryIndex === index) {
-    activeCategoryIndex = index + 1;
-  } else if (activeCategoryIndex === index + 1) {
-    activeCategoryIndex = index;
+function renderCategoriesManagerView() {
+  const titleEl = document.getElementById("menu-editor-title");
+  if (titleEl) titleEl.innerText = `⚙️ ${t("manageCategoriesTitle")}`;
+  const subEl = document.getElementById("i18n-menu-edit-sub");
+  if (subEl) subEl.innerText = t("manageCategoriesSub");
+
+  // Toggle header action buttons
+  const renameBtn = document.getElementById("btn-category-rename");
+  const deleteBtn = document.getElementById("btn-category-delete");
+  const addItemBtn = document.getElementById("btn-menu-add-item");
+  const addCatTopBtn = document.getElementById("btn-menu-add-cat-top");
+  const closeBtn = document.getElementById("btn-menu-manage-close");
+
+  if (renameBtn) renameBtn.style.display = "none";
+  if (deleteBtn) deleteBtn.style.display = "none";
+  if (addItemBtn) addItemBtn.style.display = "none";
+  if (addCatTopBtn) addCatTopBtn.style.display = "inline-flex";
+  if (closeBtn) closeBtn.style.display = "inline-flex";
+
+  const container = document.getElementById("menu-editor-body");
+  if (!container) return;
+  container.innerHTML = "";
+
+  const mgrContainer = document.createElement("div");
+  mgrContainer.className = "cat-mgr-container";
+
+  if (!currentMenuData || currentMenuData.length === 0) {
+    mgrContainer.innerHTML = `<div style="text-align:center; padding: 30px; color:#94a3b8;">${t("noCategoriesPrompt") || "尚無任何分類"}</div>`;
+  } else {
+    let draggedIndex = null;
+
+    currentMenuData.forEach((cat, idx) => {
+      const card = document.createElement("div");
+      card.className = "cat-mgr-card";
+      card.draggable = true;
+
+      card.addEventListener("dragstart", (e) => {
+        draggedIndex = idx;
+        e.dataTransfer.effectAllowed = "move";
+        setTimeout(() => card.classList.add("dragging"), 0);
+      });
+      card.addEventListener("dragend", () => {
+        card.classList.remove("dragging");
+      });
+      card.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        card.style.borderColor = "var(--primary)";
+      });
+      card.addEventListener("dragleave", () => {
+        card.style.borderColor = "#e2e8f0";
+      });
+      card.addEventListener("drop", (e) => {
+        e.preventDefault();
+        card.style.borderColor = "#e2e8f0";
+        if (draggedIndex !== null && draggedIndex !== idx) {
+          const moved = currentMenuData.splice(draggedIndex, 1)[0];
+          currentMenuData.splice(idx, 0, moved);
+          markMenuDirty();
+          renderMenuCategories();
+          renderCategoriesManagerView();
+        }
+      });
+
+      const badge = cat.type === 'modifier'
+        ? `<span style="font-size: 11.5px; padding: 3px 8px; background: #e0e7ff; color: #4338ca; border-radius: 6px; font-weight: 800;">${t("modifierPrefix")}</span>`
+        : `<span style="font-size: 11.5px; padding: 3px 8px; background: #ecfdf5; color: #047857; border-radius: 6px; font-weight: 800;">🍽️ ${t("categoryTypeCatalogBadge") || "餐點"}</span>`;
+
+      card.innerHTML = `
+        <div class="cat-mgr-drag-handle" title="Kéo rê để đổi thứ tự / 拖曳排序">☰</div>
+        <div class="cat-mgr-index">#${idx + 1}</div>
+        <div class="cat-mgr-info">
+          ${badge}
+          <span class="cat-mgr-name">${escapeHtml(cat.title)}</span>
+          <span class="cat-mgr-count">${cat.items.length} ${t("menuItemUnit")}</span>
+        </div>
+        <div class="cat-mgr-actions" onclick="event.stopPropagation()">
+          <button type="button" class="btn btn-ghost" style="border: 1px solid #cbd5e1; background:#fff; padding: 6px 12px; font-size: 13px; font-weight: 700; border-radius: 8px;" onclick="promptRenameCategoryAtIndex(${idx})">✏️ ${t("btnCategoryRename")}</button>
+          <button type="button" class="btn btn-ghost" style="border: 1px solid #fee2e2; background:#fff5f5; color:var(--brand-red); padding: 6px 12px; font-size: 13px; font-weight: 700; border-radius: 8px;" onclick="deleteCategoryAtIndex(${idx})">🗑️ ${t("btnCategoryDelete")}</button>
+        </div>
+      `;
+
+      mgrContainer.appendChild(card);
+    });
   }
-  markMenuDirty();
-  renderMenuCategories();
-  if (activeCategoryIndex >= 0) {
-    renderMenuCategoryEditor(activeCategoryIndex);
-  }
+
+  // Add category button at the bottom of the list
+  const bottomAddBtn = document.createElement("button");
+  bottomAddBtn.type = "button";
+  bottomAddBtn.className = "cat-mgr-add-btn";
+  bottomAddBtn.innerHTML = `<span>${t("btnAddCategoryBottom")}</span>`;
+  bottomAddBtn.onclick = () => openAddCategoryModal();
+  mgrContainer.appendChild(bottomAddBtn);
+
+  container.appendChild(mgrContainer);
 }
 
 function renderMenuCategories() {
@@ -219,75 +281,35 @@ function renderMenuCategories() {
 
   currentMenuData.forEach((cat, index) => {
     const div = document.createElement("div");
-    div.className = `menu-cat-item ${activeCategoryIndex === index ? 'active' : ''}`;
-
-    if (isCategoryReorderMode) {
-      div.draggable = true;
-
-      div.addEventListener("dragstart", (e) => {
-        draggedCategoryIndex = index;
-        e.dataTransfer.effectAllowed = "move";
-        setTimeout(() => div.style.opacity = "0.4", 0);
-      });
-      div.addEventListener("dragend", () => {
-        div.style.opacity = "1";
-      });
-      div.addEventListener("dragover", (e) => {
-        e.preventDefault();
-        div.style.borderTop = "2px dashed var(--primary)";
-      });
-      div.addEventListener("dragleave", () => {
-        div.style.borderTop = "";
-      });
-      div.addEventListener("drop", (e) => {
-        e.preventDefault();
-        div.style.borderTop = "";
-        if (draggedCategoryIndex !== null && draggedCategoryIndex !== index) {
-          syncMenuDataFromDOM();
-          const moved = currentMenuData.splice(draggedCategoryIndex, 1)[0];
-          currentMenuData.splice(index, 0, moved);
-          activeCategoryIndex = index;
-          markMenuDirty();
-          renderMenuCategories();
-          renderMenuCategoryEditor(index);
-        }
-      });
-    }
+    div.className = `menu-cat-item ${activeCategoryIndex === index && !isCategoryManagerOpen ? 'active' : ''}`;
 
     const badge = cat.type === 'modifier' ? `<span style="font-size: 11px; padding: 2px 6px; background: #e0e7ff; color: #4338ca; border-radius: 4px; font-weight: 700; margin-right: 6px;">${t("modifierPrefix")}</span>` : '';
-    const isFirst = index === 0;
-    const isLast = index === currentMenuData.length - 1;
 
-    if (isCategoryReorderMode) {
-      div.innerHTML = `
-        <div class="menu-cat-drag" title="Kéo để đổi thứ tự / 拖曳排序">☰</div>
-        <div style="display:flex; align-items:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;">
-          ${badge}
-          <span class="menu-cat-title">${escapeHtml(cat.title)}</span>
-        </div>
-        <div class="menu-cat-reorder-btns" onclick="event.stopPropagation()">
-          <button type="button" class="btn-cat-reorder" onclick="moveCategoryUp(${index}, event)" ${isFirst ? 'disabled' : ''} title="Di chuyển lên / 上移">▲</button>
-          <button type="button" class="btn-cat-reorder" onclick="moveCategoryDown(${index}, event)" ${isLast ? 'disabled' : ''} title="Di chuyển xuống / 下移">▼</button>
-        </div>
-      `;
-    } else {
-      div.innerHTML = `
-        <div style="display:flex; align-items:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;">
-          ${badge}
-          <span class="menu-cat-title">${escapeHtml(cat.title)}</span>
-        </div>
-        <span class="menu-cat-count">${cat.items.length} ${t("menuItemUnit")}</span>
-      `;
-    }
+    div.innerHTML = `
+      <div style="display:flex; align-items:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;">
+        ${badge}
+        <span class="menu-cat-title">${escapeHtml(cat.title)}</span>
+      </div>
+      <span class="menu-cat-count">${cat.items.length} ${t("menuItemUnit")}</span>
+    `;
 
     div.onclick = () => {
       syncMenuDataFromDOM();
+      isCategoryManagerOpen = false;
       activeCategoryIndex = index;
       renderMenuCategories();
       renderMenuCategoryEditor(index);
     };
     container.appendChild(div);
   });
+
+  // Bottom Add Category Button in Left Panel
+  const bottomDiv = document.createElement("div");
+  bottomDiv.style.padding = "12px 14px";
+  bottomDiv.innerHTML = `
+    <button type="button" class="btn btn-ghost btn-block" style="border: 1.5px dashed #cbd5e1; background: #f8fafc; color: #475569; font-weight: 800; padding: 9px 12px; border-radius: 8px; font-size: 13px; cursor: pointer; transition: all 0.2s ease;" onclick="openAddCategoryModal()">${t("btnMenuAddCategory")}</button>
+  `;
+  container.appendChild(bottomDiv);
 }
 
 function getStoreModifiersList() {
@@ -296,33 +318,27 @@ function getStoreModifiersList() {
 }
 
 function renderMenuCategoryEditor(index) {
+  isCategoryManagerOpen = false;
   const renameBtn = document.getElementById("btn-category-rename");
   const deleteBtn = document.getElementById("btn-category-delete");
-  const moveUpBtn = document.getElementById("btn-category-move-up");
-  const moveDownBtn = document.getElementById("btn-category-move-down");
+  const addItemBtn = document.getElementById("btn-menu-add-item");
+  const addCatTopBtn = document.getElementById("btn-menu-add-cat-top");
+  const closeBtn = document.getElementById("btn-menu-manage-close");
+  const subEl = document.getElementById("i18n-menu-edit-sub");
+
+  if (addCatTopBtn) addCatTopBtn.style.display = "none";
+  if (closeBtn) closeBtn.style.display = "none";
+  if (addItemBtn) addItemBtn.style.display = "inline-flex";
+  if (subEl) subEl.innerText = t("menuEditSub");
 
   if (!currentMenuData || !currentMenuData[index]) {
     if (renameBtn) renameBtn.style.display = "none";
     if (deleteBtn) deleteBtn.style.display = "none";
-    if (moveUpBtn) moveUpBtn.style.display = "none";
-    if (moveDownBtn) moveDownBtn.style.display = "none";
     return;
   }
 
   if (renameBtn) renameBtn.style.display = "inline-flex";
   if (deleteBtn) deleteBtn.style.display = "inline-flex";
-  if (moveUpBtn) {
-    moveUpBtn.style.display = "inline-flex";
-    moveUpBtn.disabled = index === 0;
-    moveUpBtn.style.opacity = index === 0 ? "0.4" : "1";
-    moveUpBtn.style.cursor = index === 0 ? "not-allowed" : "pointer";
-  }
-  if (moveDownBtn) {
-    moveDownBtn.style.display = "inline-flex";
-    moveDownBtn.disabled = index === currentMenuData.length - 1;
-    moveDownBtn.style.opacity = index === currentMenuData.length - 1 ? "0.4" : "1";
-    moveDownBtn.style.cursor = index === currentMenuData.length - 1 ? "not-allowed" : "pointer";
-  }
 
   const cat = currentMenuData[index];
   const titleEl = document.getElementById("menu-editor-title");
@@ -647,18 +663,23 @@ async function confirmAddCategory() {
   };
 
   currentMenuData.push(newCat);
-  activeCategoryIndex = currentMenuData.length - 1;
   closeAddCategoryModal();
   renderMenuCategories();
-  renderMenuCategoryEditor(activeCategoryIndex);
+
+  if (isCategoryManagerOpen) {
+    renderCategoriesManagerView();
+  } else {
+    activeCategoryIndex = currentMenuData.length - 1;
+    renderMenuCategoryEditor(activeCategoryIndex);
+  }
 
   // Auto-save immediately to database & refresh cache
   await saveMenuData(true);
 }
 
-function promptRenameCategory() {
-  if (activeCategoryIndex < 0 || !currentMenuData || !currentMenuData[activeCategoryIndex]) return;
-  const currentCat = currentMenuData[activeCategoryIndex];
+function promptRenameCategoryAtIndex(idx) {
+  if (!currentMenuData || !currentMenuData[idx]) return;
+  const currentCat = currentMenuData[idx];
   const newTitle = prompt(t("promptCategoryNamePrompt"), currentCat.title);
   if (newTitle !== null) {
     const trimmed = newTitle.trim();
@@ -670,30 +691,50 @@ function promptRenameCategory() {
     currentCat.title = trimmed;
     markMenuDirty();
     renderMenuCategories();
-    renderMenuCategoryEditor(activeCategoryIndex);
+    if (isCategoryManagerOpen) {
+      renderCategoriesManagerView();
+    } else {
+      renderMenuCategoryEditor(idx);
+    }
+  }
+}
+
+function deleteCategoryAtIndex(idx) {
+  if (!currentMenuData || !currentMenuData[idx]) return;
+  const cat = currentMenuData[idx];
+  if (!confirm(t("confirmDeleteCategory", { name: cat.title }))) return;
+
+  syncMenuDataFromDOM();
+  currentMenuData.splice(idx, 1);
+  markMenuDirty();
+  renderMenuCategories();
+
+  if (isCategoryManagerOpen) {
+    renderCategoriesManagerView();
+  } else {
+    activeCategoryIndex = -1;
+    const titleEl = document.getElementById("menu-editor-title");
+    if (titleEl) titleEl.innerText = t("menuEditorTitle");
+    const bodyEl = document.getElementById("menu-editor-body");
+    if (bodyEl) bodyEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;" id="i18n-menu-select-prompt">${t("menuSelectPrompt")}</div>`;
+    
+    const renameBtn = document.getElementById("btn-category-rename");
+    const deleteBtn = document.getElementById("btn-category-delete");
+    if (renameBtn) renameBtn.style.display = "none";
+    if (deleteBtn) deleteBtn.style.display = "none";
+  }
+}
+
+function promptRenameCategory() {
+  if (activeCategoryIndex >= 0) {
+    promptRenameCategoryAtIndex(activeCategoryIndex);
   }
 }
 
 function deleteActiveCategory() {
-  if (activeCategoryIndex < 0 || !currentMenuData || !currentMenuData[activeCategoryIndex]) return;
-  const cat = currentMenuData[activeCategoryIndex];
-  if (!confirm(t("confirmDeleteCategory", { name: cat.title }))) return;
-
-  syncMenuDataFromDOM();
-  currentMenuData.splice(activeCategoryIndex, 1);
-  activeCategoryIndex = -1;
-  markMenuDirty();
-  renderMenuCategories();
-
-  const titleEl = document.getElementById("menu-editor-title");
-  if (titleEl) titleEl.innerText = t("menuEditorTitle");
-  const bodyEl = document.getElementById("menu-editor-body");
-  if (bodyEl) bodyEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;" id="i18n-menu-select-prompt">${t("menuSelectPrompt")}</div>`;
-  
-  const renameBtn = document.getElementById("btn-category-rename");
-  const deleteBtn = document.getElementById("btn-category-delete");
-  if (renameBtn) renameBtn.style.display = "none";
-  if (deleteBtn) deleteBtn.style.display = "none";
+  if (activeCategoryIndex >= 0) {
+    deleteCategoryAtIndex(activeCategoryIndex);
+  }
 }
 
 // --- Image Management ---

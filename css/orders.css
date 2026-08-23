@@ -1930,6 +1930,126 @@ body {
   cursor: not-allowed;
 }
 
+/* Category Manager Dedicated View Styles */
+.cat-mgr-container {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.cat-mgr-card {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: all 0.2s ease;
+  user-select: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.cat-mgr-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
+}
+
+.cat-mgr-card.dragging {
+  opacity: 0.4;
+  background: #f8fafc;
+}
+
+.cat-mgr-index {
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 12.5px;
+  font-weight: 900;
+  padding: 4px 8px;
+  border-radius: 6px;
+  min-width: 32px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.cat-mgr-drag-handle {
+  color: #94a3b8;
+  font-size: 20px;
+  cursor: grab;
+  padding: 4px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+}
+
+.cat-mgr-drag-handle:hover {
+  color: #1e293b;
+}
+
+.cat-mgr-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cat-mgr-name {
+  font-size: 15.5px;
+  font-weight: 900;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cat-mgr-count {
+  font-size: 12.5px;
+  color: #64748b;
+  font-weight: 700;
+  background: #f8fafc;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.cat-mgr-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.cat-mgr-add-btn {
+  width: 100%;
+  padding: 14px 20px;
+  border: 2px dashed #cbd5e1;
+  background: #ffffff;
+  border-radius: 12px;
+  color: #334155;
+  font-size: 14.5px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 4px;
+}
+
+.cat-mgr-add-btn:hover {
+  border-color: var(--primary);
+  background: #f8fafc;
+  color: #0f172a;
+}
+
 .menu-item-row {
   background: #fff;
   border: 1px solid var(--border);

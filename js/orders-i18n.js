@@ -202,12 +202,12 @@ const I18N = {
     // Menu Editor
     menuCatTitle: "菜單分類",
     menuCatSub: "點擊左側分類以管理品項",
-    menuCatSubReorder: "拖曳或點擊箭頭以調整分類順序",
-    btnSortCategories: "↕️ 排序",
-    btnSortCategoriesDone: "✓ 完成排序",
-    btnMoveCategoryUp: "▲ 上移",
-    btnMoveCategoryDown: "▼ 下移",
-    btnMenuAddCategory: "+ 新增分類",
+    btnManageCategories: "⚙️ 管理分類",
+    manageCategoriesTitle: "管理菜單分類",
+    manageCategoriesSub: "拖曳調整分類順序，亦可新增或刪除分類",
+    btnCloseManager: "✕ 關閉",
+    btnAddCategory: "+ 新增分類",
+    btnAddCategoryBottom: "+ 新增菜單分類",
     btnCategoryDelete: "刪除分類",
     btnCategoryRename: "重新命名",
     addCategoryModalTitle: "新增菜單分類",
@@ -517,12 +517,12 @@ const I18N = {
     // Menu Editor
     menuCatTitle: "Danh mục thực đơn",
     menuCatSub: "Chọn danh mục bên trái để quản lý món",
-    menuCatSubReorder: "Kéo thả hoặc nhấn mũi tên để đổi thứ tự phân loại",
-    btnSortCategories: "↕️ Sắp xếp",
-    btnSortCategoriesDone: "✓ Xong",
-    btnMoveCategoryUp: "▲ Lên trên",
-    btnMoveCategoryDown: "▼ Xuống dưới",
-    btnMenuAddCategory: "+ Thêm phân loại",
+    btnManageCategories: "⚙️ Quản lý phân loại",
+    manageCategoriesTitle: "Quản lý phân loại thực đơn",
+    manageCategoriesSub: "Kéo thả để đổi thứ tự, thêm mới hoặc xóa phân loại",
+    btnCloseManager: "✕ Đóng",
+    btnAddCategory: "+ Thêm phân loại",
+    btnAddCategoryBottom: "+ Thêm phân loại mới",
     btnCategoryDelete: "Xóa phân loại",
     btnCategoryRename: "Đổi tên phân loại",
     addCategoryModalTitle: "Thêm phân loại thực đơn mới",
@@ -988,27 +988,14 @@ function applyLanguageToDOM() {
   const menuCatT = document.getElementById("i18n-menu-cat-title");
   if (menuCatT) menuCatT.innerText = dict.menuCatTitle;
   const menuCatS = document.getElementById("i18n-menu-cat-sub");
-  if (menuCatS) {
-    if (typeof isCategoryReorderMode !== 'undefined' && isCategoryReorderMode) {
-      menuCatS.innerText = dict.menuCatSubReorder;
-    } else {
-      menuCatS.innerText = dict.menuCatSub;
-    }
-  }
-  const btnSortCat = document.getElementById("btn-cat-toggle-reorder");
-  if (btnSortCat) {
-    if (typeof isCategoryReorderMode !== 'undefined' && isCategoryReorderMode) {
-      btnSortCat.innerText = dict.btnSortCategoriesDone;
-    } else {
-      btnSortCat.innerText = dict.btnSortCategories;
-    }
-  }
-  const btnMenuAddCat = document.getElementById("btn-menu-add-cat");
-  if (btnMenuAddCat) btnMenuAddCat.innerText = dict.btnMenuAddCategory;
-  const btnCatUp = document.getElementById("btn-category-move-up");
-  if (btnCatUp) btnCatUp.innerText = dict.btnMoveCategoryUp;
-  const btnCatDown = document.getElementById("btn-category-move-down");
-  if (btnCatDown) btnCatDown.innerText = dict.btnMoveCategoryDown;
+  if (menuCatS) menuCatS.innerText = dict.menuCatSub;
+
+  const btnManageCats = document.getElementById("btn-menu-manage-cats");
+  if (btnManageCats) btnManageCats.innerText = dict.btnManageCategories;
+  const btnManageClose = document.getElementById("btn-menu-manage-close");
+  if (btnManageClose) btnManageClose.innerText = dict.btnCloseManager;
+  const btnAddCatTop = document.getElementById("btn-menu-add-cat-top");
+  if (btnAddCatTop) btnAddCatTop.innerText = dict.btnAddCategory;
   const btnCatDel = document.getElementById("btn-category-delete");
   if (btnCatDel) btnCatDel.innerText = dict.btnCategoryDelete;
   const btnCatRen = document.getElementById("btn-category-rename");
