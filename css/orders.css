@@ -458,10 +458,6 @@ body {
   line-height: 1.2;
 }
 
-.tile-top .badge:last-child {
-  margin-left: auto;
-}
-
 .tile-customer {
   font-weight: 1000;
   font-size: 15.5px;

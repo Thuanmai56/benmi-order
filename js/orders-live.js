@@ -108,17 +108,13 @@ function renderListLeft(orders) {
     tile.className = `tile ${isNew ? "new" : ""}`;
     tile.onclick = () => openReview(order.key);
 
-    let badge = "";
     let rightActions = "";
 
     if (isNew) {
-      badge = `<span class="badge new">${t('badgeNew')}</span>`;
       rightActions = `<button class="btn btn-ghost tile-action-btn" style="background:#e0f2fe; color:#0369a1;" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">${t('btnReview')}</button>`;
     } else if (order.status === "ACCEPTED") {
-      badge = `<span class="badge wait">${t('badgeDoing')}</span>`;
       rightActions = `<button class="btn btn-primary tile-action-btn" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','DONE', {}, this)">${t('btnReady')}</button>`;
     } else {
-      badge = `<span class="badge wait" style="background:#e5e7eb; color:#4b5563;">${t('badgeWaiting')}</span>`;
       rightActions = `<button class="btn tile-action-btn" style="background:#f1f5f9; color:#94a3af; cursor:not-allowed;" disabled>${t('btnWaitingReply')}</button>`;
     }
 
@@ -145,7 +141,6 @@ function renderListLeft(orders) {
           <span class="tile-order-key">#${escapeHtml(order.key)}</span>
           ${diningBadge}
           ${appendBadge}
-          ${badge}
         </div>
         <div class="tile-meta-row">
           <span class="tile-meta-tag"><span style="color:var(--muted); margin-right:4px;">🕒</span>${escapeHtml(pickupDisplay)}</span>
@@ -215,7 +210,6 @@ function renderListRight(orders) {
           <span class="tile-order-key">#${escapeHtml(order.key)}</span>
           ${diningBadge}
           ${appendBadge}
-          <span class="badge done">${t('badgeReady')}</span>
         </div>
         <div class="tile-meta-row">
           <span class="tile-meta-tag"><span style="color:var(--muted); margin-right:4px;">🕒</span>${escapeHtml(pickupDisplay)}</span>
