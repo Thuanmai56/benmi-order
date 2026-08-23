@@ -221,10 +221,6 @@
               <span class="toc-icon">🛒</span>
               <span id="i18n-toc-ordermode">點餐取餐模式</span>
             </div>
-            <div class="settings-toc-item" id="toc-item-dinein" onclick="scrollToSettingSection('setting-card-dinein')">
-              <span class="toc-icon">🍽️</span>
-              <span id="i18n-toc-dinein">內用接單模式</span>
-            </div>
             <div class="settings-toc-item" id="toc-item-hours" onclick="scrollToSettingSection('setting-card-hours')">
               <span class="toc-icon">⏰</span>
               <span id="i18n-toc-hours">營業時間設定</span>
@@ -240,6 +236,10 @@
             <div class="settings-toc-item" id="toc-item-logo" onclick="scrollToSettingSection('setting-card-logo')">
               <span class="toc-icon">🖼️</span>
               <span id="i18n-toc-logo">門市 Logo</span>
+            </div>
+            <div class="settings-toc-item" id="toc-item-dinein" onclick="scrollToSettingSection('setting-card-dinein')">
+              <span class="toc-icon">🍽️</span>
+              <span id="i18n-toc-dinein">內用接單模式</span>
             </div>
           </div>
         </div>
@@ -310,52 +310,6 @@
                     <div style="font-size: 14px; color: #4b5563; margin-top: 4px; line-height: 1.4;" id="i18n-mode-asap-sub">隱藏預約時間選項。顧客下單後將立即依照現場排隊順序製作 (ASAP)。</div>
                   </div>
                 </label>
-              </div>
-            </div>
-
-            <!-- Dine-in Mode Setting -->
-            <div class="settings-card" id="setting-card-dinein">
-              <div
-                style="padding: 16px 20px; background: #f3f4f6; border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
-                <div>
-                  <div style="font-weight: 1100; font-size: 18px;" id="i18n-setting-dinein-title">🍽️ 內用接單設定</div>
-                  <div style="font-size: 13px; color: var(--muted); font-weight: 600; margin-top: 2px;" id="i18n-setting-dinein-sub">自訂是否允許顧客選擇「內用」或僅接受「外帶」</div>
-                </div>
-                <button class="btn btn-primary" style="padding: 10px 20px; font-size: 15px; border-radius: 8px;"
-                  onclick="saveDineInSetting()" id="btn-save-dinein-setting">儲存設定</button>
-              </div>
-              
-              <div id="setting-dinein-body" style="padding: 20px;">
-                <div id="setting-dinein-unlocked-body" style="display: flex; flex-direction: column; gap: 14px;">
-                  <label class="setting-mode-card" id="mode-card-dinein-true" style="display: flex; align-items: flex-start; gap: 14px; padding: 16px; border-radius: 12px; border: 2px solid var(--border); cursor: pointer; transition: all 0.15s ease;">
-                    <input type="radio" name="dinein-mode-radio" id="setting-allow-dinein-true" value="true" onchange="onDineInModeChange(true)" style="width: 20px; height: 20px; margin-top: 3px; accent-color: var(--primary);">
-                    <div>
-                      <div style="font-weight: 1100; font-size: 16px; color: #111827;" id="i18n-mode-dinein-true-title">🍽️ 開啟內用與外帶 (預設)</div>
-                      <div style="font-size: 14px; color: #4b5563; margin-top: 4px; line-height: 1.4;" id="i18n-mode-dinein-true-sub">顧客可在點餐頁面自由切換「外帶」或「內用」模式。</div>
-                    </div>
-                  </label>
-
-                  <label class="setting-mode-card" id="mode-card-dinein-false" style="display: flex; align-items: flex-start; gap: 14px; padding: 16px; border-radius: 12px; border: 2px solid var(--border); cursor: pointer; transition: all 0.15s ease;">
-                    <input type="radio" name="dinein-mode-radio" id="setting-allow-dinein-false" value="false" onchange="onDineInModeChange(false)" style="width: 20px; height: 20px; margin-top: 3px; accent-color: var(--primary);">
-                    <div>
-                      <div style="font-weight: 1100; font-size: 16px; color: #111827;" id="i18n-mode-dinein-false-title">🛍️ 僅限外帶 (關閉內用)</div>
-                      <div style="font-size: 14px; color: #4b5563; margin-top: 4px; line-height: 1.4;" id="i18n-mode-dinein-false-sub">隱藏內用選項，所有訂單一律為外帶自取。</div>
-                    </div>
-                  </label>
-                </div>
-
-                <div id="setting-dinein-locked-body" style="display: none; background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 14px; padding: 24px 20px; text-align: center; flex-direction: column; align-items: center; gap: 12px;">
-                  <div style="width: 52px; height: 52px; border-radius: 50%; background: #ede9fe; color: #6d28d9; display: flex; align-items: center; justify-content: center; font-size: 26px; border: 1.5px solid #ddd6fe;">
-                    🔒
-                  </div>
-                  <div>
-                    <div style="font-weight: 1100; font-size: 17px; color: #1e1b4b; margin-bottom: 4px;" id="i18n-feature-locked-title">🔒 進階功能 (未啟用)</div>
-                    <div style="font-size: 14px; color: #64748b; line-height: 1.5; max-width: 460px; margin: 0 auto;" id="i18n-feature-locked-desc">此功能為 BLAB 進階模組，如需啟用「內用接單」請聯繫 BLAB 團隊升級方案。</div>
-                  </div>
-                  <button type="button" class="btn btn-primary" style="margin-top: 6px; padding: 10px 22px; font-size: 15px; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); cursor: pointer;" onclick="openBlabContactModal()" id="i18n-btn-contact-upgrade">
-                    <span>💬</span> <span>聯繫升級方案</span>
-                  </button>
-                </div>
               </div>
             </div>
 
@@ -437,6 +391,55 @@
                   <div style="font-size: 12.5px; color: var(--muted); font-weight: 500;">
                     支援 PNG, JPG, WebP 格式（建議正方形 512x512px 以達最佳效果）
                   </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dine-in Mode Setting (Moved to bottom) -->
+            <div class="settings-card" id="setting-card-dinein">
+              <div
+                style="padding: 16px 20px; background: #f3f4f6; border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                  <div style="font-weight: 1100; font-size: 18px;" id="i18n-setting-dinein-title">🍽️ 內用接單設定</div>
+                  <div style="font-size: 13px; color: var(--muted); font-weight: 600; margin-top: 2px;" id="i18n-setting-dinein-sub">自訂是否允許顧客選擇「內用」或僅接受「外帶」</div>
+                </div>
+                <button class="btn btn-primary" style="padding: 10px 20px; font-size: 15px; border-radius: 8px;"
+                  onclick="saveDineInSetting()" id="btn-save-dinein-setting">儲存設定</button>
+              </div>
+              
+              <div id="setting-dinein-body" style="padding: 20px;">
+                <div id="setting-dinein-unlocked-body" style="display: flex; flex-direction: column; gap: 14px;">
+                  <label class="setting-mode-card" id="mode-card-dinein-true" style="display: flex; align-items: flex-start; gap: 14px; padding: 16px; border-radius: 12px; border: 2px solid var(--border); cursor: pointer; transition: all 0.15s ease;">
+                    <input type="radio" name="dinein-mode-radio" id="setting-allow-dinein-true" value="true" onchange="onDineInModeChange(true)" style="width: 20px; height: 20px; margin-top: 3px; accent-color: var(--primary);">
+                    <div>
+                      <div style="font-weight: 1100; font-size: 16px; color: #111827;" id="i18n-mode-dinein-true-title">🍽️ 開啟內用與外帶 (預設)</div>
+                      <div style="font-size: 14px; color: #4b5563; margin-top: 4px; line-height: 1.4;" id="i18n-mode-dinein-true-sub">顧客可在點餐頁面自由切換「外帶」或「內用」模式。</div>
+                    </div>
+                  </label>
+
+                  <label class="setting-mode-card" id="mode-card-dinein-false" style="display: flex; align-items: flex-start; gap: 14px; padding: 16px; border-radius: 12px; border: 2px solid var(--border); cursor: pointer; transition: all 0.15s ease;">
+                    <input type="radio" name="dinein-mode-radio" id="setting-allow-dinein-false" value="false" onchange="onDineInModeChange(false)" style="width: 20px; height: 20px; margin-top: 3px; accent-color: var(--primary);">
+                    <div>
+                      <div style="font-weight: 1100; font-size: 16px; color: #111827;" id="i18n-mode-dinein-false-title">🛍️ 僅限外帶 (關閉內用)</div>
+                      <div style="font-size: 14px; color: #4b5563; margin-top: 4px; line-height: 1.4;" id="i18n-mode-dinein-false-sub">隱藏內用選項，所有訂單一律為外帶自取。</div>
+                    </div>
+                  </label>
+                </div>
+
+                <!-- Compact Locked Banner (History style) -->
+                <div id="setting-dinein-locked-body" style="display: none; background: linear-gradient(135deg, #f8fafc 0%, #edf2f7 100%); border: 1.5px dashed #cbd5e1; border-radius: 12px; padding: 14px 18px; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
+                  <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 240px;">
+                    <div style="font-size: 22px; width: 40px; height: 40px; border-radius: 50%; background: #ede9fe; color: #6d28d9; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid #ddd6fe;">
+                      🔒
+                    </div>
+                    <div>
+                      <div style="font-weight: 900; font-size: 15px; color: #1e1b4b;" id="i18n-feature-locked-title">進階功能 (未啟用)</div>
+                      <div style="font-size: 13px; color: #64748b; line-height: 1.4; margin-top: 2px;" id="i18n-feature-locked-desc">此功能為 BLAB 進階模組，如需啟用「內用接單」請聯繫 BLAB 團隊升級方案。</div>
+                    </div>
+                  </div>
+                  <button type="button" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px; font-weight: 800; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25); cursor: pointer; white-space: nowrap;" onclick="openBlabContactModal()" id="i18n-btn-contact-upgrade">
+                    <span>💬</span> <span>聯繫升級方案</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -920,7 +923,7 @@
   <script src="js/orders-live.js?v=20260822_feat_announcement_1"></script>
   <script src="js/orders-modals.js?v=20260822_feat_announcement_1"></script>
   <script src="js/orders-history.js?v=20260822_feat_announcement_1"></script>
-  <script src="js/orders-settings.js?v=20260822_feat_announcement_1"></script>
+  <script src="js/orders-settings.js?v=20260823_dinein_bottom_1"></script>
   <script src="js/orders-menu.js?v=20260823_cat_mod_picker_1"></script>
 
   <!-- POS Bootstrap & Initialization -->
