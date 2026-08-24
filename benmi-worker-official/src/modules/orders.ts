@@ -481,13 +481,17 @@ export async function updateOrder(
   tenantCtx?: TenantContext | null
 ): Promise<Response> {
   const data: any = await request.json();
-  const tenantId = tenantCtx?.tenantId || getTenantId(request);
-  const brandName = tenantCtx?.brandName || "Store";
-
   const orderRow = await env.DB.prepare(
     "SELECT * FROM orders WHERE key = ?"
   ).bind(data.key).first<any>();
   if (!orderRow) return json({ error: "order not found" }, 404);
+
+  const effectiveTenantId = orderRow.tenant_id || tenantCtx?.tenantId || getTenantId(request);
+  if (!tenantCtx || tenantCtx.tenantId !== effectiveTenantId) {
+    tenantCtx = await resolveTenantContext(effectiveTenantId, env);
+  }
+  const tenantId = effectiveTenantId;
+  const brandName = tenantCtx?.brandName || "Store";
 
   const order: Order = {
     key: orderRow.key,

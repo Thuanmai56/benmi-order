@@ -44,6 +44,11 @@
       "secret_name": "LINE_MESSAGE_API_CHANNEL_BENMI"
     },
     {
+      "binding": "LINE_TOKEN_BSC",
+      "store_id": "7e2896f1c5cf4e1eb80ef6c89f3024d4",
+      "secret_name": "LINE_MESSAGE_API_CHANNEL_BSC"
+    },
+    {
       "binding": "OPENROUTER_API_KEY",
       "store_id": "7e2896f1c5cf4e1eb80ef6c89f3024d4",
       "secret_name": "OPENROUTER_API_KEY_BLAB"
@@ -67,6 +72,11 @@
           "binding": "LINE_CHANNEL_TOKEN",
           "store_id": "7e2896f1c5cf4e1eb80ef6c89f3024d4",
           "secret_name": "LINE_MESSAGE_API_CHANNEL_BLAB"
+        },
+        {
+          "binding": "LINE_TOKEN_BSC",
+          "store_id": "7e2896f1c5cf4e1eb80ef6c89f3024d4",
+          "secret_name": "LINE_MESSAGE_API_CHANNEL_BSC"
         },
         {
           "binding": "OPENROUTER_API_KEY",
@@ -105,6 +115,11 @@
           "binding": "LINE_CHANNEL_TOKEN",
           "store_id": "7e2896f1c5cf4e1eb80ef6c89f3024d4",
           "secret_name": "LINE_MESSAGE_API_CHANNEL_BLAB"
+        },
+        {
+          "binding": "LINE_TOKEN_BSC",
+          "store_id": "7e2896f1c5cf4e1eb80ef6c89f3024d4",
+          "secret_name": "LINE_MESSAGE_API_CHANNEL_BSC"
         },
         {
           "binding": "OPENROUTER_API_KEY",

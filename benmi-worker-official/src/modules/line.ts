@@ -8,9 +8,12 @@ import { callAI, FewShotExample } from '../integrations/groq';
 import { syncToGoogleSheets } from '../integrations/googleSheets';
 import { getTenantId, getMenuData, formatMenuForPrompt } from './menu';
 
-async function getLineToken(env: Env, tenantCtx?: TenantContext | null): Promise<string> {
+export async function getLineToken(env: Env, tenantCtx?: TenantContext | null): Promise<string> {
   if (tenantCtx?.lineChannelToken) {
     return tenantCtx.lineChannelToken;
+  }
+  if (tenantCtx?.tenantId === 'bsc' && env.LINE_TOKEN_BSC) {
+    return await resolveSecret(env.LINE_TOKEN_BSC);
   }
   return await resolveSecret(env.LINE_CHANNEL_TOKEN);
 }

@@ -69,6 +69,10 @@ export async function resolveTenantContext(
           orderPrefix: row.order_prefix || null,
         };
 
+        if (tenantId === 'bsc' && !ctx.lineChannelToken && env.LINE_TOKEN_BSC) {
+          ctx.lineChannelToken = await resolveSecret(env.LINE_TOKEN_BSC);
+        }
+
         // Cache in KV
         if (env.ORDER_STATE) {
           try {
