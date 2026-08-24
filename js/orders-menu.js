@@ -93,6 +93,26 @@ async function loadMenuData() {
       });
     }
 
+    if (data.customizations && data.customizations.length > 0) {
+      if (!categories.some(c => c.type === 'order_customization' || c.id === 'sec-flavor')) {
+        categories.unshift({
+          id: 'sec-flavor',
+          title: '🧪 口味與客製化選擇',
+          type: 'order_customization',
+          allowCustomization: false,
+          appliedModifiers: [],
+          items: data.customizations.map(cust => ({
+            name: cust.title,
+            price: 0,
+            isOos: false,
+            badgeText: cust.type === 'radio' ? '單選' : '多選',
+            isRecommended: false,
+            originalName: cust.title
+          }))
+        });
+      }
+    }
+
     currentMenuData = categories.length > 0 ? categories : getBenmiDefaultCategories().map(cat => ({
       id: cat.id,
       title: cat.label,

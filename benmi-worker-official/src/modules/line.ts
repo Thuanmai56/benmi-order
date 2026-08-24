@@ -600,6 +600,215 @@ export function buildAppendConfirmationFlexMessage(
   };
 }
 
+export function createRejectFlexBubble(
+  orderKey: string,
+  reason: string,
+  brandName: string = "店家",
+  brandColor: string = "#DC2626"
+): any {
+  return {
+    type: "bubble",
+    size: "mega",
+    header: {
+      type: "box",
+      layout: "vertical",
+      backgroundColor: brandColor,
+      paddingAll: "18px",
+      contents: [
+        {
+          type: "box",
+          layout: "horizontal",
+          spacing: "md",
+          alignItems: "center",
+          contents: [
+            {
+              type: "box",
+              layout: "vertical",
+              contents: [
+                { type: "text", text: "無法接單通知", weight: "bold", size: "xl", color: "#ffffff" },
+                { type: "text", text: `${brandName} - Order Cancel Request`, size: "xs", color: "#FEE2E2" }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      paddingAll: "20px",
+      spacing: "md",
+      contents: [
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            { type: "text", text: "訂單編號", size: "sm", color: "#888888", flex: 3 },
+            { type: "text", text: `#${orderKey}`, size: "md", weight: "bold", color: "#111111", flex: 6 }
+          ]
+        },
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            { type: "text", text: "取消原因", size: "sm", color: "#888888", flex: 3 },
+            { type: "text", text: reason || "商品已售完 / 目前無法接單", size: "sm", weight: "bold", color: "#DC2626", flex: 6, wrap: true }
+          ]
+        },
+        { type: "separator", margin: "md", color: "#EEEEEE" },
+        {
+          type: "text",
+          text: "非常抱歉！店家目前無法為您製作餐點。請點擊下方按鈕確認是否同意取消訂單：",
+          wrap: true,
+          color: "#4B5563",
+          size: "sm"
+        }
+      ]
+    },
+    footer: {
+      type: "box",
+      layout: "vertical",
+      paddingAll: "16px",
+      spacing: "sm",
+      contents: [
+        {
+          type: "button",
+          style: "primary",
+          color: "#DC2626",
+          height: "sm",
+          action: {
+            type: "postback",
+            label: "🔴 同意取消訂單",
+            data: `action=reject_agree&orderKey=${orderKey}`,
+            displayText: "同意"
+          }
+        },
+        {
+          type: "button",
+          style: "secondary",
+          height: "sm",
+          action: {
+            type: "postback",
+            label: "⚪ 不同意",
+            data: `action=reject_disagree&orderKey=${orderKey}`,
+            displayText: "不同意"
+          }
+        }
+      ]
+    }
+  };
+}
+
+export function createChangeFlexBubble(
+  orderKey: string,
+  reason: string,
+  note: string = "",
+  brandName: string = "店家",
+  brandColor: string = "#F59E0B"
+): any {
+  return {
+    type: "bubble",
+    size: "mega",
+    header: {
+      type: "box",
+      layout: "vertical",
+      backgroundColor: brandColor,
+      paddingAll: "18px",
+      contents: [
+        {
+          type: "box",
+          layout: "horizontal",
+          spacing: "md",
+          alignItems: "center",
+          contents: [
+            {
+              type: "box",
+              layout: "vertical",
+              contents: [
+                { type: "text", text: "訂單微調通知", weight: "bold", size: "xl", color: "#ffffff" },
+                { type: "text", text: `${brandName} - Order Modification Request`, size: "xs", color: "#FEF3C7" }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      paddingAll: "20px",
+      spacing: "md",
+      contents: [
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            { type: "text", text: "訂單編號", size: "sm", color: "#888888", flex: 3 },
+            { type: "text", text: `#${orderKey}`, size: "md", weight: "bold", color: "#111111", flex: 6 }
+          ]
+        },
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            { type: "text", text: "調整原因", size: "sm", color: "#888888", flex: 3 },
+            { type: "text", text: reason || "部分品項售完需調整", size: "sm", weight: "bold", color: "#D97706", flex: 6, wrap: true }
+          ]
+        },
+        ...(note ? [
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: "備註說明", size: "sm", color: "#888888", flex: 3 },
+              { type: "text", text: note, size: "sm", color: "#374151", flex: 6, wrap: true }
+            ]
+          }
+        ] : []),
+        { type: "separator", margin: "md", color: "#EEEEEE" },
+        {
+          type: "text",
+          text: "店家已收到您的訂單，但需要微調內容。請點擊下方按鈕確認是否接受變更：",
+          wrap: true,
+          color: "#4B5563",
+          size: "sm"
+        }
+      ]
+    },
+    footer: {
+      type: "box",
+      layout: "vertical",
+      paddingAll: "16px",
+      spacing: "sm",
+      contents: [
+        {
+          type: "button",
+          style: "primary",
+          color: "#F59E0B",
+          height: "sm",
+          action: {
+            type: "postback",
+            label: "🟡 同意變更",
+            data: `action=change_agree&orderKey=${orderKey}`,
+            displayText: "同意變更"
+          }
+        },
+        {
+          type: "button",
+          style: "secondary",
+          height: "sm",
+          action: {
+            type: "postback",
+            label: "⚪ 取消訂單",
+            data: `action=change_cancel&orderKey=${orderKey}`,
+            displayText: "取消訂單"
+          }
+        }
+      ]
+    }
+  };
+}
+
 export async function replyWithLiffRedirect(
   replyToken: string,
   userId: string,
@@ -822,9 +1031,11 @@ export async function handleLineWebhook(
     const userId = source.userId;
     if (!userId) continue;
 
-    // 0.1) Handle postback events (e.g. Progress Check button tap)
+    // 0.1) Handle postback events (e.g. Progress Check, Reject/Change Agree/Disagree button taps)
     if (event.type === "postback") {
       const dataStr = event.postback?.data || "";
+      console.log(`[${brandName}] [LINE Postback] userId=${userId} data=${dataStr}`);
+
       if (dataStr.includes("action=check_progress")) {
         let orderKey = "";
         const match = dataStr.match(/order_key=([^&]+)/);
@@ -840,6 +1051,85 @@ export async function handleLineWebhook(
           await replyText(replyToken, "找不到您的相關訂單紀錄。", env, tenantCtx);
         }
         continue;
+      }
+
+      // Handle Interactive Actions: reject_agree, reject_disagree, change_agree, change_cancel
+      let action = "";
+      let orderKey = "";
+
+      const params = new URLSearchParams(dataStr);
+      action = params.get("action")?.trim() || "";
+      orderKey = params.get("orderKey")?.trim() || params.get("order_key")?.trim() || "";
+
+      if (!action) {
+        if (dataStr.includes("reject_agree")) action = "reject_agree";
+        else if (dataStr.includes("reject_disagree")) action = "reject_disagree";
+        else if (dataStr.includes("change_agree")) action = "change_agree";
+        else if (dataStr.includes("change_cancel")) action = "change_cancel";
+      }
+
+      if (!orderKey) {
+        const m = dataStr.match(/orderKey=([^&]+)/) || dataStr.match(/order_key=([^&]+)/);
+        if (m) orderKey = m[1];
+      }
+
+      if (!orderKey && env.DB) {
+        try {
+          const pRow = await env.DB.prepare(
+            "SELECT order_key FROM pending_actions WHERE tenant_id = ? AND user_id = ? ORDER BY created_at DESC LIMIT 1"
+          ).bind(tenantId, userId).first<{ order_key: string }>();
+          if (pRow?.order_key) {
+            orderKey = pRow.order_key;
+          } else {
+            const wRow = await env.DB.prepare(
+              "SELECT key FROM orders WHERE tenant_id = ? AND user_id = ? AND status IN ('WAITING_CUSTOMER_REJECT', 'WAITING_CUSTOMER_CHANGE') ORDER BY updated_at DESC LIMIT 1"
+            ).bind(tenantId, userId).first<{ key: string }>();
+            if (wRow?.key) orderKey = wRow.key;
+          }
+        } catch (e) {
+          console.error("[Postback Fallback orderKey error]:", e);
+        }
+      }
+
+      if (action && orderKey && env.DB) {
+        try {
+          if (action === "reject_agree") {
+            await env.DB.prepare(
+              "UPDATE orders SET status = 'REJECTED', updated_at = strftime('%Y-%m-%d %H:%M:%f', 'now') WHERE tenant_id = ? AND key = ?"
+            ).bind(tenantId, orderKey).run();
+            await env.DB.prepare(
+              "DELETE FROM pending_actions WHERE tenant_id = ? AND (order_key = ? OR user_id = ?)"
+            ).bind(tenantId, orderKey, userId).run();
+            await replyText(replyToken, `✅ 訂單 #${orderKey} 已確認取消。期待下次能為您服務！`, env, tenantCtx);
+          } else if (action === "reject_disagree") {
+            await env.DB.prepare(
+              "UPDATE orders SET status = 'NEW', updated_at = strftime('%Y-%m-%d %H:%M:%f', 'now') WHERE tenant_id = ? AND key = ?"
+            ).bind(tenantId, orderKey).run();
+            await env.DB.prepare(
+              "DELETE FROM pending_actions WHERE tenant_id = ? AND (order_key = ? OR user_id = ?)"
+            ).bind(tenantId, orderKey, userId).run();
+            await replyText(replyToken, `感謝您的回覆！店家將盡快與您聯繫或重新為您確認訂單 #${orderKey}。`, env, tenantCtx);
+          } else if (action === "change_agree") {
+            await env.DB.prepare(
+              "UPDATE orders SET status = 'ACCEPTED', updated_at = strftime('%Y-%m-%d %H:%M:%f', 'now') WHERE tenant_id = ? AND key = ?"
+            ).bind(tenantId, orderKey).run();
+            await env.DB.prepare(
+              "DELETE FROM pending_actions WHERE tenant_id = ? AND (order_key = ? OR user_id = ?)"
+            ).bind(tenantId, orderKey, userId).run();
+            await replyText(replyToken, `✅ 已確認修改！店家已開始為您準備餐點（訂單 #${orderKey}），請稍候。`, env, tenantCtx);
+          } else if (action === "change_cancel") {
+            await env.DB.prepare(
+              "UPDATE orders SET status = 'REJECTED', updated_at = strftime('%Y-%m-%d %H:%M:%f', 'now') WHERE tenant_id = ? AND key = ?"
+            ).bind(tenantId, orderKey).run();
+            await env.DB.prepare(
+              "DELETE FROM pending_actions WHERE tenant_id = ? AND (order_key = ? OR user_id = ?)"
+            ).bind(tenantId, orderKey, userId).run();
+            await replyText(replyToken, `✅ 訂單 #${orderKey} 已取消。如有任何需求歡迎再次點餐！`, env, tenantCtx);
+          }
+          continue;
+        } catch (postbackErr) {
+          console.error(`[${brandName}] Postback execution error:`, postbackErr);
+        }
       }
     }
 

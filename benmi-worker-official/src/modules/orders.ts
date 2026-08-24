@@ -2,7 +2,7 @@ import { Env } from '../types/env';
 import { Order, DiningOption, AppendOrderPayload, OrderItemInput } from '../types/index';
 import { corsHeaders, json } from '../utils/http';
 import { syncToGoogleSheets } from '../integrations/googleSheets';
-import { pushLineMessage, pushLineFlexMessage, buildOrderFlexMessage, buildAppendConfirmationFlexMessage } from './line';
+import { pushLineMessage, pushLineFlexMessage, buildOrderFlexMessage, buildAppendConfirmationFlexMessage, createRejectFlexBubble, createChangeFlexBubble } from './line';
 import { getTenantId } from './menu';
 
 import { TenantContext, tenantHasFeature, resolveTenantOrderPrefix, generateStandardOrderId } from '../types/tenant';
@@ -490,12 +490,11 @@ export async function updateOrder(
 
     if (order.userId) {
       let notifyText = "";
-      if (order.reason === "時間需調整") {
-        const t = order.note || "稍後";
-        notifyText = `時間有點趕，請問可以改成${t}嗎？\n\n(回覆「好 / 同意」以確認，或回覆「不要了」取消訂單)`;
-      } else if (order.reason === "口味售完") {
-        const items = (order.note || "").split(",");
-        let joinedItems = items[0] || "";
+      const reason = order.reason || "未提供原因";
+      const note = order.note || "";
+      if (order.reason && order.reason.startsWith("賣完了：")) {
+        const items = order.reason.replace("賣完了：", "").split(",").map(s => s.trim()).filter(Boolean);
+        let joinedItems = items.join("、");
         if (items.length === 2) {
           joinedItems = items.join("跟");
         } else if (items.length > 2) {
@@ -503,8 +502,6 @@ export async function updateOrder(
         }
         notifyText = `不好意思 ${joinedItems}我們現在賣完了，請問可以幫您換別的嗎？`;
       } else {
-        const reason = order.reason || "未提供原因";
-        const note = order.note || "";
         notifyText =
           `${brandName} 已收到您的訂單 #${order.key}，但需要微調訂單內容：\n` +
           `原因：${reason}\n` +
@@ -521,9 +518,13 @@ export async function updateOrder(
            reason = excluded.reason,
            note = excluded.note,
            created_at = CURRENT_TIMESTAMP`
-      ).bind(tenantId, order.userId, order.key, "CHANGE", notifyText, order.reason || "", order.note || "").run();
+      ).bind(tenantId, order.userId, order.key, "CHANGE", notifyText, reason, note).run();
 
-      await pushLineMessage(order.userId, notifyText, env, tenantCtx);
+      const changeFlex = createChangeFlexBubble(order.key, reason, note, brandName);
+      const flexSent = await pushLineFlexMessage(order.userId, `[${brandName}] 訂單微調通知 #${order.key}`, changeFlex, env, tenantCtx);
+      if (!flexSent) {
+        await pushLineMessage(order.userId, notifyText, env, tenantCtx);
+      }
     }
 
     return json({ success: true });
@@ -542,7 +543,7 @@ export async function updateOrder(
     await saveOrder(env, order, tenantId);
 
     if (order.userId) {
-      const reason = order.reason || "未提供原因";
+      const reason = order.reason || "商品已售完 / 目前無法接單";
       const notifyText =
         `非常抱歉！${brandName} 目前無法接下您的訂單 #${order.key}。\n` +
         `原因：${reason}\n` +
@@ -557,9 +558,13 @@ export async function updateOrder(
            reason = excluded.reason,
            note = excluded.note,
            created_at = CURRENT_TIMESTAMP`
-      ).bind(tenantId, order.userId, order.key, "REJECT", notifyText, order.reason || "", order.note || "").run();
+      ).bind(tenantId, order.userId, order.key, "REJECT", notifyText, reason, order.note || "").run();
 
-      await pushLineMessage(order.userId, notifyText, env, tenantCtx);
+      const rejectFlex = createRejectFlexBubble(order.key, reason, brandName);
+      const flexSent = await pushLineFlexMessage(order.userId, `[${brandName}] 無法接單通知 #${order.key}`, rejectFlex, env, tenantCtx);
+      if (!flexSent) {
+        await pushLineMessage(order.userId, notifyText, env, tenantCtx);
+      }
     }
 
     return json({ success: true });

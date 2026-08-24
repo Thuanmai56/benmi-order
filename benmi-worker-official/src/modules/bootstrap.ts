@@ -59,6 +59,18 @@ export interface BootstrapResponse {
       isOutOfStock: boolean;
     }>;
   }>;
+  customizations?: Array<{
+    id: string;
+    key: string;
+    title: string;
+    type: 'radio' | 'checkbox';
+    sortOrder: number;
+    options: Array<{
+      name: string;
+      price?: number;
+      sub_options?: string[];
+    }>;
+  }>;
   translations?: Record<string, string>;
   recommended?: string[];
 }
@@ -152,10 +164,11 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
     // 3. Batch Query D1 Database
     let categories: any[] = [];
     let items: any[] = [];
+    let rawCustomizations: any[] = [];
 
     if (env.DB) {
       try {
-        const [catsRes, itemsRes] = await env.DB.batch([
+        const [catsRes, itemsRes, customRes] = await env.DB.batch([
           env.DB.prepare(
             `SELECT id, name, slug, 
                     COALESCE(category_type, 'catalog') AS category_type, 
@@ -177,12 +190,36 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
              FROM menu_items 
              WHERE tenant_id = ? 
              ORDER BY sort_order ASC`
+          ).bind(tenantId),
+          env.DB.prepare(
+            `SELECT id, key, title, type, sort_order, options_json
+             FROM menu_customizations
+             WHERE tenant_id = ?
+             ORDER BY sort_order ASC`
           ).bind(tenantId)
         ]);
         categories = (catsRes.results as any[]) || [];
         items = (itemsRes.results as any[]) || [];
+        rawCustomizations = (customRes.results as any[]) || [];
       } catch (dbErr) {
         console.error(`[Bootstrap] D1 Query error for ${tenantId}:`, dbErr);
+      }
+    }
+
+    const customizations: BootstrapResponse['customizations'] = [];
+    for (const c of rawCustomizations) {
+      try {
+        const opts = typeof c.options_json === 'string' ? JSON.parse(c.options_json) : (c.options_json || []);
+        customizations.push({
+          id: c.id,
+          key: c.key,
+          title: c.title,
+          type: c.type || 'radio',
+          sortOrder: c.sort_order || 0,
+          options: opts
+        });
+      } catch (e) {
+        console.error(`[Bootstrap] Failed to parse options_json for ${c.id}:`, e);
       }
     }
 
@@ -322,6 +359,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
       },
       catalog,
       modifiers,
+      customizations: customizations.length > 0 ? customizations : undefined,
       translations: tenantId === 'benmi' ? BENMI_TRANSLATIONS : undefined,
       recommended: items.filter(it => it.is_recommended || it.badge_text).map(it => it.name)
     };

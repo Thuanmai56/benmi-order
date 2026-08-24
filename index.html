@@ -318,6 +318,20 @@
             style="max-width: 90%; max-height: 90%; border-radius: 16px; object-fit: contain; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
     </div>
 
+    <!-- Desktop Mobile-Only QR Code Modal -->
+    <div id="desktop-qr-modal" class="custom-alert-overlay" style="display:none; z-index: 2500;">
+        <div class="custom-alert-box" style="max-width: 380px; text-align: center; padding: 24px 20px;">
+            <div style="font-size: 20px; font-weight: 900; color: #1e293b; margin-bottom: 8px;">請使用手機 LINE 掃碼點餐</div>
+            <div style="font-size: 14px; color: #64748b; margin-bottom: 18px; line-height: 1.5;">
+                為了確保能即時接收製作進度通知與優惠，本門市僅支援手機 LINE 點餐。
+            </div>
+            <div id="desktop-qr-container" style="display: flex; justify-content: center; margin-bottom: 16px;">
+                <img id="desktop-qr-img" src="" alt="QR Code" style="width: 180px; height: 180px; border-radius: 12px; border: 1px solid #e2e8f0; padding: 6px; background: #fff;">
+            </div>
+            <button class="custom-alert-btn" onclick="closeDesktopQrModal()" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1;">關閉</button>
+        </div>
+    </div>
+
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script>
         // --- WORKER BASE & TENANT RESOLUTION ---
@@ -640,15 +654,39 @@
             if (lightbox) lightbox.style.display = 'none';
         }
 
+        function closeDesktopQrModal() {
+            const modal = document.getElementById('desktop-qr-modal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function openDesktopQrModal() {
+            const modal = document.getElementById('desktop-qr-modal');
+            const qrImg = document.getElementById('desktop-qr-img');
+            if (qrImg) {
+                const currentUrl = encodeURIComponent(window.location.href);
+                qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${currentUrl}`;
+            }
+            if (modal) modal.style.display = 'flex';
+        }
+
         // --- DYNAMIC CATALOG RENDERING (UNIFIED FOR ALL TENANTS) ---
         function renderDynamicCatalog() {
             if (!bootstrapData || !bootstrapData.catalog) return;
 
+            const hasCustomizations = (Array.isArray(bootstrapData.customizations) && bootstrapData.customizations.length > 0);
+
             // 1. Navigation Tabs
             const nav = document.getElementById('main-nav');
             let navHTML = '';
+
+            const hasFlavorInCatalog = bootstrapData.catalog.some(c => c.slug === 'sec-flavor' || c.slug === 'flavor' || c.categoryType === 'order_customization');
+            if (hasCustomizations && !hasFlavorInCatalog) {
+                navHTML += `<div class="nav-btn active" onclick="scrollToSec('sec-flavor')">🧪 口味選擇</div>`;
+            }
+
             bootstrapData.catalog.forEach((cat, idx) => {
-                navHTML += `<div class="nav-btn ${idx === 0 ? 'active' : ''}" onclick="scrollToSec('sec-${cat.slug}')">${cat.name}</div>`;
+                const isActive = (!hasCustomizations && idx === 0) || (hasFlavorInCatalog && idx === 0);
+                navHTML += `<div class="nav-btn ${isActive ? 'active' : ''}" onclick="scrollToSec('sec-${cat.slug}')">${cat.name}</div>`;
             });
             navHTML += `<div class="nav-btn" onclick="scrollToSec('sec-checkout')">結帳</div>`;
             nav.innerHTML = navHTML;
@@ -657,29 +695,113 @@
             const container = document.getElementById('catalog-sections');
             container.innerHTML = '';
 
+            if (hasCustomizations && !hasFlavorInCatalog) {
+                const flavorSec = document.createElement('div');
+                flavorSec.className = 'section-container';
+                flavorSec.id = 'sec-flavor';
+                renderCustomizationsPanel(flavorSec, bootstrapData.customizations);
+                container.appendChild(flavorSec);
+            }
+
             bootstrapData.catalog.forEach(cat => {
                 const sec = document.createElement('div');
                 sec.className = 'section-container';
                 sec.id = `sec-${cat.slug}`;
 
-                const titleDiv = document.createElement('div');
-                titleDiv.className = 'section-title';
-                titleDiv.innerText = cat.name;
-                sec.appendChild(titleDiv);
+                if (cat.slug === 'sec-flavor' || cat.slug === 'flavor' || cat.categoryType === 'order_customization') {
+                    renderCustomizationsPanel(sec, bootstrapData.customizations || []);
+                } else {
+                    const titleDiv = document.createElement('div');
+                    titleDiv.className = 'section-title';
+                    titleDiv.innerText = cat.name;
+                    sec.appendChild(titleDiv);
 
-                const gridDiv = document.createElement('div');
-                gridDiv.className = 'grid';
-                gridDiv.id = `grid-${cat.slug}`;
+                    const gridDiv = document.createElement('div');
+                    gridDiv.className = 'grid';
+                    gridDiv.id = `grid-${cat.slug}`;
 
-                cat.items.forEach(item => {
-                    gridDiv.appendChild(createDynamicItemCard(cat.slug, item));
-                });
+                    (cat.items || []).forEach(item => {
+                        gridDiv.appendChild(createDynamicItemCard(cat.slug, item));
+                    });
 
-                sec.appendChild(gridDiv);
+                    sec.appendChild(gridDiv);
+                }
                 container.appendChild(sec);
             });
 
             document.querySelectorAll('.section-container').forEach(sec => observer.observe(sec));
+        }
+
+        function renderCustomizationsPanel(container, list) {
+            if (!container || !list || list.length === 0) return;
+            const escapeHtml = (str) => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+            let html = `<div class="section-title">🧪 口味與客製化選擇</div>
+            <div class="custom-panel" style="margin-bottom: 20px; padding: 18px; background: #fff; border-radius: 16px; border: 1px solid var(--border); font-size: 15px; color: #374151; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">`;
+
+            list.forEach((group, groupIdx) => {
+                const topMargin = groupIdx > 0 ? 'margin-top: 16px; border-top: 1px dashed #f1f5f9; padding-top: 14px;' : '';
+                html += `<div class="custom-group" style="${topMargin}">
+                    <label class="custom-label" style="font-weight: 800; display: block; margin-bottom: 10px; color: #1e293b;">${escapeHtml(group.title)}</label>
+                    <div class="${group.type === 'radio' ? 'radio-grid' : 'checkbox-grid-opts'}" style="display: flex; flex-wrap: wrap; gap: 10px;">`;
+
+                (group.options || []).forEach((opt, optIdx) => {
+                    const optName = typeof opt === 'string' ? opt : (opt ? opt.name || '' : '');
+                    const optPrice = (typeof opt === 'object' && opt && opt.price) ? Number(opt.price) : 0;
+                    const subOpts = (typeof opt === 'object' && opt && Array.isArray(opt.sub_options)) ? opt.sub_options : [];
+                    const inputName = `opt-${group.key}`;
+                    const isChecked = group.type === 'radio' ? (optIdx === 0 ? 'checked' : '') : '';
+                    const onchangeAttr = group.type === 'radio' ? 'onchange="toggleFlavorSubOptions()"' : (optPrice > 0 ? 'onchange="updateTotal()"' : '');
+                    const priceLabel = optPrice > 0 ? ` (+<span style="color:#059669; font-weight:800;">$${optPrice}</span>)` : '';
+
+                    if (group.type === 'radio') {
+                        html += `<div class="flavor-option-container" style="display: flex; flex-direction: column; align-items: flex-start; gap: 6px;">
+                            <label class="radio-label" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1.5px solid #e2e8f0; border-radius: 10px; background: #f8fafc; cursor: pointer; font-weight: 600;">
+                                <input type="radio" name="${inputName}" value="${escapeHtml(optName)}" ${isChecked} ${onchangeAttr} style="accent-color: var(--primary);"> 
+                                <span>${escapeHtml(optName)}${priceLabel}</span>
+                            </label>`;
+
+                        if (subOpts.length > 0) {
+                            html += `<div class="sub-option-container" data-parent-flavor="${escapeHtml(optName)}" style="display: ${optIdx === 0 ? 'flex' : 'none'}; margin-top: 6px; margin-left: 8px; padding-left: 12px; border-left: 3px solid var(--primary); gap: 10px; flex-wrap: wrap;">`;
+                            subOpts.forEach((sub) => {
+                                html += `<label class="checkbox-label" style="display: inline-flex; align-items: center; gap: 4px; font-size: 13.5px; color: #4b5563; cursor: pointer;">
+                                    <input type="checkbox" class="sub-opt-chk" data-flavor="${escapeHtml(optName)}" value="${escapeHtml(sub)}" style="accent-color: var(--primary);"> 
+                                    <span>${escapeHtml(sub)}</span>
+                                </label>`;
+                            });
+                            html += `</div>`;
+                        }
+
+                        html += `</div>`;
+                    } else {
+                        html += `<label class="checkbox-label" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1.5px solid #e2e8f0; border-radius: 10px; background: #f8fafc; cursor: pointer; font-weight: 600;">
+                            <input type="checkbox" name="${inputName}" data-price="${optPrice}" value="${escapeHtml(optName)}" ${onchangeAttr} style="accent-color: var(--primary);"> 
+                            <span>${escapeHtml(optName)}${priceLabel}</span>
+                        </label>`;
+                    }
+                });
+
+                html += `</div></div>`;
+            });
+
+            html += `</div>`;
+            container.innerHTML = html;
+        }
+
+        function toggleFlavorSubOptions() {
+            const selectedFlavorEl = document.querySelector('input[name="opt-flavor"]:checked');
+            const selectedVal = selectedFlavorEl ? selectedFlavorEl.value : '';
+
+            document.querySelectorAll('.sub-option-container').forEach(el => {
+                const parentFlavor = el.getAttribute('data-parent-flavor');
+                if (parentFlavor === selectedVal) {
+                    el.style.display = 'flex';
+                } else {
+                    el.style.display = 'none';
+                    el.querySelectorAll('input[type="checkbox"]').forEach(chk => chk.checked = false);
+                }
+            });
+            if (typeof updateTotal === 'function') updateTotal();
         }
 
         function createDynamicItemCard(catSlug, item) {
@@ -913,6 +1035,23 @@
                     summaryHTML += `<div style="border-bottom: 1px dashed #eee; margin-bottom: 8px;"></div>`;
                 }
             }
+
+            // Add Global Customization Addons if selected
+            let addonsTotal = 0;
+            const checkedAddons = document.querySelectorAll('.custom-panel input[type="checkbox"]:checked');
+            checkedAddons.forEach(chk => {
+                const p = Number(chk.getAttribute('data-price')) || 0;
+                if (p > 0) {
+                    addonsTotal += p;
+                    summaryHTML += `
+                        <div style="display:flex; justify-content:space-between; margin-bottom:6px; color:#059669; font-size:13.5px; font-weight:700;">
+                            <div>+ 加購：${chk.value}</div>
+                            <div>+$${p}</div>
+                        </div>
+                    `;
+                }
+            });
+            total += addonsTotal;
 
             const totalEl = document.getElementById('total-price');
             if (totalEl) totalEl.innerText = total;

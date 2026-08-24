@@ -345,10 +345,51 @@ function parseCartKey(key) {
     };
 }
 
+function formatGlobalCustomizationsText() {
+    if (typeof bootstrapData === 'undefined' || !bootstrapData || !bootstrapData.customizations || bootstrapData.customizations.length === 0) return "";
+    const parts = [];
+
+    bootstrapData.customizations.forEach(group => {
+        if (group.type === 'radio') {
+            const checkedRadio = document.querySelector(`input[name="opt-${group.key}"]:checked`);
+            if (checkedRadio) {
+                const val = checkedRadio.value;
+                const subOpts = [];
+                const subContainer = document.querySelector(`.sub-option-container[data-parent-flavor="${val}"]`);
+                if (subContainer) {
+                    subContainer.querySelectorAll('input.sub-opt-chk:checked').forEach(chk => {
+                        subOpts.push(chk.value);
+                    });
+                }
+                const subPart = subOpts.length > 0 ? ` (${subOpts.join('、')})` : '';
+                parts.push(`${group.title.replace(/^✦\s*/, '')}：${val}${subPart}`);
+            }
+        } else if (group.type === 'checkbox') {
+            const checkedBoxes = Array.from(document.querySelectorAll(`input[name="opt-${group.key}"]:checked`));
+            if (checkedBoxes.length > 0) {
+                const boxVals = checkedBoxes.map(chk => {
+                    const p = Number(chk.getAttribute('data-price')) || 0;
+                    return p > 0 ? `${chk.value}(+$${p})` : chk.value;
+                });
+                parts.push(`${group.title.replace(/^✦\s*/, '')}：${boxVals.join('、')}`);
+            }
+        }
+    });
+
+    return parts.length > 0 ? `【${parts.join(' | ')}】` : "";
+}
+
 // 8.1 Định dạng nội dung tin nhắn đơn hàng
 function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, mainNote) {
     const zhNumbers = ['第一份', '第二份', '第三份', '第四份', '第五份', '第六份', '第七份', '第八份', '第九份', '第十份'];
-    let msg = `[${document.getElementById('store-name')?.innerText || '線上'} 點餐]\n訂單編號：${orderNum}\n📦 訂單內容：\n`;
+    let msg = `[${document.getElementById('store-name')?.innerText || '線上'} 點餐]\n訂單編號：${orderNum}\n`;
+
+    const globalFlavor = formatGlobalCustomizationsText();
+    if (globalFlavor) {
+        msg += `🧪 口味設定：${globalFlavor}\n`;
+    }
+
+    msg += `📦 訂單內容：\n`;
 
     for (let key in cart) {
         if (cart[key] > 0) {
@@ -680,7 +721,23 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
 
         if (typeof liff !== 'undefined') {
             try {
-                if (liff.isInClient() && liff.isLoggedIn && !liff.isLoggedIn()) {
+                if (liff.isLoggedIn && !liff.isLoggedIn()) {
+                    if (storeConfig && Array.isArray(storeConfig.features) && storeConfig.features.includes('mobile_only') && liff.isInClient && !liff.isInClient()) {
+                        if (typeof openDesktopQrModal === 'function') {
+                            openDesktopQrModal();
+                        } else {
+                            customAlert('請使用手機 LINE 掃碼點餐');
+                        }
+                        isSubmitting = false;
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.innerText = '確認下單';
+                            submitBtn.style.cursor = 'pointer';
+                            submitBtn.style.opacity = '1';
+                        }
+                        return;
+                    }
+
                     const storageKey = `cart_save_${tenantId}`;
                     localStorage.setItem(storageKey, JSON.stringify({ cart, customizeData, comboDrinkData }));
                     liff.login({ redirectUri: window.location.href });
