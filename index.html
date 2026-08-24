@@ -761,47 +761,57 @@
                     <label class="custom-label">${escapeHtml(group.title)}</label>
                     <div class="custom-options-grid">`;
 
+                let subOptionsHtml = '';
+
                 (group.options || []).forEach((opt, optIdx) => {
                     const optName = typeof opt === 'string' ? opt : (opt ? opt.name || '' : '');
                     const optPrice = (typeof opt === 'object' && opt && opt.price) ? Number(opt.price) : 0;
                     const subOpts = (typeof opt === 'object' && opt && Array.isArray(opt.sub_options)) ? opt.sub_options : [];
                     const inputName = `opt-${group.key}`;
                     const isChecked = group.type === 'radio' ? (optIdx === 0 ? 'checked' : '') : '';
-                    const onchangeAttr = group.type === 'radio' ? 'onchange="toggleFlavorSubOptions()"' : (optPrice > 0 ? 'onchange="updateTotal()"' : '');
                     const priceLabel = optPrice > 0 ? ` (+<span style="color:#059669; font-weight:800;">$${optPrice}</span>)` : '';
 
                     if (group.type === 'radio') {
-                        html += `<div class="flavor-option-container">
-                            <label class="radio-label">
-                                <input type="radio" name="${inputName}" value="${escapeHtml(optName)}" ${isChecked} ${onchangeAttr}> 
-                                <span>${escapeHtml(optName)}${priceLabel}</span>
-                            </label>`;
+                        html += `<label class="radio-label">
+                            <input type="radio" name="${inputName}" value="${escapeHtml(optName)}" ${isChecked} onchange="handleCustomizationChange()"> 
+                            <span>${escapeHtml(optName)}${priceLabel}</span>
+                        </label>`;
 
                         if (subOpts.length > 0) {
-                            html += `<div class="sub-option-container" data-parent-flavor="${escapeHtml(optName)}" style="display: ${optIdx === 0 ? 'flex' : 'none'};">`;
+                            subOptionsHtml += `<div class="sub-option-container" data-parent-flavor="${escapeHtml(optName)}" style="display: ${optIdx === 0 ? 'flex' : 'none'};">`;
                             subOpts.forEach((sub) => {
-                                html += `<label class="checkbox-label">
-                                    <input type="checkbox" class="sub-opt-chk" data-flavor="${escapeHtml(optName)}" value="${escapeHtml(sub)}"> 
+                                subOptionsHtml += `<label class="checkbox-label sub-chip">
+                                    <input type="checkbox" class="sub-opt-chk" data-flavor="${escapeHtml(optName)}" value="${escapeHtml(sub)}" onchange="handleCustomizationChange()"> 
                                     <span>${escapeHtml(sub)}</span>
                                 </label>`;
                             });
-                            html += `</div>`;
+                            subOptionsHtml += `</div>`;
                         }
-
-                        html += `</div>`;
                     } else {
                         html += `<label class="checkbox-label">
-                            <input type="checkbox" name="${inputName}" data-price="${optPrice}" value="${escapeHtml(optName)}" ${onchangeAttr}> 
+                            <input type="checkbox" name="${inputName}" data-price="${optPrice}" value="${escapeHtml(optName)}" onchange="handleCustomizationChange()"> 
                             <span>${escapeHtml(optName)}${priceLabel}</span>
                         </label>`;
                     }
                 });
 
-                html += `</div></div>`;
+                html += `</div>`; // Close .custom-options-grid
+
+                if (subOptionsHtml) {
+                    html += `<div class="sub-options-wrapper">${subOptionsHtml}</div>`;
+                }
+
+                html += `</div>`; // Close .custom-group
             });
 
             html += `</div>`;
             container.innerHTML = html;
+            toggleFlavorSubOptions();
+        }
+
+        function handleCustomizationChange() {
+            toggleFlavorSubOptions();
+            if (typeof updateTotal === 'function') updateTotal();
         }
 
         function toggleFlavorSubOptions() {
@@ -817,7 +827,6 @@
                     el.querySelectorAll('input[type="checkbox"]').forEach(chk => chk.checked = false);
                 }
             });
-            if (typeof updateTotal === 'function') updateTotal();
         }
 
         function createDynamicItemCard(catSlug, item) {
@@ -967,6 +976,55 @@
             let summaryHTML = '';
             const zhNumbers = ['第一份', '第二份', '第三份', '第四份', '第五份', '第六份', '第七份', '第八份', '第九份', '第十份'];
 
+            // 1. Tóm tắt 口味與客製化設定
+            let customSummaries = [];
+            if (bootstrapData?.customizations && bootstrapData.customizations.length > 0) {
+                bootstrapData.customizations.forEach(group => {
+                    const inputName = `opt-${group.key}`;
+                    if (group.type === 'radio') {
+                        const checkedRadio = document.querySelector(`input[name="${inputName}"]:checked`);
+                        if (checkedRadio) {
+                            const val = checkedRadio.value;
+                            let subDetails = '';
+                            const activeSubContainer = document.querySelector(`.sub-option-container[data-parent-flavor="${val}"]`);
+                            if (activeSubContainer) {
+                                let subOpts = [];
+                                activeSubContainer.querySelectorAll('input.sub-opt-chk:checked').forEach(chk => {
+                                    subOpts.push(chk.value);
+                                });
+                                if (subOpts.length > 0) {
+                                    subDetails = ` (${subOpts.join('、')})`;
+                                }
+                            }
+                            const groupTitle = (group.title || '').replace(/^✦\s*/, '');
+                            customSummaries.push(`<div><b style="color:#1e293b;">${groupTitle}：</b>${val}${subDetails}</div>`);
+                        }
+                    } else if (group.type === 'checkbox') {
+                        let selectedChecks = [];
+                        document.querySelectorAll(`input[name="${inputName}"]:checked`).forEach(chk => {
+                            const p = Number(chk.getAttribute('data-price')) || 0;
+                            if (p === 0) {
+                                selectedChecks.push(chk.value);
+                            }
+                        });
+                        if (selectedChecks.length > 0) {
+                            const groupTitle = (group.title || '').replace(/^✦\s*/, '');
+                            customSummaries.push(`<div><b style="color:#1e293b;">${groupTitle}：</b>${selectedChecks.join('、')}</div>`);
+                        }
+                    }
+                });
+            }
+
+            if (customSummaries.length > 0) {
+                summaryHTML += `
+                    <div style="margin-bottom: 14px; padding: 10px 14px; background: #f8fafc; border-radius: 12px; border: 1px dashed #cbd5e1; font-size: 13.5px; color: #475569; line-height: 1.6;">
+                        <div style="font-weight: 800; color: #0f172a; margin-bottom: 4px; font-size: 14px;">⚙️ 客製化設定</div>
+                        <div style="display: flex; flex-direction: column; gap: 2px;">${customSummaries.join('')}</div>
+                    </div>
+                    <div style="border-bottom: 1px dashed #e2e8f0; margin-bottom: 12px;"></div>
+                `;
+            }
+
             const priceMap = {};
             if (bootstrapData?.catalog) {
                 bootstrapData.catalog.forEach(cat => {
@@ -1074,7 +1132,7 @@
 
             const summaryContainer = document.getElementById('cart-summary');
             if (summaryContainer) {
-                if (totalQty === 0) {
+                if (totalQty === 0 && addonsTotal === 0) {
                     summaryContainer.innerHTML = '<div style="text-align:center; color:#9ca3af;">(目前沒有已選商品)</div>';
                 } else {
                     summaryHTML += `<div style="display:flex; justify-content:space-between; font-weight:900; margin-top:12px; font-size:16px;">

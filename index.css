@@ -596,13 +596,6 @@ input[type="checkbox"] {
     align-items: center;
 }
 
-.flavor-option-container {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
-}
-
 .custom-panel label.radio-label,
 .custom-panel label.checkbox-label {
     display: inline-flex;
@@ -629,20 +622,34 @@ input[type="checkbox"] {
     font-weight: 700;
 }
 
+.sub-options-wrapper {
+    width: 100%;
+    margin-top: 4px;
+}
+
 .sub-option-container {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 6px;
-    margin-left: 6px;
-    padding: 6px 0 6px 12px;
-    border-left: 3px solid var(--primary);
+    gap: 8px;
+    padding: 10px 14px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-left: 3.5px solid var(--primary);
+    border-radius: 10px;
 }
 
-.sub-option-container label.checkbox-label {
-    padding: 5px 10px;
+.custom-panel label.sub-chip {
+    padding: 6px 12px;
     font-size: 13.5px;
-    background: #f1f5f9;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+}
+
+.custom-panel label.sub-chip:has(input:checked) {
+    border-color: var(--primary);
+    background: rgba(0, 185, 0, 0.08);
+    color: #065f46;
 }
 
 /* Footer */
