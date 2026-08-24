@@ -49,7 +49,7 @@ async function fetchReportData(range = 'today', forceRefresh = false) {
 
   try {
     const tenantId = (typeof getTenantIdFromUrl === "function" ? getTenantIdFromUrl() : "") || (typeof currentTenantId !== "undefined" && currentTenantId ? currentTenantId : "benmi");
-    const workerBase = typeof WORKER_BASE !== "undefined" ? WORKER_BASE : "https://platform-worker-dev.thuanmnc.workers.dev";
+    const workerBase = typeof WORKER_BASE !== "undefined" ? WORKER_BASE : "https://benmi-worker-official.thuanmnc.workers.dev";
     const res = await fetch(`${workerBase}/api/reports/items-analytics?tenant_id=${encodeURIComponent(tenantId)}&range=${encodeURIComponent(range)}&_t=${Date.now()}`, {
       headers: {
         "Accept": "application/json",

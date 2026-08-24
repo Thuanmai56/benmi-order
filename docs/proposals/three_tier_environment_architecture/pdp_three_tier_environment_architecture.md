@@ -114,11 +114,27 @@ Cập nhật hàm xác định `WORKER_BASE` trong [`index.html`](file:///Users/
 
 ```javascript
 const hostname = window.location.hostname;
-const WORKER_BASE = (hostname.includes("dev") || hostname.includes("localhost") || hostname.includes("127.0.0.1"))
-    ? "https://benmi-order-worker-dev.thuanmnc.workers.dev"
-    : (hostname.includes("staging") || hostname.includes("test"))
+const isDev = (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname.startsWith("dev.") ||
+    hostname.includes(".dev.") ||
+    hostname.includes("-dev.") ||
+    hostname.startsWith("dev-")
+);
+const isStaging = (
+    hostname.startsWith("staging.") ||
+    hostname.includes(".staging.") ||
+    hostname.includes("-staging.") ||
+    hostname.startsWith("test.") ||
+    hostname.includes(".test.") ||
+    hostname.includes("-test.")
+);
+const WORKER_BASE = isDev
+    ? "https://platform-worker-dev.thuanmnc.workers.dev"
+    : (isStaging
         ? "https://platform-worker-staging.thuanmnc.workers.dev"
-        : "https://benmi-worker-official.thuanmnc.workers.dev";
+        : "https://benmi-worker-official.thuanmnc.workers.dev");
 ```
 
 ### 4.3. Đồng Bộ CSDL Cho Môi Trường Dev (`blab-db-dev`)
