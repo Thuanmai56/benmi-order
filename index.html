@@ -752,14 +752,14 @@
             if (!container || !list || list.length === 0) return;
             const escapeHtml = (str) => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-            let html = `<div class="section-title">🧪 口味與客製化選擇</div>
-            <div class="custom-panel" style="margin-bottom: 20px; padding: 18px; background: #fff; border-radius: 16px; border: 1px solid var(--border); font-size: 15px; color: #374151; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">`;
+            let html = `<div class="section-title">口味與客製化選擇</div>
+            <div class="custom-panel">`;
 
             list.forEach((group, groupIdx) => {
                 const topMargin = groupIdx > 0 ? 'margin-top: 16px; border-top: 1px dashed #f1f5f9; padding-top: 14px;' : '';
                 html += `<div class="custom-group" style="${topMargin}">
-                    <label class="custom-label" style="font-weight: 800; display: block; margin-bottom: 10px; color: #1e293b;">${escapeHtml(group.title)}</label>
-                    <div class="${group.type === 'radio' ? 'radio-grid' : 'checkbox-grid-opts'}" style="display: flex; flex-wrap: wrap; gap: 10px;">`;
+                    <label class="custom-label">${escapeHtml(group.title)}</label>
+                    <div class="custom-options-grid">`;
 
                 (group.options || []).forEach((opt, optIdx) => {
                     const optName = typeof opt === 'string' ? opt : (opt ? opt.name || '' : '');
@@ -771,17 +771,17 @@
                     const priceLabel = optPrice > 0 ? ` (+<span style="color:#059669; font-weight:800;">$${optPrice}</span>)` : '';
 
                     if (group.type === 'radio') {
-                        html += `<div class="flavor-option-container" style="display: flex; flex-direction: column; align-items: flex-start; gap: 6px;">
-                            <label class="radio-label" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1.5px solid #e2e8f0; border-radius: 10px; background: #f8fafc; cursor: pointer; font-weight: 600;">
-                                <input type="radio" name="${inputName}" value="${escapeHtml(optName)}" ${isChecked} ${onchangeAttr} style="accent-color: var(--primary);"> 
+                        html += `<div class="flavor-option-container">
+                            <label class="radio-label">
+                                <input type="radio" name="${inputName}" value="${escapeHtml(optName)}" ${isChecked} ${onchangeAttr}> 
                                 <span>${escapeHtml(optName)}${priceLabel}</span>
                             </label>`;
 
                         if (subOpts.length > 0) {
-                            html += `<div class="sub-option-container" data-parent-flavor="${escapeHtml(optName)}" style="display: ${optIdx === 0 ? 'flex' : 'none'}; margin-top: 6px; margin-left: 8px; padding-left: 12px; border-left: 3px solid var(--primary); gap: 10px; flex-wrap: wrap;">`;
+                            html += `<div class="sub-option-container" data-parent-flavor="${escapeHtml(optName)}" style="display: ${optIdx === 0 ? 'flex' : 'none'};">`;
                             subOpts.forEach((sub) => {
-                                html += `<label class="checkbox-label" style="display: inline-flex; align-items: center; gap: 4px; font-size: 13.5px; color: #4b5563; cursor: pointer;">
-                                    <input type="checkbox" class="sub-opt-chk" data-flavor="${escapeHtml(optName)}" value="${escapeHtml(sub)}" style="accent-color: var(--primary);"> 
+                                html += `<label class="checkbox-label">
+                                    <input type="checkbox" class="sub-opt-chk" data-flavor="${escapeHtml(optName)}" value="${escapeHtml(sub)}"> 
                                     <span>${escapeHtml(sub)}</span>
                                 </label>`;
                             });
@@ -790,8 +790,8 @@
 
                         html += `</div>`;
                     } else {
-                        html += `<label class="checkbox-label" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1.5px solid #e2e8f0; border-radius: 10px; background: #f8fafc; cursor: pointer; font-weight: 600;">
-                            <input type="checkbox" name="${inputName}" data-price="${optPrice}" value="${escapeHtml(optName)}" ${onchangeAttr} style="accent-color: var(--primary);"> 
+                        html += `<label class="checkbox-label">
+                            <input type="checkbox" name="${inputName}" data-price="${optPrice}" value="${escapeHtml(optName)}" ${onchangeAttr}> 
                             <span>${escapeHtml(optName)}${priceLabel}</span>
                         </label>`;
                     }
