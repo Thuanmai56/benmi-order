@@ -375,10 +375,17 @@ function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, ma
                     }
                     if (c.multiple) {
                         for (let t in c.multiple) {
-                            if (c.multiple[t]) parts.push(`加${t}`);
+                            if (c.multiple[t]) {
+                                const addP = (typeof modPriceMap !== 'undefined' && modPriceMap[t]) ? modPriceMap[t] : 0;
+                                if (addP > 0) {
+                                    parts.push(`${t} (+$${addP})`);
+                                } else {
+                                    parts.push(t);
+                                }
+                            }
                         }
                     }
-                    if (c.topping && c.topping !== '') parts.push('加' + c.topping);
+                    if (c.topping && c.topping !== '') parts.push(c.topping);
                     if (c.spicy && c.spicy !== '不辣') parts.push(c.spicy);
                     if (c.note && c.note.trim() !== '') parts.push(c.note.trim());
 
@@ -442,10 +449,17 @@ function formatAppendItemsOnlyText() {
                     }
                     if (c.multiple) {
                         for (let t in c.multiple) {
-                            if (c.multiple[t]) parts.push(`加${t}`);
+                            if (c.multiple[t]) {
+                                const addP = (typeof modPriceMap !== 'undefined' && modPriceMap[t]) ? modPriceMap[t] : 0;
+                                if (addP > 0) {
+                                    parts.push(`${t} (+$${addP})`);
+                                } else {
+                                    parts.push(t);
+                                }
+                            }
                         }
                     }
-                    if (c.topping && c.topping !== '') parts.push('加' + c.topping);
+                    if (c.topping && c.topping !== '') parts.push(c.topping);
                     if (c.spicy && c.spicy !== '不辣') parts.push(c.spicy);
                     if (c.customText && c.customText.trim() !== '') parts.push(c.customText.trim());
 
@@ -499,12 +513,13 @@ function buildStructuredCartItems() {
                     if (c.multiple) {
                         for (let t in c.multiple) {
                             if (c.multiple[t]) {
-                                options.push({ group: '加料', choice: `加${t}`, price: 0 });
+                                const addP = (typeof modPriceMap !== 'undefined' && modPriceMap[t]) ? modPriceMap[t] : 0;
+                                options.push({ group: '客製化', choice: t, price: addP });
                             }
                         }
                     }
                     if (c.topping && c.topping !== '') {
-                        options.push({ group: '加料', choice: `加${c.topping}`, price: 0 });
+                        options.push({ group: '客製化', choice: c.topping, price: 0 });
                     }
                     if (c.spicy && c.spicy !== '不辣') {
                         options.push({ group: '辣度', choice: c.spicy, price: 0 });
