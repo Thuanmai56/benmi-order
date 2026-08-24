@@ -3,11 +3,27 @@
 // ==========================================
 
 const _coreHostname = window.location.hostname;
-const WORKER_BASE = (_coreHostname.includes("dev") || _coreHostname.includes("localhost") || _coreHostname.includes("127.0.0.1"))
+const _isDev = (
+  _coreHostname === "localhost" ||
+  _coreHostname === "127.0.0.1" ||
+  _coreHostname.startsWith("dev.") ||
+  _coreHostname.includes(".dev.") ||
+  _coreHostname.includes("-dev.") ||
+  _coreHostname.startsWith("dev-")
+);
+const _isStaging = (
+  _coreHostname.startsWith("staging.") ||
+  _coreHostname.includes(".staging.") ||
+  _coreHostname.includes("-staging.") ||
+  _coreHostname.startsWith("test.") ||
+  _coreHostname.includes(".test.") ||
+  _coreHostname.includes("-test.")
+);
+const WORKER_BASE = _isDev
   ? "https://platform-worker-dev.thuanmnc.workers.dev"
-  : (_coreHostname.includes("staging") || _coreHostname.includes("test"))
+  : (_isStaging
     ? "https://platform-worker-staging.thuanmnc.workers.dev"
-    : "https://benmi-worker-official.thuanmnc.workers.dev";
+    : "https://benmi-worker-official.thuanmnc.workers.dev");
 
 function getTenantIdFromUrl() {
   const params = new URLSearchParams(window.location.search);
