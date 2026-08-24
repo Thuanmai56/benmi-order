@@ -41,6 +41,8 @@ export interface AppendOrderPayload {
   tenant_id?: string;
   items?: OrderItemInput[];
   appended_items?: OrderItemInput[];
+  is_desktop?: boolean;
+  isDesktop?: boolean;
 }
 
 export interface Menu {

@@ -770,6 +770,8 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
         const tableNumber = (isDineIn && tableInput) ? tableInput.value.trim() : '';
         const structuredItems = buildStructuredCartItems();
 
+        const isDesktop = !(typeof liff !== 'undefined' && liff.isInClient && liff.isInClient());
+
         // 10.1 Xử lý riêng cho luồng 加點餐點 (Append Mode)
         if (window.isAppendMode && window.parentOrderKey) {
             const rawItemsText = formatAppendItemsOnlyText();
@@ -784,7 +786,9 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                 table_number: currentTable || undefined,
                 note: mainNote,
                 tenant_id: tenantId,
-                items: structuredItems
+                items: structuredItems,
+                is_desktop: isDesktop,
+                isDesktop: isDesktop
             };
 
             const res = await fetch(`${WORKER_BASE}/api/orders/append?tenant_id=${tenantId}`, {
@@ -833,6 +837,10 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
             } catch(e) {}
             if (typeof updateTotal === 'function') updateTotal();
 
+            const appendSuccessMsg = isDesktop && userId && userId.startsWith('U')
+                ? '店家已收到您的加點品項，將立即為您製作，系統已將加點確認同步發送至您的 LINE 🙏'
+                : '店家已收到您的加點品項，將立即為您製作 🙏';
+
             customAlert(`
                 <div style="margin-bottom: 16px;">
                     <div style="width: 60px; height: 60px; margin: 0 auto; background: #faf5ff; border: 2px solid #c084fc; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px;">
@@ -840,7 +848,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                     </div>
                 </div>
                 <div style="font-size: 19px; font-weight: 900; color: #111827; margin-bottom: 6px;">加點送出成功！</div>
-                <div style="font-size: 14.5px; line-height: 1.5; color: #4b5563;">店家已收到您的加點品項，將立即為您製作 🙏</div>
+                <div style="font-size: 14.5px; line-height: 1.5; color: #4b5563;">${appendSuccessMsg}</div>
             `, () => {
                 if (typeof closeAndExitLiff === 'function') closeAndExitLiff();
             });
@@ -860,7 +868,9 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
             note: mainNote,
             tenant_id: tenantId,
             items: structuredItems,
-            liffFallback: false
+            liffFallback: false,
+            is_desktop: isDesktop,
+            isDesktop: isDesktop
         };
 
         const res = await fetch(`${WORKER_BASE}/api/create?tenant_id=${tenantId}`, {
@@ -903,6 +913,10 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
         comboDrinkData = {};
         if (typeof updateTotal === 'function') updateTotal();
 
+        const orderSuccessMsg = isDesktop && userId && userId.startsWith('U')
+            ? '店家已收到您的訂單，系統已將訂單進度卡片發送至您的 LINE 聊天室，您可以直接在LINE查看訂單狀態 🙏'
+            : '店家已收到您的訂單，您可以直接在LINE查看訂單狀態 🙏';
+
         customAlert(`
             <div style="margin-bottom: 16px;">
                 <div style="width: 60px; height: 60px; margin: 0 auto; background: #ecfdf5; border: 2px solid #a7f3d0; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
@@ -912,7 +926,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                 </div>
             </div>
             <div style="font-size: 19px; font-weight: 900; color: #111827; margin-bottom: 6px;">訂單已送出成功！</div>
-            <div style="font-size: 14.5px; line-height: 1.5; color: #4b5563;">店家已收到您的訂單，您可以直接在LINE查看訂單狀態 🙏</div>
+            <div style="font-size: 14.5px; line-height: 1.5; color: #4b5563;">${orderSuccessMsg}</div>
         `, () => {
             if (typeof closeAndExitLiff === 'function') closeAndExitLiff();
         });
