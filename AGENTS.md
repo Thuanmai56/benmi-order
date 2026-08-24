@@ -65,14 +65,22 @@ graph TD
 
 ## 4. Development & Deployment Workflow
 
-| Môi Trường | Git Branch | Cloudflare Worker URL | D1 Database |
-| :--- | :--- | :--- | :--- |
-| **Staging** | `staging` | `https://platform-worker-staging.thuanmnc.workers.dev` | `blab-db-test` |
-| **Production** | `main` | `https://benmi-worker-official.thuanmnc.workers.dev` | `blab-db-production` |
+| Môi Trường | Git Branch | Cloudflare Worker URL | D1 Database | Fallback LIFF ID |
+| :--- | :--- | :--- | :--- | :--- |
+| **Dev** | `dev` | `https://platform-worker-dev.thuanmnc.workers.dev` | `blab-db-dev` | `2011224566-kLLdMjkq` |
+| **Staging** | `staging` | `https://platform-worker-staging.thuanmnc.workers.dev` | `blab-db-test` | `2009555608-DMioljsI` |
+| **Production** | `main` | `https://benmi-worker-official.thuanmnc.workers.dev` | `blab-db-production` | `2009560906-c5taZfiY` |
 
-### Quy trình Release:
-1. Phát triển và kiểm thử trên nhánh `staging`.
-2. Deploy backend lên Staging: `npx wrangler deploy --env test`.
-3. Kiểm thử tự động & thực tế trên staging API.
-4. Chạy migration trên Production: `npx wrangler d1 migrations apply blab-db-production --remote`.
-5. Hợp nhất `staging` vào `main` (Fast-forward) và deploy Production: `npx wrangler deploy`.
+### Quy trình Release (Dev -> Staging -> Production):
+1. **Phát triển trên Dev**:
+   - Lập trình và kiểm thử trên nhánh `dev`.
+   - Apply migration: `npx wrangler d1 migrations apply blab-db-dev --remote --env dev`.
+   - Deploy backend dev: `npx wrangler deploy --env dev`.
+2. **Kiểm thử QA & Demo trên Staging**:
+   - Hợp nhất `dev` vào `staging`: `git checkout staging && git merge dev && git push origin staging`.
+   - Apply migration: `npx wrangler d1 migrations apply blab-db-test --remote --env test`.
+   - Deploy backend staging: `npx wrangler deploy --env test`.
+3. **Phát hành chính thức (Production)**:
+   - Hợp nhất `staging` vào `main`: `git checkout main && git merge staging && git push origin main`.
+   - Apply migration: `npx wrangler d1 migrations apply blab-db-production --remote`.
+   - Deploy backend production: `npx wrangler deploy`.

@@ -93,7 +93,23 @@
       ]
     },
     "dev": {
-      "name": "benmi-order-worker-dev",
+      "name": "platform-worker-dev",
+      "vars": {
+        "LIFF_ID": "2011224566-kLLdMjkq",
+        "LIFF_URL": "https://liff.line.me/2011224566-kLLdMjkq"
+      },
+      "secrets_store_secrets": [
+        {
+          "binding": "OPENROUTER_API_KEY",
+          "store_id": "7e2896f1c5cf4e1eb80ef6c89f3024d4",
+          "secret_name": "OPENROUTER_API_KEY_BLAB"
+        },
+        {
+          "binding": "GROQ_API_KEY",
+          "store_id": "7e2896f1c5cf4e1eb80ef6c89f3024d4",
+          "secret_name": "GROQ_API_KEY_BLAB"
+        }
+      ],
       "kv_namespaces": [
         {
           "id": "ad5b1e14aad4486fb2ffcd9961cadf3a",

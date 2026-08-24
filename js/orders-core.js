@@ -2,9 +2,12 @@
 // Benmi POS - Module: Core & Polling Engine
 // ==========================================
 
-const WORKER_BASE = (window.location.hostname.includes("staging") || window.location.hostname.includes("test") || window.location.hostname.includes("localhost") || window.location.hostname.includes("127.0.0.1"))
-  ? "https://platform-worker-staging.thuanmnc.workers.dev"
-  : "https://benmi-worker-official.thuanmnc.workers.dev";
+const _coreHostname = window.location.hostname;
+const WORKER_BASE = (_coreHostname.includes("dev") || _coreHostname.includes("localhost") || _coreHostname.includes("127.0.0.1"))
+  ? "https://platform-worker-dev.thuanmnc.workers.dev"
+  : (_coreHostname.includes("staging") || _coreHostname.includes("test"))
+    ? "https://platform-worker-staging.thuanmnc.workers.dev"
+    : "https://benmi-worker-official.thuanmnc.workers.dev";
 
 function getTenantIdFromUrl() {
   const params = new URLSearchParams(window.location.search);
