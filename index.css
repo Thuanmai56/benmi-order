@@ -1041,142 +1041,125 @@ input[type="checkbox"] {
     gap: 14px;
 }
 
-/* Full Menu Blur & Frosted Lock Overlay on Desktop */
-.catalog-sections-wrapper {
+/* --- Page Body Blur on Desktop when Guest --- */
+.page-body-content {
     position: relative;
     transition: filter 0.3s ease, opacity 0.3s ease;
 }
 
-.catalog-sections-wrapper.desktop-guest-locked {
-    filter: blur(1.5px);
-    opacity: 0.86;
+.page-body-content.desktop-guest-locked {
+    filter: blur(4px);
+    opacity: 0.78;
     user-select: none;
     pointer-events: none;
 }
 
-.catalog-locked-click-layer {
+/* --- Center Auth Overlay & Card --- */
+.desktop-center-auth-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.desktop-center-auth-backdrop {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    z-index: 50;
+    background: rgba(15, 23, 42, 0.32);
     cursor: pointer;
-    background: rgba(255, 255, 255, 0.01);
 }
 
-/* Floating Bottom Auth Bar for Desktop Guest Users */
-.desktop-floating-auth-dock {
-    position: fixed;
-    bottom: 24px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: calc(100% - 32px);
-    max-width: 620px;
-    z-index: 1000;
-    background: linear-gradient(135deg, rgba(15, 23, 42, 0.96) 0%, rgba(30, 41, 59, 0.96) 100%);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1.5px solid rgba(6, 199, 85, 0.6);
-    border-radius: 18px;
-    padding: 14px 20px;
-    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4), 0 0 20px rgba(6, 199, 85, 0.25);
-    animation: floating-slide-up 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+.desktop-center-auth-card {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 440px;
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.96) 0%, rgba(30, 41, 59, 0.98) 100%);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1.5px solid rgba(6, 199, 85, 0.65);
+    border-radius: 24px;
+    padding: 36px 30px;
+    text-align: center;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5), 0 0 35px rgba(6, 199, 85, 0.25);
+    animation: center-card-pop 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    color: #f8fafc;
 }
 
-@keyframes floating-slide-up {
+@keyframes center-card-pop {
     from {
-        transform: translate(-50%, 40px);
         opacity: 0;
+        transform: scale(0.92) translateY(20px);
     }
     to {
-        transform: translate(-50%, 0);
         opacity: 1;
+        transform: scale(1) translateY(0);
     }
 }
 
-.desktop-floating-auth-content {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-}
-
-.desktop-floating-auth-info {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    min-width: 0;
-}
-
-.floating-auth-icon {
-    width: 38px;
-    height: 38px;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.1);
-    color: #06C755;
+.center-auth-icon-circle {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: rgba(6, 199, 85, 0.12);
+    border: 1.5px solid rgba(6, 199, 85, 0.35);
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0;
+    margin: 0 auto 18px auto;
 }
 
-.floating-auth-texts {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-}
-
-.floating-auth-main {
-    font-size: 14px;
-    font-weight: 800;
+.center-auth-title {
+    font-size: 20px;
+    font-weight: 900;
     color: #f8fafc;
-    line-height: 1.3;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    margin: 0 0 10px 0;
+    letter-spacing: 0.3px;
+    line-height: 1.35;
 }
 
-.floating-auth-sub {
-    font-size: 12px;
+.center-auth-desc {
+    font-size: 14px;
     color: #94a3b8;
-    line-height: 1.3;
-    margin-top: 2px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    line-height: 1.55;
+    margin: 0 0 26px 0;
 }
 
-.btn-floating-line-login {
+.btn-center-line-login {
+    width: 100%;
     background-color: #06C755;
     color: #ffffff;
     border: none;
-    padding: 10px 20px;
-    border-radius: 12px;
-    font-size: 14px;
+    padding: 14px 24px;
+    border-radius: 14px;
+    font-size: 16px;
     font-weight: 800;
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
+    gap: 10px;
     cursor: pointer;
-    flex-shrink: 0;
-    box-shadow: 0 4px 14px rgba(6, 199, 85, 0.4);
-    transition: background-color 0.2s ease, transform 0.1s ease;
+    box-shadow: 0 6px 20px rgba(6, 199, 85, 0.45);
+    transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
 }
 
-.btn-floating-line-login:hover {
+.btn-center-line-login:hover {
     background-color: #05b04c;
+    box-shadow: 0 8px 24px rgba(6, 199, 85, 0.55);
 }
 
-.btn-floating-line-login:active {
-    transform: scale(0.97);
-}
-    cursor: pointer;
-    transition: background-color 0.2s ease, transform 0.1s ease;
-}
-
-.lock-badge-btn:hover {
-    background-color: #05b04c;
+.btn-center-line-login:active {
+    transform: scale(0.98);
 }
 
 .lock-badge-btn:active {
