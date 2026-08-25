@@ -1022,13 +1022,14 @@ input[type="checkbox"] {
 
 /* --- Desktop Auth Bar & Login Modal --- */
 .desktop-auth-bar {
-    background-color: #1e293b;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
     color: #f8fafc;
-    border-bottom: 1px solid #334155;
-    padding: 10px 16px;
+    border-bottom: 2px solid #06C755;
+    padding: 12px 18px;
     position: sticky;
     top: 0;
     z-index: 999;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18);
 }
 
 .desktop-auth-inner {
@@ -1037,7 +1038,86 @@ input[type="checkbox"] {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 14px;
+}
+
+/* Custom Panel Frosted Glass Lock Overlay */
+.custom-panel-wrapper {
+    position: relative;
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.custom-panel-lock-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     gap: 12px;
+    z-index: 10;
+    cursor: pointer;
+    border-radius: 16px;
+    padding: 16px;
+    text-align: center;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    transition: background 0.2s ease;
+}
+
+.custom-panel-lock-overlay:hover {
+    background: rgba(255, 255, 255, 0.85);
+}
+
+.lock-badge-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #f8fafc;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid #cbd5e1;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.lock-badge-title {
+    font-size: 14.5px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.lock-badge-btn {
+    background-color: #06C755;
+    color: #ffffff;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 4px 10px rgba(6, 199, 85, 0.25);
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.lock-badge-btn:hover {
+    background-color: #05b04c;
+}
+
+.lock-badge-btn:active {
+    transform: scale(0.98);
 }
 
 .desktop-auth-user {
