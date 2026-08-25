@@ -392,9 +392,10 @@
                     const queryPart = decoded.includes('?') ? decoded.split('?')[1] : decoded;
                     const stateParams = new URLSearchParams(queryPart);
                     if (stateParams.has('tenant_id')) return stateParams.get('tenant_id');
+                    if (stateParams.has('tenant')) return stateParams.get('tenant');
                 } catch(e) {}
             }
-            return params.get("tenant_id") || "benmi";
+            return params.get("tenant_id") || params.get("tenant") || "benmi";
         }
 
         // State
@@ -1742,7 +1743,11 @@
             } catch(e) {
                 console.error("LIFF Init Error", e);
             }
-            await updateDesktopAuthUI();
+            try {
+                await updateDesktopAuthUI();
+            } catch (authUiErr) {
+                console.warn("Desktop Auth UI update error:", authUiErr);
+            }
             renderDynamicCatalog();
             renderStoreOperatingHours();
             if (typeof initAppendModeIfPresent === 'function') {
