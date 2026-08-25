@@ -947,6 +947,62 @@
             };
         }
 
+        function resolveCatalogItem(key) {
+            const { catSlug, origName } = parseCartKey(key);
+            let targetCat = null;
+            let targetItem = null;
+
+            if (typeof bootstrapData !== 'undefined' && bootstrapData?.catalog) {
+                if (catSlug) {
+                    targetCat = bootstrapData.catalog.find(c => c.slug === catSlug);
+                    if (targetCat?.items) {
+                        targetItem = targetCat.items.find(it => it.name === origName || it.id === key);
+                    }
+                }
+                if (!targetItem) {
+                    for (const cat of bootstrapData.catalog) {
+                        if (cat.items) {
+                            const it = cat.items.find(i => i.name === origName || i.id === key);
+                            if (it) {
+                                targetItem = it;
+                                targetCat = cat;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            let displayName = origName;
+            if (targetCat) {
+                const catNameClean = (targetCat.name || '').split(/[\s\(\[\{（【]/)[0].trim();
+                const isSizeCategory = ['大份', '小份', '大', '小', '大碗', '小碗', '加大'].includes(catNameClean) ||
+                                       ['large', 'small', 'big'].includes(targetCat.slug);
+
+                let nameCount = 0;
+                if (bootstrapData?.catalog) {
+                    for (const cat of bootstrapData.catalog) {
+                        if (cat.items?.some(it => it.name === origName)) nameCount++;
+                    }
+                }
+
+                if ((isSizeCategory || nameCount > 1) && catNameClean && !origName.includes(catNameClean)) {
+                    displayName = `[${catNameClean}] ${origName}`;
+                }
+            }
+
+            return {
+                catSlug,
+                origName,
+                displayName,
+                targetCat,
+                targetItem,
+                basePrice: Number(targetItem?.price) || 0,
+                categoryName: targetCat?.name || catSlug || "Món",
+                itemId: targetItem?.id || key
+            };
+        }
+
         function updateQty(category, origName, change) {
             const key = category + '_' + origName;
             cart[key] = (cart[key] || 0) + change;
@@ -1040,11 +1096,13 @@
 
             for (let key in cart) {
                 if (cart[key] > 0) {
+                    const itemInfo = resolveCatalogItem(key);
                     const { catSlug, itemName } = parseCartKey(key);
+                    const displayName = itemInfo.displayName || itemName;
                     const qty = cart[key];
                     totalQty += qty;
 
-                    const itemBasePrice = priceMap[key] || 0;
+                    const itemBasePrice = itemInfo.basePrice || priceMap[key] || 0;
                     let itemModifiersTotal = 0;
                     let portionsHTML = '';
 
@@ -1091,7 +1149,7 @@
 
                     summaryHTML += `
                         <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                            <div style="font-weight:800; color: #111;">${qty}x ${itemName}</div>
+                            <div style="font-weight:800; color: #111;">${qty}x ${displayName}</div>
                             <div style="font-weight:700;">$${lineTotal}</div>
                         </div>
                     `;
@@ -1663,7 +1721,7 @@
 
         initApp();
     </script>
-    <script src="js/client-checkout.js?v=20260824_modifier_prefix_fix_1"></script>
+    <script src="js/client-checkout.js?v=20260825_size_prefix_fix_1"></script>
 </body>
 
 </html>
