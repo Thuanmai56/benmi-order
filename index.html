@@ -844,9 +844,19 @@
 
             let displayName = origName;
             if (targetCat) {
-                const catNameClean = (targetCat.name || '').split(/[\s\(\[\{（【]/)[0].trim();
-                const isSizeCategory = ['大份', '小份', '大', '小', '大碗', '小碗', '加大'].includes(catNameClean) ||
-                                       ['large', 'small', 'big'].includes(targetCat.slug);
+                // Strip emoji icons from category name
+                const rawCatName = targetCat.name || '';
+                const catNameClean = rawCatName.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F000}-\u{1F02F}\u{1F0A0}-\u{1F0FF}\u{1F100}-\u{1F64F}\u{1F680}-\u{1F6FF}]/gu, '').trim();
+                const slug = (targetCat.slug || '').toLowerCase();
+
+                let sizeTag = '';
+                if (slug === 'large' || slug === 'big' || slug === 'l' || /(^|\s|[\(\[\{（【])(大|大份|大碗|大麵包|large|big)($|\s|[\)\]\}）】])/i.test(catNameClean) || catNameClean.startsWith('大')) {
+                    sizeTag = ' L';
+                } else if (slug === 'small' || slug === 's' || slug === 'mini' || /(^|\s|[\(\[\{（【])(小|小份|小碗|小麵包|small|mini)($|\s|[\)\]\}）】])/i.test(catNameClean) || catNameClean.startsWith('小')) {
+                    sizeTag = ' S';
+                } else if (slug === 'medium' || slug === 'm' || /(^|\s|[\(\[\{（【])(中|中份|中碗|medium)($|\s|[\)\]\}）】])/i.test(catNameClean) || catNameClean.startsWith('中')) {
+                    sizeTag = ' M';
+                }
 
                 let nameCount = 0;
                 if (bootstrapData?.catalog) {
@@ -855,8 +865,11 @@
                     }
                 }
 
-                if ((isSizeCategory || nameCount > 1) && catNameClean && !origName.includes(catNameClean)) {
-                    displayName = `[${catNameClean}] ${origName}`;
+                if (sizeTag && !origName.includes(' L') && !origName.includes(' S') && !origName.includes(' M') && !origName.startsWith('大') && !origName.startsWith('小')) {
+                    displayName = `${origName}${sizeTag}`;
+                } else if (nameCount > 1 && catNameClean && !origName.includes(catNameClean)) {
+                    const shortClean = catNameClean.split(/[\s\(\[\{（【]/)[0].trim();
+                    displayName = `[${shortClean}] ${origName}`;
                 }
             }
 
@@ -1524,7 +1537,7 @@
 
         initApp();
     </script>
-    <script src="js/client-checkout.js?v=20260825_size_prefix_fix_1"></script>
+    <script src="js/client-checkout.js?v=20260825_size_tag_fix_2"></script>
 </body>
 
 </html>
