@@ -801,19 +801,23 @@
                 (group.options || []).forEach((opt, optIdx) => {
                     const optName = typeof opt === 'string' ? opt : (opt ? opt.name || '' : '');
                     const optPrice = (typeof opt === 'object' && opt && opt.price) ? Number(opt.price) : 0;
+                    const isOos = Boolean(typeof opt === 'object' && opt && (opt.is_out_of_stock || opt.isOutOfStock || opt.out_of_stock));
                     const subOpts = (typeof opt === 'object' && opt && Array.isArray(opt.sub_options)) ? opt.sub_options : [];
                     const inputName = `opt-${group.key}`;
-                    const isChecked = group.type === 'radio' ? (optIdx === 0 ? 'checked' : '') : '';
+                    const isChecked = (group.type === 'radio' && !isOos) ? (optIdx === 0 ? 'checked' : '') : '';
                     const priceLabel = optPrice > 0 ? ` (+<span style="color:#059669; font-weight:800;">$${optPrice}</span>)` : '';
+                    const oosBadge = isOos ? ` <span class="oos-badge" style="color:#dc2626; font-size:12px; font-weight:900; text-decoration:none;">(已售完)</span>` : '';
+                    const disabledAttr = isOos ? 'disabled' : '';
+                    const oosStyle = isOos ? 'style="opacity: 0.5; pointer-events: none; text-decoration: line-through; color: #94a3b8;"' : '';
 
                     if (group.type === 'radio') {
-                        html += `<label class="radio-label">
-                            <input type="radio" name="${inputName}" value="${escapeHtml(optName)}" ${isChecked} onchange="handleCustomizationChange()"> 
-                            <span>${escapeHtml(optName)}${priceLabel}</span>
+                        html += `<label class="radio-label" ${oosStyle}>
+                            <input type="radio" name="${inputName}" value="${escapeHtml(optName)}" ${isChecked} ${disabledAttr} onchange="handleCustomizationChange()"> 
+                            <span>${escapeHtml(optName)}${priceLabel}</span>${oosBadge}
                         </label>`;
 
                         if (subOpts.length > 0) {
-                            subOptionsHtml += `<div class="sub-option-container" data-parent-flavor="${escapeHtml(optName)}" style="display: ${optIdx === 0 ? 'flex' : 'none'};">`;
+                            subOptionsHtml += `<div class="sub-option-container" data-parent-flavor="${escapeHtml(optName)}" style="display: ${(optIdx === 0 && !isOos) ? 'flex' : 'none'};">`;
                             subOpts.forEach((sub) => {
                                 subOptionsHtml += `<label class="checkbox-label sub-chip">
                                     <input type="checkbox" class="sub-opt-chk" data-flavor="${escapeHtml(optName)}" value="${escapeHtml(sub)}" onchange="handleCustomizationChange()"> 
@@ -823,9 +827,9 @@
                             subOptionsHtml += `</div>`;
                         }
                     } else {
-                        html += `<label class="checkbox-label">
-                            <input type="checkbox" name="${inputName}" data-price="${optPrice}" value="${escapeHtml(optName)}" onchange="handleCustomizationChange()"> 
-                            <span>${escapeHtml(optName)}${priceLabel}</span>
+                        html += `<label class="checkbox-label" ${oosStyle}>
+                            <input type="checkbox" name="${inputName}" data-price="${optPrice}" value="${escapeHtml(optName)}" ${disabledAttr} onchange="handleCustomizationChange()"> 
+                            <span>${escapeHtml(optName)}${priceLabel}</span>${oosBadge}
                         </label>`;
                     }
                 });
