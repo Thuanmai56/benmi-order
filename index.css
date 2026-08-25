@@ -1041,15 +1041,15 @@ input[type="checkbox"] {
     gap: 14px;
 }
 
-/* --- Page Body Blur on Desktop when Guest --- */
+/* --- Page Body Preview on Desktop when Guest --- */
 .page-body-content {
     position: relative;
     transition: filter 0.3s ease, opacity 0.3s ease;
 }
 
 .page-body-content.desktop-guest-locked {
-    filter: blur(4px);
-    opacity: 0.78;
+    filter: blur(0.5px);
+    opacity: 0.95;
     user-select: none;
     pointer-events: none;
 }
@@ -1075,7 +1075,7 @@ input[type="checkbox"] {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(15, 23, 42, 0.32);
+    background: rgba(15, 23, 42, 0.18);
     cursor: pointer;
 }
 
