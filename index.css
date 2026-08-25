@@ -1041,73 +1041,136 @@ input[type="checkbox"] {
     gap: 14px;
 }
 
-/* Custom Panel Frosted Glass Lock Overlay */
-.custom-panel-wrapper {
+/* Full Menu Blur & Frosted Lock Overlay on Desktop */
+.catalog-sections-wrapper {
     position: relative;
-    border-radius: 16px;
-    overflow: hidden;
+    transition: filter 0.3s ease, opacity 0.3s ease;
 }
 
-.custom-panel-lock-overlay {
+.catalog-sections-wrapper.desktop-guest-locked {
+    filter: blur(1.5px);
+    opacity: 0.86;
+    user-select: none;
+    pointer-events: none;
+}
+
+.catalog-locked-click-layer {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(255, 255, 255, 0.72);
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
+    z-index: 50;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.01);
+}
+
+/* Floating Bottom Auth Bar for Desktop Guest Users */
+.desktop-floating-auth-dock {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 32px);
+    max-width: 620px;
+    z-index: 1000;
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.96) 0%, rgba(30, 41, 59, 0.96) 100%);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1.5px solid rgba(6, 199, 85, 0.6);
+    border-radius: 18px;
+    padding: 14px 20px;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4), 0 0 20px rgba(6, 199, 85, 0.25);
+    animation: floating-slide-up 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes floating-slide-up {
+    from {
+        transform: translate(-50%, 40px);
+        opacity: 0;
+    }
+    to {
+        transform: translate(-50%, 0);
+        opacity: 1;
+    }
+}
+
+.desktop-floating-auth-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.desktop-floating-auth-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.floating-auth-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #06C755;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.floating-auth-texts {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    z-index: 10;
-    cursor: pointer;
-    border-radius: 16px;
-    padding: 16px;
-    text-align: center;
-    border: 1px solid rgba(226, 232, 240, 0.8);
-    transition: background 0.2s ease;
+    min-width: 0;
 }
 
-.custom-panel-lock-overlay:hover {
-    background: rgba(255, 255, 255, 0.85);
+.floating-auth-main {
+    font-size: 14px;
+    font-weight: 800;
+    color: #f8fafc;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.lock-badge-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: #f8fafc;
-    color: #334155;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1.5px solid #cbd5e1;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+.floating-auth-sub {
+    font-size: 12px;
+    color: #94a3b8;
+    line-height: 1.3;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.lock-badge-title {
-    font-size: 14.5px;
-    font-weight: 700;
-    color: #0f172a;
-    margin: 0;
-    line-height: 1.4;
-}
-
-.lock-badge-btn {
+.btn-floating-line-login {
     background-color: #06C755;
     color: #ffffff;
     border: none;
-    padding: 8px 18px;
-    border-radius: 8px;
-    font-size: 13px;
+    padding: 10px 20px;
+    border-radius: 12px;
+    font-size: 14px;
     font-weight: 800;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    box-shadow: 0 4px 10px rgba(6, 199, 85, 0.25);
+    gap: 8px;
+    cursor: pointer;
+    flex-shrink: 0;
+    box-shadow: 0 4px 14px rgba(6, 199, 85, 0.4);
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.btn-floating-line-login:hover {
+    background-color: #05b04c;
+}
+
+.btn-floating-line-login:active {
+    transform: scale(0.97);
+}
     cursor: pointer;
     transition: background-color 0.2s ease, transform 0.1s ease;
 }

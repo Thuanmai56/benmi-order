@@ -211,12 +211,16 @@
     <nav class="sticky-nav" id="main-nav"></nav>
 
     <div class="container">
-        <!-- Catalog Container -->
-        <div id="catalog-sections">
-            <div id="catalog-loading" style="text-align: center; padding: 48px 0; color: #9ca3af; font-size: 15px;">
-                <div style="display:inline-block; width:30px; height:30px; border:3px solid #e5e7eb; border-top-color:var(--primary); border-radius:50%; animation: spin 0.8s linear infinite; margin-bottom:10px;"></div>
-                <div>載入菜單中...</div>
+        <!-- Catalog Container with Guest Lock Wrapper -->
+        <div class="catalog-sections-wrapper" id="catalog-sections-wrapper">
+            <div id="catalog-sections">
+                <div id="catalog-loading" style="text-align: center; padding: 48px 0; color: #9ca3af; font-size: 15px;">
+                    <div style="display:inline-block; width:30px; height:30px; border:3px solid #e5e7eb; border-top-color:var(--primary); border-radius:50%; animation: spin 0.8s linear infinite; margin-bottom:10px;"></div>
+                    <div>載入菜單中...</div>
+                </div>
             </div>
+            <!-- Click Interceptor Layer for Desktop Guest Users -->
+            <div id="catalog-locked-click-layer" class="catalog-locked-click-layer" style="display: none;" onclick="triggerDesktopLineLogin()"></div>
         </div>
 
         <!-- Checkout Section -->
@@ -1098,20 +1102,30 @@
 
         async function updateDesktopAuthUI() {
             const bar = document.getElementById('desktop-auth-bar');
-            const lockOverlays = document.querySelectorAll('.custom-panel-lock-overlay');
+            const floatingDock = document.getElementById('desktop-floating-auth-dock');
+            const catalogWrapper = document.getElementById('catalog-sections-wrapper');
+            const lockLayer = document.getElementById('catalog-locked-click-layer');
+
             if (!isDesktopOutsideLiff()) {
                 if (bar) bar.style.display = 'none';
-                lockOverlays.forEach(el => el.style.display = 'none');
+                if (floatingDock) floatingDock.style.display = 'none';
+                if (catalogWrapper) catalogWrapper.classList.remove('desktop-guest-locked');
+                if (lockLayer) lockLayer.style.display = 'none';
                 return;
             }
-            if (bar) bar.style.display = 'block';
+
             const loggedInEl = document.getElementById('desktop-auth-logged-in');
             const loggedOutEl = document.getElementById('desktop-auth-logged-out');
 
             if (typeof liff !== 'undefined' && liff.isLoggedIn && liff.isLoggedIn()) {
+                // User is LOGGED IN on desktop -> Show clean top header bar with profile, unlock menu, hide floating dock
+                if (bar) bar.style.display = 'block';
                 if (loggedOutEl) loggedOutEl.style.display = 'none';
                 if (loggedInEl) loggedInEl.style.display = 'flex';
-                lockOverlays.forEach(el => el.style.display = 'none');
+                if (floatingDock) floatingDock.style.display = 'none';
+                if (catalogWrapper) catalogWrapper.classList.remove('desktop-guest-locked');
+                if (lockLayer) lockLayer.style.display = 'none';
+
                 try {
                     const profile = await liff.getProfile();
                     if (profile) {
@@ -1127,9 +1141,13 @@
                     }
                 } catch(e) {}
             } else {
+                // User is GUEST on desktop -> Hide top bar, lock & gently blur entire menu, show prominent floating dock at bottom
+                if (bar) bar.style.display = 'none';
                 if (loggedInEl) loggedInEl.style.display = 'none';
-                if (loggedOutEl) loggedOutEl.style.display = 'flex';
-                lockOverlays.forEach(el => el.style.display = 'flex');
+                if (loggedOutEl) loggedOutEl.style.display = 'none';
+                if (floatingDock) floatingDock.style.display = 'block';
+                if (catalogWrapper) catalogWrapper.classList.add('desktop-guest-locked');
+                if (lockLayer) lockLayer.style.display = 'block';
             }
         }
 
@@ -1860,6 +1878,29 @@
 
         initApp();
     </script>
+    <!-- Floating Bottom Auth Bar for Desktop Guest Users -->
+    <div id="desktop-floating-auth-dock" class="desktop-floating-auth-dock" style="display: none;">
+        <div class="desktop-floating-auth-content">
+            <div class="desktop-floating-auth-info">
+                <div class="floating-auth-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                </div>
+                <div class="floating-auth-texts">
+                    <span class="floating-auth-main">使用 LINE 帳號登入即可開始選購餐點</span>
+                    <span class="floating-auth-sub">即時追蹤餐點製作進度與取餐通知</span>
+                </div>
+            </div>
+            <button type="button" class="btn-floating-line-login" onclick="triggerDesktopLineLogin()">
+                <svg class="line-btn-svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M24 10.304c0-5.369-5.383-9.738-12-9.738-6.616 0-12 4.369-12 9.738 0 4.814 4.269 8.846 10.036 9.608.391.084.922.258 1.057.592.121.303.079.778.039 1.085l-.171 1.027c-.053.303-.242 1.186 1.039.647 1.281-.54 6.911-4.069 9.428-6.967 1.739-1.907 2.572-3.843 2.572-5.992z"/>
+                </svg>
+                <span>LINE 帳號登入</span>
+            </button>
+        </div>
+    </div>
     <div id="desktop-login-modal" class="desktop-login-modal" style="display: none;">
         <div class="desktop-login-backdrop" onclick="closeDesktopLoginModal()"></div>
         <div class="desktop-login-card">
