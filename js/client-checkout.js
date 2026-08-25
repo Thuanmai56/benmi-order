@@ -173,6 +173,9 @@ function updateFooterButtonState() {
 
 // 3. Xử lý hành vi bấm nút chân trang 2 bước
 function handleFooterAction() {
+    if (typeof checkDesktopAuthGuard === 'function' && !checkDesktopAuthGuard()) {
+        return;
+    }
     const hasItem = Object.values(cart || {}).some(q => q > 0);
     if (!hasItem) return customAlert('請先選擇餐點品項加入購物車');
 
@@ -645,6 +648,9 @@ function isPickupTimeValid(dateTime) {
 // 9. Thực thi gửi đơn hàng với Timeout 8s & Bảo vệ nút bấm
 async function submitOrder() {
     if (isSubmitting) return;
+    if (typeof checkDesktopAuthGuard === 'function' && !checkDesktopAuthGuard()) {
+        return;
+    }
 
     if (storeConfig && storeConfig.storeStatus === 'paused') {
         return customAlert('店家目前暫停接單中，暫時無法下單，敬請見諒！');

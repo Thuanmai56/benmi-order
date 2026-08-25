@@ -30,6 +30,30 @@
 </head>
 
 <body>
+    <div id="desktop-auth-bar" class="desktop-auth-bar" style="display: none;">
+        <div class="desktop-auth-inner">
+            <div class="desktop-auth-user" id="desktop-auth-logged-in" style="display: none;">
+                <img id="desktop-user-avatar" src="" alt="Avatar" class="desktop-user-avatar" style="display: none;">
+                <div id="desktop-user-placeholder-icon" class="desktop-user-placeholder">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                </div>
+                <span id="desktop-user-name" class="desktop-user-name">顧客</span>
+                <span class="desktop-auth-badge">已登入</span>
+            </div>
+            <div class="desktop-auth-prompt" id="desktop-auth-logged-out" style="display: flex;">
+                <span class="desktop-auth-text">請先登入 LINE 帳號以開始選購餐點</span>
+                <button type="button" class="btn-line-login" onclick="triggerDesktopLineLogin()">
+                    <svg class="line-btn-svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M24 10.304c0-5.369-5.383-9.738-12-9.738-6.616 0-12 4.369-12 9.738 0 4.814 4.269 8.846 10.036 9.608.391.084.922.258 1.057.592.121.303.079.778.039 1.085l-.171 1.027c-.053.303-.242 1.186 1.039.647 1.281-.54 6.911-4.069 9.428-6.967 1.739-1.907 2.572-3.843 2.572-5.992z"/>
+                    </svg>
+                    <span>LINE 帳號登入</span>
+                </button>
+            </div>
+        </div>
+    </div>
     <div class="store-header" id="store-header-box">
         <div class="store-header-top">
             <div class="store-logo-wrapper" id="store-logo-wrapper" style="display: none;">
@@ -1003,7 +1027,77 @@
             };
         }
 
+        function isDesktopOutsideLiff() {
+            return typeof liff !== 'undefined' && liff.isInClient && !liff.isInClient();
+        }
+
+        function checkDesktopAuthGuard() {
+            if (isDesktopOutsideLiff() && typeof liff !== 'undefined' && liff.isLoggedIn && !liff.isLoggedIn()) {
+                openDesktopLoginModal();
+                return false;
+            }
+            return true;
+        }
+
+        function openDesktopLoginModal() {
+            const modal = document.getElementById('desktop-login-modal');
+            if (modal) modal.style.display = 'flex';
+        }
+
+        function closeDesktopLoginModal() {
+            const modal = document.getElementById('desktop-login-modal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function triggerDesktopLineLogin() {
+            if (typeof liff !== 'undefined' && liff.login) {
+                const tenantId = getTenantIdFromUrl();
+                const storageKey = `cart_save_${tenantId}`;
+                try {
+                    localStorage.setItem(storageKey, JSON.stringify({ cart, customizeData, comboDrinkData }));
+                } catch(e) {}
+                liff.login({ redirectUri: window.location.href });
+            }
+        }
+
+        async function updateDesktopAuthUI() {
+            const bar = document.getElementById('desktop-auth-bar');
+            if (!bar) return;
+            if (!isDesktopOutsideLiff()) {
+                bar.style.display = 'none';
+                return;
+            }
+            bar.style.display = 'block';
+            const loggedInEl = document.getElementById('desktop-auth-logged-in');
+            const loggedOutEl = document.getElementById('desktop-auth-logged-out');
+
+            if (typeof liff !== 'undefined' && liff.isLoggedIn && liff.isLoggedIn()) {
+                if (loggedOutEl) loggedOutEl.style.display = 'none';
+                if (loggedInEl) loggedInEl.style.display = 'flex';
+                try {
+                    const profile = await liff.getProfile();
+                    if (profile) {
+                        const nameEl = document.getElementById('desktop-user-name');
+                        if (nameEl) nameEl.innerText = profile.displayName || '顧客';
+                        const avatarEl = document.getElementById('desktop-user-avatar');
+                        const placeholderEl = document.getElementById('desktop-user-placeholder-icon');
+                        if (profile.pictureUrl && avatarEl) {
+                            avatarEl.src = profile.pictureUrl;
+                            avatarEl.style.display = 'inline-block';
+                            if (placeholderEl) placeholderEl.style.display = 'none';
+                        }
+                    }
+                } catch(e) {}
+            } else {
+                if (loggedInEl) loggedInEl.style.display = 'none';
+                if (loggedOutEl) loggedOutEl.style.display = 'flex';
+            }
+        }
+
         function updateQty(category, origName, change) {
+            if (change > 0 && !checkDesktopAuthGuard()) {
+                return;
+            }
             const key = category + '_' + origName;
             cart[key] = (cart[key] || 0) + change;
             if (cart[key] < 0) cart[key] = 0;
@@ -1266,6 +1360,7 @@
 
         // --- CUSTOMIZE POPUP (SCHEMA-DRIVEN MODIFIERS POPUP) ---
         function toggleCustomize(category, origName) {
+            if (!checkDesktopAuthGuard()) return;
             const key = category + '_' + origName;
             const qty = cart[key];
             if (!qty) return;
@@ -1647,6 +1742,7 @@
             } catch(e) {
                 console.error("LIFF Init Error", e);
             }
+            await updateDesktopAuthUI();
             renderDynamicCatalog();
             renderStoreOperatingHours();
             if (typeof initAppendModeIfPresent === 'function') {
@@ -1721,7 +1817,25 @@
 
         initApp();
     </script>
-    <script src="js/client-checkout.js?v=20260825_size_prefix_fix_1"></script>
+    <div id="desktop-login-modal" class="desktop-login-modal" style="display: none;">
+        <div class="desktop-login-backdrop" onclick="closeDesktopLoginModal()"></div>
+        <div class="desktop-login-card">
+            <div class="desktop-login-header">
+                <h3 class="desktop-login-title">歡迎光臨</h3>
+                <button type="button" class="desktop-login-close" onclick="closeDesktopLoginModal()">✕</button>
+            </div>
+            <div class="desktop-login-body">
+                <p class="desktop-login-desc">為了即時向您發送餐點製作進度與取餐通知，請使用 LINE 帳號登入開始點餐。</p>
+                <button type="button" class="btn-line-login-full" onclick="triggerDesktopLineLogin()">
+                    <svg class="line-btn-svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M24 10.304c0-5.369-5.383-9.738-12-9.738-6.616 0-12 4.369-12 9.738 0 4.814 4.269 8.846 10.036 9.608.391.084.922.258 1.057.592.121.303.079.778.039 1.085l-.171 1.027c-.053.303-.242 1.186 1.039.647 1.281-.54 6.911-4.069 9.428-6.967 1.739-1.907 2.572-3.843 2.572-5.992z"/>
+                    </svg>
+                    <span>使用 LINE 帳號登入</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    <script src="js/client-checkout.js?v=20260825_desktop_auth_1"></script>
 </body>
 
 </html>
