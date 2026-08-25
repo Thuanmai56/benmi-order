@@ -29,6 +29,7 @@ export interface BootstrapResponse {
     id: string;
     slug: string;
     name: string;
+    shortName?: string | null;
     allowCustomization: boolean;
     appliedModifiers: string[];
     sortOrder: number;
@@ -308,6 +309,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
           id: cat.id,
           slug: cat.slug,
           name: cat.name,
+          shortName: cat.short_name || null,
           allowCustomization: Boolean(cat.allow_customization ?? 1) && appliedModifiers.length > 0,
           appliedModifiers: appliedModifiers,
           sortOrder: cat.sort_order || 0,

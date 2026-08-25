@@ -734,7 +734,8 @@
 
             bootstrapData.catalog.forEach((cat, idx) => {
                 const isActive = (!hasCustomizations && idx === 0) || (hasFlavorInCatalog && idx === 0);
-                navHTML += `<div class="nav-btn ${isActive ? 'active' : ''}" onclick="scrollToSec('sec-${cat.slug}')">${cat.name}</div>`;
+                const navTitle = cat.shortName || cat.name;
+                navHTML += `<div class="nav-btn ${isActive ? 'active' : ''}" onclick="scrollToSec('sec-${cat.slug}')">${navTitle}</div>`;
             });
             navHTML += `<div class="nav-btn" onclick="scrollToSec('sec-checkout')">結帳</div>`;
             nav.innerHTML = navHTML;
@@ -785,7 +786,7 @@
             if (!container || !list || list.length === 0) return;
             const escapeHtml = (str) => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-            let html = `<div class="section-title">口味與客製化選擇</div>
+            let html = `<div class="section-title">🧪 口味與客製化選擇</div>
             <div class="custom-panel-wrapper">
             <div class="custom-panel">`;
 
