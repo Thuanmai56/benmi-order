@@ -345,6 +345,96 @@ function parseCartKey(key) {
     };
 }
 
+function resolveCatalogItem(key) {
+    const { catSlug, origName } = parseCartKey(key);
+    let targetCat = null;
+    let targetItem = null;
+
+    if (typeof bootstrapData !== 'undefined' && bootstrapData?.catalog) {
+        if (catSlug) {
+            targetCat = bootstrapData.catalog.find(c => c.slug === catSlug);
+            if (targetCat?.items) {
+                targetItem = targetCat.items.find(it => it.name === origName || it.id === key);
+            }
+        }
+        if (!targetItem) {
+            for (const cat of bootstrapData.catalog) {
+                if (cat.items) {
+                    const it = cat.items.find(i => i.name === origName || i.id === key);
+                    if (it) {
+                        targetItem = it;
+                        targetCat = cat;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    let displayName = origName;
+    if (targetCat) {
+        const catNameClean = (targetCat.name || '').split(/[\s\(\[\{（【]/)[0].trim();
+        const isSizeCategory = ['大份', '小份', '大', '小', '大碗', '小碗', '加大'].includes(catNameClean) ||
+                               ['large', 'small', 'big'].includes(targetCat.slug);
+
+        let nameCount = 0;
+        if (bootstrapData?.catalog) {
+            for (const cat of bootstrapData.catalog) {
+                if (cat.items?.some(it => it.name === origName)) nameCount++;
+            }
+        }
+
+        if ((isSizeCategory || nameCount > 1) && catNameClean && !origName.includes(catNameClean)) {
+            displayName = `[${catNameClean}] ${origName}`;
+        }
+    }
+
+    return {
+        catSlug,
+        origName,
+        displayName,
+        targetCat,
+        targetItem,
+        basePrice: Number(targetItem?.price) || 0,
+        categoryName: targetCat?.name || catSlug || "Món",
+        itemId: targetItem?.id || key
+    };
+}
+
+function formatGlobalCustomizationsText() {
+    if (typeof bootstrapData === 'undefined' || !bootstrapData || !bootstrapData.customizations || bootstrapData.customizations.length === 0) return "";
+    const parts = [];
+
+    bootstrapData.customizations.forEach(group => {
+        if (group.type === 'radio') {
+            const checkedRadio = document.querySelector(`input[name="opt-${group.key}"]:checked`);
+            if (checkedRadio) {
+                const val = checkedRadio.value;
+                const subOpts = [];
+                const subContainer = document.querySelector(`.sub-option-container[data-parent-flavor="${val}"]`);
+                if (subContainer) {
+                    subContainer.querySelectorAll('input.sub-opt-chk:checked').forEach(chk => {
+                        subOpts.push(chk.value);
+                    });
+                }
+                const subPart = subOpts.length > 0 ? ` (${subOpts.join('、')})` : '';
+                parts.push(`${group.title.replace(/^✦\s*/, '')}：${val}${subPart}`);
+            }
+        } else if (group.type === 'checkbox') {
+            const checkedBoxes = Array.from(document.querySelectorAll(`input[name="opt-${group.key}"]:checked`));
+            if (checkedBoxes.length > 0) {
+                const boxVals = checkedBoxes.map(chk => {
+                    const p = Number(chk.getAttribute('data-price')) || 0;
+                    return p > 0 ? `${chk.value}(+$${p})` : chk.value;
+                });
+                parts.push(`${group.title.replace(/^✦\s*/, '')}：${boxVals.join('、')}`);
+            }
+        }
+    });
+
+    return parts.length > 0 ? `【${parts.join(' | ')}】` : "";
+}
+
 // 8.1 Định dạng nội dung tin nhắn đơn hàng
 function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, mainNote) {
     const zhNumbers = ['第一份', '第二份', '第三份', '第四份', '第五份', '第六份', '第七份', '第八份', '第九份', '第十份'];
@@ -352,8 +442,9 @@ function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, ma
 
     for (let key in cart) {
         if (cart[key] > 0) {
-            const { catSlug, origName } = parseCartKey(key);
-            msg += `\n${cart[key]}份 x ${origName}`;
+            const itemInfo = resolveCatalogItem(key);
+            const { catSlug, origName, displayName } = itemInfo;
+            msg += `\n${cart[key]}份 x ${displayName}`;
 
             if (catSlug === 'combo') {
                 let drinks = comboDrinkData[origName] || [];
@@ -426,8 +517,9 @@ function formatAppendItemsOnlyText() {
     const lines = [];
     for (let key in cart) {
         if (cart[key] > 0) {
-            const { catSlug, origName } = parseCartKey(key);
-            lines.push(`${cart[key]}份 x ${origName}`);
+            const itemInfo = resolveCatalogItem(key);
+            const { catSlug, origName, displayName } = itemInfo;
+            lines.push(`${cart[key]}份 x ${displayName}`);
 
             if (catSlug === 'combo') {
                 let drinks = comboDrinkData[origName] || [];
@@ -479,24 +571,9 @@ function buildStructuredCartItems() {
     const items = [];
     for (let key in cart) {
         if (cart[key] > 0) {
-            const { catSlug, origName } = parseCartKey(key);
+            const itemInfo = resolveCatalogItem(key);
+            const { catSlug, origName, displayName, basePrice, categoryName, itemId } = itemInfo;
             const qty = cart[key];
-            
-            let basePrice = 0;
-            let categoryName = catSlug || "Món";
-            if (typeof bootstrapData !== 'undefined' && bootstrapData && bootstrapData.catalog) {
-                for (const cat of bootstrapData.catalog) {
-                    if (cat.items) {
-                        for (const itm of cat.items) {
-                            if (itm.name === origName || itm.id === key) {
-                                basePrice = Number(itm.price) || 0;
-                                categoryName = cat.name || catSlug;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
 
             const options = [];
             const cust = customizeData[key];
@@ -538,8 +615,8 @@ function buildStructuredCartItems() {
             }
 
             items.push({
-                itemId: key,
-                name: origName,
+                itemId: itemId,
+                name: displayName,
                 category: categoryName,
                 quantity: qty,
                 price: basePrice,
