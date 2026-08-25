@@ -1,17 +1,17 @@
 -- Migration: 0040_fix_bsc_menu_and_categories.sql
--- Description: Clean up BSC categories, remove separate topping catalog category, update semantic slugs and add short_name for navbar tabs, set accurate out-of-stock statuses for BSC items and addons
+-- Description: Clean up BSC categories, remove emojis, update semantic slugs and add short_name for navbar tabs, set accurate out-of-stock statuses for BSC items and addons
 
 -- 1. Add short_name column to menu_categories if it doesn't exist
 ALTER TABLE menu_categories ADD COLUMN short_name TEXT;
 
--- 2. Insert / Update new BSC Categories first (so foreign keys are satisfied)
+-- 2. Insert / Update new BSC Categories first (without emojis, clean minimalist typography)
 INSERT INTO menu_categories (id, tenant_id, name, short_name, slug, sort_order, category_type, allow_customization, applied_modifiers)
 VALUES
-    ('bsc_cat_meat', 'bsc', '🍗 肉類', '🍗 肉類', 'meat', 1, 'catalog', 1, '[]'),
-    ('bsc_cat_side50', 'bsc', '⭐ 精選小菜 $50/份', '小菜$50', 'side50', 2, 'catalog', 1, '[]'),
-    ('bsc_cat_side30', 'bsc', '🥘 特色小菜 $30/份', '小菜$30', 'side30', 3, 'catalog', 1, '[]'),
-    ('bsc_cat_side25', 'bsc', '🥗 經典小菜 $25/份', '小菜$25', 'side25', 4, 'catalog', 0, '[]'),
-    ('bsc_veggie', 'bsc', '🥦 蔬菜/配菜 1份$35 / 3份$100', '蔬菜/配菜', 'veggie', 5, 'catalog', 1, '[]')
+    ('bsc_cat_meat', 'bsc', '肉類', '肉類', 'meat', 1, 'catalog', 1, '[]'),
+    ('bsc_cat_side50', 'bsc', '精選小菜 $50/份', '小菜$50', 'side50', 2, 'catalog', 1, '[]'),
+    ('bsc_cat_side30', 'bsc', '特色小菜 $30/份', '小菜$30', 'side30', 3, 'catalog', 1, '[]'),
+    ('bsc_cat_side25', 'bsc', '經典小菜 $25/份', '小菜$25', 'side25', 4, 'catalog', 0, '[]'),
+    ('bsc_veggie', 'bsc', '蔬菜/配菜 1份$35 / 3份$100', '蔬菜/配菜', 'veggie', 5, 'catalog', 1, '[]')
 ON CONFLICT(id) DO UPDATE SET
     name = excluded.name,
     short_name = excluded.short_name,

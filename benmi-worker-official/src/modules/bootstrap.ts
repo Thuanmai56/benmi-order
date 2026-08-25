@@ -171,7 +171,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
       try {
         const [catsRes, itemsRes, customRes] = await env.DB.batch([
           env.DB.prepare(
-            `SELECT id, name, slug, 
+            `SELECT id, name, short_name, slug, 
                     COALESCE(category_type, 'catalog') AS category_type, 
                     COALESCE(selection_type, 'single') AS selection_type, 
                     COALESCE(is_required, 0) AS is_required, 

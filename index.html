@@ -729,7 +729,7 @@
 
             const hasFlavorInCatalog = bootstrapData.catalog.some(c => c.slug === 'sec-flavor' || c.slug === 'flavor' || c.categoryType === 'order_customization');
             if (hasCustomizations && !hasFlavorInCatalog) {
-                navHTML += `<div class="nav-btn active" onclick="scrollToSec('sec-flavor')">🧪 口味選擇</div>`;
+                navHTML += `<div class="nav-btn active" onclick="scrollToSec('sec-flavor')">口味選擇</div>`;
             }
 
             bootstrapData.catalog.forEach((cat, idx) => {
@@ -786,7 +786,7 @@
             if (!container || !list || list.length === 0) return;
             const escapeHtml = (str) => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-            let html = `<div class="section-title">🧪 口味與客製化選擇</div>
+            let html = `<div class="section-title">口味與客製化選擇</div>
             <div class="custom-panel-wrapper">
             <div class="custom-panel">`;
 
