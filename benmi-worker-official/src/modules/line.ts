@@ -702,40 +702,15 @@ export function createRejectFlexBubble(
   };
 }
 
-export function createChangeFlexBubble(
+export function createTimeChangeFlexBubble(
   orderKey: string,
-  reason: string,
-  note: string = "",
-  brandName: string = "店家",
-  brandColor: string = "#F59E0B"
+  newTime: string,
+  brandName: string = "店家"
 ): any {
+  const timeDisplay = newTime || "稍後";
   return {
     type: "bubble",
-    size: "mega",
-    header: {
-      type: "box",
-      layout: "vertical",
-      backgroundColor: brandColor,
-      paddingAll: "18px",
-      contents: [
-        {
-          type: "box",
-          layout: "horizontal",
-          spacing: "md",
-          alignItems: "center",
-          contents: [
-            {
-              type: "box",
-              layout: "vertical",
-              contents: [
-                { type: "text", text: "訂單微調通知", weight: "bold", size: "xl", color: "#ffffff" },
-                { type: "text", text: `${brandName} - Order Modification Request`, size: "xs", color: "#FEF3C7" }
-              ]
-            }
-          ]
-        }
-      ]
-    },
+    size: "kilo",
     body: {
       type: "box",
       layout: "vertical",
@@ -746,54 +721,57 @@ export function createChangeFlexBubble(
           type: "box",
           layout: "horizontal",
           contents: [
-            { type: "text", text: "訂單編號", size: "sm", color: "#888888", flex: 3 },
-            { type: "text", text: `#${orderKey}`, size: "md", weight: "bold", color: "#111111", flex: 6 }
+            {
+              type: "text",
+              text: `訂單 #${orderKey}`,
+              size: "sm",
+              weight: "bold",
+              color: "#64748B"
+            }
           ]
         },
-        {
-          type: "box",
-          layout: "horizontal",
-          contents: [
-            { type: "text", text: "調整原因", size: "sm", color: "#888888", flex: 3 },
-            { type: "text", text: reason || "部分品項售完需調整", size: "sm", weight: "bold", color: "#D97706", flex: 6, wrap: true }
-          ]
-        },
-        ...(note ? [
-          {
-            type: "box",
-            layout: "horizontal",
-            contents: [
-              { type: "text", text: "備註說明", size: "sm", color: "#888888", flex: 3 },
-              { type: "text", text: note, size: "sm", color: "#374151", flex: 6, wrap: true }
-            ]
-          }
-        ] : []),
-        { type: "separator", margin: "md", color: "#EEEEEE" },
         {
           type: "text",
-          text: "店家已收到您的訂單，但需要微調內容。請點擊下方按鈕確認是否接受變更：",
           wrap: true,
-          color: "#4B5563",
-          size: "sm"
+          contents: [
+            {
+              type: "span",
+              text: "目前現場較忙碌，為了提供最佳品質，請問可以改成 "
+            },
+            {
+              type: "span",
+              text: timeDisplay,
+              weight: "bold",
+              color: "#059669",
+              size: "lg"
+            },
+            {
+              type: "span",
+              text: " 嗎？\n\n請協助點選下方按鈕回覆，謝謝您！"
+            }
+          ],
+          size: "md",
+          color: "#1E293B",
+          lineSpacing: "6px"
         }
       ]
     },
     footer: {
       type: "box",
-      layout: "vertical",
+      layout: "horizontal",
       paddingAll: "16px",
-      spacing: "sm",
+      spacing: "md",
       contents: [
         {
           type: "button",
           style: "primary",
-          color: "#F59E0B",
+          color: "#059669",
           height: "sm",
           action: {
             type: "postback",
-            label: "🟡 同意變更",
-            data: `action=change_agree&orderKey=${orderKey}`,
-            displayText: "同意變更"
+            label: "同意",
+            data: `action=change_agree&orderKey=${orderKey}&newTime=${encodeURIComponent(timeDisplay)}`,
+            displayText: "同意"
           }
         },
         {
@@ -802,14 +780,95 @@ export function createChangeFlexBubble(
           height: "sm",
           action: {
             type: "postback",
-            label: "⚪ 取消訂單",
+            label: "不同意",
             data: `action=change_cancel&orderKey=${orderKey}`,
-            displayText: "取消訂單"
+            displayText: "不同意"
           }
         }
       ]
     }
   };
+}
+
+export function createTimeChangeConfirmedFlexBubble(
+  orderKey: string,
+  newTime: string,
+  liffUrl: string = "https://liff.line.me/",
+  brandName: string = "店家"
+): any {
+  const timeDisplay = newTime || "稍後";
+  const targetUrl = liffUrl.includes("?") ? `${liffUrl}&order=${orderKey}` : `${liffUrl}?order=${orderKey}`;
+  return {
+    type: "bubble",
+    size: "kilo",
+    body: {
+      type: "box",
+      layout: "vertical",
+      paddingAll: "20px",
+      spacing: "md",
+      contents: [
+        {
+          type: "text",
+          text: `訂單 #${orderKey} 已確認修改！`,
+          weight: "bold",
+          size: "lg",
+          color: "#0F172A",
+          wrap: true
+        },
+        {
+          type: "text",
+          wrap: true,
+          contents: [
+            {
+              type: "span",
+              text: "取餐時間已為您更改為 "
+            },
+            {
+              type: "span",
+              text: timeDisplay,
+              weight: "bold",
+              color: "#059669"
+            },
+            {
+              type: "span",
+              text: "，店家已收到並將儘速為您確認訂單！"
+            }
+          ],
+          size: "sm",
+          color: "#475569",
+          lineSpacing: "5px"
+        }
+      ]
+    },
+    footer: {
+      type: "box",
+      layout: "vertical",
+      paddingAll: "16px",
+      contents: [
+        {
+          type: "button",
+          style: "primary",
+          color: "#059669",
+          height: "sm",
+          action: {
+            type: "uri",
+            label: "查看訂單狀態",
+            uri: targetUrl
+          }
+        }
+      ]
+    }
+  };
+}
+
+export function createChangeFlexBubble(
+  orderKey: string,
+  reason: string,
+  note: string = "",
+  brandName: string = "店家",
+  brandColor: string = "#F59E0B"
+): any {
+  return createTimeChangeFlexBubble(orderKey, note, brandName);
 }
 
 export async function replyWithLiffRedirect(
@@ -1113,21 +1172,92 @@ export async function handleLineWebhook(
             ).bind(tenantId, orderKey, userId).run();
             await replyText(replyToken, `感謝您的回覆！店家將盡快與您聯繫或重新為您確認訂單 #${orderKey}。`, env, tenantCtx);
           } else if (action === "change_agree") {
-            await env.DB.prepare(
-              "UPDATE orders SET status = 'ACCEPTED', updated_at = strftime('%Y-%m-%d %H:%M:%f', 'now') WHERE tenant_id = ? AND key = ?"
-            ).bind(tenantId, orderKey).run();
+            const pendingRow = await env.DB.prepare(
+              "SELECT * FROM pending_actions WHERE tenant_id = ? AND (order_key = ? OR user_id = ?) LIMIT 1"
+            ).bind(tenantId, orderKey, userId).first<any>();
+
+            const orderRow = await env.DB.prepare(
+              "SELECT * FROM orders WHERE tenant_id = ? AND key = ? LIMIT 1"
+            ).bind(tenantId, orderKey).first<any>();
+
+            const newTimeParam = params.get("newTime") || (pendingRow ? pendingRow.note : "") || (orderRow ? orderRow.note : "");
+            const oldTime = orderRow ? orderRow.pickup_time || "" : "";
+            const timeParts = oldTime.split(" ");
+            const oldDate = timeParts[0] || "";
+            let updatedPickupTime = newTimeParam;
+            if (oldDate && oldDate.includes("-") && !newTimeParam.includes("-")) {
+              updatedPickupTime = `${oldDate} ${newTimeParam}`;
+            }
+
+            if (orderRow) {
+              const updatedOrder: Order = {
+                key: orderRow.key,
+                customer: orderRow.customer_name || "顧客",
+                time: updatedPickupTime,
+                content: orderRow.order_content || "",
+                status: "NEW", // Tự động nhảy đơn mới với giờ nhận mới để quán bấm nhận đơn
+                createdAt: orderRow.created_at ? new Date(orderRow.created_at + "Z").getTime() : Date.now(),
+                userId: orderRow.user_id || undefined,
+                total: orderRow.total_amount,
+                reason: "",
+                note: "",
+                diningOption: (orderRow.dining_option as any) || 'takeaway',
+                tableNumber: orderRow.table_number || undefined,
+                roundCount: Number(orderRow.round_count) || 1,
+                round_count: Number(orderRow.round_count) || 1,
+                lastAppendedAt: orderRow.last_appended_at || null,
+                last_appended_at: orderRow.last_appended_at || null
+              };
+              await saveOrder(env, updatedOrder, tenantId);
+            } else {
+              await env.DB.prepare(
+                "UPDATE orders SET status = 'NEW', pickup_time = ?, reason = '', note = '', updated_at = strftime('%Y-%m-%d %H:%M:%f', 'now') WHERE tenant_id = ? AND key = ?"
+              ).bind(updatedPickupTime, tenantId, orderKey).run();
+            }
+
             await env.DB.prepare(
               "DELETE FROM pending_actions WHERE tenant_id = ? AND (order_key = ? OR user_id = ?)"
             ).bind(tenantId, orderKey, userId).run();
-            await replyText(replyToken, `✅ 已確認修改！店家已開始為您準備餐點（訂單 #${orderKey}），請稍候。`, env, tenantCtx);
+
+            const liffUrl = tenantCtx?.liffUrl || (await resolveSecret(env.LIFF_URL)) || "https://liff.line.me/";
+            const confirmedFlex = createTimeChangeConfirmedFlexBubble(orderKey, newTimeParam, liffUrl, brandName);
+            await replyLineFlexMessage(replyToken, `訂單 #${orderKey} 已確認修改！`, confirmedFlex, env, tenantCtx);
           } else if (action === "change_cancel") {
-            await env.DB.prepare(
-              "UPDATE orders SET status = 'REJECTED', updated_at = strftime('%Y-%m-%d %H:%M:%f', 'now') WHERE tenant_id = ? AND key = ?"
-            ).bind(tenantId, orderKey).run();
+            const orderRow = await env.DB.prepare(
+              "SELECT * FROM orders WHERE tenant_id = ? AND key = ? LIMIT 1"
+            ).bind(tenantId, orderKey).first<any>();
+
+            if (orderRow) {
+              const updatedOrder: Order = {
+                key: orderRow.key,
+                customer: orderRow.customer_name || "顧客",
+                time: orderRow.pickup_time || "",
+                content: orderRow.order_content || "",
+                status: "REJECTED",
+                createdAt: orderRow.created_at ? new Date(orderRow.created_at + "Z").getTime() : Date.now(),
+                userId: orderRow.user_id || undefined,
+                total: orderRow.total_amount,
+                reason: orderRow.reason || "",
+                note: orderRow.note || "",
+                diningOption: (orderRow.dining_option as any) || 'takeaway',
+                tableNumber: orderRow.table_number || undefined,
+                roundCount: Number(orderRow.round_count) || 1,
+                round_count: Number(orderRow.round_count) || 1,
+                lastAppendedAt: orderRow.last_appended_at || null,
+                last_appended_at: orderRow.last_appended_at || null
+              };
+              await saveOrder(env, updatedOrder, tenantId);
+              if (ctx && ctx.waitUntil) ctx.waitUntil(syncToGoogleSheets(updatedOrder, env, tenantCtx));
+            } else {
+              await env.DB.prepare(
+                "UPDATE orders SET status = 'REJECTED', updated_at = strftime('%Y-%m-%d %H:%M:%f', 'now') WHERE tenant_id = ? AND key = ?"
+              ).bind(tenantId, orderKey).run();
+            }
+
             await env.DB.prepare(
               "DELETE FROM pending_actions WHERE tenant_id = ? AND (order_key = ? OR user_id = ?)"
             ).bind(tenantId, orderKey, userId).run();
-            await replyText(replyToken, `✅ 訂單 #${orderKey} 已取消。如有任何需求歡迎再次點餐！`, env, tenantCtx);
+            await replyText(replyToken, `收到，已為您取消訂單 #${orderKey}，謝謝您！`, env, tenantCtx);
           }
           continue;
         } catch (postbackErr) {
@@ -1473,7 +1603,7 @@ export async function handleLineWebhook(
 
             if (isCancel) {
               order.status = "REJECTED";
-              await replyText(replyToken, `收到，謝謝您！`, env, tenantCtx);
+              await replyText(replyToken, `收到，已為您取消訂單 #${order.key}，謝謝您！`, env, tenantCtx);
               const cleanup = async () => { await saveOrder(env, order, tenantId); await finishPending(); await syncToGoogleSheets(order, env, tenantCtx); };
               if (ctx && ctx.waitUntil) ctx.waitUntil(cleanup()); else await cleanup();
             }
@@ -1482,15 +1612,19 @@ export async function handleLineWebhook(
               const oldDate = timeParts[0] || "";
               const newSuggestedTime = currentNote;
 
-              if (oldDate && oldDate.includes("-")) {
+              if (oldDate && oldDate.includes("-") && !newSuggestedTime.includes("-")) {
                 order.time = `${oldDate} ${newSuggestedTime}`;
               } else {
                 order.time = newSuggestedTime;
               }
               order.reason = "";
               order.note = "";
-              order.status = "NEW";
-              await replyText(replyToken, `收到您的同意！取餐時間已為您更改為 ${newSuggestedTime}`, env, tenantCtx);
+              order.status = "NEW"; // Tái xuất hiện thông báo đơn mới trên Dashboard với giờ mới để quán bấm nhận
+              
+              const liffUrl = tenantCtx?.liffUrl || (await resolveSecret(env.LIFF_URL)) || "https://liff.line.me/";
+              const confirmedFlex = createTimeChangeConfirmedFlexBubble(order.key, newSuggestedTime, liffUrl, brandName);
+              await replyLineFlexMessage(replyToken, `訂單 #${order.key} 已確認修改！`, confirmedFlex, env, tenantCtx);
+
               const cleanup = async () => { await saveOrder(env, order, tenantId); await finishPending(); };
               if (ctx && ctx.waitUntil) ctx.waitUntil(cleanup()); else await cleanup();
             }

@@ -2,10 +2,11 @@ import { Env } from '../types/env';
 import { Order, DiningOption, AppendOrderPayload, OrderItemInput } from '../types/index';
 import { corsHeaders, json } from '../utils/http';
 import { syncToGoogleSheets } from '../integrations/googleSheets';
-import { pushLineMessage, pushLineFlexMessage, buildOrderFlexMessage, buildAppendConfirmationFlexMessage, buildProgressFlexMessage, createRejectFlexBubble, createChangeFlexBubble } from './line';
+import { pushLineMessage, pushLineFlexMessage, buildOrderFlexMessage, buildAppendConfirmationFlexMessage, buildProgressFlexMessage, createRejectFlexBubble, createChangeFlexBubble, createTimeChangeFlexBubble } from './line';
 import { getTenantId } from './menu';
 
 import { TenantContext, tenantHasFeature, resolveTenantOrderPrefix, generateStandardOrderId } from '../types/tenant';
+import { resolveTenantContext } from './tenant';
 
 function jsonWithETag(data: any, version: string, status: number = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -556,7 +557,11 @@ export async function updateOrder(
       let notifyText = "";
       const reason = order.reason || "未提供原因";
       const note = order.note || "";
-      if (order.reason && order.reason.startsWith("賣完了：")) {
+
+      if (reason === "時間需調整") {
+        const t = note || "稍後";
+        notifyText = `目前現場較忙碌，為了提供最佳品質，請問可以改成${t}嗎？。請協助點選下方按鈕回覆，謝謝您！`;
+      } else if (order.reason && order.reason.startsWith("賣完了：")) {
         const items = order.reason.replace("賣完了：", "").split(",").map(s => s.trim()).filter(Boolean);
         let joinedItems = items.join("、");
         if (items.length === 2) {
@@ -565,12 +570,21 @@ export async function updateOrder(
           joinedItems = items.slice(0, -1).join("、") + "跟" + items[items.length - 1];
         }
         notifyText = `不好意思 ${joinedItems}我們現在賣完了，請問可以幫您換別的嗎？`;
+      } else if (reason === "口味售完") {
+        const items = (note || "").split(",").map(s => s.trim()).filter(Boolean);
+        let joinedItems = items[0] || "";
+        if (items.length === 2) {
+          joinedItems = items.join("跟");
+        } else if (items.length > 2) {
+          joinedItems = items.slice(0, -1).join("、") + "跟" + items[items.length - 1];
+        }
+        notifyText = `不好意思 ${joinedItems}我們現在賣完了，請問可以幫您換別的嗎？`;
       } else {
         notifyText =
-          `${brandName} 已收到您的訂單 #${order.key}，但需要微調訂單內容：\n` +
+          `${brandName} 已收到您的訂單 #${order.key}，需要做小幅調整。\n` +
           `原因：${reason}\n` +
           (note ? `備註：${note}\n` : "") +
-          `\n請回覆「同意」以接受變更，或回覆「取消 / 不要了」以取消訂單。`;
+          `\n請回覆您想更換的品項，或回覆「取消 / 不要了」以取消訂單。`;
       }
 
       await env.DB.prepare(
@@ -584,9 +598,14 @@ export async function updateOrder(
            created_at = CURRENT_TIMESTAMP`
       ).bind(tenantId, order.userId, order.key, "CHANGE", notifyText, reason, note).run();
 
-      const changeFlex = createChangeFlexBubble(order.key, reason, note, brandName);
-      const flexSent = await pushLineFlexMessage(order.userId, `[${brandName}] 訂單微調通知 #${order.key}`, changeFlex, env, tenantCtx);
-      if (!flexSent) {
+      if (reason === "時間需調整") {
+        const timeFlex = createTimeChangeFlexBubble(order.key, note, brandName);
+        const flexSent = await pushLineFlexMessage(order.userId, `[${brandName}] 調整取餐時間確認 #${order.key}`, timeFlex, env, tenantCtx);
+        if (!flexSent) {
+          await pushLineMessage(order.userId, notifyText, env, tenantCtx);
+        }
+      } else {
+        // Revert về push message text cho trường hợp đổi món (không áp dụng Flex message nút đồng ý/hủy đơn)
         await pushLineMessage(order.userId, notifyText, env, tenantCtx);
       }
     }
