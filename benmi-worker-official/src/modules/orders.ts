@@ -181,18 +181,16 @@ export async function createOrder(
     await saveOrder(env, order, tenantId);
   }
 
-  // 2. Tự động gửi LINE Flex Message xác nhận tiến độ đơn hàng cho khách đặt qua Desktop
+  // 2. Tự động gửi LINE Flex Message xác nhận đơn hàng đầy đủ nội dung cho khách đặt qua Desktop
   const isDesktopOrder = data.is_desktop === true || data.isDesktop === true || !data.liffInClient;
   if (order.userId && typeof order.userId === 'string' && order.userId.startsWith('U') && order.userId.length > 20 && isDesktopOrder) {
     try {
-      const queueRes = await getOrderQueueAhead(env, tenantId, order.key);
-      const queueAheadCount = queueRes ? queueRes.queueAhead : 0;
-      const flexBubble = buildProgressFlexMessage(order, queueAheadCount, tenantCtx);
+      const flexBubble = buildOrderFlexMessage(order, tenantCtx);
       const brandName = tenantCtx?.brandName || "Benmi";
 
       const pushPromise = pushLineFlexMessage(
         order.userId,
-        `[${brandName}] 📋 訂單進度 #${order.key}`,
+        `[${brandName}] 訂單明細 #${order.key}`,
         flexBubble,
         env,
         tenantCtx
