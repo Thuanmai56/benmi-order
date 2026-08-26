@@ -1551,8 +1551,8 @@ export async function handleLineWebhook(
 
       if (orderKey) {
         const orderRow = await env.DB.prepare(
-          "SELECT * FROM orders WHERE key = ?"
-        ).bind(orderKey).first<any>();
+          "SELECT * FROM orders WHERE tenant_id = ? AND key = ?"
+        ).bind(tenantId, orderKey).first<any>();
         if (orderRow) {
           const order: Order = {
             key: orderRow.key,
@@ -1691,27 +1691,14 @@ export async function handleLineWebhook(
               continue;
             }
 
-            if (currentReason === "口味售完") {
-              order.content = `【顧客換單】：${userText}\n----原本訂單 👇----\n${order.content}`;
-              order.reason = "";
-              order.note = "";
-              order.status = "NEW";
-              await replyText(replyToken, `收到您的回覆！我們會依您的需求修改訂單。`, env, tenantCtx);
-              const cleanup = async () => { await saveOrder(env, order, tenantId); await finishPending(); };
-              if (ctx && ctx.waitUntil) ctx.waitUntil(cleanup()); else await cleanup();
-              continue;
-            }
-
-            const isAgree = lowerText === "好" || lowerText === "同意" || lowerText === "ok";
-            if (isAgree) {
-              order.status = "ACCEPTED";
-              await replyText(replyToken, `${brandName} 收到您的同意！我們會開始準備您的訂單 #${orderKey}。✨`, env, tenantCtx);
-              const cleanup = async () => { await saveOrder(env, order, tenantId); await finishPending(); };
-              if (ctx && ctx.waitUntil) ctx.waitUntil(cleanup()); else await cleanup();
-              continue;
-            }
-
-            await replyText(replyToken, `請再明確回覆您的決定。`, env, tenantCtx);
+            // Trường hợp đổi món / đổi vị:
+            order.content = `【顧客換單】：${userText}\n----原本訂單 👇----\n${order.content}`;
+            order.reason = "";
+            order.note = "";
+            order.status = "NEW"; // Tái kích hoạt chuông và trạng thái đơn mới trên POS để quán nhận
+            await replyText(replyToken, `收到您的回覆！店家已收到您的更換品項需求「${userText}」，將儘速為您確認訂單。`, env, tenantCtx);
+            const cleanup = async () => { await saveOrder(env, order, tenantId); await finishPending(); };
+            if (ctx && ctx.waitUntil) ctx.waitUntil(cleanup()); else await cleanup();
             continue;
           }
 
