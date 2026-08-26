@@ -310,7 +310,7 @@ export function buildProgressFlexMessage(order: Order, queueAheadCount: number, 
     statusColor = "#2563EB";
     queueText = queueAheadCount > 0
       ? `前方還有 ${queueAheadCount} 張訂單正在排隊製作`
-      : "您的餐點正由店家用心製作中！";
+      : "您的餐點正由店家製作中！";
   } else if (order.status === "DONE") {
     statusTitle = isDineIn ? "餐點製作完成，請至櫃檯領取" : "餐點製作完成，可取餐！";
     statusColor = "#059669";
@@ -446,7 +446,7 @@ export function buildAppendConfirmationFlexMessage(
   let rawTable = (order.tableNumber || "").trim();
   if (!rawTable || rawTable === "-") {
     const tableMatch = (order.content || "").match(/(?:桌號|Bàn)[：:\s]*([^\n\r,，()（）]+)/i) ||
-                       (order.note || "").match(/(?:桌號|Bàn)[：:\s]*([^\n\r,，()（）]+)/i);
+      (order.note || "").match(/(?:桌號|Bàn)[：:\s]*([^\n\r,，()（）]+)/i);
     if (tableMatch) rawTable = tableMatch[1].trim();
   }
 
@@ -1601,7 +1601,7 @@ export async function handleLineWebhook(
               order.reason = "";
               order.note = "";
               order.status = "NEW"; // Tái xuất hiện thông báo đơn mới trên Dashboard với giờ mới để quán bấm nhận
-              
+
               const liffUrl = tenantCtx?.liffUrl || (await resolveSecret(env.LIFF_URL)) || "https://liff.line.me/";
               const confirmedFlex = createTimeChangeConfirmedFlexBubble(order.key, newSuggestedTime, liffUrl, brandName);
               await replyLineFlexMessage(replyToken, `訂單 #${order.key} 已確認修改！`, confirmedFlex, env, tenantCtx);
