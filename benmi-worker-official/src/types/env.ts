@@ -8,6 +8,7 @@ export interface Env {
 
   // Secrets & Env Variables (Fallback for primary/legacy tenant)
   LINE_CHANNEL_TOKEN?: any;
+  LINE_TOKEN_BSC?: any;
   LINE_CHANNEL_ACCESS_TOKEN?: string;
   LIFF_ID?: string;
   LIFF_URL?: string;
