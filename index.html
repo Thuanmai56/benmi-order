@@ -30,6 +30,30 @@
 </head>
 
 <body>
+    <div id="desktop-auth-bar" class="desktop-auth-bar" style="display: none;">
+        <div class="desktop-auth-inner">
+            <div class="desktop-auth-user" id="desktop-auth-logged-in" style="display: none;">
+                <img id="desktop-user-avatar" src="" alt="Avatar" class="desktop-user-avatar" style="display: none;">
+                <div id="desktop-user-placeholder-icon" class="desktop-user-placeholder">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                </div>
+                <span id="desktop-user-name" class="desktop-user-name">顧客</span>
+                <span class="desktop-auth-badge">已登入</span>
+            </div>
+            <div class="desktop-auth-prompt" id="desktop-auth-logged-out" style="display: flex;">
+                <span class="desktop-auth-text">請先登入 LINE 帳號以開始選購餐點</span>
+                <button type="button" class="btn-line-login" onclick="triggerDesktopLineLogin()">
+                    <svg class="line-btn-svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M24 10.304c0-5.369-5.383-9.738-12-9.738-6.616 0-12 4.369-12 9.738 0 4.814 4.269 8.846 10.036 9.608.391.084.922.258 1.057.592.121.303.079.778.039 1.085l-.171 1.027c-.053.303-.242 1.186 1.039.647 1.281-.54 6.911-4.069 9.428-6.967 1.739-1.907 2.572-3.843 2.572-5.992z"/>
+                    </svg>
+                    <span>LINE 帳號登入</span>
+                </button>
+            </div>
+        </div>
+    </div>
     <div class="store-header" id="store-header-box">
         <div class="store-header-top">
             <div class="store-logo-wrapper" id="store-logo-wrapper" style="display: none;">
@@ -141,8 +165,10 @@
         })();
     </script>
 
-    <!-- Dine-In Append Mode Banner -->
-    <div id="append-mode-banner" class="append-mode-banner" style="display: none;">
+    <!-- Page Body Wrapper (Blurred on desktop when guest) -->
+    <div id="page-body-content" class="page-body-content">
+        <!-- Dine-In Append Mode Banner -->
+        <div id="append-mode-banner" class="append-mode-banner" style="display: none;">
         <span class="append-mode-icon">🍽️</span>
         <div style="flex: 1;">
             <div id="append-mode-title" style="font-weight: 900; font-size: 15px; letter-spacing: 0.2px;">正在加點餐點</div>
@@ -187,12 +213,16 @@
     <nav class="sticky-nav" id="main-nav"></nav>
 
     <div class="container">
-        <!-- Catalog Container -->
-        <div id="catalog-sections">
-            <div id="catalog-loading" style="text-align: center; padding: 48px 0; color: #9ca3af; font-size: 15px;">
-                <div style="display:inline-block; width:30px; height:30px; border:3px solid #e5e7eb; border-top-color:var(--primary); border-radius:50%; animation: spin 0.8s linear infinite; margin-bottom:10px;"></div>
-                <div>載入菜單中...</div>
+        <!-- Catalog Container with Guest Lock Wrapper -->
+        <div class="catalog-sections-wrapper" id="catalog-sections-wrapper">
+            <div id="catalog-sections">
+                <div id="catalog-loading" style="text-align: center; padding: 48px 0; color: #9ca3af; font-size: 15px;">
+                    <div style="display:inline-block; width:30px; height:30px; border:3px solid #e5e7eb; border-top-color:var(--primary); border-radius:50%; animation: spin 0.8s linear infinite; margin-bottom:10px;"></div>
+                    <div>載入菜單中...</div>
+                </div>
             </div>
+            <!-- Click Interceptor Layer for Desktop Guest Users -->
+            <div id="catalog-locked-click-layer" class="catalog-locked-click-layer" style="display: none;" onclick="triggerDesktopLineLogin()"></div>
         </div>
 
         <!-- Checkout Section -->
@@ -303,6 +333,7 @@
             <button class="btn-send" id="btn-submit" onclick="handleFooterAction()">前往結帳 ➔</button>
         </div>
     </div>
+    </div><!-- /page-body-content -->
 
     <div id="custom-alert" class="custom-alert-overlay">
         <div class="custom-alert-box">
@@ -316,6 +347,20 @@
         onclick="closeImageLightbox()">
         <img id="lightbox-img" src=""
             style="max-width: 90%; max-height: 90%; border-radius: 16px; object-fit: contain; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+    </div>
+
+    <!-- Desktop Mobile-Only QR Code Modal -->
+    <div id="desktop-qr-modal" class="custom-alert-overlay" style="display:none; z-index: 2500;">
+        <div class="custom-alert-box" style="max-width: 380px; text-align: center; padding: 24px 20px;">
+            <div style="font-size: 20px; font-weight: 900; color: #1e293b; margin-bottom: 8px;">請使用手機 LINE 掃碼點餐</div>
+            <div style="font-size: 14px; color: #64748b; margin-bottom: 18px; line-height: 1.5;">
+                為了確保能即時接收製作進度通知與優惠，本門市僅支援手機 LINE 點餐。
+            </div>
+            <div id="desktop-qr-container" style="display: flex; justify-content: center; margin-bottom: 16px;">
+                <img id="desktop-qr-img" src="" alt="QR Code" style="width: 180px; height: 180px; border-radius: 12px; border: 1px solid #e2e8f0; padding: 6px; background: #fff;">
+            </div>
+            <button class="custom-alert-btn" onclick="closeDesktopQrModal()" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1;">關閉</button>
+        </div>
     </div>
 
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -354,9 +399,10 @@
                     const queryPart = decoded.includes('?') ? decoded.split('?')[1] : decoded;
                     const stateParams = new URLSearchParams(queryPart);
                     if (stateParams.has('tenant_id')) return stateParams.get('tenant_id');
+                    if (stateParams.has('tenant')) return stateParams.get('tenant');
                 } catch(e) {}
             }
-            return params.get("tenant_id") || "benmi";
+            return params.get("tenant_id") || params.get("tenant") || "benmi";
         }
 
         // State
@@ -590,6 +636,12 @@
         function scrollToSec(id) {
             const el = document.getElementById(id);
             if (el) el.scrollIntoView({ behavior: 'smooth' });
+            const targetBtn = document.querySelector(`.nav-btn[onclick="scrollToSec('${id}')"]`);
+            if (targetBtn) {
+                document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+                targetBtn.classList.add('active');
+                targetBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            }
         }
 
         const observerOptions = { root: null, rootMargin: '-80px 0px -70% 0px', threshold: 0 };
@@ -600,8 +652,7 @@
                     const targetBtn = document.querySelector(`.nav-btn[onclick="scrollToSec('${entry.target.id}')"]`);
                     if (targetBtn) {
                         targetBtn.classList.add('active');
-                        const nav = document.getElementById('main-nav');
-                        if (nav) nav.scrollTo({ left: targetBtn.offsetLeft - 20, behavior: 'smooth' });
+                        targetBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
                     }
                 }
             });
@@ -656,15 +707,40 @@
             if (lightbox) lightbox.style.display = 'none';
         }
 
+        function closeDesktopQrModal() {
+            const modal = document.getElementById('desktop-qr-modal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function openDesktopQrModal() {
+            const modal = document.getElementById('desktop-qr-modal');
+            const qrImg = document.getElementById('desktop-qr-img');
+            if (qrImg) {
+                const currentUrl = encodeURIComponent(window.location.href);
+                qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${currentUrl}`;
+            }
+            if (modal) modal.style.display = 'flex';
+        }
+
         // --- DYNAMIC CATALOG RENDERING (UNIFIED FOR ALL TENANTS) ---
         function renderDynamicCatalog() {
             if (!bootstrapData || !bootstrapData.catalog) return;
 
+            const hasCustomizations = (Array.isArray(bootstrapData.customizations) && bootstrapData.customizations.length > 0);
+
             // 1. Navigation Tabs
             const nav = document.getElementById('main-nav');
             let navHTML = '';
+
+            const hasFlavorInCatalog = bootstrapData.catalog.some(c => c.slug === 'sec-flavor' || c.slug === 'flavor' || c.categoryType === 'order_customization');
+            if (hasCustomizations && !hasFlavorInCatalog) {
+                navHTML += `<div class="nav-btn active" onclick="scrollToSec('sec-flavor')">口味選擇</div>`;
+            }
+
             bootstrapData.catalog.forEach((cat, idx) => {
-                navHTML += `<div class="nav-btn ${idx === 0 ? 'active' : ''}" onclick="scrollToSec('sec-${cat.slug}')">${cat.name}</div>`;
+                const isActive = (!hasCustomizations && idx === 0) || (hasFlavorInCatalog && idx === 0);
+                const navTitle = cat.shortName || cat.name;
+                navHTML += `<div class="nav-btn ${isActive ? 'active' : ''}" onclick="scrollToSec('sec-${cat.slug}')">${navTitle}</div>`;
             });
             navHTML += `<div class="nav-btn" onclick="scrollToSec('sec-checkout')">結帳</div>`;
             nav.innerHTML = navHTML;
@@ -673,29 +749,143 @@
             const container = document.getElementById('catalog-sections');
             container.innerHTML = '';
 
+            if (hasCustomizations && !hasFlavorInCatalog) {
+                const flavorSec = document.createElement('div');
+                flavorSec.className = 'section-container';
+                flavorSec.id = 'sec-flavor';
+                renderCustomizationsPanel(flavorSec, bootstrapData.customizations);
+                container.appendChild(flavorSec);
+            }
+
             bootstrapData.catalog.forEach(cat => {
                 const sec = document.createElement('div');
                 sec.className = 'section-container';
                 sec.id = `sec-${cat.slug}`;
 
-                const titleDiv = document.createElement('div');
-                titleDiv.className = 'section-title';
-                titleDiv.innerText = cat.name;
-                sec.appendChild(titleDiv);
+                if (cat.slug === 'sec-flavor' || cat.slug === 'flavor' || cat.categoryType === 'order_customization') {
+                    renderCustomizationsPanel(sec, bootstrapData.customizations || []);
+                } else {
+                    const titleDiv = document.createElement('div');
+                    titleDiv.className = 'section-title';
+                    titleDiv.innerText = cat.name;
+                    sec.appendChild(titleDiv);
 
-                const gridDiv = document.createElement('div');
-                gridDiv.className = 'grid';
-                gridDiv.id = `grid-${cat.slug}`;
+                    const gridDiv = document.createElement('div');
+                    gridDiv.className = 'grid';
+                    gridDiv.id = `grid-${cat.slug}`;
 
-                cat.items.forEach(item => {
-                    gridDiv.appendChild(createDynamicItemCard(cat.slug, item));
-                });
+                    (cat.items || []).forEach(item => {
+                        gridDiv.appendChild(createDynamicItemCard(cat.slug, item));
+                    });
 
-                sec.appendChild(gridDiv);
+                    sec.appendChild(gridDiv);
+                }
                 container.appendChild(sec);
             });
 
             document.querySelectorAll('.section-container').forEach(sec => observer.observe(sec));
+            updateDesktopAuthUI();
+        }
+
+        function renderCustomizationsPanel(container, list) {
+            if (!container || !list || list.length === 0) return;
+            const escapeHtml = (str) => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+            let html = `<div class="section-title">口味與客製化選擇</div>
+            <div class="custom-panel-wrapper">
+            <div class="custom-panel">`;
+
+            list.forEach((group, groupIdx) => {
+                const topMargin = groupIdx > 0 ? 'margin-top: 16px; border-top: 1px dashed #f1f5f9; padding-top: 14px;' : '';
+                html += `<div class="custom-group" style="${topMargin}">
+                    <label class="custom-label">${escapeHtml(group.title)}</label>
+                    <div class="custom-options-grid">`;
+
+                (group.options || []).forEach((opt, optIdx) => {
+                    const optName = typeof opt === 'string' ? opt : (opt ? opt.name || '' : '');
+                    const optPrice = (typeof opt === 'object' && opt && opt.price) ? Number(opt.price) : 0;
+                    const isOos = Boolean(typeof opt === 'object' && opt && (opt.is_out_of_stock || opt.isOutOfStock || opt.out_of_stock));
+                    const subOpts = (typeof opt === 'object' && opt && Array.isArray(opt.sub_options)) ? opt.sub_options : [];
+                    const inputName = `opt-${group.key}`;
+                    const isChecked = (group.type === 'radio' && !isOos) ? (optIdx === 0 ? 'checked' : '') : '';
+                    const priceLabel = optPrice > 0 ? ` (+<span style="color:#059669; font-weight:800;">$${optPrice}</span>)` : '';
+                    const oosBadge = isOos ? ` <span class="oos-badge" style="color:#dc2626; font-size:12px; font-weight:900; text-decoration:none;">(已售完)</span>` : '';
+                    const disabledAttr = isOos ? 'disabled' : '';
+                    const oosStyle = isOos ? 'style="opacity: 0.5; pointer-events: none; text-decoration: line-through; color: #94a3b8;"' : '';
+
+                    if (group.type === 'radio') {
+                        html += `<div class="flavor-option-container">
+                            <label class="radio-label" ${oosStyle}>
+                                <input type="radio" name="${inputName}" value="${escapeHtml(optName)}" ${isChecked} ${disabledAttr} onchange="handleCustomizationChange()"> 
+                                <span>${escapeHtml(optName)}${priceLabel}</span>${oosBadge}
+                            </label>`;
+
+                        if (subOpts.length > 0) {
+                            html += `<div class="sub-option-container" data-parent-flavor="${escapeHtml(optName)}" style="display: ${(optIdx === 0 && !isOos) ? 'flex' : 'none'};">`;
+                            subOpts.forEach((sub) => {
+                                html += `<label class="checkbox-label sub-chip">
+                                    <input type="checkbox" class="sub-opt-chk" data-flavor="${escapeHtml(optName)}" value="${escapeHtml(sub)}" onchange="handleCustomizationChange()"> 
+                                    <span>${escapeHtml(sub)}</span>
+                                </label>`;
+                            });
+                            html += `</div>`;
+                        }
+                        html += `</div>`;
+                    } else {
+                        html += `<label class="checkbox-label" ${oosStyle}>
+                            <input type="checkbox" name="${inputName}" data-price="${optPrice}" value="${escapeHtml(optName)}" ${disabledAttr} onchange="handleCustomizationChange()"> 
+                            <span>${escapeHtml(optName)}${priceLabel}</span>${oosBadge}
+                        </label>`;
+                    }
+                });
+
+                html += `</div>`; // Close .custom-options-grid
+                html += `</div>`; // Close .custom-group
+            });
+
+            html += `</div>`; // Close .custom-panel
+
+            // Frosted glass lock overlay for desktop guest users
+            html += `<div class="custom-panel-lock-overlay" style="display: none;" onclick="triggerDesktopLineLogin()">
+                <div class="lock-badge-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                </div>
+                <p class="lock-badge-title">請先登入 LINE 帳號以自訂餐點口味</p>
+                <button type="button" class="lock-badge-btn">
+                    <svg class="line-btn-svg" width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M24 10.304c0-5.369-5.383-9.738-12-9.738-6.616 0-12 4.369-12 9.738 0 4.814 4.269 8.846 10.036 9.608.391.084.922.258 1.057.592.121.303.079.778.039 1.085l-.171 1.027c-.053.303-.242 1.186 1.039.647 1.281-.54 6.911-4.069 9.428-6.967 1.739-1.907 2.572-3.843 2.572-5.992z"/>
+                    </svg>
+                    <span>使用 LINE 登入</span>
+                </button>
+            </div>`;
+
+            html += `</div>`; // Close .custom-panel-wrapper
+            container.innerHTML = html;
+            toggleFlavorSubOptions();
+        }
+
+        function handleCustomizationChange() {
+            if (!checkDesktopAuthGuard()) return;
+            toggleFlavorSubOptions();
+            if (typeof updateTotal === 'function') updateTotal();
+        }
+
+        function toggleFlavorSubOptions() {
+            const selectedFlavorEl = document.querySelector('input[name="opt-flavor"]:checked');
+            const selectedVal = selectedFlavorEl ? selectedFlavorEl.value : '';
+
+            document.querySelectorAll('.sub-option-container').forEach(el => {
+                const parentFlavor = el.getAttribute('data-parent-flavor');
+                if (parentFlavor === selectedVal) {
+                    el.style.display = 'flex';
+                } else {
+                    el.style.display = 'none';
+                    el.querySelectorAll('input[type="checkbox"]').forEach(chk => chk.checked = false);
+                }
+            });
         }
 
         function createDynamicItemCard(catSlug, item) {
@@ -816,7 +1006,159 @@
             };
         }
 
+        function resolveCatalogItem(key) {
+            const { catSlug, origName } = parseCartKey(key);
+            let targetCat = null;
+            let targetItem = null;
+
+            if (typeof bootstrapData !== 'undefined' && bootstrapData?.catalog) {
+                if (catSlug) {
+                    targetCat = bootstrapData.catalog.find(c => c.slug === catSlug);
+                    if (targetCat?.items) {
+                        targetItem = targetCat.items.find(it => it.name === origName || it.id === key);
+                    }
+                }
+                if (!targetItem) {
+                    for (const cat of bootstrapData.catalog) {
+                        if (cat.items) {
+                            const it = cat.items.find(i => i.name === origName || i.id === key);
+                            if (it) {
+                                targetItem = it;
+                                targetCat = cat;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            let displayName = origName;
+            if (targetCat) {
+                // Strip emoji icons from category name
+                const rawCatName = targetCat.name || '';
+                const catNameClean = rawCatName.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F000}-\u{1F02F}\u{1F0A0}-\u{1F0FF}\u{1F100}-\u{1F64F}\u{1F680}-\u{1F6FF}]/gu, '').trim();
+                const slug = (targetCat.slug || '').toLowerCase();
+
+                let sizeTag = '';
+                if (slug === 'large' || slug === 'big' || slug === 'l' || /(^|\s|[\(\[\{（【])(大|大份|大碗|大麵包|large|big)($|\s|[\)\]\}）】])/i.test(catNameClean) || catNameClean.startsWith('大')) {
+                    sizeTag = ' L';
+                } else if (slug === 'small' || slug === 's' || slug === 'mini' || /(^|\s|[\(\[\{（【])(小|小份|小碗|小麵包|small|mini)($|\s|[\)\]\}）】])/i.test(catNameClean) || catNameClean.startsWith('小')) {
+                    sizeTag = ' S';
+                } else if (slug === 'medium' || slug === 'm' || /(^|\s|[\(\[\{（【])(中|中份|中碗|medium)($|\s|[\)\]\}）】])/i.test(catNameClean) || catNameClean.startsWith('中')) {
+                    sizeTag = ' M';
+                }
+
+                let nameCount = 0;
+                if (bootstrapData?.catalog) {
+                    for (const cat of bootstrapData.catalog) {
+                        if (cat.items?.some(it => it.name === origName)) nameCount++;
+                    }
+                }
+
+                if (sizeTag && !origName.includes(' L') && !origName.includes(' S') && !origName.includes(' M') && !origName.startsWith('大') && !origName.startsWith('小')) {
+                    displayName = `${origName}${sizeTag}`;
+                } else if (nameCount > 1 && catNameClean && !origName.includes(catNameClean)) {
+                    const shortClean = catNameClean.split(/[\s\(\[\{（【]/)[0].trim();
+                    displayName = `[${shortClean}] ${origName}`;
+                }
+            }
+
+            return {
+                catSlug,
+                origName,
+                displayName,
+                targetCat,
+                targetItem,
+                basePrice: Number(targetItem?.price) || 0,
+                categoryName: targetCat?.name || catSlug || "Món",
+                itemId: targetItem?.id || key
+            };
+        }
+
+        function isDesktopOutsideLiff() {
+            return typeof liff !== 'undefined' && liff.isInClient && !liff.isInClient();
+        }
+
+        function checkDesktopAuthGuard() {
+            if (isDesktopOutsideLiff() && typeof liff !== 'undefined' && liff.isLoggedIn && !liff.isLoggedIn()) {
+                openDesktopLoginModal();
+                return false;
+            }
+            return true;
+        }
+
+        function openDesktopLoginModal() {
+            const modal = document.getElementById('desktop-center-auth-overlay');
+            if (modal) modal.style.display = 'flex';
+        }
+
+        function closeDesktopLoginModal() {
+            const modal = document.getElementById('desktop-center-auth-overlay');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function triggerDesktopLineLogin() {
+            if (typeof liff !== 'undefined' && liff.login) {
+                const tenantId = getTenantIdFromUrl();
+                const storageKey = `cart_save_${tenantId}`;
+                try {
+                    localStorage.setItem(storageKey, JSON.stringify({ cart, customizeData, comboDrinkData }));
+                } catch(e) {}
+                liff.login({ redirectUri: window.location.href });
+            }
+        }
+
+        async function updateDesktopAuthUI() {
+            const bar = document.getElementById('desktop-auth-bar');
+            const centerOverlay = document.getElementById('desktop-center-auth-overlay');
+            const pageBody = document.getElementById('page-body-content');
+
+            if (!isDesktopOutsideLiff()) {
+                if (bar) bar.style.display = 'none';
+                if (centerOverlay) centerOverlay.style.display = 'none';
+                if (pageBody) pageBody.classList.remove('desktop-guest-locked');
+                return;
+            }
+
+            const loggedInEl = document.getElementById('desktop-auth-logged-in');
+            const loggedOutEl = document.getElementById('desktop-auth-logged-out');
+
+            if (typeof liff !== 'undefined' && liff.isLoggedIn && liff.isLoggedIn()) {
+                // User is LOGGED IN on desktop -> Show clean top header bar with profile, unlock entire page, hide center overlay
+                if (bar) bar.style.display = 'block';
+                if (loggedOutEl) loggedOutEl.style.display = 'none';
+                if (loggedInEl) loggedInEl.style.display = 'flex';
+                if (centerOverlay) centerOverlay.style.display = 'none';
+                if (pageBody) pageBody.classList.remove('desktop-guest-locked');
+
+                try {
+                    const profile = await liff.getProfile();
+                    if (profile) {
+                        const nameEl = document.getElementById('desktop-user-name');
+                        if (nameEl) nameEl.innerText = profile.displayName || '顧客';
+                        const avatarEl = document.getElementById('desktop-user-avatar');
+                        const placeholderEl = document.getElementById('desktop-user-placeholder-icon');
+                        if (profile.pictureUrl && avatarEl) {
+                            avatarEl.src = profile.pictureUrl;
+                            avatarEl.style.display = 'inline-block';
+                            if (placeholderEl) placeholderEl.style.display = 'none';
+                        }
+                    }
+                } catch(e) {}
+            } else {
+                // User is GUEST on desktop -> Hide top bar, lock & blur entire page below header, show prominent center login card
+                if (bar) bar.style.display = 'none';
+                if (loggedInEl) loggedInEl.style.display = 'none';
+                if (loggedOutEl) loggedOutEl.style.display = 'none';
+                if (centerOverlay) centerOverlay.style.display = 'flex';
+                if (pageBody) pageBody.classList.add('desktop-guest-locked');
+            }
+        }
+
         function updateQty(category, origName, change) {
+            if (change > 0 && !checkDesktopAuthGuard()) {
+                return;
+            }
             const key = category + '_' + origName;
             cart[key] = (cart[key] || 0) + change;
             if (cart[key] < 0) cart[key] = 0;
@@ -845,6 +1187,55 @@
             let summaryHTML = '';
             const zhNumbers = ['第一份', '第二份', '第三份', '第四份', '第五份', '第六份', '第七份', '第八份', '第九份', '第十份'];
 
+            // 1. Tóm tắt 口味與客製化設定
+            let customSummaries = [];
+            if (bootstrapData?.customizations && bootstrapData.customizations.length > 0) {
+                bootstrapData.customizations.forEach(group => {
+                    const inputName = `opt-${group.key}`;
+                    if (group.type === 'radio') {
+                        const checkedRadio = document.querySelector(`input[name="${inputName}"]:checked`);
+                        if (checkedRadio) {
+                            const val = checkedRadio.value;
+                            let subDetails = '';
+                            const activeSubContainer = document.querySelector(`.sub-option-container[data-parent-flavor="${val}"]`);
+                            if (activeSubContainer) {
+                                let subOpts = [];
+                                activeSubContainer.querySelectorAll('input.sub-opt-chk:checked').forEach(chk => {
+                                    subOpts.push(chk.value);
+                                });
+                                if (subOpts.length > 0) {
+                                    subDetails = ` (${subOpts.join('、')})`;
+                                }
+                            }
+                            const groupTitle = (group.title || '').replace(/^✦\s*/, '');
+                            customSummaries.push(`<div><b style="color:#1e293b;">${groupTitle}：</b>${val}${subDetails}</div>`);
+                        }
+                    } else if (group.type === 'checkbox') {
+                        let selectedChecks = [];
+                        document.querySelectorAll(`input[name="${inputName}"]:checked`).forEach(chk => {
+                            const p = Number(chk.getAttribute('data-price')) || 0;
+                            if (p === 0) {
+                                selectedChecks.push(chk.value);
+                            }
+                        });
+                        if (selectedChecks.length > 0) {
+                            const groupTitle = (group.title || '').replace(/^✦\s*/, '');
+                            customSummaries.push(`<div><b style="color:#1e293b;">${groupTitle}：</b>${selectedChecks.join('、')}</div>`);
+                        }
+                    }
+                });
+            }
+
+            if (customSummaries.length > 0) {
+                summaryHTML += `
+                    <div style="margin-bottom: 14px; padding: 10px 14px; background: #f8fafc; border-radius: 12px; border: 1px dashed #cbd5e1; font-size: 13.5px; color: #475569; line-height: 1.6;">
+                        <div style="font-weight: 800; color: #0f172a; margin-bottom: 4px; font-size: 14px;">⚙️ 客製化設定</div>
+                        <div style="display: flex; flex-direction: column; gap: 2px;">${customSummaries.join('')}</div>
+                    </div>
+                    <div style="border-bottom: 1px dashed #e2e8f0; margin-bottom: 12px;"></div>
+                `;
+            }
+
             const priceMap = {};
             if (bootstrapData?.catalog) {
                 bootstrapData.catalog.forEach(cat => {
@@ -860,11 +1251,13 @@
 
             for (let key in cart) {
                 if (cart[key] > 0) {
+                    const itemInfo = resolveCatalogItem(key);
                     const { catSlug, itemName } = parseCartKey(key);
+                    const displayName = itemInfo.displayName || itemName;
                     const qty = cart[key];
                     totalQty += qty;
 
-                    const itemBasePrice = priceMap[key] || 0;
+                    const itemBasePrice = itemInfo.basePrice || priceMap[key] || 0;
                     let itemModifiersTotal = 0;
                     let portionsHTML = '';
 
@@ -911,7 +1304,7 @@
 
                     summaryHTML += `
                         <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                            <div style="font-weight:800; color: #111;">${qty}x ${itemName}</div>
+                            <div style="font-weight:800; color: #111;">${qty}x ${displayName}</div>
                             <div style="font-weight:700;">$${lineTotal}</div>
                         </div>
                     `;
@@ -930,12 +1323,29 @@
                 }
             }
 
+            // Add Global Customization Addons if selected
+            let addonsTotal = 0;
+            const checkedAddons = document.querySelectorAll('.custom-panel input[type="checkbox"]:checked');
+            checkedAddons.forEach(chk => {
+                const p = Number(chk.getAttribute('data-price')) || 0;
+                if (p > 0) {
+                    addonsTotal += p;
+                    summaryHTML += `
+                        <div style="display:flex; justify-content:space-between; margin-bottom:6px; color:#059669; font-size:13.5px; font-weight:700;">
+                            <div>+ 加購：${chk.value}</div>
+                            <div>+$${p}</div>
+                        </div>
+                    `;
+                }
+            });
+            total += addonsTotal;
+
             const totalEl = document.getElementById('total-price');
             if (totalEl) totalEl.innerText = total;
 
             const summaryContainer = document.getElementById('cart-summary');
             if (summaryContainer) {
-                if (totalQty === 0) {
+                if (totalQty === 0 && addonsTotal === 0) {
                     summaryContainer.innerHTML = '<div style="text-align:center; color:#9ca3af;">(目前沒有已選商品)</div>';
                 } else {
                     summaryHTML += `<div style="display:flex; justify-content:space-between; font-weight:900; margin-top:12px; font-size:16px;">
@@ -1011,6 +1421,7 @@
 
         // --- CUSTOMIZE POPUP (SCHEMA-DRIVEN MODIFIERS POPUP) ---
         function toggleCustomize(category, origName) {
+            if (!checkDesktopAuthGuard()) return;
             const key = category + '_' + origName;
             const qty = cart[key];
             if (!qty) return;
@@ -1392,6 +1803,11 @@
             } catch(e) {
                 console.error("LIFF Init Error", e);
             }
+            try {
+                await updateDesktopAuthUI();
+            } catch (authUiErr) {
+                console.warn("Desktop Auth UI update error:", authUiErr);
+            }
             renderDynamicCatalog();
             renderStoreOperatingHours();
             if (typeof initAppendModeIfPresent === 'function') {
@@ -1466,7 +1882,27 @@
 
         initApp();
     </script>
-    <script src="js/client-checkout.js?v=20260824_modifier_prefix_fix_1"></script>
+    <!-- Center Auth Card & Overlay for Desktop Guest Users -->
+    <div id="desktop-center-auth-overlay" class="desktop-center-auth-overlay" style="display: none;">
+        <div class="desktop-center-auth-backdrop" onclick="triggerDesktopLineLogin()"></div>
+        <div class="desktop-center-auth-card">
+            <div class="center-auth-icon-circle">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#06C755" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+            </div>
+            <h2 class="center-auth-title">請登入 LINE 帳號開始點餐</h2>
+            <p class="center-auth-desc">登入後即可自訂餐點口味、加入購物車並即時接收餐點製作與取餐通知。</p>
+            <button type="button" class="btn-center-line-login" onclick="triggerDesktopLineLogin()">
+                <svg class="line-btn-svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M24 10.304c0-5.369-5.383-9.738-12-9.738-6.616 0-12 4.369-12 9.738 0 4.814 4.269 8.846 10.036 9.608.391.084.922.258 1.057.592.121.303.079.778.039 1.085l-.171 1.027c-.053.303-.242 1.186 1.039.647 1.281-.54 6.911-4.069 9.428-6.967 1.739-1.907 2.572-3.843 2.572-5.992z"/>
+                </svg>
+                <span>使用 LINE 帳號一鍵登入</span>
+            </button>
+        </div>
+    </div>
+    <script src="js/client-checkout.js?v=20260825_size_tag_fix_2"></script>
 </body>
 
 </html>

@@ -173,6 +173,9 @@ function updateFooterButtonState() {
 
 // 3. Xử lý hành vi bấm nút chân trang 2 bước
 function handleFooterAction() {
+    if (typeof checkDesktopAuthGuard === 'function' && !checkDesktopAuthGuard()) {
+        return;
+    }
     const hasItem = Object.values(cart || {}).some(q => q > 0);
     if (!hasItem) return customAlert('請先選擇餐點品項加入購物車');
 
@@ -345,15 +348,126 @@ function parseCartKey(key) {
     };
 }
 
+function resolveCatalogItem(key) {
+    const { catSlug, origName } = parseCartKey(key);
+    let targetCat = null;
+    let targetItem = null;
+
+    if (typeof bootstrapData !== 'undefined' && bootstrapData?.catalog) {
+        if (catSlug) {
+            targetCat = bootstrapData.catalog.find(c => c.slug === catSlug);
+            if (targetCat?.items) {
+                targetItem = targetCat.items.find(it => it.name === origName || it.id === key);
+            }
+        }
+        if (!targetItem) {
+            for (const cat of bootstrapData.catalog) {
+                if (cat.items) {
+                    const it = cat.items.find(i => i.name === origName || i.id === key);
+                    if (it) {
+                        targetItem = it;
+                        targetCat = cat;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    let displayName = origName;
+    if (targetCat) {
+        // Strip emoji icons from category name
+        const rawCatName = targetCat.name || '';
+        const catNameClean = rawCatName.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F000}-\u{1F02F}\u{1F0A0}-\u{1F0FF}\u{1F100}-\u{1F64F}\u{1F680}-\u{1F6FF}]/gu, '').trim();
+        const slug = (targetCat.slug || '').toLowerCase();
+
+        let sizeTag = '';
+        if (slug === 'large' || slug === 'big' || slug === 'l' || /(^|\s|[\(\[\{（【])(大|大份|大碗|大麵包|large|big)($|\s|[\)\]\}）】])/i.test(catNameClean) || catNameClean.startsWith('大')) {
+            sizeTag = ' L';
+        } else if (slug === 'small' || slug === 's' || slug === 'mini' || /(^|\s|[\(\[\{（【])(小|小份|小碗|小麵包|small|mini)($|\s|[\)\]\}）】])/i.test(catNameClean) || catNameClean.startsWith('小')) {
+            sizeTag = ' S';
+        } else if (slug === 'medium' || slug === 'm' || /(^|\s|[\(\[\{（【])(中|中份|中碗|medium)($|\s|[\)\]\}）】])/i.test(catNameClean) || catNameClean.startsWith('中')) {
+            sizeTag = ' M';
+        }
+
+        let nameCount = 0;
+        if (bootstrapData?.catalog) {
+            for (const cat of bootstrapData.catalog) {
+                if (cat.items?.some(it => it.name === origName)) nameCount++;
+            }
+        }
+
+        if (sizeTag && !origName.includes(' L') && !origName.includes(' S') && !origName.includes(' M') && !origName.startsWith('大') && !origName.startsWith('小')) {
+            displayName = `${origName}${sizeTag}`;
+        } else if (nameCount > 1 && catNameClean && !origName.includes(catNameClean)) {
+            const shortClean = catNameClean.split(/[\s\(\[\{（【]/)[0].trim();
+            displayName = `[${shortClean}] ${origName}`;
+        }
+    }
+
+    return {
+        catSlug,
+        origName,
+        displayName,
+        targetCat,
+        targetItem,
+        basePrice: Number(targetItem?.price) || 0,
+        categoryName: targetCat?.name || catSlug || "Món",
+        itemId: targetItem?.id || key
+    };
+}
+
+function formatGlobalCustomizationsText() {
+    if (typeof bootstrapData === 'undefined' || !bootstrapData || !bootstrapData.customizations || bootstrapData.customizations.length === 0) return "";
+    const parts = [];
+
+    bootstrapData.customizations.forEach(group => {
+        if (group.type === 'radio') {
+            const checkedRadio = document.querySelector(`input[name="opt-${group.key}"]:checked`);
+            if (checkedRadio) {
+                const val = checkedRadio.value;
+                const subOpts = [];
+                const subContainer = document.querySelector(`.sub-option-container[data-parent-flavor="${val}"]`);
+                if (subContainer) {
+                    subContainer.querySelectorAll('input.sub-opt-chk:checked').forEach(chk => {
+                        subOpts.push(chk.value);
+                    });
+                }
+                const subPart = subOpts.length > 0 ? ` (${subOpts.join('、')})` : '';
+                parts.push(`${group.title.replace(/^✦\s*/, '')}：${val}${subPart}`);
+            }
+        } else if (group.type === 'checkbox') {
+            const checkedBoxes = Array.from(document.querySelectorAll(`input[name="opt-${group.key}"]:checked`));
+            if (checkedBoxes.length > 0) {
+                const boxVals = checkedBoxes.map(chk => {
+                    const p = Number(chk.getAttribute('data-price')) || 0;
+                    return p > 0 ? `${chk.value}(+$${p})` : chk.value;
+                });
+                parts.push(`${group.title.replace(/^✦\s*/, '')}：${boxVals.join('、')}`);
+            }
+        }
+    });
+
+    return parts.length > 0 ? `【${parts.join(' | ')}】` : "";
+}
+
 // 8.1 Định dạng nội dung tin nhắn đơn hàng
 function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, mainNote) {
     const zhNumbers = ['第一份', '第二份', '第三份', '第四份', '第五份', '第六份', '第七份', '第八份', '第九份', '第十份'];
-    let msg = `[${document.getElementById('store-name')?.innerText || '線上'} 點餐]\n訂單編號：${orderNum}\n📦 訂單內容：\n`;
+    let msg = `[${document.getElementById('store-name')?.innerText || '線上'} 點餐]\n訂單編號：${orderNum}\n`;
+
+    const globalFlavor = formatGlobalCustomizationsText();
+    if (globalFlavor) {
+        msg += `🧪 口味設定：${globalFlavor}\n`;
+    }
+
+    msg += `📦 訂單內容：\n`;
 
     for (let key in cart) {
         if (cart[key] > 0) {
-            const { catSlug, origName } = parseCartKey(key);
-            msg += `\n${cart[key]}份 x ${origName}`;
+            const itemInfo = resolveCatalogItem(key);
+            const { catSlug, origName, displayName } = itemInfo;
+            msg += `\n${cart[key]}份 x ${displayName}`;
 
             if (catSlug === 'combo') {
                 let drinks = comboDrinkData[origName] || [];
@@ -426,8 +540,9 @@ function formatAppendItemsOnlyText() {
     const lines = [];
     for (let key in cart) {
         if (cart[key] > 0) {
-            const { catSlug, origName } = parseCartKey(key);
-            lines.push(`${cart[key]}份 x ${origName}`);
+            const itemInfo = resolveCatalogItem(key);
+            const { catSlug, origName, displayName } = itemInfo;
+            lines.push(`${cart[key]}份 x ${displayName}`);
 
             if (catSlug === 'combo') {
                 let drinks = comboDrinkData[origName] || [];
@@ -479,24 +594,9 @@ function buildStructuredCartItems() {
     const items = [];
     for (let key in cart) {
         if (cart[key] > 0) {
-            const { catSlug, origName } = parseCartKey(key);
+            const itemInfo = resolveCatalogItem(key);
+            const { catSlug, origName, displayName, basePrice, categoryName, itemId } = itemInfo;
             const qty = cart[key];
-            
-            let basePrice = 0;
-            let categoryName = catSlug || "Món";
-            if (typeof bootstrapData !== 'undefined' && bootstrapData && bootstrapData.catalog) {
-                for (const cat of bootstrapData.catalog) {
-                    if (cat.items) {
-                        for (const itm of cat.items) {
-                            if (itm.name === origName || itm.id === key) {
-                                basePrice = Number(itm.price) || 0;
-                                categoryName = cat.name || catSlug;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
 
             const options = [];
             const cust = customizeData[key];
@@ -538,8 +638,8 @@ function buildStructuredCartItems() {
             }
 
             items.push({
-                itemId: key,
-                name: origName,
+                itemId: itemId,
+                name: displayName,
                 category: categoryName,
                 quantity: qty,
                 price: basePrice,
@@ -561,6 +661,9 @@ function isPickupTimeValid(dateTime) {
 // 9. Thực thi gửi đơn hàng với Timeout 8s & Bảo vệ nút bấm
 async function submitOrder() {
     if (isSubmitting) return;
+    if (typeof checkDesktopAuthGuard === 'function' && !checkDesktopAuthGuard()) {
+        return;
+    }
 
     if (storeConfig && storeConfig.storeStatus === 'paused') {
         return customAlert('店家目前暫停接單中，暫時無法下單，敬請見諒！');
@@ -680,7 +783,23 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
 
         if (typeof liff !== 'undefined') {
             try {
-                if (liff.isInClient() && liff.isLoggedIn && !liff.isLoggedIn()) {
+                if (liff.isLoggedIn && !liff.isLoggedIn()) {
+                    if (storeConfig && Array.isArray(storeConfig.features) && storeConfig.features.includes('mobile_only') && liff.isInClient && !liff.isInClient()) {
+                        if (typeof openDesktopQrModal === 'function') {
+                            openDesktopQrModal();
+                        } else {
+                            customAlert('請使用手機 LINE 掃碼點餐');
+                        }
+                        isSubmitting = false;
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.innerText = '確認下單';
+                            submitBtn.style.cursor = 'pointer';
+                            submitBtn.style.opacity = '1';
+                        }
+                        return;
+                    }
+
                     const storageKey = `cart_save_${tenantId}`;
                     localStorage.setItem(storageKey, JSON.stringify({ cart, customizeData, comboDrinkData }));
                     liff.login({ redirectUri: window.location.href });
@@ -713,6 +832,8 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
         const tableNumber = (isDineIn && tableInput) ? tableInput.value.trim() : '';
         const structuredItems = buildStructuredCartItems();
 
+        const isDesktop = !(typeof liff !== 'undefined' && liff.isInClient && liff.isInClient());
+
         // 10.1 Xử lý riêng cho luồng 加點餐點 (Append Mode)
         if (window.isAppendMode && window.parentOrderKey) {
             const rawItemsText = formatAppendItemsOnlyText();
@@ -727,7 +848,9 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                 table_number: currentTable || undefined,
                 note: mainNote,
                 tenant_id: tenantId,
-                items: structuredItems
+                items: structuredItems,
+                is_desktop: isDesktop,
+                isDesktop: isDesktop
             };
 
             const res = await fetch(`${WORKER_BASE}/api/orders/append?tenant_id=${tenantId}`, {
@@ -776,6 +899,10 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
             } catch(e) {}
             if (typeof updateTotal === 'function') updateTotal();
 
+            const appendSuccessMsg = isDesktop && userId && userId.startsWith('U')
+                ? '店家已收到您的加點品項，將立即為您製作，系統已將加點確認同步發送至您的 LINE 🙏'
+                : '店家已收到您的加點品項，將立即為您製作 🙏';
+
             customAlert(`
                 <div style="margin-bottom: 16px;">
                     <div style="width: 60px; height: 60px; margin: 0 auto; background: #faf5ff; border: 2px solid #c084fc; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px;">
@@ -783,7 +910,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                     </div>
                 </div>
                 <div style="font-size: 19px; font-weight: 900; color: #111827; margin-bottom: 6px;">加點送出成功！</div>
-                <div style="font-size: 14.5px; line-height: 1.5; color: #4b5563;">店家已收到您的加點品項，將立即為您製作 🙏</div>
+                <div style="font-size: 14.5px; line-height: 1.5; color: #4b5563;">${appendSuccessMsg}</div>
             `, () => {
                 if (typeof closeAndExitLiff === 'function') closeAndExitLiff();
             });
@@ -803,7 +930,9 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
             note: mainNote,
             tenant_id: tenantId,
             items: structuredItems,
-            liffFallback: false
+            liffFallback: false,
+            is_desktop: isDesktop,
+            isDesktop: isDesktop
         };
 
         const res = await fetch(`${WORKER_BASE}/api/create?tenant_id=${tenantId}`, {
@@ -846,6 +975,10 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
         comboDrinkData = {};
         if (typeof updateTotal === 'function') updateTotal();
 
+        const orderSuccessMsg = isDesktop && userId && userId.startsWith('U')
+            ? '店家已收到您的訂單，系統已將訂單進度卡片發送至您的 LINE 聊天室，您可以直接在LINE查看訂單狀態 🙏'
+            : '店家已收到您的訂單，您可以直接在LINE查看訂單狀態 🙏';
+
         customAlert(`
             <div style="margin-bottom: 16px;">
                 <div style="width: 60px; height: 60px; margin: 0 auto; background: #ecfdf5; border: 2px solid #a7f3d0; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
@@ -855,7 +988,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                 </div>
             </div>
             <div style="font-size: 19px; font-weight: 900; color: #111827; margin-bottom: 6px;">訂單已送出成功！</div>
-            <div style="font-size: 14.5px; line-height: 1.5; color: #4b5563;">店家已收到您的訂單，您可以直接在LINE查看訂單狀態 🙏</div>
+            <div style="font-size: 14.5px; line-height: 1.5; color: #4b5563;">${orderSuccessMsg}</div>
         `, () => {
             if (typeof closeAndExitLiff === 'function') closeAndExitLiff();
         });

@@ -2,10 +2,11 @@ import { Env } from '../types/env';
 import { Order, DiningOption, AppendOrderPayload, OrderItemInput } from '../types/index';
 import { corsHeaders, json } from '../utils/http';
 import { syncToGoogleSheets } from '../integrations/googleSheets';
-import { pushLineMessage, pushLineFlexMessage, buildOrderFlexMessage, buildAppendConfirmationFlexMessage } from './line';
+import { pushLineMessage, pushLineFlexMessage, buildOrderFlexMessage, buildAppendConfirmationFlexMessage, buildProgressFlexMessage, createRejectFlexBubble, createChangeFlexBubble, createTimeChangeFlexBubble } from './line';
 import { getTenantId } from './menu';
 
 import { TenantContext, tenantHasFeature, resolveTenantOrderPrefix, generateStandardOrderId } from '../types/tenant';
+import { resolveTenantContext } from './tenant';
 
 function jsonWithETag(data: any, version: string, status: number = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -77,6 +78,7 @@ export async function createOrder(
 
   // 1. Nếu client chủ động truyền parent_order_key thì chuyển sang xử lý append
   if (parentOrderKey && env.DB) {
+    const isDesktopOrder = data.is_desktop === true || data.isDesktop === true;
     return await executeAppendOrderInternal(
       env,
       tenantId,
@@ -88,7 +90,8 @@ export async function createOrder(
       data.customer,
       rawItems,
       ctx,
-      tenantCtx
+      tenantCtx,
+      isDesktopOrder
     );
   }
 
@@ -178,6 +181,30 @@ export async function createOrder(
     await saveOrder(env, order, tenantId);
   }
 
+  // 2. Tự động gửi LINE Flex Message xác nhận đơn hàng đầy đủ nội dung cho khách đặt qua Desktop
+  const isDesktopOrder = data.is_desktop === true || data.isDesktop === true || !data.liffInClient;
+  if (order.userId && typeof order.userId === 'string' && order.userId.startsWith('U') && order.userId.length > 20 && isDesktopOrder) {
+    try {
+      const flexBubble = buildOrderFlexMessage(order, tenantCtx);
+      const brandName = tenantCtx?.brandName || "Benmi";
+
+      const pushPromise = pushLineFlexMessage(
+        order.userId,
+        `[${brandName}] 訂單明細 #${order.key}`,
+        flexBubble,
+        env,
+        tenantCtx
+      );
+      if (ctx && typeof ctx.waitUntil === 'function') {
+        ctx.waitUntil(pushPromise);
+      } else {
+        await pushPromise;
+      }
+    } catch (pushErr) {
+      console.error(`[${tenantId}] Failed to push desktop order Flex Message:`, pushErr);
+    }
+  }
+
   return json({ success: true, key: orderKey });
 }
 
@@ -192,7 +219,8 @@ export async function executeAppendOrderInternal(
   customerName?: string,
   items?: OrderItemInput[],
   ctx?: ExecutionContext,
-  tenantCtx?: TenantContext | null
+  tenantCtx?: TenantContext | null,
+  isDesktop?: boolean
 ): Promise<Response> {
   const rawItems: OrderItemInput[] = Array.isArray(items) ? items : [];
   if (!appendedContent && rawItems.length > 0) {
@@ -343,6 +371,35 @@ export async function executeAppendOrderInternal(
     console.error("[appendOrder] Google Sheets sync failed:", sheetErr);
   }
 
+  // 9. Tự động gửi LINE Flex Message xác nhận 加點 cho khách đặt qua Desktop
+  const targetUserId = row.user_id || userId;
+  if (targetUserId && typeof targetUserId === 'string' && targetUserId.startsWith('U') && targetUserId.length > 20 && isDesktop) {
+    try {
+      const flexBubble = buildAppendConfirmationFlexMessage(
+        updatedOrder,
+        appendedContent,
+        appendedTotal,
+        nextRound,
+        tenantCtx
+      );
+      const brandName = tenantCtx?.brandName || "Benmi";
+      const pushPromise = pushLineFlexMessage(
+        targetUserId,
+        `[${brandName}] 🍽️ 現場加點確認 (第 ${nextRound} 輪)`,
+        flexBubble,
+        env,
+        tenantCtx
+      );
+      if (ctx && typeof ctx.waitUntil === 'function') {
+        ctx.waitUntil(pushPromise);
+      } else {
+        await pushPromise;
+      }
+    } catch (pushErr) {
+      console.error(`[${tenantId}] Failed to push desktop append Flex Message:`, pushErr);
+    }
+  }
+
   return json({
     success: true,
     key: parentKey,
@@ -368,6 +425,7 @@ export async function appendOrder(
     const note = payload.note ? String(payload.note).trim() : "";
     const userId = payload.user_id;
     const customerName = payload.customer_name;
+    const isDesktop = payload.is_desktop === true || payload.isDesktop === true;
 
     return await executeAppendOrderInternal(
       env,
@@ -380,7 +438,8 @@ export async function appendOrder(
       customerName,
       rawItems,
       ctx,
-      tenantCtx
+      tenantCtx,
+      isDesktop
     );
   } catch (e: any) {
     console.error("[appendOrder] Error:", e);
@@ -421,13 +480,17 @@ export async function updateOrder(
   tenantCtx?: TenantContext | null
 ): Promise<Response> {
   const data: any = await request.json();
-  const tenantId = tenantCtx?.tenantId || getTenantId(request);
-  const brandName = tenantCtx?.brandName || "Store";
-
   const orderRow = await env.DB.prepare(
     "SELECT * FROM orders WHERE key = ?"
   ).bind(data.key).first<any>();
   if (!orderRow) return json({ error: "order not found" }, 404);
+
+  const effectiveTenantId = orderRow.tenant_id || tenantCtx?.tenantId || getTenantId(request);
+  if (!tenantCtx || tenantCtx.tenantId !== effectiveTenantId) {
+    tenantCtx = await resolveTenantContext(effectiveTenantId, env);
+  }
+  const tenantId = effectiveTenantId;
+  const brandName = tenantCtx?.brandName || "Store";
 
   const order: Order = {
     key: orderRow.key,
@@ -490,11 +553,23 @@ export async function updateOrder(
 
     if (order.userId) {
       let notifyText = "";
-      if (order.reason === "時間需調整") {
-        const t = order.note || "稍後";
-        notifyText = `時間有點趕，請問可以改成${t}嗎？\n\n(回覆「好 / 同意」以確認，或回覆「不要了」取消訂單)`;
-      } else if (order.reason === "口味售完") {
-        const items = (order.note || "").split(",");
+      const reason = order.reason || "未提供原因";
+      const note = order.note || "";
+
+      if (reason === "時間需調整") {
+        const t = note || "稍後";
+        notifyText = `目前現場較忙碌，為了提供最佳品質，請問可以改成${t}嗎？。請協助點選下方按鈕回覆，謝謝您！`;
+      } else if (order.reason && order.reason.startsWith("賣完了：")) {
+        const items = order.reason.replace("賣完了：", "").split(",").map(s => s.trim()).filter(Boolean);
+        let joinedItems = items.join("、");
+        if (items.length === 2) {
+          joinedItems = items.join("跟");
+        } else if (items.length > 2) {
+          joinedItems = items.slice(0, -1).join("、") + "跟" + items[items.length - 1];
+        }
+        notifyText = `不好意思 ${joinedItems}我們現在賣完了，請問可以幫您換別的嗎？`;
+      } else if (reason === "口味售完") {
+        const items = (note || "").split(",").map(s => s.trim()).filter(Boolean);
         let joinedItems = items[0] || "";
         if (items.length === 2) {
           joinedItems = items.join("跟");
@@ -503,13 +578,11 @@ export async function updateOrder(
         }
         notifyText = `不好意思 ${joinedItems}我們現在賣完了，請問可以幫您換別的嗎？`;
       } else {
-        const reason = order.reason || "未提供原因";
-        const note = order.note || "";
         notifyText =
-          `${brandName} 已收到您的訂單 #${order.key}，但需要微調訂單內容：\n` +
+          `${brandName} 已收到您的訂單 #${order.key}，需要做小幅調整。\n` +
           `原因：${reason}\n` +
           (note ? `備註：${note}\n` : "") +
-          `\n請回覆「同意」以接受變更，或回覆「取消 / 不要了」以取消訂單。`;
+          `\n請回覆您想更換的品項，或回覆「取消 / 不要了」以取消訂單。`;
       }
 
       await env.DB.prepare(
@@ -521,9 +594,18 @@ export async function updateOrder(
            reason = excluded.reason,
            note = excluded.note,
            created_at = CURRENT_TIMESTAMP`
-      ).bind(tenantId, order.userId, order.key, "CHANGE", notifyText, order.reason || "", order.note || "").run();
+      ).bind(tenantId, order.userId, order.key, "CHANGE", notifyText, reason, note).run();
 
-      await pushLineMessage(order.userId, notifyText, env, tenantCtx);
+      if (reason === "時間需調整") {
+        const timeFlex = createTimeChangeFlexBubble(order.key, note, brandName);
+        const flexSent = await pushLineFlexMessage(order.userId, `[${brandName}] 調整取餐時間確認 #${order.key}`, timeFlex, env, tenantCtx);
+        if (!flexSent) {
+          await pushLineMessage(order.userId, notifyText, env, tenantCtx);
+        }
+      } else {
+        // Revert về push message text cho trường hợp đổi món (không áp dụng Flex message nút đồng ý/hủy đơn)
+        await pushLineMessage(order.userId, notifyText, env, tenantCtx);
+      }
     }
 
     return json({ success: true });
@@ -542,7 +624,7 @@ export async function updateOrder(
     await saveOrder(env, order, tenantId);
 
     if (order.userId) {
-      const reason = order.reason || "未提供原因";
+      const reason = order.reason || "商品已售完 / 目前無法接單";
       const notifyText =
         `非常抱歉！${brandName} 目前無法接下您的訂單 #${order.key}。\n` +
         `原因：${reason}\n` +
@@ -557,9 +639,13 @@ export async function updateOrder(
            reason = excluded.reason,
            note = excluded.note,
            created_at = CURRENT_TIMESTAMP`
-      ).bind(tenantId, order.userId, order.key, "REJECT", notifyText, order.reason || "", order.note || "").run();
+      ).bind(tenantId, order.userId, order.key, "REJECT", notifyText, reason, order.note || "").run();
 
-      await pushLineMessage(order.userId, notifyText, env, tenantCtx);
+      const rejectFlex = createRejectFlexBubble(order.key, reason, brandName);
+      const flexSent = await pushLineFlexMessage(order.userId, `[${brandName}] 無法接單通知 #${order.key}`, rejectFlex, env, tenantCtx);
+      if (!flexSent) {
+        await pushLineMessage(order.userId, notifyText, env, tenantCtx);
+      }
     }
 
     return json({ success: true });
