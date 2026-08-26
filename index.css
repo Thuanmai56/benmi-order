@@ -320,11 +320,19 @@ body {
     z-index: 100;
     background: white;
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
+    align-items: center;
     overflow-x: auto;
+    overflow-y: hidden;
     scroll-behavior: smooth;
-    border-bottom: 1px solid #ddd;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    border-bottom: 1px solid #e2e8f0;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
+    padding: 0 12px;
+    gap: 4px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
 }
 
 .sticky-nav::-webkit-scrollbar {
@@ -332,14 +340,15 @@ body {
 }
 
 .nav-btn {
-    padding: 16px 20px;
+    padding: 14px 18px;
     white-space: nowrap;
     font-weight: 800;
     color: var(--muted);
     cursor: pointer;
     border-bottom: 3px solid transparent;
     transition: all 0.2s ease;
-    font-size: 16px;
+    font-size: 15.5px;
+    flex-shrink: 0;
 }
 
 .nav-btn.active {
@@ -622,20 +631,25 @@ input[type="checkbox"] {
     font-weight: 700;
 }
 
-.sub-options-wrapper {
-    width: 100%;
-    margin-top: 4px;
+.flavor-option-container {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    max-width: 100%;
 }
 
 .sub-option-container {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    padding: 10px 14px;
+    padding: 8px 12px;
     background: #f8fafc;
     border: 1px solid #e2e8f0;
     border-left: 3.5px solid var(--primary);
     border-radius: 10px;
+    margin-top: 2px;
+    width: 100%;
 }
 
 .custom-panel label.sub-chip {
