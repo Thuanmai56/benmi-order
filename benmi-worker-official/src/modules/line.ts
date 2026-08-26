@@ -161,92 +161,87 @@ export async function replyLineFlexMessage(
 }
 
 export function buildOrderFlexMessage(order: Order, tenantCtx?: TenantContext | null): any {
-  const brandColor = tenantCtx?.brandColor || "#00b900";
+  const brandColor = tenantCtx?.brandColor || "#059669";
   const isScheduled = tenantCtx?.allowScheduledPickup !== false;
   const isDineIn = order.diningOption === "dine_in" || (order.content || "").includes("📍 用餐方式：🍽️ 內用") || (order.content || "").includes("【內用】");
-  const headerTitle = isDineIn ? "🍽️ 內用訂單明細" : "🛍️ 外帶訂單明細";
-  const diningLabel = isDineIn ? "🍽️ 內用 (現場製作)" : "🛍️ 外帶自取";
-  const timeLabel = isDineIn ? "🕒 點餐時間：" : (isScheduled ? "🕒 取餐時間：" : "🕒 訂餐時間：");
+  const diningLabel = isDineIn ? "內用 (現場製作)" : "外帶自取";
+  const timeLabel = isDineIn ? "點餐時間" : (isScheduled ? "取餐時間" : "訂餐時間");
 
   const contentLines = (order.content || "").split("\n").filter(l => l.trim().length > 0);
-  const contentComponents = contentLines.slice(0, 50).map(line => ({
-    type: "text",
-    text: line,
-    size: "sm",
-    color: line.startsWith("↳") ? "#666666" : "#111111",
-    weight: line.includes("x ") ? "bold" : "regular",
-    wrap: true
-  }));
+  const contentComponents = contentLines.slice(0, 50).map(line => {
+    const isOption = line.startsWith("↳") || line.startsWith("-") || line.startsWith("+") || line.startsWith("  ");
+    return {
+      type: "text",
+      text: line,
+      size: isOption ? "xs" : "sm",
+      color: isOption ? "#64748B" : "#1E293B",
+      weight: isOption ? "regular" : (line.includes("x ") || line.includes("份") ? "bold" : "regular"),
+      wrap: true
+    };
+  });
 
   return {
     type: "bubble",
-    size: "mega",
-    header: {
-      type: "box",
-      layout: "vertical",
-      backgroundColor: brandColor,
-      paddingAll: "15px",
-      contents: [
-        {
-          type: "box",
-          layout: "horizontal",
-          contents: [
-            { type: "text", text: headerTitle, weight: "bold", color: "#ffffff", size: "lg", flex: 0 },
-            { type: "text", text: `#${order.key}`, color: "#ffffff", size: "sm", align: "end", flex: 1, gravity: "center" }
-          ]
-        }
-      ]
-    },
+    size: "kilo",
     body: {
       type: "box",
       layout: "vertical",
-      paddingAll: "15px",
+      paddingAll: "20px",
       spacing: "md",
       contents: [
         {
           type: "box",
           layout: "horizontal",
           contents: [
-            { type: "text", text: "📍 用餐方式：", size: "sm", color: "#666666", flex: 0 },
-            { type: "text", text: diningLabel, size: "sm", weight: "bold", color: isDineIn ? "#7c3aed" : "#059669", align: "end", flex: 1 }
+            { type: "text", text: "訂單明細", size: "xs", weight: "bold", color: "#64748B", flex: 0 },
+            { type: "text", text: `#${order.key}`, size: "sm", weight: "bold", color: "#0F172A", align: "end", flex: 1 }
           ]
         },
-        { type: "separator", margin: "xs" },
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            { type: "text", text: "用餐方式", size: "xs", color: "#64748B", flex: 0 },
+            { type: "text", text: diningLabel, size: "sm", weight: "bold", color: isDineIn ? "#7C3AED" : "#059669", align: "end", flex: 1 }
+          ]
+        },
+        { type: "separator", margin: "sm", color: "#E2E8F0" },
         {
           type: "box",
           layout: "vertical",
           spacing: "xs",
           contents: [
-            { type: "text", text: "📦 訂單內容：", weight: "bold", size: "sm", color: "#333333" },
+            { type: "text", text: "訂單品項", size: "xs", weight: "bold", color: "#64748B", margin: "xs" },
             ...contentComponents
           ]
         },
         ...(order.note ? [
-          { type: "separator", margin: "md" },
+          { type: "separator", margin: "sm", color: "#E2E8F0" },
           {
             type: "box",
             layout: "horizontal",
             contents: [
-              { type: "text", text: "📝 備註：", size: "xs", color: "#888888", flex: 0 },
-              { type: "text", text: order.note, size: "xs", color: "#333333", wrap: true, flex: 1 }
+              { type: "text", text: "備註說明", size: "xs", color: "#64748B", flex: 0 },
+              { type: "text", text: order.note, size: "xs", color: "#334155", wrap: true, align: "end", flex: 1 }
             ]
           }
         ] : []),
-        { type: "separator", margin: "md" },
+        { type: "separator", margin: "sm", color: "#E2E8F0" },
         {
           type: "box",
           layout: "horizontal",
           contents: [
-            { type: "text", text: timeLabel, size: "sm", color: "#666666", flex: 0 },
-            { type: "text", text: String(order.time || "").replace(/\s*\([^)]*\)/g, '').trim(), size: "sm", weight: "bold", color: "#111111", align: "end", flex: 1, wrap: true }
+            { type: "text", text: timeLabel, size: "xs", color: "#64748B", flex: 0 },
+            { type: "text", text: String(order.time || "").replace(/\s*\([^)]*\)/g, '').trim(), size: "sm", weight: "bold", color: "#0F172A", align: "end", flex: 1, wrap: true }
           ]
         },
         {
           type: "box",
           layout: "horizontal",
+          alignItems: "center",
           contents: [
-            { type: "text", text: "💰 總金額：", size: "sm", color: "#666666", flex: 0 },
-            { type: "text", text: `$${order.total}`, size: "md", weight: "bold", color: "#e53e3e", align: "end", flex: 1 }
+            { type: "text", text: "總金額", size: "sm", weight: "bold", color: "#64748B", flex: 0 },
+            { type: "text", text: `$${order.total}`, size: "xl", weight: "bold", color: "#059669", align: "end", flex: 1 }
           ]
         }
       ]
@@ -254,7 +249,8 @@ export function buildOrderFlexMessage(order: Order, tenantCtx?: TenantContext | 
     footer: {
       type: "box",
       layout: "vertical",
-      paddingAll: "12px",
+      paddingAll: "16px",
+      spacing: "sm",
       contents: (() => {
         const liffBaseUrl = tenantCtx?.liffUrl || (tenantCtx?.liffId ? `https://liff.line.me/${tenantCtx.liffId}` : "https://liff.line.me/");
         const tenantId = tenantCtx?.tenantId || "benmi";
@@ -266,11 +262,11 @@ export function buildOrderFlexMessage(order: Order, tenantCtx?: TenantContext | 
           buttons.push({
             type: "button",
             style: "primary",
-            color: "#7c3aed",
+            color: "#7C3AED",
             height: "sm",
             action: {
               type: "uri",
-              label: "➕ 加點餐點",
+              label: "現場加點餐點",
               uri: appendUrl
             }
           });
@@ -279,14 +275,13 @@ export function buildOrderFlexMessage(order: Order, tenantCtx?: TenantContext | 
         buttons.push({
           type: "button",
           style: isDineIn ? "secondary" : "primary",
-          color: isDineIn ? undefined : brandColor,
+          color: isDineIn ? undefined : "#059669",
           height: "sm",
-          margin: buttons.length > 0 ? "sm" : "none",
           action: {
             type: "postback",
-            label: "🔍 查詢製作進度",
+            label: "查詢訂單進度",
             data: `action=check_progress&order_key=${order.key}`,
-            displayText: `🔍 查詢訂單進度 (${order.key})`
+            displayText: "查詢訂單進度"
           }
         });
 
@@ -297,108 +292,102 @@ export function buildOrderFlexMessage(order: Order, tenantCtx?: TenantContext | 
 }
 
 export function buildProgressFlexMessage(order: Order, queueAheadCount: number, tenantCtx?: TenantContext | null): any {
-  const brandColor = tenantCtx?.brandColor || "#00b900";
   const isScheduled = tenantCtx?.allowScheduledPickup !== false;
   const isDineIn = order.diningOption === "dine_in" || (order.content || "").includes("📍 用餐方式：🍽️ 內用") || (order.content || "").includes("【內用】");
-  const diningLabel = isDineIn ? "🍽️ 內用 (現場製作)" : "🛍️ 外帶自取";
-  const timeLabel = isDineIn ? "🕒 點餐時間：" : (isScheduled ? "🕒 取餐時間：" : "🕒 訂餐時間：");
+  const diningLabel = isDineIn ? "內用 (現場製作)" : "外帶自取";
+  const timeLabel = isDineIn ? "點餐時間" : (isScheduled ? "預計取餐時間" : "訂餐時間");
 
-  let statusTitle = "訂單已成功送出";
-  let statusBadgeColor = "#10b981";
-  let statusIcon = "✅";
-  let queueText = "";
+  let statusTitle = "已收到訂單";
+  let statusColor = "#059669";
+  let queueText = "店家已收到您的訂單，店員將儘速為您確認！";
 
   if (order.status === "NEW") {
-    statusTitle = "訂單已成功送出";
-    statusBadgeColor = "#10b981";
-    statusIcon = "✅";
+    statusTitle = "已收到訂單";
+    statusColor = "#059669";
     queueText = "店家已收到您的訂單，店員將儘速為您確認！";
   } else if (order.status === "ACCEPTED") {
     statusTitle = "店家製作中";
-    statusBadgeColor = "#3b82f6";
-    statusIcon = "🍳";
+    statusColor = "#2563EB";
     queueText = queueAheadCount > 0
       ? `前方還有 ${queueAheadCount} 張訂單正在排隊製作`
-      : "🔥 您的餐點正由店家製作中！";
+      : "您的餐點正由店家用心製作中！";
   } else if (order.status === "DONE") {
-    statusTitle = isDineIn ? "餐點製作完成，請於現場領取！" : "製作完成，可取餐！";
-    statusBadgeColor = "#10b981";
-    statusIcon = "🎉";
+    statusTitle = isDineIn ? "餐點製作完成，請至櫃檯領取" : "餐點製作完成，可取餐！";
+    statusColor = "#059669";
     queueText = isDineIn ? "您的餐點已準備完畢，請至櫃檯領取用餐！" : "您的餐點已準備完畢，請儘快前來取餐！";
   } else if (order.status === "PICKED_UP") {
-    statusTitle = isDineIn ? "已完成用餐/取餐" : "已完成取餐";
-    statusBadgeColor = "#6b7280";
-    statusIcon = "✅";
-    queueText = "感謝您的訂購，歡迎下次光臨！";
+    statusTitle = isDineIn ? "已完成用餐" : "已完成取餐";
+    statusColor = "#64748B";
+    queueText = "感謝您的訂購，期待再次為您服務！";
   } else if (order.status === "WAITING_CUSTOMER_CHANGE" || order.status === "WAITING_CUSTOMER_REJECT") {
-    statusTitle = "訂單變更/確認中";
-    statusBadgeColor = "#ec4899";
-    statusIcon = "⚠️";
-    queueText = "請查看 LINE 對話紀錄並回覆店家。";
+    statusTitle = "訂單微調確認中";
+    statusColor = "#D97706";
+    queueText = "請查看上方對話並回覆店家確認事項。";
   } else if (order.status === "REJECTED") {
     statusTitle = "訂單已取消";
-    statusBadgeColor = "#ef4444";
-    statusIcon = "❌";
-    queueText = "該訂單已被取消。";
+    statusColor = "#DC2626";
+    queueText = "該訂單已被取消。如有需要歡迎再次點餐。";
   }
 
   return {
     type: "bubble",
-    size: "mega",
-    header: {
-      type: "box",
-      layout: "vertical",
-      backgroundColor: brandColor,
-      paddingAll: "15px",
-      contents: [
-        {
-          type: "box",
-          layout: "horizontal",
-          contents: [
-            { type: "text", text: "📋 訂單進度狀態", weight: "bold", color: "#ffffff", size: "md", flex: 0 },
-            { type: "text", text: `#${order.key}`, color: "#ffffff", size: "sm", align: "end", flex: 1, gravity: "center" }
-          ]
-        }
-      ]
-    },
+    size: "kilo",
     body: {
       type: "box",
       layout: "vertical",
-      paddingAll: "16px",
+      paddingAll: "20px",
       spacing: "md",
       contents: [
         {
           type: "box",
           layout: "horizontal",
           contents: [
-            { type: "text", text: `${statusIcon} ${statusTitle}`, weight: "bold", size: "lg", color: statusBadgeColor, flex: 1, wrap: true }
+            { type: "text", text: "訂單進度狀態", size: "xs", weight: "bold", color: "#64748B", flex: 0 },
+            { type: "text", text: `#${order.key}`, size: "sm", weight: "bold", color: "#0F172A", align: "end", flex: 1 }
           ]
+        },
+        {
+          type: "text",
+          text: statusTitle,
+          weight: "bold",
+          size: "lg",
+          color: statusColor,
+          wrap: true
         },
         {
           type: "box",
           layout: "vertical",
-          backgroundColor: "#f9fafb",
+          backgroundColor: "#F8FAFC",
           cornerRadius: "md",
-          paddingAll: "10px",
+          paddingAll: "12px",
           contents: [
-            { type: "text", text: queueText, size: "sm", color: "#374151", wrap: true, weight: "bold" }
+            { type: "text", text: queueText, size: "sm", color: "#334155", wrap: true }
           ]
         },
-        { type: "separator", margin: "sm" },
+        { type: "separator", margin: "sm", color: "#E2E8F0" },
         {
           type: "box",
           layout: "horizontal",
           contents: [
-            { type: "text", text: "📍 用餐方式：", size: "sm", color: "#6b7280", flex: 0 },
-            { type: "text", text: diningLabel, size: "sm", weight: "bold", color: isDineIn ? "#7c3aed" : "#059669", align: "end", flex: 1 }
+            { type: "text", text: "用餐方式", size: "xs", color: "#64748B", flex: 0 },
+            { type: "text", text: diningLabel, size: "sm", weight: "bold", color: isDineIn ? "#7C3AED" : "#059669", align: "end", flex: 1 }
           ]
         },
         {
           type: "box",
           layout: "horizontal",
           contents: [
-            { type: "text", text: timeLabel, size: "sm", color: "#6b7280", flex: 0 },
-            { type: "text", text: String(order.time || "").replace(/\s*\([^)]*\)/g, '').trim(), size: "sm", weight: "bold", color: "#111827", align: "end", flex: 1, wrap: true }
+            { type: "text", text: timeLabel, size: "xs", color: "#64748B", flex: 0 },
+            { type: "text", text: String(order.time || "").replace(/\s*\([^)]*\)/g, '').trim(), size: "sm", weight: "bold", color: "#0F172A", align: "end", flex: 1, wrap: true }
+          ]
+        },
+        {
+          type: "box",
+          layout: "horizontal",
+          alignItems: "center",
+          contents: [
+            { type: "text", text: "總金額", size: "sm", weight: "bold", color: "#64748B", flex: 0 },
+            { type: "text", text: `$${order.total}`, size: "lg", weight: "bold", color: "#059669", align: "end", flex: 1 }
           ]
         }
       ]
@@ -406,7 +395,8 @@ export function buildProgressFlexMessage(order: Order, queueAheadCount: number, 
     footer: {
       type: "box",
       layout: "vertical",
-      paddingAll: "12px",
+      paddingAll: "16px",
+      spacing: "sm",
       contents: (() => {
         const liffBaseUrl = tenantCtx?.liffUrl || (tenantCtx?.liffId ? `https://liff.line.me/${tenantCtx.liffId}` : "https://liff.line.me/");
         const tenantId = tenantCtx?.tenantId || "benmi";
@@ -418,11 +408,11 @@ export function buildProgressFlexMessage(order: Order, queueAheadCount: number, 
           buttons.push({
             type: "button",
             style: "primary",
-            color: "#7c3aed",
+            color: "#7C3AED",
             height: "sm",
             action: {
               type: "uri",
-              label: "➕ 加點餐點",
+              label: "現場加點餐點",
               uri: appendUrl
             }
           });
@@ -432,12 +422,11 @@ export function buildProgressFlexMessage(order: Order, queueAheadCount: number, 
           type: "button",
           style: "secondary",
           height: "sm",
-          margin: buttons.length > 0 ? "sm" : "none",
           action: {
             type: "postback",
-            label: "🔄 重新整理進度",
+            label: "重新整理進度",
             data: `action=check_progress&order_key=${order.key}`,
-            displayText: `🔄 重新整理進度 (${order.key})`
+            displayText: "查詢訂單進度"
           }
         });
 
@@ -454,8 +443,6 @@ export function buildAppendConfirmationFlexMessage(
   roundNumber: number,
   tenantCtx?: TenantContext | null
 ): any {
-  const brandColor = "#7c3aed";
-
   let rawTable = (order.tableNumber || "").trim();
   if (!rawTable || rawTable === "-") {
     const tableMatch = (order.content || "").match(/(?:桌號|Bàn)[：:\s]*([^\n\r,，()（）]+)/i) ||
@@ -463,7 +450,6 @@ export function buildAppendConfirmationFlexMessage(
     if (tableMatch) rawTable = tableMatch[1].trim();
   }
 
-  // Làm sạch hoàn toàn dấu ngoặc, dấu hai chấm thừa và nhãn bàn bị lặp lại
   rawTable = rawTable
     .replace(/^(?:桌號|Bàn)[：:\s]*/i, "")
     .replace(/[：:]/g, "")
@@ -476,12 +462,12 @@ export function buildAppendConfirmationFlexMessage(
 
   const contentLines = (newItemsText || "").split("\n").filter(l => l.trim().length > 0);
   const contentComponents = contentLines.slice(0, 30).map(line => {
-    const isOption = line.startsWith("↳") || line.startsWith("-") || line.startsWith("+");
+    const isOption = line.startsWith("↳") || line.startsWith("-") || line.startsWith("+") || line.startsWith("  ");
     return {
       type: "text",
       text: line,
       size: isOption ? "xs" : "sm",
-      color: isOption ? "#666666" : "#111111",
+      color: isOption ? "#64748B" : "#1E293B",
       weight: isOption ? "regular" : "bold",
       wrap: true
     };
@@ -492,80 +478,66 @@ export function buildAppendConfirmationFlexMessage(
 
   return {
     type: "bubble",
-    size: "mega",
-    header: {
-      type: "box",
-      layout: "vertical",
-      backgroundColor: brandColor,
-      paddingAll: "15px",
-      contents: [
-        {
-          type: "box",
-          layout: "horizontal",
-          contents: [
-            { type: "text", text: `🍽️ 加點 (第 ${roundNumber} 輪)`, weight: "bold", color: "#ffffff", size: "lg", flex: 0 },
-            { type: "text", text: `#${order.key}`, color: "#ffffff", size: "sm", align: "end", flex: 1, gravity: "center" }
-          ]
-        }
-      ]
-    },
+    size: "kilo",
     body: {
       type: "box",
       layout: "vertical",
-      paddingAll: "16px",
+      paddingAll: "20px",
       spacing: "md",
       contents: [
         {
           type: "box",
           layout: "horizontal",
           contents: [
-            { type: "text", text: "桌號：", size: "sm", color: "#666666", flex: 0 },
-            { type: "text", text: displayTable, size: "sm", weight: "bold", color: "#7c3aed", align: "end", flex: 1 }
+            { type: "text", text: `現場加點 (第 ${roundNumber} 輪)`, size: "xs", weight: "bold", color: "#7C3AED", flex: 0 },
+            { type: "text", text: `#${order.key}`, size: "sm", weight: "bold", color: "#0F172A", align: "end", flex: 1 }
           ]
         },
-        { type: "separator", margin: "xs" },
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            { type: "text", text: "桌號", size: "xs", color: "#64748B", flex: 0 },
+            { type: "text", text: `${displayTable} 桌`, size: "sm", weight: "bold", color: "#7C3AED", align: "end", flex: 1 }
+          ]
+        },
+        { type: "separator", margin: "sm", color: "#E2E8F0" },
         {
           type: "box",
           layout: "vertical",
+          spacing: "xs",
           contents: [
-            { type: "text", text: "加點品項：", weight: "regular", size: "sm", color: "#666666" },
-            {
-              type: "box",
-              layout: "vertical",
-              margin: "md",
-              spacing: "xs",
-              contents: contentComponents.length > 0 ? contentComponents : [
-                { type: "text", text: "加點品項", weight: "bold", size: "sm", color: "#111111" }
-              ]
-            }
+            { type: "text", text: "本次加點品項", size: "xs", weight: "bold", color: "#64748B", margin: "xs" },
+            ...contentComponents
           ]
         },
         ...(order.note ? [
-          { type: "separator", margin: "md" },
+          { type: "separator", margin: "sm", color: "#E2E8F0" },
           {
             type: "box",
             layout: "horizontal",
             contents: [
-              { type: "text", text: "📝 備註：", size: "xs", color: "#888888", flex: 0 },
-              { type: "text", text: order.note, size: "xs", color: "#333333", wrap: true, flex: 1 }
+              { type: "text", text: "備註說明", size: "xs", color: "#64748B", flex: 0 },
+              { type: "text", text: order.note, size: "xs", color: "#334155", wrap: true, align: "end", flex: 1 }
             ]
           }
         ] : []),
-        { type: "separator", margin: "md" },
+        { type: "separator", margin: "sm", color: "#E2E8F0" },
         {
           type: "box",
           layout: "horizontal",
           contents: [
-            { type: "text", text: "加點金額：", size: "sm", color: "#666666", flex: 0 },
-            { type: "text", text: `$${addedAmount}`, size: "sm", weight: "bold", color: "#7c3aed", align: "end", flex: 1 }
+            { type: "text", text: "本次加點金額", size: "xs", color: "#64748B", flex: 0 },
+            { type: "text", text: `+$${addedAmount}`, size: "sm", weight: "bold", color: "#7C3AED", align: "end", flex: 1 }
           ]
         },
         {
           type: "box",
           layout: "horizontal",
+          alignItems: "center",
           contents: [
-            { type: "text", text: "💰 累計總金額：", size: "sm", color: "#666666", flex: 0 },
-            { type: "text", text: `$${order.total}`, size: "md", weight: "bold", color: "#e53e3e", align: "end", flex: 1 }
+            { type: "text", text: "累計總金額", size: "sm", weight: "bold", color: "#64748B", flex: 0 },
+            { type: "text", text: `$${order.total}`, size: "xl", weight: "bold", color: "#059669", align: "end", flex: 1 }
           ]
         }
       ]
@@ -573,12 +545,13 @@ export function buildAppendConfirmationFlexMessage(
     footer: {
       type: "box",
       layout: "vertical",
-      paddingAll: "12px",
+      paddingAll: "16px",
+      spacing: "sm",
       contents: [
         {
           type: "button",
           style: "primary",
-          color: brandColor,
+          color: "#7C3AED",
           height: "sm",
           action: {
             type: "uri",
@@ -590,12 +563,11 @@ export function buildAppendConfirmationFlexMessage(
           type: "button",
           style: "secondary",
           height: "sm",
-          margin: "sm",
           action: {
             type: "postback",
-            label: "🔍 查詢製作進度",
+            label: "查詢訂單進度",
             data: `action=check_progress&order_key=${order.key}`,
-            displayText: `🔍 查詢訂單進度 (${order.key})`
+            displayText: "查詢訂單進度"
           }
         }
       ]
@@ -611,31 +583,7 @@ export function createRejectFlexBubble(
 ): any {
   return {
     type: "bubble",
-    size: "mega",
-    header: {
-      type: "box",
-      layout: "vertical",
-      backgroundColor: brandColor,
-      paddingAll: "18px",
-      contents: [
-        {
-          type: "box",
-          layout: "horizontal",
-          spacing: "md",
-          alignItems: "center",
-          contents: [
-            {
-              type: "box",
-              layout: "vertical",
-              contents: [
-                { type: "text", text: "無法接單通知", weight: "bold", size: "xl", color: "#ffffff" },
-                { type: "text", text: `${brandName} - Order Cancel Request`, size: "xs", color: "#FEE2E2" }
-              ]
-            }
-          ]
-        }
-      ]
-    },
+    size: "kilo",
     body: {
       type: "box",
       layout: "vertical",
@@ -646,33 +594,45 @@ export function createRejectFlexBubble(
           type: "box",
           layout: "horizontal",
           contents: [
-            { type: "text", text: "訂單編號", size: "sm", color: "#888888", flex: 3 },
-            { type: "text", text: `#${orderKey}`, size: "md", weight: "bold", color: "#111111", flex: 6 }
+            {
+              type: "text",
+              text: `訂單 #${orderKey}`,
+              size: "sm",
+              weight: "bold",
+              color: "#DC2626"
+            }
           ]
         },
-        {
-          type: "box",
-          layout: "horizontal",
-          contents: [
-            { type: "text", text: "取消原因", size: "sm", color: "#888888", flex: 3 },
-            { type: "text", text: reason || "商品已售完 / 目前無法接單", size: "sm", weight: "bold", color: "#DC2626", flex: 6, wrap: true }
-          ]
-        },
-        { type: "separator", margin: "md", color: "#EEEEEE" },
         {
           type: "text",
-          text: "非常抱歉！店家目前無法為您製作餐點。請點擊下方按鈕確認是否同意取消訂單：",
           wrap: true,
-          color: "#4B5563",
-          size: "sm"
+          contents: [
+            {
+              type: "span",
+              text: `非常抱歉！${brandName} 目前無法接單。\n原因：`
+            },
+            {
+              type: "span",
+              text: reason || "部分品項售完 / 現場忙碌無法接單",
+              weight: "bold",
+              color: "#DC2626"
+            },
+            {
+              type: "span",
+              text: "\n\n請協助點選下方按鈕確認是否同意取消訂單，謝謝您！"
+            }
+          ],
+          size: "md",
+          color: "#1E293B",
+          lineSpacing: "6px"
         }
       ]
     },
     footer: {
       type: "box",
-      layout: "vertical",
+      layout: "horizontal",
       paddingAll: "16px",
-      spacing: "sm",
+      spacing: "md",
       contents: [
         {
           type: "button",
@@ -681,9 +641,9 @@ export function createRejectFlexBubble(
           height: "sm",
           action: {
             type: "postback",
-            label: "🔴 同意取消訂單",
+            label: "同意取消",
             data: `action=reject_agree&orderKey=${orderKey}`,
-            displayText: "同意"
+            displayText: "同意取消"
           }
         },
         {
@@ -692,7 +652,7 @@ export function createRejectFlexBubble(
           height: "sm",
           action: {
             type: "postback",
-            label: "⚪ 不同意",
+            label: "不同意",
             data: `action=reject_disagree&orderKey=${orderKey}`,
             displayText: "不同意"
           }
@@ -797,7 +757,6 @@ export function createTimeChangeConfirmedFlexBubble(
   brandName: string = "店家"
 ): any {
   const timeDisplay = newTime || "稍後";
-  const targetUrl = liffUrl.includes("?") ? `${liffUrl}&order=${orderKey}` : `${liffUrl}?order=${orderKey}`;
   return {
     type: "bubble",
     size: "kilo",
@@ -807,6 +766,27 @@ export function createTimeChangeConfirmedFlexBubble(
       paddingAll: "20px",
       spacing: "md",
       contents: [
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            {
+              type: "text",
+              text: "訂單修改確認",
+              size: "xs",
+              weight: "bold",
+              color: "#059669"
+            },
+            {
+              type: "text",
+              text: `#${orderKey}`,
+              size: "sm",
+              weight: "bold",
+              color: "#0F172A",
+              align: "end"
+            }
+          ]
+        },
         {
           type: "text",
           text: `訂單 #${orderKey} 已確認修改！`,
@@ -851,9 +831,10 @@ export function createTimeChangeConfirmedFlexBubble(
           color: "#059669",
           height: "sm",
           action: {
-            type: "uri",
+            type: "postback",
             label: "查看訂單狀態",
-            uri: targetUrl
+            data: `action=check_progress&order_key=${orderKey}`,
+            displayText: "查看訂單狀態"
           }
         }
       ]
