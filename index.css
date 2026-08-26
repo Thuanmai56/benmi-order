@@ -339,6 +339,12 @@ body {
     display: none;
 }
 
+@media (min-width: 768px) {
+    .sticky-nav {
+        justify-content: center;
+    }
+}
+
 .nav-btn {
     padding: 14px 18px;
     white-space: nowrap;
