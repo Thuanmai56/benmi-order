@@ -3,6 +3,7 @@
 // ==========================================
 
 let lastHistoryOrders = [];
+let lastHistoryTenantId = null;
 let expandedHistoryDates = new Set();
 let isHistoryStateInitialized = false;
 let isHistoryLoading = false;
@@ -11,13 +12,13 @@ let historyLastFetchedAt = 0;
 async function fetchHistoryOrders(force = false) {
   const tenantId = getTenantIdFromUrl();
   const now = Date.now();
-  if (!force && lastHistoryOrders.length > 0 && (now - historyLastFetchedAt < 15000)) {
+  if (!force && lastHistoryTenantId === tenantId && lastHistoryOrders.length > 0 && (now - historyLastFetchedAt < 15000)) {
     renderHistory(lastHistoryOrders);
     return;
   }
 
   const container = document.getElementById("list-history");
-  if (container && lastHistoryOrders.length === 0) {
+  if (container && (lastHistoryOrders.length === 0 || lastHistoryTenantId !== tenantId)) {
     container.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;" id="list-history-loading">${t('loading')}</div>`;
   }
 
@@ -28,6 +29,7 @@ async function fetchHistoryOrders(force = false) {
       const data = await res.json();
       if (Array.isArray(data)) {
         lastHistoryOrders = data;
+        lastHistoryTenantId = tenantId;
         historyLastFetchedAt = Date.now();
       }
     }
