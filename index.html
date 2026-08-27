@@ -12,7 +12,7 @@
     <script>
         (function () {
             const params = new URLSearchParams(window.location.search);
-            const tenantId = params.get("tenant_id") || "benmi";
+            const tenantId = params.get("tenant") || params.get("tenant_id") || "benmi";
             window.__INITIAL_TENANT_ID = tenantId;
             try {
                 const cached = localStorage.getItem("tenant_branding_" + tenantId) || localStorage.getItem("tenant_theme_" + tenantId);

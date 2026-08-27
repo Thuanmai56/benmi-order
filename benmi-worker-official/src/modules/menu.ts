@@ -19,8 +19,8 @@ export const DEFAULT_MENU: Menu = {
 export function getTenantId(request: Request): string {
   const url = new URL(request.url);
   
-  // 1. Ưu tiên query parameter ?tenant_id=...
-  const queryTenant = url.searchParams.get("tenant_id");
+  // 1. Ưu tiên query parameter ?tenant_id=... hoặc ?tenant=...
+  const queryTenant = url.searchParams.get("tenant_id") || url.searchParams.get("tenant");
   if (queryTenant) {
     console.log("[Tenant] Found in query param:", queryTenant);
     return queryTenant;
