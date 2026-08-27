@@ -27,7 +27,7 @@ const WORKER_BASE = _isDev
 
 function getTenantIdFromUrl() {
   const params = new URLSearchParams(window.location.search);
-  return params.get("tenant_id") || "benmi";
+  return params.get("tenant") || params.get("tenant_id") || "benmi";
 }
 
 function applyTenantBranding(tenant) {
