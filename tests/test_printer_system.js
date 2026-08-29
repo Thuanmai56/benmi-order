@@ -105,22 +105,55 @@ const kitchenPng = service.drawReceiptToCanvas(mockOrder, true, 80);
 assert(kitchenPng.startsWith("data:image/png;base64,"), "Kitchen ticket should generate valid Base64 PNG");
 console.log("✅ Test 5 Passed: Kitchen ticket Canvas Painter verified.");
 
-// 6. Test Local Mock TCP Socket Communication
-const mockServer = net.createServer((socket) => {
-  socket.on('data', (data) => {
-    assert(data.length > 0, "Socket should receive raw bytes");
-    socket.destroy();
-    mockServer.close(() => {
-      console.log("✅ Test 6 Passed: Mock TCP Socket Server on Port 9100 successfully received print stream.");
-      console.log("\n🎉 ALL 6 PRINTER SYSTEM TESTS PASSED SUCCESSFULLY!");
-      process.exit(0);
+// 6. Test Bluetooth Settings & Hybrid Dual-Interface Configuration
+const hybridSettings = {
+  autoPrintNewOrders: true,
+  cashier: {
+    enabled: true,
+    interface_type: "bluetooth",
+    mac_address: "00:11:22:33:44:55",
+    device_name: "XP-58IIH",
+    paperWidth: 58,
+    autoCut: true
+  },
+  kitchen: {
+    enabled: true,
+    interface_type: "network",
+    ip: "192.168.1.101",
+    port: 9100,
+    paperWidth: 80,
+    autoCut: true
+  }
+};
+service.saveSettings(hybridSettings);
+const loadedHybrid = service.getSettings();
+assert.strictEqual(loadedHybrid.cashier.interface_type, "bluetooth", "Cashier interface should be bluetooth");
+assert.strictEqual(loadedHybrid.cashier.mac_address, "00:11:22:33:44:55", "Cashier MAC should match");
+assert.strictEqual(loadedHybrid.kitchen.interface_type, "network", "Kitchen interface should be network");
+console.log("✅ Test 6 Passed: Hybrid Dual-Interface Settings (Bluetooth + Network) verified.");
+
+// 7. Test Bluetooth Paired Devices Query & Fallback
+service.getPairedBluetoothDevices().then((res) => {
+  assert(Array.isArray(res.devices), "getPairedBluetoothDevices should return devices array");
+  console.log(`✅ Test 7 Passed: getPairedBluetoothDevices returned ${res.devices.length} devices.`);
+
+  // 8. Test Local Mock TCP Socket Communication
+  const mockServer = net.createServer((socket) => {
+    socket.on('data', (data) => {
+      assert(data.length > 0, "Socket should receive raw bytes");
+      socket.destroy();
+      mockServer.close(() => {
+        console.log("✅ Test 8 Passed: Mock TCP Socket Server on Port 9100 successfully received print stream.");
+        console.log("\n🎉 ALL 8 PRINTER SYSTEM (NETWORK + BLUETOOTH) TESTS PASSED SUCCESSFULLY!");
+        process.exit(0);
+      });
     });
   });
-});
 
-mockServer.listen(9100, '127.0.0.1', () => {
-  const client = new net.Socket();
-  client.connect(9100, '127.0.0.1', () => {
-    client.write(Buffer.from([0x1B, 0x40, 0x1D, 0x56, 0x00])); // ESC @, GS V 0
+  mockServer.listen(9100, '127.0.0.1', () => {
+    const client = new net.Socket();
+    client.connect(9100, '127.0.0.1', () => {
+      client.write(Buffer.from([0x1B, 0x40, 0x1D, 0x56, 0x00])); // ESC @, GS V 0
+    });
   });
 });

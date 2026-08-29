@@ -562,23 +562,50 @@
                       </label>
                     </div>
                     <div style="font-size: 12.5px; color: var(--muted);" id="i18n-printer-cashier-desc">出明細發票、含金額、客製化與 QR Code</div>
+                    
+                    <!-- Interface Selector -->
                     <div>
-                      <label style="font-size: 12px; font-weight: 800; color: #475569;">IP 位址 (LAN / Wi-Fi)</label>
-                      <input type="text" id="printer-cashier-ip" class="form-input" style="margin-top: 4px; font-family: monospace; font-size: 14px;" placeholder="192.168.1.100">
+                      <label class="i18n-printer-interface-lbl" style="font-size: 12px; font-weight: 800; color: #475569;">連線方式</label>
+                      <select id="printer-cashier-interface" class="form-input" style="margin-top: 4px;" onchange="onPrinterInterfaceChange('cashier')">
+                        <option value="network" class="i18n-opt-network">🌐 區域網路 / Wi-Fi (TCP/IP)</option>
+                        <option value="bluetooth" class="i18n-opt-bluetooth">📡 藍牙無線 (Bluetooth SPP)</option>
+                      </select>
                     </div>
-                    <div style="display: flex; gap: 10px;">
-                      <div style="flex: 1;">
-                        <label style="font-size: 12px; font-weight: 800; color: #475569;">Port</label>
+
+                    <!-- Network Box -->
+                    <div id="printer-cashier-network-box" style="display: flex; flex-direction: column; gap: 10px;">
+                      <div>
+                        <label class="i18n-printer-ip-lbl" style="font-size: 12px; font-weight: 800; color: #475569;">IP 位址 (LAN / Wi-Fi)</label>
+                        <input type="text" id="printer-cashier-ip" class="form-input" style="margin-top: 4px; font-family: monospace; font-size: 14px;" placeholder="192.168.1.100">
+                      </div>
+                      <div>
+                        <label class="i18n-printer-port-lbl" style="font-size: 12px; font-weight: 800; color: #475569;">Port</label>
                         <input type="number" id="printer-cashier-port" class="form-input" style="margin-top: 4px; font-family: monospace;" value="9100">
                       </div>
-                      <div style="flex: 1;">
-                        <label style="font-size: 12px; font-weight: 800; color: #475569;">紙張規格</label>
-                        <select id="printer-cashier-paper" class="form-input" style="margin-top: 4px;">
-                          <option value="80">80mm (標準)</option>
-                          <option value="58">58mm (小票)</option>
+                    </div>
+
+                    <!-- Bluetooth Box -->
+                    <div id="printer-cashier-bt-box" style="display: none; flex-direction: column; gap: 10px;">
+                      <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                          <label class="i18n-printer-bt-lbl" style="font-size: 12px; font-weight: 800; color: #475569;">已配對藍牙裝置</label>
+                          <button type="button" class="btn i18n-printer-bt-refresh" style="font-size: 11px; padding: 2px 8px; border-radius: 6px; background: #e2e8f0; font-weight: 800;" onclick="refreshPairedBluetoothDevices('cashier')">🔄 重新整理</button>
+                        </div>
+                        <select id="printer-cashier-bt-device" class="form-input" style="margin-top: 4px; font-size: 13px;">
+                          <option value="">-- 請選擇已配對的藍牙印表機 --</option>
                         </select>
+                        <div id="printer-cashier-bt-status" style="font-size: 11.5px; color: var(--muted); margin-top: 4px;"></div>
                       </div>
                     </div>
+
+                    <div>
+                      <label class="i18n-printer-paper-lbl" style="font-size: 12px; font-weight: 800; color: #475569;">紙張規格</label>
+                      <select id="printer-cashier-paper" class="form-input" style="margin-top: 4px;">
+                        <option value="80" class="i18n-opt-p80">80mm (標準)</option>
+                        <option value="58" class="i18n-opt-p58">58mm (小票)</option>
+                      </select>
+                    </div>
+
                     <button type="button" class="btn" style="background: #f1f5f9; color: #334155; border: 1.5px solid #cbd5e1; font-weight: 800; padding: 8px 12px; margin-top: 4px; border-radius: 8px;" onclick="testPOSPrinterStation('cashier')">
                       🖨️ 測試列印 (Test Print)
                     </button>
@@ -593,23 +620,50 @@
                       </label>
                     </div>
                     <div style="font-size: 12.5px; color: var(--muted);" id="i18n-printer-kitchen-desc">大字號、桌號、備註清單、不顯示金額</div>
+                    
+                    <!-- Interface Selector -->
                     <div>
-                      <label style="font-size: 12px; font-weight: 800; color: #475569;">IP 位址 (LAN / Wi-Fi)</label>
-                      <input type="text" id="printer-kitchen-ip" class="form-input" style="margin-top: 4px; font-family: monospace; font-size: 14px;" placeholder="192.168.1.101">
+                      <label class="i18n-printer-interface-lbl" style="font-size: 12px; font-weight: 800; color: #475569;">連線方式</label>
+                      <select id="printer-kitchen-interface" class="form-input" style="margin-top: 4px;" onchange="onPrinterInterfaceChange('kitchen')">
+                        <option value="network" class="i18n-opt-network">🌐 區域網路 / Wi-Fi (TCP/IP)</option>
+                        <option value="bluetooth" class="i18n-opt-bluetooth">📡 藍牙無線 (Bluetooth SPP)</option>
+                      </select>
                     </div>
-                    <div style="display: flex; gap: 10px;">
-                      <div style="flex: 1;">
-                        <label style="font-size: 12px; font-weight: 800; color: #475569;">Port</label>
+
+                    <!-- Network Box -->
+                    <div id="printer-kitchen-network-box" style="display: flex; flex-direction: column; gap: 10px;">
+                      <div>
+                        <label class="i18n-printer-ip-lbl" style="font-size: 12px; font-weight: 800; color: #475569;">IP 位址 (LAN / Wi-Fi)</label>
+                        <input type="text" id="printer-kitchen-ip" class="form-input" style="margin-top: 4px; font-family: monospace; font-size: 14px;" placeholder="192.168.1.101">
+                      </div>
+                      <div>
+                        <label class="i18n-printer-port-lbl" style="font-size: 12px; font-weight: 800; color: #475569;">Port</label>
                         <input type="number" id="printer-kitchen-port" class="form-input" style="margin-top: 4px; font-family: monospace;" value="9100">
                       </div>
-                      <div style="flex: 1;">
-                        <label style="font-size: 12px; font-weight: 800; color: #475569;">紙張規格</label>
-                        <select id="printer-kitchen-paper" class="form-input" style="margin-top: 4px;">
-                          <option value="80">80mm (標準)</option>
-                          <option value="58">58mm (小票)</option>
+                    </div>
+
+                    <!-- Bluetooth Box -->
+                    <div id="printer-kitchen-bt-box" style="display: none; flex-direction: column; gap: 10px;">
+                      <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                          <label class="i18n-printer-bt-lbl" style="font-size: 12px; font-weight: 800; color: #475569;">已配對藍牙裝置</label>
+                          <button type="button" class="btn i18n-printer-bt-refresh" style="font-size: 11px; padding: 2px 8px; border-radius: 6px; background: #e2e8f0; font-weight: 800;" onclick="refreshPairedBluetoothDevices('kitchen')">🔄 重新整理</button>
+                        </div>
+                        <select id="printer-kitchen-bt-device" class="form-input" style="margin-top: 4px; font-size: 13px;">
+                          <option value="">-- 請選擇已配對的藍牙印表機 --</option>
                         </select>
+                        <div id="printer-kitchen-bt-status" style="font-size: 11.5px; color: var(--muted); margin-top: 4px;"></div>
                       </div>
                     </div>
+
+                    <div>
+                      <label class="i18n-printer-paper-lbl" style="font-size: 12px; font-weight: 800; color: #475569;">紙張規格</label>
+                      <select id="printer-kitchen-paper" class="form-input" style="margin-top: 4px;">
+                        <option value="80" class="i18n-opt-p80">80mm (標準)</option>
+                        <option value="58" class="i18n-opt-p58">58mm (小票)</option>
+                      </select>
+                    </div>
+
                     <button type="button" class="btn" style="background: #f1f5f9; color: #334155; border: 1.5px solid #cbd5e1; font-weight: 800; padding: 8px 12px; margin-top: 4px; border-radius: 8px;" onclick="testPOSPrinterStation('kitchen')">
                       🖨️ 測試列印 (Test Print)
                     </button>

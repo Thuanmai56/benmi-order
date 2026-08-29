@@ -655,6 +655,61 @@ function openReportsFromSettings() {
 }
 
 // --- Thermal Printer Settings Logic ---
+function onPrinterInterfaceChange(station) {
+  const isKitchen = station === 'kitchen';
+  const sel = document.getElementById(isKitchen ? 'printer-kitchen-interface' : 'printer-cashier-interface');
+  const netBox = document.getElementById(isKitchen ? 'printer-kitchen-network-box' : 'printer-cashier-network-box');
+  const btBox = document.getElementById(isKitchen ? 'printer-kitchen-bt-box' : 'printer-cashier-bt-box');
+
+  const iface = sel ? sel.value : 'network';
+  if (iface === 'bluetooth') {
+    if (netBox) netBox.style.display = 'none';
+    if (btBox) btBox.style.display = 'flex';
+    refreshPairedBluetoothDevices(station);
+  } else {
+    if (netBox) netBox.style.display = 'flex';
+    if (btBox) btBox.style.display = 'none';
+  }
+}
+
+async function refreshPairedBluetoothDevices(station = 'all') {
+  if (typeof PrinterService === 'undefined') return;
+  const stations = station === 'all' ? ['cashier', 'kitchen'] : [station];
+
+  for (const st of stations) {
+    const statusEl = document.getElementById(st === 'kitchen' ? 'printer-kitchen-bt-status' : 'printer-cashier-bt-status');
+    const selectEl = document.getElementById(st === 'kitchen' ? 'printer-kitchen-bt-device' : 'printer-cashier-bt-device');
+    if (statusEl) statusEl.innerText = t('printerBtConnecting', '正在搜尋已配對裝置...');
+
+    try {
+      const res = await PrinterService.getPairedBluetoothDevices();
+      const devices = res?.devices || [];
+
+      if (selectEl) {
+        const currentVal = selectEl.value;
+        selectEl.innerHTML = `<option value="">${t('printerBtSelectPlaceholder', '-- 請選擇已配對的藍牙印表機 --')}</option>`;
+
+        if (devices.length === 0) {
+          if (statusEl) statusEl.innerText = t('printerBtNoDevices', '未發現已配對裝置，請先至 Android 設定中完成配對');
+        } else {
+          devices.forEach(dev => {
+            const opt = document.createElement('option');
+            opt.value = dev.address;
+            opt.innerText = `${dev.name} (${dev.address})`;
+            opt.dataset.name = dev.name;
+            if (dev.address === currentVal) opt.selected = true;
+            selectEl.appendChild(opt);
+          });
+          if (statusEl) statusEl.innerText = `✅ ${devices.length} 個已配對藍牙裝置`;
+        }
+      }
+    } catch (err) {
+      console.warn('[PrinterSettings] BT scan error:', err);
+      if (statusEl) statusEl.innerText = `⚠️ ${err.message || '無法取得藍牙裝置清單'}`;
+    }
+  }
+}
+
 function loadPOSPrinterSettings() {
   if (typeof PrinterService === 'undefined') return;
   const settings = PrinterService.getSettings();
@@ -662,8 +717,11 @@ function loadPOSPrinterSettings() {
   const autoToggle = document.getElementById("printer-autoprint-toggle");
   if (autoToggle) autoToggle.checked = !!settings.autoPrintNewOrders;
 
+  // Cashier
   const cashEnabled = document.getElementById("printer-cashier-enabled");
   if (cashEnabled) cashEnabled.checked = !!settings.cashier?.enabled;
+  const cashInterface = document.getElementById("printer-cashier-interface");
+  if (cashInterface) cashInterface.value = settings.cashier?.interface_type || 'network';
   const cashIp = document.getElementById("printer-cashier-ip");
   if (cashIp) cashIp.value = settings.cashier?.ip || "";
   const cashPort = document.getElementById("printer-cashier-port");
@@ -671,43 +729,83 @@ function loadPOSPrinterSettings() {
   const cashPaper = document.getElementById("printer-cashier-paper");
   if (cashPaper) cashPaper.value = String(settings.cashier?.paperWidth || 80);
 
+  onPrinterInterfaceChange('cashier');
+
+  // Kitchen
   const kitEnabled = document.getElementById("printer-kitchen-enabled");
   if (kitEnabled) kitEnabled.checked = !!settings.kitchen?.enabled;
+  const kitInterface = document.getElementById("printer-kitchen-interface");
+  if (kitInterface) kitInterface.value = settings.kitchen?.interface_type || 'network';
   const kitIp = document.getElementById("printer-kitchen-ip");
   if (kitIp) kitIp.value = settings.kitchen?.ip || "";
   const kitPort = document.getElementById("printer-kitchen-port");
   if (kitPort) kitPort.value = settings.kitchen?.port || 9100;
   const kitPaper = document.getElementById("printer-kitchen-paper");
   if (kitPaper) kitPaper.value = String(settings.kitchen?.paperWidth || 80);
+
+  onPrinterInterfaceChange('kitchen');
+
+  // Load Bluetooth devices and select saved ones
+  refreshPairedBluetoothDevices('all').then(() => {
+    const cashBtSelect = document.getElementById("printer-cashier-bt-device");
+    if (cashBtSelect && settings.cashier?.mac_address) {
+      cashBtSelect.value = settings.cashier.mac_address;
+    }
+    const kitBtSelect = document.getElementById("printer-kitchen-bt-device");
+    if (kitBtSelect && settings.kitchen?.mac_address) {
+      kitBtSelect.value = settings.kitchen.mac_address;
+    }
+  });
 }
 
 function savePOSPrinterSettings() {
   if (typeof PrinterService === 'undefined') return;
 
   const autoToggle = document.getElementById("printer-autoprint-toggle");
+
+  // Cashier
   const cashEnabled = document.getElementById("printer-cashier-enabled");
+  const cashInterface = document.getElementById("printer-cashier-interface");
   const cashIp = document.getElementById("printer-cashier-ip");
   const cashPort = document.getElementById("printer-cashier-port");
+  const cashBtSelect = document.getElementById("printer-cashier-bt-device");
   const cashPaper = document.getElementById("printer-cashier-paper");
 
+  const cashBtOpt = cashBtSelect?.selectedOptions?.[0];
+  const cashMac = cashBtSelect ? cashBtSelect.value : "";
+  const cashDevName = cashBtOpt?.dataset?.name || "";
+
+  // Kitchen
   const kitEnabled = document.getElementById("printer-kitchen-enabled");
+  const kitInterface = document.getElementById("printer-kitchen-interface");
   const kitIp = document.getElementById("printer-kitchen-ip");
   const kitPort = document.getElementById("printer-kitchen-port");
+  const kitBtSelect = document.getElementById("printer-kitchen-bt-device");
   const kitPaper = document.getElementById("printer-kitchen-paper");
+
+  const kitBtOpt = kitBtSelect?.selectedOptions?.[0];
+  const kitMac = kitBtSelect ? kitBtSelect.value : "";
+  const kitDevName = kitBtOpt?.dataset?.name || "";
 
   const newSettings = {
     autoPrintNewOrders: autoToggle ? autoToggle.checked : false,
     cashier: {
       enabled: cashEnabled ? cashEnabled.checked : true,
+      interface_type: cashInterface ? cashInterface.value : 'network',
       ip: cashIp ? cashIp.value.trim() : "192.168.1.100",
       port: cashPort ? Number(cashPort.value) || 9100 : 9100,
+      mac_address: cashMac,
+      device_name: cashDevName,
       paperWidth: cashPaper ? Number(cashPaper.value) || 80 : 80,
       autoCut: true
     },
     kitchen: {
       enabled: kitEnabled ? kitEnabled.checked : true,
+      interface_type: kitInterface ? kitInterface.value : 'network',
       ip: kitIp ? kitIp.value.trim() : "192.168.1.101",
       port: kitPort ? Number(kitPort.value) || 9100 : 9100,
+      mac_address: kitMac,
+      device_name: kitDevName,
       paperWidth: kitPaper ? Number(kitPaper.value) || 80 : 80,
       autoCut: true
     }
@@ -724,26 +822,59 @@ function savePOSPrinterSettings() {
 async function testPOSPrinterStation(station) {
   if (typeof PrinterService === 'undefined') return;
   const isKitchen = station === 'kitchen';
+  const ifaceSelect = document.getElementById(isKitchen ? "printer-kitchen-interface" : "printer-cashier-interface");
   const ipInput = document.getElementById(isKitchen ? "printer-kitchen-ip" : "printer-cashier-ip");
   const portInput = document.getElementById(isKitchen ? "printer-kitchen-port" : "printer-cashier-port");
+  const btSelect = document.getElementById(isKitchen ? "printer-kitchen-bt-device" : "printer-cashier-bt-device");
   const paperInput = document.getElementById(isKitchen ? "printer-kitchen-paper" : "printer-cashier-paper");
 
-  const ip = ipInput ? ipInput.value.trim() : "";
-  const port = portInput ? Number(portInput.value) || 9100 : 9100;
+  const iface = ifaceSelect ? ifaceSelect.value : 'network';
   const paperWidth = paperInput ? Number(paperInput.value) || 80 : 80;
 
-  if (!ip) {
-    alert("請先輸入印表機 IP 位址 (例如: 192.168.1.100)");
-    return;
-  }
+  if (iface === 'bluetooth') {
+    const mac = btSelect ? btSelect.value : '';
+    const name = btSelect?.selectedOptions?.[0]?.dataset?.name || mac;
+    if (!mac) {
+      alert("請先選擇已配對的藍牙印表機 (Please select a paired Bluetooth printer)");
+      return;
+    }
+    if (typeof showToast === 'function') showToast(`📡 正在傳送測試列印至藍牙印表機 [${name}]...`);
+    try {
+      await PrinterService.testPrint(station, {
+        interface_type: 'bluetooth',
+        mac_address: mac,
+        device_name: name,
+        paperWidth,
+        autoCut: true
+      });
+      if (typeof showToast === 'function') showToast(`✅ 藍牙測試列印成功 [${name}]`);
+    } catch (err) {
+      console.error("BT Test print error:", err);
+      if (typeof showToast === 'function') showToast(`❌ 藍牙列印失敗: ${err.message || err}`);
+    }
+  } else {
+    const ip = ipInput ? ipInput.value.trim() : "";
+    const port = portInput ? Number(portInput.value) || 9100 : 9100;
 
-  if (typeof showToast === 'function') showToast(`🖨️ 正在傳送測試列印至 ${ip}:${port}...`);
-  try {
-    await PrinterService.testPrint(station, { ip, port, paperWidth, autoCut: true });
-    if (typeof showToast === 'function') showToast(`✅ 測試列印已送出至 ${ip}:${port}`);
-  } catch (err) {
-    console.error("Test print error:", err);
-    if (typeof showToast === 'function') showToast(`❌ 測試列印失敗: ${err.message || err}`);
+    if (!ip) {
+      alert("請先輸入印表機 IP 位址 (例如: 192.168.1.100)");
+      return;
+    }
+
+    if (typeof showToast === 'function') showToast(`🖨️ 正在傳送測試列印至 ${ip}:${port}...`);
+    try {
+      await PrinterService.testPrint(station, {
+        interface_type: 'network',
+        ip,
+        port,
+        paperWidth,
+        autoCut: true
+      });
+      if (typeof showToast === 'function') showToast(`✅ 測試列印已送出至 ${ip}:${port}`);
+    } catch (err) {
+      console.error("Test print error:", err);
+      if (typeof showToast === 'function') showToast(`❌ 測試列印失敗: ${err.message || err}`);
+    }
   }
 }
 

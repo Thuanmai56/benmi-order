@@ -211,6 +211,18 @@ const I18N = {
     printerCashierDesc: "出明細發票、含金額、客製化與 QR Code",
     printerKitchenTitle: "🍳 廚房印表機 (製作聯)",
     printerKitchenDesc: "大字號、桌號、備註清單、不顯示金額",
+    printerInterfaceLabel: "連線方式",
+    printerInterfaceNetwork: "🌐 區域網路 / Wi-Fi (TCP/IP)",
+    printerInterfaceBluetooth: "📡 藍牙無線 (Bluetooth SPP)",
+    printerBtDeviceLabel: "已配對藍牙裝置",
+    printerBtSelectPlaceholder: "-- 請選擇已配對的藍牙印表機 --",
+    printerBtRefreshBtn: "🔄 重新整理",
+    printerBtNoDevices: "未發現已配對裝置，請先至 Android 設定中完成配對",
+    printerIpLabel: "IP 位址 (LAN / Wi-Fi)",
+    printerPortLabel: "Port 端口",
+    printerPaperLabel: "紙張規格",
+    printerPaper80: "80mm (標準大票)",
+    printerPaper58: "58mm (小票)",
     btnTestPrint: "🖨️ 測試列印 (Test Print)",
     btnSavePrinterSettings: "💾 儲存印表機設定",
     // Menu Editor
@@ -679,6 +691,18 @@ const I18N = {
     printerCashierDesc: "In hóa đơn chi tiết, hiển thị giá tiền, tùy biến và mã QR",
     printerKitchenTitle: "🍳 Máy in Bếp (Phiếu chế biến)",
     printerKitchenDesc: "Font chữ lớn, số bàn, ghi chú món, không hiển thị giá tiền",
+    printerInterfaceLabel: "Hình thức kết nối",
+    printerInterfaceNetwork: "🌐 Mạng nội bộ / Wi-Fi (TCP/IP)",
+    printerInterfaceBluetooth: "📡 Bluetooth không dây (SPP)",
+    printerBtDeviceLabel: "Thiết bị Bluetooth đã ghép đôi",
+    printerBtSelectPlaceholder: "-- Chọn máy in Bluetooth đã ghép đôi --",
+    printerBtRefreshBtn: "🔄 Quét lại",
+    printerBtNoDevices: "Chưa tìm thấy máy in Bluetooth nào. Vui lòng ghép đôi trong Cài đặt Android trước",
+    printerIpLabel: "Địa chỉ IP (LAN / Wi-Fi)",
+    printerPortLabel: "Cổng Port",
+    printerPaperLabel: "Khổ giấy",
+    printerPaper80: "80mm (Khổ tiêu chuẩn)",
+    printerPaper58: "58mm (Khổ nhỏ)",
     btnTestPrint: "🖨️ In Thử Nghiệm",
     btnSavePrinterSettings: "💾 Lưu Cấu Hình Máy In",
     // Multi-Round Append Orders
@@ -1238,5 +1262,33 @@ function applyLanguageToDOM() {
   if (prnKitD) prnKitD.innerText = dict.printerKitchenDesc;
   const btnSvPrn = document.getElementById("i18n-btn-save-printer-settings");
   if (btnSvPrn) btnSvPrn.innerText = dict.btnSavePrinterSettings;
+
+  // Bluetooth & Interface DOM Labels
+  const labelsInterface = document.querySelectorAll(".i18n-printer-interface-lbl");
+  labelsInterface.forEach(el => el.innerText = dict.printerInterfaceLabel);
+
+  const labelsBt = document.querySelectorAll(".i18n-printer-bt-lbl");
+  labelsBt.forEach(el => el.innerText = dict.printerBtDeviceLabel);
+
+  const btRefreshBtns = document.querySelectorAll(".i18n-printer-bt-refresh");
+  btRefreshBtns.forEach(el => el.innerText = dict.printerBtRefreshBtn);
+
+  const labelsIp = document.querySelectorAll(".i18n-printer-ip-lbl");
+  labelsIp.forEach(el => el.innerText = dict.printerIpLabel);
+
+  const labelsPaper = document.querySelectorAll(".i18n-printer-paper-lbl");
+  labelsPaper.forEach(el => el.innerText = dict.printerPaperLabel);
+
+  const optNets = document.querySelectorAll(".i18n-opt-network");
+  optNets.forEach(el => el.innerText = dict.printerInterfaceNetwork);
+
+  const optBts = document.querySelectorAll(".i18n-opt-bluetooth");
+  optBts.forEach(el => el.innerText = dict.printerInterfaceBluetooth);
+
+  const optP80s = document.querySelectorAll(".i18n-opt-p80");
+  optP80s.forEach(el => el.innerText = dict.printerPaper80);
+
+  const optP58s = document.querySelectorAll(".i18n-opt-p58");
+  optP58s.forEach(el => el.innerText = dict.printerPaper58);
 }
 
