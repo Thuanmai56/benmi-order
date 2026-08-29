@@ -500,6 +500,12 @@ async function fetchOrders() {
     if (!isFirstLoad && ((newArrivals.length > 0 && pendingNewOrders.length > 0) || hasNewlyAppendedRound || unacknowledgedAppends.size > 0)) {
       if (typeof startContinuousAlarm === "function") startContinuousAlarm();
     }
+
+    // Auto-print newly arrived orders (with built-in deduplication)
+    if (typeof PrinterService !== "undefined" && pendingNewOrders.length > 0) {
+      PrinterService.handleIncomingOrders(pendingNewOrders);
+    }
+
     isFirstLoad = false;
     if (typeof updateNewAlert === "function") updateNewAlert();
 

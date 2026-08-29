@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Benmi POS</string>
+    <string name="title_activity_main">Benmi POS</string>
+    <string name="package_name">com.benmi.pos</string>
+    <string name="custom_url_scheme">com.benmi.pos</string>
+</resources>
