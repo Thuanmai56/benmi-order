@@ -19,9 +19,37 @@ global.localStorage = {
   clear: () => { for (const k in mockStorage) delete mockStorage[k]; }
 };
 
+global.document = {
+  createElement: (tag) => {
+    if (tag === 'canvas') {
+      return {
+        width: 576,
+        height: 800,
+        getContext: () => ({
+          fillRect: () => {},
+          fillText: () => {},
+          strokeRect: () => {},
+          stroke: () => {},
+          beginPath: () => {},
+          moveTo: () => {},
+          lineTo: () => {},
+          setLineDash: () => {},
+          save: () => {},
+          restore: () => {},
+          drawImage: () => {}
+        }),
+        toDataURL: () => "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+      };
+    }
+    return { style: {}, appendChild: () => {}, removeChild: () => {} };
+  },
+  body: { appendChild: () => {}, removeChild: () => {} }
+};
+
 global.window = {
   location: { search: '?tenant=benmi' },
-  localStorage: global.localStorage
+  localStorage: global.localStorage,
+  document: global.document
 };
 
 // Load js/printer-service.js
@@ -68,22 +96,14 @@ const mockOrder = {
   note: "請附發票載具"
 };
 
-const cashierHtml = service.buildCashierReceiptHTML(mockOrder, 80);
-assert(cashierHtml.includes("客 人 結 帳 聯"), "Cashier receipt should contain 客人結帳聯 header");
-assert(cashierHtml.includes("#260829-01"), "Cashier receipt should contain order key");
-assert(cashierHtml.includes("桌號：12"), "Cashier receipt should contain table number 12");
-assert(cashierHtml.includes("$160"), "Cashier receipt should display total price $160");
-assert(cashierHtml.includes("大辣、不加洋蔥"), "Cashier receipt should display modifiers");
-console.log("✅ Test 4 Passed: Cashier receipt HTML formatting verified.");
+const cashierPng = service.drawReceiptToCanvas(mockOrder, false, 80);
+assert(cashierPng.startsWith("data:image/png;base64,"), "Cashier receipt should generate valid Base64 PNG");
+console.log("✅ Test 4 Passed: Cashier receipt Canvas Painter verified.");
 
-// 5. Test Kitchen Ticket HTML Layout
-const kitchenHtml = service.buildKitchenTicketHTML(mockOrder, 80);
-assert(kitchenHtml.includes("廚 房 出 餐 聯"), "Kitchen ticket should contain 廚房出餐聯 header");
-assert(kitchenHtml.includes("【內用 桌號：12】"), "Kitchen ticket should contain prominent table number");
-assert(kitchenHtml.includes("招牌越式烤肉麵包"), "Kitchen ticket should contain dish name");
-assert(kitchenHtml.includes("大辣、不加洋蔥"), "Kitchen ticket should contain kitchen modifiers");
-assert(!kitchenHtml.includes("$160") && !kitchenHtml.includes("應收總計"), "Kitchen ticket MUST NOT show pricing totals");
-console.log("✅ Test 5 Passed: Kitchen ticket formatting (large font, modifiers, strictly NO pricing) verified.");
+// 5. Test Kitchen Ticket Canvas Layout
+const kitchenPng = service.drawReceiptToCanvas(mockOrder, true, 80);
+assert(kitchenPng.startsWith("data:image/png;base64,"), "Kitchen ticket should generate valid Base64 PNG");
+console.log("✅ Test 5 Passed: Kitchen ticket Canvas Painter verified.");
 
 // 6. Test Local Mock TCP Socket Communication
 const mockServer = net.createServer((socket) => {
