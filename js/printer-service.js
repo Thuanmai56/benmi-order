@@ -82,10 +82,25 @@
 
     async getPairedBluetoothDevices() {
       const plugin = this.getPlugin();
-      if (this.isNative && plugin && typeof plugin.getPairedBluetoothDevices === 'function') {
+      if (this.isNative && plugin) {
         try {
-          const res = await plugin.getPairedBluetoothDevices();
-          return res;
+          // Explicitly trigger native permission popup if not granted yet
+          if (typeof plugin.checkPermissions === 'function' && typeof plugin.requestPermissions === 'function') {
+            try {
+              const check = await plugin.checkPermissions();
+              if (check && check.bluetooth !== 'granted') {
+                console.log('[PrinterService] Requesting Bluetooth permissions via Capacitor bridge...');
+                await plugin.requestPermissions({ permissions: ['bluetooth'] });
+              }
+            } catch (permErr) {
+              console.warn('[PrinterService] Permission check error, proceeding to native call:', permErr);
+            }
+          }
+
+          if (typeof plugin.getPairedBluetoothDevices === 'function') {
+            const res = await plugin.getPairedBluetoothDevices();
+            return res;
+          }
         } catch (e) {
           console.error('[PrinterService] Failed to get paired Bluetooth devices:', e);
           throw e;
