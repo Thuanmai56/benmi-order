@@ -109,13 +109,14 @@ function renderListLeft(orders) {
     tile.onclick = () => openReview(order.key);
 
     let rightActions = "";
+    const printBtn = `<button class="btn btn-ghost tile-action-btn" style="background:#f8fafc; color:#475569; border:1.5px solid #cbd5e1; padding: 6px 10px; margin-right: 4px;" title="${t('btnPrint')}" onclick="event.stopPropagation(); if(typeof PrinterService !== 'undefined') PrinterService.printManual('${escapeHtml(order.key)}')">🖨️ ${t('btnPrint')}</button>`;
 
     if (isNew) {
-      rightActions = `<button class="btn btn-ghost tile-action-btn" style="background:#e0f2fe; color:#0369a1;" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">${t('btnReview')}</button>`;
+      rightActions = `${printBtn}<button class="btn btn-ghost tile-action-btn" style="background:#e0f2fe; color:#0369a1;" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">${t('btnReview')}</button>`;
     } else if (order.status === "ACCEPTED") {
-      rightActions = `<button class="btn btn-primary tile-action-btn" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','DONE', {}, this)">${t('btnReady')}</button>`;
+      rightActions = `${printBtn}<button class="btn btn-primary tile-action-btn" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','DONE', {}, this)">${t('btnReady')}</button>`;
     } else {
-      rightActions = `<button class="btn tile-action-btn" style="background:#f1f5f9; color:#94a3af; cursor:not-allowed;" disabled>${t('btnWaitingReply')}</button>`;
+      rightActions = `${printBtn}<button class="btn tile-action-btn" style="background:#f1f5f9; color:#94a3af; cursor:not-allowed;" disabled>${t('btnWaitingReply')}</button>`;
     }
 
     const tableNum = getOrderTableNumber(order);
@@ -221,6 +222,7 @@ function renderListRight(orders) {
         </div>
       </div>
       <div class="tile-actions">
+        <button class="btn btn-ghost tile-action-btn" style="background:#f8fafc; color:#475569; border:1.5px solid #cbd5e1; padding: 6px 10px; margin-right: 4px;" title="${t('btnReprint') || t('btnPrint')}" onclick="event.stopPropagation(); if(typeof PrinterService !== 'undefined') PrinterService.printManual('${escapeHtml(order.key)}')">🖨️ ${t('btnReprint') || t('btnPrint')}</button>
         ${isDineIn
           ? `<button class="btn tile-action-btn" style="background:#7c3aed; color:#ffffff;" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','PAID', {}, this)">${t('btnPaid')}</button>`
           : `<button class="btn btn-yellow tile-action-btn" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','PICKED_UP', {}, this)">${t('btnPickedUp')}</button>`

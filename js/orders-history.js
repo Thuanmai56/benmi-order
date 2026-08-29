@@ -202,6 +202,7 @@ function renderHistory(orders) {
           ${itemsSummary ? `<div class="history-tile-items">🧾 ${escapeHtml(itemsSummary)}</div>` : ''}
         </div>
         <div class="history-tile-actions">
+          <button class="history-tile-btn" style="background:#f8fafc; color:#475569; border:1px solid #cbd5e1; margin-right:4px;" title="${t('btnReprint') || t('btnPrint')}" onclick="event.stopPropagation(); if(typeof PrinterService !== 'undefined') PrinterService.printManual('${escapeHtml(order.key)}')">🖨️ ${t('btnReprint') || t('btnPrint')}</button>
           <button class="history-tile-btn" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">${t('btnView')}</button>
         </div>
       `;

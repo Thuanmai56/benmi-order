@@ -199,6 +199,20 @@ const I18N = {
     saving: "儲存中...",
     saveSuccess: "設定儲存成功！",
     saveFail: "儲存失敗：",
+    // Printer Settings
+    btnPrint: "列印",
+    btnReprint: "補印",
+    tocPrinter: "出單與印表機",
+    settingPrinterTitle: "🖨️ 出單與印表機設定 (ESC/POS)",
+    settingPrinterSub: "設定 Wi-Fi / LAN 區域網路熱感應出單機 (Port 9100) 與自動列印模式",
+    printerAutoPrintTitle: "新訂單自動列印 (Auto-Print)",
+    printerAutoPrintDesc: "當系統收到新訂單時，自動出單至已啟用的印表機",
+    printerCashierTitle: "🧾 櫃檯印表機 (客人聯)",
+    printerCashierDesc: "出明細發票、含金額、客製化與 QR Code",
+    printerKitchenTitle: "🍳 廚房印表機 (製作聯)",
+    printerKitchenDesc: "大字號、桌號、備註清單、不顯示金額",
+    btnTestPrint: "🖨️ 測試列印 (Test Print)",
+    btnSavePrinterSettings: "💾 儲存印表機設定",
     // Menu Editor
     menuCatTitle: "菜單分類",
     menuCatSub: "點擊左側分類以管理品項",
@@ -653,6 +667,20 @@ const I18N = {
     reportsLockedTitle: "Tính năng nâng cao (Chưa kích hoạt)",
     reportsLockedDesc: "Tính năng thuộc gói BLAB Analytics nâng cao, vui lòng liên hệ đội ngũ BLAB để nâng cấp.",
     btnBackToSettings: "← Quay lại Cài đặt",
+    // Printer Settings
+    btnPrint: "In phiếu",
+    btnReprint: "In lại",
+    tocPrinter: "Máy in & Xuất vé",
+    settingPrinterTitle: "🖨️ Cài Đặt Máy In Nhiệt (ESC/POS)",
+    settingPrinterSub: "Cấu hình máy in mạng LAN / Wi-Fi (Cổng 9100) và chế độ tự động in",
+    printerAutoPrintTitle: "Tự động in khi có đơn mới (Auto-Print)",
+    printerAutoPrintDesc: "Tự động xuất vé ra máy in ngay khi hệ thống nhận đơn hàng mới",
+    printerCashierTitle: "🧾 Máy in Quầy (Hóa đơn khách)",
+    printerCashierDesc: "In hóa đơn chi tiết, hiển thị giá tiền, tùy biến và mã QR",
+    printerKitchenTitle: "🍳 Máy in Bếp (Phiếu chế biến)",
+    printerKitchenDesc: "Font chữ lớn, số bàn, ghi chú món, không hiển thị giá tiền",
+    btnTestPrint: "🖨️ In Thử Nghiệm",
+    btnSavePrinterSettings: "💾 Lưu Cấu Hình Máy In",
     // Multi-Round Append Orders
     badgeAppendRound: "Đợt {n}",
     badgeAppendShort: "Gọi thêm",
@@ -808,6 +836,8 @@ function applyLanguageToDOM() {
   // Review Modal
   const revTitle = document.getElementById("i18n-review-title");
   if (revTitle) revTitle.innerText = dict.reviewTitle;
+  const btnRevPrn = document.getElementById("i18n-review-btn-print");
+  if (btnRevPrn) btnRevPrn.innerText = dict.btnPrint;
   const lOrder = document.getElementById("i18n-label-order");
   if (lOrder) lOrder.innerText = dict.labelOrder;
   const lCustomer = document.getElementById("i18n-label-customer");
@@ -1186,5 +1216,27 @@ function applyLanguageToDOM() {
   if (featLockD) featLockD.innerText = dict.featureLockedDesc;
   const btnContUpg = document.getElementById("i18n-btn-contact-upgrade");
   if (btnContUpg) btnContUpg.innerHTML = `<span>💬</span> <span>${dict.btnContactUpgrade}</span>`;
+
+  // Thermal Printer Settings DOM mappings
+  const tocPrn = document.getElementById("i18n-toc-printer");
+  if (tocPrn) tocPrn.innerText = dict.tocPrinter;
+  const setPrnT = document.getElementById("i18n-setting-printer-title");
+  if (setPrnT) setPrnT.innerText = dict.settingPrinterTitle;
+  const setPrnS = document.getElementById("i18n-setting-printer-sub");
+  if (setPrnS) setPrnS.innerText = dict.settingPrinterSub;
+  const prnAutoT = document.getElementById("i18n-printer-autoprint-title");
+  if (prnAutoT) prnAutoT.innerText = dict.printerAutoPrintTitle;
+  const prnAutoD = document.getElementById("i18n-printer-autoprint-desc");
+  if (prnAutoD) prnAutoD.innerText = dict.printerAutoPrintDesc;
+  const prnCashT = document.getElementById("i18n-printer-cashier-title");
+  if (prnCashT) prnCashT.innerText = dict.printerCashierTitle;
+  const prnCashD = document.getElementById("i18n-printer-cashier-desc");
+  if (prnCashD) prnCashD.innerText = dict.printerCashierDesc;
+  const prnKitT = document.getElementById("i18n-printer-kitchen-title");
+  if (prnKitT) prnKitT.innerText = dict.printerKitchenTitle;
+  const prnKitD = document.getElementById("i18n-printer-kitchen-desc");
+  if (prnKitD) prnKitD.innerText = dict.printerKitchenDesc;
+  const btnSvPrn = document.getElementById("i18n-btn-save-printer-settings");
+  if (btnSvPrn) btnSvPrn.innerText = dict.btnSavePrinterSettings;
 }
 

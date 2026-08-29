@@ -1,0 +1,20 @@
+{
+  "name": "benmi-android-pos",
+  "version": "1.0.0",
+  "description": "Benmi Multi-Tenant Android POS Tablet App with Silent ESC/POS Thermal Printing",
+  "private": true,
+  "scripts": {
+    "build:web": "bash build.sh",
+    "sync": "bash build.sh && npx cap sync android",
+    "open:android": "npx cap open android",
+    "run:android": "bash build.sh && npx cap run android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.2.0",
+    "@capacitor/cli": "^6.2.0",
+    "@capacitor/core": "^6.2.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

@@ -142,6 +142,7 @@ function openSettings() {
   renderLanguageSetting();
   renderDineInSetting();
   renderReportsSetting();
+  loadPOSPrinterSettings();
   initSettingsScrollSpy();
 }
 
@@ -653,6 +654,99 @@ function openReportsFromSettings() {
   switchTab('reports');
 }
 
+// --- Thermal Printer Settings Logic ---
+function loadPOSPrinterSettings() {
+  if (typeof PrinterService === 'undefined') return;
+  const settings = PrinterService.getSettings();
+
+  const autoToggle = document.getElementById("printer-autoprint-toggle");
+  if (autoToggle) autoToggle.checked = !!settings.autoPrintNewOrders;
+
+  const cashEnabled = document.getElementById("printer-cashier-enabled");
+  if (cashEnabled) cashEnabled.checked = !!settings.cashier?.enabled;
+  const cashIp = document.getElementById("printer-cashier-ip");
+  if (cashIp) cashIp.value = settings.cashier?.ip || "";
+  const cashPort = document.getElementById("printer-cashier-port");
+  if (cashPort) cashPort.value = settings.cashier?.port || 9100;
+  const cashPaper = document.getElementById("printer-cashier-paper");
+  if (cashPaper) cashPaper.value = String(settings.cashier?.paperWidth || 80);
+
+  const kitEnabled = document.getElementById("printer-kitchen-enabled");
+  if (kitEnabled) kitEnabled.checked = !!settings.kitchen?.enabled;
+  const kitIp = document.getElementById("printer-kitchen-ip");
+  if (kitIp) kitIp.value = settings.kitchen?.ip || "";
+  const kitPort = document.getElementById("printer-kitchen-port");
+  if (kitPort) kitPort.value = settings.kitchen?.port || 9100;
+  const kitPaper = document.getElementById("printer-kitchen-paper");
+  if (kitPaper) kitPaper.value = String(settings.kitchen?.paperWidth || 80);
+}
+
+function savePOSPrinterSettings() {
+  if (typeof PrinterService === 'undefined') return;
+
+  const autoToggle = document.getElementById("printer-autoprint-toggle");
+  const cashEnabled = document.getElementById("printer-cashier-enabled");
+  const cashIp = document.getElementById("printer-cashier-ip");
+  const cashPort = document.getElementById("printer-cashier-port");
+  const cashPaper = document.getElementById("printer-cashier-paper");
+
+  const kitEnabled = document.getElementById("printer-kitchen-enabled");
+  const kitIp = document.getElementById("printer-kitchen-ip");
+  const kitPort = document.getElementById("printer-kitchen-port");
+  const kitPaper = document.getElementById("printer-kitchen-paper");
+
+  const newSettings = {
+    autoPrintNewOrders: autoToggle ? autoToggle.checked : false,
+    cashier: {
+      enabled: cashEnabled ? cashEnabled.checked : true,
+      ip: cashIp ? cashIp.value.trim() : "192.168.1.100",
+      port: cashPort ? Number(cashPort.value) || 9100 : 9100,
+      paperWidth: cashPaper ? Number(cashPaper.value) || 80 : 80,
+      autoCut: true
+    },
+    kitchen: {
+      enabled: kitEnabled ? kitEnabled.checked : true,
+      ip: kitIp ? kitIp.value.trim() : "192.168.1.101",
+      port: kitPort ? Number(kitPort.value) || 9100 : 9100,
+      paperWidth: kitPaper ? Number(kitPaper.value) || 80 : 80,
+      autoCut: true
+    }
+  };
+
+  const success = PrinterService.saveSettings(newSettings);
+  if (success) {
+    if (typeof showToast === 'function') showToast("✅ " + (t("saveSuccess") || "印表機設定儲存成功！"));
+  } else {
+    if (typeof showToast === 'function') showToast("❌ " + (t("saveFail") || "儲存失敗"));
+  }
+}
+
+async function testPOSPrinterStation(station) {
+  if (typeof PrinterService === 'undefined') return;
+  const isKitchen = station === 'kitchen';
+  const ipInput = document.getElementById(isKitchen ? "printer-kitchen-ip" : "printer-cashier-ip");
+  const portInput = document.getElementById(isKitchen ? "printer-kitchen-port" : "printer-cashier-port");
+  const paperInput = document.getElementById(isKitchen ? "printer-kitchen-paper" : "printer-cashier-paper");
+
+  const ip = ipInput ? ipInput.value.trim() : "";
+  const port = portInput ? Number(portInput.value) || 9100 : 9100;
+  const paperWidth = paperInput ? Number(paperInput.value) || 80 : 80;
+
+  if (!ip) {
+    alert("請先輸入印表機 IP 位址 (例如: 192.168.1.100)");
+    return;
+  }
+
+  if (typeof showToast === 'function') showToast(`🖨️ 正在傳送測試列印至 ${ip}:${port}...`);
+  try {
+    await PrinterService.testPrint(station, { ip, port, paperWidth, autoCut: true });
+    if (typeof showToast === 'function') showToast(`✅ 測試列印已送出至 ${ip}:${port}`);
+  } catch (err) {
+    console.error("Test print error:", err);
+    if (typeof showToast === 'function') showToast(`❌ 測試列印失敗: ${err.message || err}`);
+  }
+}
+
 // --- Settings Table of Contents (TOC) & ScrollSpy ---
 const SETTINGS_SECTIONS = [
   { id: "setting-card-status", tocId: "toc-item-status" },
@@ -663,6 +757,7 @@ const SETTINGS_SECTIONS = [
   { id: "setting-card-logo", tocId: "toc-item-logo" },
   { id: "setting-card-language", tocId: "toc-item-language" },
   { id: "setting-card-dinein", tocId: "toc-item-dinein" },
+  { id: "setting-card-printer", tocId: "toc-item-printer" },
   { id: "setting-card-reports", tocId: "toc-item-reports" }
 ];
 

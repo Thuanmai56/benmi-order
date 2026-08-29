@@ -393,6 +393,12 @@ async function fetchOrders() {
     } else if (!isFirstLoad && hasNewlyAppendedRound) {
       if (typeof playNewOrderSound === "function") playNewOrderSound();
     }
+
+    // Auto-print newly arrived orders (with built-in deduplication)
+    if (typeof PrinterService !== "undefined" && pendingNewOrders.length > 0) {
+      PrinterService.handleIncomingOrders(pendingNewOrders);
+    }
+
     isFirstLoad = false;
     if (typeof updateNewAlert === "function") updateNewAlert();
 

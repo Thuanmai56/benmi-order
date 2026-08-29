@@ -284,6 +284,10 @@
               <span class="toc-icon">🍽️</span>
               <span id="i18n-toc-dinein">內用接單模式</span>
             </div>
+            <div class="settings-toc-item" id="toc-item-printer" onclick="scrollToSettingSection('setting-card-printer')">
+              <span class="toc-icon">🖨️</span>
+              <span id="i18n-toc-printer">出單與印表機</span>
+            </div>
             <div class="settings-toc-item" id="toc-item-reports" onclick="scrollToSettingSection('setting-card-reports')">
               <span class="toc-icon">📊</span>
               <span id="i18n-toc-reports">銷量與營收報表</span>
@@ -521,6 +525,101 @@
               </div>
             </div>
 
+            <!-- Thermal Printer Settings -->
+            <div class="settings-card" id="setting-card-printer">
+              <div style="padding: 16px 20px; background: #f3f4f6; border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                  <div style="font-weight: 1100; font-size: 18px;" id="i18n-setting-printer-title">🖨️ 出單與印表機設定 (ESC/POS)</div>
+                  <div style="font-size: 13px; color: var(--muted); font-weight: 600; margin-top: 2px;" id="i18n-setting-printer-sub">設定 Wi-Fi / LAN 區域網路熱感應出單機 (Port 9100) 與自動列印模式</div>
+                </div>
+                <button type="button" class="btn btn-primary" style="padding: 10px 20px; font-size: 15px; border-radius: 8px; font-weight: 900;" onclick="savePOSPrinterSettings()" id="i18n-btn-save-printer-settings">
+                  💾 儲存印表機設定
+                </button>
+              </div>
+              <div style="padding: 20px; display: flex; flex-direction: column; gap: 20px;">
+                
+                <!-- Auto-Print Toggle -->
+                <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 14px 18px; border-radius: 12px; border: 1.5px solid var(--border);">
+                  <div>
+                    <div style="font-weight: 900; font-size: 16px; color: #1e293b;" id="i18n-printer-autoprint-title">新訂單自動列印 (Auto-Print)</div>
+                    <div style="font-size: 13px; color: var(--muted); margin-top: 2px;" id="i18n-printer-autoprint-desc">當系統收到新訂單時，自動出單至已啟用的印表機</div>
+                  </div>
+                  <label class="switch" style="position: relative; display: inline-block; width: 50px; height: 28px; margin: 0;">
+                    <input type="checkbox" id="printer-autoprint-toggle" style="opacity: 0; width: 0; height: 0;">
+                    <span class="slider round" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .3s; border-radius: 28px;"></span>
+                  </label>
+                </div>
+
+                <!-- Dual Stations Grid -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+                  
+                  <!-- Cashier Printer Config -->
+                  <div style="background: #fff; border: 1.5px solid var(--border); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <div style="font-weight: 900; font-size: 16px; color: #0f172a;" id="i18n-printer-cashier-title">🧾 櫃檯印表機 (客人聯)</div>
+                      <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 800; cursor: pointer;">
+                        <input type="checkbox" id="printer-cashier-enabled" style="width: 18px; height: 18px; accent-color: var(--primary);"> 啟用
+                      </label>
+                    </div>
+                    <div style="font-size: 12.5px; color: var(--muted);" id="i18n-printer-cashier-desc">出明細發票、含金額、客製化與 QR Code</div>
+                    <div>
+                      <label style="font-size: 12px; font-weight: 800; color: #475569;">IP 位址 (LAN / Wi-Fi)</label>
+                      <input type="text" id="printer-cashier-ip" class="form-input" style="margin-top: 4px; font-family: monospace; font-size: 14px;" placeholder="192.168.1.100">
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                      <div style="flex: 1;">
+                        <label style="font-size: 12px; font-weight: 800; color: #475569;">Port</label>
+                        <input type="number" id="printer-cashier-port" class="form-input" style="margin-top: 4px; font-family: monospace;" value="9100">
+                      </div>
+                      <div style="flex: 1;">
+                        <label style="font-size: 12px; font-weight: 800; color: #475569;">紙張規格</label>
+                        <select id="printer-cashier-paper" class="form-input" style="margin-top: 4px;">
+                          <option value="80">80mm (標準)</option>
+                          <option value="58">58mm (小票)</option>
+                        </select>
+                      </div>
+                    </div>
+                    <button type="button" class="btn" style="background: #f1f5f9; color: #334155; border: 1.5px solid #cbd5e1; font-weight: 800; padding: 8px 12px; margin-top: 4px; border-radius: 8px;" onclick="testPOSPrinterStation('cashier')">
+                      🖨️ 測試列印 (Test Print)
+                    </button>
+                  </div>
+
+                  <!-- Kitchen Printer Config -->
+                  <div style="background: #fff; border: 1.5px solid var(--border); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <div style="font-weight: 900; font-size: 16px; color: #0f172a;" id="i18n-printer-kitchen-title">🍳 廚房印表機 (製作聯)</div>
+                      <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 800; cursor: pointer;">
+                        <input type="checkbox" id="printer-kitchen-enabled" style="width: 18px; height: 18px; accent-color: var(--primary);"> 啟用
+                      </label>
+                    </div>
+                    <div style="font-size: 12.5px; color: var(--muted);" id="i18n-printer-kitchen-desc">大字號、桌號、備註清單、不顯示金額</div>
+                    <div>
+                      <label style="font-size: 12px; font-weight: 800; color: #475569;">IP 位址 (LAN / Wi-Fi)</label>
+                      <input type="text" id="printer-kitchen-ip" class="form-input" style="margin-top: 4px; font-family: monospace; font-size: 14px;" placeholder="192.168.1.101">
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                      <div style="flex: 1;">
+                        <label style="font-size: 12px; font-weight: 800; color: #475569;">Port</label>
+                        <input type="number" id="printer-kitchen-port" class="form-input" style="margin-top: 4px; font-family: monospace;" value="9100">
+                      </div>
+                      <div style="flex: 1;">
+                        <label style="font-size: 12px; font-weight: 800; color: #475569;">紙張規格</label>
+                        <select id="printer-kitchen-paper" class="form-input" style="margin-top: 4px;">
+                          <option value="80">80mm (標準)</option>
+                          <option value="58">58mm (小票)</option>
+                        </select>
+                      </div>
+                    </div>
+                    <button type="button" class="btn" style="background: #f1f5f9; color: #334155; border: 1.5px solid #cbd5e1; font-weight: 800; padding: 8px 12px; margin-top: 4px; border-radius: 8px;" onclick="testPOSPrinterStation('kitchen')">
+                      🖨️ 測試列印 (Test Print)
+                    </button>
+                  </div>
+
+                </div>
+
+              </div>
+            </div>
+
             <!-- Reports Analytics Setting (At the bottom) -->
             <div class="settings-card" id="setting-card-reports">
               <div style="padding: 16px 20px; background: #f3f4f6; border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
@@ -623,9 +722,14 @@
   <!-- Review modal -->
   <div id="reviewModal" class="modal">
     <div class="modal-content">
-      <div class="modal-title">
+      <div class="modal-title" style="display: flex; justify-content: space-between; align-items: center;">
         <h3 id="i18n-review-title">Review 訂單</h3>
-        <div class="modal-close" onclick="closeModal()">✕</div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button type="button" class="btn btn-ghost" style="background:#f1f5f9; color:#334155; border:1.5px solid #cbd5e1; padding: 6px 12px; font-weight:800; border-radius:8px; display: inline-flex; align-items: center; gap: 4px;" onclick="if(typeof reviewingOrder !== 'undefined' && reviewingOrder && typeof PrinterService !== 'undefined') PrinterService.printManual(reviewingOrder.key)">
+            <span>🖨️</span> <span id="i18n-review-btn-print">列印</span>
+          </button>
+          <div class="modal-close" onclick="closeModal()">✕</div>
+        </div>
       </div>
 
       <div class="modal-body">
@@ -1037,6 +1141,7 @@
   <script src="js/orders-i18n.js?v=20260824_ellipsis_fix_2"></script>
   <script src="js/orders-core.js?v=20260824_ellipsis_fix_2"></script>
   <script src="js/orders-audio.js?v=20260824_ellipsis_fix_2"></script>
+  <script src="js/printer-service.js?v=20260829_printer_1"></script>
   <script src="js/orders-live.js?v=20260824_ellipsis_fix_2"></script>
   <script src="js/orders-modals.js?v=20260824_ellipsis_fix_2"></script>
   <script src="js/orders-history.js?v=20260824_ellipsis_fix_2"></script>
