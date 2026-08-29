@@ -35,34 +35,34 @@ Nhân viên tại quầy hiện đang vận hành bảng quản lý đơn hàng 
 
 ```mermaid
 graph TD
-    subgraph Cloudflare Edge Ecosystem [Độc Lập Trên Cloud - Giữ Nguyên 100%]
-        Worker[Cloudflare Worker: benmi-worker-official]
-        KV[(Workers KV: Cache & State)]
-        D1[(Cloudflare D1: SQLite Database)]
+    subgraph CloudflareEdge ["Cloudflare Edge Ecosystem (Độc Lập Trên Cloud)"]
+        Worker["Cloudflare Worker: benmi-worker-official"]
+        KV[("Workers KV: Cache & State")]
+        D1[("Cloudflare D1: SQLite Database")]
         Worker --> KV
         Worker --> D1
     end
 
-    subgraph Store Local Area Network [Mạng Nội Bộ Wi-Fi / LAN Tại Quán]
-        subgraph Android Tablet POS [apps/android-pos]
-            WebView[Capacitor Android WebView]
-            PosUI[orders.html / js/orders-*.js]
-            PrintBridge[TypeScript / JS Print Service]
-            NativePlugin[ThermalPrinterPlugin.java]
+    subgraph StoreLAN ["Store Local Area Network (Mạng Wi-Fi / LAN Tại Quán)"]
+        subgraph TabletPOS ["Android Tablet POS (apps/android-pos)"]
+            WebView["Capacitor Android WebView"]
+            PosUI["orders.html / js/orders-*.js"]
+            PrintBridge["TypeScript / JS Print Service"]
+            NativePlugin["ThermalPrinterPlugin.java"]
             
-            PosUI -->|1. Polling / SSE Cập Nhật Đơn Mới| Worker
-            PosUI -->|2a. Tự Động In Khi Có Đơn Mới (Auto)| PrintBridge
-            PosUI -->|2b. Bấm Nút In Thủ Công Trên Thẻ Đơn (Manual)| PrintBridge
-            PrintBridge -->|3. Gọi Bridge Capacitor RPC| NativePlugin
+            PosUI -->|"1. Polling / SSE Cập Nhật Đơn Mới"| Worker
+            PosUI -->|"2a. Tự Động In Khi Có Đơn Mới (Auto)"| PrintBridge
+            PosUI -->|"2b. Bấm Nút In Thủ Công Trên Thẻ Đơn (Manual)"| PrintBridge
+            PrintBridge -->|"3. Gọi Bridge Capacitor RPC"| NativePlugin
         end
 
-        subgraph Local Thermal Hardware [Cổng TCP Socket 9100]
-            CashierPrinter[Máy In Quầy: 192.168.1.100:9100<br>Hóa Đơn Khách + Giá Tiền + Mã QR]
-            KitchenPrinter[Máy In Bếp: 192.168.1.101:9100<br>Phiếu Làm Món + Topping + Chữ Lớn]
+        subgraph LocalPrinters ["Local Thermal Hardware (Cổng TCP Socket 9100)"]
+            CashierPrinter["Máy In Quầy: 192.168.1.100:9100<br>Hóa Đơn Khách + Giá Tiền + Mã QR"]
+            KitchenPrinter["Máy In Bếp: 192.168.1.101:9100<br>Phiếu Làm Món + Topping + Chữ Lớn"]
         end
 
-        NativePlugin -->|Gửi Raw TCP Byte Stream| CashierPrinter
-        NativePlugin -->|Gửi Raw TCP Byte Stream| KitchenPrinter
+        NativePlugin -->|"Gửi Raw TCP Byte Stream"| CashierPrinter
+        NativePlugin -->|"Gửi Raw TCP Byte Stream"| KitchenPrinter
     end
 ```
 
