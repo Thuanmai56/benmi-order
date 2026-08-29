@@ -213,13 +213,13 @@
 
     // --- 5. RECEIPT BUILDERS & RASTER ENGINE ---
     async printCashierReceipt(order, config) {
-      const html = this.buildCashierReceiptHTML(order, config.paperWidth);
-      return this.renderAndPrintHTML(html, config, `Cashier #${order.key}`);
+      const base64Png = this.drawReceiptToCanvas(order, false, config.paperWidth || 80);
+      return this.transmitReceiptBitmap(base64Png, config, `Cashier #${order.key}`);
     }
 
     async printKitchenTicket(order, config) {
-      const html = this.buildKitchenTicketHTML(order, config.paperWidth);
-      return this.renderAndPrintHTML(html, config, `Kitchen #${order.key}`);
+      const base64Png = this.drawReceiptToCanvas(order, true, config.paperWidth || 80);
+      return this.transmitReceiptBitmap(base64Png, config, `Kitchen #${order.key}`);
     }
 
     async testPrint(stationType, targetConfig = null) {
@@ -238,213 +238,194 @@
         createdAt: Date.now()
       };
 
-      const html = isKitchen
-        ? this.buildKitchenTicketHTML(mockOrder, config.paperWidth || 80)
-        : this.buildCashierReceiptHTML(mockOrder, config.paperWidth || 80);
-
-      return this.renderAndPrintHTML(html, config, `Test-${stationType}`);
+      const base64Png = this.drawReceiptToCanvas(mockOrder, isKitchen, config.paperWidth || 80);
+      return this.transmitReceiptBitmap(base64Png, config, `Test-${stationType}`);
     }
 
-    // --- 6. HTML RECEIPT TEMPLATES (Clean, High-Contrast for Thermal Bitmap) ---
-    buildCashierReceiptHTML(order, paperWidth = 80) {
+    // --- 6. PURE HTML5 CANVAS RECEIPT PAINTER (Zero-Taint, 100% Crisp Typography) ---
+    drawReceiptToCanvas(order, isKitchen, paperWidth = 80) {
       const widthPx = paperWidth === 58 ? 384 : 576;
-      const brandName = (typeof window.currentTenantBrandName !== 'undefined' && window.currentTenantBrandName) || 'Benmi POS';
-      const isDineIn = order.diningOption === 'dine_in';
-      const diningLabel = isDineIn ? `【內用 桌號：${order.tableNumber || '-'}】` : '【外帶自取】';
-      const dateStr = order.time || new Date().toLocaleTimeString('zh-TW');
+      const padding = paperWidth === 58 ? 16 : 24;
+      const contentWidth = widthPx - (padding * 2);
 
-      const itemsHTML = this.formatOrderContentToHTML(order.content, false);
-      const totalDisplay = (order.total != null && order.total > 0) ? `$${order.total}` : '-';
+      const canvas = document.createElement('canvas');
+      canvas.width = widthPx;
+      canvas.height = 1600; // Temp allocation
+      const ctx = canvas.getContext('2d');
 
-      return `
-        <div style="width: ${widthPx}px; background:#fff; color:#000; font-family: 'Noto Sans TC', sans-serif, monospace; padding: 12px 16px; box-sizing: border-box; font-size: 22px; line-height: 1.4;">
-          <div style="text-align: center; margin-bottom: 8px;">
-            <div style="font-size: 32px; font-weight: 900; letter-spacing: 1px;">${brandName}</div>
-            <div style="font-size: 20px; font-weight: 700; margin-top: 4px;">客 人 結 帳 聯</div>
-          </div>
-          <div style="border-top: 2px dashed #000; margin: 8px 0;"></div>
-          
-          <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 26px;">
-            <div>單號：#${order.key}</div>
-            <div>${diningLabel}</div>
-          </div>
-          <div style="font-size: 19px; color: #333; margin-top: 4px;">
-            <div>顧客：${order.customer || '顧客'}</div>
-            <div>時間：${dateStr}</div>
-          </div>
-          
-          <div style="border-top: 2px dashed #000; margin: 8px 0;"></div>
-          <div style="font-size: 20px; font-weight: 800; margin-bottom: 6px;">【訂單品項】</div>
-          ${itemsHTML}
-          
-          <div style="border-top: 2px dashed #000; margin: 8px 0;"></div>
-          ${order.note ? `<div style="font-size: 19px; font-weight: 700; margin-bottom: 6px;">備註：${order.note}</div>` : ''}
-          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 30px; font-weight: 900; margin-top: 6px;">
-            <div>應收總計：</div>
-            <div>${totalDisplay}</div>
-          </div>
-          
-          <div style="border-top: 2px solid #000; margin: 12px 0 6px 0;"></div>
-          <div style="text-align: center; font-size: 18px; font-weight: 600;">謝謝光臨，祝您用餐愉快！</div>
-          <div style="height: 24px;"></div>
-        </div>
-      `;
-    }
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, widthPx, canvas.height);
+      ctx.fillStyle = '#000000';
+      ctx.textBaseline = 'top';
 
-    buildKitchenTicketHTML(order, paperWidth = 80) {
-      const widthPx = paperWidth === 58 ? 384 : 576;
-      const isDineIn = order.diningOption === 'dine_in';
-      const diningLabel = isDineIn ? `【內用 桌號：${order.tableNumber || '-'}】` : '【外帶自取】';
-      const dateStr = order.time || new Date().toLocaleTimeString('zh-TW');
-      const itemsHTML = this.formatOrderContentToHTML(order.content, true);
+      let y = padding;
 
-      return `
-        <div style="width: ${widthPx}px; background:#fff; color:#000; font-family: 'Noto Sans TC', sans-serif, monospace; padding: 12px 16px; box-sizing: border-box; font-size: 24px; line-height: 1.45;">
-          <div style="text-align: center; border: 3px solid #000; padding: 6px 0; margin-bottom: 8px;">
-            <div style="font-size: 34px; font-weight: 1000; letter-spacing: 2px;">廚 房 出 餐 聯</div>
-            <div style="font-size: 30px; font-weight: 900; margin-top: 2px;">#${order.key}</div>
-          </div>
-          
-          <div style="font-size: 32px; font-weight: 1000; text-align: center; margin: 8px 0; background: #000; color: #fff; padding: 4px 0;">
-            ${diningLabel}
-          </div>
-          
-          <div style="display: flex; justify-content: space-between; font-size: 19px; font-weight: 700; margin-bottom: 6px;">
-            <div>顧客：${order.customer || '顧客'}</div>
-            <div>時間：${dateStr}</div>
-          </div>
-          
-          <div style="border-top: 3px solid #000; margin: 8px 0;"></div>
-          ${itemsHTML}
-          
-          <div style="border-top: 3px solid #000; margin: 8px 0;"></div>
-          ${order.note ? `<div style="font-size: 24px; font-weight: 900; margin-top: 4px; border: 2px dashed #000; padding: 6px;">⚠️ 廚房備註：${order.note}</div>` : ''}
-          <div style="height: 30px;"></div>
-        </div>
-      `;
-    }
+      // 1. Header
+      if (isKitchen) {
+        ctx.font = 'bold 30px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(padding, y, contentWidth, 54);
+        ctx.fillText('廚 房 出 餐 聯', widthPx / 2, y + 12);
+        y += 66;
 
-    formatOrderContentToHTML(content, isKitchen = false) {
-      if (!content) return '<div style="color:#666;">(無品項內容)</div>';
-      const lines = content.split('\n').filter(l => l.trim().length > 0);
-      let html = '<div style="display: flex; flex-direction: column; gap: 8px;">';
+        ctx.fillRect(padding, y, contentWidth, 52);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '900 32px sans-serif';
+        const diningLabel = order.diningOption === 'dine_in' ? `【內用 桌號：${order.tableNumber || '-'}】` : '【外帶自取】';
+        ctx.fillText(diningLabel, widthPx / 2, y + 10);
+        ctx.fillStyle = '#000000';
+        y += 62;
 
-      lines.forEach(line => {
-        const trimmed = line.trim();
-        if (trimmed.startsWith('↳') || trimmed.startsWith('✦') || trimmed.startsWith('-')) {
-          // Modifier/Customization note line
-          html += `<div style="font-size: ${isKitchen ? '22px' : '18px'}; font-weight: 700; margin-left: 18px; color: #111;">${trimmed}</div>`;
+        ctx.textAlign = 'left';
+        ctx.font = 'bold 22px sans-serif';
+        ctx.fillText(`單號：#${order.key}`, padding, y);
+        ctx.textAlign = 'right';
+        ctx.fillText(`時間：${order.time || ''}`, widthPx - padding, y);
+        y += 32;
+      } else {
+        const brandName = (typeof window.currentTenantBrandName !== 'undefined' && window.currentTenantBrandName) || 'Benmi POS';
+        ctx.font = '900 34px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(brandName, widthPx / 2, y);
+        y += 44;
+
+        ctx.font = 'bold 22px sans-serif';
+        ctx.fillText('客 人 結 帳 聯', widthPx / 2, y);
+        y += 32;
+
+        ctx.lineWidth = 2;
+        this.drawDashedLine(ctx, padding, widthPx - padding, y);
+        y += 14;
+
+        ctx.textAlign = 'left';
+        ctx.font = 'bold 26px sans-serif';
+        ctx.fillText(`單號：#${order.key}`, padding, y);
+        ctx.textAlign = 'right';
+        const diningLabel = order.diningOption === 'dine_in' ? `內用 桌號：${order.tableNumber || '-'}` : '外帶自取';
+        ctx.fillText(diningLabel, widthPx - padding, y);
+        y += 36;
+
+        ctx.textAlign = 'left';
+        ctx.font = '19px sans-serif';
+        ctx.fillText(`顧客：${order.customer || '顧客'}`, padding, y);
+        ctx.textAlign = 'right';
+        ctx.fillText(`時間：${order.time || ''}`, widthPx - padding, y);
+        y += 28;
+      }
+
+      this.drawDashedLine(ctx, padding, widthPx - padding, y);
+      y += 16;
+
+      // 2. Items Section
+      ctx.textAlign = 'left';
+      ctx.font = 'bold 22px sans-serif';
+      ctx.fillText(isKitchen ? '【製作品項】' : '【訂單品項】', padding, y);
+      y += 32;
+
+      const lines = (order.content || '').split('\n').filter(l => l.trim());
+      for (const line of lines) {
+        const isModifier = line.includes('↳') || line.startsWith('  ') || line.startsWith('\t');
+        if (isModifier) {
+          ctx.font = isKitchen ? 'bold 22px sans-serif' : '20px sans-serif';
+          ctx.fillStyle = '#222222';
+          ctx.fillText(line.trim(), padding + 22, y);
+          ctx.fillStyle = '#000000';
+          y += 28;
         } else {
-          // Main item line
-          html += `
-            <div style="display: flex; justify-content: space-between; font-size: ${isKitchen ? '28px' : '23px'}; font-weight: 900; margin-top: 6px; border-bottom: 1px dotted #ccc; padding-bottom: 3px;">
-              <div>${trimmed}</div>
-            </div>
-          `;
+          y += 4;
+          ctx.font = isKitchen ? '900 28px sans-serif' : '900 24px sans-serif';
+          ctx.fillText(line.trim(), padding, y);
+          y += 34;
         }
-      });
+      }
 
-      html += '</div>';
-      return html;
+      y += 8;
+      this.drawDashedLine(ctx, padding, widthPx - padding, y);
+      y += 16;
+
+      // 3. Notes
+      if (order.note && order.note.trim()) {
+        ctx.font = isKitchen ? 'bold 22px sans-serif' : 'bold 19px sans-serif';
+        ctx.fillText(`備註：${order.note}`, padding, y);
+        y += 32;
+        this.drawDashedLine(ctx, padding, widthPx - padding, y);
+        y += 16;
+      }
+
+      // 4. Totals (Cashier ONLY - strictly omitted for Kitchen)
+      if (!isKitchen) {
+        ctx.font = '900 32px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText('應收總計：', padding, y);
+        ctx.textAlign = 'right';
+        ctx.fillText(`$${order.total || 0}`, widthPx - padding, y);
+        y += 44;
+
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(padding, y);
+        ctx.lineTo(widthPx - padding, y);
+        ctx.stroke();
+        y += 16;
+
+        ctx.textAlign = 'center';
+        ctx.font = '18px sans-serif';
+        ctx.fillText('謝謝光臨，祝您用餐愉快！', widthPx / 2, y);
+        y += 28;
+      }
+
+      y += 24; // Bottom buffer
+
+      // Create final cropped canvas
+      const finalCanvas = document.createElement('canvas');
+      finalCanvas.width = widthPx;
+      finalCanvas.height = y;
+      const finalCtx = finalCanvas.getContext('2d');
+      finalCtx.drawImage(canvas, 0, 0, widthPx, y, 0, 0, widthPx, y);
+
+      return finalCanvas.toDataURL('image/png');
     }
 
-    // --- 7. RENDERING PIPELINE: HTML -> Canvas -> Base64 -> Native Thermal Socket ---
-    async renderAndPrintHTML(htmlString, config, logTitle = 'PrintJob') {
-      const plugin = this.getPlugin();
-      const ip = config.ip ? config.ip.trim() : '';
-      const port = Number(config.port) || 9100;
-      const paperWidth = Number(config.paperWidth) || 80;
+    drawDashedLine(ctx, x1, x2, y) {
+      ctx.save();
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 4]);
+      ctx.beginPath();
+      ctx.moveTo(x1, y);
+      ctx.lineTo(x2, y);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    async transmitReceiptBitmap(base64Png, config, logTitle) {
+      const ip = config.ip;
+      const port = parseInt(config.port, 10) || 9100;
+      const paperWidth = parseInt(config.paperWidth, 10) || 80;
       const autoCut = config.autoCut !== false;
+      const plugin = window.Capacitor?.Plugins?.ThermalPrinter;
 
       if (!ip) {
         throw new Error('未設定印表機 IP 位址');
       }
 
-      // 1. If running inside Android Native App, use Native printHtml for instant zero-taint rendering & TCP socket
-      if (this.isNative && plugin && typeof plugin.printHtml === 'function') {
-        console.log(`[PrinterService] 🚀 Sending HTML directly to Native Android Print Engine for ${ip}:${port}...`);
-        const res = await plugin.printHtml({
+      if (this.isNative && plugin) {
+        console.log(`[PrinterService] 🚀 Transmitting raster bitmap via Native TCP Socket ${ip}:${port}...`);
+        const res = await plugin.printBitmap({
           ip: ip,
           port: port,
-          html: htmlString,
+          base64Image: base64Png,
           paperWidth: paperWidth,
           autoCut: autoCut,
           timeoutMs: 5000
         });
         console.log(`[PrinterService] ✅ Native print success for [${logTitle}]:`, res);
         return res;
-      }
-
-      // 2. Fallback for Web Browser Testing (Offscreen rasterization & Preview window)
-      console.log(`[PrinterService] 🎨 Rendering [${logTitle}] for ${ip}:${port} (${paperWidth}mm)...`);
-      try {
-        const base64Png = await this.renderHtmlToPngBase64(htmlString, paperWidth);
-        console.log(`[PrinterService] 🌐 Browser Simulator: Print job generated successfully for [${logTitle}] -> ${ip}:${port}`);
+      } else {
+        console.log(`[PrinterService] 🌐 Browser Simulator: Print job generated for [${logTitle}] -> ${ip}:${port}`);
         this.openBrowserPreview(base64Png, logTitle, ip, port);
         return { success: true, simulated: true, ip, port };
-      } catch (err) {
-        console.warn(`[PrinterService] Raster preview warning:`, err);
-        return { success: true, simulated: true, ip, port };
       }
-    }
-
-    renderHtmlToPngBase64(htmlString, paperWidth = 80) {
-      return new Promise((resolve, reject) => {
-        try {
-          const widthPx = paperWidth === 58 ? 384 : 576;
-          const container = document.createElement('div');
-          container.style.position = 'fixed';
-          container.style.left = '-9999px';
-          container.style.top = '-9999px';
-          container.style.width = `${widthPx}px`;
-          container.style.backgroundColor = '#ffffff';
-          container.innerHTML = htmlString;
-          document.body.appendChild(container);
-
-          // Use SVG foreignObject rasterization or direct canvas painting
-          setTimeout(() => {
-            const heightPx = Math.max(100, container.offsetHeight);
-            const svgXml = `
-              <svg xmlns="http://www.w3.org/2000/svg" width="${widthPx}" height="${heightPx}">
-                <foreignObject width="100%" height="100%">
-                  <div xmlns="http://www.w3.org/1999/xhtml">
-                    ${htmlString}
-                  </div>
-                </foreignObject>
-              </svg>
-            `;
-
-            const img = new Image();
-            const svgBlob = new Blob([svgXml], { type: 'image/svg+xml;charset=utf-8' });
-            const url = URL.createObjectURL(svgBlob);
-
-            img.onload = () => {
-              const canvas = document.createElement('canvas');
-              canvas.width = widthPx;
-              canvas.height = heightPx;
-              const ctx = canvas.getContext('2d');
-              ctx.fillStyle = '#ffffff';
-              ctx.fillRect(0, 0, widthPx, heightPx);
-              ctx.drawImage(img, 0, 0);
-
-              const dataUrl = canvas.toDataURL('image/png');
-              URL.revokeObjectURL(url);
-              document.body.removeChild(container);
-              resolve(dataUrl);
-            };
-
-            img.onerror = (err) => {
-              URL.revokeObjectURL(url);
-              document.body.removeChild(container);
-              reject(new Error('Failed to rasterize receipt HTML to image: ' + err));
-            };
-
-            img.src = url;
-          }, 60);
-        } catch (err) {
-          reject(err);
-        }
-      });
     }
 
     openBrowserPreview(base64Png, title, ip, port) {
