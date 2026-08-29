@@ -12,11 +12,13 @@ import android.util.Base64;
 import androidx.core.app.ActivityCompat;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
+import com.getcapacitor.PermissionState;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
+import com.getcapacitor.annotation.PermissionCallback;
 
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
@@ -293,6 +295,27 @@ public class ThermalPrinterPlugin extends Plugin {
      */
     @PluginMethod
     public void getPairedBluetoothDevices(PluginCall call) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissionForAlias("bluetooth", call, "bluetoothDevicesCallback");
+                return;
+            }
+        }
+        loadAndReturnBondedDevices(call);
+    }
+
+    @PermissionCallback
+    private void bluetoothDevicesCallback(PluginCall call) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                loadAndReturnBondedDevices(call);
+                return;
+            }
+        }
+        call.reject("BLUETOOTH_CONNECT permission not granted. Please allow Nearby Devices permission in App Info > Permissions.");
+    }
+
+    private void loadAndReturnBondedDevices(PluginCall call) {
         try {
             BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
             JSObject ret = new JSObject();
@@ -312,13 +335,6 @@ public class ThermalPrinterPlugin extends Plugin {
                 ret.put("devices", new JSArray());
                 call.resolve(ret);
                 return;
-            }
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                    call.reject("BLUETOOTH_CONNECT permission not granted. Please grant Bluetooth permissions in Settings.");
-                    return;
-                }
             }
 
             Set<BluetoothDevice> paired = adapter.getBondedDevices();
