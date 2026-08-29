@@ -32,6 +32,7 @@ export interface BootstrapResponse {
     shortName?: string | null;
     allowCustomization: boolean;
     appliedModifiers: string[];
+    pricingRules?: any | null;
     sortOrder: number;
     items: Array<{
       id: string;
@@ -179,6 +180,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
                     COALESCE(max_selection, 1) AS max_selection, 
                     COALESCE(allow_customization, 1) AS allow_customization,
                     COALESCE(applied_modifiers, '') AS applied_modifiers,
+                    pricing_rules,
                     sort_order 
              FROM menu_categories 
              WHERE tenant_id = ? 
@@ -305,6 +307,15 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
           }
         }
 
+        let pricingRules: any = null;
+        if (cat.pricing_rules && String(cat.pricing_rules).trim() !== '') {
+          try {
+            pricingRules = JSON.parse(cat.pricing_rules);
+          } catch (e) {
+            console.error(`[Bootstrap] Failed to parse pricing_rules for ${cat.id}:`, e);
+          }
+        }
+
         catalog.push({
           id: cat.id,
           slug: cat.slug,
@@ -312,6 +323,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
           shortName: cat.short_name || null,
           allowCustomization: Boolean(cat.allow_customization ?? 1) && appliedModifiers.length > 0,
           appliedModifiers: appliedModifiers,
+          pricingRules: pricingRules,
           sortOrder: cat.sort_order || 0,
           items: catItems
         });
