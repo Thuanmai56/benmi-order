@@ -767,10 +767,7 @@
                 } else {
                     const titleDiv = document.createElement('div');
                     titleDiv.className = 'section-title';
-                    titleDiv.style.display = 'flex';
-                    titleDiv.style.alignItems = 'center';
-                    titleDiv.style.justifyContent = 'space-between';
-                    const promoBadge = cat.pricingRules?.promo_label ? `<span style="font-size:12px; font-weight:700; color:#059669; background:#ecfdf5; border:1px solid #a7f3d0; padding:2px 8px; border-radius:9999px;">${cat.pricingRules.promo_label}</span>` : '';
+                    const promoBadge = cat.pricingRules?.promo_label ? `<span style="margin-left:auto; font-size:12px; font-weight:700; color:#059669; background:#ecfdf5; border:1px solid #a7f3d0; padding:2px 8px; border-radius:9999px;">${cat.pricingRules.promo_label}</span>` : '';
                     titleDiv.innerHTML = `<span>${cat.name}</span>${promoBadge}`;
                     sec.appendChild(titleDiv);
 
