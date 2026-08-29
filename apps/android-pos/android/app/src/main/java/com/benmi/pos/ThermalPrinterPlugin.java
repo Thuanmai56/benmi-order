@@ -134,6 +134,89 @@ public class ThermalPrinterPlugin extends Plugin {
     }
 
     /**
+     * Convert and print an HTML snippet directly using Native Android WebView rendering into 1-bit ESC/POS bitmap.
+     * This avoids any Chromium Canvas Tainting / SecurityError restrictions.
+     */
+    @PluginMethod
+    public void printHtml(PluginCall call) {
+        String ip = call.getString("ip");
+        Integer port = call.getInt("port", 9100);
+        String html = call.getString("html");
+        Integer paperWidth = call.getInt("paperWidth", 80);
+        Boolean autoCut = call.getBoolean("autoCut", true);
+        Integer timeoutMs = call.getInt("timeoutMs", 5000);
+
+        if (ip == null || ip.trim().isEmpty() || html == null || html.trim().isEmpty()) {
+            call.reject("IP address and HTML content are required.");
+            return;
+        }
+
+        final int targetWidthPx = (paperWidth == 58) ? 384 : 576;
+
+        getActivity().runOnUiThread(() -> {
+            try {
+                android.webkit.WebView renderWebView = new android.webkit.WebView(getContext());
+                renderWebView.getSettings().setJavaScriptEnabled(false);
+                renderWebView.getSettings().setDefaultTextEncodingName("UTF-8");
+
+                renderWebView.setWebViewClient(new android.webkit.WebViewClient() {
+                    @Override
+                    public void onPageFinished(android.webkit.WebView view, String url) {
+                        view.measure(
+                            android.view.View.MeasureSpec.makeMeasureSpec(targetWidthPx, android.view.View.MeasureSpec.EXACTLY),
+                            android.view.View.MeasureSpec.makeMeasureSpec(0, android.view.View.MeasureSpec.UNSPECIFIED)
+                        );
+                        int measuredWidth = targetWidthPx;
+                        int measuredHeight = Math.max(100, view.getMeasuredHeight());
+                        view.layout(0, 0, measuredWidth, measuredHeight);
+
+                        Bitmap bitmap = Bitmap.createBitmap(measuredWidth, measuredHeight, Bitmap.Config.ARGB_8888);
+                        android.graphics.Canvas canvas = new android.graphics.Canvas(bitmap);
+                        canvas.drawColor(android.graphics.Color.WHITE);
+                        view.draw(canvas);
+
+                        executor.execute(() -> {
+                            Socket socket = null;
+                            try {
+                                byte[] escPosBytes = EscPosBitmapConverter.convertBitmapToEscPosRaster(bitmap, paperWidth, autoCut);
+
+                                socket = new Socket();
+                                socket.connect(new InetSocketAddress(ip.trim(), port), timeoutMs);
+                                socket.setSoTimeout(timeoutMs);
+
+                                OutputStream outputStream = socket.getOutputStream();
+                                outputStream.write(escPosBytes);
+                                outputStream.flush();
+
+                                JSObject ret = new JSObject();
+                                ret.put("success", true);
+                                ret.put("ip", ip);
+                                ret.put("bytesWritten", escPosBytes.length);
+                                call.resolve(ret);
+                            } catch (Exception e) {
+                                call.reject("Failed to print HTML to " + ip + ":" + port + " - " + e.getMessage(), e);
+                            } finally {
+                                if (socket != null) {
+                                    try { socket.close(); } catch (Exception ignored) {}
+                                }
+                            }
+                        });
+                    }
+                });
+
+                String styledHtml = "<!DOCTYPE html><html><head><meta charset='UTF-8'>" +
+                    "<meta name='viewport' content='width=" + targetWidthPx + ", initial-scale=1.0'>" +
+                    "<style>body { margin: 0; padding: 0; background: #fff; font-family: sans-serif; } * { box-sizing: border-box; }</style>" +
+                    "</head><body><div style='width:" + targetWidthPx + "px;'>" + html + "</div></body></html>";
+
+                renderWebView.loadDataWithBaseURL(null, styledHtml, "text/html", "UTF-8", null);
+            } catch (Exception e) {
+                call.reject("Failed to initialize HTML rendering: " + e.getMessage(), e);
+            }
+        });
+    }
+
+    /**
      * Test network connection to a thermal printer IP and Port.
      * Arguments:
      * - ip: string (Printer IP)

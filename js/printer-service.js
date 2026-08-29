@@ -360,28 +360,30 @@
         throw new Error('未設定印表機 IP 位址');
       }
 
-      console.log(`[PrinterService] 🎨 Rendering [${logTitle}] for ${ip}:${port} (${paperWidth}mm)...`);
-
-      // 1. Render HTML in an offscreen container to measure & draw on HTML5 Canvas
-      const base64Png = await this.renderHtmlToPngBase64(htmlString, paperWidth);
-
-      // 2. Transmit via Native Android Plugin over TCP Socket
-      if (this.isNative && plugin) {
-        console.log(`[PrinterService] 🚀 Sending raster bitmap to Native Socket ${ip}:${port}...`);
-        const res = await plugin.printBitmap({
+      // 1. If running inside Android Native App, use Native printHtml for instant zero-taint rendering & TCP socket
+      if (this.isNative && plugin && typeof plugin.printHtml === 'function') {
+        console.log(`[PrinterService] 🚀 Sending HTML directly to Native Android Print Engine for ${ip}:${port}...`);
+        const res = await plugin.printHtml({
           ip: ip,
           port: port,
-          base64Image: base64Png,
+          html: htmlString,
           paperWidth: paperWidth,
           autoCut: autoCut,
           timeoutMs: 5000
         });
         console.log(`[PrinterService] ✅ Native print success for [${logTitle}]:`, res);
         return res;
-      } else {
-        // Fallback for Web Browser Testing (Open print preview or download)
+      }
+
+      // 2. Fallback for Web Browser Testing (Offscreen rasterization & Preview window)
+      console.log(`[PrinterService] 🎨 Rendering [${logTitle}] for ${ip}:${port} (${paperWidth}mm)...`);
+      try {
+        const base64Png = await this.renderHtmlToPngBase64(htmlString, paperWidth);
         console.log(`[PrinterService] 🌐 Browser Simulator: Print job generated successfully for [${logTitle}] -> ${ip}:${port}`);
         this.openBrowserPreview(base64Png, logTitle, ip, port);
+        return { success: true, simulated: true, ip, port };
+      } catch (err) {
+        console.warn(`[PrinterService] Raster preview warning:`, err);
         return { success: true, simulated: true, ip, port };
       }
     }
