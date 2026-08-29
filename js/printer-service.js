@@ -11,15 +11,21 @@
     autoPrintNewOrders: false,
     cashier: {
       enabled: true,
+      interface_type: 'network', // 'network' | 'bluetooth'
       ip: '192.168.1.100',
       port: 9100,
+      mac_address: '',
+      device_name: '',
       paperWidth: 80,
       autoCut: true
     },
     kitchen: {
       enabled: true,
+      interface_type: 'network', // 'network' | 'bluetooth'
       ip: '192.168.1.101',
       port: 9100,
+      mac_address: '',
+      device_name: '',
       paperWidth: 80,
       autoCut: true
     }
@@ -72,6 +78,28 @@
         console.warn('[PrinterService] Failed to load settings:', e);
       }
       return JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+    }
+
+    async getPairedBluetoothDevices() {
+      const plugin = this.getPlugin();
+      if (this.isNative && plugin && typeof plugin.getPairedBluetoothDevices === 'function') {
+        try {
+          const res = await plugin.getPairedBluetoothDevices();
+          return res;
+        } catch (e) {
+          console.error('[PrinterService] Failed to get paired Bluetooth devices:', e);
+          throw e;
+        }
+      }
+      // Browser fallback simulated devices
+      return {
+        supported: false,
+        enabled: false,
+        devices: [
+          { name: 'Xprinter XP-58IIH (Simulated)', address: '00:11:22:33:44:55', type: 1 },
+          { name: 'Epson TM-T88VI-BT (Simulated)', address: 'AA:BB:CC:DD:EE:FF', type: 1 }
+        ]
+      };
     }
 
     saveSettings(newSettings) {
@@ -147,10 +175,17 @@
       const settings = this.getSettings();
       const tasks = [];
 
-      if (settings.cashier.enabled && settings.cashier.ip) {
+      const isCashierConfigured = settings.cashier.enabled && (
+        settings.cashier.interface_type === 'bluetooth' ? !!settings.cashier.mac_address : !!settings.cashier.ip
+      );
+      const isKitchenConfigured = settings.kitchen.enabled && (
+        settings.kitchen.interface_type === 'bluetooth' ? !!settings.kitchen.mac_address : !!settings.kitchen.ip
+      );
+
+      if (isCashierConfigured) {
         tasks.push(this.printCashierReceipt(order, settings.cashier));
       }
-      if (settings.kitchen.enabled && settings.kitchen.ip) {
+      if (isKitchenConfigured) {
         tasks.push(this.printKitchenTicket(order, settings.kitchen));
       }
 
@@ -399,36 +434,87 @@
     }
 
     async transmitReceiptBitmap(base64Png, config, logTitle) {
-      const ip = config.ip;
-      const port = parseInt(config.port, 10) || 9100;
+      const interfaceType = config.interface_type || 'network';
       const paperWidth = parseInt(config.paperWidth, 10) || 80;
       const autoCut = config.autoCut !== false;
-      const plugin = window.Capacitor?.Plugins?.ThermalPrinter;
+      const plugin = this.getPlugin();
 
-      if (!ip) {
-        throw new Error('未設定印表機 IP 位址');
-      }
+      if (interfaceType === 'bluetooth') {
+        const macAddress = (config.mac_address || '').trim();
+        const deviceName = config.device_name || macAddress || 'Bluetooth Printer';
 
-      if (this.isNative && plugin) {
-        console.log(`[PrinterService] 🚀 Transmitting raster bitmap via Native TCP Socket ${ip}:${port}...`);
-        const res = await plugin.printBitmap({
-          ip: ip,
-          port: port,
-          base64Image: base64Png,
-          paperWidth: paperWidth,
-          autoCut: autoCut,
-          timeoutMs: 5000
-        });
-        console.log(`[PrinterService] ✅ Native print success for [${logTitle}]:`, res);
-        return res;
+        if (!macAddress) {
+          throw new Error('未選擇藍牙印表機 (Please select a paired Bluetooth printer)');
+        }
+
+        if (this.isNative && plugin && typeof plugin.printBluetooth === 'function') {
+          console.log(`[PrinterService] 📡 Transmitting raster bitmap via Native Bluetooth SPP [${deviceName} (${macAddress})]...`);
+          const res = await plugin.printBluetooth({
+            macAddress: macAddress,
+            base64Image: base64Png,
+            paperWidth: paperWidth,
+            autoCut: autoCut,
+            timeoutMs: 8000
+          });
+          console.log(`[PrinterService] ✅ Native Bluetooth print success for [${logTitle}]:`, res);
+          return res;
+        } else {
+          console.log(`[PrinterService] 🌐 Browser Simulator: Print job generated for [${logTitle}] -> Bluetooth ${deviceName} (${macAddress})`);
+          this.openBrowserPreview(base64Png, logTitle, `Bluetooth: ${deviceName} (${macAddress})`, 'SPP');
+          return { success: true, simulated: true, interface: 'bluetooth', macAddress };
+        }
       } else {
-        console.log(`[PrinterService] 🌐 Browser Simulator: Print job generated for [${logTitle}] -> ${ip}:${port}`);
-        this.openBrowserPreview(base64Png, logTitle, ip, port);
+        // Network TCP Socket
+        const ip = (config.ip || '').trim();
+        const port = parseInt(config.port, 10) || 9100;
+
+        if (!ip) {
+          throw new Error('未設定印表機 IP 位址 (No printer IP address configured)');
+        }
+
+        if (this.isNative && plugin && typeof plugin.printBitmap === 'function') {
+          console.log(`[PrinterService] 🚀 Transmitting raster bitmap via Native TCP Socket ${ip}:${port}...`);
+          const res = await plugin.printBitmap({
+            ip: ip,
+            port: port,
+            base64Image: base64Png,
+            paperWidth: paperWidth,
+            autoCut: autoCut,
+            timeoutMs: 5000
+          });
+          console.log(`[PrinterService] ✅ Native print success for [${logTitle}]:`, res);
+          return res;
+        } else {
+          console.log(`[PrinterService] 🌐 Browser Simulator: Print job generated for [${logTitle}] -> ${ip}:${port}`);
+          this.openBrowserPreview(base64Png, logTitle, `Network IP: ${ip}`, port);
+          return { success: true, simulated: true, interface: 'network', ip, port };
+        }
+      }
+    }
+
+    async testConnection(config) {
+      const interfaceType = config.interface_type || 'network';
+      const plugin = this.getPlugin();
+
+      if (interfaceType === 'bluetooth') {
+        const macAddress = (config.mac_address || '').trim();
+        if (!macAddress) throw new Error('未選擇藍牙印表機 (No Bluetooth printer selected)');
+        if (this.isNative && plugin && typeof plugin.testBluetoothConnection === 'function') {
+          return await plugin.testBluetoothConnection({ macAddress });
+        }
+        return { success: true, simulated: true, macAddress };
+      } else {
+        const ip = (config.ip || '').trim();
+        const port = parseInt(config.port, 10) || 9100;
+        if (!ip) throw new Error('未輸入印表機 IP (No printer IP entered)');
+        if (this.isNative && plugin && typeof plugin.testConnection === 'function') {
+          return await plugin.testConnection({ ip, port, timeoutMs: 2500 });
+        }
         return { success: true, simulated: true, ip, port };
       }
     }
 
-    openBrowserPreview(base64Png, title, ip, port) {
+    openBrowserPreview(base64Png, title, targetInfo, portOrType) {
       const previewWindow = window.open('', '_blank');
       if (previewWindow) {
         previewWindow.document.write(`
@@ -436,7 +522,7 @@
             <head><title>Print Preview - ${title}</title></head>
             <body style="background:#1e293b; color:#fff; font-family:sans-serif; display:flex; flex-direction:column; align-items:center; padding:20px;">
               <h3>🖨️ Thermal Print Simulation (${title})</h3>
-              <p style="color:#94a3b8;">Target IP: <b>${ip}:${port}</b></p>
+              <p style="color:#94a3b8;">Target: <b>${targetInfo}${portOrType ? ' :' + portOrType : ''}</b></p>
               <div style="background:#fff; padding:10px; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.5);">
                 <img src="${base64Png}" style="display:block; max-width:100%; height:auto;" />
               </div>
