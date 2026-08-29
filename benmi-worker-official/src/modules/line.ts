@@ -1,6 +1,6 @@
 import { Env } from '../types/env';
 import { TenantContext, resolveTenantOrderPrefix, generateStandardOrderId } from '../types/tenant';
-import { Order, DiningOption } from '../types/index';
+import { Order, DiningOption, OrderItemInput } from '../types/index';
 import { corsHeaders } from '../utils/http';
 import { resolveSecret } from '../utils/secrets';
 import { saveOrder, getPendingMap, getOrderQueueAhead, getUserLatestActiveOrder } from './orders';
@@ -160,25 +160,170 @@ export async function replyLineFlexMessage(
   }
 }
 
-export function buildOrderFlexMessage(order: Order, tenantCtx?: TenantContext | null): any {
+export function buildOrderFlexMessage(
+  order: Order,
+  tenantCtx?: TenantContext | null,
+  items?: OrderItemInput[]
+): any {
   const brandColor = tenantCtx?.brandColor || "#059669";
   const isScheduled = tenantCtx?.allowScheduledPickup !== false;
-  const isDineIn = order.diningOption === "dine_in" || (order.content || "").includes("📍 用餐方式：🍽️ 內用") || (order.content || "").includes("【內用】");
-  const diningLabel = isDineIn ? "內用 (現場製作)" : "外帶自取";
-  const timeLabel = isDineIn ? "點餐時間" : (isScheduled ? "取餐時間" : "訂餐時間");
+  const isDineIn = order.diningOption === "dine_in" || ((order.content || "").includes("用餐方式：") && (order.content || "").includes("內用")) || (order.content || "").includes("【內用】");
 
-  const contentLines = (order.content || "").split("\n").filter(l => l.trim().length > 0);
-  const contentComponents = contentLines.slice(0, 50).map(line => {
-    const isOption = line.startsWith("↳") || line.startsWith("-") || line.startsWith("+") || line.startsWith("  ");
-    return {
-      type: "text",
-      text: line,
-      size: isOption ? "xs" : "sm",
-      color: isOption ? "#64748B" : "#1E293B",
-      weight: isOption ? "regular" : (line.includes("x ") || line.includes("份") ? "bold" : "regular"),
-      wrap: true
-    };
-  });
+  let tableNum = (order.tableNumber || "").trim();
+  if (!tableNum || tableNum === "-") {
+    const tableMatch = (order.content || "").match(/(?:桌號|Bàn)[：:\s]*([^\n\r,，()（）]+)/i) ||
+      (order.note || "").match(/(?:桌號|Bàn)[：:\s]*([^\n\r,，()（）]+)/i);
+    if (tableMatch) tableNum = tableMatch[1].trim();
+  }
+  tableNum = tableNum
+    .replace(/^(?:桌號|Bàn)[：:\s]*/i, "")
+    .replace(/[：:]/g, "")
+    .replace(/[()（）]/g, "")
+    .replace(/號桌/g, "")
+    .replace(/桌/g, "")
+    .trim();
+
+  const diningLabel = isDineIn ? (tableNum && tableNum !== "-" ? `內用 (${tableNum} 桌)` : "內用 (現場製作)") : "外帶自取";
+  const timeLabel = isDineIn ? "點餐時間" : (isScheduled ? "預計取餐時間" : "訂餐時間");
+
+  // Format Items in a clean POS Table
+  const itemComponents: any[] = [];
+  const rawItems: OrderItemInput[] = Array.isArray(items) && items.length > 0 ? items : [];
+
+  if (rawItems.length > 0) {
+    rawItems.slice(0, 30).forEach((it, idx) => {
+      const itQty = Number(it.quantity) || 1;
+      const itPrice = Number(it.price || it.unit_price) || 0;
+      const itSubtotal = Number(it.subtotal) || (itPrice * itQty);
+      const itName = it.name || "餐點";
+
+      // Parse options / modifiers
+      const optionTexts: string[] = [];
+      const opts = it.options || it.selected_options;
+      if (Array.isArray(opts)) {
+        opts.forEach((o: any) => {
+          if (typeof o === 'string' && o.trim()) {
+            optionTexts.push(o.trim());
+          } else if (o && typeof o === 'object') {
+            const optName = o.choice || o.name || "";
+            const optPrice = Number(o.price) || 0;
+            if (optName) {
+              optionTexts.push(optPrice > 0 ? `${optName} (+$${optPrice})` : optName);
+            }
+          }
+        });
+      } else if (typeof opts === 'string' && opts.trim()) {
+        try {
+          const parsed = JSON.parse(opts);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((o: any) => {
+              const optName = typeof o === 'string' ? o : (o.choice || o.name || "");
+              const optPrice = Number(o.price) || 0;
+              if (optName) optionTexts.push(optPrice > 0 ? `${optName} (+$${optPrice})` : optName);
+            });
+          }
+        } catch {
+          optionTexts.push(opts.trim());
+        }
+      }
+
+      if (it.note && it.note.trim()) {
+        optionTexts.push(it.note.trim());
+      } else if (it.notes && it.notes.trim()) {
+        optionTexts.push(it.notes.trim());
+      }
+
+      const itemBoxContents: any[] = [
+        {
+          type: "box",
+          layout: "horizontal",
+          alignItems: "center",
+          contents: [
+            {
+              type: "text",
+              text: itName,
+              size: "sm",
+              weight: "bold",
+              color: "#1E293B",
+              flex: 1,
+              wrap: true
+            },
+            {
+              type: "text",
+              text: `x${itQty}`,
+              size: "sm",
+              color: "#64748B",
+              flex: 0,
+              margin: "md"
+            },
+            {
+              type: "text",
+              text: `$${itSubtotal}`,
+              size: "sm",
+              weight: "bold",
+              color: "#0F172A",
+              align: "end",
+              flex: 0,
+              margin: "md"
+            }
+          ]
+        }
+      ];
+
+      if (optionTexts.length > 0) {
+        itemBoxContents.push({
+          type: "text",
+          text: `↳ ${optionTexts.join("、")}`,
+          size: "xs",
+          color: "#64748B",
+          wrap: true,
+          margin: "xs"
+        });
+      }
+
+      itemComponents.push({
+        type: "box",
+        layout: "vertical",
+        spacing: "none",
+        margin: idx > 0 ? "md" : "none",
+        contents: itemBoxContents
+      });
+    });
+  } else {
+    // Fallback: Clean parse from order.content string
+    const lines = (order.content || "").split("\n").map(l => l.trim()).filter(l => l.length > 0);
+    const itemLines = lines.filter(l => {
+      if (l.startsWith("[") || l.startsWith("【")) return false;
+      if (l.includes("訂單編號") || l.includes("訂單內容") || l.includes("用餐方式") || l.includes("取餐時間") || l.includes("點餐時間") || l.includes("總金額") || l.includes("總備註") || l.includes("桌號")) return false;
+      return true;
+    });
+
+    itemLines.slice(0, 30).forEach((line, idx) => {
+      const isOption = line.startsWith("↳") || line.startsWith("-") || line.startsWith("+") || line.startsWith("  ");
+      const cleanLine = line.replace(/^[↳\-+]\s*/, "").replace(/[🍽️🛍️📦🎁🪑]/g, "").trim();
+
+      if (isOption) {
+        itemComponents.push({
+          type: "text",
+          text: `↳ ${cleanLine}`,
+          size: "xs",
+          color: "#64748B",
+          wrap: true,
+          margin: "xs"
+        });
+      } else {
+        itemComponents.push({
+          type: "text",
+          text: cleanLine,
+          size: "sm",
+          weight: "bold",
+          color: "#1E293B",
+          wrap: true,
+          margin: idx > 0 ? "md" : "none"
+        });
+      }
+    });
+  }
 
   return {
     type: "bubble",
@@ -194,7 +339,7 @@ export function buildOrderFlexMessage(order: Order, tenantCtx?: TenantContext | 
           layout: "horizontal",
           contents: [
             { type: "text", text: "訂單明細", size: "xs", weight: "bold", color: "#64748B", flex: 0 },
-            { type: "text", text: `#${order.key}`, size: "sm", weight: "bold", color: "#0F172A", align: "end", flex: 1 }
+            { type: "text", text: `#${order.key}`, size: "sm", weight: "bold", color: "#059669", align: "end", flex: 1 }
           ]
         },
         {
@@ -212,17 +357,17 @@ export function buildOrderFlexMessage(order: Order, tenantCtx?: TenantContext | 
           spacing: "xs",
           contents: [
             { type: "text", text: "訂單品項", size: "xs", weight: "bold", color: "#64748B", margin: "xs" },
-            ...contentComponents
+            ...itemComponents
           ]
         },
-        ...(order.note ? [
+        ...(order.note && order.note.trim() ? [
           { type: "separator", margin: "sm", color: "#E2E8F0" },
           {
             type: "box",
             layout: "horizontal",
             contents: [
               { type: "text", text: "備註說明", size: "xs", color: "#64748B", flex: 0 },
-              { type: "text", text: order.note, size: "xs", color: "#334155", wrap: true, align: "end", flex: 1 }
+              { type: "text", text: order.note.trim(), size: "xs", color: "#334155", wrap: true, align: "end", flex: 1 }
             ]
           }
         ] : []),
@@ -254,7 +399,6 @@ export function buildOrderFlexMessage(order: Order, tenantCtx?: TenantContext | 
       contents: (() => {
         const liffBaseUrl = tenantCtx?.liffUrl || (tenantCtx?.liffId ? `https://liff.line.me/${tenantCtx.liffId}` : "https://liff.line.me/");
         const tenantId = tenantCtx?.tenantId || "benmi";
-        const tableNum = order.tableNumber || "";
         const buttons: any[] = [];
 
         if (isDineIn) {
@@ -1089,7 +1233,7 @@ export async function handleLineWebhook(
         const res = orderKey ? await getOrderQueueAhead(env, tenantId, orderKey) : await getUserLatestActiveOrder(env, tenantId, userId);
         if (res && res.order) {
           const flex = buildProgressFlexMessage(res.order, res.queueAhead, tenantCtx);
-          await replyLineFlexMessage(replyToken, `📋 訂單進度 #${res.order.key}`, flex, env, tenantCtx);
+          await replyLineFlexMessage(replyToken, `訂單進度 #${res.order.key}`, flex, env, tenantCtx);
         } else {
           await replyText(replyToken, "找不到您的相關訂單紀錄。", env, tenantCtx);
         }
@@ -1271,7 +1415,7 @@ export async function handleLineWebhook(
       !userText.includes("訂單編號：")
     ) {
       let orderKey = "";
-      const match = userText.match(/(?:[A-Z0-9]{1,4}\d{4}-[A-Z0-9]{4}|[A-Z0-9]+\d{4}-\d{4}-\d{4}|BD\d+-\d+-\d+)/i);
+      const match = userText.match(/(?:\d{4}-[DT]\d{3,4}|[A-Z0-9]{1,4}\d{4}-[A-Z0-9]{4}|[A-Z0-9]+\d{4}-\d{4}-\d{4}|BD\d+-\d+-\d+)/i);
       if (match) {
         orderKey = match[0];
       }
@@ -1279,7 +1423,7 @@ export async function handleLineWebhook(
       const res = orderKey ? await getOrderQueueAhead(env, tenantId, orderKey) : await getUserLatestActiveOrder(env, tenantId, userId);
       if (res && res.order) {
         const flex = buildProgressFlexMessage(res.order, res.queueAhead, tenantCtx);
-        await replyLineFlexMessage(replyToken, `📋 訂單進度 #${res.order.key}`, flex, env, tenantCtx);
+        await replyLineFlexMessage(replyToken, `訂單進度 #${res.order.key}`, flex, env, tenantCtx);
       } else {
         await replyText(replyToken, "目前查無您的進行中訂單。", env, tenantCtx);
       }
@@ -1296,7 +1440,7 @@ export async function handleLineWebhook(
       try { await env.ORDER_STATE.delete(draftKey); } catch { }
 
       let orderKey = "";
-      const match = userText.match(/(?:[A-Z0-9]{1,6}\d{4}-[A-Z0-9]{2,8}|[A-Z0-9]+\d{4}-\d{4}-\d{4}|BD\d+-\d+-\d+|BM\d+-\d+)/i) || userText.match(/#([A-Za-z0-9_-]+)/);
+      const match = userText.match(/(?:\d{4}-[DT]\d{3,4}|[A-Z0-9]{1,6}\d{4}-[A-Z0-9]{2,8}|[A-Z0-9]+\d{4}-\d{4}-\d{4}|BD\d+-\d+-\d+|BM\d+-\d+)/i) || userText.match(/#([A-Za-z0-9_-]+)/);
       if (match) {
         orderKey = (match[1] || match[0]).replace('#', '').trim();
       }
@@ -1357,7 +1501,7 @@ export async function handleLineWebhook(
             tenantCtx
           );
 
-          await replyLineFlexMessage(replyToken, `🍽️ 加點 (第 ${order.roundCount} 輪)`, flexBubble, env, tenantCtx);
+          await replyLineFlexMessage(replyToken, `現場加點 (第 ${order.roundCount} 輪) #${order.key}`, flexBubble, env, tenantCtx);
         }
       }
       continue;
@@ -1380,8 +1524,9 @@ export async function handleLineWebhook(
       const timeLine = lines.find((l: string) => l.includes("🕒 取餐時間：") || l.includes("🕒 訂餐時間：") || l.includes("🕒 點餐時間：") || l.includes("取餐時間") || l.includes("訂餐時間") || l.includes("點餐時間"));
       const totalLine = lines.find((l: string) => l.includes("💰 總金額："));
 
-      const prefix = resolveTenantOrderPrefix(tenantCtx, tenantId);
-      const fallbackOrderKey = generateStandardOrderId(prefix);
+      const isDineIn = userText.includes("📍 用餐方式：🍽️ 內用") || userText.includes("用餐方式：內用") || userText.includes("【內用】");
+      const diningOption: DiningOption = isDineIn ? "dine_in" : "takeaway";
+      const fallbackOrderKey = generateStandardOrderId(diningOption);
       const orderKey = keyLine ? keyLine.replace("訂單編號：", "").trim() : fallbackOrderKey;
       const nowTw = new Date(Date.now() + 8 * 3600000);
       const defaultTimeStr = `${nowTw.getUTCFullYear()}-${String(nowTw.getUTCMonth() + 1).padStart(2, "0")}-${String(nowTw.getUTCDate()).padStart(2, "0")} ${String(nowTw.getUTCHours()).padStart(2, "0")}:${String(nowTw.getUTCMinutes()).padStart(2, "0")}`;
@@ -1435,9 +1580,6 @@ export async function handleLineWebhook(
         extractedContent = userText.substring(contentStart + 8, contentEnd).replace("📦 訂單內容：", "").trim();
       }
 
-      const isDineIn = userText.includes("📍 用餐方式：🍽️ 內用") || userText.includes("用餐方式：內用") || userText.includes("【內用】");
-      const diningOption: DiningOption = isDineIn ? "dine_in" : "takeaway";
-
       const orderData: Order = {
         key: orderKey,
         customer: custName,
@@ -1460,7 +1602,7 @@ export async function handleLineWebhook(
           const queueRes = await getOrderQueueAhead(env, tenantId, orderKey);
           const queueAheadCount = queueRes ? queueRes.queueAhead : 0;
           const flexBubble = buildProgressFlexMessage(orderData, queueAheadCount, tenantCtx);
-          await replyLineFlexMessage(replyToken, `📋 訂單進度 #${orderKey}`, flexBubble, env, tenantCtx);
+          await replyLineFlexMessage(replyToken, `訂單進度 #${orderKey}`, flexBubble, env, tenantCtx);
         } catch (replyErr) {
           console.error(`[${brandName}] Reply progress flex confirmation error:`, replyErr);
         }

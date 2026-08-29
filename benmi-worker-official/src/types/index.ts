@@ -14,6 +14,7 @@ export type OrderStatus =
 
 export interface Order {
   key: string;
+  uuid?: string | null;
   customer: string;
   time: string; // "YYYY-MM-DD HH:mm"
   content: string;

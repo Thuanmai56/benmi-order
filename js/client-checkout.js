@@ -307,21 +307,13 @@ function generateBase32Suffix(length = 4) {
     return suffix;
 }
 
-function generateOrderNumber() {
+function generateOrderNumber(diningOption = 'takeaway') {
     const now = getTaiwanDate();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
-    const tenantId = getTenantIdFromUrl();
-
-    let prefix = 'B';
-    if (typeof storeConfig !== 'undefined' && storeConfig && storeConfig.orderPrefix) {
-        prefix = storeConfig.orderPrefix.toUpperCase();
-    } else {
-        prefix = tenantId ? tenantId.charAt(0).toUpperCase() : 'B';
-    }
-
-    const suffix = generateBase32Suffix(4);
-    return `${prefix}${month}${day}-${suffix}`;
+    const typePrefix = diningOption === 'dine_in' ? 'D' : 'T';
+    const randSeq = Math.floor(Math.random() * 900) + 100;
+    return `${month}${day}-${typePrefix}${randSeq}`;
 }
 
 // 8. Hàm phân giải khóa giỏ hàng chính xác theo danh mục và tên món
@@ -851,20 +843,21 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
         }
 
         const currentTotal = typeof updateTotal === 'function' ? updateTotal() : 0;
-        const orderNum = generateOrderNumber();
-        const mainNote = document.getElementById('note') ? document.getElementById('note').value : '';
-        const msg = formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, mainNote);
         const isDineIn = (window.currentDiningOption === 'dine_in');
+        const diningOption = isDineIn ? 'dine_in' : 'takeaway';
         const tableInput = document.getElementById('dinein-table-number');
         const tableNumber = (isDineIn && tableInput) ? tableInput.value.trim() : '';
         const structuredItems = buildStructuredCartItems();
+        const mainNote = document.getElementById('note') ? document.getElementById('note').value : '';
+        const orderUuid = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : ('ord_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9));
+        let orderNum = generateOrderNumber(diningOption);
+        let msg = formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, mainNote);
 
         const isDesktop = !(typeof liff !== 'undefined' && liff.isInClient && liff.isInClient());
 
         // 10.1 Xử lý riêng cho luồng 加點餐點 (Append Mode)
         if (window.isAppendMode && window.parentOrderKey) {
             const rawItemsText = formatAppendItemsOnlyText();
-            const tableInput = document.getElementById('dinein-table-number');
             const currentTable = (tableInput && tableInput.value.trim()) || window.appendTableNumber || window.currentTableNumber || '';
             const appendPayload = {
                 parent_order_key: window.parentOrderKey,
@@ -932,8 +925,10 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
 
             customAlert(`
                 <div style="margin-bottom: 16px;">
-                    <div style="width: 60px; height: 60px; margin: 0 auto; background: #faf5ff; border: 2px solid #c084fc; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px;">
-                        🍽️
+                    <div style="width: 60px; height: 60px; margin: 0 auto; background: #faf5ff; border: 2px solid #c084fc; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
                     </div>
                 </div>
                 <div style="font-size: 19px; font-weight: 900; color: #111827; margin-bottom: 6px;">加點送出成功！</div>
@@ -947,10 +942,11 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
 
         const orderPayload = {
             key: orderNum,
+            uuid: orderUuid,
             userId: userId,
             customer: customerName,
             time: `${dateInput} ${timeInput}`,
-            dining_option: isDineIn ? 'dine_in' : 'takeaway',
+            dining_option: diningOption,
             table_number: tableNumber || undefined,
             content: msg.split('\n\n🕒')[0].replace(/\[.*?點餐\]\n/g, '').replace('[Benmi 點餐]\n', ''),
             total: currentTotal,
@@ -975,6 +971,12 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
         clearTimeout(timeoutId);
 
         if (!res.ok) throw new Error(`API returned status ${res.status}`);
+
+        const resData = await res.json().catch(() => ({}));
+        if (resData && resData.key) {
+            orderNum = resData.key;
+            msg = formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, mainNote);
+        }
 
         orderSubmittedSuccessfully = true;
 
@@ -1038,7 +1040,9 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                     const appendChatMsg = `[加點 #${window.parentOrderKey}]${tablePart}\n現場加點品項：\n${rawItemsText}${notePart}\n\n💰 加點金額：+$${currentTotal}`;
                     await liff.sendMessages([{ type: 'text', text: appendChatMsg }]);
                 } else {
-                    const orderNum = generateOrderNumber();
+                    const isDineIn = (window.currentDiningOption === 'dine_in');
+                    const diningOption = isDineIn ? 'dine_in' : 'takeaway';
+                    const orderNum = generateOrderNumber(diningOption);
                     const msg = formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, mainNote);
                     await liff.sendMessages([{ type: 'text', text: msg }]);
                 }
