@@ -156,60 +156,72 @@ public class ThermalPrinterPlugin extends Plugin {
         getActivity().runOnUiThread(() -> {
             try {
                 android.webkit.WebView renderWebView = new android.webkit.WebView(getContext());
-                renderWebView.getSettings().setJavaScriptEnabled(false);
+                renderWebView.getSettings().setJavaScriptEnabled(true);
                 renderWebView.getSettings().setDefaultTextEncodingName("UTF-8");
+                renderWebView.setLayerType(android.view.View.LAYER_TYPE_SOFTWARE, null);
 
                 renderWebView.setWebViewClient(new android.webkit.WebViewClient() {
                     @Override
                     public void onPageFinished(android.webkit.WebView view, String url) {
-                        view.measure(
-                            android.view.View.MeasureSpec.makeMeasureSpec(targetWidthPx, android.view.View.MeasureSpec.EXACTLY),
-                            android.view.View.MeasureSpec.makeMeasureSpec(0, android.view.View.MeasureSpec.UNSPECIFIED)
-                        );
-                        int measuredWidth = targetWidthPx;
-                        int measuredHeight = Math.max(100, view.getMeasuredHeight());
-                        view.layout(0, 0, measuredWidth, measuredHeight);
-
-                        Bitmap bitmap = Bitmap.createBitmap(measuredWidth, measuredHeight, Bitmap.Config.ARGB_8888);
-                        android.graphics.Canvas canvas = new android.graphics.Canvas(bitmap);
-                        canvas.drawColor(android.graphics.Color.WHITE);
-                        view.draw(canvas);
-
-                        executor.execute(() -> {
-                            Socket socket = null;
+                        // Delay slightly to ensure fonts & layout are completely rasterized
+                        view.postDelayed(() -> {
                             try {
-                                byte[] escPosBytes = EscPosBitmapConverter.convertBitmapToEscPosRaster(bitmap, paperWidth, autoCut);
+                                float scale = getContext().getResources().getDisplayMetrics().density;
+                                int contentHeight = Math.max(300, (int) (view.getContentHeight() * scale));
+                                
+                                view.measure(
+                                    android.view.View.MeasureSpec.makeMeasureSpec(targetWidthPx, android.view.View.MeasureSpec.EXACTLY),
+                                    android.view.View.MeasureSpec.makeMeasureSpec(contentHeight, android.view.View.MeasureSpec.EXACTLY)
+                                );
+                                view.layout(0, 0, targetWidthPx, contentHeight);
 
-                                socket = new Socket();
-                                socket.connect(new InetSocketAddress(ip.trim(), port), timeoutMs);
-                                socket.setSoTimeout(timeoutMs);
+                                Bitmap bitmap = Bitmap.createBitmap(targetWidthPx, contentHeight, Bitmap.Config.ARGB_8888);
+                                android.graphics.Canvas canvas = new android.graphics.Canvas(bitmap);
+                                canvas.drawColor(android.graphics.Color.WHITE);
+                                view.draw(canvas);
 
-                                OutputStream outputStream = socket.getOutputStream();
-                                outputStream.write(escPosBytes);
-                                outputStream.flush();
+                                executor.execute(() -> {
+                                    Socket socket = null;
+                                    try {
+                                        byte[] escPosBytes = EscPosBitmapConverter.convertBitmapToEscPosRaster(bitmap, paperWidth, autoCut);
 
-                                JSObject ret = new JSObject();
-                                ret.put("success", true);
-                                ret.put("ip", ip);
-                                ret.put("bytesWritten", escPosBytes.length);
-                                call.resolve(ret);
+                                        socket = new Socket();
+                                        socket.connect(new InetSocketAddress(ip.trim(), port), timeoutMs);
+                                        socket.setSoTimeout(timeoutMs);
+
+                                        OutputStream outputStream = socket.getOutputStream();
+                                        outputStream.write(escPosBytes);
+                                        outputStream.flush();
+
+                                        JSObject ret = new JSObject();
+                                        ret.put("success", true);
+                                        ret.put("ip", ip);
+                                        ret.put("bytesWritten", escPosBytes.length);
+                                        call.resolve(ret);
+                                    } catch (Exception e) {
+                                        call.reject("Failed to print HTML to " + ip + ":" + port + " - " + e.getMessage(), e);
+                                    } finally {
+                                        if (socket != null) {
+                                            try { socket.close(); } catch (Exception ignored) {}
+                                        }
+                                    }
+                                });
                             } catch (Exception e) {
-                                call.reject("Failed to print HTML to " + ip + ":" + port + " - " + e.getMessage(), e);
-                            } finally {
-                                if (socket != null) {
-                                    try { socket.close(); } catch (Exception ignored) {}
-                                }
+                                call.reject("Failed to capture rendered receipt: " + e.getMessage(), e);
                             }
-                        });
+                        }, 250);
                     }
                 });
 
                 String styledHtml = "<!DOCTYPE html><html><head><meta charset='UTF-8'>" +
-                    "<meta name='viewport' content='width=" + targetWidthPx + ", initial-scale=1.0'>" +
-                    "<style>body { margin: 0; padding: 0; background: #fff; font-family: sans-serif; } * { box-sizing: border-box; }</style>" +
-                    "</head><body><div style='width:" + targetWidthPx + "px;'>" + html + "</div></body></html>";
+                    "<meta name='viewport' content='width=" + targetWidthPx + ", initial-scale=1.0, maximum-scale=1.0, user-scalable=no'>" +
+                    "<style>" +
+                    "body { margin: 0; padding: 0; background: #ffffff !important; color: #000000 !important; font-family: sans-serif; } " +
+                    "* { box-sizing: border-box; color: #000000 !important; border-color: #000000 !important; }" +
+                    "</style>" +
+                    "</head><body><div style='width:" + targetWidthPx + "px; background:#ffffff; color:#000000; padding: 8px;'>" + html + "</div></body></html>";
 
-                renderWebView.loadDataWithBaseURL(null, styledHtml, "text/html", "UTF-8", null);
+                renderWebView.loadDataWithBaseURL("https://localhost", styledHtml, "text/html", "UTF-8", null);
             } catch (Exception e) {
                 call.reject("Failed to initialize HTML rendering: " + e.getMessage(), e);
             }
