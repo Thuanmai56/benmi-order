@@ -767,7 +767,11 @@
                 } else {
                     const titleDiv = document.createElement('div');
                     titleDiv.className = 'section-title';
-                    titleDiv.innerText = cat.name;
+                    titleDiv.style.display = 'flex';
+                    titleDiv.style.alignItems = 'center';
+                    titleDiv.style.justifyContent = 'space-between';
+                    const promoBadge = cat.pricingRules?.promo_label ? `<span style="font-size:12px; font-weight:700; color:#059669; background:#ecfdf5; border:1px solid #a7f3d0; padding:2px 8px; border-radius:9999px;">${cat.pricingRules.promo_label}</span>` : '';
+                    titleDiv.innerHTML = `<span>${cat.name}</span>${promoBadge}`;
                     sec.appendChild(titleDiv);
 
                     const gridDiv = document.createElement('div');
@@ -1180,6 +1184,46 @@
             updateTotal();
         }
 
+        function calculateCategoryBundleSubtotal(rule, items) {
+            const regularTotal = items.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            const totalQty = items.reduce((sum, item) => sum + item.qty, 0);
+
+            if (!rule || !rule.bundle_qty || rule.bundle_qty <= 0 || !rule.bundle_price || totalQty < rule.bundle_qty) {
+                return {
+                    categoryTotal: regularTotal,
+                    regularTotal: regularTotal,
+                    discountAmount: 0,
+                    bundleCount: 0,
+                    remainderCount: totalQty
+                };
+            }
+
+            const bundleCount = Math.floor(totalQty / rule.bundle_qty);
+            const remainderCount = totalQty % rule.bundle_qty;
+
+            const flattenedPrices = [];
+            items.forEach(item => {
+                for (let i = 0; i < item.qty; i++) {
+                    flattenedPrices.push(item.price);
+                }
+            });
+            flattenedPrices.sort((a, b) => b - a);
+
+            let categoryTotal = bundleCount * rule.bundle_price;
+            const remainderPrices = flattenedPrices.slice(bundleCount * rule.bundle_qty);
+            categoryTotal += remainderPrices.reduce((sum, p) => sum + p, 0);
+
+            const discountAmount = Math.max(0, regularTotal - categoryTotal);
+
+            return {
+                categoryTotal,
+                regularTotal,
+                discountAmount,
+                bundleCount,
+                remainderCount
+            };
+        }
+
         function updateTotal() {
             let total = 0;
             let totalQty = 0;
@@ -1236,8 +1280,10 @@
             }
 
             const priceMap = {};
+            const categoryMetaMap = {};
             if (bootstrapData?.catalog) {
                 bootstrapData.catalog.forEach(cat => {
+                    categoryMetaMap[cat.slug] = cat;
                     cat.items.forEach(it => { priceMap[`${cat.slug}_${it.name}`] = it.price; });
                 });
             }
@@ -1248,15 +1294,47 @@
                 });
             }
 
+            // Group active cart items by category
+            const itemsByCategory = {};
+            if (bootstrapData?.catalog) {
+                bootstrapData.catalog.forEach(cat => {
+                    itemsByCategory[cat.slug] = [];
+                });
+            }
+
             for (let key in cart) {
                 if (cart[key] > 0) {
                     const itemInfo = resolveCatalogItem(key);
                     const { catSlug, itemName } = parseCartKey(key);
-                    const displayName = itemInfo.displayName || itemName;
                     const qty = cart[key];
                     totalQty += qty;
 
                     const itemBasePrice = itemInfo.basePrice || priceMap[key] || 0;
+                    if (!itemsByCategory[catSlug]) itemsByCategory[catSlug] = [];
+                    itemsByCategory[catSlug].push({
+                        key,
+                        itemInfo,
+                        catSlug,
+                        itemName,
+                        displayName: itemInfo.displayName || itemName,
+                        qty,
+                        price: itemBasePrice
+                    });
+                }
+            }
+
+            let totalCategoryDiscounts = 0;
+
+            for (let slug in itemsByCategory) {
+                const catItems = itemsByCategory[slug];
+                if (catItems.length === 0) continue;
+
+                const catMeta = categoryMetaMap[slug] || {};
+                const catRule = catMeta.pricingRules;
+                const bundleRes = calculateCategoryBundleSubtotal(catRule, catItems);
+
+                catItems.forEach(it => {
+                    const { key, catSlug, itemName, displayName, qty, price } = it;
                     let itemModifiersTotal = 0;
                     let portionsHTML = '';
 
@@ -1299,7 +1377,7 @@
                         });
                     }
 
-                    let lineTotal = (qty * itemBasePrice) + itemModifiersTotal;
+                    let lineTotal = (qty * price) + itemModifiersTotal;
 
                     summaryHTML += `
                         <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
@@ -1318,9 +1396,23 @@
 
                     summaryHTML += portionsHTML;
                     total += lineTotal;
-                    summaryHTML += `<div style="border-bottom: 1px dashed #eee; margin-bottom: 8px;"></div>`;
+                });
+
+                if (bundleRes.discountAmount > 0) {
+                    totalCategoryDiscounts += bundleRes.discountAmount;
+                    const cleanCatName = (catMeta.name || '').split(' ')[0] || '組合';
+                    summaryHTML += `
+                        <div style="display:flex; justify-content:space-between; margin: 2px 0 10px 0; color:#059669; font-size:13px; font-weight:700; background:#ecfdf5; padding:6px 10px; border-radius:8px; border:1px dashed #a7f3d0;">
+                            <div>🎉 ${cleanCatName} 組合特惠 (${bundleRes.bundleCount}組，已省 $${bundleRes.discountAmount})</div>
+                            <div>-$${bundleRes.discountAmount}</div>
+                        </div>
+                    `;
                 }
+
+                summaryHTML += `<div style="border-bottom: 1px dashed #eee; margin-bottom: 8px;"></div>`;
             }
+
+            total -= totalCategoryDiscounts;
 
             // Add Global Customization Addons if selected
             let addonsTotal = 0;

@@ -530,6 +530,33 @@ function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, ma
         msg += `\n\n🕒 ${timeLabel}：${dateInput} ${timeInput}`;
     }
     if (mainNote) msg += `\n📝 總備註：${mainNote}`;
+
+    // Calculate if any category discounts were applied
+    let categoryDiscountsText = '';
+    if (typeof bootstrapData !== 'undefined' && bootstrapData?.catalog) {
+        const catMap = {};
+        bootstrapData.catalog.forEach(cat => { catMap[cat.slug] = { rule: cat.pricingRules, name: cat.name, items: [] }; });
+        for (let k in cart) {
+            if (cart[k] > 0) {
+                const itInfo = resolveCatalogItem(k);
+                const { catSlug } = itInfo;
+                if (catMap[catSlug]) {
+                    catMap[catSlug].items.push({ price: itInfo.basePrice || 0, qty: cart[k] });
+                }
+            }
+        }
+        for (let s in catMap) {
+            const entry = catMap[s];
+            if (entry.items.length > 0 && typeof calculateCategoryBundleSubtotal === 'function') {
+                const res = calculateCategoryBundleSubtotal(entry.rule, entry.items);
+                if (res.discountAmount > 0) {
+                    const cleanName = (entry.name || '').split(' ')[0] || '組合';
+                    categoryDiscountsText += `\n🎉 ${cleanName}特惠：已省 $${res.discountAmount}`;
+                }
+            }
+        }
+    }
+    if (categoryDiscountsText) msg += categoryDiscountsText;
     msg += `\n💰 總金額：$${currentTotal}`;
 
     return msg;
