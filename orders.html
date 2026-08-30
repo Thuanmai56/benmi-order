@@ -121,12 +121,28 @@
       <div class="dining-filter-bar" id="dining-filter-bar">
         <div class="dining-filter-group">
           <button type="button" class="dining-filter-btn active" id="filter-btn-all" onclick="setDiningFilter('all')">全部</button>
-          <button type="button" class="dining-filter-btn" id="filter-btn-takeaway" onclick="setDiningFilter('takeaway')">🛍️ 外帶</button>
-          <button type="button" class="dining-filter-btn" id="filter-btn-dine-in" onclick="setDiningFilter('dine_in')">🍽️ 內用</button>
+          <button type="button" class="dining-filter-btn" id="filter-btn-takeaway" onclick="setDiningFilter('takeaway')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path>
+              <path d="M3 6h18"></path>
+              <path d="M16 10a4 4 0 0 1-8 0"></path>
+            </svg>
+            <span>外帶</span>
+          </button>
+          <button type="button" class="dining-filter-btn" id="filter-btn-dine-in" onclick="setDiningFilter('dine_in')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 2v6a3 3 0 0 1-3 3 3 3 0 0 1-3-3V2"></path>
+              <path d="M15 2v10"></path>
+              <path d="M15 14v8"></path>
+              <path d="M6 2v20"></path>
+              <path d="M6 2a3 3 0 0 1 3 3v3a3 3 0 0 1-3 3"></path>
+            </svg>
+            <span>內用</span>
+          </button>
         </div>
         <div class="dining-filter-stats" id="dining-filter-stats">
-          <span class="stat-pill takeaway" id="stat-pill-takeaway">🛍️ 0</span>
-          <span class="stat-pill dine-in" id="stat-pill-dinein">🍽️ 0</span>
+          <span class="stat-pill takeaway" id="stat-pill-takeaway">外帶 0</span>
+          <span class="stat-pill dine-in" id="stat-pill-dinein">內用 0</span>
         </div>
       </div>
 

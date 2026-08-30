@@ -1555,7 +1555,21 @@ input[type="checkbox"] {
         max-width: 480px;
     }
 
+    .desktop-auth-bar {
+        position: sticky;
+        top: 0;
+        z-index: 900;
+    }
+
     .sticky-nav {
+        position: sticky;
+        top: 48px;
+        z-index: 850;
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-bottom: 1px solid #e2e8f0;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
         justify-content: center;
         padding: 10px 20px;
     }
@@ -1571,14 +1585,15 @@ input[type="checkbox"] {
 
     .checkout-sidebar-col {
         position: sticky;
-        top: 70px;
-        max-height: calc(100vh - 85px);
+        top: 108px;
+        max-height: calc(100vh - 120px);
         overflow-y: auto;
         overflow-x: hidden;
         scrollbar-width: thin;
         scrollbar-color: #cbd5e1 transparent;
         padding-right: 2px;
         padding-bottom: 8px;
+        z-index: 800;
     }
 
     .checkout-sidebar-col::-webkit-scrollbar {
