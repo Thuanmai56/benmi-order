@@ -28,8 +28,8 @@
       enabled: true,
       interface_type: 'network', // 'network' | 'bluetooth'
       protocol: 'esc_pos',        // 'esc_pos' | 'tspl'
-      tspl_label_size: '50x30',   // '100x150' | '76x130' | '50x30' | 'custom'
-      tspl_custom_width_mm: 50,
+      tspl_label_size: '40x30',   // '100x150' | '76x130' | '50x30' | '40x30' | 'custom'
+      tspl_custom_width_mm: 40,
       tspl_custom_height_mm: 30,
       tspl_mode: 'item_stickers', // 'summary' | 'item_stickers'
       ip: '192.168.1.101',
@@ -261,6 +261,7 @@
       if (preset === '100x150') return { widthMm: 100, heightMm: 150 };
       if (preset === '76x130') return { widthMm: 76, heightMm: 130 };
       if (preset === '50x30') return { widthMm: 50, heightMm: 30 };
+      if (preset === '40x30') return { widthMm: 40, heightMm: 30 };
       if (preset === 'custom') {
         return {
           widthMm: parseInt(config.tspl_custom_width_mm, 10) || 100,
@@ -623,10 +624,11 @@
       return canvas.toDataURL('image/png');
     }
 
-    drawItemStickerToCanvas(item, orderContext, itemIdx, totalItems, widthMm = 50, heightMm = 30) {
+    drawItemStickerToCanvas(item, orderContext, itemIdx, totalItems, widthMm = 40, heightMm = 30) {
       const widthPx = Math.max(50, widthMm * 8);
       const heightPx = Math.max(30, heightMm * 8);
-      const padding = 12;
+      const isCompact = widthMm <= 42;
+      const padding = isCompact ? 8 : 12;
 
       const canvas = document.createElement('canvas');
       canvas.width = widthPx;
@@ -639,24 +641,24 @@
       ctx.strokeStyle = '#000000';
       ctx.textBaseline = 'top';
 
-      // Subtle border
-      ctx.lineWidth = 2;
-      ctx.strokeRect(4, 4, widthPx - 8, heightPx - 8);
+      // Subtle outer border
+      ctx.lineWidth = isCompact ? 1.5 : 2;
+      ctx.strokeRect(isCompact ? 2 : 4, isCompact ? 2 : 4, widthPx - (isCompact ? 4 : 8), heightPx - (isCompact ? 4 : 8));
 
       let y = padding;
 
-      // 1. Top row: Order Key & Table & Item Count (e.g. #260830-01  內用:12  [1/3])
-      ctx.font = 'bold 18px sans-serif';
+      // 1. Top row: Order Key & Table & Item Index (e.g. #260830-01  桌:12  [1/3])
+      ctx.font = isCompact ? 'bold 15px sans-serif' : 'bold 18px sans-serif';
       ctx.textAlign = 'left';
       ctx.fillText(`#${orderContext.key}`, padding, y);
 
       ctx.textAlign = 'center';
-      const diningShort = orderContext.diningOption === 'dine_in' ? `桌號:${orderContext.tableNumber || '-'}` : '外帶';
+      const diningShort = orderContext.diningOption === 'dine_in' ? `桌:${orderContext.tableNumber || '-'}` : '外帶';
       ctx.fillText(diningShort, widthPx / 2, y);
 
       ctx.textAlign = 'right';
       ctx.fillText(`[${itemIdx}/${totalItems}]`, widthPx - padding, y);
-      y += 24;
+      y += isCompact ? 20 : 24;
 
       // Divider line
       ctx.lineWidth = 1;
@@ -664,28 +666,28 @@
       ctx.moveTo(padding, y);
       ctx.lineTo(widthPx - padding, y);
       ctx.stroke();
-      y += 8;
+      y += isCompact ? 6 : 8;
 
       // 2. Dish / Drink Title (Large Bold)
       ctx.textAlign = 'left';
-      ctx.font = '900 26px sans-serif';
+      ctx.font = isCompact ? '900 22px sans-serif' : '900 26px sans-serif';
       ctx.fillText(`${item.name}`, padding, y);
       ctx.textAlign = 'right';
       ctx.fillText(`x${item.quantity}`, widthPx - padding, y);
-      y += 32;
+      y += isCompact ? 28 : 32;
 
       // 3. Modifiers / Options
       if (item.options || item.note) {
         ctx.textAlign = 'left';
-        ctx.font = 'bold 16px sans-serif';
+        ctx.font = isCompact ? 'bold 14px sans-serif' : 'bold 16px sans-serif';
         const optText = (item.options ? item.options : '') + (item.note ? ` (${item.note})` : '');
-        ctx.fillText(`↳ ${optText.slice(0, 24)}`, padding, y);
-        y += 22;
+        ctx.fillText(`↳ ${optText.slice(0, isCompact ? 18 : 24)}`, padding, y);
+        y += isCompact ? 18 : 22;
       }
 
-      // 4. Bottom row: Time
-      y = heightPx - padding - 18;
-      ctx.font = '14px sans-serif';
+      // 4. Bottom row: Customer & Time
+      y = heightPx - padding - (isCompact ? 14 : 18);
+      ctx.font = isCompact ? '12px sans-serif' : '14px sans-serif';
       ctx.textAlign = 'left';
       ctx.fillText(`顧客:${orderContext.customer || '顧客'}`, padding, y);
       ctx.textAlign = 'right';
