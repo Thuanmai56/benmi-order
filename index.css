@@ -1417,4 +1417,91 @@ input[type="checkbox"] {
     transform: scale(0.98);
 }
 
+/* ==========================================================================
+   Skeleton Shimmer Loading Engine (Ultra-Smooth 60fps)
+   ========================================================================== */
+@keyframes skeleton-shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+@keyframes catalog-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.skeleton-shimmer {
+    background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 40%, #cbd5e1 50%, #e2e8f0 60%, #f1f5f9 100%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s ease-in-out infinite;
+    border-radius: 6px;
+}
+
+.skeleton-nav-pill {
+    width: 68px;
+    height: 32px;
+    border-radius: 99px;
+    flex-shrink: 0;
+}
+
+.skeleton-card {
+    background: #ffffff;
+    border: 1px solid #eef2f6;
+    border-radius: 14px;
+    padding: 12px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.skeleton-card-left {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.skeleton-title {
+    width: 65%;
+    height: 18px;
+    border-radius: 6px;
+}
+
+.skeleton-subtitle {
+    width: 40%;
+    height: 13px;
+    border-radius: 4px;
+}
+
+.skeleton-price {
+    width: 52px;
+    height: 20px;
+    border-radius: 6px;
+    margin-top: 4px;
+}
+
+.skeleton-img {
+    width: 88px;
+    height: 88px;
+    border-radius: 12px;
+    flex-shrink: 0;
+}
+
+.section-container {
+    animation: catalog-fade-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 
