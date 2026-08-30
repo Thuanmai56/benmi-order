@@ -255,16 +255,17 @@ body {
 /* Dining Option Switcher (Uber Eats Style - Mobile First) */
 .dining-option-wrapper {
     background: #ffffff;
-    padding: 8px 16px;
-    border-bottom: 1px solid #f1f5f9;
+    padding: 10px 16px;
+    border-bottom: 1px solid #e2e8f0;
 }
 
 .dining-segmented-control {
     display: flex;
     background: #f1f5f9;
-    padding: 3px;
-    border-radius: 10px;
-    gap: 4px;
+    padding: 4px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    gap: 6px;
     max-width: 600px;
     margin: 0 auto;
 }
@@ -274,49 +275,54 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    padding: 8px 12px;
-    border: 1px solid transparent;
-    border-radius: 8px;
+    gap: 8px;
+    padding: 10px 16px;
+    min-height: 46px;
+    border: 1.5px solid transparent;
+    border-radius: 9px;
     background: transparent;
     color: #64748b;
-    font-size: 14px;
-    font-weight: 700;
+    font-size: 15.5px;
+    font-weight: 800;
     cursor: pointer;
-    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
     -webkit-tap-highlight-color: transparent;
     user-select: none;
 }
 
 .dining-seg-btn .dining-seg-icon,
 .dining-seg-btn .dining-seg-svg {
-    font-size: 16px;
-    width: 16px;
-    height: 16px;
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
     flex-shrink: 0;
     line-height: 1;
 }
 
 .dining-seg-btn:active {
-    transform: scale(0.98);
+    transform: scale(0.97);
 }
 
 .dining-seg-btn.active {
     background: #ffffff;
     color: #0f172a;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 #btn-dining-dinein.active,
 #checkout-btn-dinein.active {
     color: #6d28d9;
-    border-color: #ddd6fe;
+    border-color: #8b5cf6;
+    background: #ffffff;
+    box-shadow: 0 3px 10px rgba(109, 40, 217, 0.12), 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 #btn-dining-takeaway.active,
 #checkout-btn-takeaway.active {
     color: #047857;
-    border-color: #a7f3d0;
+    border-color: #10b981;
+    background: #ffffff;
+    box-shadow: 0 3px 10px rgba(4, 120, 87, 0.12), 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .sticky-nav {
