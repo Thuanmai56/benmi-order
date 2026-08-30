@@ -45,11 +45,11 @@ public class TsplBitmapConverter {
 
             stream.write(header.getBytes(StandardCharsets.US_ASCII));
 
-            // 2. 1-bit Monochrome Pixel packing (Mode 0: 1 = Black dot, 0 = White)
+            // 2. 1-bit Monochrome Pixel packing (TSPL Mode 0 standard: 0 = Black dot/Print, 1 = White/No print)
             final int threshold = 175;
             for (int y = 0; y < targetHeight; y++) {
                 for (int xByte = 0; xByte < widthBytes; xByte++) {
-                    byte b = 0;
+                    byte b = (byte) 0xFF; // Default all 1s (White background / transparent)
                     for (int bit = 0; bit < 8; bit++) {
                         int x = xByte * 8 + bit;
                         if (x < targetWidth) {
@@ -61,7 +61,8 @@ public class TsplBitmapConverter {
                                 int bVal = Color.blue(pixel);
                                 int luminance = (int) (0.299 * r + 0.587 * g + 0.114 * bVal);
                                 if (luminance < threshold) {
-                                    b |= (byte) (1 << (7 - bit));
+                                    // Dark/black pixel: clear bit to 0 (thermal dot fired)
+                                    b &= (byte) ~(1 << (7 - bit));
                                 }
                             }
                         }
