@@ -851,16 +851,28 @@ async function submitOrder() {
     doSubmitOrderExecution(dateInput, timeInput);
 }
 
+function getAllSubmitButtons() {
+    return [
+        document.getElementById('btn-submit'),
+        document.getElementById('submit-btn'),
+        document.getElementById('btn-desktop-submit')
+    ].filter(Boolean);
+}
+
+function setAllSubmitButtonsState(disabled, text, options = {}) {
+    const btns = getAllSubmitButtons();
+    btns.forEach(btn => {
+        btn.disabled = disabled;
+        if (text) btn.innerText = text;
+        if (options.cursor) btn.style.cursor = options.cursor;
+        if (options.opacity) btn.style.opacity = options.opacity;
+    });
+}
+
 // 10. Hàm nội bộ thực thi POST dữ liệu
 async function doSubmitOrderExecution(dateInput, timeInput) {
     isSubmitting = true;
-    const submitBtn = document.getElementById('btn-submit') || document.getElementById('submit-btn');
-    if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.innerText = '處理中...';
-        submitBtn.style.cursor = 'not-allowed';
-        submitBtn.style.opacity = '0.7';
-    }
+    setAllSubmitButtonsState(true, '處理中...', { cursor: 'not-allowed', opacity: '0.7' });
 
     const abortController = new AbortController();
     const timeoutId = setTimeout(() => abortController.abort(), 8000);
@@ -881,12 +893,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                             customAlert('請使用手機 LINE 掃碼點餐');
                         }
                         isSubmitting = false;
-                        if (submitBtn) {
-                            submitBtn.disabled = false;
-                            submitBtn.innerText = '確認下單';
-                            submitBtn.style.cursor = 'pointer';
-                            submitBtn.style.opacity = '1';
-                        }
+                        setAllSubmitButtonsState(false, '確認下單', { cursor: 'pointer', opacity: '1' });
                         return;
                     }
 
@@ -961,12 +968,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                 throw new Error(errData.error || `API returned status ${res.status}`);
             }
 
-            if (submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.innerText = '加點已送出';
-                submitBtn.style.cursor = 'not-allowed';
-                submitBtn.style.opacity = '0.6';
-            }
+            setAllSubmitButtonsState(true, '加點已送出', { cursor: 'not-allowed', opacity: '0.6' });
 
             if (typeof liff !== 'undefined' && liff.isInClient) {
                 try {
@@ -1051,13 +1053,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
         }
 
         orderSubmittedSuccessfully = true;
-
-        if (submitBtn) {
-            submitBtn.disabled = true;
-            submitBtn.innerText = '訂單已送出';
-            submitBtn.style.cursor = 'not-allowed';
-            submitBtn.style.opacity = '0.6';
-        }
+        setAllSubmitButtonsState(true, '訂單已送出', { cursor: 'not-allowed', opacity: '0.6' });
 
         // Tùy chọn: Gửi tin nhắn vào chat LINE nếu đang mở trong LINE App
         if (typeof liff !== 'undefined' && liff.isInClient) {
@@ -1119,13 +1115,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                     await liff.sendMessages([{ type: 'text', text: msg }]);
                 }
                 orderSubmittedSuccessfully = true;
-
-                if (submitBtn) {
-                    submitBtn.disabled = true;
-                    submitBtn.innerText = window.isAppendMode ? '加點已送出' : '訂單已送出';
-                    submitBtn.style.cursor = 'not-allowed';
-                    submitBtn.style.opacity = '0.6';
-                }
+                setAllSubmitButtonsState(true, window.isAppendMode ? '加點已送出' : '訂單已送出', { cursor: 'not-allowed', opacity: '0.6' });
 
                 cart = {};
                 customizeData = {};
@@ -1161,12 +1151,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
         // Luôn giải phóng khóa nút bấm nếu đơn hàng chưa hoàn tất
         if (!orderSubmittedSuccessfully) {
             isSubmitting = false;
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.innerText = '確認下單';
-                submitBtn.style.cursor = 'pointer';
-                submitBtn.style.opacity = '1';
-            }
+            setAllSubmitButtonsState(false, '確認下單', { cursor: 'pointer', opacity: '1' });
         }
     }
 }
