@@ -410,6 +410,13 @@
                             <input type="date" id="pickup-date" autocomplete="off" onchange="isPickupTimeManuallyChanged=true">
                             <input type="time" id="pickup-time" autocomplete="off" onchange="isPickupTimeManuallyChanged=true">
                         </div>
+                        <script>
+                            try {
+                                const _twToday = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' }).format(new Date());
+                                const _dEl = document.getElementById('pickup-date');
+                                if (_dEl) { _dEl.min = _twToday; if (!_dEl.value) _dEl.value = _twToday; }
+                            } catch(e) {}
+                        </script>
                     </div>
                     <!-- Dine-In Real-time notice -->
                     <div id="pickup-time-dinein-notice" style="display:none; padding: 14px 16px; background: #f5f3ff; border: 1.5px solid #c4b5fd; border-radius: 14px; color: #5b21b6; margin-bottom: 12px;">
@@ -763,6 +770,18 @@
             };
         }
 
+        function setTodayDate(forceReset = false) {
+            const twNow = getTaiwanDate();
+            const { dateStr } = formatTaiwanDateTime(twNow);
+            const dateEl = document.getElementById('pickup-date');
+            if (dateEl) {
+                dateEl.min = dateStr;
+                if (forceReset || !dateEl.value || dateEl.value < dateStr) {
+                    dateEl.value = dateStr;
+                }
+            }
+        }
+
         function updateAsapTimeDisplay() {
             const timeEl = document.getElementById('asap-current-time');
             const dineinTimeEl = document.getElementById('dinein-current-time');
@@ -820,6 +839,7 @@
                 } else {
                     if (pickerGroup) pickerGroup.style.display = 'block';
                     if (asapNotice) asapNotice.style.display = 'none';
+                    setTodayDate(false);
                 }
             }
             checkStoreStatus();
@@ -2054,20 +2074,6 @@
             }
         }
 
-
-
-        function setTodayDate(forceReset = false) {
-            const twNow = getTaiwanDate();
-            const { dateStr } = formatTaiwanDateTime(twNow);
-            const dateEl = document.getElementById('pickup-date');
-            if (dateEl) {
-                dateEl.min = dateStr;
-                if (forceReset || !dateEl.value || dateEl.value < dateStr) {
-                    dateEl.value = dateStr;
-                }
-            }
-        }
-
         function isStoreOpen(twTime) {
             if (!storeConfig || !storeConfig.operatingHours) {
                 const day = twTime.getDay();
@@ -2250,6 +2256,8 @@
 
         // --- INIT APP ---
         async function initApp() {
+            setTodayDate(true);
+            updateAsapTimeDisplay();
             const tenantId = getTenantIdFromUrl();
             const defaultLiffId = isDevEnv
                 ? "2011224566-kLLdMjkq"
