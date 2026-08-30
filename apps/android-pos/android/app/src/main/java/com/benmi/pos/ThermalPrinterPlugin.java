@@ -105,8 +105,11 @@ public class ThermalPrinterPlugin extends Plugin {
         String ip = call.getString("ip");
         Integer port = call.getInt("port", 9100);
         String base64Image = call.getString("base64Image");
+        String protocol = call.getString("protocol", "esc_pos");
         Integer paperWidth = call.getInt("paperWidth", 80);
         Boolean autoCut = call.getBoolean("autoCut", true);
+        Integer labelWidthMm = call.getInt("labelWidthMm", 100);
+        Integer labelHeightMm = call.getInt("labelHeightMm", 150);
         Integer timeoutMs = call.getInt("timeoutMs", 5000);
 
         if (ip == null || ip.trim().isEmpty() || base64Image == null || base64Image.trim().isEmpty()) {
@@ -128,20 +131,26 @@ public class ThermalPrinterPlugin extends Plugin {
                     return;
                 }
 
-                byte[] escPosBytes = EscPosBitmapConverter.convertBitmapToEscPosRaster(decodedBitmap, paperWidth, autoCut);
+                byte[] printBytes;
+                if ("tspl".equalsIgnoreCase(protocol)) {
+                    printBytes = TsplBitmapConverter.convertBitmapToTsplRaster(decodedBitmap, labelWidthMm, labelHeightMm);
+                } else {
+                    printBytes = EscPosBitmapConverter.convertBitmapToEscPosRaster(decodedBitmap, paperWidth, autoCut);
+                }
 
                 socket = new Socket();
                 socket.connect(new InetSocketAddress(ip.trim(), port), timeoutMs);
                 socket.setSoTimeout(timeoutMs);
 
                 OutputStream outputStream = socket.getOutputStream();
-                outputStream.write(escPosBytes);
+                outputStream.write(printBytes);
                 outputStream.flush();
 
                 JSObject ret = new JSObject();
                 ret.put("success", true);
                 ret.put("ip", ip);
-                ret.put("bytesWritten", escPosBytes.length);
+                ret.put("protocol", protocol);
+                ret.put("bytesWritten", printBytes.length);
                 call.resolve(ret);
             } catch (Exception e) {
                 call.reject("Failed to print bitmap to " + ip + ":" + port + " - " + e.getMessage(), e);
@@ -372,8 +381,11 @@ public class ThermalPrinterPlugin extends Plugin {
         String macAddress = call.getString("macAddress");
         String base64Image = call.getString("base64Image");
         String base64Data = call.getString("data");
+        String protocol = call.getString("protocol", "esc_pos");
         Integer paperWidth = call.getInt("paperWidth", 80);
         Boolean autoCut = call.getBoolean("autoCut", true);
+        Integer labelWidthMm = call.getInt("labelWidthMm", 100);
+        Integer labelHeightMm = call.getInt("labelHeightMm", 150);
 
         if (macAddress == null || macAddress.trim().isEmpty()) {
             call.reject("Bluetooth device MAC address is required.");
@@ -420,7 +432,11 @@ public class ThermalPrinterPlugin extends Plugin {
                         call.reject("Failed to decode base64 PNG bitmap.");
                         return;
                     }
-                    printBytes = EscPosBitmapConverter.convertBitmapToEscPosRaster(bitmap, paperWidth, autoCut);
+                    if ("tspl".equalsIgnoreCase(protocol)) {
+                        printBytes = TsplBitmapConverter.convertBitmapToTsplRaster(bitmap, labelWidthMm, labelHeightMm);
+                    } else {
+                        printBytes = EscPosBitmapConverter.convertBitmapToEscPosRaster(bitmap, paperWidth, autoCut);
+                    }
                 } else {
                     printBytes = Base64.decode(base64Data, Base64.DEFAULT);
                 }

@@ -132,19 +132,78 @@ assert.strictEqual(loadedHybrid.cashier.mac_address, "00:11:22:33:44:55", "Cashi
 assert.strictEqual(loadedHybrid.kitchen.interface_type, "network", "Kitchen interface should be network");
 console.log("✅ Test 6 Passed: Hybrid Dual-Interface Settings (Bluetooth + Network) verified.");
 
-// 7. Test Bluetooth Paired Devices Query & Fallback
+// 7. Test TSPL Protocol Settings Persistence
+const tsplSettings = {
+  autoPrintNewOrders: true,
+  cashier: {
+    enabled: true,
+    protocol: "tspl",
+    interface_type: "bluetooth",
+    mac_address: "DC:0D:30:88:99:AA",
+    device_name: "Aimo D520BT",
+    tspl_label_size: "100x150",
+    tspl_custom_width_mm: 100,
+    tspl_custom_height_mm: 150,
+    tspl_mode: "summary"
+  },
+  kitchen: {
+    enabled: true,
+    protocol: "tspl",
+    interface_type: "bluetooth",
+    mac_address: "DC:0D:30:88:99:BB",
+    device_name: "XP-365B",
+    tspl_label_size: "50x30",
+    tspl_custom_width_mm: 50,
+    tspl_custom_height_mm: 30,
+    tspl_mode: "item_stickers"
+  }
+};
+service.saveSettings(tsplSettings);
+const loadedTspl = service.getSettings();
+assert.strictEqual(loadedTspl.cashier.protocol, "tspl", "Cashier protocol should be tspl");
+assert.strictEqual(loadedTspl.cashier.tspl_label_size, "100x150", "Cashier label size should match");
+assert.strictEqual(loadedTspl.kitchen.tspl_mode, "item_stickers", "Kitchen label mode should match");
+console.log("✅ Test 7 Passed: TSPL Dual-Station Settings persistence verified.");
+
+// 8. Test TSPL Dimension Resolution & Order Item Parsing
+const dims100x150 = service.resolveLabelDimensions({ tspl_label_size: "100x150" });
+assert.strictEqual(dims100x150.widthMm, 100, "100x150 width should be 100mm");
+assert.strictEqual(dims100x150.heightMm, 150, "100x150 height should be 150mm");
+
+const dimsCustom = service.resolveLabelDimensions({ tspl_label_size: "custom", tspl_custom_width_mm: 80, tspl_custom_height_mm: 120 });
+assert.strictEqual(dimsCustom.widthMm, 80, "Custom width should be 80mm");
+assert.strictEqual(dimsCustom.heightMm, 120, "Custom height should be 120mm");
+
+const parsedItems = service.parseOrderItems(mockOrder);
+assert.strictEqual(parsedItems.length, 2, "mockOrder should parse into 2 individual items");
+assert.strictEqual(parsedItems[0].name, "招牌越式烤肉麵包", "First item name should match");
+assert.strictEqual(parsedItems[0].options, "大辣、不加洋蔥", "First item options should match");
+assert.strictEqual(parsedItems[1].name, "越式滴漏冰咖啡", "Second item name should match");
+console.log("✅ Test 8 Passed: TSPL Dimension Resolver & Item Parser verified.");
+
+// 9. Test TSPL Order Summary Label Canvas Painter
+const tsplSummaryPng = service.drawOrderLabelToCanvas(mockOrder, false, 100, 150);
+assert(tsplSummaryPng.startsWith("data:image/png;base64,"), "TSPL order summary label should generate valid Base64 PNG");
+console.log("✅ Test 9 Passed: TSPL Order Summary Label Canvas Painter verified.");
+
+// 10. Test TSPL Item / Cup Sticker Canvas Painter
+const tsplStickerPng = service.drawItemStickerToCanvas(parsedItems[0], mockOrder, 0, parsedItems.length, 50, 30);
+assert(tsplStickerPng.startsWith("data:image/png;base64,"), "TSPL item sticker should generate valid Base64 PNG");
+console.log("✅ Test 10 Passed: TSPL Individual Cup/Dish Sticker Canvas Painter verified.");
+
+// 11. Test Bluetooth Paired Devices Query & Fallback
 service.getPairedBluetoothDevices().then((res) => {
   assert(Array.isArray(res.devices), "getPairedBluetoothDevices should return devices array");
-  console.log(`✅ Test 7 Passed: getPairedBluetoothDevices returned ${res.devices.length} devices.`);
+  console.log(`✅ Test 11 Passed: getPairedBluetoothDevices returned ${res.devices.length} devices.`);
 
-  // 8. Test Local Mock TCP Socket Communication
+  // 12. Test Local Mock TCP Socket Communication
   const mockServer = net.createServer((socket) => {
     socket.on('data', (data) => {
       assert(data.length > 0, "Socket should receive raw bytes");
       socket.destroy();
       mockServer.close(() => {
-        console.log("✅ Test 8 Passed: Mock TCP Socket Server on Port 9100 successfully received print stream.");
-        console.log("\n🎉 ALL 8 PRINTER SYSTEM (NETWORK + BLUETOOTH) TESTS PASSED SUCCESSFULLY!");
+        console.log("✅ Test 12 Passed: Mock TCP Socket Server on Port 9100 successfully received print stream.");
+        console.log("\n🎉 ALL 12 PRINTER SYSTEM (ESC/POS + TSPL, BT + NET, RECEIPT + STICKERS) TESTS PASSED SUCCESSFULLY!");
         process.exit(0);
       });
     });
