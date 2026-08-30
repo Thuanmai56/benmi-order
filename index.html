@@ -192,6 +192,24 @@
 
                 const hoursRow = document.getElementById("store-hours-row");
                 if (hoursRow) hoursRow.style.display = "flex";
+                const todayPreviewEl = document.getElementById("hours-today-preview");
+                if (todayPreviewEl) {
+                    try {
+                        const hrs = theme.parsedHours || (typeof theme.operatingHours === 'string' ? JSON.parse(theme.operatingHours) : theme.operatingHours);
+                        if (hrs) {
+                            const todayDay = new Date().getDay();
+                            const todayShifts = hrs[todayDay] || [];
+                            if (todayShifts.length > 0) {
+                                todayPreviewEl.innerHTML = `今日 <strong style="color: #111827;">${todayShifts.map(s => `${s.start}-${s.end}`).join(", ")}</strong>`;
+                            } else {
+                                todayPreviewEl.innerHTML = `<strong style="color: #dc2626;">今日公休</strong>`;
+                                todayPreviewEl.style.background = '#fef2f2';
+                                todayPreviewEl.style.color = '#dc2626';
+                                todayPreviewEl.style.borderColor = '#fca5a5';
+                            }
+                        }
+                    } catch(e) {}
+                }
 
                 const annEl = document.getElementById("store-announcement");
                 const annRow = document.getElementById("store-announcement-row");
@@ -682,6 +700,104 @@
             applyPickupConfig();
         }
 
+        function toggleStoreHours(e) {
+            if (e) e.stopPropagation();
+            const displayEl = document.getElementById('store-hours-display');
+            const arrowEl = document.getElementById('hours-arrow-icon');
+            const toggleTextEl = document.getElementById('hours-toggle-text');
+            if (displayEl) {
+                const isHidden = (displayEl.style.display === 'none' || !displayEl.style.display);
+                displayEl.style.display = isHidden ? 'block' : 'none';
+                if (arrowEl) arrowEl.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+                if (toggleTextEl) toggleTextEl.innerText = isHidden ? '收合' : '展開';
+            }
+        }
+
+        function renderStoreOperatingHours() {
+            const displayEl = document.getElementById('store-hours-display');
+            const todayPreviewEl = document.getElementById('hours-today-preview');
+            if (!displayEl) return;
+            
+            const twTime = getTaiwanDate();
+            const todayIdx = twTime.getDay();
+            
+            let todayHoursStr = "";
+            let isTodayOpen = false;
+
+            if (storeConfig && storeConfig.operatingHours) {
+                const hrs = storeConfig.operatingHours;
+                const days = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
+                let html = "";
+                
+                const getShiftsStr = (dayIdx) => {
+                    const shifts = hrs[dayIdx] || [];
+                    if (shifts.length === 0) return "公休";
+                    return shifts.map(s => `${s.start}-${s.end}`).join(", ");
+                };
+
+                const todayShifts = hrs[todayIdx] || [];
+                if (todayShifts.length > 0) {
+                    todayHoursStr = todayShifts.map(s => `${s.start}-${s.end}`).join(", ");
+                    isTodayOpen = true;
+                } else {
+                    todayHoursStr = "今日公休";
+                    isTodayOpen = false;
+                }
+                
+                const monStr = getShiftsStr(1);
+                const tueStr = getShiftsStr(2);
+                const wedStr = getShiftsStr(3);
+                const thuStr = getShiftsStr(4);
+                const friStr = getShiftsStr(5);
+                const satStr = getShiftsStr(6);
+                const sunStr = getShiftsStr(0);
+                
+                const weekdaysEqual = (monStr === tueStr && tueStr === wedStr && wedStr === thuStr && thuStr === friStr);
+                const weekendsEqual = (satStr === sunStr);
+                
+                if (weekdaysEqual && weekendsEqual) {
+                    const isWeekday = (todayIdx >= 1 && todayIdx <= 5);
+                    const tagW = isWeekday ? '<span style="font-size: 11px; background: #ecfdf5; color: #059669; padding: 1px 6px; border-radius: 99px; margin-left: 6px; border: 1px solid #a7f3d0;">今天</span>' : '';
+                    const tagE = !isWeekday ? '<span style="font-size: 11px; background: #ecfdf5; color: #059669; padding: 1px 6px; border-radius: 99px; margin-left: 6px; border: 1px solid #a7f3d0;">今天</span>' : '';
+                    html = `<div ${isWeekday ? 'style="font-weight: 700; color: #059669;"' : ''}>週一~週五&nbsp;&nbsp;${monStr}${tagW}</div>
+                            <div ${!isWeekday ? 'style="font-weight: 700; color: #059669;"' : ''}>週六、週日&nbsp;&nbsp;${satStr}${tagE}</div>`;
+                } else {
+                    for (let i = 1; i <= 7; i++) {
+                        const dayIdx = i === 7 ? 0 : i;
+                        const isCurrentDay = (dayIdx === todayIdx);
+                        const highlightStyle = isCurrentDay ? 'style="font-weight: 700; color: #059669;"' : '';
+                        const tag = isCurrentDay ? '<span style="font-size: 11px; background: #ecfdf5; color: #059669; padding: 1px 6px; border-radius: 99px; margin-left: 6px; border: 1px solid #a7f3d0;">今天</span>' : '';
+                        html += `<div ${highlightStyle}>${days[dayIdx]}&nbsp;&nbsp;${getShiftsStr(dayIdx)}${tag}</div>`;
+                    }
+                }
+                displayEl.innerHTML = html;
+            } else {
+                if (todayIdx >= 1 && todayIdx <= 5) {
+                    todayHoursStr = "11:00-21:00";
+                    isTodayOpen = true;
+                } else {
+                    todayHoursStr = "9:00-21:00";
+                    isTodayOpen = true;
+                }
+                displayEl.innerHTML = `<div>週一~週五&nbsp;&nbsp;11:00-21:00</div>
+                                       <div>週六、週日&nbsp;&nbsp;9:00-21:00</div>`;
+            }
+
+            if (todayPreviewEl) {
+                if (isTodayOpen) {
+                    todayPreviewEl.innerHTML = `今日 <strong style="color: #111827;">${todayHoursStr}</strong>`;
+                    todayPreviewEl.style.background = '#f0fdf4';
+                    todayPreviewEl.style.color = '#059669';
+                    todayPreviewEl.style.borderColor = '#bbf7d0';
+                } else {
+                    todayPreviewEl.innerHTML = `<strong style="color: #dc2626;">今日公休</strong>`;
+                    todayPreviewEl.style.background = '#fef2f2';
+                    todayPreviewEl.style.color = '#dc2626';
+                    todayPreviewEl.style.borderColor = '#fca5a5';
+                }
+            }
+        }
+
         function applyTenantTheme(tenant) {
             if (!tenant) return;
             const tenantId = getTenantIdFromUrl();
@@ -724,6 +840,16 @@
 
             const hoursRow = document.getElementById('store-hours-row');
             if (hoursRow) hoursRow.style.display = 'flex';
+
+            if (!storeConfig) storeConfig = {};
+            if (tenant.parsedHours) {
+                storeConfig.operatingHours = tenant.parsedHours;
+            } else if (tenant.operatingHours) {
+                try {
+                    storeConfig.operatingHours = typeof tenant.operatingHours === 'string' ? JSON.parse(tenant.operatingHours) : tenant.operatingHours;
+                } catch(e) {}
+            }
+            renderStoreOperatingHours();
 
             const annEl = document.getElementById('store-announcement');
             const annRow = document.getElementById('store-announcement-row');
@@ -2156,108 +2282,11 @@
             }
         }
 
-        function toggleStoreHours(e) {
-            if (e) e.stopPropagation();
-            const displayEl = document.getElementById('store-hours-display');
-            const arrowEl = document.getElementById('hours-arrow-icon');
-            const toggleTextEl = document.getElementById('hours-toggle-text');
-            if (displayEl) {
-                const isHidden = (displayEl.style.display === 'none' || !displayEl.style.display);
-                displayEl.style.display = isHidden ? 'block' : 'none';
-                if (arrowEl) arrowEl.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
-                if (toggleTextEl) toggleTextEl.innerText = isHidden ? '收合' : '展開';
-            }
-        }
-
-        function renderStoreOperatingHours() {
-            const displayEl = document.getElementById('store-hours-display');
-            const todayPreviewEl = document.getElementById('hours-today-preview');
-            if (!displayEl) return;
-            
-            const twTime = getTaiwanDate();
-            const todayIdx = twTime.getDay();
-            
-            let todayHoursStr = "";
-            let isTodayOpen = false;
-
-            if (storeConfig && storeConfig.operatingHours) {
-                const hrs = storeConfig.operatingHours;
-                const days = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
-                let html = "";
-                
-                const getShiftsStr = (dayIdx) => {
-                    const shifts = hrs[dayIdx] || [];
-                    if (shifts.length === 0) return "公休";
-                    return shifts.map(s => `${s.start}-${s.end}`).join(", ");
-                };
-
-                const todayShifts = hrs[todayIdx] || [];
-                if (todayShifts.length > 0) {
-                    todayHoursStr = todayShifts.map(s => `${s.start}-${s.end}`).join(", ");
-                    isTodayOpen = true;
-                } else {
-                    todayHoursStr = "今日公休";
-                    isTodayOpen = false;
-                }
-                
-                const monStr = getShiftsStr(1);
-                const tueStr = getShiftsStr(2);
-                const wedStr = getShiftsStr(3);
-                const thuStr = getShiftsStr(4);
-                const friStr = getShiftsStr(5);
-                const satStr = getShiftsStr(6);
-                const sunStr = getShiftsStr(0);
-                
-                const weekdaysEqual = (monStr === tueStr && tueStr === wedStr && wedStr === thuStr && thuStr === friStr);
-                const weekendsEqual = (satStr === sunStr);
-                
-                if (weekdaysEqual && weekendsEqual) {
-                    const isWeekday = (todayIdx >= 1 && todayIdx <= 5);
-                    const tagW = isWeekday ? '<span style="font-size: 11px; background: #ecfdf5; color: #059669; padding: 1px 6px; border-radius: 99px; margin-left: 6px; border: 1px solid #a7f3d0;">今天</span>' : '';
-                    const tagE = !isWeekday ? '<span style="font-size: 11px; background: #ecfdf5; color: #059669; padding: 1px 6px; border-radius: 99px; margin-left: 6px; border: 1px solid #a7f3d0;">今天</span>' : '';
-                    html = `<div ${isWeekday ? 'style="font-weight: 700; color: #059669;"' : ''}>週一~週五&nbsp;&nbsp;${monStr}${tagW}</div>
-                            <div ${!isWeekday ? 'style="font-weight: 700; color: #059669;"' : ''}>週六、週日&nbsp;&nbsp;${satStr}${tagE}</div>`;
-                } else {
-                    for (let i = 1; i <= 7; i++) {
-                        const dayIdx = i === 7 ? 0 : i;
-                        const isCurrentDay = (dayIdx === todayIdx);
-                        const highlightStyle = isCurrentDay ? 'style="font-weight: 700; color: #059669;"' : '';
-                        const tag = isCurrentDay ? '<span style="font-size: 11px; background: #ecfdf5; color: #059669; padding: 1px 6px; border-radius: 99px; margin-left: 6px; border: 1px solid #a7f3d0;">今天</span>' : '';
-                        html += `<div ${highlightStyle}>${days[dayIdx]}&nbsp;&nbsp;${getShiftsStr(dayIdx)}${tag}</div>`;
-                    }
-                }
-                displayEl.innerHTML = html;
-            } else {
-                if (todayIdx >= 1 && todayIdx <= 5) {
-                    todayHoursStr = "11:00-21:00";
-                    isTodayOpen = true;
-                } else {
-                    todayHoursStr = "9:00-21:00";
-                    isTodayOpen = true;
-                }
-                displayEl.innerHTML = `<div>週一~週五&nbsp;&nbsp;11:00-21:00</div>
-                                       <div>週六、週日&nbsp;&nbsp;9:00-21:00</div>`;
-            }
-
-            if (todayPreviewEl) {
-                if (isTodayOpen) {
-                    todayPreviewEl.innerHTML = `今日 <strong style="color: #111827;">${todayHoursStr}</strong>`;
-                    todayPreviewEl.style.background = '#f0fdf4';
-                    todayPreviewEl.style.color = '#059669';
-                    todayPreviewEl.style.borderColor = '#bbf7d0';
-                } else {
-                    todayPreviewEl.innerHTML = `<strong style="color: #dc2626;">今日公休</strong>`;
-                    todayPreviewEl.style.background = '#fef2f2';
-                    todayPreviewEl.style.color = '#dc2626';
-                    todayPreviewEl.style.borderColor = '#fca5a5';
-                }
-            }
-        }
-
         // --- INIT APP ---
         async function initApp() {
             setTodayDate(true);
             updateAsapTimeDisplay();
+            renderStoreOperatingHours();
             const tenantId = getTenantIdFromUrl();
             const defaultLiffId = isDevEnv
                 ? "2011224566-kLLdMjkq"
