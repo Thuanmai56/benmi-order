@@ -876,7 +876,8 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
 
                     const storageKey = `cart_save_${tenantId}`;
                     localStorage.setItem(storageKey, JSON.stringify({ cart, customizeData, comboDrinkData }));
-                    liff.login({ redirectUri: window.location.href });
+                    const cleanRedirectUri = (typeof window.getCleanLiffRedirectUri === 'function') ? window.getCleanLiffRedirectUri() : window.location.href;
+                    liff.login({ redirectUri: cleanRedirectUri });
                     return;
                 }
             } catch (liffAuthErr) {
