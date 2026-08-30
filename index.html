@@ -2018,11 +2018,45 @@
 
         // --- INIT APP ---
         async function initApp() {
+            const tenantId = getTenantIdFromUrl();
             const defaultLiffId = isDevEnv
                 ? "2011224566-kLLdMjkq"
                 : (isStagingEnv ? "2009555608-DMioljsI" : "2009560906-c5taZfiY");
 
-            await fetchMenu();
+            // 1. Instant 0ms Hydration from LocalStorage for repeat visits
+            try {
+                const cachedRaw = localStorage.getItem(`tenant_bootstrap_${tenantId}`);
+                if (cachedRaw) {
+                    const parsed = JSON.parse(cachedRaw);
+                    if (parsed && parsed.tenant) {
+                        bootstrapData = parsed;
+                        storeConfig = {
+                            allowScheduledPickup: parsed.tenant.allowScheduledPickup,
+                            allowDineIn: parsed.tenant.allowDineIn,
+                            features: parsed.tenant.features || [],
+                            orderPrefix: parsed.tenant.orderPrefix,
+                            storeStatus: parsed.tenant.storeStatus,
+                            operatingHours: parsed.tenant.parsedHours,
+                            liffId: parsed.tenant.liffId
+                        };
+                        applyTenantTheme(parsed.tenant);
+                        renderDynamicCatalog();
+                        renderStoreOperatingHours();
+                        applyPickupConfig();
+                    }
+                }
+            } catch(e) {
+                console.warn('[Cache] Instant hydration notice:', e);
+            }
+
+            // 2. Fetch fresh bootstrap in background (Stale-While-Revalidate)
+            const menuPromise = fetchMenu().then(() => {
+                renderDynamicCatalog();
+                renderStoreOperatingHours();
+                applyPickupConfig();
+            });
+
+            // 3. Initialize LIFF
             try {
                 const liffId = storeConfig?.liffId || defaultLiffId;
                 if (liffId && typeof liff !== 'undefined' && liff.init) {
@@ -2031,13 +2065,15 @@
             } catch(e) {
                 console.error("LIFF Init Error", e);
             }
+
             try {
                 await updateDesktopAuthUI();
             } catch (authUiErr) {
                 console.warn("Desktop Auth UI update error:", authUiErr);
             }
-            renderDynamicCatalog();
-            renderStoreOperatingHours();
+
+            await menuPromise;
+
             if (typeof initAppendModeIfPresent === 'function') {
                 initAppendModeIfPresent();
             }
