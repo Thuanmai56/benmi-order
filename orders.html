@@ -821,13 +821,13 @@
     <div class="content" id="view-menu" style="display:none;">
       <div class="split menu-split">
         <div class="panel">
-          <div class="panel-header" style="align-items: center;">
-            <div style="flex: 1; min-width: 0; padding-right: 8px;">
+          <div class="panel-header" style="flex-direction: column; align-items: stretch; gap: 8px;">
+            <div>
               <div class="panel-title" id="i18n-menu-cat-title">菜單分類</div>
-              <div class="panel-sub" id="i18n-menu-cat-sub" style="color: var(--muted); margin-top:4px;">點擊左側分類以管理品項</div>
+              <div class="panel-sub" id="i18n-menu-cat-sub" style="color: var(--muted); margin-top: 3px; line-height: 1.35;">點擊左側分類以管理品項</div>
             </div>
-            <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
-              <button type="button" class="btn btn-ghost" id="btn-menu-manage-cats" style="border: 1.5px solid #cbd5e1; background: #fff; color: #1e293b; padding: 7px 12px; font-size: 13px; font-weight: 800; white-space: nowrap; border-radius: 8px;" onclick="openCategoriesManager()">⚙️ 管理分類</button>
+            <div>
+              <button type="button" class="btn btn-ghost" id="btn-menu-manage-cats" style="width: 100%; border: 1.5px solid #cbd5e1; background: #fff; color: #1e293b; padding: 7px 10px; font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 6px; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);" onclick="openCategoriesManager()">⚙️ 管理分類</button>
             </div>
           </div>
           <div class="panel-body" id="menu-categories" style="padding: 0; background: #fff;">
