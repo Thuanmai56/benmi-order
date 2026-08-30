@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title id="page-title">線上點餐</title>
     <link rel="preload" href="index.css?v=20260831_qty_btn_size_10" as="style">
-    <link rel="preload" href="js/client-checkout.js?v=20260830_liff_msg_clean_1" as="script">
+    <link rel="preload" href="js/client-checkout.js?v=20260831_liff_login_clean_2" as="script">
     <link rel="stylesheet" href="index.css?v=20260831_qty_btn_size_10">
     <script>
         function extractTenantId() {
@@ -846,6 +846,10 @@
                     storeConfig.operatingHours = typeof tenant.operatingHours === 'string' ? JSON.parse(tenant.operatingHours) : tenant.operatingHours;
                 } catch(e) {}
             }
+            if (tenant.liffId) storeConfig.liffId = tenant.liffId;
+            if (tenant.features) storeConfig.features = tenant.features;
+            if (tenant.allowScheduledPickup !== undefined) storeConfig.allowScheduledPickup = tenant.allowScheduledPickup;
+            if (tenant.allowDineIn !== undefined) storeConfig.allowDineIn = tenant.allowDineIn;
             renderStoreOperatingHours();
 
             const annEl = document.getElementById('store-announcement');
@@ -1489,6 +1493,22 @@
             };
         }
 
+        function getCleanLiffRedirectUri() {
+            try {
+                const url = new URL(window.location.href);
+                // Clean OAuth artifacts to prevent nested or stale code/state parameters
+                url.searchParams.delete('code');
+                url.searchParams.delete('state');
+                url.searchParams.delete('liffClientId');
+                url.searchParams.delete('liffRedirectUri');
+                url.hash = '';
+                return url.toString();
+            } catch (e) {
+                return window.location.href;
+            }
+        }
+        window.getCleanLiffRedirectUri = getCleanLiffRedirectUri;
+
         let liffInitPromise = null;
         let isLiffInitialized = false;
 
@@ -1505,14 +1525,23 @@
 
                 const tenantId = getTenantIdFromUrl();
 
-                // 1. Try to get tenant's liffId from memory or localStorage cache
-                let liffId = storeConfig?.liffId;
+                // 1. Try to get tenant's exact liffId from memory, bootstrap or localStorage cache
+                let liffId = storeConfig?.liffId || bootstrapData?.tenant?.liffId;
                 if (!liffId) {
                     try {
-                        const cached = localStorage.getItem(`tenant_bootstrap_${tenantId}`);
-                        if (cached) {
-                            const parsed = JSON.parse(cached);
+                        const cachedBootstrap = localStorage.getItem(`tenant_bootstrap_${tenantId}`);
+                        if (cachedBootstrap) {
+                            const parsed = JSON.parse(cachedBootstrap);
                             liffId = parsed?.tenant?.liffId;
+                        }
+                    } catch (e) {}
+                }
+                if (!liffId) {
+                    try {
+                        const cachedTheme = localStorage.getItem(`tenant_theme_${tenantId}`) || localStorage.getItem(`tenant_branding_${tenantId}`);
+                        if (cachedTheme) {
+                            const parsed = JSON.parse(cachedTheme);
+                            liffId = parsed?.liffId;
                         }
                     } catch (e) {}
                 }
@@ -1522,10 +1551,10 @@
                     try {
                         if (window.menuPromise) {
                             await window.menuPromise;
-                            liffId = storeConfig?.liffId;
+                            liffId = storeConfig?.liffId || bootstrapData?.tenant?.liffId;
                         } else if (typeof fetchMenu === 'function') {
                             await fetchMenu();
-                            liffId = storeConfig?.liffId;
+                            liffId = storeConfig?.liffId || bootstrapData?.tenant?.liffId;
                         }
                     } catch (e) {
                         console.warn('[LIFF] Wait for bootstrap notice:', e);
@@ -1542,6 +1571,14 @@
                     await liff.init({ liffId });
                     isLiffInitialized = true;
                     console.log(`[LIFF] Initialized successfully for tenant [${tenantId}] with ID:`, liffId);
+
+                    // If redirected back from LINE Login with OAuth parameters, clean the URL cleanly
+                    if (window.location.search && (window.location.search.includes('code=') || window.location.search.includes('liffClientId='))) {
+                        const cleanUrl = getCleanLiffRedirectUri();
+                        if (window.history && window.history.replaceState) {
+                            window.history.replaceState({}, document.title, cleanUrl);
+                        }
+                    }
                 } catch (initErr) {
                     console.warn('[LIFF] Init notice:', initErr);
                 }
@@ -1600,7 +1637,8 @@
                 try {
                     localStorage.setItem(storageKey, JSON.stringify({ cart, customizeData, comboDrinkData }));
                 } catch(e) {}
-                liff.login({ redirectUri: window.location.href });
+                const cleanRedirectUri = getCleanLiffRedirectUri();
+                liff.login({ redirectUri: cleanRedirectUri });
             }
         }
 
