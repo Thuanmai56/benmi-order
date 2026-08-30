@@ -484,7 +484,7 @@ const I18N = {
     // Change Modal
     changeTitle: "Yêu cầu thay đổi",
     changeTabTime: "Thời gian quá gấp",
-    changeTabTimeSub: "Đề xuất dời giờ lấy bánh",
+    changeTabTimeSub: "Đề xuất dời giờ lấy món",
     changeTabSoldout: "Đã hết món",
     changeTabSoldoutSub: "Chọn món đã hết hàng",
     origTimeLabel: "Khách hẹn ban đầu",
@@ -541,7 +541,7 @@ const I18N = {
     orderModeSub: "Tùy chỉnh cho phép khách hẹn giờ lấy hoặc nhận đơn làm ngay xếp theo thứ tự (ASAP)",
     btnSaveSetting: "Lưu thiết lập",
     modeScheduledTitle: "🕒 Bật hẹn giờ lấy món",
-    modeScheduledSub: "Khách hàng có thể tự chọn ngày và giờ muốn đến lấy bánh trên trang đặt hàng. Thích hợp với các quán chuẩn bị theo giờ hẹn của khách.",
+    modeScheduledSub: "Khách hàng có thể tự chọn ngày và giờ muốn đến lấy món trên trang đặt hàng. Thích hợp với các quán chuẩn bị theo giờ hẹn của khách.",
     modeAsapTitle: "⚡ Tắt hẹn giờ - Nhận đơn làm ngay theo hàng đợi (ASAP)",
     modeAsapSub: "Ẩn mục chọn ngày giờ. Khách đặt xong đơn sẽ được tiếp nhận và xử lý làm ngay theo thứ tự xếp hàng (ASAP).",
     hoursTitle: "⏰ Giờ hoạt động",
