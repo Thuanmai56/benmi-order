@@ -229,7 +229,8 @@ const I18N = {
     printerTsplSizeLabel: "標籤紙張尺寸",
     printerOptTspl100x150: "100 x 150 mm (4x6\" 貨運/大袋貼紙)",
     printerOptTspl76x130: "76 x 130 mm (3x5\" 訂單明細貼紙)",
-    printerOptTspl50x30: "50 x 30 mm (飲料杯貼/單品標籤)",
+    printerOptTspl50x30: "50 x 30 mm (餐盒/單品標籤)",
+    printerOptTspl40x30: "40 x 30 mm (飲料杯貼/單品標籤)",
     printerOptTsplCustom: "自訂尺寸 (Custom mm)",
     printerTsplWidthLabel: "寬度 (mm)",
     printerTsplHeightLabel: "高度 (mm)",
@@ -722,7 +723,8 @@ const I18N = {
     printerTsplSizeLabel: "Kích thước nhãn/decal",
     printerOptTspl100x150: "100 x 150 mm (4x6\" Tem dán túi/thùng lớn)",
     printerOptTspl76x130: "76 x 130 mm (3x5\" Tem đơn hàng trung bình)",
-    printerOptTspl50x30: "50 x 30 mm (Tem dán ly/từng món đồ uống)",
+    printerOptTspl50x30: "50 x 30 mm (Tem hộp/món chuẩn)",
+    printerOptTspl40x30: "40 x 30 mm (Tem dán ly/phiếu chế biến)",
     printerOptTsplCustom: "Kích thước tùy chỉnh (Custom mm)",
     printerTsplWidthLabel: "Chiều rộng (mm)",
     printerTsplHeightLabel: "Chiều cao (mm)",
@@ -1338,6 +1340,9 @@ function applyLanguageToDOM() {
 
   const optTspl50s = document.querySelectorAll(".i18n-opt-tspl-50x30");
   optTspl50s.forEach(el => el.innerText = dict.printerOptTspl50x30);
+
+  const optTspl40s = document.querySelectorAll(".i18n-opt-tspl-40x30");
+  optTspl40s.forEach(el => el.innerText = dict.printerOptTspl40x30);
 
   const optTsplCustoms = document.querySelectorAll(".i18n-opt-tspl-custom");
   optTsplCustoms.forEach(el => el.innerText = dict.printerOptTsplCustom);

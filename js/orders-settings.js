@@ -786,9 +786,9 @@ function loadPOSPrinterSettings() {
   const kitPaper = document.getElementById("printer-kitchen-paper");
   if (kitPaper) kitPaper.value = String(settings.kitchen?.paperWidth || 80);
   const kitTsplSize = document.getElementById("printer-kitchen-tspl-size");
-  if (kitTsplSize) kitTsplSize.value = settings.kitchen?.tspl_label_size || '50x30';
+  if (kitTsplSize) kitTsplSize.value = settings.kitchen?.tspl_label_size || '40x30';
   const kitTsplW = document.getElementById("printer-kitchen-tspl-width");
-  if (kitTsplW) kitTsplW.value = settings.kitchen?.tspl_custom_width_mm || 50;
+  if (kitTsplW) kitTsplW.value = settings.kitchen?.tspl_custom_width_mm || 40;
   const kitTsplH = document.getElementById("printer-kitchen-tspl-height");
   if (kitTsplH) kitTsplH.value = settings.kitchen?.tspl_custom_height_mm || 30;
   const kitTsplMode = document.getElementById("printer-kitchen-tspl-mode");
@@ -870,8 +870,8 @@ function savePOSPrinterSettings() {
       enabled: kitEnabled ? kitEnabled.checked : true,
       protocol: kitProto ? kitProto.value : 'esc_pos',
       interface_type: kitInterface ? kitInterface.value : 'network',
-      tspl_label_size: kitTsplSize ? kitTsplSize.value : '50x30',
-      tspl_custom_width_mm: kitTsplW ? Number(kitTsplW.value) || 50 : 50,
+      tspl_label_size: kitTsplSize ? kitTsplSize.value : '40x30',
+      tspl_custom_width_mm: kitTsplW ? Number(kitTsplW.value) || 40 : 40,
       tspl_custom_height_mm: kitTsplH ? Number(kitTsplH.value) || 30 : 30,
       tspl_mode: kitTsplMode ? kitTsplMode.value : 'item_stickers',
       ip: kitIp ? kitIp.value.trim() : "192.168.1.101",
@@ -913,9 +913,9 @@ async function testPOSPrinterStation(station) {
     protocol: protocol,
     interface_type: iface,
     paperWidth: paperWidth,
-    tspl_label_size: tsplSizeSelect ? tsplSizeSelect.value : (isKitchen ? '50x30' : '100x150'),
-    tspl_custom_width_mm: tsplWInput ? Number(tsplWInput.value) || 100 : 100,
-    tspl_custom_height_mm: tsplHInput ? Number(tsplHInput.value) || 150 : 150,
+    tspl_label_size: tsplSizeSelect ? tsplSizeSelect.value : (isKitchen ? '40x30' : '100x150'),
+    tspl_custom_width_mm: tsplWInput ? Number(tsplWInput.value) || (isKitchen ? 40 : 100) : (isKitchen ? 40 : 100),
+    tspl_custom_height_mm: tsplHInput ? Number(tsplHInput.value) || (isKitchen ? 30 : 150) : (isKitchen ? 30 : 150),
     tspl_mode: tsplModeSelect ? tsplModeSelect.value : (isKitchen ? 'item_stickers' : 'summary'),
     autoCut: true
   };
