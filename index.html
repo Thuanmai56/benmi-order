@@ -1228,14 +1228,77 @@
             };
         }
 
+        let liffInitPromise = null;
+        let isLiffInitialized = false;
+
+        function ensureLiffReady() {
+            if (liffInitPromise) return liffInitPromise;
+
+            liffInitPromise = (async () => {
+                if (typeof liff === 'undefined' || typeof liff.init !== 'function') {
+                    return null;
+                }
+                if (isLiffInitialized) {
+                    return liff;
+                }
+
+                const defaultLiffId = isDevEnv
+                    ? "2011224566-kLLdMjkq"
+                    : (isStagingEnv ? "2009555608-DMioljsI" : "2009560906-c5taZfiY");
+
+                let liffId = storeConfig?.liffId || defaultLiffId;
+                if (!liffId) {
+                    try {
+                        const tenantId = getTenantIdFromUrl();
+                        const cached = localStorage.getItem(`tenant_bootstrap_${tenantId}`);
+                        if (cached) {
+                            const parsed = JSON.parse(cached);
+                            liffId = parsed?.tenant?.liffId;
+                        }
+                    } catch (e) {}
+                }
+                if (!liffId) liffId = defaultLiffId;
+
+                try {
+                    await liff.init({ liffId });
+                    isLiffInitialized = true;
+                    console.log('[LIFF] Initialized successfully with ID:', liffId);
+                } catch (initErr) {
+                    console.warn('[LIFF] Init notice:', initErr);
+                }
+                return liff;
+            })();
+
+            return liffInitPromise;
+        }
+        window.ensureLiffReady = ensureLiffReady;
+
         function isDesktopOutsideLiff() {
-            return typeof liff !== 'undefined' && liff.isInClient && !liff.isInClient();
+            if (!isLiffInitialized || typeof liff === 'undefined' || typeof liff.isInClient !== 'function') {
+                const ua = navigator.userAgent || '';
+                const isLine = /Line\//i.test(ua);
+                const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+                return !isLine && !isMobile;
+            }
+            try {
+                return !liff.isInClient();
+            } catch(e) {
+                return false;
+            }
         }
 
         function checkDesktopAuthGuard() {
-            if (isDesktopOutsideLiff() && typeof liff !== 'undefined' && liff.isLoggedIn && !liff.isLoggedIn()) {
-                openDesktopLoginModal();
-                return false;
+            if (isDesktopOutsideLiff()) {
+                let isLoggedIn = false;
+                try {
+                    if (isLiffInitialized && typeof liff !== 'undefined' && typeof liff.isLoggedIn === 'function') {
+                        isLoggedIn = liff.isLoggedIn();
+                    }
+                } catch(e) {}
+                if (!isLoggedIn) {
+                    openDesktopLoginModal();
+                    return false;
+                }
             }
             return true;
         }
@@ -1266,6 +1329,8 @@
             const centerOverlay = document.getElementById('desktop-center-auth-overlay');
             const pageBody = document.getElementById('page-body-content');
 
+            await ensureLiffReady();
+
             if (!isDesktopOutsideLiff()) {
                 if (bar) bar.style.display = 'none';
                 if (centerOverlay) centerOverlay.style.display = 'none';
@@ -1276,7 +1341,16 @@
             const loggedInEl = document.getElementById('desktop-auth-logged-in');
             const loggedOutEl = document.getElementById('desktop-auth-logged-out');
 
-            if (typeof liff !== 'undefined' && liff.isLoggedIn && liff.isLoggedIn()) {
+            let isLoggedIn = false;
+            try {
+                if (isLiffInitialized && typeof liff !== 'undefined' && typeof liff.isLoggedIn === 'function') {
+                    isLoggedIn = liff.isLoggedIn();
+                }
+            } catch(e) {
+                console.warn('[LIFF] isLoggedIn check notice:', e);
+            }
+
+            if (isLoggedIn) {
                 // User is LOGGED IN on desktop -> Show clean top header bar with profile, unlock entire page, hide center overlay
                 if (bar) bar.style.display = 'block';
                 if (loggedOutEl) loggedOutEl.style.display = 'none';
@@ -2074,21 +2148,10 @@
                 applyPickupConfig();
             });
 
-            // 3. Initialize LIFF
-            try {
-                const liffId = storeConfig?.liffId || defaultLiffId;
-                if (liffId && typeof liff !== 'undefined' && liff.init) {
-                    await liff.init({ liffId });
-                }
-            } catch(e) {
-                console.error("LIFF Init Error", e);
-            }
-
-            try {
-                await updateDesktopAuthUI();
-            } catch (authUiErr) {
-                console.warn("Desktop Auth UI update error:", authUiErr);
-            }
+            // 3. Initialize LIFF asynchronously via Singleton Gate
+            ensureLiffReady().then(() => {
+                updateDesktopAuthUI();
+            });
 
             await menuPromise;
 

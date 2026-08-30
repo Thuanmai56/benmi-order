@@ -799,6 +799,9 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
 
     try {
         const tenantId = getTenantIdFromUrl();
+        if (typeof window.ensureLiffReady === 'function') {
+            await window.ensureLiffReady();
+        }
 
         if (typeof liff !== 'undefined') {
             try {
