@@ -18,7 +18,7 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans CJK TC", "Microsoft JhengHei", "Be Vietnam Pro", Roboto, "Segoe UI", sans-serif;
     background: var(--bg);
     margin: 0;
-    padding-bottom: calc(135px + env(safe-area-inset-bottom, 20px));
+    padding-bottom: calc(148px + env(safe-area-inset-bottom, 26px));
     color: var(--text);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -728,8 +728,8 @@ input[type="checkbox"] {
 .footer-inner {
     max-width: 600px;
     width: 100%;
-    padding: 14px 18px;
-    padding-bottom: calc(28px + env(safe-area-inset-bottom, 20px));
+    padding: 15px 18px;
+    padding-bottom: calc(38px + env(safe-area-inset-bottom, 26px));
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -746,7 +746,7 @@ input[type="checkbox"] {
 
 .footer.scrolling .footer-inner {
     padding-top: 10px;
-    padding-bottom: calc(18px + env(safe-area-inset-bottom, 12px));
+    padding-bottom: calc(22px + env(safe-area-inset-bottom, 16px));
 }
 
 .total-wrap {
