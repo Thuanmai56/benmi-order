@@ -160,14 +160,14 @@ function updateFooterButtonState() {
     if (!btn || btn.disabled || isSubmitting) return;
 
     if (window.isAppendMode) {
-        btn.innerText = '確認加點';
+        btn.innerHTML = '<span>確認加點</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 4px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>';
         return;
     }
 
     if (isCheckoutSectionVisible()) {
-        btn.innerText = '確認下單';
+        btn.innerHTML = '<span>確認下單</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 4px;"><polyline points="20 6 9 17 4 12"></polyline></svg>';
     } else {
-        btn.innerText = '前往結帳 ➔';
+        btn.innerHTML = '<span>前往結帳</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 4px;"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>';
     }
 }
 
@@ -307,21 +307,13 @@ function generateBase32Suffix(length = 4) {
     return suffix;
 }
 
-function generateOrderNumber() {
+function generateOrderNumber(diningOption = 'takeaway') {
     const now = getTaiwanDate();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
-    const tenantId = getTenantIdFromUrl();
-
-    let prefix = 'B';
-    if (typeof storeConfig !== 'undefined' && storeConfig && storeConfig.orderPrefix) {
-        prefix = storeConfig.orderPrefix.toUpperCase();
-    } else {
-        prefix = tenantId ? tenantId.charAt(0).toUpperCase() : 'B';
-    }
-
-    const suffix = generateBase32Suffix(4);
-    return `${prefix}${month}${day}-${suffix}`;
+    const typePrefix = diningOption === 'dine_in' ? 'D' : 'T';
+    const randSeq = Math.floor(Math.random() * 900) + 100;
+    return `${month}${day}-${typePrefix}${randSeq}`;
 }
 
 // 8. Hàm phân giải khóa giỏ hàng chính xác theo danh mục và tên món
@@ -419,22 +411,33 @@ function resolveCatalogItem(key) {
 
 function formatGlobalCustomizationsText() {
     if (typeof bootstrapData === 'undefined' || !bootstrapData || !bootstrapData.customizations || bootstrapData.customizations.length === 0) return "";
-    const parts = [];
+    const mainFlavors = [];
+    const extraIngredients = [];
 
     bootstrapData.customizations.forEach(group => {
+        const cleanTitle = (group.title || '')
+            .replace(/^✦\s*/, '')
+            .replace(/選擇|調整/g, '')
+            .replace(/\(朝天椒\)/g, '')
+            .replace(/（朝天椒）/g, '')
+            .trim();
+
         if (group.type === 'radio') {
             const checkedRadio = document.querySelector(`input[name="opt-${group.key}"]:checked`);
             if (checkedRadio) {
-                const val = checkedRadio.value;
+                let val = checkedRadio.value
+                    .replace(/（\s*[^）]*缺貨[^）]*）/g, '')
+                    .replace(/\(\s*[^)]*缺貨[^)]*\)/g, '')
+                    .trim();
                 const subOpts = [];
-                const subContainer = document.querySelector(`.sub-option-container[data-parent-flavor="${val}"]`);
+                const subContainer = document.querySelector(`.sub-option-container[data-parent-flavor="${checkedRadio.value}"]`);
                 if (subContainer) {
                     subContainer.querySelectorAll('input.sub-opt-chk:checked').forEach(chk => {
                         subOpts.push(chk.value);
                     });
                 }
                 const subPart = subOpts.length > 0 ? ` (${subOpts.join('、')})` : '';
-                parts.push(`${group.title.replace(/^✦\s*/, '')}：${val}${subPart}`);
+                mainFlavors.push(`${val}${subPart}`);
             }
         } else if (group.type === 'checkbox') {
             const checkedBoxes = Array.from(document.querySelectorAll(`input[name="opt-${group.key}"]:checked`));
@@ -443,38 +446,96 @@ function formatGlobalCustomizationsText() {
                     const p = Number(chk.getAttribute('data-price')) || 0;
                     return p > 0 ? `${chk.value}(+$${p})` : chk.value;
                 });
-                parts.push(`${group.title.replace(/^✦\s*/, '')}：${boxVals.join('、')}`);
+                extraIngredients.push(`  • ${cleanTitle || '配料'}：${boxVals.join('、')}`);
             }
         }
     });
 
-    return parts.length > 0 ? `【${parts.join(' | ')}】` : "";
+    if (mainFlavors.length === 0 && extraIngredients.length === 0) return "";
+    let result = `🧂 口味設定：${mainFlavors.join('・')}\n`;
+    if (extraIngredients.length > 0) {
+        result += `${extraIngredients.join('\n')}\n`;
+    }
+    return result + '\n';
+}
+
+function getStructuredGlobalCustomizations() {
+    if (typeof bootstrapData === 'undefined' || !bootstrapData || !bootstrapData.customizations || bootstrapData.customizations.length === 0) return [];
+    const result = [];
+
+    bootstrapData.customizations.forEach(group => {
+        const cleanTitle = (group.title || '')
+            .replace(/^✦\s*/, '')
+            .replace(/選擇|調整/g, '')
+            .replace(/\(朝天椒\)/g, '')
+            .replace(/（朝天椒）/g, '')
+            .trim();
+
+        if (group.type === 'radio') {
+            const checkedRadio = document.querySelector(`input[name="opt-${group.key}"]:checked`);
+            if (checkedRadio) {
+                let val = checkedRadio.value
+                    .replace(/（\s*[^）]*缺貨[^）]*）/g, '')
+                    .replace(/\(\s*[^)]*缺貨[^)]*\)/g, '')
+                    .trim();
+                const subOpts = [];
+                const subContainer = document.querySelector(`.sub-option-container[data-parent-flavor="${checkedRadio.value}"]`);
+                if (subContainer) {
+                    subContainer.querySelectorAll('input.sub-opt-chk:checked').forEach(chk => {
+                        subOpts.push(chk.value);
+                    });
+                }
+                const subPart = subOpts.length > 0 ? ` (${subOpts.join('、')})` : '';
+                result.push({
+                    key: group.key,
+                    label: cleanTitle || '口味',
+                    value: `${val}${subPart}`
+                });
+            }
+        } else if (group.type === 'checkbox') {
+            const checkedBoxes = Array.from(document.querySelectorAll(`input[name="opt-${group.key}"]:checked`));
+            if (checkedBoxes.length > 0) {
+                const boxVals = checkedBoxes.map(chk => {
+                    const p = Number(chk.getAttribute('data-price')) || 0;
+                    return p > 0 ? `${chk.value}(+$${p})` : chk.value;
+                });
+                result.push({
+                    key: group.key,
+                    label: cleanTitle || '配料',
+                    value: boxVals.join('、')
+                });
+            }
+        }
+    });
+
+    return result;
 }
 
 // 8.1 Định dạng nội dung tin nhắn đơn hàng
 function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, mainNote) {
     const zhNumbers = ['第一份', '第二份', '第三份', '第四份', '第五份', '第六份', '第七份', '第八份', '第九份', '第十份'];
-    let msg = `[${document.getElementById('store-name')?.innerText || '線上'} 點餐]\n訂單編號：${orderNum}\n`;
+    let msg = `訂單編號：${orderNum}\n\n`;
 
     const globalFlavor = formatGlobalCustomizationsText();
     if (globalFlavor) {
-        msg += `🧪 口味設定：${globalFlavor}\n`;
+        msg += globalFlavor;
     }
 
     msg += `📦 訂單內容：\n`;
 
+    const itemLines = [];
     for (let key in cart) {
         if (cart[key] > 0) {
             const itemInfo = resolveCatalogItem(key);
             const { catSlug, origName, displayName } = itemInfo;
-            msg += `\n${cart[key]}份 x ${displayName}`;
+            let itemStr = `${cart[key]}份 x ${displayName}`;
 
             if (catSlug === 'combo') {
                 let drinks = comboDrinkData[origName] || [];
                 let drinkCounts = {};
                 drinks.slice(0, cart[key]).forEach(d => { drinkCounts[d] = (drinkCounts[d] || 0) + 1; });
                 let drinkStr = Object.entries(drinkCounts).map(([n, c]) => `${n} x${c}`).join('、');
-                if (drinkStr) msg += `\n   ↳ 飲料：${drinkStr}`;
+                if (drinkStr) itemStr += `\n   ↳ 飲料：${drinkStr}`;
             }
 
             if (customizeData[key]) {
@@ -505,58 +566,34 @@ function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, ma
 
                     if (parts.length > 0) {
                         let zhIdx = zhNumbers[i] || `第 ${i + 1} 份`;
-                        msg += `\n   ↳ ${zhIdx}: ${parts.join(', ')}`;
+                        itemStr += `\n   ↳ ${zhIdx}: ${parts.join(', ')}`;
                     }
                 });
             }
+            itemLines.push(itemStr);
         }
     }
+    msg += itemLines.join('\n') + '\n\n';
 
     const isDineIn = (window.currentDiningOption === 'dine_in');
     const tableInput = document.getElementById('dinein-table-number');
     const tableNumber = (isDineIn && tableInput) ? tableInput.value.trim() : '';
 
-    const diningLabel = isDineIn ? (tableNumber ? `🍽️ 內用 (桌號：${tableNumber})` : '🍽️ 內用') : '🛍️ 外帶';
-    msg += `\n📍 用餐方式：${diningLabel}`;
+    const diningLabel = isDineIn ? (tableNumber ? `內用 (桌號：${tableNumber})` : '內用') : '外帶';
+    msg += `📍 用餐方式：${diningLabel}\n\n`;
 
     if (isDineIn) {
-        msg += `\n\n🕒 點餐時間：${dateInput} ${timeInput}`;
+        msg += `🕒 點餐時間：${dateInput} ${timeInput}`;
         if (tableNumber) {
             msg += `\n🪑 用餐桌號：${tableNumber}`;
         }
     } else {
         const isScheduledEnabled = !(storeConfig && storeConfig.allowScheduledPickup === false);
         const timeLabel = isScheduledEnabled ? '取餐時間' : '訂餐時間';
-        msg += `\n\n🕒 ${timeLabel}：${dateInput} ${timeInput}`;
+        msg += `🕒 ${timeLabel}：${dateInput} ${timeInput}`;
     }
     if (mainNote) msg += `\n📝 總備註：${mainNote}`;
 
-    // Calculate if any category discounts were applied
-    let categoryDiscountsText = '';
-    if (typeof bootstrapData !== 'undefined' && bootstrapData?.catalog) {
-        const catMap = {};
-        bootstrapData.catalog.forEach(cat => { catMap[cat.slug] = { rule: cat.pricingRules, name: cat.name, items: [] }; });
-        for (let k in cart) {
-            if (cart[k] > 0) {
-                const itInfo = resolveCatalogItem(k);
-                const { catSlug } = itInfo;
-                if (catMap[catSlug]) {
-                    catMap[catSlug].items.push({ price: itInfo.basePrice || 0, qty: cart[k] });
-                }
-            }
-        }
-        for (let s in catMap) {
-            const entry = catMap[s];
-            if (entry.items.length > 0 && typeof calculateCategoryBundleSubtotal === 'function') {
-                const res = calculateCategoryBundleSubtotal(entry.rule, entry.items);
-                if (res.discountAmount > 0) {
-                    const cleanName = (entry.name || '').split(' ')[0] || '組合';
-                    categoryDiscountsText += `\n🎉 ${cleanName}特惠：已省 $${res.discountAmount}`;
-                }
-            }
-        }
-    }
-    if (categoryDiscountsText) msg += categoryDiscountsText;
     msg += `\n💰 總金額：$${currentTotal}`;
 
     return msg;
@@ -791,22 +828,37 @@ async function submitOrder() {
     doSubmitOrderExecution(dateInput, timeInput);
 }
 
+function getAllSubmitButtons() {
+    return [
+        document.getElementById('btn-submit'),
+        document.getElementById('submit-btn'),
+        document.getElementById('btn-desktop-submit')
+    ].filter(Boolean);
+}
+
+function setAllSubmitButtonsState(disabled, text, options = {}) {
+    const btns = getAllSubmitButtons();
+    btns.forEach(btn => {
+        btn.disabled = disabled;
+        if (text) btn.innerText = text;
+        if (options.cursor) btn.style.cursor = options.cursor;
+        if (options.opacity) btn.style.opacity = options.opacity;
+    });
+}
+
 // 10. Hàm nội bộ thực thi POST dữ liệu
 async function doSubmitOrderExecution(dateInput, timeInput) {
     isSubmitting = true;
-    const submitBtn = document.getElementById('btn-submit') || document.getElementById('submit-btn');
-    if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.innerText = '處理中...';
-        submitBtn.style.cursor = 'not-allowed';
-        submitBtn.style.opacity = '0.7';
-    }
+    setAllSubmitButtonsState(true, '處理中...', { cursor: 'not-allowed', opacity: '0.7' });
 
     const abortController = new AbortController();
     const timeoutId = setTimeout(() => abortController.abort(), 8000);
 
     try {
         const tenantId = getTenantIdFromUrl();
+        if (typeof window.ensureLiffReady === 'function') {
+            await window.ensureLiffReady();
+        }
 
         if (typeof liff !== 'undefined') {
             try {
@@ -818,12 +870,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                             customAlert('請使用手機 LINE 掃碼點餐');
                         }
                         isSubmitting = false;
-                        if (submitBtn) {
-                            submitBtn.disabled = false;
-                            submitBtn.innerText = '確認下單';
-                            submitBtn.style.cursor = 'pointer';
-                            submitBtn.style.opacity = '1';
-                        }
+                        setAllSubmitButtonsState(false, '確認下單', { cursor: 'pointer', opacity: '1' });
                         return;
                     }
 
@@ -851,20 +898,21 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
         }
 
         const currentTotal = typeof updateTotal === 'function' ? updateTotal() : 0;
-        const orderNum = generateOrderNumber();
-        const mainNote = document.getElementById('note') ? document.getElementById('note').value : '';
-        const msg = formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, mainNote);
         const isDineIn = (window.currentDiningOption === 'dine_in');
+        const diningOption = isDineIn ? 'dine_in' : 'takeaway';
         const tableInput = document.getElementById('dinein-table-number');
         const tableNumber = (isDineIn && tableInput) ? tableInput.value.trim() : '';
         const structuredItems = buildStructuredCartItems();
+        const mainNote = document.getElementById('note') ? document.getElementById('note').value : '';
+        const orderUuid = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : ('ord_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9));
+        let orderNum = generateOrderNumber(diningOption);
+        let msg = formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, mainNote);
 
         const isDesktop = !(typeof liff !== 'undefined' && liff.isInClient && liff.isInClient());
 
         // 10.1 Xử lý riêng cho luồng 加點餐點 (Append Mode)
         if (window.isAppendMode && window.parentOrderKey) {
             const rawItemsText = formatAppendItemsOnlyText();
-            const tableInput = document.getElementById('dinein-table-number');
             const currentTable = (tableInput && tableInput.value.trim()) || window.appendTableNumber || window.currentTableNumber || '';
             const appendPayload = {
                 parent_order_key: window.parentOrderKey,
@@ -897,12 +945,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                 throw new Error(errData.error || `API returned status ${res.status}`);
             }
 
-            if (submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.innerText = '加點已送出';
-                submitBtn.style.cursor = 'not-allowed';
-                submitBtn.style.opacity = '0.6';
-            }
+            setAllSubmitButtonsState(true, '加點已送出', { cursor: 'not-allowed', opacity: '0.6' });
 
             if (typeof liff !== 'undefined' && liff.isInClient) {
                 try {
@@ -932,8 +975,10 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
 
             customAlert(`
                 <div style="margin-bottom: 16px;">
-                    <div style="width: 60px; height: 60px; margin: 0 auto; background: #faf5ff; border: 2px solid #c084fc; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px;">
-                        🍽️
+                    <div style="width: 60px; height: 60px; margin: 0 auto; background: #faf5ff; border: 2px solid #c084fc; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
                     </div>
                 </div>
                 <div style="font-size: 19px; font-weight: 900; color: #111827; margin-bottom: 6px;">加點送出成功！</div>
@@ -947,16 +992,18 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
 
         const orderPayload = {
             key: orderNum,
+            uuid: orderUuid,
             userId: userId,
             customer: customerName,
             time: `${dateInput} ${timeInput}`,
-            dining_option: isDineIn ? 'dine_in' : 'takeaway',
+            dining_option: diningOption,
             table_number: tableNumber || undefined,
             content: msg.split('\n\n🕒')[0].replace(/\[.*?點餐\]\n/g, '').replace('[Benmi 點餐]\n', ''),
             total: currentTotal,
             note: mainNote,
             tenant_id: tenantId,
             items: structuredItems,
+            customizations: getStructuredGlobalCustomizations(),
             liffFallback: false,
             is_desktop: isDesktop,
             isDesktop: isDesktop
@@ -976,14 +1023,14 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
 
         if (!res.ok) throw new Error(`API returned status ${res.status}`);
 
-        orderSubmittedSuccessfully = true;
-
-        if (submitBtn) {
-            submitBtn.disabled = true;
-            submitBtn.innerText = '訂單已送出';
-            submitBtn.style.cursor = 'not-allowed';
-            submitBtn.style.opacity = '0.6';
+        const resData = await res.json().catch(() => ({}));
+        if (resData && resData.key) {
+            orderNum = resData.key;
+            msg = formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, mainNote);
         }
+
+        orderSubmittedSuccessfully = true;
+        setAllSubmitButtonsState(true, '訂單已送出', { cursor: 'not-allowed', opacity: '0.6' });
 
         // Tùy chọn: Gửi tin nhắn vào chat LINE nếu đang mở trong LINE App
         if (typeof liff !== 'undefined' && liff.isInClient) {
@@ -1038,18 +1085,14 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                     const appendChatMsg = `[加點 #${window.parentOrderKey}]${tablePart}\n現場加點品項：\n${rawItemsText}${notePart}\n\n💰 加點金額：+$${currentTotal}`;
                     await liff.sendMessages([{ type: 'text', text: appendChatMsg }]);
                 } else {
-                    const orderNum = generateOrderNumber();
+                    const isDineIn = (window.currentDiningOption === 'dine_in');
+                    const diningOption = isDineIn ? 'dine_in' : 'takeaway';
+                    const orderNum = generateOrderNumber(diningOption);
                     const msg = formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, mainNote);
                     await liff.sendMessages([{ type: 'text', text: msg }]);
                 }
                 orderSubmittedSuccessfully = true;
-
-                if (submitBtn) {
-                    submitBtn.disabled = true;
-                    submitBtn.innerText = window.isAppendMode ? '加點已送出' : '訂單已送出';
-                    submitBtn.style.cursor = 'not-allowed';
-                    submitBtn.style.opacity = '0.6';
-                }
+                setAllSubmitButtonsState(true, window.isAppendMode ? '加點已送出' : '訂單已送出', { cursor: 'not-allowed', opacity: '0.6' });
 
                 cart = {};
                 customizeData = {};
@@ -1085,12 +1128,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
         // Luôn giải phóng khóa nút bấm nếu đơn hàng chưa hoàn tất
         if (!orderSubmittedSuccessfully) {
             isSubmitting = false;
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.innerText = '確認下單';
-                submitBtn.style.cursor = 'pointer';
-                submitBtn.style.opacity = '1';
-            }
+            setAllSubmitButtonsState(false, '確認下單', { cursor: 'pointer', opacity: '1' });
         }
     }
 }

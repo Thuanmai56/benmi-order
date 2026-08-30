@@ -56,16 +56,23 @@ export function resolveTenantOrderPrefix(ctx: TenantContext | null | undefined, 
   return tenantId.charAt(0).toUpperCase() || 'O';
 }
 
-export function generateStandardOrderId(prefix: string, dateObj: Date = new Date()): string {
+export function generateStandardOrderId(diningOption: string = 'takeaway', dateObj: Date = new Date(), seqNumber?: number): string {
   // Taiwan time UTC+8
   const nowTaiwan = new Date(dateObj.getTime() + 8 * 3600000);
   const mm = String(nowTaiwan.getUTCMonth() + 1).padStart(2, "0");
   const dd = String(nowTaiwan.getUTCDate()).padStart(2, "0");
-  const suffix = generateBase32Suffix(4);
-  return `${prefix}${mm}${dd}-${suffix}`;
+  const typePrefix = diningOption === 'dine_in' ? 'D' : 'T';
+  const seqStr = seqNumber !== undefined ? String(seqNumber).padStart(3, "0") : generateBase32Suffix(3);
+  return `${mm}${dd}-${typePrefix}${seqStr}`;
 }
 
 export function tenantHasFeature(ctx: TenantContext | null | undefined, featureKey: string): boolean {
-  if (!ctx || !Array.isArray(ctx.features)) return false;
+  if (!ctx) return false;
+  if (featureKey === 'dine_in') {
+    if (ctx.allowDineIn === false) return false;
+    if (Array.isArray(ctx.features) && ctx.features.includes('dine_in')) return true;
+    return ctx.allowDineIn === true || ctx.allowDineIn === undefined;
+  }
+  if (!Array.isArray(ctx.features)) return false;
   return ctx.features.includes(featureKey);
 }

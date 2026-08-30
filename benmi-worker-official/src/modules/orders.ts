@@ -45,6 +45,42 @@ export function formatItemsToText(items: OrderItemInput[]): string {
 export const ORDER_INDEX_LATEST = "order_index:latest";
 export const MAX_INDEX = 200;
 
+export async function getNextDailyOrderSeq(
+  env: Env,
+  tenantId: string,
+  diningOption: DiningOption = "takeaway",
+  dateObj: Date = new Date()
+): Promise<{ key: string; seq: number }> {
+  const taiwanDate = new Date(dateObj.getTime() + 8 * 3600000);
+  const yyyy = taiwanDate.getUTCFullYear();
+  const mm = String(taiwanDate.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(taiwanDate.getUTCDate()).padStart(2, "0");
+  const dateStr = `${yyyy}-${mm}-${dd}`;
+  const typePrefix = diningOption === "dine_in" ? "D" : "T";
+
+  if (!env.DB) {
+    const fallbackSeq = Math.floor(Math.random() * 900) + 100;
+    return { key: `${mm}${dd}-${typePrefix}${fallbackSeq}`, seq: fallbackSeq };
+  }
+
+  try {
+    const res = await env.DB.prepare(
+      `INSERT INTO daily_order_counters (tenant_id, order_date, dining_option, last_seq)
+       VALUES (?, ?, ?, 1)
+       ON CONFLICT(tenant_id, order_date, dining_option) DO UPDATE SET last_seq = last_seq + 1
+       RETURNING last_seq`
+    ).bind(tenantId, dateStr, diningOption).first<{ last_seq: number }>();
+
+    const seq = res?.last_seq || 1;
+    const seqStr = String(seq).padStart(3, "0");
+    return { key: `${mm}${dd}-${typePrefix}${seqStr}`, seq };
+  } catch (err) {
+    console.error(`[getNextDailyOrderSeq] Error for tenant ${tenantId}:`, err);
+    const fallbackSeq = Math.floor(Math.random() * 900) + 100;
+    return { key: `${mm}${dd}-${typePrefix}${fallbackSeq}`, seq: fallbackSeq };
+  }
+}
+
 export async function createOrder(
   request: Request,
   env: Env,
@@ -58,10 +94,6 @@ export async function createOrder(
     return json({ error: "店家目前暫停接單中，暫無法接收新訂單", code: "STORE_PAUSED" }, 400);
   }
 
-  const prefix = resolveTenantOrderPrefix(tenantCtx, tenantId);
-  const fallbackOrderKey = generateStandardOrderId(prefix);
-  const orderKey = data.orderId || data.key || fallbackOrderKey;
-
   const cleanTime = String(data.time || "").replace(/\s*\([^)]*\)/g, '').trim();
   let diningOption: DiningOption = (data.dining_option === 'dine_in' || data.diningOption === 'dine_in') ? 'dine_in' : 'takeaway';
 
@@ -69,6 +101,24 @@ export async function createOrder(
   if (diningOption === 'dine_in' && tenantCtx && !tenantHasFeature(tenantCtx, 'dine_in')) {
     console.warn(`[Orders] Tenant '${tenantId}' lacks 'dine_in' feature package. Auto-fallback to 'takeaway'.`);
     diningOption = 'takeaway';
+  }
+
+  const orderUuid = data.uuid || data.order_uuid || null;
+
+  // 0. Idempotency Check via UUID
+  if (orderUuid && env.DB) {
+    try {
+      const existing = await env.DB.prepare(
+        "SELECT key, status, total_amount FROM orders WHERE uuid = ? AND tenant_id = ?"
+      ).bind(orderUuid, tenantId).first<{ key: string; status: string; total_amount: number }>();
+
+      if (existing && existing.key) {
+        console.log(`[createOrder] Idempotent hit for UUID ${orderUuid} -> returning existing key ${existing.key}`);
+        return json({ success: true, key: existing.key, uuid: orderUuid, idempotent: true });
+      }
+    } catch (e) {
+      console.warn(`[createOrder] Idempotency check warning:`, e);
+    }
   }
 
   const tableNumber = data.table_number || data.tableNumber || null;
@@ -95,6 +145,9 @@ export async function createOrder(
     );
   }
 
+  // 2. Generate authoritative atomic sequential order key (MMDD-DXXX / MMDD-TXXX)
+  const { key: orderKey } = await getNextDailyOrderSeq(env, tenantId, diningOption);
+
   let orderContent = String(data.content || "").trim();
   if (!orderContent && rawItems.length > 0) {
     orderContent = formatItemsToText(rawItems);
@@ -102,6 +155,7 @@ export async function createOrder(
 
   const order: Order = {
     key: orderKey,
+    uuid: orderUuid,
     customer: data.customer || "顧客",
     time: cleanTime,
     content: orderContent,
@@ -120,9 +174,10 @@ export async function createOrder(
   if (rawItems.length > 0 && env.DB) {
     const batchStatements: any[] = [
       env.DB.prepare(
-        `INSERT INTO orders (key, tenant_id, user_id, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, round_count, last_appended_at, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, 'NEW', ?, ?, ?, ?, ?, ?, 1, NULL, datetime(?, 'unixepoch'), datetime('now'))
+        `INSERT INTO orders (key, uuid, tenant_id, user_id, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, round_count, last_appended_at, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, 'NEW', ?, ?, ?, ?, ?, ?, 1, NULL, datetime(?, 'unixepoch'), datetime('now'))
          ON CONFLICT(key) DO UPDATE SET
+           uuid = CASE WHEN excluded.uuid IS NOT NULL THEN excluded.uuid ELSE orders.uuid END,
            status = CASE
              WHEN orders.status IN ('ACCEPTED', 'DONE', 'REJECTED', 'PICKED_UP', 'PAID') AND excluded.status = 'NEW'
              THEN orders.status
@@ -141,6 +196,7 @@ export async function createOrder(
            updated_at = datetime('now')`
       ).bind(
         order.key,
+        order.uuid || null,
         tenantId,
         order.userId || null,
         order.customer,
@@ -182,10 +238,10 @@ export async function createOrder(
   }
 
   // 2. Tự động gửi LINE Flex Message xác nhận đơn hàng đầy đủ nội dung cho khách đặt qua Desktop
-  const isDesktopOrder = data.is_desktop === true || data.isDesktop === true || !data.liffInClient;
+  const isDesktopOrder = data.is_desktop === true || data.isDesktop === true;
   if (order.userId && typeof order.userId === 'string' && order.userId.startsWith('U') && order.userId.length > 20 && isDesktopOrder) {
     try {
-      const flexBubble = buildOrderFlexMessage(order, tenantCtx);
+      const flexBubble = buildOrderFlexMessage(order, tenantCtx, rawItems, data.customizations);
       const brandName = tenantCtx?.brandName || "Benmi";
 
       const pushPromise = pushLineFlexMessage(
@@ -205,7 +261,7 @@ export async function createOrder(
     }
   }
 
-  return json({ success: true, key: orderKey });
+  return json({ success: true, key: orderKey, uuid: orderUuid });
 }
 
 export async function executeAppendOrderInternal(
@@ -385,7 +441,7 @@ export async function executeAppendOrderInternal(
       const brandName = tenantCtx?.brandName || "Benmi";
       const pushPromise = pushLineFlexMessage(
         targetUserId,
-        `[${brandName}] 🍽️ 現場加點確認 (第 ${nextRound} 輪)`,
+        `[${brandName}] 現場加點確認 (第 ${nextRound} 輪)`,
         flexBubble,
         env,
         tenantCtx
@@ -929,9 +985,10 @@ export async function getHistoryAll(request: Request, env: Env): Promise<Respons
 export async function saveOrder(env: Env, order: Order, tenantId: string): Promise<void> {
   // Save order to D1
   await env.DB.prepare(
-    `INSERT INTO orders (key, tenant_id, user_id, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, round_count, last_appended_at, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, 1), ?, datetime(?, 'unixepoch'), datetime('now'))
+    `INSERT INTO orders (key, uuid, tenant_id, user_id, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, round_count, last_appended_at, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, 1), ?, datetime(?, 'unixepoch'), datetime('now'))
      ON CONFLICT(key) DO UPDATE SET
+       uuid = CASE WHEN excluded.uuid IS NOT NULL THEN excluded.uuid ELSE orders.uuid END,
        status = CASE
          WHEN orders.status IN ('ACCEPTED', 'DONE', 'REJECTED', 'PICKED_UP', 'PAID') AND excluded.status = 'NEW'
          THEN orders.status
@@ -950,6 +1007,7 @@ export async function saveOrder(env: Env, order: Order, tenantId: string): Promi
        updated_at = datetime('now')`
   ).bind(
     order.key,
+    order.uuid || null,
     tenantId,
     order.userId || null,
     order.customer,

@@ -140,7 +140,10 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
     if (!noCache && env.ORDER_STATE) {
       const cached = await env.ORDER_STATE.get(cacheKey);
       if (cached) {
-        return json(JSON.parse(cached));
+        return json(JSON.parse(cached), 200, {
+          "X-Cache": "HIT",
+          "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=86400"
+        });
       }
     }
   } catch (e) {
@@ -387,7 +390,10 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
       }
     }
 
-    return json(payload);
+    return json(payload, 200, {
+      "X-Cache": "MISS",
+      "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=86400"
+    });
 
   } catch (err: any) {
     console.error(`[Bootstrap] Failed to bootstrap tenant ${tenantId}:`, err);
