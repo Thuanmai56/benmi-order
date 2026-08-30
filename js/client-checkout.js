@@ -411,27 +411,33 @@ function resolveCatalogItem(key) {
 
 function formatGlobalCustomizationsText() {
     if (typeof bootstrapData === 'undefined' || !bootstrapData || !bootstrapData.customizations || bootstrapData.customizations.length === 0) return "";
-    const lines = [];
+    const mainFlavors = [];
+    const extraIngredients = [];
 
     bootstrapData.customizations.forEach(group => {
         const cleanTitle = (group.title || '')
             .replace(/^✦\s*/, '')
             .replace(/選擇|調整/g, '')
+            .replace(/\(朝天椒\)/g, '')
+            .replace(/（朝天椒）/g, '')
             .trim();
 
         if (group.type === 'radio') {
             const checkedRadio = document.querySelector(`input[name="opt-${group.key}"]:checked`);
             if (checkedRadio) {
-                const val = checkedRadio.value;
+                let val = checkedRadio.value
+                    .replace(/（\s*[^）]*缺貨[^）]*）/g, '')
+                    .replace(/\(\s*[^)]*缺貨[^)]*\)/g, '')
+                    .trim();
                 const subOpts = [];
-                const subContainer = document.querySelector(`.sub-option-container[data-parent-flavor="${val}"]`);
+                const subContainer = document.querySelector(`.sub-option-container[data-parent-flavor="${checkedRadio.value}"]`);
                 if (subContainer) {
                     subContainer.querySelectorAll('input.sub-opt-chk:checked').forEach(chk => {
                         subOpts.push(chk.value);
                     });
                 }
                 const subPart = subOpts.length > 0 ? ` (${subOpts.join('、')})` : '';
-                lines.push(`  • ${cleanTitle || '口味'}：${val}${subPart}`);
+                mainFlavors.push(`${val}${subPart}`);
             }
         } else if (group.type === 'checkbox') {
             const checkedBoxes = Array.from(document.querySelectorAll(`input[name="opt-${group.key}"]:checked`));
@@ -440,13 +446,17 @@ function formatGlobalCustomizationsText() {
                     const p = Number(chk.getAttribute('data-price')) || 0;
                     return p > 0 ? `${chk.value}(+$${p})` : chk.value;
                 });
-                lines.push(`  • ${cleanTitle || '配料'}：${boxVals.join('、')}`);
+                extraIngredients.push(`  • ${cleanTitle || '配料'}：${boxVals.join('、')}`);
             }
         }
     });
 
-    if (lines.length === 0) return "";
-    return `🧂 口味設定：\n${lines.join('\n')}\n\n`;
+    if (mainFlavors.length === 0 && extraIngredients.length === 0) return "";
+    let result = `🧂 口味設定：${mainFlavors.join('・')}\n`;
+    if (extraIngredients.length > 0) {
+        result += `${extraIngredients.join('\n')}\n`;
+    }
+    return result + '\n';
 }
 
 function getStructuredGlobalCustomizations() {
@@ -457,14 +467,19 @@ function getStructuredGlobalCustomizations() {
         const cleanTitle = (group.title || '')
             .replace(/^✦\s*/, '')
             .replace(/選擇|調整/g, '')
+            .replace(/\(朝天椒\)/g, '')
+            .replace(/（朝天椒）/g, '')
             .trim();
 
         if (group.type === 'radio') {
             const checkedRadio = document.querySelector(`input[name="opt-${group.key}"]:checked`);
             if (checkedRadio) {
-                const val = checkedRadio.value;
+                let val = checkedRadio.value
+                    .replace(/（\s*[^）]*缺貨[^）]*）/g, '')
+                    .replace(/\(\s*[^)]*缺貨[^)]*\)/g, '')
+                    .trim();
                 const subOpts = [];
-                const subContainer = document.querySelector(`.sub-option-container[data-parent-flavor="${val}"]`);
+                const subContainer = document.querySelector(`.sub-option-container[data-parent-flavor="${checkedRadio.value}"]`);
                 if (subContainer) {
                     subContainer.querySelectorAll('input.sub-opt-chk:checked').forEach(chk => {
                         subOpts.push(chk.value);

@@ -187,48 +187,64 @@ export function buildOrderFlexMessage(
   const diningLabel = isDineIn ? (tableNum && tableNum !== "-" ? `內用 (${tableNum} 桌)` : "內用 (現場製作)") : "外帶自取";
   const timeLabel = isDineIn ? "點餐時間" : (isScheduled ? "預計取餐時間" : "訂餐時間");
 
-  // Extract Global Customizations (e.g. BSC / multi-tenant flavor options)
-  const globalCustomizations: Array<{ label: string; value: string }> = [];
+  // Extract and clean Global Customizations
+  const flavorPills: string[] = [];
+  const extraPills: string[] = [];
+
+  const cleanItemVal = (v: string) =>
+    v.replace(/（\s*[^）]*缺貨[^）]*）/g, '')
+     .replace(/\(\s*[^)]*缺貨[^)]*\)/g, '')
+     .trim();
+
   if (Array.isArray(customizations) && customizations.length > 0) {
-    globalCustomizations.push(...customizations);
+    customizations.forEach(c => {
+      const label = (c.label || '').replace(/✦/g, '').replace(/選擇|調整/g, '').replace(/\(朝天椒\)/g, '').replace(/（朝天椒）/g, '').trim();
+      const val = cleanItemVal(c.value || '');
+      if (label.includes('配料') || label.includes('加價') || label.includes('備註')) {
+        extraPills.push(`${label}：${val}`);
+      } else {
+        flavorPills.push(val);
+      }
+    });
   } else if (order.content) {
     const lines = (order.content || "").split("\n");
-    let isInsideFlavorBlock = false;
     for (const rawLine of lines) {
       const l = rawLine.trim();
       if (l.includes("口味設定")) {
-        isInsideFlavorBlock = true;
-      }
-      if (isInsideFlavorBlock) {
-        if (l.includes("訂單內容") || l.includes("用餐方式") || l.includes("總金額")) {
-          isInsideFlavorBlock = false;
-          continue;
-        }
-        const match = l.match(/^[•\-*]\s*([^：:]+)[：:]\s*(.+)$/);
-        if (match) {
-          const cleanLabel = match[1].replace(/✦/g, '').replace(/選擇|調整/g, '').trim();
-          globalCustomizations.push({
-            label: cleanLabel,
-            value: match[2].trim()
+        const inlineFlavors = l.replace(/.*口味設定[：:]\s*/, '').replace(/[【】]/g, '').trim();
+        if (inlineFlavors) {
+          const parts = inlineFlavors.split(/[・·|]/).map(p => cleanItemVal(p.trim())).filter(Boolean);
+          parts.forEach(p => {
+            const pMatch = p.match(/([^：:]+)[：:]\s*(.+)/);
+            if (pMatch) {
+              const label = pMatch[1].replace(/✦/g, '').replace(/選擇|調整/g, '').replace(/\(朝天椒\)/g, '').replace(/（朝天椒）/g, '').trim();
+              const val = cleanItemVal(pMatch[2].trim());
+              if (label.includes('配料') || label.includes('加價')) {
+                extraPills.push(`${label}：${val}`);
+              } else {
+                flavorPills.push(val);
+              }
+            } else {
+              flavorPills.push(p);
+            }
           });
         }
       }
-      if (l.includes("【") && l.includes("】") && (l.includes("口味") || l.includes("鹹度") || l.includes("辣度"))) {
-        const inner = l.replace(/.*口味設定[：:]\s*/, '').replace(/[【】]/g, '').trim();
-        const parts = inner.split('|');
-        for (const p of parts) {
-          const pMatch = p.match(/([^：:]+)[：:]\s*(.+)/);
-          if (pMatch) {
-            const cleanLabel = pMatch[1].replace(/✦/g, '').replace(/選擇|調整/g, '').trim();
-            globalCustomizations.push({
-              label: cleanLabel,
-              value: pMatch[2].trim()
-            });
-          }
+      const match = l.match(/^[•\-*]\s*([^：:]+)[：:]\s*(.+)$/);
+      if (match) {
+        const label = match[1].replace(/✦/g, '').replace(/選擇|調整/g, '').replace(/\(朝天椒\)/g, '').replace(/（朝天椒）/g, '').trim();
+        const val = cleanItemVal(match[2].trim());
+        if (label.includes('配料') || label.includes('加價')) {
+          extraPills.push(`${label}：${val}`);
+        } else {
+          flavorPills.push(val);
         }
       }
     }
   }
+
+  const uniqueFlavors = Array.from(new Set(flavorPills.filter(Boolean)));
+  const uniqueExtras = Array.from(new Set(extraPills.filter(Boolean)));
 
   // Format Items in a clean POS Table
   const itemComponents: any[] = [];
@@ -405,7 +421,7 @@ export function buildOrderFlexMessage(
             ...itemComponents
           ]
         },
-        ...(globalCustomizations.length > 0 ? [
+        ...(uniqueFlavors.length > 0 || uniqueExtras.length > 0 ? [
           { type: "separator", margin: "sm", color: "#E2E8F0" },
           {
             type: "box",
@@ -418,17 +434,28 @@ export function buildOrderFlexMessage(
               {
                 type: "text",
                 text: "口味設定",
-                size: "xs",
+                size: "xxs",
                 weight: "bold",
-                color: "#64748B"
+                color: "#94A3B8"
               },
-              ...globalCustomizations.map(g => ({
-                type: "box",
-                layout: "horizontal",
-                contents: [
-                  { type: "text", text: g.label, size: "xs", color: "#64748B", flex: 0 },
-                  { type: "text", text: g.value, size: "xs", weight: "bold", color: "#1E293B", align: "end", flex: 1, wrap: true }
-                ]
+              ...(uniqueFlavors.length > 0 ? [
+                {
+                  type: "text",
+                  text: uniqueFlavors.join(" · "),
+                  size: "xs",
+                  weight: "bold",
+                  color: "#1E293B",
+                  wrap: true,
+                  margin: "xs"
+                }
+              ] : []),
+              ...uniqueExtras.map(ext => ({
+                type: "text",
+                text: ext,
+                size: "xs",
+                color: "#64748B",
+                wrap: true,
+                margin: "xs"
               }))
             ]
           }
