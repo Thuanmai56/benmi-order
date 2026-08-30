@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="index.css?v=20260823_append_done_1">
+    <link rel="stylesheet" href="index.css?v=20260830_clean_icons_1">
     <script>
         (function () {
             const params = new URLSearchParams(window.location.search);
@@ -227,7 +227,14 @@
 
         <!-- Checkout Section -->
         <div class="section-container" id="sec-checkout" style="margin-top: 20px;">
-            <div class="section-title">🛍️ 購物車清單</div>
+            <div class="section-title checkout-section-title">
+                <svg class="section-title-svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path>
+                    <path d="M3 6h18"></path>
+                    <path d="M16 10a4 4 0 0 1-8 0"></path>
+                </svg>
+                <span>購物車清單</span>
+            </div>
             <div id="cart-summary"
                 style="margin-bottom: 20px; padding: 14px; background: #fff; border-radius: 14px; border: 1px solid var(--border); font-size: 15px; color: #444;">
                 <div style="text-align:center; color:#9ca3af;">(目前沒有已選商品)</div>
@@ -249,7 +256,13 @@
             </div>
 
             <div id="pickup-time-section">
-                <div class="section-title" id="pickup-time-section-title">🕒 取餐時間</div>
+                <div class="section-title checkout-section-title" id="pickup-time-section-title">
+                    <svg class="section-title-svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    <span id="pickup-time-title-text">取餐時間</span>
+                </div>
                 
                 <!-- Dine-In Table Number Input -->
                 <div class="input-group" id="dinein-table-input-group" style="display: none; margin-bottom: 14px;">
@@ -302,7 +315,16 @@
                 </div>
             </div>
 
-            <div class="section-title">📝 其他要求</div>
+            <div class="section-title checkout-section-title">
+                <svg class="section-title-svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <line x1="10" y1="9" x2="8" y2="9"></line>
+                </svg>
+                <span>其他要求</span>
+            </div>
             <div class="input-group">
                 <textarea id="note" rows="3" placeholder="例如：不要香菜、醬料分開裝"></textarea>
             </div>
@@ -609,15 +631,17 @@
 
             const tableGroup = document.getElementById('dinein-table-input-group');
 
+            const secTitleText = document.getElementById('pickup-time-title-text');
+
             if (window.currentDiningOption === 'dine_in') {
-                if (secTitle) secTitle.innerText = '🕒 點餐時間';
+                if (secTitleText) secTitleText.innerText = '點餐時間';
                 if (pickerGroup) pickerGroup.style.display = 'none';
                 if (asapNotice) asapNotice.style.display = 'none';
                 if (dineInNotice) dineInNotice.style.display = 'block';
                 if (tableGroup) tableGroup.style.display = window.isAppendMode ? 'none' : 'block';
                 updateAsapTimeDisplay();
             } else {
-                if (secTitle) secTitle.innerText = '🕒 取餐時間';
+                if (secTitleText) secTitleText.innerText = '取餐時間';
                 if (dineInNotice) dineInNotice.style.display = 'none';
                 if (tableGroup) tableGroup.style.display = 'none';
                 if (storeConfig && storeConfig.allowScheduledPickup === false) {

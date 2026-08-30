@@ -392,6 +392,17 @@ body {
     border-radius: 4px;
 }
 
+.checkout-section-title::before {
+    display: none !important;
+}
+
+.section-title-svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    color: var(--primary);
+}
+
 .grid {
     display: grid;
     grid-template-columns: 1fr;
