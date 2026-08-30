@@ -274,7 +274,18 @@
                         <path d="M6 2a3 3 0 0 1 3 3v3a3 3 0 0 1-3 3"></path>
                     </svg>
                     <span class="dining-seg-text">店內用餐</span>
-                </    <div class="container main-order-layout">
+                </button>
+            </div>
+        </div>
+
+    <nav class="sticky-nav" id="main-nav">
+        <div class="skeleton-shimmer skeleton-nav-pill"></div>
+        <div class="skeleton-shimmer skeleton-nav-pill"></div>
+        <div class="skeleton-shimmer skeleton-nav-pill"></div>
+        <div class="skeleton-shimmer skeleton-nav-pill"></div>
+    </nav>
+
+    <div class="container main-order-layout">
         <!-- Left Column: Menu Catalog & Customizations -->
         <div class="menu-catalog-col">
             <!-- Catalog Container with Guest Lock Wrapper -->
@@ -926,7 +937,7 @@
                 navHTML += `<div class="nav-btn ${isActive ? 'active' : ''}" onclick="scrollToSec('sec-${cat.slug}')">${navTitle}</div>`;
             });
             navHTML += `<div class="nav-btn" onclick="scrollToSec('sec-checkout')">結帳</div>`;
-            nav.innerHTML = navHTML;
+            if (nav) nav.innerHTML = navHTML;
 
             // 2. Section Containers
             const container = document.getElementById('catalog-sections');
