@@ -411,9 +411,14 @@ function resolveCatalogItem(key) {
 
 function formatGlobalCustomizationsText() {
     if (typeof bootstrapData === 'undefined' || !bootstrapData || !bootstrapData.customizations || bootstrapData.customizations.length === 0) return "";
-    const parts = [];
+    const lines = [];
 
     bootstrapData.customizations.forEach(group => {
+        const cleanTitle = (group.title || '')
+            .replace(/^✦\s*/, '')
+            .replace(/選擇|調整/g, '')
+            .trim();
+
         if (group.type === 'radio') {
             const checkedRadio = document.querySelector(`input[name="opt-${group.key}"]:checked`);
             if (checkedRadio) {
@@ -426,7 +431,7 @@ function formatGlobalCustomizationsText() {
                     });
                 }
                 const subPart = subOpts.length > 0 ? ` (${subOpts.join('、')})` : '';
-                parts.push(`${group.title.replace(/^✦\s*/, '')}：${val}${subPart}`);
+                lines.push(`  • ${cleanTitle || '口味'}：${val}${subPart}`);
             }
         } else if (group.type === 'checkbox') {
             const checkedBoxes = Array.from(document.querySelectorAll(`input[name="opt-${group.key}"]:checked`));
@@ -435,22 +440,70 @@ function formatGlobalCustomizationsText() {
                     const p = Number(chk.getAttribute('data-price')) || 0;
                     return p > 0 ? `${chk.value}(+$${p})` : chk.value;
                 });
-                parts.push(`${group.title.replace(/^✦\s*/, '')}：${boxVals.join('、')}`);
+                lines.push(`  • ${cleanTitle || '配料'}：${boxVals.join('、')}`);
             }
         }
     });
 
-    return parts.length > 0 ? `【${parts.join(' | ')}】` : "";
+    if (lines.length === 0) return "";
+    return `🧂 口味設定：\n${lines.join('\n')}\n\n`;
+}
+
+function getStructuredGlobalCustomizations() {
+    if (typeof bootstrapData === 'undefined' || !bootstrapData || !bootstrapData.customizations || bootstrapData.customizations.length === 0) return [];
+    const result = [];
+
+    bootstrapData.customizations.forEach(group => {
+        const cleanTitle = (group.title || '')
+            .replace(/^✦\s*/, '')
+            .replace(/選擇|調整/g, '')
+            .trim();
+
+        if (group.type === 'radio') {
+            const checkedRadio = document.querySelector(`input[name="opt-${group.key}"]:checked`);
+            if (checkedRadio) {
+                const val = checkedRadio.value;
+                const subOpts = [];
+                const subContainer = document.querySelector(`.sub-option-container[data-parent-flavor="${val}"]`);
+                if (subContainer) {
+                    subContainer.querySelectorAll('input.sub-opt-chk:checked').forEach(chk => {
+                        subOpts.push(chk.value);
+                    });
+                }
+                const subPart = subOpts.length > 0 ? ` (${subOpts.join('、')})` : '';
+                result.push({
+                    key: group.key,
+                    label: cleanTitle || '口味',
+                    value: `${val}${subPart}`
+                });
+            }
+        } else if (group.type === 'checkbox') {
+            const checkedBoxes = Array.from(document.querySelectorAll(`input[name="opt-${group.key}"]:checked`));
+            if (checkedBoxes.length > 0) {
+                const boxVals = checkedBoxes.map(chk => {
+                    const p = Number(chk.getAttribute('data-price')) || 0;
+                    return p > 0 ? `${chk.value}(+$${p})` : chk.value;
+                });
+                result.push({
+                    key: group.key,
+                    label: cleanTitle || '配料',
+                    value: boxVals.join('、')
+                });
+            }
+        }
+    });
+
+    return result;
 }
 
 // 8.1 Định dạng nội dung tin nhắn đơn hàng
 function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, mainNote) {
     const zhNumbers = ['第一份', '第二份', '第三份', '第四份', '第五份', '第六份', '第七份', '第八份', '第九份', '第十份'];
-    let msg = `[${document.getElementById('store-name')?.innerText || '線上'} 點餐]\n訂單編號：${orderNum}\n`;
+    let msg = `[${document.getElementById('store-name')?.innerText || '線上'} 點餐]\n訂單編號：${orderNum}\n\n`;
 
     const globalFlavor = formatGlobalCustomizationsText();
     if (globalFlavor) {
-        msg += `🧪 口味設定：${globalFlavor}\n`;
+        msg += globalFlavor;
     }
 
     msg += `📦 訂單內容：\n`;
@@ -956,6 +1009,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
             note: mainNote,
             tenant_id: tenantId,
             items: structuredItems,
+            customizations: getStructuredGlobalCustomizations(),
             liffFallback: false,
             is_desktop: isDesktop,
             isDesktop: isDesktop

@@ -163,7 +163,8 @@ export async function replyLineFlexMessage(
 export function buildOrderFlexMessage(
   order: Order,
   tenantCtx?: TenantContext | null,
-  items?: OrderItemInput[]
+  items?: OrderItemInput[],
+  customizations?: Array<{ label: string; value: string }>
 ): any {
   const brandColor = tenantCtx?.brandColor || "#059669";
   const isScheduled = tenantCtx?.allowScheduledPickup !== false;
@@ -185,6 +186,49 @@ export function buildOrderFlexMessage(
 
   const diningLabel = isDineIn ? (tableNum && tableNum !== "-" ? `內用 (${tableNum} 桌)` : "內用 (現場製作)") : "外帶自取";
   const timeLabel = isDineIn ? "點餐時間" : (isScheduled ? "預計取餐時間" : "訂餐時間");
+
+  // Extract Global Customizations (e.g. BSC / multi-tenant flavor options)
+  const globalCustomizations: Array<{ label: string; value: string }> = [];
+  if (Array.isArray(customizations) && customizations.length > 0) {
+    globalCustomizations.push(...customizations);
+  } else if (order.content) {
+    const lines = (order.content || "").split("\n");
+    let isInsideFlavorBlock = false;
+    for (const rawLine of lines) {
+      const l = rawLine.trim();
+      if (l.includes("口味設定")) {
+        isInsideFlavorBlock = true;
+      }
+      if (isInsideFlavorBlock) {
+        if (l.includes("訂單內容") || l.includes("用餐方式") || l.includes("總金額")) {
+          isInsideFlavorBlock = false;
+          continue;
+        }
+        const match = l.match(/^[•\-*]\s*([^：:]+)[：:]\s*(.+)$/);
+        if (match) {
+          const cleanLabel = match[1].replace(/✦/g, '').replace(/選擇|調整/g, '').trim();
+          globalCustomizations.push({
+            label: cleanLabel,
+            value: match[2].trim()
+          });
+        }
+      }
+      if (l.includes("【") && l.includes("】") && (l.includes("口味") || l.includes("鹹度") || l.includes("辣度"))) {
+        const inner = l.replace(/.*口味設定[：:]\s*/, '').replace(/[【】]/g, '').trim();
+        const parts = inner.split('|');
+        for (const p of parts) {
+          const pMatch = p.match(/([^：:]+)[：:]\s*(.+)/);
+          if (pMatch) {
+            const cleanLabel = pMatch[1].replace(/✦/g, '').replace(/選擇|調整/g, '').trim();
+            globalCustomizations.push({
+              label: cleanLabel,
+              value: pMatch[2].trim()
+            });
+          }
+        }
+      }
+    }
+  }
 
   // Format Items in a clean POS Table
   const itemComponents: any[] = [];
@@ -294,7 +338,8 @@ export function buildOrderFlexMessage(
     const lines = (order.content || "").split("\n").map(l => l.trim()).filter(l => l.length > 0);
     const itemLines = lines.filter(l => {
       if (l.startsWith("[") || l.startsWith("【")) return false;
-      if (l.includes("訂單編號") || l.includes("訂單內容") || l.includes("用餐方式") || l.includes("取餐時間") || l.includes("點餐時間") || l.includes("總金額") || l.includes("總備註") || l.includes("桌號")) return false;
+      if (l.includes("訂單編號") || l.includes("訂單內容") || l.includes("用餐方式") || l.includes("取餐時間") || l.includes("點餐時間") || l.includes("總金額") || l.includes("總備註") || l.includes("桌號") || l.includes("口味設定")) return false;
+      if (l.startsWith("•") || l.startsWith("●") || l.startsWith("🧂") || l.startsWith("🧪")) return false;
       return true;
     });
 
@@ -360,6 +405,34 @@ export function buildOrderFlexMessage(
             ...itemComponents
           ]
         },
+        ...(globalCustomizations.length > 0 ? [
+          { type: "separator", margin: "sm", color: "#E2E8F0" },
+          {
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#F8FAFC",
+            cornerRadius: "md",
+            paddingAll: "10px",
+            spacing: "xs",
+            contents: [
+              {
+                type: "text",
+                text: "口味設定",
+                size: "xs",
+                weight: "bold",
+                color: "#64748B"
+              },
+              ...globalCustomizations.map(g => ({
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  { type: "text", text: g.label, size: "xs", color: "#64748B", flex: 0 },
+                  { type: "text", text: g.value, size: "xs", weight: "bold", color: "#1E293B", align: "end", flex: 1, wrap: true }
+                ]
+              }))
+            ]
+          }
+        ] : []),
         ...(order.note && order.note.trim() ? [
           { type: "separator", margin: "sm", color: "#E2E8F0" },
           {

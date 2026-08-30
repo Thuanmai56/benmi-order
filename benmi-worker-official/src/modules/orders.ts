@@ -241,7 +241,7 @@ export async function createOrder(
   const isDesktopOrder = data.is_desktop === true || data.isDesktop === true;
   if (order.userId && typeof order.userId === 'string' && order.userId.startsWith('U') && order.userId.length > 20 && isDesktopOrder) {
     try {
-      const flexBubble = buildOrderFlexMessage(order, tenantCtx, rawItems);
+      const flexBubble = buildOrderFlexMessage(order, tenantCtx, rawItems, data.customizations);
       const brandName = tenantCtx?.brandName || "Benmi";
 
       const pushPromise = pushLineFlexMessage(
