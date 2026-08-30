@@ -562,7 +562,12 @@
                 const tenantId = getTenantIdFromUrl();
                 const res = await fetch(`${WORKER_BASE}/api/tenant/bootstrap?tenant_id=${tenantId}`);
                 if (res.ok) {
-                    bootstrapData = await res.json();
+                    const freshData = await res.json();
+                    const prevDataStr = localStorage.getItem(`tenant_bootstrap_${tenantId}`);
+                    const freshDataStr = JSON.stringify(freshData);
+                    const hasChanged = (prevDataStr !== freshDataStr);
+
+                    bootstrapData = freshData;
                     storeConfig = bootstrapData.tenant ? {
                         allowScheduledPickup: bootstrapData.tenant.allowScheduledPickup,
                         allowDineIn: bootstrapData.tenant.allowDineIn,
@@ -572,11 +577,22 @@
                         operatingHours: bootstrapData.tenant.parsedHours,
                         liffId: bootstrapData.tenant.liffId
                     } : null;
+
                     try {
-                        localStorage.setItem(`tenant_bootstrap_${tenantId}`, JSON.stringify(bootstrapData));
+                        localStorage.setItem(`tenant_bootstrap_${tenantId}`, freshDataStr);
                     } catch(e) {}
+
                     applyTenantTheme(bootstrapData.tenant);
-                    updateDynamicStockAndPrices();
+                    
+                    const sections = document.getElementById('catalog-sections');
+                    const hasRendered = sections && sections.children.length > 0;
+
+                    if (hasChanged || !hasRendered) {
+                        renderDynamicCatalog();
+                        renderStoreOperatingHours();
+                    } else {
+                        updateDynamicStockAndPrices();
+                    }
                 }
                 applyPickupConfig();
                 checkStoreStatus();
