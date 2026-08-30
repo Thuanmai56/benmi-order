@@ -599,9 +599,9 @@ export function buildProgressFlexMessage(order: Order, queueAheadCount: number, 
       ? `前方還有 ${queueAheadCount} 張訂單正在排隊製作`
       : "您的餐點正由店家製作中！";
   } else if (order.status === "DONE") {
-    statusTitle = isDineIn ? "餐點製作完成，請至櫃檯領取" : "餐點製作完成，可取餐！";
+    statusTitle = isDineIn ? "餐點製作完成" : "餐點製作完成，可取餐！";
     statusColor = "#059669";
-    queueText = isDineIn ? "您的餐點已準備完畢，請至櫃檯領取用餐！" : "您的餐點已準備完畢，請儘快前來取餐！";
+    queueText = isDineIn ? "" : "您的餐點已準備完畢，請儘快前來取餐！";
   } else if (order.status === "PICKED_UP") {
     statusTitle = isDineIn ? "已完成用餐" : "已完成取餐";
     statusColor = "#64748B";
@@ -641,7 +641,7 @@ export function buildProgressFlexMessage(order: Order, queueAheadCount: number, 
           color: statusColor,
           wrap: true
         },
-        {
+        ...(queueText ? [{
           type: "box",
           layout: "vertical",
           backgroundColor: "#F8FAFC",
@@ -650,7 +650,7 @@ export function buildProgressFlexMessage(order: Order, queueAheadCount: number, 
           contents: [
             { type: "text", text: queueText, size: "sm", color: "#334155", wrap: true }
           ]
-        },
+        }] : []),
         { type: "separator", margin: "sm", color: "#E2E8F0" },
         {
           type: "box",
