@@ -1270,14 +1270,12 @@
                     return liff;
                 }
 
-                const defaultLiffId = isDevEnv
-                    ? "2011224566-kLLdMjkq"
-                    : (isStagingEnv ? "2009555608-DMioljsI" : "2009560906-c5taZfiY");
+                const tenantId = getTenantIdFromUrl();
 
-                let liffId = storeConfig?.liffId || defaultLiffId;
+                // 1. Try to get tenant's liffId from memory or localStorage cache
+                let liffId = storeConfig?.liffId;
                 if (!liffId) {
                     try {
-                        const tenantId = getTenantIdFromUrl();
                         const cached = localStorage.getItem(`tenant_bootstrap_${tenantId}`);
                         if (cached) {
                             const parsed = JSON.parse(cached);
@@ -1285,12 +1283,32 @@
                         }
                     } catch (e) {}
                 }
+
+                // 2. If cold cache on first load, wait for bootstrap data to ensure exact tenant liffId
+                if (!liffId) {
+                    try {
+                        if (window.menuPromise) {
+                            await window.menuPromise;
+                            liffId = storeConfig?.liffId;
+                        } else if (typeof fetchMenu === 'function') {
+                            await fetchMenu();
+                            liffId = storeConfig?.liffId;
+                        }
+                    } catch (e) {
+                        console.warn('[LIFF] Wait for bootstrap notice:', e);
+                    }
+                }
+
+                const defaultLiffId = isDevEnv
+                    ? "2011224566-kLLdMjkq"
+                    : (isStagingEnv ? "2009555608-DMioljsI" : "2009560906-c5taZfiY");
+
                 if (!liffId) liffId = defaultLiffId;
 
                 try {
                     await liff.init({ liffId });
                     isLiffInitialized = true;
-                    console.log('[LIFF] Initialized successfully with ID:', liffId);
+                    console.log(`[LIFF] Initialized successfully for tenant [${tenantId}] with ID:`, liffId);
                 } catch (initErr) {
                     console.warn('[LIFF] Init notice:', initErr);
                 }
@@ -1341,7 +1359,8 @@
             if (modal) modal.style.display = 'none';
         }
 
-        function triggerDesktopLineLogin() {
+        async function triggerDesktopLineLogin() {
+            await ensureLiffReady();
             if (typeof liff !== 'undefined' && liff.login) {
                 const tenantId = getTenantIdFromUrl();
                 const storageKey = `cart_save_${tenantId}`;
@@ -2170,7 +2189,7 @@
             }
 
             // 2. Fetch fresh bootstrap in background (Stale-While-Revalidate)
-            const menuPromise = fetchMenu().then(() => {
+            window.menuPromise = fetchMenu().then(() => {
                 renderDynamicCatalog();
                 renderStoreOperatingHours();
                 applyPickupConfig();
@@ -2181,7 +2200,7 @@
                 updateDesktopAuthUI();
             });
 
-            await menuPromise;
+            await window.menuPromise;
 
             if (typeof initAppendModeIfPresent === 'function') {
                 initAppendModeIfPresent();
