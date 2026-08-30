@@ -5,9 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title id="page-title">線上點餐</title>
-    <link rel="preload" href="index.css?v=20260831_header_size_7" as="style">
+    <link rel="preload" href="index.css?v=20260831_dining_prominent_8" as="style">
     <link rel="preload" href="js/client-checkout.js?v=20260830_liff_msg_clean_1" as="script">
-    <link rel="stylesheet" href="index.css?v=20260831_header_size_7">
+    <link rel="stylesheet" href="index.css?v=20260831_dining_prominent_8">
     <script>
         function extractTenantId() {
             try {
@@ -276,7 +276,7 @@
         <div id="dining-option-wrapper" class="dining-option-wrapper" style="display: none;">
             <div class="dining-segmented-control" role="tablist">
                 <button type="button" class="dining-seg-btn active" id="btn-dining-takeaway" role="tab" aria-selected="true" onclick="setCustomerDiningOption('takeaway')">
-                    <svg class="dining-seg-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg class="dining-seg-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path>
                         <path d="M3 6h18"></path>
                         <path d="M16 10a4 4 0 0 1-8 0"></path>
@@ -284,7 +284,7 @@
                     <span class="dining-seg-text">外帶自取</span>
                 </button>
                 <button type="button" class="dining-seg-btn" id="btn-dining-dinein" role="tab" aria-selected="false" onclick="setCustomerDiningOption('dine_in')">
-                    <svg class="dining-seg-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg class="dining-seg-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M18 2v6a3 3 0 0 1-3 3 3 3 0 0 1-3-3V2"></path>
                         <path d="M15 2v10"></path>
                         <path d="M15 14v8"></path>
@@ -361,8 +361,8 @@
 
                 <!-- 2. Dining Option in Checkout (Synchronized with top switcher) -->
                 <div class="input-group" id="checkout-dining-option-group" style="display: none;">
-                    <label style="font-weight: 800; color: #111827; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <label style="font-weight: 800; color: #111827; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; font-size: 15.5px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                             <circle cx="12" cy="10" r="3"></circle>
                         </svg>
@@ -370,7 +370,7 @@
                     </label>
                     <div class="dining-segmented-control" style="margin-bottom: 14px;">
                         <button type="button" class="dining-seg-btn active" id="checkout-btn-takeaway" onclick="setCustomerDiningOption('takeaway')">
-                            <svg class="dining-seg-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <svg class="dining-seg-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path>
                                 <path d="M3 6h18"></path>
                                 <path d="M16 10a4 4 0 0 1-8 0"></path>
@@ -378,7 +378,7 @@
                             <span class="dining-seg-text">外帶自取</span>
                         </button>
                         <button type="button" class="dining-seg-btn" id="checkout-btn-dinein" onclick="setCustomerDiningOption('dine_in')">
-                            <svg class="dining-seg-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <svg class="dining-seg-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M18 2v6a3 3 0 0 1-3 3 3 3 0 0 1-3-3V2"></path>
                                 <path d="M15 2v10"></path>
                                 <path d="M15 14v8"></path>
