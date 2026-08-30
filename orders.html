@@ -666,8 +666,8 @@
                     <div>
                       <label class="i18n-printer-protocol-lbl" style="font-size: 12px; font-weight: 800; color: #475569;">列印指令協定 (Protocol)</label>
                       <select id="printer-kitchen-protocol" class="form-input" style="margin-top: 4px;" onchange="onPrinterProtocolChange('kitchen')">
+                        <option value="tspl" class="i18n-opt-tspl" selected>🏷️ TSPL (貼紙/標籤機 如 Aimo D520BT, Xprinter)</option>
                         <option value="esc_pos" class="i18n-opt-escpos">🧾 ESC/POS (收據/小票 58-80mm)</option>
-                        <option value="tspl" class="i18n-opt-tspl">🏷️ TSPL (貼紙/標籤機 如 Aimo D520BT, Xprinter)</option>
                       </select>
                     </div>
 
@@ -707,7 +707,7 @@
                     </div>
 
                     <!-- ESC/POS Paper Spec Box -->
-                    <div id="printer-kitchen-escpos-box">
+                    <div id="printer-kitchen-escpos-box" style="display: none;">
                       <label class="i18n-printer-paper-lbl" style="font-size: 12px; font-weight: 800; color: #475569;">紙張規格</label>
                       <select id="printer-kitchen-paper" class="form-input" style="margin-top: 4px;">
                         <option value="80" class="i18n-opt-p80">80mm (標準)</option>
@@ -716,11 +716,11 @@
                     </div>
 
                     <!-- TSPL Label Config Box -->
-                    <div id="printer-kitchen-tspl-box" style="display: none; flex-direction: column; gap: 10px; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <div id="printer-kitchen-tspl-box" style="display: flex; flex-direction: column; gap: 10px; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
                       <div>
                         <label class="i18n-printer-tspl-size-lbl" style="font-size: 12px; font-weight: 800; color: #475569;">標籤紙張尺寸</label>
                         <select id="printer-kitchen-tspl-size" class="form-input" style="margin-top: 4px;" onchange="onTsplSizeChange('kitchen')">
-                          <option value="40x30" class="i18n-opt-tspl-40x30">40 x 30 mm (飲料杯貼/單品標籤)</option>
+                          <option value="40x30" class="i18n-opt-tspl-40x30" selected>40 x 30 mm (飲料杯貼/單品標籤)</option>
                           <option value="50x30" class="i18n-opt-tspl-50x30">50 x 30 mm (餐盒/單品標籤)</option>
                           <option value="76x130" class="i18n-opt-tspl-76x130">76 x 130 mm (3x5" 訂單明細貼紙)</option>
                           <option value="100x150" class="i18n-opt-tspl-100x150">100 x 150 mm (4x6" 貨運/大袋貼紙)</option>
@@ -1274,16 +1274,16 @@
   </div>
 
   <!-- Benmi POS Modular Architecture Scripts -->
-  <script src="js/orders-i18n.js?v=20260830_printer_v1_2"></script>
-  <script src="js/orders-core.js?v=20260830_printer_v1_2"></script>
-  <script src="js/orders-audio.js?v=20260830_printer_v1_2"></script>
-  <script src="js/printer-service.js?v=20260830_printer_v1_2"></script>
-  <script src="js/orders-live.js?v=20260830_printer_v1_2"></script>
-  <script src="js/orders-modals.js?v=20260830_printer_v1_2"></script>
-  <script src="js/orders-history.js?v=20260830_printer_v1_2"></script>
-  <script src="js/orders-reports.js?v=20260830_printer_v1_2"></script>
-  <script src="js/orders-settings.js?v=20260830_printer_v1_2"></script>
-  <script src="js/orders-menu.js?v=20260830_printer_v1_2"></script>
+  <script src="js/orders-i18n.js?v=20260830_printer_v1_2_1"></script>
+  <script src="js/orders-core.js?v=20260830_printer_v1_2_1"></script>
+  <script src="js/orders-audio.js?v=20260830_printer_v1_2_1"></script>
+  <script src="js/printer-service.js?v=20260830_printer_v1_2_1"></script>
+  <script src="js/orders-live.js?v=20260830_printer_v1_2_1"></script>
+  <script src="js/orders-modals.js?v=20260830_printer_v1_2_1"></script>
+  <script src="js/orders-history.js?v=20260830_printer_v1_2_1"></script>
+  <script src="js/orders-reports.js?v=20260830_printer_v1_2_1"></script>
+  <script src="js/orders-settings.js?v=20260830_printer_v1_2_1"></script>
+  <script src="js/orders-menu.js?v=20260830_printer_v1_2_1"></script>
 
   <!-- POS Bootstrap & Initialization -->
   <script>
