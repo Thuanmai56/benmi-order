@@ -304,25 +304,24 @@ body {
 }
 
 .dining-seg-btn.active {
-    background: #ffffff;
-    color: #0f172a;
-    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+    color: #ffffff;
+    font-weight: 800;
 }
 
 #btn-dining-dinein.active,
 #checkout-btn-dinein.active {
-    color: #6d28d9;
-    border-color: #8b5cf6;
-    background: #ffffff;
-    box-shadow: 0 3px 10px rgba(109, 40, 217, 0.12), 0 1px 3px rgba(0, 0, 0, 0.04);
+    color: #ffffff;
+    background: #7c3aed;
+    border-color: #7c3aed;
+    box-shadow: 0 3px 10px rgba(124, 58, 237, 0.3), 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 #btn-dining-takeaway.active,
 #checkout-btn-takeaway.active {
-    color: #047857;
-    border-color: #10b981;
-    background: #ffffff;
-    box-shadow: 0 3px 10px rgba(4, 120, 87, 0.12), 0 1px 3px rgba(0, 0, 0, 0.04);
+    color: #ffffff;
+    background: var(--primary, #059669);
+    border-color: var(--primary, #059669);
+    box-shadow: 0 3px 10px rgba(0, 185, 0, 0.28), 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .sticky-nav {
