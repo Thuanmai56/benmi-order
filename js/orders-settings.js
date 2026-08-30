@@ -655,6 +655,36 @@ function openReportsFromSettings() {
 }
 
 // --- Thermal Printer Settings Logic ---
+function onPrinterProtocolChange(station) {
+  const isKitchen = station === 'kitchen';
+  const protoSel = document.getElementById(isKitchen ? 'printer-kitchen-protocol' : 'printer-cashier-protocol');
+  const escBox = document.getElementById(isKitchen ? 'printer-kitchen-escpos-box' : 'printer-cashier-escpos-box');
+  const tsplBox = document.getElementById(isKitchen ? 'printer-kitchen-tspl-box' : 'printer-cashier-tspl-box');
+
+  const protocol = protoSel ? protoSel.value : 'esc_pos';
+  if (protocol === 'tspl') {
+    if (escBox) escBox.style.display = 'none';
+    if (tsplBox) tsplBox.style.display = 'flex';
+    onTsplSizeChange(station);
+  } else {
+    if (escBox) escBox.style.display = 'block';
+    if (tsplBox) tsplBox.style.display = 'none';
+  }
+}
+
+function onTsplSizeChange(station) {
+  const isKitchen = station === 'kitchen';
+  const sizeSel = document.getElementById(isKitchen ? 'printer-kitchen-tspl-size' : 'printer-cashier-tspl-size');
+  const customBox = document.getElementById(isKitchen ? 'printer-kitchen-tspl-custom-size-box' : 'printer-cashier-tspl-custom-size-box');
+
+  const size = sizeSel ? sizeSel.value : '100x150';
+  if (size === 'custom') {
+    if (customBox) customBox.style.display = 'grid';
+  } else {
+    if (customBox) customBox.style.display = 'none';
+  }
+}
+
 function onPrinterInterfaceChange(station) {
   const isKitchen = station === 'kitchen';
   const sel = document.getElementById(isKitchen ? 'printer-kitchen-interface' : 'printer-cashier-interface');
@@ -720,6 +750,8 @@ function loadPOSPrinterSettings() {
   // Cashier
   const cashEnabled = document.getElementById("printer-cashier-enabled");
   if (cashEnabled) cashEnabled.checked = !!settings.cashier?.enabled;
+  const cashProto = document.getElementById("printer-cashier-protocol");
+  if (cashProto) cashProto.value = settings.cashier?.protocol || 'esc_pos';
   const cashInterface = document.getElementById("printer-cashier-interface");
   if (cashInterface) cashInterface.value = settings.cashier?.interface_type || 'network';
   const cashIp = document.getElementById("printer-cashier-ip");
@@ -728,12 +760,23 @@ function loadPOSPrinterSettings() {
   if (cashPort) cashPort.value = settings.cashier?.port || 9100;
   const cashPaper = document.getElementById("printer-cashier-paper");
   if (cashPaper) cashPaper.value = String(settings.cashier?.paperWidth || 80);
+  const cashTsplSize = document.getElementById("printer-cashier-tspl-size");
+  if (cashTsplSize) cashTsplSize.value = settings.cashier?.tspl_label_size || '100x150';
+  const cashTsplW = document.getElementById("printer-cashier-tspl-width");
+  if (cashTsplW) cashTsplW.value = settings.cashier?.tspl_custom_width_mm || 100;
+  const cashTsplH = document.getElementById("printer-cashier-tspl-height");
+  if (cashTsplH) cashTsplH.value = settings.cashier?.tspl_custom_height_mm || 150;
+  const cashTsplMode = document.getElementById("printer-cashier-tspl-mode");
+  if (cashTsplMode) cashTsplMode.value = settings.cashier?.tspl_mode || 'summary';
 
+  onPrinterProtocolChange('cashier');
   onPrinterInterfaceChange('cashier');
 
   // Kitchen
   const kitEnabled = document.getElementById("printer-kitchen-enabled");
   if (kitEnabled) kitEnabled.checked = !!settings.kitchen?.enabled;
+  const kitProto = document.getElementById("printer-kitchen-protocol");
+  if (kitProto) kitProto.value = settings.kitchen?.protocol || 'esc_pos';
   const kitInterface = document.getElementById("printer-kitchen-interface");
   if (kitInterface) kitInterface.value = settings.kitchen?.interface_type || 'network';
   const kitIp = document.getElementById("printer-kitchen-ip");
@@ -742,7 +785,16 @@ function loadPOSPrinterSettings() {
   if (kitPort) kitPort.value = settings.kitchen?.port || 9100;
   const kitPaper = document.getElementById("printer-kitchen-paper");
   if (kitPaper) kitPaper.value = String(settings.kitchen?.paperWidth || 80);
+  const kitTsplSize = document.getElementById("printer-kitchen-tspl-size");
+  if (kitTsplSize) kitTsplSize.value = settings.kitchen?.tspl_label_size || '50x30';
+  const kitTsplW = document.getElementById("printer-kitchen-tspl-width");
+  if (kitTsplW) kitTsplW.value = settings.kitchen?.tspl_custom_width_mm || 50;
+  const kitTsplH = document.getElementById("printer-kitchen-tspl-height");
+  if (kitTsplH) kitTsplH.value = settings.kitchen?.tspl_custom_height_mm || 30;
+  const kitTsplMode = document.getElementById("printer-kitchen-tspl-mode");
+  if (kitTsplMode) kitTsplMode.value = settings.kitchen?.tspl_mode || 'item_stickers';
 
+  onPrinterProtocolChange('kitchen');
   onPrinterInterfaceChange('kitchen');
 
   // Load Bluetooth devices and select saved ones
@@ -765,11 +817,16 @@ function savePOSPrinterSettings() {
 
   // Cashier
   const cashEnabled = document.getElementById("printer-cashier-enabled");
+  const cashProto = document.getElementById("printer-cashier-protocol");
   const cashInterface = document.getElementById("printer-cashier-interface");
   const cashIp = document.getElementById("printer-cashier-ip");
   const cashPort = document.getElementById("printer-cashier-port");
   const cashBtSelect = document.getElementById("printer-cashier-bt-device");
   const cashPaper = document.getElementById("printer-cashier-paper");
+  const cashTsplSize = document.getElementById("printer-cashier-tspl-size");
+  const cashTsplW = document.getElementById("printer-cashier-tspl-width");
+  const cashTsplH = document.getElementById("printer-cashier-tspl-height");
+  const cashTsplMode = document.getElementById("printer-cashier-tspl-mode");
 
   const cashBtOpt = cashBtSelect?.selectedOptions?.[0];
   const cashMac = cashBtSelect ? cashBtSelect.value : "";
@@ -777,11 +834,16 @@ function savePOSPrinterSettings() {
 
   // Kitchen
   const kitEnabled = document.getElementById("printer-kitchen-enabled");
+  const kitProto = document.getElementById("printer-kitchen-protocol");
   const kitInterface = document.getElementById("printer-kitchen-interface");
   const kitIp = document.getElementById("printer-kitchen-ip");
   const kitPort = document.getElementById("printer-kitchen-port");
   const kitBtSelect = document.getElementById("printer-kitchen-bt-device");
   const kitPaper = document.getElementById("printer-kitchen-paper");
+  const kitTsplSize = document.getElementById("printer-kitchen-tspl-size");
+  const kitTsplW = document.getElementById("printer-kitchen-tspl-width");
+  const kitTsplH = document.getElementById("printer-kitchen-tspl-height");
+  const kitTsplMode = document.getElementById("printer-kitchen-tspl-mode");
 
   const kitBtOpt = kitBtSelect?.selectedOptions?.[0];
   const kitMac = kitBtSelect ? kitBtSelect.value : "";
@@ -791,7 +853,12 @@ function savePOSPrinterSettings() {
     autoPrintNewOrders: autoToggle ? autoToggle.checked : false,
     cashier: {
       enabled: cashEnabled ? cashEnabled.checked : true,
+      protocol: cashProto ? cashProto.value : 'esc_pos',
       interface_type: cashInterface ? cashInterface.value : 'network',
+      tspl_label_size: cashTsplSize ? cashTsplSize.value : '100x150',
+      tspl_custom_width_mm: cashTsplW ? Number(cashTsplW.value) || 100 : 100,
+      tspl_custom_height_mm: cashTsplH ? Number(cashTsplH.value) || 150 : 150,
+      tspl_mode: cashTsplMode ? cashTsplMode.value : 'summary',
       ip: cashIp ? cashIp.value.trim() : "192.168.1.100",
       port: cashPort ? Number(cashPort.value) || 9100 : 9100,
       mac_address: cashMac,
@@ -801,7 +868,12 @@ function savePOSPrinterSettings() {
     },
     kitchen: {
       enabled: kitEnabled ? kitEnabled.checked : true,
+      protocol: kitProto ? kitProto.value : 'esc_pos',
       interface_type: kitInterface ? kitInterface.value : 'network',
+      tspl_label_size: kitTsplSize ? kitTsplSize.value : '50x30',
+      tspl_custom_width_mm: kitTsplW ? Number(kitTsplW.value) || 50 : 50,
+      tspl_custom_height_mm: kitTsplH ? Number(kitTsplH.value) || 30 : 30,
+      tspl_mode: kitTsplMode ? kitTsplMode.value : 'item_stickers',
       ip: kitIp ? kitIp.value.trim() : "192.168.1.101",
       port: kitPort ? Number(kitPort.value) || 9100 : 9100,
       mac_address: kitMac,
@@ -822,14 +894,31 @@ function savePOSPrinterSettings() {
 async function testPOSPrinterStation(station) {
   if (typeof PrinterService === 'undefined') return;
   const isKitchen = station === 'kitchen';
+  const protoSelect = document.getElementById(isKitchen ? "printer-kitchen-protocol" : "printer-cashier-protocol");
   const ifaceSelect = document.getElementById(isKitchen ? "printer-kitchen-interface" : "printer-cashier-interface");
   const ipInput = document.getElementById(isKitchen ? "printer-kitchen-ip" : "printer-cashier-ip");
   const portInput = document.getElementById(isKitchen ? "printer-kitchen-port" : "printer-cashier-port");
   const btSelect = document.getElementById(isKitchen ? "printer-kitchen-bt-device" : "printer-cashier-bt-device");
   const paperInput = document.getElementById(isKitchen ? "printer-kitchen-paper" : "printer-cashier-paper");
+  const tsplSizeSelect = document.getElementById(isKitchen ? "printer-kitchen-tspl-size" : "printer-cashier-tspl-size");
+  const tsplWInput = document.getElementById(isKitchen ? "printer-kitchen-tspl-width" : "printer-cashier-tspl-width");
+  const tsplHInput = document.getElementById(isKitchen ? "printer-kitchen-tspl-height" : "printer-cashier-tspl-height");
+  const tsplModeSelect = document.getElementById(isKitchen ? "printer-kitchen-tspl-mode" : "printer-cashier-tspl-mode");
 
+  const protocol = protoSelect ? protoSelect.value : 'esc_pos';
   const iface = ifaceSelect ? ifaceSelect.value : 'network';
   const paperWidth = paperInput ? Number(paperInput.value) || 80 : 80;
+
+  const targetConfig = {
+    protocol: protocol,
+    interface_type: iface,
+    paperWidth: paperWidth,
+    tspl_label_size: tsplSizeSelect ? tsplSizeSelect.value : (isKitchen ? '50x30' : '100x150'),
+    tspl_custom_width_mm: tsplWInput ? Number(tsplWInput.value) || 100 : 100,
+    tspl_custom_height_mm: tsplHInput ? Number(tsplHInput.value) || 150 : 150,
+    tspl_mode: tsplModeSelect ? tsplModeSelect.value : (isKitchen ? 'item_stickers' : 'summary'),
+    autoCut: true
+  };
 
   if (iface === 'bluetooth') {
     const mac = btSelect ? btSelect.value : '';
@@ -838,15 +927,12 @@ async function testPOSPrinterStation(station) {
       alert("請先選擇已配對的藍牙印表機 (Please select a paired Bluetooth printer)");
       return;
     }
-    if (typeof showToast === 'function') showToast(`📡 正在傳送測試列印至藍牙印表機 [${name}]...`);
+    targetConfig.mac_address = mac;
+    targetConfig.device_name = name;
+
+    if (typeof showToast === 'function') showToast(`📡 正在傳送測試列印 [${protocol.toUpperCase()}] 至藍牙印表機 [${name}]...`);
     try {
-      await PrinterService.testPrint(station, {
-        interface_type: 'bluetooth',
-        mac_address: mac,
-        device_name: name,
-        paperWidth,
-        autoCut: true
-      });
+      await PrinterService.testPrint(station, targetConfig);
       if (typeof showToast === 'function') showToast(`✅ 藍牙測試列印成功 [${name}]`);
     } catch (err) {
       console.error("BT Test print error:", err);
@@ -860,16 +946,12 @@ async function testPOSPrinterStation(station) {
       alert("請先輸入印表機 IP 位址 (例如: 192.168.1.100)");
       return;
     }
+    targetConfig.ip = ip;
+    targetConfig.port = port;
 
-    if (typeof showToast === 'function') showToast(`🖨️ 正在傳送測試列印至 ${ip}:${port}...`);
+    if (typeof showToast === 'function') showToast(`🖨️ 正在傳送測試列印 [${protocol.toUpperCase()}] 至 ${ip}:${port}...`);
     try {
-      await PrinterService.testPrint(station, {
-        interface_type: 'network',
-        ip,
-        port,
-        paperWidth,
-        autoCut: true
-      });
+      await PrinterService.testPrint(station, targetConfig);
       if (typeof showToast === 'function') showToast(`✅ 測試列印已送出至 ${ip}:${port}`);
     } catch (err) {
       console.error("Test print error:", err);

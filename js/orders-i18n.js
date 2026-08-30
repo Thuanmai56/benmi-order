@@ -223,6 +223,19 @@ const I18N = {
     printerPaperLabel: "紙張規格",
     printerPaper80: "80mm (標準大票)",
     printerPaper58: "58mm (小票)",
+    printerProtocolLabel: "列印指令協定 (Protocol)",
+    printerOptEscPos: "🧾 ESC/POS (收據/小票 58-80mm)",
+    printerOptTspl: "🏷️ TSPL (貼紙/標籤機 如 Aimo D520BT, Xprinter)",
+    printerTsplSizeLabel: "標籤紙張尺寸",
+    printerOptTspl100x150: "100 x 150 mm (4x6\" 貨運/大袋貼紙)",
+    printerOptTspl76x130: "76 x 130 mm (3x5\" 訂單明細貼紙)",
+    printerOptTspl50x30: "50 x 30 mm (飲料杯貼/單品標籤)",
+    printerOptTsplCustom: "自訂尺寸 (Custom mm)",
+    printerTsplWidthLabel: "寬度 (mm)",
+    printerTsplHeightLabel: "高度 (mm)",
+    printerTsplModeLabel: "標籤列印模式",
+    printerOptTsplModeSummary: "📦 訂單總表貼紙 (1張/每張訂單)",
+    printerOptTsplModeItems: "🥤 單品/杯貼標籤 (1張/每份餐點)",
     btnTestPrint: "🖨️ 測試列印 (Test Print)",
     btnSavePrinterSettings: "💾 儲存印表機設定",
     // Menu Editor
@@ -703,6 +716,19 @@ const I18N = {
     printerPaperLabel: "Khổ giấy",
     printerPaper80: "80mm (Khổ tiêu chuẩn)",
     printerPaper58: "58mm (Khổ nhỏ)",
+    printerProtocolLabel: "Giao thức lệnh in (Protocol)",
+    printerOptEscPos: "🧾 ESC/POS (Hóa đơn cuộn 58-80mm)",
+    printerOptTspl: "🏷️ TSPL (Máy in tem nhãn/decal như Aimo D520BT, Xprinter)",
+    printerTsplSizeLabel: "Kích thước nhãn/decal",
+    printerOptTspl100x150: "100 x 150 mm (4x6\" Tem dán túi/thùng lớn)",
+    printerOptTspl76x130: "76 x 130 mm (3x5\" Tem đơn hàng trung bình)",
+    printerOptTspl50x30: "50 x 30 mm (Tem dán ly/từng món đồ uống)",
+    printerOptTsplCustom: "Kích thước tùy chỉnh (Custom mm)",
+    printerTsplWidthLabel: "Chiều rộng (mm)",
+    printerTsplHeightLabel: "Chiều cao (mm)",
+    printerTsplModeLabel: "Chế độ in tem nhãn",
+    printerOptTsplModeSummary: "📦 Tem tổng đơn hàng (1 tem/mỗi đơn)",
+    printerOptTsplModeItems: "🥤 Tem dán từng ly/từng món (1 tem/mỗi món)",
     btnTestPrint: "🖨️ In Thử Nghiệm",
     btnSavePrinterSettings: "💾 Lưu Cấu Hình Máy In",
     // Multi-Round Append Orders
@@ -1290,5 +1316,45 @@ function applyLanguageToDOM() {
 
   const optP58s = document.querySelectorAll(".i18n-opt-p58");
   optP58s.forEach(el => el.innerText = dict.printerPaper58);
+
+  // Protocol & TSPL Labels
+  const labelsProto = document.querySelectorAll(".i18n-printer-protocol-lbl");
+  labelsProto.forEach(el => el.innerText = dict.printerProtocolLabel);
+
+  const optEscs = document.querySelectorAll(".i18n-opt-escpos");
+  optEscs.forEach(el => el.innerText = dict.printerOptEscPos);
+
+  const optTspls = document.querySelectorAll(".i18n-opt-tspl");
+  optTspls.forEach(el => el.innerText = dict.printerOptTspl);
+
+  const labelsTsplSize = document.querySelectorAll(".i18n-printer-tspl-size-lbl");
+  labelsTsplSize.forEach(el => el.innerText = dict.printerTsplSizeLabel);
+
+  const optTspl100s = document.querySelectorAll(".i18n-opt-tspl-100x150");
+  optTspl100s.forEach(el => el.innerText = dict.printerOptTspl100x150);
+
+  const optTspl76s = document.querySelectorAll(".i18n-opt-tspl-76x130");
+  optTspl76s.forEach(el => el.innerText = dict.printerOptTspl76x130);
+
+  const optTspl50s = document.querySelectorAll(".i18n-opt-tspl-50x30");
+  optTspl50s.forEach(el => el.innerText = dict.printerOptTspl50x30);
+
+  const optTsplCustoms = document.querySelectorAll(".i18n-opt-tspl-custom");
+  optTsplCustoms.forEach(el => el.innerText = dict.printerOptTsplCustom);
+
+  const labelsTsplW = document.querySelectorAll(".i18n-printer-tspl-width-lbl");
+  labelsTsplW.forEach(el => el.innerText = dict.printerTsplWidthLabel);
+
+  const labelsTsplH = document.querySelectorAll(".i18n-printer-tspl-height-lbl");
+  labelsTsplH.forEach(el => el.innerText = dict.printerTsplHeightLabel);
+
+  const labelsTsplMode = document.querySelectorAll(".i18n-printer-tspl-mode-lbl");
+  labelsTsplMode.forEach(el => el.innerText = dict.printerTsplModeLabel);
+
+  const optTsplModSums = document.querySelectorAll(".i18n-opt-tspl-mode-summary");
+  optTsplModSums.forEach(el => el.innerText = dict.printerOptTsplModeSummary);
+
+  const optTsplModIts = document.querySelectorAll(".i18n-opt-tspl-mode-items");
+  optTsplModIts.forEach(el => el.innerText = dict.printerOptTsplModeItems);
 }
 

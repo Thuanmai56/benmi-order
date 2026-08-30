@@ -12,6 +12,11 @@
     cashier: {
       enabled: true,
       interface_type: 'network', // 'network' | 'bluetooth'
+      protocol: 'esc_pos',        // 'esc_pos' | 'tspl'
+      tspl_label_size: '100x150', // '100x150' | '76x130' | '50x30' | 'custom'
+      tspl_custom_width_mm: 100,
+      tspl_custom_height_mm: 150,
+      tspl_mode: 'summary',       // 'summary' | 'item_stickers'
       ip: '192.168.1.100',
       port: 9100,
       mac_address: '',
@@ -22,6 +27,11 @@
     kitchen: {
       enabled: true,
       interface_type: 'network', // 'network' | 'bluetooth'
+      protocol: 'esc_pos',        // 'esc_pos' | 'tspl'
+      tspl_label_size: '50x30',   // '100x150' | '76x130' | '50x30' | 'custom'
+      tspl_custom_width_mm: 50,
+      tspl_custom_height_mm: 30,
+      tspl_mode: 'item_stickers', // 'summary' | 'item_stickers'
       ip: '192.168.1.101',
       port: 9100,
       mac_address: '',
@@ -246,13 +256,93 @@
       return null;
     }
 
-    // --- 5. RECEIPT BUILDERS & RASTER ENGINE ---
+    resolveLabelDimensions(config) {
+      const preset = config.tspl_label_size || '100x150';
+      if (preset === '100x150') return { widthMm: 100, heightMm: 150 };
+      if (preset === '76x130') return { widthMm: 76, heightMm: 130 };
+      if (preset === '50x30') return { widthMm: 50, heightMm: 30 };
+      if (preset === 'custom') {
+        return {
+          widthMm: parseInt(config.tspl_custom_width_mm, 10) || 100,
+          heightMm: parseInt(config.tspl_custom_height_mm, 10) || 150
+        };
+      }
+      return { widthMm: 100, heightMm: 150 };
+    }
+
+    parseOrderItems(order) {
+      const items = [];
+      if (Array.isArray(order.items) && order.items.length > 0) {
+        order.items.forEach(it => {
+          items.push({
+            name: it.name || it.item_name || '餐點',
+            quantity: Number(it.quantity) || 1,
+            options: Array.isArray(it.options) ? it.options.join('、') : (it.options || it.selected_options || ''),
+            note: it.note || it.notes || ''
+          });
+        });
+        return items;
+      }
+      // Fallback: parse lines from content
+      const lines = (order.content || '').split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      let currentItem = null;
+      lines.forEach(line => {
+        if (line.startsWith('↳') || line.startsWith('-') || line.startsWith('+')) {
+          if (currentItem) {
+            const opt = line.replace(/^[↳\-+]\s*/, '').trim();
+            currentItem.options = currentItem.options ? `${currentItem.options}、${opt}` : opt;
+          }
+        } else {
+          const match = line.match(/^(\d+)\s*(?:份|x|X)\s*(?:x\s*)?(.+)$/) || line.match(/^(.+?)\s*[xX*]\s*(\d+)$/);
+          if (match) {
+            const qty = Number(match[1]) || Number(match[2]) || 1;
+            const name = (match[2] || match[1] || line).replace(/\$[\d,]+/g, '').trim();
+            currentItem = { name, quantity: qty, options: '', note: '' };
+            items.push(currentItem);
+          } else if (!line.includes('【') && !line.includes('訂單') && !line.includes('總金額') && !line.includes('時間')) {
+            currentItem = { name: line.replace(/\$[\d,]+/g, '').trim(), quantity: 1, options: '', note: '' };
+            items.push(currentItem);
+          }
+        }
+      });
+      return items.length > 0 ? items : [{ name: '特餐餐點', quantity: 1, options: '', note: '' }];
+    }
+
+    // --- 5. RECEIPT & LABEL BUILDERS ---
     async printCashierReceipt(order, config) {
+      if (config.protocol === 'tspl') {
+        const dim = this.resolveLabelDimensions(config);
+        if (config.tspl_mode === 'item_stickers') {
+          const items = this.parseOrderItems(order);
+          const tasks = items.map((it, idx) => {
+            const png = this.drawItemStickerToCanvas(it, order, idx + 1, items.length, dim.widthMm, dim.heightMm);
+            return this.transmitReceiptBitmap(png, config, `Sticker #${order.key} (${idx + 1}/${items.length})`);
+          });
+          return Promise.all(tasks);
+        } else {
+          const base64Png = this.drawOrderLabelToCanvas(order, false, dim.widthMm, dim.heightMm);
+          return this.transmitReceiptBitmap(base64Png, config, `TSPL Label #${order.key}`);
+        }
+      }
       const base64Png = this.drawReceiptToCanvas(order, false, config.paperWidth || 80);
       return this.transmitReceiptBitmap(base64Png, config, `Cashier #${order.key}`);
     }
 
     async printKitchenTicket(order, config) {
+      if (config.protocol === 'tspl') {
+        const dim = this.resolveLabelDimensions(config);
+        if (config.tspl_mode === 'item_stickers') {
+          const items = this.parseOrderItems(order);
+          const tasks = items.map((it, idx) => {
+            const png = this.drawItemStickerToCanvas(it, order, idx + 1, items.length, dim.widthMm, dim.heightMm);
+            return this.transmitReceiptBitmap(png, config, `Kitchen Sticker #${order.key} (${idx + 1}/${items.length})`);
+          });
+          return Promise.all(tasks);
+        } else {
+          const base64Png = this.drawOrderLabelToCanvas(order, true, dim.widthMm, dim.heightMm);
+          return this.transmitReceiptBitmap(base64Png, config, `Kitchen TSPL Label #${order.key}`);
+        }
+      }
       const base64Png = this.drawReceiptToCanvas(order, true, config.paperWidth || 80);
       return this.transmitReceiptBitmap(base64Png, config, `Kitchen #${order.key}`);
     }
@@ -269,9 +359,21 @@
         time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false }),
         content: '2份 x 測試招牌特餐\n   ↳ 大辣、不加蔥\n1份 x 鮮奶茶',
         total: 180,
-        note: '這是一張測試列印單據，用於檢驗 TCP Socket 與中文/越文點陣排版。',
+        note: '這是一張測試列印單據，用於檢驗 TCP Socket / 藍牙 / TSPL 排版。',
         createdAt: Date.now()
       };
+
+      if (config.protocol === 'tspl') {
+        const dim = this.resolveLabelDimensions(config);
+        if (config.tspl_mode === 'item_stickers') {
+          const mockItem = { name: '測試招牌特餐', quantity: 2, options: '大辣、不加蔥', note: '少冰' };
+          const base64Png = this.drawItemStickerToCanvas(mockItem, mockOrder, 1, 2, dim.widthMm, dim.heightMm);
+          return this.transmitReceiptBitmap(base64Png, config, `Test-${stationType}-TSPL-Sticker`);
+        } else {
+          const base64Png = this.drawOrderLabelToCanvas(mockOrder, isKitchen, dim.widthMm, dim.heightMm);
+          return this.transmitReceiptBitmap(base64Png, config, `Test-${stationType}-TSPL-Label`);
+        }
+      }
 
       const base64Png = this.drawReceiptToCanvas(mockOrder, isKitchen, config.paperWidth || 80);
       return this.transmitReceiptBitmap(base64Png, config, `Test-${stationType}`);
@@ -433,8 +535,169 @@
       ctx.restore();
     }
 
+    // --- 7. TSPL CANVAS PAINTERS (Order Summary Label & Individual Cup/Item Stickers) ---
+    drawOrderLabelToCanvas(order, isKitchen, widthMm = 100, heightMm = 150) {
+      const widthPx = Math.max(100, widthMm * 8);
+      const heightPx = Math.max(100, heightMm * 8);
+      const padding = 20;
+      const contentWidth = widthPx - (padding * 2);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = widthPx;
+      canvas.height = heightPx;
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, widthPx, heightPx);
+      ctx.fillStyle = '#000000';
+      ctx.strokeStyle = '#000000';
+      ctx.textBaseline = 'top';
+
+      // Outer border for sticker
+      ctx.lineWidth = 3;
+      ctx.strokeRect(padding / 2, padding / 2, widthPx - padding, heightPx - padding);
+
+      let y = padding + 4;
+
+      // 1. Header & Brand
+      const brandName = (typeof window.currentTenantBrandName !== 'undefined' && window.currentTenantBrandName) || 'Benmi POS';
+      ctx.font = '900 32px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(brandName, widthPx / 2, y);
+      y += 40;
+
+      // Order Title Box
+      ctx.fillRect(padding, y, contentWidth, 48);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 28px sans-serif';
+      const diningLabel = order.diningOption === 'dine_in' ? `【內用 桌號：${order.tableNumber || '-'}】` : '【外帶自取訂單】';
+      ctx.fillText(diningLabel, widthPx / 2, y + 8);
+      ctx.fillStyle = '#000000';
+      y += 58;
+
+      // Order Key & Time
+      ctx.textAlign = 'left';
+      ctx.font = '900 32px sans-serif';
+      ctx.fillText(`單號：#${order.key}`, padding, y);
+      ctx.textAlign = 'right';
+      ctx.font = 'bold 20px sans-serif';
+      ctx.fillText(`${order.time || ''}`, widthPx - padding, y + 8);
+      y += 40;
+
+      this.drawDashedLine(ctx, padding, widthPx - padding, y);
+      y += 12;
+
+      // Items
+      const items = this.parseOrderItems(order);
+      ctx.textAlign = 'left';
+      items.slice(0, 10).forEach(it => {
+        if (y > heightPx - 160) return;
+        ctx.font = 'bold 22px sans-serif';
+        ctx.fillText(`${it.quantity}份 x ${it.name}`, padding, y);
+        y += 26;
+        if (it.options) {
+          ctx.font = '17px sans-serif';
+          ctx.fillText(`   ↳ ${it.options}`, padding, y);
+          y += 22;
+        }
+      });
+
+      // Notes & Total at bottom
+      y = Math.max(y + 10, heightPx - 140);
+      this.drawDashedLine(ctx, padding, widthPx - padding, y);
+      y += 12;
+
+      if (order.note && order.note.trim()) {
+        ctx.font = 'bold 18px sans-serif';
+        ctx.fillText(`備註：${order.note.slice(0, 30)}`, padding, y);
+        y += 26;
+      }
+
+      if (!isKitchen) {
+        ctx.font = '900 28px sans-serif';
+        ctx.fillText('總計：', padding, y);
+        ctx.textAlign = 'right';
+        ctx.fillText(`$${order.total || 0}`, widthPx - padding, y);
+      }
+
+      return canvas.toDataURL('image/png');
+    }
+
+    drawItemStickerToCanvas(item, orderContext, itemIdx, totalItems, widthMm = 50, heightMm = 30) {
+      const widthPx = Math.max(50, widthMm * 8);
+      const heightPx = Math.max(30, heightMm * 8);
+      const padding = 12;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = widthPx;
+      canvas.height = heightPx;
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, widthPx, heightPx);
+      ctx.fillStyle = '#000000';
+      ctx.strokeStyle = '#000000';
+      ctx.textBaseline = 'top';
+
+      // Subtle border
+      ctx.lineWidth = 2;
+      ctx.strokeRect(4, 4, widthPx - 8, heightPx - 8);
+
+      let y = padding;
+
+      // 1. Top row: Order Key & Table & Item Count (e.g. #260830-01  內用:12  [1/3])
+      ctx.font = 'bold 18px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(`#${orderContext.key}`, padding, y);
+
+      ctx.textAlign = 'center';
+      const diningShort = orderContext.diningOption === 'dine_in' ? `桌號:${orderContext.tableNumber || '-'}` : '外帶';
+      ctx.fillText(diningShort, widthPx / 2, y);
+
+      ctx.textAlign = 'right';
+      ctx.fillText(`[${itemIdx}/${totalItems}]`, widthPx - padding, y);
+      y += 24;
+
+      // Divider line
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(padding, y);
+      ctx.lineTo(widthPx - padding, y);
+      ctx.stroke();
+      y += 8;
+
+      // 2. Dish / Drink Title (Large Bold)
+      ctx.textAlign = 'left';
+      ctx.font = '900 26px sans-serif';
+      ctx.fillText(`${item.name}`, padding, y);
+      ctx.textAlign = 'right';
+      ctx.fillText(`x${item.quantity}`, widthPx - padding, y);
+      y += 32;
+
+      // 3. Modifiers / Options
+      if (item.options || item.note) {
+        ctx.textAlign = 'left';
+        ctx.font = 'bold 16px sans-serif';
+        const optText = (item.options ? item.options : '') + (item.note ? ` (${item.note})` : '');
+        ctx.fillText(`↳ ${optText.slice(0, 24)}`, padding, y);
+        y += 22;
+      }
+
+      // 4. Bottom row: Time
+      y = heightPx - padding - 18;
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(`顧客:${orderContext.customer || '顧客'}`, padding, y);
+      ctx.textAlign = 'right';
+      ctx.fillText(`${orderContext.time || ''}`, widthPx - padding, y);
+
+      return canvas.toDataURL('image/png');
+    }
+
     async transmitReceiptBitmap(base64Png, config, logTitle) {
       const interfaceType = config.interface_type || 'network';
+      const protocol = config.protocol || 'esc_pos';
+      const dim = this.resolveLabelDimensions(config);
       const paperWidth = parseInt(config.paperWidth, 10) || 80;
       const autoCut = config.autoCut !== false;
       const plugin = this.getPlugin();
@@ -448,20 +711,23 @@
         }
 
         if (this.isNative && plugin && typeof plugin.printBluetooth === 'function') {
-          console.log(`[PrinterService] 📡 Transmitting raster bitmap via Native Bluetooth SPP [${deviceName} (${macAddress})]...`);
+          console.log(`[PrinterService] 📡 Transmitting ${protocol.toUpperCase()} raster bitmap via Native Bluetooth SPP [${deviceName} (${macAddress})]...`);
           const res = await plugin.printBluetooth({
             macAddress: macAddress,
             base64Image: base64Png,
+            protocol: protocol,
             paperWidth: paperWidth,
             autoCut: autoCut,
+            labelWidthMm: dim.widthMm,
+            labelHeightMm: dim.heightMm,
             timeoutMs: 8000
           });
           console.log(`[PrinterService] ✅ Native Bluetooth print success for [${logTitle}]:`, res);
           return res;
         } else {
-          console.log(`[PrinterService] 🌐 Browser Simulator: Print job generated for [${logTitle}] -> Bluetooth ${deviceName} (${macAddress})`);
-          this.openBrowserPreview(base64Png, logTitle, `Bluetooth: ${deviceName} (${macAddress})`, 'SPP');
-          return { success: true, simulated: true, interface: 'bluetooth', macAddress };
+          console.log(`[PrinterService] 🌐 Browser Simulator: Print job generated for [${logTitle}] -> Bluetooth ${deviceName} (${macAddress}) [${protocol.toUpperCase()}]`);
+          this.openBrowserPreview(base64Png, logTitle, `Bluetooth: ${deviceName} (${macAddress})`, `Protocol: ${protocol.toUpperCase()}`);
+          return { success: true, simulated: true, interface: 'bluetooth', protocol, macAddress };
         }
       } else {
         // Network TCP Socket
@@ -473,21 +739,24 @@
         }
 
         if (this.isNative && plugin && typeof plugin.printBitmap === 'function') {
-          console.log(`[PrinterService] 🚀 Transmitting raster bitmap via Native TCP Socket ${ip}:${port}...`);
+          console.log(`[PrinterService] 🚀 Transmitting ${protocol.toUpperCase()} raster bitmap via Native TCP Socket ${ip}:${port}...`);
           const res = await plugin.printBitmap({
             ip: ip,
             port: port,
             base64Image: base64Png,
+            protocol: protocol,
             paperWidth: paperWidth,
             autoCut: autoCut,
+            labelWidthMm: dim.widthMm,
+            labelHeightMm: dim.heightMm,
             timeoutMs: 5000
           });
           console.log(`[PrinterService] ✅ Native print success for [${logTitle}]:`, res);
           return res;
         } else {
-          console.log(`[PrinterService] 🌐 Browser Simulator: Print job generated for [${logTitle}] -> ${ip}:${port}`);
-          this.openBrowserPreview(base64Png, logTitle, `Network IP: ${ip}`, port);
-          return { success: true, simulated: true, interface: 'network', ip, port };
+          console.log(`[PrinterService] 🌐 Browser Simulator: Print job generated for [${logTitle}] -> ${ip}:${port} [${protocol.toUpperCase()}]`);
+          this.openBrowserPreview(base64Png, logTitle, `Network IP: ${ip}:${port}`, `Protocol: ${protocol.toUpperCase()}`);
+          return { success: true, simulated: true, interface: 'network', protocol, ip, port };
         }
       }
     }
@@ -522,8 +791,8 @@
             <head><title>Print Preview - ${title}</title></head>
             <body style="background:#1e293b; color:#fff; font-family:sans-serif; display:flex; flex-direction:column; align-items:center; padding:20px;">
               <h3>🖨️ Thermal Print Simulation (${title})</h3>
-              <p style="color:#94a3b8;">Target: <b>${targetInfo}${portOrType ? ' :' + portOrType : ''}</b></p>
-              <div style="background:#fff; padding:10px; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.5);">
+              <p style="color:#94a3b8;">Target: <b>${targetInfo}</b> | <span style="background:#059669; color:#fff; padding:2px 8px; border-radius:4px;">${portOrType || ''}</span></p>
+              <div style="background:#fff; padding:10px; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.5); max-width:90%;">
                 <img src="${base64Png}" style="display:block; max-width:100%; height:auto;" />
               </div>
             </body>

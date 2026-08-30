@@ -563,6 +563,15 @@
                     </div>
                     <div style="font-size: 12.5px; color: var(--muted);" id="i18n-printer-cashier-desc">出明細發票、含金額、客製化與 QR Code</div>
                     
+                    <!-- Protocol Selector -->
+                    <div>
+                      <label class="i18n-printer-protocol-lbl" style="font-size: 12px; font-weight: 800; color: #475569;">列印指令協定 (Protocol)</label>
+                      <select id="printer-cashier-protocol" class="form-input" style="margin-top: 4px;" onchange="onPrinterProtocolChange('cashier')">
+                        <option value="esc_pos" class="i18n-opt-escpos">🧾 ESC/POS (收據/小票 58-80mm)</option>
+                        <option value="tspl" class="i18n-opt-tspl">🏷️ TSPL (貼紙/標籤機 如 Aimo D520BT, Xprinter)</option>
+                      </select>
+                    </div>
+
                     <!-- Interface Selector -->
                     <div>
                       <label class="i18n-printer-interface-lbl" style="font-size: 12px; font-weight: 800; color: #475569;">連線方式</label>
@@ -598,12 +607,43 @@
                       </div>
                     </div>
 
-                    <div>
+                    <!-- ESC/POS Paper Spec Box -->
+                    <div id="printer-cashier-escpos-box">
                       <label class="i18n-printer-paper-lbl" style="font-size: 12px; font-weight: 800; color: #475569;">紙張規格</label>
                       <select id="printer-cashier-paper" class="form-input" style="margin-top: 4px;">
                         <option value="80" class="i18n-opt-p80">80mm (標準)</option>
                         <option value="58" class="i18n-opt-p58">58mm (小票)</option>
                       </select>
+                    </div>
+
+                    <!-- TSPL Label Config Box -->
+                    <div id="printer-cashier-tspl-box" style="display: none; flex-direction: column; gap: 10px; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                      <div>
+                        <label class="i18n-printer-tspl-size-lbl" style="font-size: 12px; font-weight: 800; color: #475569;">標籤紙張尺寸</label>
+                        <select id="printer-cashier-tspl-size" class="form-input" style="margin-top: 4px;" onchange="onTsplSizeChange('cashier')">
+                          <option value="100x150" class="i18n-opt-tspl-100x150">100 x 150 mm (4x6" 貨運/大袋貼紙)</option>
+                          <option value="76x130" class="i18n-opt-tspl-76x130">76 x 130 mm (3x5" 訂單明細貼紙)</option>
+                          <option value="50x30" class="i18n-opt-tspl-50x30">50 x 30 mm (飲料杯貼/單品標籤)</option>
+                          <option value="custom" class="i18n-opt-tspl-custom">自訂尺寸 (Custom mm)</option>
+                        </select>
+                      </div>
+                      <div id="printer-cashier-tspl-custom-size-box" style="display: none; grid-template-columns: 1fr 1fr; gap: 8px;">
+                        <div>
+                          <label class="i18n-printer-tspl-width-lbl" style="font-size: 11px; font-weight: 800; color: #64748b;">寬度 (mm)</label>
+                          <input type="number" id="printer-cashier-tspl-width" class="form-input" style="margin-top: 2px;" value="100">
+                        </div>
+                        <div>
+                          <label class="i18n-printer-tspl-height-lbl" style="font-size: 11px; font-weight: 800; color: #64748b;">高度 (mm)</label>
+                          <input type="number" id="printer-cashier-tspl-height" class="form-input" style="margin-top: 2px;" value="150">
+                        </div>
+                      </div>
+                      <div>
+                        <label class="i18n-printer-tspl-mode-lbl" style="font-size: 12px; font-weight: 800; color: #475569;">標籤列印模式</label>
+                        <select id="printer-cashier-tspl-mode" class="form-input" style="margin-top: 4px;">
+                          <option value="summary" class="i18n-opt-tspl-mode-summary">📦 訂單總表貼紙 (1張/每張訂單)</option>
+                          <option value="item_stickers" class="i18n-opt-tspl-mode-items">🥤 單品/杯貼標籤 (1張/每份餐點)</option>
+                        </select>
+                      </div>
                     </div>
 
                     <button type="button" class="btn" style="background: #f1f5f9; color: #334155; border: 1.5px solid #cbd5e1; font-weight: 800; padding: 8px 12px; margin-top: 4px; border-radius: 8px;" onclick="testPOSPrinterStation('cashier')">
@@ -621,6 +661,15 @@
                     </div>
                     <div style="font-size: 12.5px; color: var(--muted);" id="i18n-printer-kitchen-desc">大字號、桌號、備註清單、不顯示金額</div>
                     
+                    <!-- Protocol Selector -->
+                    <div>
+                      <label class="i18n-printer-protocol-lbl" style="font-size: 12px; font-weight: 800; color: #475569;">列印指令協定 (Protocol)</label>
+                      <select id="printer-kitchen-protocol" class="form-input" style="margin-top: 4px;" onchange="onPrinterProtocolChange('kitchen')">
+                        <option value="esc_pos" class="i18n-opt-escpos">🧾 ESC/POS (收據/小票 58-80mm)</option>
+                        <option value="tspl" class="i18n-opt-tspl">🏷️ TSPL (貼紙/標籤機 如 Aimo D520BT, Xprinter)</option>
+                      </select>
+                    </div>
+
                     <!-- Interface Selector -->
                     <div>
                       <label class="i18n-printer-interface-lbl" style="font-size: 12px; font-weight: 800; color: #475569;">連線方式</label>
@@ -656,12 +705,43 @@
                       </div>
                     </div>
 
-                    <div>
+                    <!-- ESC/POS Paper Spec Box -->
+                    <div id="printer-kitchen-escpos-box">
                       <label class="i18n-printer-paper-lbl" style="font-size: 12px; font-weight: 800; color: #475569;">紙張規格</label>
                       <select id="printer-kitchen-paper" class="form-input" style="margin-top: 4px;">
                         <option value="80" class="i18n-opt-p80">80mm (標準)</option>
                         <option value="58" class="i18n-opt-p58">58mm (小票)</option>
                       </select>
+                    </div>
+
+                    <!-- TSPL Label Config Box -->
+                    <div id="printer-kitchen-tspl-box" style="display: none; flex-direction: column; gap: 10px; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                      <div>
+                        <label class="i18n-printer-tspl-size-lbl" style="font-size: 12px; font-weight: 800; color: #475569;">標籤紙張尺寸</label>
+                        <select id="printer-kitchen-tspl-size" class="form-input" style="margin-top: 4px;" onchange="onTsplSizeChange('kitchen')">
+                          <option value="50x30" class="i18n-opt-tspl-50x30">50 x 30 mm (飲料杯貼/單品標籤)</option>
+                          <option value="76x130" class="i18n-opt-tspl-76x130">76 x 130 mm (3x5" 訂單明細貼紙)</option>
+                          <option value="100x150" class="i18n-opt-tspl-100x150">100 x 150 mm (4x6" 貨運/大袋貼紙)</option>
+                          <option value="custom" class="i18n-opt-tspl-custom">自訂尺寸 (Custom mm)</option>
+                        </select>
+                      </div>
+                      <div id="printer-kitchen-tspl-custom-size-box" style="display: none; grid-template-columns: 1fr 1fr; gap: 8px;">
+                        <div>
+                          <label class="i18n-printer-tspl-width-lbl" style="font-size: 11px; font-weight: 800; color: #64748b;">寬度 (mm)</label>
+                          <input type="number" id="printer-kitchen-tspl-width" class="form-input" style="margin-top: 2px;" value="50">
+                        </div>
+                        <div>
+                          <label class="i18n-printer-tspl-height-lbl" style="font-size: 11px; font-weight: 800; color: #64748b;">高度 (mm)</label>
+                          <input type="number" id="printer-kitchen-tspl-height" class="form-input" style="margin-top: 2px;" value="30">
+                        </div>
+                      </div>
+                      <div>
+                        <label class="i18n-printer-tspl-mode-lbl" style="font-size: 12px; font-weight: 800; color: #475569;">標籤列印模式</label>
+                        <select id="printer-kitchen-tspl-mode" class="form-input" style="margin-top: 4px;">
+                          <option value="item_stickers" class="i18n-opt-tspl-mode-items">🥤 單品/杯貼標籤 (1張/每份餐點)</option>
+                          <option value="summary" class="i18n-opt-tspl-mode-summary">📦 訂單總表貼紙 (1張/每張訂單)</option>
+                        </select>
+                      </div>
                     </div>
 
                     <button type="button" class="btn" style="background: #f1f5f9; color: #334155; border: 1.5px solid #cbd5e1; font-weight: 800; padding: 8px 12px; margin-top: 4px; border-radius: 8px;" onclick="testPOSPrinterStation('kitchen')">
