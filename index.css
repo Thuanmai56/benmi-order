@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
-
 :root {
     --primary: #00b900;
     --primary-dark: #009900;
@@ -17,11 +15,13 @@
 }
 
 body {
-    font-family: 'Be Vietnam Pro', 'Noto Sans TC', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang TC", "Microsoft JhengHei", sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans CJK TC", "Microsoft JhengHei", "Be Vietnam Pro", Roboto, "Segoe UI", sans-serif;
     background: var(--bg);
     margin: 0;
     padding-bottom: 96px;
     color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 /* Header & Nav */
