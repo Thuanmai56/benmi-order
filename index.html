@@ -7,15 +7,44 @@
     <title id="page-title">線上點餐</title>
     <link rel="stylesheet" href="index.css?v=20260830_fast_system_fonts_1">
     <script>
-        (function () {
-            const params = new URLSearchParams(window.location.search);
-            const tenantId = params.get("tenant") || params.get("tenant_id") || "benmi";
-            window.__INITIAL_TENANT_ID = tenantId;
+        function extractTenantId() {
             try {
-                const cached = localStorage.getItem("tenant_branding_" + tenantId) || localStorage.getItem("tenant_theme_" + tenantId);
+                const searchParams = new URLSearchParams(window.location.search);
+                if (searchParams.has('tenant_id')) return searchParams.get('tenant_id');
+                if (searchParams.has('tenant')) return searchParams.get('tenant');
+
+                const liffState = searchParams.get('liff.state');
+                if (liffState) {
+                    const decoded = decodeURIComponent(liffState);
+                    const queryPart = decoded.includes('?') ? decoded.split('?')[1] : decoded;
+                    const stateParams = new URLSearchParams(queryPart);
+                    if (stateParams.has('tenant_id')) return stateParams.get('tenant_id');
+                    if (stateParams.has('tenant')) return stateParams.get('tenant');
+                }
+
+                if (window.location.hash) {
+                    const hashStr = window.location.hash.substring(1);
+                    const hashParams = new URLSearchParams(hashStr.includes('?') ? hashStr.split('?')[1] : hashStr);
+                    if (hashParams.has('tenant_id')) return hashParams.get('tenant_id');
+                    if (hashParams.has('tenant')) return hashParams.get('tenant');
+                }
+
+                const sessionTenant = sessionStorage.getItem('current_tenant_id');
+                if (sessionTenant) return sessionTenant;
+            } catch (e) {}
+            return "benmi";
+        }
+
+        (function () {
+            const tenantId = extractTenantId();
+            window.__INITIAL_TENANT_ID = tenantId;
+            sessionStorage.setItem('current_tenant_id', tenantId);
+            try {
+                const cached = localStorage.getItem("tenant_bootstrap_" + tenantId) || localStorage.getItem("tenant_branding_" + tenantId) || localStorage.getItem("tenant_theme_" + tenantId);
                 if (cached) {
                     const t = JSON.parse(cached);
-                    if (t.brandName) document.title = t.brandName + " 點餐";
+                    const brand = t.tenant ? t.tenant.brandName : (t.brandName || "");
+                    if (brand) document.title = brand + " 點餐";
                 } else if (tenantId === "benmi") {
                     document.title = "Benmi 點餐";
                 } else {
@@ -105,7 +134,7 @@
     </div>
     <script>
         (function() {
-            const tenantId = window.__INITIAL_TENANT_ID || "benmi";
+            const tenantId = window.__INITIAL_TENANT_ID || (typeof extractTenantId === 'function' ? extractTenantId() : "benmi");
             const BENMI_DEFAULT_THEME = {
                 brandName: "本米",
                 brandSubtitle: "Bánh mì Việt Nam<br>越式法國麵包",
@@ -113,12 +142,22 @@
                 logoUrl: "./benmi_logo.png"
             };
 
-            let theme = (tenantId === "benmi") ? BENMI_DEFAULT_THEME : null;
-            if (!theme) {
-                try {
-                    const cached = localStorage.getItem("tenant_theme_" + tenantId);
-                    if (cached) theme = JSON.parse(cached);
-                } catch(e) {}
+            let theme = null;
+            try {
+                const rawBootstrap = localStorage.getItem("tenant_bootstrap_" + tenantId);
+                if (rawBootstrap) {
+                    const parsed = JSON.parse(rawBootstrap);
+                    if (parsed && parsed.tenant) theme = parsed.tenant;
+                }
+                if (!theme) {
+                    const rawTheme = localStorage.getItem("tenant_theme_" + tenantId);
+                    if (rawTheme) theme = JSON.parse(rawTheme);
+                }
+            } catch(e) {}
+
+            // Only Benmi tenant falls back to hardcoded Benmi theme. Other tenants show neutral clean placeholder!
+            if (!theme && tenantId === "benmi") {
+                theme = BENMI_DEFAULT_THEME;
             }
 
             if (theme) {
@@ -158,6 +197,10 @@
                     annEl.innerText = theme.announcement;
                     if (annRow) annRow.style.display = "flex";
                 }
+            } else {
+                // Neutral clean state for new tenants: Never show Benmi!
+                const nameEl = document.getElementById("store-name");
+                if (nameEl) nameEl.innerText = "線上點餐";
             }
         })();
     </script>
@@ -485,19 +528,7 @@
                 : "https://benmi-worker-official.thuanmnc.workers.dev");
 
         function getTenantIdFromUrl() {
-            const rawSearch = window.location.search;
-            const params = new URLSearchParams(rawSearch);
-            const liffState = params.get('liff.state');
-            if (liffState) {
-                try {
-                    const decoded = decodeURIComponent(liffState);
-                    const queryPart = decoded.includes('?') ? decoded.split('?')[1] : decoded;
-                    const stateParams = new URLSearchParams(queryPart);
-                    if (stateParams.has('tenant_id')) return stateParams.get('tenant_id');
-                    if (stateParams.has('tenant')) return stateParams.get('tenant');
-                } catch(e) {}
-            }
-            return params.get("tenant_id") || params.get("tenant") || "benmi";
+            return typeof extractTenantId === 'function' ? extractTenantId() : "benmi";
         }
 
         // State
@@ -529,7 +560,7 @@
         async function fetchMenu() {
             try {
                 const tenantId = getTenantIdFromUrl();
-                const res = await fetch(`${WORKER_BASE}/api/tenant/bootstrap?tenant_id=${tenantId}&_t=${Date.now()}`, { cache: 'no-store' });
+                const res = await fetch(`${WORKER_BASE}/api/tenant/bootstrap?tenant_id=${tenantId}`);
                 if (res.ok) {
                     bootstrapData = await res.json();
                     storeConfig = bootstrapData.tenant ? {
@@ -541,6 +572,9 @@
                         operatingHours: bootstrapData.tenant.parsedHours,
                         liffId: bootstrapData.tenant.liffId
                     } : null;
+                    try {
+                        localStorage.setItem(`tenant_bootstrap_${tenantId}`, JSON.stringify(bootstrapData));
+                    } catch(e) {}
                     applyTenantTheme(bootstrapData.tenant);
                     updateDynamicStockAndPrices();
                 }
