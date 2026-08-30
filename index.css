@@ -287,8 +287,12 @@ body {
     user-select: none;
 }
 
-.dining-seg-btn .dining-seg-icon {
+.dining-seg-btn .dining-seg-icon,
+.dining-seg-btn .dining-seg-svg {
     font-size: 18px;
+    width: 17px;
+    height: 17px;
+    flex-shrink: 0;
     line-height: 1;
 }
 
@@ -726,13 +730,17 @@ input[type="checkbox"] {
     background: var(--primary);
     color: white;
     border: none;
-    padding: 16px 32px;
+    padding: 16px 28px;
     border-radius: 99px;
     font-weight: 900;
-    font-size: 18px;
+    font-size: 17.5px;
     cursor: pointer;
-    box-shadow: 0 4px 15px rgba(0, 185, 0, 0.4);
-    transition: transform 0.1s;
+    box-shadow: 0 4px 15px rgba(0, 185, 0, 0.35);
+    transition: transform 0.1s, background-color 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
 }
 
 .btn-send:active {
