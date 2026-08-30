@@ -5,9 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title id="page-title">線上點餐</title>
-    <link rel="preload" href="index.css?v=20260830_footer_tuned_5" as="style">
+    <link rel="preload" href="index.css?v=20260830_section_flash_6" as="style">
     <link rel="preload" href="js/client-checkout.js?v=20260830_liff_msg_clean_1" as="script">
-    <link rel="stylesheet" href="index.css?v=20260830_footer_tuned_5">
+    <link rel="stylesheet" href="index.css?v=20260830_section_flash_6">
     <script>
         function extractTenantId() {
             try {
@@ -826,37 +826,98 @@
         }
 
         // --- SCROLL & NAV ---
+        let isManualScrollLock = false;
+        let manualScrollTimeout = null;
+
         function scrollToSec(id) {
             const el = document.getElementById(id);
-            if (el) el.scrollIntoView({ behavior: 'smooth' });
+            if (!el) return;
+
+            // 1. Khóa tạm thời scroll-spy để tránh giật/nhầm tab khi đang lướt tới vị trí
+            isManualScrollLock = true;
+            clearTimeout(manualScrollTimeout);
+            manualScrollTimeout = setTimeout(() => {
+                isManualScrollLock = false;
+            }, 900);
+
+            // 2. Kích hoạt ngay tab được bấm & cuộn tab vào giữa thanh nav
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
             const targetBtn = document.querySelector(`.nav-btn[onclick="scrollToSec('${id}')"]`);
             if (targetBtn) {
-                document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
                 targetBtn.classList.add('active');
                 targetBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
             }
+
+            // 3. Cuộn mượt với khoảng bù trừ chính xác của sticky navigation bar
+            const navEl = document.getElementById('main-nav');
+            const authBar = document.querySelector('.desktop-auth-bar');
+            const isDesktop = window.innerWidth >= 1024;
+            const authHeight = (isDesktop && authBar && authBar.style.display !== 'none') ? (authBar.offsetHeight || 48) : 0;
+            const navHeight = navEl ? (navEl.offsetHeight || 50) : 50;
+            const totalOffset = authHeight + navHeight + (isDesktop ? 16 : 8);
+
+            const targetY = el.getBoundingClientRect().top + window.pageYOffset - totalOffset;
+            window.scrollTo({ top: Math.max(0, targetY), behavior: 'smooth' });
+
+            // 4. Hiệu ứng nháy nhẹ (flash glow) vùng nhóm món để định vị thị giác tức thì
+            document.querySelectorAll('.section-container').forEach(s => s.classList.remove('section-highlight-flash'));
+            void el.offsetWidth; // Trigger reflow
+            el.classList.add('section-highlight-flash');
+            setTimeout(() => {
+                el.classList.remove('section-highlight-flash');
+            }, 1300);
+
+            if (typeof updateFooterButtonState === 'function') updateFooterButtonState();
         }
 
-        const observerOptions = { root: null, rootMargin: '-80px 0px -70% 0px', threshold: 0 };
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-                    const targetBtn = document.querySelector(`.nav-btn[onclick="scrollToSec('${entry.target.id}')"]`);
-                    if (targetBtn) {
-                        targetBtn.classList.add('active');
-                        targetBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        // Tự động nhận diện chính xác nhóm món đang đọc khi cuộn tự nhiên (Scroll-Spy)
+        function updateActiveNavOnScroll() {
+            if (isManualScrollLock) return;
+
+            const sections = Array.from(document.querySelectorAll('.section-container'));
+            if (sections.length === 0) return;
+
+            const navEl = document.getElementById('main-nav');
+            const authBar = document.querySelector('.desktop-auth-bar');
+            const isDesktop = window.innerWidth >= 1024;
+            const authHeight = (isDesktop && authBar && authBar.style.display !== 'none') ? (authBar.offsetHeight || 48) : 0;
+            const navHeight = navEl ? (navEl.offsetHeight || 50) : 50;
+            const scanLine = authHeight + navHeight + 40;
+
+            const isBottom = (window.innerHeight + window.scrollY) >= (document.documentElement.scrollHeight - 60);
+            let currentActiveId = null;
+
+            if (isBottom) {
+                currentActiveId = sections[sections.length - 1].id;
+            } else {
+                for (let i = 0; i < sections.length; i++) {
+                    const rect = sections[i].getBoundingClientRect();
+                    if (rect.top <= scanLine && rect.bottom > scanLine) {
+                        currentActiveId = sections[i].id;
+                        break;
                     }
                 }
-            });
-            if (typeof updateFooterButtonState === 'function') updateFooterButtonState();
-        }, observerOptions);
+                if (!currentActiveId && sections[0] && sections[0].getBoundingClientRect().top > scanLine) {
+                    currentActiveId = sections[0].id;
+                }
+            }
+
+            if (currentActiveId) {
+                const targetBtn = document.querySelector(`.nav-btn[onclick="scrollToSec('${currentActiveId}')"]`);
+                if (targetBtn && !targetBtn.classList.contains('active')) {
+                    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+                    targetBtn.classList.add('active');
+                    targetBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                }
+            }
+        }
 
         let scrollTimeout = null;
         const footerEl = document.querySelector('.footer');
 
         window.addEventListener('scroll', () => {
             if (typeof updateFooterButtonState === 'function') updateFooterButtonState();
+            updateActiveNavOnScroll();
 
             if (footerEl) {
                 if (!footerEl.classList.contains('scrolling')) {
