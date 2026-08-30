@@ -251,11 +251,20 @@ export function buildOrderFlexMessage(
   const rawItems: OrderItemInput[] = Array.isArray(items) && items.length > 0 ? items : [];
 
   if (rawItems.length > 0) {
+    let itemsSubtotalSum = 0;
+    let bundleCategoryName = '';
+
     rawItems.slice(0, 30).forEach((it, idx) => {
       const itQty = Number(it.quantity) || 1;
       const itPrice = Number(it.price || it.unit_price) || 0;
       const itSubtotal = Number(it.subtotal) || (itPrice * itQty);
       const itName = it.name || "餐點";
+      itemsSubtotalSum += itSubtotal;
+
+      const catName = it.category || it.category_name || '';
+      if (catName && (catName.includes('蔬菜') || catName.includes('配菜') || catName.includes('小菜') || catName.includes('組合'))) {
+        bundleCategoryName = catName.split(' ')[0];
+      }
 
       // Parse options / modifiers
       const optionTexts: string[] = [];
@@ -349,6 +358,40 @@ export function buildOrderFlexMessage(
         contents: itemBoxContents
       });
     });
+
+    const parsedTotal = Number(order.total) || 0;
+    if (parsedTotal > 0 && itemsSubtotalSum > parsedTotal) {
+      const discountAmount = itemsSubtotalSum - parsedTotal;
+      const discountLabel = bundleCategoryName ? `${bundleCategoryName} 組合特惠` : "組合優惠折抵";
+      itemComponents.push({
+        type: "box",
+        layout: "horizontal",
+        alignItems: "center",
+        backgroundColor: "#ECFDF5",
+        cornerRadius: "md",
+        paddingAll: "6px",
+        margin: "md",
+        contents: [
+          {
+            type: "text",
+            text: `🏷️ ${discountLabel}`,
+            size: "xs",
+            weight: "bold",
+            color: "#059669",
+            flex: 1
+          },
+          {
+            type: "text",
+            text: `-$${discountAmount}`,
+            size: "xs",
+            weight: "bold",
+            color: "#059669",
+            align: "end",
+            flex: 0
+          }
+        ]
+      });
+    }
   } else {
     // Fallback: Clean parse from order.content string
     const lines = (order.content || "").split("\n").map(l => l.trim()).filter(l => l.length > 0);

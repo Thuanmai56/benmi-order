@@ -514,7 +514,7 @@ function getStructuredGlobalCustomizations() {
 // 8.1 Định dạng nội dung tin nhắn đơn hàng
 function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, mainNote) {
     const zhNumbers = ['第一份', '第二份', '第三份', '第四份', '第五份', '第六份', '第七份', '第八份', '第九份', '第十份'];
-    let msg = `[${document.getElementById('store-name')?.innerText || '線上'} 點餐]\n訂單編號：${orderNum}\n\n`;
+    let msg = `訂單編號：${orderNum}\n\n`;
 
     const globalFlavor = formatGlobalCustomizationsText();
     if (globalFlavor) {
@@ -523,18 +523,19 @@ function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, ma
 
     msg += `📦 訂單內容：\n`;
 
+    const itemLines = [];
     for (let key in cart) {
         if (cart[key] > 0) {
             const itemInfo = resolveCatalogItem(key);
             const { catSlug, origName, displayName } = itemInfo;
-            msg += `\n${cart[key]}份 x ${displayName}`;
+            let itemStr = `${cart[key]}份 x ${displayName}`;
 
             if (catSlug === 'combo') {
                 let drinks = comboDrinkData[origName] || [];
                 let drinkCounts = {};
                 drinks.slice(0, cart[key]).forEach(d => { drinkCounts[d] = (drinkCounts[d] || 0) + 1; });
                 let drinkStr = Object.entries(drinkCounts).map(([n, c]) => `${n} x${c}`).join('、');
-                if (drinkStr) msg += `\n   ↳ 飲料：${drinkStr}`;
+                if (drinkStr) itemStr += `\n   ↳ 飲料：${drinkStr}`;
             }
 
             if (customizeData[key]) {
@@ -565,58 +566,34 @@ function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, ma
 
                     if (parts.length > 0) {
                         let zhIdx = zhNumbers[i] || `第 ${i + 1} 份`;
-                        msg += `\n   ↳ ${zhIdx}: ${parts.join(', ')}`;
+                        itemStr += `\n   ↳ ${zhIdx}: ${parts.join(', ')}`;
                     }
                 });
             }
+            itemLines.push(itemStr);
         }
     }
+    msg += itemLines.join('\n') + '\n\n';
 
     const isDineIn = (window.currentDiningOption === 'dine_in');
     const tableInput = document.getElementById('dinein-table-number');
     const tableNumber = (isDineIn && tableInput) ? tableInput.value.trim() : '';
 
-    const diningLabel = isDineIn ? (tableNumber ? `🍽️ 內用 (桌號：${tableNumber})` : '🍽️ 內用') : '🛍️ 外帶';
-    msg += `\n📍 用餐方式：${diningLabel}`;
+    const diningLabel = isDineIn ? (tableNumber ? `內用 (桌號：${tableNumber})` : '內用') : '外帶';
+    msg += `📍 用餐方式：${diningLabel}\n\n`;
 
     if (isDineIn) {
-        msg += `\n\n🕒 點餐時間：${dateInput} ${timeInput}`;
+        msg += `🕒 點餐時間：${dateInput} ${timeInput}`;
         if (tableNumber) {
             msg += `\n🪑 用餐桌號：${tableNumber}`;
         }
     } else {
         const isScheduledEnabled = !(storeConfig && storeConfig.allowScheduledPickup === false);
         const timeLabel = isScheduledEnabled ? '取餐時間' : '訂餐時間';
-        msg += `\n\n🕒 ${timeLabel}：${dateInput} ${timeInput}`;
+        msg += `🕒 ${timeLabel}：${dateInput} ${timeInput}`;
     }
     if (mainNote) msg += `\n📝 總備註：${mainNote}`;
 
-    // Calculate if any category discounts were applied
-    let categoryDiscountsText = '';
-    if (typeof bootstrapData !== 'undefined' && bootstrapData?.catalog) {
-        const catMap = {};
-        bootstrapData.catalog.forEach(cat => { catMap[cat.slug] = { rule: cat.pricingRules, name: cat.name, items: [] }; });
-        for (let k in cart) {
-            if (cart[k] > 0) {
-                const itInfo = resolveCatalogItem(k);
-                const { catSlug } = itInfo;
-                if (catMap[catSlug]) {
-                    catMap[catSlug].items.push({ price: itInfo.basePrice || 0, qty: cart[k] });
-                }
-            }
-        }
-        for (let s in catMap) {
-            const entry = catMap[s];
-            if (entry.items.length > 0 && typeof calculateCategoryBundleSubtotal === 'function') {
-                const res = calculateCategoryBundleSubtotal(entry.rule, entry.items);
-                if (res.discountAmount > 0) {
-                    const cleanName = (entry.name || '').split(' ')[0] || '組合';
-                    categoryDiscountsText += `\n🎉 ${cleanName}特惠：已省 $${res.discountAmount}`;
-                }
-            }
-        }
-    }
-    if (categoryDiscountsText) msg += categoryDiscountsText;
     msg += `\n💰 總金額：$${currentTotal}`;
 
     return msg;

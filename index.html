@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title id="page-title">線上點餐</title>
     <link rel="preload" href="index.css?v=20260830_sticky_nav_fix_2" as="style">
-    <link rel="preload" href="js/client-checkout.js?v=20260830_sticky_sidebar_1" as="script">
+    <link rel="preload" href="js/client-checkout.js?v=20260830_liff_msg_clean_1" as="script">
     <link rel="stylesheet" href="index.css?v=20260830_sticky_nav_fix_2">
     <script>
         function extractTenantId() {
@@ -481,16 +481,9 @@
                     </a>
                 </div>
 
-                <!-- Desktop Direct Action Box (Cart Icon + Total + Submit Button) -->
+                <!-- Desktop Direct Action Box (Total + Submit Button) -->
                 <div class="desktop-sidebar-submit-wrap">
                     <div class="desktop-sidebar-total-row">
-                        <div class="desktop-sidebar-cart-icon">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path>
-                                <path d="M3 6h18"></path>
-                                <path d="M16 10a4 4 0 0 1-8 0"></path>
-                            </svg>
-                        </div>
                         <div class="desktop-sidebar-price">$<span id="desktop-total-price">0</span></div>
                     </div>
                     <button type="button" class="btn-desktop-submit" id="btn-desktop-submit" onclick="submitOrder()">
@@ -2320,7 +2313,7 @@
             </button>
         </div>
     </div>
-    <script src="js/client-checkout.js?v=20260830_sticky_sidebar_1"></script>
+    <script src="js/client-checkout.js?v=20260830_liff_msg_clean_1"></script>
 </body>
 
 </html>
