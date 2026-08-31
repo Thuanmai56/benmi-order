@@ -311,9 +311,18 @@ function generateOrderNumber(diningOption = 'takeaway') {
     const now = getTaiwanDate();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
+    const tenantId = getTenantIdFromUrl();
+
+    let prefix = 'B';
+    if (typeof storeConfig !== 'undefined' && storeConfig && storeConfig.orderPrefix) {
+        prefix = storeConfig.orderPrefix.toUpperCase();
+    } else {
+        prefix = tenantId ? tenantId.charAt(0).toUpperCase() : 'B';
+    }
+
     const typePrefix = diningOption === 'dine_in' ? 'D' : 'T';
     const randSeq = Math.floor(Math.random() * 900) + 100;
-    return `${month}${day}-${typePrefix}${randSeq}`;
+    return `${prefix}${month}${day}-${typePrefix}${randSeq}`;
 }
 
 // 8. Hàm phân giải khóa giỏ hàng chính xác theo danh mục và tên món
@@ -852,7 +861,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
     setAllSubmitButtonsState(true, '處理中...', { cursor: 'not-allowed', opacity: '0.7' });
 
     const abortController = new AbortController();
-    const timeoutId = setTimeout(() => abortController.abort(), 8000);
+    const timeoutId = setTimeout(() => abortController.abort(), 12000);
 
     try {
         const tenantId = getTenantIdFromUrl();

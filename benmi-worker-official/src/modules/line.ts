@@ -1669,7 +1669,8 @@ export async function handleLineWebhook(
 
       const isDineIn = userText.includes("📍 用餐方式：🍽️ 內用") || userText.includes("用餐方式：內用") || userText.includes("【內用】");
       const diningOption: DiningOption = isDineIn ? "dine_in" : "takeaway";
-      const fallbackOrderKey = generateStandardOrderId(diningOption);
+      const prefix = resolveTenantOrderPrefix(tenantCtx, tenantId);
+      const fallbackOrderKey = generateStandardOrderId(diningOption, new Date(), undefined, prefix);
       const orderKey = keyLine ? keyLine.replace("訂單編號：", "").trim() : fallbackOrderKey;
       const nowTw = new Date(Date.now() + 8 * 3600000);
       const defaultTimeStr = `${nowTw.getUTCFullYear()}-${String(nowTw.getUTCMonth() + 1).padStart(2, "0")}-${String(nowTw.getUTCDate()).padStart(2, "0")} ${String(nowTw.getUTCHours()).padStart(2, "0")}:${String(nowTw.getUTCMinutes()).padStart(2, "0")}`;
@@ -1695,21 +1696,49 @@ export async function handleLineWebhook(
       let custName = "顧客 (線上)";
 
       const existingOrder = await env.DB.prepare(
-        "SELECT status, customer_name FROM orders WHERE key = ?"
-      ).bind(orderKey).first<{ status: string; customer_name: string }>();
+        "SELECT * FROM orders WHERE key = ?"
+      ).bind(orderKey).first<any>();
 
       if (existingOrder) {
         if (existingOrder.customer_name && existingOrder.customer_name !== "顧客 (線上)" && existingOrder.customer_name !== "Khách (Web)") {
           custName = existingOrder.customer_name;
         }
-        // If order already exists and status has changed from NEW, do not re-create/overwrite status back to NEW
+        // If order already exists and status has changed from NEW, do not re-create/overwrite status back to NEW, but still reply with Progress Flex
         if (existingOrder.status !== "NEW") {
-          console.log(`[${brandName}] Order ${orderKey} already processed with status ${existingOrder.status}. Skipping webhook re-creation.`);
+          console.log(`[${brandName}] Order ${orderKey} already processed with status ${existingOrder.status}. Replying Progress Flex and skipping webhook re-creation.`);
           try {
             await env.DB.prepare("DELETE FROM pending_actions WHERE tenant_id = ? AND user_id = ?")
               .bind(tenantId, userId).run();
           } catch { }
           try { await env.ORDER_STATE.delete(draftKey); } catch { }
+
+          if (replyToken) {
+            try {
+              const existingOrderData: Order = {
+                key: existingOrder.key,
+                customer: existingOrder.customer_name || custName,
+                time: existingOrder.pickup_time || timeStr,
+                content: existingOrder.order_content || "",
+                status: existingOrder.status,
+                createdAt: existingOrder.created_at ? new Date(existingOrder.created_at + "Z").getTime() : Date.now(),
+                userId: existingOrder.user_id || userId,
+                total: existingOrder.total_amount || (parseInt(totalStr, 10) || 0),
+                reason: existingOrder.reason || "",
+                note: existingOrder.note || noteStr,
+                diningOption: (existingOrder.dining_option as any) || diningOption,
+                tableNumber: existingOrder.table_number || undefined,
+                roundCount: Number(existingOrder.round_count) || 1,
+                round_count: Number(existingOrder.round_count) || 1,
+                lastAppendedAt: existingOrder.last_appended_at || null
+              };
+              const queueRes = await getOrderQueueAhead(env, tenantId, orderKey);
+              const queueAheadCount = queueRes ? queueRes.queueAhead : 0;
+              const flexBubble = buildProgressFlexMessage(existingOrderData, queueAheadCount, tenantCtx);
+              await replyLineFlexMessage(replyToken, `訂單進度 #${orderKey}`, flexBubble, env, tenantCtx);
+            } catch (replyErr) {
+              console.error(`[${brandName}] Reply existing order progress error:`, replyErr);
+            }
+          }
           continue;
         }
       }
