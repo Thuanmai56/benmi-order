@@ -56,14 +56,14 @@ export function resolveTenantOrderPrefix(ctx: TenantContext | null | undefined, 
   return tenantId.charAt(0).toUpperCase() || 'O';
 }
 
-export function generateStandardOrderId(diningOption: string = 'takeaway', dateObj: Date = new Date(), seqNumber?: number): string {
+export function generateStandardOrderId(diningOption: string = 'takeaway', dateObj: Date = new Date(), seqNumber?: number, prefix: string = ''): string {
   // Taiwan time UTC+8
   const nowTaiwan = new Date(dateObj.getTime() + 8 * 3600000);
   const mm = String(nowTaiwan.getUTCMonth() + 1).padStart(2, "0");
   const dd = String(nowTaiwan.getUTCDate()).padStart(2, "0");
   const typePrefix = diningOption === 'dine_in' ? 'D' : 'T';
   const seqStr = seqNumber !== undefined ? String(seqNumber).padStart(3, "0") : generateBase32Suffix(3);
-  return `${mm}${dd}-${typePrefix}${seqStr}`;
+  return `${prefix}${mm}${dd}-${typePrefix}${seqStr}`;
 }
 
 export function tenantHasFeature(ctx: TenantContext | null | undefined, featureKey: string): boolean {

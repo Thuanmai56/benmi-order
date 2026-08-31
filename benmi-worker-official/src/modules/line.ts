@@ -1669,7 +1669,8 @@ export async function handleLineWebhook(
 
       const isDineIn = userText.includes("📍 用餐方式：🍽️ 內用") || userText.includes("用餐方式：內用") || userText.includes("【內用】");
       const diningOption: DiningOption = isDineIn ? "dine_in" : "takeaway";
-      const fallbackOrderKey = generateStandardOrderId(diningOption);
+      const prefix = resolveTenantOrderPrefix(tenantCtx, tenantId);
+      const fallbackOrderKey = generateStandardOrderId(diningOption, new Date(), undefined, prefix);
       const orderKey = keyLine ? keyLine.replace("訂單編號：", "").trim() : fallbackOrderKey;
       const nowTw = new Date(Date.now() + 8 * 3600000);
       const defaultTimeStr = `${nowTw.getUTCFullYear()}-${String(nowTw.getUTCMonth() + 1).padStart(2, "0")}-${String(nowTw.getUTCDate()).padStart(2, "0")} ${String(nowTw.getUTCHours()).padStart(2, "0")}:${String(nowTw.getUTCMinutes()).padStart(2, "0")}`;

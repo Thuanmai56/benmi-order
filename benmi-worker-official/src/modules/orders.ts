@@ -49,7 +49,8 @@ export async function getNextDailyOrderSeq(
   env: Env,
   tenantId: string,
   diningOption: DiningOption = "takeaway",
-  dateObj: Date = new Date()
+  dateObj: Date = new Date(),
+  prefix: string = ""
 ): Promise<{ key: string; seq: number }> {
   const taiwanDate = new Date(dateObj.getTime() + 8 * 3600000);
   const yyyy = taiwanDate.getUTCFullYear();
@@ -57,10 +58,11 @@ export async function getNextDailyOrderSeq(
   const dd = String(taiwanDate.getUTCDate()).padStart(2, "0");
   const dateStr = `${yyyy}-${mm}-${dd}`;
   const typePrefix = diningOption === "dine_in" ? "D" : "T";
+  const p = prefix ? prefix.trim().toUpperCase() : (tenantId.charAt(0).toUpperCase() || 'O');
 
   if (!env.DB) {
     const fallbackSeq = Math.floor(Math.random() * 900) + 100;
-    return { key: `${mm}${dd}-${typePrefix}${fallbackSeq}`, seq: fallbackSeq };
+    return { key: `${p}${mm}${dd}-${typePrefix}${fallbackSeq}`, seq: fallbackSeq };
   }
 
   try {
@@ -73,11 +75,11 @@ export async function getNextDailyOrderSeq(
 
     const seq = res?.last_seq || 1;
     const seqStr = String(seq).padStart(3, "0");
-    return { key: `${mm}${dd}-${typePrefix}${seqStr}`, seq };
+    return { key: `${p}${mm}${dd}-${typePrefix}${seqStr}`, seq };
   } catch (err) {
     console.error(`[getNextDailyOrderSeq] Error for tenant ${tenantId}:`, err);
     const fallbackSeq = Math.floor(Math.random() * 900) + 100;
-    return { key: `${mm}${dd}-${typePrefix}${fallbackSeq}`, seq: fallbackSeq };
+    return { key: `${p}${mm}${dd}-${typePrefix}${fallbackSeq}`, seq: fallbackSeq };
   }
 }
 
@@ -145,8 +147,9 @@ export async function createOrder(
     );
   }
 
-  // 2. Generate authoritative atomic sequential order key (MMDD-DXXX / MMDD-TXXX)
-  const { key: orderKey } = await getNextDailyOrderSeq(env, tenantId, diningOption);
+  // 2. Generate authoritative atomic sequential order key (with tenant order prefix: B0831-D001 / B0831-T001)
+  const prefix = resolveTenantOrderPrefix(tenantCtx, tenantId);
+  const { key: orderKey } = await getNextDailyOrderSeq(env, tenantId, diningOption, new Date(), prefix);
 
   let orderContent = String(data.content || "").trim();
   if (!orderContent && rawItems.length > 0) {
