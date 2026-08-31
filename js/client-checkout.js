@@ -861,7 +861,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
     setAllSubmitButtonsState(true, '處理中...', { cursor: 'not-allowed', opacity: '0.7' });
 
     const abortController = new AbortController();
-    const timeoutId = setTimeout(() => abortController.abort(), 8000);
+    const timeoutId = setTimeout(() => abortController.abort(), 12000);
 
     try {
         const tenantId = getTenantIdFromUrl();

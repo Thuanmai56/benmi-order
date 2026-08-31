@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title id="page-title">線上點餐</title>
     <link rel="preload" href="index.css?v=20260831_qty_btn_size_10" as="style">
-    <link rel="preload" href="js/client-checkout.js?v=20260831_tenant_prefix_hotfix_1" as="script">
+    <link rel="preload" href="js/client-checkout.js?v=20260831_liff_resilience_2" as="script">
     <link rel="stylesheet" href="index.css?v=20260831_qty_btn_size_10">
     <script>
         function extractTenantId() {
@@ -1514,6 +1514,7 @@
         let isLiffInitialized = false;
 
         function ensureLiffReady() {
+            if (isLiffInitialized) return Promise.resolve(liff);
             if (liffInitPromise) return liffInitPromise;
 
             liffInitPromise = (async () => {
@@ -1547,13 +1548,22 @@
                     } catch (e) {}
                 }
 
+                // Check URL query parameters (e.g. liffClientId or liff_id)
+                if (!liffId) {
+                    try {
+                        const sp = new URLSearchParams(window.location.search);
+                        liffId = sp.get('liffClientId') || sp.get('liff_id');
+                    } catch (e) {}
+                }
+
                 // 2. If cold cache on first load, wait for bootstrap data to ensure exact tenant liffId
                 if (!liffId) {
                     try {
                         if (window.menuPromise) {
                             await window.menuPromise;
                             liffId = storeConfig?.liffId || bootstrapData?.tenant?.liffId;
-                        } else if (typeof fetchMenu === 'function') {
+                        }
+                        if (!liffId && typeof fetchMenu === 'function') {
                             await fetchMenu();
                             liffId = storeConfig?.liffId || bootstrapData?.tenant?.liffId;
                         }
@@ -1562,11 +1572,18 @@
                     }
                 }
 
-                const defaultLiffId = isDevEnv
-                    ? "2011224566-kLLdMjkq"
-                    : (isStagingEnv ? "2009555608-DMioljsI" : "2009560906-c5taZfiY");
+                // Fallback default ONLY for 'benmi'
+                if (!liffId && tenantId === 'benmi') {
+                    liffId = isDevEnv
+                        ? "2011224566-kLLdMjkq"
+                        : (isStagingEnv ? "2009555608-DMioljsI" : "2009560906-c5taZfiY");
+                }
 
-                if (!liffId) liffId = defaultLiffId;
+                if (!liffId) {
+                    console.warn(`[LIFF] No liffId found for tenant [${tenantId}]. Running in pure web mode.`);
+                    liffInitPromise = null;
+                    return null;
+                }
 
                 try {
                     await liff.init({ liffId });
@@ -1581,7 +1598,10 @@
                         }
                     }
                 } catch (initErr) {
-                    console.warn('[LIFF] Init notice:', initErr);
+                    console.warn('[LIFF] Init error for tenant [' + tenantId + ']:', initErr);
+                    isLiffInitialized = false;
+                    liffInitPromise = null; // Allow retry on subsequent calls
+                    throw initErr;
                 }
                 return liff;
             })();
@@ -2460,7 +2480,7 @@
             </button>
         </div>
     </div>
-    <script src="js/client-checkout.js?v=20260831_tenant_prefix_hotfix_1"></script>
+    <script src="js/client-checkout.js?v=20260831_liff_resilience_2"></script>
 </body>
 
 </html>
