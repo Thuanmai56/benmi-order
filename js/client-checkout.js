@@ -855,16 +855,122 @@ function setAllSubmitButtonsState(disabled, text, options = {}) {
     });
 }
 
+// 9.5 Tiền kiểm tra món ăn theo thời gian thực (Pre-Submit Stock Validation)
+async function validateCartStockBeforeSubmit() {
+    const tenantId = getTenantIdFromUrl();
+    try {
+        const res = await fetch(`${WORKER_BASE}/api/tenant/bootstrap?tenant_id=${tenantId}`, {
+            cache: 'no-cache'
+        });
+        if (!res.ok) {
+            return { valid: true, outOfStockItems: [], paused: false };
+        }
+
+        const freshData = await res.json();
+        bootstrapData = freshData;
+        try {
+            localStorage.setItem(`tenant_bootstrap_${tenantId}`, JSON.stringify(freshData));
+        } catch(e) {}
+
+        // 1. Kiểm tra trạng thái tạm ngưng nhận đơn của quán
+        if (freshData.tenant && freshData.tenant.storeStatus === 'paused') {
+            if (typeof checkStoreStatus === 'function') checkStoreStatus();
+            return { valid: false, outOfStockItems: [], paused: true };
+        }
+
+        // 2. Rà soát từng món trong giỏ hàng so với thực đơn mới nhất
+        const outOfStockItems = [];
+        if (freshData.catalog && Array.isArray(freshData.catalog)) {
+            for (let key in cart) {
+                if (cart[key] > 0) {
+                    const { catSlug, origName } = parseCartKey(key);
+                    let targetItem = null;
+
+                    if (catSlug) {
+                        const cat = freshData.catalog.find(c => c.slug === catSlug);
+                        if (cat && cat.items) {
+                            targetItem = cat.items.find(it => it.name === origName || it.id === key);
+                        }
+                    }
+                    if (!targetItem) {
+                        for (const cat of freshData.catalog) {
+                            if (cat.items) {
+                                const it = cat.items.find(i => i.name === origName || i.id === key);
+                                if (it) {
+                                    targetItem = it;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    if (!targetItem || targetItem.isOutOfStock) {
+                        const itemInfo = resolveCatalogItem(key);
+                        const displayName = itemInfo?.displayName || origName;
+                        if (!outOfStockItems.includes(displayName)) {
+                            outOfStockItems.push(displayName);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (outOfStockItems.length > 0) {
+            if (typeof updateDynamicStockAndPrices === 'function') {
+                updateDynamicStockAndPrices();
+            }
+            if (typeof renderDynamicCatalog === 'function') {
+                renderDynamicCatalog();
+            }
+            return { valid: false, outOfStockItems, paused: false };
+        }
+
+        return { valid: true, outOfStockItems: [], paused: false };
+    } catch (e) {
+        console.warn("[Validation] Pre-submit stock validation notice:", e);
+        return { valid: true, outOfStockItems: [], paused: false };
+    }
+}
+
 // 10. Hàm nội bộ thực thi POST dữ liệu
 async function doSubmitOrderExecution(dateInput, timeInput) {
     isSubmitting = true;
-    setAllSubmitButtonsState(true, '處理中...', { cursor: 'not-allowed', opacity: '0.7' });
+    setAllSubmitButtonsState(true, '驗證餐點中...', { cursor: 'not-allowed', opacity: '0.7' });
 
     const abortController = new AbortController();
     const timeoutId = setTimeout(() => abortController.abort(), 12000);
 
     try {
         const tenantId = getTenantIdFromUrl();
+
+        // Bước kiểm tra món hết hàng theo thời gian thực
+        const validation = await validateCartStockBeforeSubmit();
+        if (!validation.valid) {
+            clearTimeout(timeoutId);
+            isSubmitting = false;
+            setAllSubmitButtonsState(false, '確認下單', { cursor: 'pointer', opacity: '1' });
+
+            if (validation.paused) {
+                return customAlert('店家目前已暫停接單，暫時無法送出訂單，敬請見諒！');
+            }
+
+            if (validation.outOfStockItems && validation.outOfStockItems.length > 0) {
+                const itemListHtml = validation.outOfStockItems.map(name => `• 【${name}】`).join('<br>');
+                return customAlert(
+                    `<div style="font-size: 16px; font-weight: 900; color: #dc2626; margin-bottom: 8px;">⚠️ 部分餐點已售完</div>` +
+                    `<div style="font-size: 14px; color: #374151; line-height: 1.6; text-align: left; margin: 12px 0;">` +
+                    `抱歉，您選購的以下餐點目前已售完：<br>` +
+                    `<div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 10px 12px; margin-top: 8px; color: #b91c1c; font-weight: 700;">` +
+                    `${itemListHtml}` +
+                    `</div>` +
+                    `</div>` +
+                    `<div style="font-size: 13px; color: #6b7280;">請重新調整購物車內容後再送出訂單。</div>`
+                );
+            }
+            return;
+        }
+
+        setAllSubmitButtonsState(true, '處理中...', { cursor: 'not-allowed', opacity: '0.7' });
         if (typeof window.ensureLiffReady === 'function') {
             await window.ensureLiffReady();
         }
