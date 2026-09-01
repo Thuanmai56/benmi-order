@@ -488,7 +488,8 @@ var MarketplaceApp = {
           self.tenants = json.data;
           self.recomputeDistances();
           self.applyFilters();
-          self.initMapMarkers();
+          self.updateMapMarkers();
+          self.fitMapToBounds();
         }
       })
       .catch(function (err) {
@@ -521,16 +522,21 @@ var MarketplaceApp = {
         }
         if (gpsText) gpsText.innerText = self.t("located");
 
-        // Add user marker on Leaflet map
+        // Add user marker on MapLibre map
         self.updateUserMapMarker(lat, lon);
 
         // Recompute distances and sort
         self.recomputeDistances();
         self.applyFilters();
 
-        // Pan map smoothly to user location
+        // Pan map smoothly to user location with MapLibre syntax
         if (self.map) {
-          self.map.flyTo([lat, lon], 13, { duration: 1.2 });
+          self.map.flyTo({
+            center: [lon, lat],
+            zoom: 13,
+            pitch: 35,
+            duration: 1200
+          });
         }
       },
       function (err) {
@@ -739,7 +745,7 @@ var MarketplaceApp = {
     this.applyFilters();
   },
 
-  // 6. MapLibre GL JS Vector Map Engine Controller
+  // 6. MapLibre GL JS Vector Map Engine Controller (Native GPU Supercluster)
   initMap: function () {
     if (typeof maplibregl === "undefined") {
       console.warn("[Marketplace] MapLibre GL JS not loaded yet");
@@ -765,183 +771,279 @@ var MarketplaceApp = {
     this.map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-left");
 
     this.map.on("load", function () {
-      self.initMapMarkers();
+      self.setupMapLayers();
+      self.updateMapSource();
+      self.fitMapToBounds();
     });
 
-    // Re-evaluate clusters on zoom/move
-    this.map.on("zoomend", function () {
-      self.updateMapMarkers();
+    // Sync unclustered HTML markers continuously during map navigation
+    this.map.on("move", function () {
+      self.updateUnclusteredHtmlMarkers();
+    });
+    this.map.on("moveend", function () {
+      self.updateUnclusteredHtmlMarkers();
     });
   },
 
-  initMapMarkers: function () {
+  buildGeoJSON: function () {
+    var features = [];
+    (this.filteredTenants || []).forEach(function (t) {
+      if (t.latitude != null && t.longitude != null) {
+        features.push({
+          type: "Feature",
+          id: t.tenantId,
+          geometry: {
+            type: "Point",
+            coordinates: [Number(t.longitude), Number(t.latitude)]
+          },
+          properties: {
+            tenantId: t.tenantId,
+            brandName: t.brandName,
+            brandColor: t.brandColor || "#059669",
+            logoUrl: t.logoUrl || "",
+            isOpen: Boolean(t.isOpen),
+            storeStatus: t.storeStatus || "open",
+            storeAddress: t.storeAddress || "",
+            cuisineType: t.cuisineType || "vietnamese",
+            distanceKm: t.distanceKm || 0
+          }
+        });
+      }
+    });
+
+    return {
+      type: "FeatureCollection",
+      features: features
+    };
+  },
+
+  setupMapLayers: function () {
+    var self = this;
+    if (!this.map) return;
+
+    // 1. GeoJSON Supercluster Source
+    if (!this.map.getSource("tenants-source")) {
+      this.map.addSource("tenants-source", {
+        type: "geojson",
+        data: this.buildGeoJSON(),
+        cluster: true,
+        clusterMaxZoom: 13,
+        clusterRadius: 65
+      });
+    }
+
+    // 2. Cluster Glow
+    if (!this.map.getLayer("clusters-glow")) {
+      this.map.addLayer({
+        id: "clusters-glow",
+        type: "circle",
+        source: "tenants-source",
+        filter: ["has", "point_count"],
+        paint: {
+          "circle-color": "#059669",
+          "circle-radius": [
+            "step",
+            ["get", "point_count"],
+            24, 4, 28, 8, 34
+          ],
+          "circle-opacity": 0.25,
+          "circle-blur": 0.5
+        }
+      });
+    }
+
+    // 3. Cluster Disc
+    if (!this.map.getLayer("clusters")) {
+      this.map.addLayer({
+        id: "clusters",
+        type: "circle",
+        source: "tenants-source",
+        filter: ["has", "point_count"],
+        paint: {
+          "circle-color": "#065f46",
+          "circle-radius": [
+            "step",
+            ["get", "point_count"],
+            18, 4, 22, 8, 26
+          ],
+          "circle-stroke-width": 3,
+          "circle-stroke-color": "#ffffff",
+          "circle-stroke-opacity": 1
+        }
+      });
+    }
+
+    // 4. Cluster Count Label
+    if (!this.map.getLayer("cluster-count")) {
+      this.map.addLayer({
+        id: "cluster-count",
+        type: "symbol",
+        source: "tenants-source",
+        filter: ["has", "point_count"],
+        layout: {
+          "text-field": "{point_count_abbreviated}",
+          "text-font": ["Noto Sans Regular", "Open Sans Bold", "Arial Unicode MS Bold"],
+          "text-size": 13,
+          "text-allow-overlap": true,
+          "text-ignore-placement": true
+        },
+        paint: {
+          "text-color": "#ffffff"
+        }
+      });
+    }
+
+    // 5. Unclustered Invisible Target Layer for Exact Frame Querying
+    if (!this.map.getLayer("unclustered-point")) {
+      this.map.addLayer({
+        id: "unclustered-point",
+        type: "circle",
+        source: "tenants-source",
+        filter: ["!", ["has", "point_count"]],
+        paint: {
+          "circle-color": "rgba(0,0,0,0)",
+          "circle-radius": 1
+        }
+      });
+    }
+
+    // 6. Cluster Click Expansion (Fly to & Expand)
+    this.map.on("click", "clusters", function (e) {
+      var features = self.map.queryRenderedFeatures(e.point, { layers: ["clusters"] });
+      if (!features || !features.length) return;
+      var clusterId = features[0].properties.cluster_id;
+      self.map.getSource("tenants-source").getClusterExpansionZoom(clusterId, function (err, zoom) {
+        if (err) return;
+        self.map.flyTo({
+          center: features[0].geometry.coordinates,
+          zoom: Math.min(zoom + 0.6, 15),
+          pitch: 35,
+          duration: 800
+        });
+      });
+    });
+
+    this.map.on("mouseenter", "clusters", function () {
+      self.map.getCanvas().style.cursor = "pointer";
+    });
+    this.map.on("mouseleave", "clusters", function () {
+      self.map.getCanvas().style.cursor = "";
+    });
+  },
+
+  updateMapSource: function () {
     if (!this.map || typeof maplibregl === "undefined") return;
-    this.updateMapMarkers();
-    this.fitMapToBounds();
+    var source = this.map.getSource("tenants-source");
+    var geojson = this.buildGeoJSON();
+
+    if (source) {
+      source.setData(geojson);
+    }
+    this.updateUnclusteredHtmlMarkers();
   },
 
   updateMapMarkers: function () {
-    var self = this;
-    if (!this.map || typeof maplibregl === "undefined") return;
+    this.updateMapSource();
+  },
 
-    // 1. Remove existing markers
-    Object.keys(this.markers).forEach(function (id) {
-      if (self.markers[id]) {
+  updateUnclusteredHtmlMarkers: function () {
+    var self = this;
+    if (!this.map || !this.map.getSource("tenants-source")) return;
+
+    var newMarkers = {};
+    var features = this.map.queryRenderedFeatures({ layers: ["unclustered-point"] });
+    var tenantMap = {};
+    (this.filteredTenants || []).forEach(function (t) { tenantMap[t.tenantId] = t; });
+
+    for (var i = 0; i < features.length; i++) {
+      var coords = features[i].geometry.coordinates;
+      var props = features[i].properties;
+      var id = props.tenantId;
+      if (!id || newMarkers[id]) continue;
+
+      var t = tenantMap[id];
+      if (!t) continue;
+
+      var marker = self.markers[id];
+      if (!marker) {
+        var isOpen = t.isOpen;
+        var statusClass = isOpen ? "open" : (t.storeStatus === "busy" ? "busy" : "closed");
+        var brandColor = t.brandColor || "#059669";
+
+        var pinWrapper = document.createElement("div");
+        pinWrapper.className = "custom-marker-anchor" + (self.activeTenantId === t.tenantId ? " active" : "");
+        pinWrapper.id = "marker-pin-" + t.tenantId;
+
+        var pinAvatar = t.logoUrl
+          ? '<img src="' + t.logoUrl + '" alt="' + t.brandName + '">'
+          : MARKETPLACE_SVG.utensils;
+
+        pinWrapper.innerHTML = [
+          '<div class="custom-map-pin">',
+          '  <div class="pin-shadow"></div>',
+          '  <div class="pin-badge ' + statusClass + '" style="background-color: ' + brandColor + ';">',
+          '    <div class="pin-icon-wrap">' + pinAvatar + '</div>',
+          '    <span class="pin-status-dot"></span>',
+          '  </div>',
+          '  <div class="pin-needle" style="border-top-color: ' + brandColor + ';"></div>',
+          '</div>'
+        ].join("");
+
+        // Build Popup Content
+        var avatarHtml = t.logoUrl
+          ? '<img src="' + t.logoUrl + '" alt="' + t.brandName + '">'
+          : '<span>' + (t.brandName.charAt(0)) + '</span>';
+        var statusText = isOpen ? self.t("openNow") : (t.storeStatus === "busy" ? self.t("busy") : self.t("closed"));
+        var distStr = formatDistance(t.distanceKm, self.currentLang);
+        var orderUrl = "index.html?tenant=" + encodeURIComponent(t.tenantId);
+
+        var popupHtml = [
+          '<div class="map-popup-card">',
+          '  <div class="popup-header">',
+          '    <div class="popup-avatar" style="border: 1px solid ' + brandColor + '33;">' + avatarHtml + '</div>',
+          '    <div>',
+          '      <h4 class="popup-brand-name">' + t.brandName + '</h4>',
+          '      <span class="status-badge ' + statusClass + '" style="margin-top:2px;">',
+          '        <span class="status-dot"></span> ' + statusText,
+          '      </span>',
+          (distStr ? '      <span style="font-size:0.75rem; color:var(--text-muted); margin-left:4px;">' + distStr + '</span>' : ''),
+          '    </div>',
+          '  </div>',
+          '  <p class="popup-address">' + (t.storeAddress ? t.storeAddress.split('\n')[0] : '') + '</p>',
+          '  <div class="popup-footer">',
+          '    <a class="popup-order-btn" href="' + orderUrl + '">',
+          '      ' + MARKETPLACE_SVG.shoppingBag + ' ' + self.t("btnOrder") + ' →',
+          '    </a>',
+          '  </div>',
+          '</div>'
+        ].join("");
+
+        var popup = new maplibregl.Popup({ offset: [0, -48], closeButton: true })
+          .setHTML(popupHtml);
+
+        (function (storeId) {
+          pinWrapper.addEventListener("click", function (e) {
+            e.stopPropagation();
+            self.selectStore(storeId, false);
+          });
+        })(t.tenantId);
+
+        marker = new maplibregl.Marker({ element: pinWrapper, anchor: "bottom" })
+          .setLngLat([coords[0], coords[1]])
+          .setPopup(popup)
+          .addTo(self.map);
+      }
+
+      newMarkers[id] = marker;
+    }
+
+    // Remove markers that are no longer unclustered or offscreen
+    for (var id in self.markers) {
+      if (!newMarkers[id]) {
         self.markers[id].remove();
       }
-    });
-    this.markers = {};
-
-    if (this.clusterMarkers) {
-      this.clusterMarkers.forEach(function (m) { m.remove(); });
     }
-    this.clusterMarkers = [];
-
-    var currentZoom = this.map.getZoom();
-    var validTenants = this.filteredTenants.filter(function (t) {
-      return t.latitude != null && t.longitude != null;
-    });
-
-    var clusters = [];
-    var unclusteredTenants = [];
-    var clusterDistancePx = 52;
-
-    // 2. Compute Clusters when Zoom < 12.5
-    if (currentZoom < 12.5) {
-      var processed = {};
-      for (var i = 0; i < validTenants.length; i++) {
-        var tA = validTenants[i];
-        if (processed[tA.tenantId]) continue;
-
-        var pA = self.map.project([tA.longitude, tA.latitude]);
-        var group = [tA];
-
-        for (var j = i + 1; j < validTenants.length; j++) {
-          var tB = validTenants[j];
-          if (processed[tB.tenantId]) continue;
-          var pB = self.map.project([tB.longitude, tB.latitude]);
-          var dist = Math.hypot(pA.x - pB.x, pA.y - pB.y);
-          if (dist <= clusterDistancePx) {
-            group.push(tB);
-            processed[tB.tenantId] = true;
-          }
-        }
-
-        if (group.length > 1) {
-          processed[tA.tenantId] = true;
-          var avgLng = group.reduce(function (sum, t) { return sum + t.longitude; }, 0) / group.length;
-          var avgLat = group.reduce(function (sum, t) { return sum + t.latitude; }, 0) / group.length;
-          clusters.push({
-            count: group.length,
-            lng: avgLng,
-            lat: avgLat,
-            tenants: group
-          });
-        } else {
-          unclusteredTenants.push(tA);
-        }
-      }
-    } else {
-      unclusteredTenants = validTenants;
-    }
-
-    // 3. Render Cluster Badges
-    clusters.forEach(function (c) {
-      var clusterEl = document.createElement("div");
-      clusterEl.className = "custom-cluster-badge";
-      clusterEl.innerHTML = [
-        '<div class="cluster-halo"></div>',
-        '<div class="cluster-core">',
-        '  <span class="cluster-count">' + c.count + '</span>',
-        '</div>'
-      ].join("");
-
-      var clusterMarker = new maplibregl.Marker({ element: clusterEl, anchor: "center" })
-        .setLngLat([c.lng, c.lat])
-        .addTo(self.map);
-
-      clusterEl.addEventListener("click", function (e) {
-        e.stopPropagation();
-        self.map.flyTo({
-          center: [c.lng, c.lat],
-          zoom: Math.min(currentZoom + 2.6, 14.5),
-          pitch: 35,
-          duration: 900
-        });
-      });
-
-      self.clusterMarkers.push(clusterMarker);
-    });
-
-    // 4. Render Individual Precision Pins
-    unclusteredTenants.forEach(function (t) {
-      var isOpen = t.isOpen;
-      var statusClass = isOpen ? "open" : (t.storeStatus === "busy" ? "busy" : "closed");
-      var brandColor = t.brandColor || "#059669";
-
-      var pinWrapper = document.createElement("div");
-      pinWrapper.className = "custom-marker-anchor" + (self.activeTenantId === t.tenantId ? " active" : "");
-      pinWrapper.id = "marker-pin-" + t.tenantId;
-
-      var pinAvatar = t.logoUrl
-        ? '<img src="' + t.logoUrl + '" alt="' + t.brandName + '">'
-        : MARKETPLACE_SVG.utensils;
-
-      pinWrapper.innerHTML = [
-        '<div class="custom-map-pin">',
-        '  <div class="pin-shadow"></div>',
-        '  <div class="pin-badge ' + statusClass + '" style="background-color: ' + brandColor + ';">',
-        '    <div class="pin-icon-wrap">' + pinAvatar + '</div>',
-        '    <span class="pin-status-dot"></span>',
-        '  </div>',
-        '  <div class="pin-needle" style="border-top-color: ' + brandColor + ';"></div>',
-        '</div>'
-      ].join("");
-
-      // Build Popup Content
-      var avatarHtml = t.logoUrl
-        ? '<img src="' + t.logoUrl + '" alt="' + t.brandName + '">'
-        : '<span>' + (t.brandName.charAt(0)) + '</span>';
-      var statusText = isOpen ? self.t("openNow") : (t.storeStatus === "busy" ? self.t("busy") : self.t("closed"));
-      var distStr = formatDistance(t.distanceKm, self.currentLang);
-      var orderUrl = "index.html?tenant=" + encodeURIComponent(t.tenantId);
-
-      var popupHtml = [
-        '<div class="map-popup-card">',
-        '  <div class="popup-header">',
-        '    <div class="popup-avatar" style="border: 1px solid ' + brandColor + '33;">' + avatarHtml + '</div>',
-        '    <div>',
-        '      <h4 class="popup-brand-name">' + t.brandName + '</h4>',
-        '      <span class="status-badge ' + statusClass + '" style="margin-top:2px;">',
-        '        <span class="status-dot"></span> ' + statusText,
-        '      </span>',
-        (distStr ? '      <span style="font-size:0.75rem; color:var(--text-muted); margin-left:4px;">' + distStr + '</span>' : ''),
-        '    </div>',
-        '  </div>',
-        '  <p class="popup-address">' + (t.storeAddress ? t.storeAddress.split('\n')[0] : '') + '</p>',
-        '  <div class="popup-footer">',
-        '    <a class="popup-order-btn" href="' + orderUrl + '">',
-        '      ' + MARKETPLACE_SVG.shoppingBag + ' ' + self.t("btnOrder") + ' →',
-        '    </a>',
-        '  </div>',
-        '</div>'
-      ].join("");
-
-      var popup = new maplibregl.Popup({ offset: [0, -48], closeButton: true })
-        .setHTML(popupHtml);
-
-      var marker = new maplibregl.Marker({ element: pinWrapper, anchor: "bottom" })
-        .setLngLat([t.longitude, t.latitude])
-        .setPopup(popup)
-        .addTo(self.map);
-
-      pinWrapper.addEventListener("click", function (e) {
-        e.stopPropagation();
-        self.selectStore(t.tenantId, false);
-      });
-
-      self.markers[t.tenantId] = marker;
-    });
+    self.markers = newMarkers;
   },
 
   updateUserMapMarker: function (lat, lon) {
@@ -1010,25 +1112,30 @@ var MarketplaceApp = {
       card.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
 
-    // Update map marker
-    this.highlightStore(tenantId);
-    var marker = this.markers[tenantId];
-    if (marker && this.map) {
-      var popup = marker.getPopup();
-      if (popup && !popup.isOpen()) {
-        marker.togglePopup();
-      }
-      if (panMap) {
-        var lngLat = marker.getLngLat();
-        this.map.flyTo({
-          center: [lngLat.lng, lngLat.lat],
-          zoom: 14.5,
-          pitch: 40,
-          duration: 1200,
-          essential: true
-        });
-      }
+    var t = this.tenants.find(function (item) { return item.tenantId === tenantId; });
+    if (!t || t.latitude == null || t.longitude == null || !this.map) return;
+
+    var self = this;
+    if (panMap) {
+      var targetZoom = Math.max(this.map.getZoom(), 14.5);
+      this.map.flyTo({
+        center: [t.longitude, t.latitude],
+        zoom: targetZoom,
+        pitch: 35,
+        duration: 900
+      });
     }
+
+    setTimeout(function () {
+      self.updateUnclusteredHtmlMarkers();
+      self.highlightStore(tenantId);
+      var marker = self.markers[tenantId];
+      if (marker && marker.getPopup()) {
+        if (!marker.getPopup().isOpen()) {
+          marker.togglePopup();
+        }
+      }
+    }, 450);
   },
 
   // 7. Store Detail Modal Controller
