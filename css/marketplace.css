@@ -864,15 +864,43 @@ button {
   100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
 }
 
-/* Custom Leaflet Popup */
+/* Custom MapLibre GL & Leaflet Popup */
+.maplibregl-popup {
+  z-index: 500;
+}
+
+.maplibregl-popup-content,
 .leaflet-popup-content-wrapper {
   border-radius: var(--radius-lg) !important;
   padding: 0 !important;
   box-shadow: var(--shadow-xl) !important;
-  border: 1px solid var(--border-light);
+  border: 1px solid var(--border-light) !important;
   overflow: hidden;
+  background: var(--bg-surface) !important;
 }
 
+.maplibregl-popup-close-button {
+  font-size: 16px;
+  color: var(--text-muted);
+  padding: 4px 8px;
+  right: 4px;
+  top: 4px;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+.maplibregl-popup-close-button:hover {
+  color: var(--text-main);
+  background: none;
+}
+
+.maplibregl-popup-tip {
+  border-top-color: var(--bg-surface) !important;
+  border-bottom-color: var(--bg-surface) !important;
+}
+
+.maplibregl-popup-content,
 .leaflet-popup-content {
   margin: 0 !important;
   width: 260px !important;
