@@ -68,7 +68,12 @@ var MARKETPLACE_I18N = {
     modalDiningScheduled: "支援預約取餐",
     recenterMap: "重設地圖",
     categories: "推薦品項",
-    todaySchedule: "今日營業"
+    todaySchedule: "今日營業",
+    days: ["週日", "週一", "週二", "週三", "週四", "週五", "週六"],
+    dayRest: "公休",
+    todayRest: "今日公休",
+    todayHours: "今日 {hours}",
+    todayLabel: "今日"
   },
   "vi": {
     brandTitle: "Benmi Discovery",
@@ -113,7 +118,12 @@ var MARKETPLACE_I18N = {
     modalDiningScheduled: "Hẹn giờ lấy",
     recenterMap: "Toàn bộ bản đồ",
     categories: "Món nổi bật",
-    todaySchedule: "Giờ mở hôm nay"
+    todaySchedule: "Giờ mở hôm nay",
+    days: ["Chủ Nhật", "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7"],
+    dayRest: "Nghỉ",
+    todayRest: "Hôm nay nghỉ",
+    todayHours: "Hôm nay: {hours}",
+    todayLabel: "Hôm nay"
   }
 };
 window.MARKETPLACE_I18N = MARKETPLACE_I18N;
@@ -167,6 +177,62 @@ function formatDistance(distKm, lang) {
     return dictionary.distanceM.replace("{dist}", meters);
   }
   return dictionary.distanceKm.replace("{dist}", distKm.toFixed(1));
+}
+
+function formatOperatingHoursPretty(operatingHours, parsedHours, lang, mode) {
+  var dict = MARKETPLACE_I18N[lang] || MARKETPLACE_I18N["zh-TW"];
+  
+  // Calculate current day of week in Taiwan (UTC+8)
+  var now = new Date();
+  var taiwanTime = new Date(now.getTime() + 8 * 3600000);
+  var currentDay = String(taiwanTime.getUTCDay()); // 0 = Sun, 1 = Mon ... 6 = Sat
+
+  var isJson = typeof operatingHours === "string" && operatingHours.trim().startsWith("{");
+
+  if (mode === "card") {
+    if (parsedHours && typeof parsedHours === "object") {
+      var shifts = parsedHours[currentDay];
+      if (Array.isArray(shifts) && shifts.length > 0) {
+        var shiftStr = shifts.map(function (s) { return s.start + " - " + s.end; }).join(", ");
+        return dict.todayHours.replace("{hours}", shiftStr);
+      } else if (Array.isArray(shifts) && shifts.length === 0) {
+        return dict.todayRest;
+      }
+    }
+    if (operatingHours && !isJson) {
+      return operatingHours.split("\n")[0];
+    }
+    return "11:00 - 21:00";
+  }
+
+  // mode === "modal" (Structured full weekly schedule)
+  if (parsedHours && typeof parsedHours === "object") {
+    var dayOrder = ["1", "2", "3", "4", "5", "6", "0"];
+    var rowsHtml = dayOrder.map(function (d) {
+      var idx = parseInt(d, 10);
+      var dayName = (dict.days && dict.days[idx]) ? dict.days[idx] : "Day " + d;
+      var shifts = parsedHours[d];
+      var isToday = (d === currentDay);
+      var hoursStr = "";
+      if (Array.isArray(shifts) && shifts.length > 0) {
+        hoursStr = shifts.map(function (s) { return s.start + " - " + s.end; }).join(", ");
+      } else {
+        hoursStr = dict.dayRest;
+      }
+      return '<div class="schedule-row' + (isToday ? ' today' : '') + '">' +
+             '  <span class="schedule-day">' + dayName + (isToday ? ' (' + dict.todayLabel + ')' : '') + '</span>' +
+             '  <span class="schedule-hours">' + hoursStr + '</span>' +
+             '</div>';
+    }).join("");
+
+    return '<div class="schedule-list">' + rowsHtml + '</div>';
+  }
+
+  if (operatingHours && !isJson) {
+    return '<span>' + operatingHours + '</span>';
+  }
+
+  return '<span>11:00 - 21:00</span>';
 }
 
 // 5. Marketplace Application State
@@ -625,9 +691,9 @@ var MarketplaceApp = {
         '      ' + MARKETPLACE_SVG.mapPin,
         '      <span>' + (t.storeAddress ? t.storeAddress.split('\n')[0] : '台灣') + '</span>',
         '    </div>',
-        '    <div class="detail-line" title="' + (t.operatingHours || '') + '">',
+        '    <div class="detail-line">',
         '      ' + MARKETPLACE_SVG.clock,
-        '      <span>' + (t.operatingHours ? t.operatingHours.split('\n')[0] : '11:00 - 21:00') + '</span>',
+        '      <span>' + formatOperatingHoursPretty(t.operatingHours, t.parsedHours, self.currentLang, 'card') + '</span>',
         '    </div>',
         '  </div>',
         categoriesHtml,
@@ -918,9 +984,9 @@ var MarketplaceApp = {
       '  <div class="modal-section-card">',
       '    <div class="modal-info-row">',
       '      ' + MARKETPLACE_SVG.clock,
-      '      <div>',
-      '        <strong>' + this.t("modalHours") + ':</strong><br>',
-      '        <span>' + (tenant.operatingHours || '11:00 - 21:00') + '</span>',
+      '      <div style="width:100%;">',
+      '        <strong>' + this.t("modalHours") + ':</strong>',
+      '        ' + formatOperatingHoursPretty(tenant.operatingHours, tenant.parsedHours, this.currentLang, 'modal'),
       '      </div>',
       '    </div>',
       '  </div>',

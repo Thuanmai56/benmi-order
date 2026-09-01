@@ -1083,6 +1083,42 @@ button {
   gap: 10px;
 }
 
+/* Weekly Schedule List in Modal */
+.schedule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+  width: 100%;
+}
+
+.schedule-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  border-radius: var(--radius-xs);
+  font-size: 0.82rem;
+  color: var(--text-body);
+  transition: background 0.15s ease;
+}
+
+.schedule-row.today {
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  font-weight: 700;
+  border-left: 3px solid var(--primary);
+}
+
+.schedule-day {
+  font-weight: 600;
+}
+
+.schedule-hours {
+  color: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
 .modal-info-row {
   display: flex;
   align-items: flex-start;
