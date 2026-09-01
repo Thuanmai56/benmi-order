@@ -251,6 +251,7 @@ var MarketplaceApp = {
   viewMode: "list",
   map: null,
   markers: {},
+  clusterMarkers: [],
   userMarker: null,
 
   t: function (key, params) {
@@ -766,6 +767,11 @@ var MarketplaceApp = {
     this.map.on("load", function () {
       self.initMapMarkers();
     });
+
+    // Re-evaluate clusters on zoom/move
+    this.map.on("zoomend", function () {
+      self.updateMapMarkers();
+    });
   },
 
   initMapMarkers: function () {
@@ -778,7 +784,7 @@ var MarketplaceApp = {
     var self = this;
     if (!this.map || typeof maplibregl === "undefined") return;
 
-    // Remove existing markers
+    // 1. Remove existing markers
     Object.keys(this.markers).forEach(function (id) {
       if (self.markers[id]) {
         self.markers[id].remove();
@@ -786,75 +792,155 @@ var MarketplaceApp = {
     });
     this.markers = {};
 
-    this.filteredTenants.forEach(function (t) {
-      if (t.latitude != null && t.longitude != null) {
-        var isOpen = t.isOpen;
-        var statusClass = isOpen ? "open" : "closed";
-        var brandColor = t.brandColor || "#059669";
+    if (this.clusterMarkers) {
+      this.clusterMarkers.forEach(function (m) { m.remove(); });
+    }
+    this.clusterMarkers = [];
 
-        // Create Custom Luxury Pin DOM Element
-        var pinEl = document.createElement("div");
-        pinEl.className = "custom-map-pin" + (self.activeTenantId === t.tenantId ? " active" : "");
-        pinEl.id = "marker-pin-" + t.tenantId;
-        pinEl.style.setProperty("--pin-color", brandColor);
+    var currentZoom = this.map.getZoom();
+    var validTenants = this.filteredTenants.filter(function (t) {
+      return t.latitude != null && t.longitude != null;
+    });
 
-        var pinAvatar = t.logoUrl
-          ? '<img src="' + t.logoUrl + '" alt="' + t.brandName + '">'
-          : MARKETPLACE_SVG.utensils;
+    var clusters = [];
+    var unclusteredTenants = [];
+    var clusterDistancePx = 52;
 
-        pinEl.innerHTML = [
-          '<div class="pin-shadow"></div>',
-          '<div class="pin-badge ' + statusClass + '" style="background-color: ' + brandColor + ';">',
-          '  <div class="pin-icon-wrap">' + pinAvatar + '</div>',
-          '  <span class="pin-status-dot"></span>',
-          '</div>',
-          '<div class="pin-needle" style="border-top-color: ' + brandColor + ';"></div>'
-        ].join("");
+    // 2. Compute Clusters when Zoom < 12.5
+    if (currentZoom < 12.5) {
+      var processed = {};
+      for (var i = 0; i < validTenants.length; i++) {
+        var tA = validTenants[i];
+        if (processed[tA.tenantId]) continue;
 
-        // Build Popup Content
-        var avatarHtml = t.logoUrl
-          ? '<img src="' + t.logoUrl + '" alt="' + t.brandName + '">'
-          : '<span>' + (t.brandName.charAt(0)) + '</span>';
-        var statusText = isOpen ? self.t("openNow") : self.t("closed");
-        var distStr = formatDistance(t.distanceKm, self.currentLang);
-        var orderUrl = "index.html?tenant=" + encodeURIComponent(t.tenantId);
+        var pA = self.map.project([tA.longitude, tA.latitude]);
+        var group = [tA];
 
-        var popupHtml = [
-          '<div class="map-popup-card">',
-          '  <div class="popup-header">',
-          '    <div class="popup-avatar" style="border: 1px solid ' + brandColor + '33;">' + avatarHtml + '</div>',
-          '    <div>',
-          '      <h4 class="popup-brand-name">' + t.brandName + '</h4>',
-          '      <span class="status-badge ' + statusClass + '" style="margin-top:2px;">',
-          '        <span class="status-dot"></span> ' + statusText,
-          '      </span>',
-          (distStr ? '      <span style="font-size:0.75rem; color:var(--text-muted); margin-left:4px;">' + distStr + '</span>' : ''),
-          '    </div>',
-          '  </div>',
-          '  <p class="popup-address">' + (t.storeAddress ? t.storeAddress.split('\n')[0] : '') + '</p>',
-          '  <div class="popup-footer">',
-          '    <a class="popup-order-btn" href="' + orderUrl + '">',
-          '      ' + MARKETPLACE_SVG.shoppingBag + ' ' + self.t("btnOrder") + ' →',
-          '    </a>',
-          '  </div>',
-          '</div>'
-        ].join("");
+        for (var j = i + 1; j < validTenants.length; j++) {
+          var tB = validTenants[j];
+          if (processed[tB.tenantId]) continue;
+          var pB = self.map.project([tB.longitude, tB.latitude]);
+          var dist = Math.hypot(pA.x - pB.x, pA.y - pB.y);
+          if (dist <= clusterDistancePx) {
+            group.push(tB);
+            processed[tB.tenantId] = true;
+          }
+        }
 
-        var popup = new maplibregl.Popup({ offset: [0, -48], closeButton: true })
-          .setHTML(popupHtml);
-
-        var marker = new maplibregl.Marker({ element: pinEl, anchor: "bottom" })
-          .setLngLat([t.longitude, t.latitude])
-          .setPopup(popup)
-          .addTo(self.map);
-
-        pinEl.addEventListener("click", function (e) {
-          e.stopPropagation();
-          self.selectStore(t.tenantId, false);
-        });
-
-        self.markers[t.tenantId] = marker;
+        if (group.length > 1) {
+          processed[tA.tenantId] = true;
+          var avgLng = group.reduce(function (sum, t) { return sum + t.longitude; }, 0) / group.length;
+          var avgLat = group.reduce(function (sum, t) { return sum + t.latitude; }, 0) / group.length;
+          clusters.push({
+            count: group.length,
+            lng: avgLng,
+            lat: avgLat,
+            tenants: group
+          });
+        } else {
+          unclusteredTenants.push(tA);
+        }
       }
+    } else {
+      unclusteredTenants = validTenants;
+    }
+
+    // 3. Render Cluster Badges
+    clusters.forEach(function (c) {
+      var clusterEl = document.createElement("div");
+      clusterEl.className = "custom-cluster-badge";
+      clusterEl.innerHTML = [
+        '<div class="cluster-halo"></div>',
+        '<div class="cluster-core">',
+        '  <span class="cluster-count">' + c.count + '</span>',
+        '</div>'
+      ].join("");
+
+      var clusterMarker = new maplibregl.Marker({ element: clusterEl, anchor: "center" })
+        .setLngLat([c.lng, c.lat])
+        .addTo(self.map);
+
+      clusterEl.addEventListener("click", function (e) {
+        e.stopPropagation();
+        self.map.flyTo({
+          center: [c.lng, c.lat],
+          zoom: Math.min(currentZoom + 2.6, 14.5),
+          pitch: 35,
+          duration: 900
+        });
+      });
+
+      self.clusterMarkers.push(clusterMarker);
+    });
+
+    // 4. Render Individual Precision Pins
+    unclusteredTenants.forEach(function (t) {
+      var isOpen = t.isOpen;
+      var statusClass = isOpen ? "open" : (t.storeStatus === "busy" ? "busy" : "closed");
+      var brandColor = t.brandColor || "#059669";
+
+      var pinWrapper = document.createElement("div");
+      pinWrapper.className = "custom-marker-anchor" + (self.activeTenantId === t.tenantId ? " active" : "");
+      pinWrapper.id = "marker-pin-" + t.tenantId;
+
+      var pinAvatar = t.logoUrl
+        ? '<img src="' + t.logoUrl + '" alt="' + t.brandName + '">'
+        : MARKETPLACE_SVG.utensils;
+
+      pinWrapper.innerHTML = [
+        '<div class="custom-map-pin">',
+        '  <div class="pin-shadow"></div>',
+        '  <div class="pin-badge ' + statusClass + '" style="background-color: ' + brandColor + ';">',
+        '    <div class="pin-icon-wrap">' + pinAvatar + '</div>',
+        '    <span class="pin-status-dot"></span>',
+        '  </div>',
+        '  <div class="pin-needle" style="border-top-color: ' + brandColor + ';"></div>',
+        '</div>'
+      ].join("");
+
+      // Build Popup Content
+      var avatarHtml = t.logoUrl
+        ? '<img src="' + t.logoUrl + '" alt="' + t.brandName + '">'
+        : '<span>' + (t.brandName.charAt(0)) + '</span>';
+      var statusText = isOpen ? self.t("openNow") : (t.storeStatus === "busy" ? self.t("busy") : self.t("closed"));
+      var distStr = formatDistance(t.distanceKm, self.currentLang);
+      var orderUrl = "index.html?tenant=" + encodeURIComponent(t.tenantId);
+
+      var popupHtml = [
+        '<div class="map-popup-card">',
+        '  <div class="popup-header">',
+        '    <div class="popup-avatar" style="border: 1px solid ' + brandColor + '33;">' + avatarHtml + '</div>',
+        '    <div>',
+        '      <h4 class="popup-brand-name">' + t.brandName + '</h4>',
+        '      <span class="status-badge ' + statusClass + '" style="margin-top:2px;">',
+        '        <span class="status-dot"></span> ' + statusText,
+        '      </span>',
+        (distStr ? '      <span style="font-size:0.75rem; color:var(--text-muted); margin-left:4px;">' + distStr + '</span>' : ''),
+        '    </div>',
+        '  </div>',
+        '  <p class="popup-address">' + (t.storeAddress ? t.storeAddress.split('\n')[0] : '') + '</p>',
+        '  <div class="popup-footer">',
+        '    <a class="popup-order-btn" href="' + orderUrl + '">',
+        '      ' + MARKETPLACE_SVG.shoppingBag + ' ' + self.t("btnOrder") + ' →',
+        '    </a>',
+        '  </div>',
+        '</div>'
+      ].join("");
+
+      var popup = new maplibregl.Popup({ offset: [0, -48], closeButton: true })
+        .setHTML(popupHtml);
+
+      var marker = new maplibregl.Marker({ element: pinWrapper, anchor: "bottom" })
+        .setLngLat([t.longitude, t.latitude])
+        .setPopup(popup)
+        .addTo(self.map);
+
+      pinWrapper.addEventListener("click", function (e) {
+        e.stopPropagation();
+        self.selectStore(t.tenantId, false);
+      });
+
+      self.markers[t.tenantId] = marker;
     });
   },
 
@@ -905,7 +991,7 @@ var MarketplaceApp = {
   highlightStore: function (tenantId) {
     var pinEl = document.getElementById("marker-pin-" + tenantId);
     if (pinEl) {
-      document.querySelectorAll(".custom-map-pin").forEach(function (p) { p.classList.remove("active"); });
+      document.querySelectorAll(".custom-marker-anchor").forEach(function (p) { p.classList.remove("active"); });
       pinEl.classList.add("active");
     }
   },
