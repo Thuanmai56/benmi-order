@@ -94,7 +94,10 @@ const I18N = {
     dineInElapsedHeader: "下單進度",
     // Alert modal
     alertTitle: "{count} 單 新訂單",
+    alertTitleAppend: "{count} 單 現場加點",
+    alertTitleCombined: "{newCount} 單新訂單，{appendCount} 單現場加點",
     alertSub: "點擊 “Review 訂單” 查看詳情並接單",
+    alertSubAppend: "桌號：{tables} 剛加點新品項，請盡速製作",
     alertBtnReview: "Review 訂單",
     alertBtnDismiss: "暫時隱藏",
     // Review Modal
@@ -423,7 +426,10 @@ const I18N = {
     dineInElapsedHeader: "Thời gian đã qua",
     // Alert modal
     alertTitle: "{count} Đơn hàng mới",
+    alertTitleAppend: "{count} Đơn gọi thêm món",
+    alertTitleCombined: "{newCount} đơn mới, {appendCount} đơn gọi thêm",
     alertSub: "Nhấn “Xem đơn” để xem chi tiết và nhận đơn",
+    alertSubAppend: "Bàn: {tables} vừa gọi thêm món, vui lòng chuẩn bị",
     alertBtnReview: "Xem đơn",
     alertBtnDismiss: "Tạm ẩn",
     // Review Modal

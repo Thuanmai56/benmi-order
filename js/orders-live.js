@@ -104,9 +104,14 @@ function renderListLeft(orders) {
     const itemCountStr = t("tileItemCount", { count: itemCount > 0 ? itemCount : "?" });
     const isDineIn = isOrderDineIn(order);
 
+    const isAppendedUnread = (typeof unacknowledgedAppends !== "undefined" && unacknowledgedAppends.has(order.key));
+
     const tile = document.createElement("div");
-    tile.className = `tile ${isNew ? "new" : ""}`;
-    tile.onclick = () => openReview(order.key);
+    tile.className = `tile ${isNew ? "new" : ""} ${isAppendedUnread ? "append-new" : ""}`;
+    tile.onclick = () => {
+      if (typeof unacknowledgedAppends !== "undefined") unacknowledgedAppends.delete(order.key);
+      openReview(order.key);
+    };
 
     let rightActions = "";
 
@@ -232,12 +237,15 @@ function renderListRight(orders) {
 }
 
 function updateNewAlert() {
-  const count = pendingNewOrders.length;
+  const newCount = pendingNewOrders.length;
+  const appendCount = (typeof unacknowledgedAppends !== "undefined") ? unacknowledgedAppends.size : 0;
+  const totalCount = newCount + appendCount;
   const alertEl = document.getElementById("new-alert");
   const titleEl = document.getElementById("new-alert-title");
+  const subEl = document.getElementById("new-alert-sub");
   if (!alertEl || !titleEl) return;
 
-  if (count <= 0) {
+  if (totalCount <= 0) {
     alertEl.style.display = "none";
     newAlertSnoozeUntilMs = 0;
     snoozedNewOrderKeys = new Set();
@@ -262,24 +270,45 @@ function updateNewAlert() {
   }
 
   if (Date.now() < newAlertSnoozeUntilMs) {
-    // If a brand-new order arrived that wasn't in the snoozed set, wake up immediately!
+    // If a brand-new order or append arrived that wasn't in the snoozed set, wake up immediately!
     const hasBrandNew = pendingNewOrders.some(o => o?.key && !snoozedNewOrderKeys.has(o.key));
-    if (!hasBrandNew) {
+    const hasBrandNewAppend = (typeof unacknowledgedAppends !== "undefined") && Array.from(unacknowledgedAppends.keys()).some(k => !snoozedNewOrderKeys.has(k));
+    if (!hasBrandNew && !hasBrandNewAppend) {
       alertEl.style.display = "none";
       if (typeof stopContinuousAlarm === "function") stopContinuousAlarm();
       return;
     }
   }
 
-  // Otherwise, snooze has expired or was interrupted by new order -> show modal & alarm!
-  titleEl.innerText = t("alertTitle", { count });
+  // Format title & subtitle based on mix of new vs append orders
+  if (newCount > 0 && appendCount > 0) {
+    titleEl.innerText = t("alertTitleCombined", { newCount, appendCount });
+    if (subEl) subEl.innerText = t("alertSub");
+  } else if (appendCount > 0) {
+    titleEl.innerText = t("alertTitleAppend", { count: appendCount });
+    const tableList = Array.from(unacknowledgedAppends.values())
+      .map(a => a.tableNumber ? `${a.tableNumber}號桌` : a.key)
+      .join(", ");
+    if (subEl) subEl.innerText = t("alertSubAppend", { tables: tableList || "—" });
+  } else {
+    titleEl.innerText = t("alertTitle", { count: newCount });
+    if (subEl) subEl.innerText = t("alertSub");
+  }
+
   alertEl.style.display = "flex";
   if (typeof startContinuousAlarm === "function") startContinuousAlarm();
 }
 
 function dismissNewAlert() {
   newAlertSnoozeUntilMs = Date.now() + 30_000;
-  snoozedNewOrderKeys = new Set(pendingNewOrders.map(o => o?.key).filter(Boolean));
+  const appendKeys = (typeof unacknowledgedAppends !== "undefined") ? Array.from(unacknowledgedAppends.keys()) : [];
+  snoozedNewOrderKeys = new Set([
+    ...pendingNewOrders.map(o => o?.key).filter(Boolean),
+    ...appendKeys
+  ]);
+  if (typeof unacknowledgedAppends !== "undefined") {
+    unacknowledgedAppends.clear();
+  }
   const alertEl = document.getElementById("new-alert");
   if (alertEl) alertEl.style.display = "none";
   if (typeof stopContinuousAlarm === "function") stopContinuousAlarm();
@@ -294,11 +323,17 @@ function dismissNewAlert() {
 }
 
 function reviewNextNewOrder() {
-  if (pendingNewOrders.length <= 0) {
-    dismissNewAlert();
+  if (pendingNewOrders.length > 0) {
+    openReview(pendingNewOrders[0].key);
     return;
   }
-  openReview(pendingNewOrders[0].key);
+  if (typeof unacknowledgedAppends !== "undefined" && unacknowledgedAppends.size > 0) {
+    const firstAppendKey = unacknowledgedAppends.keys().next().value;
+    unacknowledgedAppends.delete(firstAppendKey);
+    openReview(firstAppendKey);
+    return;
+  }
+  dismissNewAlert();
 }
 
 function formatContentHtml(order) {
