@@ -508,3 +508,18 @@ async function reviewForceCancel(btn) {
   closeModal();
   switchTab("live");
 }
+
+window.isOrderDineIn = isOrderDineIn;
+window.getOrderTableNumber = getOrderTableNumber;
+window.setDiningFilter = setDiningFilter;
+window.updateDiningFilterStats = updateDiningFilterStats;
+window.renderListLeft = renderListLeft;
+window.renderListRight = renderListRight;
+window.updateNewAlert = updateNewAlert;
+window.dismissNewAlert = dismissNewAlert;
+window.reviewNextNewOrder = reviewNextNewOrder;
+window.updateStatus = updateStatus;
+window.formatContentHtml = formatContentHtml;
+window.reviewAccept = reviewAccept;
+window.markReadyFromReview = markReadyFromReview;
+window.reviewForceCancel = reviewForceCancel;
