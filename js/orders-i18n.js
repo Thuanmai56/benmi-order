@@ -749,10 +749,12 @@ const I18N = {
   }
 };
 
-let currentLang = localStorage.getItem("benmi_lang") || "zh-TW";
+var currentLang = (typeof localStorage !== "undefined" && localStorage.getItem("benmi_lang")) || "zh-TW";
+window.currentLang = currentLang;
 
 function t(key, params = {}) {
-  let str = (I18N[currentLang] && I18N[currentLang][key]) || (I18N["zh-TW"] && I18N["zh-TW"][key]) || key;
+  const lang = window.currentLang || currentLang || "zh-TW";
+  let str = (I18N[lang] && I18N[lang][key]) || (I18N["zh-TW"] && I18N["zh-TW"][key]) || key;
   Object.keys(params).forEach(p => {
     str = str.replace(new RegExp(`\\{${p}\\}`, 'g'), params[p]);
   });
@@ -781,7 +783,8 @@ document.addEventListener("click", (e) => {
 
 function setLanguage(lang) {
   currentLang = lang;
-  localStorage.setItem("benmi_lang", lang);
+  window.currentLang = lang;
+  if (typeof localStorage !== "undefined") localStorage.setItem("benmi_lang", lang);
   applyLanguageToDOM();
   if (typeof renderAll === "function") renderAll();
   if (typeof activeTab !== "undefined" && activeTab === "settings") {
