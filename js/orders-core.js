@@ -533,6 +533,27 @@ function closeModal() {
   if (typeof updateNewAlert === "function") updateNewAlert();
 }
 
+window.getTenantIdFromUrl = getTenantIdFromUrl;
+window.applyTenantBranding = applyTenantBranding;
+window.escapeHtml = escapeHtml;
+window.parsePickupTimeMs = parsePickupTimeMs;
+window.formatOrderTotal = formatOrderTotal;
+window.getOrderEffectiveDineInTimeMs = getOrderEffectiveDineInTimeMs;
+window.sortByPickupTimeAsc = sortByPickupTimeAsc;
+window.formatEta = formatEta;
+window.isOrderElapsedMode = isOrderElapsedMode;
+window.formatOrderSubmissionTime = formatOrderSubmissionTime;
+window.formatSubmissionElapsedTime = formatSubmissionElapsedTime;
+window.formatDineInElapsedTime = formatDineInElapsedTime;
+window.formatDineInTimeDisplay = formatDineInTimeDisplay;
+window.shortItems = shortItems;
+window.countItemsFromContent = countItemsFromContent;
+window.formatPickupTimeDisplay = formatPickupTimeDisplay;
+window.fetchOrders = fetchOrders;
+window.renderAll = renderAll;
+window.copyToClipboard = copyToClipboard;
+window.closeModal = closeModal;
+
 // 1.5s Polling loop for active order updates - ALWAYS runs across all dashboard tabs!
 setInterval(() => {
   fetchOrders();
