@@ -171,20 +171,32 @@ function renderHistory(orders) {
       const totalFormatted = formatOrderTotal(order);
       const itemsSummary = shortItems(order.content) || "";
       const isDineIn = typeof isOrderDineIn === "function" ? isOrderDineIn(order) : order.diningOption === "dine_in";
+      const isElapsed = typeof isOrderElapsedMode === "function" ? isOrderElapsedMode(order) : isDineIn;
+
       const tableNum = typeof getOrderTableNumber === "function" ? getOrderTableNumber(order) : (order.tableNumber || "");
       const tableLabel = tableNum ? (currentLang === 'vi' ? ` · Bàn ${tableNum}` : ` · 桌號 ${tableNum}`) : "";
+
+      const svgTakeaway = (typeof POS_SVG !== "undefined" && POS_SVG.takeaway) || "";
+      const svgDineIn = (typeof POS_SVG !== "undefined" && POS_SVG.dineIn) || "";
+      const svgClock = (typeof POS_SVG !== "undefined" && POS_SVG.clock) || "";
+      const svgReceipt = (typeof POS_SVG !== "undefined" && POS_SVG.receipt) || "";
+
       const diningBadge = isDineIn
-        ? `<span class="badge badge-dine-in" style="font-size:11px; padding:2px 6px; margin-left:4px;">🍽️ ${t('badgeDineIn')}${escapeHtml(tableLabel)}</span>`
-        : `<span class="badge badge-takeaway" style="font-size:11px; padding:2px 6px; margin-left:4px;">🛍️ ${t('badgeTakeaway')}</span>`;
+        ? `<span class="badge badge-dine-in" style="font-size:11px; padding:2px 6px; margin-left:4px;">${svgDineIn}${t('badgeDineIn')}${escapeHtml(tableLabel)}</span>`
+        : `<span class="badge badge-takeaway" style="font-size:11px; padding:2px 6px; margin-left:4px;">${svgTakeaway}${t('badgeTakeaway')}</span>`;
 
       const roundCount = Number(order.round_count || order.roundCount) || 1;
       const appendBadge = (isDineIn && roundCount > 1)
         ? `<span class="badge badge-append" style="font-size:11px; padding:2px 6px; border-radius:4px; font-weight:800; white-space:nowrap; flex-shrink:0;">${t('badgeAppendRound', { n: roundCount })}</span>`
         : "";
 
+      const formattedTime = isElapsed
+        ? (typeof formatOrderSubmissionTime === "function" ? formatOrderSubmissionTime(order) : formatPickupTimeDisplay(order.time))
+        : formatPickupTimeDisplay(order.time, order.createdAt, order.content);
+
       const pickupDisplay = isDineIn
-        ? `${t('dineInTimeLabel')}: ${formatPickupTimeDisplay(order.time, order.createdAt, order.content)}`
-        : `${t('pickupLabel')} ${formatPickupTimeDisplay(order.time, order.createdAt, order.content)}`;
+        ? `${t('dineInTimeLabel')}: ${formattedTime}`
+        : `${t('pickupLabel')} ${formattedTime}`;
 
       tile.innerHTML = `
         <div class="history-tile-info">
@@ -196,10 +208,10 @@ function renderHistory(orders) {
             ${badge}
           </div>
           <div class="history-tile-meta-row">
-            <span class="history-tile-meta"><span style="color:var(--muted); margin-right:4px;">🕒</span>${escapeHtml(pickupDisplay)}</span>
+            <span class="history-tile-meta">${svgClock}${escapeHtml(pickupDisplay)}</span>
             ${totalFormatted !== '-' ? `<span class="history-tile-price">${escapeHtml(totalFormatted)}</span>` : ''}
           </div>
-          ${itemsSummary ? `<div class="history-tile-items">🧾 ${escapeHtml(itemsSummary)}</div>` : ''}
+          ${itemsSummary ? `<div class="history-tile-items">${svgReceipt}${escapeHtml(itemsSummary)}</div>` : ''}
         </div>
         <div class="history-tile-actions">
           <button class="history-tile-btn" style="background:#f8fafc; color:#475569; border:1px solid #cbd5e1; margin-right:4px;" title="${t('btnReprint') || t('btnPrint')}" onclick="event.stopPropagation(); if(typeof PrinterService !== 'undefined') PrinterService.printManual('${escapeHtml(order.key)}')">🖨️ ${t('btnReprint') || t('btnPrint')}</button>
