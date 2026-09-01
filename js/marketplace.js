@@ -646,15 +646,15 @@ var MarketplaceApp = {
 
     var html = this.filteredTenants.map(function (t) {
       var isOpen = t.isOpen;
+      var brandColor = t.brandColor || "#059669";
       var statusClass = isOpen ? "open" : (t.storeStatus === "busy" ? "busy" : "closed");
       var statusText = isOpen ? self.t("openNow") : (t.storeStatus === "busy" ? self.t("busy") : self.t("closed"));
       var distStr = formatDistance(t.distanceKm, self.currentLang);
+      var cuisineText = self.t("cuisine" + (t.cuisineType ? t.cuisineType.charAt(0).toUpperCase() + t.cuisineType.slice(1) : "All")) || t.cuisineType;
 
       var avatarHtml = t.logoUrl
-        ? '<img src="' + t.logoUrl + '" alt="' + t.brandName + '" loading="lazy" onerror="this.parentElement.innerHTML=\'<span class=\\\'card-avatar-text\\\'>' + (t.brandName.charAt(0)) + '</span>\'">'
-        : '<span class="card-avatar-text">' + (t.brandName.charAt(0)) + '</span>';
-
-      var cuisineText = self.t("cuisine" + (t.cuisineType.charAt(0).toUpperCase() + t.cuisineType.slice(1))) || t.cuisineType;
+        ? '<img src="' + t.logoUrl + '" alt="' + t.brandName + '" loading="lazy" onerror="this.parentElement.innerHTML=\'<span class=\\\'card-avatar-text\\\' style=\\\'color:' + brandColor + ';\\\'>' + (t.brandName.charAt(0)) + '</span>\'">'
+        : '<span class="card-avatar-text" style="color:' + brandColor + ';">' + (t.brandName.charAt(0)) + '</span>';
 
       var categoriesHtml = "";
       if (Array.isArray(t.categoriesSummary) && t.categoriesSummary.length > 0) {
@@ -671,16 +671,20 @@ var MarketplaceApp = {
         '<div class="store-card' + (self.activeTenantId === t.tenantId ? ' active-focus' : '') + '"',
         '     id="store-card-' + t.tenantId + '"',
         '     data-tenant-id="' + t.tenantId + '"',
+        '     style="--card-brand-color:' + brandColor + ';"',
         '     onmouseenter="MarketplaceApp.highlightStore(\'' + t.tenantId + '\')"',
         '     onclick="MarketplaceApp.selectStore(\'' + t.tenantId + '\')">',
+        '  <div class="card-accent-bar" style="background: linear-gradient(90deg, ' + brandColor + ', ' + brandColor + '66);"></div>',
         '  <div class="card-header">',
-        '    <div class="card-avatar">' + avatarHtml + '</div>',
+        '    <div class="card-avatar" style="border-color:' + brandColor + '33;">' + avatarHtml + '</div>',
         '    <div class="card-title-group">',
         '      <div class="card-title-row">',
         '        <h3 class="card-brand-name">' + t.brandName + '</h3>',
-        '        <span class="card-cuisine-pill">' + cuisineText + '</span>',
         '      </div>',
-        (t.brandSubtitle ? '      <p class="card-subtitle">' + t.brandSubtitle + '</p>' : ''),
+        '      <div class="card-meta-row">',
+        '        <span class="card-cuisine-pill">' + cuisineText + '</span>',
+        (distStr ? '        <span class="card-distance-pill">' + MARKETPLACE_SVG.mapPin + ' ' + distStr + '</span>' : ''),
+        '      </div>',
         '    </div>',
         '  </div>',
         '  <div class="card-status-row">',
@@ -688,16 +692,15 @@ var MarketplaceApp = {
         '      <span class="status-dot"></span>',
         '      <span>' + statusText + '</span>',
         '    </span>',
-        (distStr ? '    <span class="distance-badge">' + MARKETPLACE_SVG.mapPin + ' ' + distStr + '</span>' : ''),
+        '    <span class="hours-badge">',
+        '      ' + MARKETPLACE_SVG.clock + ' ',
+        '      <span>' + formatOperatingHoursPretty(t.operatingHours, t.parsedHours, self.currentLang, 'card') + '</span>',
+        '    </span>',
         '  </div>',
         '  <div class="card-details">',
         '    <div class="detail-line" title="' + (t.storeAddress || '') + '">',
         '      ' + MARKETPLACE_SVG.mapPin,
         '      <span>' + (t.storeAddress ? t.storeAddress.split('\n')[0] : '台灣') + '</span>',
-        '    </div>',
-        '    <div class="detail-line">',
-        '      ' + MARKETPLACE_SVG.clock,
-        '      <span>' + formatOperatingHoursPretty(t.operatingHours, t.parsedHours, self.currentLang, 'card') + '</span>',
         '    </div>',
         '  </div>',
         categoriesHtml,
@@ -706,7 +709,7 @@ var MarketplaceApp = {
         '      ' + MARKETPLACE_SVG.store + ' ' + self.t("btnDetails"),
         '    </button>',
         '    <a class="btn-card-order" href="' + orderUrl + '">',
-        '      ' + MARKETPLACE_SVG.shoppingBag + ' ' + self.t("btnOrder"),
+        '      ' + MARKETPLACE_SVG.shoppingBag + ' ' + self.t("btnOrder") + ' <span class="btn-arrow">→</span>',
         '    </a>',
         '  </div>',
         '</div>'
@@ -789,14 +792,23 @@ var MarketplaceApp = {
         var statusClass = isOpen ? "open" : "closed";
         var brandColor = t.brandColor || "#059669";
 
-        // Create Custom Pin DOM Element
+        // Create Custom Luxury Pin DOM Element
         var pinEl = document.createElement("div");
         pinEl.className = "custom-map-pin" + (self.activeTenantId === t.tenantId ? " active" : "");
         pinEl.id = "marker-pin-" + t.tenantId;
+        pinEl.style.setProperty("--pin-color", brandColor);
+
+        var pinAvatar = t.logoUrl
+          ? '<img src="' + t.logoUrl + '" alt="' + t.brandName + '">'
+          : MARKETPLACE_SVG.utensils;
+
         pinEl.innerHTML = [
-          '<div class="pin-bubble ' + statusClass + '" style="background-color: ' + brandColor + ';">',
-          '  <div class="pin-icon">' + MARKETPLACE_SVG.utensils + '</div>',
-          '</div>'
+          '<div class="pin-shadow"></div>',
+          '<div class="pin-badge ' + statusClass + '" style="background-color: ' + brandColor + ';">',
+          '  <div class="pin-icon-wrap">' + pinAvatar + '</div>',
+          '  <span class="pin-status-dot"></span>',
+          '</div>',
+          '<div class="pin-needle" style="border-top-color: ' + brandColor + ';"></div>'
         ].join("");
 
         // Build Popup Content
@@ -810,7 +822,7 @@ var MarketplaceApp = {
         var popupHtml = [
           '<div class="map-popup-card">',
           '  <div class="popup-header">',
-          '    <div class="popup-avatar">' + avatarHtml + '</div>',
+          '    <div class="popup-avatar" style="border: 1px solid ' + brandColor + '33;">' + avatarHtml + '</div>',
           '    <div>',
           '      <h4 class="popup-brand-name">' + t.brandName + '</h4>',
           '      <span class="status-badge ' + statusClass + '" style="margin-top:2px;">',
@@ -822,13 +834,13 @@ var MarketplaceApp = {
           '  <p class="popup-address">' + (t.storeAddress ? t.storeAddress.split('\n')[0] : '') + '</p>',
           '  <div class="popup-footer">',
           '    <a class="popup-order-btn" href="' + orderUrl + '">',
-          '      ' + MARKETPLACE_SVG.shoppingBag + ' ' + self.t("btnOrder"),
+          '      ' + MARKETPLACE_SVG.shoppingBag + ' ' + self.t("btnOrder") + ' →',
           '    </a>',
           '  </div>',
           '</div>'
         ].join("");
 
-        var popup = new maplibregl.Popup({ offset: 20, closeButton: true })
+        var popup = new maplibregl.Popup({ offset: [0, -48], closeButton: true })
           .setHTML(popupHtml);
 
         var marker = new maplibregl.Marker({ element: pinEl, anchor: "bottom" })
