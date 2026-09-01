@@ -1,0 +1,19 @@
+{
+  "name": "benmi-order",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Benmi Multi-Tenant Order Platform",
+  "scripts": {
+    "check": "node scripts/check-frontend.js",
+    "check:pos": "node scripts/check-frontend.js",
+    "check:frontend": "node scripts/check-frontend.js",
+    "test": "node scripts/check-frontend.js"
+  },
+  "keywords": [
+    "pos",
+    "cloudflare-pages",
+    "order-system"
+  ],
+  "author": "Benmi Team",
+  "license": "ISC"
+}

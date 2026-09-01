@@ -72,15 +72,18 @@ graph TD
 | **Production** | `main` | `https://benmi-worker-official.thuanmnc.workers.dev` | `blab-db-production` | `2009560906-c5taZfiY` |
 
 ### Quy trình Release (Dev -> Staging -> Production):
-1. **Phát triển trên Dev**:
+1. **Kiểm thử tĩnh & Phạm vi biến Frontend (BẮT BUỘC)**:
+   - Trước khi deploy frontend, **BẮT BUỘC** chạy: `npm run check` (hoặc `node scripts/check-frontend.js`).
+   - Lệnh này kiểm tra cú pháp, phát hiện trùng lặp biến toàn cục (`const`/`let`) giữa các thẻ `<script>`, và mô phỏng khởi tạo trong VM context.
+2. **Phát triển trên Dev**:
    - Lập trình và kiểm thử trên nhánh `dev`.
    - Apply migration: `npx wrangler d1 migrations apply blab-db-dev --remote --env dev`.
    - Deploy backend dev: `npx wrangler deploy --env dev`.
-2. **Kiểm thử QA & Demo trên Staging**:
+3. **Kiểm thử QA & Demo trên Staging**:
    - Hợp nhất `dev` vào `staging`: `git checkout staging && git merge dev && git push origin staging`.
    - Apply migration: `npx wrangler d1 migrations apply blab-db-test --remote --env test`.
    - Deploy backend staging: `npx wrangler deploy --env test`.
-3. **Phát hành chính thức (Production)**:
+4. **Phát hành chính thức (Production)**:
    - Hợp nhất `staging` vào `main`: `git checkout main && git merge staging && git push origin main`.
    - Apply migration: `npx wrangler d1 migrations apply blab-db-production --remote`.
    - Deploy backend production: `npx wrangler deploy`.
