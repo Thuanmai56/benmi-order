@@ -11,6 +11,7 @@ import { resolveTenantContext } from './modules/tenant';
 import { handleAdminRoute } from './modules/admin';
 import { getTenantBootstrap } from './modules/bootstrap';
 import { getItemAnalyticsReport } from './modules/reports';
+import { getMarketplaceTenants } from './modules/marketplace';
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -51,6 +52,7 @@ export default {
     const tenantCtx = await resolveTenantContext(tenantId, env);
 
     // 4. API Endpoints
+    if (request.method === "GET" && (path === "/api/marketplace/tenants" || path === "/api/marketplace")) return getMarketplaceTenants(request, env);
     if (request.method === "GET" && (path === "/api/tenant/bootstrap" || path === "/api/bootstrap")) return getTenantBootstrap(request, env);
     if (request.method === "POST" && path === "/api/create") return createOrder(request, env, ctx, tenantCtx);
     if (request.method === "POST" && (path === "/api/orders/append" || path === "/api/append")) return appendOrder(request, env, ctx, tenantCtx);

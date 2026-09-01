@@ -36,6 +36,11 @@ export interface TenantContext {
   // Subscription & Packaging Features
   features: string[];
   orderPrefix?: string | null;
+  // Metadata & Marketplace Discovery
+  latitude?: number | null;
+  longitude?: number | null;
+  cuisineType?: string | null;
+  isMarketplaceVisible?: boolean;
 }
 
 export const ORDER_ID_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
