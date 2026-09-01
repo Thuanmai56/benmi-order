@@ -67,6 +67,10 @@ export async function resolveTenantContext(
           googleSheetsUrl: row.google_sheets_url || null,
           features: Array.isArray(features) ? features : [],
           orderPrefix: row.order_prefix || null,
+          latitude: row.latitude !== undefined && row.latitude !== null ? Number(row.latitude) : null,
+          longitude: row.longitude !== undefined && row.longitude !== null ? Number(row.longitude) : null,
+          cuisineType: row.cuisine_type || 'vietnamese',
+          isMarketplaceVisible: row.is_marketplace_visible !== undefined && row.is_marketplace_visible !== null ? Boolean(row.is_marketplace_visible) : true,
         };
 
         // Cache in KV
@@ -125,6 +129,10 @@ export async function resolveTenantContext(
       googleSheetsUrl: env.GOOGLE_SHEETS_URL || null,
       features: ['reports'],
       orderPrefix: 'B',
+      latitude: 24.970220,
+      longitude: 121.442880,
+      cuisineType: 'vietnamese',
+      isMarketplaceVisible: true,
     };
 
     return fallbackCtx;

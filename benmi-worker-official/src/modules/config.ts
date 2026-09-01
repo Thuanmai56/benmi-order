@@ -3,6 +3,7 @@ import { json } from '../utils/http';
 import { getTenantId } from './menu';
 import { TenantContext, tenantHasFeature } from '../types/tenant';
 import { invalidateBootstrapCache, parseOperatingHours } from './bootstrap';
+import { invalidateMarketplaceCache } from './marketplace';
 
 export async function getConfig(
   request: Request,
@@ -156,6 +157,7 @@ export async function updateConfig(
       try {
         await env.ORDER_STATE.delete(`tenant:${tenantId}:config_cache`);
         await invalidateBootstrapCache(tenantId, env);
+        await invalidateMarketplaceCache(env);
       } catch (cacheErr) {
         console.error(`[updateConfig] Cache invalidation failed for tenant ${tenantId}:`, cacheErr);
       }
