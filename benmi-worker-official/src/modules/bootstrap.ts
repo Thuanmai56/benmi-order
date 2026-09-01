@@ -142,7 +142,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
       if (cached) {
         return json(JSON.parse(cached), 200, {
           "X-Cache": "HIT",
-          "Cache-Control": "public, max-age=10, s-maxage=60, stale-while-revalidate=300"
+          "Cache-Control": "no-cache, must-revalidate"
         });
       }
     }
@@ -392,7 +392,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
 
     return json(payload, 200, {
       "X-Cache": "MISS",
-      "Cache-Control": "public, max-age=10, s-maxage=60, stale-while-revalidate=300"
+      "Cache-Control": "no-cache, must-revalidate"
     });
 
   } catch (err: any) {

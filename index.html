@@ -629,7 +629,9 @@
         async function fetchMenu() {
             try {
                 const tenantId = getTenantIdFromUrl();
-                const res = await fetch(`${WORKER_BASE}/api/tenant/bootstrap?tenant_id=${tenantId}`);
+                const res = await fetch(`${WORKER_BASE}/api/tenant/bootstrap?tenant_id=${tenantId}`, {
+                    cache: 'no-cache'
+                });
                 if (res.ok) {
                     const freshData = await res.json();
                     const prevDataStr = localStorage.getItem(`tenant_bootstrap_${tenantId}`);
@@ -1562,8 +1564,7 @@
                         if (window.menuPromise) {
                             await window.menuPromise;
                             liffId = storeConfig?.liffId || bootstrapData?.tenant?.liffId;
-                        }
-                        if (!liffId && typeof fetchMenu === 'function') {
+                        } else if (!liffId && typeof fetchMenu === 'function') {
                             await fetchMenu();
                             liffId = storeConfig?.liffId || bootstrapData?.tenant?.liffId;
                         }
