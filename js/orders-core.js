@@ -25,6 +25,14 @@ const WORKER_BASE = _isDev
     ? "https://platform-worker-staging.thuanmnc.workers.dev"
     : "https://benmi-worker-official.thuanmnc.workers.dev");
 
+const POS_SVG = {
+  takeaway: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-1px; margin-right:4px;"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path><path d="M3 6h18"></path><path d="M16 10a4 4 0 0 1-8 0"></path></svg>`,
+  dineIn: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-1px; margin-right:4px;"><path d="M18 2v6a3 3 0 0 1-3 3 3 3 0 0 1-3-3V2"></path><path d="M15 2v10"></path><path d="M15 14v8"></path><path d="M6 2v20"></path><path d="M6 2a3 3 0 0 1 3 3v3a3 3 0 0 1-3 3"></path></svg>`,
+  clock: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-1px; margin-right:4px; opacity:0.65;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`,
+  receipt: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-1px; margin-right:4px; opacity:0.65;"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"></path><path d="M16 8h-8"></path><path d="M16 12h-8"></path><path d="M10 16h-4"></path></svg>`
+};
+window.POS_SVG = POS_SVG;
+
 function getTenantIdFromUrl() {
   const params = new URLSearchParams(window.location.search);
   return params.get("tenant") || params.get("tenant_id") || "benmi";
@@ -178,41 +186,66 @@ function formatEta(timeStr) {
   return t("etaHours", { h, m });
 }
 
-function formatDineInElapsedTime(order) {
-  const roundCount = Number(order?.round_count || order?.roundCount) || 1;
-  const isAppended = roundCount > 1 || Boolean(order?.lastAppendedAt || order?.last_appended_at);
-  const refMs = getOrderEffectiveDineInTimeMs(order);
-
-  if (!refMs || Number.isNaN(refMs)) {
-    return isAppended ? t("dineInAppendedJustNow") : t("dineInElapsedJustNow");
+function isOrderElapsedMode(order) {
+  if (!order) return false;
+  if (typeof isOrderDineIn === "function" && isOrderDineIn(order)) return true;
+  if (typeof allowScheduledPickup !== "undefined" && allowScheduledPickup === false) return true;
+  
+  const timeStr = String(order.time || "").trim();
+  if (!timeStr || timeStr === "-" || timeStr === "Unknown" || timeStr.includes("即刻") || timeStr.includes("現場") || timeStr.includes("Làm ngay")) {
+    return true;
   }
-  const diffMs = Date.now() - refMs;
+  return false;
+}
+
+function formatOrderSubmissionTime(order) {
+  if (!order) return "-";
+  let createdMs = 0;
+  if (order.createdAt) {
+    createdMs = typeof order.createdAt === "number" ? order.createdAt : new Date(String(order.createdAt).includes("Z") ? order.createdAt : order.createdAt + "Z").getTime();
+  }
+  if (!createdMs || Number.isNaN(createdMs)) {
+    createdMs = parsePickupTimeMs(order.time);
+  }
+  if (!createdMs || Number.isNaN(createdMs)) return "-";
+
+  const d = new Date(createdMs + 8 * 3600000);
+  const hh = String(d.getUTCHours()).padStart(2, "0");
+  const mm = String(d.getUTCMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
+function formatSubmissionElapsedTime(order) {
+  let createdMs = 0;
+  if (order?.createdAt) {
+    createdMs = typeof order.createdAt === "number" ? order.createdAt : new Date(String(order.createdAt).includes("Z") ? order.createdAt : order.createdAt + "Z").getTime();
+  }
+  if (!createdMs || Number.isNaN(createdMs)) {
+    createdMs = parsePickupTimeMs(order?.time);
+  }
+  if (!createdMs || Number.isNaN(createdMs)) {
+    return t("dineInElapsedJustNow");
+  }
+
+  const diffMs = Date.now() - createdMs;
   const diffMin = Math.floor(diffMs / 60000);
   if (diffMin <= 0) {
-    return isAppended ? t("dineInAppendedJustNow") : t("dineInElapsedJustNow");
+    return t("dineInElapsedJustNow");
   }
   if (diffMin < 60) {
-    return isAppended ? t("dineInAppendedMinutes", { min: diffMin }) : t("dineInElapsedMinutes", { min: diffMin });
+    return t("dineInElapsedMinutes", { min: diffMin });
   }
   const h = Math.floor(diffMin / 60);
   const m = diffMin % 60;
-  return isAppended ? t("dineInAppendedHours", { h, m }) : t("dineInElapsedHours", { h, m });
+  return t("dineInElapsedHours", { h, m });
+}
+
+function formatDineInElapsedTime(order) {
+  return formatSubmissionElapsedTime(order);
 }
 
 function formatDineInTimeDisplay(order) {
-  if (!order) return "-";
-  const roundCount = Number(order?.round_count || order?.roundCount) || 1;
-  const appended = order.lastAppendedAt || order.last_appended_at;
-  if (roundCount > 1 && appended) {
-    const appendedMs = typeof appended === "number" ? appended : new Date(String(appended).includes("Z") ? appended : appended + "Z").getTime();
-    if (!Number.isNaN(appendedMs) && appendedMs > 0) {
-      const d = new Date(appendedMs + 8 * 3600000);
-      const hh = String(d.getUTCHours()).padStart(2, "0");
-      const mm = String(d.getUTCMinutes()).padStart(2, "0");
-      return `${hh}:${mm}`;
-    }
-  }
-  return formatPickupTimeDisplay(order.time, order.createdAt, order.content);
+  return formatOrderSubmissionTime(order);
 }
 
 function shortItems(content) {

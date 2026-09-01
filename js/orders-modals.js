@@ -50,10 +50,11 @@ function openReview(orderKey) {
   const elDining = document.getElementById("review-dining");
   if (elDining) {
     const tableNum = typeof getOrderTableNumber === "function" ? getOrderTableNumber(order) : (order.tableNumber || "");
-    const tableSuffix = tableNum ? (currentLang === "vi" ? ` (Bàn ${tableNum})` : ` (桌號：${tableNum})`) : "";
+    const svgDineIn = (typeof POS_SVG !== "undefined" && POS_SVG.dineIn) || "";
+    const svgTakeaway = (typeof POS_SVG !== "undefined" && POS_SVG.takeaway) || "";
     elDining.innerHTML = isDineIn
-      ? `<span style="color:#6d28d9; font-weight:1000;">🍽️ ${t('dineIn')}${escapeHtml(tableSuffix)}</span>`
-      : `<span style="color:#047857; font-weight:1000;">🛍️ ${t('takeaway')}</span>`;
+      ? `<span style="color:#6d28d9; font-weight:1000;">${svgDineIn}${t('dineIn')}${escapeHtml(tableSuffix)}</span>`
+      : `<span style="color:#047857; font-weight:1000;">${svgTakeaway}${t('takeaway')}</span>`;
   }
   const elCont = document.getElementById("review-content");
   if (elCont) elCont.innerHTML = formatContentHtml(order);

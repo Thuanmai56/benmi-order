@@ -38,6 +38,13 @@ function setDiningFilter(filter) {
   renderAll();
 }
 
+const POS_SVG = {
+  takeaway: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-1px; margin-right:4px;"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path><path d="M3 6h18"></path><path d="M16 10a4 4 0 0 1-8 0"></path></svg>`,
+  dineIn: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-1px; margin-right:4px;"><path d="M18 2v6a3 3 0 0 1-3 3 3 3 0 0 1-3-3V2"></path><path d="M15 2v10"></path><path d="M15 14v8"></path><path d="M6 2v20"></path><path d="M6 2a3 3 0 0 1 3 3v3a3 3 0 0 1-3 3"></path></svg>`,
+  clock: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-1px; margin-right:4px; opacity:0.65;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`,
+  receipt: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-1px; margin-right:4px; opacity:0.65;"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"></path><path d="M16 8h-8"></path><path d="M16 12h-8"></path><path d="M10 16h-4"></path></svg>`
+};
+
 function updateDiningFilterStats(allLiveOrders) {
   const isFeatureEnabled = Array.isArray(window.currentTenantFeatures)
     ? window.currentTenantFeatures.includes('dine_in')
@@ -75,9 +82,9 @@ function updateDiningFilterStats(allLiveOrders) {
   });
 
   const takeawayStatEl = document.getElementById("stat-pill-takeaway");
-  if (takeawayStatEl) takeawayStatEl.innerText = `🛍️ ${takeawayCount}`;
+  if (takeawayStatEl) takeawayStatEl.innerHTML = `${POS_SVG.takeaway} ${t('badgeTakeaway')} ${takeawayCount}`;
 
-  if (dineInStatEl) dineInStatEl.innerText = `🍽️ ${dineInCount}`;
+  if (dineInStatEl) dineInStatEl.innerHTML = `${POS_SVG.dineIn} ${t('badgeDineIn')} ${dineInCount}`;
 }
 
 function renderListLeft(orders) {
@@ -98,11 +105,12 @@ function renderListLeft(orders) {
 
   filteredOrders.forEach(order => {
     const isNew = order.status === "NEW";
-    const eta = formatEta(order.time);
+    const isDineIn = isOrderDineIn(order);
+    const isElapsed = typeof isOrderElapsedMode === "function" ? isOrderElapsedMode(order) : isDineIn;
+
     const totalFormatted = formatOrderTotal(order);
     const itemCount = countItemsFromContent(order.content);
     const itemCountStr = t("tileItemCount", { count: itemCount > 0 ? itemCount : "?" });
-    const isDineIn = isOrderDineIn(order);
 
     const isAppendedUnread = (typeof unacknowledgedAppends !== "undefined" && unacknowledgedAppends.has(order.key));
 
@@ -126,18 +134,23 @@ function renderListLeft(orders) {
     const tableNum = getOrderTableNumber(order);
     const tableLabel = tableNum ? (currentLang === 'vi' ? ` · Bàn ${tableNum}` : ` · 桌號 ${tableNum}`) : "";
     const diningBadge = isDineIn
-      ? `<span class="badge badge-dine-in" style="font-size:11px; padding:2px 6px; border-radius:4px; font-weight:800; white-space:nowrap; flex-shrink:0;">🍽️ ${t('badgeDineIn')}${escapeHtml(tableLabel)}</span>`
-      : `<span class="badge badge-takeaway" style="font-size:11px; padding:2px 6px; border-radius:4px; font-weight:800; white-space:nowrap; flex-shrink:0;">${t('badgeTakeaway')}</span>`;
+      ? `<span class="badge badge-dine-in" style="font-size:11px; padding:2px 6px; border-radius:4px; font-weight:800; white-space:nowrap; flex-shrink:0;">${POS_SVG.dineIn}${t('badgeDineIn')}${escapeHtml(tableLabel)}</span>`
+      : `<span class="badge badge-takeaway" style="font-size:11px; padding:2px 6px; border-radius:4px; font-weight:800; white-space:nowrap; flex-shrink:0;">${POS_SVG.takeaway}${t('badgeTakeaway')}</span>`;
 
     const roundCount = Number(order.round_count || order.roundCount) || 1;
     const appendBadge = (isDineIn && roundCount > 1)
       ? `<span class="badge badge-append" style="font-size:11px; padding:2px 6px; border-radius:4px; font-weight:800; white-space:nowrap; flex-shrink:0;">${t('badgeAppendRound', { n: roundCount })}</span>`
       : "";
 
-    const pickupDisplay = isDineIn
-      ? (formatDineInTimeDisplay(order) !== '-' ? formatDineInTimeDisplay(order) : t('dineIn'))
+    const pickupDisplay = isElapsed
+      ? (typeof formatOrderSubmissionTime === "function" ? formatOrderSubmissionTime(order) : formatPickupTimeDisplay(order.time))
       : formatPickupTimeDisplay(order.time, order.createdAt, order.content);
-    const etaDisplay = isDineIn ? formatDineInElapsedTime(order) : formatEta(order.time);
+
+    const etaDisplay = isElapsed
+      ? (typeof formatSubmissionElapsedTime === "function" ? formatSubmissionElapsedTime(order) : formatDineInElapsedTime(order))
+      : formatEta(order.time);
+
+    const etaStyle = isElapsed ? 'color:#7c3aed; font-weight:800;' : '';
 
     tile.innerHTML = `
       <div class="tile-info">
@@ -148,11 +161,11 @@ function renderListLeft(orders) {
           ${appendBadge}
         </div>
         <div class="tile-meta-row">
-          <span class="tile-meta-tag"><span style="color:var(--muted); margin-right:4px;">🕒</span>${escapeHtml(pickupDisplay)}</span>
-          <span class="tile-meta-tag tile-eta" style="${isDineIn ? 'color:#7c3aed; font-weight:800;' : ''}">${escapeHtml(etaDisplay)}</span>
+          <span class="tile-meta-tag">${POS_SVG.clock}${escapeHtml(pickupDisplay)}</span>
+          <span class="tile-meta-tag tile-eta" style="${etaStyle}">${escapeHtml(etaDisplay)}</span>
         </div>
         <div class="tile-count-row">
-          <span class="tile-item-count"><span style="margin-right:4px;">🧾</span>${itemCountStr}</span>
+          <span class="tile-item-count">${POS_SVG.receipt}${itemCountStr}</span>
           ${totalFormatted !== '-' ? `<span class="tile-price">${escapeHtml(totalFormatted)}</span>` : ''}
         </div>
       </div>
@@ -182,11 +195,12 @@ function renderListRight(orders) {
   }
 
   filteredOrders.forEach(order => {
-    const eta = formatEta(order.time);
+    const isDineIn = isOrderDineIn(order);
+    const isElapsed = typeof isOrderElapsedMode === "function" ? isOrderElapsedMode(order) : isDineIn;
+
     const totalFormatted = formatOrderTotal(order);
     const itemCount = countItemsFromContent(order.content);
     const itemCountStr = t("tileItemCount", { count: itemCount > 0 ? itemCount : "?" });
-    const isDineIn = isOrderDineIn(order);
 
     const tile = document.createElement("div");
     tile.className = "tile";
@@ -195,18 +209,23 @@ function renderListRight(orders) {
     const tableNum = getOrderTableNumber(order);
     const tableLabel = tableNum ? (currentLang === 'vi' ? ` · Bàn ${tableNum}` : ` · 桌號 ${tableNum}`) : "";
     const diningBadge = isDineIn
-      ? `<span class="badge badge-dine-in" style="font-size:11px; padding:2px 6px; border-radius:4px; font-weight:800; white-space:nowrap; flex-shrink:0;">🍽️ ${t('badgeDineIn')}${escapeHtml(tableLabel)}</span>`
-      : `<span class="badge badge-takeaway" style="font-size:11px; padding:2px 6px; border-radius:4px; font-weight:800; white-space:nowrap; flex-shrink:0;">${t('badgeTakeaway')}</span>`;
+      ? `<span class="badge badge-dine-in" style="font-size:11px; padding:2px 6px; border-radius:4px; font-weight:800; white-space:nowrap; flex-shrink:0;">${POS_SVG.dineIn}${t('badgeDineIn')}${escapeHtml(tableLabel)}</span>`
+      : `<span class="badge badge-takeaway" style="font-size:11px; padding:2px 6px; border-radius:4px; font-weight:800; white-space:nowrap; flex-shrink:0;">${POS_SVG.takeaway}${t('badgeTakeaway')}</span>`;
 
     const roundCount = Number(order.round_count || order.roundCount) || 1;
     const appendBadge = (isDineIn && roundCount > 1)
       ? `<span class="badge badge-append" style="font-size:11px; padding:2px 6px; border-radius:4px; font-weight:800; white-space:nowrap; flex-shrink:0;">${t('badgeAppendRound', { n: roundCount })}</span>`
       : "";
 
-    const pickupDisplay = isDineIn
-      ? (formatDineInTimeDisplay(order) !== '-' ? formatDineInTimeDisplay(order) : t('dineIn'))
+    const pickupDisplay = isElapsed
+      ? (typeof formatOrderSubmissionTime === "function" ? formatOrderSubmissionTime(order) : formatPickupTimeDisplay(order.time))
       : formatPickupTimeDisplay(order.time, order.createdAt, order.content);
-    const etaDisplay = isDineIn ? formatDineInElapsedTime(order) : formatEta(order.time);
+
+    const etaDisplay = isElapsed
+      ? (typeof formatSubmissionElapsedTime === "function" ? formatSubmissionElapsedTime(order) : formatDineInElapsedTime(order))
+      : formatEta(order.time);
+
+    const etaStyle = isElapsed ? 'color:#7c3aed; font-weight:800;' : '';
 
     tile.innerHTML = `
       <div class="tile-info">
@@ -217,11 +236,11 @@ function renderListRight(orders) {
           ${appendBadge}
         </div>
         <div class="tile-meta-row">
-          <span class="tile-meta-tag"><span style="color:var(--muted); margin-right:4px;">🕒</span>${escapeHtml(pickupDisplay)}</span>
-          <span class="tile-meta-tag tile-eta" style="${isDineIn ? 'color:#7c3aed; font-weight:800;' : ''}">${escapeHtml(etaDisplay)}</span>
+          <span class="tile-meta-tag">${POS_SVG.clock}${escapeHtml(pickupDisplay)}</span>
+          <span class="tile-meta-tag tile-eta" style="${etaStyle}">${escapeHtml(etaDisplay)}</span>
         </div>
         <div class="tile-count-row">
-          <span class="tile-item-count"><span style="margin-right:4px;">🧾</span>${itemCountStr}</span>
+          <span class="tile-item-count">${POS_SVG.receipt}${itemCountStr}</span>
           ${totalFormatted !== '-' ? `<span class="tile-price">${escapeHtml(totalFormatted)}</span>` : ''}
         </div>
       </div>
@@ -395,8 +414,8 @@ function formatContentHtml(order) {
       return `
         <div class="round-section-block ${isLatest ? 'round-section-latest' : ''}" style="${isLatest ? 'background:#fbf7ff; border:2px solid #a855f7; border-radius:14px; padding:14px 16px; margin-bottom:12px; box-shadow:0 2px 8px rgba(168,85,247,0.15);' : 'background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:14px; padding:14px 16px; margin-bottom:12px;'}">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:6px; border-bottom:${isLatest ? '1.5px solid #e9d5ff' : '1px solid #e2e8f0'};">
-            <span style="font-weight:900; font-size:18px; color:${isLatest ? '#6b21a8' : '#334155'};">🍽️ ${escapeHtml(headerText)}</span>
-            ${isLatest ? `<span style="background:#7e22ce; color:#ffffff; font-size:12px; font-weight:800; padding:2px 8px; border-radius:6px; letter-spacing:0.3px;">🔥 ${t('roundBlockLatest')}</span>` : ''}
+            <span style="font-weight:900; font-size:18px; color:${isLatest ? '#6b21a8' : '#334155'};">${POS_SVG.dineIn}${escapeHtml(headerText)}</span>
+            ${isLatest ? `<span style="background:#7e22ce; color:#ffffff; font-size:12px; font-weight:800; padding:2px 8px; border-radius:6px; letter-spacing:0.3px;">${t('roundBlockLatest')}</span>` : ''}
           </div>
           ${linesHtml}
         </div>
