@@ -128,7 +128,39 @@ export async function createOrder(
   const parentOrderKey = data.parent_order_key || data.parentOrderKey || null;
   const rawItems: OrderItemInput[] = Array.isArray(data.items) ? data.items : [];
 
-  // 1. Nếu client chủ động truyền parent_order_key thì chuyển sang xử lý append
+  // 1. Kiểm tra tồn kho tại CSDL D1 cho các món trong đơn hàng
+  if (rawItems.length > 0 && env.DB) {
+    const rawNames = rawItems.map(i => i.name).filter(Boolean);
+    if (rawNames.length > 0) {
+      const cleanNames = rawNames.map(n => n.replace(/\s+(L|S|M)$/i, '').replace(/^\[[^\]]+\]\s*/, '').trim());
+      const allSearchNames = Array.from(new Set([...rawNames, ...cleanNames]));
+      const placeholders = allSearchNames.map(() => '?').join(',');
+
+      try {
+        const oosQuery = await env.DB.prepare(
+          `SELECT name FROM menu_items 
+           WHERE tenant_id = ? 
+             AND (name IN (${placeholders}) OR id IN (${placeholders})) 
+             AND out_of_stock_until IS NOT NULL 
+             AND datetime(out_of_stock_until) > datetime('now')`
+        ).bind(tenantId, ...allSearchNames, ...allSearchNames).all<{ name: string }>();
+
+        if (oosQuery.results && oosQuery.results.length > 0) {
+          const oosNames = Array.from(new Set(oosQuery.results.map(r => r.name)));
+          console.warn(`[createOrder] Rejected order for tenant ${tenantId} due to out-of-stock items: ${oosNames.join(', ')}`);
+          return json({
+            error: `抱歉，您選購的餐點【${oosNames.join('、')}】目前已售完，請重新選擇！`,
+            code: "ITEMS_OUT_OF_STOCK",
+            outOfStockItems: oosNames
+          }, 400);
+        }
+      } catch (stockCheckErr) {
+        console.warn(`[createOrder] Stock check warning:`, stockCheckErr);
+      }
+    }
+  }
+
+  // 1.1 Nếu client chủ động truyền parent_order_key thì chuyển sang xử lý append
   if (parentOrderKey && env.DB) {
     const isDesktopOrder = data.is_desktop === true || data.isDesktop === true;
     return await executeAppendOrderInternal(
@@ -292,6 +324,38 @@ export async function executeAppendOrderInternal(
 
   if (!env.DB) {
     return json({ error: "Database not configured", code: "NO_DB" }, 500);
+  }
+
+  // 0. Kiểm tra tồn kho tại CSDL D1 cho các món 加點
+  if (rawItems.length > 0) {
+    const rawNames = rawItems.map(i => i.name).filter(Boolean);
+    if (rawNames.length > 0) {
+      const cleanNames = rawNames.map(n => n.replace(/\s+(L|S|M)$/i, '').replace(/^\[[^\]]+\]\s*/, '').trim());
+      const allSearchNames = Array.from(new Set([...rawNames, ...cleanNames]));
+      const placeholders = allSearchNames.map(() => '?').join(',');
+
+      try {
+        const oosQuery = await env.DB.prepare(
+          `SELECT name FROM menu_items 
+           WHERE tenant_id = ? 
+             AND (name IN (${placeholders}) OR id IN (${placeholders})) 
+             AND out_of_stock_until IS NOT NULL 
+             AND datetime(out_of_stock_until) > datetime('now')`
+        ).bind(tenantId, ...allSearchNames, ...allSearchNames).all<{ name: string }>();
+
+        if (oosQuery.results && oosQuery.results.length > 0) {
+          const oosNames = Array.from(new Set(oosQuery.results.map(r => r.name)));
+          console.warn(`[appendOrder] Rejected append for tenant ${tenantId} due to out-of-stock items: ${oosNames.join(', ')}`);
+          return json({
+            error: `抱歉，您加點的餐點【${oosNames.join('、')}】目前已售完，請重新選擇！`,
+            code: "ITEMS_OUT_OF_STOCK",
+            outOfStockItems: oosNames
+          }, 400);
+        }
+      } catch (stockCheckErr) {
+        console.warn(`[appendOrder] Stock check warning:`, stockCheckErr);
+      }
+    }
   }
 
   // 1. Fetch parent order

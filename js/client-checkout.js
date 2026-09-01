@@ -855,14 +855,53 @@ function setAllSubmitButtonsState(disabled, text, options = {}) {
     });
 }
 
+// 9.4 Hàm tìm kiếm món ăn chính xác trong danh mục thực đơn
+function findItemInCatalog(catalog, key) {
+    if (!catalog || !Array.isArray(catalog)) return null;
+    const { catSlug, origName } = parseCartKey(key);
+
+    // 1. Tìm theo slug danh mục trước
+    if (catSlug) {
+        const cat = catalog.find(c => c.slug === catSlug || c.id === catSlug);
+        if (cat && Array.isArray(cat.items)) {
+            const item = cat.items.find(i => 
+                i.name === origName || 
+                i.name === key ||
+                i.id === key || 
+                i.id === origName ||
+                (key.endsWith(`_${i.name}`) || key.endsWith(`_${i.id}`))
+            );
+            if (item) return { item, cat };
+        }
+    }
+
+    // 2. Tìm kiếm toàn cục trên tất cả danh mục
+    for (const cat of catalog) {
+        if (Array.isArray(cat.items)) {
+            const item = cat.items.find(i => 
+                i.name === origName || 
+                i.name === key || 
+                i.id === key || 
+                i.id === origName ||
+                (key.endsWith(`_${i.name}`) || key.endsWith(`_${i.id}`))
+            );
+            if (item) return { item, cat };
+        }
+    }
+
+    return null;
+}
+
 // 9.5 Tiền kiểm tra món ăn theo thời gian thực (Pre-Submit Stock Validation)
 async function validateCartStockBeforeSubmit() {
     const tenantId = getTenantIdFromUrl();
     try {
+        console.log(`[Validation] Fetching fresh bootstrap data for tenant: ${tenantId}...`);
         const res = await fetch(`${WORKER_BASE}/api/tenant/bootstrap?tenant_id=${tenantId}`, {
             cache: 'no-cache'
         });
         if (!res.ok) {
+            console.warn(`[Validation] Bootstrap fetch returned status ${res.status}`);
             return { valid: true, outOfStockItems: [], paused: false };
         }
 
@@ -874,7 +913,7 @@ async function validateCartStockBeforeSubmit() {
 
         // 1. Kiểm tra trạng thái tạm ngưng nhận đơn của quán
         if (freshData.tenant && freshData.tenant.storeStatus === 'paused') {
-            if (typeof checkStoreStatus === 'function') checkStoreStatus();
+            try { if (typeof checkStoreStatus === 'function') checkStoreStatus(); } catch(e) {}
             return { valid: false, outOfStockItems: [], paused: true };
         }
 
@@ -883,31 +922,22 @@ async function validateCartStockBeforeSubmit() {
         if (freshData.catalog && Array.isArray(freshData.catalog)) {
             for (let key in cart) {
                 if (cart[key] > 0) {
-                    const { catSlug, origName } = parseCartKey(key);
-                    let targetItem = null;
+                    const match = findItemInCatalog(freshData.catalog, key);
+                    const targetItem = match ? match.item : null;
 
-                    if (catSlug) {
-                        const cat = freshData.catalog.find(c => c.slug === catSlug);
-                        if (cat && cat.items) {
-                            targetItem = cat.items.find(it => it.name === origName || it.id === key);
-                        }
-                    }
-                    if (!targetItem) {
-                        for (const cat of freshData.catalog) {
-                            if (cat.items) {
-                                const it = cat.items.find(i => i.name === origName || i.id === key);
-                                if (it) {
-                                    targetItem = it;
-                                    break;
-                                }
-                            }
-                        }
-                    }
+                    console.log(`[Validation] Cart key "${key}" matched:`, targetItem ? `${targetItem.name} (isOutOfStock: ${targetItem.isOutOfStock})` : "NOT FOUND");
 
                     if (!targetItem || targetItem.isOutOfStock) {
-                        const itemInfo = resolveCatalogItem(key);
-                        const displayName = itemInfo?.displayName || origName;
-                        if (!outOfStockItems.includes(displayName)) {
+                        let displayName = targetItem ? targetItem.name : null;
+                        if (!displayName) {
+                            try {
+                                const itemInfo = resolveCatalogItem(key);
+                                displayName = itemInfo?.displayName || key;
+                            } catch(e) {
+                                displayName = key;
+                            }
+                        }
+                        if (displayName && !outOfStockItems.includes(displayName)) {
                             outOfStockItems.push(displayName);
                         }
                     }
@@ -915,19 +945,21 @@ async function validateCartStockBeforeSubmit() {
             }
         }
 
+        console.log("[Validation] Out of stock items detected:", outOfStockItems);
+
         if (outOfStockItems.length > 0) {
-            if (typeof updateDynamicStockAndPrices === 'function') {
-                updateDynamicStockAndPrices();
-            }
-            if (typeof renderDynamicCatalog === 'function') {
-                renderDynamicCatalog();
+            try {
+                if (typeof updateDynamicStockAndPrices === 'function') updateDynamicStockAndPrices();
+                if (typeof renderDynamicCatalog === 'function') renderDynamicCatalog();
+            } catch(renderErr) {
+                console.warn("[Validation] UI re-render notice:", renderErr);
             }
             return { valid: false, outOfStockItems, paused: false };
         }
 
         return { valid: true, outOfStockItems: [], paused: false };
     } catch (e) {
-        console.warn("[Validation] Pre-submit stock validation notice:", e);
+        console.error("[Validation] Pre-submit stock validation error:", e);
         return { valid: true, outOfStockItems: [], paused: false };
     }
 }
@@ -1061,6 +1093,27 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
 
             if (!res.ok) {
                 const errData = await res.json().catch(() => ({}));
+                if (errData && errData.code === 'ITEMS_OUT_OF_STOCK') {
+                    const outOfStockNames = errData.outOfStockItems || [];
+                    const itemListHtml = outOfStockNames.map(name => `• 【${name}】`).join('<br>');
+                    try {
+                        if (typeof updateDynamicStockAndPrices === 'function') updateDynamicStockAndPrices();
+                        if (typeof renderDynamicCatalog === 'function') renderDynamicCatalog();
+                    } catch(e) {}
+                    return customAlert(
+                        `<div style="font-size: 16px; font-weight: 900; color: #dc2626; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 6px;">` +
+                        `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M16 16s-1.5-2-4-2-4 2-4 2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>` +
+                        `<span>部分加點餐點已售完</span>` +
+                        `</div>` +
+                        `<div style="font-size: 14px; color: #374151; line-height: 1.6; text-align: left; margin: 12px 0;">` +
+                        `抱歉，您加點的以下餐點目前已售完：<br>` +
+                        `<div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 10px 12px; margin-top: 8px; color: #b91c1c; font-weight: 700;">` +
+                        `${itemListHtml}` +
+                        `</div>` +
+                        `</div>` +
+                        `<div style="font-size: 13px; color: #6b7280;">請重新調整購物車內容後再送出加點。</div>`
+                    );
+                }
                 throw new Error(errData.error || `API returned status ${res.status}`);
             }
 
@@ -1088,20 +1141,15 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
             } catch(e) {}
             if (typeof updateTotal === 'function') updateTotal();
 
-            const appendSuccessMsg = isDesktop && userId && userId.startsWith('U')
-                ? '店家已收到您的加點品項，將立即為您製作，系統已將加點確認同步發送至您的 LINE 🙏'
-                : '店家已收到您的加點品項，將立即為您製作 🙏';
-
+            const appendSuccessMsg = `您的現場加點已成功送達廚房製作！\n總共加點 $${currentTotal}`;
             customAlert(`
                 <div style="margin-bottom: 16px;">
-                    <div style="width: 60px; height: 60px; margin: 0 auto; background: #faf5ff; border: 2px solid #c084fc; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                    <div style="width: 60px; height: 60px; margin: 0 auto; background: #ecfdf5; border: 2px solid #a7f3d0; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="20 6 9 17 4 12"></polyline>
                         </svg>
                     </div>
                 </div>
-                <div style="font-size: 19px; font-weight: 900; color: #111827; margin-bottom: 6px;">加點送出成功！</div>
-                <div style="font-size: 14.5px; line-height: 1.5; color: #4b5563;">${appendSuccessMsg}</div>
             `, () => {
                 if (typeof closeAndExitLiff === 'function') closeAndExitLiff();
             });
@@ -1140,7 +1188,31 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
 
         clearTimeout(timeoutId);
 
-        if (!res.ok) throw new Error(`API returned status ${res.status}`);
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            if (errData && errData.code === 'ITEMS_OUT_OF_STOCK') {
+                const outOfStockNames = errData.outOfStockItems || [];
+                const itemListHtml = outOfStockNames.map(name => `• 【${name}】`).join('<br>');
+                try {
+                    if (typeof updateDynamicStockAndPrices === 'function') updateDynamicStockAndPrices();
+                    if (typeof renderDynamicCatalog === 'function') renderDynamicCatalog();
+                } catch(e) {}
+                return customAlert(
+                    `<div style="font-size: 16px; font-weight: 900; color: #dc2626; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 6px;">` +
+                    `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M16 16s-1.5-2-4-2-4 2-4 2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>` +
+                    `<span>部分餐點已售完</span>` +
+                    `</div>` +
+                    `<div style="font-size: 14px; color: #374151; line-height: 1.6; text-align: left; margin: 12px 0;">` +
+                    `抱歉，您選購的以下餐點目前已售完：<br>` +
+                    `<div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 10px 12px; margin-top: 8px; color: #b91c1c; font-weight: 700;">` +
+                    `${itemListHtml}` +
+                    `</div>` +
+                    `</div>` +
+                    `<div style="font-size: 13px; color: #6b7280;">請重新調整購物車內容後再送出訂單。</div>`
+                );
+            }
+            throw new Error(errData.error || `API returned status ${res.status}`);
+        }
 
         const resData = await res.json().catch(() => ({}));
         if (resData && resData.key) {
