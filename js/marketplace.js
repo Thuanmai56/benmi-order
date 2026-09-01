@@ -402,7 +402,11 @@ var MarketplaceApp = {
     }
     if (mode === "map" && this.map) {
       setTimeout(function () {
-        MarketplaceApp.map.invalidateSize();
+        if (typeof MarketplaceApp.map.resize === "function") {
+          MarketplaceApp.map.resize();
+        } else if (typeof MarketplaceApp.map.invalidateSize === "function") {
+          MarketplaceApp.map.invalidateSize();
+        }
       }, 150);
     }
   },
@@ -731,75 +735,69 @@ var MarketplaceApp = {
     this.applyFilters();
   },
 
-  // 6. Leaflet Map Engine Controller
+  // 6. MapLibre GL JS Vector Map Engine Controller
   initMap: function () {
-    if (typeof L === "undefined") {
-      console.warn("[Marketplace] Leaflet.js not loaded yet");
+    if (typeof maplibregl === "undefined") {
+      console.warn("[Marketplace] MapLibre GL JS not loaded yet");
       return;
     }
 
     var mapContainer = document.getElementById("marketplaceMap");
     if (!mapContainer) return;
 
-    // Center on Northern/Central Taiwan [24.97, 121.44]
-    this.map = L.map("marketplaceMap", {
-      center: [24.97022, 121.44288],
-      zoom: 12,
-      zoomControl: true
+    var self = this;
+    // MapLibre uses [lng, lat]
+    this.map = new maplibregl.Map({
+      container: "marketplaceMap",
+      style: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+      center: [121.44288, 24.97022],
+      zoom: 11.5,
+      pitch: 0,
+      bearing: 0,
+      antialias: true
     });
 
-    // OpenStreetMap Clean Tiles
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    }).addTo(this.map);
+    // Add Navigation Control (Zoom +/- and 3D Compass)
+    this.map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-left");
+
+    this.map.on("load", function () {
+      self.initMapMarkers();
+    });
   },
 
   initMapMarkers: function () {
-    if (!this.map || typeof L === "undefined") return;
+    if (!this.map || typeof maplibregl === "undefined") return;
     this.updateMapMarkers();
     this.fitMapToBounds();
   },
 
   updateMapMarkers: function () {
     var self = this;
-    if (!this.map || typeof L === "undefined") return;
+    if (!this.map || typeof maplibregl === "undefined") return;
 
     // Remove existing markers
     Object.keys(this.markers).forEach(function (id) {
-      self.map.removeLayer(self.markers[id]);
+      if (self.markers[id]) {
+        self.markers[id].remove();
+      }
     });
     this.markers = {};
 
-    var bounds = L.latLngBounds();
-    var hasValidCoords = false;
-
     this.filteredTenants.forEach(function (t) {
       if (t.latitude != null && t.longitude != null) {
-        hasValidCoords = true;
-        var latLng = [t.latitude, t.longitude];
-        bounds.extend(latLng);
-
         var isOpen = t.isOpen;
         var statusClass = isOpen ? "open" : "closed";
         var brandColor = t.brandColor || "#059669";
 
-        // Create Custom Pin Icon
-        var customIcon = L.divIcon({
-          className: "custom-leaflet-div-icon",
-          html: [
-            '<div class="custom-map-pin' + (self.activeTenantId === t.tenantId ? ' active' : '') + '" id="marker-pin-' + t.tenantId + '">',
-            '  <div class="pin-bubble ' + statusClass + '" style="background-color: ' + brandColor + ';">',
-            '    <div class="pin-icon">' + MARKETPLACE_SVG.utensils + '</div>',
-            '  </div>',
-            '</div>'
-          ].join(""),
-          iconSize: [38, 38],
-          iconAnchor: [19, 38],
-          popupAnchor: [0, -38]
-        });
-
-        var marker = L.marker(latLng, { icon: customIcon }).addTo(self.map);
+        // Create Custom Pin DOM Element
+        var pinEl = document.createElement("div");
+        pinEl.className = "custom-map-pin" + (self.activeTenantId === t.tenantId ? " active" : "");
+        pinEl.id = "marker-pin-" + t.tenantId;
+        pinEl.innerHTML = [
+          '<div class="pin-bubble ' + statusClass + '" style="background-color: ' + brandColor + ';">',
+          '  <div class="pin-icon">' + MARKETPLACE_SVG.utensils + '</div>',
+          '</div>'
+        ].join("");
 
         // Build Popup Content
         var avatarHtml = t.logoUrl
@@ -830,58 +828,65 @@ var MarketplaceApp = {
           '</div>'
         ].join("");
 
-        marker.bindPopup(popupHtml, { closeButton: true });
+        var popup = new maplibregl.Popup({ offset: 20, closeButton: true })
+          .setHTML(popupHtml);
 
-        marker.on("click", function () {
+        var marker = new maplibregl.Marker({ element: pinEl, anchor: "bottom" })
+          .setLngLat([t.longitude, t.latitude])
+          .setPopup(popup)
+          .addTo(self.map);
+
+        pinEl.addEventListener("click", function (e) {
+          e.stopPropagation();
           self.selectStore(t.tenantId, false);
         });
 
         self.markers[t.tenantId] = marker;
       }
     });
-
-    if (hasValidCoords && bounds.isValid()) {
-      // Don't auto-fit on every filter if user coordinates are set and zooming
-    }
   },
 
   updateUserMapMarker: function (lat, lon) {
-    if (!this.map || typeof L === "undefined") return;
+    if (!this.map || typeof maplibregl === "undefined") return;
 
     if (this.userMarker) {
-      this.map.removeLayer(this.userMarker);
+      this.userMarker.remove();
     }
 
-    var userIcon = L.divIcon({
-      className: "custom-user-div-icon",
-      html: '<div class="user-location-marker"></div>',
-      iconSize: [20, 20],
-      iconAnchor: [10, 10]
-    });
+    var userEl = document.createElement("div");
+    userEl.className = "user-location-marker";
 
-    this.userMarker = L.marker([lat, lon], { icon: userIcon }).addTo(this.map);
+    this.userMarker = new maplibregl.Marker({ element: userEl, anchor: "center" })
+      .setLngLat([lon, lat])
+      .addTo(this.map);
   },
 
   fitMapToBounds: function () {
-    if (!this.map || typeof L === "undefined") return;
+    if (!this.map || typeof maplibregl === "undefined") return;
 
-    var bounds = L.latLngBounds();
+    var bounds = new maplibregl.LngLatBounds();
     var hasPoints = false;
 
     if (this.userCoords) {
-      bounds.extend([this.userCoords.lat, this.userCoords.lon]);
+      bounds.extend([this.userCoords.lon, this.userCoords.lat]);
       hasPoints = true;
     }
 
     this.filteredTenants.forEach(function (t) {
       if (t.latitude != null && t.longitude != null) {
-        bounds.extend([t.latitude, t.longitude]);
+        bounds.extend([t.longitude, t.latitude]);
         hasPoints = true;
       }
     });
 
-    if (hasPoints && bounds.isValid()) {
-      this.map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+    if (hasPoints) {
+      this.map.fitBounds(bounds, {
+        padding: { top: 60, bottom: 60, left: 60, right: 60 },
+        maxZoom: 14,
+        pitch: 0,
+        bearing: 0,
+        duration: 1000
+      });
     }
   },
 
@@ -911,9 +916,19 @@ var MarketplaceApp = {
     this.highlightStore(tenantId);
     var marker = this.markers[tenantId];
     if (marker && this.map) {
-      marker.openPopup();
+      var popup = marker.getPopup();
+      if (popup && !popup.isOpen()) {
+        marker.togglePopup();
+      }
       if (panMap) {
-        this.map.flyTo(marker.getLatLng(), 14, { duration: 0.8 });
+        var lngLat = marker.getLngLat();
+        this.map.flyTo({
+          center: [lngLat.lng, lngLat.lat],
+          zoom: 14.5,
+          pitch: 40,
+          duration: 1200,
+          essential: true
+        });
       }
     }
   },
