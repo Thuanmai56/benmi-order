@@ -132,7 +132,8 @@ function renderListLeft(orders) {
     }
 
     const tableNum = getOrderTableNumber(order);
-    const tableLabel = tableNum ? (currentLang === 'vi' ? ` · Bàn ${tableNum}` : ` · 桌號 ${tableNum}`) : "";
+    const lang = window.currentLang || (typeof currentLang !== "undefined" ? currentLang : "zh-TW");
+    const tableLabel = tableNum ? (lang === 'vi' ? ` · Bàn ${tableNum}` : ` · 桌號 ${tableNum}`) : "";
     const diningBadge = isDineIn
       ? `<span class="badge badge-dine-in" style="font-size:11px; padding:2px 6px; border-radius:4px; font-weight:800; white-space:nowrap; flex-shrink:0;">${POS_SVG.dineIn}${t('badgeDineIn')}${escapeHtml(tableLabel)}</span>`
       : `<span class="badge badge-takeaway" style="font-size:11px; padding:2px 6px; border-radius:4px; font-weight:800; white-space:nowrap; flex-shrink:0;">${POS_SVG.takeaway}${t('badgeTakeaway')}</span>`;
@@ -207,7 +208,8 @@ function renderListRight(orders) {
     tile.onclick = () => openReview(order.key);
 
     const tableNum = getOrderTableNumber(order);
-    const tableLabel = tableNum ? (currentLang === 'vi' ? ` · Bàn ${tableNum}` : ` · 桌號 ${tableNum}`) : "";
+    const lang = window.currentLang || (typeof currentLang !== "undefined" ? currentLang : "zh-TW");
+    const tableLabel = tableNum ? (lang === 'vi' ? ` · Bàn ${tableNum}` : ` · 桌號 ${tableNum}`) : "";
     const diningBadge = isDineIn
       ? `<span class="badge badge-dine-in" style="font-size:11px; padding:2px 6px; border-radius:4px; font-weight:800; white-space:nowrap; flex-shrink:0;">${POS_SVG.dineIn}${t('badgeDineIn')}${escapeHtml(tableLabel)}</span>`
       : `<span class="badge badge-takeaway" style="font-size:11px; padding:2px 6px; border-radius:4px; font-weight:800; white-space:nowrap; flex-shrink:0;">${POS_SVG.takeaway}${t('badgeTakeaway')}</span>`;

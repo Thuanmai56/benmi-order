@@ -93,21 +93,27 @@ async function initTenantBranding() {
 initTenantBranding();
 
 // Global POS State
-let latestOrders = [];
-let pendingNewOrders = [];
-let reviewingOrder = null;
-let currentOrderKey = null;
-let activeTab = "live";
-let newAlertSnoozeUntilMs = 0;
-let snoozedNewOrderKeys = new Set();
-let newAlertSnoozeTimerId = null;
-let localOverrides = {};
-const knownOrderKeys = new Set();
-const knownOrderRounds = new Map();
-const unacknowledgedAppends = new Map();
-const processingKeys = new Set();
-let isFirstLoad = true;
-let lastOrdersETag = "";
+var latestOrders = [];
+var pendingNewOrders = [];
+var reviewingOrder = null;
+var currentOrderKey = null;
+var activeTab = "live";
+var newAlertSnoozeUntilMs = 0;
+var snoozedNewOrderKeys = new Set();
+var newAlertSnoozeTimerId = null;
+var localOverrides = {};
+var knownOrderKeys = new Set();
+var knownOrderRounds = new Map();
+var unacknowledgedAppends = new Map();
+var processingKeys = new Set();
+var isFirstLoad = true;
+var lastOrdersETag = "";
+
+window.latestOrders = latestOrders;
+window.pendingNewOrders = pendingNewOrders;
+window.reviewingOrder = reviewingOrder;
+window.unacknowledgedAppends = unacknowledgedAppends;
+window.snoozedNewOrderKeys = snoozedNewOrderKeys;
 
 function escapeHtml(s) {
   return String(s ?? "")
