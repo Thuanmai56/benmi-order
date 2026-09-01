@@ -251,7 +251,7 @@ var MarketplaceApp = {
   viewMode: "list",
   map: null,
   markers: {},
-  clusterMarkers: [],
+  clusterMarkers: {},
   userMarker: null,
 
   t: function (key, params) {
@@ -776,12 +776,12 @@ var MarketplaceApp = {
       self.fitMapToBounds();
     });
 
-    // Sync unclustered HTML markers continuously during map navigation
+    // Sync HTML cluster badges and unclustered pins continuously during map navigation
     this.map.on("move", function () {
-      self.updateUnclusteredHtmlMarkers();
+      self.updateHtmlMarkers();
     });
     this.map.on("moveend", function () {
-      self.updateUnclusteredHtmlMarkers();
+      self.updateHtmlMarkers();
     });
   },
 
@@ -832,71 +832,24 @@ var MarketplaceApp = {
       });
     }
 
-    // 2. Cluster Glow
-    if (!this.map.getLayer("clusters-glow")) {
+    // 2. Invisible Cluster Target Layer for Supercluster query
+    if (!this.map.getLayer("clusters-target")) {
       this.map.addLayer({
-        id: "clusters-glow",
+        id: "clusters-target",
         type: "circle",
         source: "tenants-source",
         filter: ["has", "point_count"],
         paint: {
-          "circle-color": "#059669",
-          "circle-radius": [
-            "step",
-            ["get", "point_count"],
-            24, 4, 28, 8, 34
-          ],
-          "circle-opacity": 0.25,
-          "circle-blur": 0.5
+          "circle-color": "rgba(0,0,0,0)",
+          "circle-radius": 24
         }
       });
     }
 
-    // 3. Cluster Disc
-    if (!this.map.getLayer("clusters")) {
+    // 3. Invisible Unclustered Target Layer for Supercluster query
+    if (!this.map.getLayer("unclustered-target")) {
       this.map.addLayer({
-        id: "clusters",
-        type: "circle",
-        source: "tenants-source",
-        filter: ["has", "point_count"],
-        paint: {
-          "circle-color": "#065f46",
-          "circle-radius": [
-            "step",
-            ["get", "point_count"],
-            18, 4, 22, 8, 26
-          ],
-          "circle-stroke-width": 3,
-          "circle-stroke-color": "#ffffff",
-          "circle-stroke-opacity": 1
-        }
-      });
-    }
-
-    // 4. Cluster Count Label
-    if (!this.map.getLayer("cluster-count")) {
-      this.map.addLayer({
-        id: "cluster-count",
-        type: "symbol",
-        source: "tenants-source",
-        filter: ["has", "point_count"],
-        layout: {
-          "text-field": "{point_count_abbreviated}",
-          "text-font": ["Noto Sans Regular", "Open Sans Bold", "Arial Unicode MS Bold"],
-          "text-size": 13,
-          "text-allow-overlap": true,
-          "text-ignore-placement": true
-        },
-        paint: {
-          "text-color": "#ffffff"
-        }
-      });
-    }
-
-    // 5. Unclustered Invisible Target Layer for Exact Frame Querying
-    if (!this.map.getLayer("unclustered-point")) {
-      this.map.addLayer({
-        id: "unclustered-point",
+        id: "unclustered-target",
         type: "circle",
         source: "tenants-source",
         filter: ["!", ["has", "point_count"]],
@@ -906,29 +859,6 @@ var MarketplaceApp = {
         }
       });
     }
-
-    // 6. Cluster Click Expansion (Fly to & Expand)
-    this.map.on("click", "clusters", function (e) {
-      var features = self.map.queryRenderedFeatures(e.point, { layers: ["clusters"] });
-      if (!features || !features.length) return;
-      var clusterId = features[0].properties.cluster_id;
-      self.map.getSource("tenants-source").getClusterExpansionZoom(clusterId, function (err, zoom) {
-        if (err) return;
-        self.map.flyTo({
-          center: features[0].geometry.coordinates,
-          zoom: Math.min(zoom + 0.6, 15),
-          pitch: 35,
-          duration: 800
-        });
-      });
-    });
-
-    this.map.on("mouseenter", "clusters", function () {
-      self.map.getCanvas().style.cursor = "pointer";
-    });
-    this.map.on("mouseleave", "clusters", function () {
-      self.map.getCanvas().style.cursor = "";
-    });
   },
 
   updateMapSource: function () {
@@ -939,32 +869,90 @@ var MarketplaceApp = {
     if (source) {
       source.setData(geojson);
     }
-    this.updateUnclusteredHtmlMarkers();
+    this.updateHtmlMarkers();
   },
 
   updateMapMarkers: function () {
     this.updateMapSource();
   },
 
-  updateUnclusteredHtmlMarkers: function () {
+  updateHtmlMarkers: function () {
     var self = this;
     if (!this.map || !this.map.getSource("tenants-source")) return;
 
-    var newMarkers = {};
-    var features = this.map.queryRenderedFeatures({ layers: ["unclustered-point"] });
     var tenantMap = {};
     (this.filteredTenants || []).forEach(function (t) { tenantMap[t.tenantId] = t; });
 
-    for (var i = 0; i < features.length; i++) {
-      var coords = features[i].geometry.coordinates;
-      var props = features[i].properties;
-      var id = props.tenantId;
-      if (!id || newMarkers[id]) continue;
+    // 1. Process Luxury Cluster Badges
+    var clusterFeatures = this.map.queryRenderedFeatures({ layers: ["clusters-target"] });
+    var newClusterMarkers = {};
 
-      var t = tenantMap[id];
+    for (var i = 0; i < clusterFeatures.length; i++) {
+      var cFeat = clusterFeatures[i];
+      var cCoords = cFeat.geometry.coordinates;
+      var cProps = cFeat.properties;
+      var clusterId = String(cProps.cluster_id);
+      var pointCount = cProps.point_count;
+
+      if (newClusterMarkers[clusterId]) continue;
+
+      var cMarker = self.clusterMarkers[clusterId];
+      if (!cMarker) {
+        var clusterEl = document.createElement("div");
+        clusterEl.className = "custom-cluster-badge";
+        clusterEl.innerHTML = [
+          '<div class="cluster-halo"></div>',
+          '<div class="cluster-core">',
+          '  <span class="cluster-count">' + pointCount + '</span>',
+          '</div>'
+        ].join("");
+
+        (function (cId, coords) {
+          clusterEl.addEventListener("click", function (e) {
+            e.stopPropagation();
+            self.map.getSource("tenants-source").getClusterExpansionZoom(Number(cId), function (err, zoom) {
+              if (err) return;
+              self.map.flyTo({
+                center: coords,
+                zoom: Math.min(zoom + 0.6, 15),
+                pitch: 35,
+                duration: 800
+              });
+            });
+          });
+        })(clusterId, cCoords);
+
+        cMarker = new maplibregl.Marker({ element: clusterEl, anchor: "center" })
+          .setLngLat([cCoords[0], cCoords[1]])
+          .addTo(self.map);
+      }
+
+      newClusterMarkers[clusterId] = cMarker;
+    }
+
+    // Remove old clusters no longer rendered
+    for (var cId in self.clusterMarkers) {
+      if (!newClusterMarkers[cId]) {
+        self.clusterMarkers[cId].remove();
+      }
+    }
+    self.clusterMarkers = newClusterMarkers;
+
+    // 2. Process Individual Unclustered Pins
+    var unclusteredFeatures = this.map.queryRenderedFeatures({ layers: ["unclustered-target"] });
+    var newStoreMarkers = {};
+
+    for (var j = 0; j < unclusteredFeatures.length; j++) {
+      var uFeat = unclusteredFeatures[j];
+      var uCoords = uFeat.geometry.coordinates;
+      var uProps = uFeat.properties;
+      var storeId = uProps.tenantId;
+
+      if (!storeId || newStoreMarkers[storeId]) continue;
+      var t = tenantMap[storeId];
       if (!t) continue;
 
-      var marker = self.markers[id];
+      var marker = self.markers[storeId];
       if (!marker) {
         var isOpen = t.isOpen;
         var statusClass = isOpen ? "open" : (t.storeStatus === "busy" ? "busy" : "closed");
@@ -1029,21 +1017,21 @@ var MarketplaceApp = {
         })(t.tenantId);
 
         marker = new maplibregl.Marker({ element: pinWrapper, anchor: "bottom" })
-          .setLngLat([coords[0], coords[1]])
+          .setLngLat([uCoords[0], uCoords[1]])
           .setPopup(popup)
           .addTo(self.map);
       }
 
-      newMarkers[id] = marker;
+      newStoreMarkers[storeId] = marker;
     }
 
-    // Remove markers that are no longer unclustered or offscreen
-    for (var id in self.markers) {
-      if (!newMarkers[id]) {
-        self.markers[id].remove();
+    // Remove old unclustered markers no longer visible or now grouped into clusters
+    for (var sId in self.markers) {
+      if (!newStoreMarkers[sId]) {
+        self.markers[sId].remove();
       }
     }
-    self.markers = newMarkers;
+    self.markers = newStoreMarkers;
   },
 
   updateUserMapMarker: function (lat, lon) {
@@ -1127,7 +1115,7 @@ var MarketplaceApp = {
     }
 
     setTimeout(function () {
-      self.updateUnclusteredHtmlMarkers();
+      self.updateHtmlMarkers();
       self.highlightStore(tenantId);
       var marker = self.markers[tenantId];
       if (marker && marker.getPopup()) {
