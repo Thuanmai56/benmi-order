@@ -218,7 +218,7 @@ function highlightMissingPickupTime() {
             try { timeEl.focus(); } catch (e) { }
         }, 400);
     }
-    customAlert('⚠️ 請選擇預計取餐時間 🕒');
+    customAlert('請選擇預計取餐時間');
 }
 
 // 5. Xác định ca mở cửa tiếp theo khi quán đang đóng cửa
@@ -957,7 +957,10 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
             if (validation.outOfStockItems && validation.outOfStockItems.length > 0) {
                 const itemListHtml = validation.outOfStockItems.map(name => `• 【${name}】`).join('<br>');
                 return customAlert(
-                    `<div style="font-size: 16px; font-weight: 900; color: #dc2626; margin-bottom: 8px;">⚠️ 部分餐點已售完</div>` +
+                    `<div style="font-size: 16px; font-weight: 900; color: #dc2626; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 6px;">` +
+                    `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M16 16s-1.5-2-4-2-4 2-4 2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>` +
+                    `<span>部分餐點已售完</span>` +
+                    `</div>` +
                     `<div style="font-size: 14px; color: #374151; line-height: 1.6; text-align: left; margin: 12px 0;">` +
                     `抱歉，您選購的以下餐點目前已售完：<br>` +
                     `<div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 10px 12px; margin-top: 8px; color: #b91c1c; font-weight: 700;">` +
@@ -1237,7 +1240,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
             }
         } catch (liffErr) {
             const errorMsg = (err.name === 'AbortError') ? '連線逾時（網路較慢），請重新點擊送出' : (err.message || '連線逾時');
-            customAlert(`⚠️ 訂單送出失敗：<br><br><span style="color:#ef4444; font-weight:700;">${errorMsg}</span><br><br>請檢查網路後再次點擊確認下單。`);
+            customAlert(`訂單送出失敗：<br><br><span style="color:#ef4444; font-weight:700;">${errorMsg}</span><br><br>請檢查網路後再次點擊確認下單。`);
         }
     } finally {
         clearTimeout(timeoutId);
