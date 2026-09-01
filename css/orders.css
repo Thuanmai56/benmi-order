@@ -446,6 +446,22 @@ body {
   background: #fffafa;
 }
 
+.tile.append-new {
+  border-color: rgba(234, 88, 12, 0.6) !important;
+  box-shadow: 0 0 0 2px rgba(234, 88, 12, 0.15) inset, 0 4px 12px rgba(234, 88, 12, 0.12) !important;
+  background: #fffaf5 !important;
+  animation: tile-append-pulse 1.8s infinite ease-in-out;
+}
+
+@keyframes tile-append-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 2px rgba(234, 88, 12, 0.15) inset, 0 4px 12px rgba(234, 88, 12, 0.12);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.35) inset, 0 6px 16px rgba(234, 88, 12, 0.25);
+  }
+}
+
 .tile-info {
   flex: 1;
   min-width: 0;

@@ -96,6 +96,7 @@ let newAlertSnoozeTimerId = null;
 let localOverrides = {};
 const knownOrderKeys = new Set();
 const knownOrderRounds = new Map();
+const unacknowledgedAppends = new Map();
 const processingKeys = new Set();
 let isFirstLoad = true;
 let lastOrdersETag = "";
@@ -380,6 +381,13 @@ async function fetchOrders() {
           const prevRound = knownOrderRounds.get(o.key);
           if (currentRound > prevRound) {
             hasNewlyAppendedRound = true;
+            unacknowledgedAppends.set(o.key, {
+              key: o.key,
+              round: currentRound,
+              tableNumber: o.table_number || o.tableNumber || "",
+              customer: o.customer_name || o.customer || "",
+              time: Date.now()
+            });
           }
         }
         knownOrderRounds.set(o.key, currentRound);
@@ -388,10 +396,8 @@ async function fetchOrders() {
 
     // NEW orders or newly appended rounds => alert sound
     pendingNewOrders = latestOrders.filter(o => o && o.status === "NEW").slice().sort(sortByPickupTimeAsc);
-    if (!isFirstLoad && (newArrivals.length > 0 && pendingNewOrders.length > 0)) {
+    if (!isFirstLoad && ((newArrivals.length > 0 && pendingNewOrders.length > 0) || hasNewlyAppendedRound || unacknowledgedAppends.size > 0)) {
       if (typeof startContinuousAlarm === "function") startContinuousAlarm();
-    } else if (!isFirstLoad && hasNewlyAppendedRound) {
-      if (typeof playNewOrderSound === "function") playNewOrderSound();
     }
 
     // Auto-print newly arrived orders (with built-in deduplication)

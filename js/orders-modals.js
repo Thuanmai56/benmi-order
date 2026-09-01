@@ -7,8 +7,14 @@ function openReview(orderKey) {
   if (!order) return;
   reviewingOrder = order;
 
+  if (typeof unacknowledgedAppends !== "undefined") {
+    unacknowledgedAppends.delete(orderKey);
+  }
+
   if (order.status === "NEW") {
     dismissNewAlert();
+  } else if (typeof updateNewAlert === "function") {
+    updateNewAlert();
   }
 
   const isDineIn = typeof isOrderDineIn === "function" ? isOrderDineIn(order) : order.diningOption === "dine_in";
