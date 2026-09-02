@@ -5,6 +5,17 @@ import { TenantContext, tenantHasFeature } from '../types/tenant';
 import { invalidateBootstrapCache, parseOperatingHours } from './bootstrap';
 import { invalidateMarketplaceCache } from './marketplace';
 
+interface TenantConfigRow {
+  operating_hours: string | null;
+  allow_scheduled_pickup: number | null;
+  allow_dine_in: number | null;
+  store_status: string | null;
+  liff_id: string | null;
+  store_address: string | null;
+  announcement: string | null;
+  features: string | string[] | null;
+}
+
 export async function getConfig(
   request: Request,
   env: Env,
@@ -17,6 +28,7 @@ export async function getConfig(
   let allowDineIn = true;
   let storeStatus = 'open';
   let liffId: string | null = null;
+  let storeAddress: string | null = null;
   let announcement: string | null = null;
   let features: string[] = [];
 
@@ -24,8 +36,8 @@ export async function getConfig(
   if (env.DB) {
     try {
       const row = await env.DB.prepare(
-        "SELECT operating_hours, allow_scheduled_pickup, allow_dine_in, store_status, liff_id, announcement, features FROM tenant_config WHERE tenant_id = ?"
-      ).bind(tenantId).first<any>();
+        "SELECT operating_hours, allow_scheduled_pickup, allow_dine_in, store_status, liff_id, store_address, announcement, features FROM tenant_config WHERE tenant_id = ?"
+      ).bind(tenantId).first<TenantConfigRow>();
 
       if (row) {
         operatingHours = parseOperatingHours(row.operating_hours, tenantId);
@@ -41,9 +53,8 @@ export async function getConfig(
         if (row.liff_id) {
           liffId = row.liff_id;
         }
-        if (row.announcement !== undefined) {
-          announcement = row.announcement;
-        }
+        storeAddress = row.store_address;
+        announcement = row.announcement;
         try {
           if (row.features) {
             features = typeof row.features === 'string' ? JSON.parse(row.features) : row.features;
@@ -70,7 +81,8 @@ export async function getConfig(
     allowDineIn: allowDineIn,
     features: finalFeatures,
     storeStatus: storeStatus || tenantCtx?.storeStatus || 'open',
-    announcement: announcement !== null ? announcement : (tenantCtx?.announcement || null)
+    storeAddress: storeAddress !== null ? storeAddress : (tenantCtx?.storeAddress ?? null),
+    announcement: announcement !== null ? announcement : (tenantCtx?.announcement ?? null)
   });
 }
 

@@ -407,9 +407,9 @@
                   onclick="saveStoreAddressSetting()" id="btn-save-address-setting">儲存地址</button>
               </div>
               <div style="padding: 20px;">
-                <input type="text" id="setting-store-address-input" class="input"
-                  style="width: 100%; box-sizing: border-box; padding: 12px 14px; font-size: 15px; font-weight: 600; border: 1.5px solid var(--border); border-radius: 10px; outline: none; transition: border-color 0.15s ease;"
-                  placeholder="請輸入門市地址（例如：新北市土城區中央路二段135號）" />
+                <textarea id="setting-store-address-input" class="input" rows="3"
+                  style="width: 100%; box-sizing: border-box; padding: 12px 14px; font-size: 15px; font-weight: 600; line-height: 1.5; border: 1.5px solid var(--border); border-radius: 10px; outline: none; transition: border-color 0.15s ease; min-height: 96px; resize: vertical; font-family: inherit;"
+                  placeholder="請輸入門市地址，可分行輸入"></textarea>
               </div>
             </div>
 
@@ -1051,15 +1051,15 @@
   </div>
 
   <!-- Benmi POS Modular Architecture Scripts -->
-  <script src="js/orders-i18n.js?v=20260902_append_status_sound"></script>
-  <script src="js/orders-core.js?v=20260902_append_status_sound"></script>
-  <script src="js/orders-audio.js?v=20260902_append_status_sound"></script>
-  <script src="js/orders-live.js?v=20260902_append_status_sound"></script>
-  <script src="js/orders-modals.js?v=20260902_append_status_sound"></script>
-  <script src="js/orders-history.js?v=20260902_append_status_sound"></script>
-  <script src="js/orders-reports.js?v=20260902_append_status_sound"></script>
-  <script src="js/orders-settings.js?v=20260902_append_status_sound"></script>
-  <script src="js/orders-menu.js?v=20260902_append_status_sound"></script>
+  <script src="js/orders-i18n.js?v=20260902_settings_address_multiline"></script>
+  <script src="js/orders-core.js?v=20260902_fix_pos_svg_dup"></script>
+  <script src="js/orders-audio.js?v=20260902_fix_pos_svg_dup"></script>
+  <script src="js/orders-live.js?v=20260902_fix_pos_svg_dup"></script>
+  <script src="js/orders-modals.js?v=20260902_fix_pos_svg_dup"></script>
+  <script src="js/orders-history.js?v=20260902_fix_pos_svg_dup"></script>
+  <script src="js/orders-reports.js?v=20260902_fix_pos_svg_dup"></script>
+  <script src="js/orders-settings.js?v=20260902_fix_pos_svg_dup"></script>
+  <script src="js/orders-menu.js?v=20260902_fix_pos_svg_dup"></script>
 
   <!-- POS Bootstrap & Initialization -->
   <script>
