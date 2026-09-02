@@ -420,6 +420,15 @@ async function fetchOrders() {
           const prevRound = knownOrderRounds.get(o.key);
           if (currentRound > prevRound) {
             hasNewlyAppendedRound = true;
+            if (typeof localOverrides !== "undefined" && localOverrides[o.key]) {
+              delete localOverrides[o.key];
+            }
+            if (typeof snoozedNewOrderKeys !== "undefined") {
+              snoozedNewOrderKeys.delete(o.key);
+            }
+            if (typeof newAlertSnoozeUntilMs !== "undefined") {
+              newAlertSnoozeUntilMs = 0;
+            }
             unacknowledgedAppends.set(o.key, {
               key: o.key,
               round: currentRound,

@@ -62,9 +62,23 @@ function playAlarmCycle() {
 
 function startContinuousAlarm() {
   if (!soundUnlocked) return;
+  try {
+    const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+    if (AudioContextCtor) {
+      if (!audioCtx) audioCtx = new AudioContextCtor();
+      if (audioCtx.state === "suspended") {
+        audioCtx.resume().catch(() => {});
+      }
+    }
+  } catch (e) {
+    console.error("Failed to resume audioCtx:", e);
+  }
   if (alarmIntervalId) return;
   playAlarmCycle();
   alarmIntervalId = setInterval(() => {
+    if (audioCtx && audioCtx.state === "suspended") {
+      audioCtx.resume().catch(() => {});
+    }
     playAlarmCycle();
   }, 2200);
 }
