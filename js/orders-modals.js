@@ -50,6 +50,8 @@ function openReview(orderKey) {
   const elDining = document.getElementById("review-dining");
   if (elDining) {
     const tableNum = typeof getOrderTableNumber === "function" ? getOrderTableNumber(order) : (order.tableNumber || "");
+    const lang = window.currentLang || (typeof currentLang !== "undefined" ? currentLang : "zh-TW");
+    const tableSuffix = tableNum ? (lang === 'vi' ? ` · Bàn ${tableNum}` : ` · 桌號 ${tableNum}`) : "";
     const svgDineIn = (typeof POS_SVG !== "undefined" && POS_SVG.dineIn) || "";
     const svgTakeaway = (typeof POS_SVG !== "undefined" && POS_SVG.takeaway) || "";
     elDining.innerHTML = isDineIn
@@ -77,7 +79,6 @@ function openReview(orderKey) {
     if (actionsDone) actionsDone.style.display = "grid";
     const btnPik = document.getElementById("btn-review-picked");
     const btnPaid = document.getElementById("btn-review-paid");
-    const isDineIn = typeof isOrderDineIn === "function" ? isOrderDineIn(order) : order.diningOption === "dine_in";
     if (isDineIn) {
       if (btnPik) btnPik.style.display = "none";
       if (btnPaid) btnPaid.style.display = "inline-flex";
