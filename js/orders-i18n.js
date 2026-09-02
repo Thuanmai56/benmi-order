@@ -240,6 +240,11 @@ const I18N = {
     printerTsplModeLabel: "標籤列印模式",
     printerOptTsplModeSummary: "📦 訂單總表貼紙 (1張/每張訂單)",
     printerOptTsplModeItems: "🥤 單品/杯貼標籤 (1張/每份餐點)",
+    printerTsplDpiLabel: "解析度 (DPI)",
+    printerOptTsplDpi203: "203 DPI (8 dots/mm - 標準)",
+    printerOptTsplDpi300: "300 DPI (11.8 dots/mm - 高解析度)",
+    printerTsplXOffsetLabel: "水平邊距 X (mm)",
+    printerTsplYOffsetLabel: "垂直邊距 Y (mm)",
     btnTestPrint: "🖨️ 測試列印 (Test Print)",
     btnSavePrinterSettings: "💾 儲存印表機設定",
     // Menu Editor
@@ -737,6 +742,11 @@ const I18N = {
     printerTsplModeLabel: "Chế độ in tem nhãn",
     printerOptTsplModeSummary: "📦 Tem tổng đơn hàng (1 tem/mỗi đơn)",
     printerOptTsplModeItems: "🥤 Tem dán từng ly/từng món (1 tem/mỗi món)",
+    printerTsplDpiLabel: "Độ phân giải (DPI)",
+    printerOptTsplDpi203: "203 DPI (8 dots/mm - Tiêu chuẩn)",
+    printerOptTsplDpi300: "300 DPI (11.8 dots/mm - Siêu nét)",
+    printerTsplXOffsetLabel: "Lề ngang X (mm)",
+    printerTsplYOffsetLabel: "Lề dọc Y (mm)",
     btnTestPrint: "🖨️ In Thử Nghiệm",
     btnSavePrinterSettings: "💾 Lưu Cấu Hình Máy In",
     // Multi-Round Append Orders
@@ -1370,5 +1380,20 @@ function applyLanguageToDOM() {
 
   const optTsplModIts = document.querySelectorAll(".i18n-opt-tspl-mode-items");
   optTsplModIts.forEach(el => el.innerText = dict.printerOptTsplModeItems);
+
+  const labelsTsplDpi = document.querySelectorAll(".i18n-printer-tspl-dpi-lbl");
+  labelsTsplDpi.forEach(el => el.innerText = dict.printerTsplDpiLabel);
+
+  const optTsplDpi203s = document.querySelectorAll(".i18n-opt-tspl-dpi-203");
+  optTsplDpi203s.forEach(el => el.innerText = dict.printerOptTsplDpi203);
+
+  const optTsplDpi300s = document.querySelectorAll(".i18n-opt-tspl-dpi-300");
+  optTsplDpi300s.forEach(el => el.innerText = dict.printerOptTsplDpi300);
+
+  const labelsTsplXOff = document.querySelectorAll(".i18n-printer-tspl-x-offset-lbl");
+  labelsTsplXOff.forEach(el => el.innerText = dict.printerTsplXOffsetLabel);
+
+  const labelsTsplYOff = document.querySelectorAll(".i18n-printer-tspl-y-offset-lbl");
+  labelsTsplYOff.forEach(el => el.innerText = dict.printerTsplYOffsetLabel);
 }
 

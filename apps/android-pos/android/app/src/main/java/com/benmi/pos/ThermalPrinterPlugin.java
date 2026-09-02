@@ -110,6 +110,9 @@ public class ThermalPrinterPlugin extends Plugin {
         Boolean autoCut = call.getBoolean("autoCut", true);
         Integer labelWidthMm = call.getInt("labelWidthMm", 100);
         Integer labelHeightMm = call.getInt("labelHeightMm", 150);
+        Integer dpi = call.getInt("dpi", 203);
+        Double xOffsetMm = call.getDouble("xOffsetMm", 0.0);
+        Double yOffsetMm = call.getDouble("yOffsetMm", 0.0);
         Integer timeoutMs = call.getInt("timeoutMs", 5000);
 
         if (ip == null || ip.trim().isEmpty() || base64Image == null || base64Image.trim().isEmpty()) {
@@ -133,7 +136,14 @@ public class ThermalPrinterPlugin extends Plugin {
 
                 byte[] printBytes;
                 if ("tspl".equalsIgnoreCase(protocol)) {
-                    printBytes = TsplBitmapConverter.convertBitmapToTsplRaster(decodedBitmap, labelWidthMm, labelHeightMm);
+                    printBytes = TsplBitmapConverter.convertBitmapToTsplRaster(
+                        decodedBitmap, 
+                        labelWidthMm, 
+                        labelHeightMm, 
+                        dpi != null ? dpi : 203, 
+                        xOffsetMm != null ? xOffsetMm : 0.0, 
+                        yOffsetMm != null ? yOffsetMm : 0.0
+                    );
                 } else {
                     printBytes = EscPosBitmapConverter.convertBitmapToEscPosRaster(decodedBitmap, paperWidth, autoCut);
                 }
@@ -386,6 +396,9 @@ public class ThermalPrinterPlugin extends Plugin {
         Boolean autoCut = call.getBoolean("autoCut", true);
         Integer labelWidthMm = call.getInt("labelWidthMm", 100);
         Integer labelHeightMm = call.getInt("labelHeightMm", 150);
+        Integer dpi = call.getInt("dpi", 203);
+        Double xOffsetMm = call.getDouble("xOffsetMm", 0.0);
+        Double yOffsetMm = call.getDouble("yOffsetMm", 0.0);
 
         if (macAddress == null || macAddress.trim().isEmpty()) {
             call.reject("Bluetooth device MAC address is required.");
@@ -433,7 +446,14 @@ public class ThermalPrinterPlugin extends Plugin {
                         return;
                     }
                     if ("tspl".equalsIgnoreCase(protocol)) {
-                        printBytes = TsplBitmapConverter.convertBitmapToTsplRaster(bitmap, labelWidthMm, labelHeightMm);
+                        printBytes = TsplBitmapConverter.convertBitmapToTsplRaster(
+                            bitmap, 
+                            labelWidthMm, 
+                            labelHeightMm, 
+                            dpi != null ? dpi : 203, 
+                            xOffsetMm != null ? xOffsetMm : 0.0, 
+                            yOffsetMm != null ? yOffsetMm : 0.0
+                        );
                     } else {
                         printBytes = EscPosBitmapConverter.convertBitmapToEscPosRaster(bitmap, paperWidth, autoCut);
                     }

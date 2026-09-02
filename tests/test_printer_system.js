@@ -169,10 +169,15 @@ console.log("✅ Test 7 Passed: TSPL Dual-Station Settings persistence verified.
 const dims100x150 = service.resolveLabelDimensions({ tspl_label_size: "100x150" });
 assert.strictEqual(dims100x150.widthMm, 100, "100x150 width should be 100mm");
 assert.strictEqual(dims100x150.heightMm, 150, "100x150 height should be 150mm");
+assert.strictEqual(dims100x150.dpi, 203, "Default DPI should be 203");
+assert.strictEqual(dims100x150.xOffsetMm, 0, "Default X offset should be 0");
 
-const dims40x30 = service.resolveLabelDimensions({ tspl_label_size: "40x30" });
+const dims40x30 = service.resolveLabelDimensions({ tspl_label_size: "40x30", tspl_dpi: 300, tspl_x_offset_mm: 5.5, tspl_y_offset_mm: 2 });
 assert.strictEqual(dims40x30.widthMm, 40, "40x30 width should be 40mm");
 assert.strictEqual(dims40x30.heightMm, 30, "40x30 height should be 30mm");
+assert.strictEqual(dims40x30.dpi, 300, "DPI should be 300");
+assert.strictEqual(dims40x30.xOffsetMm, 5.5, "X offset should be 5.5mm");
+assert.strictEqual(dims40x30.yOffsetMm, 2, "Y offset should be 2mm");
 
 const dimsCustom = service.resolveLabelDimensions({ tspl_label_size: "custom", tspl_custom_width_mm: 80, tspl_custom_height_mm: 120 });
 assert.strictEqual(dimsCustom.widthMm, 80, "Custom width should be 80mm");
@@ -183,17 +188,20 @@ assert.strictEqual(parsedItems.length, 2, "mockOrder should parse into 2 individ
 assert.strictEqual(parsedItems[0].name, "招牌越式烤肉麵包", "First item name should match");
 assert.strictEqual(parsedItems[0].options, "大辣、不加洋蔥", "First item options should match");
 assert.strictEqual(parsedItems[1].name, "越式滴漏冰咖啡", "Second item name should match");
-console.log("✅ Test 8 Passed: TSPL Dimension Resolver (including 40x30mm) & Item Parser verified.");
+console.log("✅ Test 8 Passed: TSPL Dimension & DPI/Offset Resolver & Item Parser verified.");
 
 // 9. Test TSPL Order Summary Label Canvas Painter
-const tsplSummaryPng = service.drawOrderLabelToCanvas(mockOrder, false, 100, 150);
+const tsplSummaryPng = service.drawOrderLabelToCanvas(mockOrder, false, 100, 150, 203);
 assert(tsplSummaryPng.startsWith("data:image/png;base64,"), "TSPL order summary label should generate valid Base64 PNG");
 console.log("✅ Test 9 Passed: TSPL Order Summary Label Canvas Painter verified.");
 
-// 10. Test TSPL Item / Cup Sticker Canvas Painter (40x30mm compact sticker)
-const tsplStickerPng = service.drawItemStickerToCanvas(parsedItems[0], mockOrder, 0, parsedItems.length, 40, 30);
-assert(tsplStickerPng.startsWith("data:image/png;base64,"), "TSPL item sticker should generate valid Base64 PNG");
-console.log("✅ Test 10 Passed: TSPL Individual Cup/Dish 40x30mm Sticker Canvas Painter verified.");
+// 10. Test TSPL Item / Cup Sticker Canvas Painter (40x30mm compact sticker at 203 and 300 DPI)
+const tsplStickerPng203 = service.drawItemStickerToCanvas(parsedItems[0], mockOrder, 0, parsedItems.length, 40, 30, 203);
+assert(tsplStickerPng203.startsWith("data:image/png;base64,"), "TSPL item sticker (203 DPI) should generate valid Base64 PNG");
+
+const tsplStickerPng300 = service.drawItemStickerToCanvas(parsedItems[0], mockOrder, 0, parsedItems.length, 40, 30, 300);
+assert(tsplStickerPng300.startsWith("data:image/png;base64,"), "TSPL item sticker (300 DPI) should generate valid Base64 PNG");
+console.log("✅ Test 10 Passed: TSPL Individual Cup/Dish 40x30mm Sticker Canvas Painter (203 & 300 DPI) verified.");
 
 // 11. Test Bluetooth Paired Devices Query & Fallback
 service.getPairedBluetoothDevices().then((res) => {

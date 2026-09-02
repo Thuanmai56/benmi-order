@@ -17,6 +17,9 @@
       tspl_custom_width_mm: 100,
       tspl_custom_height_mm: 150,
       tspl_mode: 'summary',       // 'summary' | 'item_stickers'
+      tspl_dpi: 203,              // 203 | 300
+      tspl_x_offset_mm: 0,        // Horizontal offset mm
+      tspl_y_offset_mm: 0,        // Vertical offset mm
       ip: '192.168.1.100',
       port: 9100,
       mac_address: '',
@@ -32,6 +35,9 @@
       tspl_custom_width_mm: 40,
       tspl_custom_height_mm: 30,
       tspl_mode: 'item_stickers', // 'summary' | 'item_stickers'
+      tspl_dpi: 203,              // 203 | 300
+      tspl_x_offset_mm: 0,        // Horizontal offset mm
+      tspl_y_offset_mm: 0,        // Vertical offset mm
       ip: '192.168.1.101',
       port: 9100,
       mac_address: '',
@@ -258,17 +264,23 @@
 
     resolveLabelDimensions(config) {
       const preset = config.tspl_label_size || '100x150';
-      if (preset === '100x150') return { widthMm: 100, heightMm: 150 };
-      if (preset === '76x130') return { widthMm: 76, heightMm: 130 };
-      if (preset === '50x30') return { widthMm: 50, heightMm: 30 };
-      if (preset === '40x30') return { widthMm: 40, heightMm: 30 };
-      if (preset === 'custom') {
-        return {
-          widthMm: parseInt(config.tspl_custom_width_mm, 10) || 100,
-          heightMm: parseInt(config.tspl_custom_height_mm, 10) || 150
-        };
+      const dpi = parseInt(config.tspl_dpi, 10) === 300 ? 300 : 203;
+      const xOffsetMm = Number(config.tspl_x_offset_mm) || 0;
+      const yOffsetMm = Number(config.tspl_y_offset_mm) || 0;
+
+      let widthMm = 100;
+      let heightMm = 150;
+
+      if (preset === '100x150') { widthMm = 100; heightMm = 150; }
+      else if (preset === '76x130') { widthMm = 76; heightMm = 130; }
+      else if (preset === '50x30') { widthMm = 50; heightMm = 30; }
+      else if (preset === '40x30') { widthMm = 40; heightMm = 30; }
+      else if (preset === 'custom') {
+        widthMm = parseInt(config.tspl_custom_width_mm, 10) || 100;
+        heightMm = parseInt(config.tspl_custom_height_mm, 10) || 150;
       }
-      return { widthMm: 100, heightMm: 150 };
+
+      return { widthMm, heightMm, dpi, xOffsetMm, yOffsetMm };
     }
 
     parseOrderItems(order) {
@@ -316,12 +328,12 @@
         if (config.tspl_mode === 'item_stickers') {
           const items = this.parseOrderItems(order);
           const tasks = items.map((it, idx) => {
-            const png = this.drawItemStickerToCanvas(it, order, idx + 1, items.length, dim.widthMm, dim.heightMm);
+            const png = this.drawItemStickerToCanvas(it, order, idx + 1, items.length, dim.widthMm, dim.heightMm, dim.dpi);
             return this.transmitReceiptBitmap(png, config, `Sticker #${order.key} (${idx + 1}/${items.length})`);
           });
           return Promise.all(tasks);
         } else {
-          const base64Png = this.drawOrderLabelToCanvas(order, false, dim.widthMm, dim.heightMm);
+          const base64Png = this.drawOrderLabelToCanvas(order, false, dim.widthMm, dim.heightMm, dim.dpi);
           return this.transmitReceiptBitmap(base64Png, config, `TSPL Label #${order.key}`);
         }
       }
@@ -335,12 +347,12 @@
         if (config.tspl_mode === 'item_stickers') {
           const items = this.parseOrderItems(order);
           const tasks = items.map((it, idx) => {
-            const png = this.drawItemStickerToCanvas(it, order, idx + 1, items.length, dim.widthMm, dim.heightMm);
+            const png = this.drawItemStickerToCanvas(it, order, idx + 1, items.length, dim.widthMm, dim.heightMm, dim.dpi);
             return this.transmitReceiptBitmap(png, config, `Kitchen Sticker #${order.key} (${idx + 1}/${items.length})`);
           });
           return Promise.all(tasks);
         } else {
-          const base64Png = this.drawOrderLabelToCanvas(order, true, dim.widthMm, dim.heightMm);
+          const base64Png = this.drawOrderLabelToCanvas(order, true, dim.widthMm, dim.heightMm, dim.dpi);
           return this.transmitReceiptBitmap(base64Png, config, `Kitchen TSPL Label #${order.key}`);
         }
       }
@@ -368,10 +380,10 @@
         const dim = this.resolveLabelDimensions(config);
         if (config.tspl_mode === 'item_stickers') {
           const mockItem = { name: '測試招牌特餐', quantity: 2, options: '大辣、不加蔥', note: '少冰' };
-          const base64Png = this.drawItemStickerToCanvas(mockItem, mockOrder, 1, 2, dim.widthMm, dim.heightMm);
+          const base64Png = this.drawItemStickerToCanvas(mockItem, mockOrder, 1, 2, dim.widthMm, dim.heightMm, dim.dpi);
           return this.transmitReceiptBitmap(base64Png, config, `Test-${stationType}-TSPL-Sticker`);
         } else {
-          const base64Png = this.drawOrderLabelToCanvas(mockOrder, isKitchen, dim.widthMm, dim.heightMm);
+          const base64Png = this.drawOrderLabelToCanvas(mockOrder, isKitchen, dim.widthMm, dim.heightMm, dim.dpi);
           return this.transmitReceiptBitmap(base64Png, config, `Test-${stationType}-TSPL-Label`);
         }
       }
@@ -537,10 +549,12 @@
     }
 
     // --- 7. TSPL CANVAS PAINTERS (Order Summary Label & Individual Cup/Item Stickers) ---
-    drawOrderLabelToCanvas(order, isKitchen, widthMm = 100, heightMm = 150) {
-      const widthPx = Math.max(100, widthMm * 8);
-      const heightPx = Math.max(100, heightMm * 8);
-      const padding = 20;
+    drawOrderLabelToCanvas(order, isKitchen, widthMm = 100, heightMm = 150, dpi = 203) {
+      const dotsPerMm = dpi === 300 ? 11.81 : 8.0;
+      const scaleRatio = dpi === 300 ? 1.476 : 1.0;
+      const widthPx = Math.round(Math.max(100, widthMm * dotsPerMm));
+      const heightPx = Math.round(Math.max(100, heightMm * dotsPerMm));
+      const padding = Math.round(20 * scaleRatio);
       const contentWidth = widthPx - (padding * 2);
 
       const canvas = document.createElement('canvas');
@@ -554,68 +568,64 @@
       ctx.strokeStyle = '#000000';
       ctx.textBaseline = 'top';
 
-      // Outer border for sticker
-      ctx.lineWidth = 3;
-      ctx.strokeRect(padding / 2, padding / 2, widthPx - padding, heightPx - padding);
-
-      let y = padding + 4;
+      let y = padding;
 
       // 1. Header & Brand
       const brandName = (typeof window.currentTenantBrandName !== 'undefined' && window.currentTenantBrandName) || 'Benmi POS';
-      ctx.font = '900 32px sans-serif';
+      ctx.font = `900 ${Math.round(30 * scaleRatio)}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.fillText(brandName, widthPx / 2, y);
-      y += 40;
+      y += Math.round(38 * scaleRatio);
 
       // Order Title Box
-      ctx.fillRect(padding, y, contentWidth, 48);
+      ctx.fillRect(padding, y, contentWidth, Math.round(44 * scaleRatio));
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 28px sans-serif';
+      ctx.font = `bold ${Math.round(24 * scaleRatio)}px sans-serif`;
       const diningLabel = order.diningOption === 'dine_in' ? `【內用 桌號：${order.tableNumber || '-'}】` : '【外帶自取訂單】';
-      ctx.fillText(diningLabel, widthPx / 2, y + 8);
+      ctx.fillText(diningLabel, widthPx / 2, y + Math.round(8 * scaleRatio));
       ctx.fillStyle = '#000000';
-      y += 58;
+      y += Math.round(54 * scaleRatio);
 
       // Order Key & Time
       ctx.textAlign = 'left';
-      ctx.font = '900 32px sans-serif';
+      ctx.font = `900 ${Math.round(28 * scaleRatio)}px sans-serif`;
       ctx.fillText(`單號：#${order.key}`, padding, y);
       ctx.textAlign = 'right';
-      ctx.font = 'bold 20px sans-serif';
-      ctx.fillText(`${order.time || ''}`, widthPx - padding, y + 8);
-      y += 40;
+      ctx.font = `bold ${Math.round(18 * scaleRatio)}px sans-serif`;
+      ctx.fillText(`${order.time || ''}`, widthPx - padding, y + Math.round(6 * scaleRatio));
+      y += Math.round(36 * scaleRatio);
 
       this.drawDashedLine(ctx, padding, widthPx - padding, y);
-      y += 12;
+      y += Math.round(12 * scaleRatio);
 
       // Items
       const items = this.parseOrderItems(order);
       ctx.textAlign = 'left';
       items.slice(0, 10).forEach(it => {
-        if (y > heightPx - 160) return;
-        ctx.font = 'bold 22px sans-serif';
+        if (y > heightPx - Math.round(140 * scaleRatio)) return;
+        ctx.font = `bold ${Math.round(20 * scaleRatio)}px sans-serif`;
         ctx.fillText(`${it.quantity}份 x ${it.name}`, padding, y);
-        y += 26;
+        y += Math.round(24 * scaleRatio);
         if (it.options) {
-          ctx.font = '17px sans-serif';
+          ctx.font = `${Math.round(15 * scaleRatio)}px sans-serif`;
           ctx.fillText(`   ↳ ${it.options}`, padding, y);
-          y += 22;
+          y += Math.round(20 * scaleRatio);
         }
       });
 
       // Notes & Total at bottom
-      y = Math.max(y + 10, heightPx - 140);
+      y = Math.max(y + Math.round(10 * scaleRatio), heightPx - Math.round(120 * scaleRatio));
       this.drawDashedLine(ctx, padding, widthPx - padding, y);
-      y += 12;
+      y += Math.round(12 * scaleRatio);
 
       if (order.note && order.note.trim()) {
-        ctx.font = 'bold 18px sans-serif';
+        ctx.font = `bold ${Math.round(16 * scaleRatio)}px sans-serif`;
         ctx.fillText(`備註：${order.note.slice(0, 30)}`, padding, y);
-        y += 26;
+        y += Math.round(24 * scaleRatio);
       }
 
       if (!isKitchen) {
-        ctx.font = '900 28px sans-serif';
+        ctx.font = `900 ${Math.round(26 * scaleRatio)}px sans-serif`;
         ctx.fillText('總計：', padding, y);
         ctx.textAlign = 'right';
         ctx.fillText(`$${order.total || 0}`, widthPx - padding, y);
@@ -624,11 +634,14 @@
       return canvas.toDataURL('image/png');
     }
 
-    drawItemStickerToCanvas(item, orderContext, itemIdx, totalItems, widthMm = 40, heightMm = 30) {
-      const widthPx = Math.max(50, widthMm * 8);
-      const heightPx = Math.max(30, heightMm * 8);
+    drawItemStickerToCanvas(item, orderContext, itemIdx, totalItems, widthMm = 40, heightMm = 30, dpi = 203) {
+      const dotsPerMm = dpi === 300 ? 11.81 : 8.0;
+      const scaleRatio = dpi === 300 ? 1.476 : 1.0;
+      const widthPx = Math.round(Math.max(50, widthMm * dotsPerMm));
+      const heightPx = Math.round(Math.max(30, heightMm * dotsPerMm));
       const isCompact = widthMm <= 42;
-      const padding = isCompact ? 8 : 12;
+      // Generous safe padding to prevent cutting off text on edge
+      const padding = Math.round((isCompact ? 10 : 14) * scaleRatio);
 
       const canvas = document.createElement('canvas');
       canvas.width = widthPx;
@@ -641,14 +654,10 @@
       ctx.strokeStyle = '#000000';
       ctx.textBaseline = 'top';
 
-      // Subtle outer border
-      ctx.lineWidth = isCompact ? 1.5 : 2;
-      ctx.strokeRect(isCompact ? 2 : 4, isCompact ? 2 : 4, widthPx - (isCompact ? 4 : 8), heightPx - (isCompact ? 4 : 8));
-
       let y = padding;
 
       // 1. Top row: Order Key & Table & Item Index (e.g. #260830-01  桌:12  [1/3])
-      ctx.font = isCompact ? 'bold 15px sans-serif' : 'bold 18px sans-serif';
+      ctx.font = `bold ${Math.round((isCompact ? 14 : 17) * scaleRatio)}px sans-serif`;
       ctx.textAlign = 'left';
       ctx.fillText(`#${orderContext.key}`, padding, y);
 
@@ -658,36 +667,36 @@
 
       ctx.textAlign = 'right';
       ctx.fillText(`[${itemIdx}/${totalItems}]`, widthPx - padding, y);
-      y += isCompact ? 20 : 24;
+      y += Math.round((isCompact ? 18 : 22) * scaleRatio);
 
-      // Divider line
-      ctx.lineWidth = 1;
+      // Clean divider line (minimalist separator, no harsh box border)
+      ctx.lineWidth = Math.max(1, Math.round(1 * scaleRatio));
       ctx.beginPath();
       ctx.moveTo(padding, y);
       ctx.lineTo(widthPx - padding, y);
       ctx.stroke();
-      y += isCompact ? 6 : 8;
+      y += Math.round((isCompact ? 6 : 8) * scaleRatio);
 
       // 2. Dish / Drink Title (Large Bold)
       ctx.textAlign = 'left';
-      ctx.font = isCompact ? '900 22px sans-serif' : '900 26px sans-serif';
+      ctx.font = `900 ${Math.round((isCompact ? 20 : 25) * scaleRatio)}px sans-serif`;
       ctx.fillText(`${item.name}`, padding, y);
       ctx.textAlign = 'right';
       ctx.fillText(`x${item.quantity}`, widthPx - padding, y);
-      y += isCompact ? 28 : 32;
+      y += Math.round((isCompact ? 26 : 30) * scaleRatio);
 
       // 3. Modifiers / Options
       if (item.options || item.note) {
         ctx.textAlign = 'left';
-        ctx.font = isCompact ? 'bold 14px sans-serif' : 'bold 16px sans-serif';
+        ctx.font = `bold ${Math.round((isCompact ? 13 : 15) * scaleRatio)}px sans-serif`;
         const optText = (item.options ? item.options : '') + (item.note ? ` (${item.note})` : '');
         ctx.fillText(`↳ ${optText.slice(0, isCompact ? 18 : 24)}`, padding, y);
-        y += isCompact ? 18 : 22;
+        y += Math.round((isCompact ? 16 : 20) * scaleRatio);
       }
 
       // 4. Bottom row: Customer & Time
-      y = heightPx - padding - (isCompact ? 14 : 18);
-      ctx.font = isCompact ? '12px sans-serif' : '14px sans-serif';
+      y = heightPx - padding - Math.round((isCompact ? 14 : 18) * scaleRatio);
+      ctx.font = `${Math.round((isCompact ? 11 : 13) * scaleRatio)}px sans-serif`;
       ctx.textAlign = 'left';
       ctx.fillText(`顧客:${orderContext.customer || '顧客'}`, padding, y);
       ctx.textAlign = 'right';
@@ -722,6 +731,9 @@
             autoCut: autoCut,
             labelWidthMm: dim.widthMm,
             labelHeightMm: dim.heightMm,
+            dpi: dim.dpi,
+            xOffsetMm: dim.xOffsetMm,
+            yOffsetMm: dim.yOffsetMm,
             timeoutMs: 8000
           });
           console.log(`[PrinterService] ✅ Native Bluetooth print success for [${logTitle}]:`, res);
@@ -751,6 +763,9 @@
             autoCut: autoCut,
             labelWidthMm: dim.widthMm,
             labelHeightMm: dim.heightMm,
+            dpi: dim.dpi,
+            xOffsetMm: dim.xOffsetMm,
+            yOffsetMm: dim.yOffsetMm,
             timeoutMs: 5000
           });
           console.log(`[PrinterService] ✅ Native print success for [${logTitle}]:`, res);

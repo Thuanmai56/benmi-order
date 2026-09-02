@@ -1,0 +1,153 @@
+# Benmi POS - Android Tablet POS App & Dual Thermal Printing Architecture
+
+Ứng dụng POS chuyên dụng dành cho máy tính bảng (Tablet/iPad) và điện thoại Android đặt tại quầy thu ngân và khu vực bếp/pha chế F&B. Ứng dụng được đóng gói bằng **Capacitor 6** từ giao diện web POS (`orders.html`), tích hợp sâu tầng Native Android để in hóa đơn và in tem nhãn decal **chạy ngầm (silent printing)** siêu tốc mà không cần qua hộp thoại in của hệ điều hành.
+
+---
+
+## 1. Tính Năng Nổi Bật
+
+- **Màn hình POS tối ưu Tablet-First**: Thao tác chạm nhanh, nút bấm lớn tối thiểu 48px, lưới đơn hàng trực quan, hỗ trợ đa ngôn ngữ (**Tiếng Việt** & **繁體中文**).
+- **In hóa đơn siêu tốc (ESC/POS)**: Hỗ trợ các dòng máy in bill nhiệt 58mm và 80mm thông dụng (Xprinter, Rongta, Epson, Star Micronics, Sunmi...) qua **Mạng LAN/Wi-Fi (TCP Socket Port 9100)** hoặc **Bluetooth Classic (SPP RFCOMM)**. Hỗ trợ tự động cắt giấy (auto-cut).
+- **In tem nhãn decal ly/món (TSPL)**: Hỗ trợ các dòng máy in tem nhãn mã vận đơn/decal (Aimo D520BT, Xprinter XP-365B, XP-420B, Phomemo, Munbyn...) để dán ly trà sữa, hộp thức ăn hoặc dán túi giao hàng.
+- **Bộ căn chỉnh nhãn chuyên sâu (Từ v1.3)**:
+  - Tùy chỉnh lề ngang `X-Offset (mm)` và lề dọc `Y-Offset (mm)` giúp xử lý triệt để hiện tượng lệch lề, cắt chữ trên các dòng máy in ngàm kéo cân 2 bên vào giữa như Aimo D520BT.
+  - Tùy chọn độ phân giải **203 DPI** (8 dots/mm) và **300 DPI** (11.8 dots/mm) giúp con tem căng đầy 100% diện tích, không bị co nhỏ.
+  - Giao diện tem không viền tối giản (Borderless), đường kẻ phân cách thanh lịch theo đúng chuẩn F&B hiện đại.
+- **In tự động ngầm (Auto-Print on New Order)**: Tự động in hóa đơn thu ngân và phiếu order bếp ngay khi có đơn hàng mới từ khách đặt qua LINE LIFF.
+- **Cơ chế chống in trùng (Deduplication)**: Ngăn chặn in lặp lại cùng một mã đơn hàng.
+
+---
+
+## 2. Kiến Trúc In Ấn Kép (Dual Thermal Printing Engine)
+
+```mermaid
+graph TD
+    Order[Đơn Hàng Mới / Thao Tác In] --> Dispatcher[js/printer-service.js Dispatcher]
+    
+    Dispatcher --> StationCheck{Cấu Hình Từng Trạm}
+    StationCheck -->|Quầy Thu Ngân| CashierConfig[Protocol: ESC/POS hoặc TSPL]
+    StationCheck -->|Khu Vực Bếp| KitchenConfig[Protocol: TSPL hoặc ESC/POS]
+    
+    CashierConfig --> CanvasReceipt[HTML5 Canvas 2D: Hóa Đơn Bill<br/>576px / 384px continuous]
+    KitchenConfig --> CanvasSticker[HTML5 Canvas 2D: Tem Decal Ly/Món<br/>40x30mm / 50x30mm / Tùy chỉnh]
+    
+    CanvasReceipt --> Bridge[Capacitor Native Bridge: ThermalPrinterPlugin]
+    CanvasSticker --> Bridge
+    
+    Bridge --> ConverterCheck{Lựa Chọn Trình Biên Dịch}
+    ConverterCheck -->|ESC/POS| EscConverter[EscPosBitmapConverter.java<br/>ESC @, GS v 0, GS V 0]
+    ConverterCheck -->|TSPL| TsplConverter[TsplBitmapConverter.java<br/>SIZE, GAP, DIRECTION 1, BITMAP, PRINT]
+    
+    EscConverter --> Transport{Kênh Truyền Tải}
+    TsplConverter --> Transport
+    
+    Transport -->|Bluetooth SPP| BTSocket[Bluetooth RFCOMM Socket<br/>SPP UUID: ...00805F9B34FB]
+    Transport -->|TCP Socket| TCPSocket[TCP Raw Socket: Port 9100]
+    
+    BTSocket --> PrinterHardware[Máy In Nhiệt Thực Tế]
+    TCPSocket --> PrinterHardware
+```
+
+---
+
+## 3. Cấu Trúc Thư Mục Dự Án
+
+```
+apps/android-pos/
+├── android/                             # Dự án Android Studio gốc
+│   ├── app/
+│   │   ├── build.gradle                 # Cấu hình build APK, versionCode & versionName
+│   │   └── src/main/
+│   │       ├── AndroidManifest.xml      # Khai báo quyền Bluetooth & Network
+│   │       └── java/com/benmi/pos/
+│   │           ├── MainActivity.java    # Khởi tạo WebView & đăng ký Plugin
+│   │           ├── ThermalPrinterPlugin.java # Native Bridge kết nối Bluetooth & TCP
+│   │           ├── EscPosBitmapConverter.java # Biên dịch bitmap sang mã ESC/POS
+│   │           └── TsplBitmapConverter.java   # Biên dịch bitmap sang mã TSPL
+│   └── local.properties                 # Đường dẫn Android SDK (gitignored)
+├── dist/                                # Thư mục web assets được sync từ root repo
+├── build.sh                             # Script tự động copy HTML, CSS, JS sang dist/
+├── capacitor.config.ts                  # Cấu hình Capacitor App (appId: com.benmi.pos)
+├── package.json                         # Scripts & dependencies
+├── benmi-pos-v1.3.apk                   # File cài đặt APK phiên bản mới nhất
+└── README.md                            # Tài liệu hướng dẫn này
+```
+
+---
+
+## 4. Hướng Dẫn Cài Đặt & Phát Triển (Development Setup)
+
+### A. Yêu Cầu Môi Trường (Prerequisites)
+- **Node.js**: Phiên bản 18.x hoặc 20.x trở lên
+- **Java Development Kit (JDK)**: JDK 17 hoặc JDK 21
+- **Android SDK**: Android API 34 / 35, Command-line Tools và Build-Tools
+- **Android Studio** (Tùy chọn, khuyến nghị cho việc debug Native)
+
+### B. Cài Đặt Thư Viện
+Tại thư mục gốc dự án hoặc thư mục `apps/android-pos`:
+```bash
+cd apps/android-pos
+npm install
+```
+
+### C. Đồng Bộ Web Assets Vào Android App
+Mỗi khi chỉnh sửa giao diện hoặc logic tại `orders.html`, `js/`, `css/`:
+```bash
+cd apps/android-pos
+npm run sync
+```
+*Lệnh này sẽ chạy `bash build.sh` để copy toàn bộ web assets vào `dist/` rồi gọi `npx cap sync android`.*
+
+### D. Build File Cài Đặt APK
+1. Tạo file `android/local.properties` chỉ định đường dẫn Android SDK (nếu chưa có):
+   ```properties
+   sdk.dir=/Users/<username>/Library/Android/sdk
+   ```
+2. Build file APK Debug:
+   ```bash
+   cd apps/android-pos/android
+   ./gradlew assembleDebug
+   ```
+3. File APK xuất ra tại:
+   `android/app/build/outputs/apk/debug/app-debug.apk`
+   Copy ra thư mục `apps/android-pos/benmi-pos-v1.3.apk` để lưu trữ và phân phối.
+
+### E. Cài Đặt Lên Thiết Bị Thật Qua Cáp USB (ADB)
+```bash
+adb install -r benmi-pos-v1.3.apk
+```
+
+---
+
+## 5. Hướng Dẫn Cấu Hình Máy In Trong Ứng Dụng
+
+Sau khi mở app trên máy tính bảng POS, vào biểu tượng **⚙️ Cài đặt (Settings) > Máy In**:
+
+### A. Cấu Hình Máy In Hóa Đơn Bill (ESC/POS)
+1. **Giao thức in**: Chọn `🧾 ESC/POS (Hóa đơn cuộn 58-80mm)`.
+2. **Kênh kết nối**:
+   - **Mạng LAN/Wi-Fi**: Nhập địa chỉ IP máy in (ví dụ: `192.168.1.100`) và cổng Port `9100`.
+   - **Bluetooth**: Ghép đôi máy in trong Cài đặt Bluetooth của Android trước, sau đó bấm biểu tượng làm mới và chọn tên máy in từ danh sách thả xuống.
+3. **Khổ giấy**: Chọn `80mm` hoặc `58mm`.
+4. Bấm **🖨️ In Thử Nghiệm (Test Print)** để kiểm tra.
+
+### B. Cấu Hình Máy In Tem Nhãn Decal (TSPL) - Ví dụ máy Aimo D520BT / Xprinter
+1. **Giao thức in**: Chọn `🏷️ TSPL (Máy in tem nhãn/decal)`.
+2. **Kích thước nhãn**: Chọn khổ tem phù hợp (ví dụ: `40 x 30 mm` cho tem ly trà sữa, hoặc `自訂尺寸 (Custom)`).
+3. **Chế độ in**: Chọn `🥤 Tem dán từng ly/từng món (1 tem/mỗi món)` hoặc `📦 Tem tổng đơn hàng`.
+4. **Căn chỉnh nâng cao (Khắc phục lệch lề / cắt chữ)**:
+   - **Lề ngang X (mm)**: Với máy in có ngàm cân giữa như Aimo D520BT, nhập giá trị từ `3` đến `5` mm để dịch nội dung sang phải, giúp chữ không bị cắt lẹm mép trái.
+   - **Độ phân giải (DPI)**: Nếu tem in ra bị co bé chỉ chiếm 1 phần con tem, đổi từ `203 DPI` sang `300 DPI` để nội dung căng đầy toàn bộ mặt tem.
+5. Bấm **🖨️ In Thử Nghiệm** và kiểm tra độ vừa vặn của con tem.
+6. Bấm **💾 Lưu Cấu Hình Máy In**.
+
+---
+
+## 6. Lịch Sử Các Phiên Bản (Changelog)
+
+| Phiên Bản | Ngày Phát Hành | Điểm Nâng Cấp Chính |
+| :--- | :--- | :--- |
+| **v1.3** | 02/09/2026 | - Bổ sung bộ căn chỉnh tem nhãn TSPL chuyên sâu: Lề ngang `X-Offset`, lề dọc `Y-Offset`.<br>- Tùy chọn Độ phân giải `203 DPI` vs `300 DPI`.<br>- Bỏ khung viền chữ nhật bao quanh tem, chuyển sang phong cách Borderless tối giản.<br>- Cập nhật bộ đệm cache frontend chống lưu cache cũ. |
+| **v1.2** | 30/08/2026 | - Tích hợp giao thức in nhãn nhiệt TSPL (`TsplBitmapConverter.java`).<br>- Hỗ trợ in tem ly/món riêng lẻ (`item_stickers`) cho quầy pha chế/bếp.<br>- Hỗ trợ các kích thước tem chuẩn 40x30mm, 50x30mm, 76x130mm, 100x150mm. |
+| **v1.1** | 29/08/2026 | - Bổ sung in nhiệt không dây qua Bluetooth Classic SPP RFCOMM.<br>- Tự động tìm kiếm và hiển thị danh sách thiết bị Bluetooth đã ghép đôi.<br>- Hỗ trợ cấu hình độc lập 2 trạm (Quầy Thu Ngân & Khu Vực Bếp). |
+| **v1.0** | 28/08/2026 | - Phiên bản nền tảng đầu tiên đóng gói POS qua Capacitor.<br>- Hỗ trợ in hóa đơn ESC/POS ngầm qua mạng TCP Socket (Port 9100).<br>- Tự động cắt giấy và chống in trùng đơn hàng. |
