@@ -397,14 +397,14 @@ export async function executeAppendOrderInternal(
     : (row.note || "");
   const newTotal = (Number(row.total_amount) || 0) + appendedTotal;
 
-  // 6. Persist to D1: Luôn chuyển trạng thái về ACCEPTED (kể cả đơn cũ đang là DONE) để POS & Bếp thấy món mới
+  // 6. Persist to D1: Luôn chuyển trạng thái về NEW khi gọi thêm món để POS hiển thị ở cột Mới và phát chuông báo
   if (rawItems.length > 0) {
     const batchStatements: any[] = [
       env.DB.prepare(
         `UPDATE orders SET
            order_content = ?,
            total_amount = ?,
-           status = 'ACCEPTED',
+           status = 'NEW',
            round_count = ?,
            last_appended_at = datetime('now'),
            note = ?,
@@ -448,7 +448,7 @@ export async function executeAppendOrderInternal(
       `UPDATE orders SET
          order_content = ?,
          total_amount = ?,
-         status = 'ACCEPTED',
+         status = 'NEW',
          round_count = ?,
          last_appended_at = datetime('now'),
          note = ?,
@@ -470,7 +470,7 @@ export async function executeAppendOrderInternal(
     customer: row.customer_name || customerName || "顧客",
     time: row.pickup_time || "",
     content: updatedContent,
-    status: "ACCEPTED",
+    status: "NEW",
     createdAt: row.created_at ? new Date(row.created_at + "Z").getTime() : Date.now(),
     userId: row.user_id || userId,
     total: newTotal,
@@ -528,7 +528,7 @@ export async function executeAppendOrderInternal(
     key: parentKey,
     round_count: nextRound,
     total_amount: newTotal,
-    status: 'ACCEPTED'
+    status: 'NEW'
   });
 }
 
