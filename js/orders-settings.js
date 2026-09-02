@@ -768,6 +768,12 @@ function loadPOSPrinterSettings() {
   if (cashTsplH) cashTsplH.value = settings.cashier?.tspl_custom_height_mm || 150;
   const cashTsplMode = document.getElementById("printer-cashier-tspl-mode");
   if (cashTsplMode) cashTsplMode.value = settings.cashier?.tspl_mode || 'summary';
+  const cashTsplDpi = document.getElementById("printer-cashier-tspl-dpi");
+  if (cashTsplDpi) cashTsplDpi.value = String(settings.cashier?.tspl_dpi || 203);
+  const cashTsplXOffset = document.getElementById("printer-cashier-tspl-x-offset");
+  if (cashTsplXOffset) cashTsplXOffset.value = settings.cashier?.tspl_x_offset_mm ?? 0;
+  const cashTsplYOffset = document.getElementById("printer-cashier-tspl-y-offset");
+  if (cashTsplYOffset) cashTsplYOffset.value = settings.cashier?.tspl_y_offset_mm ?? 0;
 
   onPrinterProtocolChange('cashier');
   onPrinterInterfaceChange('cashier');
@@ -793,6 +799,12 @@ function loadPOSPrinterSettings() {
   if (kitTsplH) kitTsplH.value = settings.kitchen?.tspl_custom_height_mm || 30;
   const kitTsplMode = document.getElementById("printer-kitchen-tspl-mode");
   if (kitTsplMode) kitTsplMode.value = settings.kitchen?.tspl_mode || 'item_stickers';
+  const kitTsplDpi = document.getElementById("printer-kitchen-tspl-dpi");
+  if (kitTsplDpi) kitTsplDpi.value = String(settings.kitchen?.tspl_dpi || 203);
+  const kitTsplXOffset = document.getElementById("printer-kitchen-tspl-x-offset");
+  if (kitTsplXOffset) kitTsplXOffset.value = settings.kitchen?.tspl_x_offset_mm ?? 0;
+  const kitTsplYOffset = document.getElementById("printer-kitchen-tspl-y-offset");
+  if (kitTsplYOffset) kitTsplYOffset.value = settings.kitchen?.tspl_y_offset_mm ?? 0;
 
   onPrinterProtocolChange('kitchen');
   onPrinterInterfaceChange('kitchen');
@@ -827,6 +839,9 @@ function savePOSPrinterSettings() {
   const cashTsplW = document.getElementById("printer-cashier-tspl-width");
   const cashTsplH = document.getElementById("printer-cashier-tspl-height");
   const cashTsplMode = document.getElementById("printer-cashier-tspl-mode");
+  const cashTsplDpi = document.getElementById("printer-cashier-tspl-dpi");
+  const cashTsplXOffset = document.getElementById("printer-cashier-tspl-x-offset");
+  const cashTsplYOffset = document.getElementById("printer-cashier-tspl-y-offset");
 
   const cashBtOpt = cashBtSelect?.selectedOptions?.[0];
   const cashMac = cashBtSelect ? cashBtSelect.value : "";
@@ -844,6 +859,9 @@ function savePOSPrinterSettings() {
   const kitTsplW = document.getElementById("printer-kitchen-tspl-width");
   const kitTsplH = document.getElementById("printer-kitchen-tspl-height");
   const kitTsplMode = document.getElementById("printer-kitchen-tspl-mode");
+  const kitTsplDpi = document.getElementById("printer-kitchen-tspl-dpi");
+  const kitTsplXOffset = document.getElementById("printer-kitchen-tspl-x-offset");
+  const kitTsplYOffset = document.getElementById("printer-kitchen-tspl-y-offset");
 
   const kitBtOpt = kitBtSelect?.selectedOptions?.[0];
   const kitMac = kitBtSelect ? kitBtSelect.value : "";
@@ -859,6 +877,9 @@ function savePOSPrinterSettings() {
       tspl_custom_width_mm: cashTsplW ? Number(cashTsplW.value) || 100 : 100,
       tspl_custom_height_mm: cashTsplH ? Number(cashTsplH.value) || 150 : 150,
       tspl_mode: cashTsplMode ? cashTsplMode.value : 'summary',
+      tspl_dpi: cashTsplDpi ? Number(cashTsplDpi.value) || 203 : 203,
+      tspl_x_offset_mm: cashTsplXOffset ? Number(cashTsplXOffset.value) || 0 : 0,
+      tspl_y_offset_mm: cashTsplYOffset ? Number(cashTsplYOffset.value) || 0 : 0,
       ip: cashIp ? cashIp.value.trim() : "192.168.1.100",
       port: cashPort ? Number(cashPort.value) || 9100 : 9100,
       mac_address: cashMac,
@@ -874,6 +895,9 @@ function savePOSPrinterSettings() {
       tspl_custom_width_mm: kitTsplW ? Number(kitTsplW.value) || 40 : 40,
       tspl_custom_height_mm: kitTsplH ? Number(kitTsplH.value) || 30 : 30,
       tspl_mode: kitTsplMode ? kitTsplMode.value : 'item_stickers',
+      tspl_dpi: kitTsplDpi ? Number(kitTsplDpi.value) || 203 : 203,
+      tspl_x_offset_mm: kitTsplXOffset ? Number(kitTsplXOffset.value) || 0 : 0,
+      tspl_y_offset_mm: kitTsplYOffset ? Number(kitTsplYOffset.value) || 0 : 0,
       ip: kitIp ? kitIp.value.trim() : "192.168.1.101",
       port: kitPort ? Number(kitPort.value) || 9100 : 9100,
       mac_address: kitMac,
@@ -904,6 +928,9 @@ async function testPOSPrinterStation(station) {
   const tsplWInput = document.getElementById(isKitchen ? "printer-kitchen-tspl-width" : "printer-cashier-tspl-width");
   const tsplHInput = document.getElementById(isKitchen ? "printer-kitchen-tspl-height" : "printer-cashier-tspl-height");
   const tsplModeSelect = document.getElementById(isKitchen ? "printer-kitchen-tspl-mode" : "printer-cashier-tspl-mode");
+  const tsplDpiSelect = document.getElementById(isKitchen ? "printer-kitchen-tspl-dpi" : "printer-cashier-tspl-dpi");
+  const tsplXOffsetInput = document.getElementById(isKitchen ? "printer-kitchen-tspl-x-offset" : "printer-cashier-tspl-x-offset");
+  const tsplYOffsetInput = document.getElementById(isKitchen ? "printer-kitchen-tspl-y-offset" : "printer-cashier-tspl-y-offset");
 
   const protocol = protoSelect ? protoSelect.value : 'esc_pos';
   const iface = ifaceSelect ? ifaceSelect.value : 'network';
@@ -917,6 +944,9 @@ async function testPOSPrinterStation(station) {
     tspl_custom_width_mm: tsplWInput ? Number(tsplWInput.value) || (isKitchen ? 40 : 100) : (isKitchen ? 40 : 100),
     tspl_custom_height_mm: tsplHInput ? Number(tsplHInput.value) || (isKitchen ? 30 : 150) : (isKitchen ? 30 : 150),
     tspl_mode: tsplModeSelect ? tsplModeSelect.value : (isKitchen ? 'item_stickers' : 'summary'),
+    tspl_dpi: tsplDpiSelect ? Number(tsplDpiSelect.value) || 203 : 203,
+    tspl_x_offset_mm: tsplXOffsetInput ? Number(tsplXOffsetInput.value) || 0 : 0,
+    tspl_y_offset_mm: tsplYOffsetInput ? Number(tsplYOffsetInput.value) || 0 : 0,
     autoCut: true
   };
 
