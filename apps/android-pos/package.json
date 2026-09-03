@@ -1,13 +1,16 @@
 {
   "name": "benmi-android-pos",
-  "version": "1.3.0",
-  "description": "Benmi Multi-Tenant Android POS Tablet App with Silent ESC/POS Thermal Printing",
+  "version": "1.4.0",
+  "description": "Benmi Multi-Tenant Universal Android POS Tablet App with Remote Cloud Loader & Thermal Printing",
   "private": true,
   "scripts": {
     "build:web": "bash build.sh",
     "sync": "bash build.sh && npx cap sync android",
+    "sync:prod": "APP_ENV=prod bash build.sh && APP_ENV=prod npx cap sync android",
+    "sync:dev": "APP_ENV=dev bash build.sh && APP_ENV=dev npx cap sync android",
     "open:android": "npx cap open android",
-    "run:android": "bash build.sh && npx cap run android"
+    "build:apk": "APP_ENV=prod bash build.sh && APP_ENV=prod npx cap sync android && cd android && ./gradlew assembleDebug",
+    "build:apk:dev": "APP_ENV=dev bash build.sh && APP_ENV=dev npx cap sync android && cd android && ./gradlew assembleDebug"
   },
   "dependencies": {
     "@capacitor/android": "^6.2.0",

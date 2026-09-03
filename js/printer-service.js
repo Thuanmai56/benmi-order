@@ -434,7 +434,7 @@
         ctx.fillText(`時間：${order.time || ''}`, widthPx - padding, y);
         y += 32;
       } else {
-        const brandName = (typeof window.currentTenantBrandName !== 'undefined' && window.currentTenantBrandName) || 'Benmi POS';
+        const brandName = (typeof window.currentTenantBrandName !== 'undefined' && window.currentTenantBrandName) || 'Blab POS';
         ctx.font = '900 34px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(brandName, widthPx / 2, y);
@@ -571,7 +571,7 @@
       let y = padding;
 
       // 1. Header & Brand
-      const brandName = (typeof window.currentTenantBrandName !== 'undefined' && window.currentTenantBrandName) || 'Benmi POS';
+      const brandName = (typeof window.currentTenantBrandName !== 'undefined' && window.currentTenantBrandName) || 'Blab POS';
       ctx.font = `900 ${Math.round(30 * scaleRatio)}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.fillText(brandName, widthPx / 2, y);
