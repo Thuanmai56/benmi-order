@@ -4,21 +4,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title id="pos-page-title">Dashboard</title>
+  <title id="pos-page-title">Blab POS</title>
   <link rel="stylesheet" href="css/orders.css?v=20260902_v1_3_tspl" />
     <script>
       (function () {
         document.documentElement.style.setProperty('--primary', '#00b900');
         document.documentElement.style.setProperty('--primary-dark', '#009900');
         const params = new URLSearchParams(window.location.search);
-        const tenantId = params.get("tenant") || params.get("tenant_id") || "benmi";
+        const tenantId = params.get("tenant") || params.get("tenant_id") || (typeof localStorage !== "undefined" && localStorage.getItem("pos_device_tenant_id")) || "";
         window.__INITIAL_TENANT_ID = tenantId;
         try {
-          const cached = localStorage.getItem("tenant_branding_" + tenantId) || localStorage.getItem("tenant_theme_" + tenantId);
-          if (cached) {
-            const data = JSON.parse(cached);
-            if (data.brandName) {
-              document.title = data.brandName + " Dashboard";
+          if (tenantId) {
+            const cached = localStorage.getItem("tenant_branding_" + tenantId) || localStorage.getItem("tenant_theme_" + tenantId);
+            if (cached) {
+              const data = JSON.parse(cached);
+              if (data.brandName) {
+                document.title = data.brandName + " Dashboard";
+              }
             }
           }
         } catch (e) {}
@@ -32,24 +34,36 @@
       <div class="brand" style="display: flex; align-items: center; gap: 10px;">
         <img id="brand-logo" src="" alt="Logo" style="display: none; width: 38px; height: 38px; border-radius: 8px; object-fit: cover; border: 1px solid rgba(0,0,0,0.08); flex-shrink: 0;">
         <div>
-          <div class="brand-title" id="brand-title">Dashboard</div>
+          <div class="brand-title" id="brand-title">Blab POS</div>
           <div class="brand-sub" id="i18n-brand-sub">即時訂單</div>
         </div>
+        <button type="button" class="badge" id="header-store-badge" onclick="promptUnlinkStoreDevice()" style="cursor: pointer; background: #e0f2fe; color: #0284c7; border: 1.5px solid #bae6fd; border-radius: 8px; padding: 4px 10px; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; margin-left: 6px;" title="切換門市 / Đổi Quán">
+          <span id="header-store-name">門市: --</span>
+          <span id="header-store-switch-text" style="font-size: 11px; opacity: 0.8; text-decoration: underline;">(切換)</span>
+        </button>
       </div>
       <script>
         (function() {
-          const tenantId = window.__INITIAL_TENANT_ID || "benmi";
+          const tenantId = window.__INITIAL_TENANT_ID || "";
           const bTitle = document.getElementById("brand-title");
           const bLogo = document.getElementById("brand-logo");
+          const sName = document.getElementById("header-store-name");
+          if (sName) {
+            sName.innerText = tenantId ? ("門市: " + tenantId.toUpperCase()) : "未綁定門市";
+          }
           try {
-            const cached = localStorage.getItem("tenant_branding_" + tenantId) || localStorage.getItem("tenant_theme_" + tenantId);
-            if (cached) {
-              const data = JSON.parse(cached);
-              if (bTitle && data.brandName) bTitle.innerText = data.brandName + " Dashboard";
-              if (bLogo && data.logoUrl) {
-                bLogo.src = data.logoUrl;
-                bLogo.style.display = "block";
+            if (tenantId) {
+              const cached = localStorage.getItem("tenant_branding_" + tenantId) || localStorage.getItem("tenant_theme_" + tenantId);
+              if (cached) {
+                const data = JSON.parse(cached);
+                if (bTitle && data.brandName) bTitle.innerText = data.brandName + " Dashboard";
+                if (bLogo && data.logoUrl) {
+                  bLogo.src = data.logoUrl;
+                  bLogo.style.display = "block";
+                }
               }
+            } else {
+              if (bTitle) bTitle.innerText = "Blab POS";
             }
           } catch(e) {}
         })();
@@ -111,6 +125,7 @@
       <div class="tabs">
         <button class="tab active" id="tab-live" onclick="switchTab('live')">即時</button>
         <button class="tab" id="tab-history" onclick="switchTab('history')">歷史</button>
+        <button class="mini-btn" id="tab-printer-quick" onclick="openSettings(); scrollToSettingSection('setting-card-printer');" style="display:inline-flex; align-items:center; gap:4px;" title="出單與印表機 / Máy In">🖨️ 印表機</button>
         <button class="mini-btn" id="tab-menu" onclick="openMenuSettings()">菜單</button>
         <button class="mini-btn" id="tab-settings" onclick="openSettings()">設定</button>
       </div>
@@ -308,6 +323,10 @@
             <div class="settings-toc-item" id="toc-item-reports" onclick="scrollToSettingSection('setting-card-reports')">
               <span class="toc-icon">📊</span>
               <span id="i18n-toc-reports">銷量與營收報表</span>
+            </div>
+            <div class="settings-toc-item" id="toc-item-store-pairing" onclick="scrollToSettingSection('setting-card-store-pairing')">
+              <span class="toc-icon">🏪</span>
+              <span id="i18n-toc-store-pairing">門市終端綁定</span>
             </div>
           </div>
         </div>
@@ -846,6 +865,42 @@
               </div>
             </div>
 
+            <!-- Store & Device Pairing Setting (Universal Multi-Tenant POS) -->
+            <div class="settings-card" id="setting-card-store-pairing">
+              <div style="padding: 16px 20px; background: #f3f4f6; border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                  <div style="font-weight: 1100; font-size: 18px;" id="i18n-setting-pairing-title">門市終端與設備綁定</div>
+                  <div style="font-size: 13px; color: var(--muted); font-weight: 600; margin-top: 2px;" id="i18n-setting-pairing-sub">管理此平板電腦與雲端門市之連線設定</div>
+                </div>
+              </div>
+
+              <div style="padding: 20px;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px;">
+                  <div style="background: #f8fafc; padding: 16px; border-radius: 12px; border: 1.5px solid #e2e8f0;">
+                    <div style="font-size: 13px; color: #64748b; margin-bottom: 4px;" id="i18n-pairing-tenant-label">當前綁定門市代碼</div>
+                    <div style="font-size: 18px; font-weight: 800; color: #0f172a;" id="display-pairing-tenant-id">--</div>
+                  </div>
+                  <div style="background: #f8fafc; padding: 16px; border-radius: 12px; border: 1.5px solid #e2e8f0;">
+                    <div style="font-size: 13px; color: #64748b; margin-bottom: 4px;" id="i18n-pairing-status-label">終端連線狀態</div>
+                    <div style="font-size: 16px; font-weight: 800; color: #10b981; display: flex; align-items: center; gap: 8px;">
+                      <span style="width: 10px; height: 10px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+                      <span id="i18n-pairing-status-connected">已連線運作中</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="border-top: 1px solid #f1f5f9; padding-top: 16px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
+                  <div>
+                    <div style="font-size: 15px; font-weight: 700; color: #1e293b;" id="i18n-unlink-title">解除此設備綁定 / 切換門市</div>
+                    <div style="font-size: 13px; color: #64748b; margin-top: 2px;" id="i18n-unlink-desc">解除後此終端機將停止同步該門市訂單，需輸入管理 PIN 碼確認。</div>
+                  </div>
+                  <button type="button" class="btn" style="min-height: 48px; padding: 0 20px; font-size: 15px; font-weight: 800; color: #ef4444; background: #fef2f2; border: 1.5px solid #fecaca; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;" onclick="promptUnlinkStoreDevice()" id="i18n-btn-unlink-store">
+                    切換門市 / 解除綁定
+                  </button>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
@@ -1324,6 +1379,44 @@
     </div>
   </div>
 
+  <!-- Store Activation Modal (Universal Multi-Tenant POS) -->
+  <div id="storeActivationModal" class="modal" style="display: none; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 10000; align-items: center; justify-content: center;">
+    <div class="modal-content" style="max-width: 480px; width: 92vw; padding: 32px 28px; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1);">
+      <div style="width: 64px; height: 64px; margin: 0 auto 16px; background: #fff; border-radius: 16px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.06);">
+        <img src="blab_icon.png" alt="BLAB Logo" style="width: 52px; height: 52px; object-fit: contain; border-radius: 12px;" />
+      </div>
+
+      <h2 style="font-size: 22px; font-weight: 800; color: #0f172a; margin: 0 0 6px; text-align: center;" id="i18n-modal-activation-title">
+        門市終端啟用
+      </h2>
+      <p style="font-size: 14px; color: #64748b; line-height: 1.5; margin: 0 0 24px; text-align: center;" id="i18n-modal-activation-sub">
+        請輸入門市代碼與管理 PIN 碼以綁定此終端設備
+      </p>
+
+      <form id="storeActivationForm" onsubmit="submitStoreActivation(event)" style="display: flex; flex-direction: column; gap: 16px;">
+        <div>
+          <label style="display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px;" id="i18n-activation-tenant-label">
+            門市代碼 (Tenant ID)
+          </label>
+          <input type="text" id="activation-tenant-id" class="input" style="width: 100%; height: 48px; font-size: 16px; border-radius: 12px; border: 1.5px solid #cbd5e1; padding: 0 14px; box-sizing: border-box;" placeholder="例如: bsc, benmi..." required autocomplete="off" autocapitalize="none" spellcheck="false" />
+        </div>
+
+        <div>
+          <label style="display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px;" id="i18n-activation-pin-label">
+            管理 PIN 碼
+          </label>
+          <input type="password" id="activation-pin" class="input" style="width: 100%; height: 48px; font-size: 16px; border-radius: 12px; border: 1.5px solid #cbd5e1; padding: 0 14px; box-sizing: border-box;" placeholder="預設 12345678" required autocomplete="off" />
+        </div>
+
+        <div id="activation-error-msg" style="display: none; padding: 10px 14px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; color: #b91c1c; font-size: 13px; font-weight: 600; line-height: 1.4;"></div>
+
+        <button type="submit" id="btn-submit-activation" class="btn btn-primary" style="width: 100%; height: 48px; font-size: 16px; font-weight: 800; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 8px; cursor: pointer; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);">
+          <span id="i18n-btn-submit-activation-text">啟用終端並開始接單</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
   <!-- Benmi POS Modular Architecture Scripts -->
   <script src="js/orders-i18n.js?v=20260902_v1_3_tspl"></script>
   <script src="js/orders-core.js?v=20260902_v1_3_tspl"></script>
@@ -1340,6 +1433,11 @@
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       applyLanguageToDOM();
+      const tenantId = getTenantIdFromUrl();
+      if (!tenantId) {
+        showStoreActivationModal();
+        return;
+      }
       fetchOrders();
       loadStoreStatus();
       checkInitialSessionModal();

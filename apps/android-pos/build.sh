@@ -42,5 +42,8 @@ fi
 if [ -d "$ROOT_DIR/assets" ]; then
   cp -r "$ROOT_DIR/assets" "$DIST_DIR/"
 fi
+if [ -f "$ROOT_DIR/blab_icon.png" ]; then
+  cp "$ROOT_DIR/blab_icon.png" "$DIST_DIR/"
+fi
 
 echo "✅ Web assets synchronized successfully into $DIST_DIR!"

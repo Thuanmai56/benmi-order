@@ -214,6 +214,7 @@ async function fetchTenantMenuItems() {
     return tenantMenuItemsCache;
   }
   const tenantId = getTenantIdFromUrl();
+  if (!tenantId) return [];
   try {
     const res = await fetch(`${WORKER_BASE}/api/tenant/bootstrap?tenant_id=${tenantId}&_t=${Date.now()}`);
     if (res.ok) {
@@ -387,3 +388,117 @@ function closeBlabContactModal() {
   const modal = document.getElementById("blabContactModal");
   if (modal) modal.style.display = "none";
 }
+
+function showStoreActivationModal() {
+  const modal = document.getElementById("storeActivationModal");
+  if (!modal) return;
+  // If already displayed, do not re-initialize or steal focus from active inputs
+  if (modal.style.display === "flex") return;
+  modal.style.display = "flex";
+
+  const inpTenant = document.getElementById("activation-tenant-id");
+  const inpPin = document.getElementById("activation-pin");
+  const errDiv = document.getElementById("activation-error-msg");
+
+  if (inpTenant) {
+    const saved = (typeof localStorage !== "undefined" && localStorage.getItem("pos_device_tenant_id")) || "";
+    if (saved) {
+      inpTenant.value = saved;
+      if (inpPin) inpPin.focus();
+    } else {
+      inpTenant.focus();
+    }
+  }
+  if (inpPin && (!inpTenant || !inpTenant.value)) inpPin.value = "";
+  if (errDiv) {
+    errDiv.style.display = "none";
+    errDiv.innerText = "";
+  }
+}
+
+function closeStoreActivationModal() {
+  const modal = document.getElementById("storeActivationModal");
+  if (modal) modal.style.display = "none";
+}
+
+async function submitStoreActivation(e) {
+  if (e && e.preventDefault) e.preventDefault();
+
+  const inpTenant = document.getElementById("activation-tenant-id");
+  const inpPin = document.getElementById("activation-pin");
+  const btnSubmit = document.getElementById("btn-submit-activation");
+  const btnText = document.getElementById("i18n-btn-submit-activation-text");
+  const errDiv = document.getElementById("activation-error-msg");
+
+  const tenantId = inpTenant ? inpTenant.value.trim().toLowerCase() : "";
+  const pin = inpPin ? inpPin.value.trim() : "";
+
+  if (!tenantId || !pin) {
+    if (errDiv) {
+      errDiv.innerText = (typeof t === "function" && t("activationErrorRequired")) || "請完整填寫門市代碼與管理 PIN 碼。";
+      errDiv.style.display = "block";
+    }
+    return;
+  }
+
+  // Loading state
+  if (btnSubmit) btnSubmit.disabled = true;
+  if (btnText) btnText.innerText = (typeof t === "function" && t("btnVerifying")) || "正在驗證中...";
+  if (errDiv) {
+    errDiv.style.display = "none";
+    errDiv.innerText = "";
+  }
+
+  try {
+    const workerUrl = typeof WORKER_BASE !== "undefined" ? WORKER_BASE : "https://benmi-worker-official.thuanmnc.workers.dev";
+    const res = await fetch(`${workerUrl}/api/auth?pw=${encodeURIComponent(pin)}&tenant_id=${encodeURIComponent(tenantId)}`);
+    const data = await res.json().catch(() => ({ ok: false }));
+
+    if (res.ok && data && data.ok) {
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem("pos_device_tenant_id", tenantId);
+        try {
+          const bootRes = await fetch(`${workerUrl}/api/tenant/bootstrap?tenant_id=${tenantId}&_t=${Date.now()}`);
+          if (bootRes.ok) {
+            const bootData = await bootRes.json();
+            if (bootData.tenant) {
+              localStorage.setItem("tenant_branding_" + tenantId, JSON.stringify(bootData.tenant));
+              localStorage.setItem("tenant_theme_" + tenantId, JSON.stringify(bootData.tenant));
+            }
+          }
+        } catch (err) {}
+      }
+
+      closeStoreActivationModal();
+
+      // Reload with query param to ensure clean bootstrap
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.set("tenant", tenantId);
+      window.location.href = currentUrl.toString();
+    } else {
+      if (errDiv) {
+        if (data && data.error === "invalid_tenant") {
+          errDiv.innerText = (typeof t === "function" && t("activationErrorTenantNotFound")) || "門市代碼不存在或已停用，請重新確認。";
+        } else if (data && data.error === "invalid_password") {
+          errDiv.innerText = (typeof t === "function" && t("activationErrorWrongPin")) || "管理 PIN 碼錯誤，請重新確認。";
+        } else {
+          errDiv.innerText = (data && data.message) || (typeof t === "function" && t("activationErrorInvalid")) || "門市代碼或管理 PIN 碼錯誤，請重新確認。";
+        }
+        errDiv.style.display = "block";
+      }
+    }
+  } catch (err) {
+    if (errDiv) {
+      errDiv.innerText = (typeof t === "function" && t("activationErrorNetwork")) || "連線驗證失敗，請檢查網路連線後重試。";
+      errDiv.style.display = "block";
+    }
+  } finally {
+    if (btnSubmit) btnSubmit.disabled = false;
+    if (btnText) btnText.innerText = (typeof t === "function" && t("btnSubmitActivation")) || "啟用終端並開始接單";
+  }
+}
+
+window.showStoreActivationModal = showStoreActivationModal;
+window.closeStoreActivationModal = closeStoreActivationModal;
+window.submitStoreActivation = submitStoreActivation;
+

@@ -11,8 +11,11 @@ const I18N = {
     tabHistory: "歷史",
     tabReports: "報表",
     tabSound: "測試音效",
+    tabPrinter: "🖨️ 印表機",
     tabMenu: "菜單",
     tabSettings: "設定",
+    headerStore: "門市: ",
+    headerSwitch: "(切換)",
     reportsTitle: "餐點銷量與營收分析",
     reportsSub: "即時統計門市各品項銷售數據與加料偏好",
     rangeToday: "今天",
@@ -378,7 +381,34 @@ const I18N = {
     roundBlockTitle: "第 {n} 輪餐點",
     roundBlockLatest: "最新加點",
     roundBlockInitial: "第 1 輪 (最初點餐)",
-    alertNewAppended: "🔔 桌號 {table} (單號 #{key}) 有新加點餐點！"
+    alertNewAppended: "🔔 桌號 {table} (單號 #{key}) 有新加點餐點！",
+    // Store Pairing & Activation (Universal Multi-Tenant POS)
+    tocStorePairing: "門市終端綁定",
+    settingPairingTitle: "門市終端與設備綁定",
+    settingPairingSub: "管理此平板電腦與雲端門市之連線設定",
+    pairingTenantLabel: "當前綁定門市代碼",
+    pairingStatusLabel: "終端連線狀態",
+    pairingStatusConnected: "已連線運作中",
+    unlinkTitle: "解除此設備綁定 / 切換門市",
+    unlinkDesc: "解除後此終端機將停止同步該門市訂單，需輸入管理 PIN 碼確認。",
+    btnUnlinkStore: "切換門市 / 解除綁定",
+    modalActivationTitle: "門市終端啟用",
+    modalActivationSub: "請輸入門市代碼與管理 PIN 碼以綁定此終端設備",
+    activationTenantLabel: "門市代碼 (Tenant ID)",
+    activationTenantPlaceholder: "例如: bsc, benmi...",
+    activationPinLabel: "管理 PIN 碼",
+    activationPinPlaceholder: "預設 12345678",
+    btnSubmitActivation: "啟用終端並開始接單",
+    btnVerifying: "正在驗證中...",
+    activationErrorInvalid: "門市代碼或管理 PIN 碼錯誤，請重新確認。",
+    activationErrorTenantNotFound: "門市代碼不存在或已停用，請重新確認。",
+    activationErrorWrongPin: "管理 PIN 碼錯誤，請重新確認。",
+    activationErrorRequired: "請完整填寫門市代碼與管理 PIN 碼。",
+    activationErrorNetwork: "連線驗證失敗，請檢查網路連線後重試。",
+    promptUnlinkPin: "請輸入門市管理 PIN 碼以解除綁定：",
+    unlinkSuccess: "已成功解除設備綁定！即將返回門市啟用畫面。",
+    unlinkWrongPin: "管理 PIN 碼錯誤，無法解除綁定。",
+    unpaired: "未綁定"
   },
   "vi": {
     langBtn: "繁體中文",
@@ -388,8 +418,11 @@ const I18N = {
     tabHistory: "Lịch sử",
     tabReports: "Báo cáo",
     tabSound: "Thử âm thanh",
+    tabPrinter: "🖨️ Máy In",
     tabMenu: "Thực đơn",
     tabSettings: "Cài đặt",
+    headerStore: "Quán: ",
+    headerSwitch: "(Đổi)",
     reportsTitle: "Phân tích doanh số & Doanh thu món",
     reportsSub: "Thống kê thời gian thực doanh số từng món và tùy biến",
     rangeToday: "Hôm nay",
@@ -755,7 +788,34 @@ const I18N = {
     roundBlockTitle: "Đợt {n}",
     roundBlockLatest: "Mới gọi thêm",
     roundBlockInitial: "Đợt 1 (Đơn ban đầu)",
-    alertNewAppended: "🔔 Bàn {table} (Đơn #{key}) vừa gọi thêm món mới!"
+    alertNewAppended: "🔔 Bàn {table} (Đơn #{key}) vừa gọi thêm món mới!",
+    // Store Pairing & Activation (Universal Multi-Tenant POS)
+    tocStorePairing: "Điểm bán & Thiết bị",
+    settingPairingTitle: "Điểm Bán & Thiết Bị POS",
+    settingPairingSub: "Quản lý kết nối giữa máy tính bảng này và điểm bán trên hệ thống đám mây",
+    pairingTenantLabel: "Mã điểm bán hiện tại",
+    pairingStatusLabel: "Trạng thái kết nối",
+    pairingStatusConnected: "Đã kết nối và hoạt động",
+    unlinkTitle: "Hủy ghép đôi thiết bị / Đổi điểm bán",
+    unlinkDesc: "Sau khi hủy, thiết bị sẽ ngừng đồng bộ đơn của quán này. Cần nhập mã PIN quản lý để xác nhận.",
+    btnUnlinkStore: "Đổi Quán / Hủy Ghép Đôi",
+    modalActivationTitle: "Kích Hoạt Điểm Bán",
+    modalActivationSub: "Vui lòng nhập Mã Quán (Tenant ID) và Mã PIN Quản Lý để liên kết thiết bị POS",
+    activationTenantLabel: "Mã Điểm Bán (Tenant ID)",
+    activationTenantPlaceholder: "Ví dụ: bsc, benmi...",
+    activationPinLabel: "Mã PIN Quản Lý",
+    activationPinPlaceholder: "Mặc định 12345678",
+    btnSubmitActivation: "Kích Hoạt Điểm Bán & Bắt Đầu",
+    btnVerifying: "Đang xác thực...",
+    activationErrorInvalid: "Mã quán hoặc mã PIN quản lý không chính xác. Vui lòng kiểm tra lại.",
+    activationErrorTenantNotFound: "Mã điểm bán không tồn tại hoặc đã ngưng hoạt động. Vui lòng kiểm tra lại.",
+    activationErrorWrongPin: "Mã PIN quản lý không chính xác. Vui lòng kiểm tra lại.",
+    activationErrorRequired: "Vui lòng nhập đầy đủ mã quán và mã PIN quản lý.",
+    activationErrorNetwork: "Kết nối xác thực thất bại. Vui lòng kiểm tra lại đường truyền mạng.",
+    promptUnlinkPin: "Vui lòng nhập mã PIN quản lý của quán để hủy ghép đôi:",
+    unlinkSuccess: "Đã hủy ghép đôi thiết bị thành công! Đang chuyển về màn hình kích hoạt.",
+    unlinkWrongPin: "Mã PIN quản lý không đúng. Không thể hủy ghép đôi.",
+    unpaired: "Chưa liên kết"
   }
 };
 
@@ -829,8 +889,12 @@ function applyLanguageToDOM() {
   if (tabSound) tabSound.innerText = dict.tabSound;
   const tabMenu = document.getElementById("tab-menu");
   if (tabMenu) tabMenu.innerText = dict.tabMenu;
+  const tabPrinter = document.getElementById("tab-printer-quick");
+  if (tabPrinter) tabPrinter.innerText = dict.tabPrinter;
   const tabSettings = document.getElementById("tab-settings");
   if (tabSettings) tabSettings.innerText = dict.tabSettings;
+  const headerSwitch = document.getElementById("header-store-switch-text");
+  if (headerSwitch) headerSwitch.innerText = dict.headerSwitch;
 
   // View Reports Elements
   const repTitle = document.getElementById("i18n-reports-title");
@@ -1395,5 +1459,41 @@ function applyLanguageToDOM() {
 
   const labelsTsplYOff = document.querySelectorAll(".i18n-printer-tspl-y-offset-lbl");
   labelsTsplYOff.forEach(el => el.innerText = dict.printerTsplYOffsetLabel);
+
+  // Store Pairing DOM mappings
+  const tocStoreP = document.getElementById("i18n-toc-store-pairing");
+  if (tocStoreP) tocStoreP.innerText = dict.tocStorePairing;
+  const setPairT = document.getElementById("i18n-setting-pairing-title");
+  if (setPairT) setPairT.innerText = dict.settingPairingTitle;
+  const setPairS = document.getElementById("i18n-setting-pairing-sub");
+  if (setPairS) setPairS.innerText = dict.settingPairingSub;
+  const pairTLbl = document.getElementById("i18n-pairing-tenant-label");
+  if (pairTLbl) pairTLbl.innerText = dict.pairingTenantLabel;
+  const pairStLbl = document.getElementById("i18n-pairing-status-label");
+  if (pairStLbl) pairStLbl.innerText = dict.pairingStatusLabel;
+  const pairStConn = document.getElementById("i18n-pairing-status-connected");
+  if (pairStConn) pairStConn.innerText = dict.pairingStatusConnected;
+  const unlT = document.getElementById("i18n-unlink-title");
+  if (unlT) unlT.innerText = dict.unlinkTitle;
+  const unlD = document.getElementById("i18n-unlink-desc");
+  if (unlD) unlD.innerText = dict.unlinkDesc;
+  const btnUnlSt = document.getElementById("i18n-btn-unlink-store");
+  if (btnUnlSt) btnUnlSt.innerText = dict.btnUnlinkStore;
+
+  // Store Activation Modal DOM mappings
+  const actModT = document.getElementById("i18n-modal-activation-title");
+  if (actModT) actModT.innerText = dict.modalActivationTitle;
+  const actModS = document.getElementById("i18n-modal-activation-sub");
+  if (actModS) actModS.innerText = dict.modalActivationSub;
+  const actTLbl = document.getElementById("i18n-activation-tenant-label");
+  if (actTLbl) actTLbl.innerText = dict.activationTenantLabel;
+  const actInpT = document.getElementById("activation-tenant-id");
+  if (actInpT) actInpT.placeholder = dict.activationTenantPlaceholder;
+  const actPLbl = document.getElementById("i18n-activation-pin-label");
+  if (actPLbl) actPLbl.innerText = dict.activationPinLabel;
+  const actInpP = document.getElementById("activation-pin");
+  if (actInpP) actInpP.placeholder = dict.activationPinPlaceholder;
+  const btnActTxt = document.getElementById("i18n-btn-submit-activation-text");
+  if (btnActTxt) btnActTxt.innerText = dict.btnSubmitActivation;
 }
 

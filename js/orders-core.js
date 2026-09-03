@@ -3,15 +3,19 @@
 // ==========================================
 
 const _coreHostname = window.location.hostname;
+const _coreParams = new URLSearchParams(window.location.search);
+const _forcedEnv = _coreParams.get("env") || (typeof localStorage !== "undefined" && localStorage.getItem("pos_env_override"));
+
 const _isDev = (
-  _coreHostname === "localhost" ||
-  _coreHostname === "127.0.0.1" ||
+  _forcedEnv === "dev" ||
+  ((_coreHostname === "localhost" || _coreHostname === "127.0.0.1") && _forcedEnv !== "prod") ||
   _coreHostname.startsWith("dev.") ||
   _coreHostname.includes(".dev.") ||
   _coreHostname.includes("-dev.") ||
   _coreHostname.startsWith("dev-")
 );
 const _isStaging = (
+  _forcedEnv === "staging" ||
   _coreHostname.startsWith("staging.") ||
   _coreHostname.includes(".staging.") ||
   _coreHostname.includes("-staging.") ||
@@ -35,7 +39,17 @@ window.POS_SVG = POS_SVG;
 
 function getTenantIdFromUrl() {
   const params = new URLSearchParams(window.location.search);
-  return params.get("tenant") || params.get("tenant_id") || "benmi";
+  const fromUrl = params.get("tenant") || params.get("tenant_id");
+  if (fromUrl && fromUrl.trim()) {
+    return fromUrl.trim();
+  }
+  if (typeof localStorage !== "undefined") {
+    const savedTenant = localStorage.getItem("pos_device_tenant_id");
+    if (savedTenant && savedTenant.trim()) {
+      return savedTenant.trim();
+    }
+  }
+  return "";
 }
 
 function applyTenantBranding(tenant) {
@@ -66,6 +80,12 @@ function applyTenantBranding(tenant) {
 
 async function initTenantBranding() {
   const tenantId = getTenantIdFromUrl();
+  if (!tenantId) {
+    if (typeof showStoreActivationModal === "function") {
+      showStoreActivationModal();
+    }
+    return;
+  }
 
   // 1. Instant Cache Render (0ms latency, eliminates any flash of unstyled content)
   try {
@@ -383,6 +403,7 @@ function switchTab(tab) {
 async function fetchOrders() {
   try {
     const tenantId = getTenantIdFromUrl();
+    if (!tenantId) return;
     const headers = { "X-Tenant-ID": tenantId };
     if (lastOrdersETag) {
       headers["If-None-Match"] = lastOrdersETag;

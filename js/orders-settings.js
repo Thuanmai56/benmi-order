@@ -142,6 +142,7 @@ function openSettings() {
   renderLanguageSetting();
   renderDineInSetting();
   renderReportsSetting();
+  renderStorePairingSection();
   loadPOSPrinterSettings();
   initSettingsScrollSpy();
 }
@@ -1001,7 +1002,8 @@ const SETTINGS_SECTIONS = [
   { id: "setting-card-language", tocId: "toc-item-language" },
   { id: "setting-card-dinein", tocId: "toc-item-dinein" },
   { id: "setting-card-printer", tocId: "toc-item-printer" },
-  { id: "setting-card-reports", tocId: "toc-item-reports" }
+  { id: "setting-card-reports", tocId: "toc-item-reports" },
+  { id: "setting-card-store-pairing", tocId: "toc-item-store-pairing" }
 ];
 
 let isManualSettingScroll = false;
@@ -1063,4 +1065,59 @@ function initSettingsScrollSpy() {
     }
   }, { passive: true });
 }
+
+function renderStorePairingSection() {
+  const tenantId = (typeof getTenantIdFromUrl === "function" && getTenantIdFromUrl()) || "";
+  const elTenant = document.getElementById("display-pairing-tenant-id");
+  if (elTenant) {
+    elTenant.innerText = tenantId || (typeof t === "function" && t("unpaired")) || "未綁定";
+  }
+  const elHeader = document.getElementById("header-store-name");
+  if (elHeader) {
+    const prefix = (typeof t === "function" && t("headerStore")) || "門市: ";
+    elHeader.innerText = tenantId ? `${prefix}${tenantId.toUpperCase()}` : ((typeof t === "function" && t("unpaired")) || "未綁定門市");
+  }
+}
+
+async function promptUnlinkStoreDevice() {
+  const currentTenant = (typeof getTenantIdFromUrl === "function" && getTenantIdFromUrl()) || "";
+  if (!currentTenant) {
+    if (typeof showStoreActivationModal === "function") {
+      showStoreActivationModal();
+    }
+    return;
+  }
+
+  const promptMsg = (typeof t === "function" && t("promptUnlinkPin")) || "請輸入門市管理 PIN 碼以解除綁定：";
+  const pin = prompt(promptMsg);
+  if (!pin || !pin.trim()) return;
+
+  try {
+    const workerUrl = typeof WORKER_BASE !== "undefined" ? WORKER_BASE : "https://benmi-worker-official.thuanmnc.workers.dev";
+    const res = await fetch(`${workerUrl}/api/auth?pw=${encodeURIComponent(pin.trim())}&tenant_id=${encodeURIComponent(currentTenant)}`);
+    const data = await res.json().catch(() => ({ ok: false }));
+
+    if (data && data.ok) {
+      if (typeof localStorage !== "undefined") {
+        localStorage.removeItem("pos_device_tenant_id");
+        localStorage.removeItem("tenant_branding_" + currentTenant);
+        localStorage.removeItem("tenant_theme_" + currentTenant);
+      }
+      alert((typeof t === "function" && t("unlinkSuccess")) || "已成功解除設備綁定！即將返回門市啟用畫面。");
+
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.delete("tenant");
+      currentUrl.searchParams.delete("tenant_id");
+      window.location.href = currentUrl.toString();
+    } else {
+      alert((typeof t === "function" && t("unlinkWrongPin")) || "管理 PIN 碼錯誤，無法解除綁定。");
+    }
+  } catch (e) {
+    alert((typeof t === "function" && t("activationErrorNetwork")) || "連線驗證失敗，請檢查網路連線。");
+  }
+}
+
+window.renderStorePairingSection = renderStorePairingSection;
+window.promptUnlinkStoreDevice = promptUnlinkStoreDevice;
+
 
