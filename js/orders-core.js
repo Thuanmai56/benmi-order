@@ -375,6 +375,7 @@ function switchTab(tab) {
   if (tabLive) tabLive.classList.toggle("active", tab === "live");
   if (tabHistory) tabHistory.classList.toggle("active", tab === "history");
   if (tabReports) tabReports.classList.toggle("active", tab === "reports");
+  document.querySelectorAll(".mini-btn").forEach(t => t.classList.remove("active"));
 
   const viewLive = document.getElementById("view-live");
   const viewHistory = document.getElementById("view-history");

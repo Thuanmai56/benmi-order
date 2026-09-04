@@ -93,6 +93,12 @@ body {
   white-space: nowrap;
 }
 
+.mini-btn.active {
+  border-color: var(--primary);
+  color: var(--primary);
+  border-width: 2px;
+}
+
 /* Custom Language Dropdown */
 .lang-dropdown {
   position: relative;
