@@ -151,6 +151,8 @@ const I18N = {
     btnBack: "返回",
     // Settings
     settingsTitle: "系統設定",
+    settingsSub: "門市營運參數、出單列印與設備偏好",
+    settingsSyncStatus: "雲端即時同步",
     tocSettingsTitle: "設定目錄",
     tocSettingsSub: "系統與門市參數",
     tocStoreStatus: "門市接單狀態",
@@ -617,6 +619,8 @@ const I18N = {
     btnBack: "Quay lại",
     // Settings
     settingsTitle: "Cài đặt hệ thống",
+    settingsSub: "Thông số vận hành, in ấn hoá đơn và thiết bị quầy",
+    settingsSyncStatus: "Đồng bộ đám mây",
     tocSettingsTitle: "Mục lục cài đặt",
     tocSettingsSub: "Cấu hình hệ thống",
     tocStoreStatus: "Trạng thái nhận đơn",
@@ -1197,6 +1201,10 @@ function applyLanguageToDOM() {
   // Settings
   const setT = document.getElementById("i18n-settings-title");
   if (setT) setT.innerText = dict.settingsTitle;
+  const setS = document.getElementById("i18n-settings-sub");
+  if (setS) setS.innerText = dict.settingsSub;
+  const setSync = document.getElementById("i18n-settings-sync-status");
+  if (setSync) setSync.innerText = dict.settingsSyncStatus;
   const setStT = document.getElementById("i18n-setting-store-status-title");
   if (setStT) setStT.innerText = dict.settingStoreStatusTitle;
   const setStS = document.getElementById("i18n-setting-store-status-sub");
@@ -1584,10 +1592,6 @@ function applyLanguageToDOM() {
   if (btnPGuide) btnPGuide.innerText = dict.btnPrinterGuide;
   const btnCloseG = document.getElementById("i18n-btn-close-guide");
   if (btnCloseG) btnCloseG.innerText = dict.btnCloseGuide;
-  const pGuideStripT = document.getElementById("i18n-printer-guide-strip-title");
-  if (pGuideStripT) pGuideStripT.innerText = dict.printerGuideStripTitle;
-  const btnViewG = document.getElementById("i18n-btn-view-guide");
-  if (btnViewG) btnViewG.innerText = dict.btnViewPrinterGuide;
 
   // Re-render open modal contents if active
   if (typeof reviewingOrder !== "undefined" && reviewingOrder) {
