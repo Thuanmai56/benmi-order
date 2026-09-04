@@ -151,6 +151,7 @@ const I18N = {
     // Settings
     settingsTitle: "系統設定",
     tocSettingsTitle: "設定目錄",
+    tocSettingsSub: "系統與門市參數",
     tocStoreStatus: "門市接單狀態",
     tocOrderMode: "點餐取餐模式",
     tocHours: "營業時間設定",
@@ -578,6 +579,7 @@ const I18N = {
     // Settings
     settingsTitle: "Cài đặt hệ thống",
     tocSettingsTitle: "Mục lục cài đặt",
+    tocSettingsSub: "Cấu hình hệ thống",
     tocStoreStatus: "Trạng thái nhận đơn",
     tocOrderMode: "Chế độ nhận đơn",
     tocHours: "Giờ hoạt động",
@@ -1154,6 +1156,8 @@ function applyLanguageToDOM() {
 
   const tocTitle = document.getElementById("i18n-toc-settings-title");
   if (tocTitle) tocTitle.innerText = dict.tocSettingsTitle;
+  const tocSub = document.getElementById("i18n-toc-settings-sub");
+  if (tocSub) tocSub.innerText = dict.tocSettingsSub || "系統與門市參數";
   const tocStatus = document.getElementById("i18n-toc-status");
   if (tocStatus) tocStatus.innerText = dict.tocStoreStatus;
   const tocOrderMode = document.getElementById("i18n-toc-ordermode");
