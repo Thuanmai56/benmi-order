@@ -207,13 +207,46 @@ body {
 .content {
   flex: 1;
   min-height: 0;
-  padding: 14px 16px;
+  padding: 10px 12px;
+}
+
+#view-live {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - 65px);
+  overflow: hidden;
+}
+
+#view-live .split {
+  flex: 1;
+  min-height: 0;
+  padding: 10px 12px;
+  gap: 10px;
+}
+
+#view-history {
+  padding: 10px 12px;
+  height: calc(100dvh - 65px);
+  overflow: hidden;
+}
+
+#view-menu {
+  padding: 0;
+  height: calc(100dvh - 65px);
+  overflow: hidden;
+}
+
+#view-settings {
+  padding: 0;
+  height: calc(100dvh - 65px);
+  overflow: hidden;
 }
 
 .split {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
+  gap: 12px;
   height: 100%;
 }
 
@@ -1913,26 +1946,50 @@ body {
 }
 
 /* ========================================================
-   Menu Editor - Tablet-First Compact Layout
+   Menu Editor - Tablet-First Compact Layout (Marketplace Style)
    ======================================================== */
 .menu-split {
   display: grid;
-  grid-template-columns: 210px 1fr;
-  gap: 12px;
+  grid-template-columns: 220px 1fr;
+  gap: 0;
   height: 100%;
   min-height: 0;
+  background: #ffffff;
+}
+
+#view-menu > .menu-split > .panel:first-child {
+  border: none;
+  border-right: 1px solid #e2e8f0;
+  border-radius: 0;
+  background: #ffffff;
+}
+
+#view-menu > .menu-split > .panel:last-child {
+  border: none;
+  border-radius: 0;
+  background: #f8fafc;
+}
+
+#view-menu .panel-header {
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 @media (max-width: 960px) {
   .menu-split {
-    grid-template-columns: 185px 1fr;
-    gap: 8px;
+    grid-template-columns: 195px 1fr;
+    gap: 0;
   }
 }
 
 @media (max-width: 680px) {
   .menu-split {
     grid-template-columns: 1fr;
+    gap: 0;
+  }
+  #view-menu > .menu-split > .panel:first-child {
+    border-right: none;
+    border-bottom: 1px solid #e2e8f0;
   }
 }
 
@@ -2321,33 +2378,45 @@ body {
 }
 
 /* ========================================================
-   Settings - Table of Contents Split Layout
+   Settings - Table of Contents Split Layout (Marketplace Style)
    ======================================================== */
 .settings-split {
   display: grid;
   grid-template-columns: 260px 1fr;
-  gap: 16px;
+  gap: 0;
   height: 100%;
   min-height: 0;
   width: 100%;
+  background: #ffffff;
 }
 
 .settings-toc-panel {
   background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
+  border: none;
+  border-right: 1px solid #e2e8f0;
+  border-radius: 0;
   display: flex;
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
   height: 100%;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+  box-shadow: none;
 }
 
-.settings-toc-panel .panel-header,
+.settings-toc-panel .panel-header {
+  padding: 12px 16px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 52px;
+  box-sizing: border-box;
+}
+
 .settings-content-panel .panel-header {
-  padding: 14px 18px;
-  background: #f8fafc;
+  padding: 12px 20px;
+  background: #ffffff;
   border-bottom: 1px solid #e2e8f0;
   display: flex;
   align-items: center;
@@ -2397,7 +2466,7 @@ body {
   gap: 11px;
   padding: 8px 12px;
   min-height: 48px;
-  border-radius: 12px;
+  border-radius: 10px;
   font-weight: 700;
   font-size: 14px;
   color: #334155;
@@ -2479,35 +2548,76 @@ body {
 }
 
 .settings-content-panel {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
+  background: #f8fafc;
+  border: none;
+  border-radius: 0;
   display: flex;
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
   height: 100%;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+  box-shadow: none;
 }
 
 .settings-content-body {
-  padding: 24px;
+  padding: 16px 20px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
   overflow-y: auto;
   scroll-behavior: smooth;
   flex: 1;
   min-height: 0;
+  background: #f8fafc;
 }
 
 .settings-card {
   border: 1px solid #e2e8f0;
-  border-radius: 14px;
+  border-radius: 12px;
   overflow: hidden;
-  background: #fff;
+  background: #ffffff;
   flex-shrink: 0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.settings-card > div:first-child {
+  background: #ffffff !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  padding: 14px 18px !important;
+}
+
+/* Radio & Selection Mode Cards (Modern :has support) */
+.setting-mode-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 2px solid var(--border, #e2e8f0);
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+
+.setting-mode-card:hover {
+  border-color: #cbd5e1;
+  background: #fafafa;
+}
+
+.setting-mode-card:has(input:checked) {
+  border-color: var(--primary, #00b900);
+  background: #f0fdf4;
+  box-shadow: 0 0 0 3px rgba(0, 185, 0, 0.1);
+}
+
+/* Settings Form Controls Focus States */
+.settings-content-body input:focus,
+.settings-content-body textarea:focus,
+.settings-content-body select:focus {
+  border-color: var(--primary, #00b900) !important;
+  box-shadow: 0 0 0 3px rgba(0, 185, 0, 0.15) !important;
+  outline: none !important;
 }
 
 @media (max-width: 1024px) {
@@ -2520,7 +2630,7 @@ body {
 @media (max-width: 960px) {
   .settings-split {
     grid-template-columns: 220px 1fr;
-    gap: 12px;
+    gap: 0;
   }
   .settings-toc-item {
     padding: 8px 10px;
@@ -2537,8 +2647,8 @@ body {
     height: 16px;
   }
   .settings-content-body {
-    padding: 16px;
-    gap: 18px;
+    padding: 12px 14px;
+    gap: 14px;
   }
 }
 
@@ -2546,12 +2656,14 @@ body {
   .settings-split {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 0;
   }
   .settings-toc-panel {
     display: flex;
     height: auto;
-    border-radius: 12px;
+    border-radius: 0;
+    border-right: none;
+    border-bottom: 1px solid #e2e8f0;
     flex-shrink: 0;
   }
   .settings-toc-panel .panel-header {

@@ -400,6 +400,16 @@ function closeBlabContactModal() {
   if (modal) modal.style.display = "none";
 }
 
+function openPrinterGuideModal() {
+  const modal = document.getElementById("printerGuideModal");
+  if (modal) modal.style.display = "flex";
+}
+
+function closePrinterGuideModal() {
+  const modal = document.getElementById("printerGuideModal");
+  if (modal) modal.style.display = "none";
+}
+
 function showStoreActivationModal() {
   const modal = document.getElementById("storeActivationModal");
   if (!modal) return;

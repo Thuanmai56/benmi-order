@@ -287,6 +287,10 @@ const I18N = {
     // Printer Usage Guide
     printerGuideTitle: "出單與印表機功能使用指南",
     printerGuideSub: "深入了解自動出單、單據規格與 3 段式列印操作技巧",
+    btnPrinterGuide: "出單指南",
+    btnViewPrinterGuide: "查看完整指南",
+    btnCloseGuide: "我知道了",
+    printerGuideStripTitle: "需要了解自動出單、雙機搭配或 3 段式列印技巧？",
     printerGuideModeTitle: "1. 列印出單模式說明 (Auto vs. Manual)",
     printerGuideModeAutoTitle: "自動列印模式 (Auto-print)",
     printerGuideModeAutoDesc: "當客人送出訂單後，系統立即發出提示音並自動列印「1 張收銀明細」與「全部餐點貼紙」，適合尖峰繁忙時段，省去店員手動點選步驟。",
@@ -874,6 +878,10 @@ const I18N = {
     // Printer Usage Guide
     printerGuideTitle: "Hướng dẫn sử dụng chức năng In ấn POS",
     printerGuideSub: "Tìm hiểu chi tiết cơ chế in tự động, quy cách tem nhãn và thao tác in 3 cấp độ",
+    btnPrinterGuide: "Hướng dẫn in",
+    btnViewPrinterGuide: "Xem hướng dẫn",
+    btnCloseGuide: "Đã hiểu",
+    printerGuideStripTitle: "Tìm hiểu chế độ in tự động, phối hợp 2 máy in hoặc mẹo in 3 cấp độ?",
     printerGuideModeTitle: "1. Các chế độ in đơn (Auto-print vs. Manual-print)",
     printerGuideModeAutoTitle: "Chế độ In tự động (Auto-print)",
     printerGuideModeAutoDesc: "Khi có đơn mới vào hệ thống, POS tự động phát chuông Ting Ting và xả toàn bộ 1 Bill thu ngân + toàn bộ Tem dán món mà không cần chạm màn hình. Rất thích hợp cho giờ cao điểm đông khách.",
@@ -1572,6 +1580,14 @@ function applyLanguageToDOM() {
   if (gHwKitchen) gHwKitchen.innerText = dict.printerGuideHwKitchen;
   const gHwTest = document.getElementById("i18n-printer-guide-hw-test");
   if (gHwTest) gHwTest.innerText = dict.printerGuideHwTest;
+  const btnPGuide = document.getElementById("i18n-btn-printer-guide");
+  if (btnPGuide) btnPGuide.innerText = dict.btnPrinterGuide;
+  const btnCloseG = document.getElementById("i18n-btn-close-guide");
+  if (btnCloseG) btnCloseG.innerText = dict.btnCloseGuide;
+  const pGuideStripT = document.getElementById("i18n-printer-guide-strip-title");
+  if (pGuideStripT) pGuideStripT.innerText = dict.printerGuideStripTitle;
+  const btnViewG = document.getElementById("i18n-btn-view-guide");
+  if (btnViewG) btnViewG.innerText = dict.btnViewPrinterGuide;
 
   // Re-render open modal contents if active
   if (typeof reviewingOrder !== "undefined" && reviewingOrder) {
