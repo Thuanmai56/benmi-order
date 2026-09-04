@@ -11,7 +11,7 @@ const I18N = {
     tabHistory: "歷史",
     tabReports: "報表",
     tabSound: "測試音效",
-    tabPrinter: "🖨️ 印表機",
+    tabPrinter: "印表機",
     tabMenu: "菜單",
     tabSettings: "設定",
     headerStore: "門市: ",
@@ -21,10 +21,11 @@ const I18N = {
     rangeToday: "今天",
     range7d: "近 7 天",
     range30d: "近 30 天",
-    kpiTopItem: "🏆 熱銷第一名",
-    kpiTotalSold: "📦 總銷售份數",
-    kpiTotalRevenue: "💰 餐點總營收",
-    kpiTotalOrders: "🧾 成交訂單數",
+    kpiTopItem: "熱銷第一名",
+    kpiTotalSold: "總銷售份數",
+    kpiTotalRevenue: "餐點總營收",
+    kpiTotalOrders: "成交訂單數",
+    revenueSub: "餐點銷售總額",
     completedOrdersSub: "已完成 / 已結帳",
     tableTitle: "品項銷售明細排行榜",
     colRank: "排名",
@@ -157,7 +158,7 @@ const I18N = {
     tocHours: "營業時間設定",
     tocAddress: "門市地址設定",
     tocLogo: "門市 Logo",
-    settingStoreStatusTitle: "🏪 門市接單狀態",
+    settingStoreStatusTitle: "門市接單狀態",
     settingStoreStatusSub: "隨時切換一般營業、繁忙延後或暫停接單模式",
     boxOpenTitle: "正常營業",
     boxOpenDesc: "正常接收新訂單，依照標準預約或排隊時間",
@@ -175,27 +176,29 @@ const I18N = {
     statusOptBusyDesc: "新訂單製作時間自動延長 1 小時",
     statusOptPausedTitle: "暫停接單",
     statusOptPausedDesc: "暫停接收新訂單，顧客端無法下單",
-    orderModeTitle: "🛒 點餐模式 / 取餐時間設定",
+    orderModeTitle: "點餐模式 / 取餐時間設定",
     orderModeSub: "自訂允許顧客預約時間或現場排隊即時製作 (ASAP)",
     btnSaveSetting: "儲存設定",
-    modeScheduledTitle: "🕒 允許預約取餐",
+    modeScheduledTitle: "允許預約取餐",
     modeScheduledSub: "顧客可在點餐頁面自選取餐日期與時間，適合預先排程準備餐點的店家。",
-    modeAsapTitle: "⚡ 關閉預約 - 即時排隊製作模式",
+    modeAsapTitle: "關閉預約 - 即時排隊製作模式",
     modeAsapSub: "隱藏預約時間選項。顧客下單後將立即依照現場排隊順序製作 (ASAP)。",
-    hoursTitle: "⏰ 營業時間",
+    hoursTitle: "營業時間設定",
+    hoursSub: "設定每日營業時段與公休日",
     btnSaveHours: "儲存時間",
-    settingAddressTitle: "📍 門市地址",
+    settingAddressTitle: "門市地址",
     settingAddressSub: "顯示於顧客點餐頁面與 LINE 官方帳號回覆",
     settingAddressPlaceholder: "請輸入門市地址",
     btnSaveAddress: "儲存地址",
     tocAnnouncement: "門市公告設定",
-    settingAnnouncementTitle: "📢 門市公告設定",
+    settingAnnouncementTitle: "門市公告設定",
     settingAnnouncementSub: "顯示於顧客點餐頁面 Header 最下方，留空則自動隱藏",
     settingAnnouncementPlaceholder: "請輸入門市公告（例如：今日特餐全面 9 折 / 國定假日公休公告...）",
     btnSaveAnnouncement: "儲存公告",
-    settingLogoTitle: "🖼️ 門市 Logo",
+    settingLogoTitle: "門市 Logo",
     settingLogoSub: "顯示於顧客點餐頁面頂部與 POS 系統",
     btnChooseLogo: "選擇圖片",
+    logoHint: "支援 PNG, JPG, WebP 格式（建議正方形 512x512px 以達最佳效果）",
     btnSaveLogo: "儲存 Logo",
     btnDeleteLogo: "刪除 Logo",
     logoUploadPrompt: "請先選擇要上傳的 Logo 圖片",
@@ -210,20 +213,22 @@ const I18N = {
     btnPrint: "列印",
     btnReprint: "補印",
     tocPrinter: "出單與印表機",
-    settingPrinterTitle: "🖨️ 出單與印表機設定 (ESC/POS)",
+    settingPrinterTitle: "出單與印表機設定 (ESC/POS)",
     settingPrinterSub: "設定 Wi-Fi / LAN 區域網路熱感應出單機 (Port 9100) 與自動列印模式",
     printerAutoPrintTitle: "新訂單自動列印 (Auto-Print)",
     printerAutoPrintDesc: "當系統收到新訂單時，自動出單至已啟用的印表機",
-    printerCashierTitle: "🧾 櫃檯印表機 (客人聯)",
+    printerCashierTitle: "櫃檯印表機 (客人聯)",
     printerCashierDesc: "出明細發票、含金額、客製化與 QR Code",
-    printerKitchenTitle: "🍳 廚房印表機 (製作聯)",
+    printerKitchenTitle: "出餐/廚房標籤機 (廚房聯)",
     printerKitchenDesc: "大字號、桌號、備註清單、不顯示金額",
     printerInterfaceLabel: "連線方式",
-    printerInterfaceNetwork: "🌐 區域網路 / Wi-Fi (TCP/IP)",
-    printerInterfaceBluetooth: "📡 藍牙無線 (Bluetooth SPP)",
+    printerInterfaceNetwork: "區域網路 / Wi-Fi (TCP/IP)",
+    printerInterfaceBluetooth: "藍牙無線 (Bluetooth SPP)",
+    printerEnableLabel: "啟用",
     printerBtDeviceLabel: "已配對藍牙裝置",
     printerBtSelectPlaceholder: "-- 請選擇已配對的藍牙印表機 --",
-    printerBtRefreshBtn: "🔄 重新整理",
+    printerBtDevicePlaceholder: "-- 請選擇已配對的藍牙印表機 --",
+    printerBtRefreshBtn: "重新整理",
     printerBtNoDevices: "未發現已配對裝置，請先至 Android 設定中完成配對",
     printerIpLabel: "IP 位址 (LAN / Wi-Fi)",
     printerPortLabel: "Port 端口",
@@ -231,8 +236,8 @@ const I18N = {
     printerPaper80: "80mm (標準大票)",
     printerPaper58: "58mm (小票)",
     printerProtocolLabel: "列印指令協定 (Protocol)",
-    printerOptEscPos: "🧾 ESC/POS (收據/小票 58-80mm)",
-    printerOptTspl: "🏷️ TSPL (貼紙/標籤機 如 Aimo D520BT, Xprinter)",
+    printerOptEscPos: "ESC/POS (收據/小票 58-80mm)",
+    printerOptTspl: "TSPL (貼紙/標籤機 如 Aimo D520BT, Xprinter)",
     printerTsplSizeLabel: "標籤紙張尺寸",
     printerOptTspl100x150: "100 x 150 mm (4x6\" 貨運/大袋貼紙)",
     printerOptTspl76x130: "76 x 130 mm (3x5\" 訂單明細貼紙)",
@@ -242,8 +247,8 @@ const I18N = {
     printerTsplWidthLabel: "寬度 (mm)",
     printerTsplHeightLabel: "高度 (mm)",
     printerTsplModeLabel: "標籤列印模式",
-    printerOptTsplModeSummary: "📦 訂單總表貼紙 (1張/每張訂單)",
-    printerOptTsplModeItems: "🥤 單品/杯貼標籤 (1張/每份餐點)",
+    printerOptTsplModeSummary: "訂單總表貼紙 (1張/每張訂單)",
+    printerOptTsplModeItems: "單品/杯貼標籤 (1張/每份餐點)",
     printerTsplDpiLabel: "解析度 (DPI)",
     printerOptTsplDpi203: "203 DPI (8 dots/mm - 標準)",
     printerOptTsplDpi300: "300 DPI (11.8 dots/mm - 高解析度)",
@@ -254,9 +259,9 @@ const I18N = {
     // Print Mode Settings (Auto vs Manual)
     printModeTitle: "列印出單模式",
     printModeSub: "選擇新訂單進來時的列印行為",
-    printModeAutoTitle: "⚡ 自動列印模式 (Auto-print)",
+    printModeAutoTitle: "自動列印模式 (Auto-print)",
     printModeAutoDesc: "收到新訂單時，系統發出提示音並自動列印全部明細 (Bill) 與標籤貼紙 (Tem)，無需觸碰螢幕。適合尖峰繁忙時段。",
-    printModeManualTitle: "✋ 手動列印模式 (Manual-print)",
+    printModeManualTitle: "手動列印模式 (Manual-print)",
     printModeManualDesc: "店員須在螢幕點選 [整單全印] 機器才會出單。適合需要先核對確認訂單的門市。",
     // 3 Print Levels
     btnPrintFullOrder: "整單全印 (1 聯收銀 + {n} 張貼紙)",
@@ -283,18 +288,18 @@ const I18N = {
     printerGuideTitle: "出單與印表機功能使用指南",
     printerGuideSub: "深入了解自動出單、單據規格與 3 段式列印操作技巧",
     printerGuideModeTitle: "1. 列印出單模式說明 (Auto vs. Manual)",
-    printerGuideModeAutoTitle: "⚡ 自動列印模式 (Auto-print)",
+    printerGuideModeAutoTitle: "自動列印模式 (Auto-print)",
     printerGuideModeAutoDesc: "當客人送出訂單後，系統立即發出提示音並自動列印「1 張收銀明細」與「全部餐點貼紙」，適合尖峰繁忙時段，省去店員手動點選步驟。",
-    printerGuideModeManualTitle: "✋ 手動列印模式 (Manual-print)",
+    printerGuideModeManualTitle: "手動列印模式 (Manual-print)",
     printerGuideModeManualDesc: "收到新單時僅發出通知音，店員需點進訂單詳細頁確認餐點內容後，點選 [整單全印] 才會出單。適合需先確認庫存或客製化說明的門市。",
     printerGuideLevelsTitle: "2. 訂單詳細頁 3 段式列印控制",
-    printerGuideLevelFullTitle: "🖨️ 整單全印 (1 聯收銀 + N 張貼紙)",
+    printerGuideLevelFullTitle: "整單全印 (1 聯收銀 + N 張貼紙)",
     printerGuideLevelFullDesc: "一鍵送出：1 張櫃檯明細 (給客人或留底) + N 張廚房貼紙 (每份餐點 1 張獨立杯貼/盒貼)。",
-    printerGuideLevelBillTitle: "🧾 僅印收銀明細 (Bill)",
+    printerGuideLevelBillTitle: "僅印收銀明細 (Bill)",
     printerGuideLevelBillDesc: "僅出單張收據小票，適合結帳找零、補開客人明細或退換貨核對。",
-    printerGuideLevelSingleTitle: "🏷️ 單品貼紙列印與備餐勾選",
+    printerGuideLevelSingleTitle: "單品貼紙列印與備餐勾選",
     printerGuideLevelSingleDesc: "每道餐點左側設有 [ ] 勾選方塊供廚房備餐核對；右側設有 [印單品貼紙] 鈕，遇卡紙或貼紙破損時可單獨補印該品項。",
-    printerGuideLevelCustomTitle: "⚙️ 補印客製/緊急貼紙",
+    printerGuideLevelCustomTitle: "補印客製/緊急貼紙",
     printerGuideLevelCustomDesc: "點開可快選常見備註 (如：不要香菜、去冰、微辣) 或手動輸入特殊要求，立即印出獨立小貼紙貼在餐盒上。",
     printerGuideHardwareTitle: "3. 雙印表機 (Dual-Station) 建議設定",
     printerGuideHwCashier: "• 櫃檯印表機：建議使用 ESC/POS 協定熱感應小票機 (80mm 或 58mm)，連接 Wi-Fi (Port 9100) 或藍牙。",
@@ -303,7 +308,7 @@ const I18N = {
     // Menu Editor
     menuCatTitle: "菜單分類",
     menuCatSub: "點擊左側分類以管理品項",
-    btnManageCategories: "⚙️ 管理分類",
+    btnManageCategories: "管理分類",
     manageCategoriesTitle: "管理菜單分類",
     manageCategoriesSub: "拖曳調整分類順序，亦可新增或刪除分類",
     btnCloseManager: "✕ 關閉",
@@ -316,14 +321,14 @@ const I18N = {
     categoryNameLabel: "分類名稱",
     categoryNamePlaceholder: "例: 豆漿 意仁漿, 經典主食",
     categoryTypeLabel: "分類類型",
-    categoryTypeCatalog: "🍽️ 菜單品項 (主餐 / 飲料)",
-    categoryTypeModifier: "⚙️ 客製化選項 (加辣 / 加料 / 甜度)",
+    categoryTypeCatalog: "菜單品項 (主餐 / 飲料)",
+    categoryTypeModifier: "客製化選項 (加辣 / 加料 / 甜度)",
     confirmDeleteCategory: "確定要刪除整個「{name}」分類及其內部所有品項嗎？",
     promptCategoryNameEmpty: "請輸入有效的分類名稱！",
     promptCategoryNamePrompt: "請輸入新的分類名稱：",
     allowCustomizationLabel: "允許客製化選項 (加料 / 辣度 / 備註)",
     allowCustomizationDesc: "開啟後，顧客在點選此分類餐點時可選擇客製化設定",
-    appliedModifiersTitle: "🔧 適用客製化選項",
+    appliedModifiersTitle: "適用客製化選項",
     appliedModifiersDesc: "勾選顧客在點選此分類餐點時可使用的客製化選項 (預設為全部勾選)",
     btnSelectAll: "全選",
     btnUnselectAll: "清除 (全不選)",
@@ -389,8 +394,8 @@ const I18N = {
     takeaway: "外帶",
     dineIn: "內用",
     filterAll: "全部",
-    filterTakeaway: "🛍️ 外帶",
-    filterDineIn: "🍽️ 內用",
+    filterTakeaway: "外帶",
+    filterDineIn: "內用",
     badgeTakeaway: "外帶",
     badgeDineIn: "內用",
     tableNumber: "桌號",
@@ -400,24 +405,24 @@ const I18N = {
     printTakeaway: "【外帶】",
     // Dine In Setting
     tocDineIn: "內用接單模式",
-    settingDineInTitle: "🍽️ 內用接單設定",
+    settingDineInTitle: "內用接單設定",
     settingDineInSub: "自訂是否允許顧客選擇「內用」或僅接受「外帶」",
-    settingDineInTrueTitle: "🍽️ 開啟內用與外帶 (預設)",
+    settingDineInTrueTitle: "開啟內用與外帶 (預設)",
     settingDineInTrueSub: "顧客可在點餐頁面自由切換「外帶」或「內用」模式。",
-    settingDineInFalseTitle: "🛍️ 僅限外帶 (關閉內用)",
+    settingDineInFalseTitle: "僅限外帶 (關閉內用)",
     settingDineInFalseSub: "隱藏內用選項，所有訂單一律為外帶自取。",
     btnSaveDineInSetting: "儲存設定",
     dineInSaveSuccess: "內用設定已成功儲存！",
     dineInSaveFail: "內用設定儲存失敗：",
-    featureLockedTitle: "🔒 進階功能 (未啟用)",
+    featureLockedTitle: "進階功能 (未啟用)",
     featureLockedDesc: "此功能為 BLAB 進階模組，如需啟用「內用接單」請聯繫 BLAB 團隊升級方案。",
     btnContactUpgrade: "聯繫升級方案",
     // Language & Reports Settings
     tocLanguage: "介面語言",
     tocReports: "銷量與營收報表",
-    settingLangTitle: "🌐 介面語言",
+    settingLangTitle: "系統介面語言",
     settingLangSub: "設定 POS 系統的操作與顯示語言",
-    settingReportsTitle: "📊 銷量與營收報表",
+    settingReportsTitle: "銷量與營收報表",
     settingReportsSub: "查看門市餐點銷售統計、營收排行與加料偏好",
     reportsUnlockedName: "即時餐點銷量與營收分析",
     reportsUnlockedDesc: "依時間區間（今日、近7天、近30天）統計門市各品項銷售數量、營收總額及顧客加料分析。",
@@ -461,14 +466,14 @@ const I18N = {
     unpaired: "未綁定"
   },
   "vi": {
-    langBtn: "繁體中文",
-    brandTitle: "🥖 Benmi Dashboard",
+    langBtn: "Tiếng Việt",
+    brandTitle: "Benmi Dashboard",
     brandSub: "Đơn hàng trực tiếp",
     tabLive: "Trực tiếp",
     tabHistory: "Lịch sử",
     tabReports: "Báo cáo",
     tabSound: "Thử âm thanh",
-    tabPrinter: "🖨️ Máy In",
+    tabPrinter: "Máy in",
     tabMenu: "Thực đơn",
     tabSettings: "Cài đặt",
     headerStore: "Quán: ",
@@ -478,10 +483,11 @@ const I18N = {
     rangeToday: "Hôm nay",
     range7d: "7 ngày qua",
     range30d: "30 ngày qua",
-    kpiTopItem: "🏆 Top 1 Bán chạy nhất",
-    kpiTotalSold: "📦 Tổng phần đã bán",
-    kpiTotalRevenue: "💰 Tổng doanh thu món",
-    kpiTotalOrders: "🧾 Tổng đơn thành công",
+    kpiTopItem: "Top 1 Bán chạy nhất",
+    kpiTotalSold: "Tổng phần đã bán",
+    kpiTotalRevenue: "Tổng doanh thu món",
+    kpiTotalOrders: "Tổng đơn thành công",
+    revenueSub: "Doanh thu món bán",
     completedOrdersSub: "Đã xong / Đã thanh toán",
     tableTitle: "Bảng xếp hạng chi tiết món bán",
     colRank: "Hạng",
@@ -614,7 +620,7 @@ const I18N = {
     tocHours: "Giờ hoạt động",
     tocAddress: "Địa chỉ cửa hàng",
     tocLogo: "Logo cửa hàng",
-    settingStoreStatusTitle: "🏪 Trạng thái nhận đơn của quán",
+    settingStoreStatusTitle: "Trạng thái nhận đơn",
     settingStoreStatusSub: "Chuyển đổi linh hoạt giữa Mở quán, Đang bận (+1h) hoặc Tạm dừng nhận đơn",
     boxOpenTitle: "Mở quán",
     boxOpenDesc: "Nhận đơn bình thường theo thời gian hẹn hoặc xếp hàng",
@@ -632,27 +638,29 @@ const I18N = {
     statusOptBusyDesc: "Quán đang bận, tự động kéo dài thời gian làm thêm 1 tiếng cho mỗi đơn mới",
     statusOptPausedTitle: "Tạm dừng nhận đơn",
     statusOptPausedDesc: "Tạm dừng nhận đơn mới, khách hàng không thể gửi đơn",
-    orderModeTitle: "🛒 Chế độ nhận đơn & Hẹn giờ",
+    orderModeTitle: "Chế độ nhận đơn & Hẹn giờ",
     orderModeSub: "Tùy chỉnh cho phép khách hẹn giờ lấy hoặc nhận đơn làm ngay xếp theo thứ tự (ASAP)",
     btnSaveSetting: "Lưu thiết lập",
-    modeScheduledTitle: "🕒 Bật hẹn giờ lấy món",
+    modeScheduledTitle: "Bật hẹn giờ lấy món",
     modeScheduledSub: "Khách hàng có thể tự chọn ngày và giờ muốn đến lấy món trên trang đặt hàng. Thích hợp với các quán chuẩn bị theo giờ hẹn của khách.",
-    modeAsapTitle: "⚡ Tắt hẹn giờ - Nhận đơn làm ngay theo hàng đợi (ASAP)",
+    modeAsapTitle: "Tắt hẹn giờ - Nhận đơn làm ngay theo hàng đợi (ASAP)",
     modeAsapSub: "Ẩn mục chọn ngày giờ. Khách đặt xong đơn sẽ được tiếp nhận và xử lý làm ngay theo thứ tự xếp hàng (ASAP).",
-    hoursTitle: "⏰ Giờ hoạt động",
+    hoursTitle: "Giờ hoạt động",
+    hoursSub: "Cài đặt khung giờ mở cửa và ngày nghỉ định kỳ",
     btnSaveHours: "Lưu thời gian",
-    settingAddressTitle: "📍 Địa chỉ cửa hàng",
+    settingAddressTitle: "Địa chỉ cửa hàng",
     settingAddressSub: "Hiển thị trên trang đặt món của khách và tin nhắn tự động LINE",
     settingAddressPlaceholder: "Nhập địa chỉ cửa hàng",
     btnSaveAddress: "Lưu địa chỉ",
     tocAnnouncement: "Thông báo cửa hàng",
-    settingAnnouncementTitle: "📢 Thông báo của quán",
+    settingAnnouncementTitle: "Thông báo của quán",
     settingAnnouncementSub: "Hiển thị dưới cùng của Header trên trang đặt món của khách, để trống sẽ tự động ẩn",
     settingAnnouncementPlaceholder: "Nhập thông báo cửa hàng (ví dụ: Hôm nay có món mới / Nghỉ lễ 2/9...)",
     btnSaveAnnouncement: "Lưu thông báo",
-    settingLogoTitle: "🖼️ Logo cửa hàng",
+    settingLogoTitle: "Logo cửa hàng",
     settingLogoSub: "Hiển thị ở đầu trang đặt món của khách và hệ thống POS",
     btnChooseLogo: "Chọn ảnh",
+    logoHint: "Hỗ trợ định dạng PNG, JPG, WebP (Khuyến nghị hình vuông 512x512px)",
     btnSaveLogo: "Lưu Logo",
     btnDeleteLogo: "Xóa Logo",
     logoUploadPrompt: "Vui lòng chọn ảnh Logo trước khi lưu",
@@ -666,7 +674,7 @@ const I18N = {
     // Menu Editor
     menuCatTitle: "Danh mục thực đơn",
     menuCatSub: "Chọn danh mục bên trái để quản lý món",
-    btnManageCategories: "⚙️ Quản lý phân loại",
+    btnManageCategories: "Quản lý phân loại",
     manageCategoriesTitle: "Quản lý phân loại thực đơn",
     manageCategoriesSub: "Kéo thả để đổi thứ tự, thêm mới hoặc xóa phân loại",
     btnCloseManager: "✕ Đóng",
@@ -677,16 +685,16 @@ const I18N = {
     btnCategoryRename: "Đổi tên phân loại",
     addCategoryModalTitle: "Thêm phân loại thực đơn mới",
     categoryNameLabel: "Tên phân loại",
-    categoryNamePlaceholder: "VD: 豆漿 意仁漿, Món ăn kèm",
+    categoryNamePlaceholder: "VD: Đồ uống, Món chính",
     categoryTypeLabel: "Loại phân loại",
-    categoryTypeCatalog: "🍽️ Danh mục món (Món chính / Đồ uống)",
-    categoryTypeModifier: "⚙️ Tùy biến chọn kèm (Thêm cay / Topping)",
+    categoryTypeCatalog: "Danh mục món (Món chính / Đồ uống)",
+    categoryTypeModifier: "Tùy biến chọn kèm (Thêm cay / Topping)",
     confirmDeleteCategory: "Bạn có chắc muốn xóa toàn bộ phân loại「{name}」và các món bên trong không?",
     promptCategoryNameEmpty: "Vui lòng nhập tên phân loại hợp lệ!",
     promptCategoryNamePrompt: "Nhập tên phân loại mới:",
     allowCustomizationLabel: "Cho phép tùy chỉnh món (Topping / Độ cay / Ghi chú)",
     allowCustomizationDesc: "Khi bật, khách hàng có thể tùy chỉnh thêm topping, mức cay cho các món trong loại này",
-    appliedModifiersTitle: "🔧 Tùy biến áp dụng cho loại này",
+    appliedModifiersTitle: "Tùy biến áp dụng cho loại này",
     appliedModifiersDesc: "Chọn các tùy biến khách hàng có thể chọn khi gọi món trong loại này (Mặc định chọn tất cả)",
     btnSelectAll: "Chọn tất cả",
     btnUnselectAll: "Bỏ chọn tất cả",
@@ -752,8 +760,8 @@ const I18N = {
     takeaway: "Mang đi",
     dineIn: "Ăn tại quán",
     filterAll: "Tất cả",
-    filterTakeaway: "🛍️ Mang đi",
-    filterDineIn: "🍽️ Ăn tại quán",
+    filterTakeaway: "Mang đi",
+    filterDineIn: "Ăn tại quán",
     badgeTakeaway: "Mang đi",
     badgeDineIn: "Ăn tại quán",
     tableNumber: "Số bàn",
@@ -763,24 +771,24 @@ const I18N = {
     printTakeaway: "【MANG ĐI】",
     // Dine In Setting
     tocDineIn: "Thiết lập ăn tại quán",
-    settingDineInTitle: "🍽️ Thiết lập ăn tại quán",
+    settingDineInTitle: "Thiết lập ăn tại quán",
     settingDineInSub: "Bật/tắt tùy chọn ăn tại quán hoặc chỉ bán mang đi",
-    settingDineInTrueTitle: "🍽️ Mở cả Ăn tại quán & Mang đi (Mặc định)",
+    settingDineInTrueTitle: "Mở cả Ăn tại quán & Mang đi (Mặc định)",
     settingDineInTrueSub: "Khách có thể tự do chuyển đổi giữa Ăn tại quán và Mang đi.",
-    settingDineInFalseTitle: "🛍️ Chỉ bán mang đi (Tắt ăn tại quán)",
+    settingDineInFalseTitle: "Chỉ bán mang đi (Tắt ăn tại quán)",
     settingDineInFalseSub: "Ẩn tùy chọn ăn tại quán trên menu, tất cả đơn hàng đều là mang đi.",
     btnSaveDineInSetting: "Lưu thiết lập",
     dineInSaveSuccess: "Đã lưu thiết lập ăn tại quán thành công!",
     dineInSaveFail: "Lưu thiết lập thất bại: ",
-    featureLockedTitle: "🔒 Tính năng nâng cao (Chưa kích hoạt)",
+    featureLockedTitle: "Tính năng nâng cao (Chưa kích hoạt)",
     featureLockedDesc: "Tính năng này thuộc gói mô-đun nâng cao. Để kích hoạt 'Ăn tại quán', vui lòng liên hệ BLAB để nâng cấp gói.",
     btnContactUpgrade: "Liên hệ nâng cấp gói",
     // Language & Reports Settings
     tocLanguage: "Ngôn ngữ POS",
     tocReports: "Báo cáo doanh thu",
-    settingLangTitle: "🌐 Ngôn ngữ hiển thị POS",
+    settingLangTitle: "Ngôn ngữ hiển thị POS",
     settingLangSub: "Cài đặt ngôn ngữ hiển thị và thao tác của hệ thống POS",
-    settingReportsTitle: "📊 Báo cáo doanh thu & sản lượng món",
+    settingReportsTitle: "Báo cáo doanh thu & sản lượng món",
     settingReportsSub: "Xem thống kê bán hàng, doanh thu các món và tùy biến chọn kèm",
     reportsUnlockedName: "Phân tích doanh thu & sản lượng món thời gian thực",
     reportsUnlockedDesc: "Thống kê số lượng bán, tổng doanh thu theo mốc thời gian (Hôm nay, 7 ngày, 30 ngày) và phân tích topping/tùy biến.",
@@ -792,20 +800,22 @@ const I18N = {
     btnPrint: "In phiếu",
     btnReprint: "In lại",
     tocPrinter: "Máy in & Xuất vé",
-    settingPrinterTitle: "🖨️ Cài Đặt Máy In Nhiệt (ESC/POS)",
+    settingPrinterTitle: "Cài Đặt Máy In Nhiệt (ESC/POS)",
     settingPrinterSub: "Cấu hình máy in mạng LAN / Wi-Fi (Cổng 9100) và chế độ tự động in",
     printerAutoPrintTitle: "Tự động in khi có đơn mới (Auto-Print)",
     printerAutoPrintDesc: "Tự động xuất vé ra máy in ngay khi hệ thống nhận đơn hàng mới",
-    printerCashierTitle: "🧾 Máy in Quầy (Hóa đơn khách)",
+    printerCashierTitle: "Máy in Quầy (Hóa đơn khách)",
     printerCashierDesc: "In hóa đơn chi tiết, hiển thị giá tiền, tùy biến và mã QR",
-    printerKitchenTitle: "🍳 Máy in Bếp (Phiếu chế biến)",
+    printerKitchenTitle: "Máy in Bếp (Phiếu chế biến)",
     printerKitchenDesc: "Font chữ lớn, số bàn, ghi chú món, không hiển thị giá tiền",
     printerInterfaceLabel: "Hình thức kết nối",
-    printerInterfaceNetwork: "🌐 Mạng nội bộ / Wi-Fi (TCP/IP)",
-    printerInterfaceBluetooth: "📡 Bluetooth không dây (SPP)",
+    printerInterfaceNetwork: "Mạng nội bộ / Wi-Fi (TCP/IP)",
+    printerInterfaceBluetooth: "Bluetooth không dây (SPP)",
+    printerEnableLabel: "Kích hoạt",
     printerBtDeviceLabel: "Thiết bị Bluetooth đã ghép đôi",
     printerBtSelectPlaceholder: "-- Chọn máy in Bluetooth đã ghép đôi --",
-    printerBtRefreshBtn: "🔄 Quét lại",
+    printerBtDevicePlaceholder: "-- Vui lòng chọn máy in Bluetooth đã kết nối --",
+    printerBtRefreshBtn: "Quét lại",
     printerBtNoDevices: "Chưa tìm thấy máy in Bluetooth nào. Vui lòng ghép đôi trong Cài đặt Android trước",
     printerIpLabel: "Địa chỉ IP (LAN / Wi-Fi)",
     printerPortLabel: "Cổng Port",
@@ -813,8 +823,8 @@ const I18N = {
     printerPaper80: "80mm (Khổ tiêu chuẩn)",
     printerPaper58: "58mm (Khổ nhỏ)",
     printerProtocolLabel: "Giao thức lệnh in (Protocol)",
-    printerOptEscPos: "🧾 ESC/POS (Hóa đơn cuộn 58-80mm)",
-    printerOptTspl: "🏷️ TSPL (Máy in tem nhãn/decal như Aimo D520BT, Xprinter)",
+    printerOptEscPos: "ESC/POS (Hóa đơn cuộn 58-80mm)",
+    printerOptTspl: "TSPL (Máy in tem nhãn/decal như Aimo D520BT, Xprinter)",
     printerTsplSizeLabel: "Kích thước nhãn/decal",
     printerOptTspl100x150: "100 x 150 mm (4x6\" Tem dán túi/thùng lớn)",
     printerOptTspl76x130: "76 x 130 mm (3x5\" Tem đơn hàng trung bình)",
@@ -824,8 +834,8 @@ const I18N = {
     printerTsplWidthLabel: "Chiều rộng (mm)",
     printerTsplHeightLabel: "Chiều cao (mm)",
     printerTsplModeLabel: "Chế độ in tem nhãn",
-    printerOptTsplModeSummary: "📦 Tem tổng đơn hàng (1 tem/mỗi đơn)",
-    printerOptTsplModeItems: "🥤 Tem dán từng ly/từng món (1 tem/mỗi món)",
+    printerOptTsplModeSummary: "Tem tổng đơn hàng (1 tem/mỗi đơn)",
+    printerOptTsplModeItems: "Tem dán từng ly/từng món (1 tem/mỗi món)",
     printerTsplDpiLabel: "Độ phân giải (DPI)",
     printerOptTsplDpi203: "203 DPI (8 dots/mm - Tiêu chuẩn)",
     printerOptTsplDpi300: "300 DPI (11.8 dots/mm - Siêu nét)",
@@ -836,9 +846,9 @@ const I18N = {
     // Print Mode Settings (Auto vs Manual)
     printModeTitle: "Chế độ xuất vé / in",
     printModeSub: "Tùy chỉnh hành vi in khi hệ thống tiếp nhận đơn hàng mới",
-    printModeAutoTitle: "⚡ Chế độ In tự động (Auto-print)",
+    printModeAutoTitle: "Chế độ In tự động (Auto-print)",
     printModeAutoDesc: "Đơn được nhận, Web tự động phát tiếng chuông Ting Ting và tự động xả toàn bộ Tem + Bill ra máy in mà không cần nhân viên chạm vào màn hình. Rất thích hợp cho quán lúc cực kỳ đông khách.",
-    printModeManualTitle: "✋ Chế độ In thủ công (Manual-print)",
+    printModeManualTitle: "Chế độ In thủ công (Manual-print)",
     printModeManualDesc: "Nhân viên phải bấm nút [ IN CẢ ĐƠN ] trên màn hình thì máy mới in. Thích hợp cho quán muốn kiểm tra lại đơn trước khi nhận.",
     // 3 Print Levels
     btnPrintFullOrder: "IN CẢ ĐƠN (1 Bill + {n} Tem)",
@@ -865,18 +875,18 @@ const I18N = {
     printerGuideTitle: "Hướng dẫn sử dụng chức năng In ấn POS",
     printerGuideSub: "Tìm hiểu chi tiết cơ chế in tự động, quy cách tem nhãn và thao tác in 3 cấp độ",
     printerGuideModeTitle: "1. Các chế độ in đơn (Auto-print vs. Manual-print)",
-    printerGuideModeAutoTitle: "⚡ Chế độ In tự động (Auto-print)",
+    printerGuideModeAutoTitle: "Chế độ In tự động (Auto-print)",
     printerGuideModeAutoDesc: "Khi có đơn mới vào hệ thống, POS tự động phát chuông Ting Ting và xả toàn bộ 1 Bill thu ngân + toàn bộ Tem dán món mà không cần chạm màn hình. Rất thích hợp cho giờ cao điểm đông khách.",
-    printerGuideModeManualTitle: "✋ Chế độ In thủ công (Manual-print)",
+    printerGuideModeManualTitle: "Chế độ In thủ công (Manual-print)",
     printerGuideModeManualDesc: "Khi có đơn mới hệ thống chỉ báo chuông. Nhân viên bấm mở đơn kiểm tra rồi nhấn [IN CẢ ĐƠN] máy mới in. Phù hợp quán cần kiểm tra lại món hoặc xác nhận với khách trước khi làm.",
     printerGuideLevelsTitle: "2. Thao tác in 3 cấp độ trong chi tiết đơn hàng",
-    printerGuideLevelFullTitle: "🖨️ IN CẢ ĐƠN (1 Bill + N Tem)",
+    printerGuideLevelFullTitle: "IN CẢ ĐƠN (1 Bill + N Tem)",
     printerGuideLevelFullDesc: "1 chạm xuất đầy đủ: 1 hoá đơn thu ngân cho khách + N tem nhãn cho quầy bar/bếp (mỗi ly/phần ăn 1 tem dán riêng).",
-    printerGuideLevelBillTitle: "🧾 IN BILL THU NGÂN",
+    printerGuideLevelBillTitle: "IN BILL THU NGÂN",
     printerGuideLevelBillDesc: "Chỉ in 1 phiếu hoá đơn tính tiền, dùng khi thanh toán, kẹp hoá đơn bàn giao cho khách hoặc lưu sổ sách.",
-    printerGuideLevelSingleTitle: "🏷️ In tem từng món & Checkbox bếp",
+    printerGuideLevelSingleTitle: "In tem từng món & Checkbox bếp",
     printerGuideLevelSingleDesc: "Mỗi dòng món ăn có checkbox [ ] cho bếp tích đánh dấu hoàn thành (tự động gạch ngang món); nút [In tem món] cho phép in lại đúng món đó khi rách tem hoặc kẹt giấy.",
-    printerGuideLevelCustomTitle: "⚙️ IN TEM TÙY CHỌN (Tem chữa cháy)",
+    printerGuideLevelCustomTitle: "IN TEM TÙY CHỌN (Tem chữa cháy)",
     printerGuideLevelCustomDesc: "Bấm mở popup để chạm nhanh các tùy biến (Không hành, Ít đá, Cay vừa...) hoặc nhập chữ tự do để xả ngay 1 tem ghi chú dán chữa cháy lên ly/hộp.",
     printerGuideHardwareTitle: "3. Cấu hình khuyến nghị cho mô hình 2 máy in (Dual-Station)",
     printerGuideHwCashier: "• Máy in thu ngân: Dùng máy in hoá đơn nhiệt ESC/POS (khổ 80mm hoặc 58mm), kết nối mạng Wi-Fi LAN (Port 9100) hoặc Bluetooth.",
@@ -1013,6 +1023,8 @@ function applyLanguageToDOM() {
   if (kpiTotalRev) kpiTotalRev.innerText = dict.kpiTotalRevenue;
   const kpiTotalOrders = document.getElementById("i18n-kpi-total-orders");
   if (kpiTotalOrders) kpiTotalOrders.innerText = dict.kpiTotalOrders;
+  const revSub = document.getElementById("i18n-revenue-sub");
+  if (revSub) revSub.innerText = dict.revenueSub;
   const compOrdersSub = document.getElementById("i18n-completed-orders-sub");
   if (compOrdersSub) compOrdersSub.innerText = dict.completedOrdersSub;
   const repTblTitle = document.getElementById("i18n-table-title");
@@ -1083,6 +1095,8 @@ function applyLanguageToDOM() {
   if (lTotal) lTotal.innerText = dict.labelTotal;
   const lStatus = document.getElementById("i18n-label-status");
   if (lStatus) lStatus.innerText = dict.labelStatus;
+  const lDining = document.getElementById("i18n-label-dining");
+  if (lDining) lDining.innerText = dict.labelDiningOption;
 
   const btnRevAcc = document.getElementById("btn-review-accept");
   if (btnRevAcc) btnRevAcc.innerText = dict.btnAccept;
@@ -1300,6 +1314,8 @@ function applyLanguageToDOM() {
   if (modeAsapS) modeAsapS.innerText = dict.modeAsapSub;
   const hrsT = document.getElementById("i18n-hours-title");
   if (hrsT) hrsT.innerText = dict.hoursTitle;
+  const hrsS = document.getElementById("i18n-hours-sub");
+  if (hrsS) hrsS.innerText = dict.hoursSub;
   const btnSaveHrs = document.getElementById("btn-save-hours");
   if (btnSaveHrs) btnSaveHrs.innerText = dict.btnSaveHours;
 
@@ -1325,8 +1341,15 @@ function applyLanguageToDOM() {
   if (setLogoT) setLogoT.innerText = dict.settingLogoTitle;
   const setLogoS = document.getElementById("i18n-setting-logo-sub");
   if (setLogoS) setLogoS.innerText = dict.settingLogoSub;
-  const btnChooseLogo = document.getElementById("btn-setting-choose-logo");
-  if (btnChooseLogo) btnChooseLogo.innerText = dict.btnChooseLogo;
+  const btnChooseLogoTxt = document.getElementById("i18n-btn-choose-logo-text");
+  if (btnChooseLogoTxt) {
+    btnChooseLogoTxt.innerText = dict.btnChooseLogo;
+  } else {
+    const btnChooseLogo = document.getElementById("btn-setting-choose-logo");
+    if (btnChooseLogo) btnChooseLogo.innerText = dict.btnChooseLogo;
+  }
+  const logoHint = document.getElementById("i18n-logo-hint");
+  if (logoHint) logoHint.innerText = dict.logoHint;
   const btnSaveLogo = document.getElementById("btn-save-logo-setting");
   if (btnSaveLogo) btnSaveLogo.innerText = dict.btnSaveLogo;
   const btnDeleteLogo = document.getElementById("btn-delete-logo-setting");
@@ -1451,8 +1474,13 @@ function applyLanguageToDOM() {
   if (featLockT) featLockT.innerText = dict.featureLockedTitle;
   const featLockD = document.getElementById("i18n-feature-locked-desc");
   if (featLockD) featLockD.innerText = dict.featureLockedDesc;
-  const btnContUpg = document.getElementById("i18n-btn-contact-upgrade");
-  if (btnContUpg) btnContUpg.innerHTML = `<span>💬</span> <span>${dict.btnContactUpgrade}</span>`;
+  const btnContUpgTxt = document.getElementById("i18n-btn-contact-upgrade-text");
+  if (btnContUpgTxt) {
+    btnContUpgTxt.innerText = dict.btnContactUpgrade;
+  } else {
+    const btnContUpg = document.getElementById("i18n-btn-contact-upgrade");
+    if (btnContUpg) btnContUpg.innerText = dict.btnContactUpgrade;
+  }
 
   // Thermal Printer Settings DOM mappings
   const setPrnT = document.getElementById("i18n-setting-printer-title");
@@ -1569,6 +1597,12 @@ function applyLanguageToDOM() {
   if (btnSvPrn) btnSvPrn.innerText = dict.btnSavePrinterSettings;
 
   // Bluetooth & Interface DOM Labels
+  const labelsEnable = document.querySelectorAll(".i18n-printer-enable-lbl");
+  labelsEnable.forEach(el => el.innerText = dict.printerEnableLabel);
+
+  const optsBtPlaceholder = document.querySelectorAll(".i18n-opt-bt-placeholder");
+  optsBtPlaceholder.forEach(el => el.innerText = dict.printerBtDevicePlaceholder);
+
   const labelsInterface = document.querySelectorAll(".i18n-printer-interface-lbl");
   labelsInterface.forEach(el => el.innerText = dict.printerInterfaceLabel);
 
