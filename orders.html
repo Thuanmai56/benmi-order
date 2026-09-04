@@ -272,53 +272,169 @@
       <div class="split settings-split">
         <!-- Left Column: Table of Contents -->
         <div class="settings-toc-panel">
-          <div class="panel-header">
-            <div class="panel-title" id="i18n-toc-settings-title">設定目錄</div>
+          <div class="settings-toc-header">
+            <div class="settings-toc-header-left">
+              <div class="settings-toc-header-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="4" y1="21" x2="4" y2="14"></line>
+                  <line x1="4" y1="10" x2="4" y2="3"></line>
+                  <line x1="12" y1="21" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12" y2="3"></line>
+                  <line x1="20" y1="21" x2="20" y2="16"></line>
+                  <line x1="20" y1="12" x2="20" y2="3"></line>
+                  <line x1="1" y1="14" x2="7" y2="14"></line>
+                  <line x1="9" y1="8" x2="15" y2="8"></line>
+                  <line x1="17" y1="16" x2="23" y2="16"></line>
+                </svg>
+              </div>
+              <div class="settings-toc-header-text">
+                <div class="panel-title" id="i18n-toc-settings-title">設定目錄</div>
+                <div class="panel-sub" id="i18n-toc-settings-sub">系統與門市參數</div>
+              </div>
+            </div>
           </div>
           <div class="settings-toc-list" id="settings-toc-list">
             <div class="settings-toc-item active" id="toc-item-status" onclick="scrollToSettingSection('setting-card-status')">
-              <span class="toc-icon">🏪</span>
-              <span id="i18n-toc-status">門市接單狀態</span>
+              <div class="toc-icon-box">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"></path>
+                  <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
+                  <path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"></path>
+                  <path d="M2 7h20"></path>
+                </svg>
+              </div>
+              <span class="toc-item-label" id="i18n-toc-status">門市接單狀態</span>
+              <svg class="toc-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
             </div>
             <div class="settings-toc-item" id="toc-item-ordermode" onclick="scrollToSettingSection('setting-card-ordermode')">
-              <span class="toc-icon">🛒</span>
-              <span id="i18n-toc-ordermode">點餐取餐模式</span>
+              <div class="toc-icon-box">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path>
+                  <path d="M3 6h18"></path>
+                  <path d="M16 10a4 4 0 0 1-8 0"></path>
+                </svg>
+              </div>
+              <span class="toc-item-label" id="i18n-toc-ordermode">點餐取餐模式</span>
+              <svg class="toc-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
             </div>
             <div class="settings-toc-item" id="toc-item-hours" onclick="scrollToSettingSection('setting-card-hours')">
-              <span class="toc-icon">⏰</span>
-              <span id="i18n-toc-hours">營業時間設定</span>
+              <div class="toc-icon-box">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+              </div>
+              <span class="toc-item-label" id="i18n-toc-hours">營業時間設定</span>
+              <svg class="toc-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
             </div>
             <div class="settings-toc-item" id="toc-item-address" onclick="scrollToSettingSection('setting-card-address')">
-              <span class="toc-icon">📍</span>
-              <span id="i18n-toc-address">門市地址設定</span>
+              <div class="toc-icon-box">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                  <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+              </div>
+              <span class="toc-item-label" id="i18n-toc-address">門市地址設定</span>
+              <svg class="toc-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
             </div>
             <div class="settings-toc-item" id="toc-item-announcement" onclick="scrollToSettingSection('setting-card-announcement')">
-              <span class="toc-icon">📢</span>
-              <span id="i18n-toc-announcement">門市公告設定</span>
+              <div class="toc-icon-box">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                </svg>
+              </div>
+              <span class="toc-item-label" id="i18n-toc-announcement">門市公告設定</span>
+              <svg class="toc-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
             </div>
             <div class="settings-toc-item" id="toc-item-logo" onclick="scrollToSettingSection('setting-card-logo')">
-              <span class="toc-icon">🖼️</span>
-              <span id="i18n-toc-logo">門市 Logo</span>
+              <div class="toc-icon-box">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                  <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
+              </div>
+              <span class="toc-item-label" id="i18n-toc-logo">門市 Logo</span>
+              <svg class="toc-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
             </div>
             <div class="settings-toc-item" id="toc-item-language" onclick="scrollToSettingSection('setting-card-language')">
-              <span class="toc-icon">🌐</span>
-              <span id="i18n-toc-language">介面語言</span>
+              <div class="toc-icon-box">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="2" y1="12" x2="22" y2="12"></line>
+                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                </svg>
+              </div>
+              <span class="toc-item-label" id="i18n-toc-language">介面語言</span>
+              <svg class="toc-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
             </div>
             <div class="settings-toc-item" id="toc-item-dinein" onclick="scrollToSettingSection('setting-card-dinein')">
-              <span class="toc-icon">🍽️</span>
-              <span id="i18n-toc-dinein">內用接單模式</span>
+              <div class="toc-icon-box">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 2v6a3 3 0 0 1-3 3 3 3 0 0 1-3-3V2"></path>
+                  <path d="M15 2v10"></path>
+                  <path d="M15 14v8"></path>
+                  <path d="M6 2v20"></path>
+                  <path d="M6 2a3 3 0 0 1 3 3v3a3 3 0 0 1-3 3"></path>
+                </svg>
+              </div>
+              <span class="toc-item-label" id="i18n-toc-dinein">內用接單模式</span>
+              <svg class="toc-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
             </div>
             <div class="settings-toc-item" id="toc-item-printer" onclick="scrollToSettingSection('setting-card-printer')">
-              <span class="toc-icon">🖨️</span>
-              <span id="i18n-toc-printer">出單與印表機</span>
+              <div class="toc-icon-box">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                  <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                  <rect x="6" y="14" width="12" height="8"></rect>
+                </svg>
+              </div>
+              <span class="toc-item-label" id="i18n-toc-printer">出單與印表機</span>
+              <svg class="toc-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
             </div>
             <div class="settings-toc-item" id="toc-item-reports" onclick="scrollToSettingSection('setting-card-reports')">
-              <span class="toc-icon">📊</span>
-              <span id="i18n-toc-reports">銷量與營收報表</span>
+              <div class="toc-icon-box">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="20" x2="12" y2="10"></line>
+                  <line x1="18" y1="20" x2="18" y2="4"></line>
+                  <line x1="6" y1="20" x2="6" y2="16"></line>
+                </svg>
+              </div>
+              <span class="toc-item-label" id="i18n-toc-reports">銷量與營收報表</span>
+              <svg class="toc-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
             </div>
             <div class="settings-toc-item" id="toc-item-store-pairing" onclick="scrollToSettingSection('setting-card-store-pairing')">
-              <span class="toc-icon">🏪</span>
-              <span id="i18n-toc-store-pairing">門市終端綁定</span>
+              <div class="toc-icon-box">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect>
+                  <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                </svg>
+              </div>
+              <span class="toc-item-label" id="i18n-toc-store-pairing">門市終端綁定</span>
+              <svg class="toc-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
             </div>
           </div>
         </div>
