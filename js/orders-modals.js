@@ -61,6 +61,16 @@ function openReview(orderKey) {
   const elCont = document.getElementById("review-content");
   if (elCont) elCont.innerHTML = formatContentHtml(order);
 
+  // Dynamic 3-level Print Macro Bar Label
+  const parsedItems = (typeof PrinterService !== "undefined" && typeof PrinterService.parseOrderItems === "function")
+    ? PrinterService.parseOrderItems(order, true)
+    : [];
+  const itemCount = parsedItems.length || 1;
+  const btnFullLabel = document.getElementById("i18n-btn-print-full");
+  if (btnFullLabel) {
+    btnFullLabel.innerText = (typeof t === "function" && t("btnPrintFullOrder", { n: itemCount })) || `IN CẢ ĐƠN (1 Bill + ${itemCount} Tem)`;
+  }
+
   const actionsNew = document.getElementById("review-actions");
   const actionsAccepted = document.getElementById("review-actions-accepted");
   const actionsWaiting = document.getElementById("review-actions-waiting");
@@ -501,4 +511,111 @@ async function submitStoreActivation(e) {
 window.showStoreActivationModal = showStoreActivationModal;
 window.closeStoreActivationModal = closeStoreActivationModal;
 window.submitStoreActivation = submitStoreActivation;
+
+// ==========================================
+// Quick Sticker / Emergency Note Sticker Modal
+// ==========================================
+var quickStickerOrderKey = null;
+
+function openQuickStickerModal(orderKey) {
+  quickStickerOrderKey = orderKey || (typeof reviewingOrder !== "undefined" && reviewingOrder ? reviewingOrder.key : null);
+  const modal = document.getElementById("quickStickerModal");
+  if (modal) modal.style.display = "flex";
+  const customInput = document.getElementById("quick-sticker-custom-input");
+  if (customInput) {
+    customInput.value = "";
+    setTimeout(() => customInput.focus(), 100);
+  }
+  renderQuickStickerOptions();
+}
+
+function closeQuickStickerModal() {
+  const modal = document.getElementById("quickStickerModal");
+  if (modal) modal.style.display = "none";
+  quickStickerOrderKey = null;
+}
+
+function renderQuickStickerOptions() {
+  const container = document.getElementById("quick-sticker-chips-container");
+  if (!container) return;
+
+  const groups = [];
+
+  // If menu data has modifier categories
+  if (typeof currentMenuData !== "undefined" && Array.isArray(currentMenuData) && currentMenuData.length > 0) {
+    const modCats = currentMenuData.filter(c => c && (c.type === 'modifier' || (c.name && (c.name.includes('辣') || c.name.includes('客製') || c.name.includes('加料') || c.name.includes('甜度') || c.name.includes('冰量')))));
+    modCats.forEach(cat => {
+      if (Array.isArray(cat.items) && cat.items.length > 0) {
+        groups.push({
+          title: cat.name || "客製選項",
+          options: cat.items.map(it => typeof it === 'string' ? it : (it.name || '')).filter(Boolean)
+        });
+      }
+    });
+  }
+
+  // Fallback / Standard F&B Fast-Tap groups if empty or supplementary
+  if (groups.length === 0) {
+    groups.push({
+      title: (typeof t === "function" && t("spiceLevel")) || "辣度 / Gia vị Cay",
+      options: ["不辣", "微辣", "小辣", "中辣", "大辣", "生辣椒"]
+    });
+    groups.push({
+      title: (typeof t === "function" && t("veggieOptions")) || "蔥花與香菜 / Rau gia vị",
+      options: ["不要香菜", "不要洋蔥", "不要酸菜", "不要蔥花", "加量香菜", "加量洋蔥"]
+    });
+    groups.push({
+      title: (typeof t === "function" && t("iceSugarOptions")) || "甜度與冰量 / Đá & Đường",
+      options: ["去冰", "微冰", "少冰", "熱飲", "無糖", "微糖", "半糖"]
+    });
+    groups.push({
+      title: (typeof t === "function" && t("kitchenNotes")) || "出餐與分裝 / Ghi chú Bếp",
+      options: ["外帶分裝", "餐具另外放", "醬汁另外裝", "先做此單", "補印單品"]
+    });
+  }
+
+  let html = "";
+  groups.forEach(grp => {
+    html += `
+      <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 12px 14px;">
+        <div style="font-size: 13px; font-weight: 800; color: #64748b; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">${escapeHtml(grp.title)}</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+          ${grp.options.map(opt => `
+            <button type="button" class="btn btn-ghost quick-sticker-chip" style="min-height: 44px; padding: 8px 14px; font-size: 15px; font-weight: 800; border-radius: 8px; background: #ffffff; border: 1.5px solid #cbd5e1; color: #1e293b; cursor: pointer; transition: all 0.15s ease;" onclick="printQuickModifierOption('${escapeHtml(opt)}')">
+              ${escapeHtml(opt)}
+            </button>
+          `).join("")}
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+async function printQuickModifierOption(text) {
+  if (!text) return;
+  const order = (typeof latestOrders !== "undefined" ? latestOrders.find(o => o && o.key === quickStickerOrderKey) : null) || (typeof reviewingOrder !== "undefined" ? reviewingOrder : null);
+  if (typeof PrinterService !== "undefined" && typeof PrinterService.printQuickModifierSticker === "function") {
+    await PrinterService.printQuickModifierSticker(text, order);
+  }
+}
+
+async function printCustomQuickSticker() {
+  const input = document.getElementById("quick-sticker-custom-input");
+  const val = input ? input.value.trim() : "";
+  if (!val) {
+    if (input) input.focus();
+    return;
+  }
+  await printQuickModifierOption(val);
+  if (input) input.value = "";
+}
+
+window.openQuickStickerModal = openQuickStickerModal;
+window.closeQuickStickerModal = closeQuickStickerModal;
+window.renderQuickStickerOptions = renderQuickStickerOptions;
+window.printQuickModifierOption = printQuickModifierOption;
+window.printCustomQuickSticker = printCustomQuickSticker;
+
 

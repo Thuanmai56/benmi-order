@@ -352,40 +352,85 @@ function reviewNextNewOrder() {
   dismissNewAlert();
 }
 
+var preparedOrderItems = window.preparedOrderItems || new Set();
+window.preparedOrderItems = preparedOrderItems;
+
+function toggleItemPreparedState(orderKey, itemIdx, checkbox) {
+  const itemKey = `${orderKey}_item_${itemIdx}`;
+  if (checkbox && checkbox.checked) {
+    preparedOrderItems.add(itemKey);
+  } else {
+    preparedOrderItems.delete(itemKey);
+  }
+  const row = document.getElementById(`review-item-${orderKey}-${itemIdx}`);
+  if (row) {
+    if (checkbox && checkbox.checked) {
+      row.classList.add('item-prepared');
+    } else {
+      row.classList.remove('item-prepared');
+    }
+  }
+}
+window.toggleItemPreparedState = toggleItemPreparedState;
+
+function renderItemRowHtml(it, idx, orderKey) {
+  const isPrepared = preparedOrderItems.has(`${orderKey}_item_${idx}`);
+  const optionsHtml = it.options ? `<div class="review-item-options">${escapeHtml(it.options)}</div>` : "";
+  const noteHtml = it.note ? `<div class="review-item-note">📝 ${escapeHtml(it.note)}</div>` : "";
+  const unitBadge = (it.originalQty && it.originalQty > 1) ? `<span class="review-item-unit-badge">(${it.unitIndex}/${it.originalQty})</span>` : "";
+  const printLabel = (typeof t === "function" && t("btnPrintSingleItem")) || "In tem món";
+  const printerIcon = (typeof POS_SVG !== "undefined" && POS_SVG.printer) || "";
+
+  return `
+    <div class="review-item-row ${isPrepared ? 'item-prepared' : ''}" id="review-item-${escapeHtml(orderKey)}-${idx}">
+      <label class="review-item-check-container" title="${isPrepared ? 'Đã hoàn thành' : 'Đánh dấu đã hoàn thành'}">
+        <input type="checkbox" class="review-item-checkbox" ${isPrepared ? 'checked' : ''} onchange="toggleItemPreparedState('${escapeHtml(orderKey)}', ${idx}, this)">
+      </label>
+      <div class="review-item-details">
+        <div class="review-item-header">
+          <span class="review-item-seq">${idx + 1}.</span>
+          <span class="review-item-name">${escapeHtml(it.name)}</span>
+          ${unitBadge}
+        </div>
+        ${optionsHtml}
+        ${noteHtml}
+      </div>
+      <button type="button" class="btn btn-ghost review-item-print-btn" onclick="if(typeof PrinterService !== 'undefined') PrinterService.printSingleItemSticker('${escapeHtml(orderKey)}', ${idx})" title="${escapeHtml(printLabel)}">
+        ${printerIcon}
+        <span>${escapeHtml(printLabel)}</span>
+      </button>
+    </div>
+  `;
+}
+window.renderItemRowHtml = renderItemRowHtml;
+
 function formatContentHtml(order) {
   const raw = String(order?.content || "");
   if (order?.reason === "Đơn qua tin nhắn") {
     return `<div style="background:rgba(0,185,0,0.07); border:1.5px solid rgba(0,185,0,0.25); border-radius:16px; padding:18px; white-space:pre-wrap; line-height:1.7; font-size:22px;">${escapeHtml(raw)}</div>`;
   }
 
+  const orderKey = order?.key || "";
+  const allParsedItems = (typeof PrinterService !== "undefined" && typeof PrinterService.parseOrderItems === "function")
+    ? PrinterService.parseOrderItems(order, true)
+    : null;
+
   // Multi-round detection: [第 X 輪 or [Đợt X
   const hasMultiRound = raw.includes("[第") || raw.includes("[Đợt");
   let contentHtml = "";
 
-  if (hasMultiRound) {
-    const lines = raw.split("\n");
-    const rounds = [];
-    let currentRoundHeader = "";
-    let currentRoundLines = [];
-
-    lines.forEach(line => {
-      const trimmed = line.trim();
-      if ((trimmed.startsWith("[第") || trimmed.startsWith("[Đợt")) && trimmed.endsWith("]")) {
-        if (currentRoundHeader || currentRoundLines.length > 0) {
-          rounds.push({ header: currentRoundHeader, lines: currentRoundLines });
-        }
-        currentRoundHeader = trimmed;
-        currentRoundLines = [];
-      } else if (trimmed !== "" && !trimmed.startsWith("----")) {
-        currentRoundLines.push(line);
+  if (hasMultiRound && allParsedItems && allParsedItems.length > 0) {
+    const roundMap = new Map();
+    allParsedItems.forEach((it, idx) => {
+      const rdHeader = it.round || (typeof t === "function" ? t("roundBlockInitial") : "Đợt 1");
+      if (!roundMap.has(rdHeader)) {
+        roundMap.set(rdHeader, []);
       }
+      roundMap.get(rdHeader).push({ item: it, globalIdx: idx });
     });
 
-    if (currentRoundHeader || currentRoundLines.length > 0) {
-      rounds.push({ header: currentRoundHeader, lines: currentRoundLines });
-    }
+    const rounds = Array.from(roundMap.entries()).map(([header, itemsList]) => ({ header, itemsList }));
 
-    // Trích xuất số đợt để sắp xếp giảm dần (Đợt mới nhất luôn ở trên cùng)
     const getRoundNum = (rd, fallbackIdx) => {
       const m = (rd.header || "").match(/(?:第\s*(\d+)\s*輪|Đợt\s*(\d+))/i);
       if (m) {
@@ -402,11 +447,7 @@ function formatContentHtml(order) {
         ? rd.header.replace(/^\[/, '').replace(/\]$/, '')
         : (idx === 0 ? t('roundBlockInitial') : t('roundBlockTitle', { n: idx + 1 }));
 
-      const linesHtml = rd.lines.map(line => {
-        const text = line.trimStart();
-        const isSub = text.startsWith("-") || text.startsWith("•") || text.startsWith("↳") || text.startsWith("－");
-        return `<div style="${isSub ? 'padding-left:16px; color:#4b5563; font-size:20px;' : 'font-weight:800; margin-top:8px; font-size:22px;'}">${escapeHtml(line)}</div>`;
-      }).join("");
+      const itemsHtml = rd.itemsList.map(entry => renderItemRowHtml(entry.item, entry.globalIdx, orderKey)).join("");
 
       return `
         <div class="round-section-block ${isLatest ? 'round-section-latest' : ''}" style="${isLatest ? 'background:#fbf7ff; border:2px solid #a855f7; border-radius:14px; padding:14px 16px; margin-bottom:12px; box-shadow:0 2px 8px rgba(168,85,247,0.15);' : 'background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:14px; padding:14px 16px; margin-bottom:12px;'}">
@@ -414,10 +455,18 @@ function formatContentHtml(order) {
             <span style="font-weight:900; font-size:18px; color:${isLatest ? '#6b21a8' : '#334155'};">${POS_SVG.dineIn}${escapeHtml(headerText)}</span>
             ${isLatest ? `<span style="background:#7e22ce; color:#ffffff; font-size:12px; font-weight:800; padding:2px 8px; border-radius:6px; letter-spacing:0.3px;">${t('roundBlockLatest')}</span>` : ''}
           </div>
-          ${linesHtml}
+          <div class="round-items-container">
+            ${itemsHtml}
+          </div>
         </div>
       `;
     }).join("");
+  } else if (allParsedItems && allParsedItems.length > 0) {
+    contentHtml = `
+      <div class="review-items-list" style="display: flex; flex-direction: column; gap: 8px;">
+        ${allParsedItems.map((it, idx) => renderItemRowHtml(it, idx, orderKey)).join("")}
+      </div>
+    `;
   } else {
     const lines = raw.split("\n").map(l => l.trimEnd()).filter(l => l.trim() !== "");
     if (lines.length === 0) return `<div style="background:rgba(0,185,0,0.07); border:1.5px solid rgba(0,185,0,0.25); border-radius:16px; padding:18px;">-</div>`;

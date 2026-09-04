@@ -250,6 +250,26 @@ const I18N = {
     printerTsplYOffsetLabel: "垂直邊距 Y (mm)",
     btnTestPrint: "🖨️ 測試列印 (Test Print)",
     btnSavePrinterSettings: "💾 儲存印表機設定",
+    // Print Mode Settings (Auto vs Manual)
+    printModeTitle: "列印出單模式",
+    printModeSub: "選擇新訂單進來時的列印行為",
+    printModeAutoTitle: "⚡ 自動列印模式 (Auto-print)",
+    printModeAutoDesc: "收到新訂單時，系統發出提示音並自動列印全部明細 (Bill) 與標籤貼紙 (Tem)，無需觸碰螢幕。適合尖峰繁忙時段。",
+    printModeManualTitle: "✋ 手動列印模式 (Manual-print)",
+    printModeManualDesc: "店員須在螢幕點選 [🖨️ 整單全印] 機器才會出單。適合需要先核對確認訂單的門市。",
+    // 3 Print Levels
+    btnPrintFullOrder: "🖨️ 整單全印 (1 明細 + {n} 貼紙)",
+    btnPrintBillOnly: "🧾 僅印明細 (Bill)",
+    btnPrintCustomOption: "⚙️ 印客製/補印貼紙",
+    btnPrintSingleItem: "印此品項貼紙",
+    printSingleItemSuccess: "已列印「{name}」貼紙！",
+    // Quick Sticker / Emergency Note Modal
+    quickStickerModalTitle: "補印客製標籤 (緊急貼紙)",
+    quickStickerModalSub: "點擊下方常見選項，立即列印 1 張獨立備註貼紙粘貼於餐點上：",
+    quickStickerCustomPlaceholder: "輸入自訂備註 (例如：少冰、不要酸菜)...",
+    quickStickerCustomPrintBtn: "列印此備註",
+    quickStickerPrinting: "正在列印備註貼紙...",
+    quickStickerSuccess: "已出標籤: 「{text}」！",
     // Menu Editor
     menuCatTitle: "菜單分類",
     menuCatSub: "點擊左側分類以管理品項",
@@ -782,6 +802,26 @@ const I18N = {
     printerTsplYOffsetLabel: "Lề dọc Y (mm)",
     btnTestPrint: "🖨️ In Thử Nghiệm",
     btnSavePrinterSettings: "💾 Lưu Cấu Hình Máy In",
+    // Print Mode Settings (Auto vs Manual)
+    printModeTitle: "Chế độ xuất vé / in",
+    printModeSub: "Tùy chỉnh hành vi in khi hệ thống tiếp nhận đơn hàng mới",
+    printModeAutoTitle: "⚡ Chế độ In tự động (Auto-print)",
+    printModeAutoDesc: "Đơn được nhận, Web tự động phát tiếng chuông Ting Ting và tự động xả toàn bộ Tem + Bill ra máy in mà không cần nhân viên chạm vào màn hình. Rất thích hợp cho quán lúc cực kỳ đông khách.",
+    printModeManualTitle: "✋ Chế độ In thủ công (Manual-print)",
+    printModeManualDesc: "Nhân viên phải bấm nút [ 🖨️ In cả đơn ] trên màn hình thì máy mới in. Thích hợp cho quán muốn kiểm tra lại đơn trước khi nhận.",
+    // 3 Print Levels
+    btnPrintFullOrder: "🖨️ IN CẢ ĐƠN (1 Bill + {n} Tem)",
+    btnPrintBillOnly: "🧾 IN BILL",
+    btnPrintCustomOption: "⚙️ IN TEM TÙY CHỌN",
+    btnPrintSingleItem: "In tem món",
+    printSingleItemSuccess: "Đã in tem món \"{name}\"!",
+    // Quick Sticker / Emergency Note Modal
+    quickStickerModalTitle: "In tem tùy chọn / Tem chữa cháy",
+    quickStickerModalSub: "Chạm các tùy chọn bên dưới để xả ngay 1 tem ghi chú dán chữa cháy lên món:",
+    quickStickerCustomPlaceholder: "Nhập ghi chú tùy ý (ví dụ: Ít đá, Bàn 2 thêm thìa)...",
+    quickStickerCustomPrintBtn: "In ghi chú này",
+    quickStickerPrinting: "Đang in tem ghi chú...",
+    quickStickerSuccess: "Đã in tem: \"{text}\"!",
     // Multi-Round Append Orders
     badgeAppendRound: "Đợt {n}",
     badgeAppendShort: "Gọi thêm",
@@ -1361,6 +1401,35 @@ function applyLanguageToDOM() {
   if (prnAutoT) prnAutoT.innerText = dict.printerAutoPrintTitle;
   const prnAutoD = document.getElementById("i18n-printer-autoprint-desc");
   if (prnAutoD) prnAutoD.innerText = dict.printerAutoPrintDesc;
+  const prnModeT = document.getElementById("i18n-printer-mode-title");
+  if (prnModeT) prnModeT.innerText = dict.printModeTitle;
+  const prnModeS = document.getElementById("i18n-printer-mode-sub");
+  if (prnModeS) prnModeS.innerText = dict.printModeSub;
+  const prnAutoTitle = document.getElementById("i18n-print-mode-auto-title");
+  if (prnAutoTitle) prnAutoTitle.innerText = dict.printModeAutoTitle;
+  const prnAutoDesc = document.getElementById("i18n-print-mode-auto-desc");
+  if (prnAutoDesc) prnAutoDesc.innerText = dict.printModeAutoDesc;
+  const prnManualTitle = document.getElementById("i18n-print-mode-manual-title");
+  if (prnManualTitle) prnManualTitle.innerText = dict.printModeManualTitle;
+  const prnManualDesc = document.getElementById("i18n-print-mode-manual-desc");
+  if (prnManualDesc) prnManualDesc.innerText = dict.printModeManualDesc;
+
+  // Review 3 Print levels
+  const btnPrintBillOnly = document.getElementById("i18n-btn-print-bill-only");
+  if (btnPrintBillOnly) btnPrintBillOnly.innerText = dict.btnPrintBillOnly;
+  const btnPrintCustomOpt = document.getElementById("i18n-btn-print-custom-opt");
+  if (btnPrintCustomOpt) btnPrintCustomOpt.innerText = dict.btnPrintCustomOption;
+
+  // Quick Sticker Modal
+  const qStickerTitle = document.getElementById("i18n-quick-sticker-title");
+  if (qStickerTitle) qStickerTitle.innerText = dict.quickStickerModalTitle;
+  const qStickerSub = document.getElementById("i18n-quick-sticker-sub");
+  if (qStickerSub) qStickerSub.innerText = dict.quickStickerModalSub;
+  const qStickerInput = document.getElementById("quick-sticker-custom-input");
+  if (qStickerInput) qStickerInput.placeholder = dict.quickStickerCustomPlaceholder;
+  const qStickerBtn = document.getElementById("i18n-btn-print-quick-custom");
+  if (qStickerBtn) qStickerBtn.innerText = dict.quickStickerCustomPrintBtn;
+
   const prnCashT = document.getElementById("i18n-printer-cashier-title");
   if (prnCashT) prnCashT.innerText = dict.printerCashierTitle;
   const prnCashD = document.getElementById("i18n-printer-cashier-desc");

@@ -703,7 +703,49 @@ function onPrinterInterfaceChange(station) {
   }
 }
 
-async function refreshPairedBluetoothDevices(station = 'all') {
+function onPrinterModeChange(mode) {
+  const isAuto = mode === 'auto';
+  updatePrintModeCardStyles(isAuto);
+  savePOSPrinterSettings(true);
+}
+
+function updatePrintModeCardStyles(isAuto) {
+  const cardAuto = document.getElementById("mode-card-print-auto");
+  const cardManual = document.getElementById("mode-card-print-manual");
+  if (cardAuto) {
+    cardAuto.style.borderColor = isAuto ? "var(--primary, #00b900)" : "var(--border, #cbd5e1)";
+    cardAuto.style.background = isAuto ? "rgba(0, 185, 0, 0.05)" : "#fff";
+  }
+  if (cardManual) {
+    cardManual.style.borderColor = !isAuto ? "var(--primary, #00b900)" : "var(--border, #cbd5e1)";
+    cardManual.style.background = !isAuto ? "rgba(0, 185, 0, 0.05)" : "#fff";
+  }
+}
+
+let printerAutoSaveDebounceTimer = null;
+function attachPrinterAutoSave() {
+  const card = document.getElementById("setting-card-printer");
+  if (!card || card.dataset.autosaveAttached === "true") return;
+  card.dataset.autosaveAttached = "true";
+
+  card.addEventListener("input", (e) => {
+    if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") {
+      clearTimeout(printerAutoSaveDebounceTimer);
+      printerAutoSaveDebounceTimer = setTimeout(() => {
+        savePOSPrinterSettings(true);
+      }, 400);
+    }
+  });
+
+  card.addEventListener("change", (e) => {
+    if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") {
+      clearTimeout(printerAutoSaveDebounceTimer);
+      savePOSPrinterSettings(true);
+    }
+  });
+}
+
+async function refreshPairedBluetoothDevices(station = 'all', targetMacs = null) {
   if (typeof PrinterService === 'undefined') return;
   const stations = station === 'all' ? ['cashier', 'kitchen'] : [station];
 
@@ -717,7 +759,8 @@ async function refreshPairedBluetoothDevices(station = 'all') {
       const devices = res?.devices || [];
 
       if (selectEl) {
-        const currentVal = selectEl.value;
+        const explicitMac = targetMacs ? targetMacs[st] : null;
+        const currentVal = explicitMac || selectEl.value;
         selectEl.innerHTML = `<option value="">${t('printerBtSelectPlaceholder', '-- 請選擇已配對的藍牙印表機 --')}</option>`;
 
         if (devices.length === 0) {
@@ -745,8 +788,14 @@ function loadPOSPrinterSettings() {
   if (typeof PrinterService === 'undefined') return;
   const settings = PrinterService.getSettings();
 
-  const autoToggle = document.getElementById("printer-autoprint-toggle");
-  if (autoToggle) autoToggle.checked = !!settings.autoPrintNewOrders;
+  const isAuto = !!settings.autoPrintNewOrders;
+  const radioAuto = document.getElementById("printer-mode-auto");
+  const radioManual = document.getElementById("printer-mode-manual");
+  if (radioAuto && radioManual) {
+    radioAuto.checked = isAuto;
+    radioManual.checked = !isAuto;
+    updatePrintModeCardStyles(isAuto);
+  }
 
   // Cashier
   const cashEnabled = document.getElementById("printer-cashier-enabled");
@@ -811,22 +860,21 @@ function loadPOSPrinterSettings() {
   onPrinterInterfaceChange('kitchen');
 
   // Load Bluetooth devices and select saved ones
-  refreshPairedBluetoothDevices('all').then(() => {
-    const cashBtSelect = document.getElementById("printer-cashier-bt-device");
-    if (cashBtSelect && settings.cashier?.mac_address) {
-      cashBtSelect.value = settings.cashier.mac_address;
-    }
-    const kitBtSelect = document.getElementById("printer-kitchen-bt-device");
-    if (kitBtSelect && settings.kitchen?.mac_address) {
-      kitBtSelect.value = settings.kitchen.mac_address;
-    }
-  });
+  const targetMacs = {
+    cashier: settings.cashier?.mac_address || "",
+    kitchen: settings.kitchen?.mac_address || ""
+  };
+  refreshPairedBluetoothDevices('all', targetMacs);
+
+  // Attach instant auto-save listener
+  attachPrinterAutoSave();
 }
 
-function savePOSPrinterSettings() {
+function savePOSPrinterSettings(silent = false) {
   if (typeof PrinterService === 'undefined') return;
 
-  const autoToggle = document.getElementById("printer-autoprint-toggle");
+  const radioAuto = document.getElementById("printer-mode-auto");
+  const autoPrintEnabled = radioAuto ? radioAuto.checked : false;
 
   // Cashier
   const cashEnabled = document.getElementById("printer-cashier-enabled");
@@ -869,7 +917,7 @@ function savePOSPrinterSettings() {
   const kitDevName = kitBtOpt?.dataset?.name || "";
 
   const newSettings = {
-    autoPrintNewOrders: autoToggle ? autoToggle.checked : false,
+    autoPrintNewOrders: autoPrintEnabled,
     cashier: {
       enabled: cashEnabled ? cashEnabled.checked : true,
       protocol: cashProto ? cashProto.value : 'esc_pos',
@@ -909,10 +957,12 @@ function savePOSPrinterSettings() {
   };
 
   const success = PrinterService.saveSettings(newSettings);
-  if (success) {
-    if (typeof showToast === 'function') showToast("✅ " + (t("saveSuccess") || "印表機設定儲存成功！"));
-  } else {
-    if (typeof showToast === 'function') showToast("❌ " + (t("saveFail") || "儲存失敗"));
+  if (!silent) {
+    if (success) {
+      if (typeof showToast === 'function') showToast("✅ " + (t("saveSuccess") || "印表機設定儲存成功！"));
+    } else {
+      if (typeof showToast === 'function') showToast("❌ " + (t("saveFail") || "儲存失敗"));
+    }
   }
 }
 

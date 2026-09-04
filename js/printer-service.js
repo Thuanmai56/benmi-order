@@ -71,9 +71,17 @@
     // --- 1. SETTINGS & STORAGE (Multi-Tenant isolated) ---
     getTenantId() {
       if (typeof getTenantIdFromUrl === 'function') {
-        return getTenantIdFromUrl();
+        const tid = getTenantIdFromUrl();
+        if (tid) return tid;
       }
-      const params = new URLSearchParams(window.location.search);
+      if (typeof window !== 'undefined' && window.__INITIAL_TENANT_ID) {
+        return window.__INITIAL_TENANT_ID;
+      }
+      if (typeof localStorage !== 'undefined') {
+        const saved = localStorage.getItem('pos_device_tenant_id');
+        if (saved && saved.trim()) return saved.trim();
+      }
+      const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
       return params.get('tenant') || params.get('tenant_id') || 'benmi';
     }
 
@@ -247,6 +255,78 @@
       }
     }
 
+    async printFullOrder(orderKey) {
+      return this.printManual(orderKey, 'all');
+    }
+
+    async printCashierOnly(orderKey) {
+      return this.printManual(orderKey, 'cashier');
+    }
+
+    async printSingleItemSticker(orderKey, itemIndex) {
+      const order = this.resolveOrder(orderKey);
+      if (!order) {
+        if (typeof showToast === 'function') showToast(`❌ 找不到訂單 #${orderKey}`);
+        return;
+      }
+      const items = this.parseOrderItems(order);
+      const idx = parseInt(itemIndex, 10);
+      if (isNaN(idx) || idx < 0 || idx >= items.length) {
+        if (typeof showToast === 'function') showToast('❌ 找不到該項餐點');
+        return;
+      }
+      const targetItem = items[idx];
+      const settings = this.getSettings();
+      const config = (settings.kitchen && settings.kitchen.enabled) ? settings.kitchen : settings.cashier;
+      if (!config || !config.enabled) {
+        if (typeof showToast === 'function') showToast('⚠️ 請先在設定中啟用印表機');
+        return;
+      }
+
+      const dim = this.resolveLabelDimensions(config);
+      try {
+        if (typeof showToast === 'function') showToast(`🏷️ 正在列印「${targetItem.name}」貼紙...`);
+        const png = this.drawItemStickerToCanvas(targetItem, order, idx + 1, items.length, dim.widthMm, dim.heightMm, dim.dpi);
+        await this.transmitReceiptBitmap(png, config, `Single Sticker #${order.key} (${idx + 1}/${items.length})`);
+        if (typeof showToast === 'function') {
+          const successMsg = (typeof t === 'function' && t('printSingleItemSuccess', { name: targetItem.name })) || `✅ 已列印「${targetItem.name}」貼紙！`;
+          showToast(successMsg);
+        }
+      } catch (err) {
+        console.error('[PrinterService] Single item print failed:', err);
+        if (typeof showToast === 'function') showToast(`❌ 列印失敗: ${err.message || err}`);
+      }
+    }
+
+    async printQuickModifierSticker(text, orderContext = null) {
+      const cleanText = String(text || '').trim();
+      if (!cleanText) return;
+
+      const settings = this.getSettings();
+      const config = (settings.kitchen && settings.kitchen.enabled) ? settings.kitchen : settings.cashier;
+      if (!config || !config.enabled) {
+        if (typeof showToast === 'function') showToast('⚠️ 請先在設定中啟用印表機');
+        return;
+      }
+
+      const dim = this.resolveLabelDimensions(config);
+      try {
+        if (typeof showToast === 'function') {
+          const printingMsg = (typeof t === 'function' && t('quickStickerPrinting')) || `🏷️ 正在列印備註貼紙: 「${cleanText}」...`;
+          showToast(printingMsg);
+        }
+        const png = this.drawQuickNoteStickerToCanvas(cleanText, orderContext, dim.widthMm, dim.heightMm, dim.dpi);
+        await this.transmitReceiptBitmap(png, config, `Quick Note Sticker: ${cleanText}`);
+        if (typeof showToast === 'function') {
+          const successMsg = (typeof t === 'function' && t('quickStickerSuccess', { text: cleanText })) || `✅ 已出標籤: 「${cleanText}」！`;
+          showToast(successMsg);
+        }
+      } catch (err) {
+        console.error('[PrinterService] Quick note print failed:', err);
+        if (typeof showToast === 'function') showToast(`❌ 列印失敗: ${err.message || err}`);
+      }
+    }
+
     resolveOrder(orderKey) {
       if (typeof latestOrders !== 'undefined' && Array.isArray(latestOrders)) {
         const found = latestOrders.find(o => String(o.key) === String(orderKey));
@@ -283,7 +363,7 @@
       return { widthMm, heightMm, dpi, xOffsetMm, yOffsetMm };
     }
 
-    parseOrderItems(order) {
+    parseOrderItems(order, expand = true) {
       const items = [];
       if (Array.isArray(order.items) && order.items.length > 0) {
         order.items.forEach(it => {
@@ -291,34 +371,65 @@
             name: it.name || it.item_name || '餐點',
             quantity: Number(it.quantity) || 1,
             options: Array.isArray(it.options) ? it.options.join('、') : (it.options || it.selected_options || ''),
-            note: it.note || it.notes || ''
+            note: it.note || it.notes || '',
+            round: it.round || ''
           });
         });
+      } else {
+        // Fallback: parse lines from content
+        const lines = (order.content || '').split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        let currentItem = null;
+        let currentRound = '';
+        lines.forEach(line => {
+          if ((line.startsWith('[第') || line.startsWith('[Đợt')) && line.endsWith(']')) {
+            currentRound = line;
+            return;
+          }
+          if (line.startsWith('----') || line.startsWith('====') || line.includes('【') || line.includes('訂單') || line.includes('總金額') || line.includes('時間')) {
+            return;
+          }
+          if (line.startsWith('↳') || line.startsWith('-') || line.startsWith('+') || line.startsWith('•') || line.startsWith('－')) {
+            if (currentItem) {
+              const opt = line.replace(/^[↳\-+•－]\s*/, '').trim();
+              currentItem.options = currentItem.options ? `${currentItem.options}、${opt}` : opt;
+            }
+          } else {
+            const match = line.match(/^(\d+)\s*(?:份|x|X)\s*(?:x\s*)?(.+)$/) || line.match(/^(.+?)\s*[xX*]\s*(\d+)$/);
+            if (match) {
+              const qty = Number(match[1]) || Number(match[2]) || 1;
+              const name = (match[2] || match[1] || line).replace(/\$[\d,]+/g, '').trim();
+              currentItem = { name, quantity: qty, options: '', note: '', round: currentRound };
+              items.push(currentItem);
+            } else {
+              currentItem = { name: line.replace(/\$[\d,]+/g, '').trim(), quantity: 1, options: '', note: '', round: currentRound };
+              items.push(currentItem);
+            }
+          }
+        });
+      }
+
+      if (items.length === 0) {
+        items.push({ name: '特餐餐點', quantity: 1, options: '', note: '', round: '' });
+      }
+
+      if (!expand) {
         return items;
       }
-      // Fallback: parse lines from content
-      const lines = (order.content || '').split('\n').map(l => l.trim()).filter(l => l.length > 0);
-      let currentItem = null;
-      lines.forEach(line => {
-        if (line.startsWith('↳') || line.startsWith('-') || line.startsWith('+')) {
-          if (currentItem) {
-            const opt = line.replace(/^[↳\-+]\s*/, '').trim();
-            currentItem.options = currentItem.options ? `${currentItem.options}、${opt}` : opt;
-          }
-        } else {
-          const match = line.match(/^(\d+)\s*(?:份|x|X)\s*(?:x\s*)?(.+)$/) || line.match(/^(.+?)\s*[xX*]\s*(\d+)$/);
-          if (match) {
-            const qty = Number(match[1]) || Number(match[2]) || 1;
-            const name = (match[2] || match[1] || line).replace(/\$[\d,]+/g, '').trim();
-            currentItem = { name, quantity: qty, options: '', note: '' };
-            items.push(currentItem);
-          } else if (!line.includes('【') && !line.includes('訂單') && !line.includes('總金額') && !line.includes('時間')) {
-            currentItem = { name: line.replace(/\$[\d,]+/g, '').trim(), quantity: 1, options: '', note: '' };
-            items.push(currentItem);
-          }
+
+      // If expand is true: expand each quantity unit into an individual sticker item
+      const expanded = [];
+      items.forEach(it => {
+        const qty = Math.max(1, parseInt(it.quantity, 10) || 1);
+        for (let q = 0; q < qty; q++) {
+          expanded.push({
+            ...it,
+            quantity: 1,
+            originalQty: qty,
+            unitIndex: q + 1
+          });
         }
       });
-      return items.length > 0 ? items : [{ name: '特餐餐點', quantity: 1, options: '', note: '' }];
+      return expanded;
     }
 
     // --- 5. RECEIPT & LABEL BUILDERS ---
@@ -599,7 +710,7 @@
       y += Math.round(12 * scaleRatio);
 
       // Items
-      const items = this.parseOrderItems(order);
+      const items = this.parseOrderItems(order, false);
       ctx.textAlign = 'left';
       items.slice(0, 10).forEach(it => {
         if (y > heightPx - Math.round(140 * scaleRatio)) return;
@@ -701,6 +812,70 @@
       ctx.fillText(`顧客:${orderContext.customer || '顧客'}`, padding, y);
       ctx.textAlign = 'right';
       ctx.fillText(`${orderContext.time || ''}`, widthPx - padding, y);
+
+      return canvas.toDataURL('image/png');
+    }
+
+    drawQuickNoteStickerToCanvas(text, orderContext = null, widthMm = 40, heightMm = 30, dpi = 203) {
+      const dotsPerMm = dpi === 300 ? 11.81 : 8.0;
+      const scaleRatio = dpi === 300 ? 1.476 : 1.0;
+      const widthPx = Math.round(Math.max(50, widthMm * dotsPerMm));
+      const heightPx = Math.round(Math.max(30, heightMm * dotsPerMm));
+      const isCompact = widthMm <= 42;
+      const padding = Math.round((isCompact ? 10 : 14) * scaleRatio);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = widthPx;
+      canvas.height = heightPx;
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, widthPx, heightPx);
+      ctx.fillStyle = '#000000';
+      ctx.strokeStyle = '#000000';
+      ctx.textBaseline = 'top';
+
+      let y = padding;
+
+      // 1. Top row: Note / Order info
+      ctx.font = `bold ${Math.round((isCompact ? 13 : 16) * scaleRatio)}px sans-serif`;
+      ctx.textAlign = 'left';
+      const orderKey = orderContext && orderContext.key ? `#${orderContext.key}` : '【備註貼紙 / GHI CHÚ】';
+      ctx.fillText(orderKey, padding, y);
+
+      ctx.textAlign = 'right';
+      const diningShort = (orderContext && orderContext.diningOption === 'dine_in')
+        ? `桌:${orderContext.tableNumber || '-'}`
+        : ((orderContext && orderContext.diningOption === 'takeaway') ? '外帶' : '補印');
+      ctx.fillText(diningShort, widthPx - padding, y);
+      y += Math.round((isCompact ? 18 : 22) * scaleRatio);
+
+      // Divider line
+      ctx.lineWidth = Math.max(1, Math.round(1 * scaleRatio));
+      ctx.beginPath();
+      ctx.moveTo(padding, y);
+      ctx.lineTo(widthPx - padding, y);
+      ctx.stroke();
+      y += Math.round((isCompact ? 8 : 12) * scaleRatio);
+
+      // 2. Main Note Text (Centered, Bold, Large)
+      ctx.textAlign = 'center';
+      const displayNote = String(text || '').trim();
+      const fontSize = displayNote.length > 8
+        ? Math.round((isCompact ? 18 : 22) * scaleRatio)
+        : Math.round((isCompact ? 24 : 30) * scaleRatio);
+      ctx.font = `900 ${fontSize}px sans-serif`;
+      ctx.fillText(displayNote, widthPx / 2, y);
+
+      // 3. Bottom row: Timestamp
+      y = heightPx - padding - Math.round((isCompact ? 13 : 16) * scaleRatio);
+      ctx.font = `${Math.round((isCompact ? 11 : 13) * scaleRatio)}px sans-serif`;
+      ctx.textAlign = 'left';
+      ctx.fillText('Blab POS', padding, y);
+      ctx.textAlign = 'right';
+      const now = new Date();
+      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      ctx.fillText(orderContext && orderContext.time ? orderContext.time : timeStr, widthPx - padding, y);
 
       return canvas.toDataURL('image/png');
     }

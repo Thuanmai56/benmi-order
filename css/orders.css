@@ -2488,3 +2488,154 @@ body {
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06) !important;
 }
+
+/* ==========================================================================
+   3-Level Print & Kitchen Prep Checklist Styles (Tablet / iPad First >= 48px)
+   ========================================================================== */
+.review-print-macro-bar {
+  display: grid;
+  grid-template-columns: 1.8fr 1fr 1.3fr;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1.5px dashed #cbd5e1;
+}
+
+@media (max-width: 640px) {
+  .review-print-macro-bar {
+    grid-template-columns: 1fr;
+  }
+}
+
+.review-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.review-item-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.review-item-row:hover {
+  border-color: #cbd5e1;
+}
+
+.review-item-row.item-prepared {
+  background: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+.review-item-row.item-prepared .review-item-header .review-item-name,
+.review-item-row.item-prepared .review-item-options,
+.review-item-row.item-prepared .review-item-note {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+
+.review-item-check-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.review-item-checkbox {
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  accent-color: var(--primary, #00b900);
+  border-radius: 6px;
+}
+
+.review-item-details {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.4;
+}
+
+.review-item-header {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.review-item-seq {
+  color: #64748b;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.review-item-name {
+  font-weight: 900;
+}
+
+.review-item-unit-badge {
+  font-size: 12px;
+  font-weight: 800;
+  color: #0284c7;
+  background: #e0f2fe;
+  padding: 1px 6px;
+  border-radius: 6px;
+}
+
+.review-item-options {
+  font-size: 15px;
+  color: #475569;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.review-item-note {
+  font-size: 13px;
+  color: #b45309;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.review-item-print-btn {
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 800;
+  border-radius: 8px;
+  border: 1.5px solid #cbd5e1;
+  background: #f8fafc;
+  color: #334155;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.review-item-print-btn:hover {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.quick-sticker-chip:hover {
+  background: #f1f5f9 !important;
+  border-color: var(--primary, #00b900) !important;
+  color: var(--primary, #00b900) !important;
+  transform: translateY(-1px);
+}
+

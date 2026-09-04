@@ -203,19 +203,43 @@ const tsplStickerPng300 = service.drawItemStickerToCanvas(parsedItems[0], mockOr
 assert(tsplStickerPng300.startsWith("data:image/png;base64,"), "TSPL item sticker (300 DPI) should generate valid Base64 PNG");
 console.log("✅ Test 10 Passed: TSPL Individual Cup/Dish 40x30mm Sticker Canvas Painter (203 & 300 DPI) verified.");
 
-// 11. Test Bluetooth Paired Devices Query & Fallback
+// 11. Test Quick Note / Emergency Sticker Canvas Painter
+const quickNotePng = service.drawQuickNoteStickerToCanvas("不要洋蔥", mockOrder, 40, 30, 203);
+assert(quickNotePng.startsWith("data:image/png;base64,"), "Quick note sticker should generate valid Base64 PNG");
+console.log("✅ Test 11 Passed: Emergency Quick Note 40x30mm Sticker Canvas Painter verified.");
+
+// 12. Test Item Quantity Expansion in parseOrderItems
+const multiQtyOrder = {
+  key: "260830-02",
+  customer: "李小美",
+  content: "1份 x 招牌肉排麵包\n2份 x 冰奶茶\n   ↳ 微糖、去冰"
+};
+const expandedItems = service.parseOrderItems(multiQtyOrder, true);
+assert.strictEqual(expandedItems.length, 3, "multiQtyOrder should expand 1 bread + 2 teas into 3 individual sticker units");
+assert.strictEqual(expandedItems[0].name, "招牌肉排麵包", "Item 1 is bread");
+assert.strictEqual(expandedItems[1].name, "冰奶茶", "Item 2 is first milk tea");
+assert.strictEqual(expandedItems[2].name, "冰奶茶", "Item 3 is second milk tea");
+assert.strictEqual(expandedItems[1].unitIndex, 1, "First milk tea has unitIndex 1");
+assert.strictEqual(expandedItems[2].unitIndex, 2, "Second milk tea has unitIndex 2");
+
+const unexpandedItems = service.parseOrderItems(multiQtyOrder, false);
+assert.strictEqual(unexpandedItems.length, 2, "Unexpanded parse should have 2 line items");
+assert.strictEqual(unexpandedItems[1].quantity, 2, "Unexpanded milk tea quantity should be 2");
+console.log("✅ Test 12 Passed: parseOrderItems quantity expansion (individual cup stickers) verified.");
+
+// 13. Test Bluetooth Paired Devices Query & Fallback
 service.getPairedBluetoothDevices().then((res) => {
   assert(Array.isArray(res.devices), "getPairedBluetoothDevices should return devices array");
-  console.log(`✅ Test 11 Passed: getPairedBluetoothDevices returned ${res.devices.length} devices.`);
+  console.log(`✅ Test 13 Passed: getPairedBluetoothDevices returned ${res.devices.length} devices.`);
 
-  // 12. Test Local Mock TCP Socket Communication
+  // 14. Test Local Mock TCP Socket Communication
   const mockServer = net.createServer((socket) => {
     socket.on('data', (data) => {
       assert(data.length > 0, "Socket should receive raw bytes");
       socket.destroy();
       mockServer.close(() => {
-        console.log("✅ Test 12 Passed: Mock TCP Socket Server on Port 9100 successfully received print stream.");
-        console.log("\n🎉 ALL 12 PRINTER SYSTEM (ESC/POS + TSPL, BT + NET, RECEIPT + STICKERS) TESTS PASSED SUCCESSFULLY!");
+        console.log("✅ Test 14 Passed: Mock TCP Socket Server on Port 9100 successfully received print stream.");
+        console.log("\n🎉 ALL 14 PRINTER SYSTEM (ESC/POS + TSPL, 3 PRINT LEVELS, STICKERS, AUTO/MANUAL) TESTS PASSED SUCCESSFULLY!");
         process.exit(0);
       });
     });
