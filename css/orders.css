@@ -2415,7 +2415,7 @@ body {
 }
 
 .settings-content-panel .panel-header {
-  padding: 12px 20px;
+  padding: 0 20px;
   background: #ffffff;
   border-bottom: 1px solid #e2e8f0;
   display: flex;
@@ -2425,12 +2425,90 @@ body {
   box-sizing: border-box;
 }
 
+.settings-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.settings-header-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.settings-header-titles {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
 .settings-toc-panel .panel-title,
 .settings-content-panel .panel-title {
-  font-size: 16px;
+  font-size: 15.5px;
   font-weight: 900;
   color: #0f172a;
   line-height: 1.2;
+}
+
+.settings-header-titles .panel-subtitle {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 600;
+  line-height: 1.2;
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.settings-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.settings-sync-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 800;
+  padding: 3px 9px;
+  border-radius: 99px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #15803d;
+  user-select: none;
+}
+
+.settings-sync-dot {
+  width: 6.5px;
+  height: 6.5px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
+  animation: pulseSyncDot 2.4s infinite ease-in-out;
+}
+
+@keyframes pulseSyncDot {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.25);
+    opacity: 0.75;
+  }
 }
 
 .settings-toc-list {
@@ -2569,6 +2647,23 @@ body {
   flex: 1;
   min-height: 0;
   background: #f8fafc;
+  --scrollbar-thumb: #cbd5e1;
+  --scrollbar-track: transparent;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+@supports not (scrollbar-color: auto) {
+  .settings-content-body::-webkit-scrollbar {
+    width: 6px;
+  }
+  .settings-content-body::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 99px;
+  }
+  .settings-content-body::-webkit-scrollbar-track {
+    background: transparent;
+  }
 }
 
 .settings-card {
@@ -2578,12 +2673,32 @@ body {
   background: #ffffff;
   flex-shrink: 0;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.settings-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
 }
 
 .settings-card > div:first-child {
   background: #ffffff !important;
   border-bottom: 1px solid #f1f5f9 !important;
   padding: 14px 18px !important;
+}
+
+.settings-card > div:first-child div[style*="font-weight: 1100"],
+.settings-card > div:first-child div[style*="font-weight: 1000"] {
+  font-size: 16px !important;
+  font-weight: 900 !important;
+  color: #0f172a !important;
+  letter-spacing: -0.01em;
+}
+
+.settings-card > div:first-child div[style*="var(--muted)"] {
+  font-size: 12.5px !important;
+  color: #64748b !important;
+  font-weight: 500 !important;
 }
 
 /* Radio & Selection Mode Cards (Modern :has support) */
