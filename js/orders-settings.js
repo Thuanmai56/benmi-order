@@ -1072,11 +1072,6 @@ function renderStorePairingSection() {
   if (elTenant) {
     elTenant.innerText = tenantId || (typeof t === "function" && t("unpaired")) || "未綁定";
   }
-  const elHeader = document.getElementById("header-store-name");
-  if (elHeader) {
-    const prefix = (typeof t === "function" && t("headerStore")) || "門市: ";
-    elHeader.innerText = tenantId ? `${prefix}${tenantId.toUpperCase()}` : ((typeof t === "function" && t("unpaired")) || "未綁定門市");
-  }
 }
 
 async function promptUnlinkStoreDevice() {
