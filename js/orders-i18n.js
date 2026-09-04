@@ -182,7 +182,7 @@ const I18N = {
     btnSaveHours: "儲存時間",
     settingAddressTitle: "📍 門市地址",
     settingAddressSub: "顯示於顧客點餐頁面與 LINE 官方帳號回覆",
-    settingAddressPlaceholder: "請輸入門市地址",
+    settingAddressPlaceholder: "請輸入門市地址，可分行輸入",
     btnSaveAddress: "儲存地址",
     tocAnnouncement: "門市公告設定",
     settingAnnouncementTitle: "📢 門市公告設定",
@@ -514,7 +514,7 @@ const I18N = {
     btnSaveHours: "Lưu thời gian",
     settingAddressTitle: "📍 Địa chỉ cửa hàng",
     settingAddressSub: "Hiển thị trên trang đặt món của khách và tin nhắn tự động LINE",
-    settingAddressPlaceholder: "Nhập địa chỉ cửa hàng",
+    settingAddressPlaceholder: "Nhập địa chỉ cửa hàng, có thể xuống dòng",
     btnSaveAddress: "Lưu địa chỉ",
     tocAnnouncement: "Thông báo cửa hàng",
     settingAnnouncementTitle: "📢 Thông báo của quán",
@@ -1196,4 +1196,3 @@ function applyLanguageToDOM() {
   const btnContUpg = document.getElementById("i18n-btn-contact-upgrade");
   if (btnContUpg) btnContUpg.innerHTML = `<span>💬</span> <span>${dict.btnContactUpgrade}</span>`;
 }
-
