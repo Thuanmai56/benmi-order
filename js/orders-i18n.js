@@ -893,8 +893,6 @@ function applyLanguageToDOM() {
   if (tabPrinter) tabPrinter.innerText = dict.tabPrinter;
   const tabSettings = document.getElementById("tab-settings");
   if (tabSettings) tabSettings.innerText = dict.tabSettings;
-  const headerSwitch = document.getElementById("header-store-switch-text");
-  if (headerSwitch) headerSwitch.innerText = dict.headerSwitch;
 
   // View Reports Elements
   const repTitle = document.getElementById("i18n-reports-title");

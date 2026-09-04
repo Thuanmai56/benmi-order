@@ -37,20 +37,12 @@
           <div class="brand-title" id="brand-title">Blab POS</div>
           <div class="brand-sub" id="i18n-brand-sub">即時訂單</div>
         </div>
-        <button type="button" class="badge" id="header-store-badge" onclick="promptUnlinkStoreDevice()" style="cursor: pointer; background: #e0f2fe; color: #0284c7; border: 1.5px solid #bae6fd; border-radius: 8px; padding: 4px 10px; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; margin-left: 6px;" title="切換門市 / Đổi Quán">
-          <span id="header-store-name">門市: --</span>
-          <span id="header-store-switch-text" style="font-size: 11px; opacity: 0.8; text-decoration: underline;">(切換)</span>
-        </button>
       </div>
       <script>
         (function() {
           const tenantId = window.__INITIAL_TENANT_ID || "";
           const bTitle = document.getElementById("brand-title");
           const bLogo = document.getElementById("brand-logo");
-          const sName = document.getElementById("header-store-name");
-          if (sName) {
-            sName.innerText = tenantId ? ("門市: " + tenantId.toUpperCase()) : "未綁定門市";
-          }
           try {
             if (tenantId) {
               const cached = localStorage.getItem("tenant_branding_" + tenantId) || localStorage.getItem("tenant_theme_" + tenantId);
