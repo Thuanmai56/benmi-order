@@ -1201,7 +1201,9 @@
                 container.appendChild(sec);
             });
 
-            document.querySelectorAll('.section-container').forEach(sec => observer.observe(sec));
+            if (typeof updateActiveNavOnScroll === 'function') {
+                updateActiveNavOnScroll();
+            }
             updateDesktopAuthUI();
         }
 
@@ -2380,6 +2382,8 @@
                 renderDynamicCatalog();
                 renderStoreOperatingHours();
                 applyPickupConfig();
+            }).catch(err => {
+                console.warn('[MenuPromise] Background refresh notice:', err);
             });
 
             // 3. Initialize LIFF asynchronously via Singleton Gate
