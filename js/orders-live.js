@@ -38,6 +38,67 @@ function setDiningFilter(filter) {
   renderAll();
 }
 
+function isOrderMetadataText(text) {
+  if (!text) return true;
+  const s = String(text).trim();
+  if (s.startsWith("----") || s.startsWith("====") || s.includes("【") || s.includes("訂單")) return true;
+  if (s.includes("用餐方式") || s.includes("桌號") || s.includes("聯絡電話") || s.includes("備註") || s.includes("付款方式") || s.includes("總金額") || s.includes("總計") || s.includes("時間") || s.includes("取餐")) return true;
+  if (s.includes("Hình thức") || s.includes("Bàn số") || s.includes("Số bàn") || s.includes("SĐT") || s.includes("Ghi chú") || s.includes("Thanh toán") || s.includes("Tổng cộng")) return true;
+  if (/^[📍📞👤📝🕒💰🏷️]/.test(s)) return true;
+  return false;
+}
+
+function getOrderItemsPreview(order) {
+  if (!order) return "";
+  let items = [];
+  if (typeof PrinterService !== "undefined" && typeof PrinterService.parseOrderItems === "function") {
+    try {
+      items = PrinterService.parseOrderItems(order, false) || [];
+    } catch (e) {}
+  }
+  if (!items || items.length === 0) {
+    const rawLines = String(order.content || "").split("\n").map(s => s.trim()).filter(Boolean);
+    for (const line of rawLines) {
+      if (isOrderMetadataText(line)) continue;
+      if (line.startsWith("↳") || line.startsWith("-") || line.startsWith("+") || line.startsWith("•") || line.startsWith("－")) continue;
+      const m = line.match(/^(\d+)\s*(?:份|x|X)\s*(?:x\s*)?(.+)$/) || line.match(/^(.+?)\s*[xX*]\s*(\d+)$/);
+      if (m) {
+        items.push({ name: (m[2] || m[1] || "").trim(), quantity: Number(m[1] || m[2]) || 1 });
+      } else if (!line.startsWith("[") && line.length > 1 && line.length < 30) {
+        items.push({ name: line.replace(/\$[\d,]+/g, '').trim(), quantity: 1 });
+      }
+    }
+  }
+
+  // Filter out any metadata that might have been parsed as item names
+  items = items.filter(it => it && it.name && !isOrderMetadataText(it.name));
+
+  if (items.length === 0) return "";
+  const maxShown = 2;
+  const shownItems = items.slice(0, maxShown).map(it => `${it.name} x${it.quantity}`);
+  const remaining = items.length - maxShown;
+  if (remaining > 0) {
+    return shownItems.join(" · ") + ` · +${remaining}`;
+  }
+  return shownItems.join(" · ");
+}
+
+function renderEmptyLiveState(type) {
+  const isPending = type === 'pending';
+  const title = isPending ? t('emptyLivePendingTitle') : t('emptyLiveAcceptedTitle');
+  const sub = isPending ? t('emptyLivePendingSub') : t('emptyLiveAcceptedSub');
+  const iconSvg = isPending ? (POS_SVG.inbox || "") : (POS_SVG.partyCheck || "");
+  return `
+    <div class="empty-state-card">
+      <div class="empty-state-icon-circle ${isPending ? 'pending' : 'accepted'}">
+        ${iconSvg}
+      </div>
+      <div class="empty-state-title">${escapeHtml(title)}</div>
+      <div class="empty-state-desc">${escapeHtml(sub)}</div>
+    </div>
+  `;
+}
+
 function updateDiningFilterStats(allLiveOrders) {
   const isFeatureEnabled = Array.isArray(window.currentTenantFeatures)
     ? window.currentTenantFeatures.includes('dine_in')
@@ -46,22 +107,6 @@ function updateDiningFilterStats(allLiveOrders) {
   const diningFilterBar = document.getElementById("dining-filter-bar");
   const filterDineInBtn = document.getElementById("filter-btn-dine-in");
   const dineInStatEl = document.getElementById("stat-pill-dinein");
-
-  if (!isFeatureEnabled) {
-    if (diningFilterBar) diningFilterBar.style.display = "none";
-    if (filterDineInBtn) filterDineInBtn.style.display = "none";
-    if (dineInStatEl) dineInStatEl.style.display = "none";
-    if (currentDiningFilter === "dine_in") {
-      currentDiningFilter = "all";
-      const filterAllBtn = document.getElementById("filter-btn-all");
-      if (filterAllBtn) filterAllBtn.classList.add("active");
-    }
-    return;
-  } else {
-    if (diningFilterBar) diningFilterBar.style.display = "flex";
-    if (filterDineInBtn) filterDineInBtn.style.display = "inline-flex";
-    if (dineInStatEl) dineInStatEl.style.display = "inline-flex";
-  }
 
   let takeawayCount = 0;
   let dineInCount = 0;
@@ -74,10 +119,36 @@ function updateDiningFilterStats(allLiveOrders) {
     }
   });
 
+  const totalCount = (allLiveOrders || []).length;
+
+  const countAllEl = document.getElementById("filter-count-all");
+  if (countAllEl) countAllEl.innerText = totalCount;
+
+  const countTakeawayEl = document.getElementById("filter-count-takeaway");
+  if (countTakeawayEl) countTakeawayEl.innerText = takeawayCount;
+
+  const countDineInEl = document.getElementById("filter-count-dinein");
+  if (countDineInEl) countDineInEl.innerText = dineInCount;
+
   const takeawayStatEl = document.getElementById("stat-pill-takeaway");
   if (takeawayStatEl) takeawayStatEl.innerHTML = `${POS_SVG.takeaway} ${t('badgeTakeaway')} ${takeawayCount}`;
 
   if (dineInStatEl) dineInStatEl.innerHTML = `${POS_SVG.dineIn} ${t('badgeDineIn')} ${dineInCount}`;
+
+  if (!isFeatureEnabled) {
+    if (diningFilterBar) diningFilterBar.style.display = "none";
+    if (filterDineInBtn) filterDineInBtn.style.display = "none";
+    if (dineInStatEl) dineInStatEl.style.display = "none";
+    if (currentDiningFilter === "dine_in") {
+      currentDiningFilter = "all";
+      const filterAllBtn = document.getElementById("filter-btn-all");
+      if (filterAllBtn) filterAllBtn.classList.add("active");
+    }
+  } else {
+    if (diningFilterBar) diningFilterBar.style.display = "flex";
+    if (filterDineInBtn) filterDineInBtn.style.display = "inline-flex";
+    if (dineInStatEl) dineInStatEl.style.display = "inline-flex";
+  }
 }
 
 function renderListLeft(orders) {
@@ -92,7 +163,7 @@ function renderListLeft(orders) {
   });
 
   if (filteredOrders.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">${t('empty')}</div>`;
+    container.innerHTML = renderEmptyLiveState('pending');
     return;
   }
 
@@ -104,11 +175,12 @@ function renderListLeft(orders) {
     const totalFormatted = formatOrderTotal(order);
     const itemCount = countItemsFromContent(order.content);
     const itemCountStr = t("tileItemCount", { count: itemCount > 0 ? itemCount : "?" });
+    const itemsPreview = getOrderItemsPreview(order);
 
     const isAppendedUnread = (typeof unacknowledgedAppends !== "undefined" && unacknowledgedAppends.has(order.key));
 
     const tile = document.createElement("div");
-    tile.className = `tile ${isNew ? "new" : ""} ${isAppendedUnread ? "append-new" : ""}`;
+    tile.className = `tile ${isNew ? "is-new" : ""} ${isDineIn ? "is-dine-in" : "is-takeaway"} ${isAppendedUnread ? "is-append-new" : ""}`;
     tile.onclick = () => {
       if (typeof unacknowledgedAppends !== "undefined") unacknowledgedAppends.delete(order.key);
       openReview(order.key);
@@ -116,23 +188,27 @@ function renderListLeft(orders) {
 
     let rightActions = "";
     if (isNew) {
-      rightActions = `<button class="btn btn-ghost tile-action-btn" style="background:#e0f2fe; color:#0369a1;" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">${t('btnReview')}</button>`;
+      rightActions = `<button type="button" class="btn tile-action-btn btn-action-review" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">${POS_SVG.eye}<span>${t('btnReview')}</span></button>`;
     } else if (order.status === "ACCEPTED") {
-      rightActions = `<button class="btn btn-primary tile-action-btn" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','DONE', {}, this)">${t('btnReady')}</button>`;
+      rightActions = `<button type="button" class="btn tile-action-btn btn-action-ready" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','DONE', {}, this)">${POS_SVG.check}<span>${t('btnReady')}</span></button>`;
     } else {
-      rightActions = `<button class="btn tile-action-btn" style="background:#f1f5f9; color:#94a3af; cursor:not-allowed;" disabled>${t('btnWaitingReply')}</button>`;
+      rightActions = `<button type="button" class="btn tile-action-btn btn-action-waiting" disabled><span>${t('btnWaitingReply')}</span></button>`;
     }
 
     const tableNum = getOrderTableNumber(order);
     const lang = window.currentLang || (typeof currentLang !== "undefined" ? currentLang : "zh-TW");
     const tableLabel = tableNum ? (lang === 'vi' ? ` · Bàn ${tableNum}` : ` · 桌號 ${tableNum}`) : "";
     const diningBadge = isDineIn
-      ? `<span class="badge badge-dine-in" style="font-size:11px; padding:2px 6px; border-radius:4px; font-weight:800; white-space:nowrap; flex-shrink:0;">${POS_SVG.dineIn}${t('badgeDineIn')}${escapeHtml(tableLabel)}</span>`
-      : `<span class="badge badge-takeaway" style="font-size:11px; padding:2px 6px; border-radius:4px; font-weight:800; white-space:nowrap; flex-shrink:0;">${POS_SVG.takeaway}${t('badgeTakeaway')}</span>`;
+      ? `<span class="tile-badge badge-dine-in">${POS_SVG.dineIn}${t('badgeDineIn')}${escapeHtml(tableLabel)}</span>`
+      : `<span class="tile-badge badge-takeaway">${POS_SVG.takeaway}${t('badgeTakeaway')}</span>`;
 
     const roundCount = Number(order.round_count || order.roundCount) || 1;
     const appendBadge = (isDineIn && roundCount > 1)
-      ? `<span class="badge badge-append" style="font-size:11px; padding:2px 6px; border-radius:4px; font-weight:800; white-space:nowrap; flex-shrink:0;">${t('badgeAppendRound', { n: roundCount })}</span>`
+      ? `<span class="tile-badge badge-append">${t('badgeAppendRound', { n: roundCount })}</span>`
+      : "";
+
+    const newBadge = isNew
+      ? `<span class="tile-badge badge-new-pulse">${POS_SVG.tag}${t('badgeNewOrder')}</span>`
       : "";
 
     const pickupDisplay = isElapsed
@@ -143,22 +219,26 @@ function renderListLeft(orders) {
       ? (typeof formatSubmissionElapsedTime === "function" ? formatSubmissionElapsedTime(order) : formatDineInElapsedTime(order))
       : formatEta(order.time);
 
-    const etaStyle = isElapsed ? 'color:#7c3aed; font-weight:800;' : '';
+    const etaClass = isElapsed ? 'tile-eta-dinein' : 'tile-eta-pickup';
 
     tile.innerHTML = `
       <div class="tile-info">
         <div class="tile-top">
           <span class="tile-customer" title="${escapeHtml(order.customer || t('defaultCustomer'))}">${escapeHtml(order.customer || t('defaultCustomer'))}</span>
           <span class="tile-order-key">#${escapeHtml(order.key)}</span>
+          ${newBadge}
           ${diningBadge}
           ${appendBadge}
         </div>
         <div class="tile-meta-row">
-          <span class="tile-meta-tag">${POS_SVG.clock}${escapeHtml(pickupDisplay)}</span>
-          <span class="tile-meta-tag tile-eta" style="${etaStyle}">${escapeHtml(etaDisplay)}</span>
+          <span class="tile-meta-tag"><span class="tile-meta-icon">${POS_SVG.clock}</span><span class="tile-pickup-time">${escapeHtml(pickupDisplay)}</span></span>
+          <span class="tile-meta-tag tile-eta ${etaClass}">${escapeHtml(etaDisplay)}</span>
         </div>
         <div class="tile-count-row">
-          <span class="tile-item-count">${POS_SVG.receipt}${itemCountStr}</span>
+          <div class="tile-item-summary">
+            <span class="tile-item-count"><span class="tile-meta-icon">${POS_SVG.receipt}</span>${itemCountStr}</span>
+            ${itemsPreview ? `<span class="tile-item-preview" title="${escapeHtml(itemsPreview)}">${escapeHtml(itemsPreview)}</span>` : ''}
+          </div>
           ${totalFormatted !== '-' ? `<span class="tile-price">${escapeHtml(totalFormatted)}</span>` : ''}
         </div>
       </div>
@@ -183,7 +263,7 @@ function renderListRight(orders) {
   });
 
   if (filteredOrders.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">${t('empty')}</div>`;
+    container.innerHTML = renderEmptyLiveState('accepted');
     return;
   }
 
@@ -194,21 +274,22 @@ function renderListRight(orders) {
     const totalFormatted = formatOrderTotal(order);
     const itemCount = countItemsFromContent(order.content);
     const itemCountStr = t("tileItemCount", { count: itemCount > 0 ? itemCount : "?" });
+    const itemsPreview = getOrderItemsPreview(order);
 
     const tile = document.createElement("div");
-    tile.className = "tile";
+    tile.className = `tile ${isDineIn ? "is-dine-in" : "is-takeaway"}`;
     tile.onclick = () => openReview(order.key);
 
     const tableNum = getOrderTableNumber(order);
     const lang = window.currentLang || (typeof currentLang !== "undefined" ? currentLang : "zh-TW");
     const tableLabel = tableNum ? (lang === 'vi' ? ` · Bàn ${tableNum}` : ` · 桌號 ${tableNum}`) : "";
     const diningBadge = isDineIn
-      ? `<span class="badge badge-dine-in" style="font-size:11px; padding:2px 6px; border-radius:4px; font-weight:800; white-space:nowrap; flex-shrink:0;">${POS_SVG.dineIn}${t('badgeDineIn')}${escapeHtml(tableLabel)}</span>`
-      : `<span class="badge badge-takeaway" style="font-size:11px; padding:2px 6px; border-radius:4px; font-weight:800; white-space:nowrap; flex-shrink:0;">${POS_SVG.takeaway}${t('badgeTakeaway')}</span>`;
+      ? `<span class="tile-badge badge-dine-in">${POS_SVG.dineIn}${t('badgeDineIn')}${escapeHtml(tableLabel)}</span>`
+      : `<span class="tile-badge badge-takeaway">${POS_SVG.takeaway}${t('badgeTakeaway')}</span>`;
 
     const roundCount = Number(order.round_count || order.roundCount) || 1;
     const appendBadge = (isDineIn && roundCount > 1)
-      ? `<span class="badge badge-append" style="font-size:11px; padding:2px 6px; border-radius:4px; font-weight:800; white-space:nowrap; flex-shrink:0;">${t('badgeAppendRound', { n: roundCount })}</span>`
+      ? `<span class="tile-badge badge-append">${t('badgeAppendRound', { n: roundCount })}</span>`
       : "";
 
     const pickupDisplay = isElapsed
@@ -219,7 +300,7 @@ function renderListRight(orders) {
       ? (typeof formatSubmissionElapsedTime === "function" ? formatSubmissionElapsedTime(order) : formatDineInElapsedTime(order))
       : formatEta(order.time);
 
-    const etaStyle = isElapsed ? 'color:#7c3aed; font-weight:800;' : '';
+    const etaClass = isElapsed ? 'tile-eta-dinein' : 'tile-eta-pickup';
 
     tile.innerHTML = `
       <div class="tile-info">
@@ -230,18 +311,21 @@ function renderListRight(orders) {
           ${appendBadge}
         </div>
         <div class="tile-meta-row">
-          <span class="tile-meta-tag">${POS_SVG.clock}${escapeHtml(pickupDisplay)}</span>
-          <span class="tile-meta-tag tile-eta" style="${etaStyle}">${escapeHtml(etaDisplay)}</span>
+          <span class="tile-meta-tag"><span class="tile-meta-icon">${POS_SVG.clock}</span><span class="tile-pickup-time">${escapeHtml(pickupDisplay)}</span></span>
+          <span class="tile-meta-tag tile-eta ${etaClass}">${escapeHtml(etaDisplay)}</span>
         </div>
         <div class="tile-count-row">
-          <span class="tile-item-count">${POS_SVG.receipt}${itemCountStr}</span>
+          <div class="tile-item-summary">
+            <span class="tile-item-count"><span class="tile-meta-icon">${POS_SVG.receipt}</span>${itemCountStr}</span>
+            ${itemsPreview ? `<span class="tile-item-preview" title="${escapeHtml(itemsPreview)}">${escapeHtml(itemsPreview)}</span>` : ''}
+          </div>
           ${totalFormatted !== '-' ? `<span class="tile-price">${escapeHtml(totalFormatted)}</span>` : ''}
         </div>
       </div>
       <div class="tile-actions">
         ${isDineIn
-          ? `<button class="btn tile-action-btn" style="background:#7c3aed; color:#ffffff;" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','PAID', {}, this)">${t('btnPaid')}</button>`
-          : `<button class="btn btn-yellow tile-action-btn" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','PICKED_UP', {}, this)">${t('btnPickedUp')}</button>`
+          ? `<button type="button" class="btn tile-action-btn btn-action-paid" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','PAID', {}, this)">${POS_SVG.checkAll}<span>${t('btnPaid')}</span></button>`
+          : `<button type="button" class="btn tile-action-btn btn-action-pickup" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','PICKED_UP', {}, this)">${POS_SVG.checkAll}<span>${t('btnPickedUp')}</span></button>`
         }
       </div>
     `;
@@ -370,16 +454,117 @@ function toggleItemPreparedState(orderKey, itemIdx, checkbox) {
 }
 window.toggleItemPreparedState = toggleItemPreparedState;
 
+function extractFlavorSettings(rawContent) {
+  if (!rawContent) return null;
+  const lines = String(rawContent).split("\n");
+  const flavors = [];
+  const extraIngredients = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (line.includes("口味設定") || line.includes("Hương vị") || line.includes("Khẩu vị")) {
+      const inline = line.replace(/.*(?:口味設定|Hương vị|Khẩu vị)[：:]\s*/, "").replace(/[【】]/g, "").trim();
+      if (inline) {
+        const parts = inline.split(/[・·|,|｜]/).map(p => p.trim()).filter(Boolean);
+        parts.forEach(p => {
+          const m = p.match(/^([^：:]+)[：:]\s*(.+)$/);
+          if (m) {
+            const key = m[1].replace(/✦/g, "").replace(/選擇|調整/g, "").replace(/[\(（]朝天椒[\)）]/g, "").trim();
+            const val = m[2].trim();
+            flavors.push({ label: key, value: val });
+          } else {
+            flavors.push({ label: "", value: p });
+          }
+        });
+      }
+    } else if (line.startsWith("• 配料：") || line.startsWith("• 加料：") || line.startsWith("• Topping:")) {
+      const extra = line.replace(/^•\s*[^：:]+[：:]\s*/, "").trim();
+      if (extra) {
+        extraIngredients.push(extra);
+      }
+    }
+  }
+
+  if (flavors.length === 0 && extraIngredients.length === 0) return null;
+  return { flavors, extraIngredients };
+}
+window.extractFlavorSettings = extractFlavorSettings;
+
+function extractCustomerChanges(rawContent) {
+  if (!rawContent) return null;
+  const lines = String(rawContent).split("\n");
+  const changes = [];
+  for (const line of lines) {
+    const l = line.trim();
+    if (l.includes("【顧客換單】") || l.includes("【換單】") || l.includes("【Đổi món】") || l.includes("【Thay đổi】")) {
+      const text = l.replace(/.*【(?:顧客換單|換單|Đổi món|Thay đổi)】[：:]\s*/, "").trim();
+      if (text) changes.push(text);
+    }
+  }
+  return changes.length > 0 ? changes : null;
+}
+window.extractCustomerChanges = extractCustomerChanges;
+
+function toggleRawOrderViewer(orderKey) {
+  const body = document.getElementById(`raw-order-body-${orderKey}`);
+  const btn = document.getElementById(`raw-order-toggle-btn-${orderKey}`);
+  const textSpan = document.getElementById(`raw-order-btn-text-${orderKey}`);
+  if (!body) return;
+  const isHidden = body.style.display === "none";
+  body.style.display = isHidden ? "block" : "none";
+  if (btn) {
+    if (isHidden) {
+      btn.classList.add("expanded");
+    } else {
+      btn.classList.remove("expanded");
+    }
+  }
+  if (textSpan && typeof t === "function") {
+    textSpan.innerText = isHidden ? t("hideRawOrder") : t("viewRawOrder");
+  }
+}
+window.toggleRawOrderViewer = toggleRawOrderViewer;
+
+async function copyRawOrderContent(orderKey) {
+  const pre = document.getElementById(`raw-order-text-${orderKey}`);
+  const copyBtn = document.getElementById(`raw-order-copy-btn-${orderKey}`);
+  if (!pre) return;
+  const text = pre.innerText || "";
+  try {
+    await navigator.clipboard.writeText(text);
+    if (copyBtn) {
+      const originalHtml = copyBtn.innerHTML;
+      const successText = (typeof t === "function" && t("copySuccess")) || "已複製";
+      const checkIcon = (typeof POS_SVG !== "undefined" && POS_SVG.check) || "";
+      copyBtn.innerHTML = `${checkIcon}<span>${escapeHtml(successText)}</span>`;
+      setTimeout(() => {
+        if (copyBtn) copyBtn.innerHTML = originalHtml;
+      }, 2000);
+    }
+  } catch (err) {
+    console.error("Failed to copy raw order: ", err);
+  }
+}
+window.copyRawOrderContent = copyRawOrderContent;
+
 function renderItemRowHtml(it, idx, orderKey) {
   const isPrepared = preparedOrderItems.has(`${orderKey}_item_${idx}`);
-  const optionsHtml = it.options ? `<div class="review-item-options">${escapeHtml(it.options)}</div>` : "";
+  let optionsHtml = "";
+  if (it.options) {
+    const rawOpts = String(it.options);
+    const splitOpts = rawOpts.split(/[、,，\n]+/).map(s => s.trim()).filter(Boolean);
+    if (splitOpts.length > 0) {
+      optionsHtml = `<div class="review-item-options">${splitOpts.map(opt => `<span class="mod-chip">${escapeHtml(opt)}</span>`).join("")}</div>`;
+    }
+  }
   const noteIcon = (typeof POS_SVG !== "undefined" && POS_SVG.note) || "";
   const noteHtml = it.note ? `<div class="review-item-note">${noteIcon}${escapeHtml(it.note)}</div>` : "";
   const unitBadge = (it.originalQty && it.originalQty > 1) ? `<span class="review-item-unit-badge">(${it.unitIndex}/${it.originalQty})</span>` : "";
-  const printLabel = (typeof t === "function" && t("btnPrintSingleItem")) || "印此品項貼紙";
+  const qtyBadge = (it.quantity && it.quantity > 1) ? `<span class="review-item-qty-badge">x${it.quantity}</span>` : "";
+  const printLabel = (typeof t === "function" && t("btnPrintStickerShort")) || "印貼紙";
   const printerIcon = (typeof POS_SVG !== "undefined" && POS_SVG.printer) || "";
   const checkTitle = isPrepared
-    ? ((typeof t === "function" && t("itemPrepared")) || "已完成")
+    ? ((typeof t === "function" && t("itemPreparedBadge")) || "已完成")
     : ((typeof t === "function" && t("markPrepared")) || "標記已出餐");
 
   return `
@@ -387,10 +572,11 @@ function renderItemRowHtml(it, idx, orderKey) {
       <label class="review-item-check-container" title="${escapeHtml(checkTitle)}">
         <input type="checkbox" class="review-item-checkbox" ${isPrepared ? 'checked' : ''} onchange="toggleItemPreparedState('${escapeHtml(orderKey)}', ${idx}, this)">
       </label>
+      <div class="review-item-seq-badge">${idx + 1}</div>
       <div class="review-item-details">
         <div class="review-item-header">
-          <span class="review-item-seq">${idx + 1}.</span>
           <span class="review-item-name">${escapeHtml(it.name)}</span>
+          ${qtyBadge}
           ${unitBadge}
         </div>
         ${optionsHtml}
@@ -408,15 +594,73 @@ window.renderItemRowHtml = renderItemRowHtml;
 function formatContentHtml(order) {
   const raw = String(order?.content || "");
   if (order?.reason === "Đơn qua tin nhắn") {
-    return `<div style="background:rgba(0,185,0,0.07); border:1.5px solid rgba(0,185,0,0.25); border-radius:16px; padding:18px; white-space:pre-wrap; line-height:1.7; font-size:22px;">${escapeHtml(raw)}</div>`;
+    return `<div class="review-content-raw">${escapeHtml(raw)}</div>`;
   }
 
   const orderKey = order?.key || "";
-  const allParsedItems = (typeof PrinterService !== "undefined" && typeof PrinterService.parseOrderItems === "function")
+  let allParsedItems = (typeof PrinterService !== "undefined" && typeof PrinterService.parseOrderItems === "function")
     ? PrinterService.parseOrderItems(order, true)
     : null;
 
-  // Multi-round detection: [第 X 輪 or [Đợt X
+  // Filter out any metadata lines that might have been parsed as items
+  if (allParsedItems && Array.isArray(allParsedItems)) {
+    allParsedItems = allParsedItems.filter(it => it && it.name && !isOrderMetadataText(it.name));
+  }
+
+  // 1. Extract and render Customer Change Requests
+  const customerChanges = extractCustomerChanges(raw);
+  let changeHtml = "";
+  if (customerChanges && customerChanges.length > 0) {
+    const changeTitle = (typeof t === "function" && t("customerChangeTitle")) || "顧客換單 / 特殊需求";
+    changeHtml = `
+      <div class="customer-change-card">
+        <div class="customer-change-header">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-2px; margin-right:4px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          <span>${escapeHtml(changeTitle)}</span>
+        </div>
+        <div class="customer-change-body">
+          ${customerChanges.map(c => `<div class="customer-change-line">${escapeHtml(c)}</div>`).join("")}
+        </div>
+      </div>
+    `;
+  }
+
+  // 2. Extract and render Global Flavor Settings
+  const flavorData = extractFlavorSettings(raw);
+  let flavorHtml = "";
+  if (flavorData) {
+    const flameIcon = (typeof POS_SVG !== "undefined" && POS_SVG.flame) || "";
+    const flavorTitle = (typeof t === "function" && t("flavorTitle")) || "口味與客製設定";
+    const optLabelFallback = (typeof t === "function" && t("colOptions")) || "配料";
+    const chips = [
+      ...flavorData.flavors.map(f => `
+        <span class="flavor-chip">
+          ${f.label ? `<span class="flavor-label">${escapeHtml(f.label)}:</span>` : ""}
+          <strong class="flavor-val">${escapeHtml(f.value)}</strong>
+        </span>
+      `),
+      ...flavorData.extraIngredients.map(e => `
+        <span class="flavor-chip extra-chip">
+          <span class="flavor-label">${escapeHtml(optLabelFallback)}:</span>
+          <strong class="flavor-val">${escapeHtml(e)}</strong>
+        </span>
+      `)
+    ].join("");
+
+    flavorHtml = `
+      <div class="flavor-custom-card">
+        <div class="flavor-card-header">
+          ${flameIcon}
+          <span>${escapeHtml(flavorTitle)}</span>
+        </div>
+        <div class="flavor-chips-grid">
+          ${chips}
+        </div>
+      </div>
+    `;
+  }
+
+  // 3. Multi-round detection: [第 X 輪 or [Đợt X
   const hasMultiRound = raw.includes("[第") || raw.includes("[Đợt");
   let contentHtml = "";
 
@@ -451,10 +695,10 @@ function formatContentHtml(order) {
       const itemsHtml = rd.itemsList.map(entry => renderItemRowHtml(entry.item, entry.globalIdx, orderKey)).join("");
 
       return `
-        <div class="round-section-block ${isLatest ? 'round-section-latest' : ''}" style="${isLatest ? 'background:#fbf7ff; border:2px solid #a855f7; border-radius:14px; padding:14px 16px; margin-bottom:12px; box-shadow:0 2px 8px rgba(168,85,247,0.15);' : 'background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:14px; padding:14px 16px; margin-bottom:12px;'}">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:6px; border-bottom:${isLatest ? '1.5px solid #e9d5ff' : '1px solid #e2e8f0'};">
-            <span style="font-weight:900; font-size:18px; color:${isLatest ? '#6b21a8' : '#334155'};">${POS_SVG.dineIn}${escapeHtml(headerText)}</span>
-            ${isLatest ? `<span style="background:#7e22ce; color:#ffffff; font-size:12px; font-weight:800; padding:2px 8px; border-radius:6px; letter-spacing:0.3px;">${t('roundBlockLatest')}</span>` : ''}
+        <div class="round-section-block ${isLatest ? 'round-section-latest' : ''}">
+          <div class="round-section-header">
+            <span class="round-title">${POS_SVG.dineIn}${escapeHtml(headerText)}</span>
+            ${isLatest ? `<span class="round-latest-badge">${t('roundBlockLatest')}</span>` : ''}
           </div>
           <div class="round-items-container">
             ${itemsHtml}
@@ -464,32 +708,68 @@ function formatContentHtml(order) {
     }).join("");
   } else if (allParsedItems && allParsedItems.length > 0) {
     contentHtml = `
-      <div class="review-items-list" style="display: flex; flex-direction: column; gap: 8px;">
+      <div class="review-items-list">
         ${allParsedItems.map((it, idx) => renderItemRowHtml(it, idx, orderKey)).join("")}
       </div>
     `;
   } else {
-    const lines = raw.split("\n").map(l => l.trimEnd()).filter(l => l.trim() !== "");
-    if (lines.length === 0) return `<div style="background:rgba(0,185,0,0.07); border:1.5px solid rgba(0,185,0,0.25); border-radius:16px; padding:18px;">-</div>`;
+    const lines = raw.split("\n")
+      .map(l => l.trimEnd())
+      .filter(l => l.trim() !== "" && !isOrderMetadataText(l));
 
-    contentHtml = lines.map(line => {
-      const text = line.trimStart();
-      const isSub = text.startsWith("-") || text.startsWith("•") || text.startsWith("↳") || text.startsWith("－");
-      return `<div style="${isSub ? 'padding-left:16px; color:#4b5563; font-size:20px;' : 'font-weight:800; margin-top:8px; font-size:22px;'}">${escapeHtml(line)}</div>`;
-    }).join("");
+    if (lines.length === 0) return `<div class="review-content-empty">-</div>`;
+
+    contentHtml = `
+      <div class="review-items-list-raw">
+        ${lines.map(line => {
+          const text = line.trimStart();
+          const isSub = text.startsWith("-") || text.startsWith("•") || text.startsWith("↳") || text.startsWith("－");
+          return `<div class="${isSub ? 'review-raw-sub' : 'review-raw-item'}">${escapeHtml(line)}</div>`;
+        }).join("")}
+      </div>
+    `;
   }
 
-  let footer = "";
+  // 4. Customer note section
+  let noteHtml = "";
   if (order?.note) {
-    footer += `<div style="color: #555; font-size: 18px; margin-top: 12px; font-weight: 800;">📝 ${escapeHtml(order.note)}</div>`;
+    const noteIcon = (typeof POS_SVG !== "undefined" && POS_SVG.note) || "";
+    const noteTitle = (typeof t === "function" && t("customerNoteLabel")) || "顧客備註";
+    noteHtml = `
+      <div class="order-note-alert">
+        <div class="order-note-alert-header">${noteIcon}<span>${escapeHtml(noteTitle)}</span></div>
+        <div class="order-note-alert-body">${escapeHtml(order.note)}</div>
+      </div>
+    `;
   }
 
-  const totalDisplay = formatOrderTotal(order);
-  if (totalDisplay !== "-") {
-    footer += `<div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; padding-top:12px; border-top:1.5px dashed rgba(0,185,0,0.35); font-weight:1000; font-size:22px; color:#111827;"><span>${t('labelTotal')}:</span><span style="color:var(--primary); font-size:26px; font-weight:1100;">${totalDisplay}</span></div>`;
-  }
+  // 5. Raw order accordion (Unstructured data fallback)
+  const fileTextIcon = (typeof POS_SVG !== "undefined" && POS_SVG.fileText) || "";
+  const copyIcon = (typeof POS_SVG !== "undefined" && POS_SVG.copy) || "";
+  const viewRawLabel = (typeof t === "function" && t("viewRawOrder")) || "查看原始訂單內容";
+  const rawOrderTitle = (typeof t === "function" && t("rawOrderTitle")) || "原始訂單文字（Raw Data）";
+  const btnCopyLabel = (typeof t === "function" && t("btnCopy")) || "複製";
 
-  return `<div style="background:rgba(0,185,0,0.07); border:1.5px solid rgba(0,185,0,0.25); border-radius:16px; padding:18px; line-height:1.7;">${contentHtml}${footer}</div>`;
+  const rawAccordionHtml = `
+    <div class="raw-order-accordion">
+      <button type="button" class="btn btn-ghost raw-order-toggle-btn" id="raw-order-toggle-btn-${escapeHtml(orderKey)}" onclick="toggleRawOrderViewer('${escapeHtml(orderKey)}')">
+        <span class="raw-order-toggle-left">${fileTextIcon}<span id="raw-order-btn-text-${escapeHtml(orderKey)}">${escapeHtml(viewRawLabel)}</span></span>
+        <svg class="raw-order-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+      </button>
+      <div id="raw-order-body-${escapeHtml(orderKey)}" class="raw-order-body" style="display:none;">
+        <div class="raw-order-header">
+          <span class="raw-order-title">${escapeHtml(rawOrderTitle)}</span>
+          <button type="button" class="btn btn-ghost raw-order-copy-btn" id="raw-order-copy-btn-${escapeHtml(orderKey)}" onclick="copyRawOrderContent('${escapeHtml(orderKey)}')">
+            ${copyIcon}
+            <span>${escapeHtml(btnCopyLabel)}</span>
+          </button>
+        </div>
+        <pre id="raw-order-text-${escapeHtml(orderKey)}" class="raw-order-pre">${escapeHtml(raw)}</pre>
+      </div>
+    </div>
+  `;
+
+  return `<div class="review-content-card">${changeHtml}${flavorHtml}${contentHtml}${noteHtml}${rawAccordionHtml}</div>`;
 }
 
 async function updateStatus(key, status, extra = {}, btn = null) {
@@ -566,3 +846,7 @@ window.formatContentHtml = formatContentHtml;
 window.reviewAccept = reviewAccept;
 window.markReadyFromReview = markReadyFromReview;
 window.reviewForceCancel = reviewForceCancel;
+window.toggleRawOrderViewer = toggleRawOrderViewer;
+window.copyRawOrderContent = copyRawOrderContent;
+window.extractFlavorSettings = extractFlavorSettings;
+window.extractCustomerChanges = extractCustomerChanges;

@@ -32,21 +32,73 @@ function openReview(orderKey) {
   const elEtaLabel = document.getElementById("i18n-label-eta");
   if (elEtaLabel) elEtaLabel.innerText = isDineIn ? t("dineInElapsedHeader") : t("labelEta");
 
+  const elRevTitle = document.getElementById("i18n-review-title");
+  if (elRevTitle) {
+    elRevTitle.innerText = (order.status === "NEW")
+      ? (t("reviewTitleNew") || "審核訂單")
+      : (t("reviewTitle") || "訂單詳情");
+  }
+
+  const elKeyBadge = document.getElementById("review-order-key-badge");
+  if (elKeyBadge) {
+    elKeyBadge.innerText = "#" + (order.key || "-");
+  }
+
   const elKey = document.getElementById("review-order-key");
   if (elKey) elKey.innerText = order.key || "-";
+
   const elCust = document.getElementById("review-customer");
-  if (elCust) elCust.innerText = order.customer || "-";
+  if (elCust) {
+    const userSvg = (typeof POS_SVG !== "undefined" && POS_SVG.user) || "";
+    elCust.innerHTML = `${userSvg}<span>${escapeHtml(order.customer || "-")}</span>`;
+  }
+
   const elPick = document.getElementById("review-pickup");
-  if (elPick) elPick.innerText = isDineIn ? formatDineInTimeDisplay(order) : formatPickupTimeDisplay(order.time);
+  if (elPick) {
+    const clockSvg = (typeof POS_SVG !== "undefined" && POS_SVG.clock) || "";
+    const pickTimeStr = isDineIn ? formatDineInTimeDisplay(order) : formatPickupTimeDisplay(order.time);
+    elPick.innerHTML = `${clockSvg}<span>${escapeHtml(pickTimeStr)}</span>`;
+  }
+
   const elEta = document.getElementById("review-eta");
   if (elEta) {
     elEta.innerText = isDineIn ? formatDineInElapsedTime(order) : formatEta(order.time);
     elEta.style.color = isDineIn ? "#7c3aed" : "var(--brand-red)";
   }
+
   const elTot = document.getElementById("review-total");
   if (elTot) elTot.innerText = formatOrderTotal(order);
+
   const elSt = document.getElementById("review-status");
-  if (elSt) elSt.innerText = order.status || "-";
+  if (elSt) {
+    let statusText = order.status || "-";
+    let statusCls = "status-pill-default";
+    if (order.status === "NEW") {
+      statusText = t("statusPillNew") || "待處理";
+      statusCls = "status-pill-new";
+    } else if (order.status === "ACCEPTED") {
+      statusText = t("statusPillAccepted") || "製作中";
+      statusCls = "status-pill-accepted";
+    } else if (order.status === "DONE") {
+      statusText = t("statusPillDone") || "待取餐";
+      statusCls = "status-pill-done";
+    } else if (order.status === "PICKED_UP") {
+      statusText = t("statusPillPicked") || "已取餐";
+      statusCls = "status-pill-picked";
+    } else if (order.status === "PAID") {
+      statusText = t("statusPillPaid") || "已結帳";
+      statusCls = "status-pill-paid";
+    } else if (order.status === "REJECTED" || order.status === "CANCELLED") {
+      statusText = t("statusPillRejected") || "已取消";
+      statusCls = "status-pill-rejected";
+    } else if (order.status === "WAITING_CUSTOMER_CHANGE" || order.status === "WAITING_CUSTOMER_REJECT") {
+      statusText = t("statusPillWaiting") || "待客人確認";
+      statusCls = "status-pill-waiting";
+    }
+    elSt.className = `status-pill ${statusCls}`;
+    elSt.innerText = statusText;
+  }
+
   const elDining = document.getElementById("review-dining");
   if (elDining) {
     const tableNum = typeof getOrderTableNumber === "function" ? getOrderTableNumber(order) : (order.tableNumber || "");
@@ -55,21 +107,31 @@ function openReview(orderKey) {
     const svgDineIn = (typeof POS_SVG !== "undefined" && POS_SVG.dineIn) || "";
     const svgTakeaway = (typeof POS_SVG !== "undefined" && POS_SVG.takeaway) || "";
     elDining.innerHTML = isDineIn
-      ? `<span style="color:#6d28d9; font-weight:1000;">${svgDineIn}${t('dineIn')}${escapeHtml(tableSuffix)}</span>`
-      : `<span style="color:#047857; font-weight:1000;">${svgTakeaway}${t('takeaway')}</span>`;
+      ? `<span class="dining-pill dine-in">${svgDineIn}${t('dineIn')}${escapeHtml(tableSuffix)}</span>`
+      : `<span class="dining-pill takeaway">${svgTakeaway}${t('takeaway')}</span>`;
   }
+
   const elCont = document.getElementById("review-content");
   if (elCont) elCont.innerHTML = formatContentHtml(order);
 
-  // Dynamic 3-level Print Macro Bar Label
-  const parsedItems = (typeof PrinterService !== "undefined" && typeof PrinterService.parseOrderItems === "function")
+  // Dynamic 3-level Print Macro Bar Label & Item Count
+  let parsedItems = (typeof PrinterService !== "undefined" && typeof PrinterService.parseOrderItems === "function")
     ? PrinterService.parseOrderItems(order, true)
     : [];
-  const itemCount = parsedItems.length || 1;
+  if (parsedItems && Array.isArray(parsedItems) && typeof isOrderMetadataText === "function") {
+    parsedItems = parsedItems.filter(it => it && it.name && !isOrderMetadataText(it.name));
+  }
+  const itemCount = (parsedItems && parsedItems.length) || 1;
+  const elItemsCount = document.getElementById("review-items-count");
+  if (elItemsCount) {
+    const isVi = (typeof currentLang !== "undefined" && currentLang === "vi") || (typeof window !== "undefined" && window.currentLang === "vi");
+    elItemsCount.innerText = isVi ? `${itemCount} món` : `${itemCount} 項`;
+  }
+
   const btnFullLabel = document.getElementById("i18n-btn-print-full");
   if (btnFullLabel) {
     const isVi = (typeof currentLang !== "undefined" && currentLang === "vi") || (typeof window !== "undefined" && window.currentLang === "vi");
-    btnFullLabel.innerText = (typeof t === "function" && t("btnPrintFullOrder", { n: itemCount })) || (isVi ? `IN CẢ ĐƠN (1 Bill + ${itemCount} Tem)` : `整單全印 (1 聯收銀 + ${itemCount} 張貼紙)`);
+    btnFullLabel.innerText = (typeof t === "function" && t("btnPrintFullOrder", { n: itemCount })) || (isVi ? `In Cả Đơn (1 Bill + ${itemCount} Tem)` : `整單全印 (1 聯收銀 + ${itemCount} 張貼紙)`);
   }
 
   const actionsNew = document.getElementById("review-actions");

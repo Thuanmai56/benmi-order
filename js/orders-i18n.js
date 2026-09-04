@@ -44,6 +44,11 @@ const I18N = {
     panelRightSub: "製作中與等待取餐",
     loading: "載入中...",
     empty: "無訂單",
+    emptyLivePendingTitle: "目前沒有待處理訂單",
+    emptyLivePendingSub: "新進訂單將即時推播並顯示於此",
+    emptyLiveAcceptedTitle: "目前無製作中訂單",
+    emptyLiveAcceptedSub: "已接單的餐點將在此顯示製作進度",
+    badgeNewOrder: "新訂單",
     emptyHistory: "尚無歷史訂單",
     historyTitle: "訂單歷史",
     historySub: "近 30 天訂單紀錄 (依日期分組)",
@@ -102,16 +107,37 @@ const I18N = {
     alertTitleCombined: "{newCount} 單新訂單，{appendCount} 單現場加點",
     alertSub: "點擊 “Review 訂單” 查看詳情並接單",
     alertSubAppend: "桌號：{tables} 剛加點新品項，請盡速製作",
-    alertBtnReview: "Review 訂單",
+    alertBtnReview: "審核訂單",
     alertBtnDismiss: "暫時隱藏",
     // Review Modal
-    reviewTitle: "Review 訂單",
+    reviewTitle: "訂單詳情",
+    reviewTitleNew: "審核訂單",
     labelOrder: "訂單編號",
     labelCustomer: "LINE 顧客",
     labelPickup: "取餐時間",
     labelEta: "剩餘時間",
     labelTotal: "總金額",
     labelStatus: "狀態",
+    labelDiningOption: "用餐方式",
+    labelOrderItems: "餐點明細",
+    statusPillNew: "待處理",
+    statusPillAccepted: "製作中",
+    statusPillDone: "待取餐",
+    statusPillPicked: "已取餐",
+    statusPillPaid: "已結帳",
+    statusPillWaiting: "待客人確認",
+    statusPillRejected: "已取消",
+    customerNoteLabel: "顧客備註",
+    flavorTitle: "口味與客製設定",
+    customerChangeTitle: "顧客換單 / 特殊需求",
+    viewRawOrder: "查看原始訂單內容",
+    hideRawOrder: "收起原始內容",
+    printToolsLabel: "出單與列印工具",
+    rawOrderTitle: "原始訂單文字（Raw Data）",
+    btnCopy: "複製",
+    copySuccess: "已複製",
+    btnPrintStickerShort: "印貼紙",
+    itemPreparedBadge: "已完成",
     btnAccept: "接單",
     btnChange: "需要更改",
     btnReject: "無法接單",
@@ -512,6 +538,11 @@ const I18N = {
     panelRightSub: "Đang làm & Chờ khách lấy",
     loading: "Đang tải...",
     empty: "Chưa có đơn",
+    emptyLivePendingTitle: "Không có đơn chờ xử lý",
+    emptyLivePendingSub: "Đơn mới sẽ tự động hiển thị và đổ chuông tại đây",
+    emptyLiveAcceptedTitle: "Không có đơn đang thực hiện",
+    emptyLiveAcceptedSub: "Các đơn đã nhận sẽ hiển thị tiến độ tại đây",
+    badgeNewOrder: "ĐƠN MỚI",
     emptyHistory: "Chưa có lịch sử đơn hàng",
     historyTitle: "Lịch sử đơn hàng",
     historySub: "Đơn hàng 30 ngày gần nhất (theo ngày)",
@@ -574,12 +605,33 @@ const I18N = {
     alertBtnDismiss: "Tạm ẩn",
     // Review Modal
     reviewTitle: "Chi tiết đơn hàng",
+    reviewTitleNew: "Duyệt đơn hàng",
     labelOrder: "Mã đơn",
     labelCustomer: "Khách LINE",
     labelPickup: "Giờ lấy",
     labelEta: "Thời gian còn",
     labelTotal: "Tổng tiền",
     labelStatus: "Trạng thái",
+    labelDiningOption: "Hình thức phục vụ",
+    labelOrderItems: "Danh sách món",
+    statusPillNew: "Chờ xử lý",
+    statusPillAccepted: "Đang làm",
+    statusPillDone: "Chờ lấy",
+    statusPillPicked: "Đã lấy",
+    statusPillPaid: "Đã thanh toán",
+    statusPillWaiting: "Chờ khách xác nhận",
+    statusPillRejected: "Đã hủy",
+    customerNoteLabel: "Ghi chú từ khách",
+    flavorTitle: "Tùy chọn hương vị & Khẩu vị",
+    customerChangeTitle: "Yêu cầu đổi món / Ghi chú đặc biệt",
+    viewRawOrder: "Xem toàn văn đơn gốc",
+    hideRawOrder: "Thu gọn đơn gốc",
+    printToolsLabel: "Công cụ in ấn & Tem nhãn",
+    rawOrderTitle: "Dữ liệu đơn hàng gốc (Raw Data)",
+    btnCopy: "Sao chép",
+    copySuccess: "Đã sao chép",
+    btnPrintStickerShort: "In tem",
+    itemPreparedBadge: "Đã xong",
     btnAccept: "Nhận đơn",
     btnChange: "Yêu cầu thay đổi",
     btnReject: "Từ chối đơn",
@@ -1052,6 +1104,13 @@ function applyLanguageToDOM() {
   const rightSub = document.getElementById("i18n-right-sub");
   if (rightSub) rightSub.innerText = dict.panelRightSub;
 
+  const fAll = document.getElementById("i18n-filter-all");
+  if (fAll) fAll.innerText = dict.filterAll || "全部";
+  const fTakeaway = document.getElementById("i18n-filter-takeaway");
+  if (fTakeaway) fTakeaway.innerText = dict.filterTakeaway || "外帶";
+  const fDinein = document.getElementById("i18n-filter-dinein");
+  if (fDinein) fDinein.innerText = dict.filterDineIn || "內用";
+
   // View History Headers
   const histTitle = document.getElementById("i18n-history-title");
   if (histTitle) histTitle.innerText = dict.historyTitle;
@@ -1109,6 +1168,10 @@ function applyLanguageToDOM() {
   if (lStatus) lStatus.innerText = dict.labelStatus;
   const lDining = document.getElementById("i18n-label-dining");
   if (lDining) lDining.innerText = dict.labelDiningOption;
+  const lItemsTitle = document.getElementById("i18n-review-items-title");
+  if (lItemsTitle) lItemsTitle.innerText = dict.labelOrderItems;
+  const lPrintTools = document.getElementById("i18n-print-tools-label");
+  if (lPrintTools) lPrintTools.innerText = dict.printToolsLabel;
 
   const btnRevAcc = document.getElementById("btn-review-accept");
   if (btnRevAcc) btnRevAcc.innerText = dict.btnAccept;

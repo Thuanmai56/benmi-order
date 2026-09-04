@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title id="pos-page-title">Blab POS</title>
-  <link rel="stylesheet" href="css/orders.css?v=20260904_settings_v7" />
+  <link rel="stylesheet" href="css/orders.css?v=20260905_review_modal_v2" />
     <script>
       (function () {
         document.documentElement.style.setProperty('--primary', '#00b900');
@@ -127,17 +127,21 @@
     </div>
 
     <div class="content" id="view-live">
-      <!-- Dining Filter Bar (Tablet-first) -->
+      <!-- Dining Filter Bar (Tablet-first Segmented Control) -->
       <div class="dining-filter-bar" id="dining-filter-bar">
-        <div class="dining-filter-group">
-          <button type="button" class="dining-filter-btn active" id="filter-btn-all" onclick="setDiningFilter('all')">全部</button>
+        <div class="dining-filter-group" role="tablist">
+          <button type="button" class="dining-filter-btn active" id="filter-btn-all" onclick="setDiningFilter('all')">
+            <span id="i18n-filter-all">全部</span>
+            <span class="filter-count-badge" id="filter-count-all">0</span>
+          </button>
           <button type="button" class="dining-filter-btn" id="filter-btn-takeaway" onclick="setDiningFilter('takeaway')">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path>
               <path d="M3 6h18"></path>
               <path d="M16 10a4 4 0 0 1-8 0"></path>
             </svg>
-            <span>外帶</span>
+            <span id="i18n-filter-takeaway">外帶</span>
+            <span class="filter-count-badge" id="filter-count-takeaway">0</span>
           </button>
           <button type="button" class="dining-filter-btn" id="filter-btn-dine-in" onclick="setDiningFilter('dine_in')">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -147,7 +151,8 @@
               <path d="M6 2v20"></path>
               <path d="M6 2a3 3 0 0 1 3 3v3a3 3 0 0 1-3 3"></path>
             </svg>
-            <span>內用</span>
+            <span id="i18n-filter-dinein">內用</span>
+            <span class="filter-count-badge" id="filter-count-dinein">0</span>
           </button>
         </div>
         <div class="dining-filter-stats" id="dining-filter-stats">
@@ -156,29 +161,31 @@
         </div>
       </div>
 
-      <div class="split">
-        <div class="panel">
-          <div class="panel-header">
+      <div class="split live-split">
+        <div class="panel live-panel">
+          <div class="panel-header live-panel-header">
             <div class="panel-header-title-group">
+              <span class="panel-pulse-dot dot-amber"></span>
               <span class="panel-title" id="i18n-left-title">待處理</span>
               <span class="panel-sub-inline" id="i18n-left-sub">近 → 遠 (依取餐時間)</span>
             </div>
-            <div class="badge wait" id="count-left">0</div>
+            <div class="badge wait live-count-badge" id="count-left">0</div>
           </div>
-          <div class="panel-body" id="list-left">
+          <div class="panel-body live-panel-body" id="list-left">
             <div style="text-align:center; padding: 22px; color:#999;" id="list-left-loading">載入中...</div>
           </div>
         </div>
 
-        <div class="panel">
-          <div class="panel-header">
+        <div class="panel live-panel">
+          <div class="panel-header live-panel-header">
             <div class="panel-header-title-group">
+              <span class="panel-pulse-dot dot-green"></span>
               <span class="panel-title" id="i18n-right-title">已接單</span>
               <span class="panel-sub-inline" id="i18n-right-sub">製作中與等待取餐</span>
             </div>
-            <div class="badge done" id="count-right">0</div>
+            <div class="badge done live-count-badge" id="count-right">0</div>
           </div>
-          <div class="panel-body" id="list-right">
+          <div class="panel-body live-panel-body" id="list-right">
             <div style="text-align:center; padding: 22px; color:#999;" id="list-right-empty">無訂單</div>
           </div>
         </div>
@@ -1099,90 +1106,152 @@
 
   <!-- Review modal -->
   <div id="reviewModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-title" style="display: flex; justify-content: space-between; align-items: center;">
-        <h3 id="i18n-review-title">Review 訂單</h3>
-        <div class="modal-close" onclick="closeModal()">✕</div>
+    <div class="modal-content review-dialog-content">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <h3 id="i18n-review-title">訂單詳情</h3>
+          <span class="modal-header-key" id="review-order-key-badge">-</span>
+        </div>
+        <button type="button" class="modal-close-btn" onclick="closeModal()" aria-label="Close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+        </button>
       </div>
 
       <div class="modal-body">
-        <div class="detail-grid">
-          <div class="detail-box">
-            <div class="detail-label" id="i18n-label-order">訂單編號</div>
-            <div class="detail-value mono" id="review-order-key">-</div>
+        <!-- Structured Order Overview Card -->
+        <div class="order-summary-card">
+          <div class="order-summary-row primary-row">
+            <div class="summary-col customer-col">
+              <span class="summary-label" id="i18n-label-customer">LINE 顧客</span>
+              <div class="summary-val customer-val" id="review-customer">-</div>
+            </div>
+            <div class="summary-col dining-col">
+              <span class="summary-label" id="i18n-label-dining">用餐方式</span>
+              <div class="summary-val" id="review-dining">-</div>
+            </div>
+            <div class="summary-col status-col">
+              <span class="summary-label" id="i18n-label-status">狀態</span>
+              <div class="summary-val" id="review-status-container">
+                <span class="status-pill" id="review-status">-</span>
+              </div>
+            </div>
           </div>
-          <div class="detail-box">
-            <div class="detail-label" id="i18n-label-customer">LINE 顧客</div>
-            <div class="detail-value" id="review-customer">-</div>
-          </div>
-          <div class="detail-box">
-            <div class="detail-label" id="i18n-label-pickup">取餐時間</div>
-            <div class="detail-value" id="review-pickup">-</div>
-          </div>
-          <div class="detail-box">
-            <div class="detail-label" id="i18n-label-eta">剩餘時間</div>
-            <div class="detail-value" id="review-eta" style="color: var(--brand-red);">-</div>
-          </div>
-          <div class="detail-box">
-            <div class="detail-label" id="i18n-label-total">總金額</div>
-            <div class="detail-value" id="review-total" style="color: var(--primary); font-weight: 1100;">-</div>
-          </div>
-          <div class="detail-box">
-            <div class="detail-label" id="i18n-label-status">狀態</div>
-            <div class="detail-value" id="review-status">-</div>
-          </div>
-          <div class="detail-box">
-            <div class="detail-label" id="i18n-label-dining">用餐方式</div>
-            <div class="detail-value" id="review-dining" style="font-weight: 1000;">-</div>
+          <div class="order-summary-row secondary-row">
+            <div class="summary-col time-col">
+              <span class="summary-label" id="i18n-label-pickup">取餐時間</span>
+              <div class="summary-val time-val" id="review-pickup">-</div>
+            </div>
+            <div class="summary-col eta-col">
+              <span class="summary-label" id="i18n-label-eta">剩餘時間</span>
+              <div class="summary-val eta-val" id="review-eta">-</div>
+            </div>
+            <div class="summary-col total-col">
+              <span class="summary-label" id="i18n-label-total">總金額</span>
+              <div class="summary-val total-val" id="review-total">-</div>
+            </div>
           </div>
         </div>
 
-        <div class="detail-content" id="review-content">-</div>
+        <div id="review-order-key" style="display:none;"></div>
 
-        <!-- 3-Level Print Control Bar (Tablet Touch Friendly >= 48px) -->
-        <div class="review-print-macro-bar" id="review-print-macro-bar" style="margin-top: 16px; padding-top: 14px; border-top: 1.5px dashed #cbd5e1; display: grid; grid-template-columns: 1.8fr 1fr 1.3fr; gap: 10px;">
-          <button type="button" class="btn btn-primary" id="btn-review-print-full" style="min-height: 48px; padding: 10px 14px; font-size: 15px; font-weight: 900; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 2px 8px rgba(0,185,0,0.25); cursor: pointer;" onclick="if(typeof reviewingOrder !== 'undefined' && reviewingOrder && typeof PrinterService !== 'undefined') PrinterService.printFullOrder(reviewingOrder.key)">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-            <span id="i18n-btn-print-full">整單全印 (1 聯收銀 + 貼紙)</span>
-          </button>
-          <button type="button" class="btn btn-ghost" id="btn-review-print-bill" style="min-height: 48px; padding: 10px 14px; font-size: 14px; font-weight: 800; border-radius: 10px; background: #f8fafc; border: 1.5px solid #cbd5e1; color: #1e293b; display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;" onclick="if(typeof reviewingOrder !== 'undefined' && reviewingOrder && typeof PrinterService !== 'undefined') PrinterService.printCashierOnly(reviewingOrder.key)">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"></path><path d="M16 8h-8"></path><path d="M16 12h-8"></path><path d="M10 16h-4"></path></svg>
-            <span id="i18n-btn-print-bill-only">僅印收銀明細</span>
-          </button>
-          <button type="button" class="btn btn-ghost" id="btn-review-print-custom" style="min-height: 48px; padding: 10px 14px; font-size: 14px; font-weight: 800; border-radius: 10px; background: #eff6ff; border: 1.5px solid #bfdbfe; color: #1d4ed8; display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;" onclick="openQuickStickerModal(reviewingOrder ? reviewingOrder.key : '')">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-            <span id="i18n-btn-print-custom-opt">補印客製標籤</span>
-          </button>
+        <!-- Order Items Section -->
+        <div class="review-items-wrapper">
+          <div class="review-items-header">
+            <span class="review-items-title" id="i18n-review-items-title">餐點明細</span>
+            <span class="review-items-count-badge" id="review-items-count">0 項</span>
+          </div>
+          <div class="detail-content" id="review-content">-</div>
+        </div>
+
+        <!-- Auxiliary Print Toolbar (Subtle, Compact 40px utility tools) -->
+        <div class="modal-print-toolbar">
+          <div class="print-toolbar-header">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-2px;"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+            <span id="i18n-print-tools-label">出單與列印工具</span>
+          </div>
+          <div class="review-print-macro-bar" id="review-print-macro-bar">
+            <button type="button" class="btn btn-print-full" id="btn-review-print-full" onclick="if(typeof reviewingOrder !== 'undefined' && reviewingOrder && typeof PrinterService !== 'undefined') PrinterService.printFullOrder(reviewingOrder.key)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+              <span id="i18n-btn-print-full">整單全印 (1 聯收銀 + 貼紙)</span>
+            </button>
+            <button type="button" class="btn btn-print-bill" id="btn-review-print-bill" onclick="if(typeof reviewingOrder !== 'undefined' && reviewingOrder && typeof PrinterService !== 'undefined') PrinterService.printCashierOnly(reviewingOrder.key)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"></path><path d="M16 8h-8"></path><path d="M16 12h-8"></path><path d="M10 16h-4"></path></svg>
+              <span id="i18n-btn-print-bill-only">僅印收銀明細</span>
+            </button>
+            <button type="button" class="btn btn-print-custom" id="btn-review-print-custom" onclick="openQuickStickerModal(reviewingOrder ? reviewingOrder.key : '')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+              <span id="i18n-btn-print-custom-opt">補印客製標籤</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      <div class="modal-actions" id="review-actions">
-        <button class="btn btn-primary" id="btn-review-accept" onclick="reviewAccept(this)">接單</button>
-        <button class="btn btn-yellow" id="btn-review-change" onclick="reviewOpenChange()">需要更改</button>
-        <button class="btn btn-danger" id="btn-review-reject" onclick="reviewOpenReject()">無法接單</button>
-      </div>
+      <!-- Elevated Lifecycle Footer (Touch-optimized 54px buttons for high-speed POS operation) -->
+      <div class="modal-lifecycle-footer">
+        <div class="modal-actions" id="review-actions">
+          <button class="btn btn-primary btn-lifecycle-primary" id="btn-review-accept" onclick="reviewAccept(this)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>接單</span>
+          </button>
+          <button class="btn btn-yellow btn-lifecycle-change" id="btn-review-change" onclick="reviewOpenChange()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            <span>需要更改</span>
+          </button>
+          <button class="btn btn-danger btn-lifecycle-danger" id="btn-review-reject" onclick="reviewOpenReject()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+            <span>無法接單</span>
+          </button>
+        </div>
 
-      <div class="modal-actions" id="review-actions-accepted" style="display:none;">
-        <button class="btn btn-primary" id="btn-review-ready" onclick="markReadyFromReview(this)">準備好了</button>
-        <button class="btn btn-danger" id="btn-review-cancel-1"
-          onclick="if(confirm(t('confirmCancelOrder'))){ updateStatus(reviewingOrder.key, 'REJECTED', { reason: '取消並不回復客戶' }, this).then(() => closeModal()); }">取消訂單</button>
-        <button class="btn btn-ghost" id="btn-review-close-1" onclick="closeModal()">關閉</button>
-      </div>
+        <div class="modal-actions" id="review-actions-accepted" style="display:none;">
+          <button class="btn btn-primary btn-lifecycle-primary" id="btn-review-ready" onclick="markReadyFromReview(this)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>準備好了</span>
+          </button>
+          <button class="btn btn-danger btn-lifecycle-danger" id="btn-review-cancel-1"
+            onclick="if(confirm(t('confirmCancelOrder'))){ updateStatus(reviewingOrder.key, 'REJECTED', { reason: '取消並不回復客戶' }, this).then(() => closeModal()); }">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+            <span>取消訂單</span>
+          </button>
+          <button class="btn btn-ghost btn-lifecycle-secondary" id="btn-review-close-1" onclick="closeModal()">
+            <span>關閉</span>
+          </button>
+        </div>
 
-      <div class="modal-actions" id="review-actions-done" style="display:none;">
-        <button class="btn btn-primary" id="btn-review-picked"
-          onclick="updateStatus(reviewingOrder.key, 'PICKED_UP', {}, this).then(() => closeModal());">已取餐</button>
-        <button class="btn" id="btn-review-paid" style="background:#7c3aed; color:#fff; display:none;"
-          onclick="updateStatus(reviewingOrder.key, 'PAID', {}, this).then(() => closeModal());">已結帳</button>
-        <button class="btn btn-danger" id="btn-review-cancel-2"
-          onclick="if(confirm(t('confirmCancelOrder'))){ updateStatus(reviewingOrder.key, 'REJECTED', { reason: '取消並不回復客戶' }, this).then(() => closeModal()); }">取消訂單</button>
-        <button class="btn btn-ghost" id="btn-review-close-2" onclick="closeModal()">關閉</button>
-      </div>
+        <div class="modal-actions" id="review-actions-done" style="display:none;">
+          <button class="btn btn-primary btn-lifecycle-primary" id="btn-review-picked"
+            onclick="updateStatus(reviewingOrder.key, 'PICKED_UP', {}, this).then(() => closeModal());">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 6 7 17 2 12"></polyline><path d="m22 10-7.5 7.5L13 16"></path></svg>
+            <span>已取餐</span>
+          </button>
+          <button class="btn btn-purple btn-lifecycle-purple" id="btn-review-paid" style="display:none;"
+            onclick="updateStatus(reviewingOrder.key, 'PAID', {}, this).then(() => closeModal());">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>已結帳</span>
+          </button>
+          <button class="btn btn-danger btn-lifecycle-danger" id="btn-review-cancel-2"
+            onclick="if(confirm(t('confirmCancelOrder'))){ updateStatus(reviewingOrder.key, 'REJECTED', { reason: '取消並不回復客戶' }, this).then(() => closeModal()); }">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+            <span>取消訂單</span>
+          </button>
+          <button class="btn btn-ghost btn-lifecycle-secondary" id="btn-review-close-2" onclick="closeModal()">
+            <span>關閉</span>
+          </button>
+        </div>
 
-      <div class="modal-actions" id="review-actions-waiting" style="display:none;">
-        <button class="btn btn-primary" id="btn-review-accept-wait" onclick="reviewAccept(this)">接單</button>
-        <button class="btn btn-danger" id="btn-review-force-cancel" onclick="reviewForceCancel(this)">取消訂單</button>
-        <button class="btn btn-ghost" id="btn-review-close-3" onclick="closeModal()">關閉</button>
+        <div class="modal-actions" id="review-actions-waiting" style="display:none;">
+          <button class="btn btn-primary btn-lifecycle-primary" id="btn-review-accept-wait" onclick="reviewAccept(this)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>接單</span>
+          </button>
+          <button class="btn btn-danger btn-lifecycle-danger" id="btn-review-force-cancel" onclick="reviewForceCancel(this)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+            <span>取消訂單</span>
+          </button>
+          <button class="btn btn-ghost btn-lifecycle-secondary" id="btn-review-close-3" onclick="closeModal()">
+            <span>關閉</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -1664,16 +1733,16 @@
   </div>
 
   <!-- Benmi POS Modular Architecture Scripts -->
-  <script src="js/orders-i18n.js?v=20260904_settings_v7"></script>
-  <script src="js/orders-core.js?v=20260904_settings_v7"></script>
-  <script src="js/orders-audio.js?v=20260904_settings_v7"></script>
-  <script src="js/printer-service.js?v=20260904_settings_v7"></script>
-  <script src="js/orders-live.js?v=20260904_settings_v7"></script>
-  <script src="js/orders-modals.js?v=20260904_settings_v7"></script>
-  <script src="js/orders-history.js?v=20260904_settings_v7"></script>
-  <script src="js/orders-reports.js?v=20260904_settings_v7"></script>
-  <script src="js/orders-settings.js?v=20260904_settings_v7"></script>
-  <script src="js/orders-menu.js?v=20260904_settings_v7"></script>
+  <script src="js/orders-i18n.js?v=20260905_review_modal_v1"></script>
+  <script src="js/orders-core.js?v=20260905_review_modal_v1"></script>
+  <script src="js/orders-audio.js?v=20260905_review_modal_v1"></script>
+  <script src="js/printer-service.js?v=20260905_review_modal_v1"></script>
+  <script src="js/orders-live.js?v=20260905_review_modal_v1"></script>
+  <script src="js/orders-modals.js?v=20260905_review_modal_v1"></script>
+  <script src="js/orders-history.js?v=20260905_review_modal_v1"></script>
+  <script src="js/orders-reports.js?v=20260905_review_modal_v1"></script>
+  <script src="js/orders-settings.js?v=20260905_review_modal_v1"></script>
+  <script src="js/orders-menu.js?v=20260905_review_modal_v1"></script>
 
   <!-- POS Bootstrap & Initialization -->
   <script>
