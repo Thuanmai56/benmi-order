@@ -245,6 +245,30 @@ async function saveScheduledPickupSetting() {
   }
 }
 
+function updateTocFeatureItem(tocId, labelId, i18nKey, unlockedSvg, isFeatureEnabled) {
+  const tocItem = document.getElementById(tocId);
+  if (!tocItem) return;
+  const lockSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
+  const targetSvg = isFeatureEnabled ? unlockedSvg : lockSvg;
+  
+  const iconBox = tocItem.querySelector(".toc-icon-box");
+  const label = document.getElementById(labelId);
+  const chevron = tocItem.querySelector(".toc-chevron");
+
+  if (!iconBox || !label || !chevron) {
+    tocItem.innerHTML = `
+      <div class="toc-icon-box">${targetSvg}</div>
+      <span class="toc-item-label" id="${labelId}">${typeof t === 'function' ? t(i18nKey) : ''}</span>
+      <svg class="toc-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="9 18 15 12 9 6"></polyline>
+      </svg>
+    `;
+  } else {
+    iconBox.innerHTML = targetSvg;
+    if (typeof t === 'function') label.innerText = t(i18nKey);
+  }
+}
+
 function renderDineInSetting() {
   const isFeatureEnabled = Array.isArray(window.currentTenantFeatures)
     ? window.currentTenantFeatures.includes('dine_in')
@@ -253,24 +277,20 @@ function renderDineInSetting() {
   const unlockedBody = document.getElementById("setting-dinein-unlocked-body");
   const lockedBody = document.getElementById("setting-dinein-locked-body");
   const saveBtn = document.getElementById("btn-save-dinein-setting");
-  const tocItem = document.getElementById("toc-item-dinein");
+
+  const DINEIN_SVG = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2v6a3 3 0 0 1-3 3 3 3 0 0 1-3-3V2"></path><path d="M15 2v10"></path><path d="M15 14v8"></path><path d="M6 2v20"></path><path d="M6 2a3 3 0 0 1 3 3v3a3 3 0 0 1-3 3"></path></svg>`;
+  updateTocFeatureItem("toc-item-dinein", "i18n-toc-dinein", "tocDineIn", DINEIN_SVG, isFeatureEnabled);
 
   if (!isFeatureEnabled) {
     if (unlockedBody) unlockedBody.style.display = "none";
     if (lockedBody) lockedBody.style.display = "flex";
     if (saveBtn) saveBtn.style.display = "none";
-    if (tocItem) {
-      tocItem.innerHTML = `<span>🔒</span> <span id="i18n-toc-dinein">${t('tocDineIn')}</span>`;
-    }
     return;
   }
 
   if (unlockedBody) unlockedBody.style.display = "flex";
   if (lockedBody) lockedBody.style.display = "none";
   if (saveBtn) saveBtn.style.display = "block";
-  if (tocItem) {
-    tocItem.innerHTML = `<span>🍽️</span> <span id="i18n-toc-dinein">${t('tocDineIn')}</span>`;
-  }
 
   const radioTrue = document.getElementById("setting-allow-dinein-true");
   const radioFalse = document.getElementById("setting-allow-dinein-false");
@@ -631,24 +651,20 @@ function renderReportsSetting() {
     ? window.currentTenantFeatures.includes('reports')
     : (Array.isArray(currentTenantFeatures) ? currentTenantFeatures.includes('reports') : false);
 
+  const REPORTS_SVG = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>`;
+  updateTocFeatureItem("toc-item-reports", "i18n-toc-reports", "tocReports", REPORTS_SVG, isFeatureEnabled);
+
   const unlockedBody = document.getElementById("setting-reports-unlocked-body");
   const lockedBody = document.getElementById("setting-reports-locked-body");
-  const tocItem = document.getElementById("toc-item-reports");
 
   if (!isFeatureEnabled) {
     if (unlockedBody) unlockedBody.style.display = "none";
     if (lockedBody) lockedBody.style.display = "flex";
-    if (tocItem) {
-      tocItem.innerHTML = `<span class="toc-icon">🔒</span> <span id="i18n-toc-reports">${t('tocReports')}</span>`;
-    }
     return;
   }
 
   if (unlockedBody) unlockedBody.style.display = "flex";
   if (lockedBody) lockedBody.style.display = "none";
-  if (tocItem) {
-    tocItem.innerHTML = `<span class="toc-icon">📊</span> <span id="i18n-toc-reports">${t('tocReports')}</span>`;
-  }
 }
 
 function openReportsFromSettings() {

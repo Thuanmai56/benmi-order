@@ -68,7 +68,8 @@ function openReview(orderKey) {
   const itemCount = parsedItems.length || 1;
   const btnFullLabel = document.getElementById("i18n-btn-print-full");
   if (btnFullLabel) {
-    btnFullLabel.innerText = (typeof t === "function" && t("btnPrintFullOrder", { n: itemCount })) || `IN CẢ ĐƠN (1 Bill + ${itemCount} Tem)`;
+    const isVi = (typeof currentLang !== "undefined" && currentLang === "vi") || (typeof window !== "undefined" && window.currentLang === "vi");
+    btnFullLabel.innerText = (typeof t === "function" && t("btnPrintFullOrder", { n: itemCount })) || (isVi ? `IN CẢ ĐƠN (1 Bill + ${itemCount} Tem)` : `整單全印 (1 聯收銀 + ${itemCount} 張貼紙)`);
   }
 
   const actionsNew = document.getElementById("review-actions");
@@ -539,15 +540,18 @@ function renderQuickStickerOptions() {
   const container = document.getElementById("quick-sticker-chips-container");
   if (!container) return;
 
+  const currentLanguage = (typeof currentLang !== "undefined" && currentLang) || (typeof window !== "undefined" && window.currentLang) || "zh-TW";
+  const isVi = currentLanguage === "vi";
+
   const groups = [];
 
   // If menu data has modifier categories
   if (typeof currentMenuData !== "undefined" && Array.isArray(currentMenuData) && currentMenuData.length > 0) {
-    const modCats = currentMenuData.filter(c => c && (c.type === 'modifier' || (c.name && (c.name.includes('辣') || c.name.includes('客製') || c.name.includes('加料') || c.name.includes('甜度') || c.name.includes('冰量')))));
+    const modCats = currentMenuData.filter(c => c && (c.type === 'modifier' || (c.name && (c.name.includes('辣') || c.name.includes('客製') || c.name.includes('加料') || c.name.includes('甜度') || c.name.includes('冰量') || c.name.toLowerCase().includes('topping') || c.name.toLowerCase().includes('cay') || c.name.toLowerCase().includes('đường')))));
     modCats.forEach(cat => {
       if (Array.isArray(cat.items) && cat.items.length > 0) {
         groups.push({
-          title: cat.name || "客製選項",
+          title: cat.name || (isVi ? "Tùy chọn món" : "客製選項"),
           options: cat.items.map(it => typeof it === 'string' ? it : (it.name || '')).filter(Boolean)
         });
       }
@@ -556,22 +560,41 @@ function renderQuickStickerOptions() {
 
   // Fallback / Standard F&B Fast-Tap groups if empty or supplementary
   if (groups.length === 0) {
-    groups.push({
-      title: (typeof t === "function" && t("spiceLevel")) || "辣度 / Gia vị Cay",
-      options: ["不辣", "微辣", "小辣", "中辣", "大辣", "生辣椒"]
-    });
-    groups.push({
-      title: (typeof t === "function" && t("veggieOptions")) || "蔥花與香菜 / Rau gia vị",
-      options: ["不要香菜", "不要洋蔥", "不要酸菜", "不要蔥花", "加量香菜", "加量洋蔥"]
-    });
-    groups.push({
-      title: (typeof t === "function" && t("iceSugarOptions")) || "甜度與冰量 / Đá & Đường",
-      options: ["去冰", "微冰", "少冰", "熱飲", "無糖", "微糖", "半糖"]
-    });
-    groups.push({
-      title: (typeof t === "function" && t("kitchenNotes")) || "出餐與分裝 / Ghi chú Bếp",
-      options: ["外帶分裝", "餐具另外放", "醬汁另外裝", "先做此單", "補印單品"]
-    });
+    if (isVi) {
+      groups.push({
+        title: (typeof t === "function" && t("quickStickerGroupSpice")) || "Gia vị cay",
+        options: ["Không cay", "Cay nhẹ", "Cay vừa", "Cay nhiều", "Ớt hiểm tươi"]
+      });
+      groups.push({
+        title: (typeof t === "function" && t("quickStickerGroupVeggie")) || "Rau gia vị",
+        options: ["Không ngò / rau mùi", "Không hành tây", "Không đồ chua", "Không hành lá", "Thêm ngò", "Thêm hành"]
+      });
+      groups.push({
+        title: (typeof t === "function" && t("quickStickerGroupIceSugar")) || "Đá & Đường",
+        options: ["Không đá", "Ít đá", "Đá vừa", "Uống nóng", "Không đường", "Ít đường", "50% đường"]
+      });
+      groups.push({
+        title: (typeof t === "function" && t("quickStickerGroupKitchen")) || "Ghi chú bếp",
+        options: ["Để riêng từng món", "Kèm muỗng nĩa", "Nước sốt để riêng", "Làm gấp đơn này", "In lại tem"]
+      });
+    } else {
+      groups.push({
+        title: (typeof t === "function" && t("quickStickerGroupSpice")) || "辣度選項",
+        options: ["不辣", "微辣", "小辣", "中辣", "大辣", "生辣椒"]
+      });
+      groups.push({
+        title: (typeof t === "function" && t("quickStickerGroupVeggie")) || "蔥花與香菜",
+        options: ["不要香菜", "不要洋蔥", "不要酸菜", "不要蔥花", "加量香菜", "加量洋蔥"]
+      });
+      groups.push({
+        title: (typeof t === "function" && t("quickStickerGroupIceSugar")) || "甜度與冰量",
+        options: ["去冰", "微冰", "少冰", "熱飲", "無糖", "微糖", "半糖"]
+      });
+      groups.push({
+        title: (typeof t === "function" && t("quickStickerGroupKitchen")) || "出餐與分裝",
+        options: ["外帶分裝", "餐具另外放", "醬汁另外裝", "先做此單", "補印單品"]
+      });
+    }
   }
 
   let html = "";

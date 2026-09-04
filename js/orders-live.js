@@ -115,14 +115,12 @@ function renderListLeft(orders) {
     };
 
     let rightActions = "";
-    const printBtn = `<button class="btn btn-ghost tile-action-btn" style="background:#f8fafc; color:#475569; border:1.5px solid #cbd5e1; padding: 6px 10px; margin-right: 4px;" title="${t('btnPrint')}" onclick="event.stopPropagation(); if(typeof PrinterService !== 'undefined') PrinterService.printManual('${escapeHtml(order.key)}')">🖨️ ${t('btnPrint')}</button>`;
-
     if (isNew) {
-      rightActions = `${printBtn}<button class="btn btn-ghost tile-action-btn" style="background:#e0f2fe; color:#0369a1;" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">${t('btnReview')}</button>`;
+      rightActions = `<button class="btn btn-ghost tile-action-btn" style="background:#e0f2fe; color:#0369a1;" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">${t('btnReview')}</button>`;
     } else if (order.status === "ACCEPTED") {
-      rightActions = `${printBtn}<button class="btn btn-primary tile-action-btn" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','DONE', {}, this)">${t('btnReady')}</button>`;
+      rightActions = `<button class="btn btn-primary tile-action-btn" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','DONE', {}, this)">${t('btnReady')}</button>`;
     } else {
-      rightActions = `${printBtn}<button class="btn tile-action-btn" style="background:#f1f5f9; color:#94a3af; cursor:not-allowed;" disabled>${t('btnWaitingReply')}</button>`;
+      rightActions = `<button class="btn tile-action-btn" style="background:#f1f5f9; color:#94a3af; cursor:not-allowed;" disabled>${t('btnWaitingReply')}</button>`;
     }
 
     const tableNum = getOrderTableNumber(order);
@@ -241,7 +239,6 @@ function renderListRight(orders) {
         </div>
       </div>
       <div class="tile-actions">
-        <button class="btn btn-ghost tile-action-btn" style="background:#f8fafc; color:#475569; border:1.5px solid #cbd5e1; padding: 6px 10px; margin-right: 4px;" title="${t('btnReprint') || t('btnPrint')}" onclick="event.stopPropagation(); if(typeof PrinterService !== 'undefined') PrinterService.printManual('${escapeHtml(order.key)}')">🖨️ ${t('btnReprint') || t('btnPrint')}</button>
         ${isDineIn
           ? `<button class="btn tile-action-btn" style="background:#7c3aed; color:#ffffff;" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','PAID', {}, this)">${t('btnPaid')}</button>`
           : `<button class="btn btn-yellow tile-action-btn" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','PICKED_UP', {}, this)">${t('btnPickedUp')}</button>`
@@ -376,14 +373,18 @@ window.toggleItemPreparedState = toggleItemPreparedState;
 function renderItemRowHtml(it, idx, orderKey) {
   const isPrepared = preparedOrderItems.has(`${orderKey}_item_${idx}`);
   const optionsHtml = it.options ? `<div class="review-item-options">${escapeHtml(it.options)}</div>` : "";
-  const noteHtml = it.note ? `<div class="review-item-note">📝 ${escapeHtml(it.note)}</div>` : "";
+  const noteIcon = (typeof POS_SVG !== "undefined" && POS_SVG.note) || "";
+  const noteHtml = it.note ? `<div class="review-item-note">${noteIcon}${escapeHtml(it.note)}</div>` : "";
   const unitBadge = (it.originalQty && it.originalQty > 1) ? `<span class="review-item-unit-badge">(${it.unitIndex}/${it.originalQty})</span>` : "";
-  const printLabel = (typeof t === "function" && t("btnPrintSingleItem")) || "In tem món";
+  const printLabel = (typeof t === "function" && t("btnPrintSingleItem")) || "印此品項貼紙";
   const printerIcon = (typeof POS_SVG !== "undefined" && POS_SVG.printer) || "";
+  const checkTitle = isPrepared
+    ? ((typeof t === "function" && t("itemPrepared")) || "已完成")
+    : ((typeof t === "function" && t("markPrepared")) || "標記已出餐");
 
   return `
     <div class="review-item-row ${isPrepared ? 'item-prepared' : ''}" id="review-item-${escapeHtml(orderKey)}-${idx}">
-      <label class="review-item-check-container" title="${isPrepared ? 'Đã hoàn thành' : 'Đánh dấu đã hoàn thành'}">
+      <label class="review-item-check-container" title="${escapeHtml(checkTitle)}">
         <input type="checkbox" class="review-item-checkbox" ${isPrepared ? 'checked' : ''} onchange="toggleItemPreparedState('${escapeHtml(orderKey)}', ${idx}, this)">
       </label>
       <div class="review-item-details">

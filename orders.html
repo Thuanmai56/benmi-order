@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title id="pos-page-title">Blab POS</title>
-  <link rel="stylesheet" href="css/orders.css?v=20260902_v1_3_tspl" />
+  <link rel="stylesheet" href="css/orders.css?v=20260904_settings_v3" />
     <script>
       (function () {
         document.documentElement.style.setProperty('--primary', '#00b900');
@@ -272,26 +272,8 @@
       <div class="split settings-split">
         <!-- Left Column: Table of Contents -->
         <div class="settings-toc-panel">
-          <div class="settings-toc-header">
-            <div class="settings-toc-header-left">
-              <div class="settings-toc-header-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="4" y1="21" x2="4" y2="14"></line>
-                  <line x1="4" y1="10" x2="4" y2="3"></line>
-                  <line x1="12" y1="21" x2="12" y2="12"></line>
-                  <line x1="12" y1="8" x2="12" y2="3"></line>
-                  <line x1="20" y1="21" x2="20" y2="16"></line>
-                  <line x1="20" y1="12" x2="20" y2="3"></line>
-                  <line x1="1" y1="14" x2="7" y2="14"></line>
-                  <line x1="9" y1="8" x2="15" y2="8"></line>
-                  <line x1="17" y1="16" x2="23" y2="16"></line>
-                </svg>
-              </div>
-              <div class="settings-toc-header-text">
-                <div class="panel-title" id="i18n-toc-settings-title">設定目錄</div>
-                <div class="panel-sub" id="i18n-toc-settings-sub">系統與門市參數</div>
-              </div>
-            </div>
+          <div class="panel-header">
+            <div class="panel-title" id="i18n-toc-settings-title">設定目錄</div>
           </div>
           <div class="settings-toc-list" id="settings-toc-list">
             <div class="settings-toc-item active" id="toc-item-status" onclick="scrollToSettingSection('setting-card-status')">
@@ -820,8 +802,9 @@
                       </div>
                     </div>
 
-                    <button type="button" class="btn" style="background: #f1f5f9; color: #334155; border: 1.5px solid #cbd5e1; font-weight: 800; padding: 8px 12px; margin-top: 4px; border-radius: 8px;" onclick="testPOSPrinterStation('cashier')">
-                      🖨️ 測試列印 (Test Print)
+                    <button type="button" class="btn" style="background: #f1f5f9; color: #334155; border: 1.5px solid #cbd5e1; font-weight: 800; padding: 8px 14px; margin-top: 4px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;" onclick="testPOSPrinterStation('cashier')">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                      <span class="i18n-btn-test-print">測試列印 (Test Print)</span>
                     </button>
                   </div>
 
@@ -936,11 +919,67 @@
                       </div>
                     </div>
 
-                    <button type="button" class="btn" style="background: #f1f5f9; color: #334155; border: 1.5px solid #cbd5e1; font-weight: 800; padding: 8px 12px; margin-top: 4px; border-radius: 8px;" onclick="testPOSPrinterStation('kitchen')">
-                      🖨️ 測試列印 (Test Print)
+                    <button type="button" class="btn" style="background: #f1f5f9; color: #334155; border: 1.5px solid #cbd5e1; font-weight: 800; padding: 8px 14px; margin-top: 4px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;" onclick="testPOSPrinterStation('kitchen')">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                      <span class="i18n-btn-test-print">測試列印 (Test Print)</span>
                     </button>
+                </div>
+
+                <!-- Printer Feature Usage Guide (Tablet-First / Modern Guide Card) -->
+                <div class="printer-guide-box" style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 14px;">
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 34px; height: 34px; border-radius: 9px; background: #ecfdf5; border: 1px solid #a7f3d0; color: #059669; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                    </div>
+                    <div>
+                      <div style="font-weight: 1000; font-size: 16px; color: #0f172a;" id="i18n-printer-guide-title">出單與印表機功能使用指南</div>
+                      <div style="font-size: 12.5px; color: #64748b; margin-top: 2px;" id="i18n-printer-guide-sub">深入了解自動出單、單據規格與 3 段式列印操作技巧</div>
+                    </div>
                   </div>
 
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 12px;">
+                    <!-- Guide Card 1: Modes -->
+                    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 8px;">
+                      <div style="font-weight: 900; font-size: 14px; color: #1e293b;" id="i18n-printer-guide-mode-title">1. 列印出單模式說明 (Auto vs. Manual)</div>
+                      <div style="font-size: 13px; color: #475569; line-height: 1.45;">
+                        <strong style="color: #059669;" id="i18n-printer-guide-mode-auto-title">⚡ 自動列印模式 (Auto-print)</strong><br>
+                        <span id="i18n-printer-guide-mode-auto-desc">當客人送出訂單後，系統立即發出提示音並自動列印「1 張收銀明細」與「全部餐點貼紙」，適合尖峰繁忙時段，省去店員手動點選步驟。</span>
+                      </div>
+                      <div style="font-size: 13px; color: #475569; line-height: 1.45; margin-top: 4px;">
+                        <strong style="color: #3b82f6;" id="i18n-printer-guide-mode-manual-title">✋ 手動列印模式 (Manual-print)</strong><br>
+                        <span id="i18n-printer-guide-mode-manual-desc">收到新單時僅發出通知音，店員需點進訂單詳細頁確認餐點內容後，點選 [整單全印] 才會出單。適合需先確認庫存或客製化說明的門市。</span>
+                      </div>
+                    </div>
+
+                    <!-- Guide Card 2: 3-Level Print -->
+                    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 8px;">
+                      <div style="font-weight: 900; font-size: 14px; color: #1e293b;" id="i18n-printer-guide-levels-title">2. 訂單詳細頁 3 段式列印控制</div>
+                      <div style="font-size: 13px; color: #475569; line-height: 1.45;">
+                        <strong style="color: #0f172a;" id="i18n-printer-guide-level-full-title">🖨️ 整單全印 (1 聯收銀 + N 張貼紙)</strong><br>
+                        <span id="i18n-printer-guide-level-full-desc">一鍵送出：1 張櫃檯明細 (給客人或留底) + N 張廚房貼紙 (每份餐點 1 張獨立杯貼/盒貼)。</span>
+                      </div>
+                      <div style="font-size: 13px; color: #475569; line-height: 1.45;">
+                        <strong style="color: #0f172a;" id="i18n-printer-guide-level-bill-title">🧾 僅印收銀明細 (Bill)</strong><br>
+                        <span id="i18n-printer-guide-level-bill-desc">僅出單張收據小票，適合結帳找零、補開客人明細或退換貨核對。</span>
+                      </div>
+                      <div style="font-size: 13px; color: #475569; line-height: 1.45;">
+                        <strong style="color: #0f172a;" id="i18n-printer-guide-level-single-title">🏷️ 單品貼紙列印與備餐勾選</strong><br>
+                        <span id="i18n-printer-guide-level-single-desc">每道餐點左側設有 [ ] 勾選方塊供廚房備餐核對；右側設有 [印單品貼紙] 鈕，遇卡紙或貼紙破損時可單獨補印該品項。</span>
+                      </div>
+                      <div style="font-size: 13px; color: #475569; line-height: 1.45;">
+                        <strong style="color: #0f172a;" id="i18n-printer-guide-level-custom-title">⚙️ 補印客製/緊急貼紙</strong><br>
+                        <span id="i18n-printer-guide-level-custom-desc">點開可快選常見備註 (如：不要香菜、去冰、微辣) 或手動輸入特殊要求，立即印出獨立小貼紙貼在餐盒上。</span>
+                      </div>
+                    </div>
+
+                    <!-- Guide Card 3: Hardware tips -->
+                    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 8px;">
+                      <div style="font-weight: 900; font-size: 14px; color: #1e293b;" id="i18n-printer-guide-hardware-title">3. 雙印表機 (Dual-Station) 建議設定</div>
+                      <div style="font-size: 13px; color: #475569; line-height: 1.45;" id="i18n-printer-guide-hw-cashier">• 櫃檯印表機：建議使用 ESC/POS 協定熱感應小票機 (80mm 或 58mm)，連接 Wi-Fi (Port 9100) 或藍牙。</div>
+                      <div style="font-size: 13px; color: #475569; line-height: 1.45;" id="i18n-printer-guide-hw-kitchen">• 廚房/吧台印表機：建議使用 TSPL 協定標籤貼紙機 (如 Aimo, Xprinter 40x30mm / 50x30mm)，模式選「單品/杯貼標籤」。</div>
+                      <div style="font-size: 13px; color: #475569; line-height: 1.45;" id="i18n-printer-guide-hw-test">• 每日開班前建議點選「測試列印」確認連線通暢。</div>
+                    </div>
+                  </div>
                 </div>
 
               </div>
@@ -1086,12 +1125,7 @@
     <div class="modal-content">
       <div class="modal-title" style="display: flex; justify-content: space-between; align-items: center;">
         <h3 id="i18n-review-title">Review 訂單</h3>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <button type="button" class="btn btn-ghost" style="background:#f1f5f9; color:#334155; border:1.5px solid #cbd5e1; padding: 6px 12px; font-weight:800; border-radius:8px; display: inline-flex; align-items: center; gap: 4px;" onclick="if(typeof reviewingOrder !== 'undefined' && reviewingOrder && typeof PrinterService !== 'undefined') PrinterService.printManual(reviewingOrder.key)">
-            <span>🖨️</span> <span id="i18n-review-btn-print">列印</span>
-          </button>
-          <div class="modal-close" onclick="closeModal()">✕</div>
-        </div>
+        <div class="modal-close" onclick="closeModal()">✕</div>
       </div>
 
       <div class="modal-body">
@@ -1132,15 +1166,15 @@
         <div class="review-print-macro-bar" id="review-print-macro-bar" style="margin-top: 16px; padding-top: 14px; border-top: 1.5px dashed #cbd5e1; display: grid; grid-template-columns: 1.8fr 1fr 1.3fr; gap: 10px;">
           <button type="button" class="btn btn-primary" id="btn-review-print-full" style="min-height: 48px; padding: 10px 14px; font-size: 15px; font-weight: 900; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 2px 8px rgba(0,185,0,0.25); cursor: pointer;" onclick="if(typeof reviewingOrder !== 'undefined' && reviewingOrder && typeof PrinterService !== 'undefined') PrinterService.printFullOrder(reviewingOrder.key)">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-            <span id="i18n-btn-print-full">IN CẢ ĐƠN (1 Bill + Tem)</span>
+            <span id="i18n-btn-print-full">整單全印 (1 聯收銀 + 貼紙)</span>
           </button>
           <button type="button" class="btn btn-ghost" id="btn-review-print-bill" style="min-height: 48px; padding: 10px 14px; font-size: 14px; font-weight: 800; border-radius: 10px; background: #f8fafc; border: 1.5px solid #cbd5e1; color: #1e293b; display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;" onclick="if(typeof reviewingOrder !== 'undefined' && reviewingOrder && typeof PrinterService !== 'undefined') PrinterService.printCashierOnly(reviewingOrder.key)">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"></path><path d="M16 8h-8"></path><path d="M16 12h-8"></path><path d="M10 16h-4"></path></svg>
-            <span id="i18n-btn-print-bill-only">IN BILL</span>
+            <span id="i18n-btn-print-bill-only">僅印收銀明細</span>
           </button>
           <button type="button" class="btn btn-ghost" id="btn-review-print-custom" style="min-height: 48px; padding: 10px 14px; font-size: 14px; font-weight: 800; border-radius: 10px; background: #eff6ff; border: 1.5px solid #bfdbfe; color: #1d4ed8; display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;" onclick="openQuickStickerModal(reviewingOrder ? reviewingOrder.key : '')">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-            <span id="i18n-btn-print-custom-opt">IN TEM TÙY CHỌN</span>
+            <span id="i18n-btn-print-custom-opt">補印客製標籤</span>
           </button>
         </div>
       </div>
@@ -1181,23 +1215,23 @@
     <div class="modal-content" style="max-width: 600px;">
       <div class="modal-title" style="display: flex; justify-content: space-between; align-items: center;">
         <div>
-          <h3 id="i18n-quick-sticker-title" style="margin: 0; font-size: 20px; font-weight: 900;">In tem tùy chọn / Tem chữa cháy</h3>
-          <div id="i18n-quick-sticker-sub" style="font-size: 13px; color: var(--muted); margin-top: 4px;">Chạm các tùy chọn bên dưới để xả ngay 1 tem ghi chú dán chữa cháy lên món:</div>
+          <h3 id="i18n-quick-sticker-title" style="margin: 0; font-size: 20px; font-weight: 900;">補印客製標籤 (緊急貼紙)</h3>
+          <div id="i18n-quick-sticker-sub" style="font-size: 13px; color: var(--muted); margin-top: 4px;">點擊下方常見選項，立即列印 1 張獨立備註貼紙粘貼於餐點上：</div>
         </div>
         <div class="modal-close" onclick="closeQuickStickerModal()">✕</div>
       </div>
       <div class="modal-body" style="padding: 18px 20px; max-height: 70vh; overflow-y: auto;">
         <!-- Dynamic Fast-Tap Modifier Chips Container -->
         <div id="quick-sticker-chips-container" style="display: flex; flex-direction: column; gap: 14px;">
-          <div style="text-align: center; color: #94a3b8; padding: 12px;">Đang tải danh sách tùy chọn...</div>
+          <div style="text-align: center; color: #94a3b8; padding: 12px;">正在載入選項...</div>
         </div>
 
         <!-- Custom Text Input for Fast Typing -->
         <div style="margin-top: 18px; padding-top: 16px; border-top: 1.5px dashed #e2e8f0;">
-          <div style="font-size: 13px; font-weight: 800; color: #475569; margin-bottom: 8px;">Hoặc nhập ghi chú tùy ý cần in:</div>
+          <div id="i18n-quick-sticker-custom-label" style="font-size: 13px; font-weight: 800; color: #475569; margin-bottom: 8px;">或輸入自訂備註文字：</div>
           <div style="display: flex; gap: 8px;">
-            <input type="text" id="quick-sticker-custom-input" class="form-input" style="flex: 1; font-size: 15px; font-weight: 600;" placeholder="Nhập ghi chú tùy ý (ví dụ: Ít đá, Bàn 2 thêm thìa)..." onkeydown="if(event.key==='Enter') printCustomQuickSticker()">
-            <button type="button" class="btn btn-primary" id="i18n-btn-print-quick-custom" style="padding: 10px 18px; font-size: 14px; font-weight: 900; white-space: nowrap;" onclick="printCustomQuickSticker()">In ghi chú này</button>
+            <input type="text" id="quick-sticker-custom-input" class="form-input" style="flex: 1; font-size: 15px; font-weight: 600;" placeholder="輸入自訂備註 (例如：少冰、不要酸菜)..." onkeydown="if(event.key==='Enter') printCustomQuickSticker()">
+            <button type="button" class="btn btn-primary" id="i18n-btn-print-quick-custom" style="padding: 10px 18px; font-size: 14px; font-weight: 900; white-space: nowrap;" onclick="printCustomQuickSticker()">列印此備註</button>
           </div>
         </div>
       </div>
@@ -1582,16 +1616,16 @@
   </div>
 
   <!-- Benmi POS Modular Architecture Scripts -->
-  <script src="js/orders-i18n.js?v=20260902_v1_3_tspl"></script>
-  <script src="js/orders-core.js?v=20260902_v1_3_tspl"></script>
-  <script src="js/orders-audio.js?v=20260902_v1_3_tspl"></script>
-  <script src="js/printer-service.js?v=20260902_v1_3_tspl"></script>
-  <script src="js/orders-live.js?v=20260902_v1_3_tspl"></script>
-  <script src="js/orders-modals.js?v=20260902_v1_3_tspl"></script>
-  <script src="js/orders-history.js?v=20260902_v1_3_tspl"></script>
-  <script src="js/orders-reports.js?v=20260902_v1_3_tspl"></script>
-  <script src="js/orders-settings.js?v=20260902_v1_3_tspl"></script>
-  <script src="js/orders-menu.js?v=20260902_v1_3_tspl"></script>
+  <script src="js/orders-i18n.js?v=20260904_settings_v3"></script>
+  <script src="js/orders-core.js?v=20260904_settings_v3"></script>
+  <script src="js/orders-audio.js?v=20260904_settings_v3"></script>
+  <script src="js/printer-service.js?v=20260904_settings_v3"></script>
+  <script src="js/orders-live.js?v=20260904_settings_v3"></script>
+  <script src="js/orders-modals.js?v=20260904_settings_v3"></script>
+  <script src="js/orders-history.js?v=20260904_settings_v3"></script>
+  <script src="js/orders-reports.js?v=20260904_settings_v3"></script>
+  <script src="js/orders-settings.js?v=20260904_settings_v3"></script>
+  <script src="js/orders-menu.js?v=20260904_settings_v3"></script>
 
   <!-- POS Bootstrap & Initialization -->
   <script>

@@ -249,28 +249,57 @@ const I18N = {
     printerOptTsplDpi300: "300 DPI (11.8 dots/mm - 高解析度)",
     printerTsplXOffsetLabel: "水平邊距 X (mm)",
     printerTsplYOffsetLabel: "垂直邊距 Y (mm)",
-    btnTestPrint: "🖨️ 測試列印 (Test Print)",
-    btnSavePrinterSettings: "💾 儲存印表機設定",
+    btnTestPrint: "測試列印 (Test Print)",
+    btnSavePrinterSettings: "儲存印表機設定",
     // Print Mode Settings (Auto vs Manual)
     printModeTitle: "列印出單模式",
     printModeSub: "選擇新訂單進來時的列印行為",
     printModeAutoTitle: "⚡ 自動列印模式 (Auto-print)",
     printModeAutoDesc: "收到新訂單時，系統發出提示音並自動列印全部明細 (Bill) 與標籤貼紙 (Tem)，無需觸碰螢幕。適合尖峰繁忙時段。",
     printModeManualTitle: "✋ 手動列印模式 (Manual-print)",
-    printModeManualDesc: "店員須在螢幕點選 [🖨️ 整單全印] 機器才會出單。適合需要先核對確認訂單的門市。",
+    printModeManualDesc: "店員須在螢幕點選 [整單全印] 機器才會出單。適合需要先核對確認訂單的門市。",
     // 3 Print Levels
-    btnPrintFullOrder: "🖨️ 整單全印 (1 明細 + {n} 貼紙)",
-    btnPrintBillOnly: "🧾 僅印明細 (Bill)",
-    btnPrintCustomOption: "⚙️ 印客製/補印貼紙",
+    btnPrintFullOrder: "整單全印 (1 聯收銀 + {n} 張貼紙)",
+    btnPrintBillOnly: "僅印收銀明細",
+    btnPrintCustomOption: "補印客製標籤",
     btnPrintSingleItem: "印此品項貼紙",
+    itemPrepared: "已完成",
+    markPrepared: "標記已出餐",
     printSingleItemSuccess: "已列印「{name}」貼紙！",
     // Quick Sticker / Emergency Note Modal
     quickStickerModalTitle: "補印客製標籤 (緊急貼紙)",
     quickStickerModalSub: "點擊下方常見選項，立即列印 1 張獨立備註貼紙粘貼於餐點上：",
+    quickStickerCustomLabel: "或輸入自訂備註文字：",
     quickStickerCustomPlaceholder: "輸入自訂備註 (例如：少冰、不要酸菜)...",
     quickStickerCustomPrintBtn: "列印此備註",
     quickStickerPrinting: "正在列印備註貼紙...",
     quickStickerSuccess: "已出標籤: 「{text}」！",
+    quickStickerLoading: "正在載入選項...",
+    quickStickerGroupSpice: "辣度選項",
+    quickStickerGroupVeggie: "蔥花與香菜",
+    quickStickerGroupIceSugar: "甜度與冰量",
+    quickStickerGroupKitchen: "出餐與分裝",
+    // Printer Usage Guide
+    printerGuideTitle: "出單與印表機功能使用指南",
+    printerGuideSub: "深入了解自動出單、單據規格與 3 段式列印操作技巧",
+    printerGuideModeTitle: "1. 列印出單模式說明 (Auto vs. Manual)",
+    printerGuideModeAutoTitle: "⚡ 自動列印模式 (Auto-print)",
+    printerGuideModeAutoDesc: "當客人送出訂單後，系統立即發出提示音並自動列印「1 張收銀明細」與「全部餐點貼紙」，適合尖峰繁忙時段，省去店員手動點選步驟。",
+    printerGuideModeManualTitle: "✋ 手動列印模式 (Manual-print)",
+    printerGuideModeManualDesc: "收到新單時僅發出通知音，店員需點進訂單詳細頁確認餐點內容後，點選 [整單全印] 才會出單。適合需先確認庫存或客製化說明的門市。",
+    printerGuideLevelsTitle: "2. 訂單詳細頁 3 段式列印控制",
+    printerGuideLevelFullTitle: "🖨️ 整單全印 (1 聯收銀 + N 張貼紙)",
+    printerGuideLevelFullDesc: "一鍵送出：1 張櫃檯明細 (給客人或留底) + N 張廚房貼紙 (每份餐點 1 張獨立杯貼/盒貼)。",
+    printerGuideLevelBillTitle: "🧾 僅印收銀明細 (Bill)",
+    printerGuideLevelBillDesc: "僅出單張收據小票，適合結帳找零、補開客人明細或退換貨核對。",
+    printerGuideLevelSingleTitle: "🏷️ 單品貼紙列印與備餐勾選",
+    printerGuideLevelSingleDesc: "每道餐點左側設有 [ ] 勾選方塊供廚房備餐核對；右側設有 [印單品貼紙] 鈕，遇卡紙或貼紙破損時可單獨補印該品項。",
+    printerGuideLevelCustomTitle: "⚙️ 補印客製/緊急貼紙",
+    printerGuideLevelCustomDesc: "點開可快選常見備註 (如：不要香菜、去冰、微辣) 或手動輸入特殊要求，立即印出獨立小貼紙貼在餐盒上。",
+    printerGuideHardwareTitle: "3. 雙印表機 (Dual-Station) 建議設定",
+    printerGuideHwCashier: "• 櫃檯印表機：建議使用 ESC/POS 協定熱感應小票機 (80mm 或 58mm)，連接 Wi-Fi (Port 9100) 或藍牙。",
+    printerGuideHwKitchen: "• 廚房/吧台印表機：建議使用 TSPL 協定標籤貼紙機 (如 Aimo, Xprinter 40x30mm / 50x30mm)，模式選「單品/杯貼標籤」。",
+    printerGuideHwTest: "• 每日開班前建議點選「測試列印」確認連線通暢。",
     // Menu Editor
     menuCatTitle: "菜單分類",
     menuCatSub: "點擊左側分類以管理品項",
@@ -802,28 +831,57 @@ const I18N = {
     printerOptTsplDpi300: "300 DPI (11.8 dots/mm - Siêu nét)",
     printerTsplXOffsetLabel: "Lề ngang X (mm)",
     printerTsplYOffsetLabel: "Lề dọc Y (mm)",
-    btnTestPrint: "🖨️ In Thử Nghiệm",
-    btnSavePrinterSettings: "💾 Lưu Cấu Hình Máy In",
+    btnTestPrint: "In thử nghiệm (Test Print)",
+    btnSavePrinterSettings: "Lưu Cấu Hình Máy In",
     // Print Mode Settings (Auto vs Manual)
     printModeTitle: "Chế độ xuất vé / in",
     printModeSub: "Tùy chỉnh hành vi in khi hệ thống tiếp nhận đơn hàng mới",
     printModeAutoTitle: "⚡ Chế độ In tự động (Auto-print)",
     printModeAutoDesc: "Đơn được nhận, Web tự động phát tiếng chuông Ting Ting và tự động xả toàn bộ Tem + Bill ra máy in mà không cần nhân viên chạm vào màn hình. Rất thích hợp cho quán lúc cực kỳ đông khách.",
     printModeManualTitle: "✋ Chế độ In thủ công (Manual-print)",
-    printModeManualDesc: "Nhân viên phải bấm nút [ 🖨️ In cả đơn ] trên màn hình thì máy mới in. Thích hợp cho quán muốn kiểm tra lại đơn trước khi nhận.",
+    printModeManualDesc: "Nhân viên phải bấm nút [ IN CẢ ĐƠN ] trên màn hình thì máy mới in. Thích hợp cho quán muốn kiểm tra lại đơn trước khi nhận.",
     // 3 Print Levels
-    btnPrintFullOrder: "🖨️ IN CẢ ĐƠN (1 Bill + {n} Tem)",
-    btnPrintBillOnly: "🧾 IN BILL",
-    btnPrintCustomOption: "⚙️ IN TEM TÙY CHỌN",
+    btnPrintFullOrder: "IN CẢ ĐƠN (1 Bill + {n} Tem)",
+    btnPrintBillOnly: "IN BILL THU NGÂN",
+    btnPrintCustomOption: "IN TEM TÙY CHỌN",
     btnPrintSingleItem: "In tem món",
+    itemPrepared: "Đã hoàn thành",
+    markPrepared: "Đánh dấu đã hoàn thành",
     printSingleItemSuccess: "Đã in tem món \"{name}\"!",
     // Quick Sticker / Emergency Note Modal
     quickStickerModalTitle: "In tem tùy chọn / Tem chữa cháy",
-    quickStickerModalSub: "Chạm các tùy chọn bên dưới để xả ngay 1 tem ghi chú dán chữa cháy lên món:",
+    quickStickerModalSub: "Chạm các tùy chọn bên dưới để xả ngay 1 tem ghi chú dán lên món:",
+    quickStickerCustomLabel: "Hoặc nhập ghi chú tùy ý cần in:",
     quickStickerCustomPlaceholder: "Nhập ghi chú tùy ý (ví dụ: Ít đá, Bàn 2 thêm thìa)...",
     quickStickerCustomPrintBtn: "In ghi chú này",
     quickStickerPrinting: "Đang in tem ghi chú...",
     quickStickerSuccess: "Đã in tem: \"{text}\"!",
+    quickStickerLoading: "Đang tải danh sách tùy chọn...",
+    quickStickerGroupSpice: "Gia vị cay",
+    quickStickerGroupVeggie: "Rau gia vị",
+    quickStickerGroupIceSugar: "Đá & Đường",
+    quickStickerGroupKitchen: "Ghi chú bếp",
+    // Printer Usage Guide
+    printerGuideTitle: "Hướng dẫn sử dụng chức năng In ấn POS",
+    printerGuideSub: "Tìm hiểu chi tiết cơ chế in tự động, quy cách tem nhãn và thao tác in 3 cấp độ",
+    printerGuideModeTitle: "1. Các chế độ in đơn (Auto-print vs. Manual-print)",
+    printerGuideModeAutoTitle: "⚡ Chế độ In tự động (Auto-print)",
+    printerGuideModeAutoDesc: "Khi có đơn mới vào hệ thống, POS tự động phát chuông Ting Ting và xả toàn bộ 1 Bill thu ngân + toàn bộ Tem dán món mà không cần chạm màn hình. Rất thích hợp cho giờ cao điểm đông khách.",
+    printerGuideModeManualTitle: "✋ Chế độ In thủ công (Manual-print)",
+    printerGuideModeManualDesc: "Khi có đơn mới hệ thống chỉ báo chuông. Nhân viên bấm mở đơn kiểm tra rồi nhấn [IN CẢ ĐƠN] máy mới in. Phù hợp quán cần kiểm tra lại món hoặc xác nhận với khách trước khi làm.",
+    printerGuideLevelsTitle: "2. Thao tác in 3 cấp độ trong chi tiết đơn hàng",
+    printerGuideLevelFullTitle: "🖨️ IN CẢ ĐƠN (1 Bill + N Tem)",
+    printerGuideLevelFullDesc: "1 chạm xuất đầy đủ: 1 hoá đơn thu ngân cho khách + N tem nhãn cho quầy bar/bếp (mỗi ly/phần ăn 1 tem dán riêng).",
+    printerGuideLevelBillTitle: "🧾 IN BILL THU NGÂN",
+    printerGuideLevelBillDesc: "Chỉ in 1 phiếu hoá đơn tính tiền, dùng khi thanh toán, kẹp hoá đơn bàn giao cho khách hoặc lưu sổ sách.",
+    printerGuideLevelSingleTitle: "🏷️ In tem từng món & Checkbox bếp",
+    printerGuideLevelSingleDesc: "Mỗi dòng món ăn có checkbox [ ] cho bếp tích đánh dấu hoàn thành (tự động gạch ngang món); nút [In tem món] cho phép in lại đúng món đó khi rách tem hoặc kẹt giấy.",
+    printerGuideLevelCustomTitle: "⚙️ IN TEM TÙY CHỌN (Tem chữa cháy)",
+    printerGuideLevelCustomDesc: "Bấm mở popup để chạm nhanh các tùy biến (Không hành, Ít đá, Cay vừa...) hoặc nhập chữ tự do để xả ngay 1 tem ghi chú dán chữa cháy lên ly/hộp.",
+    printerGuideHardwareTitle: "3. Cấu hình khuyến nghị cho mô hình 2 máy in (Dual-Station)",
+    printerGuideHwCashier: "• Máy in thu ngân: Dùng máy in hoá đơn nhiệt ESC/POS (khổ 80mm hoặc 58mm), kết nối mạng Wi-Fi LAN (Port 9100) hoặc Bluetooth.",
+    printerGuideHwKitchen: "• Máy in bếp/pha chế: Dùng máy in tem nhãn TSPL (như Aimo, Xprinter khổ 40x30mm hoặc 50x30mm), chọn chế độ in \"Đơn từng món/ly\".",
+    printerGuideHwTest: "• Đầu mỗi ca bán hàng, nên bấm nút \"Kiểm tra in (Test Print)\" để đảm bảo kết nối thông suốt.",
     // Multi-Round Append Orders
     badgeAppendRound: "Đợt {n}",
     badgeAppendShort: "Gọi thêm",
@@ -1157,7 +1215,7 @@ function applyLanguageToDOM() {
   const tocTitle = document.getElementById("i18n-toc-settings-title");
   if (tocTitle) tocTitle.innerText = dict.tocSettingsTitle;
   const tocSub = document.getElementById("i18n-toc-settings-sub");
-  if (tocSub) tocSub.innerText = dict.tocSettingsSub || "系統與門市參數";
+  if (tocSub) tocSub.innerText = dict.tocSettingsSub || (currentLang === "vi" ? "Cấu hình hệ thống" : "系統與門市參數");
   const tocStatus = document.getElementById("i18n-toc-status");
   if (tocStatus) tocStatus.innerText = dict.tocStoreStatus;
   const tocOrderMode = document.getElementById("i18n-toc-ordermode");
@@ -1174,8 +1232,12 @@ function applyLanguageToDOM() {
   if (tocLang) tocLang.innerText = dict.tocLanguage;
   const tocDine = document.getElementById("i18n-toc-dinein");
   if (tocDine) tocDine.innerText = dict.tocDineIn;
+  const tocPrn = document.getElementById("i18n-toc-printer");
+  if (tocPrn) tocPrn.innerText = dict.tocPrinter;
   const tocRep = document.getElementById("i18n-toc-reports");
   if (tocRep) tocRep.innerText = dict.tocReports;
+  const tocStoreP = document.getElementById("i18n-toc-store-pairing");
+  if (tocStoreP) tocStoreP.innerText = dict.tocStorePairing;
 
   // Language Setting Card
   const setLangT = document.getElementById("i18n-setting-lang-title");
@@ -1311,7 +1373,7 @@ function applyLanguageToDOM() {
   const btnAddCatCan = document.getElementById("btn-add-cat-cancel");
   if (btnAddCatCan) btnAddCatCan.innerText = dict.btnCancel || "取消";
   const menuEdT = document.getElementById("menu-editor-title");
-  if (menuEdT && (!currentMenuData || activeCategoryIndex < 0)) menuEdT.innerText = dict.menuEditorTitle;
+  if (menuEdT && (typeof currentMenuData === 'undefined' || !currentMenuData || typeof activeCategoryIndex === 'undefined' || activeCategoryIndex < 0)) menuEdT.innerText = dict.menuEditorTitle;
   const menuEdS = document.getElementById("i18n-menu-edit-sub");
   if (menuEdS) menuEdS.innerText = dict.menuEditSub;
   const btnMenuAdd = document.getElementById("btn-menu-add-item");
@@ -1329,7 +1391,7 @@ function applyLanguageToDOM() {
 
   // Image Modal
   const imgModT = document.getElementById("image-modal-title");
-  if (imgModT && (!currentImageItemName)) imgModT.innerText = dict.imageModalTitle;
+  if (imgModT && (typeof currentImageItemName === 'undefined' || !currentImageItemName)) imgModT.innerText = dict.imageModalTitle;
   const btnImgSel = document.getElementById("btn-image-select");
   if (btnImgSel) btnImgSel.innerText = dict.btnImageSelect;
   const btnImgDel = document.getElementById("btn-delete-image");
@@ -1339,7 +1401,7 @@ function applyLanguageToDOM() {
 
   // Stock Modal
   const stkModT = document.getElementById("stock-modal-title");
-  if (stkModT && currentStockCidx === null) stkModT.innerText = dict.stockModalTitle;
+  if (stkModT && (typeof currentStockCidx === 'undefined' || currentStockCidx === null)) stkModT.innerText = dict.stockModalTitle;
   const stkLblSt = document.getElementById("i18n-stock-label-status");
   if (stkLblSt) stkLblSt.innerText = dict.stockLabelStatus;
   const stkOptIn = document.getElementById("stock-opt-in-stock");
@@ -1370,8 +1432,6 @@ function applyLanguageToDOM() {
   if (btnFilterDineIn) btnFilterDineIn.innerText = dict.filterDineIn;
 
   // Dine-in Settings
-  const tocDineIn = document.getElementById("i18n-toc-dinein");
-  if (tocDineIn) tocDineIn.innerText = dict.tocDineIn;
   const setDineInT = document.getElementById("i18n-setting-dinein-title");
   if (setDineInT) setDineInT.innerText = dict.settingDineInTitle;
   const setDineInS = document.getElementById("i18n-setting-dinein-sub");
@@ -1395,8 +1455,6 @@ function applyLanguageToDOM() {
   if (btnContUpg) btnContUpg.innerHTML = `<span>💬</span> <span>${dict.btnContactUpgrade}</span>`;
 
   // Thermal Printer Settings DOM mappings
-  const tocPrn = document.getElementById("i18n-toc-printer");
-  if (tocPrn) tocPrn.innerText = dict.tocPrinter;
   const setPrnT = document.getElementById("i18n-setting-printer-title");
   if (setPrnT) setPrnT.innerText = dict.settingPrinterTitle;
   const setPrnS = document.getElementById("i18n-setting-printer-sub");
@@ -1419,6 +1477,15 @@ function applyLanguageToDOM() {
   if (prnManualDesc) prnManualDesc.innerText = dict.printModeManualDesc;
 
   // Review 3 Print levels
+  const btnPrintFull = document.getElementById("i18n-btn-print-full");
+  if (btnPrintFull) {
+    const order = (typeof reviewingOrder !== "undefined" && reviewingOrder) ? reviewingOrder : null;
+    let n = 1;
+    if (order && typeof PrinterService !== "undefined" && typeof PrinterService.parseOrderItems === "function") {
+      n = PrinterService.parseOrderItems(order, true).length || 1;
+    }
+    btnPrintFull.innerText = dict.btnPrintFullOrder ? dict.btnPrintFullOrder.replace("{n}", n) : `IN CẢ ĐƠN (1 Bill + ${n} Tem)`;
+  }
   const btnPrintBillOnly = document.getElementById("i18n-btn-print-bill-only");
   if (btnPrintBillOnly) btnPrintBillOnly.innerText = dict.btnPrintBillOnly;
   const btnPrintCustomOpt = document.getElementById("i18n-btn-print-custom-opt");
@@ -1429,10 +1496,66 @@ function applyLanguageToDOM() {
   if (qStickerTitle) qStickerTitle.innerText = dict.quickStickerModalTitle;
   const qStickerSub = document.getElementById("i18n-quick-sticker-sub");
   if (qStickerSub) qStickerSub.innerText = dict.quickStickerModalSub;
+  const qStickerCustomLbl = document.getElementById("i18n-quick-sticker-custom-label");
+  if (qStickerCustomLbl) qStickerCustomLbl.innerText = dict.quickStickerCustomLabel;
   const qStickerInput = document.getElementById("quick-sticker-custom-input");
   if (qStickerInput) qStickerInput.placeholder = dict.quickStickerCustomPlaceholder;
   const qStickerBtn = document.getElementById("i18n-btn-print-quick-custom");
   if (qStickerBtn) qStickerBtn.innerText = dict.quickStickerCustomPrintBtn;
+
+  // Printer Usage Guide DOM mappings
+  const gTitle = document.getElementById("i18n-printer-guide-title");
+  if (gTitle) gTitle.innerText = dict.printerGuideTitle;
+  const gSub = document.getElementById("i18n-printer-guide-sub");
+  if (gSub) gSub.innerText = dict.printerGuideSub;
+  const gModeT = document.getElementById("i18n-printer-guide-mode-title");
+  if (gModeT) gModeT.innerText = dict.printerGuideModeTitle;
+  const gModeAutoT = document.getElementById("i18n-printer-guide-mode-auto-title");
+  if (gModeAutoT) gModeAutoT.innerText = dict.printerGuideModeAutoTitle;
+  const gModeAutoD = document.getElementById("i18n-printer-guide-mode-auto-desc");
+  if (gModeAutoD) gModeAutoD.innerText = dict.printerGuideModeAutoDesc;
+  const gModeManualT = document.getElementById("i18n-printer-guide-mode-manual-title");
+  if (gModeManualT) gModeManualT.innerText = dict.printerGuideModeManualTitle;
+  const gModeManualD = document.getElementById("i18n-printer-guide-mode-manual-desc");
+  if (gModeManualD) gModeManualD.innerText = dict.printerGuideModeManualDesc;
+  const gLevelsT = document.getElementById("i18n-printer-guide-levels-title");
+  if (gLevelsT) gLevelsT.innerText = dict.printerGuideLevelsTitle;
+  const gLevelFullT = document.getElementById("i18n-printer-guide-level-full-title");
+  if (gLevelFullT) gLevelFullT.innerText = dict.printerGuideLevelFullTitle;
+  const gLevelFullD = document.getElementById("i18n-printer-guide-level-full-desc");
+  if (gLevelFullD) gLevelFullD.innerText = dict.printerGuideLevelFullDesc;
+  const gLevelBillT = document.getElementById("i18n-printer-guide-level-bill-title");
+  if (gLevelBillT) gLevelBillT.innerText = dict.printerGuideLevelBillTitle;
+  const gLevelBillD = document.getElementById("i18n-printer-guide-level-bill-desc");
+  if (gLevelBillD) gLevelBillD.innerText = dict.printerGuideLevelBillDesc;
+  const gLevelSingleT = document.getElementById("i18n-printer-guide-level-single-title");
+  if (gLevelSingleT) gLevelSingleT.innerText = dict.printerGuideLevelSingleTitle;
+  const gLevelSingleD = document.getElementById("i18n-printer-guide-level-single-desc");
+  if (gLevelSingleD) gLevelSingleD.innerText = dict.printerGuideLevelSingleDesc;
+  const gLevelCustomT = document.getElementById("i18n-printer-guide-level-custom-title");
+  if (gLevelCustomT) gLevelCustomT.innerText = dict.printerGuideLevelCustomTitle;
+  const gLevelCustomD = document.getElementById("i18n-printer-guide-level-custom-desc");
+  if (gLevelCustomD) gLevelCustomD.innerText = dict.printerGuideLevelCustomDesc;
+  const gHwT = document.getElementById("i18n-printer-guide-hardware-title");
+  if (gHwT) gHwT.innerText = dict.printerGuideHardwareTitle;
+  const gHwCashier = document.getElementById("i18n-printer-guide-hw-cashier");
+  if (gHwCashier) gHwCashier.innerText = dict.printerGuideHwCashier;
+  const gHwKitchen = document.getElementById("i18n-printer-guide-hw-kitchen");
+  if (gHwKitchen) gHwKitchen.innerText = dict.printerGuideHwKitchen;
+  const gHwTest = document.getElementById("i18n-printer-guide-hw-test");
+  if (gHwTest) gHwTest.innerText = dict.printerGuideHwTest;
+
+  // Re-render open modal contents if active
+  if (typeof reviewingOrder !== "undefined" && reviewingOrder) {
+    const elCont = document.getElementById("review-content");
+    if (elCont && typeof formatContentHtml === "function") {
+      elCont.innerHTML = formatContentHtml(reviewingOrder);
+    }
+  }
+  const qModal = document.getElementById("quickStickerModal");
+  if (qModal && qModal.style.display === "flex" && typeof renderQuickStickerOptions === "function") {
+    renderQuickStickerOptions();
+  }
 
   const prnCashT = document.getElementById("i18n-printer-cashier-title");
   if (prnCashT) prnCashT.innerText = dict.printerCashierTitle;
@@ -1531,9 +1654,10 @@ function applyLanguageToDOM() {
   const labelsTsplYOff = document.querySelectorAll(".i18n-printer-tspl-y-offset-lbl");
   labelsTsplYOff.forEach(el => el.innerText = dict.printerTsplYOffsetLabel);
 
+  const labelsTestPrint = document.querySelectorAll(".i18n-btn-test-print");
+  labelsTestPrint.forEach(el => el.innerText = dict.btnTestPrint);
+
   // Store Pairing DOM mappings
-  const tocStoreP = document.getElementById("i18n-toc-store-pairing");
-  if (tocStoreP) tocStoreP.innerText = dict.tocStorePairing;
   const setPairT = document.getElementById("i18n-setting-pairing-title");
   if (setPairT) setPairT.innerText = dict.settingPairingTitle;
   const setPairS = document.getElementById("i18n-setting-pairing-sub");
