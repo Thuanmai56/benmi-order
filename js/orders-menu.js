@@ -38,6 +38,9 @@ function clearMenuDirty() {
 function openMenuSettings() {
   activeTab = "menu";
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".mini-btn").forEach(t => t.classList.remove("active"));
+  const tabMenu = document.getElementById("tab-menu");
+  if (tabMenu) tabMenu.classList.add("active");
   document.querySelectorAll(".content").forEach(c => c.style.display = "none");
   const viewMenu = document.getElementById("view-menu");
   if (viewMenu) viewMenu.style.display = "block";
