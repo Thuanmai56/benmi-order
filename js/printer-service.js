@@ -385,7 +385,16 @@
             currentRound = line;
             return;
           }
-          if (line.startsWith('----') || line.startsWith('====') || line.includes('【') || line.includes('訂單') || line.includes('總金額') || line.includes('時間')) {
+          if (
+            line.startsWith('----') || line.startsWith('====') || line.includes('【') ||
+            line.includes('訂單') || line.includes('總金額') || line.includes('總計') ||
+            line.includes('時間') || line.includes('用餐方式') || line.includes('桌號') ||
+            line.includes('聯絡電話') || line.includes('備註') || line.includes('付款') ||
+            line.includes('取餐') || line.startsWith('📍') || line.startsWith('📞') ||
+            line.startsWith('👤') || line.startsWith('📝') || line.startsWith('💰') ||
+            line.includes('Hình thức') || line.includes('Bàn số') || line.includes('Số bàn') ||
+            line.includes('Ghi chú') || line.includes('Thanh toán') || line.includes('Tổng cộng')
+          ) {
             return;
           }
           if (line.startsWith('↳') || line.startsWith('-') || line.startsWith('+') || line.startsWith('•') || line.startsWith('－')) {
