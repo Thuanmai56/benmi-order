@@ -1703,53 +1703,91 @@ export async function handleLineWebhook(
         if (existingOrder.customer_name && existingOrder.customer_name !== "顧客 (線上)" && existingOrder.customer_name !== "Khách (Web)") {
           custName = existingOrder.customer_name;
         }
-        // If order already exists and status has changed from NEW, do not re-create/overwrite status back to NEW, but still reply with Progress Flex
-        if (existingOrder.status !== "NEW") {
-          console.log(`[${brandName}] Order ${orderKey} already processed with status ${existingOrder.status}. Replying Progress Flex and skipping webhook re-creation.`);
-          try {
-            await env.DB.prepare("DELETE FROM pending_actions WHERE tenant_id = ? AND user_id = ?")
-              .bind(tenantId, userId).run();
-          } catch { }
-          try { await env.ORDER_STATE.delete(draftKey); } catch { }
 
-          if (replyToken) {
-            try {
-              const existingOrderData: Order = {
-                key: existingOrder.key,
-                customer: existingOrder.customer_name || custName,
-                time: existingOrder.pickup_time || timeStr,
-                content: existingOrder.order_content || "",
-                status: existingOrder.status,
-                createdAt: existingOrder.created_at ? new Date(existingOrder.created_at + "Z").getTime() : Date.now(),
-                userId: existingOrder.user_id || userId,
-                total: existingOrder.total_amount || (parseInt(totalStr, 10) || 0),
-                reason: existingOrder.reason || "",
-                note: existingOrder.note || noteStr,
-                diningOption: (existingOrder.dining_option as any) || diningOption,
-                tableNumber: existingOrder.table_number || undefined,
-                roundCount: Number(existingOrder.round_count) || 1,
-                round_count: Number(existingOrder.round_count) || 1,
-                lastAppendedAt: existingOrder.last_appended_at || null
-              };
-              const queueRes = await getOrderQueueAhead(env, tenantId, orderKey);
-              const queueAheadCount = queueRes ? queueRes.queueAhead : 0;
-              const flexBubble = buildProgressFlexMessage(existingOrderData, queueAheadCount, tenantCtx);
-              await replyLineFlexMessage(replyToken, `訂單進度 #${orderKey}`, flexBubble, env, tenantCtx);
-            } catch (replyErr) {
-              console.error(`[${brandName}] Reply existing order progress error:`, replyErr);
-            }
-          }
-          continue;
+        // Link user_id to order in DB if not linked yet
+        if (userId && (!existingOrder.user_id || existingOrder.user_id !== userId)) {
+          try {
+            await env.DB.prepare("UPDATE orders SET user_id = ? WHERE key = ?").bind(userId, orderKey).run();
+          } catch {}
         }
+
+        try {
+          await env.DB.prepare("DELETE FROM pending_actions WHERE tenant_id = ? AND user_id = ?")
+            .bind(tenantId, userId).run();
+        } catch { }
+        try { await env.ORDER_STATE.delete(draftKey); } catch { }
+
+        // Reply Progress Flex Message to customer in LINE chat
+        if (replyToken) {
+          try {
+            const existingOrderData: Order = {
+              key: existingOrder.key,
+              customer: existingOrder.customer_name || custName,
+              time: existingOrder.pickup_time || timeStr,
+              content: existingOrder.order_content || "",
+              status: existingOrder.status,
+              createdAt: existingOrder.created_at ? new Date(existingOrder.created_at + "Z").getTime() : Date.now(),
+              userId: existingOrder.user_id || userId,
+              total: existingOrder.total_amount || (parseInt(totalStr, 10) || 0),
+              reason: existingOrder.reason || "",
+              note: existingOrder.note || noteStr,
+              diningOption: (existingOrder.dining_option as any) || diningOption,
+              tableNumber: existingOrder.table_number || undefined,
+              roundCount: Number(existingOrder.round_count) || 1,
+              round_count: Number(existingOrder.round_count) || 1,
+              lastAppendedAt: existingOrder.last_appended_at || null
+            };
+            const queueRes = await getOrderQueueAhead(env, tenantId, orderKey);
+            const queueAheadCount = queueRes ? queueRes.queueAhead : 0;
+            const flexBubble = buildProgressFlexMessage(existingOrderData, queueAheadCount, tenantCtx);
+            await replyLineFlexMessage(replyToken, `訂單進度 #${orderKey}`, flexBubble, env, tenantCtx);
+          } catch (replyErr) {
+            console.error(`[${brandName}] Reply existing order progress error:`, replyErr);
+          }
+        }
+
+        // Update real LINE name in background if needed
+        if (ctx && ctx.waitUntil) {
+          ctx.waitUntil((async () => {
+            try {
+              const token = await getLineToken(env, tenantCtx);
+              const profUrl = `https://api.line.me/v2/bot/profile/${userId}`;
+              const resp = await fetch(profUrl, { headers: { Authorization: `Bearer ${token}` } });
+              if (resp.ok) {
+                const p: any = await resp.json();
+                if (p && p.displayName) {
+                  await env.DB.prepare(
+                    "UPDATE orders SET customer_name = ? WHERE key = ?"
+                  ).bind(p.displayName, orderKey).run();
+                }
+              }
+            } catch (err) {
+              console.error(`[${brandName}] Background profile fetch error:`, err);
+            }
+          })());
+        }
+
+        // Order already created via /api/create with full customizations & items; DO NOT overwrite order_content in DB!
+        continue;
       }
 
-      const contentStart = userText.indexOf("📦 訂單內容：");
+      let contentStart = -1;
+      const flavorMatch = userText.match(/(?:[🧂🧪]?\s*(?:口味設定|Hương vị|Khẩu vị)[：:])/);
+      if (flavorMatch && flavorMatch.index !== undefined) {
+        contentStart = flavorMatch.index;
+      } else {
+        contentStart = userText.indexOf("📦 訂單內容：");
+      }
+
       let contentEnd = userText.indexOf("🕒 取餐時間：");
       if (contentEnd === -1) contentEnd = userText.indexOf("🕒 訂餐時間：");
       if (contentEnd === -1) contentEnd = userText.indexOf("🕒");
+      if (contentEnd === -1) contentEnd = userText.indexOf("📍 用餐方式：");
       let extractedContent = userText;
       if (contentStart > -1 && contentEnd > contentStart) {
-        extractedContent = userText.substring(contentStart + 8, contentEnd).replace("📦 訂單內容：", "").trim();
+        extractedContent = userText.substring(contentStart, contentEnd)
+          .replace(/📦\s*訂單內容[：:]\s*\n?/g, "")
+          .trim();
       }
 
       const orderData: Order = {
