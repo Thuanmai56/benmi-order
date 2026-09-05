@@ -73,7 +73,8 @@ apps/android-pos/
 ├── build.sh                             # Script tự động copy HTML, CSS, JS sang dist/
 ├── capacitor.config.ts                  # Cấu hình Capacitor App (Remote Cloud Loader OTA)
 ├── package.json                         # Scripts build:apk, sync:prod, sync:dev
-├── benmi-pos-universal-v1.4.apk         # File cài đặt APK Universal mới nhất
+├── benmi-pos-universal-v1.6.apk         # File cài đặt APK Universal Production mới nhất (OTA Cloud Loader)
+├── blab-pos-dev-v1.6.apk                # File cài đặt APK Dev mới nhất (Bundled Local Web Assets)
 └── README.md                            # Tài liệu hướng dẫn này
 ```
 
@@ -110,18 +111,25 @@ Mỗi khi chỉnh sửa giao diện hoặc logic tại `orders.html`, `js/`, `cs
    ```properties
    sdk.dir=/Users/<username>/Library/Android/sdk
    ```
-2. Build file APK Universal Production:
-   ```bash
-   cd apps/android-pos
-   npm run build:apk
-   ```
-3. File APK xuất ra tại:
-   `android/app/build/outputs/apk/debug/app-debug.apk`
-   Đã được copy sẵn thành `apps/android-pos/benmi-pos-universal-v1.4.apk`.
+2. Build file APK:
+   * **Bản Dev (Bundled Local Web Assets)**:
+     ```bash
+     cd apps/android-pos
+     npm run build:apk:dev
+     ```
+     Xuất ra tại: `apps/android-pos/blab-pos-dev-v1.6.apk` (hoặc `blab-pos-dev.apk`).
+   * **Bản Production (Universal OTA Remote Loader)**:
+     ```bash
+     cd apps/android-pos
+     npm run build:apk
+     ```
+     Xuất ra tại: `apps/android-pos/benmi-pos-universal-v1.6.apk` (hoặc `benmi-pos-universal.apk`).
 
 ### E. Cài Đặt Lên Thiết Bị Thật Qua Cáp USB (ADB)
 ```bash
-adb install -r benmi-pos-universal-v1.4.apk
+adb install -r blab-pos-dev-v1.6.apk
+# Hoặc cài bản universal production:
+adb install -r benmi-pos-universal-v1.6.apk
 ```
 
 ---

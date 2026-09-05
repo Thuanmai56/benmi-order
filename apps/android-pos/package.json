@@ -1,6 +1,6 @@
 {
   "name": "benmi-android-pos",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Benmi Multi-Tenant Universal Android POS Tablet App with Remote Cloud Loader & Thermal Printing",
   "private": true,
   "scripts": {
