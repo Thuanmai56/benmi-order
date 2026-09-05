@@ -144,6 +144,7 @@ function openSettings() {
   renderReportsSetting();
   renderStorePairingSection();
   loadPOSPrinterSettings();
+  if (typeof updateUiModeElements === 'function') updateUiModeElements();
   initSettingsScrollSpy();
 }
 
@@ -1059,6 +1060,7 @@ async function testPOSPrinterStation(station) {
 
 // --- Settings Table of Contents (TOC) & ScrollSpy ---
 const SETTINGS_SECTIONS = [
+  { id: "setting-card-uimode", tocId: "toc-item-uimode" },
   { id: "setting-card-status", tocId: "toc-item-status" },
   { id: "setting-card-ordermode", tocId: "toc-item-ordermode" },
   { id: "setting-card-hours", tocId: "toc-item-hours" },

@@ -66,8 +66,19 @@ const I18N = {
     kdsCookingCount: "製作中 ({n})",
     kdsPendingCount: "待處理 ({n})",
     kdsReadyCount: "待取餐 ({n})",
-    kdsBatchMiseTitle: "🔪 廚房即時備料總攬 ({orders} 張單，共 {items} 份)",
+    kdsBatchMiseTitle: "廚房即時備料總攬 ({orders} 張單，共 {items} 份)",
     kdsReprintTooltip: "列印標籤與收據",
+    uiModeKdsBadge: "KDS 模式",
+    uiModeClassicBadge: "傳統 POS",
+    uiModeTryKds: "試用新版",
+    uiModeBackClassic: "切換舊版",
+    uiModeToc: "介面模式",
+    uiModeTitle: "POS 顯示介面模式",
+    uiModeSub: "自由切換新版 KDS 廚房系統（專為平板與出餐設計）或傳統雙欄介面",
+    uiModeOptClassicTitle: "經典雙欄模式",
+    uiModeOptClassicDesc: "傳統左右雙欄版面，適合一般電腦桌面與滑鼠操作",
+    uiModeOptKdsTitle: "新版 KDS 廚房系統 (實驗性)",
+    uiModeOptKdsDesc: "三站式流水線、左右滑動切換、廚房備料彙總，專為平板觸控與快節奏出餐設計",
     badgeNewOrder: "新訂單",
     emptyHistory: "尚無歷史訂單",
     historyTitle: "訂單歷史",
@@ -580,8 +591,19 @@ const I18N = {
     kdsCookingCount: "Đang nấu ({n})",
     kdsPendingCount: "Chờ duyệt ({n})",
     kdsReadyCount: "Chờ giao ({n})",
-    kdsBatchMiseTitle: "🔪 TỔNG HỢP NGUYÊN LIỆU ĐANG NẤU ({orders} đơn, {items} phần)",
+    kdsBatchMiseTitle: "TỔNG HỢP NGUYÊN LIỆU ĐANG NẤU ({orders} đơn, {items} phần)",
     kdsReprintTooltip: "In lại tem & bill",
+    uiModeKdsBadge: "KDS Mới",
+    uiModeClassicBadge: "POS Cổ điển",
+    uiModeTryKds: "Thử KDS",
+    uiModeBackClassic: "Về UI cũ",
+    uiModeToc: "Chế độ giao diện",
+    uiModeTitle: "Chế độ giao diện hiển thị",
+    uiModeSub: "Tự do chuyển đổi giữa Giao diện KDS Mới (tối ưu Tablet/Bếp) và Giao diện 2 cột cổ điển",
+    uiModeOptClassicTitle: "Giao diện Cổ điển (Tiêu chuẩn)",
+    uiModeOptClassicDesc: "Bố cục 2 cột truyền thống với danh sách đơn bên trái và chi tiết bên phải, phù hợp chuột máy tính",
+    uiModeOptKdsTitle: "Giao diện KDS Mới (Thực nghiệm)",
+    uiModeOptKdsDesc: "Hệ thống 3 trạm thông minh, vuốt chuyển tab, thanh gom món, tối ưu màn hình cảm ứng quầy POS",
     badgeNewOrder: "ĐƠN MỚI",
     emptyHistory: "Chưa có lịch sử đơn hàng",
     historyTitle: "Lịch sử đơn hàng",
@@ -1165,6 +1187,28 @@ function applyLanguageToDOM() {
   if (kdsHdrCook) kdsHdrCook.innerText = dict.kdsStationCooking || "製作中";
   const kdsHdrRdy = document.getElementById("i18n-kds-header-ready");
   if (kdsHdrRdy) kdsHdrRdy.innerText = dict.kdsStationReady || "待取餐";
+
+  // UI Mode Switcher & Settings
+  const uiModeBadge = document.getElementById("i18n-uimode-badge");
+  const uiModeAction = document.getElementById("i18n-uimode-action");
+  const isExp = typeof window !== "undefined" && window.location.pathname.includes("experiment");
+  if (uiModeBadge) uiModeBadge.innerText = isExp ? (dict.uiModeKdsBadge || "KDS Mới") : (dict.uiModeClassicBadge || "POS Cổ điển");
+  if (uiModeAction) uiModeAction.innerText = isExp ? (dict.uiModeBackClassic || "Về UI cũ") : (dict.uiModeTryKds || "Thử KDS");
+
+  const uiModeToc = document.getElementById("i18n-toc-uimode");
+  if (uiModeToc) uiModeToc.innerText = dict.uiModeToc || "介面模式";
+  const uiModeTitle = document.getElementById("i18n-setting-uimode-title");
+  if (uiModeTitle) uiModeTitle.innerText = dict.uiModeTitle || "POS 顯示介面模式";
+  const uiModeSub = document.getElementById("i18n-setting-uimode-sub");
+  if (uiModeSub) uiModeSub.innerText = dict.uiModeSub || "";
+  const optClassicTitle = document.getElementById("i18n-opt-classic-title");
+  if (optClassicTitle) optClassicTitle.innerText = dict.uiModeOptClassicTitle || "經典雙欄模式";
+  const optClassicDesc = document.getElementById("i18n-opt-classic-desc");
+  if (optClassicDesc) optClassicDesc.innerText = dict.uiModeOptClassicDesc || "";
+  const optKdsTitle = document.getElementById("i18n-opt-kds-title");
+  if (optKdsTitle) optKdsTitle.innerText = dict.uiModeOptKdsTitle || "新版 KDS 廚房系統 (實驗性)";
+  const optKdsDesc = document.getElementById("i18n-opt-kds-desc");
+  if (optKdsDesc) optKdsDesc.innerText = dict.uiModeOptKdsDesc || "";
 
   // View History Headers
   const histTitle = document.getElementById("i18n-history-title");

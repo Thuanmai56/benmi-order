@@ -1,65 +1,148 @@
 /* ==========================================================================
    Benmi POS - Adaptive Compact KDS (Kitchen Display & Expediter System)
-   Architecture Specification: docs/proposals/live_orders_kds_redesign/pdp_ui_ux_design.md
+   Refined Retail Aesthetic & Seamless Space Integration Architecture
+   Specification: docs/proposals/live_orders_kds_redesign/pdp_ui_ux_design.md
    ========================================================================== */
 
 :root {
-  /* Urgency Color Spectrum Tokens */
-  --kds-calm-bg: #ecfdf5;
-  --kds-calm-border: #a7f3d0;
-  --kds-calm-text: #065f46;
-  --kds-calm-badge: #10b981;
+  /* Refined Retail Urgency Color Tokens (Subtle & High-Signal) */
+  --kds-calm-accent: #94a3b8;
+  --kds-calm-badge-bg: #ecfdf5;
+  --kds-calm-badge-border: #a7f3d0;
+  --kds-calm-badge-text: #059669;
 
-  --kds-warning-bg: #fffbeb;
-  --kds-warning-border: #fde68a;
-  --kds-warning-text: #92400e;
-  --kds-warning-badge: #f59e0b;
+  --kds-warning-accent: #f59e0b;
+  --kds-warning-badge-bg: #fef3c7;
+  --kds-warning-badge-border: #fde68a;
+  --kds-warning-badge-text: #b45309;
 
-  --kds-urgent-bg: #fff7ed;
-  --kds-urgent-border: #fed7aa;
-  --kds-urgent-text: #9a3412;
-  --kds-urgent-badge: #f97316;
+  --kds-urgent-accent: #f97316;
+  --kds-urgent-badge-bg: #ffedd5;
+  --kds-urgent-badge-border: #fed7aa;
+  --kds-urgent-badge-text: #c2410c;
 
-  --kds-overdue-bg: #fef2f2;
-  --kds-overdue-border: #fca5a5;
-  --kds-overdue-text: #991b1b;
-  --kds-overdue-badge: #ef4444;
+  --kds-overdue-accent: #f43f5e;
+  --kds-overdue-badge-bg: #fff1f2;
+  --kds-overdue-badge-border: #fecdd3;
+  --kds-overdue-badge-text: #be123c;
 
   --kds-col-bg: #f8fafc;
   --kds-card-bg: #ffffff;
   --kds-card-border: #e2e8f0;
-  --kds-card-radius: 14px;
+  --kds-card-radius: 10px;
 }
 
 /* ==========================================================================
-   1. Segmented Pipeline Tabs (For Portrait / Viewport < 900px)
+   0. Global Layout & Seamless Spacing Integration
+   ========================================================================== */
+#view-live {
+  padding: 4px 12px 8px 12px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  height: calc(100dvh - 62px) !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  background: #f1f5f9; /* Sleek cool neutral POS canvas */
+}
+
+/* Slim Flush Dining Filter Toolbar */
+.dining-filter-bar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 2px 2px 6px 2px !important;
+  background: transparent !important;
+  border: none !important;
+  border-bottom: none !important;
+  margin: 0 !important;
+  min-height: 34px !important;
+  flex-shrink: 0 !important;
+  box-shadow: none !important;
+}
+
+.dining-filter-group {
+  display: inline-flex;
+  align-items: center;
+  background: #e2e8f0;
+  padding: 2px;
+  border-radius: 8px;
+  gap: 2px;
+}
+
+.dining-filter-btn {
+  border: none;
+  background: transparent;
+  color: #64748b;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dining-filter-btn:hover {
+  color: #0f172a;
+}
+
+.dining-filter-btn.active {
+  background: #ffffff;
+  color: #0f172a;
+  font-weight: 800;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+.dining-filter-stats {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stat-pill {
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+}
+
+/* ==========================================================================
+   1. Segmented Pipeline Tabs (Portrait / Tablet Vertical < 900px)
    ========================================================================== */
 .kds-segmented-tabs {
   display: none; /* Hidden by default in landscape >= 900px */
   background: #e2e8f0;
-  padding: 5px;
-  border-radius: 14px;
-  gap: 6px;
-  margin-bottom: 12px;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.06);
+  border: none;
+  padding: 3px;
+  border-radius: 10px;
+  gap: 3px;
+  margin-bottom: 6px;
+  flex-shrink: 0;
 }
 
 .kds-tab-btn {
   flex: 1;
-  height: 48px;
-  min-height: 48px;
+  height: 40px;
+  min-height: 40px;
   border: none;
   background: transparent;
-  border-radius: 10px;
-  font-size: 15px;
+  border-radius: 8px;
+  font-size: 13.5px;
   font-weight: 700;
-  color: #475569;
+  color: #64748b;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   cursor: pointer;
-  transition: all 0.18s ease;
+  transition: all 0.15s ease;
   position: relative;
   -webkit-tap-highlight-color: transparent;
 }
@@ -71,7 +154,7 @@
 .kds-tab-btn.active {
   background: #ffffff;
   color: #0f172a;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
 .kds-tab-btn.tab-pending.has-orders {
@@ -93,7 +176,7 @@
 }
 
 .kds-tab-btn.tab-ready.active {
-  color: #16a34a;
+  color: #15803d;
 }
 
 .kds-tab-btn.tab-ready .kds-tab-badge {
@@ -105,53 +188,54 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 22px;
-  height: 22px;
-  padding: 0 6px;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
   background: #cbd5e1;
   color: #334155;
   transition: all 0.2s ease;
 }
 
-/* Pulsing badge on Pending Tab when in cooking/ready station */
 .kds-tab-btn.tab-pending.pulse-alert {
-  animation: kdsTabPulse 1.2s infinite ease-in-out;
+  animation: kdsTabPulse 1.4s infinite ease-in-out;
 }
 
 @keyframes kdsTabPulse {
-  0% { background: rgba(245, 158, 11, 0.12); }
-  50% { background: rgba(239, 68, 68, 0.28); }
-  100% { background: rgba(245, 158, 11, 0.12); }
+  0% { background: rgba(245, 158, 11, 0.15); }
+  50% { background: rgba(239, 68, 68, 0.22); }
+  100% { background: rgba(245, 158, 11, 0.15); }
 }
 
 /* ==========================================================================
-   2. Asymmetric Flex Layout (Landscape >= 900px)
+   2. Asymmetric Flex Grid Layout (Landscape >= 900px)
    ========================================================================== */
 .live-split-kds {
   display: flex;
-  gap: 14px;
+  gap: 8px; /* Tight cohesive spacing */
   width: 100%;
   box-sizing: border-box;
   align-items: stretch;
-  height: calc(100vh - 130px);
-  min-height: 520px;
+  flex: 1;
+  min-height: 0; /* Critical for inner scroll containers */
+  height: auto;
 }
 
 .kds-col {
   display: flex;
   flex-direction: column;
   background: var(--kds-col-bg);
-  border: 1.5px solid #e2e8f0;
-  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
   box-sizing: border-box;
+  min-height: 0;
 }
 
-/* Specific Asymmetric Widths */
+/* Station Widths (Landscape: 22% - 56% - 22%) */
 .kds-col-pending {
   flex: 0 0 22%;
   max-width: 22%;
@@ -161,9 +245,8 @@
 .kds-col-cooking {
   flex: 1 1 56%;
   min-width: 440px;
-  background: #ffffff;
+  background: #f8fafc; /* Keep subtle cool slate so pure white cards pop */
   border-color: #cbd5e1;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.05);
 }
 
 .kds-col-ready {
@@ -172,40 +255,43 @@
   min-width: 210px;
 }
 
-/* Column Headers */
+/* Column Header - Retail Styling */
 .kds-col-header {
-  padding: 12px 14px;
-  border-bottom: 1.5px solid #e2e8f0;
+  padding: 6px 12px;
+  border-bottom: 1px solid #e2e8f0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   background: #ffffff;
   flex-shrink: 0;
+  min-height: 38px;
+  box-sizing: border-box;
 }
 
 .kds-col-header-group {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .kds-col-title {
-  font-size: 15px;
-  font-weight: 800;
-  color: #1e293b;
-  letter-spacing: -0.2px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #475569;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
 }
 
 .kds-col-cooking .kds-col-title {
-  font-size: 16px;
-  font-weight: 900;
+  font-size: 13.5px;
+  font-weight: 800;
   color: #0369a1;
 }
 
 .kds-col-count-pill {
-  padding: 3px 8px;
+  padding: 2px 7px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
 }
 
@@ -224,17 +310,43 @@
   color: #15803d;
 }
 
+/* Status Indicator Dots */
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.dot-amber {
+  background: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+}
+
+.dot-blue {
+  background: #0284c7;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
+}
+
+.dot-green {
+  background: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
 /* Column Scroll Body */
 .kds-col-body {
   flex: 1;
   overflow-y: auto;
-  padding: 10px;
+  padding: 6px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
   -webkit-overflow-scrolling: touch;
+  min-height: 0;
 }
 
+/* ==========================================================================
 /* ==========================================================================
    3. Responsive Rules: Portrait / Small Viewports (< 900px)
    ========================================================================== */
@@ -246,7 +358,8 @@
   .live-split-kds {
     display: block;
     height: auto;
-    min-height: calc(100vh - 180px);
+    min-height: 0;
+    touch-action: pan-y;
   }
 
   .kds-col {
@@ -254,7 +367,8 @@
     width: 100% !important;
     max-width: 100% !important;
     flex: none !important;
-    height: calc(100vh - 190px);
+    height: calc(100dvh - 165px);
+    touch-action: pan-y;
   }
 
   .kds-col.active-station {
@@ -262,62 +376,103 @@
   }
 }
 
+/* Station Swipe & Navigation Animations */
+.slide-from-right {
+  animation: kdsSlideFromRight 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.slide-from-left {
+  animation: kdsSlideFromLeft 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes kdsSlideFromRight {
+  from {
+    opacity: 0.65;
+    transform: translate3d(24px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes kdsSlideFromLeft {
+  from {
+    opacity: 0.65;
+    transform: translate3d(-24px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+
 /* ==========================================================================
-   4. Mise en Place Aggregator (Thanh Gom Món Bếp)
+   4. Mise en Place Aggregator (Thanh Gom Món Bếp - Sleek Flush Bar)
    ========================================================================== */
+#kds-mise-container {
+  padding: 0 !important;
+  flex-shrink: 0;
+}
+
 .kds-mise-bar {
-  background: #f0f9ff;
-  border: 1.5px solid #bae6fd;
-  border-radius: 12px;
-  padding: 8px 12px;
-  margin-bottom: 8px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 4px 10px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
+  gap: 6px;
   overflow-x: auto;
   white-space: nowrap;
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  min-height: 32px;
+  box-sizing: border-box;
+}
+
+.kds-mise-bar::-webkit-scrollbar {
+  display: none;
 }
 
 .kds-mise-label {
-  font-size: 12.5px;
-  font-weight: 800;
-  color: #0369a1;
+  font-size: 11px;
+  font-weight: 700;
+  color: #0284c7;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   flex-shrink: 0;
+  letter-spacing: 0.1px;
 }
 
 .kds-mise-chips {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .kds-mise-chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  background: #ffffff;
-  border: 1px solid #7dd3fc;
-  border-radius: 999px;
-  padding: 3px 9px;
-  font-size: 12.5px;
+  gap: 4px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 11.5px;
   font-weight: 700;
-  color: #0c4a6e;
-  box-shadow: 0 1px 2px rgba(2, 132, 199, 0.06);
+  color: #334155;
   flex-shrink: 0;
 }
 
 .kds-mise-chip-count {
-  background: #0284c7;
-  color: #ffffff;
-  border-radius: 999px;
-  padding: 1px 6px;
-  font-size: 11.5px;
-  font-weight: 900;
+  background: #e0f2fe;
+  color: #0369a1;
+  border-radius: 4px;
+  padding: 0 4px;
+  font-size: 11px;
+  font-weight: 800;
 }
 
 /* ==========================================================================
@@ -325,14 +480,15 @@
    ========================================================================== */
 .kds-card-mini {
   background: #ffffff;
-  border: 1.5px solid #cbd5e1;
+  border: 1px solid #e2e8f0;
   border-radius: var(--kds-card-radius);
-  padding: 10px 12px;
+  padding: 8px 10px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  gap: 5px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  cursor: pointer;
 }
 
 .kds-card-mini:active {
@@ -347,54 +503,57 @@
 
 .kds-card-mini-code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 15px;
+  font-size: 14.5px;
   font-weight: 800;
   color: #0f172a;
 }
 
 .kds-card-mini-time {
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 700;
   color: #64748b;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
 }
 
 .kds-card-mini-cust {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   color: #334155;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .kds-card-mini-preview {
-  font-size: 12px;
+  font-size: 11.5px;
   color: #64748b;
   line-height: 1.35;
   background: #f8fafc;
-  padding: 6px 8px;
-  border-radius: 8px;
+  padding: 4px 6px;
+  border-radius: 5px;
   border: 1px solid #f1f5f9;
 }
 
 /* Action button 100% full width */
 .kds-btn-bottom-full {
   width: 100%;
-  height: 44px;
-  min-height: 44px;
-  border-radius: 10px;
+  height: 38px;
+  min-height: 38px;
+  border-radius: 8px;
   border: none;
-  font-size: 15px;
-  font-weight: 800;
+  font-size: 13px;
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.12s ease;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -403,13 +562,13 @@
 }
 
 .kds-btn-accept {
-  background: #10b981;
+  background: #059669;
   color: #ffffff;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
+  box-shadow: 0 1px 2px rgba(5, 150, 105, 0.2);
 }
 
-.kds-btn-accept:active {
-  background: #059669;
+.kds-btn-accept:hover {
+  background: #047857;
 }
 
 /* ==========================================================================
@@ -417,162 +576,150 @@
    ========================================================================== */
 .kds-card-cooking {
   background: #ffffff;
-  border: 1.5px solid #cbd5e1;
+  border: 1px solid #e2e8f0;
   border-radius: var(--kds-card-radius);
-  padding: 12px 14px;
+  padding: 9px 11px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+  gap: 5px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
   position: relative;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: all 0.15s ease;
 }
 
-/* Visual Urgency Spectrum Borders */
+/* Refined Left Accent Urgency Stripe */
 .kds-card-cooking.urgency-calm {
-  border-color: var(--kds-calm-border);
-  background: linear-gradient(180deg, var(--kds-calm-bg) 0%, #ffffff 42px);
+  border-left: 3.5px solid var(--kds-calm-accent);
 }
 
 .kds-card-cooking.urgency-warning {
-  border-color: var(--kds-warning-border);
-  border-width: 2px;
-  background: linear-gradient(180deg, var(--kds-warning-bg) 0%, #ffffff 46px);
+  border-left: 3.5px solid var(--kds-warning-accent);
 }
 
 .kds-card-cooking.urgency-urgent {
-  border-color: var(--kds-urgent-border);
-  border-width: 2px;
-  background: linear-gradient(180deg, var(--kds-urgent-bg) 0%, #ffffff 50px);
+  border-left: 3.5px solid var(--kds-urgent-accent);
 }
 
 .kds-card-cooking.urgency-overdue {
-  border-color: var(--kds-overdue-border);
-  border-width: 2px;
-  background: linear-gradient(180deg, var(--kds-overdue-bg) 0%, #ffffff 52px);
-  animation: kdsPulseRed 1.8s infinite ease-in-out;
-}
-
-@keyframes kdsPulseRed {
-  0% {
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
-    border-color: #ef4444;
-  }
-  70% {
-    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
-    border-color: #b91c1c;
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
-    border-color: #ef4444;
-  }
+  border-left: 3.5px solid var(--kds-overdue-accent);
+  box-shadow: 0 1px 4px rgba(244, 63, 94, 0.12), 0 0 0 1px rgba(244, 63, 94, 0.12);
 }
 
 /* Card Header */
 .kds-card-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 8px;
+  align-items: center;
+  gap: 6px;
 }
 
 .kds-card-id-block {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
 .kds-card-code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 17px;
-  font-weight: 900;
+  font-size: 15px;
+  font-weight: 800;
   color: #0f172a;
-  letter-spacing: -0.3px;
+  letter-spacing: -0.2px;
+  white-space: nowrap;
 }
 
 .kds-table-badge {
   background: #f1f5f9;
   border: 1px solid #cbd5e1;
   color: #334155;
-  font-size: 12px;
+  font-size: 10.5px;
   font-weight: 800;
-  padding: 2px 7px;
-  border-radius: 6px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
 }
 
 .kds-dining-pill {
-  font-size: 11.5px;
-  font-weight: 800;
-  padding: 2px 7px;
-  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .kds-dining-takeaway {
   background: #f3e8ff;
   color: #7e22ce;
+  border: 1px solid #e9d5ff;
 }
 
 .kds-dining-dinein {
   background: #e0f2fe;
   color: #0369a1;
+  border: 1px solid #bae6fd;
 }
 
 /* Header Right: Countdown Pill & Action Icons */
 .kds-card-header-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
 }
 
 .kds-countdown-pill {
-  font-size: 12px;
-  font-weight: 800;
-  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   white-space: nowrap;
 }
 
 .kds-countdown-calm {
-  background: #dcfce7;
-  color: #15803d;
+  background: var(--kds-calm-badge-bg);
+  border: 1px solid var(--kds-calm-badge-border);
+  color: var(--kds-calm-badge-text);
 }
 
 .kds-countdown-warning {
-  background: #fef3c7;
-  color: #b45309;
+  background: var(--kds-warning-badge-bg);
+  border: 1px solid var(--kds-warning-badge-border);
+  color: var(--kds-warning-badge-text);
 }
 
 .kds-countdown-urgent {
-  background: #ffedd5;
-  color: #c2410c;
+  background: var(--kds-urgent-badge-bg);
+  border: 1px solid var(--kds-urgent-badge-border);
+  color: var(--kds-urgent-badge-text);
 }
 
 .kds-countdown-overdue {
-  background: #fee2e2;
-  color: #b91c1c;
-  font-weight: 900;
+  background: var(--kds-overdue-badge-bg);
+  border: 1px solid var(--kds-overdue-badge-border);
+  color: var(--kds-overdue-badge-text);
+  font-weight: 800;
 }
 
-/* Header Action Icon (Reprint / Detail) */
+/* Header Action Icon (Reprint) */
 .kds-icon-action-btn {
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
   border: 1px solid #e2e8f0;
   background: #ffffff;
-  color: #475569;
+  color: #64748b;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.12s ease;
 }
 
 .kds-icon-action-btn:hover {
@@ -581,57 +728,66 @@
 }
 
 .kds-icon-action-btn:active {
-  transform: scale(0.94);
+  transform: scale(0.92);
 }
 
 /* Customer Details Sub-Row */
 .kds-cust-row {
-  font-size: 13px;
-  font-weight: 700;
-  color: #475569;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #64748b;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 5px;
   flex-wrap: wrap;
 }
 
 /* Flavor Warning Strip */
 .kds-flavor-strip {
   background: #fffbeb;
-  border-left: 3.5px solid #f59e0b;
-  border-radius: 6px;
-  padding: 6px 10px;
-  font-size: 13px;
-  font-weight: 800;
+  border-left: 2.5px solid #f59e0b;
+  border-radius: 4px;
+  padding: 4px 7px;
+  font-size: 12px;
+  font-weight: 700;
   color: #92400e;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
-/* Micro-Checklist Items List */
+/* Micro-Checklist Items List (Unified Continuous List) */
 .kds-checklist {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin: 2px 0;
+  gap: 0;
+  margin: 1px 0;
+  border-radius: 6px;
 }
 
 .kds-checklist-item {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 6px 8px;
-  border-radius: 8px;
-  background: #f8fafc;
-  border: 1px solid #f1f5f9;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 2px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #f8fafc;
   transition: background 0.12s ease;
   user-select: none;
+  cursor: pointer;
+}
+
+.kds-checklist-item:last-child {
+  border-bottom: none;
+}
+
+.kds-checklist-item:hover {
+  background: #f8fafc;
 }
 
 .kds-checklist-item.checked {
-  background: #f1f5f9;
-  opacity: 0.62;
+  opacity: 0.48;
 }
 
 .kds-checklist-item.checked .kds-item-name {
@@ -640,15 +796,14 @@
 }
 
 .kds-checkbox-touch {
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
-  border: 2px solid #94a3b8;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1.5px solid #cbd5e1;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  margin-top: 1px;
   cursor: pointer;
   background: #ffffff;
   transition: all 0.12s ease;
@@ -664,77 +819,74 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 1px;
 }
 
 .kds-item-header {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
 }
 
 .kds-item-name {
-  font-size: 15px;
-  font-weight: 800;
-  color: #0f172a;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #1e293b;
 }
 
 .kds-item-qty {
-  font-size: 15px;
-  font-weight: 900;
-  color: #0369a1;
+  font-size: 13px;
+  font-weight: 800;
+  color: #0284c7;
   white-space: nowrap;
 }
 
-/* Inline Pills for Customizations (No vertical '↳' indentation) */
+/* Inline Pills for Customizations */
 .kds-inline-pills {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   flex-wrap: wrap;
 }
 
 .kds-inline-pill {
   display: inline-block;
-  font-size: 11.5px;
-  font-weight: 700;
-  padding: 1px 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 1px 5px;
   border-radius: 4px;
-  background: #e2e8f0;
-  color: #334155;
-}
-
-.kds-inline-pill.option-alert {
-  background: #fef3c7;
-  color: #92400e;
+  background: #f1f5f9;
+  color: #475569;
 }
 
 /* Note Callout Bubble */
 .kds-note-bubble {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 6px 10px;
-  font-size: 12.5px;
+  border-radius: 6px;
+  padding: 4px 7px;
+  font-size: 11.5px;
   color: #334155;
-  line-height: 1.4;
+  line-height: 1.35;
   display: flex;
   align-items: flex-start;
-  gap: 6px;
+  gap: 5px;
 }
 
 /* 100% Full Width Finish Button */
 .kds-btn-done {
   background: #0284c7;
   color: #ffffff;
-  height: 48px;
-  min-height: 48px;
-  box-shadow: 0 3px 10px rgba(2, 132, 199, 0.35);
+  box-shadow: 0 1px 2px rgba(2, 132, 199, 0.2);
+}
+
+.kds-btn-done:hover {
+  background: #0369a1;
 }
 
 .kds-btn-done:active {
-  background: #0369a1;
+  background: #0284c7;
 }
 
 /* ==========================================================================
@@ -742,46 +894,52 @@
    ========================================================================== */
 .kds-card-ready {
   background: #ffffff;
-  border: 1.5px solid #86efac;
+  border: 1px solid #e2e8f0;
+  border-left: 3.5px solid #10b981;
   border-radius: var(--kds-card-radius);
-  padding: 12px 14px;
+  padding: 8px 10px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  box-shadow: 0 1px 4px rgba(22, 163, 74, 0.08);
+  gap: 5px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
 .kds-ready-code-callout {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 22px;
-  font-weight: 1000;
-  color: #15803d;
-  letter-spacing: -0.5px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .kds-ready-info-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 13px;
-  font-weight: 700;
-  color: #334155;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
 }
 
 .kds-ready-price {
-  font-size: 14px;
-  font-weight: 900;
+  font-size: 13px;
+  font-weight: 800;
   color: #0f172a;
 }
 
 .kds-btn-handover {
-  background: #16a34a;
+  background: #059669;
   color: #ffffff;
-  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.35);
+  height: 36px;
+  min-height: 36px;
+  box-shadow: 0 1px 2px rgba(5, 150, 105, 0.2);
 }
 
-.kds-btn-handover:active {
-  background: #15803d;
+.kds-btn-handover:hover {
+  background: #047857;
 }
 
 /* Empty State Cards */
@@ -790,32 +948,32 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 32px 16px;
+  padding: 24px 14px;
   text-align: center;
-  gap: 8px;
+  gap: 6px;
   color: #94a3b8;
 }
 
 .kds-empty-icon {
-  width: 44px;
-  height: 44px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   background: #f1f5f9;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #94a3b8;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .kds-empty-title {
-  font-size: 14px;
-  font-weight: 800;
+  font-size: 13px;
+  font-weight: 700;
   color: #64748b;
 }
 
 .kds-empty-sub {
-  font-size: 12px;
+  font-size: 11px;
   color: #94a3b8;
-  max-width: 220px;
+  max-width: 200px;
 }

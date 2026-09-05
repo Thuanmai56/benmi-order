@@ -4069,3 +4069,182 @@ body {
   }
 }
 
+/* ==========================================================================
+   UI Mode Switcher & Settings (Classic vs KDS Experiment)
+   ========================================================================== */
+.ui-mode-container {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.ui-mode-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  padding: 6px 10px 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+  transition: all 0.18s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ui-mode-pill:hover {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.ui-mode-pill:active {
+  transform: scale(0.97);
+}
+
+.ui-mode-pill.active-kds {
+  background: #f0f9ff;
+  border-color: #bae6fd;
+  color: #0369a1;
+}
+
+.ui-mode-pill.active-kds:hover {
+  background: #e0f2fe;
+  border-color: #7dd3fc;
+}
+
+.ui-mode-tag {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #0284c7;
+  color: #ffffff;
+  letter-spacing: 0.2px;
+  transition: all 0.15s ease;
+}
+
+.ui-mode-pill.active-kds .ui-mode-tag {
+  background: #ffffff;
+  color: #0369a1;
+  border: 1px solid #7dd3fc;
+}
+
+@media (max-width: 768px) {
+  .ui-mode-label {
+    display: none;
+  }
+}
+
+/* Settings Card Styles */
+.uimode-options-grid {
+  padding: 16px 20px 20px 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 768px) {
+  .uimode-options-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.uimode-select-card {
+  border: 2px solid #e2e8f0;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.uimode-select-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.uimode-select-card.active {
+  border-color: #0284c7;
+  background: #f0f9ff;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.12);
+}
+
+.uimode-icon-wrap {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.uimode-icon-wrap.classic {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.uimode-icon-wrap.kds {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+
+.uimode-radio {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid #cbd5e1;
+  background: #ffffff;
+  position: relative;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.uimode-select-card.active .uimode-radio {
+  border-color: #0284c7;
+  background: #0284c7;
+}
+
+.uimode-select-card.active .uimode-radio::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ffffff;
+  transform: translate(-50%, -50%);
+}
+
+.uimode-feature-tag {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.uimode-feature-tag.kds {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.settings-active-pill {
+  font-size: 11.5px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+

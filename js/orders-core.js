@@ -605,6 +605,100 @@ window.renderAll = renderAll;
 window.copyToClipboard = copyToClipboard;
 window.closeModal = closeModal;
 
+// ==========================================
+// POS UI Mode Management (Classic vs KDS Experiment)
+// ==========================================
+// POS UI Mode Controller (Classic POS vs KDS Experiment)
+// ==========================================
+function getPosUiMode() {
+  const search = (typeof window !== "undefined" && window.location && window.location.search) || "";
+  const params = new URLSearchParams(search);
+  const fromQuery = params.get("ui") || params.get("mode");
+  if (fromQuery === "experiment" || fromQuery === "kds") return "experiment";
+  if (fromQuery === "classic" || fromQuery === "standard") return "classic";
+
+  if (typeof localStorage !== "undefined") {
+    try {
+      const saved = localStorage.getItem("pos_ui_mode");
+      if (saved === "experiment" || saved === "classic") return saved;
+    } catch(e) {}
+  }
+  return "classic";
+}
+
+function switchPosUiMode(targetMode) {
+  if (typeof window === "undefined" || !window.location) return;
+  const currentPath = window.location.pathname || "";
+  const isCurrentlyExperiment = currentPath.includes("experiment");
+  const mode = targetMode || (isCurrentlyExperiment ? "classic" : "experiment");
+
+  if (typeof localStorage !== "undefined") {
+    try {
+      localStorage.setItem("pos_ui_mode", mode);
+    } catch(e) {}
+  }
+
+  const search = window.location.search || "";
+  const params = new URLSearchParams(search);
+  params.set("ui", mode);
+
+  if (mode === "experiment") {
+    window.location.href = "/experiment/orders.html?" + params.toString();
+  } else {
+    window.location.href = "/orders.html?" + params.toString();
+  }
+}
+
+function updateUiModeElements() {
+  if (typeof window === "undefined" || !window.location) return;
+  const currentPath = window.location.pathname || "";
+  const isExperiment = currentPath.includes("experiment");
+
+  // 1. Topbar Pill
+  const pill = document.getElementById("ui-mode-pill");
+  const label = document.getElementById("i18n-uimode-badge");
+  const action = document.getElementById("i18n-uimode-action");
+
+  if (pill) {
+    pill.classList.toggle("active-kds", isExperiment);
+  }
+  if (label) {
+    label.innerText = isExperiment
+      ? (typeof t === "function" && t("uiModeKdsBadge") || "KDS Mới")
+      : (typeof t === "function" && t("uiModeClassicBadge") || "POS Cổ điển");
+  }
+  if (action) {
+    action.innerText = isExperiment
+      ? (typeof t === "function" && t("uiModeBackClassic") || "Về UI cũ")
+      : (typeof t === "function" && t("uiModeTryKds") || "Thử KDS");
+  }
+
+  // 2. Settings Card
+  const cardClassic = document.getElementById("uimode-card-classic");
+  const cardKds = document.getElementById("uimode-card-kds");
+  const badgeCurrent = document.getElementById("uimode-active-badge");
+
+  if (cardClassic) cardClassic.classList.toggle("active", !isExperiment);
+  if (cardKds) cardKds.classList.toggle("active", isExperiment);
+  if (badgeCurrent) {
+    badgeCurrent.innerText = isExperiment ? "KDS EXPERIMENT" : "CLASSIC POS";
+  }
+}
+
+window.getPosUiMode = getPosUiMode;
+window.switchPosUiMode = switchPosUiMode;
+window.togglePosUiMode = function() { switchPosUiMode(); };
+window.updateUiModeElements = updateUiModeElements;
+
+// Auto-run UI mode element sync on load
+if (typeof document !== "undefined") {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", updateUiModeElements);
+  } else {
+    updateUiModeElements();
+  }
+}
+
 // 1.5s Polling loop for active order updates - ALWAYS runs across all dashboard tabs!
 setInterval(() => {
   fetchOrders();
