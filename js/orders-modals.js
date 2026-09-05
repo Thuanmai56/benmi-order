@@ -151,13 +151,17 @@ function openReview(orderKey) {
   } else if (order.status === "DONE") {
     if (actionsDone) actionsDone.style.display = "grid";
     const btnPik = document.getElementById("btn-review-picked");
-    const btnPaid = document.getElementById("btn-review-paid");
-    if (isDineIn) {
-      if (btnPik) btnPik.style.display = "none";
-      if (btnPaid) btnPaid.style.display = "inline-flex";
-    } else {
-      if (btnPik) btnPik.style.display = "inline-flex";
-      if (btnPaid) btnPaid.style.display = "none";
+    if (btnPik) {
+      btnPik.style.display = "inline-flex";
+      const span = btnPik.querySelector("span");
+      if (span) {
+        const lang = window.currentLang || (typeof currentLang !== "undefined" ? currentLang : "zh-TW");
+        if (isDineIn) {
+          span.textContent = lang === "vi" ? "Đã xong" : "已完成";
+        } else {
+          span.textContent = lang === "vi" ? (t("btnPickedUp") || "Đã lấy") : (t("btnPickedUp") || "已取餐");
+        }
+      }
     }
   } else if (order.status === "WAITING_CUSTOMER_CHANGE" || order.status === "WAITING_CUSTOMER_REJECT") {
     if (actionsWaiting) actionsWaiting.style.display = "grid";
@@ -166,6 +170,14 @@ function openReview(orderKey) {
   const revModal = document.getElementById("reviewModal");
   if (revModal) revModal.style.display = "flex";
 }
+
+function completeOrderFromReview(btn) {
+  if (!reviewingOrder) return;
+  const isDineIn = typeof isOrderDineIn === "function" ? isOrderDineIn(reviewingOrder) : reviewingOrder.diningOption === "dine_in";
+  const targetStatus = isDineIn ? "PAID" : "PICKED_UP";
+  updateStatus(reviewingOrder.key, targetStatus, {}, btn).then(() => closeModal());
+}
+window.completeOrderFromReview = completeOrderFromReview;
 
 function selectChangeReason(val) {
   const sel = document.getElementById("change-reason");

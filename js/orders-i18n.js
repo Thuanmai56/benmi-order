@@ -1173,35 +1173,29 @@ function applyLanguageToDOM() {
   const lPrintTools = document.getElementById("i18n-print-tools-label");
   if (lPrintTools) lPrintTools.innerText = dict.printToolsLabel;
 
-  const btnRevAcc = document.getElementById("btn-review-accept");
-  if (btnRevAcc) btnRevAcc.innerText = dict.btnAccept;
-  const btnRevChg = document.getElementById("btn-review-change");
-  if (btnRevChg) btnRevChg.innerText = dict.btnChange;
-  const btnRevRej = document.getElementById("btn-review-reject");
-  if (btnRevRej) btnRevRej.innerText = dict.btnReject;
+  const setBtnText = (id, text) => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    const sp = btn.querySelector("span");
+    if (sp) sp.innerText = text;
+    else btn.innerText = text;
+  };
 
-  const btnRevRdy = document.getElementById("btn-review-ready");
-  if (btnRevRdy) btnRevRdy.innerText = dict.btnReady;
-  const btnRevCan1 = document.getElementById("btn-review-cancel-1");
-  if (btnRevCan1) btnRevCan1.innerText = dict.btnCancelOrder;
-  const btnRevCls1 = document.getElementById("btn-review-close-1");
-  if (btnRevCls1) btnRevCls1.innerText = dict.btnClose;
+  setBtnText("btn-review-accept", dict.btnAccept);
+  setBtnText("btn-review-change", dict.btnChange);
+  setBtnText("btn-review-reject", dict.btnReject);
 
-  const btnRevPik = document.getElementById("btn-review-picked");
-  if (btnRevPik) btnRevPik.innerText = dict.btnPickedUp;
-  const btnRevPaid = document.getElementById("btn-review-paid");
-  if (btnRevPaid) btnRevPaid.innerText = dict.btnPaid;
-  const btnRevCan2 = document.getElementById("btn-review-cancel-2");
-  if (btnRevCan2) btnRevCan2.innerText = dict.btnCancelOrder;
-  const btnRevCls2 = document.getElementById("btn-review-close-2");
-  if (btnRevCls2) btnRevCls2.innerText = dict.btnClose;
+  setBtnText("btn-review-ready", dict.btnReady);
+  setBtnText("btn-review-cancel-1", dict.btnCancelOrder);
+  setBtnText("btn-review-close-1", dict.btnClose);
 
-  const btnRevAccW = document.getElementById("btn-review-accept-wait");
-  if (btnRevAccW) btnRevAccW.innerText = dict.btnAccept;
-  const btnRevFrcC = document.getElementById("btn-review-force-cancel");
-  if (btnRevFrcC) btnRevFrcC.innerText = dict.btnCancelOrder;
-  const btnRevCls3 = document.getElementById("btn-review-close-3");
-  if (btnRevCls3) btnRevCls3.innerText = dict.btnClose;
+  setBtnText("btn-review-picked", dict.btnPickedUp);
+  setBtnText("btn-review-cancel-2", dict.btnCancelOrder);
+  setBtnText("btn-review-close-2", dict.btnClose);
+
+  setBtnText("btn-review-accept-wait", dict.btnAccept);
+  setBtnText("btn-review-force-cancel", dict.btnCancelOrder);
+  setBtnText("btn-review-close-3", dict.btnClose);
 
   // Change Modal
   const chgTitle = document.getElementById("i18n-change-title");

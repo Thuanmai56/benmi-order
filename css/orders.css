@@ -1080,6 +1080,22 @@ body {
 
 #reviewModal .modal-content {
   width: min(960px, 95vw);
+  max-height: min(94vh, 94dvh);
+  padding: 12px 18px;
+}
+
+#reviewModal .modal-header {
+  margin-bottom: 8px;
+  gap: 8px;
+}
+
+#reviewModal .modal-header h3 {
+  font-size: 18px;
+}
+
+#reviewModal .modal-close-btn {
+  width: 32px;
+  height: 32px;
 }
 
 #changeModal .modal-content {
@@ -1174,54 +1190,59 @@ body {
   overflow-y: auto;
   min-height: 0;
   padding-right: 4px;
+  padding-bottom: 6px;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
 }
 
-/* Order Summary Card in Review Dialog */
+/* Order Summary Card in Review Dialog (Compact Low-Profile Info Bar) */
 .order-summary-card {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  padding: 14px 16px;
+  border-radius: 10px;
+  padding: 6px 12px;
+  margin-bottom: 8px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 4px;
 }
 
 .order-summary-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
+  grid-template-columns: 1.3fr 1.1fr 1fr;
+  gap: 8px;
+  align-items: center;
 }
 
 .order-summary-row.primary-row {
-  padding-bottom: 12px;
+  padding-bottom: 4px;
   border-bottom: 1px dashed #e2e8f0;
 }
 
 .summary-col {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
 }
 
 .summary-label {
-  font-size: 11px;
-  font-weight: 800;
+  font-size: 10.5px;
+  font-weight: 700;
   color: #64748b;
   text-transform: uppercase;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.3px;
+  flex-shrink: 0;
 }
 
 .summary-val {
-  font-size: 16px;
+  font-size: 13.5px;
   font-weight: 800;
   color: #0f172a;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -3366,10 +3387,10 @@ body {
 
 /* Review Modal Items Section */
 .review-items-wrapper {
-  margin-top: 14px;
+  margin-top: 6px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .review-items-header {
@@ -3380,50 +3401,50 @@ body {
 }
 
 .review-items-title {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 800;
   color: #64748b;
   text-transform: uppercase;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.3px;
 }
 
 .review-items-count-badge {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
   background: #e2e8f0;
   color: #334155;
-  padding: 2px 8px;
+  padding: 1px 7px;
   border-radius: 9999px;
 }
 
 .review-content-card {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .review-items-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .review-item-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  min-height: 52px;
-  padding: 10px 14px;
-  border-radius: 12px;
+  gap: 8px;
+  min-height: 42px;
+  padding: 6px 10px;
+  border-radius: 8px;
   background: #ffffff;
-  border: 1.5px solid #e2e8f0;
+  border: 1.2px solid #e2e8f0;
   transition: all 0.15s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
 .review-item-row:hover {
   border-color: #cbd5e1;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
 }
 
 .review-item-row.item-prepared {
@@ -3442,28 +3463,28 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 34px;
+  height: 34px;
   cursor: pointer;
   flex-shrink: 0;
-  margin: -6px;
+  margin: -4px;
 }
 
 .review-item-checkbox {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   cursor: pointer;
   accent-color: #10b981;
-  border-radius: 6px;
+  border-radius: 4px;
 }
 
 .review-item-seq-badge {
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   background: #f1f5f9;
   color: #64748b;
-  font-size: 13px;
+  font-size: 11.5px;
   font-weight: 800;
   display: flex;
   align-items: center;
@@ -3474,53 +3495,53 @@ body {
 .review-item-details {
   flex: 1;
   min-width: 0;
-  line-height: 1.35;
+  line-height: 1.3;
 }
 
 .review-item-header {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
 .review-item-name {
-  font-size: 17px;
-  font-weight: 900;
+  font-size: 15px;
+  font-weight: 800;
   color: #0f172a;
 }
 
 .review-item-qty-badge {
-  font-size: 13px;
-  font-weight: 900;
+  font-size: 12px;
+  font-weight: 800;
   background: #f1f5f9;
   color: #0f172a;
   border: 1px solid #e2e8f0;
-  padding: 1px 7px;
-  border-radius: 6px;
+  padding: 1px 6px;
+  border-radius: 5px;
 }
 
 .review-item-unit-badge {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
   color: #0284c7;
   background: #e0f2fe;
-  padding: 1px 6px;
-  border-radius: 6px;
+  padding: 1px 5px;
+  border-radius: 5px;
 }
 
 .review-item-options {
-  font-size: 14px;
+  font-size: 12.5px;
   color: #475569;
-  font-weight: 700;
-  margin-top: 3px;
+  font-weight: 600;
+  margin-top: 2px;
 }
 
 .review-item-note {
-  font-size: 13px;
+  font-size: 12px;
   color: #b45309;
   font-weight: 700;
-  margin-top: 3px;
+  margin-top: 2px;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -3528,11 +3549,11 @@ body {
 
 .review-item-print-btn {
   flex-shrink: 0;
-  min-height: 40px;
-  padding: 6px 12px;
-  font-size: 13px;
-  font-weight: 800;
-  border-radius: 8px;
+  min-height: 30px;
+  padding: 3px 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  border-radius: 6px;
   border: 1px solid #cbd5e1;
   background: #f8fafc;
   color: #334155;
@@ -3790,12 +3811,12 @@ body {
 }
 
 /* ==========================================================================
-   Auxiliary Print Toolbar (Subtle, Compact 40px utility tools)
+   Auxiliary Print Toolbar (Subtle, Compact 32px utility tools)
    ========================================================================== */
 .modal-print-toolbar {
-  margin-top: 18px;
-  padding: 12px 14px;
-  border-radius: 12px;
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
 }
@@ -3803,34 +3824,34 @@ body {
 .print-toolbar-header {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 11.5px;
+  gap: 5px;
+  font-size: 10.5px;
   font-weight: 700;
   color: #64748b;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 10px;
+  letter-spacing: 0.3px;
+  margin-bottom: 5px;
 }
 
 .review-print-macro-bar {
   display: grid;
-  grid-template-columns: 1.8fr 1.1fr 1.2fr;
-  gap: 10px;
+  grid-template-columns: 1.6fr 1fr 1.1fr;
+  gap: 6px;
 }
 
 .btn-print-full {
-  min-height: 40px;
-  padding: 8px 12px;
-  font-size: 13.5px;
+  min-height: 32px;
+  padding: 4px 8px;
+  font-size: 12px;
   font-weight: 700;
-  border-radius: 8px;
+  border-radius: 6px;
   background: #ecfdf5;
   color: #047857;
-  border: 1.5px solid #a7f3d0;
+  border: 1.2px solid #a7f3d0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 5px;
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -3842,18 +3863,18 @@ body {
 }
 
 .btn-print-bill {
-  min-height: 40px;
-  padding: 8px 12px;
-  font-size: 13px;
+  min-height: 32px;
+  padding: 4px 8px;
+  font-size: 12px;
   font-weight: 700;
-  border-radius: 8px;
+  border-radius: 6px;
   background: #ffffff;
-  border: 1.5px solid #cbd5e1;
+  border: 1.2px solid #cbd5e1;
   color: #334155;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 5px;
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -3865,18 +3886,18 @@ body {
 }
 
 .btn-print-custom {
-  min-height: 40px;
-  padding: 8px 12px;
-  font-size: 13px;
+  min-height: 32px;
+  padding: 4px 8px;
+  font-size: 12px;
   font-weight: 700;
-  border-radius: 8px;
+  border-radius: 6px;
   background: #f0f9ff;
-  border: 1.5px solid #bae6fd;
+  border: 1.2px solid #bae6fd;
   color: #0369a1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 5px;
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -3888,34 +3909,35 @@ body {
 }
 
 /* ==========================================================================
-   Elevated Modal Lifecycle Footer (Tablet Touch Friendly 54px)
+   Elevated Modal Lifecycle Footer (Compact Tablet-Friendly 40px Buttons)
    ========================================================================== */
 .modal-lifecycle-footer {
-  margin-top: 20px;
-  padding-top: 16px;
+  margin-top: 10px;
+  padding-top: 10px;
   border-top: 1.5px solid #e2e8f0;
 }
 
 .modal-lifecycle-footer .modal-actions {
   display: grid;
   grid-template-columns: 2fr 1fr 1fr;
-  gap: 12px;
+  gap: 8px;
 }
 
 .btn-lifecycle-primary {
-  min-height: 54px !important;
-  border-radius: 12px !important;
-  font-size: 16px !important;
+  min-height: 40px !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
   font-weight: 800 !important;
+  padding: 6px 14px !important;
   background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
   color: #ffffff !important;
   border: 1px solid #059669 !important;
-  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35) !important;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25) !important;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 8px !important;
+  gap: 6px !important;
   cursor: pointer !important;
   transition: all 0.15s ease !important;
 }
@@ -3923,16 +3945,17 @@ body {
 .btn-lifecycle-primary:hover {
   background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
   transform: translateY(-1px) !important;
-  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.45) !important;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35) !important;
 }
 
 .btn-lifecycle-danger {
-  min-height: 54px !important;
-  border-radius: 12px !important;
-  font-size: 14.5px !important;
+  min-height: 40px !important;
+  border-radius: 8px !important;
+  font-size: 13.5px !important;
   font-weight: 700 !important;
+  padding: 6px 12px !important;
   background: #fef2f2 !important;
-  border: 1.5px solid #fecaca !important;
+  border: 1.2px solid #fecaca !important;
   color: #dc2626 !important;
   display: inline-flex !important;
   align-items: center !important;
@@ -3949,12 +3972,13 @@ body {
 }
 
 .btn-lifecycle-secondary {
-  min-height: 54px !important;
-  border-radius: 12px !important;
-  font-size: 14.5px !important;
+  min-height: 40px !important;
+  border-radius: 8px !important;
+  font-size: 13.5px !important;
   font-weight: 700 !important;
+  padding: 6px 12px !important;
   background: #f1f5f9 !important;
-  border: 1.5px solid #e2e8f0 !important;
+  border: 1.2px solid #e2e8f0 !important;
   color: #475569 !important;
   display: inline-flex !important;
   align-items: center !important;
@@ -3969,12 +3993,13 @@ body {
 }
 
 .btn-lifecycle-change {
-  min-height: 54px !important;
-  border-radius: 12px !important;
-  font-size: 14.5px !important;
+  min-height: 40px !important;
+  border-radius: 8px !important;
+  font-size: 13.5px !important;
   font-weight: 700 !important;
+  padding: 6px 12px !important;
   background: #fffbeb !important;
-  border: 1.5px solid #fde68a !important;
+  border: 1.2px solid #fde68a !important;
   color: #b45309 !important;
   display: inline-flex !important;
   align-items: center !important;
@@ -3990,18 +4015,19 @@ body {
 }
 
 .btn-lifecycle-purple {
-  min-height: 54px !important;
-  border-radius: 12px !important;
-  font-size: 16px !important;
+  min-height: 40px !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
   font-weight: 800 !important;
+  padding: 6px 12px !important;
   background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%) !important;
   color: #ffffff !important;
   border: 1px solid #6d28d9 !important;
-  box-shadow: 0 4px 14px rgba(139, 92, 246, 0.35) !important;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.25) !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 8px !important;
+  gap: 6px !important;
   cursor: pointer !important;
   transition: all 0.15s ease !important;
 }
