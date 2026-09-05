@@ -11,6 +11,21 @@
         document.documentElement.style.setProperty('--primary', '#00b900');
         document.documentElement.style.setProperty('--primary-dark', '#009900');
         const params = new URLSearchParams(window.location.search);
+        const forceUi = params.get("ui") || params.get("mode");
+        if (forceUi === "classic") {
+          try { localStorage.setItem("pos_ui_mode", "classic"); } catch(e) {}
+        } else if (forceUi === "experiment" || forceUi === "kds") {
+          try { localStorage.setItem("pos_ui_mode", "experiment"); } catch(e) {}
+          window.location.replace("/experiment/orders.html" + window.location.search);
+          return;
+        } else {
+          try {
+            if (localStorage.getItem("pos_ui_mode") === "experiment") {
+              window.location.replace("/experiment/orders.html" + window.location.search);
+              return;
+            }
+          } catch(e) {}
+        }
         const tenantId = params.get("tenant") || params.get("tenant_id") || (typeof localStorage !== "undefined" && localStorage.getItem("pos_device_tenant_id")) || "";
         window.__INITIAL_TENANT_ID = tenantId;
         try {
@@ -112,6 +127,17 @@
             </svg>
           </div>
         </div>
+      </div>
+
+      <!-- UI Mode Switcher Quick Pill -->
+      <div class="ui-mode-container">
+        <button type="button" class="ui-mode-pill" id="ui-mode-pill" onclick="switchPosUiMode()" title="切換介面模式 / Chuyển đổi giao diện">
+          <span class="ui-mode-tag" id="i18n-uimode-badge">POS Cổ điển</span>
+          <span class="ui-mode-action" id="i18n-uimode-action">Thử KDS</span>
+          <svg class="ui-mode-arrow" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
       </div>
 
       <div class="tabs">
@@ -286,7 +312,21 @@
             <div class="panel-title" id="i18n-toc-settings-title">設定目錄</div>
           </div>
           <div class="settings-toc-list" id="settings-toc-list">
-            <div class="settings-toc-item active" id="toc-item-status" onclick="scrollToSettingSection('setting-card-status')">
+            <div class="settings-toc-item active" id="toc-item-uimode" onclick="scrollToSettingSection('setting-card-uimode')">
+              <div class="toc-icon-box">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect width="20" height="14" x="2" y="3" rx="2"></rect>
+                  <line x1="8" x2="8" y1="21" y2="17"></line>
+                  <line x1="16" x2="16" y1="21" y2="17"></line>
+                  <line x1="12" x2="12" y1="17" y2="21"></line>
+                </svg>
+              </div>
+              <span class="toc-item-label" id="i18n-toc-uimode">介面模式</span>
+              <svg class="toc-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </div>
+            <div class="settings-toc-item" id="toc-item-status" onclick="scrollToSettingSection('setting-card-status')">
               <div class="toc-icon-box">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"></path>
@@ -454,6 +494,63 @@
             </div>
           </div>
           <div class="settings-content-body" id="settings-scroll-container">
+
+            <!-- UI Mode Setting Card -->
+            <div class="settings-card" id="setting-card-uimode">
+              <div style="padding: 16px 20px; background: #f3f4f6; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                  <div style="font-weight: 1100; font-size: 18px;" id="i18n-setting-uimode-title">POS 顯示介面模式</div>
+                  <div style="font-size: 13px; color: var(--muted); font-weight: 600; margin-top: 2px;" id="i18n-setting-uimode-sub">自由切換新版 KDS 廚房系統或經典雙欄介面</div>
+                </div>
+                <div class="settings-active-pill" id="uimode-active-badge">CLASSIC POS</div>
+              </div>
+              <div class="uimode-options-grid">
+                <!-- Option 1: Classic Mode -->
+                <div class="uimode-select-card" id="uimode-card-classic" onclick="switchPosUiMode('classic')">
+                  <div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                      <div class="uimode-icon-wrap classic">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                          <rect width="18" height="18" x="3" y="3" rx="2"></rect>
+                          <line x1="12" x2="12" y1="3" y2="21"></line>
+                        </svg>
+                      </div>
+                      <div class="uimode-radio"></div>
+                    </div>
+                    <div style="font-weight: 900; font-size: 16px; margin-bottom: 6px; color: #0f172a;" id="i18n-opt-classic-title">經典雙欄模式</div>
+                    <div style="font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 12px;" id="i18n-opt-classic-desc">傳統左右雙欄版面，適合一般電腦桌面與滑鼠操作</div>
+                  </div>
+                  <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                    <span class="uimode-feature-tag">2 欄版面</span>
+                    <span class="uimode-feature-tag">Chuột & Desktop</span>
+                  </div>
+                </div>
+
+                <!-- Option 2: KDS Experiment Mode -->
+                <div class="uimode-select-card" id="uimode-card-kds" onclick="switchPosUiMode('experiment')">
+                  <div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                      <div class="uimode-icon-wrap kds">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                          <rect width="20" height="14" x="2" y="3" rx="2"></rect>
+                          <line x1="8" x2="8" y1="21" y2="17"></line>
+                          <line x1="16" x2="16" y1="21" y2="17"></line>
+                          <line x1="12" x2="12" y1="17" y2="21"></line>
+                        </svg>
+                      </div>
+                      <div class="uimode-radio"></div>
+                    </div>
+                    <div style="font-weight: 900; font-size: 16px; margin-bottom: 6px; color: #0284c7;" id="i18n-opt-kds-title">新版 KDS 廚房系統 (實驗性)</div>
+                    <div style="font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 12px;" id="i18n-opt-kds-desc">三站式流水線、左右滑動切換、廚房備料彙總，專為平板觸控與快節奏出餐設計</div>
+                  </div>
+                  <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                    <span class="uimode-feature-tag kds">3 Trạm KDS</span>
+                    <span class="uimode-feature-tag kds">Vuốt chuyển tab</span>
+                    <span class="uimode-feature-tag kds">Gom món</span>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <!-- Store Status Setting -->
             <div class="settings-card" id="setting-card-status">

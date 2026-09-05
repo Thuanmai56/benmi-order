@@ -7,12 +7,20 @@
   <title id="pos-page-title">Blab POS</title>
   <base href="/" />
   <link rel="stylesheet" href="css/orders.css?v=20260905_review_modal_v2" />
-  <link rel="stylesheet" href="css/orders-kds.css?v=20260905_kds_v1" />
+  <link rel="stylesheet" href="css/orders-kds.css?v=20260905_kds_v2" />
     <script>
       (function () {
         document.documentElement.style.setProperty('--primary', '#00b900');
         document.documentElement.style.setProperty('--primary-dark', '#009900');
         const params = new URLSearchParams(window.location.search);
+        const forceUi = params.get("ui") || params.get("mode");
+        if (forceUi === "classic") {
+          try { localStorage.setItem("pos_ui_mode", "classic"); } catch(e) {}
+          window.location.replace("/orders.html" + window.location.search);
+          return;
+        } else {
+          try { localStorage.setItem("pos_ui_mode", "experiment"); } catch(e) {}
+        }
         const tenantId = params.get("tenant") || params.get("tenant_id") || (typeof localStorage !== "undefined" && localStorage.getItem("pos_device_tenant_id")) || "";
         window.__INITIAL_TENANT_ID = tenantId;
         try {
@@ -119,6 +127,17 @@
         </div>
       </div>
 
+      <!-- UI Mode Switcher Quick Pill -->
+      <div class="ui-mode-container">
+        <button type="button" class="ui-mode-pill active-kds" id="ui-mode-pill" onclick="switchPosUiMode()" title="切換介面模式 / Chuyển đổi giao diện">
+          <span class="ui-mode-tag" id="i18n-uimode-badge">KDS Mới</span>
+          <span class="ui-mode-action" id="i18n-uimode-action">Về UI cũ</span>
+          <svg class="ui-mode-arrow" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+      </div>
+
       <div class="tabs">
         <button class="tab active" id="tab-live" onclick="switchTab('live')">即時</button>
         <button class="tab" id="tab-history" onclick="switchTab('history')">歷史</button>
@@ -169,17 +188,17 @@
       <!-- Segmented Pipeline Tabs for Portrait / Mobile (< 900px) -->
       <div class="kds-segmented-tabs" id="kds-segmented-tabs">
         <button type="button" class="kds-tab-btn tab-pending" id="kds-tab-btn-pending" onclick="switchKdsStation('pending')">
-          <span>🔔</span>
+          <span class="kds-tab-icon" id="kds-tab-icon-pending"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-1px;"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg></span>
           <span id="i18n-kds-tab-pending">待處理</span>
           <span class="kds-tab-badge" id="kds-tab-count-pending">0</span>
         </button>
         <button type="button" class="kds-tab-btn tab-cooking active" id="kds-tab-btn-cooking" onclick="switchKdsStation('cooking')">
-          <span>🍳</span>
+          <span class="kds-tab-icon" id="kds-tab-icon-cooking"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-1px;"><path d="M6 13.8a4.4 4.4 0 1 1-1.8-8.4A4.5 4.5 0 0 1 12 4a4.5 4.5 0 0 1 7.8 1.4A4.4 4.4 0 1 1 18 13.8V17H6v-3.2z"></path><line x1="6" y1="17" x2="18" y2="17"></line><line x1="6" y1="20" x2="18" y2="20"></line></svg></span>
           <span id="i18n-kds-tab-cooking">製作中</span>
           <span class="kds-tab-badge" id="kds-tab-count-cooking">0</span>
         </button>
         <button type="button" class="kds-tab-btn tab-ready" id="kds-tab-btn-ready" onclick="switchKdsStation('ready')">
-          <span>🛍️</span>
+          <span class="kds-tab-icon" id="kds-tab-icon-ready"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-1px;"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path><path d="M3 6h18"></path><path d="M16 10a4 4 0 0 1-8 0"></path></svg></span>
           <span id="i18n-kds-tab-ready">待取餐</span>
           <span class="kds-tab-badge" id="kds-tab-count-ready">0</span>
         </button>
@@ -246,7 +265,7 @@
               0 單
             </div>
             <button class="mini-btn" id="btn-toggle-all-history" onclick="toggleAllHistoryGroups()" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; font-size: 14px; border-radius: 8px;">
-              <span id="btn-toggle-all-icon">📂</span>
+              <span id="btn-toggle-all-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-1px;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg></span>
               <span id="btn-toggle-all-text">展開全部</span>
             </button>
           </div>
@@ -273,7 +292,7 @@
             <button type="button" class="report-range-btn" data-range="30d" onclick="selectReportRange('30d')" id="i18n-range-30d" style="border:none; padding:7px 14px; border-radius:8px; font-size:14px; font-weight:600; background:transparent; color:var(--text, #1e293b); cursor:pointer;">近 30 天</button>
           </div>
           <button type="button" class="btn btn-ghost" onclick="refreshReportData()" style="padding:8px 12px; border-radius:10px; border:1px solid #cbd5e1; background:#fff; cursor:pointer;" title="Refresh">
-            <span>🔄</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-2px;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
           </button>
           <button type="button" class="btn btn-ghost" style="border:1.5px solid #cbd5e1; background:#fff; color:#475569; font-weight:800; padding:7px 14px; border-radius:10px; font-size:13.5px; cursor:pointer;" onclick="openSettings()" id="i18n-btn-back-settings">← 返回設定</button>
         </div>
@@ -328,7 +347,21 @@
             <div class="panel-title" id="i18n-toc-settings-title">設定目錄</div>
           </div>
           <div class="settings-toc-list" id="settings-toc-list">
-            <div class="settings-toc-item active" id="toc-item-status" onclick="scrollToSettingSection('setting-card-status')">
+            <div class="settings-toc-item active" id="toc-item-uimode" onclick="scrollToSettingSection('setting-card-uimode')">
+              <div class="toc-icon-box">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect width="20" height="14" x="2" y="3" rx="2"></rect>
+                  <line x1="8" x2="8" y1="21" y2="17"></line>
+                  <line x1="16" x2="16" y1="21" y2="17"></line>
+                  <line x1="12" x2="12" y1="17" y2="21"></line>
+                </svg>
+              </div>
+              <span class="toc-item-label" id="i18n-toc-uimode">介面模式</span>
+              <svg class="toc-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </div>
+            <div class="settings-toc-item" id="toc-item-status" onclick="scrollToSettingSection('setting-card-status')">
               <div class="toc-icon-box">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"></path>
@@ -496,6 +529,63 @@
             </div>
           </div>
           <div class="settings-content-body" id="settings-scroll-container">
+
+            <!-- UI Mode Setting Card -->
+            <div class="settings-card" id="setting-card-uimode">
+              <div style="padding: 16px 20px; background: #f3f4f6; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                  <div style="font-weight: 1100; font-size: 18px;" id="i18n-setting-uimode-title">POS 顯示介面模式</div>
+                  <div style="font-size: 13px; color: var(--muted); font-weight: 600; margin-top: 2px;" id="i18n-setting-uimode-sub">自由切換新版 KDS 廚房系統或經典雙欄介面</div>
+                </div>
+                <div class="settings-active-pill" id="uimode-active-badge">KDS EXPERIMENT</div>
+              </div>
+              <div class="uimode-options-grid">
+                <!-- Option 1: Classic Mode -->
+                <div class="uimode-select-card" id="uimode-card-classic" onclick="switchPosUiMode('classic')">
+                  <div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                      <div class="uimode-icon-wrap classic">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                          <rect width="18" height="18" x="3" y="3" rx="2"></rect>
+                          <line x1="12" x2="12" y1="3" y2="21"></line>
+                        </svg>
+                      </div>
+                      <div class="uimode-radio"></div>
+                    </div>
+                    <div style="font-weight: 900; font-size: 16px; margin-bottom: 6px; color: #0f172a;" id="i18n-opt-classic-title">經典雙欄模式</div>
+                    <div style="font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 12px;" id="i18n-opt-classic-desc">傳統左右雙欄版面，適合一般電腦桌面與滑鼠操作</div>
+                  </div>
+                  <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                    <span class="uimode-feature-tag">2 欄版面</span>
+                    <span class="uimode-feature-tag">Chuột & Desktop</span>
+                  </div>
+                </div>
+
+                <!-- Option 2: KDS Experiment Mode -->
+                <div class="uimode-select-card active" id="uimode-card-kds" onclick="switchPosUiMode('experiment')">
+                  <div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                      <div class="uimode-icon-wrap kds">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                          <rect width="20" height="14" x="2" y="3" rx="2"></rect>
+                          <line x1="8" x2="8" y1="21" y2="17"></line>
+                          <line x1="16" x2="16" y1="21" y2="17"></line>
+                          <line x1="12" x2="12" y1="17" y2="21"></line>
+                        </svg>
+                      </div>
+                      <div class="uimode-radio"></div>
+                    </div>
+                    <div style="font-weight: 900; font-size: 16px; margin-bottom: 6px; color: #0284c7;" id="i18n-opt-kds-title">新版 KDS 廚房系統 (實驗性)</div>
+                    <div style="font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 12px;" id="i18n-opt-kds-desc">三站式流水線、左右滑動切換、廚房備料彙總，專為平板觸控與快節奏出餐設計</div>
+                  </div>
+                  <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                    <span class="uimode-feature-tag kds">3 Trạm KDS</span>
+                    <span class="uimode-feature-tag kds">Vuốt chuyển tab</span>
+                    <span class="uimode-feature-tag kds">Gom món</span>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <!-- Store Status Setting -->
             <div class="settings-card" id="setting-card-status">
@@ -1101,7 +1191,7 @@
               <div class="panel-sub" id="i18n-menu-cat-sub" style="color: var(--muted); margin-top: 3px; line-height: 1.35;">點擊左側分類以管理品項</div>
             </div>
             <div>
-              <button type="button" class="btn btn-ghost" id="btn-menu-manage-cats" style="width: 100%; border: 1.5px solid #cbd5e1; background: #fff; color: #1e293b; padding: 7px 10px; font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 6px; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);" onclick="openCategoriesManager()">⚙️ 管理分類</button>
+              <button type="button" class="btn btn-ghost" id="btn-menu-manage-cats" style="width: 100%; border: 1.5px solid #cbd5e1; background: #fff; color: #1e293b; padding: 7px 10px; font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 6px; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);" onclick="openCategoriesManager()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> 管理分類</button>
             </div>
           </div>
           <div class="panel-body" id="menu-categories" style="padding: 0; background: #fff;">
@@ -1113,15 +1203,15 @@
           <div class="panel-header">
             <div>
               <div class="panel-title" id="menu-editor-title">分類項目</div>
-              <div class="panel-sub" id="i18n-menu-edit-sub">拖曳排序 ✦ 點擊欄位直接修改</div>
+              <div class="panel-sub" id="i18n-menu-edit-sub">拖曳排序 · 點擊欄位直接修改</div>
             </div>
             <div style="display:flex; gap:6px; align-items:center;">
-              <button class="btn btn-ghost" id="btn-category-rename" style="border: 1px solid #cbd5e1; background:#fff; padding: 6px 12px; font-size: 13px; display:none;" onclick="promptRenameCategory()">✏️ 重新命名</button>
-              <button class="btn btn-ghost" id="btn-category-delete" style="border: 1px solid #fee2e2; background: #fff5f5; color: var(--brand-red); padding: 6px 12px; font-size: 13px; display:none;" onclick="deleteActiveCategory()">🗑️ 刪除分類</button>
+              <button class="btn btn-ghost" id="btn-category-rename" style="border: 1px solid #cbd5e1; background:#fff; padding: 6px 12px; font-size: 13px; display:none;" onclick="promptRenameCategory()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-1px;"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg> 重新命名</button>
+              <button class="btn btn-ghost" id="btn-category-delete" style="border: 1px solid #fee2e2; background: #fff5f5; color: var(--brand-red); padding: 6px 12px; font-size: 13px; display:none;" onclick="deleteActiveCategory()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-1px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg> 刪除分類</button>
               <button class="btn btn-yellow" id="btn-menu-add-cat-top" style="padding: 6px 12px; font-size: 13px; display:none;" onclick="openAddCategoryModal()">+ 新增分類</button>
               <button class="btn btn-yellow" id="btn-menu-add-item" style="padding: 6px 12px; font-size: 13px;" onclick="addNewMenuItem()">+ 新增項目</button>
               <button class="btn btn-primary" id="btn-menu-save" style="padding: 6px 12px; font-size: 13px;" onclick="saveMenuData()">儲存變更</button>
-              <button class="btn btn-ghost" id="btn-menu-manage-close" style="border: 1.5px solid #cbd5e1; background:#fff; color: #475569; font-weight: 800; padding: 6px 12px; font-size: 13px; display:none;" onclick="closeCategoriesManager()">✕ 關閉</button>
+              <button class="btn btn-ghost" id="btn-menu-manage-close" style="border: 1.5px solid #cbd5e1; background:#fff; color: #475569; font-weight: 800; padding: 6px 12px; font-size: 13px; display:none;" onclick="closeCategoriesManager()">關閉</button>
             </div>
           </div>
           <div class="panel-body" id="menu-editor-body" style="background: #f9fafb;">
@@ -1333,14 +1423,14 @@
         <!-- Tablet Horizontal Reason Selector Tabs -->
         <div class="change-type-tabs">
           <button type="button" class="change-tab-btn active" id="tab-reason-time" onclick="selectChangeReason('時間需調整')">
-            <span class="tab-icon">⏰</span>
+            <span class="tab-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></span>
             <div class="tab-text">
               <div class="tab-title" id="i18n-change-tab-time-title">時間太趕，需延後</div>
               <div class="tab-sub" id="i18n-change-tab-time-sub">建議延後取餐時間</div>
             </div>
           </button>
           <button type="button" class="change-tab-btn" id="tab-reason-soldout" onclick="selectChangeReason('口味售完')">
-            <span class="tab-icon">🚫</span>
+            <span class="tab-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg></span>
             <div class="tab-text">
               <div class="tab-title" id="i18n-change-tab-soldout-title">該口味已售完</div>
               <div class="tab-sub" id="i18n-change-tab-soldout-sub">選擇已售完的品項</div>
@@ -1433,28 +1523,28 @@
       <div class="modal-body">
         <div class="reject-reason-grid">
           <button type="button" class="reject-card active" data-val="今日已售完" onclick="selectRejectReason('今日已售完')">
-            <span class="reject-icon">🚫</span>
+            <span class="reject-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg></span>
             <div class="reject-text">
               <div class="reject-title" id="i18n-reject-r1-title">今日已售完</div>
               <div class="reject-sub" id="i18n-reject-r1-sub">所有餐點已全數售完</div>
             </div>
           </button>
           <button type="button" class="reject-card" data-val="訂單過多" onclick="selectRejectReason('訂單過多')">
-            <span class="reject-icon">⏳</span>
+            <span class="reject-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 22h14"></path><path d="M5 2h14"></path><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"></path><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"></path></svg></span>
             <div class="reject-text">
               <div class="reject-title" id="i18n-reject-r2-title">訂單過多，暫不接單</div>
               <div class="reject-sub" id="i18n-reject-r2-sub">現場製作繁忙，暫停接單</div>
             </div>
           </button>
           <button type="button" class="reject-card" data-val="已過營業時間" onclick="selectRejectReason('已過營業時間')">
-            <span class="reject-icon">🌙</span>
+            <span class="reject-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></span>
             <div class="reject-text">
               <div class="reject-title" id="i18n-reject-r3-title">已過營業時間</div>
               <div class="reject-sub" id="i18n-reject-r3-sub">目前非營業時段</div>
             </div>
           </button>
           <button type="button" class="reject-card" data-val="取消並不回復客戶" onclick="selectRejectReason('取消並不回復客戶')">
-            <span class="reject-icon">🔕</span>
+            <span class="reject-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.73 21a2 2 0 0 1-3.46 0"></path><path d="M18.63 13A17.89 17.89 0 0 1 18 8"></path><path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"></path><path d="M18 8a6 6 0 0 0-9.33-5"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg></span>
             <div class="reject-text">
               <div class="reject-title" id="i18n-reject-r4-title">取消並不回復客戶</div>
               <div class="reject-sub" id="i18n-reject-r4-sub">直接取消且不發送訊息</div>
@@ -1499,8 +1589,8 @@
           分類類型
         </label>
         <select id="add-cat-select-type" onchange="onAddCategoryTypeChange()" style="width: 100%; box-sizing: border-box; padding: 10px 12px; font-size: 14px; font-weight: 600; border-radius: 8px; border: 1.5px solid var(--border); background: #fff;">
-          <option value="catalog" id="i18n-add-cat-opt-catalog">🍽️ 菜單品項 (主餐 / 飲料)</option>
-          <option value="modifier" id="i18n-add-cat-opt-modifier">⚙️ 客製化選項 (加辣 / 加料 / 甜度)</option>
+          <option value="catalog" id="i18n-add-cat-opt-catalog">菜單品項 (主餐 / 飲料)</option>
+          <option value="modifier" id="i18n-add-cat-opt-modifier">客製化選項 (加辣 / 加料 / 甜度)</option>
         </select>
       </div>
 
@@ -1564,8 +1654,8 @@
           <select id="stock-status-select"
             style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px;"
             onchange="handleStockStatusChange()">
-            <option value="in_stock" id="stock-opt-in-stock">🟢 正常供應 (In Stock)</option>
-            <option value="out_of_stock" id="stock-opt-out-stock">🔴 暫時售完 (Out of Stock)</option>
+            <option value="in_stock" id="stock-opt-in-stock">正常供應 (In Stock)</option>
+            <option value="out_of_stock" id="stock-opt-out-stock">暫時售完 (Out of Stock)</option>
           </select>
         </div>
         <div id="oos-options-container" style="margin-top: 16px; display: none;">
@@ -1711,8 +1801,8 @@
   <!-- Start Shift / Audio Unlock Modal -->
   <div id="startShiftModal" class="modal" style="display: none; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(8px); z-index: 9999;">
     <div class="modal-content" style="max-width: 440px; text-align: center; padding: 28px 24px; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.25);">
-      <div style="width: 64px; height: 64px; margin: 0 auto 16px; background: #ecfdf5; border: 2px solid #a7f3d0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px;">
-        🔔
+      <div style="width: 64px; height: 64px; margin: 0 auto 16px; background: #ecfdf5; border: 2px solid #a7f3d0; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
       </div>
       
       <h2 style="font-size: 22px; font-weight: 900; color: #111827; margin: 0 0 8px;" id="i18n-start-shift-title">
@@ -1725,7 +1815,7 @@
 
       <div style="display: flex; flex-direction: column; gap: 12px;">
         <button type="button" class="btn btn-primary btn-block" style="padding: 14px 20px; font-size: 16px; font-weight: 800; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35); cursor: pointer;" onclick="startOrderShift()" id="i18n-btn-start-shift">
-          <span>🚀</span> <span id="i18n-btn-start-shift-text">開始接單 (啟用提示音)</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> <span id="i18n-btn-start-shift-text">開始接單 (啟用提示音)</span>
         </button>
       </div>
     </div>
@@ -1775,7 +1865,7 @@
   <script src="js/orders-audio.js?v=20260905_review_modal_v1"></script>
   <script src="js/printer-service.js?v=20260905_review_modal_v1"></script>
   <script src="js/orders-live.js?v=20260905_review_modal_v1"></script>
-  <script src="js/orders-live-kds.js?v=20260905_kds_v1"></script>
+  <script src="js/orders-live-kds.js?v=20260905_kds_v2"></script>
   <script src="js/orders-modals.js?v=20260905_review_modal_v1"></script>
   <script src="js/orders-history.js?v=20260905_review_modal_v1"></script>
   <script src="js/orders-reports.js?v=20260905_review_modal_v1"></script>
