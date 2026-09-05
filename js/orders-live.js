@@ -477,10 +477,25 @@ function extractFlavorSettings(rawContent) {
           }
         });
       }
-    } else if (line.startsWith("• 配料：") || line.startsWith("• 加料：") || line.startsWith("• Topping:")) {
-      const extra = line.replace(/^•\s*[^：:]+[：:]\s*/, "").trim();
-      if (extra) {
-        extraIngredients.push(extra);
+    } else {
+      const extraMatch = line.match(/^[•\-*]\s*([^：:]+)[：:]\s*(.+)$/);
+      if (extraMatch) {
+        const label = extraMatch[1].replace(/✦/g, "").replace(/選擇|調整/g, "").trim();
+        const val = extraMatch[2].trim();
+        if (label && val && !label.includes("訂單") && !label.includes("總金額") && !label.includes("時間") && !label.includes("取餐") && !label.includes("用餐方式")) {
+          extraIngredients.push(val);
+        }
+      } else if (line.includes("| 口味:") || line.includes("| 口味：") || line.includes("｜ 口味:") || line.includes("｜ 口味：")) {
+        const flavorPart = line.split(/[|｜]/).slice(1).join("|").trim();
+        const parts = flavorPart.split(/[/／]/).map(p => p.trim()).filter(Boolean);
+        parts.forEach(p => {
+          const m = p.match(/^([^：:]+)[：:]\s*(.+)$/);
+          if (m) {
+            flavors.push({ label: m[1].trim(), value: m[2].trim() });
+          } else {
+            flavors.push({ label: "", value: p });
+          }
+        });
       }
     }
   }
@@ -639,12 +654,16 @@ function formatContentHtml(order) {
           <strong class="flavor-val">${escapeHtml(f.value)}</strong>
         </span>
       `),
-      ...flavorData.extraIngredients.map(e => `
-        <span class="flavor-chip extra-chip">
-          <span class="flavor-label">${escapeHtml(optLabelFallback)}:</span>
-          <strong class="flavor-val">${escapeHtml(e)}</strong>
-        </span>
-      `)
+      ...flavorData.extraIngredients.map(e => {
+        const lbl = (typeof e === 'object' && e && e.label) ? e.label : optLabelFallback;
+        const val = (typeof e === 'object' && e && e.value) ? e.value : String(e);
+        return `
+          <span class="flavor-chip extra-chip">
+            <span class="flavor-label">${escapeHtml(lbl)}:</span>
+            <strong class="flavor-val">${escapeHtml(val)}</strong>
+          </span>
+        `;
+      })
     ].join("");
 
     flavorHtml = `

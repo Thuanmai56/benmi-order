@@ -446,7 +446,8 @@ function formatGlobalCustomizationsText() {
                     });
                 }
                 const subPart = subOpts.length > 0 ? ` (${subOpts.join('、')})` : '';
-                mainFlavors.push(`${val}${subPart}`);
+                const flavorLabel = cleanTitle || '口味';
+                mainFlavors.push(`${flavorLabel}：${val}${subPart}`);
             }
         } else if (group.type === 'checkbox') {
             const checkedBoxes = Array.from(document.querySelectorAll(`input[name="opt-${group.key}"]:checked`));
@@ -611,6 +612,10 @@ function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, ma
 // 8.2 Định dạng danh sách món cho luồng Gọi thêm (không kèm tiền tổng hoặc mã đơn ảo)
 function formatAppendItemsOnlyText() {
     const lines = [];
+    const globalFlavor = formatGlobalCustomizationsText();
+    if (globalFlavor) {
+        lines.push(globalFlavor.trim());
+    }
     for (let key in cart) {
         if (cart[key] > 0) {
             const itemInfo = resolveCatalogItem(key);
@@ -1075,6 +1080,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                 note: mainNote,
                 tenant_id: tenantId,
                 items: structuredItems,
+                customizations: getStructuredGlobalCustomizations(),
                 is_desktop: isDesktop,
                 isDesktop: isDesktop
             };
