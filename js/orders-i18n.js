@@ -48,6 +48,26 @@ const I18N = {
     emptyLivePendingSub: "新進訂單將即時推播並顯示於此",
     emptyLiveAcceptedTitle: "目前無製作中訂單",
     emptyLiveAcceptedSub: "已接單的餐點將在此顯示製作進度",
+    kdsStationPending: "待處理",
+    kdsStationCooking: "製作中",
+    kdsStationReady: "待取餐",
+    kdsBatchSummary: "備料總攬",
+    kdsActionAccept: "接單",
+    kdsActionDone: "準備好了",
+    kdsActionHandover: "已取餐",
+    kdsActionPayAndHandover: "結帳並交餐",
+    kdsCountdownMin: "剩餘 {m} 分鐘",
+    kdsOverdueMin: "逾時 {m} 分鐘",
+    kdsJustNow: "剛剛下單",
+    kdsEmptyPending: "目前無待處理新訂單",
+    kdsEmptyCooking: "目前無廚房製作中訂單",
+    kdsEmptyReady: "目前無待取餐訂單",
+    kdsItemsCount: "共 {n} 項餐點",
+    kdsCookingCount: "製作中 ({n})",
+    kdsPendingCount: "待處理 ({n})",
+    kdsReadyCount: "待取餐 ({n})",
+    kdsBatchMiseTitle: "🔪 廚房即時備料總攬 ({orders} 張單，共 {items} 份)",
+    kdsReprintTooltip: "列印標籤與收據",
     badgeNewOrder: "新訂單",
     emptyHistory: "尚無歷史訂單",
     historyTitle: "訂單歷史",
@@ -542,6 +562,26 @@ const I18N = {
     emptyLivePendingSub: "Đơn mới sẽ tự động hiển thị và đổ chuông tại đây",
     emptyLiveAcceptedTitle: "Không có đơn đang thực hiện",
     emptyLiveAcceptedSub: "Các đơn đã nhận sẽ hiển thị tiến độ tại đây",
+    kdsStationPending: "CẦN TIẾP NHẬN",
+    kdsStationCooking: "ĐANG CHẾ BIẾN",
+    kdsStationReady: "CHỜ BÀN GIAO",
+    kdsBatchSummary: "TỔNG HỢP NGUYÊN LIỆU",
+    kdsActionAccept: "TIẾP NHẬN",
+    kdsActionDone: "LÀM XONG",
+    kdsActionHandover: "ĐÃ GIAO",
+    kdsActionPayAndHandover: "THANH TOÁN & GIAO",
+    kdsCountdownMin: "Còn {m} phút",
+    kdsOverdueMin: "Quá hẹn {m} phút",
+    kdsJustNow: "Vừa đặt",
+    kdsEmptyPending: "Hiện không có đơn cần tiếp nhận",
+    kdsEmptyCooking: "Hiện không có đơn đang chế biến trong bếp",
+    kdsEmptyReady: "Hiện không có đơn chờ giao cho khách",
+    kdsItemsCount: "Tổng {n} món",
+    kdsCookingCount: "Đang nấu ({n})",
+    kdsPendingCount: "Chờ duyệt ({n})",
+    kdsReadyCount: "Chờ giao ({n})",
+    kdsBatchMiseTitle: "🔪 TỔNG HỢP NGUYÊN LIỆU ĐANG NẤU ({orders} đơn, {items} phần)",
+    kdsReprintTooltip: "In lại tem & bill",
     badgeNewOrder: "ĐƠN MỚI",
     emptyHistory: "Chưa có lịch sử đơn hàng",
     historyTitle: "Lịch sử đơn hàng",
@@ -1110,6 +1150,21 @@ function applyLanguageToDOM() {
   if (fTakeaway) fTakeaway.innerText = dict.filterTakeaway || "外帶";
   const fDinein = document.getElementById("i18n-filter-dinein");
   if (fDinein) fDinein.innerText = dict.filterDineIn || "內用";
+
+  // KDS Adaptive Compact Headers & Tabs
+  const kdsTabPend = document.getElementById("i18n-kds-tab-pending");
+  if (kdsTabPend) kdsTabPend.innerText = dict.kdsStationPending || "待處理";
+  const kdsTabCook = document.getElementById("i18n-kds-tab-cooking");
+  if (kdsTabCook) kdsTabCook.innerText = dict.kdsStationCooking || "製作中";
+  const kdsTabRdy = document.getElementById("i18n-kds-tab-ready");
+  if (kdsTabRdy) kdsTabRdy.innerText = dict.kdsStationReady || "待取餐";
+
+  const kdsHdrPend = document.getElementById("i18n-kds-header-pending");
+  if (kdsHdrPend) kdsHdrPend.innerText = dict.kdsStationPending || "待處理";
+  const kdsHdrCook = document.getElementById("i18n-kds-header-cooking");
+  if (kdsHdrCook) kdsHdrCook.innerText = dict.kdsStationCooking || "製作中";
+  const kdsHdrRdy = document.getElementById("i18n-kds-header-ready");
+  if (kdsHdrRdy) kdsHdrRdy.innerText = dict.kdsStationReady || "待取餐";
 
   // View History Headers
   const histTitle = document.getElementById("i18n-history-title");

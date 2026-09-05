@@ -393,7 +393,9 @@
             line.includes('取餐') || line.startsWith('📍') || line.startsWith('📞') ||
             line.startsWith('👤') || line.startsWith('📝') || line.startsWith('💰') ||
             line.includes('Hình thức') || line.includes('Bàn số') || line.includes('Số bàn') ||
-            line.includes('Ghi chú') || line.includes('Thanh toán') || line.includes('Tổng cộng')
+            line.includes('Ghi chú') || line.includes('Thanh toán') || line.includes('Tổng cộng') ||
+            line.includes('口味設定') || line.includes('Khẩu vị') || line.includes('Hương vị') ||
+            line.startsWith('🧂') || line.startsWith('📦')
           ) {
             return;
           }
