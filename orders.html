@@ -5,11 +5,30 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title id="pos-page-title">Blab POS</title>
-  <link rel="stylesheet" href="css/orders.css?v=20260905_review_modal_v2" />
+  <base href="/" />
+  <link rel="stylesheet" href="css/orders.css?v=20260905_uimode_v2" />
     <script>
       (function () {
         document.documentElement.style.setProperty('--primary', '#00b900');
         document.documentElement.style.setProperty('--primary-dark', '#009900');
+
+        // Early definition of UI Mode Switcher to guarantee availability before body DOM renders
+        window.switchPosUiMode = function(targetMode) {
+          const currentPath = (window.location && window.location.pathname) || "";
+          const isExp = currentPath.includes("experiment");
+          const mode = targetMode || (isExp ? "classic" : "experiment");
+          try { localStorage.setItem("pos_ui_mode", mode); } catch(e) {}
+          const search = (window.location && window.location.search) ? window.location.search : "";
+          const searchParams = new URLSearchParams(search);
+          searchParams.set("ui", mode);
+          if (mode === "experiment") {
+            window.location.href = "/experiment/orders.html?" + searchParams.toString();
+          } else {
+            window.location.href = "/orders.html?" + searchParams.toString();
+          }
+        };
+        window.togglePosUiMode = function() { window.switchPosUiMode(); };
+
         const params = new URLSearchParams(window.location.search);
         const forceUi = params.get("ui") || params.get("mode");
         if (forceUi === "classic") {
@@ -1825,16 +1844,16 @@
   </div>
 
   <!-- Benmi POS Modular Architecture Scripts -->
-  <script src="js/orders-i18n.js?v=20260905_review_modal_v1"></script>
-  <script src="js/orders-core.js?v=20260905_review_modal_v1"></script>
-  <script src="js/orders-audio.js?v=20260905_review_modal_v1"></script>
-  <script src="js/printer-service.js?v=20260905_review_modal_v1"></script>
-  <script src="js/orders-live.js?v=20260905_review_modal_v1"></script>
-  <script src="js/orders-modals.js?v=20260905_review_modal_v1"></script>
-  <script src="js/orders-history.js?v=20260905_review_modal_v1"></script>
-  <script src="js/orders-reports.js?v=20260905_review_modal_v1"></script>
-  <script src="js/orders-settings.js?v=20260905_review_modal_v1"></script>
-  <script src="js/orders-menu.js?v=20260905_review_modal_v1"></script>
+  <script src="js/orders-i18n.js?v=20260905_uimode_v2"></script>
+  <script src="js/orders-core.js?v=20260905_uimode_v2"></script>
+  <script src="js/orders-audio.js?v=20260905_uimode_v2"></script>
+  <script src="js/printer-service.js?v=20260905_uimode_v2"></script>
+  <script src="js/orders-live.js?v=20260905_uimode_v2"></script>
+  <script src="js/orders-modals.js?v=20260905_uimode_v2"></script>
+  <script src="js/orders-history.js?v=20260905_uimode_v2"></script>
+  <script src="js/orders-reports.js?v=20260905_uimode_v2"></script>
+  <script src="js/orders-settings.js?v=20260905_uimode_v2"></script>
+  <script src="js/orders-menu.js?v=20260905_uimode_v2"></script>
 
   <!-- POS Bootstrap & Initialization -->
   <script>
