@@ -8,6 +8,29 @@ let expandedHistoryDates = new Set();
 let isHistoryStateInitialized = false;
 let isHistoryLoading = false;
 let historyLastFetchedAt = 0;
+let historySearchQuery = "";
+let historyFilterType = "all"; // 'all' | 'dine_in' | 'takeaway'
+
+function onHistorySearchInput(val) {
+  historySearchQuery = (val || "").trim().toLowerCase();
+  const clearBtn = document.getElementById("btn-history-search-clear");
+  if (clearBtn) clearBtn.style.display = historySearchQuery ? "inline-flex" : "none";
+  renderHistory(lastHistoryOrders);
+}
+
+function clearHistorySearch() {
+  const input = document.getElementById("history-search-input");
+  if (input) input.value = "";
+  onHistorySearchInput("");
+}
+
+function setHistoryFilter(type) {
+  historyFilterType = type || "all";
+  document.querySelectorAll("#history-filter-group .history-filter-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.getAttribute("data-filter") === historyFilterType);
+  });
+  renderHistory(lastHistoryOrders);
+}
 
 async function fetchHistoryOrders(force = false) {
   const tenantId = getTenantIdFromUrl();
@@ -85,19 +108,60 @@ function renderHistory(orders) {
     isHistoryStateInitialized = true;
   }
 
-  if (orders.length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">${t('emptyHistory')}</div>`;
+  if (!orders || orders.length === 0) {
+    container.innerHTML = `
+      <div class="history-empty-state">
+        <div class="history-empty-icon">${(typeof POS_SVG !== "undefined" && POS_SVG.inbox) || ""}</div>
+        <div class="history-empty-title">${t('emptyHistory')}</div>
+      </div>
+    `;
     const summaryBadge = document.getElementById("history-total-summary-badge");
     if (summaryBadge) summaryBadge.innerText = `0 ${t('orderUnit')}`;
     return;
   }
 
-  const summaryBadge = document.getElementById("history-total-summary-badge");
-  if (summaryBadge) {
-    summaryBadge.innerText = `${orders.length} ${t('orderUnit')}`;
+  // Filter orders by filterType & searchQuery
+  let filteredOrders = orders;
+  if (historyFilterType === "dine_in") {
+    filteredOrders = filteredOrders.filter(o => (typeof isOrderDineIn === "function" ? isOrderDineIn(o) : o.diningOption === "dine_in"));
+  } else if (historyFilterType === "takeaway") {
+    filteredOrders = filteredOrders.filter(o => !(typeof isOrderDineIn === "function" ? isOrderDineIn(o) : o.diningOption === "dine_in"));
   }
 
-  const grouped = groupByDate(orders);
+  if (historySearchQuery) {
+    filteredOrders = filteredOrders.filter(o => {
+      const keyMatch = (o.key || "").toLowerCase().includes(historySearchQuery);
+      const custMatch = (o.customer || "").toLowerCase().includes(historySearchQuery);
+      const tableMatch = (String(o.tableNumber || "")).toLowerCase().includes(historySearchQuery);
+      const phoneMatch = (o.phone || "").toLowerCase().includes(historySearchQuery);
+      return keyMatch || custMatch || tableMatch || phoneMatch;
+    });
+  }
+
+  const summaryBadge = document.getElementById("history-total-summary-badge");
+  if (summaryBadge) {
+    if (filteredOrders.length !== orders.length) {
+      summaryBadge.innerText = `${filteredOrders.length} / ${orders.length} ${t('orderUnit')}`;
+    } else {
+      summaryBadge.innerText = `${orders.length} ${t('orderUnit')}`;
+    }
+  }
+
+  if (filteredOrders.length === 0) {
+    container.innerHTML = `
+      <div class="history-empty-state">
+        <div class="history-empty-icon">${(typeof POS_SVG !== "undefined" && POS_SVG.search) || ""}</div>
+        <div class="history-empty-title">${t('historyNoSearchResults')}</div>
+        <div class="history-empty-sub">${t('historyNoSearchResultsSub')}</div>
+        <button type="button" class="btn btn-ghost history-clear-filter-btn" onclick="clearHistorySearch(); setHistoryFilter('all');">
+          ${t('btnClearFilter')}
+        </button>
+      </div>
+    `;
+    return;
+  }
+
+  const grouped = groupByDate(filteredOrders);
   // Sort groups by date descending
   const sortedDates = Array.from(grouped.keys()).sort((a, b) => b.localeCompare(a));
 
@@ -106,7 +170,12 @@ function renderHistory(orders) {
   const toggleAllText = document.getElementById("btn-toggle-all-text");
   const toggleAllIcon = document.getElementById("btn-toggle-all-icon");
   if (toggleAllText) toggleAllText.innerText = isAllExpanded ? t('btnCollapseAll') : t('btnExpandAll');
-  if (toggleAllIcon) toggleAllIcon.innerText = isAllExpanded ? '📁' : '📂';
+  if (toggleAllIcon) {
+    const folderIconSvg = (typeof POS_SVG !== "undefined")
+      ? (isAllExpanded ? POS_SVG.folder : POS_SVG.folderOpen)
+      : "";
+    toggleAllIcon.innerHTML = folderIconSvg;
+  }
 
   for (const date of sortedDates) {
     let items = grouped.get(date) || [];
@@ -125,13 +194,15 @@ function renderHistory(orders) {
     groupEl.className = "history-date-group";
     groupEl.id = `history-group-${date}`;
 
+    const calendarSvg = (typeof POS_SVG !== "undefined" && POS_SVG.calendar) || "";
+
     // Header (Accordion Toggle)
     const header = document.createElement("div");
     header.className = `history-date-header ${isExpanded ? 'expanded' : ''}`;
     header.onclick = () => toggleHistoryDateGroup(date);
     header.innerHTML = `
       <div class="history-date-left">
-        <span class="history-date-icon">📅</span>
+        <div class="history-date-icon-box">${calendarSvg}</div>
         <span class="history-date-text">${escapeHtml(date)}</span>
         ${isToday ? `<span class="history-today-tag">${t('todayTag')}</span>` : ''}
       </div>
@@ -214,7 +285,10 @@ function renderHistory(orders) {
           ${itemsSummary ? `<div class="history-tile-items">${svgReceipt}${escapeHtml(itemsSummary)}</div>` : ''}
         </div>
         <div class="history-tile-actions">
-          <button class="history-tile-btn" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">${t('btnView')}</button>
+          <button type="button" class="btn btn-ghost history-tile-btn" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">
+            ${(typeof POS_SVG !== "undefined" && POS_SVG.eye) || ""}
+            <span>${t('btnView')}</span>
+          </button>
         </div>
       `;
       body.appendChild(tile);
