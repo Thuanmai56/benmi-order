@@ -144,7 +144,7 @@ assert(htmlContent.includes('class="modal-print-toolbar"'), "orders.html missing
 assert(htmlContent.includes('class="modal-lifecycle-footer"'), "orders.html missing modal-lifecycle-footer");
 assert(htmlContent.includes('btn-lifecycle-primary'), "orders.html missing btn-lifecycle-primary");
 assert(htmlContent.includes('btn-lifecycle-danger'), "orders.html missing btn-lifecycle-danger");
-assert(htmlContent.includes('btn-lifecycle-secondary'), "orders.html missing btn-lifecycle-secondary");
+assert(htmlContent.includes('btn-review-ready'), "orders.html missing btn-review-ready");
 assert(htmlContent.includes('i18n-print-tools-label'), "orders.html missing i18n-print-tools-label");
 console.log("✓ orders.html contains modal-print-toolbar and modal-lifecycle-footer");
 

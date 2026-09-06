@@ -367,9 +367,11 @@
       const items = [];
       if (Array.isArray(order.items) && order.items.length > 0) {
         order.items.forEach(it => {
+          const itemPrice = it.price ? (String(it.price).startsWith('$') ? String(it.price) : `$${it.price}`) : '';
           items.push({
             name: it.name || it.item_name || '餐點',
             quantity: Number(it.quantity) || 1,
+            price: itemPrice,
             options: Array.isArray(it.options) ? it.options.join('、') : (it.options || it.selected_options || ''),
             note: it.note || it.notes || '',
             round: it.round || ''
@@ -405,14 +407,16 @@
               currentItem.options = currentItem.options ? `${currentItem.options}、${opt}` : opt;
             }
           } else {
+            const priceMatch = line.match(/\$[\d,.]+/);
+            const itemPrice = priceMatch ? priceMatch[0] : '';
             const match = line.match(/^(\d+)\s*(?:份|x|X)\s*(?:x\s*)?(.+)$/) || line.match(/^(.+?)\s*[xX*]\s*(\d+)$/);
             if (match) {
               const qty = Number(match[1]) || Number(match[2]) || 1;
-              const name = (match[2] || match[1] || line).replace(/\$[\d,]+/g, '').trim();
-              currentItem = { name, quantity: qty, options: '', note: '', round: currentRound };
+              const name = (match[2] || match[1] || line).replace(/\$[\d,.]+/g, '').trim();
+              currentItem = { name, quantity: qty, price: itemPrice, options: '', note: '', round: currentRound };
               items.push(currentItem);
             } else {
-              currentItem = { name: line.replace(/\$[\d,]+/g, '').trim(), quantity: 1, options: '', note: '', round: currentRound };
+              currentItem = { name: line.replace(/\$[\d,.]+/g, '').trim(), quantity: 1, price: itemPrice, options: '', note: '', round: currentRound };
               items.push(currentItem);
             }
           }
@@ -420,7 +424,7 @@
       }
 
       if (items.length === 0) {
-        items.push({ name: '特餐餐點', quantity: 1, options: '', note: '', round: '' });
+        items.push({ name: '特餐餐點', quantity: 1, price: '', options: '', note: '', round: '' });
       }
 
       if (!expand) {
