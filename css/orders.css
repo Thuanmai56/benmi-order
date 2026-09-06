@@ -29,6 +29,308 @@ body {
   max-width: 100vw;
 }
 
+/* App Layout with Left Vertical Sidebar */
+.app.app-layout {
+  height: 100vh;
+  height: 100dvh;
+  display: flex !important;
+  flex-direction: row !important;
+  overflow: hidden;
+  max-width: 100vw;
+  width: 100vw;
+  background: var(--bg);
+}
+
+/* Sidebar Styles (Uber Eats Tablet-First Design) */
+/* Sidebar Styles (Uber Eats Tablet-First Design) */
+.app-sidebar {
+  width: 64px;
+  min-width: 64px;
+  height: 100%;
+  height: 100dvh;
+  background: #ffffff;
+  border-right: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  transition: width 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+  z-index: 100;
+  user-select: none;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.app-sidebar.expanded {
+  width: 230px;
+  min-width: 230px;
+  align-items: stretch;
+}
+
+.sidebar-header {
+  width: 100%;
+  height: 64px;
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.app-sidebar.expanded .sidebar-header {
+  justify-content: flex-start;
+  padding: 0 12px;
+}
+
+.sidebar-toggle-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: none;
+  background: transparent;
+  color: #111827;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  padding: 0;
+  margin: 0;
+  box-shadow: none;
+  outline: none;
+}
+
+.sidebar-toggle-btn:hover {
+  background: #f3f4f6;
+  color: #000000;
+}
+
+.sidebar-toggle-btn:active {
+  transform: scale(0.95);
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  width: 100%;
+  flex: 1;
+  box-sizing: border-box;
+}
+
+.app-sidebar.expanded .sidebar-nav {
+  align-items: stretch;
+  padding: 6px 10px;
+}
+
+.sidebar-nav-item,
+button.sidebar-nav-item,
+button.sidebar-nav-item.tab,
+button.sidebar-nav-item.mini-btn {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 44px !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+  border-radius: 12px !important;
+  border: none !important;
+  outline: none !important;
+  background: transparent !important;
+  color: #4b5563 !important;
+  cursor: pointer;
+  text-decoration: none;
+  position: relative;
+  transition: all 0.15s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box !important;
+  box-shadow: none !important;
+}
+
+.sidebar-nav-item:hover,
+button.sidebar-nav-item:hover {
+  background: #f3f4f6 !important;
+  color: #111827 !important;
+}
+
+.sidebar-nav-item.active,
+button.sidebar-nav-item.active {
+  background: #111827 !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+  border: none !important;
+}
+
+.sidebar-nav-item .nav-item-icon {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.sidebar-nav-item .nav-item-icon svg {
+  width: 22px;
+  height: 22px;
+  stroke: currentColor;
+  fill: none;
+  display: block;
+}
+
+.sidebar-nav-item.active .nav-item-icon svg {
+  stroke: #ffffff !important;
+}
+
+.sidebar-nav-item .sidebar-label {
+  display: none;
+  font-size: 14px;
+  font-weight: 700;
+  color: inherit;
+  white-space: nowrap;
+}
+
+/* Expanded Sidebar State */
+.app-sidebar.expanded .sidebar-nav-item,
+.app-sidebar.expanded button.sidebar-nav-item {
+  width: 100% !important;
+  height: 44px !important;
+  padding: 0 12px !important;
+  margin: 0 !important;
+  justify-content: flex-start !important;
+  gap: 12px !important;
+  border-radius: 10px !important;
+}
+
+.app-sidebar.expanded .sidebar-nav-item .sidebar-label {
+  display: inline-block;
+}
+
+.app-sidebar.expanded .sidebar-nav-item.active .sidebar-label {
+  color: #ffffff !important;
+}
+
+.sidebar-count-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  box-sizing: border-box;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.app-sidebar.expanded .sidebar-count-badge {
+  position: static;
+  margin-left: auto;
+  top: auto;
+  right: auto;
+  border: none;
+  box-shadow: none;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+}
+
+/* Main Layout Area */
+.main-layout {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+/* Main Content Topbar (Uber Eats Style) */
+.main-topbar {
+  height: 64px;
+  min-height: 64px;
+  background: #ffffff;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  gap: 16px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  transition: margin-top 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.22s ease,
+              visibility 0.28s ease;
+  will-change: margin-top, opacity;
+  z-index: 50;
+  position: relative;
+}
+
+.main-topbar.topbar-hidden {
+  margin-top: -65px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.main-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.page-main-title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 900;
+  color: #0f172a;
+  letter-spacing: -0.5px;
+  line-height: 1;
+}
+
+.brand-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #f1f5f9;
+  padding: 4px 12px 4px 6px;
+  border-radius: 999px;
+  color: #475569;
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.main-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .topbar {
   display: flex;
   align-items: center;
@@ -220,8 +522,11 @@ body {
   padding: 0;
   display: flex;
   flex-direction: column;
-  height: calc(100dvh - 65px);
+  flex: 1;
+  min-height: 0;
+  height: 100%;
   overflow: hidden;
+  background: #ffffff;
 }
 
 #view-live .live-split {
@@ -229,30 +534,38 @@ body {
   min-height: 0;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0;
+  gap: 24px;
+  padding: 8px 24px 24px 24px;
   background: #ffffff;
   height: 100%;
+  box-sizing: border-box;
 }
 
-.live-panel {
-  background: #f8fafc;
-  border: none;
-  border-radius: 0;
+#view-live .live-panel,
+#view-live .panel {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
   display: flex;
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
 }
 
-.live-split > .live-panel:first-child {
-  border-right: 1px solid #e2e8f0;
+#view-live .live-split > .live-panel:first-child {
+  border-right: none;
 }
 
-.live-panel-header {
-  height: 52px;
-  padding: 0 18px;
-  background: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
+#view-live .live-panel-header,
+#view-live .panel-header {
+  height: auto;
+  min-height: auto;
+  padding: 0 0 12px 0 !important;
+  background: transparent !important;
+  border: none !important;
+  border-bottom: none !important;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -262,69 +575,62 @@ body {
   flex-shrink: 0;
 }
 
+.live-panel-header .panel-header-title-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.live-panel-header .panel-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #111827;
+  letter-spacing: -0.3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.live-panel-header .panel-sub-inline {
+  font-size: 13px;
+  color: #9ca3af;
+  font-weight: 600;
+  margin-left: 6px;
+}
+
 .panel-pulse-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  display: inline-block;
-  flex-shrink: 0;
-  position: relative;
-}
-
-.panel-pulse-dot.dot-amber {
-  background: #f59e0b;
-  box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6);
-  animation: pulseAmber 2s infinite;
-}
-
-.panel-pulse-dot.dot-green {
-  background: #10b981;
-  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
-  animation: pulseGreen 2s infinite;
-}
-
-@keyframes pulseAmber {
-  0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6); }
-  70% { box-shadow: 0 0 0 6px rgba(245, 158, 11, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
-}
-
-@keyframes pulseGreen {
-  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
-  70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  display: none;
 }
 
 .live-count-badge {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 13px;
-  font-weight: 800;
-  padding: 4px 12px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 2px 8px;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
-  letter-spacing: 0.2px;
+  background: #e5e7eb;
+  color: #374151;
+  border: none;
+  box-shadow: none;
+  margin-left: 6px;
 }
 
-.live-count-badge.wait {
-  background: #fef3c7;
-  color: #b45309;
-  border: 1px solid #fde68a;
-}
-
+.live-count-badge.wait,
 .live-count-badge.done {
-  background: #ecfdf5;
-  color: #047857;
-  border: 1px solid #a7f3d0;
+  background: #e5e7eb;
+  color: #374151;
+  border: none;
 }
 
 .live-panel-body {
-  padding: 14px 16px;
+  padding: 4px 0 16px 0;
   overflow-y: auto;
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   scrollbar-width: thin;
   scrollbar-color: #cbd5e1 transparent;
 }
@@ -340,19 +646,25 @@ body {
 
 #view-history {
   padding: 10px 12px;
-  height: calc(100dvh - 65px);
+  flex: 1;
+  min-height: 0;
+  height: 100%;
   overflow: hidden;
 }
 
 #view-menu {
   padding: 0;
-  height: calc(100dvh - 65px);
+  flex: 1;
+  min-height: 0;
+  height: 100%;
   overflow: hidden;
 }
 
 #view-settings {
   padding: 0;
-  height: calc(100dvh - 65px);
+  flex: 1;
+  min-height: 0;
+  height: 100%;
   overflow: hidden;
 }
 
@@ -417,6 +729,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  flex: 1;
 }
 
 .badge {
@@ -585,52 +898,51 @@ body {
   border: 1px solid #ddd6fe;
 }
 
-/* --- High-End POS Order Tile (Toast / Square / Stripe Terminal Caliber) --- */
+/* --- High-End POS Order Tile (Uber Eats Tablet Minimalist Style) --- */
 .tile {
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
+  border: none !important;
+  border-left: none !important;
+  border-radius: 12px !important;
   padding: 0;
   display: flex;
   align-items: stretch;
   cursor: pointer;
-  background: #ffffff;
+  background: #f3f4f6 !important;
   overflow: hidden;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.02);
-  min-height: 88px;
+  transition: all 0.15s ease;
+  box-shadow: none !important;
+  min-height: 84px;
   box-sizing: border-box;
   position: relative;
 }
 
 .tile:hover {
-  border-color: #cbd5e1;
-  box-shadow: 0 4px 14px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
-  transform: translateY(-1px);
+  background: #eceff1 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+  transform: none !important;
 }
 
 .tile:active {
+  background: #e2e8f0 !important;
   transform: scale(0.995);
 }
 
-/* Status Accent Stripes */
-.tile.is-takeaway {
-  border-left: 4.5px solid #10b981;
-}
-
+/* Status Accent Stripes - None in Uber Flat Style */
+.tile.is-takeaway,
 .tile.is-dine-in {
-  border-left: 4.5px solid #8b5cf6;
+  border-left: none !important;
 }
 
 .tile.is-new {
-  border-left: 4.5px solid #ef4444 !important;
-  background: linear-gradient(90deg, rgba(254, 242, 242, 0.5) 0%, #ffffff 70px) !important;
-  box-shadow: 0 0 0 1.5px rgba(239, 68, 68, 0.15) inset, 0 2px 8px rgba(239, 68, 68, 0.08);
+  border-left: none !important;
+  background: #fee2e2 !important;
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.25) inset !important;
 }
 
 .tile.is-append-new {
-  border-left: 4.5px solid #f97316 !important;
-  background: linear-gradient(90deg, rgba(255, 247, 237, 0.65) 0%, #ffffff 70px) !important;
-  box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.2) inset, 0 4px 14px rgba(249, 115, 22, 0.12) !important;
+  border-left: none !important;
+  background: #ffedd5 !important;
+  box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.3) inset !important;
   animation: tile-append-pulse 2s infinite ease-in-out;
 }
 
@@ -658,23 +970,22 @@ body {
 .tile-top {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
   width: 100%;
-  flex-wrap: nowrap;
-  overflow: hidden;
+  flex-wrap: wrap;
 }
 
 .tile-customer {
-  font-weight: 900;
-  font-size: 15.5px;
+  font-weight: 800;
+  font-size: 16.5px;
   color: #0f172a;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
   flex: 0 1 auto;
-  max-width: 140px;
+  max-width: 160px;
   letter-spacing: -0.2px;
 }
 
@@ -683,7 +994,7 @@ body {
   font-size: 12px;
   font-weight: 700;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  background: #f1f5f9;
+  background: #e2e8f0;
   padding: 2px 7px;
   border-radius: 6px;
   white-space: nowrap;
@@ -737,9 +1048,10 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
   width: 100%;
+  flex-wrap: wrap;
 }
 
 .tile-meta-tag {
@@ -849,62 +1161,116 @@ body {
 
 .tile-action-btn {
   width: 100%;
-  height: 100%;
-  min-height: 52px;
-  padding: 8px 8px;
-  border-radius: 10px !important;
+  height: auto;
+  min-height: 48px;
+  padding: 8px 10px;
+  border-radius: 8px !important;
   font-size: 13.5px;
   font-weight: 800;
   text-align: center;
   display: inline-flex;
-  flex-direction: column;
+  flex-direction: row;
   justify-content: center;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   white-space: nowrap;
-  border: none;
   cursor: pointer;
   transition: all 0.15s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   box-sizing: border-box;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
 
-.tile-action-btn:hover {
-  filter: brightness(1.05);
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
-  transform: translateY(-1px);
-}
-
 .tile-action-btn:active {
-  transform: translateY(1px);
-  filter: brightness(0.95);
+  transform: scale(0.97);
 }
 
+/* "Xem đơn" / Review order button (Dark Slate) */
 .btn-action-review {
-  background: #0284c7 !important;
+  background: #0f172a !important;
   color: #ffffff !important;
+  border: 1px solid #0f172a !important;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.25) !important;
 }
 
+.btn-action-review:hover {
+  background: #1e293b !important;
+  border-color: #1e293b !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.35) !important;
+}
+
+/* "Đã xong" / Ready button (Vibrant Emerald Green) */
 .btn-action-ready {
-  background: #10b981 !important;
+  background: #16a34a !important;
   color: #ffffff !important;
+  border: 1px solid #15803d !important;
+  box-shadow: 0 2px 6px rgba(22, 163, 74, 0.3) !important;
 }
 
+.btn-action-ready:hover {
+  background: #15803d !important;
+  border-color: #166534 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 10px rgba(22, 163, 74, 0.4) !important;
+}
+
+/* "Đã lấy" / Picked up button (Vibrant Royal Blue) */
 .btn-action-pickup {
-  background: #d97706 !important;
+  background: #2563eb !important;
   color: #ffffff !important;
+  border: 1px solid #1d4ed8 !important;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3) !important;
 }
 
+.btn-action-pickup:hover {
+  background: #1d4ed8 !important;
+  border-color: #1e40af !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.4) !important;
+}
+
+/* "Đã TT" / Dine-in Paid button (Vibrant Indigo) */
 .btn-action-paid {
-  background: #7c3aed !important;
+  background: #4f46e5 !important;
   color: #ffffff !important;
+  border: 1px solid #4338ca !important;
+  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.3) !important;
 }
 
+.btn-action-paid:hover {
+  background: #4338ca !important;
+  border-color: #3730a3 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 10px rgba(79, 70, 229, 0.4) !important;
+}
+
+/* Top-right corner status icons for "Đã xong" (1 check) and "Đã lấy / Đã TT" (2 checks) */
+.tile-action-btn.btn-action-ready,
+.tile-action-btn.btn-action-pickup,
+.tile-action-btn.btn-action-paid {
+  position: relative !important;
+}
+
+.tile-action-btn.btn-action-ready > svg,
+.tile-action-btn.btn-action-pickup > svg,
+.tile-action-btn.btn-action-paid > svg {
+  position: absolute !important;
+  top: 4px !important;
+  right: 6px !important;
+  margin: 0 !important;
+  width: 14px !important;
+  height: 14px !important;
+  stroke-width: 2.6px !important;
+  opacity: 0.95 !important;
+  pointer-events: none !important;
+}
+
+/* "Chờ trả lời" / Waiting reply button */
 .btn-action-waiting {
-  background: #f1f5f9 !important;
-  color: #94a3af !important;
+  background: #f3f4f6 !important;
+  color: #9ca3af !important;
+  border: 1px solid #e5e7eb !important;
   cursor: not-allowed !important;
   box-shadow: none !important;
   transform: none !important;
@@ -915,11 +1281,11 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   text-align: center;
-  padding: 48px 24px;
-  gap: 12px;
-  margin: auto;
+  padding: 16px 20px;
+  gap: 8px;
+  margin: 8px auto 0 auto;
 }
 
 .empty-state-icon-circle {
@@ -1078,24 +1444,415 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-#reviewModal .modal-content {
-  width: min(960px, 95vw);
-  max-height: min(94vh, 94dvh);
-  padding: 12px 18px;
+/* ==========================================================================
+   Full-Page Order Detail (Uber Eats Merchant Standard)
+   ========================================================================== */
+#reviewModal.order-detail-fullpage {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2000 !important;
+  background: #ffffff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  display: none;
+  flex-direction: column !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
 }
 
-#reviewModal .modal-header {
-  margin-bottom: 8px;
+.order-detail-page-container {
+  width: 100%;
+  min-height: 100%;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 44px 56px 44px;
+  box-sizing: border-box;
+  max-width: 1240px;
+  margin: 0 auto;
+}
+
+/* Top Navigation Bar */
+.order-detail-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0;
+  margin-bottom: 24px;
+  border-bottom: 1px solid #f1f5f9;
+  flex-shrink: 0;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.22s ease,
+              box-shadow 0.22s ease;
+  will-change: transform, opacity;
+}
+
+.order-detail-topbar.is-scrolled {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.order-detail-topbar.topbar-hidden {
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.order-detail-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.order-detail-circle-btn {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 50%;
+  background: #f3f4f6;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #111827;
+  transition: all 0.15s ease;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.order-detail-circle-btn:hover {
+  background: #e5e7eb;
+  transform: scale(1.05);
+}
+
+.order-detail-circle-btn:active {
+  transform: scale(0.95);
+}
+
+.order-detail-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #111827;
+  margin: 0;
+  letter-spacing: -0.5px;
+  display: flex;
+  align-items: center;
   gap: 8px;
 }
 
-#reviewModal .modal-header h3 {
-  font-size: 18px;
+.order-title-dot {
+  color: #94a3b8;
+  font-weight: 400;
+  margin: 0 4px;
 }
 
-#reviewModal .modal-close-btn {
-  width: 32px;
-  height: 32px;
+.order-title-key {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: #111827;
+}
+
+/* 2-Column Grid Layout (Uber Eats Merchant Standard) */
+.order-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 48px;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .order-detail-page-container {
+    padding: 16px 20px 32px 20px;
+  }
+
+  .order-detail-grid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+}
+
+/* Left Column: Items Breakdown */
+.order-detail-main-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.order-detail-meta-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 8px;
+}
+
+.order-detail-items-count {
+  font-weight: 800;
+  font-size: 17px;
+  color: #111827;
+}
+
+.order-detail-meta-divider {
+  color: #cbd5e1;
+}
+
+.order-detail-dining-tag .dining-pill {
+  font-size: 13.5px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+/* Detail Content & Items List */
+.order-detail-main-col .detail-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.order-detail-main-col .review-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.order-detail-main-col .review-item-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px 8px;
+  border: none;
+  border-bottom: 1px solid #f1f5f9;
+  border-radius: 8px;
+  background: transparent;
+  box-shadow: none;
+  min-height: 48px;
+  transition: background 0.15s ease;
+}
+
+.order-detail-main-col .review-item-row:hover {
+  background: #fafafa;
+}
+
+.order-detail-main-col .review-item-row.item-prepared {
+  background: #f8fafc;
+  opacity: 0.7;
+}
+
+.order-detail-main-col .review-item-name {
+  font-size: 16.5px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.4;
+}
+
+.order-detail-main-col .review-item-qty-badge {
+  font-size: 15px;
+  font-weight: 800;
+  color: #111827;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin-right: 4px;
+}
+
+.order-detail-main-col .review-item-options {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.order-detail-main-col .mod-chip {
+  font-size: 13px;
+  font-weight: 600;
+  background: #f1f5f9;
+  color: #475569;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+/* Totals Block */
+.order-detail-totals-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  padding-top: 24px;
+  margin-top: 16px;
+  border-top: 1.5px solid #e5e7eb;
+}
+
+.order-detail-total-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 32px;
+  min-width: 240px;
+}
+
+.order-detail-total-row.subtotal-row {
+  font-size: 15px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.order-detail-total-row.discount-row {
+  font-size: 15px;
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.order-detail-total-row.grand-total-row {
+  font-size: 20px;
+  font-weight: 900;
+  color: #111827;
+}
+
+.order-detail-total-row.grand-total-row .total-val {
+  color: #059669;
+  font-size: 22px;
+}
+
+.order-detail-total-row .total-val {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  text-align: right;
+  min-width: 110px;
+  font-weight: 800;
+}
+
+/* Right Column: Status & Action Sidebar */
+.order-detail-side-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.order-detail-status-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.order-detail-status-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #111827;
+  margin: 0;
+  letter-spacing: -0.3px;
+}
+
+.order-detail-time-text {
+  font-size: 14px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.order-detail-customer-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.customer-card-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.customer-avatar-circle {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border-radius: 50%;
+  background: #111827;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 800;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.customer-card-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.customer-card-name {
+  font-size: 16.5px;
+  font-weight: 800;
+  color: #111827;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.customer-card-sub {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.customer-card-pills {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.customer-pill {
+  font-size: 12.5px;
+  font-weight: 600;
+  background: #f1f5f9;
+  color: #334155;
+  padding: 5px 10px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.order-detail-customer-card .modal-lifecycle-footer {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  width: 100%;
+}
+
+.order-detail-customer-card .modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.order-detail-side-col .modal-print-toolbar {
+  margin: 0;
+  width: 100%;
+  border-radius: 12px;
 }
 
 #changeModal .modal-content {
@@ -2206,48 +2963,41 @@ body {
 .store-status-pill {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   border-radius: 999px;
   padding: 8px 16px;
   font-size: 15px;
-  font-weight: 1000;
+  font-weight: 700;
   cursor: pointer;
   outline: none;
   font-family: inherit;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  background: #f3f4f6;
+  border: none;
+  color: #111827;
+  box-shadow: none;
+  transition: background-color 0.15s ease, transform 0.1s ease;
 }
 
 .store-status-pill:hover {
-  filter: brightness(0.97);
-  transform: translateY(-1px);
+  background: #e5e7eb;
 }
 
 .store-status-pill:active {
+  background: #d1d5db;
   transform: scale(0.98);
 }
 
-.store-status-pill.open {
-  background: #f0fdf4;
-  border: 1.5px solid #86efac;
-  color: #15803d;
-}
-
-.store-status-pill.busy {
-  background: #fffbeb;
-  border: 1.5px solid #fcd34d;
-  color: #b45309;
-}
-
+.store-status-pill.open,
+.store-status-pill.busy,
 .store-status-pill.paused {
-  background: #fef2f2;
-  border: 1.5px solid #fca5a5;
-  color: #b91c1c;
+  background: #f3f4f6;
+  border: none;
+  color: #111827;
 }
 
 .status-dot {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   display: inline-block;
   flex-shrink: 0;
@@ -2256,37 +3006,28 @@ body {
 .store-status-pill.open .status-dot,
 .status-dot.dot-open {
   background: #16a34a;
-  animation: pulseOpen 2s infinite;
 }
 
 .store-status-pill.busy .status-dot,
 .status-dot.dot-busy {
   background: #d97706;
-  animation: pulseBusy 2s infinite;
 }
 
 .store-status-pill.paused .status-dot,
 .status-dot.dot-paused {
   background: #dc2626;
-  animation: pulsePaused 2s infinite;
 }
 
-@keyframes pulseOpen {
-  0% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.7); }
-  70% { box-shadow: 0 0 0 6px rgba(22, 163, 74, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
+.status-arrow {
+  width: 14px;
+  height: 14px;
+  color: #111827;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
 }
 
-@keyframes pulseBusy {
-  0% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.7); }
-  70% { box-shadow: 0 0 0 6px rgba(217, 119, 6, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0); }
-}
-
-@keyframes pulsePaused {
-  0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); }
-  70% { box-shadow: 0 0 0 6px rgba(220, 38, 38, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+.store-status-dropdown.open .status-arrow {
+  transform: rotate(180deg);
 }
 
 .status-arrow {
@@ -3919,16 +4660,26 @@ body {
 
 .modal-lifecycle-footer .modal-actions {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
   gap: 8px;
 }
 
+#review-actions {
+  grid-template-columns: 1.4fr 1fr 1fr;
+}
+
+#review-actions-accepted,
+#review-actions-done,
+#review-actions-waiting {
+  grid-template-columns: 1.6fr 1fr;
+}
+
 .btn-lifecycle-primary {
-  min-height: 40px !important;
+  min-height: 48px !important;
   border-radius: 8px !important;
   font-size: 14px !important;
   font-weight: 800 !important;
-  padding: 6px 14px !important;
+  padding: 8px 14px !important;
   background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
   color: #ffffff !important;
   border: 1px solid #059669 !important;
@@ -3948,12 +4699,56 @@ body {
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35) !important;
 }
 
+.btn-lifecycle-blue {
+  min-height: 48px !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  padding: 8px 14px !important;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid #1d4ed8 !important;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25) !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.btn-lifecycle-blue:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35) !important;
+}
+
+/* Top-right corner status icons for Review Modal lifecycle buttons */
+#btn-review-ready,
+#btn-review-picked {
+  position: relative !important;
+}
+
+#btn-review-ready > svg,
+#btn-review-picked > svg {
+  position: absolute !important;
+  top: 6px !important;
+  right: 10px !important;
+  margin: 0 !important;
+  width: 16px !important;
+  height: 16px !important;
+  stroke-width: 2.6px !important;
+  opacity: 0.95 !important;
+  pointer-events: none !important;
+}
+
 .btn-lifecycle-danger {
-  min-height: 40px !important;
+  min-height: 48px !important;
   border-radius: 8px !important;
   font-size: 13.5px !important;
   font-weight: 700 !important;
-  padding: 6px 12px !important;
+  padding: 8px 12px !important;
   background: #fef2f2 !important;
   border: 1.2px solid #fecaca !important;
   color: #dc2626 !important;
@@ -3972,11 +4767,11 @@ body {
 }
 
 .btn-lifecycle-secondary {
-  min-height: 40px !important;
+  min-height: 48px !important;
   border-radius: 8px !important;
   font-size: 13.5px !important;
   font-weight: 700 !important;
-  padding: 6px 12px !important;
+  padding: 8px 12px !important;
   background: #f1f5f9 !important;
   border: 1.2px solid #e2e8f0 !important;
   color: #475569 !important;
@@ -3993,11 +4788,11 @@ body {
 }
 
 .btn-lifecycle-change {
-  min-height: 40px !important;
+  min-height: 48px !important;
   border-radius: 8px !important;
   font-size: 13.5px !important;
   font-weight: 700 !important;
-  padding: 6px 12px !important;
+  padding: 8px 12px !important;
   background: #fffbeb !important;
   border: 1.2px solid #fde68a !important;
   color: #b45309 !important;
@@ -4015,11 +4810,11 @@ body {
 }
 
 .btn-lifecycle-purple {
-  min-height: 40px !important;
+  min-height: 48px !important;
   border-radius: 8px !important;
   font-size: 14px !important;
   font-weight: 800 !important;
-  padding: 6px 12px !important;
+  padding: 8px 12px !important;
   background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%) !important;
   color: #ffffff !important;
   border: 1px solid #6d28d9 !important;

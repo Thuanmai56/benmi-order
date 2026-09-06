@@ -542,12 +542,12 @@
 /* Action button 100% full width */
 .kds-btn-bottom-full {
   width: 100%;
-  height: 38px;
-  min-height: 38px;
+  height: 42px;
+  min-height: 42px;
   border-radius: 8px;
   border: none;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 13.5px;
+  font-weight: 800;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -564,7 +564,7 @@
 .kds-btn-accept {
   background: #059669;
   color: #ffffff;
-  box-shadow: 0 1px 2px rgba(5, 150, 105, 0.2);
+  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);
 }
 
 .kds-btn-accept:hover {
@@ -874,19 +874,35 @@
   gap: 5px;
 }
 
-/* 100% Full Width Finish Button */
+/* 100% Full Width Finish Button ("Đã xong" = Green) */
 .kds-btn-done {
-  background: #0284c7;
+  background: #16a34a;
   color: #ffffff;
-  box-shadow: 0 1px 2px rgba(2, 132, 199, 0.2);
+  box-shadow: 0 2px 6px rgba(22, 163, 74, 0.25);
 }
 
 .kds-btn-done:hover {
-  background: #0369a1;
+  background: #15803d;
 }
 
 .kds-btn-done:active {
-  background: #0284c7;
+  background: #166534;
+}
+
+.kds-btn-done {
+  position: relative !important;
+}
+
+.kds-btn-done > svg {
+  position: absolute !important;
+  top: 5px !important;
+  right: 9px !important;
+  margin: 0 !important;
+  width: 15px !important;
+  height: 15px !important;
+  stroke-width: 2.6px !important;
+  opacity: 0.95 !important;
+  pointer-events: none !important;
 }
 
 /* ==========================================================================
@@ -930,16 +946,22 @@
   color: #0f172a;
 }
 
+/* "Đã lấy" = Royal Blue */
 .kds-btn-handover {
-  background: #059669;
+  background: #2563eb;
   color: #ffffff;
-  height: 36px;
-  min-height: 36px;
-  box-shadow: 0 1px 2px rgba(5, 150, 105, 0.2);
+  height: 42px;
+  min-height: 42px;
+  font-weight: 800;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
 }
 
 .kds-btn-handover:hover {
-  background: #047857;
+  background: #1d4ed8;
+}
+
+.kds-btn-handover:active {
+  background: #1e40af;
 }
 
 /* Empty State Cards */

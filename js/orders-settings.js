@@ -135,6 +135,9 @@ function openSettings() {
   document.querySelectorAll(".mini-btn").forEach(t => t.classList.remove("active"));
   const tabSettings = document.getElementById("tab-settings");
   if (tabSettings) tabSettings.classList.add("active");
+  if (typeof updateSidebarActive === "function") {
+    updateSidebarActive("settings");
+  }
   document.querySelectorAll(".content").forEach(c => c.style.display = "none");
   const viewSettings = document.getElementById("view-settings");
   if (viewSettings) viewSettings.style.display = "block";
@@ -144,7 +147,6 @@ function openSettings() {
   renderReportsSetting();
   renderStorePairingSection();
   loadPOSPrinterSettings();
-  if (typeof updateUiModeElements === 'function') updateUiModeElements();
   initSettingsScrollSpy();
 }
 
@@ -1060,7 +1062,6 @@ async function testPOSPrinterStation(station) {
 
 // --- Settings Table of Contents (TOC) & ScrollSpy ---
 const SETTINGS_SECTIONS = [
-  { id: "setting-card-uimode", tocId: "toc-item-uimode" },
   { id: "setting-card-status", tocId: "toc-item-status" },
   { id: "setting-card-ordermode", tocId: "toc-item-ordermode" },
   { id: "setting-card-hours", tocId: "toc-item-hours" },
@@ -1100,7 +1101,10 @@ function scrollToSettingSection(sectionId) {
   isManualSettingScroll = true;
   if (settingScrollTimeout) clearTimeout(settingScrollTimeout);
 
-  target.scrollIntoView({ behavior: "smooth", block: "start" });
+  const containerRect = container.getBoundingClientRect();
+  const targetRect = target.getBoundingClientRect();
+  const relativeTop = targetRect.top - containerRect.top + container.scrollTop;
+  container.scrollTo({ top: Math.max(0, relativeTop - 12), behavior: "smooth" });
 
   settingScrollTimeout = setTimeout(() => {
     isManualSettingScroll = false;

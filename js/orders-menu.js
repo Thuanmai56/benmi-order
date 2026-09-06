@@ -41,6 +41,9 @@ function openMenuSettings() {
   document.querySelectorAll(".mini-btn").forEach(t => t.classList.remove("active"));
   const tabMenu = document.getElementById("tab-menu");
   if (tabMenu) tabMenu.classList.add("active");
+  if (typeof updateSidebarActive === "function") {
+    updateSidebarActive("menu");
+  }
   document.querySelectorAll(".content").forEach(c => c.style.display = "none");
   const viewMenu = document.getElementById("view-menu");
   if (viewMenu) viewMenu.style.display = "block";
@@ -123,15 +126,19 @@ async function loadMenuData() {
       items: []
     }));
 
-    activeCategoryIndex = -1;
+    activeCategoryIndex = currentMenuData.length > 0 ? 0 : -1;
     renderMenuCategories();
-    if (bodyEl) bodyEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;" id="i18n-menu-select-prompt">${t("menuSelectPrompt")}</div>`;
-    const titleEl = document.getElementById("menu-editor-title");
-    if (titleEl) titleEl.innerText = t("menuEditorTitle");
-    const renameBtn = document.getElementById("btn-category-rename");
-    const deleteBtn = document.getElementById("btn-category-delete");
-    if (renameBtn) renameBtn.style.display = "none";
-    if (deleteBtn) deleteBtn.style.display = "none";
+    if (activeCategoryIndex >= 0) {
+      renderMenuCategoryEditor(0);
+    } else {
+      if (bodyEl) bodyEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;" id="i18n-menu-select-prompt">${t("menuSelectPrompt")}</div>`;
+      const titleEl = document.getElementById("menu-editor-title");
+      if (titleEl) titleEl.innerText = t("menuEditorTitle");
+      const renameBtn = document.getElementById("btn-category-rename");
+      const deleteBtn = document.getElementById("btn-category-delete");
+      if (renameBtn) renameBtn.style.display = "none";
+      if (deleteBtn) deleteBtn.style.display = "none";
+    }
   } catch (e) {
     console.warn("Bootstrap load failed, falling back to legacy /api/menu:", e);
     try {
@@ -147,15 +154,19 @@ async function loadMenuData() {
           return { name, price: typeof price === 'object' ? price.price : price, badgeText: typeof price === 'object' ? (price.badge_text || '') : '', isOos, originalName: name };
         })
       }));
-      activeCategoryIndex = -1;
+      activeCategoryIndex = currentMenuData.length > 0 ? 0 : -1;
       renderMenuCategories();
-      if (bodyEl) bodyEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;" id="i18n-menu-select-prompt">${t("menuSelectPrompt")}</div>`;
-      const titleEl = document.getElementById("menu-editor-title");
-      if (titleEl) titleEl.innerText = t("menuEditorTitle");
-      const renameBtn = document.getElementById("btn-category-rename");
-      const deleteBtn = document.getElementById("btn-category-delete");
-      if (renameBtn) renameBtn.style.display = "none";
-      if (deleteBtn) deleteBtn.style.display = "none";
+      if (activeCategoryIndex >= 0) {
+        renderMenuCategoryEditor(0);
+      } else {
+        if (bodyEl) bodyEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;" id="i18n-menu-select-prompt">${t("menuSelectPrompt")}</div>`;
+        const titleEl = document.getElementById("menu-editor-title");
+        if (titleEl) titleEl.innerText = t("menuEditorTitle");
+        const renameBtn = document.getElementById("btn-category-rename");
+        const deleteBtn = document.getElementById("btn-category-delete");
+        if (renameBtn) renameBtn.style.display = "none";
+        if (deleteBtn) deleteBtn.style.display = "none";
+      }
     } catch (err2) {
       alert(t("menuLoadFail") + err2.message);
     }

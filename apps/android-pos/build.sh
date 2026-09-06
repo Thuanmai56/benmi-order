@@ -18,15 +18,7 @@ mkdir -p "$DIST_DIR"
 cp "$ROOT_DIR/orders.html" "$DIST_DIR/orders.html"
 # Set orders.html as default landing page index.html in the Android POS App
 cp "$ROOT_DIR/orders.html" "$DIST_DIR/index.html"
-if [ -d "$ROOT_DIR/experiment" ]; then
-  cp -r "$ROOT_DIR/experiment" "$DIST_DIR/"
-fi
-if [ -f "$ROOT_DIR/orders_experiment.html" ]; then
-  cp "$ROOT_DIR/orders_experiment.html" "$DIST_DIR/"
-fi
-if [ -f "$ROOT_DIR/orders_experiments.html" ]; then
-  cp "$ROOT_DIR/orders_experiments.html" "$DIST_DIR/"
-fi
+
 if [ -f "$ROOT_DIR/index.html" ]; then
   cp "$ROOT_DIR/index.html" "$DIST_DIR/customer-menu.html"
 fi

@@ -14,6 +14,17 @@ const I18N = {
     tabPrinter: "印表機",
     tabMenu: "菜單",
     tabSettings: "設定",
+    sidebarLive: "即時訂單",
+    sidebarHistory: "歷史訂單",
+    sidebarMenu: "菜單管理",
+    sidebarPrinter: "出單印表機",
+    sidebarSettings: "系統設定",
+    sidebarSupport: "技術支援",
+    pageTitleLive: "訂單",
+    pageTitleHistory: "歷史訂單",
+    pageTitleMenu: "菜單管理",
+    pageTitleSettings: "系統設定",
+    pageTitleReports: "營業報表",
     headerStore: "門市: ",
     headerSwitch: "(切換)",
     reportsTitle: "餐點銷量與營收分析",
@@ -148,6 +159,9 @@ const I18N = {
     labelPickup: "取餐時間",
     labelEta: "剩餘時間",
     labelTotal: "總金額",
+    labelSubtotal: "小計",
+    labelGrandtotal: "總計",
+    labelDiscount: "折抵優惠",
     labelStatus: "狀態",
     labelDiningOption: "用餐方式",
     labelOrderItems: "餐點明細",
@@ -539,6 +553,17 @@ const I18N = {
     tabPrinter: "Máy in",
     tabMenu: "Thực đơn",
     tabSettings: "Cài đặt",
+    sidebarLive: "Đơn hàng",
+    sidebarHistory: "Lịch sử đơn",
+    sidebarMenu: "Thực đơn",
+    sidebarPrinter: "Máy in",
+    sidebarSettings: "Cài đặt",
+    sidebarSupport: "Hỗ trợ kỹ thuật",
+    pageTitleLive: "Đơn hàng",
+    pageTitleHistory: "Lịch sử đơn",
+    pageTitleMenu: "Quản lý thực đơn",
+    pageTitleSettings: "Cài đặt hệ thống",
+    pageTitleReports: "Báo cáo doanh thu",
     headerStore: "Quán: ",
     headerSwitch: "(Đổi)",
     reportsTitle: "Phân tích doanh số & Doanh thu món",
@@ -673,6 +698,9 @@ const I18N = {
     labelPickup: "Giờ lấy",
     labelEta: "Thời gian còn",
     labelTotal: "Tổng tiền",
+    labelSubtotal: "Tạm tính",
+    labelGrandtotal: "Tổng cộng",
+    labelDiscount: "Giảm giá",
     labelStatus: "Trạng thái",
     labelDiningOption: "Hình thức phục vụ",
     labelOrderItems: "Danh sách món",
@@ -1115,20 +1143,66 @@ function applyLanguageToDOM() {
 
   const brandSub = document.getElementById("i18n-brand-sub");
   if (brandSub) brandSub.innerText = dict.brandSub;
-  const tabLive = document.getElementById("tab-live");
-  if (tabLive) tabLive.innerText = dict.tabLive;
-  const tabHistory = document.getElementById("tab-history");
-  if (tabHistory) tabHistory.innerText = dict.tabHistory;
-  const tabReports = document.getElementById("tab-reports");
-  if (tabReports) tabReports.innerText = dict.tabReports;
+
+  const labelLive = document.getElementById("i18n-tab-live");
+  if (labelLive) {
+    labelLive.innerText = dict.sidebarLive || dict.tabLive || "即時訂單";
+  } else {
+    const tabLive = document.getElementById("tab-live");
+    if (tabLive) tabLive.innerText = dict.tabLive;
+  }
+
+  const labelHistory = document.getElementById("i18n-tab-history");
+  if (labelHistory) {
+    labelHistory.innerText = dict.sidebarHistory || dict.tabHistory || "歷史訂單";
+  } else {
+    const tabHistory = document.getElementById("tab-history");
+    if (tabHistory) tabHistory.innerText = dict.tabHistory;
+  }
+
+  const labelReports = document.getElementById("i18n-tab-reports");
+  if (labelReports) {
+    labelReports.innerText = dict.tabReports;
+  } else {
+    const tabReports = document.getElementById("tab-reports");
+    if (tabReports) tabReports.innerText = dict.tabReports;
+  }
+
   const tabSound = document.getElementById("tab-sound");
   if (tabSound) tabSound.innerText = dict.tabSound;
-  const tabMenu = document.getElementById("tab-menu");
-  if (tabMenu) tabMenu.innerText = dict.tabMenu;
-  const tabPrinter = document.getElementById("tab-printer-quick");
-  if (tabPrinter) tabPrinter.innerText = dict.tabPrinter;
-  const tabSettings = document.getElementById("tab-settings");
-  if (tabSettings) tabSettings.innerText = dict.tabSettings;
+
+  const labelMenu = document.getElementById("i18n-tab-menu");
+  if (labelMenu) {
+    labelMenu.innerText = dict.sidebarMenu || dict.tabMenu || "菜單管理";
+  } else {
+    const tabMenu = document.getElementById("tab-menu");
+    if (tabMenu) tabMenu.innerText = dict.tabMenu;
+  }
+
+  const labelPrinter = document.getElementById("i18n-tab-printer");
+  if (labelPrinter) {
+    labelPrinter.innerText = dict.sidebarPrinter || dict.tabPrinter || "出單印表機";
+  } else {
+    const tabPrinter = document.getElementById("tab-printer-quick");
+    if (tabPrinter) tabPrinter.innerText = dict.tabPrinter;
+  }
+
+  const labelSettings = document.getElementById("i18n-tab-settings");
+  if (labelSettings) {
+    labelSettings.innerText = dict.sidebarSettings || dict.tabSettings || "系統設定";
+  } else {
+    const tabSettings = document.getElementById("tab-settings");
+    if (tabSettings) tabSettings.innerText = dict.tabSettings;
+  }
+
+  const labelSupport = document.getElementById("i18n-tab-support");
+  if (labelSupport) {
+    labelSupport.innerText = dict.sidebarSupport || "技術支援";
+  }
+
+  if (typeof updatePageMainTitle === "function" && typeof activeTab !== "undefined") {
+    updatePageMainTitle(activeTab);
+  }
 
   // View Reports Elements
   const repTitle = document.getElementById("i18n-reports-title");
@@ -1263,6 +1337,12 @@ function applyLanguageToDOM() {
   if (lEta) lEta.innerText = dict.labelEta;
   const lTotal = document.getElementById("i18n-label-total");
   if (lTotal) lTotal.innerText = dict.labelTotal;
+  const lSubtotal = document.getElementById("i18n-label-subtotal");
+  if (lSubtotal) lSubtotal.innerText = dict.labelSubtotal;
+  const lGrandtotal = document.getElementById("i18n-label-grandtotal");
+  if (lGrandtotal) lGrandtotal.innerText = dict.labelGrandtotal;
+  const lDiscount = document.getElementById("i18n-label-discount");
+  if (lDiscount) lDiscount.innerText = dict.labelDiscount;
   const lStatus = document.getElementById("i18n-label-status");
   if (lStatus) lStatus.innerText = dict.labelStatus;
   const lDining = document.getElementById("i18n-label-dining");

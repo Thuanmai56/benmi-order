@@ -2,10 +2,111 @@
 // Benmi POS - Module: Modals & Change/Reject
 // ==========================================
 
+function formatOrderDetailHeaderTime(dateOrStr) {
+  let d = null;
+  if (dateOrStr) {
+    if (dateOrStr instanceof Date && !isNaN(dateOrStr.getTime())) {
+      d = dateOrStr;
+    } else {
+      const s = String(dateOrStr).trim();
+      const timeMatch = s.match(/(\d{1,2}):(\d{2})/);
+      const dateMatch = s.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+      if (dateMatch && timeMatch) {
+        d = new Date(parseInt(dateMatch[1], 10), parseInt(dateMatch[2], 10) - 1, parseInt(dateMatch[3], 10), parseInt(timeMatch[1], 10), parseInt(timeMatch[2], 10));
+      } else {
+        const parsed = new Date(s);
+        if (!isNaN(parsed.getTime())) d = parsed;
+      }
+    }
+  }
+  if (!d || isNaN(d.getTime())) d = new Date();
+
+  const lang = (typeof window !== "undefined" && window.currentLang) || "zh-TW";
+  const monthsEn = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const mStr = monthsEn[d.getMonth()];
+  const day = String(d.getDate()).padStart(2, "0");
+  const year = d.getFullYear();
+  const hours = d.getHours();
+  const minutes = String(d.getMinutes()).padStart(2, "0");
+  const ampm = hours >= 12 ? "PM" : "AM";
+  const h12 = hours % 12 || 12;
+
+  if (lang === "vi") {
+    return `${mStr} ${day}, ${year}, ${h12}:${minutes} ${ampm}`;
+  } else {
+    return `${year}年${d.getMonth() + 1}月${d.getDate()}日 ${ampm} ${h12}:${minutes}`;
+  }
+}
+window.formatOrderDetailHeaderTime = formatOrderDetailHeaderTime;
+
+if (typeof window !== "undefined" && !window.__orderModalEscRegistered) {
+  window.__orderModalEscRegistered = true;
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" || e.key === "Esc") {
+      const revModal = document.getElementById("reviewModal");
+      if (revModal && revModal.style.display !== "none") {
+        closeModal();
+      }
+    }
+  });
+}
+
+function initOrderDetailHeaderScroll() {
+  const reviewModal = document.getElementById("reviewModal");
+  if (!reviewModal) return;
+  const detailTopbar = reviewModal.querySelector(".order-detail-topbar");
+  if (!detailTopbar) return;
+
+  let lastReviewScrollTop = 0;
+  let reviewTicking = false;
+
+  reviewModal.addEventListener("scroll", () => {
+    if (!reviewTicking) {
+      const rAF = (typeof window !== "undefined" && window.requestAnimationFrame) || (cb => setTimeout(cb, 16));
+      rAF(() => {
+        const currentSt = reviewModal.scrollTop;
+        const diff = currentSt - lastReviewScrollTop;
+        if (currentSt > 20) {
+          detailTopbar.classList.add("is-scrolled");
+        } else {
+          detailTopbar.classList.remove("is-scrolled");
+        }
+
+        if (currentSt <= 20) {
+          detailTopbar.classList.remove("topbar-hidden");
+        } else if (Math.abs(diff) > 8) {
+          if (diff > 0 && currentSt > 50) {
+            detailTopbar.classList.add("topbar-hidden");
+          } else if (diff < 0) {
+            detailTopbar.classList.remove("topbar-hidden");
+          }
+        }
+        lastReviewScrollTop = currentSt;
+        reviewTicking = false;
+      });
+      reviewTicking = true;
+    }
+  }, { passive: true });
+
+  reviewModal.addEventListener("wheel", (e) => {
+    if (Math.abs(e.deltaY) > 5) {
+      if (e.deltaY > 0 && reviewModal.scrollTop > 40) {
+        detailTopbar.classList.add("topbar-hidden");
+      } else if (e.deltaY < 0) {
+        detailTopbar.classList.remove("topbar-hidden");
+      }
+    }
+  }, { passive: true });
+}
+window.initOrderDetailHeaderScroll = initOrderDetailHeaderScroll;
+
 function openReview(orderKey) {
   const order = (latestOrders || []).find(o => o && o.key === orderKey) || (typeof lastHistoryOrders !== "undefined" ? (lastHistoryOrders || []).find(o => o && o.key === orderKey) : null);
   if (!order) return;
   reviewingOrder = order;
+
+  const detailTopbar = document.querySelector(".order-detail-topbar");
+  if (detailTopbar) detailTopbar.classList.remove("topbar-hidden", "is-scrolled");
 
   if (typeof unacknowledgedAppends !== "undefined") {
     unacknowledgedAppends.delete(orderKey);
@@ -39,9 +140,18 @@ function openReview(orderKey) {
       : (t("reviewTitle") || "訂單詳情");
   }
 
+  const custName = (order.customer && order.customer.trim()) || (typeof t === "function" ? (t("guest") || "顧客") : "顧客");
+  const elCustHeader = document.getElementById("review-customer-header");
+  if (elCustHeader) elCustHeader.innerText = custName;
+
   const elKeyBadge = document.getElementById("review-order-key-badge");
   if (elKeyBadge) {
-    elKeyBadge.innerText = "#" + (order.key || "-");
+    elKeyBadge.innerText = (order.key || "-").replace(/^#/, "");
+  }
+
+  const elCustAvatar = document.getElementById("review-customer-avatar");
+  if (elCustAvatar) {
+    elCustAvatar.innerText = custName ? custName.charAt(0).toUpperCase() : "👤";
   }
 
   const elKey = document.getElementById("review-order-key");
@@ -49,8 +159,20 @@ function openReview(orderKey) {
 
   const elCust = document.getElementById("review-customer");
   if (elCust) {
-    const userSvg = (typeof POS_SVG !== "undefined" && POS_SVG.user) || "";
-    elCust.innerHTML = `${userSvg}<span>${escapeHtml(order.customer || "-")}</span>`;
+    elCust.innerText = order.customer ? order.customer.trim() : "-";
+  }
+
+  const elCustSub = document.getElementById("review-customer-sub");
+  if (elCustSub) {
+    const tableNum = typeof getOrderTableNumber === "function" ? getOrderTableNumber(order) : (order.tableNumber || "");
+    const lang = window.currentLang || (typeof currentLang !== "undefined" ? currentLang : "zh-TW");
+    if (order.phone) {
+      elCustSub.innerText = order.phone;
+    } else if (isDineIn) {
+      elCustSub.innerText = tableNum ? (lang === 'vi' ? `Bàn ${tableNum}` : `桌號 ${tableNum}`) : (t('dineIn') || (lang === 'vi' ? "Dùng tại quán" : "內用"));
+    } else {
+      elCustSub.innerText = t('takeaway') || (lang === 'vi' ? "Mang đi" : "外帶");
+    }
   }
 
   const elPick = document.getElementById("review-pickup");
@@ -69,34 +191,91 @@ function openReview(orderKey) {
   const elTot = document.getElementById("review-total");
   if (elTot) elTot.innerText = formatOrderTotal(order);
 
-  const elSt = document.getElementById("review-status");
-  if (elSt) {
-    let statusText = order.status || "-";
-    let statusCls = "status-pill-default";
-    if (order.status === "NEW") {
-      statusText = t("statusPillNew") || "待處理";
-      statusCls = "status-pill-new";
-    } else if (order.status === "ACCEPTED") {
-      statusText = t("statusPillAccepted") || "製作中";
-      statusCls = "status-pill-accepted";
-    } else if (order.status === "DONE") {
-      statusText = t("statusPillDone") || "待取餐";
-      statusCls = "status-pill-done";
-    } else if (order.status === "PICKED_UP") {
-      statusText = t("statusPillPicked") || "已取餐";
-      statusCls = "status-pill-picked";
-    } else if (order.status === "PAID") {
-      statusText = t("statusPillPaid") || "已結帳";
-      statusCls = "status-pill-paid";
-    } else if (order.status === "REJECTED" || order.status === "CANCELLED") {
-      statusText = t("statusPillRejected") || "已取消";
-      statusCls = "status-pill-rejected";
-    } else if (order.status === "WAITING_CUSTOMER_CHANGE" || order.status === "WAITING_CUSTOMER_REJECT") {
-      statusText = t("statusPillWaiting") || "待客人確認";
-      statusCls = "status-pill-waiting";
+  // Check if there is an item subtotal vs total discrepancy (discount / combo savings)
+  let itemsSubtotal = 0;
+  if (typeof PrinterService !== "undefined" && typeof PrinterService.parseOrderItems === "function") {
+    const parsedItems = PrinterService.parseOrderItems(order, false) || [];
+    parsedItems.forEach(it => {
+      const p = Number(it.price) || 0;
+      const q = Number(it.qty) || 1;
+      if (p > 0) {
+        itemsSubtotal += p * q;
+      }
+    });
+  }
+
+  let finalTotalNum = 0;
+  if (order?.total !== undefined && order?.total !== null && !isNaN(order.total) && Number(order.total) > 0) {
+    finalTotalNum = Number(order.total);
+  } else if (order?.content) {
+    const match = String(order.content).match(/💰\s*總金額[：:]\s*\$?(\d+)/) || String(order.content).match(/Tổng\s*(?:tiền)?[：:]\s*(\d+)/i);
+    if (match) {
+      finalTotalNum = Number(match[1]);
     }
+  }
+
+  const subtotalRow = document.getElementById("review-subtotal-row");
+  const discountRow = document.getElementById("review-discount-row");
+  const elSubtot = document.getElementById("review-subtotal");
+  const elDiscount = document.getElementById("review-discount");
+
+  if (itemsSubtotal > finalTotalNum && finalTotalNum > 0) {
+    const discountAmount = itemsSubtotal - finalTotalNum;
+    if (subtotalRow) subtotalRow.style.display = "flex";
+    if (discountRow) discountRow.style.display = "flex";
+    if (elSubtot) elSubtot.innerText = `$${itemsSubtotal.toLocaleString()}`;
+    if (elDiscount) elDiscount.innerText = `-$${discountAmount.toLocaleString()}`;
+  } else {
+    // Normal order without discount: hide subtotal & discount rows so merchant sees only one clean "Tổng cộng"
+    if (subtotalRow) subtotalRow.style.display = "none";
+    if (discountRow) discountRow.style.display = "none";
+  }
+
+  const elSt = document.getElementById("review-status");
+  const elStatusTitle = document.getElementById("review-status-title");
+  let statusText = order.status || "-";
+  let statusCls = "status-pill-default";
+  const lang = window.currentLang || (typeof currentLang !== "undefined" ? currentLang : "zh-TW");
+
+  if (order.status === "NEW") {
+    statusText = t("statusPillNew") || (lang === "vi" ? "Chờ xác nhận" : "待處理");
+    statusCls = "status-pill-new";
+  } else if (order.status === "ACCEPTED") {
+    statusText = t("statusPillAccepted") || (lang === "vi" ? "Đang làm" : "製作中");
+    statusCls = "status-pill-accepted";
+  } else if (order.status === "DONE") {
+    statusText = t("statusPillDone") || (lang === "vi" ? (isDineIn ? "Chờ hoàn thành" : "Chờ lấy món") : "待取餐");
+    statusCls = "status-pill-done";
+  } else if (order.status === "PICKED_UP") {
+    statusText = t("statusPillPicked") || (lang === "vi" ? "Đã giao hàng" : "已取餐");
+    statusCls = "status-pill-picked";
+  } else if (order.status === "PAID") {
+    statusText = t("statusPillPaid") || (lang === "vi" ? "Đã hoàn thành" : "已結帳");
+    statusCls = "status-pill-paid";
+  } else if (order.status === "REJECTED" || order.status === "CANCELLED") {
+    statusText = t("statusPillRejected") || (lang === "vi" ? "Đã hủy" : "已取消");
+    statusCls = "status-pill-rejected";
+  } else if (order.status === "WAITING_CUSTOMER_CHANGE" || order.status === "WAITING_CUSTOMER_REJECT") {
+    statusText = t("statusPillWaiting") || (lang === "vi" ? "Chờ khách xác nhận" : "待客人確認");
+    statusCls = "status-pill-waiting";
+  }
+
+  if (elSt) {
     elSt.className = `status-pill ${statusCls}`;
     elSt.innerText = statusText;
+  }
+  if (elStatusTitle) {
+    elStatusTitle.innerText = statusText;
+  }
+
+  const elTimeDisplay = document.getElementById("review-time-display");
+  if (elTimeDisplay) {
+    elTimeDisplay.innerText = formatOrderDetailHeaderTime(order.time || order.created_at);
+  }
+
+  const elPillOrders = document.getElementById("review-pill-orders");
+  if (elPillOrders) {
+    elPillOrders.innerText = lang === "vi" ? "1 đơn hàng trước đây ⓘ" : "歷史訂單 1 筆 ⓘ";
   }
 
   const elDining = document.getElementById("review-dining");
@@ -168,7 +347,10 @@ function openReview(orderKey) {
   }
 
   const revModal = document.getElementById("reviewModal");
-  if (revModal) revModal.style.display = "flex";
+  if (revModal) {
+    revModal.scrollTop = 0;
+    revModal.style.display = "flex";
+  }
 }
 
 function completeOrderFromReview(btn) {

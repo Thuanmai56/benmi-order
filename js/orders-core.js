@@ -383,10 +383,20 @@ function switchTab(tab) {
   const tabLive = document.getElementById("tab-live");
   const tabHistory = document.getElementById("tab-history");
   const tabReports = document.getElementById("tab-reports");
+  const tabMenu = document.getElementById("tab-menu");
+  const tabSettings = document.getElementById("tab-settings");
+
   if (tabLive) tabLive.classList.toggle("active", tab === "live");
   if (tabHistory) tabHistory.classList.toggle("active", tab === "history");
   if (tabReports) tabReports.classList.toggle("active", tab === "reports");
+  if (tabMenu) tabMenu.classList.toggle("active", tab === "menu");
+  if (tabSettings) tabSettings.classList.toggle("active", tab === "settings");
+
   document.querySelectorAll(".mini-btn").forEach(t => t.classList.remove("active"));
+
+  if (typeof updateSidebarActive === "function") {
+    updateSidebarActive(tab);
+  }
 
   const viewLive = document.getElementById("view-live");
   const viewHistory = document.getElementById("view-history");
@@ -397,8 +407,8 @@ function switchTab(tab) {
   if (viewLive) viewLive.style.display = tab === "live" ? "block" : "none";
   if (viewHistory) viewHistory.style.display = tab === "history" ? "block" : "none";
   if (viewReports) viewReports.style.display = tab === "reports" ? "block" : "none";
-  if (viewSettings) viewSettings.style.display = "none";
-  if (viewMenu) viewMenu.style.display = "none";
+  if (viewSettings) viewSettings.style.display = tab === "settings" ? "block" : "none";
+  if (viewMenu) viewMenu.style.display = tab === "menu" ? "block" : "none";
 
   if (tab === "live") {
     renderAll();
@@ -411,6 +421,14 @@ function switchTab(tab) {
   } else if (tab === "reports") {
     if (typeof fetchReportData === "function") {
       fetchReportData(typeof currentReportRange !== "undefined" ? currentReportRange : "today");
+    }
+  } else if (tab === "menu") {
+    if (typeof openMenuSettings === "function") {
+      openMenuSettings();
+    }
+  } else if (tab === "settings") {
+    if (typeof openSettings === "function") {
+      openSettings();
     }
   }
 }
@@ -540,6 +558,17 @@ function renderAll() {
   const cRight = document.getElementById("count-right");
   if (cRight) cRight.innerText = String(rightOrders.length);
 
+  const sidebarLiveBadge = document.getElementById("sidebar-live-count");
+  if (sidebarLiveBadge) {
+    const totalLive = leftOrders.length + rightOrders.length;
+    if (totalLive > 0) {
+      sidebarLiveBadge.innerText = String(totalLive);
+      sidebarLiveBadge.style.display = "inline-flex";
+    } else {
+      sidebarLiveBadge.style.display = "none";
+    }
+  }
+
   if (typeof updateDiningFilterStats === "function") {
     updateDiningFilterStats(leftOrders.concat(rightOrders));
   }
@@ -605,85 +634,206 @@ window.renderAll = renderAll;
 window.copyToClipboard = copyToClipboard;
 window.closeModal = closeModal;
 
-// ==========================================
-// POS UI Mode Management (Classic vs KDS Experiment)
-// ==========================================
-// POS UI Mode Controller (Classic POS vs KDS Experiment)
-// ==========================================
 function getPosUiMode() {
-  const search = (typeof window !== "undefined" && window.location && window.location.search) || "";
-  const params = new URLSearchParams(search);
-  const fromQuery = params.get("ui") || params.get("mode");
-  if (fromQuery === "experiment" || fromQuery === "kds") return "experiment";
-  if (fromQuery === "classic" || fromQuery === "standard") return "classic";
-
-  if (typeof localStorage !== "undefined") {
-    try {
-      const saved = localStorage.getItem("pos_ui_mode");
-      if (saved === "experiment" || saved === "classic") return saved;
-    } catch(e) {}
-  }
   return "classic";
 }
 
-function switchPosUiMode(targetMode) {
-  if (typeof window === "undefined" || !window.location) return;
-  const currentPath = window.location.pathname || "";
-  const isCurrentlyExperiment = currentPath.includes("experiment");
-  const mode = targetMode || (isCurrentlyExperiment ? "classic" : "experiment");
+function switchPosUiMode() {}
 
-  if (typeof localStorage !== "undefined") {
-    try {
-      localStorage.setItem("pos_ui_mode", mode);
-    } catch(e) {}
-  }
+function updateUiModeElements() {}
 
-  const search = window.location.search || "";
-  const params = new URLSearchParams(search);
-  params.set("ui", mode);
-
-  if (mode === "experiment") {
-    window.location.href = "/experiment/orders.html?" + params.toString();
-  } else {
-    window.location.href = "/orders.html?" + params.toString();
-  }
+// ==========================================
+// Vertical Sidebar Management (Uber Eats Tablet-First)
+// ==========================================
+function toggleSidebar(forceState) {
+  const sidebar = document.getElementById("app-sidebar");
+  if (!sidebar) return;
+  const isExpanded = forceState !== undefined ? forceState : !sidebar.classList.contains("expanded");
+  sidebar.classList.toggle("expanded", isExpanded);
+  try {
+    localStorage.setItem("pos_sidebar_expanded", isExpanded ? "1" : "0");
+  } catch (e) {}
 }
 
-function updateUiModeElements() {
-  if (typeof window === "undefined" || !window.location) return;
-  const currentPath = window.location.pathname || "";
-  const isExperiment = currentPath.includes("experiment");
-
-  // 1. Topbar Pill
-  const pill = document.getElementById("ui-mode-pill");
-  const label = document.getElementById("i18n-uimode-badge");
-  const action = document.getElementById("i18n-uimode-action");
-
-  if (pill) {
-    pill.classList.toggle("active-kds", isExperiment);
-  }
-  if (label) {
-    label.innerText = isExperiment
-      ? (typeof t === "function" && t("uiModeKdsBadge") || "KDS Mới")
-      : (typeof t === "function" && t("uiModeClassicBadge") || "POS Cổ điển");
-  }
-  if (action) {
-    action.innerText = isExperiment
-      ? (typeof t === "function" && t("uiModeBackClassic") || "Về UI cũ")
-      : (typeof t === "function" && t("uiModeTryKds") || "Thử KDS");
-  }
-
-  // 2. Settings Card
-  const cardClassic = document.getElementById("uimode-card-classic");
-  const cardKds = document.getElementById("uimode-card-kds");
-  const badgeCurrent = document.getElementById("uimode-active-badge");
-
-  if (cardClassic) cardClassic.classList.toggle("active", !isExperiment);
-  if (cardKds) cardKds.classList.toggle("active", isExperiment);
-  if (badgeCurrent) {
-    badgeCurrent.innerText = isExperiment ? "KDS EXPERIMENT" : "CLASSIC POS";
-  }
+function initSidebarState() {
+  const sidebar = document.getElementById("app-sidebar");
+  if (!sidebar) return;
+  try {
+    const saved = localStorage.getItem("pos_sidebar_expanded");
+    if (saved === "1") {
+      sidebar.classList.add("expanded");
+    } else {
+      sidebar.classList.remove("expanded");
+    }
+  } catch (e) {}
 }
+
+function updateSidebarActive(tabName) {
+  const navItems = document.querySelectorAll(".sidebar-nav-item");
+  navItems.forEach(item => {
+    const itemTab = item.getAttribute("data-tab");
+    item.classList.toggle("active", itemTab === tabName);
+  });
+  updatePageMainTitle(tabName);
+  if (typeof showMainTopbar === "function") showMainTopbar();
+}
+
+function updatePageMainTitle(tabName) {
+  const titleEl = document.getElementById("page-main-title");
+  if (!titleEl) return;
+  const currentLangCode = (typeof currentLang !== "undefined" ? currentLang : "zh-TW");
+  const titles = {
+    "live": currentLangCode === "vi" ? "Đơn hàng" : "訂單",
+    "history": currentLangCode === "vi" ? "Lịch sử đơn" : "歷史訂單",
+    "menu": currentLangCode === "vi" ? "Quản lý thực đơn" : "菜單管理",
+    "settings": currentLangCode === "vi" ? "Cài đặt hệ thống" : "系統設定",
+    "reports": currentLangCode === "vi" ? "Báo cáo doanh thu" : "營業報表"
+  };
+  titleEl.textContent = titles[tabName] || (currentLangCode === "vi" ? "Đơn hàng" : "訂單");
+}
+
+// ==========================================
+// Smart Hide-on-Scroll Topbar (Auto-collapse on scroll down, reveal on scroll up)
+// ==========================================
+function initSmartHeaderScroll() {
+  const mainTopbar = document.getElementById("main-topbar");
+  const mainLayout = document.getElementById("main-layout");
+  if (!mainTopbar || !mainLayout) return;
+
+  const lastScrollPositions = new WeakMap();
+  let ticking = false;
+  const THRESHOLD = 6;
+
+  function showMainTopbar() {
+    if (mainTopbar.classList.contains("topbar-hidden")) {
+      mainTopbar.classList.remove("topbar-hidden");
+    }
+  }
+
+  function isModalOverlayActive() {
+    const modals = document.querySelectorAll(".modal");
+    for (let i = 0; i < modals.length; i++) {
+      const m = modals[i];
+      if (m.id === "reviewModal") continue; // reviewModal is full-page detail with its own header logic
+      if (m.style && (m.style.display === "flex" || m.style.display === "block")) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function hideMainTopbar() {
+    // Never hide if store status dropdown menu is open
+    const statusDropdown = document.getElementById("store-status-dropdown");
+    if (statusDropdown && statusDropdown.classList.contains("open")) {
+      return;
+    }
+    const statusMenu = document.getElementById("store-status-menu");
+    if (statusMenu && (statusMenu.classList.contains("show") || statusMenu.style.display === "block")) {
+      return;
+    }
+    // Never hide if a modal is open
+    if (isModalOverlayActive()) {
+      return;
+    }
+    if (!mainTopbar.classList.contains("topbar-hidden")) {
+      mainTopbar.classList.add("topbar-hidden");
+    }
+  }
+
+  window.showMainTopbar = showMainTopbar;
+  window.hideMainTopbar = hideMainTopbar;
+
+  // 1. Capture-phase scroll listener on all scroll containers in mainLayout
+  window.addEventListener("scroll", (e) => {
+    const target = e.target;
+    if (target && target.closest && target.closest(".modal")) return;
+
+    let st = 0;
+    if (target === document || target === window) {
+      st = window.pageYOffset || document.documentElement.scrollTop;
+    } else if (target && typeof target.scrollTop === "number") {
+      st = target.scrollTop;
+    } else {
+      return;
+    }
+
+    if (target && typeof target === "object") {
+      target.__latestSt = st;
+    }
+
+    if (!ticking) {
+      const rAF = (typeof window !== "undefined" && window.requestAnimationFrame) || (cb => setTimeout(cb, 16));
+      rAF(() => {
+        let currentSt = 0;
+        if (target === document || target === window) {
+          currentSt = window.pageYOffset || document.documentElement.scrollTop;
+        } else if (target && typeof target.scrollTop === "number") {
+          currentSt = target.scrollTop;
+        }
+
+        const prevSt = lastScrollPositions.get(target) || 0;
+        const diff = currentSt - prevSt;
+
+        if (currentSt <= 15) {
+          showMainTopbar();
+        } else if (Math.abs(diff) >= THRESHOLD) {
+          if (diff > 0 && currentSt > 25) {
+            hideMainTopbar();
+          } else if (diff < 0) {
+            showMainTopbar();
+          }
+        }
+        lastScrollPositions.set(target, currentSt);
+        ticking = false;
+      });
+      ticking = true;
+    }
+  }, { capture: true, passive: true });
+
+  // 2. Touch gesture listener on mainLayout for immediate response on touch screens (iPad / Tablets)
+  let touchLastY = 0;
+
+  mainLayout.addEventListener("touchstart", (e) => {
+    if (e.touches && e.touches.length === 1) {
+      touchLastY = e.touches[0].clientY;
+    }
+  }, { passive: true });
+
+  mainLayout.addEventListener("touchmove", (e) => {
+    if (e.target && e.target.closest && e.target.closest(".modal")) return;
+    if (e.touches && e.touches.length === 1) {
+      const currentY = e.touches[0].clientY;
+      const deltaY = currentY - touchLastY; // > 0: pulling down (scroll up), < 0: pushing up (scroll down)
+      touchLastY = currentY;
+
+      if (deltaY > 10) {
+        showMainTopbar();
+      } else if (deltaY < -10) {
+        hideMainTopbar();
+      }
+    }
+  }, { passive: true });
+
+  // 3. Wheel event listener on mainLayout for mouse / trackpad
+  mainLayout.addEventListener("wheel", (e) => {
+    if (e.target && e.target.closest && e.target.closest(".modal")) return;
+    if (Math.abs(e.deltaY) > 5) {
+      if (e.deltaY > 0) {
+        hideMainTopbar();
+      } else if (e.deltaY < 0) {
+        showMainTopbar();
+      }
+    }
+  }, { passive: true });
+}
+
+window.initSmartHeaderScroll = initSmartHeaderScroll;
+
+window.toggleSidebar = toggleSidebar;
+window.initSidebarState = initSidebarState;
+window.updateSidebarActive = updateSidebarActive;
+window.updatePageMainTitle = updatePageMainTitle;
 
 window.getPosUiMode = getPosUiMode;
 window.switchPosUiMode = switchPosUiMode;

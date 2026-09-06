@@ -597,6 +597,7 @@ function renderItemRowHtml(it, idx, orderKey) {
         ${optionsHtml}
         ${noteHtml}
       </div>
+      ${it.price ? `<div class="review-item-price">${escapeHtml(it.price)}</div>` : ''}
       <button type="button" class="btn btn-ghost review-item-print-btn" onclick="if(typeof PrinterService !== 'undefined') PrinterService.printSingleItemSticker('${escapeHtml(orderKey)}', ${idx})" title="${escapeHtml(printLabel)}">
         ${printerIcon}
         <span>${escapeHtml(printLabel)}</span>
