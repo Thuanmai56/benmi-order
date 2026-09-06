@@ -1161,9 +1161,9 @@ button.sidebar-nav-item.active {
 
 .tile-action-btn {
   width: 100%;
-  height: auto;
+  height: 48px;
   min-height: 48px;
-  padding: 8px 10px;
+  padding: 8px 20px;
   border-radius: 8px !important;
   font-size: 13.5px;
   font-weight: 800;
@@ -1179,6 +1179,7 @@ button.sidebar-nav-item.active {
   box-sizing: border-box;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+  overflow: visible;
 }
 
 .tile-action-btn:active {
@@ -1245,25 +1246,31 @@ button.sidebar-nav-item.active {
   box-shadow: 0 4px 10px rgba(79, 70, 229, 0.4) !important;
 }
 
-/* Top-right corner status icons for "Đã xong" (1 check) and "Đã lấy / Đã TT" (2 checks) */
+/* Top-left corner status icons for "Đã xong" (1 check) and "Đã lấy / Đã TT" (2 checks) */
+/* Icon tràn ra ngoài border ở góc trái trên của nút */
 .tile-action-btn.btn-action-ready,
 .tile-action-btn.btn-action-pickup,
 .tile-action-btn.btn-action-paid {
   position: relative !important;
+  padding-left: 26px !important;
 }
 
 .tile-action-btn.btn-action-ready > svg,
 .tile-action-btn.btn-action-pickup > svg,
 .tile-action-btn.btn-action-paid > svg {
   position: absolute !important;
-  top: 4px !important;
-  right: 6px !important;
+  top: -6px !important;
+  left: -5px !important;
   margin: 0 !important;
-  width: 14px !important;
-  height: 14px !important;
+  width: 18px !important;
+  height: 18px !important;
   stroke-width: 2.6px !important;
-  opacity: 0.95 !important;
+  opacity: 1 !important;
   pointer-events: none !important;
+  background: inherit;
+  border-radius: 50%;
+  padding: 2px;
+  box-sizing: border-box;
 }
 
 /* "Chờ trả lời" / Waiting reply button */
@@ -3044,7 +3051,8 @@ button.sidebar-nav-item.active {
   display: none;
   position: absolute;
   top: calc(100% + 8px);
-  left: 0;
+  right: 0;
+  left: auto;
   min-width: 320px;
   background: #ffffff;
   border: 1px solid var(--border);
@@ -3727,38 +3735,90 @@ button.sidebar-nav-item.active {
   flex-shrink: 0;
 }
 
-.settings-sync-badge {
+/* Printer Status Pill in Settings Header (Replaces Cloud Sync Badge) */
+.settings-printer-status-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 11.5px;
+  gap: 7px;
+  font-size: 12.5px;
   font-weight: 800;
-  padding: 3px 9px;
+  padding: 5px 12px;
   border-radius: 99px;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  color: #15803d;
   user-select: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  max-width: 380px;
 }
 
-.settings-sync-dot {
-  width: 6.5px;
-  height: 6.5px;
+.settings-printer-status-pill.connected {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #047857;
+}
+
+.settings-printer-status-pill.connected:hover {
+  background: #d1fae5;
+  border-color: #6ee7b7;
+  transform: translateY(-1px);
+}
+
+.settings-printer-status-pill.disconnected {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+}
+
+.settings-printer-status-pill.disconnected:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+}
+
+.printer-status-dot {
+  width: 7.5px;
+  height: 7.5px;
   border-radius: 50%;
-  background: #10b981;
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
-  animation: pulseSyncDot 2.4s infinite ease-in-out;
+  flex-shrink: 0;
 }
 
-@keyframes pulseSyncDot {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.25);
-    opacity: 0.75;
-  }
+.printer-status-dot.online {
+  background: #10b981;
+  box-shadow: 0 0 0 2.5px rgba(16, 185, 129, 0.25);
+}
+
+.printer-status-dot.offline {
+  background: #94a3b8;
+}
+
+/* ========================================================
+   Platform Feature Visibility Separation
+   1. Native App: Hide Analytics/Reports ("Chức năng phân tích")
+   2. Web Platform: Hide Printing ("Chức năng in")
+   ======================================================== */
+
+/* App Mode (Android POS Tablet / Capacitor) */
+.is-native-app #toc-item-reports,
+.is-native-app #setting-card-reports,
+.is-native-app #view-reports,
+.is-native-app [data-feature="reports"] {
+  display: none !important;
+}
+
+/* Web Mode (Production Browser on PC/Mobile) */
+/* Hidden on production web; remains visible in dev/staging/localhost for UI testing */
+.is-web-platform.is-prod-env #toc-item-printer,
+.is-web-platform.is-prod-env #setting-card-printer,
+.is-web-platform.is-prod-env .modal-print-toolbar,
+.is-web-platform.is-prod-env .review-item-print-btn,
+.is-web-platform.is-prod-env #settings-printer-status-bar,
+.is-web-platform.is-prod-env [data-feature="printer"],
+.hide-web-printer #toc-item-printer,
+.hide-web-printer #setting-card-printer,
+.hide-web-printer .modal-print-toolbar,
+.hide-web-printer .review-item-print-btn,
+.hide-web-printer #settings-printer-status-bar,
+.hide-web-printer [data-feature="printer"] {
+  display: none !important;
 }
 
 .settings-toc-list {
@@ -3916,39 +3976,272 @@ button.sidebar-nav-item.active {
   }
 }
 
+/* Isolated Tabbed Settings Display (Master-Detail Architecture) */
 .settings-card {
+  display: none !important;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
+  border-radius: 14px;
   overflow: hidden;
   background: #ffffff;
-  flex-shrink: 0;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
   transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
-.settings-card:hover {
-  border-color: #cbd5e1;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+.settings-card.active {
+  display: flex !important;
+  flex-direction: column;
+  animation: fadeInSettingTab 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeInSettingTab {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .settings-card > div:first-child {
   background: #ffffff !important;
   border-bottom: 1px solid #f1f5f9 !important;
-  padding: 14px 18px !important;
+  padding: 16px 20px !important;
 }
 
 .settings-card > div:first-child div[style*="font-weight: 1100"],
 .settings-card > div:first-child div[style*="font-weight: 1000"] {
-  font-size: 16px !important;
+  font-size: 17px !important;
   font-weight: 900 !important;
   color: #0f172a !important;
   letter-spacing: -0.01em;
 }
 
 .settings-card > div:first-child div[style*="var(--muted)"] {
-  font-size: 12.5px !important;
+  font-size: 13px !important;
   color: #64748b !important;
   font-weight: 500 !important;
+}
+
+/* ===================================================
+   Modern Form Inputs & UI Controls (ui-styling)
+   =================================================== */
+
+.form-input,
+.form-select {
+  width: 100%;
+  height: 46px;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1e293b;
+  background-color: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  transition: border-color 0.15s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.form-input::placeholder {
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.form-input:focus,
+.form-select:focus {
+  outline: none;
+  border-color: var(--primary, #00b900);
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3.5px rgba(0, 185, 0, 0.12);
+}
+
+.form-input:hover:not(:focus),
+.form-select:hover:not(:focus) {
+  border-color: #cbd5e1;
+}
+
+/* Custom Select Dropdown with Clean SVG Chevron */
+.form-select,
+select.form-input {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 16px 16px;
+  padding-right: 40px;
+  cursor: pointer;
+}
+
+/* Tactile iOS / shadcn Style Toggle Switch (Tablet-First) */
+.ui-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  gap: 10px;
+  min-height: 40px;
+}
+
+.ui-switch input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.ui-switch-track {
+  position: relative;
+  width: 48px;
+  height: 26px;
+  background-color: #cbd5e1;
+  border-radius: 9999px;
+  transition: background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+}
+
+.ui-switch-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  background-color: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ui-switch input[type="checkbox"]:checked + .ui-switch-track {
+  background-color: var(--primary, #00b900);
+}
+
+.ui-switch input[type="checkbox"]:checked + .ui-switch-track .ui-switch-thumb {
+  transform: translateX(22px);
+}
+
+.ui-switch input[type="checkbox"]:focus-visible + .ui-switch-track {
+  box-shadow: 0 0 0 3.5px rgba(0, 185, 0, 0.2);
+}
+
+.ui-switch-label {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+/* Modern Printer Station Cards */
+.printer-station-card {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.printer-station-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.06);
+}
+
+.printer-station-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.printer-station-header .settings-printer-status-pill {
+  cursor: default;
+  transition: all 0.15s ease;
+  line-height: 1.3;
+}
+
+.printer-station-header .settings-printer-status-pill:hover {
+  transform: none;
+}
+
+.printer-station-title {
+  font-weight: 900;
+  font-size: 16px;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.printer-station-desc {
+  font-size: 12.5px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.printer-sub-box {
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.btn-refresh-bt {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  min-height: 32px;
+  border-radius: 7px;
+  background: #f1f5f9;
+  border: 1.5px solid #cbd5e1;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-refresh-bt:hover {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.btn-test-print {
+  width: 100%;
+  height: 46px;
+  background: #f8fafc;
+  color: #1e293b;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  margin-top: 4px;
+}
+
+.btn-test-print:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.btn-test-print:active {
+  transform: scale(0.99);
 }
 
 /* Radio & Selection Mode Cards (Modern :has support) */
@@ -4724,23 +5017,29 @@ button.sidebar-nav-item.active {
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35) !important;
 }
 
-/* Top-right corner status icons for Review Modal lifecycle buttons */
+/* Top-left corner status icons for Review Modal lifecycle buttons */
 #btn-review-ready,
 #btn-review-picked {
   position: relative !important;
+  overflow: visible !important;
+  padding-left: 30px !important;
 }
 
 #btn-review-ready > svg,
 #btn-review-picked > svg {
   position: absolute !important;
-  top: 6px !important;
-  right: 10px !important;
+  top: -7px !important;
+  left: -6px !important;
   margin: 0 !important;
-  width: 16px !important;
-  height: 16px !important;
+  width: 20px !important;
+  height: 20px !important;
   stroke-width: 2.6px !important;
-  opacity: 0.95 !important;
+  opacity: 1 !important;
   pointer-events: none !important;
+  background: inherit;
+  border-radius: 50%;
+  padding: 2px;
+  box-sizing: border-box;
 }
 
 .btn-lifecycle-danger {
@@ -4863,183 +5162,4 @@ button.sidebar-nav-item.active {
     grid-template-columns: 1fr;
   }
 }
-
-/* ==========================================================================
-   UI Mode Switcher & Settings (Classic vs KDS Experiment)
-   ========================================================================== */
-.ui-mode-container {
-  display: inline-flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.ui-mode-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  background: #f1f5f9;
-  border: 1px solid #cbd5e1;
-  padding: 6px 10px 6px 12px;
-  border-radius: 999px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 700;
-  color: #334155;
-  transition: all 0.18s ease;
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.ui-mode-pill:hover {
-  background: #e2e8f0;
-  border-color: #94a3b8;
-  color: #0f172a;
-}
-
-.ui-mode-pill:active {
-  transform: scale(0.97);
-}
-
-.ui-mode-pill.active-kds {
-  background: #f0f9ff;
-  border-color: #bae6fd;
-  color: #0369a1;
-}
-
-.ui-mode-pill.active-kds:hover {
-  background: #e0f2fe;
-  border-color: #7dd3fc;
-}
-
-.ui-mode-tag {
-  font-size: 11px;
-  font-weight: 800;
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: #0284c7;
-  color: #ffffff;
-  letter-spacing: 0.2px;
-  transition: all 0.15s ease;
-}
-
-.ui-mode-pill.active-kds .ui-mode-tag {
-  background: #ffffff;
-  color: #0369a1;
-  border: 1px solid #7dd3fc;
-}
-
-@media (max-width: 768px) {
-  .ui-mode-label {
-    display: none;
-  }
-}
-
-/* Settings Card Styles */
-.uimode-options-grid {
-  padding: 16px 20px 20px 20px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-}
-
-@media (max-width: 768px) {
-  .uimode-options-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.uimode-select-card {
-  border: 2px solid #e2e8f0;
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 16px;
-  cursor: pointer;
-  transition: all 0.18s ease;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.uimode-select-card:hover {
-  border-color: #cbd5e1;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-
-.uimode-select-card.active {
-  border-color: #0284c7;
-  background: #f0f9ff;
-  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.12);
-}
-
-.uimode-icon-wrap {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.uimode-icon-wrap.classic {
-  background: #f1f5f9;
-  color: #475569;
-}
-
-.uimode-icon-wrap.kds {
-  background: #e0f2fe;
-  color: #0284c7;
-}
-
-.uimode-radio {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  border: 2px solid #cbd5e1;
-  background: #ffffff;
-  position: relative;
-  transition: all 0.15s ease;
-  flex-shrink: 0;
-}
-
-.uimode-select-card.active .uimode-radio {
-  border-color: #0284c7;
-  background: #0284c7;
-}
-
-.uimode-select-card.active .uimode-radio::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #ffffff;
-  transform: translate(-50%, -50%);
-}
-
-.uimode-feature-tag {
-  font-size: 11px;
-  font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 4px;
-  background: #f1f5f9;
-  color: #475569;
-}
-
-.uimode-feature-tag.kds {
-  background: #e0f2fe;
-  color: #0369a1;
-}
-
-.settings-active-pill {
-  font-size: 11.5px;
-  font-weight: 800;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: #ecfdf5;
-  color: #059669;
-  border: 1px solid #a7f3d0;
-}
-
 

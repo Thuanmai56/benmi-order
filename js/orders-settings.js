@@ -7,6 +7,8 @@ let storeOperatingHours = null;
 let allowScheduledPickup = true;
 let currentTenantFeatures = [];
 window.currentTenantFeatures = currentTenantFeatures;
+let currentStoreLogoUrl = null;
+let pendingLogoDataUri = null;
 
 const DAY_NAMES = {
   "zh-TW": ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"],
@@ -148,11 +150,43 @@ function openSettings() {
   renderStorePairingSection();
   loadPOSPrinterSettings();
   initSettingsScrollSpy();
+  const lastTab = (typeof sessionStorage !== "undefined" && sessionStorage.getItem("last_settings_tab")) || "setting-card-status";
+  switchSettingTab(lastTab);
 }
 
 async function loadOperatingHours() {
+  const tenantId = getTenantIdFromUrl();
+
+  // Instant render from local cache if available
   try {
-    const res = await fetch(`${WORKER_BASE}/api/config?tenant_id=${getTenantIdFromUrl()}&_t=${Date.now()}`);
+    const cachedStr = localStorage.getItem("tenant_branding_" + tenantId) || localStorage.getItem("tenant_theme_" + tenantId);
+    if (cachedStr) {
+      const cached = JSON.parse(cachedStr);
+      if (cached.storeAddress !== undefined && cached.storeAddress !== null) {
+        const addrInput = document.getElementById("setting-store-address-input");
+        if (addrInput && !addrInput.value) addrInput.value = cached.storeAddress || "";
+      }
+      if (cached.announcement !== undefined && cached.announcement !== null) {
+        const annInput = document.getElementById("setting-store-announcement-input");
+        if (annInput && !annInput.value) annInput.value = cached.announcement || "";
+      }
+      if (cached.logoUrl && !currentStoreLogoUrl) {
+        currentStoreLogoUrl = cached.logoUrl;
+        renderStoreLogoUI(cached.logoUrl);
+      }
+    }
+  } catch(e) {}
+
+  if (!currentStoreLogoUrl) {
+    const bLogo = document.getElementById("brand-logo");
+    if (bLogo && bLogo.src && bLogo.style.display !== "none" && !bLogo.src.endsWith("#")) {
+      currentStoreLogoUrl = bLogo.src;
+      renderStoreLogoUI(bLogo.src);
+    }
+  }
+
+  try {
+    const res = await fetch(`${WORKER_BASE}/api/config?tenant_id=${tenantId}&_t=${Date.now()}`);
     if (res.ok) {
       const data = await res.json();
       storeOperatingHours = ensureParsedOperatingHours(data.operatingHours);
@@ -163,18 +197,18 @@ async function loadOperatingHours() {
         window.currentTenantFeatures = currentTenantFeatures;
       }
       if (data.storeStatus) currentStoreStatus = data.storeStatus;
-      if (data.storeAddress !== undefined) {
+      if (data.storeAddress !== undefined && data.storeAddress !== null) {
         const addrInput = document.getElementById("setting-store-address-input");
         if (addrInput) addrInput.value = data.storeAddress || "";
       }
-      if (data.announcement !== undefined) {
+      if (data.announcement !== undefined && data.announcement !== null) {
         const annInput = document.getElementById("setting-store-announcement-input");
         if (annInput) annInput.value = data.announcement || "";
       }
       if (data.logoUrl) {
         currentStoreLogoUrl = data.logoUrl;
         renderStoreLogoUI(data.logoUrl);
-      } else {
+      } else if (!currentStoreLogoUrl) {
         currentStoreLogoUrl = null;
         renderStoreLogoUI(null);
       }
@@ -182,13 +216,13 @@ async function loadOperatingHours() {
       storeOperatingHours = createDefaultOperatingHours();
       allowScheduledPickup = true;
       allowDineIn = true;
-      renderStoreLogoUI(null);
+      if (!currentStoreLogoUrl) renderStoreLogoUI(null);
     }
   } catch (e) {
     storeOperatingHours = createDefaultOperatingHours();
     allowScheduledPickup = true;
     allowDineIn = true;
-    renderStoreLogoUI(null);
+    if (!currentStoreLogoUrl) renderStoreLogoUI(null);
   }
   renderStoreStatusUI(currentStoreStatus);
   renderOperatingHours();
@@ -443,6 +477,18 @@ async function saveOperatingHours() {
   }
 }
 
+function updateLocalTenantBranding(patch) {
+  try {
+    const tenantId = getTenantIdFromUrl();
+    const key = "tenant_branding_" + tenantId;
+    const raw = localStorage.getItem(key) || localStorage.getItem("tenant_theme_" + tenantId);
+    const obj = raw ? JSON.parse(raw) : {};
+    Object.assign(obj, patch);
+    localStorage.setItem(key, JSON.stringify(obj));
+    localStorage.setItem("tenant_theme_" + tenantId, JSON.stringify(obj));
+  } catch(e) {}
+}
+
 async function saveStoreAddressSetting() {
   const addrInput = document.getElementById("setting-store-address-input");
   const newAddress = addrInput ? addrInput.value.trim() : "";
@@ -456,6 +502,7 @@ async function saveStoreAddressSetting() {
       body: JSON.stringify({ storeAddress: newAddress })
     });
     if (!res.ok) throw new Error("API returned " + res.status);
+    updateLocalTenantBranding({ storeAddress: newAddress });
     alert(t("saveSuccess"));
   } catch (e) {
     alert(t("saveFail") + e.message);
@@ -477,6 +524,7 @@ async function saveStoreAnnouncementSetting() {
       body: JSON.stringify({ announcement: newAnnouncement })
     });
     if (!res.ok) throw new Error("API returned " + res.status);
+    updateLocalTenantBranding({ announcement: newAnnouncement });
     alert(t("saveSuccess"));
   } catch (e) {
     alert(t("saveFail") + e.message);
@@ -584,6 +632,7 @@ async function saveStoreLogoSetting() {
       bLogo.style.display = "block";
     }
 
+    updateLocalTenantBranding({ logoUrl: finalLogoUrl });
     alert(t("saveSuccess"));
   } catch (e) {
     alert(t("saveFail") + e.message);
@@ -619,6 +668,7 @@ async function deleteStoreLogoSetting() {
       bLogo.style.display = "none";
     }
 
+    updateLocalTenantBranding({ logoUrl: null });
     alert(t("logoDeleteSuccess"));
   } catch (e) {
     alert(t("saveFail") + e.message);
@@ -626,6 +676,74 @@ async function deleteStoreLogoSetting() {
     if (btn) { btn.innerText = oldText; btn.disabled = false; }
   }
 }
+
+async function saveAllStoreInfoSettings() {
+  const btn = document.getElementById("btn-save-all-store-info");
+  const oldText = btn ? btn.innerText : "";
+  if (btn) { btn.innerText = t("saving"); btn.disabled = true; }
+
+  const tenantId = getTenantIdFromUrl();
+  const addrInput = document.getElementById("setting-store-address-input");
+  const annInput = document.getElementById("setting-store-announcement-input");
+  const newAddress = addrInput ? addrInput.value.trim() : "";
+  const newAnnouncement = annInput ? annInput.value.trim() : "";
+
+  try {
+    let finalLogoUrl = currentStoreLogoUrl;
+
+    if (pendingLogoDataUri) {
+      const imgRes = await fetch(`${WORKER_BASE}/api/image?tenant_id=${tenantId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "store_logo",
+          dataUri: pendingLogoDataUri
+        })
+      });
+      if (!imgRes.ok) throw new Error("Upload logo image failed: " + imgRes.status);
+      finalLogoUrl = `${WORKER_BASE}/api/image?tenant_id=${tenantId}&name=store_logo&_t=${Date.now()}`;
+    }
+
+    const payload = {
+      storeAddress: newAddress,
+      announcement: newAnnouncement
+    };
+    if (finalLogoUrl !== undefined && finalLogoUrl !== null) {
+      payload.logoUrl = finalLogoUrl;
+    }
+
+    const res = await fetch(`${WORKER_BASE}/api/config?tenant_id=${tenantId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error("API returned " + res.status);
+
+    if (finalLogoUrl) {
+      currentStoreLogoUrl = finalLogoUrl;
+      pendingLogoDataUri = null;
+      renderStoreLogoUI(finalLogoUrl);
+      const bLogo = document.getElementById("brand-logo");
+      if (bLogo) {
+        bLogo.src = finalLogoUrl;
+        bLogo.style.display = "block";
+      }
+    }
+
+    updateLocalTenantBranding({
+      storeAddress: newAddress,
+      announcement: newAnnouncement,
+      ...(finalLogoUrl ? { logoUrl: finalLogoUrl } : {})
+    });
+
+    alert(t("saveSuccess"));
+  } catch (e) {
+    alert(t("saveFail") + e.message);
+  } finally {
+    if (btn) { btn.innerText = oldText; btn.disabled = false; }
+  }
+}
+window.saveAllStoreInfoSettings = saveAllStoreInfoSettings;
 
 function renderLanguageSetting() {
   const radioZh = document.getElementById("setting-lang-zh");
@@ -887,6 +1005,9 @@ function loadPOSPrinterSettings() {
 
   // Attach instant auto-save listener
   attachPrinterAutoSave();
+
+  // Update header printer status pill
+  updateSettingsPrinterStatusDisplay();
 }
 
 function savePOSPrinterSettings(silent = false) {
@@ -976,6 +1097,7 @@ function savePOSPrinterSettings(silent = false) {
   };
 
   const success = PrinterService.saveSettings(newSettings);
+  updateSettingsPrinterStatusDisplay();
   if (!silent) {
     if (success) {
       if (typeof showToast === 'function') showToast("✅ " + (t("saveSuccess") || "印表機設定儲存成功！"));
@@ -1065,9 +1187,7 @@ const SETTINGS_SECTIONS = [
   { id: "setting-card-status", tocId: "toc-item-status" },
   { id: "setting-card-ordermode", tocId: "toc-item-ordermode" },
   { id: "setting-card-hours", tocId: "toc-item-hours" },
-  { id: "setting-card-address", tocId: "toc-item-address" },
-  { id: "setting-card-announcement", tocId: "toc-item-announcement" },
-  { id: "setting-card-logo", tocId: "toc-item-logo" },
+  { id: "setting-card-store-info", tocId: "toc-item-store-info" },
   { id: "setting-card-language", tocId: "toc-item-language" },
   { id: "setting-card-dinein", tocId: "toc-item-dinein" },
   { id: "setting-card-printer", tocId: "toc-item-printer" },
@@ -1088,7 +1208,95 @@ function setActiveTocItem(activeTocId) {
   });
 }
 
+function switchSettingTab(cardId) {
+  if (!cardId) cardId = "setting-card-status";
+
+  // Map legacy/merged tab IDs to the unified store info card
+  if (
+    cardId === "setting-card-address" ||
+    cardId === "setting-card-announcement" ||
+    cardId === "setting-card-logo" ||
+    cardId === "toc-item-address" ||
+    cardId === "toc-item-announcement" ||
+    cardId === "toc-item-logo" ||
+    cardId === "address" ||
+    cardId === "announcement" ||
+    cardId === "logo" ||
+    cardId === "store-info"
+  ) {
+    cardId = "setting-card-store-info";
+  }
+
+  // Normalize if passed an ID without prefix or TOC ID
+  let targetId = cardId;
+  let matchedSec = SETTINGS_SECTIONS.find(s => s.id === cardId || s.tocId === cardId || s.id === `setting-card-${cardId}`);
+  if (matchedSec) {
+    targetId = matchedSec.id;
+  }
+
+  let targetCard = document.getElementById(targetId);
+  if (!targetCard) {
+    targetId = "setting-card-status";
+    targetCard = document.getElementById("setting-card-status");
+    matchedSec = SETTINGS_SECTIONS.find(s => s.id === "setting-card-status");
+  }
+  if (!targetCard) return;
+
+  // If target card is hidden by platform rules (e.g. printer on web-prod or reports on native app)
+  const targetToc = matchedSec ? document.getElementById(matchedSec.tocId) : null;
+  const isPlatformHidden = targetToc && window.getComputedStyle(targetToc).display === "none";
+  if (isPlatformHidden) {
+    // Pick the first section whose TOC item is visible
+    for (const sec of SETTINGS_SECTIONS) {
+      const toc = document.getElementById(sec.tocId);
+      if (toc && window.getComputedStyle(toc).display !== "none") {
+        const el = document.getElementById(sec.id);
+        if (el) {
+          targetCard = el;
+          targetId = sec.id;
+          matchedSec = sec;
+          break;
+        }
+      }
+    }
+  }
+
+  // 1. Hide all cards and show target card
+  document.querySelectorAll(".settings-card").forEach(card => {
+    card.classList.remove("active");
+  });
+  targetCard.classList.add("active");
+
+  // 2. Set active TOC item
+  if (matchedSec) {
+    setActiveTocItem(matchedSec.tocId);
+  }
+
+  // 3. Toggle printer status bar (Only show when on the printer settings tab)
+  const printerStatusBar = document.getElementById("settings-printer-status-bar");
+  if (printerStatusBar) {
+    printerStatusBar.style.display = (targetId === "setting-card-printer") ? "inline-flex" : "none";
+  }
+  if (targetId === "setting-card-printer" && typeof updateSettingsPrinterStatusDisplay === "function") {
+    updateSettingsPrinterStatusDisplay();
+  }
+
+  // 4. Scroll container to top
+  const container = document.getElementById("settings-scroll-container");
+  if (container) {
+    container.scrollTop = 0;
+  }
+
+  // 5. Save state for session reload
+  try {
+    sessionStorage.setItem("last_settings_tab", targetId);
+  } catch (e) {}
+}
+window.switchSettingTab = switchSettingTab;
+
 function scrollToSettingSection(sectionId) {
+  switchSettingTab(sectionId);
+
   const container = document.getElementById("settings-scroll-container");
   const target = document.getElementById(sectionId);
   if (!container || !target) return;
@@ -1110,6 +1318,7 @@ function scrollToSettingSection(sectionId) {
     isManualSettingScroll = false;
   }, 800);
 }
+window.scrollToSettingSection = scrollToSettingSection;
 
 function initSettingsScrollSpy() {
   const container = document.getElementById("settings-scroll-container");
@@ -1120,10 +1329,11 @@ function initSettingsScrollSpy() {
     if (isManualSettingScroll) return;
     const containerTop = container.getBoundingClientRect().top;
 
-    let currentActive = SETTINGS_SECTIONS[0];
+    let currentActive = null;
     for (const sec of SETTINGS_SECTIONS) {
       const el = document.getElementById(sec.id);
-      if (el) {
+      if (el && el.offsetParent !== null) {
+        if (!currentActive) currentActive = sec;
         const rect = el.getBoundingClientRect();
         // If element top is within upper portion of container
         if (rect.top - containerTop <= 120) {
@@ -1137,6 +1347,133 @@ function initSettingsScrollSpy() {
     }
   }, { passive: true });
 }
+
+function updateSettingsPrinterStatusDisplay() {
+  const isVi = (typeof currentLang !== "undefined" && currentLang === "vi") || 
+               (typeof window !== "undefined" && window.currentLang === "vi") ||
+               (typeof currentLanguage !== "undefined" && currentLanguage === "vi");
+
+  const lblCashier = (typeof t === "function" && t("printerStationCashierShort")) || (isVi ? "Thu ngân" : "櫃檯");
+  const lblKitchen = (typeof t === "function" && t("printerStationKitchenShort")) || (isVi ? "Bếp" : "廚房");
+  const lblBT = (typeof t === "function" && t("printerTypeBluetooth")) || (isVi ? "Bluetooth" : "藍牙");
+  const lblLAN = (typeof t === "function" && t("printerTypeLAN")) || (isVi ? "Mạng LAN" : "區網");
+  const lblDisabled = (typeof t === "function" && t("printerDisabled")) || (isVi ? "Đã tắt" : "已停用");
+  const lblNone = (typeof t === "function" && t("printerStatusNone")) || (isVi ? "Chưa kết nối máy in" : "未連線印表機");
+  const lblNotConfigured = (typeof t === "function" && t("printerNotConfigured")) || (isVi ? "Chưa thiết lập" : "未設定連線");
+
+  let cashier = {};
+  let kitchen = {};
+
+  if (typeof PrinterService !== 'undefined') {
+    const settings = PrinterService.getSettings() || {};
+    cashier = settings.cashier || {};
+    kitchen = settings.kitchen || {};
+  } else {
+    const cashEl = document.getElementById("printer-cashier-enabled");
+    cashier.enabled = cashEl ? cashEl.checked : false;
+    const kitEl = document.getElementById("printer-kitchen-enabled");
+    kitchen.enabled = kitEl ? kitEl.checked : false;
+  }
+
+  // 1. Update Cashier Station Pill
+  const cashPill = document.getElementById("printer-cashier-status-pill");
+  const cashDot = document.getElementById("printer-cashier-status-dot");
+  const cashText = document.getElementById("printer-cashier-status-text");
+  if (cashPill && cashText) {
+    if (!cashier.enabled) {
+      if (cashDot) cashDot.className = "printer-status-dot offline";
+      cashPill.className = "settings-printer-status-pill disconnected";
+      cashText.innerText = lblDisabled;
+    } else {
+      let desc = "";
+      if (cashier.interface_type === 'bluetooth') {
+        const name = cashier.device_name || cashier.mac_address;
+        if (name) desc = `${name} (${lblBT})`;
+      } else {
+        if (cashier.ip) desc = `${cashier.ip}:${cashier.port || 9100} (${lblLAN})`;
+      }
+
+      if (desc) {
+        if (cashDot) cashDot.className = "printer-status-dot online";
+        cashPill.className = "settings-printer-status-pill connected";
+        cashText.innerText = desc;
+      } else {
+        if (cashDot) cashDot.className = "printer-status-dot offline";
+        cashPill.className = "settings-printer-status-pill disconnected";
+        cashText.innerText = lblNotConfigured;
+      }
+    }
+  }
+
+  // 2. Update Kitchen Station Pill
+  const kitPill = document.getElementById("printer-kitchen-status-pill");
+  const kitDot = document.getElementById("printer-kitchen-status-dot");
+  const kitText = document.getElementById("printer-kitchen-status-text");
+  if (kitPill && kitText) {
+    if (!kitchen.enabled) {
+      if (kitDot) kitDot.className = "printer-status-dot offline";
+      kitPill.className = "settings-printer-status-pill disconnected";
+      kitText.innerText = lblDisabled;
+    } else {
+      let desc = "";
+      if (kitchen.interface_type === 'bluetooth') {
+        const name = kitchen.device_name || kitchen.mac_address;
+        if (name) desc = `${name} (${lblBT})`;
+      } else {
+        if (kitchen.ip) desc = `${kitchen.ip}:${kitchen.port || 9100} (${lblLAN})`;
+      }
+
+      if (desc) {
+        if (kitDot) kitDot.className = "printer-status-dot online";
+        kitPill.className = "settings-printer-status-pill connected";
+        kitText.innerText = desc;
+      } else {
+        if (kitDot) kitDot.className = "printer-status-dot offline";
+        kitPill.className = "settings-printer-status-pill disconnected";
+        kitText.innerText = lblNotConfigured;
+      }
+    }
+  }
+
+  // 3. Update legacy/fallback header status bar if present
+  const statusBar = document.getElementById("settings-printer-status-bar");
+  const statusDot = document.getElementById("printer-status-dot");
+  const statusText = document.getElementById("settings-printer-status-text");
+  if (statusBar && statusText) {
+    const activePrinters = [];
+
+    if (cashier.enabled) {
+      let name = "";
+      if (cashier.interface_type === 'bluetooth') {
+        name = cashier.device_name || cashier.mac_address || lblBT;
+      } else {
+        name = cashier.ip ? `${cashier.ip}:${cashier.port || 9100}` : lblLAN;
+      }
+      activePrinters.push(`${lblCashier}: ${name}`);
+    }
+
+    if (kitchen.enabled) {
+      let name = "";
+      if (kitchen.interface_type === 'bluetooth') {
+        name = kitchen.device_name || kitchen.mac_address || lblBT;
+      } else {
+        name = kitchen.ip ? `${kitchen.ip}:${kitchen.port || 9100}` : lblLAN;
+      }
+      activePrinters.push(`${lblKitchen}: ${name}`);
+    }
+
+    if (activePrinters.length > 0) {
+      if (statusDot) statusDot.className = "printer-status-dot online";
+      statusBar.className = "settings-printer-status-pill connected";
+      statusText.innerText = activePrinters.join(" | ");
+    } else {
+      if (statusDot) statusDot.className = "printer-status-dot offline";
+      statusBar.className = "settings-printer-status-pill disconnected";
+      statusText.innerText = lblNone;
+    }
+  }
+}
+window.updateSettingsPrinterStatusDisplay = updateSettingsPrinterStatusDisplay;
 
 function renderStorePairingSection() {
   const tenantId = (typeof getTenantIdFromUrl === "function" && getTenantIdFromUrl()) || "";

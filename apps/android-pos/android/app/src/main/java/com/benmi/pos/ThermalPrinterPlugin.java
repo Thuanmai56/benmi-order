@@ -479,11 +479,22 @@ public class ThermalPrinterPlugin extends Plugin {
                 }
 
                 OutputStream outputStream = socket.getOutputStream();
-                outputStream.write(printBytes);
+                
+                // Transmit in 1024-byte chunks with pacing to prevent RFCOMM buffer overflow on Bluetooth thermal printers
+                final int chunkSize = 1024;
+                for (int i = 0; i < printBytes.length; i += chunkSize) {
+                    int len = Math.min(chunkSize, printBytes.length - i);
+                    outputStream.write(printBytes, i, len);
+                    outputStream.flush();
+                    if (i + chunkSize < printBytes.length) {
+                        try { Thread.sleep(15); } catch (InterruptedException ignored) {}
+                    }
+                }
                 outputStream.flush();
 
-                // Small delay to ensure printer hardware buffer completes before closing socket
-                try { Thread.sleep(150); } catch (InterruptedException ignored) {}
+                // Dynamic wait based on payload size so thermal printhead finishes printing before RFCOMM socket closes
+                long waitTimeMs = Math.max(800, Math.min(4000, (printBytes.length / 1024) * 40));
+                try { Thread.sleep(waitTimeMs); } catch (InterruptedException ignored) {}
 
                 JSObject ret = new JSObject();
                 ret.put("success", true);

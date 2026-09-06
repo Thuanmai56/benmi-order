@@ -227,10 +227,12 @@ function renderHistory(orders) {
   // Footer Banner: Older Data / Contact BLAB
   const olderCard = document.createElement("div");
   olderCard.className = "history-older-card";
-  olderCard.onclick = openBlabContactModal;
+  olderCard.onclick = () => openBlabContactModal('history');
   olderCard.innerHTML = `
     <div class="history-older-left">
-      <div class="history-older-icon">📦</div>
+      <div class="history-older-icon" style="width: 40px; height: 40px; border-radius: 10px; background: #f1f5f9; border: 1px solid #e2e8f0; color: #475569; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"></path><path d="M1 3h22v5H1z"></path><path d="M10 12h4"></path></svg>
+      </div>
       <div>
         <div class="history-older-title">
           <span>${t('historyOlderTitle')}</span>
@@ -238,8 +240,8 @@ function renderHistory(orders) {
         <div class="history-older-sub">${t('historyOlderSub')}</div>
       </div>
     </div>
-    <button class="btn btn-primary history-older-btn" onclick="event.stopPropagation(); openBlabContactModal()">
-      <span>💬</span>
+    <button class="btn btn-primary history-older-btn" onclick="event.stopPropagation(); openBlabContactModal('history')" style="min-height: 44px; display: inline-flex; align-items: center; gap: 8px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
       <span>${t('btnContactBlab')}</span>
     </button>
   `;

@@ -51,6 +51,63 @@ var POS_SVG = {
 };
 window.POS_SVG = POS_SVG;
 
+function isNativeAppPlatform() {
+  if (typeof window === "undefined") return false;
+  if (typeof window.IS_NATIVE_APP !== "undefined") return window.IS_NATIVE_APP;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const p = params.get("platform");
+    if (p === "app" || params.get("app") === "1") return true;
+    if (p === "web" || params.get("web") === "1") return false;
+    if (window.Capacitor) {
+      if (typeof window.Capacitor.isNativePlatform === "function" && window.Capacitor.isNativePlatform()) return true;
+      if (typeof window.Capacitor.getPlatform === "function" && window.Capacitor.getPlatform() !== "web") return true;
+      if (typeof window.Capacitor.isPluginAvailable === "function" && window.Capacitor.isPluginAvailable("ThermalPrinter")) return true;
+    }
+  } catch (e) {}
+  return false;
+}
+window.isNativeAppPlatform = isNativeAppPlatform;
+
+const _isProd = !_isDev && !_isStaging;
+window._isProdEnv = _isProd;
+
+function shouldHideWebPrinter() {
+  if (typeof window === "undefined") return false;
+  if (isNativeAppPlatform()) return false;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const hp = params.get("hide_printer");
+    if (hp === "1") return true;
+    if (hp === "0") return false;
+    return !!_isProd;
+  } catch (e) {
+    return !!_isProd;
+  }
+}
+window.shouldHideWebPrinter = shouldHideWebPrinter;
+
+function syncPlatformClasses() {
+  const isApp = isNativeAppPlatform();
+  const hideWebPrinter = shouldHideWebPrinter();
+  window.IS_NATIVE_APP = isApp;
+  if (typeof document !== "undefined") {
+    [document.documentElement, document.body].forEach(el => {
+      if (el && el.classList && typeof el.classList.toggle === "function") {
+        el.classList.toggle("is-native-app", isApp);
+        el.classList.toggle("is-web-platform", !isApp);
+        el.classList.toggle("is-prod-env", _isProd);
+        el.classList.toggle("is-non-prod-env", !_isProd);
+        el.classList.toggle("hide-web-printer", hideWebPrinter);
+      }
+    });
+  }
+}
+syncPlatformClasses();
+if (typeof document !== "undefined" && typeof document.addEventListener === "function") {
+  document.addEventListener("DOMContentLoaded", syncPlatformClasses);
+}
+
 function getTenantIdFromUrl() {
   const params = new URLSearchParams(window.location.search);
   const fromUrl = params.get("tenant") || params.get("tenant_id");
@@ -379,6 +436,9 @@ function formatOrderTotal(order) {
 }
 
 function switchTab(tab) {
+  if (tab === "reports" && isNativeAppPlatform()) {
+    tab = "live";
+  }
   activeTab = tab;
   const tabLive = document.getElementById("tab-live");
   const tabHistory = document.getElementById("tab-history");
@@ -634,13 +694,7 @@ window.renderAll = renderAll;
 window.copyToClipboard = copyToClipboard;
 window.closeModal = closeModal;
 
-function getPosUiMode() {
-  return "classic";
-}
 
-function switchPosUiMode() {}
-
-function updateUiModeElements() {}
 
 // ==========================================
 // Vertical Sidebar Management (Uber Eats Tablet-First)
@@ -835,19 +889,7 @@ window.initSidebarState = initSidebarState;
 window.updateSidebarActive = updateSidebarActive;
 window.updatePageMainTitle = updatePageMainTitle;
 
-window.getPosUiMode = getPosUiMode;
-window.switchPosUiMode = switchPosUiMode;
-window.togglePosUiMode = function() { switchPosUiMode(); };
-window.updateUiModeElements = updateUiModeElements;
 
-// Auto-run UI mode element sync on load
-if (typeof document !== "undefined") {
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", updateUiModeElements);
-  } else {
-    updateUiModeElements();
-  }
-}
 
 // 1.5s Polling loop for active order updates - ALWAYS runs across all dashboard tabs!
 setInterval(() => {

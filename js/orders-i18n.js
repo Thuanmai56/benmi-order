@@ -59,38 +59,8 @@ const I18N = {
     emptyLivePendingSub: "新進訂單將即時推播並顯示於此",
     emptyLiveAcceptedTitle: "目前無製作中訂單",
     emptyLiveAcceptedSub: "已接單的餐點將在此顯示製作進度",
-    kdsStationPending: "待處理",
-    kdsStationCooking: "製作中",
-    kdsStationReady: "待取餐",
-    kdsBatchSummary: "備料總攬",
-    kdsActionAccept: "接單",
-    kdsActionDone: "準備好了",
-    kdsActionHandover: "已取餐",
-    kdsActionPayAndHandover: "結帳並交餐",
-    kdsCountdownMin: "剩餘 {m} 分鐘",
-    kdsOverdueMin: "逾時 {m} 分鐘",
-    kdsJustNow: "剛剛下單",
-    kdsEmptyPending: "目前無待處理新訂單",
-    kdsEmptyCooking: "目前無廚房製作中訂單",
-    kdsEmptyReady: "目前無待取餐訂單",
-    kdsItemsCount: "共 {n} 項餐點",
-    kdsCookingCount: "製作中 ({n})",
-    kdsPendingCount: "待處理 ({n})",
-    kdsReadyCount: "待取餐 ({n})",
-    kdsBatchMiseTitle: "廚房即時備料總攬 ({orders} 張單，共 {items} 份)",
-    kdsReprintTooltip: "列印標籤與收據",
-    uiModeKdsBadge: "KDS 模式",
-    uiModeClassicBadge: "傳統 POS",
-    uiModeTryKds: "試用新版",
-    uiModeBackClassic: "切換舊版",
-    uiModeToc: "介面模式",
-    uiModeTitle: "POS 顯示介面模式",
-    uiModeSub: "自由切換新版 KDS 廚房系統（專為平板與出餐設計）或傳統雙欄介面",
-    uiModeOptClassicTitle: "經典雙欄模式",
-    uiModeOptClassicDesc: "傳統左右雙欄版面，適合一般電腦桌面與滑鼠操作",
-    uiModeOptKdsTitle: "新版 KDS 廚房系統 (實驗性)",
-    uiModeOptKdsDesc: "三站式流水線、左右滑動切換、廚房備料彙總，專為平板觸控與快節奏出餐設計",
     badgeNewOrder: "新訂單",
+
     emptyHistory: "尚無歷史訂單",
     historyTitle: "訂單歷史",
     historySub: "近 30 天訂單紀錄 (依日期分組)",
@@ -101,13 +71,26 @@ const I18N = {
     historyOlderTitle: "查看 30 天前的歷史訂單",
     historyOlderSub: "如需調閱更早歷史紀錄或匯出月報表，請聯繫 BLAB 團隊",
     btnContactBlab: "聯繫 BLAB",
-    modalBlabTitle: "歷史訂單進階調閱",
+    modalBlabTitle: "BLAB 客服與技術支援",
+    modalBlabSubtitle: "全方位門市營運與系統諮詢服務",
     modalBlabDesc: "系統預設提供近 30 天即時訂單記錄。超過 30 天之歷史資料封存於雲端資料庫，如需查詢或匯出完整財務報表，請聯繫 BLAB 團隊為您處理。",
+    blabStatusOnline: "線上",
+    blabSupportDirectSub: "LINE 官方帳號 / 1對1 即時專人支援",
+    btnModalBlabLine: "開啟 LINE",
+    blabUpgradeTitle: "功能開通與方案諮詢",
+    blabUpgradeSub: "內用模組、營收報表分析、歷史資料調閱",
+    btnModalBlabUpgrade: "聯繫諮詢",
+    blabHoursCommitment: "服務時間：每日 09:00 - 22:00（標準回覆時間 < 5 分鐘）",
     blabExportTitle: "月度報表 / 雲端匯出服務",
     blabExportSub: "請聯繫 BLAB 團隊協助調閱歷史資料",
-    btnModalBlabLine: "開啟 LINE 支援",
     btnModalBlabExport: "聯絡 BLAB",
-    btnModalBlabClose: "我知道了",
+    btnModalBlabClose: "關閉",
+    blabContextHistoryTitle: "歷史訂單進階調閱",
+    blabContextHistoryDesc: "系統預設提供近 30 天即時訂單記錄。超過 30 天之歷史資料封存於雲端資料庫，如需查詢或匯出完整財務報表，請透過下方管道聯繫技術團隊為您處理。",
+    blabContextUpgradeTitle: "方案升級與功能解鎖",
+    blabContextUpgradeDesc: "如需開通「內用接單」或「銷量與營收報表分析」等進階模組，專員將於 5 分鐘內為您提供說明並線上開通。",
+    blabContextSupportTitle: "即時專屬支援管道",
+    blabContextSupportDesc: "門市營運遇到疑問、出單機連線異常或需要功能協助，歡迎隨時透過下方官方管道與我們聯繫。",
     startShiftTitle: "開始接收訂單",
     startShiftDesc: "點擊下方按鈕以啟動即時訂單提示音與工作階段，確保第一時間收到顧客點餐通知。",
     btnStartShift: "開始接單 (啟用提示音)",
@@ -229,6 +212,10 @@ const I18N = {
     tocStoreStatus: "門市接單狀態",
     tocOrderMode: "點餐取餐模式",
     tocHours: "營業時間設定",
+    tocStoreInfo: "門市基本資訊",
+    settingStoreInfoTitle: "門市基本資訊",
+    settingStoreInfoSub: "管理門市標誌 (Logo)、跑馬燈公告與門市聯絡地址",
+    btnSaveAllStoreInfo: "儲存全部資訊",
     tocAddress: "門市地址設定",
     tocLogo: "門市 Logo",
     settingStoreStatusTitle: "門市接單狀態",
@@ -286,7 +273,7 @@ const I18N = {
     btnPrint: "列印",
     btnReprint: "補印",
     tocPrinter: "出單與印表機",
-    settingPrinterTitle: "出單與印表機設定 (ESC/POS)",
+    settingPrinterTitle: "出單與印表機",
     settingPrinterSub: "設定 Wi-Fi / LAN 區域網路熱感應出單機 (Port 9100) 與自動列印模式",
     printerAutoPrintTitle: "新訂單自動列印 (Auto-Print)",
     printerAutoPrintDesc: "當系統收到新訂單時，自動出單至已啟用的印表機",
@@ -298,6 +285,14 @@ const I18N = {
     printerInterfaceNetwork: "區域網路 / Wi-Fi (TCP/IP)",
     printerInterfaceBluetooth: "藍牙無線 (Bluetooth SPP)",
     printerEnableLabel: "啟用",
+    printerStatusConnected: "已連線印表機",
+    printerStatusNone: "未連線印表機",
+    printerDisabled: "已停用",
+    printerNotConfigured: "未設定連線",
+    printerStationCashierShort: "櫃檯",
+    printerStationKitchenShort: "廚房",
+    printerTypeBluetooth: "藍牙",
+    printerTypeLAN: "區網",
     printerBtDeviceLabel: "已配對藍牙裝置",
     printerBtSelectPlaceholder: "-- 請選擇已配對的藍牙印表機 --",
     printerBtDevicePlaceholder: "-- 請選擇已配對的藍牙印表機 --",
@@ -598,38 +593,8 @@ const I18N = {
     emptyLivePendingSub: "Đơn mới sẽ tự động hiển thị và đổ chuông tại đây",
     emptyLiveAcceptedTitle: "Không có đơn đang thực hiện",
     emptyLiveAcceptedSub: "Các đơn đã nhận sẽ hiển thị tiến độ tại đây",
-    kdsStationPending: "CẦN TIẾP NHẬN",
-    kdsStationCooking: "ĐANG CHẾ BIẾN",
-    kdsStationReady: "CHỜ BÀN GIAO",
-    kdsBatchSummary: "TỔNG HỢP NGUYÊN LIỆU",
-    kdsActionAccept: "TIẾP NHẬN",
-    kdsActionDone: "LÀM XONG",
-    kdsActionHandover: "ĐÃ GIAO",
-    kdsActionPayAndHandover: "THANH TOÁN & GIAO",
-    kdsCountdownMin: "Còn {m} phút",
-    kdsOverdueMin: "Quá hẹn {m} phút",
-    kdsJustNow: "Vừa đặt",
-    kdsEmptyPending: "Hiện không có đơn cần tiếp nhận",
-    kdsEmptyCooking: "Hiện không có đơn đang chế biến trong bếp",
-    kdsEmptyReady: "Hiện không có đơn chờ giao cho khách",
-    kdsItemsCount: "Tổng {n} món",
-    kdsCookingCount: "Đang nấu ({n})",
-    kdsPendingCount: "Chờ duyệt ({n})",
-    kdsReadyCount: "Chờ giao ({n})",
-    kdsBatchMiseTitle: "TỔNG HỢP NGUYÊN LIỆU ĐANG NẤU ({orders} đơn, {items} phần)",
-    kdsReprintTooltip: "In lại tem & bill",
-    uiModeKdsBadge: "KDS Mới",
-    uiModeClassicBadge: "POS Cổ điển",
-    uiModeTryKds: "Thử KDS",
-    uiModeBackClassic: "Về UI cũ",
-    uiModeToc: "Chế độ giao diện",
-    uiModeTitle: "Chế độ giao diện hiển thị",
-    uiModeSub: "Tự do chuyển đổi giữa Giao diện KDS Mới (tối ưu Tablet/Bếp) và Giao diện 2 cột cổ điển",
-    uiModeOptClassicTitle: "Giao diện Cổ điển (Tiêu chuẩn)",
-    uiModeOptClassicDesc: "Bố cục 2 cột truyền thống với danh sách đơn bên trái và chi tiết bên phải, phù hợp chuột máy tính",
-    uiModeOptKdsTitle: "Giao diện KDS Mới (Thực nghiệm)",
-    uiModeOptKdsDesc: "Hệ thống 3 trạm thông minh, vuốt chuyển tab, thanh gom món, tối ưu màn hình cảm ứng quầy POS",
     badgeNewOrder: "ĐƠN MỚI",
+
     emptyHistory: "Chưa có lịch sử đơn hàng",
     historyTitle: "Lịch sử đơn hàng",
     historySub: "Đơn hàng 30 ngày gần nhất (theo ngày)",
@@ -640,13 +605,26 @@ const I18N = {
     historyOlderTitle: "Xem đơn hàng trên 30 ngày",
     historyOlderSub: "Quý khách cần xuất báo cáo hoặc tra cứu lịch sử vui lòng liên hệ đội ngũ BLAB",
     btnContactBlab: "Liên hệ BLAB",
-    modalBlabTitle: "Tra cứu dữ liệu lịch sử > 30 ngày",
+    modalBlabTitle: "Hỗ trợ kỹ thuật & Liên hệ BLAB",
+    modalBlabSubtitle: "Kênh chăm sóc khách hàng và tư vấn giải pháp POS",
     modalBlabDesc: "Hệ thống hiển thị dữ liệu 30 ngày gần nhất. Dữ liệu trên 30 ngày được lưu trữ an toàn trên đám mây, quý khách cần tra cứu hoặc xuất báo cáo đối soát vui lòng liên hệ đội ngũ BLAB.",
+    blabStatusOnline: "Trực tuyến",
+    blabSupportDirectSub: "LINE Official / Hỗ trợ kỹ thuật 1-1 nhanh chóng",
+    btnModalBlabLine: "Mở LINE hỗ trợ",
+    blabUpgradeTitle: "Tư vấn nâng cấp tính năng & Gói giải pháp",
+    blabUpgradeSub: "Mở khóa Ăn tại quán, Báo cáo tài chính, Tra cứu lịch sử",
+    btnModalBlabUpgrade: "Liên hệ tư vấn",
+    blabHoursCommitment: "Khung giờ hỗ trợ: 09:00 - 22:00 hằng ngày (Phản hồi < 5 phút)",
     blabExportTitle: "Báo cáo theo tháng / Dữ liệu đám mây",
     blabExportSub: "Vui lòng liên hệ đội ngũ BLAB để được hỗ trợ",
-    btnModalBlabLine: "Mở LINE hỗ trợ",
     btnModalBlabExport: "Liên hệ BLAB",
-    btnModalBlabClose: "Đã hiểu",
+    btnModalBlabClose: "Đóng",
+    blabContextHistoryTitle: "Tra cứu dữ liệu lịch sử > 30 ngày",
+    blabContextHistoryDesc: "Hệ thống hiển thị dữ liệu 30 ngày gần nhất. Dữ liệu trên 30 ngày được lưu trữ an toàn trên đám mây, quý khách cần tra cứu hoặc xuất báo cáo đối soát vui lòng liên hệ chuyên viên qua kênh dưới đây.",
+    blabContextUpgradeTitle: "Mở khóa tính năng & Nâng cấp gói",
+    blabContextUpgradeDesc: "Để kích hoạt các tính năng nâng cao (Ăn tại quán, Báo cáo doanh thu chuyên sâu), chuyên viên BLAB luôn sẵn sàng tư vấn và kích hoạt cho quý quán trong 5 phút.",
+    blabContextSupportTitle: "Kênh kết nối kỹ thuật trực tiếp",
+    blabContextSupportDesc: "Quý quán gặp sự cố vận hành, lỗi kết nối máy in hoặc cần hỗ trợ thao tác, vui lòng kết nối ngay với đội ngũ kỹ thuật BLAB.",
     startShiftTitle: "Bắt đầu nhận đơn",
     startShiftDesc: "Nhấn nút bên dưới để kích hoạt chuông báo và sẵn sàng nhận đơn hàng mới từ khách hàng.",
     btnStartShift: "Bắt đầu nhận đơn (Bật chuông)",
@@ -768,6 +746,10 @@ const I18N = {
     tocStoreStatus: "Trạng thái nhận đơn",
     tocOrderMode: "Chế độ nhận đơn",
     tocHours: "Giờ hoạt động",
+    tocStoreInfo: "Thông tin cửa hàng",
+    settingStoreInfoTitle: "Thông tin cơ bản cửa hàng",
+    settingStoreInfoSub: "Quản lý Logo thương hiệu, thông báo chạy chữ và địa chỉ liên hệ",
+    btnSaveAllStoreInfo: "Lưu tất cả thông tin",
     tocAddress: "Địa chỉ cửa hàng",
     tocLogo: "Logo cửa hàng",
     settingStoreStatusTitle: "Trạng thái nhận đơn",
@@ -950,7 +932,7 @@ const I18N = {
     btnPrint: "In phiếu",
     btnReprint: "In lại",
     tocPrinter: "Máy in & Xuất vé",
-    settingPrinterTitle: "Cài Đặt Máy In Nhiệt (ESC/POS)",
+    settingPrinterTitle: "Máy in & xuất vé",
     settingPrinterSub: "Cấu hình máy in mạng LAN / Wi-Fi (Cổng 9100) và chế độ tự động in",
     printerAutoPrintTitle: "Tự động in khi có đơn mới (Auto-Print)",
     printerAutoPrintDesc: "Tự động xuất vé ra máy in ngay khi hệ thống nhận đơn hàng mới",
@@ -962,6 +944,14 @@ const I18N = {
     printerInterfaceNetwork: "Mạng nội bộ / Wi-Fi (TCP/IP)",
     printerInterfaceBluetooth: "Bluetooth không dây (SPP)",
     printerEnableLabel: "Kích hoạt",
+    printerStatusConnected: "Đã kết nối máy in",
+    printerStatusNone: "Chưa kết nối máy in",
+    printerDisabled: "Đã tắt",
+    printerNotConfigured: "Chưa thiết lập",
+    printerStationCashierShort: "Thu ngân",
+    printerStationKitchenShort: "Bếp",
+    printerTypeBluetooth: "Bluetooth",
+    printerTypeLAN: "Mạng LAN",
     printerBtDeviceLabel: "Thiết bị Bluetooth đã ghép đôi",
     printerBtSelectPlaceholder: "-- Chọn máy in Bluetooth đã ghép đôi --",
     printerBtDevicePlaceholder: "-- Vui lòng chọn máy in Bluetooth đã kết nối --",
@@ -1247,60 +1237,38 @@ function applyLanguageToDOM() {
   const fDinein = document.getElementById("i18n-filter-dinein");
   if (fDinein) fDinein.innerText = dict.filterDineIn || "內用";
 
-  // KDS Adaptive Compact Headers & Tabs
-  const kdsTabPend = document.getElementById("i18n-kds-tab-pending");
-  if (kdsTabPend) kdsTabPend.innerText = dict.kdsStationPending || "待處理";
-  const kdsTabCook = document.getElementById("i18n-kds-tab-cooking");
-  if (kdsTabCook) kdsTabCook.innerText = dict.kdsStationCooking || "製作中";
-  const kdsTabRdy = document.getElementById("i18n-kds-tab-ready");
-  if (kdsTabRdy) kdsTabRdy.innerText = dict.kdsStationReady || "待取餐";
-
-  const kdsHdrPend = document.getElementById("i18n-kds-header-pending");
-  if (kdsHdrPend) kdsHdrPend.innerText = dict.kdsStationPending || "待處理";
-  const kdsHdrCook = document.getElementById("i18n-kds-header-cooking");
-  if (kdsHdrCook) kdsHdrCook.innerText = dict.kdsStationCooking || "製作中";
-  const kdsHdrRdy = document.getElementById("i18n-kds-header-ready");
-  if (kdsHdrRdy) kdsHdrRdy.innerText = dict.kdsStationReady || "待取餐";
-
-  // UI Mode Switcher & Settings
-  const uiModeBadge = document.getElementById("i18n-uimode-badge");
-  const uiModeAction = document.getElementById("i18n-uimode-action");
-  const isExp = typeof window !== "undefined" && window.location.pathname.includes("experiment");
-  if (uiModeBadge) uiModeBadge.innerText = isExp ? (dict.uiModeKdsBadge || "KDS Mới") : (dict.uiModeClassicBadge || "POS Cổ điển");
-  if (uiModeAction) uiModeAction.innerText = isExp ? (dict.uiModeBackClassic || "Về UI cũ") : (dict.uiModeTryKds || "Thử KDS");
-
-  const uiModeToc = document.getElementById("i18n-toc-uimode");
-  if (uiModeToc) uiModeToc.innerText = dict.uiModeToc || "介面模式";
-  const uiModeTitle = document.getElementById("i18n-setting-uimode-title");
-  if (uiModeTitle) uiModeTitle.innerText = dict.uiModeTitle || "POS 顯示介面模式";
-  const uiModeSub = document.getElementById("i18n-setting-uimode-sub");
-  if (uiModeSub) uiModeSub.innerText = dict.uiModeSub || "";
-  const optClassicTitle = document.getElementById("i18n-opt-classic-title");
-  if (optClassicTitle) optClassicTitle.innerText = dict.uiModeOptClassicTitle || "經典雙欄模式";
-  const optClassicDesc = document.getElementById("i18n-opt-classic-desc");
-  if (optClassicDesc) optClassicDesc.innerText = dict.uiModeOptClassicDesc || "";
-  const optKdsTitle = document.getElementById("i18n-opt-kds-title");
-  if (optKdsTitle) optKdsTitle.innerText = dict.uiModeOptKdsTitle || "新版 KDS 廚房系統 (實驗性)";
-  const optKdsDesc = document.getElementById("i18n-opt-kds-desc");
-  if (optKdsDesc) optKdsDesc.innerText = dict.uiModeOptKdsDesc || "";
-
   // View History Headers
+
   const histTitle = document.getElementById("i18n-history-title");
   if (histTitle) histTitle.innerText = dict.historyTitle;
   const histSub = document.getElementById("i18n-history-sub");
   if (histSub) histSub.innerText = dict.historySub;
 
-  // BLAB Modal
+  // BLAB Support & Contact Modal
   const mBlabT = document.getElementById("i18n-modal-blab-title");
   if (mBlabT) mBlabT.innerText = dict.modalBlabTitle;
+  const mBlabSub = document.getElementById("i18n-modal-blab-subtitle");
+  if (mBlabSub) mBlabSub.innerText = dict.modalBlabSubtitle;
+  const mBlabStatus = document.getElementById("i18n-blab-status-online");
+  if (mBlabStatus) mBlabStatus.innerText = dict.blabStatusOnline;
+  const mBlabDirectSub = document.getElementById("i18n-blab-support-direct-sub");
+  if (mBlabDirectSub) mBlabDirectSub.innerText = dict.blabSupportDirectSub;
+  const btnMBlabLine = document.getElementById("i18n-btn-modal-blab-line");
+  if (btnMBlabLine) btnMBlabLine.innerText = dict.btnModalBlabLine;
+  const mBlabUpgT = document.getElementById("i18n-blab-upgrade-title");
+  if (mBlabUpgT) mBlabUpgT.innerText = dict.blabUpgradeTitle;
+  const mBlabUpgS = document.getElementById("i18n-blab-upgrade-sub");
+  if (mBlabUpgS) mBlabUpgS.innerText = dict.blabUpgradeSub;
+  const btnMBlabUpg = document.getElementById("i18n-btn-modal-blab-upgrade");
+  if (btnMBlabUpg) btnMBlabUpg.innerText = dict.btnModalBlabUpgrade;
+  const mBlabHours = document.getElementById("i18n-blab-hours-commitment");
+  if (mBlabHours) mBlabHours.innerText = dict.blabHoursCommitment;
   const mBlabD = document.getElementById("i18n-modal-blab-desc");
   if (mBlabD) mBlabD.innerText = dict.modalBlabDesc;
   const blabExpT = document.getElementById("i18n-blab-export-title");
   if (blabExpT) blabExpT.innerText = dict.blabExportTitle;
   const blabExpS = document.getElementById("i18n-blab-export-sub");
   if (blabExpS) blabExpS.innerText = dict.blabExportSub;
-  const btnMBlabLine = document.getElementById("i18n-btn-modal-blab-line");
-  if (btnMBlabLine) btnMBlabLine.innerText = dict.btnModalBlabLine;
   const btnMBlabExp = document.getElementById("i18n-btn-modal-blab-export");
   if (btnMBlabExp) btnMBlabExp.innerText = dict.btnModalBlabExport;
   const btnMBlabCls = document.getElementById("i18n-btn-modal-blab-close");
@@ -1441,6 +1409,9 @@ function applyLanguageToDOM() {
   if (setS) setS.innerText = dict.settingsSub;
   const setSync = document.getElementById("i18n-settings-sync-status");
   if (setSync) setSync.innerText = dict.settingsSyncStatus;
+  if (typeof updateSettingsPrinterStatusDisplay === "function") {
+    updateSettingsPrinterStatusDisplay();
+  }
   const setStT = document.getElementById("i18n-setting-store-status-title");
   if (setStT) setStT.innerText = dict.settingStoreStatusTitle;
   const setStS = document.getElementById("i18n-setting-store-status-sub");
@@ -1488,6 +1459,8 @@ function applyLanguageToDOM() {
   if (tocOrderMode) tocOrderMode.innerText = dict.tocOrderMode;
   const tocHours = document.getElementById("i18n-toc-hours");
   if (tocHours) tocHours.innerText = dict.tocHours;
+  const tocStoreInfo = document.getElementById("i18n-toc-store-info");
+  if (tocStoreInfo) tocStoreInfo.innerText = dict.tocStoreInfo;
   const tocAddress = document.getElementById("i18n-toc-address");
   if (tocAddress) tocAddress.innerText = dict.tocAddress;
   const tocAnn = document.getElementById("i18n-toc-announcement");
@@ -1570,6 +1543,13 @@ function applyLanguageToDOM() {
   if (hrsS) hrsS.innerText = dict.hoursSub;
   const btnSaveHrs = document.getElementById("btn-save-hours");
   if (btnSaveHrs) btnSaveHrs.innerText = dict.btnSaveHours;
+
+  const setStoreInfoT = document.getElementById("i18n-setting-store-info-title");
+  if (setStoreInfoT) setStoreInfoT.innerText = dict.settingStoreInfoTitle;
+  const setStoreInfoS = document.getElementById("i18n-setting-store-info-sub");
+  if (setStoreInfoS) setStoreInfoS.innerText = dict.settingStoreInfoSub;
+  const btnSaveAllStoreInfo = document.getElementById("btn-save-all-store-info");
+  if (btnSaveAllStoreInfo) btnSaveAllStoreInfo.innerText = dict.btnSaveAllStoreInfo;
 
   const setAddrT = document.getElementById("i18n-setting-address-title");
   if (setAddrT) setAddrT.innerText = dict.settingAddressTitle;
