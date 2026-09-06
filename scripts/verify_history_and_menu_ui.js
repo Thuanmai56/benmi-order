@@ -133,6 +133,65 @@ assert(menuJs.includes('POS_SVG.grip'), 'Missing POS_SVG.grip in js/orders-menu.
 
 console.log('  ✓ JavaScript logic, filters, and status pill renderers verified');
 
+// 6. Detailed Search & Filter Execution Verification
+console.log('6. Running simulated search & filter tests with real-world sample orders...');
+
+const testVm = {
+  window: {},
+  document: {
+    getElementById: (id) => ({
+      style: {},
+      value: "",
+      focus: () => {},
+      innerText: ""
+    }),
+    querySelectorAll: () => [],
+    addEventListener: () => {}
+  },
+  POS_SVG: { inbox: "", search: "", calendar: "", folder: "", folderOpen: "" },
+  t: (k) => k,
+  escapeHtml: (s) => s
+};
+vm.createContext(testVm);
+vm.runInContext(historyJs, testVm);
+
+const mockOrders = [
+  {
+    key: "B0906-T005",
+    customer: "NICK EN",
+    time: "2026-09-06 19:55",
+    content: "訂單編號：B0906-T113\n\n1份 x Set 11 小綜合+飲料\n\n📍 用餐方式：外帶",
+    total: 179,
+    diningOption: "takeaway"
+  },
+  {
+    key: "B0906-D002",
+    customer: "Nguyễn Văn Thuận",
+    time: "2026-09-06 12:30",
+    content: "1 x Bánh mì thịt nướng\n1 x Cà phê sữa đá\n\n📍 Dịch vụ: Ăn tại chỗ",
+    tableNumber: "5",
+    total: 95,
+    diningOption: "dine_in"
+  }
+];
+
+// Test matchesHistorySearch
+assert(testVm.matchesHistorySearch(mockOrders[0], "T005"), "Should match order by key T005");
+assert(testVm.matchesHistorySearch(mockOrders[0], "#005"), "Should match order by key #005");
+assert(testVm.matchesHistorySearch(mockOrders[0], "nick"), "Should match customer nick");
+assert(testVm.matchesHistorySearch(mockOrders[0], "Set 11"), "Should match dish Set 11");
+assert(!testVm.matchesHistorySearch(mockOrders[0], "thuan"), "Should not match different customer");
+
+assert(testVm.matchesHistorySearch(mockOrders[1], "thuan"), "Should match unaccented thuan");
+assert(testVm.matchesHistorySearch(mockOrders[1], "banh mi"), "Should match unaccented banh mi");
+assert(testVm.matchesHistorySearch(mockOrders[1], "5"), "Should match table 5");
+
+// Test isOrderDineIn
+assert(!testVm.isOrderDineIn(mockOrders[0]), "mockOrder 0 should be takeaway");
+assert(testVm.isOrderDineIn(mockOrders[1]), "mockOrder 1 should be dine_in");
+
+console.log('  ✓ Search multi-field matching (key, customer, table, dishes, diacritics) and dining detection passed');
+
 console.log('\n====================================================');
 console.log('🎉 ALL VERIFICATION CHECKS PASSED SUCCESSFULLY!');
 console.log('====================================================\n');
