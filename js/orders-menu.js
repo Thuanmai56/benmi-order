@@ -19,19 +19,23 @@ function getBenmiDefaultCategories() {
 
 function markMenuDirty() {
   isMenuDirty = true;
-  const btn = document.querySelector("#view-menu .btn-primary");
+  const btn = document.getElementById("btn-menu-save") || document.querySelector("#view-menu .btn-primary");
+  const textEl = document.getElementById("btn-menu-save-text");
   if (btn) {
     btn.style.backgroundColor = "var(--brand-red)";
-    btn.innerText = t("btnMenuDirty");
+    if (textEl) textEl.innerText = t("btnMenuDirty");
+    else btn.innerText = t("btnMenuDirty");
   }
 }
 
 function clearMenuDirty() {
   isMenuDirty = false;
-  const btn = document.querySelector("#view-menu .btn-primary");
+  const btn = document.getElementById("btn-menu-save") || document.querySelector("#view-menu .btn-primary");
+  const textEl = document.getElementById("btn-menu-save-text");
   if (btn) {
     btn.style.backgroundColor = ""; // revert to CSS default
-    btn.innerText = t("btnMenuSave");
+    if (textEl) textEl.innerText = t("btnMenuSave");
+    else btn.innerText = t("btnMenuSave");
   }
 }
 
@@ -110,7 +114,7 @@ async function loadMenuData() {
       if (!categories.some(c => c.type === 'order_customization' || c.id === 'sec-flavor')) {
         categories.unshift({
           id: 'sec-flavor',
-          title: '🧪 口味與客製化選擇',
+          title: currentLang === 'vi' ? 'Tùy chọn khẩu vị & biến thể' : '口味與客製化選擇',
           type: 'order_customization',
           allowCustomization: false,
           appliedModifiers: [],
@@ -243,7 +247,7 @@ function updateCategoryCardIndexes(cardsList) {
 
 function renderCategoriesManagerView() {
   const titleEl = document.getElementById("menu-editor-title");
-  if (titleEl) titleEl.innerText = `⚙️ ${t("manageCategoriesTitle")}`;
+  if (titleEl) titleEl.innerText = t("manageCategoriesTitle");
   const subEl = document.getElementById("i18n-menu-edit-sub");
   if (subEl) subEl.innerText = t("manageCategoriesSub");
 
@@ -322,11 +326,15 @@ function renderCategoriesManagerView() {
       });
 
       const badge = cat.type === 'modifier'
-        ? `<span style="font-size: 11.5px; padding: 3px 8px; background: #e0e7ff; color: #4338ca; border-radius: 6px; font-weight: 800;">${t("modifierPrefix")}</span>`
-        : `<span style="font-size: 11.5px; padding: 3px 8px; background: #ecfdf5; color: #047857; border-radius: 6px; font-weight: 800;">🍽️ ${t("categoryTypeCatalogBadge") || "餐點"}</span>`;
+        ? `<span class="cat-type-badge cat-type-modifier">${t("modifierPrefix")}</span>`
+        : `<span class="cat-type-badge cat-type-catalog">${t("categoryTypeCatalogBadge") || "餐點"}</span>`;
+
+      const gripSvg = (typeof POS_SVG !== "undefined" && POS_SVG.grip) || "⋮⋮";
+      const editSvg = (typeof POS_SVG !== "undefined" && POS_SVG.edit) || "";
+      const trashSvg = (typeof POS_SVG !== "undefined" && POS_SVG.trash) || "";
 
       card.innerHTML = `
-        <div class="cat-mgr-drag-handle" title="Kéo rê để đổi thứ tự / 拖曳排序">☰</div>
+        <div class="cat-mgr-drag-handle" title="Kéo rê để đổi thứ tự / 拖曳排序">${gripSvg}</div>
         <div class="cat-mgr-index">#${idx + 1}</div>
         <div class="cat-mgr-info">
           ${badge}
@@ -334,8 +342,12 @@ function renderCategoriesManagerView() {
           <span class="cat-mgr-count">${cat.items.length} ${t("menuItemUnit")}</span>
         </div>
         <div class="cat-mgr-actions" onclick="event.stopPropagation()">
-          <button type="button" class="btn btn-ghost" style="border: 1px solid #cbd5e1; background:#fff; padding: 6px 12px; font-size: 13px; font-weight: 700; border-radius: 8px;" onclick="promptRenameCategoryAtIndex(${idx})">✏️ ${t("btnCategoryRename")}</button>
-          <button type="button" class="btn btn-ghost" style="border: 1px solid #fee2e2; background:#fff5f5; color:var(--brand-red); padding: 6px 12px; font-size: 13px; font-weight: 700; border-radius: 8px;" onclick="deleteCategoryAtIndex(${idx})">🗑️ ${t("btnCategoryDelete")}</button>
+          <button type="button" class="btn btn-ghost cat-mgr-btn" onclick="promptRenameCategoryAtIndex(${idx})">
+            ${editSvg}<span>${t("btnCategoryRename")}</span>
+          </button>
+          <button type="button" class="btn btn-ghost cat-mgr-btn btn-danger-ghost" onclick="deleteCategoryAtIndex(${idx})">
+            ${trashSvg}<span>${t("btnCategoryDelete")}</span>
+          </button>
         </div>
       `;
 
@@ -349,7 +361,8 @@ function renderCategoriesManagerView() {
   const bottomAddBtn = document.createElement("button");
   bottomAddBtn.type = "button";
   bottomAddBtn.className = "cat-mgr-add-btn";
-  bottomAddBtn.innerHTML = `<span>${t("btnAddCategoryBottom")}</span>`;
+  const plusSvg = (typeof POS_SVG !== "undefined" && POS_SVG.plus) || "";
+  bottomAddBtn.innerHTML = `${plusSvg}<span>${t("btnAddCategoryBottom")}</span>`;
   bottomAddBtn.onclick = () => openAddCategoryModal();
   mgrContainer.appendChild(bottomAddBtn);
 
@@ -389,8 +402,11 @@ function renderMenuCategories() {
   // Bottom Add Category Button in Left Panel
   const bottomDiv = document.createElement("div");
   bottomDiv.style.padding = "12px 14px";
+  const plusIcon = (typeof POS_SVG !== "undefined" && POS_SVG.plus) || "";
   bottomDiv.innerHTML = `
-    <button type="button" class="btn btn-ghost btn-block" style="border: 1.5px dashed #cbd5e1; background: #f8fafc; color: #475569; font-weight: 800; padding: 9px 12px; border-radius: 8px; font-size: 13px; cursor: pointer; transition: all 0.2s ease;" onclick="openAddCategoryModal()">${t("btnMenuAddCategory")}</button>
+    <button type="button" class="btn btn-ghost btn-block menu-cat-add-bottom" onclick="openAddCategoryModal()">
+      ${plusIcon}<span>${t("btnMenuAddCategory")}</span>
+    </button>
   `;
   container.appendChild(bottomDiv);
 }
@@ -519,25 +535,37 @@ function renderMenuCategoryEditor(index) {
     const oosBorder = item.isOos ? '#fca5a5' : '#6ee7b7';
     const oosText = item.isOos ? t("stockStatusOutOfStock") : t("stockStatusInStock");
 
+    const gripSvg = (typeof POS_SVG !== "undefined" && POS_SVG.grip) || "⋮⋮";
+    const tagSvg = (typeof POS_SVG !== "undefined" && POS_SVG.tag) || "";
+    const imageSvg = (typeof POS_SVG !== "undefined" && POS_SVG.image) || "";
+    const trashSvg = (typeof POS_SVG !== "undefined" && POS_SVG.trash) || "";
+
     row.innerHTML = `
-      <div class="menu-item-drag">☰</div>
-      <input type="text" class="menu-item-name-input" value="${escapeHtml(item.name)}" data-name-cidx="${index}" data-name-iidx="${iIdx}" oninput="markMenuDirty()"
+      <div class="menu-item-drag" title="Kéo để đổi thứ tự">${gripSvg}</div>
+      <input type="text" class="form-input menu-item-name-input" value="${escapeHtml(item.name)}" data-name-cidx="${index}" data-name-iidx="${iIdx}" oninput="markMenuDirty()"
         placeholder="${t("newItemPlaceholder")}">
       <label class="menu-item-price-label">
-        <span>$</span>
-        <input type="number" class="menu-item-price-input" value="${item.price !== null && item.price !== undefined ? item.price : ''}" data-cidx="${index}" data-iidx="${iIdx}" oninput="markMenuDirty()"
-        placeholder="${t("priceHiddenPlaceholder")}">
+        <span class="price-currency">$</span>
+        <input type="number" class="form-input menu-item-price-input" value="${item.price !== null && item.price !== undefined ? item.price : ''}" data-cidx="${index}" data-iidx="${iIdx}" oninput="markMenuDirty()"
+          placeholder="${t("priceHiddenPlaceholder")}">
       </label>
-      <label class="menu-item-badge-label" title="標籤 / 推薦 (例如: 雞肉足足100g, 👍 推薦)">
-        <span style="font-size:14px; color:#ef4444;">🏷️</span>
-        <input type="text" class="menu-item-badge-input" value="${escapeHtml(item.badgeText || '')}" data-badge-cidx="${index}" data-badge-iidx="${iIdx}" oninput="markMenuDirty()"
-          placeholder="標籤/推薦">
+      <label class="menu-item-badge-label" title="${t('menuItemBadgePlaceholder')}">
+        <span class="badge-icon">${tagSvg}</span>
+        <input type="text" class="form-input menu-item-badge-input" value="${escapeHtml(item.badgeText || '')}" data-badge-cidx="${index}" data-badge-iidx="${iIdx}" oninput="markMenuDirty()"
+          placeholder="${t('menuItemBadgePlaceholder')}">
       </label>
       <div class="menu-item-actions">
-        <button class="menu-item-btn" style="background: ${oosBg}; color: ${oosColor}; border: 1px solid ${oosBorder};"
-          onclick="openStockModal(${index}, ${iIdx})">${oosText}</button>
-        <button class="menu-item-btn btn-ghost" style="border: 1px solid #cbd5e1; background:#fff;" onclick="openImageModal('${cat.id}', '${escapeHtml(item.name)}')">${t("btnItemImage")}</button>
-        <button class="menu-item-btn btn-ghost" style="border: 1px solid #fee2e2; background: #fff5f5; color: var(--brand-red);" onclick="removeMenuItemAt(${index}, ${iIdx})">${t("btnItemDelete")}</button>
+        <button type="button" class="menu-item-status-pill ${item.isOos ? 'oos' : 'in-stock'}"
+          onclick="openStockModal(${index}, ${iIdx})" title="${oosText}">
+          <span class="status-dot"></span>
+          <span class="status-text">${oosText}</span>
+        </button>
+        <button type="button" class="btn btn-ghost menu-item-action-btn" onclick="openImageModal('${cat.id}', '${escapeHtml(item.name)}')">
+          ${imageSvg}<span>${t("btnItemImage")}</span>
+        </button>
+        <button type="button" class="btn btn-ghost menu-item-action-btn btn-danger-ghost" onclick="removeMenuItemAt(${index}, ${iIdx})">
+          ${trashSvg}<span>${t("btnItemDelete")}</span>
+        </button>
       </div>
     `;
     itemsContainer.appendChild(row);

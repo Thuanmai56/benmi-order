@@ -64,6 +64,13 @@ const I18N = {
     emptyHistory: "尚無歷史訂單",
     historyTitle: "訂單歷史",
     historySub: "近 30 天訂單紀錄 (依日期分組)",
+    historySearchPlaceholder: "搜尋訂單編號 / 顧客姓名 / 桌號...",
+    historyFilterAll: "全部",
+    historyFilterDineIn: "內用",
+    historyFilterTakeaway: "外帶",
+    historyNoSearchResults: "查無符合條件的訂單",
+    historyNoSearchResultsSub: "請嘗試更換關鍵字或清除篩選條件",
+    btnClearFilter: "清除篩選",
     btnExpandAll: "展開全部",
     btnCollapseAll: "收合全部",
     todayTag: "今天",
@@ -383,10 +390,10 @@ const I18N = {
     btnManageCategories: "管理分類",
     manageCategoriesTitle: "管理菜單分類",
     manageCategoriesSub: "拖曳調整分類順序，亦可新增或刪除分類",
-    btnCloseManager: "✕ 關閉",
-    btnAddCategory: "+ 新增分類",
-    btnMenuAddCategory: "+ 新增分類",
-    btnAddCategoryBottom: "+ 新增菜單分類",
+    btnCloseManager: "關閉",
+    btnAddCategory: "新增分類",
+    btnMenuAddCategory: "新增分類",
+    btnAddCategoryBottom: "新增菜單分類",
     btnCategoryDelete: "刪除分類",
     btnCategoryRename: "重新命名",
     addCategoryModalTitle: "新增菜單分類",
@@ -395,6 +402,7 @@ const I18N = {
     categoryTypeLabel: "分類類型",
     categoryTypeCatalog: "菜單品項 (主餐 / 飲料)",
     categoryTypeModifier: "客製化選項 (加辣 / 加料 / 甜度)",
+    categoryTypeCatalogBadge: "餐點",
     confirmDeleteCategory: "確定要刪除整個「{name}」分類及其內部所有品項嗎？",
     promptCategoryNameEmpty: "請輸入有效的分類名稱！",
     promptCategoryNamePrompt: "請輸入新的分類名稱：",
@@ -408,7 +416,7 @@ const I18N = {
     menuEditorTitle: "分類項目",
     menuEditSub: "拖曳排序 ✦ 點擊欄位直接修改",
     btnMenuRestore: "恢復預設菜單",
-    btnMenuAddItem: "+ 新增項目",
+    btnMenuAddItem: "新增項目",
     btnMenuSave: "儲存變更",
     btnMenuDirty: "儲存變更 (尚未儲存 *)",
     menuSelectPrompt: "請先從左側選擇分類",
@@ -416,10 +424,12 @@ const I18N = {
     menuItemTotalCount: "(全部 {count} 項)",
     menuItemUnit: "項",
     modifierPrefix: "[客製化]",
-    stockStatusInStock: "🟢 正常供應",
-    stockStatusOutOfStock: "🔴 暫時售完",
-    btnItemImage: "📷 圖片",
+    stockStatusInStock: "正常供應",
+    stockStatusOutOfStock: "暫時售完",
+    btnItemImage: "圖片",
     btnItemDelete: "刪除",
+    menuItemBadgePlaceholder: "標籤/推薦 (例: 招牌)",
+    menuItemPricePlaceholder: "價格",
     confirmDeleteItem: "確定要刪除這個項目嗎？",
     newItemPlaceholder: "新項目",
     confirmSaveMenu: "確定要儲存所有變更嗎？這會直接即時影響顧客端點餐頁面。",
@@ -598,6 +608,13 @@ const I18N = {
     emptyHistory: "Chưa có lịch sử đơn hàng",
     historyTitle: "Lịch sử đơn hàng",
     historySub: "Đơn hàng 30 ngày gần nhất (theo ngày)",
+    historySearchPlaceholder: "Tìm mã đơn / tên khách / số bàn...",
+    historyFilterAll: "Tất cả",
+    historyFilterDineIn: "Tại bàn",
+    historyFilterTakeaway: "Mang về",
+    historyNoSearchResults: "Không tìm thấy đơn hàng phù hợp",
+    historyNoSearchResultsSub: "Vui lòng thử từ khóa khác hoặc xóa bộ lọc",
+    btnClearFilter: "Xóa bộ lọc",
     btnExpandAll: "Mở tất cả",
     btnCollapseAll: "Thu gọn",
     todayTag: "Hôm nay",
@@ -809,10 +826,10 @@ const I18N = {
     btnManageCategories: "Quản lý phân loại",
     manageCategoriesTitle: "Quản lý phân loại thực đơn",
     manageCategoriesSub: "Kéo thả để đổi thứ tự, thêm mới hoặc xóa phân loại",
-    btnCloseManager: "✕ Đóng",
-    btnAddCategory: "+ Thêm phân loại",
-    btnMenuAddCategory: "+ Thêm phân loại",
-    btnAddCategoryBottom: "+ Thêm phân loại mới",
+    btnCloseManager: "Đóng",
+    btnAddCategory: "Thêm phân loại",
+    btnMenuAddCategory: "Thêm phân loại",
+    btnAddCategoryBottom: "Thêm phân loại mới",
     btnCategoryDelete: "Xóa phân loại",
     btnCategoryRename: "Đổi tên phân loại",
     addCategoryModalTitle: "Thêm phân loại thực đơn mới",
@@ -821,6 +838,7 @@ const I18N = {
     categoryTypeLabel: "Loại phân loại",
     categoryTypeCatalog: "Danh mục món (Món chính / Đồ uống)",
     categoryTypeModifier: "Tùy biến chọn kèm (Thêm cay / Topping)",
+    categoryTypeCatalogBadge: "Món ăn",
     confirmDeleteCategory: "Bạn có chắc muốn xóa toàn bộ phân loại「{name}」và các món bên trong không?",
     promptCategoryNameEmpty: "Vui lòng nhập tên phân loại hợp lệ!",
     promptCategoryNamePrompt: "Nhập tên phân loại mới:",
@@ -834,7 +852,7 @@ const I18N = {
     menuEditorTitle: "Danh sách món",
     menuEditSub: "Kéo thả để sắp xếp ✦ Nhấn vào ô để sửa trực tiếp",
     btnMenuRestore: "Khôi phục Menu gốc",
-    btnMenuAddItem: "+ Thêm món mới",
+    btnMenuAddItem: "Thêm món mới",
     btnMenuSave: "Lưu thay đổi",
     btnMenuDirty: "Lưu thay đổi (Chưa lưu *)",
     menuSelectPrompt: "Vui lòng chọn danh mục ở bên trái",
@@ -842,10 +860,12 @@ const I18N = {
     menuItemTotalCount: "(Tất cả {count} món)",
     menuItemUnit: "món",
     modifierPrefix: "[Tùy biến]",
-    stockStatusInStock: "🟢 Còn hàng",
-    stockStatusOutOfStock: "🔴 Hết hàng",
-    btnItemImage: "📷 Ảnh",
+    stockStatusInStock: "Còn món",
+    stockStatusOutOfStock: "Hết hàng",
+    btnItemImage: "Ảnh món",
     btnItemDelete: "Xóa",
+    menuItemBadgePlaceholder: "Nhãn/Gợi ý (VD: Bán chạy)",
+    menuItemPricePlaceholder: "Giá",
     confirmDeleteItem: "Bạn có chắc muốn xóa món này không?",
     newItemPlaceholder: "Món mới",
     confirmSaveMenu: "Bạn có chắc chắn muốn lưu mọi thay đổi không? Thay đổi sẽ cập nhật ngay lập tức lên trang đặt hàng của khách.",
@@ -1237,12 +1257,19 @@ function applyLanguageToDOM() {
   const fDinein = document.getElementById("i18n-filter-dinein");
   if (fDinein) fDinein.innerText = dict.filterDineIn || "內用";
 
-  // View History Headers
-
+  // View History Headers & Search
   const histTitle = document.getElementById("i18n-history-title");
   if (histTitle) histTitle.innerText = dict.historyTitle;
   const histSub = document.getElementById("i18n-history-sub");
   if (histSub) histSub.innerText = dict.historySub;
+  const histSearch = document.getElementById("history-search-input");
+  if (histSearch) histSearch.placeholder = dict.historySearchPlaceholder || "搜尋訂單編號 / 顧客姓名 / 桌號...";
+  const histFAll = document.getElementById("i18n-hist-filter-all");
+  if (histFAll) histFAll.innerText = dict.historyFilterAll || "全部";
+  const histFDine = document.getElementById("i18n-hist-filter-dinein");
+  if (histFDine) histFDine.innerText = dict.historyFilterDineIn || "內用";
+  const histFTake = document.getElementById("i18n-hist-filter-takeaway");
+  if (histFTake) histFTake.innerText = dict.historyFilterTakeaway || "外帶";
 
   // BLAB Support & Contact Modal
   const mBlabT = document.getElementById("i18n-modal-blab-title");
