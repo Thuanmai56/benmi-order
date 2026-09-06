@@ -3888,38 +3888,43 @@ button.sidebar-nav-item.active {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex: 1 1 240px;
+  flex: 1 1 320px;
   min-width: 0;
 }
 
-.menu-item-name-input {
-  flex: 1 1 110px;
-  min-width: 0;
-  height: 40px;
-  font-size: 14.5px;
-  font-weight: 800;
-  padding: 0 10px;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 9px;
-  font-family: inherit;
-  box-sizing: border-box;
-  background: #ffffff;
-  color: #0f172a;
+/* Vùng nhập Tên Món Ăn: Ưu tiên không gian rộng rãi, không bị co nhỏ hay chèn ép */
+.menu-item-name-input,
+input.menu-item-name-input {
+  flex: 2 1 200px !important;
+  min-width: 140px !important;
+  height: 40px !important;
+  font-size: 14.5px !important;
+  font-weight: 800 !important;
+  padding: 0 12px !important;
+  border: 1.5px solid #e2e8f0 !important;
+  border-radius: 9px !important;
+  font-family: inherit !important;
+  box-sizing: border-box !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
   transition: all 0.15s ease;
 }
 
-.menu-item-name-input:focus {
+.menu-item-name-input:focus,
+input.menu-item-name-input:focus {
   outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(0, 185, 0, 0.12);
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px rgba(0, 185, 0, 0.12) !important;
 }
 
 .menu-item-price-label {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   font-weight: 800;
+  flex: 0 0 auto;
   flex-shrink: 0;
+  width: auto;
 }
 
 .menu-item-price-label .price-currency {
@@ -3928,41 +3933,50 @@ button.sidebar-nav-item.active {
   color: #64748b;
 }
 
-/* Khung nhập giá tiền hẹp lại, căn giữa số tiền */
-.menu-item-price-input {
-  width: 52px;
-  height: 40px;
-  font-size: 14px;
-  font-weight: 800;
-  padding: 0 4px;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 9px;
-  font-family: inherit;
-  box-sizing: border-box;
-  text-align: center;
-  background: #ffffff;
-  color: #0f172a;
+/* Khung nhập giá tiền: Cố định hẹp gọn gàng (60px), căn giữa, không bao giờ bị kéo dài */
+.menu-item-price-input,
+input.menu-item-price-input {
+  width: 60px !important;
+  max-width: 64px !important;
+  min-width: 52px !important;
+  height: 40px !important;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  padding: 0 4px !important;
+  border: 1.5px solid #e2e8f0 !important;
+  border-radius: 9px !important;
+  font-family: inherit !important;
+  box-sizing: border-box !important;
+  text-align: center !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  flex: 0 0 60px !important;
   transition: all 0.15s ease;
   -moz-appearance: textfield;
 }
 
 .menu-item-price-input::-webkit-outer-spin-button,
-.menu-item-price-input::-webkit-inner-spin-button {
+.menu-item-price-input::-webkit-inner-spin-button,
+input.menu-item-price-input::-webkit-outer-spin-button,
+input.menu-item-price-input::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
 
-.menu-item-price-input:focus {
+.menu-item-price-input:focus,
+input.menu-item-price-input:focus {
   outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(0, 185, 0, 0.12);
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px rgba(0, 185, 0, 0.12) !important;
 }
 
 .menu-item-badge-label {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
+  flex: 0 0 auto;
   flex-shrink: 0;
+  width: auto;
 }
 
 .menu-item-badge-label .badge-icon {
@@ -3971,25 +3985,31 @@ button.sidebar-nav-item.active {
   color: #ef4444;
 }
 
-.menu-item-badge-input {
-  width: 78px;
-  height: 40px;
-  font-size: 12.5px;
-  font-weight: 700;
-  padding: 0 8px;
-  border: 1.5px solid #fecaca;
-  border-radius: 9px;
-  font-family: inherit;
-  box-sizing: border-box;
-  color: #b91c1c;
-  background: #fff5f5;
+/* Khung nhập nhãn phụ (đơn chọn / đa chọn): Cố định hẹp gọn (76px) */
+.menu-item-badge-input,
+input.menu-item-badge-input {
+  width: 76px !important;
+  max-width: 80px !important;
+  min-width: 64px !important;
+  height: 40px !important;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  padding: 0 8px !important;
+  border: 1.5px solid #fecaca !important;
+  border-radius: 9px !important;
+  font-family: inherit !important;
+  box-sizing: border-box !important;
+  color: #b91c1c !important;
+  background: #fff5f5 !important;
+  flex: 0 0 76px !important;
   transition: all 0.15s ease;
 }
 
-.menu-item-badge-input:focus {
+.menu-item-badge-input:focus,
+input.menu-item-badge-input:focus {
   outline: none;
-  border-color: #ef4444;
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
 }
 
 .menu-item-actions {
@@ -4105,15 +4125,21 @@ button.sidebar-nav-item.active {
     padding-top: 6px;
     border-top: 1px dashed #f1f5f9;
   }
-  .menu-item-price-input {
-    width: 48px;
-    height: 38px;
-    font-size: 13.5px;
+  .menu-item-price-input,
+  input.menu-item-price-input {
+    width: 54px !important;
+    max-width: 58px !important;
+    height: 38px !important;
+    font-size: 13.5px !important;
+    flex: 0 0 54px !important;
   }
-  .menu-item-badge-input {
-    width: 72px;
-    height: 38px;
-    font-size: 12px;
+  .menu-item-badge-input,
+  input.menu-item-badge-input {
+    width: 72px !important;
+    max-width: 76px !important;
+    height: 38px !important;
+    font-size: 12px !important;
+    flex: 0 0 72px !important;
   }
   .menu-item-status-pill,
   .menu-item-action-btn {
