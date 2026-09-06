@@ -60,7 +60,7 @@ graph TD
 apps/android-pos/
 ├── android/                             # Dự án Android Studio gốc
 │   ├── app/
-│   │   ├── build.gradle                 # Cấu hình build APK, versionCode 5 & versionName 1.4
+│   │   ├── build.gradle                 # Cấu hình build APK, versionCode 8 & versionName 1.7
 │   │   └── src/main/
 │   │       ├── AndroidManifest.xml      # Khai báo quyền Bluetooth & Network
 │   │       └── java/com/benmi/pos/
@@ -73,8 +73,8 @@ apps/android-pos/
 ├── build.sh                             # Script tự động copy HTML, CSS, JS sang dist/
 ├── capacitor.config.ts                  # Cấu hình Capacitor App (Remote Cloud Loader OTA)
 ├── package.json                         # Scripts build:apk, sync:prod, sync:dev
-├── benmi-pos-universal-v1.6.apk         # File cài đặt APK Universal Production mới nhất (OTA Cloud Loader)
-├── blab-pos-dev-v1.6.apk                # File cài đặt APK Dev mới nhất (Bundled Local Web Assets)
+├── benmi-pos-universal-v1.7.apk         # File cài đặt APK Universal Production mới nhất (OTA Cloud Loader)
+├── blab-pos-dev-v1.7.apk                # File cài đặt APK Dev mới nhất (Bundled Local Web Assets)
 └── README.md                            # Tài liệu hướng dẫn này
 ```
 
@@ -117,19 +117,19 @@ Mỗi khi chỉnh sửa giao diện hoặc logic tại `orders.html`, `js/`, `cs
      cd apps/android-pos
      npm run build:apk:dev
      ```
-     Xuất ra tại: `apps/android-pos/blab-pos-dev-v1.6.apk` (hoặc `blab-pos-dev.apk`).
+     Xuất ra tại: `apps/android-pos/blab-pos-dev-v1.7.apk` (hoặc `blab-pos-dev.apk`).
    * **Bản Production (Universal OTA Remote Loader)**:
      ```bash
      cd apps/android-pos
      npm run build:apk
      ```
-     Xuất ra tại: `apps/android-pos/benmi-pos-universal-v1.6.apk` (hoặc `benmi-pos-universal.apk`).
+     Xuất ra tại: `apps/android-pos/benmi-pos-universal-v1.7.apk` (hoặc `benmi-pos-universal.apk`).
 
 ### E. Cài Đặt Lên Thiết Bị Thật Qua Cáp USB (ADB)
 ```bash
-adb install -r blab-pos-dev-v1.6.apk
+adb install -r blab-pos-dev-v1.7.apk
 # Hoặc cài bản universal production:
-adb install -r benmi-pos-universal-v1.6.apk
+adb install -r benmi-pos-universal-v1.7.apk
 ```
 
 ---
@@ -146,7 +146,7 @@ adb install -r benmi-pos-universal-v1.6.apk
 4. Bấm **Kích Hoạt Điểm Bán & Bắt Đầu**. Hệ thống sẽ xác thực và tự động mở đúng Dashboard của quán đó.
 
 ### B. Cấu Hình Máy In Hóa Đơn Bill (ESC/POS)
-Vào biểu tượng **⚙️ Cài đặt (Settings) > Xuất Đơn & Máy In**:
+Vào biểu tượng **⚙️ Cài đặt (Settings) > Máy in & xuất vé**:
 1. **Giao thức in**: Chọn `🧾 ESC/POS (Hóa đơn cuộn 58-80mm)`.
 2. **Kênh kết nối**:
    - **Mạng LAN/Wi-Fi**: Nhập địa chỉ IP máy in (ví dụ: `192.168.1.100`) và cổng Port `9100`.
@@ -175,6 +175,8 @@ Vào biểu tượng **⚙️ Cài đặt (Settings) > Xuất Đơn & Máy In**:
 
 | Phiên Bản | Ngày Phát Hành | Điểm Nâng Cấp Chính |
 | :--- | :--- | :--- |
+| **v1.7** | 06/09/2026 | - **Hiển thị trạng thái máy in độc lập theo từng trạm**: Tách riêng pill trạng thái kết nối cho Quầy thu ngân & Khu bếp trong cài đặt máy in.<br>- **Tối ưu Trung tâm Hỗ trợ (Support Center)**: Thiết kế lại modal liên hệ theo từng chủ đề (Hỗ trợ kỹ thuật, Nâng cấp gói, Lịch sử dữ liệu > 30 ngày) với giao diện chuẩn UI/UX, phân cấp thị giác hiện đại và icon SVG thương mại.<br>- **Thống nhất Cài đặt cửa hàng**: Gộp thông tin cửa hàng vào tab Thông tin & Khách hàng, ẩn các nút hành động dư thừa khi ở tab máy in.<br>- Đổi tiêu đề cài đặt thành "Máy in & xuất vé" chuẩn hóa ngữ nghĩa POS. |
+| **v1.6** | 05/09/2026 | - Bộ chuyển đổi giao diện UI Mode Switcher (Sidebar navigation) & KDS Module.<br>- Cập nhật toàn diện icon SVG thương mại Lucide thay thế emoji trên POS. |
 | **v1.4** | 03/09/2026 | - **Kiến Trúc Universal Multi-Tenant POS**: 1 bản APK chung cho 1,000+ quán.<br>- **Remote Cloud Loader (OTA)**: Nạp trực tiếp từ Cloudflare Pages Production, cập nhật tức thì không cần cài lại app.<br>- **Store Activation Flow**: Màn hình kích hoạt điểm bán (Tenant ID + PIN quản lý).<br>- **Store Pairing & Unlink Management**: Quản lý và bảo vệ đổi quán bằng mã PIN trong mục Cài Đặt.<br>- Hỗ trợ môi trường phân tách bằng build flavors (`sync:prod` vs `sync:dev`). |
 | **v1.3** | 02/09/2026 | - Bổ sung bộ căn chỉnh tem nhãn TSPL chuyên sâu: Lề ngang `X-Offset`, lề dọc `Y-Offset`.<br>- Tùy chọn Độ phân giải `203 DPI` vs `300 DPI`.<br>- Bỏ khung viền chữ nhật bao quanh tem, chuyển sang phong cách Borderless tối giản. |
 | **v1.2** | 30/08/2026 | - Tích hợp giao thức in nhãn nhiệt TSPL (`TsplBitmapConverter.java`).<br>- Hỗ trợ in tem ly/món riêng lẻ (`item_stickers`) cho quầy pha chế/bếp.<br>- Hỗ trợ các kích thước tem chuẩn 40x30mm, 50x30mm, 76x130mm, 100x150mm. |

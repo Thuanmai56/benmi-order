@@ -47,7 +47,14 @@ function openMenuSettings() {
   document.querySelectorAll(".content").forEach(c => c.style.display = "none");
   const viewMenu = document.getElementById("view-menu");
   if (viewMenu) viewMenu.style.display = "block";
-  if (!currentMenuData) loadMenuData();
+  if (!currentMenuData) {
+    loadMenuData();
+  } else {
+    renderMenuCategories();
+    if (activeCategoryIndex >= 0) {
+      renderMenuCategoryEditor(activeCategoryIndex);
+    }
+  }
 }
 
 async function loadMenuData() {
