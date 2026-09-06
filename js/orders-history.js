@@ -10,6 +10,79 @@ let isHistoryLoading = false;
 let historyLastFetchedAt = 0;
 let historySearchQuery = "";
 let historyFilterType = "all"; // 'all' | 'dine_in' | 'takeaway'
+let currentRenderedDates = [];
+
+function removeVietnameseDiacritics(str) {
+  if (!str) return "";
+  return str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D");
+}
+
+function matchesHistorySearch(order, query) {
+  if (!query) return true;
+  const q = query.trim().toLowerCase();
+  const qClean = removeVietnameseDiacritics(q);
+  const qNoHash = q.replace(/^#/, "");
+
+  // 1. Order Key / Number (e.g. B0906-T005, T005, #005, 005)
+  const key = String(order.key || "").toLowerCase();
+  const keyClean = key.replace(/^#/, "");
+  if (key.includes(q) || keyClean.includes(qNoHash) || key.includes(qNoHash)) return true;
+
+  // 2. Customer Name (Supports Vietnamese accented & unaccented)
+  const cust = String(order.customer || order.customer_name || "").toLowerCase();
+  if (cust.includes(q) || removeVietnameseDiacritics(cust).includes(qClean)) return true;
+
+  // 3. Table Number (via helper or direct property)
+  const table = (typeof getOrderTableNumber === "function" ? getOrderTableNumber(order) : String(order.tableNumber || order.table_number || "")).toLowerCase().trim();
+  if (table && (table === q || table === qNoHash || table.includes(q))) return true;
+
+  // 4. Phone Number
+  const phone = String(order.phone || order.phoneNumber || "").toLowerCase();
+  if (phone && phone.includes(q)) return true;
+
+  // 5. Order Content / Dish Items (e.g. Bánh mì, Cà phê, Set 11)
+  const content = String(order.content || "").toLowerCase();
+  if (content.includes(q) || removeVietnameseDiacritics(content).includes(qClean)) return true;
+
+  // 6. Note
+  const note = String(order.note || "").toLowerCase();
+  if (note.includes(q) || removeVietnameseDiacritics(note).includes(qClean)) return true;
+
+  return false;
+}
+
+function isOrderDineIn(order) {
+  if (!order) return false;
+  // 1. Explicit dining option field
+  const opt = String(order.diningOption || order.dining_option || "").toLowerCase().trim();
+  if (opt === "dine_in" || opt === "dinein" || opt === "in") return true;
+  if (opt === "takeaway" || opt === "take_out" || opt === "out") return false;
+
+  // 2. Table number presence strongly implies dine-in
+  const table = (typeof getOrderTableNumber === "function" ? getOrderTableNumber(order) : String(order.tableNumber || order.table_number || "")).trim();
+  if (table) return true;
+
+  // 3. Order key prefix: D for dine-in, T for takeaway (e.g. B0906-D001 vs B0906-T005)
+  const key = String(order.key || "").trim();
+  if (/(?:^|-)D\d+/i.test(key)) return true;
+  if (/(?:^|-)T\d+/i.test(key)) return false;
+
+  // 4. Content indicators (Chinese & Vietnamese)
+  const content = String(order.content || "");
+  if (content.includes("內用") || content.includes("Tại chỗ") || content.includes("Ăn tại chỗ")) return true;
+  if (content.includes("外帶") || content.includes("Mang đi") || content.includes("Mang về")) return false;
+
+  // 5. Pickup time string indicators
+  const time = String(order.time || "");
+  if (time.includes("現場內用") || time.includes("內用") || time.includes("Tại chỗ")) return true;
+  if (time.includes("外帶") || time.includes("Mang đi")) return false;
+
+  return false;
+}
 
 function onHistorySearchInput(val) {
   historySearchQuery = (val || "").trim().toLowerCase();
@@ -20,12 +93,20 @@ function onHistorySearchInput(val) {
 
 function clearHistorySearch() {
   const input = document.getElementById("history-search-input");
-  if (input) input.value = "";
+  if (input) {
+    input.value = "";
+    input.focus();
+  }
   onHistorySearchInput("");
 }
 
 function setHistoryFilter(type) {
-  historyFilterType = type || "all";
+  // Toggle off if already active (except if switching to all)
+  if (historyFilterType === type && type !== "all") {
+    historyFilterType = "all";
+  } else {
+    historyFilterType = type || "all";
+  }
   document.querySelectorAll("#history-filter-group .history-filter-btn").forEach(btn => {
     btn.classList.toggle("active", btn.getAttribute("data-filter") === historyFilterType);
   });
@@ -62,6 +143,14 @@ async function fetchHistoryOrders(force = false) {
     isHistoryLoading = false;
   }
 
+  // Fallback: If remote history-all is empty, merge finished orders from active session
+  if ((!lastHistoryOrders || lastHistoryOrders.length === 0) && typeof currentOrders !== "undefined" && Array.isArray(currentOrders)) {
+    const finished = currentOrders.filter(o => o && (o.status === "PICKED_UP" || o.status === "REJECTED" || o.status === "PAID"));
+    if (finished.length > 0) {
+      lastHistoryOrders = finished;
+    }
+  }
+
   renderHistory(lastHistoryOrders);
 }
 
@@ -95,20 +184,17 @@ function groupByDate(orders) {
 }
 
 function renderHistory(orders) {
-  lastHistoryOrders = orders;
+  if (Array.isArray(orders)) {
+    lastHistoryOrders = orders;
+  }
+  const allOrders = Array.isArray(lastHistoryOrders) ? lastHistoryOrders : [];
   const container = document.getElementById("list-history");
   if (!container) return;
   container.innerHTML = "";
 
   const todayStr = getTaiwanTodayStr();
 
-  // Mặc định khởi tạo: tất cả ngày đều đóng (không tự động mở ngày hôm nay)
-  if (!isHistoryStateInitialized) {
-    expandedHistoryDates = new Set();
-    isHistoryStateInitialized = true;
-  }
-
-  if (!orders || orders.length === 0) {
+  if (!allOrders || allOrders.length === 0) {
     container.innerHTML = `
       <div class="history-empty-state">
         <div class="history-empty-icon">${(typeof POS_SVG !== "undefined" && POS_SVG.inbox) || ""}</div>
@@ -120,30 +206,24 @@ function renderHistory(orders) {
     return;
   }
 
-  // Filter orders by filterType & searchQuery
-  let filteredOrders = orders;
+  // Filter orders by dining option & search query
+  let filteredOrders = allOrders;
   if (historyFilterType === "dine_in") {
-    filteredOrders = filteredOrders.filter(o => (typeof isOrderDineIn === "function" ? isOrderDineIn(o) : o.diningOption === "dine_in"));
+    filteredOrders = filteredOrders.filter(o => isOrderDineIn(o));
   } else if (historyFilterType === "takeaway") {
-    filteredOrders = filteredOrders.filter(o => !(typeof isOrderDineIn === "function" ? isOrderDineIn(o) : o.diningOption === "dine_in"));
+    filteredOrders = filteredOrders.filter(o => !isOrderDineIn(o));
   }
 
   if (historySearchQuery) {
-    filteredOrders = filteredOrders.filter(o => {
-      const keyMatch = (o.key || "").toLowerCase().includes(historySearchQuery);
-      const custMatch = (o.customer || "").toLowerCase().includes(historySearchQuery);
-      const tableMatch = (String(o.tableNumber || "")).toLowerCase().includes(historySearchQuery);
-      const phoneMatch = (o.phone || "").toLowerCase().includes(historySearchQuery);
-      return keyMatch || custMatch || tableMatch || phoneMatch;
-    });
+    filteredOrders = filteredOrders.filter(o => matchesHistorySearch(o, historySearchQuery));
   }
 
   const summaryBadge = document.getElementById("history-total-summary-badge");
   if (summaryBadge) {
-    if (filteredOrders.length !== orders.length) {
-      summaryBadge.innerText = `${filteredOrders.length} / ${orders.length} ${t('orderUnit')}`;
+    if (filteredOrders.length !== allOrders.length) {
+      summaryBadge.innerText = `${filteredOrders.length} / ${allOrders.length} ${t('orderUnit')}`;
     } else {
-      summaryBadge.innerText = `${orders.length} ${t('orderUnit')}`;
+      summaryBadge.innerText = `${allOrders.length} ${t('orderUnit')}`;
     }
   }
 
@@ -164,9 +244,21 @@ function renderHistory(orders) {
   const grouped = groupByDate(filteredOrders);
   // Sort groups by date descending
   const sortedDates = Array.from(grouped.keys()).sort((a, b) => b.localeCompare(a));
+  currentRenderedDates = sortedDates;
 
-  // Cập nhật trạng thái nút "Mở tất cả / Thu gọn"
-  const isAllExpanded = sortedDates.length > 0 && sortedDates.every(d => expandedHistoryDates.has(d));
+  // Active filter or search automatically reveals results across all matching dates
+  const isFilterActive = !!historySearchQuery || historyFilterType !== "all";
+
+  // Default initialization: auto-expand the latest date group if neither filter nor search is active
+  if (!isHistoryStateInitialized) {
+    if (sortedDates.length > 0) {
+      expandedHistoryDates = new Set([sortedDates[0]]);
+    }
+    isHistoryStateInitialized = true;
+  }
+
+  // Update "Expand All / Collapse All" toggle button state
+  const isAllExpanded = sortedDates.length > 0 && sortedDates.every(d => isFilterActive || expandedHistoryDates.has(d));
   const toggleAllText = document.getElementById("btn-toggle-all-text");
   const toggleAllIcon = document.getElementById("btn-toggle-all-icon");
   if (toggleAllText) toggleAllText.innerText = isAllExpanded ? t('btnCollapseAll') : t('btnExpandAll');
@@ -187,7 +279,8 @@ function renderHistory(orders) {
     });
 
     const isToday = (date === todayStr);
-    const isExpanded = expandedHistoryDates.has(date);
+    // Expand if searching/filtering OR explicitly expanded
+    const isExpanded = isFilterActive ? (!expandedHistoryDates.has('collapsed_' + date)) : expandedHistoryDates.has(date);
     const dayTotal = items.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
 
     const groupEl = document.createElement("div");
@@ -323,22 +416,74 @@ function renderHistory(orders) {
 }
 
 function toggleHistoryDateGroup(date) {
-  if (expandedHistoryDates.has(date)) {
-    expandedHistoryDates.delete(date);
+  const isFilterActive = !!historySearchQuery || historyFilterType !== "all";
+  if (isFilterActive) {
+    if (expandedHistoryDates.has('collapsed_' + date)) {
+      expandedHistoryDates.delete('collapsed_' + date);
+    } else {
+      expandedHistoryDates.add('collapsed_' + date);
+    }
   } else {
-    expandedHistoryDates.add(date);
+    if (expandedHistoryDates.has(date)) {
+      expandedHistoryDates.delete(date);
+    } else {
+      expandedHistoryDates.add(date);
+    }
   }
   renderHistory(lastHistoryOrders);
 }
 
 function toggleAllHistoryGroups() {
-  const grouped = groupByDate(lastHistoryOrders);
-  const allDates = Array.from(grouped.keys());
-  const isAllExpanded = allDates.length > 0 && allDates.every(d => expandedHistoryDates.has(d));
-  if (isAllExpanded) {
-    expandedHistoryDates.clear();
+  const dates = currentRenderedDates.length > 0 ? currentRenderedDates : Array.from(groupByDate(lastHistoryOrders).keys());
+  const isFilterActive = !!historySearchQuery || historyFilterType !== "all";
+
+  if (isFilterActive) {
+    const isAnyCollapsed = dates.some(d => expandedHistoryDates.has('collapsed_' + d));
+    if (isAnyCollapsed) {
+      dates.forEach(d => expandedHistoryDates.delete('collapsed_' + d));
+    } else {
+      dates.forEach(d => expandedHistoryDates.add('collapsed_' + d));
+    }
   } else {
-    expandedHistoryDates = new Set(allDates);
+    const isAllExpanded = dates.length > 0 && dates.every(d => expandedHistoryDates.has(d));
+    if (isAllExpanded) {
+      expandedHistoryDates.clear();
+    } else {
+      expandedHistoryDates = new Set(dates);
+    }
   }
   renderHistory(lastHistoryOrders);
+}
+
+// Expose functions on window for global access
+window.onHistorySearchInput = onHistorySearchInput;
+window.clearHistorySearch = clearHistorySearch;
+window.setHistoryFilter = setHistoryFilter;
+window.toggleHistoryDateGroup = toggleHistoryDateGroup;
+window.toggleAllHistoryGroups = toggleAllHistoryGroups;
+window.fetchHistoryOrders = fetchHistoryOrders;
+window.renderHistory = renderHistory;
+
+// Safe DOM initialization for keyboard shortcuts and direct event listeners
+if (typeof document !== "undefined") {
+  document.addEventListener("DOMContentLoaded", () => {
+    const searchInput = document.getElementById("history-search-input");
+    if (searchInput) {
+      searchInput.addEventListener("input", (e) => onHistorySearchInput(e.target.value));
+      searchInput.addEventListener("keyup", (e) => {
+        if (e.key === "Escape") clearHistorySearch();
+      });
+    }
+    const clearBtn = document.getElementById("btn-history-search-clear");
+    if (clearBtn) {
+      clearBtn.addEventListener("click", () => clearHistorySearch());
+    }
+    const filterBtns = document.querySelectorAll("#history-filter-group .history-filter-btn");
+    filterBtns.forEach(btn => {
+      btn.addEventListener("click", () => {
+        const filter = btn.getAttribute("data-filter");
+        if (filter) setHistoryFilter(filter);
+      });
+    });
+  });
 }
