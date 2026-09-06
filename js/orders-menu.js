@@ -542,18 +542,20 @@ function renderMenuCategoryEditor(index) {
 
     row.innerHTML = `
       <div class="menu-item-drag" title="Kéo để đổi thứ tự">${gripSvg}</div>
-      <input type="text" class="form-input menu-item-name-input" value="${escapeHtml(item.name)}" data-name-cidx="${index}" data-name-iidx="${iIdx}" oninput="markMenuDirty()"
-        placeholder="${t("newItemPlaceholder")}">
-      <label class="menu-item-price-label">
-        <span class="price-currency">$</span>
-        <input type="number" class="form-input menu-item-price-input" value="${item.price !== null && item.price !== undefined ? item.price : ''}" data-cidx="${index}" data-iidx="${iIdx}" oninput="markMenuDirty()"
-          placeholder="${t("priceHiddenPlaceholder")}">
-      </label>
-      <label class="menu-item-badge-label" title="${t('menuItemBadgePlaceholder')}">
-        <span class="badge-icon">${tagSvg}</span>
-        <input type="text" class="form-input menu-item-badge-input" value="${escapeHtml(item.badgeText || '')}" data-badge-cidx="${index}" data-badge-iidx="${iIdx}" oninput="markMenuDirty()"
-          placeholder="${t('menuItemBadgePlaceholder')}">
-      </label>
+      <div class="menu-item-main-fields">
+        <input type="text" class="form-input menu-item-name-input" value="${escapeHtml(item.name)}" data-name-cidx="${index}" data-name-iidx="${iIdx}" oninput="markMenuDirty()"
+          placeholder="${t("newItemPlaceholder")}">
+        <label class="menu-item-price-label">
+          <span class="price-currency">$</span>
+          <input type="number" class="form-input menu-item-price-input" value="${item.price !== null && item.price !== undefined ? item.price : ''}" data-cidx="${index}" data-iidx="${iIdx}" oninput="markMenuDirty()"
+            placeholder="${t("priceHiddenPlaceholder")}">
+        </label>
+        <label class="menu-item-badge-label" title="${t('menuItemBadgePlaceholder')}">
+          <span class="badge-icon">${tagSvg}</span>
+          <input type="text" class="form-input menu-item-badge-input" value="${escapeHtml(item.badgeText || '')}" data-badge-cidx="${index}" data-badge-iidx="${iIdx}" oninput="markMenuDirty()"
+            placeholder="${t('menuItemBadgePlaceholder')}">
+        </label>
+      </div>
       <div class="menu-item-actions">
         <button type="button" class="menu-item-status-pill ${item.isOos ? 'oos' : 'in-stock'}"
           onclick="openStockModal(${index}, ${iIdx})" title="${oosText}">

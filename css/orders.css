@@ -3846,11 +3846,13 @@ button.sidebar-nav-item.active {
   padding: 10px 14px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  min-height: 54px;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-height: 52px;
   transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.2s ease, border-color 0.2s ease;
   box-shadow: 0 1px 2px rgba(0,0,0,0.02);
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .menu-item-row.dragging {
@@ -3870,7 +3872,7 @@ button.sidebar-nav-item.active {
 .menu-item-drag {
   color: #94a3b8;
   cursor: grab;
-  padding: 4px;
+  padding: 4px 2px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3882,15 +3884,23 @@ button.sidebar-nav-item.active {
   color: #1e293b;
 }
 
+.menu-item-main-fields {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
 .menu-item-name-input {
-  flex: 2;
-  min-width: 120px;
-  height: 42px;
-  font-size: 15px;
+  flex: 1 1 110px;
+  min-width: 0;
+  height: 40px;
+  font-size: 14.5px;
   font-weight: 800;
-  padding: 0 12px;
+  padding: 0 10px;
   border: 1.5px solid #e2e8f0;
-  border-radius: 10px;
+  border-radius: 9px;
   font-family: inherit;
   box-sizing: border-box;
   background: #ffffff;
@@ -3905,33 +3915,41 @@ button.sidebar-nav-item.active {
 }
 
 .menu-item-price-label {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-weight: 900;
+  gap: 3px;
+  font-weight: 800;
   flex-shrink: 0;
 }
 
 .menu-item-price-label .price-currency {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
   color: #64748b;
 }
 
+/* Khung nhập giá tiền hẹp lại, căn giữa số tiền */
 .menu-item-price-input {
-  width: 72px;
-  height: 42px;
-  font-size: 15px;
-  font-weight: 900;
-  padding: 0 6px;
+  width: 52px;
+  height: 40px;
+  font-size: 14px;
+  font-weight: 800;
+  padding: 0 4px;
   border: 1.5px solid #e2e8f0;
-  border-radius: 10px;
+  border-radius: 9px;
   font-family: inherit;
   box-sizing: border-box;
   text-align: center;
   background: #ffffff;
   color: #0f172a;
   transition: all 0.15s ease;
+  -moz-appearance: textfield;
+}
+
+.menu-item-price-input::-webkit-outer-spin-button,
+.menu-item-price-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .menu-item-price-input:focus {
@@ -3941,9 +3959,9 @@ button.sidebar-nav-item.active {
 }
 
 .menu-item-badge-label {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   flex-shrink: 0;
 }
 
@@ -3954,13 +3972,13 @@ button.sidebar-nav-item.active {
 }
 
 .menu-item-badge-input {
-  width: 110px;
-  height: 42px;
-  font-size: 13px;
+  width: 78px;
+  height: 40px;
+  font-size: 12.5px;
   font-weight: 700;
-  padding: 0 10px;
+  padding: 0 8px;
   border: 1.5px solid #fecaca;
-  border-radius: 10px;
+  border-radius: 9px;
   font-family: inherit;
   box-sizing: border-box;
   color: #b91c1c;
@@ -3977,23 +3995,25 @@ button.sidebar-nav-item.active {
 .menu-item-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 .menu-item-status-pill {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 0 12px;
-  min-height: 42px;
-  border-radius: 10px;
-  font-size: 13px;
+  gap: 6px;
+  padding: 0 10px;
+  min-height: 40px;
+  border-radius: 9px;
+  font-size: 12.5px;
   font-weight: 800;
   cursor: pointer;
   transition: all 0.15s ease;
   user-select: none;
   box-sizing: border-box;
+  white-space: nowrap;
 }
 
 .menu-item-status-pill.in-stock {
@@ -4036,20 +4056,21 @@ button.sidebar-nav-item.active {
 }
 
 .menu-item-action-btn {
-  min-height: 42px;
+  min-height: 40px;
   border: 1.5px solid #e2e8f0;
   background: #ffffff;
   color: #475569;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 700;
-  border-radius: 10px;
-  padding: 0 12px;
+  border-radius: 9px;
+  padding: 0 10px;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   cursor: pointer;
   transition: all 0.15s ease;
   box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+  white-space: nowrap;
 }
 
 .menu-item-action-btn:hover {
@@ -4074,22 +4095,49 @@ button.sidebar-nav-item.active {
     padding: 8px 10px;
     gap: 8px;
   }
-  .menu-item-name-input {
-    font-size: 14px;
-    min-width: 100px;
+  .menu-item-main-fields {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+  .menu-item-actions {
+    width: 100%;
+    justify-content: flex-end;
+    padding-top: 6px;
+    border-top: 1px dashed #f1f5f9;
   }
   .menu-item-price-input {
-    width: 60px;
-    font-size: 14px;
+    width: 48px;
+    height: 38px;
+    font-size: 13.5px;
   }
   .menu-item-badge-input {
-    width: 85px;
+    width: 72px;
+    height: 38px;
     font-size: 12px;
   }
   .menu-item-status-pill,
   .menu-item-action-btn {
+    min-height: 38px;
     padding: 0 8px;
     font-size: 12px;
+  }
+}
+
+@media (max-width: 540px) {
+  .menu-item-main-fields {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .menu-item-name-input {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+  .menu-item-actions {
+    justify-content: space-between;
+  }
+  .menu-item-actions > * {
+    flex: 1;
+    justify-content: center;
   }
 }
 
