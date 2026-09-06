@@ -110,6 +110,8 @@ const requiredClasses = [
     '.menu-editor-panel',
     '.menu-action-btn',
     '.menu-item-row',
+    '.menu-item-main-fields',
+    '.menu-item-price-input',
     '.menu-item-status-pill',
     '.status-dot'
 ];
@@ -117,7 +119,12 @@ const requiredClasses = [
 requiredClasses.forEach(cls => {
     assert(ordersCss.includes(cls), `Missing CSS class in css/orders.css: ${cls}`);
 });
-console.log('  ✓ All required CSS component classes exist in css/orders.css');
+
+// Assert menu-item-price-input is narrow (52px width, <= 60px)
+const priceInputMatch = ordersCss.match(/\.menu-item-price-input\s*\{[^}]*width:\s*(\d+)px/);
+assert(priceInputMatch && parseInt(priceInputMatch[1], 10) <= 56, `menu-item-price-input must be narrow (<= 56px), found: ${priceInputMatch ? priceInputMatch[1] : 'none'}`);
+
+console.log('  ✓ All required CSS component classes exist and price input is made compact & narrow (<= 56px)');
 
 // 5. JavaScript Logic & Method Verification
 console.log('5. Verifying function signatures & logic...');
