@@ -73,8 +73,8 @@ apps/android-pos/
 ├── build.sh                             # Script tự động copy HTML, CSS, JS sang dist/
 ├── capacitor.config.ts                  # Cấu hình Capacitor App (Remote Cloud Loader OTA)
 ├── package.json                         # Scripts build:apk, sync:prod, sync:dev
-├── benmi-pos-universal-v1.8.apk         # File cài đặt APK Universal Production mới nhất (OTA Cloud Loader)
-├── blab-pos-dev-v1.8.apk                # File cài đặt APK Dev mới nhất (Bundled Local Web Assets)
+├── benmi-pos-universal-v1.8.1.apk       # File cài đặt APK Universal Production mới nhất (OTA Cloud Loader)
+├── blab-pos-dev-v1.8.1.apk              # File cài đặt APK Dev mới nhất (Bundled Local Web Assets)
 └── README.md                            # Tài liệu hướng dẫn này
 ```
 
@@ -117,19 +117,19 @@ Mỗi khi chỉnh sửa giao diện hoặc logic tại `orders.html`, `js/`, `cs
      cd apps/android-pos
      npm run build:apk:dev
      ```
-     Xuất ra tại: `apps/android-pos/blab-pos-dev-v1.8.apk` (hoặc `blab-pos-dev.apk`).
+     Xuất ra tại: `apps/android-pos/blab-pos-dev-v1.8.1.apk` (hoặc `blab-pos-dev.apk`).
    * **Bản Production (Universal OTA Remote Loader)**:
      ```bash
      cd apps/android-pos
      npm run build:apk
      ```
-     Xuất ra tại: `apps/android-pos/benmi-pos-universal-v1.8.apk` (hoặc `benmi-pos-universal.apk`).
+     Xuất ra tại: `apps/android-pos/benmi-pos-universal-v1.8.1.apk` (hoặc `benmi-pos-universal.apk`).
 
 ### E. Cài Đặt Lên Thiết Bị Thật Qua Cáp USB (ADB)
 ```bash
-adb install -r blab-pos-dev-v1.8.apk
+adb install -r blab-pos-dev-v1.8.1.apk
 # Hoặc cài bản universal production:
-adb install -r benmi-pos-universal-v1.8.apk
+adb install -r benmi-pos-universal-v1.8.1.apk
 ```
 
 ---
@@ -175,6 +175,7 @@ Vào biểu tượng **⚙️ Cài đặt (Settings) > Máy in & xuất vé**:
 
 | Phiên Bản | Ngày Phát Hành | Điểm Nâng Cấp Chính |
 | :--- | :--- | :--- |
+| **v1.8.1** | 06/09/2026 | - **Sửa triệt để độ rộng ô đơn giá & hiển thị trọn vẹn tên món ăn**: Khóa cứng kích thước ô nhập giá tiền (`width: 60px !important`, căn giữa) và ô nhãn phụ (`width: 76px !important`), loại bỏ hoàn toàn sự can thiệp của class form toàn cục; giải phóng không gian tối đa cho ô Tên món (`flex: 2 1 200px !important`), hiển thị trọn vẹn 100% không bị che khuất chữ. |
 | **v1.8** | 06/09/2026 | - **Đồng bộ toàn diện UI/UX trang Lịch sử & Quản lý thực đơn**: Chuẩn hóa phong cách tối giản, sử dụng icon SVG Lucide nét mảnh.<br>- **Công cụ tìm kiếm & lọc nâng cao cho Lịch sử đơn hàng**: Tìm kiếm đa trường (món ăn, số bàn, mã đơn, ghi chú) không dấu tiếng Việt (`removeVietnameseDiacritics`), tự động mở nhóm ngày có kết quả khớp, bộ lọc trạng thái linh hoạt (Tất cả, Hoàn tất, Đã hủy).<br>- **Tối ưu hiển thị danh sách món thực đơn**: Thu gọn ô nhập đơn giá (52px), tổ chức cụm trường chính `.menu-item-main-fields` và tự động xuống hàng linh hoạt, xử lý triệt để hiện tượng tràn nút/chữ trên màn hình hẹp/tablet ngang dọc. |
 | **v1.7** | 06/09/2026 | - **Hiển thị trạng thái máy in độc lập theo từng trạm**: Tách riêng pill trạng thái kết nối cho Quầy thu ngân & Khu bếp trong cài đặt máy in.<br>- **Tối ưu Trung tâm Hỗ trợ (Support Center)**: Thiết kế lại modal liên hệ theo từng chủ đề (Hỗ trợ kỹ thuật, Nâng cấp gói, Lịch sử dữ liệu > 30 ngày) với giao diện chuẩn UI/UX, phân cấp thị giác hiện đại và icon SVG thương mại.<br>- **Thống nhất Cài đặt cửa hàng**: Gộp thông tin cửa hàng vào tab Thông tin & Khách hàng, ẩn các nút hành động dư thừa khi ở tab máy in.<br>- Đổi tiêu đề cài đặt thành "Máy in & xuất vé" chuẩn hóa ngữ nghĩa POS. |
 | **v1.6** | 05/09/2026 | - Bộ chuyển đổi giao diện UI Mode Switcher (Sidebar navigation) & KDS Module.<br>- Cập nhật toàn diện icon SVG thương mại Lucide thay thế emoji trên POS. |
