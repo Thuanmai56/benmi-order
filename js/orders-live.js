@@ -175,7 +175,6 @@ function renderListLeft(orders) {
     const totalFormatted = formatOrderTotal(order);
     const itemCount = countItemsFromContent(order.content);
     const itemCountStr = t("tileItemCount", { count: itemCount > 0 ? itemCount : "?" });
-    const itemsPreview = getOrderItemsPreview(order);
 
     const isAppendedUnread = (typeof unacknowledgedAppends !== "undefined" && unacknowledgedAppends.has(order.key));
 
@@ -237,7 +236,6 @@ function renderListLeft(orders) {
         <div class="tile-count-row">
           <div class="tile-item-summary">
             <span class="tile-item-count"><span class="tile-meta-icon">${POS_SVG.receipt}</span>${itemCountStr}</span>
-            ${itemsPreview ? `<span class="tile-item-preview" title="${escapeHtml(itemsPreview)}">${escapeHtml(itemsPreview)}</span>` : ''}
           </div>
           ${totalFormatted !== '-' ? `<span class="tile-price">${escapeHtml(totalFormatted)}</span>` : ''}
         </div>
@@ -274,7 +272,6 @@ function renderListRight(orders) {
     const totalFormatted = formatOrderTotal(order);
     const itemCount = countItemsFromContent(order.content);
     const itemCountStr = t("tileItemCount", { count: itemCount > 0 ? itemCount : "?" });
-    const itemsPreview = getOrderItemsPreview(order);
 
     const tile = document.createElement("div");
     tile.className = `tile ${isDineIn ? "is-dine-in" : "is-takeaway"}`;
@@ -317,7 +314,6 @@ function renderListRight(orders) {
         <div class="tile-count-row">
           <div class="tile-item-summary">
             <span class="tile-item-count"><span class="tile-meta-icon">${POS_SVG.receipt}</span>${itemCountStr}</span>
-            ${itemsPreview ? `<span class="tile-item-preview" title="${escapeHtml(itemsPreview)}">${escapeHtml(itemsPreview)}</span>` : ''}
           </div>
           ${totalFormatted !== '-' ? `<span class="tile-price">${escapeHtml(totalFormatted)}</span>` : ''}
         </div>
