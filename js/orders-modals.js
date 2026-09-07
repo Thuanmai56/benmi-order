@@ -57,45 +57,11 @@ function initOrderDetailHeaderScroll() {
   const detailTopbar = reviewModal.querySelector(".order-detail-topbar");
   if (!detailTopbar) return;
 
-  let lastReviewScrollTop = 0;
-  let reviewTicking = false;
-
+  if (reviewModal.dataset.headerScrollInit) return;
+  reviewModal.dataset.headerScrollInit = "true";
+  detailTopbar.classList.remove("topbar-hidden");
   reviewModal.addEventListener("scroll", () => {
-    if (!reviewTicking) {
-      const rAF = (typeof window !== "undefined" && window.requestAnimationFrame) || (cb => setTimeout(cb, 16));
-      rAF(() => {
-        const currentSt = reviewModal.scrollTop;
-        const diff = currentSt - lastReviewScrollTop;
-        if (currentSt > 20) {
-          detailTopbar.classList.add("is-scrolled");
-        } else {
-          detailTopbar.classList.remove("is-scrolled");
-        }
-
-        if (currentSt <= 20) {
-          detailTopbar.classList.remove("topbar-hidden");
-        } else if (Math.abs(diff) > 8) {
-          if (diff > 0 && currentSt > 50) {
-            detailTopbar.classList.add("topbar-hidden");
-          } else if (diff < 0) {
-            detailTopbar.classList.remove("topbar-hidden");
-          }
-        }
-        lastReviewScrollTop = currentSt;
-        reviewTicking = false;
-      });
-      reviewTicking = true;
-    }
-  }, { passive: true });
-
-  reviewModal.addEventListener("wheel", (e) => {
-    if (Math.abs(e.deltaY) > 5) {
-      if (e.deltaY > 0 && reviewModal.scrollTop > 40) {
-        detailTopbar.classList.add("topbar-hidden");
-      } else if (e.deltaY < 0) {
-        detailTopbar.classList.remove("topbar-hidden");
-      }
-    }
+    detailTopbar.classList.toggle("is-scrolled", reviewModal.scrollTop > 20);
   }, { passive: true });
 }
 window.initOrderDetailHeaderScroll = initOrderDetailHeaderScroll;
