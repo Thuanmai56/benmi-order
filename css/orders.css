@@ -902,7 +902,7 @@ button.sidebar-nav-item.active {
   box-shadow: none !important;
   /* Keep complete cards in the scrolling list, including wrapped badges. */
   flex: 0 0 auto;
-  min-height: 112px;
+  min-height: 84px;
   box-sizing: border-box;
   position: relative;
 }
@@ -5678,4 +5678,3 @@ select.form-input {
     grid-template-columns: 1fr;
   }
 }
-
