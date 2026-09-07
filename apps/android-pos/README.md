@@ -60,7 +60,7 @@ graph TD
 apps/android-pos/
 ├── android/                             # Dự án Android Studio gốc
 │   ├── app/
-│   │   ├── build.gradle                 # Cấu hình build APK, versionCode 11 & versionName 1.8.2
+│   │   ├── build.gradle                 # Cấu hình build APK, versionCode 12 & versionName 1.8.3
 │   │   └── src/main/
 │   │       ├── AndroidManifest.xml      # Khai báo quyền Bluetooth & Network
 │   │       └── java/com/benmi/pos/
@@ -74,7 +74,7 @@ apps/android-pos/
 ├── capacitor.config.ts                  # Cấu hình Capacitor App (Remote Cloud Loader OTA)
 ├── package.json                         # Scripts build:apk, sync:prod, sync:dev
 ├── benmi-pos-universal-v1.8.1.apk       # File cài đặt APK Universal Production mới nhất (OTA Cloud Loader)
-├── blab-pos-dev-v1.8.2.apk              # File cài đặt APK Dev mới nhất (Bundled Local Web Assets)
+├── blab-pos-dev-v1.8.3.apk              # File cài đặt APK Dev mới nhất (Bundled Local Web Assets)
 └── README.md                            # Tài liệu hướng dẫn này
 ```
 
@@ -118,7 +118,7 @@ Mỗi khi chỉnh sửa giao diện hoặc logic tại `orders.html`, `js/`, `cs
      npm run build:apk:dev
      ```
      Gradle xuất APK tại `android/app/build/outputs/apk/debug/app-debug.apk`.
-     Bản Dev 1.8.2 đã được sao chép thành `blab-pos-dev-v1.8.2.apk` và `blab-pos-dev.apk`, gồm các sửa lỗi bố cục tablet và header luôn hiển thị.
+     Bản Dev 1.8.3 đã được sao chép thành `blab-pos-dev-v1.8.3.apk` và `blab-pos-dev.apk`, gồm thẻ đơn gọn hơn (tối thiểu 84px), popup thêm phân loại có vùng cuộn và header luôn hiển thị.
    * **Bản Production (Universal OTA Remote Loader)**:
      ```bash
      cd apps/android-pos
@@ -128,7 +128,7 @@ Mỗi khi chỉnh sửa giao diện hoặc logic tại `orders.html`, `js/`, `cs
 
 ### E. Cài Đặt Lên Thiết Bị Thật Qua Cáp USB (ADB)
 ```bash
-adb install -r blab-pos-dev-v1.8.2.apk
+adb install -r blab-pos-dev-v1.8.3.apk
 # Hoặc cài bản universal production:
 adb install -r benmi-pos-universal-v1.8.1.apk
 ```
