@@ -3,6 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <script>
+    // Seamless routing: If arriving with ?tenant= or ?tenant_id=, forward directly to store menu
+    (function () {
+      try {
+        var params = new URLSearchParams(window.location.search);
+        if (params.has('tenant') || params.has('tenant_id') || params.has('liff.state')) {
+          window.location.replace('/index.html' + window.location.search + window.location.hash);
+        }
+      } catch (e) {}
+    })();
+  </script>
   
   <!-- SEO & Open Graph Meta Tags -->
   <title>專為台灣 F&B 店家打造的 LINE 點餐系統 | 提升外帶效率與熟客回購率</title>

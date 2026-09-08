@@ -16,7 +16,19 @@
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
 
   <!-- Marketplace Custom Styles -->
-  <link rel="stylesheet" href="css/marketplace.css?v=20260902_luxurycluster_v5">
+  <link rel="stylesheet" href="/css/marketplace.css?v=20260902_luxurycluster_v5">
+
+  <script>
+    // Seamless routing: If arriving with ?tenant= or ?tenant_id=, forward directly to store menu
+    (function () {
+      try {
+        var params = new URLSearchParams(window.location.search);
+        if (params.has('tenant') || params.has('tenant_id') || params.has('liff.state')) {
+          window.location.replace('/index.html' + window.location.search + window.location.hash);
+        }
+      } catch (e) {}
+    })();
+  </script>
 </head>
 
 <body>
@@ -26,7 +38,7 @@
     <div class="header-container">
       
       <!-- Brand Logo Section -->
-      <a href="marketplace.html" class="brand-section">
+      <a href="/" class="brand-section">
         <div class="brand-logo-icon">
           <svg class="icon-svg" viewBox="0 0 24 24" style="width:22px; height:22px;">
             <path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"></path>
@@ -178,7 +190,7 @@
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
   
   <!-- Marketplace Logic Script -->
-  <script src="js/marketplace.js?v=20260902_luxurycluster_v5"></script>
+  <script src="/js/marketplace.js?v=20260902_luxurycluster_v5"></script>
 
 </body>
 </html>
