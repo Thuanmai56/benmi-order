@@ -447,6 +447,7 @@ function formatOrderTotal(order) {
 }
 
 function switchTab(tab) {
+  if (activeTab === "menu" && tab !== "menu" && typeof confirmLeaveMenu === "function" && !confirmLeaveMenu()) return;
   if (tab === "reports" && isNativeAppPlatform()) {
     tab = "live";
   }

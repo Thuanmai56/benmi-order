@@ -418,6 +418,9 @@ const I18N = {
     btnMenuRestore: "恢復預設菜單",
     btnMenuAddItem: "新增項目",
     btnMenuSave: "儲存變更",
+    menuSaved: "已儲存",
+    menuHelp: "編輯說明",
+    menuDiscardConfirm: "尚有未儲存的菜單變更。確定放棄變更並離開？取消可繼續編輯。",
     btnMenuDirty: "儲存變更 (尚未儲存 *)",
     menuSelectPrompt: "請先從左側選擇分類",
     menuLoading: "載入菜單中...",
@@ -854,6 +857,9 @@ const I18N = {
     btnMenuRestore: "Khôi phục Menu gốc",
     btnMenuAddItem: "Thêm món mới",
     btnMenuSave: "Lưu thay đổi",
+    menuSaved: "Đã lưu",
+    menuHelp: "Hướng dẫn chỉnh sửa",
+    menuDiscardConfirm: "Có thay đổi thực đơn chưa lưu. Bỏ thay đổi và rời đi? Chọn Hủy để tiếp tục chỉnh sửa.",
     btnMenuDirty: "Lưu thay đổi (Chưa lưu *)",
     menuSelectPrompt: "Vui lòng chọn danh mục ở bên trái",
     menuLoading: "Đang tải thực đơn...",
@@ -1660,14 +1666,9 @@ function applyLanguageToDOM() {
   if (menuEdS) menuEdS.innerText = dict.menuEditSub;
   const btnMenuAdd = document.getElementById("btn-menu-add-item");
   if (btnMenuAdd) btnMenuAdd.innerText = dict.btnMenuAddItem;
-  const btnMenuSv = document.getElementById("btn-menu-save");
-  if (btnMenuSv) {
-    if (typeof isMenuDirty !== "undefined" && isMenuDirty) {
-      btnMenuSv.innerText = dict.btnMenuDirty;
-    } else {
-      btnMenuSv.innerText = dict.btnMenuSave;
-    }
-  }
+  if (typeof updateMenuSaveState === "function") updateMenuSaveState();
+  const menuHelp = document.getElementById("menu-help-toggle");
+  if (menuHelp) menuHelp.setAttribute("aria-label", dict.menuHelp);
   const menuPrompt = document.getElementById("i18n-menu-select-prompt");
   if (menuPrompt) menuPrompt.innerText = dict.menuSelectPrompt;
 
