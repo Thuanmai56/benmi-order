@@ -6,6 +6,8 @@ let currentMenuData = null;   // Array form for editor
 let rawMenuData = null;       // Original object form from API
 let activeCategoryIndex = -1;
 let isMenuDirty = false;
+let savedMenuSnapshot = null;
+let isMenuSaving = false;
 
 function getBenmiDefaultCategories() {
   return [
@@ -17,29 +19,53 @@ function getBenmiDefaultCategories() {
   ];
 }
 
+function updateMenuSaveState() {
+  const btn = document.getElementById("btn-menu-save");
+  const label = document.getElementById("btn-menu-save-text");
+  if (!btn) return;
+  btn.disabled = isMenuSaving || !isMenuDirty;
+  btn.classList.toggle("has-changes", isMenuDirty);
+  const text = t(isMenuSaving ? "menuSaving" : isMenuDirty ? "btnMenuSave" : "menuSaved");
+  if (label) label.textContent = text;
+  else btn.textContent = text;
+}
+
 function markMenuDirty() {
   isMenuDirty = true;
-  const btn = document.getElementById("btn-menu-save") || document.querySelector("#view-menu .btn-primary");
-  const textEl = document.getElementById("btn-menu-save-text");
-  if (btn) {
-    btn.style.backgroundColor = "var(--brand-red)";
-    if (textEl) textEl.innerText = t("btnMenuDirty");
-    else btn.innerText = t("btnMenuDirty");
-  }
+  updateMenuSaveState();
 }
 
 function clearMenuDirty() {
   isMenuDirty = false;
-  const btn = document.getElementById("btn-menu-save") || document.querySelector("#view-menu .btn-primary");
-  const textEl = document.getElementById("btn-menu-save-text");
-  if (btn) {
-    btn.style.backgroundColor = ""; // revert to CSS default
-    if (textEl) textEl.innerText = t("btnMenuSave");
-    else btn.innerText = t("btnMenuSave");
-  }
+  savedMenuSnapshot = JSON.stringify(currentMenuData);
+  updateMenuSaveState();
 }
 
+function confirmLeaveMenu() {
+  if (isMenuSaving) return false;
+  if (!isMenuDirty) return true;
+  if (!confirm(t("menuDiscardConfirm"))) return false;
+  currentMenuData = savedMenuSnapshot ? JSON.parse(savedMenuSnapshot) : null;
+  activeCategoryIndex = currentMenuData?.length ? Math.max(0, Math.min(activeCategoryIndex, currentMenuData.length - 1)) : -1;
+  clearMenuDirty();
+  renderMenuCategories();
+  if (activeCategoryIndex >= 0) renderMenuCategoryEditor(activeCategoryIndex);
+  else {
+    const body = document.getElementById("menu-editor-body");
+    if (body) body.textContent = t("menuSelectPrompt");
+  }
+  return true;
+}
+window.confirmLeaveMenu = confirmLeaveMenu;
+
+window.addEventListener("beforeunload", event => {
+  if (!isMenuDirty && !isMenuSaving) return;
+  event.preventDefault();
+  event.returnValue = "";
+});
+
 function openMenuSettings() {
+  if (isMenuDirty) syncMenuDataFromDOM();
   activeTab = "menu";
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
   document.querySelectorAll(".mini-btn").forEach(t => t.classList.remove("active"));
@@ -158,6 +184,7 @@ async function loadMenuData() {
       items: []
     }));
 
+    clearMenuDirty();
     activeCategoryIndex = currentMenuData.length > 0 ? 0 : -1;
     renderMenuCategories();
     if (activeCategoryIndex >= 0) {
@@ -187,6 +214,7 @@ async function loadMenuData() {
           return { name, price: typeof price === 'object' ? price.price : price, badgeText: typeof price === 'object' ? (price.badge_text || '') : '', isOos, originalName: name };
         })
       }));
+      clearMenuDirty();
       activeCategoryIndex = currentMenuData.length > 0 ? 0 : -1;
       renderMenuCategories();
       if (activeCategoryIndex >= 0) {
@@ -210,7 +238,7 @@ let draggedCategoryIndex = null;
 let isCategoryManagerOpen = false;
 
 function openCategoriesManager() {
-  syncMenuDataFromDOM();
+  if (!confirmLeaveMenu()) return;
   isCategoryManagerOpen = true;
   activeCategoryIndex = -1;
   renderMenuCategories();
@@ -218,7 +246,7 @@ function openCategoriesManager() {
 }
 
 function closeCategoriesManager() {
-  syncMenuDataFromDOM();
+  if (!confirmLeaveMenu()) return;
   isCategoryManagerOpen = false;
   activeCategoryIndex = (currentMenuData && currentMenuData.length > 0) ? 0 : -1;
   renderMenuCategories();
@@ -437,7 +465,8 @@ function renderMenuCategories() {
     `;
 
     div.onclick = () => {
-      syncMenuDataFromDOM();
+      if (index !== activeCategoryIndex && !confirmLeaveMenu()) return;
+      if (index === activeCategoryIndex && isMenuDirty) syncMenuDataFromDOM();
       isCategoryManagerOpen = false;
       activeCategoryIndex = index;
       renderMenuCategories();
@@ -518,7 +547,7 @@ function renderMenuCategoryEditor(index) {
 
     const toggleDiv = document.createElement("div");
     toggleDiv.className = "category-customization-box";
-    toggleDiv.style.cssText = "margin-bottom: 20px; background: #f8fafc; padding: 16px; border-radius: 12px; border: 1.5px solid #e2e8f0;";
+
     
     let modifiersHtml = '';
     if (storeModifiers.length === 0) {
@@ -1027,16 +1056,18 @@ function serializeMenuData(categories) {
 }
 
 async function saveMenuData(skipConfirm = false) {
-  if (!currentMenuData) return;
+  if (!currentMenuData || isMenuSaving) return;
   if (!skipConfirm && !confirm(t("confirmSaveMenu"))) return;
   syncMenuDataFromDOM();
 
   // Convert to rich item map format for API
   const output = serializeMenuData(currentMenuData);
 
-  const btn = document.querySelector("#view-menu .btn-primary");
-  const oldText = btn ? btn.innerText : "";
-  if (btn) { btn.innerText = t("menuSaving"); btn.disabled = true; }
+  isMenuSaving = true;
+  updateMenuSaveState();
+  const editor = document.getElementById("menu-editor-body");
+  if (editor) editor.inert = true;
+  document.querySelectorAll(".menu-header-actions, #menu-categories").forEach(el => el.inert = true);
 
   try {
     const res = await fetch(`${WORKER_BASE}/api/menu?tenant_id=${getTenantIdFromUrl()}`, {
@@ -1053,7 +1084,10 @@ async function saveMenuData(skipConfirm = false) {
   } catch (e) {
     alert(t("menuSaveFail") + e.message);
   } finally {
-    if (btn) { btn.innerText = t("btnMenuSave"); btn.disabled = false; }
+    isMenuSaving = false;
+    if (editor) editor.inert = false;
+    document.querySelectorAll(".menu-header-actions, #menu-categories").forEach(el => el.inert = false);
+    updateMenuSaveState();
   }
 }
 
@@ -1094,6 +1128,7 @@ function selectAllCategoryModifiers(catIndex, selectAll) {
 
 // --- Category Management ---
 function openAddCategoryModal() {
+  if (!confirmLeaveMenu()) return;
   const inp = document.getElementById("add-cat-input-name");
   if (inp) inp.value = "";
   const typeSelect = document.getElementById("add-cat-select-type");
@@ -1123,8 +1158,23 @@ function openAddCategoryModal() {
   const modal = document.getElementById("addCategoryModal");
   if (modal) {
     modal.style.display = "flex";
-    if (inp) setTimeout(() => inp.focus(), 50);
+    // Let the user choose when to open the keyboard on a tablet.
+    const body = modal.querySelector(".modal-body");
+    if (body) body.scrollTop = 0;
+    updateAddCategoryViewport();
   }
+}
+
+function updateAddCategoryViewport() {
+  const modal = document.getElementById("addCategoryModal");
+  if (!modal || modal.style.display === "none") return;
+  const viewport = window.visualViewport;
+  modal.style.height = `${viewport ? viewport.height : window.innerHeight}px`;
+  modal.style.top = `${viewport ? viewport.offsetTop : 0}px`;
+}
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", updateAddCategoryViewport);
+  window.visualViewport.addEventListener("scroll", updateAddCategoryViewport);
 }
 
 function onAddCategoryTypeChange() {
@@ -1184,6 +1234,7 @@ async function confirmAddCategory() {
   };
 
   currentMenuData.push(newCat);
+  markMenuDirty();
   closeAddCategoryModal();
   renderMenuCategories();
 
