@@ -478,12 +478,7 @@ if (typeof document !== "undefined") {
     if (clearBtn) {
       clearBtn.addEventListener("click", () => clearHistorySearch());
     }
-    const filterBtns = document.querySelectorAll("#history-filter-group .history-filter-btn");
-    filterBtns.forEach(btn => {
-      btn.addEventListener("click", () => {
-        const filter = btn.getAttribute("data-filter");
-        if (filter) setHistoryFilter(filter);
-      });
-    });
+    // Filter clicks are wired once by the inline handlers in orders.html.
+
   });
 }

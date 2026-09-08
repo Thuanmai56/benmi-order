@@ -109,7 +109,7 @@ const I18N = {
     badgePicked: "已取餐",
     badgePaid: "已結帳",
     badgeRejected: "已取消",
-    btnReview: "Review 訂單",
+    btnReview: "查看訂單",
     btnReady: "準備好了",
     btnPickedUp: "已取餐",
     btnPaid: "已結帳",
