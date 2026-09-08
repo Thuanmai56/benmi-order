@@ -2,6 +2,19 @@
 // Benmi POS - Module: Modals & Change/Reject
 // ==========================================
 
+// Reset after display: hidden elements have no scrollable layout to reset.
+function showModalFromTop(modal) {
+  if (!modal) return;
+  modal.style.display = "flex";
+  modal.scrollTop = 0;
+  modal.scrollLeft = 0;
+  modal.querySelectorAll(".modal-body, .modal-content").forEach(region => {
+    region.scrollTop = 0;
+    region.scrollLeft = 0;
+  });
+}
+window.showModalFromTop = showModalFromTop;
+
 function formatOrderDetailHeaderTime(dateOrStr) {
   let d = null;
   if (dateOrStr) {
@@ -314,8 +327,7 @@ function openReview(orderKey) {
 
   const revModal = document.getElementById("reviewModal");
   if (revModal) {
-    revModal.scrollTop = 0;
-    revModal.style.display = "flex";
+    showModalFromTop(revModal);
   }
 }
 
@@ -548,7 +560,7 @@ function reviewOpenChange() {
   onChangeReasonChange();
   renderTimePresets();
   applyTimePreset(10);
-  document.getElementById("changeModal").style.display = "flex";
+  showModalFromTop(document.getElementById("changeModal"));
 }
 
 function reviewOpenReject() {
@@ -560,7 +572,7 @@ function reviewOpenReject() {
   currentOrderKey = savedKey;           // Restore after closeModal
   document.getElementById("reject-reason").selectedIndex = 0;
   selectRejectReason("今日已售完");
-  document.getElementById("rejectModal").style.display = "flex";
+  showModalFromTop(document.getElementById("rejectModal"));
 }
 
 function onChangeReasonChange() {
@@ -655,7 +667,7 @@ function openBlabContactModal(topic = 'general') {
     }
   }
 
-  modal.style.display = "flex";
+  showModalFromTop(modal);
 }
 
 function closeBlabContactModal() {
@@ -665,7 +677,7 @@ function closeBlabContactModal() {
 
 function openPrinterGuideModal() {
   const modal = document.getElementById("printerGuideModal");
-  if (modal) modal.style.display = "flex";
+  if (modal) showModalFromTop(modal);
 }
 
 function closePrinterGuideModal() {
@@ -678,7 +690,7 @@ function showStoreActivationModal() {
   if (!modal) return;
   // If already displayed, do not re-initialize or steal focus from active inputs
   if (modal.style.display === "flex") return;
-  modal.style.display = "flex";
+  showModalFromTop(modal);
 
   const inpTenant = document.getElementById("activation-tenant-id");
   const inpPin = document.getElementById("activation-pin");
@@ -794,7 +806,7 @@ var quickStickerOrderKey = null;
 function openQuickStickerModal(orderKey) {
   quickStickerOrderKey = orderKey || (typeof reviewingOrder !== "undefined" && reviewingOrder ? reviewingOrder.key : null);
   const modal = document.getElementById("quickStickerModal");
-  if (modal) modal.style.display = "flex";
+  if (modal) showModalFromTop(modal);
   const customInput = document.getElementById("quick-sticker-custom-input");
   if (customInput) {
     customInput.value = "";
