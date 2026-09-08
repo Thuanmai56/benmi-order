@@ -1,4 +1,5 @@
 # Cloudflare Pages Redirects & Rewrites
 
-# Route root / to landing.html (200 rewrite)
-/              /landing.html    200
+# Clean marketplace routes
+/marketplace   /marketplace.html    200
+/marketplace/  /marketplace.html    200
