@@ -1,15 +1,29 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
-const isDev = process.env.APP_ENV === 'dev';
+const appEnv = process.env.APP_ENV || 'prod';
+
+const getRemoteUrl = (env: string): string | undefined => {
+  switch (env) {
+    case 'dev':
+      return 'https://dev.benmi-order.pages.dev/orders.html';
+    case 'staging':
+      return 'https://staging.benmi-order.pages.dev/orders.html';
+    case 'local':
+      return undefined; // Uses bundled local dist/
+    case 'prod':
+    default:
+      return 'https://benmi-order.pages.dev/orders.html';
+  }
+};
+
+const remoteUrl = getRemoteUrl(appEnv);
 
 const config: CapacitorConfig = {
   appId: 'com.benmi.pos',
   appName: 'Blab POS',
   webDir: 'dist',
   server: {
-    // In dev mode or local bundled APK: omit server.url so Capacitor loads local bundled dist/
-    // In prod remote loader mode: loads from live Cloudflare Pages
-    ...(isDev ? {} : { url: 'https://benmi-order.pages.dev/orders.html' }),
+    ...(remoteUrl ? { url: remoteUrl } : {}),
     androidScheme: 'https',
     cleartext: true
   },
