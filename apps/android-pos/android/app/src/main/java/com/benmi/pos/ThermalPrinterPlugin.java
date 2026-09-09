@@ -184,7 +184,6 @@ public class ThermalPrinterPlugin extends Plugin {
         String html = call.getString("html");
         Integer paperWidth = call.getInt("paperWidth", 80);
         Boolean autoCut = call.getBoolean("autoCut", true);
-        Double feedBeforeCutMm = call.getDouble("feedBeforeCutMm", 20.0);
         Integer timeoutMs = call.getInt("timeoutMs", 5000);
 
         if (ip == null || ip.trim().isEmpty() || html == null || html.trim().isEmpty()) {
@@ -396,6 +395,7 @@ public class ThermalPrinterPlugin extends Plugin {
         String protocol = call.getString("protocol", "esc_pos");
         Integer paperWidth = call.getInt("paperWidth", 80);
         Boolean autoCut = call.getBoolean("autoCut", true);
+        Double feedBeforeCutMm = call.getDouble("feedBeforeCutMm", 20.0);
         Integer labelWidthMm = call.getInt("labelWidthMm", 100);
         Integer labelHeightMm = call.getInt("labelHeightMm", 150);
         Integer dpi = call.getInt("dpi", 203);
