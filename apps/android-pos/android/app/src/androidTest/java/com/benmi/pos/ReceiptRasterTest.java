@@ -21,7 +21,7 @@ public class ReceiptRasterTest {
                     int rowBytes = (bytes[pos + 4] & 255) + ((bytes[pos + 5] & 255) << 8);
                     int height = (bytes[pos + 6] & 255) + ((bytes[pos + 7] & 255) << 8);
                     assertEquals(dots / 8, rowBytes);
-                    assertTrue(height > 0 && height <= 200);
+                    assertEquals(1701, height);
                     if (rows + height == 1701) {
                         assertEquals(128, bytes[pos + 8 + (height - 1) * rowBytes] & 255);
                     }
