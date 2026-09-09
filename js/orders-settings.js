@@ -948,6 +948,8 @@ function loadPOSPrinterSettings() {
   if (cashPort) cashPort.value = settings.cashier?.port || 9100;
   const cashPaper = document.getElementById("printer-cashier-paper");
   if (cashPaper) cashPaper.value = String(settings.cashier?.paperWidth || 80);
+  const cashFeed = document.getElementById("printer-cashier-feed-before-cut");
+  if (cashFeed) cashFeed.value = settings.cashier?.feedBeforeCutMm ?? 20;
   const cashTsplSize = document.getElementById("printer-cashier-tspl-size");
   if (cashTsplSize) cashTsplSize.value = settings.cashier?.tspl_label_size || '100x150';
   const cashTsplW = document.getElementById("printer-cashier-tspl-width");
@@ -979,6 +981,8 @@ function loadPOSPrinterSettings() {
   if (kitPort) kitPort.value = settings.kitchen?.port || 9100;
   const kitPaper = document.getElementById("printer-kitchen-paper");
   if (kitPaper) kitPaper.value = String(settings.kitchen?.paperWidth || 80);
+  const kitFeed = document.getElementById("printer-kitchen-feed-before-cut");
+  if (kitFeed) kitFeed.value = settings.kitchen?.feedBeforeCutMm ?? 20;
   const kitTsplSize = document.getElementById("printer-kitchen-tspl-size");
   if (kitTsplSize) kitTsplSize.value = settings.kitchen?.tspl_label_size || '40x30';
   const kitTsplW = document.getElementById("printer-kitchen-tspl-width");
@@ -1075,6 +1079,7 @@ function savePOSPrinterSettings(silent = false) {
       mac_address: cashMac,
       device_name: cashDevName,
       paperWidth: cashPaper ? Number(cashPaper.value) || 80 : 80,
+      feedBeforeCutMm: cashFeed ? Math.max(0, Math.min(31, Number(cashFeed.value) || 20)) : 20,
       autoCut: true
     },
     kitchen: {
@@ -1093,6 +1098,7 @@ function savePOSPrinterSettings(silent = false) {
       mac_address: kitMac,
       device_name: kitDevName,
       paperWidth: kitPaper ? Number(kitPaper.value) || 80 : 80,
+      feedBeforeCutMm: kitFeed ? Math.max(0, Math.min(31, Number(kitFeed.value) || 20)) : 20,
       autoCut: true
     }
   };
@@ -1524,4 +1530,3 @@ async function promptUnlinkStoreDevice() {
 
 window.renderStorePairingSection = renderStorePairingSection;
 window.promptUnlinkStoreDevice = promptUnlinkStoreDevice;
-

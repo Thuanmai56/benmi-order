@@ -278,6 +278,7 @@ const I18N = {
     printerSavedLocally: "印表機設定已儲存於此裝置（變更會自動儲存）。",
     printerSaveFailed: "無法儲存印表機設定，請確認此裝置的儲存空間後重試。",
     printerAutoSaveHint: "設定變更會自動儲存於此裝置，也可按下儲存按鈕立即儲存。",
+    printerFeedBeforeCut: "裁切前進紙／底部留白 (mm)",
     saveFail: "儲存失敗：",
     // Printer Settings
     btnPrint: "列印",
@@ -833,6 +834,7 @@ const I18N = {
     printerSavedLocally: "Đã lưu cài đặt máy in trên thiết bị này (thay đổi được tự động lưu).",
     printerSaveFailed: "Không lưu được cài đặt máy in. Kiểm tra bộ nhớ thiết bị rồi thử lại.",
     printerAutoSaveHint: "Thay đổi tự lưu trên thiết bị này; bạn cũng có thể bấm Lưu để lưu ngay.",
+    printerFeedBeforeCut: "Đẩy giấy / chừa khoảng trắng trước khi cắt (mm)",
     saveFail: "Lưu thất bại: ",
     // Menu Editor
     menuCatTitle: "Danh mục thực đơn",
@@ -1851,6 +1853,7 @@ function applyLanguageToDOM() {
     if (el) el.innerText = dict['printerGuideAlign' + suffix];
   });
   const printerSaveStatus = document.getElementById('printer-save-status');
+  document.querySelectorAll('.i18n-printer-feed-before-cut').forEach(el => { el.textContent = dict.printerFeedBeforeCut || el.textContent; });
   if (printerSaveStatus) printerSaveStatus.textContent = dict[printerSaveStatus.dataset.state === 'error' ? 'printerSaveFailed' : printerSaveStatus.dataset.state === 'saved' ? 'printerSavedLocally' : 'printerAutoSaveHint'];
   const gHwTest = document.getElementById("i18n-printer-guide-hw-test");
   if (gHwTest) gHwTest.innerText = dict.printerGuideHwTest;

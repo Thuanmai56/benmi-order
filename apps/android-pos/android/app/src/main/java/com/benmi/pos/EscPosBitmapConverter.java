@@ -21,6 +21,10 @@ public class EscPosBitmapConverter {
      * @return ESC/POS byte array ready to be written to raw TCP socket
      */
     public static byte[] convertBitmapToEscPosRaster(Bitmap bitmap, int paperWidthMm, boolean autoCut) {
+        return convertBitmapToEscPosRaster(bitmap, paperWidthMm, autoCut, 20.0);
+    }
+
+    public static byte[] convertBitmapToEscPosRaster(Bitmap bitmap, int paperWidthMm, boolean autoCut, double feedBeforeCutMm) {
         if (bitmap == null) {
             return new byte[0];
         }
@@ -45,9 +49,9 @@ public class EscPosBitmapConverter {
         stream.write(0x33);
         stream.write(0x00);
 
-        // 3. Send contiguous raster strips to limit each command's buffer size.
-        // GS v 0 advances by its raster height independently of line spacing.
-        final int MAX_CHUNK_HEIGHT = 200;
+        // 3. Send one contiguous raster command. Some low-cost ESC/POS firmware treats
+        // successive GS v 0 strips as separate pages and can cut between strips.
+        final int MAX_CHUNK_HEIGHT = targetHeight;
         final int threshold = 175; // Standard thermal darkness threshold
 
         for (int yStart = 0; yStart < targetHeight; yStart += MAX_CHUNK_HEIGHT) {
@@ -104,7 +108,8 @@ public class EscPosBitmapConverter {
             // ESC d previously fed zero distance because ESC 3 0 was active.
             stream.write(0x1B);
             stream.write(0x4A);
-            stream.write(160);
+            int feedDots = Math.max(0, Math.min(255, (int) Math.round(feedBeforeCutMm * 8.0)));
+            stream.write(feedDots);
 
             // Cut paper: GS V 1 (0x1D, 0x56, 0x01 - Partial Cut)
             stream.write(0x1D);
