@@ -25,7 +25,7 @@
       mac_address: '',
       device_name: '',
       paperWidth: 80,
-      feedBeforeCutMm: 20,
+      feedBeforeCutMm: 30,
       autoCut: true
     },
     kitchen: {
@@ -44,7 +44,7 @@
       mac_address: '',
       device_name: '',
       paperWidth: 80,
-      feedBeforeCutMm: 20,
+      feedBeforeCutMm: 30,
       autoCut: true
     }
   };
@@ -716,7 +716,7 @@
             protocol: protocol,
             paperWidth: paperWidth,
             autoCut: autoCut,
-            feedBeforeCutMm: Number(config.feedBeforeCutMm) || 20,
+            feedBeforeCutMm: Number(config.feedBeforeCutMm) || 30,
             labelWidthMm: dim.widthMm,
             labelHeightMm: dim.heightMm,
             dpi: dim.dpi,
@@ -749,7 +749,7 @@
             protocol: protocol,
             paperWidth: paperWidth,
             autoCut: autoCut,
-            feedBeforeCutMm: Number(config.feedBeforeCutMm) || 20,
+            feedBeforeCutMm: Number(config.feedBeforeCutMm) || 30,
             labelWidthMm: dim.widthMm,
             labelHeightMm: dim.heightMm,
             dpi: dim.dpi,
