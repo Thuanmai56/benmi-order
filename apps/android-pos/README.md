@@ -192,3 +192,15 @@ Vào biểu tượng **⚙️ Cài đặt (Settings) > Máy in & xuất vé**:
 | **v1.2** | 30/08/2026 | - Tích hợp giao thức in nhãn nhiệt TSPL (`TsplBitmapConverter.java`).<br>- Hỗ trợ in tem ly/món riêng lẻ (`item_stickers`) cho quầy pha chế/bếp.<br>- Hỗ trợ các kích thước tem chuẩn 40x30mm, 50x30mm, 76x130mm, 100x150mm. |
 | **v1.1** | 29/08/2026 | - Bổ sung in nhiệt không dây qua Bluetooth Classic SPP RFCOMM.<br>- Tự động tìm kiếm và hiển thị danh sách thiết bị Bluetooth đã ghép đôi.<br>- Hỗ trợ cấu hình độc lập 2 trạm (Quầy Thu Ngân & Khu Vực Bếp). |
 | **v1.0** | 28/08/2026 | - Phiên bản nền tảng đầu tiên đóng gói POS qua Capacitor.<br>- Hỗ trợ in hóa đơn ESC/POS ngầm qua mạng TCP Socket (Port 9100).<br>- Tự động cắt giấy và chống in trùng đơn hàng. |
+
+
+### Build v1.8.6 (09/09/2026)
+
+- `versionCode 15`, sửa lệnh tiến giấy trước khi cắt bill ESC/POS.
+- Canvas bill tự tăng chiều cao theo số dòng; thêm hướng dẫn Việt/Trung và minh hoạ căn chỉnh trong hướng dẫn máy in.
+- `blab-pos-dev-v1.8.6.apk`: tải giao diện từ `https://dev.benmi-order.pages.dev/orders.html`. Phần hướng dẫn và canvas mới chỉ xuất hiện khi web dev được cập nhật.
+- `blab-pos-local-v1.8.6.apk`: đóng gói giao diện hiện tại để kiểm tra ngay toàn bộ thay đổi, không cập nhật giao diện qua OTA.
+- Hai bản cùng application ID `com.benmi.pos`; chỉ cài một bản trên thiết bị.
+- Muốn cài đè v1.8.5 và giữ dữ liệu phải ký bằng cùng keystore của bản cũ. Không gỡ ứng dụng đang sử dụng chỉ để vượt lỗi chữ ký.
+
+Bản build trên máy này dùng khóa debug mới (lưu cục bộ, không commit: `android/local-signing/debug-v1.8.6.keystore`), khác chữ ký v1.8.5. Hai APK v1.8.6 đã build không cài đè v1.8.5; cần ký lại bằng khóa cũ để cập nhật tại chỗ.

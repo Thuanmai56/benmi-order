@@ -381,6 +381,11 @@ const I18N = {
     printerGuideLevelCustomTitle: "補印客製/緊急貼紙",
     printerGuideLevelCustomDesc: "點開可快選常見備註 (如：不要香菜、去冰、微辣) 或手動輸入特殊要求，立即印出獨立小貼紙貼在餐盒上。",
     printerGuideHardwareTitle: "3. 雙印表機 (Dual-Station) 建議設定",
+    printerGuideAlignTitle: "4. 列印位置與裁切",
+    printerGuideAlignReceipt: "收據請選 ESC/POS 與實際紙寬（58／80 mm）。系統會在內容印完後進紙再裁切；X／Y 是貼紙定位，不能修正收據裁切。更新 Android 應用程式後，請連續試印兩張，確認總計及頁尾完整。",
+    printerGuideAlignLabel: "貼紙先選正確尺寸與 DPI，再調整 X／Y（毫米）。X 增加向右移，Y 增加向下移；目前負值視為 0。每次調整 0.5–1 mm 後試印，過大的位移可能超出紙張。位置正常時維持 0 即可。",
+    printerGuideAlignReceiptCaption: "收據：內容 → 留白 → 裁切",
+    printerGuideAlignLabelCaption: "貼紙：X 向右，Y 向下",
     printerGuideHwCashier: "• 櫃檯印表機：建議使用 ESC/POS 協定熱感應小票機 (80mm 或 58mm)，連接 Wi-Fi (Port 9100) 或藍牙。",
     printerGuideHwKitchen: "• 廚房/吧台印表機：建議使用 TSPL 協定標籤貼紙機 (如 Aimo, Xprinter 40x30mm / 50x30mm)，模式選「單品/杯貼標籤」。",
     printerGuideHwTest: "• 每日開班前建議點選「測試列印」確認連線通暢。",
@@ -1059,6 +1064,11 @@ const I18N = {
     printerGuideLevelCustomTitle: "IN TEM TÙY CHỌN (Tem chữa cháy)",
     printerGuideLevelCustomDesc: "Bấm mở popup để chạm nhanh các tùy biến (Không hành, Ít đá, Cay vừa...) hoặc nhập chữ tự do để xả ngay 1 tem ghi chú dán chữa cháy lên ly/hộp.",
     printerGuideHardwareTitle: "3. Cấu hình khuyến nghị cho mô hình 2 máy in (Dual-Station)",
+    printerGuideAlignTitle: "4. Vị trí in và cắt giấy",
+    printerGuideAlignReceipt: "Bill: chọn ESC/POS và đúng khổ giấy (58/80 mm). Hệ thống in hết nội dung rồi đẩy giấy trước khi cắt. X/Y dùng để căn vị trí tem, không sửa lỗi cắt bill. Sau khi cập nhật ứng dụng Android, in thử hai bill liên tiếp và kiểm tra đủ tổng tiền, lời cảm ơn.",
+    printerGuideAlignLabel: "Tem: chọn đúng kích thước và DPI trước khi chỉnh X/Y (mm). Tăng X để dịch phải, tăng Y để dịch xuống; hiện giá trị âm được xử lý như 0. Chỉnh từng 0,5–1 mm rồi in thử; dịch quá nhiều có thể vượt mép giấy. Nếu đã in đúng vị trí, giữ 0.",
+    printerGuideAlignReceiptCaption: "Bill: nội dung → khoảng trống → đường cắt",
+    printerGuideAlignLabelCaption: "Tem: X sang phải, Y xuống dưới",
     printerGuideHwCashier: "• Máy in thu ngân: Dùng máy in hoá đơn nhiệt ESC/POS (khổ 80mm hoặc 58mm), kết nối mạng Wi-Fi LAN (Port 9100) hoặc Bluetooth.",
     printerGuideHwKitchen: "• Máy in bếp/pha chế: Dùng máy in tem nhãn TSPL (như Aimo, Xprinter khổ 40x30mm hoặc 50x30mm), chọn chế độ in \"Đơn từng món/ly\".",
     printerGuideHwTest: "• Đầu mỗi ca bán hàng, nên bấm nút \"Kiểm tra in (Test Print)\" để đảm bảo kết nối thông suốt.",
@@ -1830,6 +1840,10 @@ function applyLanguageToDOM() {
   if (gHwCashier) gHwCashier.innerText = dict.printerGuideHwCashier;
   const gHwKitchen = document.getElementById("i18n-printer-guide-hw-kitchen");
   if (gHwKitchen) gHwKitchen.innerText = dict.printerGuideHwKitchen;
+  ['Title', 'Receipt', 'Label', 'ReceiptCaption', 'LabelCaption'].forEach(suffix => {
+    const el = document.getElementById('printer-guide-align-' + suffix);
+    if (el) el.innerText = dict['printerGuideAlign' + suffix];
+  });
   const gHwTest = document.getElementById("i18n-printer-guide-hw-test");
   if (gHwTest) gHwTest.innerText = dict.printerGuideHwTest;
   const btnPGuide = document.getElementById("i18n-btn-printer-guide");

@@ -526,7 +526,10 @@
 
       const canvas = document.createElement('canvas');
       canvas.width = widthPx;
-      canvas.height = 1600; // Temp allocation
+      // Allocate before painting: resizing later clears the canvas. Each content
+      // line uses at most 38 px; reserve enough for both headers, note and footer.
+      const receiptLineCount = (order.content || '').split('\n').filter(l => l.trim()).length;
+      canvas.height = Math.max(1600, 600 + receiptLineCount * 38);
       const ctx = canvas.getContext('2d');
 
       ctx.fillStyle = '#ffffff';

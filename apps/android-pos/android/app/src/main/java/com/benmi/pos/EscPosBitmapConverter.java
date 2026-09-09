@@ -17,7 +17,7 @@ public class EscPosBitmapConverter {
      *
      * @param bitmap Original Android Bitmap (Receipt view / canvas)
      * @param paperWidthMm Paper width in mm: 80 (576 dots) or 58 (384 dots)
-     * @param autoCut Whether to append feed lines and full paper cut commands
+     * @param autoCut Whether to append paper advance and a partial cut command
      * @return ESC/POS byte array ready to be written to raw TCP socket
      */
     public static byte[] convertBitmapToEscPosRaster(Bitmap bitmap, int paperWidthMm, boolean autoCut) {
@@ -32,7 +32,7 @@ public class EscPosBitmapConverter {
 
         Bitmap scaledBitmap = Bitmap.createScaledBitmap(bitmap, targetWidth, targetHeight, true);
         int widthBytes = (targetWidth + 7) / 8;
-        int heightPixels = targetHeight;
+
 
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
 
@@ -45,10 +45,8 @@ public class EscPosBitmapConverter {
         stream.write(0x33);
         stream.write(0x00);
 
-        // 3. Render raster bitmap in chunks of max 200 lines
-        // ESC/POS thermal printers have limited printhead buffer (typically 256 or 512 lines).
-        // Sending a tall single GS v 0 command causes buffer overflow, premature page cut, and splitting across sheets.
-        // Chunking into strips of 200 lines with zero line-spacing (ESC 3 0) guarantees 100% seamless receipt output.
+        // 3. Send contiguous raster strips to limit each command's buffer size.
+        // GS v 0 advances by its raster height independently of line spacing.
         final int MAX_CHUNK_HEIGHT = 200;
         final int threshold = 175; // Standard thermal darkness threshold
 
@@ -95,12 +93,18 @@ public class EscPosBitmapConverter {
             }
         }
 
-        // 4. Append feed and paper cut if requested
+        // Restore normal line spacing for subsequent text jobs, including no-cut jobs.
+        stream.write(0x1B);
+        stream.write(0x32);
+
+        // 4. Advance the receipt past the cutter before issuing exactly one cut.
         if (autoCut) {
-            // Feed 4 lines past printhead: ESC d 4 (0x1B, 0x64, 0x04)
+            // ESC J feeds motion units independently of ESC 3 line spacing.
+            // 160 units is about 20 mm on standard 203 dpi receipt printers.
+            // ESC d previously fed zero distance because ESC 3 0 was active.
             stream.write(0x1B);
-            stream.write(0x64);
-            stream.write(0x04);
+            stream.write(0x4A);
+            stream.write(160);
 
             // Cut paper: GS V 1 (0x1D, 0x56, 0x01 - Partial Cut)
             stream.write(0x1D);
