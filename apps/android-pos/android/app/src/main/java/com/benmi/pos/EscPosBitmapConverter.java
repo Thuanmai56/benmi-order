@@ -104,12 +104,14 @@ public class EscPosBitmapConverter {
         // 4. Advance the receipt past the cutter before issuing exactly one cut.
         if (autoCut) {
             // ESC J feeds motion units independently of ESC 3 line spacing.
-            // 160 units is about 20 mm on standard 203 dpi receipt printers.
-            // ESC d previously fed zero distance because ESC 3 0 was active.
-            stream.write(0x1B);
-            stream.write(0x4A);
-            int feedDots = Math.max(0, Math.min(255, (int) Math.round(feedBeforeCutMm * 8.0)));
-            stream.write(feedDots);
+            int remainingDots = Math.max(0, (int) Math.round(feedBeforeCutMm * 8.0));
+            do {
+                stream.write(0x1B);
+                stream.write(0x4A);
+                int feedDots = Math.min(255, remainingDots);
+                stream.write(feedDots);
+                remainingDots -= feedDots;
+            } while (remainingDots > 0);
 
             // Cut paper: GS V 1 (0x1D, 0x56, 0x01 - Partial Cut)
             stream.write(0x1D);
