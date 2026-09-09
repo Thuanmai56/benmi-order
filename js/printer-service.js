@@ -556,7 +556,10 @@
 
     drawReceiptToCanvas(order, isKitchen, paperWidth = 80) {
       const width = Number(paperWidth) === 58 ? 384 : 576;
-      const padding = Number(paperWidth) === 58 ? 16 : 24;
+      // Keep only a small top/bottom quiet zone. The cutter feed is handled
+      // after the raster payload, so a large canvas padding here wastes paper
+      // at the beginning of every receipt.
+      const padding = Number(paperWidth) === 58 ? 8 : 12;
       const available = width - padding * 2;
       const canvas = document.createElement('canvas');
       canvas.width = width;
@@ -599,7 +602,10 @@
         divider();
         row('應收總計', 48, '$' + (order.total ?? 0), '900');
         divider();
-        row('謝謝光臨，祝您用餐愉快！', 27, 'Powered by Blab', 'normal');
+        // Keep the Chinese greeting and attribution on separate centered rows.
+        // Sharing one row made both strings wrap on narrow 58 mm paper.
+        row('謝謝光臨，祝您用餐愉快！', 25, '', 'normal', true);
+        row('Powered by Blab', 22, '', 'normal', true);
       }
       canvas.height = Math.ceil(y + padding);
       const paint = canvas.getContext('2d');
