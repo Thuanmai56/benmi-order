@@ -275,6 +275,9 @@ const I18N = {
     closedDay: "公休",
     saving: "儲存中...",
     saveSuccess: "設定儲存成功！",
+    printerSavedLocally: "印表機設定已儲存於此裝置（變更會自動儲存）。",
+    printerSaveFailed: "無法儲存印表機設定，請確認此裝置的儲存空間後重試。",
+    printerAutoSaveHint: "設定變更會自動儲存於此裝置，也可按下儲存按鈕立即儲存。",
     saveFail: "儲存失敗：",
     // Printer Settings
     btnPrint: "列印",
@@ -335,11 +338,11 @@ const I18N = {
     printModeTitle: "列印出單模式",
     printModeSub: "選擇新訂單進來時的列印行為",
     printModeAutoTitle: "自動列印模式 (Auto-print)",
-    printModeAutoDesc: "收到新訂單時，系統發出提示音並自動列印全部明細 (Bill) 與標籤貼紙 (Tem)，無需觸碰螢幕。適合尖峰繁忙時段。",
+    printModeAutoDesc: "收到新訂單時，系統發出提示音並自動列印全部明細與標籤貼紙，無需觸碰螢幕。適合尖峰繁忙時段。",
     printModeManualTitle: "手動列印模式 (Manual-print)",
     printModeManualDesc: "店員須在螢幕點選 [整單全印] 機器才會出單。適合需要先核對確認訂單的門市。",
     // 3 Print Levels
-    btnPrintFullOrder: "整單全印 (1 聯收銀 + {n} 張貼紙)",
+    btnPrintFullOrder: "整單全印 (明細+標籤）",
     btnPrintBillOnly: "僅印收銀明細",
     btnPrintCustomOption: "補印客製標籤",
     btnPrintSingleItem: "印此品項貼紙",
@@ -372,9 +375,9 @@ const I18N = {
     printerGuideModeManualTitle: "手動列印模式 (Manual-print)",
     printerGuideModeManualDesc: "收到新單時僅發出通知音，店員需點進訂單詳細頁確認餐點內容後，點選 [整單全印] 才會出單。適合需先確認庫存或客製化說明的門市。",
     printerGuideLevelsTitle: "2. 訂單詳細頁 3 段式列印控制",
-    printerGuideLevelFullTitle: "整單全印 (1 聯收銀 + N 張貼紙)",
+    printerGuideLevelFullTitle: "整單全印 (明細+標籤）",
     printerGuideLevelFullDesc: "一鍵送出：1 張櫃檯明細 (給客人或留底) + N 張廚房貼紙 (每份餐點 1 張獨立杯貼/盒貼)。",
-    printerGuideLevelBillTitle: "僅印收銀明細 (Bill)",
+    printerGuideLevelBillTitle: "僅印收銀明細",
     printerGuideLevelBillDesc: "僅出單張收據小票，適合結帳找零、補開客人明細或退換貨核對。",
     printerGuideLevelSingleTitle: "單品貼紙列印與備餐勾選",
     printerGuideLevelSingleDesc: "每道餐點左側設有 [ ] 勾選方塊供廚房備餐核對；右側設有 [印單品貼紙] 鈕，遇卡紙或貼紙破損時可單獨補印該品項。",
@@ -827,6 +830,9 @@ const I18N = {
     closedDay: "Nghỉ",
     saving: "Đang lưu...",
     saveSuccess: "Đã lưu thiết lập thành công!",
+    printerSavedLocally: "Đã lưu cài đặt máy in trên thiết bị này (thay đổi được tự động lưu).",
+    printerSaveFailed: "Không lưu được cài đặt máy in. Kiểm tra bộ nhớ thiết bị rồi thử lại.",
+    printerAutoSaveHint: "Thay đổi tự lưu trên thiết bị này; bạn cũng có thể bấm Lưu để lưu ngay.",
     saveFail: "Lưu thất bại: ",
     // Menu Editor
     menuCatTitle: "Danh mục thực đơn",
@@ -1449,7 +1455,7 @@ function applyLanguageToDOM() {
   const setT = document.getElementById("i18n-settings-title");
   if (setT) setT.innerText = dict.settingsTitle;
   const setS = document.getElementById("i18n-settings-sub");
-  if (setS) setS.innerText = dict.settingsSub;
+  if (setS) setS.innerText = dict.settingsSub || "";
   const setSync = document.getElementById("i18n-settings-sync-status");
   if (setSync) setSync.innerText = dict.settingsSyncStatus;
   if (typeof updateSettingsPrinterStatusDisplay === "function") {
@@ -1634,7 +1640,7 @@ function applyLanguageToDOM() {
   const menuCatT = document.getElementById("i18n-menu-cat-title");
   if (menuCatT) menuCatT.innerText = dict.menuCatTitle;
   const menuCatS = document.getElementById("i18n-menu-cat-sub");
-  if (menuCatS) menuCatS.innerText = dict.menuCatSub;
+  if (menuCatS) menuCatS.innerText = dict.menuCatSub || "";
 
   const btnManageCats = document.getElementById("btn-menu-manage-cats");
   if (btnManageCats) btnManageCats.innerText = dict.btnManageCategories;
@@ -1844,6 +1850,8 @@ function applyLanguageToDOM() {
     const el = document.getElementById('printer-guide-align-' + suffix);
     if (el) el.innerText = dict['printerGuideAlign' + suffix];
   });
+  const printerSaveStatus = document.getElementById('printer-save-status');
+  if (printerSaveStatus) printerSaveStatus.textContent = dict[printerSaveStatus.dataset.state === 'error' ? 'printerSaveFailed' : printerSaveStatus.dataset.state === 'saved' ? 'printerSavedLocally' : 'printerAutoSaveHint'];
   const gHwTest = document.getElementById("i18n-printer-guide-hw-test");
   if (gHwTest) gHwTest.innerText = dict.printerGuideHwTest;
   const btnPGuide = document.getElementById("i18n-btn-printer-guide");
@@ -2003,4 +2011,3 @@ function applyLanguageToDOM() {
   const btnActTxt = document.getElementById("i18n-btn-submit-activation-text");
   if (btnActTxt) btnActTxt.innerText = dict.btnSubmitActivation;
 }
-

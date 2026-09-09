@@ -137,6 +137,7 @@ function getTenantIdFromUrl() {
 function applyTenantBranding(tenant) {
   if (!tenant) return;
   const brandName = tenant.brandName || "Dashboard";
+  window.currentTenantBrandName = tenant.brandName || tenant.name || '';
   const bTitle = document.getElementById('brand-title');
   const bLogo = document.getElementById('brand-logo');
 

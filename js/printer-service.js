@@ -363,18 +363,28 @@
       return { widthMm, heightMm, dpi, xOffsetMm, yOffsetMm };
     }
 
+    formatPrintOptions(value) {
+      if (!value) return '';
+      if (typeof value === 'string') {
+        try { return this.formatPrintOptions(JSON.parse(value)); } catch { return value; }
+      }
+      if (Array.isArray(value)) return value.map(option => typeof option === 'string' ? option : option.choice || option.name || '').filter(Boolean).join('、');
+      return '';
+    }
+
     parseOrderItems(order, expand = true) {
       const items = [];
       if (Array.isArray(order.items) && order.items.length > 0) {
         order.items.forEach(it => {
-          const itemPrice = it.price ? (String(it.price).startsWith('$') ? String(it.price) : `$${it.price}`) : '';
+          const rawPrice = it.price ?? it.unit_price ?? it.unitPrice;
+          const itemPrice = rawPrice != null ? (String(rawPrice).startsWith('$') ? String(rawPrice) : `$${rawPrice}`) : '';
           items.push({
             name: it.name || it.item_name || '餐點',
             quantity: Number(it.quantity) || 1,
             price: itemPrice,
-            options: Array.isArray(it.options) ? it.options.join('、') : (it.options || it.selected_options || ''),
+            options: this.formatPrintOptions(it.options || it.selected_options),
             note: it.note || it.notes || '',
-            round: it.round || ''
+            round: it.round || (Number(order.roundCount || order.round_count) > 1 ? '[第' + (it.round_number || 1) + '輪]' : '')
           });
         });
       } else {
@@ -519,151 +529,87 @@
     }
 
     // --- 6. PURE HTML5 CANVAS RECEIPT PAINTER (Zero-Taint, 100% Crisp Typography) ---
-    drawReceiptToCanvas(order, isKitchen, paperWidth = 80) {
-      const widthPx = paperWidth === 58 ? 384 : 576;
-      const padding = paperWidth === 58 ? 16 : 24;
-      const contentWidth = widthPx - (padding * 2);
-
-      const canvas = document.createElement('canvas');
-      canvas.width = widthPx;
-      // Allocate before painting: resizing later clears the canvas. Each content
-      // line uses at most 38 px; reserve enough for both headers, note and footer.
-      const receiptLineCount = (order.content || '').split('\n').filter(l => l.trim()).length;
-      canvas.height = Math.max(1600, 600 + receiptLineCount * 38);
-      const ctx = canvas.getContext('2d');
-
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, widthPx, canvas.height);
-      ctx.fillStyle = '#000000';
-      ctx.textBaseline = 'top';
-
-      let y = padding;
-
-      // 1. Header
-      if (isKitchen) {
-        ctx.font = 'bold 30px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.lineWidth = 3;
-        ctx.strokeRect(padding, y, contentWidth, 54);
-        ctx.fillText('廚 房 出 餐 聯', widthPx / 2, y + 12);
-        y += 66;
-
-        ctx.fillRect(padding, y, contentWidth, 52);
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '900 32px sans-serif';
-        const diningLabel = order.diningOption === 'dine_in' ? `【內用 桌號：${order.tableNumber || '-'}】` : '【外帶自取】';
-        ctx.fillText(diningLabel, widthPx / 2, y + 10);
-        ctx.fillStyle = '#000000';
-        y += 62;
-
-        ctx.textAlign = 'left';
-        ctx.font = 'bold 22px sans-serif';
-        ctx.fillText(`單號：#${order.key}`, padding, y);
-        ctx.textAlign = 'right';
-        ctx.fillText(`時間：${order.time || ''}`, widthPx - padding, y);
-        y += 32;
-      } else {
-        const brandName = (typeof window.currentTenantBrandName !== 'undefined' && window.currentTenantBrandName) || 'Blab POS';
-        ctx.font = '900 34px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(brandName, widthPx / 2, y);
-        y += 44;
-
-        ctx.font = 'bold 22px sans-serif';
-        ctx.fillText('客 人 結 帳 聯', widthPx / 2, y);
-        y += 32;
-
-        ctx.lineWidth = 2;
-        this.drawDashedLine(ctx, padding, widthPx - padding, y);
-        y += 14;
-
-        ctx.textAlign = 'left';
-        ctx.font = 'bold 26px sans-serif';
-        ctx.fillText(`單號：#${order.key}`, padding, y);
-        ctx.textAlign = 'right';
-        const diningLabel = order.diningOption === 'dine_in' ? `內用 桌號：${order.tableNumber || '-'}` : '外帶自取';
-        ctx.fillText(diningLabel, widthPx - padding, y);
-        y += 36;
-
-        ctx.textAlign = 'left';
-        ctx.font = '19px sans-serif';
-        ctx.fillText(`顧客：${order.customer || '顧客'}`, padding, y);
-        ctx.textAlign = 'right';
-        ctx.fillText(`時間：${order.time || ''}`, widthPx - padding, y);
-        y += 28;
-      }
-
-      this.drawDashedLine(ctx, padding, widthPx - padding, y);
-      y += 16;
-
-      // 2. Items Section
-      ctx.textAlign = 'left';
-      ctx.font = 'bold 22px sans-serif';
-      ctx.fillText(isKitchen ? '【製作品項】' : '【訂單品項】', padding, y);
-      y += 32;
-
-      const lines = (order.content || '').split('\n').filter(l => l.trim());
-      for (const line of lines) {
-        const isModifier = line.includes('↳') || line.startsWith('  ') || line.startsWith('\t');
-        if (isModifier) {
-          ctx.font = isKitchen ? 'bold 22px sans-serif' : '20px sans-serif';
-          ctx.fillStyle = '#222222';
-          ctx.fillText(line.trim(), padding + 22, y);
-          ctx.fillStyle = '#000000';
-          y += 28;
-        } else {
-          y += 4;
-          ctx.font = isKitchen ? '900 28px sans-serif' : '900 24px sans-serif';
-          ctx.fillText(line.trim(), padding, y);
-          y += 34;
+    // Measure first, then paint at the required height so large fonts never clip.
+    wrapPrintText(ctx, text, maxWidth) {
+      const result = [];
+      for (const paragraph of String(text ?? '').split('\n')) {
+        let line = '';
+        for (const char of paragraph) {
+          const candidate = line + char;
+          const width = typeof ctx.measureText === 'function'
+            ? ctx.measureText(candidate).width : candidate.length * (parseFloat(ctx.font.match(/[\d.]+px/)?.[0]) || 24);
+          if (line && width > maxWidth) {
+            // Keep Latin words together when a previous space can wrap the row.
+            const split = candidate.lastIndexOf(' ');
+            if (split > 0 && /^[\x20-\x7e]+$/.test(candidate)) {
+              result.push(candidate.slice(0, split + 1)); line = candidate.slice(split + 1);
+            } else { result.push(line); line = char; }
+          }
+          else line = candidate;
         }
+        result.push(line);
       }
+      return result;
+    }
 
-      y += 8;
-      this.drawDashedLine(ctx, padding, widthPx - padding, y);
-      y += 16;
-
-      // 3. Notes
-      if (order.note && order.note.trim()) {
-        ctx.font = isKitchen ? 'bold 22px sans-serif' : 'bold 19px sans-serif';
-        ctx.fillText(`備註：${order.note}`, padding, y);
-        y += 32;
-        this.drawDashedLine(ctx, padding, widthPx - padding, y);
-        y += 16;
+    drawReceiptToCanvas(order, isKitchen, paperWidth = 80) {
+      const width = Number(paperWidth) === 58 ? 384 : 576;
+      const padding = Number(paperWidth) === 58 ? 16 : 24;
+      const available = width - padding * 2;
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      const ctx = canvas.getContext('2d');
+      const operations = [];
+      let y = padding;
+      const row = (left, size, right = '', weight = 'bold', centered = false) => {
+        const font = `${weight} ${size}px sans-serif`;
+        ctx.font = font;
+        const gap = 16;
+        const rightWidth = right ? Math.min(available * 0.4,
+          typeof ctx.measureText === 'function' ? ctx.measureText(String(right)).width : available * 0.4) : 0;
+        const leftLines = this.wrapPrintText(ctx, left, available - (right ? rightWidth + gap : 0));
+        const rightLines = right ? this.wrapPrintText(ctx, right, rightWidth) : [];
+        const lineHeight = Math.ceil(size * 1.25);
+        leftLines.forEach((text, i) => operations.push({ text, x: centered ? width / 2 : padding,
+          y: y + i * lineHeight, font, align: centered ? 'center' : 'left' }));
+        rightLines.forEach((text, i) => operations.push({ text, x: width - padding,
+          y: y + i * lineHeight, font, align: 'right' }));
+        y += Math.max(leftLines.length, rightLines.length) * lineHeight + 6;
+      };
+      const divider = () => { y += 8; operations.push({ line: true, y }); y += 16; };
+      const brand = window.currentTenantBrandName || order.storeName || order.tenantName || '';
+      if (brand) row(brand, 51, '', '900', true);
+      if (isKitchen) row('廚房出餐聯', 45, '', '900', true);
+      divider();
+      row('#' + order.key, 39);
+      row(order.diningOption === 'dine_in' ? '內用 桌號：' + (order.tableNumber || '-') : '外帶自取', 33);
+      row('顧客：' + (order.customer || '顧客'), 29);
+      row('時間：' + (order.time || ''), 29, '', 'normal');
+      divider();
+      for (const item of this.parseOrderItems(order, false)) {
+        if (item.round) row(item.round, 30);
+        row(item.quantity + ' x ' + item.name, isKitchen ? 42 : 36, isKitchen ? '' : item.price, '900');
+        if (item.options) row('  ' + item.options, 30, '', 'normal');
+        if (item.note) row('  ' + item.note, 30, '', 'normal');
       }
-
-      // 4. Totals (Cashier ONLY - strictly omitted for Kitchen)
+      if (order.note?.trim()) { divider(); row('備註：' + order.note, 29); }
       if (!isKitchen) {
-        ctx.font = '900 32px sans-serif';
-        ctx.textAlign = 'left';
-        ctx.fillText('應收總計：', padding, y);
-        ctx.textAlign = 'right';
-        ctx.fillText(`$${order.total || 0}`, widthPx - padding, y);
-        y += 44;
-
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(padding, y);
-        ctx.lineTo(widthPx - padding, y);
-        ctx.stroke();
-        y += 16;
-
-        ctx.textAlign = 'center';
-        ctx.font = '18px sans-serif';
-        ctx.fillText('謝謝光臨，祝您用餐愉快！', widthPx / 2, y);
-        y += 28;
+        divider();
+        row('應收總計', 48, '$' + (order.total ?? 0), '900');
+        divider();
+        row('謝謝光臨，祝您用餐愉快！', 27, 'Powered by Blab', 'normal');
       }
-
-      y += 24; // Bottom buffer
-
-      // Create final cropped canvas
-      const finalCanvas = document.createElement('canvas');
-      finalCanvas.width = widthPx;
-      finalCanvas.height = y;
-      const finalCtx = finalCanvas.getContext('2d');
-      finalCtx.drawImage(canvas, 0, 0, widthPx, y, 0, 0, widthPx, y);
-
-      return finalCanvas.toDataURL('image/png');
+      canvas.height = Math.ceil(y + padding);
+      const paint = canvas.getContext('2d');
+      paint.fillStyle = '#fff';
+      paint.fillRect(0, 0, width, canvas.height);
+      paint.fillStyle = '#000';
+      paint.textBaseline = 'top';
+      for (const op of operations) {
+        if (op.line) this.drawDashedLine(paint, padding, width - padding, op.y);
+        else { paint.font = op.font; paint.textAlign = op.align; paint.fillText(op.text, op.x, op.y); }
+      }
+      return canvas.toDataURL('image/png');
     }
 
     drawDashedLine(ctx, x1, x2, y) {
@@ -679,223 +625,69 @@
 
     // --- 7. TSPL CANVAS PAINTERS (Order Summary Label & Individual Cup/Item Stickers) ---
     drawOrderLabelToCanvas(order, isKitchen, widthMm = 100, heightMm = 150, dpi = 203) {
-      const dotsPerMm = dpi === 300 ? 11.81 : 8.0;
-      const scaleRatio = dpi === 300 ? 1.476 : 1.0;
-      const widthPx = Math.round(Math.max(100, widthMm * dotsPerMm));
-      const heightPx = Math.round(Math.max(100, heightMm * dotsPerMm));
-      const padding = Math.round(20 * scaleRatio);
-      const contentWidth = widthPx - (padding * 2);
+      const dining = order.diningOption === 'dine_in' ? '桌:' + (order.tableNumber || '-') : '外帶';
+      const body = this.parseOrderItems(order, false).map(item =>
+        [item.quantity + ' x ' + item.name, item.options, item.note].filter(Boolean).join('\n')).join('\n');
+      return this.drawStickerLayout(
+        [window.currentTenantBrandName, '#' + order.key, dining].filter(Boolean).join(' '),
+        [body, order.note].filter(Boolean).join('\n'),
+        isKitchen ? (order.customer || '') : '應收總計：$' + (order.total ?? 0),
+        widthMm, heightMm, dpi, [60, 60, 52]);
+    }
 
+    // Fixed paper: grow typography to the requested target, then fit all text.
+    drawStickerLayout(header, body, footer, widthMm, heightMm, dpi, sizes) {
+      const scale = dpi === 300 ? 300 / 203 : 1;
+      const width = Math.round(widthMm * (dpi === 300 ? 11.811 : 8));
+      const height = Math.round(heightMm * (dpi === 300 ? 11.811 : 8));
+      const padding = Math.round(10 * scale);
       const canvas = document.createElement('canvas');
-      canvas.width = widthPx;
-      canvas.height = heightPx;
+      canvas.width = width;
+      canvas.height = height;
       const ctx = canvas.getContext('2d');
-
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, widthPx, heightPx);
-      ctx.fillStyle = '#000000';
-      ctx.strokeStyle = '#000000';
-      ctx.textBaseline = 'top';
-
-      let y = padding;
-
-      // 1. Header & Brand
-      const brandName = (typeof window.currentTenantBrandName !== 'undefined' && window.currentTenantBrandName) || 'Blab POS';
-      ctx.font = `900 ${Math.round(30 * scaleRatio)}px sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.fillText(brandName, widthPx / 2, y);
-      y += Math.round(38 * scaleRatio);
-
-      // Order Title Box
-      ctx.fillRect(padding, y, contentWidth, Math.round(44 * scaleRatio));
-      ctx.fillStyle = '#ffffff';
-      ctx.font = `bold ${Math.round(24 * scaleRatio)}px sans-serif`;
-      const diningLabel = order.diningOption === 'dine_in' ? `【內用 桌號：${order.tableNumber || '-'}】` : '【外帶自取訂單】';
-      ctx.fillText(diningLabel, widthPx / 2, y + Math.round(8 * scaleRatio));
-      ctx.fillStyle = '#000000';
-      y += Math.round(54 * scaleRatio);
-
-      // Order Key & Time
-      ctx.textAlign = 'left';
-      ctx.font = `900 ${Math.round(28 * scaleRatio)}px sans-serif`;
-      ctx.fillText(`單號：#${order.key}`, padding, y);
-      ctx.textAlign = 'right';
-      ctx.font = `bold ${Math.round(18 * scaleRatio)}px sans-serif`;
-      ctx.fillText(`${order.time || ''}`, widthPx - padding, y + Math.round(6 * scaleRatio));
-      y += Math.round(36 * scaleRatio);
-
-      this.drawDashedLine(ctx, padding, widthPx - padding, y);
-      y += Math.round(12 * scaleRatio);
-
-      // Items
-      const items = this.parseOrderItems(order, false);
-      ctx.textAlign = 'left';
-      items.slice(0, 10).forEach(it => {
-        if (y > heightPx - Math.round(140 * scaleRatio)) return;
-        ctx.font = `bold ${Math.round(20 * scaleRatio)}px sans-serif`;
-        ctx.fillText(`${it.quantity}份 x ${it.name}`, padding, y);
-        y += Math.round(24 * scaleRatio);
-        if (it.options) {
-          ctx.font = `${Math.round(15 * scaleRatio)}px sans-serif`;
-          ctx.fillText(`   ↳ ${it.options}`, padding, y);
-          y += Math.round(20 * scaleRatio);
-        }
-      });
-
-      // Notes & Total at bottom
-      y = Math.max(y + Math.round(10 * scaleRatio), heightPx - Math.round(120 * scaleRatio));
-      this.drawDashedLine(ctx, padding, widthPx - padding, y);
-      y += Math.round(12 * scaleRatio);
-
-      if (order.note && order.note.trim()) {
-        ctx.font = `bold ${Math.round(16 * scaleRatio)}px sans-serif`;
-        ctx.fillText(`備註：${order.note.slice(0, 30)}`, padding, y);
-        y += Math.round(24 * scaleRatio);
-      }
-
-      if (!isKitchen) {
-        ctx.font = `900 ${Math.round(26 * scaleRatio)}px sans-serif`;
-        ctx.fillText('總計：', padding, y);
-        ctx.textAlign = 'right';
-        ctx.fillText(`$${order.total || 0}`, widthPx - padding, y);
-      }
-
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, width, height);
+      ctx.fillStyle = '#000'; ctx.textBaseline = 'top'; ctx.textAlign = 'left';
+      const available = width - padding * 2;
+      const topHeight = Math.round((height - padding * 2) * 0.22);
+      const bottomHeight = Math.round((height - padding * 2) * 0.18);
+      const gap = Math.round(6 * scale);
+      const draw = (text, top, boxHeight, target) => {
+        let size = Math.round(target * scale);
+        let lines;
+        do {
+          ctx.font = 'bold ' + size + 'px sans-serif';
+          lines = this.wrapPrintText(ctx, text, available);
+          if (lines.length * Math.ceil(size * 1.15) <= boxHeight) break;
+          size--;
+        } while (size > 1);
+        const lineHeight = Math.ceil(size * 1.15);
+        lines.forEach((line, i) => ctx.fillText(line, padding, top + i * lineHeight));
+      };
+      draw(header, padding, topHeight, sizes[0]);
+      draw(body, padding + topHeight + gap, height - padding * 2 - topHeight - bottomHeight - gap * 2, sizes[1]);
+      draw(footer, height - padding - bottomHeight, bottomHeight, sizes[2]);
       return canvas.toDataURL('image/png');
     }
 
     drawItemStickerToCanvas(item, orderContext, itemIdx, totalItems, widthMm = 40, heightMm = 30, dpi = 203) {
-      const dotsPerMm = dpi === 300 ? 11.81 : 8.0;
-      const scaleRatio = dpi === 300 ? 1.476 : 1.0;
-      const widthPx = Math.round(Math.max(50, widthMm * dotsPerMm));
-      const heightPx = Math.round(Math.max(30, heightMm * dotsPerMm));
-      const isCompact = widthMm <= 42;
-      // Generous safe padding to prevent cutting off text on edge
-      const padding = Math.round((isCompact ? 10 : 14) * scaleRatio);
-
-      const canvas = document.createElement('canvas');
-      canvas.width = widthPx;
-      canvas.height = heightPx;
-      const ctx = canvas.getContext('2d');
-
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, widthPx, heightPx);
-      ctx.fillStyle = '#000000';
-      ctx.strokeStyle = '#000000';
-      ctx.textBaseline = 'top';
-
-      let y = padding;
-
-      // 1. Top row: Order Key & Table & Item Index (e.g. #260830-01  桌:12  [1/3])
-      ctx.font = `bold ${Math.round((isCompact ? 14 : 17) * scaleRatio)}px sans-serif`;
-      ctx.textAlign = 'left';
-      ctx.fillText(`#${orderContext.key}`, padding, y);
-
-      ctx.textAlign = 'center';
-      const diningShort = orderContext.diningOption === 'dine_in' ? `桌:${orderContext.tableNumber || '-'}` : '外帶';
-      ctx.fillText(diningShort, widthPx / 2, y);
-
-      ctx.textAlign = 'right';
-      ctx.fillText(`[${itemIdx}/${totalItems}]`, widthPx - padding, y);
-      y += Math.round((isCompact ? 18 : 22) * scaleRatio);
-
-      // Clean divider line (minimalist separator, no harsh box border)
-      ctx.lineWidth = Math.max(1, Math.round(1 * scaleRatio));
-      ctx.beginPath();
-      ctx.moveTo(padding, y);
-      ctx.lineTo(widthPx - padding, y);
-      ctx.stroke();
-      y += Math.round((isCompact ? 6 : 8) * scaleRatio);
-
-      // 2. Dish / Drink Title (Large Bold)
-      ctx.textAlign = 'left';
-      ctx.font = `900 ${Math.round((isCompact ? 20 : 25) * scaleRatio)}px sans-serif`;
-      ctx.fillText(`${item.name}`, padding, y);
-      ctx.textAlign = 'right';
-      ctx.fillText(`x${item.quantity}`, widthPx - padding, y);
-      y += Math.round((isCompact ? 26 : 30) * scaleRatio);
-
-      // 3. Modifiers / Options
-      if (item.options || item.note) {
-        ctx.textAlign = 'left';
-        ctx.font = `bold ${Math.round((isCompact ? 13 : 15) * scaleRatio)}px sans-serif`;
-        const optText = (item.options ? item.options : '') + (item.note ? ` (${item.note})` : '');
-        ctx.fillText(`↳ ${optText.slice(0, isCompact ? 18 : 24)}`, padding, y);
-        y += Math.round((isCompact ? 16 : 20) * scaleRatio);
-      }
-
-      // 4. Bottom row: Customer & Time
-      y = heightPx - padding - Math.round((isCompact ? 14 : 18) * scaleRatio);
-      ctx.font = `${Math.round((isCompact ? 11 : 13) * scaleRatio)}px sans-serif`;
-      ctx.textAlign = 'left';
-      ctx.fillText(`顧客:${orderContext.customer || '顧客'}`, padding, y);
-      ctx.textAlign = 'right';
-      ctx.fillText(`${orderContext.time || ''}`, widthPx - padding, y);
-
-      return canvas.toDataURL('image/png');
+      const compact = widthMm <= 42;
+      const dining = orderContext.diningOption === 'dine_in' ? '桌:' + (orderContext.tableNumber || '-') : '外帶';
+      const header = '#' + orderContext.key + ' ' + dining + ' [' + itemIdx + '/' + totalItems + ']';
+      const body = [item.name + ' x' + item.quantity, item.options, item.note].filter(Boolean).join('\n');
+      const time = String(orderContext.time || '').match(/\d{1,2}:\d{2}/)?.[0] || '';
+      return this.drawStickerLayout(header, body, (orderContext.customer || '顧客') + ' ' + time,
+        widthMm, heightMm, dpi, compact ? [28, 60, 22] : [34, 75, 26]);
     }
 
     drawQuickNoteStickerToCanvas(text, orderContext = null, widthMm = 40, heightMm = 30, dpi = 203) {
-      const dotsPerMm = dpi === 300 ? 11.81 : 8.0;
-      const scaleRatio = dpi === 300 ? 1.476 : 1.0;
-      const widthPx = Math.round(Math.max(50, widthMm * dotsPerMm));
-      const heightPx = Math.round(Math.max(30, heightMm * dotsPerMm));
-      const isCompact = widthMm <= 42;
-      const padding = Math.round((isCompact ? 10 : 14) * scaleRatio);
-
-      const canvas = document.createElement('canvas');
-      canvas.width = widthPx;
-      canvas.height = heightPx;
-      const ctx = canvas.getContext('2d');
-
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, widthPx, heightPx);
-      ctx.fillStyle = '#000000';
-      ctx.strokeStyle = '#000000';
-      ctx.textBaseline = 'top';
-
-      let y = padding;
-
-      // 1. Top row: Note / Order info
-      ctx.font = `bold ${Math.round((isCompact ? 13 : 16) * scaleRatio)}px sans-serif`;
-      ctx.textAlign = 'left';
-      const orderKey = orderContext && orderContext.key ? `#${orderContext.key}` : '【備註貼紙 / GHI CHÚ】';
-      ctx.fillText(orderKey, padding, y);
-
-      ctx.textAlign = 'right';
-      const diningShort = (orderContext && orderContext.diningOption === 'dine_in')
-        ? `桌:${orderContext.tableNumber || '-'}`
-        : ((orderContext && orderContext.diningOption === 'takeaway') ? '外帶' : '補印');
-      ctx.fillText(diningShort, widthPx - padding, y);
-      y += Math.round((isCompact ? 18 : 22) * scaleRatio);
-
-      // Divider line
-      ctx.lineWidth = Math.max(1, Math.round(1 * scaleRatio));
-      ctx.beginPath();
-      ctx.moveTo(padding, y);
-      ctx.lineTo(widthPx - padding, y);
-      ctx.stroke();
-      y += Math.round((isCompact ? 8 : 12) * scaleRatio);
-
-      // 2. Main Note Text (Centered, Bold, Large)
-      ctx.textAlign = 'center';
-      const displayNote = String(text || '').trim();
-      const fontSize = displayNote.length > 8
-        ? Math.round((isCompact ? 18 : 22) * scaleRatio)
-        : Math.round((isCompact ? 24 : 30) * scaleRatio);
-      ctx.font = `900 ${fontSize}px sans-serif`;
-      ctx.fillText(displayNote, widthPx / 2, y);
-
-      // 3. Bottom row: Timestamp
-      y = heightPx - padding - Math.round((isCompact ? 13 : 16) * scaleRatio);
-      ctx.font = `${Math.round((isCompact ? 11 : 13) * scaleRatio)}px sans-serif`;
-      ctx.textAlign = 'left';
-      ctx.fillText('Blab POS', padding, y);
-      ctx.textAlign = 'right';
+      const compact = widthMm <= 42;
+      const context = orderContext || {};
       const now = new Date();
-      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-      ctx.fillText(orderContext && orderContext.time ? orderContext.time : timeStr, widthPx - padding, y);
-
-      return canvas.toDataURL('image/png');
+      const time = String(context.time || '').match(/\d{1,2}:\d{2}/)?.[0]
+        || String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+      return this.drawStickerLayout(context.key ? '#' + context.key : '備註',
+        String(text || '').trim(), (window.currentTenantBrandName || '') + ' ' + time,
+        widthMm, heightMm, dpi, compact ? [26, 72, 22] : [32, 90, 26]);
     }
 
     async transmitReceiptBitmap(base64Png, config, logTitle) {

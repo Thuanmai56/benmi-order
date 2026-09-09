@@ -58,6 +58,16 @@ function confirmLeaveMenu() {
 }
 window.confirmLeaveMenu = confirmLeaveMenu;
 
+// All help disclosures, including dynamically rendered category help.
+document.addEventListener('click', event => {
+  document.querySelectorAll('.menu-help[open]').forEach(help => {
+    if (!help.contains(event.target)) help.open = false;
+  });
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape') document.querySelectorAll('.menu-help[open]').forEach(help => { help.open = false; });
+});
+
 window.addEventListener("beforeunload", event => {
   if (!isMenuDirty && !isMenuSaving) return;
   event.preventDefault();
@@ -510,9 +520,9 @@ function renderMenuCategoryEditor(index) {
     }
 
     toggleDiv.innerHTML = `
-      <div style="margin-bottom: 12px;">
+      <div class="help-title-row" style="margin-bottom: 12px;">
         <div style="font-weight: 800; font-size: 15px; color: #1e293b;" id="i18n-applied-modifiers-title">${t("appliedModifiersTitle")}</div>
-        <div style="font-size: 12px; color: #64748b; margin-top: 2px;" id="i18n-applied-modifiers-desc">${t("appliedModifiersDesc")}</div>
+        <details class="menu-help"><summary aria-labelledby="i18n-applied-modifiers-title"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v6m0 3v1"/></svg></summary><div class="menu-help-text" id="i18n-applied-modifiers-desc">${t("appliedModifiersDesc")}</div></details>
       </div>
       ${modifiersHtml}
     `;
@@ -649,14 +659,9 @@ function syncMenuDataFromDOM() {
   });
 }
 
-async function saveMenuData(skipConfirm = false) {
-  if (!currentMenuData || isMenuSaving) return;
-  if (!skipConfirm && !confirm(t("confirmSaveMenu"))) return;
-  syncMenuDataFromDOM();
-
-  // Convert to rich item map format for API
+function serializeMenuData(categories) {
   const output = {};
-  currentMenuData.forEach(cat => {
+  categories.forEach(cat => {
     output[cat.id] = {
       __title: cat.title,
       __type: cat.type || 'catalog',
@@ -674,6 +679,14 @@ async function saveMenuData(skipConfirm = false) {
     });
   });
 
+  return output;
+}
+
+async function saveMenuData(skipConfirm = false) {
+  if (!currentMenuData || isMenuSaving) return;
+  if (!skipConfirm && !confirm(t("confirmSaveMenu"))) return;
+  syncMenuDataFromDOM();
+  const output = serializeMenuData(currentMenuData);
   isMenuSaving = true;
   updateMenuSaveState();
   const editor = document.getElementById("menu-editor-body");
@@ -845,8 +858,8 @@ async function confirmAddCategory() {
     renderMenuCategoryEditor(activeCategoryIndex);
   }
 
-  // Auto-save immediately to database & refresh cache
-  await saveMenuData(true);
+  // A new category remains a draft until the explicit Save action.
+  markMenuDirty();
 }
 
 function promptRenameCategoryAtIndex(idx) {
@@ -871,14 +884,39 @@ function promptRenameCategoryAtIndex(idx) {
   }
 }
 
-function deleteCategoryAtIndex(idx) {
-  if (!currentMenuData || !currentMenuData[idx]) return;
+async function deleteCategoryAtIndex(idx) {
+  if (isMenuSaving || !currentMenuData || !currentMenuData[idx]) return;
   const cat = currentMenuData[idx];
   if (!confirm(t("confirmDeleteCategory", { name: cat.title }))) return;
 
   syncMenuDataFromDOM();
+  // Persist only the deletion. Other unsaved edits must remain drafts.
+  const saved = savedMenuSnapshot ? JSON.parse(savedMenuSnapshot) : [];
+  if (saved.some(entry => entry.id === cat.id)) {
+    isMenuSaving = true;
+    updateMenuSaveState();
+    const panels = document.querySelectorAll('.menu-split');
+    panels.forEach(el => { el.inert = true; });
+    try {
+      const remaining = saved.filter(entry => entry.id !== cat.id);
+      const res = await fetch(`${WORKER_BASE}/api/menu?tenant_id=${getTenantIdFromUrl()}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(serializeMenuData(remaining))
+      });
+      if (!res.ok) throw new Error('API returned ' + res.status);
+      savedMenuSnapshot = JSON.stringify(remaining);
+    } catch (error) {
+      alert(t('menuSaveFail') + error.message);
+      return;
+    } finally {
+      isMenuSaving = false;
+      panels.forEach(el => { el.inert = false; });
+      updateMenuSaveState();
+    }
+  }
   currentMenuData.splice(idx, 1);
-  markMenuDirty();
+  isMenuDirty = JSON.stringify(currentMenuData) !== savedMenuSnapshot;
+  updateMenuSaveState();
   renderMenuCategories();
 
   if (isCategoryManagerOpen) {

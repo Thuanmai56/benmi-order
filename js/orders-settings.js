@@ -132,6 +132,7 @@ async function loadStoreStatus() {
 }
 
 function openSettings() {
+  if (activeTab === "menu" && !confirmLeaveMenu()) return;
   activeTab = "settings";
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
   document.querySelectorAll(".mini-btn").forEach(t => t.classList.remove("active"));
@@ -1098,13 +1099,13 @@ function savePOSPrinterSettings(silent = false) {
 
   const success = PrinterService.saveSettings(newSettings);
   updateSettingsPrinterStatusDisplay();
-  if (!silent) {
-    if (success) {
-      if (typeof showToast === 'function') showToast("✅ " + (t("saveSuccess") || "印表機設定儲存成功！"));
-    } else {
-      if (typeof showToast === 'function') showToast("❌ " + (t("saveFail") || "儲存失敗"));
-    }
+  const status = document.getElementById('printer-save-status');
+  if (status) {
+    status.textContent = t(success ? 'printerSavedLocally' : 'printerSaveFailed');
+    status.dataset.state = success ? 'saved' : 'error';
   }
+  if (!silent && !success) alert(t('printerSaveFailed'));
+  return success;
 }
 
 async function testPOSPrinterStation(station) {
@@ -1523,5 +1524,4 @@ async function promptUnlinkStoreDevice() {
 
 window.renderStorePairingSection = renderStorePairingSection;
 window.promptUnlinkStoreDevice = promptUnlinkStoreDevice;
-
 

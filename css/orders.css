@@ -1864,7 +1864,28 @@ button.sidebar-nav-item.active {
 
 #changeModal .modal-content {
   width: min(960px, 95vw);
+  max-height: calc(100dvh - 24px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
+#changeModal .modal-body { min-height: 0; overflow-y: auto; }
+#changeModal .modal-actions { flex-shrink: 0; margin-top: 12px; background: white; }
+#changeModal .modal-actions .btn { min-height: 48px; }
+#changeModal .time-adjust-block { padding: 12px; }
+#changeModal .presets-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+#changeModal .preset-card { min-height: 48px; padding: 8px; }
+@media (max-width: 600px) {
+  #changeModal .presets-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+.order-detail-page-container { padding: 12px 24px 24px; }
+.order-detail-topbar { padding: 8px 0; margin-bottom: 12px; }
+.order-detail-topbar-left { gap: 8px; min-width: 0; }
+.order-detail-title { font-size: 20px; flex-wrap: wrap; gap: 4px; overflow-wrap: anywhere; }
+.order-detail-circle-btn { width: 48px; height: 48px; min-width: 48px; min-height: 48px; }
+.order-detail-meta-bar { gap: 8px; padding-bottom: 8px; margin-bottom: 4px; }
+.order-detail-main-col .review-item-row { padding: 10px 8px; gap: 10px; }
+.order-detail-totals-block { margin-top: 12px; padding-top: 12px; }
 
 #rejectModal .modal-content {
   width: min(760px, 95vw);
@@ -3542,11 +3563,9 @@ button.sidebar-nav-item.active {
   border-radius: 8px; background: #fff; color: #475569; font-size: 13px;
   box-shadow: 0 4px 12px #0002;
 }
-.menu-help[open] .menu-help-text,
-.menu-help:focus-within .menu-help-text { display: block; }
-@media (hover: hover) {
-  .menu-help:hover .menu-help-text { display: block; }
-}
+.menu-help[open] .menu-help-text { display: block; }
+.help-title-row { display: flex; align-items: center; gap: 4px; }
+.help-title-row .menu-help-text { right: auto; left: 0; max-width: 60vw; }
 
 
 .menu-header-actions {
@@ -3562,7 +3581,7 @@ button.sidebar-nav-item.active {
   min-width: 0;
   min-height: 48px;
   padding: 6px;
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 800;
   border-radius: 10px;
   display: inline-flex;
