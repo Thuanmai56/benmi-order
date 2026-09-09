@@ -949,7 +949,7 @@ function loadPOSPrinterSettings() {
   const cashPaper = document.getElementById("printer-cashier-paper");
   const cashFeed = document.getElementById("printer-cashier-feed-before-cut");
   if (cashPaper) cashPaper.value = String(settings.cashier?.paperWidth || 80);
-  if (cashFeed) cashFeed.value = settings.cashier?.feedBeforeCutMm ?? 30;
+  if (cashFeed) cashFeed.value = settings.cashier?.feedBeforeCutMm ?? 100;
   const cashTsplSize = document.getElementById("printer-cashier-tspl-size");
   if (cashTsplSize) cashTsplSize.value = settings.cashier?.tspl_label_size || '100x150';
   const cashTsplW = document.getElementById("printer-cashier-tspl-width");
@@ -982,7 +982,7 @@ function loadPOSPrinterSettings() {
   const kitPaper = document.getElementById("printer-kitchen-paper");
   const kitFeed = document.getElementById("printer-kitchen-feed-before-cut");
   if (kitPaper) kitPaper.value = String(settings.kitchen?.paperWidth || 80);
-  if (kitFeed) kitFeed.value = settings.kitchen?.feedBeforeCutMm ?? 30;
+  if (kitFeed) kitFeed.value = settings.kitchen?.feedBeforeCutMm ?? 100;
   const kitTsplSize = document.getElementById("printer-kitchen-tspl-size");
   if (kitTsplSize) kitTsplSize.value = settings.kitchen?.tspl_label_size || '40x30';
   const kitTsplW = document.getElementById("printer-kitchen-tspl-width");
@@ -1081,7 +1081,7 @@ function savePOSPrinterSettings(silent = false) {
       mac_address: cashMac,
       device_name: cashDevName,
       paperWidth: cashPaper ? Number(cashPaper.value) || 80 : 80,
-      feedBeforeCutMm: cashFeed ? Math.max(0, Math.min(60, Number(cashFeed.value) || 30)) : 30,
+      feedBeforeCutMm: cashFeed ? Math.max(0, Math.min(150, Number(cashFeed.value) || 100)) : 100,
       autoCut: true
     },
     kitchen: {
@@ -1100,7 +1100,7 @@ function savePOSPrinterSettings(silent = false) {
       mac_address: kitMac,
       device_name: kitDevName,
       paperWidth: kitPaper ? Number(kitPaper.value) || 80 : 80,
-      feedBeforeCutMm: kitFeed ? Math.max(0, Math.min(60, Number(kitFeed.value) || 30)) : 30,
+      feedBeforeCutMm: kitFeed ? Math.max(0, Math.min(150, Number(kitFeed.value) || 100)) : 100,
       autoCut: true
     }
   };
@@ -1142,7 +1142,7 @@ async function testPOSPrinterStation(station) {
     protocol: protocol,
     interface_type: iface,
     paperWidth: paperWidth,
-    feedBeforeCutMm: feedInput ? Math.max(0, Math.min(60, Number(feedInput.value) || 30)) : 30,
+    feedBeforeCutMm: feedInput ? Math.max(0, Math.min(150, Number(feedInput.value) || 100)) : 100,
     tspl_label_size: tsplSizeSelect ? tsplSizeSelect.value : (isKitchen ? '40x30' : '100x150'),
     tspl_custom_width_mm: tsplWInput ? Number(tsplWInput.value) || (isKitchen ? 40 : 100) : (isKitchen ? 40 : 100),
     tspl_custom_height_mm: tsplHInput ? Number(tsplHInput.value) || (isKitchen ? 30 : 150) : (isKitchen ? 30 : 150),

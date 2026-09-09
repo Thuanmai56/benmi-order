@@ -386,6 +386,8 @@ const I18N = {
     printerGuideLevelCustomDesc: "點開可快選常見備註 (如：不要香菜、去冰、微辣) 或手動輸入特殊要求，立即印出獨立小貼紙貼在餐盒上。",
     printerGuideHardwareTitle: "3. 雙印表機 (Dual-Station) 建議設定",
     printerGuideAlignTitle: "4. 列印位置與裁切",
+    printerGuideAlignBillHeading: "BILL · 收據列印",
+    printerGuideAlignLabelHeading: "TEM · 貼紙列印",
     printerGuideAlignReceipt: "收據請選 ESC/POS 與實際紙寬（58／80 mm）。系統會在內容印完後進紙再裁切；X／Y 是貼紙定位，不能修正收據裁切。更新 Android 應用程式後，請連續試印兩張，確認總計及頁尾完整。",
     printerGuideAlignLabel: "貼紙先選正確尺寸與 DPI，再調整 X／Y（毫米）。X 增加向右移，Y 增加向下移；目前負值視為 0。每次調整 0.5–1 mm 後試印，過大的位移可能超出紙張。位置正常時維持 0 即可。",
     printerGuideAlignReceiptCaption: "收據：內容 → 留白 → 裁切",
@@ -1073,6 +1075,8 @@ const I18N = {
     printerGuideLevelCustomDesc: "Bấm mở popup để chạm nhanh các tùy biến (Không hành, Ít đá, Cay vừa...) hoặc nhập chữ tự do để xả ngay 1 tem ghi chú dán chữa cháy lên ly/hộp.",
     printerGuideHardwareTitle: "3. Cấu hình khuyến nghị cho mô hình 2 máy in (Dual-Station)",
     printerGuideAlignTitle: "4. Vị trí in và cắt giấy",
+    printerGuideAlignBillHeading: "BILL · HÓA ĐƠN NHIỆT",
+    printerGuideAlignLabelHeading: "TEM · NHÃN DÁN",
     printerGuideAlignReceipt: "Bill: chọn ESC/POS và đúng khổ giấy (58/80 mm). Hệ thống in hết nội dung rồi đẩy giấy trước khi cắt. X/Y dùng để căn vị trí tem, không sửa lỗi cắt bill. Sau khi cập nhật ứng dụng Android, in thử hai bill liên tiếp và kiểm tra đủ tổng tiền, lời cảm ơn.",
     printerGuideAlignLabel: "Tem: chọn đúng kích thước và DPI trước khi chỉnh X/Y (mm). Tăng X để dịch phải, tăng Y để dịch xuống; hiện giá trị âm được xử lý như 0. Chỉnh từng 0,5–1 mm rồi in thử; dịch quá nhiều có thể vượt mép giấy. Nếu đã in đúng vị trí, giữ 0.",
     printerGuideAlignReceiptCaption: "Bill: nội dung → khoảng trống → đường cắt",
@@ -1848,7 +1852,7 @@ function applyLanguageToDOM() {
   if (gHwCashier) gHwCashier.innerText = dict.printerGuideHwCashier;
   const gHwKitchen = document.getElementById("i18n-printer-guide-hw-kitchen");
   if (gHwKitchen) gHwKitchen.innerText = dict.printerGuideHwKitchen;
-  ['Title', 'Receipt', 'Label', 'ReceiptCaption', 'LabelCaption'].forEach(suffix => {
+  ['Title', 'BillHeading', 'Receipt', 'LabelHeading', 'Label', 'ReceiptCaption', 'LabelCaption'].forEach(suffix => {
     const el = document.getElementById('printer-guide-align-' + suffix);
     if (el) el.innerText = dict['printerGuideAlign' + suffix];
   });

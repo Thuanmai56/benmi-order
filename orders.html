@@ -943,7 +943,7 @@
                         <option value="58" class="i18n-opt-p58">58mm (小票)</option>
                       </select>
                       <label class="printer-field-label i18n-printer-feed-before-cut" for="printer-cashier-feed-before-cut">紙尾留白 / 裁切前進紙 (mm)</label>
-                      <input type="number" id="printer-cashier-feed-before-cut" class="form-input" min="0" max="60" step="1" value="30" title="若底部內容太靠近刀口，可增加此值">
+                      <input type="number" id="printer-cashier-feed-before-cut" class="form-input" min="0" max="150" step="1" value="100" title="若底部內容太靠近刀口，可增加此值">
                     </div>
 
                     <!-- TSPL Label Config Box -->
@@ -1076,7 +1076,7 @@
                         <option value="58" class="i18n-opt-p58">58mm (小票)</option>
                       </select>
                       <label class="printer-field-label i18n-printer-feed-before-cut" for="printer-kitchen-feed-before-cut">紙尾留白 / 裁切前進紙 (mm)</label>
-                      <input type="number" id="printer-kitchen-feed-before-cut" class="form-input" min="0" max="60" step="1" value="30" title="若底部內容太靠近刀口，可增加此值">
+                      <input type="number" id="printer-kitchen-feed-before-cut" class="form-input" min="0" max="150" step="1" value="100" title="若底部內容太靠近刀口，可增加此值">
                     </div>
 
                     <!-- TSPL Label Config Box -->
@@ -1834,6 +1834,7 @@
           </div>
           <section style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; color: #475569; line-height: 1.6; font-size: 14px;" aria-labelledby="printer-guide-align-Title">
             <h3 id="printer-guide-align-Title" style="margin: 0 0 12px; color: #1e293b;">4. 列印位置與裁切</h3>
+            <h4 id="printer-guide-align-BillHeading" style="display:inline-block; margin: 4px 0 6px; padding: 4px 10px; border-radius: 999px; background:#dbeafe; color:#1d4ed8; font-size:15px;">BILL · 收據列印</h4>
             <p id="printer-guide-align-Receipt"></p>
             <figure style="margin: 12px 0;">
               <svg viewBox="0 0 360 150" style="width: 100%; max-width: 360px;" aria-hidden="true" fill="none" stroke="#475569" stroke-width="2">
@@ -1842,6 +1843,7 @@
               </svg>
               <figcaption id="printer-guide-align-ReceiptCaption"></figcaption>
             </figure>
+            <h4 id="printer-guide-align-LabelHeading" style="display:inline-block; margin: 10px 0 6px; padding: 4px 10px; border-radius: 999px; background:#dcfce7; color:#047857; font-size:15px;">TEM · 貼紙列印</h4>
             <p id="printer-guide-align-Label"></p>
             <figure style="margin: 12px 0 0;">
               <svg viewBox="0 0 360 150" style="width: 100%; max-width: 360px;" aria-hidden="true" fill="none" stroke="#475569" stroke-width="2">

@@ -4,7 +4,7 @@
 // Target Hardware: ESC/POS LAN/Wi-Fi Printers on Port 9100
 // ==========================================================
 
-(function(window) {
+(function (window) {
   'use strict';
 
   const DEFAULT_SETTINGS = {
@@ -25,7 +25,7 @@
       mac_address: '',
       device_name: '',
       paperWidth: 80,
-      feedBeforeCutMm: 30,
+      feedBeforeCutMm: 100,
       autoCut: true
     },
     kitchen: {
@@ -44,7 +44,7 @@
       mac_address: '',
       device_name: '',
       paperWidth: 80,
-      feedBeforeCutMm: 30,
+      feedBeforeCutMm: 100,
       autoCut: true
     }
   };
@@ -559,7 +559,7 @@
       // Keep only a small top/bottom quiet zone. The cutter feed is handled
       // after the raster payload, so a large canvas padding here wastes paper
       // at the beginning of every receipt.
-      const padding = Number(paperWidth) === 58 ? 8 : 12;
+      const padding = Number(paperWidth) === 58 ? 2 : 4;
       const available = width - padding * 2;
       const canvas = document.createElement('canvas');
       canvas.width = width;
@@ -575,10 +575,14 @@
         const leftLines = this.wrapPrintText(ctx, left, available - (right ? rightWidth + gap : 0));
         const rightLines = right ? this.wrapPrintText(ctx, right, rightWidth) : [];
         const lineHeight = Math.ceil(size * 1.25);
-        leftLines.forEach((text, i) => operations.push({ text, x: centered ? width / 2 : padding,
-          y: y + i * lineHeight, font, align: centered ? 'center' : 'left' }));
-        rightLines.forEach((text, i) => operations.push({ text, x: width - padding,
-          y: y + i * lineHeight, font, align: 'right' }));
+        leftLines.forEach((text, i) => operations.push({
+          text, x: centered ? width / 2 : padding,
+          y: y + i * lineHeight, font, align: centered ? 'center' : 'left'
+        }));
+        rightLines.forEach((text, i) => operations.push({
+          text, x: width - padding,
+          y: y + i * lineHeight, font, align: 'right'
+        }));
         y += Math.max(leftLines.length, rightLines.length) * lineHeight + 6;
       };
       const divider = () => { y += 8; operations.push({ line: true, y }); y += 16; };
@@ -722,7 +726,7 @@
             protocol: protocol,
             paperWidth: paperWidth,
             autoCut: autoCut,
-            feedBeforeCutMm: Number(config.feedBeforeCutMm) || 30,
+            feedBeforeCutMm: Number(config.feedBeforeCutMm) || 100,
             labelWidthMm: dim.widthMm,
             labelHeightMm: dim.heightMm,
             dpi: dim.dpi,
@@ -755,7 +759,7 @@
             protocol: protocol,
             paperWidth: paperWidth,
             autoCut: autoCut,
-            feedBeforeCutMm: Number(config.feedBeforeCutMm) || 30,
+            feedBeforeCutMm: Number(config.feedBeforeCutMm) || 100,
             labelWidthMm: dim.widthMm,
             labelHeightMm: dim.heightMm,
             dpi: dim.dpi,
