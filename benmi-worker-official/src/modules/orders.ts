@@ -8,6 +8,7 @@ import { getTenantId } from './menu';
 
 import { TenantContext, tenantHasFeature, resolveTenantOrderPrefix, generateStandardOrderId } from '../types/tenant';
 import { resolveTenantContext } from './tenant';
+import { attachOrderPrintItems } from './order-print-items';
 
 function jsonWithETag(data: any, version: string, status: number = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -1114,7 +1115,7 @@ export async function getWaitingCount(request: Request, env: Env): Promise<Respo
       }
     }
 
-    const currentVersion = `identity2_${waitingCount}_${lastUpdated}`;
+    const currentVersion = `identity3_items_${waitingCount}_${lastUpdated}`;
 
     const clientETag = request.headers.get("if-none-match")?.replace(/^W\//, '').replace(/"/g, '');
     if (clientETag && clientETag === currentVersion) {
@@ -1193,7 +1194,7 @@ export async function getOrders(request: Request, env: Env): Promise<Response> {
     const lastKey = verRow?.key || "empty";
     const lastStatus = verRow?.status || "none";
     const lastRound = verRow?.round_count || 1;
-    const currentVersion = `identity2_${lastUpdated}_${lastKey}_${lastStatus}_${lastRound}`;
+    const currentVersion = `identity3_items_${lastUpdated}_${lastKey}_${lastStatus}_${lastRound}`;
 
     // 2. Client gửi Header "If-None-Match" -> So sánh với D1 version
     const clientETag = request.headers.get("if-none-match")?.replace(/^W\//, '').replace(/"/g, '');
@@ -1223,6 +1224,7 @@ export async function getOrders(request: Request, env: Env): Promise<Response> {
     ).bind(tenantId, startOfTodayUTC).all<any>();
 
     const orders = mapOrderRows(results || []);
+    await attachOrderPrintItems(env, tenantId, orders);
     return jsonWithETag(orders, currentVersion);
   } catch (e: any) {
     console.error("[getOrders] D1 error:", e);
@@ -1282,6 +1284,7 @@ export async function getOrdersByDate(request: Request, env: Env): Promise<Respo
     ).bind(tenantId, dateStr).all<any>();
 
     const orders = mapOrderRows(results || []);
+    await attachOrderPrintItems(env, tenantId, orders);
     return json(orders);
   } catch (e: any) {
     console.error("[getOrdersByDate] D1 error:", e);
@@ -1304,6 +1307,7 @@ export async function getHistoryAll(request: Request, env: Env): Promise<Respons
     ).bind(tenantId).all<any>();
 
     const orders = mapOrderRows(results || []);
+    await attachOrderPrintItems(env, tenantId, orders);
     return json(orders);
   } catch (e: any) {
     console.error("[getHistoryAll] D1 error:", e);
