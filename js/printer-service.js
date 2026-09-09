@@ -559,7 +559,7 @@
       // Keep only a small top/bottom quiet zone. The cutter feed is handled
       // after the raster payload, so a large canvas padding here wastes paper
       // at the beginning of every receipt.
-      const padding = Number(paperWidth) === 58 ? 2 : 4;
+      const padding = Number(paperWidth) === 58 ? 1 : 1;
       const available = width - padding * 2;
       const canvas = document.createElement('canvas');
       canvas.width = width;
