@@ -4,12 +4,13 @@ android {
     namespace "com.benmi.pos"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId System.getenv('APP_ENV') == 'dev-local' ? "com.benmi.pos.dev" : System.getenv('APP_ENV') == 'pilot' ? "com.benmi.pos.pilot" : "com.benmi.pos"
+        def env = System.getenv('APP_ENV') ?: ''
+        applicationId = (env == 'dev-local' || env == 'dev') ? "com.benmi.pos.dev" : (env == 'pilot' ? "com.benmi.pos.pilot" : "com.benmi.pos")
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 17
-        versionName "1.8.9"
-        manifestPlaceholders = [posAppLabel: System.getenv('APP_ENV') == 'dev-local' ? 'Blab POS Dev' : System.getenv('APP_ENV') == 'pilot' ? 'Blab POS Pilot' : 'Blab POS']
+        versionCode 18
+        versionName "1.9.0"
+        manifestPlaceholders = [posAppLabel: (env == 'dev-local' || env == 'dev') ? 'Blab POS Dev' : (env == 'pilot' ? 'Blab POS Pilot' : 'Blab POS')]
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
