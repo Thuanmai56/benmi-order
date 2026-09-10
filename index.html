@@ -2091,7 +2091,7 @@
             if (applied.length === 0) return [];
             const allMods = bootstrapData?.modifiers || [];
             if (applied.includes('*')) return allMods;
-            return allMods.filter(m => applied.includes(m.slug));
+            return allMods.filter(m => applied.includes(m.slug) || applied.includes(m.id));
         }
 
         // --- CUSTOMIZE POPUP (SCHEMA-DRIVEN MODIFIERS POPUP) ---
