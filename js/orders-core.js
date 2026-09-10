@@ -4,7 +4,7 @@
 
 const _coreHostname = window.location.hostname;
 const _coreParams = new URLSearchParams(window.location.search);
-const _forcedEnv = _coreParams.get("env") || (typeof localStorage !== "undefined" && localStorage.getItem("pos_env_override"));
+const _forcedEnv = window.POS_BUNDLED_ENV || _coreParams.get("env") || (typeof localStorage !== "undefined" && localStorage.getItem("pos_env_override"));
 
 const _isDev = (
   _forcedEnv === "dev" ||

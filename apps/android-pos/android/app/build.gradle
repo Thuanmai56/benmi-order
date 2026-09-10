@@ -4,11 +4,12 @@ android {
     namespace "com.benmi.pos"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.benmi.pos"
+        applicationId System.getenv('APP_ENV') == 'pilot' ? "com.benmi.pos.pilot" : "com.benmi.pos"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 15
-        versionName "1.8.6"
+        versionCode 16
+        versionName "1.8.8"
+        manifestPlaceholders = [posAppLabel: System.getenv('APP_ENV') == 'pilot' ? 'Blab POS Pilot' : 'Blab POS']
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

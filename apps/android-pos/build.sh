@@ -47,4 +47,12 @@ if [ -f "$ROOT_DIR/blab_icon.png" ]; then
   cp "$ROOT_DIR/blab_icon.png" "$DIST_DIR/"
 fi
 
+if [ "${APP_ENV:-}" = "pilot" ]; then
+  node - "$DIST_DIR/js/orders-core.js" <<'NODE'
+const fs = require('fs');
+const file = process.argv[2];
+fs.writeFileSync(file, 'window.POS_BUNDLED_ENV = "prod";\n' + fs.readFileSync(file, 'utf8'));
+NODE
+fi
+
 echo "✅ Web assets synchronized successfully into $DIST_DIR!"
