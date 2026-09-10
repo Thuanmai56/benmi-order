@@ -245,12 +245,17 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
   const catNameMap = new Map<string, string>();
   for (const cat of (existingCats || [])) {
     catIdMap.set(cat.slug as string, cat.id as string);
-    if (cat.name) catNameMap.set(cat.slug as string, cat.name as string);
+    catIdMap.set(cat.id as string, cat.id as string);
+    if (cat.name) {
+      catNameMap.set(cat.slug as string, cat.name as string);
+      catNameMap.set(cat.id as string, cat.name as string);
+    }
   }
 
   const itemIdMap = new Map<string, string>();
   for (const item of (existingItems || [])) {
     itemIdMap.set(`${item.category_id}:${item.name}`, item.id as string);
+    itemIdMap.set(item.id as string, item.id as string);
   }
 
   const statements: any[] = [];
@@ -300,6 +305,7 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET 
            name = excluded.name, 
+           slug = excluded.slug,
            category_type = excluded.category_type,
            allow_customization = excluded.allow_customization,
            applied_modifiers = excluded.applied_modifiers,
@@ -336,6 +342,8 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
             `INSERT INTO menu_items (id, tenant_id, category_id, name, price, badge_text, is_recommended, sort_order)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?)
              ON CONFLICT(id) DO UPDATE SET 
+               category_id = excluded.category_id,
+               name = excluded.name,
                price = excluded.price, 
                badge_text = excluded.badge_text, 
                is_recommended = excluded.is_recommended, 
@@ -346,35 +354,47 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
     }
   }
 
-  // Deletion queries for cleanup
-  if (activeItemIds.length > 0) {
-    const placeholders = activeItemIds.map(() => "?").join(",");
-    statements.push(
-      env.DB.prepare(
-        `DELETE FROM menu_items WHERE tenant_id = ? AND id NOT IN (${placeholders})`
-      ).bind(tenantId, ...activeItemIds)
-    );
-  } else {
-    statements.push(
-      env.DB.prepare("DELETE FROM menu_items WHERE tenant_id = ?").bind(tenantId)
-    );
+  // Find which items currently in DB were NOT in the active submitted items
+  const activeItemSet = new Set(activeItemIds);
+  const itemsToDelete = (existingItems || [])
+    .map((item: any) => item.id as string)
+    .filter(id => !activeItemSet.has(id));
+
+  // Find which categories currently in DB were NOT in the active submitted categories
+  const activeCatSet = new Set(activeCategoryIds);
+  const catsToDelete = (existingCats || [])
+    .map((cat: any) => cat.id as string)
+    .filter(id => !activeCatSet.has(id));
+
+  // Keep each DELETE below D1's limit of 100 bound parameters (including tenant_id).
+  if (itemsToDelete.length > 0) {
+    for (let i = 0; i < itemsToDelete.length; i += 50) {
+      const chunk = itemsToDelete.slice(i, i + 50);
+      const placeholders = chunk.map(() => "?").join(",");
+      statements.push(
+        env.DB.prepare(
+          `DELETE FROM menu_items WHERE tenant_id = ? AND id IN (${placeholders})`
+        ).bind(tenantId, ...chunk)
+      );
+    }
   }
 
-  if (activeCategoryIds.length > 0) {
-    const placeholders = activeCategoryIds.map(() => "?").join(",");
-    statements.push(
-      env.DB.prepare(
-        `DELETE FROM menu_categories WHERE tenant_id = ? AND id NOT IN (${placeholders})`
-      ).bind(tenantId, ...activeCategoryIds)
-    );
-  } else {
-    statements.push(
-      env.DB.prepare("DELETE FROM menu_categories WHERE tenant_id = ?").bind(tenantId)
-    );
+  if (catsToDelete.length > 0) {
+    for (let i = 0; i < catsToDelete.length; i += 50) {
+      const chunk = catsToDelete.slice(i, i + 50);
+      const placeholders = chunk.map(() => "?").join(",");
+      statements.push(
+        env.DB.prepare(
+          `DELETE FROM menu_categories WHERE tenant_id = ? AND id IN (${placeholders})`
+        ).bind(tenantId, ...chunk)
+      );
+    }
   }
 
-  // Run all statements in a single batch
-  await env.DB.batch(statements);
+  // One batch keeps the entire menu update atomic if any statement fails.
+  if (statements.length > 0) {
+    await env.DB.batch(statements);
+  }
 }
 
 export async function updateMenu(request: Request, env: Env): Promise<Response> {
