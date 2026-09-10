@@ -153,6 +153,9 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
   try {
     // 2. Fetch Tenant Context
     const tenantCtx = await resolveTenantContext(tenantId, env);
+    if (!tenantCtx && tenantId !== 'benmi') {
+      return json({ error: `Tenant '${tenantId}' not found or inactive` }, 404);
+    }
     const brandName = tenantCtx?.brandName || (tenantId === 'benmi' ? 'Benmi 越式法國麵包' : tenantId);
     const brandColor = '#00b900';
     const brandColorDark = '#009900';

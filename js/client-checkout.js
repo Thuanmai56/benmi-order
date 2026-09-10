@@ -446,7 +446,9 @@ function formatGlobalCustomizationsText() {
                     });
                 }
                 const subPart = subOpts.length > 0 ? ` (${subOpts.join('、')})` : '';
-                mainFlavors.push(`${val}${subPart}`);
+                const flavorLabel = cleanTitle || '口味';
+                const price = Number(checkedRadio.getAttribute('data-price')) || 0;
+                mainFlavors.push(`${flavorLabel}：${val}${subPart}${price > 0 ? ` (+$${price})` : ''}`);
             }
         } else if (group.type === 'checkbox') {
             const checkedBoxes = Array.from(document.querySelectorAll(`input[name="opt-${group.key}"]:checked`));
@@ -498,7 +500,7 @@ function getStructuredGlobalCustomizations() {
                 result.push({
                     key: group.key,
                     label: cleanTitle || '口味',
-                    value: `${val}${subPart}`
+                    value: `${val}${subPart}${Number(checkedRadio.getAttribute('data-price')) > 0 ? ` (+$${Number(checkedRadio.getAttribute('data-price'))})` : ''}`
                 });
             }
         } else if (group.type === 'checkbox') {
@@ -611,6 +613,10 @@ function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, ma
 // 8.2 Định dạng danh sách món cho luồng Gọi thêm (không kèm tiền tổng hoặc mã đơn ảo)
 function formatAppendItemsOnlyText() {
     const lines = [];
+    const globalFlavor = formatGlobalCustomizationsText();
+    if (globalFlavor) {
+        lines.push(globalFlavor.trim());
+    }
     for (let key in cart) {
         if (cart[key] > 0) {
             const itemInfo = resolveCatalogItem(key);
@@ -744,6 +750,16 @@ async function submitOrder() {
 
     const hasItem = Object.values(cart || {}).some(q => q > 0);
     if (!hasItem) return customAlert('請先選擇餐點品項加入購物車');
+
+    // Minimum spend excludes order-wide add-on charges themselves.
+    updateTotal();
+    const selectedOrderOptions = Array.from(document.querySelectorAll('.custom-panel input[data-price]:checked'));
+    const orderAddons = selectedOrderOptions.reduce((sum, input) => sum + (Number(input.getAttribute('data-price')) || 0), 0);
+    const foodSubtotal = (Number(document.getElementById('total-price')?.innerText) || 0) - orderAddons;
+    const unavailableOption = selectedOrderOptions.find(input => foodSubtotal < (Number(input.getAttribute('data-min-order-amount')) || 0));
+    if (unavailableOption) {
+        return customAlert(`${unavailableOption.getAttribute('data-group-title')}：餐點金額需滿 ${unavailableOption.getAttribute('data-min-order-amount')} 元，請調整餐點或選項。`);
+    }
 
     const twNow = getTaiwanDate();
     const isDineIn = (window.currentDiningOption === 'dine_in');
@@ -1075,6 +1091,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                 note: mainNote,
                 tenant_id: tenantId,
                 items: structuredItems,
+                customizations: getStructuredGlobalCustomizations(),
                 is_desktop: isDesktop,
                 isDesktop: isDesktop
             };

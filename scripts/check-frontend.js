@@ -142,6 +142,8 @@ HTML_FILES.forEach(htmlFile => {
   // 3. Browser Simulation in shared VM context
   console.log(`  ${COLORS.cyan}Simulating script execution sequence in shared VM context...${COLORS.reset}`);
   const sandbox = {
+    addEventListener: () => {},
+    removeEventListener: () => {},
     window: {},
     document: {
       addEventListener: () => {},
@@ -154,19 +156,31 @@ HTML_FILES.forEach(htmlFile => {
         innerHTML: "",
         innerText: "",
         appendChild: () => {},
-        getElementsByClassName: () => []
+        getElementsByClassName: () => [],
+        addEventListener: () => {},
+        removeEventListener: () => {}
       }),
       querySelectorAll: () => [],
-      querySelector: () => null,
+      querySelector: () => ({
+        classList: { toggle: () => {}, add: () => {}, remove: () => {} },
+        style: {},
+        innerHTML: "",
+        innerText: "",
+        addEventListener: () => {},
+        removeEventListener: () => {}
+      }),
       createElement: (tag) => ({
         tag,
         classList: { add: () => {}, remove: () => {}, toggle: () => {} },
         style: {},
         innerHTML: "",
         appendChild: () => {},
-        querySelectorAll: () => []
+        querySelectorAll: () => [],
+        addEventListener: () => {},
+        removeEventListener: () => {}
       })
     },
+    getComputedStyle: () => ({ display: "block" }),
     location: { hostname: "localhost", search: "?tenant=blab_demo" },
     navigator: { clipboard: { writeText: async () => {} }, userAgent: "Mozilla/5.0" },
     localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} },

@@ -7,6 +7,8 @@ let storeOperatingHours = null;
 let allowScheduledPickup = true;
 let currentTenantFeatures = [];
 window.currentTenantFeatures = currentTenantFeatures;
+let currentStoreLogoUrl = null;
+let pendingLogoDataUri = null;
 
 const DAY_NAMES = {
   "zh-TW": ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"],
@@ -130,11 +132,15 @@ async function loadStoreStatus() {
 }
 
 function openSettings() {
+  if (activeTab === "menu" && !confirmLeaveMenu()) return;
   activeTab = "settings";
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
   document.querySelectorAll(".mini-btn").forEach(t => t.classList.remove("active"));
   const tabSettings = document.getElementById("tab-settings");
   if (tabSettings) tabSettings.classList.add("active");
+  if (typeof updateSidebarActive === "function") {
+    updateSidebarActive("settings");
+  }
   document.querySelectorAll(".content").forEach(c => c.style.display = "none");
   const viewSettings = document.getElementById("view-settings");
   if (viewSettings) viewSettings.style.display = "block";
@@ -142,12 +148,46 @@ function openSettings() {
   renderLanguageSetting();
   renderDineInSetting();
   renderReportsSetting();
+  renderStorePairingSection();
+  loadPOSPrinterSettings();
   initSettingsScrollSpy();
+  const lastTab = (typeof sessionStorage !== "undefined" && sessionStorage.getItem("last_settings_tab")) || "setting-card-status";
+  switchSettingTab(lastTab);
 }
 
 async function loadOperatingHours() {
+  const tenantId = getTenantIdFromUrl();
+
+  // Instant render from local cache if available
   try {
-    const res = await fetch(`${WORKER_BASE}/api/config?tenant_id=${getTenantIdFromUrl()}&_t=${Date.now()}`);
+    const cachedStr = localStorage.getItem("tenant_branding_" + tenantId) || localStorage.getItem("tenant_theme_" + tenantId);
+    if (cachedStr) {
+      const cached = JSON.parse(cachedStr);
+      if (cached.storeAddress !== undefined && cached.storeAddress !== null) {
+        const addrInput = document.getElementById("setting-store-address-input");
+        if (addrInput && !addrInput.value) addrInput.value = cached.storeAddress || "";
+      }
+      if (cached.announcement !== undefined && cached.announcement !== null) {
+        const annInput = document.getElementById("setting-store-announcement-input");
+        if (annInput && !annInput.value) annInput.value = cached.announcement || "";
+      }
+      if (cached.logoUrl && !currentStoreLogoUrl) {
+        currentStoreLogoUrl = cached.logoUrl;
+        renderStoreLogoUI(cached.logoUrl);
+      }
+    }
+  } catch(e) {}
+
+  if (!currentStoreLogoUrl) {
+    const bLogo = document.getElementById("brand-logo");
+    if (bLogo && bLogo.src && bLogo.style.display !== "none" && !bLogo.src.endsWith("#")) {
+      currentStoreLogoUrl = bLogo.src;
+      renderStoreLogoUI(bLogo.src);
+    }
+  }
+
+  try {
+    const res = await fetch(`${WORKER_BASE}/api/config?tenant_id=${tenantId}&_t=${Date.now()}`);
     if (res.ok) {
       const data = await res.json();
       storeOperatingHours = ensureParsedOperatingHours(data.operatingHours);
@@ -158,18 +198,18 @@ async function loadOperatingHours() {
         window.currentTenantFeatures = currentTenantFeatures;
       }
       if (data.storeStatus) currentStoreStatus = data.storeStatus;
-      if (data.storeAddress !== undefined) {
+      if (data.storeAddress !== undefined && data.storeAddress !== null) {
         const addrInput = document.getElementById("setting-store-address-input");
         if (addrInput) addrInput.value = data.storeAddress || "";
       }
-      if (data.announcement !== undefined) {
+      if (data.announcement !== undefined && data.announcement !== null) {
         const annInput = document.getElementById("setting-store-announcement-input");
         if (annInput) annInput.value = data.announcement || "";
       }
       if (data.logoUrl) {
         currentStoreLogoUrl = data.logoUrl;
         renderStoreLogoUI(data.logoUrl);
-      } else {
+      } else if (!currentStoreLogoUrl) {
         currentStoreLogoUrl = null;
         renderStoreLogoUI(null);
       }
@@ -177,13 +217,13 @@ async function loadOperatingHours() {
       storeOperatingHours = createDefaultOperatingHours();
       allowScheduledPickup = true;
       allowDineIn = true;
-      renderStoreLogoUI(null);
+      if (!currentStoreLogoUrl) renderStoreLogoUI(null);
     }
   } catch (e) {
     storeOperatingHours = createDefaultOperatingHours();
     allowScheduledPickup = true;
     allowDineIn = true;
-    renderStoreLogoUI(null);
+    if (!currentStoreLogoUrl) renderStoreLogoUI(null);
   }
   renderStoreStatusUI(currentStoreStatus);
   renderOperatingHours();
@@ -243,6 +283,30 @@ async function saveScheduledPickupSetting() {
   }
 }
 
+function updateTocFeatureItem(tocId, labelId, i18nKey, unlockedSvg, isFeatureEnabled) {
+  const tocItem = document.getElementById(tocId);
+  if (!tocItem) return;
+  const lockSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
+  const targetSvg = isFeatureEnabled ? unlockedSvg : lockSvg;
+  
+  const iconBox = tocItem.querySelector(".toc-icon-box");
+  const label = document.getElementById(labelId);
+  const chevron = tocItem.querySelector(".toc-chevron");
+
+  if (!iconBox || !label || !chevron) {
+    tocItem.innerHTML = `
+      <div class="toc-icon-box">${targetSvg}</div>
+      <span class="toc-item-label" id="${labelId}">${typeof t === 'function' ? t(i18nKey) : ''}</span>
+      <svg class="toc-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="9 18 15 12 9 6"></polyline>
+      </svg>
+    `;
+  } else {
+    iconBox.innerHTML = targetSvg;
+    if (typeof t === 'function') label.innerText = t(i18nKey);
+  }
+}
+
 function renderDineInSetting() {
   const isFeatureEnabled = Array.isArray(window.currentTenantFeatures)
     ? window.currentTenantFeatures.includes('dine_in')
@@ -251,24 +315,20 @@ function renderDineInSetting() {
   const unlockedBody = document.getElementById("setting-dinein-unlocked-body");
   const lockedBody = document.getElementById("setting-dinein-locked-body");
   const saveBtn = document.getElementById("btn-save-dinein-setting");
-  const tocItem = document.getElementById("toc-item-dinein");
+
+  const DINEIN_SVG = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2v6a3 3 0 0 1-3 3 3 3 0 0 1-3-3V2"></path><path d="M15 2v10"></path><path d="M15 14v8"></path><path d="M6 2v20"></path><path d="M6 2a3 3 0 0 1 3 3v3a3 3 0 0 1-3 3"></path></svg>`;
+  updateTocFeatureItem("toc-item-dinein", "i18n-toc-dinein", "tocDineIn", DINEIN_SVG, isFeatureEnabled);
 
   if (!isFeatureEnabled) {
     if (unlockedBody) unlockedBody.style.display = "none";
     if (lockedBody) lockedBody.style.display = "flex";
     if (saveBtn) saveBtn.style.display = "none";
-    if (tocItem) {
-      tocItem.innerHTML = `<span>🔒</span> <span id="i18n-toc-dinein">${t('tocDineIn')}</span>`;
-    }
     return;
   }
 
   if (unlockedBody) unlockedBody.style.display = "flex";
   if (lockedBody) lockedBody.style.display = "none";
   if (saveBtn) saveBtn.style.display = "block";
-  if (tocItem) {
-    tocItem.innerHTML = `<span>🍽️</span> <span id="i18n-toc-dinein">${t('tocDineIn')}</span>`;
-  }
 
   const radioTrue = document.getElementById("setting-allow-dinein-true");
   const radioFalse = document.getElementById("setting-allow-dinein-false");
@@ -418,6 +478,18 @@ async function saveOperatingHours() {
   }
 }
 
+function updateLocalTenantBranding(patch) {
+  try {
+    const tenantId = getTenantIdFromUrl();
+    const key = "tenant_branding_" + tenantId;
+    const raw = localStorage.getItem(key) || localStorage.getItem("tenant_theme_" + tenantId);
+    const obj = raw ? JSON.parse(raw) : {};
+    Object.assign(obj, patch);
+    localStorage.setItem(key, JSON.stringify(obj));
+    localStorage.setItem("tenant_theme_" + tenantId, JSON.stringify(obj));
+  } catch(e) {}
+}
+
 async function saveStoreAddressSetting() {
   const addrInput = document.getElementById("setting-store-address-input");
   const newAddress = addrInput ? addrInput.value.trim() : "";
@@ -431,6 +503,7 @@ async function saveStoreAddressSetting() {
       body: JSON.stringify({ storeAddress: newAddress })
     });
     if (!res.ok) throw new Error("API returned " + res.status);
+    updateLocalTenantBranding({ storeAddress: newAddress });
     alert(t("saveSuccess"));
   } catch (e) {
     alert(t("saveFail") + e.message);
@@ -452,6 +525,7 @@ async function saveStoreAnnouncementSetting() {
       body: JSON.stringify({ announcement: newAnnouncement })
     });
     if (!res.ok) throw new Error("API returned " + res.status);
+    updateLocalTenantBranding({ announcement: newAnnouncement });
     alert(t("saveSuccess"));
   } catch (e) {
     alert(t("saveFail") + e.message);
@@ -559,6 +633,7 @@ async function saveStoreLogoSetting() {
       bLogo.style.display = "block";
     }
 
+    updateLocalTenantBranding({ logoUrl: finalLogoUrl });
     alert(t("saveSuccess"));
   } catch (e) {
     alert(t("saveFail") + e.message);
@@ -594,6 +669,7 @@ async function deleteStoreLogoSetting() {
       bLogo.style.display = "none";
     }
 
+    updateLocalTenantBranding({ logoUrl: null });
     alert(t("logoDeleteSuccess"));
   } catch (e) {
     alert(t("saveFail") + e.message);
@@ -601,6 +677,74 @@ async function deleteStoreLogoSetting() {
     if (btn) { btn.innerText = oldText; btn.disabled = false; }
   }
 }
+
+async function saveAllStoreInfoSettings() {
+  const btn = document.getElementById("btn-save-all-store-info");
+  const oldText = btn ? btn.innerText : "";
+  if (btn) { btn.innerText = t("saving"); btn.disabled = true; }
+
+  const tenantId = getTenantIdFromUrl();
+  const addrInput = document.getElementById("setting-store-address-input");
+  const annInput = document.getElementById("setting-store-announcement-input");
+  const newAddress = addrInput ? addrInput.value.trim() : "";
+  const newAnnouncement = annInput ? annInput.value.trim() : "";
+
+  try {
+    let finalLogoUrl = currentStoreLogoUrl;
+
+    if (pendingLogoDataUri) {
+      const imgRes = await fetch(`${WORKER_BASE}/api/image?tenant_id=${tenantId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "store_logo",
+          dataUri: pendingLogoDataUri
+        })
+      });
+      if (!imgRes.ok) throw new Error("Upload logo image failed: " + imgRes.status);
+      finalLogoUrl = `${WORKER_BASE}/api/image?tenant_id=${tenantId}&name=store_logo&_t=${Date.now()}`;
+    }
+
+    const payload = {
+      storeAddress: newAddress,
+      announcement: newAnnouncement
+    };
+    if (finalLogoUrl !== undefined && finalLogoUrl !== null) {
+      payload.logoUrl = finalLogoUrl;
+    }
+
+    const res = await fetch(`${WORKER_BASE}/api/config?tenant_id=${tenantId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error("API returned " + res.status);
+
+    if (finalLogoUrl) {
+      currentStoreLogoUrl = finalLogoUrl;
+      pendingLogoDataUri = null;
+      renderStoreLogoUI(finalLogoUrl);
+      const bLogo = document.getElementById("brand-logo");
+      if (bLogo) {
+        bLogo.src = finalLogoUrl;
+        bLogo.style.display = "block";
+      }
+    }
+
+    updateLocalTenantBranding({
+      storeAddress: newAddress,
+      announcement: newAnnouncement,
+      ...(finalLogoUrl ? { logoUrl: finalLogoUrl } : {})
+    });
+
+    alert(t("saveSuccess"));
+  } catch (e) {
+    alert(t("saveFail") + e.message);
+  } finally {
+    if (btn) { btn.innerText = oldText; btn.disabled = false; }
+  }
+}
+window.saveAllStoreInfoSettings = saveAllStoreInfoSettings;
 
 function renderLanguageSetting() {
   const radioZh = document.getElementById("setting-lang-zh");
@@ -629,28 +773,425 @@ function renderReportsSetting() {
     ? window.currentTenantFeatures.includes('reports')
     : (Array.isArray(currentTenantFeatures) ? currentTenantFeatures.includes('reports') : false);
 
+  const REPORTS_SVG = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>`;
+  updateTocFeatureItem("toc-item-reports", "i18n-toc-reports", "tocReports", REPORTS_SVG, isFeatureEnabled);
+
   const unlockedBody = document.getElementById("setting-reports-unlocked-body");
   const lockedBody = document.getElementById("setting-reports-locked-body");
-  const tocItem = document.getElementById("toc-item-reports");
 
   if (!isFeatureEnabled) {
     if (unlockedBody) unlockedBody.style.display = "none";
     if (lockedBody) lockedBody.style.display = "flex";
-    if (tocItem) {
-      tocItem.innerHTML = `<span class="toc-icon">🔒</span> <span id="i18n-toc-reports">${t('tocReports')}</span>`;
-    }
     return;
   }
 
   if (unlockedBody) unlockedBody.style.display = "flex";
   if (lockedBody) lockedBody.style.display = "none";
-  if (tocItem) {
-    tocItem.innerHTML = `<span class="toc-icon">📊</span> <span id="i18n-toc-reports">${t('tocReports')}</span>`;
-  }
 }
 
 function openReportsFromSettings() {
   switchTab('reports');
+}
+
+// --- Thermal Printer Settings Logic ---
+function onPrinterProtocolChange(station) {
+  const isKitchen = station === 'kitchen';
+  const protoSel = document.getElementById(isKitchen ? 'printer-kitchen-protocol' : 'printer-cashier-protocol');
+  const escBox = document.getElementById(isKitchen ? 'printer-kitchen-escpos-box' : 'printer-cashier-escpos-box');
+  const tsplBox = document.getElementById(isKitchen ? 'printer-kitchen-tspl-box' : 'printer-cashier-tspl-box');
+
+  const protocol = isKitchen ? 'tspl' : 'esc_pos';
+  if (protoSel) protoSel.value = protocol;
+  if (protocol === 'tspl') {
+    if (escBox) escBox.style.display = 'none';
+    if (tsplBox) tsplBox.style.display = 'flex';
+    onTsplSizeChange(station);
+  } else {
+    if (escBox) escBox.style.display = 'block';
+    if (tsplBox) tsplBox.style.display = 'none';
+  }
+}
+
+function onTsplSizeChange(station) {
+  const isKitchen = station === 'kitchen';
+  const sizeSel = document.getElementById(isKitchen ? 'printer-kitchen-tspl-size' : 'printer-cashier-tspl-size');
+  const customBox = document.getElementById(isKitchen ? 'printer-kitchen-tspl-custom-size-box' : 'printer-cashier-tspl-custom-size-box');
+
+  const size = sizeSel ? sizeSel.value : '100x150';
+  if (size === 'custom') {
+    if (customBox) customBox.style.display = 'grid';
+  } else {
+    if (customBox) customBox.style.display = 'none';
+  }
+}
+
+function onPrinterInterfaceChange(station) {
+  const isKitchen = station === 'kitchen';
+  const sel = document.getElementById(isKitchen ? 'printer-kitchen-interface' : 'printer-cashier-interface');
+  const netBox = document.getElementById(isKitchen ? 'printer-kitchen-network-box' : 'printer-cashier-network-box');
+  const btBox = document.getElementById(isKitchen ? 'printer-kitchen-bt-box' : 'printer-cashier-bt-box');
+
+  const iface = sel ? sel.value : 'network';
+  if (iface === 'bluetooth') {
+    if (netBox) netBox.style.display = 'none';
+    if (btBox) btBox.style.display = 'flex';
+    refreshPairedBluetoothDevices(station);
+  } else {
+    if (netBox) netBox.style.display = 'flex';
+    if (btBox) btBox.style.display = 'none';
+  }
+}
+
+function onPrinterModeChange(mode) {
+  const isAuto = mode === 'auto';
+  updatePrintModeCardStyles(isAuto);
+  savePOSPrinterSettings(true);
+}
+
+function updatePrintModeCardStyles(isAuto) {
+  const cardAuto = document.getElementById("mode-card-print-auto");
+  const cardManual = document.getElementById("mode-card-print-manual");
+  if (cardAuto) {
+    cardAuto.style.borderColor = isAuto ? "var(--primary, #00b900)" : "var(--border, #cbd5e1)";
+    cardAuto.style.background = isAuto ? "rgba(0, 185, 0, 0.05)" : "#fff";
+  }
+  if (cardManual) {
+    cardManual.style.borderColor = !isAuto ? "var(--primary, #00b900)" : "var(--border, #cbd5e1)";
+    cardManual.style.background = !isAuto ? "rgba(0, 185, 0, 0.05)" : "#fff";
+  }
+}
+
+let printerAutoSaveDebounceTimer = null;
+function attachPrinterAutoSave() {
+  const card = document.getElementById("setting-card-printer");
+  if (!card || card.dataset.autosaveAttached === "true") return;
+  card.dataset.autosaveAttached = "true";
+
+  card.addEventListener("input", (e) => {
+    if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") {
+      clearTimeout(printerAutoSaveDebounceTimer);
+      printerAutoSaveDebounceTimer = setTimeout(() => {
+        savePOSPrinterSettings(true);
+      }, 400);
+    }
+  });
+
+  card.addEventListener("change", (e) => {
+    if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") {
+      clearTimeout(printerAutoSaveDebounceTimer);
+      savePOSPrinterSettings(true);
+    }
+  });
+}
+
+async function refreshPairedBluetoothDevices(station = 'all', targetMacs = null) {
+  if (typeof PrinterService === 'undefined') return;
+  const stations = station === 'all' ? ['cashier', 'kitchen'] : [station];
+
+  for (const st of stations) {
+    const statusEl = document.getElementById(st === 'kitchen' ? 'printer-kitchen-bt-status' : 'printer-cashier-bt-status');
+    const selectEl = document.getElementById(st === 'kitchen' ? 'printer-kitchen-bt-device' : 'printer-cashier-bt-device');
+    if (statusEl) statusEl.innerText = t('printerBtConnecting', '正在搜尋已配對裝置...');
+
+    try {
+      const res = await PrinterService.getPairedBluetoothDevices();
+      const devices = res?.devices || [];
+
+      if (selectEl) {
+        const explicitMac = targetMacs ? targetMacs[st] : null;
+        const currentVal = explicitMac || selectEl.value;
+        selectEl.innerHTML = `<option value="">${t('printerBtSelectPlaceholder', '-- 請選擇已配對的藍牙印表機 --')}</option>`;
+
+        if (devices.length === 0) {
+          if (statusEl) statusEl.innerText = t('printerBtNoDevices', '未發現已配對裝置，請先至 Android 設定中完成配對');
+        } else {
+          devices.forEach(dev => {
+            const opt = document.createElement('option');
+            opt.value = dev.address;
+            opt.innerText = `${dev.name} (${dev.address})`;
+            opt.dataset.name = dev.name;
+            if (dev.address === currentVal) opt.selected = true;
+            selectEl.appendChild(opt);
+          });
+          if (statusEl) statusEl.innerText = `✅ ${devices.length} 個已配對藍牙裝置`;
+        }
+      }
+    } catch (err) {
+      console.warn('[PrinterSettings] BT scan error:', err);
+      if (statusEl) statusEl.innerText = `⚠️ ${err.message || '無法取得藍牙裝置清單'}`;
+    }
+  }
+}
+
+function loadPOSPrinterSettings() {
+  if (typeof PrinterService === 'undefined') return;
+  const settings = PrinterService.getSettings();
+
+  const isAuto = !!settings.autoPrintNewOrders;
+  const radioAuto = document.getElementById("printer-mode-auto");
+  const radioManual = document.getElementById("printer-mode-manual");
+  if (radioAuto && radioManual) {
+    radioAuto.checked = isAuto;
+    radioManual.checked = !isAuto;
+    updatePrintModeCardStyles(isAuto);
+  }
+
+  // Cashier
+  const cashEnabled = document.getElementById("printer-cashier-enabled");
+  if (cashEnabled) cashEnabled.checked = !!settings.cashier?.enabled;
+  const cashProto = document.getElementById("printer-cashier-protocol");
+  if (cashProto) cashProto.value = 'esc_pos';
+  const cashInterface = document.getElementById("printer-cashier-interface");
+  if (cashInterface) cashInterface.value = settings.cashier?.interface_type || 'network';
+  const cashIp = document.getElementById("printer-cashier-ip");
+  if (cashIp) cashIp.value = settings.cashier?.ip || "";
+  const cashPort = document.getElementById("printer-cashier-port");
+  if (cashPort) cashPort.value = settings.cashier?.port || 9100;
+  const cashPaper = document.getElementById("printer-cashier-paper");
+  const cashFeed = document.getElementById("printer-cashier-feed-before-cut");
+  if (cashPaper) cashPaper.value = String(settings.cashier?.paperWidth || 80);
+  if (cashFeed) cashFeed.value = settings.cashier?.feedBeforeCutMm ?? 80;
+  const cashTsplSize = document.getElementById("printer-cashier-tspl-size");
+  if (cashTsplSize) cashTsplSize.value = settings.cashier?.tspl_label_size || '100x150';
+  const cashTsplW = document.getElementById("printer-cashier-tspl-width");
+  if (cashTsplW) cashTsplW.value = settings.cashier?.tspl_custom_width_mm || 100;
+  const cashTsplH = document.getElementById("printer-cashier-tspl-height");
+  if (cashTsplH) cashTsplH.value = settings.cashier?.tspl_custom_height_mm || 150;
+  const cashTsplMode = document.getElementById("printer-cashier-tspl-mode");
+  if (cashTsplMode) cashTsplMode.value = settings.cashier?.tspl_mode || 'summary';
+  const cashTsplDpi = document.getElementById("printer-cashier-tspl-dpi");
+  if (cashTsplDpi) cashTsplDpi.value = String(settings.cashier?.tspl_dpi || 203);
+  const cashTsplXOffset = document.getElementById("printer-cashier-tspl-x-offset");
+  if (cashTsplXOffset) cashTsplXOffset.value = settings.cashier?.tspl_x_offset_mm ?? 0;
+  const cashTsplYOffset = document.getElementById("printer-cashier-tspl-y-offset");
+  if (cashTsplYOffset) cashTsplYOffset.value = settings.cashier?.tspl_y_offset_mm ?? 0;
+
+  onPrinterProtocolChange('cashier');
+  onPrinterInterfaceChange('cashier');
+
+  // Kitchen
+  const kitEnabled = document.getElementById("printer-kitchen-enabled");
+  if (kitEnabled) kitEnabled.checked = !!settings.kitchen?.enabled;
+  const kitProto = document.getElementById("printer-kitchen-protocol");
+  if (kitProto) kitProto.value = 'tspl';
+  const kitInterface = document.getElementById("printer-kitchen-interface");
+  if (kitInterface) kitInterface.value = settings.kitchen?.interface_type || 'network';
+  const kitIp = document.getElementById("printer-kitchen-ip");
+  if (kitIp) kitIp.value = settings.kitchen?.ip || "";
+  const kitPort = document.getElementById("printer-kitchen-port");
+  if (kitPort) kitPort.value = settings.kitchen?.port || 9100;
+  const kitPaper = document.getElementById("printer-kitchen-paper");
+  const kitFeed = document.getElementById("printer-kitchen-feed-before-cut");
+  if (kitPaper) kitPaper.value = String(settings.kitchen?.paperWidth || 80);
+  if (kitFeed) kitFeed.value = settings.kitchen?.feedBeforeCutMm ?? 80;
+  const kitTsplSize = document.getElementById("printer-kitchen-tspl-size");
+  if (kitTsplSize) kitTsplSize.value = settings.kitchen?.tspl_label_size || '40x30';
+  const kitTsplW = document.getElementById("printer-kitchen-tspl-width");
+  if (kitTsplW) kitTsplW.value = settings.kitchen?.tspl_custom_width_mm || 40;
+  const kitTsplH = document.getElementById("printer-kitchen-tspl-height");
+  if (kitTsplH) kitTsplH.value = settings.kitchen?.tspl_custom_height_mm || 30;
+  const kitTsplMode = document.getElementById("printer-kitchen-tspl-mode");
+  if (kitTsplMode) kitTsplMode.value = settings.kitchen?.tspl_mode || 'item_stickers';
+  const kitTsplDpi = document.getElementById("printer-kitchen-tspl-dpi");
+  if (kitTsplDpi) kitTsplDpi.value = String(settings.kitchen?.tspl_dpi || 203);
+  const kitTsplXOffset = document.getElementById("printer-kitchen-tspl-x-offset");
+  if (kitTsplXOffset) kitTsplXOffset.value = settings.kitchen?.tspl_x_offset_mm ?? 0;
+  const kitTsplYOffset = document.getElementById("printer-kitchen-tspl-y-offset");
+  if (kitTsplYOffset) kitTsplYOffset.value = settings.kitchen?.tspl_y_offset_mm ?? 0;
+
+  onPrinterProtocolChange('kitchen');
+  onPrinterInterfaceChange('kitchen');
+
+  // Load Bluetooth devices and select saved ones
+  const targetMacs = {
+    cashier: settings.cashier?.mac_address || "",
+    kitchen: settings.kitchen?.mac_address || ""
+  };
+  refreshPairedBluetoothDevices('all', targetMacs);
+
+  // Attach instant auto-save listener
+  attachPrinterAutoSave();
+
+  // Update header printer status pill
+  updateSettingsPrinterStatusDisplay();
+}
+
+function savePOSPrinterSettings(silent = false) {
+  if (typeof PrinterService === 'undefined') return;
+
+  const radioAuto = document.getElementById("printer-mode-auto");
+  const autoPrintEnabled = radioAuto ? radioAuto.checked : false;
+
+  // Cashier
+  const cashEnabled = document.getElementById("printer-cashier-enabled");
+  const cashProto = document.getElementById("printer-cashier-protocol");
+  const cashInterface = document.getElementById("printer-cashier-interface");
+  const cashIp = document.getElementById("printer-cashier-ip");
+  const cashPort = document.getElementById("printer-cashier-port");
+  const cashBtSelect = document.getElementById("printer-cashier-bt-device");
+  const cashPaper = document.getElementById("printer-cashier-paper");
+  const cashFeed = document.getElementById("printer-cashier-feed-before-cut");
+  const cashTsplSize = document.getElementById("printer-cashier-tspl-size");
+  const cashTsplW = document.getElementById("printer-cashier-tspl-width");
+  const cashTsplH = document.getElementById("printer-cashier-tspl-height");
+  const cashTsplMode = document.getElementById("printer-cashier-tspl-mode");
+  const cashTsplDpi = document.getElementById("printer-cashier-tspl-dpi");
+  const cashTsplXOffset = document.getElementById("printer-cashier-tspl-x-offset");
+  const cashTsplYOffset = document.getElementById("printer-cashier-tspl-y-offset");
+
+  const cashBtOpt = cashBtSelect?.selectedOptions?.[0];
+  const cashMac = cashBtSelect ? cashBtSelect.value : "";
+  const cashDevName = cashBtOpt?.dataset?.name || "";
+
+  // Kitchen
+  const kitEnabled = document.getElementById("printer-kitchen-enabled");
+  const kitProto = document.getElementById("printer-kitchen-protocol");
+  const kitInterface = document.getElementById("printer-kitchen-interface");
+  const kitIp = document.getElementById("printer-kitchen-ip");
+  const kitPort = document.getElementById("printer-kitchen-port");
+  const kitBtSelect = document.getElementById("printer-kitchen-bt-device");
+  const kitPaper = document.getElementById("printer-kitchen-paper");
+  const kitFeed = document.getElementById("printer-kitchen-feed-before-cut");
+  const kitTsplSize = document.getElementById("printer-kitchen-tspl-size");
+  const kitTsplW = document.getElementById("printer-kitchen-tspl-width");
+  const kitTsplH = document.getElementById("printer-kitchen-tspl-height");
+  const kitTsplMode = document.getElementById("printer-kitchen-tspl-mode");
+  const kitTsplDpi = document.getElementById("printer-kitchen-tspl-dpi");
+  const kitTsplXOffset = document.getElementById("printer-kitchen-tspl-x-offset");
+  const kitTsplYOffset = document.getElementById("printer-kitchen-tspl-y-offset");
+
+  const kitBtOpt = kitBtSelect?.selectedOptions?.[0];
+  const kitMac = kitBtSelect ? kitBtSelect.value : "";
+  const kitDevName = kitBtOpt?.dataset?.name || "";
+
+  const newSettings = {
+    autoPrintNewOrders: autoPrintEnabled,
+    cashier: {
+      enabled: cashEnabled ? cashEnabled.checked : true,
+      protocol: 'esc_pos',
+      interface_type: cashInterface ? cashInterface.value : 'network',
+      tspl_label_size: cashTsplSize ? cashTsplSize.value : '100x150',
+      tspl_custom_width_mm: cashTsplW ? Number(cashTsplW.value) || 100 : 100,
+      tspl_custom_height_mm: cashTsplH ? Number(cashTsplH.value) || 150 : 150,
+      tspl_mode: cashTsplMode ? cashTsplMode.value : 'summary',
+      tspl_dpi: cashTsplDpi ? Number(cashTsplDpi.value) || 203 : 203,
+      tspl_x_offset_mm: cashTsplXOffset ? Number(cashTsplXOffset.value) || 0 : 0,
+      tspl_y_offset_mm: cashTsplYOffset ? Number(cashTsplYOffset.value) || 0 : 0,
+      ip: cashIp ? cashIp.value.trim() : "192.168.1.100",
+      port: cashPort ? Number(cashPort.value) || 9100 : 9100,
+      mac_address: cashMac,
+      device_name: cashDevName,
+      paperWidth: cashPaper ? Number(cashPaper.value) || 80 : 80,
+      feedBeforeCutMm: cashFeed ? Math.max(0, Math.min(150, Number(cashFeed.value) || 80)) : 80,
+      autoCut: true
+    },
+    kitchen: {
+      enabled: kitEnabled ? kitEnabled.checked : true,
+      protocol: 'tspl',
+      interface_type: kitInterface ? kitInterface.value : 'network',
+      tspl_label_size: kitTsplSize ? kitTsplSize.value : '40x30',
+      tspl_custom_width_mm: kitTsplW ? Number(kitTsplW.value) || 40 : 40,
+      tspl_custom_height_mm: kitTsplH ? Number(kitTsplH.value) || 30 : 30,
+      tspl_mode: kitTsplMode ? kitTsplMode.value : 'item_stickers',
+      tspl_dpi: kitTsplDpi ? Number(kitTsplDpi.value) || 203 : 203,
+      tspl_x_offset_mm: kitTsplXOffset ? Number(kitTsplXOffset.value) || 0 : 0,
+      tspl_y_offset_mm: kitTsplYOffset ? Number(kitTsplYOffset.value) || 0 : 0,
+      ip: kitIp ? kitIp.value.trim() : "192.168.1.101",
+      port: kitPort ? Number(kitPort.value) || 9100 : 9100,
+      mac_address: kitMac,
+      device_name: kitDevName,
+      paperWidth: kitPaper ? Number(kitPaper.value) || 80 : 80,
+      feedBeforeCutMm: kitFeed ? Math.max(0, Math.min(150, Number(kitFeed.value) || 80)) : 80,
+      autoCut: true
+    }
+  };
+
+  const success = PrinterService.saveSettings(newSettings);
+  updateSettingsPrinterStatusDisplay();
+  const status = document.getElementById('printer-save-status');
+  if (status) {
+    status.textContent = t(success ? 'printerSavedLocally' : 'printerSaveFailed');
+    status.dataset.state = success ? 'saved' : 'error';
+  }
+  if (!silent && !success) alert(t('printerSaveFailed'));
+  return success;
+}
+
+async function testPOSPrinterStation(station) {
+  if (typeof PrinterService === 'undefined') return;
+  const isKitchen = station === 'kitchen';
+  const protoSelect = document.getElementById(isKitchen ? "printer-kitchen-protocol" : "printer-cashier-protocol");
+  const ifaceSelect = document.getElementById(isKitchen ? "printer-kitchen-interface" : "printer-cashier-interface");
+  const ipInput = document.getElementById(isKitchen ? "printer-kitchen-ip" : "printer-cashier-ip");
+  const portInput = document.getElementById(isKitchen ? "printer-kitchen-port" : "printer-cashier-port");
+  const btSelect = document.getElementById(isKitchen ? "printer-kitchen-bt-device" : "printer-cashier-bt-device");
+  const paperInput = document.getElementById(isKitchen ? "printer-kitchen-paper" : "printer-cashier-paper");
+  const feedInput = document.getElementById(isKitchen ? "printer-kitchen-feed-before-cut" : "printer-cashier-feed-before-cut");
+  const tsplSizeSelect = document.getElementById(isKitchen ? "printer-kitchen-tspl-size" : "printer-cashier-tspl-size");
+  const tsplWInput = document.getElementById(isKitchen ? "printer-kitchen-tspl-width" : "printer-cashier-tspl-width");
+  const tsplHInput = document.getElementById(isKitchen ? "printer-kitchen-tspl-height" : "printer-cashier-tspl-height");
+  const tsplModeSelect = document.getElementById(isKitchen ? "printer-kitchen-tspl-mode" : "printer-cashier-tspl-mode");
+  const tsplDpiSelect = document.getElementById(isKitchen ? "printer-kitchen-tspl-dpi" : "printer-cashier-tspl-dpi");
+  const tsplXOffsetInput = document.getElementById(isKitchen ? "printer-kitchen-tspl-x-offset" : "printer-cashier-tspl-x-offset");
+  const tsplYOffsetInput = document.getElementById(isKitchen ? "printer-kitchen-tspl-y-offset" : "printer-cashier-tspl-y-offset");
+
+  const protocol = isKitchen ? 'tspl' : 'esc_pos';
+  const iface = ifaceSelect ? ifaceSelect.value : 'network';
+  const paperWidth = paperInput ? Number(paperInput.value) || 80 : 80;
+
+  const targetConfig = {
+    protocol: protocol,
+    interface_type: iface,
+    paperWidth: paperWidth,
+    feedBeforeCutMm: feedInput ? Math.max(0, Math.min(150, Number(feedInput.value) || 80)) : 80,
+    tspl_label_size: tsplSizeSelect ? tsplSizeSelect.value : (isKitchen ? '40x30' : '100x150'),
+    tspl_custom_width_mm: tsplWInput ? Number(tsplWInput.value) || (isKitchen ? 40 : 100) : (isKitchen ? 40 : 100),
+    tspl_custom_height_mm: tsplHInput ? Number(tsplHInput.value) || (isKitchen ? 30 : 150) : (isKitchen ? 30 : 150),
+    tspl_mode: tsplModeSelect ? tsplModeSelect.value : (isKitchen ? 'item_stickers' : 'summary'),
+    tspl_dpi: tsplDpiSelect ? Number(tsplDpiSelect.value) || 203 : 203,
+    tspl_x_offset_mm: tsplXOffsetInput ? Number(tsplXOffsetInput.value) || 0 : 0,
+    tspl_y_offset_mm: tsplYOffsetInput ? Number(tsplYOffsetInput.value) || 0 : 0,
+    autoCut: true
+  };
+
+  if (iface === 'bluetooth') {
+    const mac = btSelect ? btSelect.value : '';
+    const name = btSelect?.selectedOptions?.[0]?.dataset?.name || mac;
+    if (!mac) {
+      alert("請先選擇已配對的藍牙印表機 (Please select a paired Bluetooth printer)");
+      return;
+    }
+    targetConfig.mac_address = mac;
+    targetConfig.device_name = name;
+
+    if (typeof showToast === 'function') showToast(`📡 正在傳送測試列印 [${protocol.toUpperCase()}] 至藍牙印表機 [${name}]...`);
+    try {
+      await PrinterService.testPrint(station, targetConfig);
+      if (typeof showToast === 'function') showToast(`✅ 藍牙測試列印成功 [${name}]`);
+    } catch (err) {
+      console.error("BT Test print error:", err);
+      if (typeof showToast === 'function') showToast(`❌ 藍牙列印失敗: ${err.message || err}`);
+    }
+  } else {
+    const ip = ipInput ? ipInput.value.trim() : "";
+    const port = portInput ? Number(portInput.value) || 9100 : 9100;
+
+    if (!ip) {
+      alert("請先輸入印表機 IP 位址 (例如: 192.168.1.100)");
+      return;
+    }
+    targetConfig.ip = ip;
+    targetConfig.port = port;
+
+    if (typeof showToast === 'function') showToast(`🖨️ 正在傳送測試列印 [${protocol.toUpperCase()}] 至 ${ip}:${port}...`);
+    try {
+      await PrinterService.testPrint(station, targetConfig);
+      if (typeof showToast === 'function') showToast(`✅ 測試列印已送出至 ${ip}:${port}`);
+    } catch (err) {
+      console.error("Test print error:", err);
+      if (typeof showToast === 'function') showToast(`❌ 測試列印失敗: ${err.message || err}`);
+    }
+  }
 }
 
 // --- Settings Table of Contents (TOC) & ScrollSpy ---
@@ -658,12 +1199,12 @@ const SETTINGS_SECTIONS = [
   { id: "setting-card-status", tocId: "toc-item-status" },
   { id: "setting-card-ordermode", tocId: "toc-item-ordermode" },
   { id: "setting-card-hours", tocId: "toc-item-hours" },
-  { id: "setting-card-address", tocId: "toc-item-address" },
-  { id: "setting-card-announcement", tocId: "toc-item-announcement" },
-  { id: "setting-card-logo", tocId: "toc-item-logo" },
+  { id: "setting-card-store-info", tocId: "toc-item-store-info" },
   { id: "setting-card-language", tocId: "toc-item-language" },
   { id: "setting-card-dinein", tocId: "toc-item-dinein" },
-  { id: "setting-card-reports", tocId: "toc-item-reports" }
+  { id: "setting-card-printer", tocId: "toc-item-printer" },
+  { id: "setting-card-reports", tocId: "toc-item-reports" },
+  { id: "setting-card-store-pairing", tocId: "toc-item-store-pairing" }
 ];
 
 let isManualSettingScroll = false;
@@ -679,7 +1220,95 @@ function setActiveTocItem(activeTocId) {
   });
 }
 
+function switchSettingTab(cardId) {
+  if (!cardId) cardId = "setting-card-status";
+
+  // Map legacy/merged tab IDs to the unified store info card
+  if (
+    cardId === "setting-card-address" ||
+    cardId === "setting-card-announcement" ||
+    cardId === "setting-card-logo" ||
+    cardId === "toc-item-address" ||
+    cardId === "toc-item-announcement" ||
+    cardId === "toc-item-logo" ||
+    cardId === "address" ||
+    cardId === "announcement" ||
+    cardId === "logo" ||
+    cardId === "store-info"
+  ) {
+    cardId = "setting-card-store-info";
+  }
+
+  // Normalize if passed an ID without prefix or TOC ID
+  let targetId = cardId;
+  let matchedSec = SETTINGS_SECTIONS.find(s => s.id === cardId || s.tocId === cardId || s.id === `setting-card-${cardId}`);
+  if (matchedSec) {
+    targetId = matchedSec.id;
+  }
+
+  let targetCard = document.getElementById(targetId);
+  if (!targetCard) {
+    targetId = "setting-card-status";
+    targetCard = document.getElementById("setting-card-status");
+    matchedSec = SETTINGS_SECTIONS.find(s => s.id === "setting-card-status");
+  }
+  if (!targetCard) return;
+
+  // If target card is hidden by platform rules (e.g. printer on web-prod or reports on native app)
+  const targetToc = matchedSec ? document.getElementById(matchedSec.tocId) : null;
+  const isPlatformHidden = targetToc && window.getComputedStyle(targetToc).display === "none";
+  if (isPlatformHidden) {
+    // Pick the first section whose TOC item is visible
+    for (const sec of SETTINGS_SECTIONS) {
+      const toc = document.getElementById(sec.tocId);
+      if (toc && window.getComputedStyle(toc).display !== "none") {
+        const el = document.getElementById(sec.id);
+        if (el) {
+          targetCard = el;
+          targetId = sec.id;
+          matchedSec = sec;
+          break;
+        }
+      }
+    }
+  }
+
+  // 1. Hide all cards and show target card
+  document.querySelectorAll(".settings-card").forEach(card => {
+    card.classList.remove("active");
+  });
+  targetCard.classList.add("active");
+
+  // 2. Set active TOC item
+  if (matchedSec) {
+    setActiveTocItem(matchedSec.tocId);
+  }
+
+  // 3. Toggle printer status bar (Only show when on the printer settings tab)
+  const printerStatusBar = document.getElementById("settings-printer-status-bar");
+  if (printerStatusBar) {
+    printerStatusBar.style.display = (targetId === "setting-card-printer") ? "inline-flex" : "none";
+  }
+  if (targetId === "setting-card-printer" && typeof updateSettingsPrinterStatusDisplay === "function") {
+    updateSettingsPrinterStatusDisplay();
+  }
+
+  // 4. Scroll container to top
+  const container = document.getElementById("settings-scroll-container");
+  if (container) {
+    container.scrollTop = 0;
+  }
+
+  // 5. Save state for session reload
+  try {
+    sessionStorage.setItem("last_settings_tab", targetId);
+  } catch (e) {}
+}
+window.switchSettingTab = switchSettingTab;
+
 function scrollToSettingSection(sectionId) {
+  switchSettingTab(sectionId);
+
   const container = document.getElementById("settings-scroll-container");
   const target = document.getElementById(sectionId);
   if (!container || !target) return;
@@ -692,12 +1321,16 @@ function scrollToSettingSection(sectionId) {
   isManualSettingScroll = true;
   if (settingScrollTimeout) clearTimeout(settingScrollTimeout);
 
-  target.scrollIntoView({ behavior: "smooth", block: "start" });
+  const containerRect = container.getBoundingClientRect();
+  const targetRect = target.getBoundingClientRect();
+  const relativeTop = targetRect.top - containerRect.top + container.scrollTop;
+  container.scrollTo({ top: Math.max(0, relativeTop - 12), behavior: "smooth" });
 
   settingScrollTimeout = setTimeout(() => {
     isManualSettingScroll = false;
   }, 800);
 }
+window.scrollToSettingSection = scrollToSettingSection;
 
 function initSettingsScrollSpy() {
   const container = document.getElementById("settings-scroll-container");
@@ -708,10 +1341,11 @@ function initSettingsScrollSpy() {
     if (isManualSettingScroll) return;
     const containerTop = container.getBoundingClientRect().top;
 
-    let currentActive = SETTINGS_SECTIONS[0];
+    let currentActive = null;
     for (const sec of SETTINGS_SECTIONS) {
       const el = document.getElementById(sec.id);
-      if (el) {
+      if (el && el.offsetParent !== null) {
+        if (!currentActive) currentActive = sec;
         const rect = el.getBoundingClientRect();
         // If element top is within upper portion of container
         if (rect.top - containerTop <= 120) {
@@ -726,3 +1360,178 @@ function initSettingsScrollSpy() {
   }, { passive: true });
 }
 
+function updateSettingsPrinterStatusDisplay() {
+  const isVi = (typeof currentLang !== "undefined" && currentLang === "vi") || 
+               (typeof window !== "undefined" && window.currentLang === "vi") ||
+               (typeof currentLanguage !== "undefined" && currentLanguage === "vi");
+
+  const lblCashier = (typeof t === "function" && t("printerStationCashierShort")) || (isVi ? "Thu ngân" : "櫃檯");
+  const lblKitchen = (typeof t === "function" && t("printerStationKitchenShort")) || (isVi ? "Bếp" : "廚房");
+  const lblBT = (typeof t === "function" && t("printerTypeBluetooth")) || (isVi ? "Bluetooth" : "藍牙");
+  const lblLAN = (typeof t === "function" && t("printerTypeLAN")) || (isVi ? "Mạng LAN" : "區網");
+  const lblDisabled = (typeof t === "function" && t("printerDisabled")) || (isVi ? "Đã tắt" : "已停用");
+  const lblNone = (typeof t === "function" && t("printerStatusNone")) || (isVi ? "Chưa kết nối máy in" : "未連線印表機");
+  const lblNotConfigured = (typeof t === "function" && t("printerNotConfigured")) || (isVi ? "Chưa thiết lập" : "未設定連線");
+
+  let cashier = {};
+  let kitchen = {};
+
+  if (typeof PrinterService !== 'undefined') {
+    const settings = PrinterService.getSettings() || {};
+    cashier = settings.cashier || {};
+    kitchen = settings.kitchen || {};
+  } else {
+    const cashEl = document.getElementById("printer-cashier-enabled");
+    cashier.enabled = cashEl ? cashEl.checked : false;
+    const kitEl = document.getElementById("printer-kitchen-enabled");
+    kitchen.enabled = kitEl ? kitEl.checked : false;
+  }
+
+  // 1. Update Cashier Station Pill
+  const cashPill = document.getElementById("printer-cashier-status-pill");
+  const cashDot = document.getElementById("printer-cashier-status-dot");
+  const cashText = document.getElementById("printer-cashier-status-text");
+  if (cashPill && cashText) {
+    if (!cashier.enabled) {
+      if (cashDot) cashDot.className = "printer-status-dot offline";
+      cashPill.className = "settings-printer-status-pill disconnected";
+      cashText.innerText = lblDisabled;
+    } else {
+      let desc = "";
+      if (cashier.interface_type === 'bluetooth') {
+        const name = cashier.device_name || cashier.mac_address;
+        if (name) desc = `${name} (${lblBT})`;
+      } else {
+        if (cashier.ip) desc = `${cashier.ip}:${cashier.port || 9100} (${lblLAN})`;
+      }
+
+      if (desc) {
+        if (cashDot) cashDot.className = "printer-status-dot online";
+        cashPill.className = "settings-printer-status-pill connected";
+        cashText.innerText = desc;
+      } else {
+        if (cashDot) cashDot.className = "printer-status-dot offline";
+        cashPill.className = "settings-printer-status-pill disconnected";
+        cashText.innerText = lblNotConfigured;
+      }
+    }
+  }
+
+  // 2. Update Kitchen Station Pill
+  const kitPill = document.getElementById("printer-kitchen-status-pill");
+  const kitDot = document.getElementById("printer-kitchen-status-dot");
+  const kitText = document.getElementById("printer-kitchen-status-text");
+  if (kitPill && kitText) {
+    if (!kitchen.enabled) {
+      if (kitDot) kitDot.className = "printer-status-dot offline";
+      kitPill.className = "settings-printer-status-pill disconnected";
+      kitText.innerText = lblDisabled;
+    } else {
+      let desc = "";
+      if (kitchen.interface_type === 'bluetooth') {
+        const name = kitchen.device_name || kitchen.mac_address;
+        if (name) desc = `${name} (${lblBT})`;
+      } else {
+        if (kitchen.ip) desc = `${kitchen.ip}:${kitchen.port || 9100} (${lblLAN})`;
+      }
+
+      if (desc) {
+        if (kitDot) kitDot.className = "printer-status-dot online";
+        kitPill.className = "settings-printer-status-pill connected";
+        kitText.innerText = desc;
+      } else {
+        if (kitDot) kitDot.className = "printer-status-dot offline";
+        kitPill.className = "settings-printer-status-pill disconnected";
+        kitText.innerText = lblNotConfigured;
+      }
+    }
+  }
+
+  // 3. Update legacy/fallback header status bar if present
+  const statusBar = document.getElementById("settings-printer-status-bar");
+  const statusDot = document.getElementById("printer-status-dot");
+  const statusText = document.getElementById("settings-printer-status-text");
+  if (statusBar && statusText) {
+    const activePrinters = [];
+
+    if (cashier.enabled) {
+      let name = "";
+      if (cashier.interface_type === 'bluetooth') {
+        name = cashier.device_name || cashier.mac_address || lblBT;
+      } else {
+        name = cashier.ip ? `${cashier.ip}:${cashier.port || 9100}` : lblLAN;
+      }
+      activePrinters.push(`${lblCashier}: ${name}`);
+    }
+
+    if (kitchen.enabled) {
+      let name = "";
+      if (kitchen.interface_type === 'bluetooth') {
+        name = kitchen.device_name || kitchen.mac_address || lblBT;
+      } else {
+        name = kitchen.ip ? `${kitchen.ip}:${kitchen.port || 9100}` : lblLAN;
+      }
+      activePrinters.push(`${lblKitchen}: ${name}`);
+    }
+
+    if (activePrinters.length > 0) {
+      if (statusDot) statusDot.className = "printer-status-dot online";
+      statusBar.className = "settings-printer-status-pill connected";
+      statusText.innerText = activePrinters.join(" | ");
+    } else {
+      if (statusDot) statusDot.className = "printer-status-dot offline";
+      statusBar.className = "settings-printer-status-pill disconnected";
+      statusText.innerText = lblNone;
+    }
+  }
+}
+window.updateSettingsPrinterStatusDisplay = updateSettingsPrinterStatusDisplay;
+
+function renderStorePairingSection() {
+  const tenantId = (typeof getTenantIdFromUrl === "function" && getTenantIdFromUrl()) || "";
+  const elTenant = document.getElementById("display-pairing-tenant-id");
+  if (elTenant) {
+    elTenant.innerText = tenantId || (typeof t === "function" && t("unpaired")) || "未綁定";
+  }
+}
+
+async function promptUnlinkStoreDevice() {
+  const currentTenant = (typeof getTenantIdFromUrl === "function" && getTenantIdFromUrl()) || "";
+  if (!currentTenant) {
+    if (typeof showStoreActivationModal === "function") {
+      showStoreActivationModal();
+    }
+    return;
+  }
+
+  const promptMsg = (typeof t === "function" && t("promptUnlinkPin")) || "請輸入門市管理 PIN 碼以解除綁定：";
+  const pin = prompt(promptMsg);
+  if (!pin || !pin.trim()) return;
+
+  try {
+    const workerUrl = typeof WORKER_BASE !== "undefined" ? WORKER_BASE : "https://benmi-worker-official.thuanmnc.workers.dev";
+    const res = await fetch(`${workerUrl}/api/auth?pw=${encodeURIComponent(pin.trim())}&tenant_id=${encodeURIComponent(currentTenant)}`);
+    const data = await res.json().catch(() => ({ ok: false }));
+
+    if (data && data.ok) {
+      if (typeof localStorage !== "undefined") {
+        localStorage.removeItem("pos_device_tenant_id");
+        localStorage.removeItem("tenant_branding_" + currentTenant);
+        localStorage.removeItem("tenant_theme_" + currentTenant);
+      }
+      alert((typeof t === "function" && t("unlinkSuccess")) || "已成功解除設備綁定！即將返回門市啟用畫面。");
+
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.delete("tenant");
+      currentUrl.searchParams.delete("tenant_id");
+      window.location.href = currentUrl.toString();
+    } else {
+      alert((typeof t === "function" && t("unlinkWrongPin")) || "管理 PIN 碼錯誤，無法解除綁定。");
+    }
+  } catch (e) {
+    alert((typeof t === "function" && t("activationErrorNetwork")) || "連線驗證失敗，請檢查網路連線。");
+  }
+}
+
+window.renderStorePairingSection = renderStorePairingSection;
+window.promptUnlinkStoreDevice = promptUnlinkStoreDevice;

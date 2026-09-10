@@ -1,0 +1,19 @@
+# Node modules & build artifacts
+node_modules/
+dist/
+
+# Android build outputs & IDE files
+android/.gradle/
+android/build/
+android/app/build/
+android/.idea/
+android/*.iml
+android/app/*.iml
+android/local.properties
+android/captures/
+.externalNativeBuild/
+.cxx/
+
+# OS files
+.DS_Store
+Thumbs.db

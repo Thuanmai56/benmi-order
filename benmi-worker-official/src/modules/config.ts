@@ -18,13 +18,15 @@ export async function getConfig(
   let storeStatus = 'open';
   let liffId: string | null = null;
   let announcement: string | null = null;
+  let logoUrl: string | null = null;
+  let storeAddress: string | null = null;
   let features: string[] = [];
 
   // 1. Read exclusively from D1 Database
   if (env.DB) {
     try {
       const row = await env.DB.prepare(
-        "SELECT operating_hours, allow_scheduled_pickup, allow_dine_in, store_status, liff_id, announcement, features FROM tenant_config WHERE tenant_id = ?"
+        "SELECT operating_hours, allow_scheduled_pickup, allow_dine_in, store_status, liff_id, logo_url, store_address, announcement, features FROM tenant_config WHERE tenant_id = ?"
       ).bind(tenantId).first<any>();
 
       if (row) {
@@ -40,6 +42,12 @@ export async function getConfig(
         }
         if (row.liff_id) {
           liffId = row.liff_id;
+        }
+        if (row.logo_url) {
+          logoUrl = row.logo_url;
+        }
+        if (row.store_address) {
+          storeAddress = row.store_address;
         }
         if (row.announcement !== undefined) {
           announcement = row.announcement;
@@ -70,6 +78,8 @@ export async function getConfig(
     allowDineIn: allowDineIn,
     features: finalFeatures,
     storeStatus: storeStatus || tenantCtx?.storeStatus || 'open',
+    logoUrl: logoUrl || tenantCtx?.logoUrl || null,
+    storeAddress: storeAddress || tenantCtx?.storeAddress || null,
     announcement: announcement !== null ? announcement : (tenantCtx?.announcement || null)
   });
 }

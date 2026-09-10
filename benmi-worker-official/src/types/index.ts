@@ -13,6 +13,14 @@ export type OrderStatus =
   | 'FORCE_REJECT';
 
 export interface Order {
+  items?: Array<{
+    item_name: string;
+    quantity: number;
+    unit_price: number;
+    selected_options: string | null;
+    notes: string | null;
+    round_number: number;
+  }>;
   key: string;
   uuid?: string | null;
   customer: string;
