@@ -749,7 +749,7 @@ function formatContentHtml(order) {
     noteHtml = `
       <div class="order-note-alert">
         <div class="order-note-alert-header">${noteIcon}<span>${escapeHtml(noteTitle)}</span></div>
-        <div class="order-note-alert-body">${escapeHtml(order.note)}</div>
+        <div class="order-note-alert-body">“${escapeHtml(order.note)}”</div>
       </div>
     `;
   }

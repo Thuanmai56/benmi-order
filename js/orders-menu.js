@@ -496,22 +496,22 @@ function renderMenuCategoryEditor(index) {
     
     let modifiersHtml = '';
     if (storeModifiers.length === 0) {
-      modifiersHtml = `<div style="font-size: 13px; color: #94a3b8; padding: 4px 0;">${t("noModifiersInStore")}</div>`;
+      modifiersHtml = `<div style="font-size: 12px; color: #94a3b8; padding: 2px 0;">${t("noModifiersInStore")}</div>`;
     } else {
       modifiersHtml = `
-        <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-          <button type="button" class="btn btn-ghost" style="padding: 6px 12px; font-size: 13px; font-weight: 700; background: #fff; border: 1.5px solid #cbd5e1; border-radius: 8px; cursor: pointer;" onclick="selectAllCategoryModifiers(${index}, true)">${t("btnSelectAll")}</button>
-          <button type="button" class="btn btn-ghost" style="padding: 6px 12px; font-size: 13px; font-weight: 700; background: #fff; border: 1.5px solid #cbd5e1; border-radius: 8px; color: #64748b; cursor: pointer;" onclick="selectAllCategoryModifiers(${index}, false)">${t("btnUnselectAll")}</button>
+        <div style="display: flex; gap: 6px; margin-bottom: 6px;">
+          <button type="button" class="btn btn-ghost" style="padding: 4px 10px; font-size: 12.5px; font-weight: 700; background: #fff; border: 1.5px solid #cbd5e1; border-radius: 6px; cursor: pointer;" onclick="selectAllCategoryModifiers(${index}, true)">${t("btnSelectAll")}</button>
+          <button type="button" class="btn btn-ghost" style="padding: 4px 10px; font-size: 12.5px; font-weight: 700; background: #fff; border: 1.5px solid #cbd5e1; border-radius: 6px; color: #64748b; cursor: pointer;" onclick="selectAllCategoryModifiers(${index}, false)">${t("btnUnselectAll")}</button>
         </div>
-        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
       `;
 
       storeModifiers.forEach(mod => {
         const isModSelected = appliedMods.includes('*') || appliedMods.includes(mod.id);
         const safeModId = mod.id.replace(/'/g, "\\'");
         modifiersHtml += `
-          <label style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; min-height: 48px; background: ${isModSelected ? '#ecfdf5' : '#fff'}; border: 1.5px solid ${isModSelected ? '#10b981' : '#cbd5e1'}; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 700; color: ${isModSelected ? '#065f46' : '#475569'}; user-select: none;">
-            <input type="checkbox" ${isModSelected ? 'checked' : ''} style="width: 20px; height: 20px; accent-color: #10b981; cursor: pointer;" onchange="toggleCategoryModifierItem(${index}, '${safeModId}', this.checked)">
+          <label style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; min-height: 40px; background: ${isModSelected ? '#ecfdf5' : '#fff'}; border: 1.5px solid ${isModSelected ? '#10b981' : '#cbd5e1'}; border-radius: 8px; cursor: pointer; font-size: 13.5px; font-weight: 700; color: ${isModSelected ? '#065f46' : '#475569'}; user-select: none;">
+            <input type="checkbox" ${isModSelected ? 'checked' : ''} style="width: 18px; height: 18px; accent-color: #10b981; cursor: pointer;" onchange="toggleCategoryModifierItem(${index}, '${safeModId}', this.checked)">
             <span>${escapeHtml(mod.title)}</span>
           </label>
         `;
@@ -520,9 +520,9 @@ function renderMenuCategoryEditor(index) {
     }
 
     toggleDiv.innerHTML = `
-      <div class="help-title-row" style="margin-bottom: 12px;">
-        <div style="font-weight: 800; font-size: 15px; color: #1e293b;" id="i18n-applied-modifiers-title">${t("appliedModifiersTitle")}</div>
-        <details class="menu-help"><summary aria-labelledby="i18n-applied-modifiers-title"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v6m0 3v1"/></svg></summary><div class="menu-help-text" id="i18n-applied-modifiers-desc">${t("appliedModifiersDesc")}</div></details>
+      <div class="help-title-row" style="margin-bottom: 4px;">
+        <div style="font-weight: 800; font-size: 13.5px; color: #1e293b;" id="i18n-applied-modifiers-title">${t("appliedModifiersTitle")}</div>
+        <details class="menu-help"><summary aria-labelledby="i18n-applied-modifiers-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v6m0 3v1"/></svg></summary><div class="menu-help-text" id="i18n-applied-modifiers-desc">${t("appliedModifiersDesc")}</div></details>
       </div>
       ${modifiersHtml}
     `;
@@ -580,8 +580,8 @@ function renderMenuCategoryEditor(index) {
     const trashSvg = (typeof POS_SVG !== "undefined" && POS_SVG.trash) || "";
 
     row.innerHTML = `
-      <div class="menu-item-drag" title="Kéo để đổi thứ tự">${gripSvg}</div>
       <div class="menu-item-main-fields">
+        <div class="menu-item-drag" title="Kéo để đổi thứ tự">${gripSvg}</div>
         <input type="text" class="menu-item-name-input" value="${escapeHtml(item.name)}" data-name-cidx="${index}" data-name-iidx="${iIdx}" oninput="markMenuDirty()"
           placeholder="${t("newItemPlaceholder")}">
         <label class="menu-item-price-label">

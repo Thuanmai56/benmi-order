@@ -284,7 +284,7 @@ function openReview(orderKey) {
   const btnFullLabel = document.getElementById("i18n-btn-print-full");
   if (btnFullLabel) {
     const isVi = (typeof currentLang !== "undefined" && currentLang === "vi") || (typeof window !== "undefined" && window.currentLang === "vi");
-    btnFullLabel.innerText = (typeof t === "function" && t("btnPrintFullOrder", { n: itemCount })) || (isVi ? `In Cả Đơn (1 Bill + ${itemCount} Tem)` : `整單全印 (明細+標籤）`);
+    btnFullLabel.innerHTML = (typeof t === "function" && t("btnPrintFullOrder", { n: itemCount })) || (isVi ? `IN CẢ ĐƠN<br>(1 Bill + ${itemCount} Tem)` : `整單全印<br>(明細+標籤）`);
   }
 
   const actionsNew = document.getElementById("review-actions");

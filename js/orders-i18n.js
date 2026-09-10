@@ -343,9 +343,9 @@ const I18N = {
     printModeManualTitle: "手動列印模式 (Manual-print)",
     printModeManualDesc: "店員須在螢幕點選 [整單全印] 機器才會出單。適合需要先核對確認訂單的門市。",
     // 3 Print Levels
-    btnPrintFullOrder: "整單全印 (明細+標籤）",
+    btnPrintFullOrder: "整單全印<br>(明細+標籤）",
     btnPrintBillOnly: "僅印收銀明細",
-    btnPrintCustomOption: "補印客製標籤",
+    btnPrintCustomOption: "補印客製<br>標籤",
     btnPrintSingleItem: "印此品項貼紙",
     itemPrepared: "已完成",
     markPrepared: "標記已出餐",
@@ -1032,9 +1032,9 @@ const I18N = {
     printModeManualTitle: "Chế độ In thủ công (Manual-print)",
     printModeManualDesc: "Nhân viên phải bấm nút [ IN CẢ ĐƠN ] trên màn hình thì máy mới in. Thích hợp cho quán muốn kiểm tra lại đơn trước khi nhận.",
     // 3 Print Levels
-    btnPrintFullOrder: "IN CẢ ĐƠN (1 Bill + {n} Tem)",
+    btnPrintFullOrder: "IN CẢ ĐƠN<br>(1 Bill + {n} Tem)",
     btnPrintBillOnly: "IN BILL THU NGÂN",
-    btnPrintCustomOption: "IN TEM TÙY CHỌN",
+    btnPrintCustomOption: "IN BÙ TEM<br>TÙY CHỌN",
     btnPrintSingleItem: "In tem món",
     itemPrepared: "Đã hoàn thành",
     markPrepared: "Đánh dấu đã hoàn thành",
@@ -1794,12 +1794,12 @@ function applyLanguageToDOM() {
     if (order && typeof PrinterService !== "undefined" && typeof PrinterService.parseOrderItems === "function") {
       n = PrinterService.parseOrderItems(order, true).length || 1;
     }
-    btnPrintFull.innerText = dict.btnPrintFullOrder ? dict.btnPrintFullOrder.replace("{n}", n) : `IN CẢ ĐƠN (1 Bill + ${n} Tem)`;
+    btnPrintFull.innerHTML = dict.btnPrintFullOrder ? dict.btnPrintFullOrder.replace("{n}", n) : `IN CẢ ĐƠN<br>(1 Bill + ${n} Tem)`;
   }
   const btnPrintBillOnly = document.getElementById("i18n-btn-print-bill-only");
   if (btnPrintBillOnly) btnPrintBillOnly.innerText = dict.btnPrintBillOnly;
   const btnPrintCustomOpt = document.getElementById("i18n-btn-print-custom-opt");
-  if (btnPrintCustomOpt) btnPrintCustomOpt.innerText = dict.btnPrintCustomOption;
+  if (btnPrintCustomOpt) btnPrintCustomOpt.innerHTML = dict.btnPrintCustomOption;
 
   // Quick Sticker Modal
   const qStickerTitle = document.getElementById("i18n-quick-sticker-title");

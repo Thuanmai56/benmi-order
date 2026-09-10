@@ -136,13 +136,13 @@ function getTenantIdFromUrl() {
 
 function applyTenantBranding(tenant) {
   if (!tenant) return;
-  const brandName = tenant.brandName || "Dashboard";
+  const brandName = tenant.brandName || "Blab POS";
   window.currentTenantBrandName = tenant.brandName || tenant.name || '';
   const bTitle = document.getElementById('brand-title');
   const bLogo = document.getElementById('brand-logo');
 
-  if (bTitle) bTitle.innerText = `${brandName} Dashboard`;
-  document.title = `${brandName} Dashboard`;
+  if (bTitle) bTitle.innerText = brandName;
+  document.title = `${brandName} POS`;
 
   if (bLogo) {
     if (tenant.logoUrl) {
@@ -753,6 +753,11 @@ function updatePageMainTitle(tabName) {
     "reports": currentLangCode === "vi" ? "Báo cáo doanh thu" : "營業報表"
   };
   titleEl.textContent = titles[tabName] || (currentLangCode === "vi" ? "Đơn hàng" : "訂單");
+
+  const brandBadge = document.getElementById("brand-badge-pill");
+  if (brandBadge) {
+    brandBadge.style.display = (tabName === "menu") ? "none" : "";
+  }
 }
 
 // ==========================================

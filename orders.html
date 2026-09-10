@@ -832,10 +832,7 @@
                     </svg>
                     <span id="i18n-btn-printer-guide">出單指南 (Guide)</span>
                   </button>
-                  <p id="printer-save-status" role="status" aria-live="polite" style="font-size:14px; margin:0; flex-basis:100%;">設定變更會自動儲存於此裝置，也可按下儲存按鈕立即儲存。</p>
-                  <button type="button" class="btn btn-primary" style="min-height:48px; padding: 9px 18px; font-size: 14.5px; border-radius: 8px; font-weight: 900;" onclick="savePOSPrinterSettings()" id="i18n-btn-save-printer-settings">
-                    儲存印表機設定
-                  </button>
+                  <p id="printer-save-status" role="status" aria-live="polite" style="display:none;"></p>
                 </div>
               </div>
               <div style="padding: 20px; display: flex; flex-direction: column; gap: 20px;">
@@ -1444,7 +1441,7 @@
             <div class="review-print-macro-bar" id="review-print-macro-bar">
               <button type="button" class="btn btn-print-full" id="btn-review-print-full" onclick="if(typeof reviewingOrder !== 'undefined' && reviewingOrder && typeof PrinterService !== 'undefined') PrinterService.printFullOrder(reviewingOrder.key)">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-                <span id="i18n-btn-print-full">整單全印 (明細+標籤）</span>
+                <span id="i18n-btn-print-full">整單全印<br>(明細+標籤）</span>
               </button>
               <button type="button" class="btn btn-print-bill" id="btn-review-print-bill" onclick="if(typeof reviewingOrder !== 'undefined' && reviewingOrder && typeof PrinterService !== 'undefined') PrinterService.printCashierOnly(reviewingOrder.key)">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"></path><path d="M16 8h-8"></path><path d="M16 12h-8"></path><path d="M10 16h-4"></path></svg>
@@ -1452,7 +1449,7 @@
               </button>
               <button type="button" class="btn btn-print-custom" id="btn-review-print-custom" onclick="openQuickStickerModal(reviewingOrder ? reviewingOrder.key : '')">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-                <span id="i18n-btn-print-custom-opt">補印客製標籤</span>
+                <span id="i18n-btn-print-custom-opt">補印客製<br>標籤</span>
               </button>
             </div>
           </div>

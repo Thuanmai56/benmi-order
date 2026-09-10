@@ -447,7 +447,8 @@ function formatGlobalCustomizationsText() {
                 }
                 const subPart = subOpts.length > 0 ? ` (${subOpts.join('、')})` : '';
                 const flavorLabel = cleanTitle || '口味';
-                mainFlavors.push(`${flavorLabel}：${val}${subPart}`);
+                const price = Number(checkedRadio.getAttribute('data-price')) || 0;
+                mainFlavors.push(`${flavorLabel}：${val}${subPart}${price > 0 ? ` (+$${price})` : ''}`);
             }
         } else if (group.type === 'checkbox') {
             const checkedBoxes = Array.from(document.querySelectorAll(`input[name="opt-${group.key}"]:checked`));
@@ -499,7 +500,7 @@ function getStructuredGlobalCustomizations() {
                 result.push({
                     key: group.key,
                     label: cleanTitle || '口味',
-                    value: `${val}${subPart}`
+                    value: `${val}${subPart}${Number(checkedRadio.getAttribute('data-price')) > 0 ? ` (+$${Number(checkedRadio.getAttribute('data-price'))})` : ''}`
                 });
             }
         } else if (group.type === 'checkbox') {
@@ -749,6 +750,16 @@ async function submitOrder() {
 
     const hasItem = Object.values(cart || {}).some(q => q > 0);
     if (!hasItem) return customAlert('請先選擇餐點品項加入購物車');
+
+    // Minimum spend excludes order-wide add-on charges themselves.
+    updateTotal();
+    const selectedOrderOptions = Array.from(document.querySelectorAll('.custom-panel input[data-price]:checked'));
+    const orderAddons = selectedOrderOptions.reduce((sum, input) => sum + (Number(input.getAttribute('data-price')) || 0), 0);
+    const foodSubtotal = (Number(document.getElementById('total-price')?.innerText) || 0) - orderAddons;
+    const unavailableOption = selectedOrderOptions.find(input => foodSubtotal < (Number(input.getAttribute('data-min-order-amount')) || 0));
+    if (unavailableOption) {
+        return customAlert(`${unavailableOption.getAttribute('data-group-title')}：餐點金額需滿 ${unavailableOption.getAttribute('data-min-order-amount')} 元，請調整餐點或選項。`);
+    }
 
     const twNow = getTaiwanDate();
     const isDineIn = (window.currentDiningOption === 'dine_in');
