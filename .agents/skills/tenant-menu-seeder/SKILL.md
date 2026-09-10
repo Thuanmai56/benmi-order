@@ -131,4 +131,5 @@ CI=true CLOUDFLARE_ACCOUNT_ID=525bb177ae7306325d13269246769f50 npx wrangler kv k
 Provide direct clickable links to test the menu:
 - Customer Menu: `https://benmi-order.pages.dev/?tenant_id=<tenant_id>`
 - POS Dashboard: `https://benmi-order.pages.dev/orders.html?tenant_id=<tenant_id>`
+- LINE Webhook URL (LINE Developers Console): `https://benmi-worker-official.thuanmnc.workers.dev/webhook/<tenant_id>`
 - API Bootstrap Check: `curl "https://benmi-worker-official.thuanmnc.workers.dev/api/tenant/bootstrap?tenant_id=<tenant_id>"`
