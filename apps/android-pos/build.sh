@@ -47,11 +47,11 @@ if [ -f "$ROOT_DIR/blab_icon.png" ]; then
   cp "$ROOT_DIR/blab_icon.png" "$DIST_DIR/"
 fi
 
-if [ "${APP_ENV:-}" = "pilot" ]; then
+if [ "${APP_ENV:-}" = "pilot" ] || [ "${APP_ENV:-}" = "dev-local" ]; then
   node - "$DIST_DIR/js/orders-core.js" <<'NODE'
 const fs = require('fs');
 const file = process.argv[2];
-fs.writeFileSync(file, 'window.POS_BUNDLED_ENV = "prod";\n' + fs.readFileSync(file, 'utf8'));
+fs.writeFileSync(file, 'window.POS_BUNDLED_ENV = ' + JSON.stringify(process.env.APP_ENV === 'dev-local' ? 'dev' : 'prod') + ';\n' + fs.readFileSync(file, 'utf8'));
 NODE
 fi
 
