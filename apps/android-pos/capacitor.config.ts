@@ -8,6 +8,7 @@ const getRemoteUrl = (env: string): string | undefined => {
       return 'https://dev.benmi-order.pages.dev/orders.html';
     case 'staging':
       return 'https://staging.benmi-order.pages.dev/orders.html';
+    case 'dev-local':
     case 'pilot':
     case 'local':
       return undefined; // Uses bundled local dist/
@@ -20,8 +21,8 @@ const getRemoteUrl = (env: string): string | undefined => {
 const remoteUrl = getRemoteUrl(appEnv);
 
 const config: CapacitorConfig = {
-  appId: appEnv === 'pilot' ? 'com.benmi.pos.pilot' : 'com.benmi.pos',
-  appName: appEnv === 'pilot' ? 'Blab POS Pilot' : 'Blab POS',
+  appId: appEnv === 'dev-local' ? 'com.benmi.pos.dev' : appEnv === 'pilot' ? 'com.benmi.pos.pilot' : 'com.benmi.pos',
+  appName: appEnv === 'dev-local' ? 'Blab POS Dev' : appEnv === 'pilot' ? 'Blab POS Pilot' : 'Blab POS',
   webDir: 'dist',
   server: {
     ...(remoteUrl ? { url: remoteUrl } : {}),
