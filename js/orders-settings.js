@@ -800,7 +800,8 @@ function onPrinterProtocolChange(station) {
   const escBox = document.getElementById(isKitchen ? 'printer-kitchen-escpos-box' : 'printer-cashier-escpos-box');
   const tsplBox = document.getElementById(isKitchen ? 'printer-kitchen-tspl-box' : 'printer-cashier-tspl-box');
 
-  const protocol = protoSel ? protoSel.value : 'esc_pos';
+  const protocol = isKitchen ? 'tspl' : 'esc_pos';
+  if (protoSel) protoSel.value = protocol;
   if (protocol === 'tspl') {
     if (escBox) escBox.style.display = 'none';
     if (tsplBox) tsplBox.style.display = 'flex';
@@ -939,7 +940,7 @@ function loadPOSPrinterSettings() {
   const cashEnabled = document.getElementById("printer-cashier-enabled");
   if (cashEnabled) cashEnabled.checked = !!settings.cashier?.enabled;
   const cashProto = document.getElementById("printer-cashier-protocol");
-  if (cashProto) cashProto.value = settings.cashier?.protocol || 'esc_pos';
+  if (cashProto) cashProto.value = 'esc_pos';
   const cashInterface = document.getElementById("printer-cashier-interface");
   if (cashInterface) cashInterface.value = settings.cashier?.interface_type || 'network';
   const cashIp = document.getElementById("printer-cashier-ip");
@@ -972,7 +973,7 @@ function loadPOSPrinterSettings() {
   const kitEnabled = document.getElementById("printer-kitchen-enabled");
   if (kitEnabled) kitEnabled.checked = !!settings.kitchen?.enabled;
   const kitProto = document.getElementById("printer-kitchen-protocol");
-  if (kitProto) kitProto.value = settings.kitchen?.protocol || 'esc_pos';
+  if (kitProto) kitProto.value = 'tspl';
   const kitInterface = document.getElementById("printer-kitchen-interface");
   if (kitInterface) kitInterface.value = settings.kitchen?.interface_type || 'network';
   const kitIp = document.getElementById("printer-kitchen-ip");
@@ -1067,7 +1068,7 @@ function savePOSPrinterSettings(silent = false) {
     autoPrintNewOrders: autoPrintEnabled,
     cashier: {
       enabled: cashEnabled ? cashEnabled.checked : true,
-      protocol: cashProto ? cashProto.value : 'esc_pos',
+      protocol: 'esc_pos',
       interface_type: cashInterface ? cashInterface.value : 'network',
       tspl_label_size: cashTsplSize ? cashTsplSize.value : '100x150',
       tspl_custom_width_mm: cashTsplW ? Number(cashTsplW.value) || 100 : 100,
@@ -1086,7 +1087,7 @@ function savePOSPrinterSettings(silent = false) {
     },
     kitchen: {
       enabled: kitEnabled ? kitEnabled.checked : true,
-      protocol: kitProto ? kitProto.value : 'esc_pos',
+      protocol: 'tspl',
       interface_type: kitInterface ? kitInterface.value : 'network',
       tspl_label_size: kitTsplSize ? kitTsplSize.value : '40x30',
       tspl_custom_width_mm: kitTsplW ? Number(kitTsplW.value) || 40 : 40,
@@ -1134,7 +1135,7 @@ async function testPOSPrinterStation(station) {
   const tsplXOffsetInput = document.getElementById(isKitchen ? "printer-kitchen-tspl-x-offset" : "printer-cashier-tspl-x-offset");
   const tsplYOffsetInput = document.getElementById(isKitchen ? "printer-kitchen-tspl-y-offset" : "printer-cashier-tspl-y-offset");
 
-  const protocol = protoSelect ? protoSelect.value : 'esc_pos';
+  const protocol = isKitchen ? 'tspl' : 'esc_pos';
   const iface = ifaceSelect ? ifaceSelect.value : 'network';
   const paperWidth = paperInput ? Number(paperInput.value) || 80 : 80;
 
