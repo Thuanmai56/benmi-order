@@ -60,7 +60,7 @@ graph TD
 apps/android-pos/
 ├── android/                             # Dự án Android Studio gốc
 │   ├── app/
-│   │   ├── build.gradle                 # Cấu hình build APK, versionCode 14 & versionName 1.8.5
+│   │   ├── build.gradle                 # Cấu hình build APK, versionCode 18 & versionName 1.9.0
 │   │   └── src/main/
 │   │       ├── AndroidManifest.xml      # Khai báo quyền Bluetooth & Network
 │   │       └── java/com/benmi/pos/
@@ -71,10 +71,10 @@ apps/android-pos/
 │   └── local.properties                 # Đường dẫn Android SDK (gitignored)
 ├── dist/                                # Thư mục web assets được sync từ root repo
 ├── build.sh                             # Script tự động copy HTML, CSS, JS sang dist/
-├── capacitor.config.ts                  # Cấu hình Capacitor App (Remote Cloud Loader OTA cho cả Dev & Prod)
-├── package.json                         # Scripts build:apk, build:apk:dev, sync:prod, sync:dev, sync:local
-├── benmi-pos-universal-v1.8.1.apk       # File cài đặt APK Universal Production mới nhất (OTA Cloud Loader)
-├── blab-pos-dev-v1.8.5.apk              # File cài đặt APK Dev mới nhất (OTA Cloud Loader qua dev.benmi-order.pages.dev)
+├── capacitor.config.ts                  # Cấu hình Capacitor App (Hỗ trợ dev-local, pilot, prod)
+├── package.json                         # Scripts build:apk, build:apk:dev, build:apk:pilot, sync:dev
+├── blab-pos-dev-v1.9.0.apk              # File cài đặt APK Dev mới nhất (v1.9.0 / v1.9)
+├── blab-pos-pilot-v1.8.9.apk            # File cài đặt APK Pilot
 └── README.md                            # Tài liệu hướng dẫn này
 ```
 
@@ -181,6 +181,7 @@ Vào biểu tượng **⚙️ Cài đặt (Settings) > Máy in & xuất vé**:
 
 | Phiên Bản | Ngày Phát Hành | Điểm Nâng Cấp Chính |
 | :--- | :--- | :--- |
+| **v1.9.0** | 10/09/2026 | - **Phiên bản Dev 1.9**: Nâng cấp `versionCode: 18`, `versionName: "1.9.0"`.<br>- Tích hợp toàn bộ tối ưu hóa mới nhất từ commit `2f248c7`: Tối ưu giao diện menu POS và xem lại đơn hàng (Order review UI), hỗ trợ tùy chỉnh món của Jiangjiejie.<br>- Đóng gói trực tiếp web assets chạy độc lập cho môi trường Dev với `appId: com.benmi.pos.dev`, tiêu đề `Blab POS Dev` và trỏ API về Cloudflare Worker Dev. |
 | **v1.8.5** | 08/09/2026 | - **Bản Dev hỗ trợ Remote Cloud Loader OTA toàn diện**: Cấu hình `APP_ENV=dev` nạp trực tiếp giao diện từ Cloudflare Pages Dev (`https://dev.benmi-order.pages.dev/orders.html`). Khi cập nhật CSS/JS/HTML chỉ cần push lên nhánh `dev`, máy tính bảng mở hoặc reload lại app là tự động nhận giao diện mới nhất 100% mà không cần build hay cài lại APK.<br>- Bổ sung lệnh `build:apk:local` và `sync:local` cho trường hợp muốn đóng gói web assets offline nội bộ. |
 | **v1.8.4** | 08/09/2026 | - **Tối ưu toàn diện nút thao tác đơn hàng trên Tablet**: Khắc phục hiện tượng nhảy dòng, tăng khoảng cách cột `order-detail-grid`, padding `6px 8px`, chống rớt/tràn chữ trên màn hình cảm ứng POS.<br>- **Sửa lỗi cuộn modal**: Tự động đưa vị trí cuộn về đầu trang (top) khi mở bất kỳ modal nào.<br>- **Chuẩn hóa I18N tiếng Trung phồn thể thuần túy**: Chuyển nút xem đơn hàng sang "查看訂單" (thay cho "Review 訂單").<br>- **Tối ưu bộ lọc Lịch sử đơn hàng**: Khắc phục sự kiện click trùng lặp trên các tab trạng thái. |
 | **v1.8.1** | 06/09/2026 | - **Sửa triệt để độ rộng ô đơn giá & hiển thị trọn vẹn tên món ăn**: Khóa cứng kích thước ô nhập giá tiền (`width: 60px !important`, căn giữa) và ô nhãn phụ (`width: 76px !important`), loại bỏ hoàn toàn sự can thiệp của class form toàn cục; giải phóng không gian tối đa cho ô Tên món (`flex: 2 1 200px !important`), hiển thị trọn vẹn 100% không bị che khuất chữ. |

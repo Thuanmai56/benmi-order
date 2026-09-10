@@ -21,8 +21,8 @@ const getRemoteUrl = (env: string): string | undefined => {
 const remoteUrl = getRemoteUrl(appEnv);
 
 const config: CapacitorConfig = {
-  appId: appEnv === 'dev-local' ? 'com.benmi.pos.dev' : appEnv === 'pilot' ? 'com.benmi.pos.pilot' : 'com.benmi.pos',
-  appName: appEnv === 'dev-local' ? 'Blab POS Dev' : appEnv === 'pilot' ? 'Blab POS Pilot' : 'Blab POS',
+  appId: (appEnv === 'dev-local' || appEnv === 'dev') ? 'com.benmi.pos.dev' : appEnv === 'pilot' ? 'com.benmi.pos.pilot' : 'com.benmi.pos',
+  appName: (appEnv === 'dev-local' || appEnv === 'dev') ? 'Blab POS Dev' : appEnv === 'pilot' ? 'Blab POS Pilot' : 'Blab POS',
   webDir: 'dist',
   server: {
     ...(remoteUrl ? { url: remoteUrl } : {}),
