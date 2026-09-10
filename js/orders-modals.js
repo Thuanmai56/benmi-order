@@ -175,8 +175,8 @@ function openReview(orderKey) {
   if (typeof PrinterService !== "undefined" && typeof PrinterService.parseOrderItems === "function") {
     const parsedItems = PrinterService.parseOrderItems(order, false) || [];
     parsedItems.forEach(it => {
-      const p = Number(it.price) || 0;
-      const q = Number(it.qty) || 1;
+      const p = Number(String(it.price).replace(/[$,]/g, '')) || 0;
+      const q = Number(it.quantity) || 1;
       if (p > 0) {
         itemsSubtotal += p * q;
       }
@@ -250,11 +250,6 @@ function openReview(orderKey) {
   const elTimeDisplay = document.getElementById("review-time-display");
   if (elTimeDisplay) {
     elTimeDisplay.innerText = formatOrderDetailHeaderTime(order.time || order.created_at);
-  }
-
-  const elPillOrders = document.getElementById("review-pill-orders");
-  if (elPillOrders) {
-    elPillOrders.innerText = lang === "vi" ? "1 đơn hàng trước đây ⓘ" : "歷史訂單 1 筆 ⓘ";
   }
 
   const elDining = document.getElementById("review-dining");

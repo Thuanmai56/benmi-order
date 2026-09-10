@@ -1172,3 +1172,16 @@ async function saveStockStatus() {
     alert(t("stockUpdateFail") + e.message);
   }
 }
+
+// Position disclosures in viewport coordinates, outside the category columns.
+document.addEventListener('toggle', event => {
+  const help = event.target;
+  if (!help.matches?.('.menu-help') || !help.open) return;
+  const text = help.querySelector('.menu-help-text');
+  if (!text) return;
+  const anchor = help.getBoundingClientRect();
+  text.style.right = 'auto';
+  text.style.maxWidth = (window.innerWidth - 24) + 'px';
+  text.style.left = Math.max(12, Math.min(anchor.left, window.innerWidth - text.offsetWidth - 12)) + 'px';
+  text.style.top = Math.max(12, Math.min(anchor.bottom, window.innerHeight - text.offsetHeight - 12)) + 'px';
+}, true);

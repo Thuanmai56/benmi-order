@@ -70,6 +70,13 @@ function getOrderItemsPreview(order) {
     }
   }
 
+  let stickerIndex = 0;
+  if (allParsedItems) allParsedItems = allParsedItems.map(item => {
+    const result = { ...item, stickerIndex };
+    stickerIndex += Math.max(1, parseInt(item.quantity, 10) || 1);
+    return result;
+  });
+
   // Filter out any metadata that might have been parsed as item names
   items = items.filter(it => it && it.name && !isOrderMetadataText(it.name));
 
@@ -559,7 +566,6 @@ async function copyRawOrderContent(orderKey) {
 window.copyRawOrderContent = copyRawOrderContent;
 
 function renderItemRowHtml(it, idx, orderKey) {
-  const isPrepared = preparedOrderItems.has(`${orderKey}_item_${idx}`);
   let optionsHtml = "";
   if (it.options) {
     const rawOpts = String(it.options);
@@ -570,31 +576,20 @@ function renderItemRowHtml(it, idx, orderKey) {
   }
   const noteIcon = (typeof POS_SVG !== "undefined" && POS_SVG.note) || "";
   const noteHtml = it.note ? `<div class="review-item-note">${noteIcon}${escapeHtml(it.note)}</div>` : "";
-  const unitBadge = (it.originalQty && it.originalQty > 1) ? `<span class="review-item-unit-badge">(${it.unitIndex}/${it.originalQty})</span>` : "";
-  const qtyBadge = (it.quantity && it.quantity > 1) ? `<span class="review-item-qty-badge">x${it.quantity}</span>` : "";
   const printLabel = (typeof t === "function" && t("btnPrintStickerShort")) || "印貼紙";
   const printerIcon = (typeof POS_SVG !== "undefined" && POS_SVG.printer) || "";
-  const checkTitle = isPrepared
-    ? ((typeof t === "function" && t("itemPreparedBadge")) || "已完成")
-    : ((typeof t === "function" && t("markPrepared")) || "標記已出餐");
 
   return `
-    <div class="review-item-row ${isPrepared ? 'item-prepared' : ''}" id="review-item-${escapeHtml(orderKey)}-${idx}">
-      <label class="review-item-check-container" title="${escapeHtml(checkTitle)}">
-        <input type="checkbox" class="review-item-checkbox" ${isPrepared ? 'checked' : ''} onchange="toggleItemPreparedState('${escapeHtml(orderKey)}', ${idx}, this)">
-      </label>
-      <div class="review-item-seq-badge">${idx + 1}</div>
+    <div class="review-item-row " id="review-item-${escapeHtml(orderKey)}-${idx}">
       <div class="review-item-details">
         <div class="review-item-header">
-          <span class="review-item-name">${escapeHtml(it.name)}</span>
-          ${qtyBadge}
-          ${unitBadge}
+          <span class="review-item-name">${it.quantity || 1} x ${escapeHtml(it.name)}</span>
         </div>
         ${optionsHtml}
         ${noteHtml}
       </div>
-      ${it.price ? `<div class="review-item-price">${escapeHtml(it.price)}</div>` : ''}
-      <button type="button" class="btn btn-ghost review-item-print-btn" onclick="if(typeof PrinterService !== 'undefined') PrinterService.printSingleItemSticker('${escapeHtml(orderKey)}', ${idx})" title="${escapeHtml(printLabel)}">
+      <div class="review-item-price">${escapeHtml(it.price || "—")}</div>
+      <button type="button" class="btn btn-ghost review-item-print-btn" onclick="if(typeof PrinterService !== 'undefined') PrinterService.printSingleItemSticker('${escapeHtml(orderKey)}', ${it.stickerIndex ?? idx})" title="${escapeHtml(printLabel)}">
         ${printerIcon}
         <span>${escapeHtml(printLabel)}</span>
       </button>
@@ -611,7 +606,7 @@ function formatContentHtml(order) {
 
   const orderKey = order?.key || "";
   let allParsedItems = (typeof PrinterService !== "undefined" && typeof PrinterService.parseOrderItems === "function")
-    ? PrinterService.parseOrderItems(order, true)
+    ? PrinterService.parseOrderItems(order, false)
     : null;
 
   // Filter out any metadata lines that might have been parsed as items
@@ -759,33 +754,7 @@ function formatContentHtml(order) {
     `;
   }
 
-  // 5. Raw order accordion (Unstructured data fallback)
-  const fileTextIcon = (typeof POS_SVG !== "undefined" && POS_SVG.fileText) || "";
-  const copyIcon = (typeof POS_SVG !== "undefined" && POS_SVG.copy) || "";
-  const viewRawLabel = (typeof t === "function" && t("viewRawOrder")) || "查看原始訂單內容";
-  const rawOrderTitle = (typeof t === "function" && t("rawOrderTitle")) || "原始訂單文字（Raw Data）";
-  const btnCopyLabel = (typeof t === "function" && t("btnCopy")) || "複製";
-
-  const rawAccordionHtml = `
-    <div class="raw-order-accordion">
-      <button type="button" class="btn btn-ghost raw-order-toggle-btn" id="raw-order-toggle-btn-${escapeHtml(orderKey)}" onclick="toggleRawOrderViewer('${escapeHtml(orderKey)}')">
-        <span class="raw-order-toggle-left">${fileTextIcon}<span id="raw-order-btn-text-${escapeHtml(orderKey)}">${escapeHtml(viewRawLabel)}</span></span>
-        <svg class="raw-order-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-      </button>
-      <div id="raw-order-body-${escapeHtml(orderKey)}" class="raw-order-body" style="display:none;">
-        <div class="raw-order-header">
-          <span class="raw-order-title">${escapeHtml(rawOrderTitle)}</span>
-          <button type="button" class="btn btn-ghost raw-order-copy-btn" id="raw-order-copy-btn-${escapeHtml(orderKey)}" onclick="copyRawOrderContent('${escapeHtml(orderKey)}')">
-            ${copyIcon}
-            <span>${escapeHtml(btnCopyLabel)}</span>
-          </button>
-        </div>
-        <pre id="raw-order-text-${escapeHtml(orderKey)}" class="raw-order-pre">${escapeHtml(raw)}</pre>
-      </div>
-    </div>
-  `;
-
-  return `<div class="review-content-card">${changeHtml}${flavorHtml}${contentHtml}${noteHtml}${rawAccordionHtml}</div>`;
+  return `<div class="review-content-card">${changeHtml}${flavorHtml}${contentHtml}${noteHtml}</div>`;
 }
 
 async function updateStatus(key, status, extra = {}, btn = null) {

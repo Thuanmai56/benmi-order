@@ -44,7 +44,7 @@
       mac_address: '',
       device_name: '',
       paperWidth: 80,
-      feedBeforeCutMm: 100,
+      feedBeforeCutMm: 80,
       autoCut: true
     }
   };
@@ -597,7 +597,7 @@
       divider();
       for (const item of this.parseOrderItems(order, false)) {
         if (item.round) row(item.round, 30);
-        row(item.quantity + ' x ' + item.name, isKitchen ? 42 : 36, isKitchen ? '' : item.price, '900');
+        row(item.quantity + ' x ' + item.name, isKitchen ? 42 : 36, isKitchen ? '' : (item.price || '—'), '900');
         if (item.options) row('  ' + item.options, 30, '', 'normal');
         if (item.note) row('  ' + item.note, 30, '', 'normal');
       }
@@ -644,7 +644,7 @@
         [window.currentTenantBrandName, '#' + order.key, dining].filter(Boolean).join(' '),
         [body, order.note].filter(Boolean).join('\n'),
         isKitchen ? (order.customer || '') : '應收總計：$' + (order.total ?? 0),
-        widthMm, heightMm, dpi, [60, 60, 52]);
+        widthMm, heightMm, dpi, [60, 36, 52]);
     }
 
     // Fixed paper: grow typography to the requested target, then fit all text.
@@ -688,7 +688,7 @@
       const body = [item.name + ' x' + item.quantity, item.options, item.note].filter(Boolean).join('\n');
       const time = String(orderContext.time || '').match(/\d{1,2}:\d{2}/)?.[0] || '';
       return this.drawStickerLayout(header, body, (orderContext.customer || '顧客') + ' ' + time,
-        widthMm, heightMm, dpi, compact ? [28, 60, 22] : [34, 75, 26]);
+        widthMm, heightMm, dpi, compact ? [28, 36, 22] : [34, 45, 26]);
     }
 
     drawQuickNoteStickerToCanvas(text, orderContext = null, widthMm = 40, heightMm = 30, dpi = 203) {
@@ -726,7 +726,7 @@
             protocol: protocol,
             paperWidth: paperWidth,
             autoCut: autoCut,
-            feedBeforeCutMm: Number(config.feedBeforeCutMm) || 100,
+            feedBeforeCutMm: Number(config.feedBeforeCutMm) || 80,
             labelWidthMm: dim.widthMm,
             labelHeightMm: dim.heightMm,
             dpi: dim.dpi,
@@ -759,7 +759,7 @@
             protocol: protocol,
             paperWidth: paperWidth,
             autoCut: autoCut,
-            feedBeforeCutMm: Number(config.feedBeforeCutMm) || 100,
+            feedBeforeCutMm: Number(config.feedBeforeCutMm) || 80,
             labelWidthMm: dim.widthMm,
             labelHeightMm: dim.heightMm,
             dpi: dim.dpi,

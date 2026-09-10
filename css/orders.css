@@ -5758,3 +5758,9 @@ select.form-input {
 #addCategoryModal .modal-title { margin-bottom: 8px !important; flex-shrink: 0; }
 #addCategoryModal .modal-actions { margin-top: 6px; padding-top: 6px; }
 #addCategoryModal input.input, #addCategoryModal select { min-height: 48px; font-size: 16px !important; }
+
+/* Compact order details and anchored menu help on narrow tablets. */
+.order-note-alert { background: transparent; border: 0; padding: 6px 0; }
+#review-grandtotal-row { padding-bottom: 2px; }
+.category-customization-box > .help-title-row { margin-bottom: 0 !important; }
+.menu-help[open] .menu-help-text { position: fixed; z-index: 10000; }
