@@ -31,7 +31,7 @@
     kitchen: {
       enabled: true,
       interface_type: 'network', // 'network' | 'bluetooth'
-      protocol: 'esc_pos',        // 'esc_pos' | 'tspl'
+      protocol: 'tspl',        // 'esc_pos' | 'tspl'
       tspl_label_size: '40x30',   // '100x150' | '76x130' | '50x30' | '40x30' | 'custom'
       tspl_custom_width_mm: 40,
       tspl_custom_height_mm: 30,
@@ -96,8 +96,8 @@
           const parsed = JSON.parse(raw);
           return {
             autoPrintNewOrders: parsed.autoPrintNewOrders ?? DEFAULT_SETTINGS.autoPrintNewOrders,
-            cashier: { ...DEFAULT_SETTINGS.cashier, ...(parsed.cashier || {}) },
-            kitchen: { ...DEFAULT_SETTINGS.kitchen, ...(parsed.kitchen || {}) }
+            cashier: { ...DEFAULT_SETTINGS.cashier, ...(parsed.cashier || {}), protocol: 'esc_pos' },
+            kitchen: { ...DEFAULT_SETTINGS.kitchen, ...(parsed.kitchen || {}), protocol: 'tspl' }
           };
         }
       } catch (e) {
@@ -132,7 +132,7 @@
       const tenantId = this.getTenantId();
       const storageKey = `pos_printer_settings_${tenantId}`;
       try {
-        localStorage.setItem(storageKey, JSON.stringify(newSettings));
+        localStorage.setItem(storageKey, JSON.stringify({ ...newSettings, cashier: { ...newSettings.cashier, protocol: 'esc_pos' }, kitchen: { ...newSettings.kitchen, protocol: 'tspl' } }));
         return true;
       } catch (e) {
         console.error('[PrinterService] Failed to save settings:', e);
