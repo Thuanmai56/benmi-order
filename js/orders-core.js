@@ -297,14 +297,10 @@ function formatEta(timeStr) {
 
 function isOrderElapsedMode(order) {
   if (!order) return false;
-  if (typeof isOrderDineIn === "function" && isOrderDineIn(order)) return true;
-  if (typeof allowScheduledPickup !== "undefined" && allowScheduledPickup === false) return true;
-  
-  const timeStr = String(order.time || "").trim();
-  if (!timeStr || timeStr === "-" || timeStr === "Unknown" || timeStr.includes("即刻") || timeStr.includes("現場") || timeStr.includes("Làm ngay")) {
-    return true;
-  }
-  return false;
+  // Scheduling settings affect new orders, not the meaning of existing pickup times.
+  return typeof isOrderDineIn === "function"
+    ? isOrderDineIn(order)
+    : (order.diningOption || order.dining_option) === "dine_in";
 }
 
 function formatOrderSubmissionTime(order) {
