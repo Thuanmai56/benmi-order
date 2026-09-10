@@ -870,6 +870,16 @@ async function submitOrder() {
     const hasItem = Object.values(cart || {}).some(q => q > 0);
     if (!hasItem) return customAlert('請先選擇餐點品項加入購物車');
 
+    // Minimum spend excludes order-wide add-on charges themselves.
+    updateTotal();
+    const selectedOrderOptions = Array.from(document.querySelectorAll('.custom-panel input[data-price]:checked'));
+    const orderAddons = selectedOrderOptions.reduce((sum, input) => sum + (Number(input.getAttribute('data-price')) || 0), 0);
+    const foodSubtotal = (Number(document.getElementById('total-price')?.innerText) || 0) - orderAddons;
+    const unavailableOption = selectedOrderOptions.find(input => foodSubtotal < (Number(input.getAttribute('data-min-order-amount')) || 0));
+    if (unavailableOption) {
+        return customAlert(`${unavailableOption.getAttribute('data-group-title')}：餐點金額需滿 ${unavailableOption.getAttribute('data-min-order-amount')} 元，請調整餐點或選項。`);
+    }
+
     const twNow = getTaiwanDate();
     const isDineIn = (window.currentDiningOption === 'dine_in');
     const isScheduledEnabled = !(storeConfig && storeConfig.allowScheduledPickup === false);
