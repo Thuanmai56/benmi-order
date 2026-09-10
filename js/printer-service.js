@@ -25,7 +25,7 @@
       mac_address: '',
       device_name: '',
       paperWidth: 80,
-      feedBeforeCutMm: 100,
+      feedBeforeCutMm: 80,
       autoCut: true
     },
     kitchen: {
