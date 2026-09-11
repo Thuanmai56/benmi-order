@@ -299,6 +299,7 @@ function renderCategoriesManagerView() {
           currentMenuData = reordered;
           markMenuDirty();
           renderMenuCategories();
+          saveMenuData(true);
         }
         renderCategoriesManagerView();
       });
@@ -580,6 +581,7 @@ async function saveMenuData(skipConfirm = false) {
   // Convert to rich item map format for API
   const output = {};
   currentMenuData.forEach(cat => {
+    if (cat.type === 'order_customization' || cat.id === 'sec-flavor') return;
     output[cat.id] = {
       __title: cat.title,
       __short_name: cat.shortName || cat.title,
@@ -762,7 +764,7 @@ async function confirmAddCategory() {
   await saveMenuData(true);
 }
 
-function promptRenameCategoryAtIndex(idx) {
+async function promptRenameCategoryAtIndex(idx) {
   if (!currentMenuData || !currentMenuData[idx]) return;
   const currentCat = currentMenuData[idx];
   const newTitle = prompt(t("promptCategoryNamePrompt"), currentCat.title);
@@ -782,10 +784,12 @@ function promptRenameCategoryAtIndex(idx) {
     } else {
       renderMenuCategoryEditor(idx);
     }
+    // Auto-save immediately to database & refresh edge cache
+    await saveMenuData(true);
   }
 }
 
-function deleteCategoryAtIndex(idx) {
+async function deleteCategoryAtIndex(idx) {
   if (!currentMenuData || !currentMenuData[idx]) return;
   const cat = currentMenuData[idx];
   if (!confirm(t("confirmDeleteCategory", { name: cat.title }))) return;
@@ -809,6 +813,9 @@ function deleteCategoryAtIndex(idx) {
     if (renameBtn) renameBtn.style.display = "none";
     if (deleteBtn) deleteBtn.style.display = "none";
   }
+
+  // Auto-save immediately to database & refresh edge cache
+  await saveMenuData(true);
 }
 
 function promptRenameCategory() {

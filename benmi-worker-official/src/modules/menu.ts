@@ -285,16 +285,22 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
 
   let catSortOrder = 1;
   for (const slug of Object.keys(menuData)) {
+    const itemsMap = menuData[slug];
+    const customCatName = (itemsMap && (itemsMap.__title || itemsMap._name)) || null;
+    const customCatShortName = (itemsMap && (itemsMap.__short_name || itemsMap._short_name || itemsMap.__short_title || itemsMap._short_title)) || null;
+    const customCatType = (itemsMap && (itemsMap.__type || itemsMap._type)) || 'catalog';
+
+    // Skip order_customization / sec-flavor UI containers from being saved to menu_categories
+    if (slug === 'sec-flavor' || slug.startsWith('sec-') || customCatType === 'order_customization') {
+      continue;
+    }
+
     let catId = catIdMap.get(slug);
     if (!catId) {
       catId = `${tenantId}_${slug}`;
     }
     activeCategoryIds.push(catId);
 
-    const itemsMap = menuData[slug];
-    const customCatName = (itemsMap && (itemsMap.__title || itemsMap._name)) || null;
-    const customCatShortName = (itemsMap && (itemsMap.__short_name || itemsMap._short_name || itemsMap.__short_title || itemsMap._short_title)) || null;
-    const customCatType = (itemsMap && (itemsMap.__type || itemsMap._type)) || 'catalog';
     const allowCustomization = (itemsMap && (itemsMap.__allow_customization !== undefined || itemsMap._allow_customization !== undefined))
       ? ((itemsMap.__allow_customization ?? itemsMap._allow_customization) ? 1 : 0)
       : (slug === 'drinks' ? 0 : 1);
