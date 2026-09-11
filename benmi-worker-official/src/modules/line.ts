@@ -1348,7 +1348,19 @@ export async function handleLineWebhook(
   ctx: ExecutionContext,
   tenantCtx?: TenantContext | null
 ): Promise<Response> {
-  const body: any = await request.json().catch(() => ({}));
+  let body: any;
+  if (tenantCtx?.lineChannelSecret || tenantCtx?.requiresPosSession) {
+    const { verifyLineSignature } = await import('../onboarding/crypto');
+    if (!request.body) return new Response('Invalid signature', { status: 401 });
+    const reader = request.body.getReader(); const decoder = new TextDecoder(); let raw = ''; let size = 0;
+    try { while (true) { const { value, done } = await reader.read(); if (done) break; size += value.byteLength;
+      if (size > 1_000_000) { await reader.cancel(); return new Response('Payload too large', { status: 413 }); }
+      raw += decoder.decode(value, { stream: true });
+    } raw += decoder.decode(); } finally { reader.releaseLock(); }
+    if (!await verifyLineSignature(raw, request.headers.get('x-line-signature'), tenantCtx?.lineChannelSecret || ''))
+      return new Response('Invalid signature', { status: 401 });
+    try { body = JSON.parse(raw); } catch { return new Response('Invalid body', { status: 400 }); }
+  } else body = await request.json().catch(() => ({}));
   const events = Array.isArray(body.events) ? body.events : [];
   const tenantId = tenantCtx?.tenantId || getTenantId(request);
   const brandName = tenantCtx?.brandName || tenantId;

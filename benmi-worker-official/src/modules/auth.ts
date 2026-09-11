@@ -3,10 +3,13 @@ import { json } from '../utils/http';
 import { getTenantId } from './menu';
 import { resolveTenantContext } from './tenant';
 import { TenantContext } from '../types/tenant';
+import { hashPassword, verifyPassword } from '../onboarding/crypto';
+import { allowLoginAttempt, issuePosSession } from '../onboarding/pos-session';
 
 export const DEFAULT_PASSWORD = "12345678";
 
 async function getStoredPassword(env: Env, tenantId: string, tenantCtx?: TenantContext | null): Promise<string> {
+  if (tenantCtx?.requiresPosSession) return tenantCtx.defaultPassword;
   const cacheKey = `tenant:${tenantId}:password`;
   let stored = await env.ORDER_STATE.get(cacheKey);
   if (!stored && tenantId === "benmi") {
@@ -43,8 +46,12 @@ export async function handleAuth(request: Request, env: Env, url?: URL, tenantCt
   }
 
   // 2. Validate Password against Store PIN
+  if (tenantCtx.requiresPosSession) {
+    if (request.method !== 'POST') return json({ ok: false, error: 'post_required' }, 405);
+    if (!await allowLoginAttempt(request, env, tenantId)) return json({ ok: false, error: 'rate_limited' }, 429);
+  }
   const stored = await getStoredPassword(env, tenantId, tenantCtx);
-  if (password !== stored) {
+  if (!await verifyPassword(password, stored)) {
     return json({ ok: false, error: "invalid_password", message: "管理 PIN 碼錯誤" }, 401);
   }
 
@@ -52,6 +59,7 @@ export async function handleAuth(request: Request, env: Env, url?: URL, tenantCt
     ok: true,
     tenant_id: tenantCtx.tenantId,
     brand_name: tenantCtx.brandName
+    , session_token: tenantCtx.requiresPosSession ? await issuePosSession(env, tenantId) : undefined
   });
 }
 
@@ -68,10 +76,20 @@ export async function handleAuthChange(request: Request, env: Env, tenantCtx?: T
   }
 
   const stored = await getStoredPassword(env, tenantId, tenantCtx);
-  if (current !== stored) return json({ ok: false, error: "Wrong current password" }, 401);
+  if (!await verifyPassword(current, stored)) return json({ ok: false, error: "Wrong current password" }, 401);
   if (newPassword.length < 4) return json({ ok: false, error: "Password too short" }, 400);
   
   const cacheKey = `tenant:${tenantId}:password`;
+  if (tenantCtx.requiresPosSession) {
+    if (typeof newPassword !== 'string' || newPassword.length < 8 || newPassword.length > 128 || newPassword === DEFAULT_PASSWORD)
+      return json({ ok: false, error: 'Password must have 8 to 128 characters' }, 400);
+    await env.DB.batch([
+      env.DB.prepare('UPDATE tenant_config SET default_password = ?, updated_at = datetime(\'now\') WHERE tenant_id = ?').bind(await hashPassword(newPassword), tenantId),
+      env.DB.prepare('DELETE FROM pos_sessions WHERE tenant_id = ?').bind(tenantId),
+    ]);
+    await env.ORDER_STATE.delete(cacheKey);
+    return json({ ok: true, session_token: await issuePosSession(env, tenantId) });
+  }
   await env.ORDER_STATE.put(cacheKey, newPassword);
   return json({ ok: true });
 }
@@ -88,7 +106,7 @@ export async function handleCreateTempLink(request: Request, env: Env, tenantCtx
   }
 
   const stored = await getStoredPassword(env, tenantId, tenantCtx);
-  if (password !== stored) return json({ ok: false, error: "Wrong password" }, 401);
+  if (!await verifyPassword(password, stored)) return json({ ok: false, error: "Wrong password" }, 401);
 
   const ttl = Math.min(Math.max(parseInt(hours) || 24, 1), 168);
   const token = Array.from(crypto.getRandomValues(new Uint8Array(12)))

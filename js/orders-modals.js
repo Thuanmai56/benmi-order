@@ -747,7 +747,9 @@ async function submitStoreActivation(e) {
 
   try {
     const workerUrl = typeof WORKER_BASE !== "undefined" ? WORKER_BASE : "https://benmi-worker-official.thuanmnc.workers.dev";
-    const res = await fetch(`${workerUrl}/api/auth?pw=${encodeURIComponent(pin)}&tenant_id=${encodeURIComponent(tenantId)}`);
+    const res = await fetch(`${workerUrl}/api/auth?tenant_id=${encodeURIComponent(tenantId)}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pin, tenant_id: tenantId })
+    });
     const data = await res.json().catch(() => ({ ok: false }));
 
     if (res.ok && data && data.ok) {
@@ -925,5 +927,4 @@ window.closeQuickStickerModal = closeQuickStickerModal;
 window.renderQuickStickerOptions = renderQuickStickerOptions;
 window.printQuickModifierOption = printQuickModifierOption;
 window.printCustomQuickSticker = printCustomQuickSticker;
-
 

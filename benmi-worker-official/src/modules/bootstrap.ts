@@ -157,8 +157,10 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
       return json({ error: `Tenant '${tenantId}' not found or inactive` }, 404);
     }
     const brandName = tenantCtx?.brandName || (tenantId === 'benmi' ? 'Benmi 越式法國麵包' : tenantId);
-    const brandColor = '#00b900';
-    const brandColorDark = '#009900';
+    const brandColor = tenantCtx?.brandColor || '#00b900';
+    const brandColorDark = /^#[a-fA-F0-9]{6}$/.test(brandColor)
+      ? '#' + [1, 3, 5].map(i => Math.round(parseInt(brandColor.slice(i, i + 2), 16) * 0.8).toString(16).padStart(2, '0')).join('')
+      : '#009900';
     const brandSubtitle = tenantCtx?.brandSubtitle || (tenantId === 'benmi' ? 'Bánh mì Việt Nam / 越式法國麵包' : '');
     const storeAddress = tenantCtx?.storeAddress || (tenantId === 'benmi' ? '新北市土城區中央路二段135號' : null);
     const operatingHours = tenantCtx?.operatingHours || null;
@@ -280,7 +282,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
     const modifiers: BootstrapResponse['modifiers'] = [];
 
     for (const cat of categories) {
-      const catType = cat.category_type || (cat.slug === 'topping' ? 'modifier' : 'catalog');
+      const catType = cat.category_type || 'catalog';
       const catItems = itemsByCatId.get(cat.id) || [];
 
       if (catType === 'modifier') {
@@ -288,7 +290,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
           id: cat.id,
           slug: cat.slug,
           name: cat.name,
-          selectionType: (cat.slug === 'topping' ? 'multiple' : (cat.selection_type || 'single')),
+          selectionType: cat.selection_type || 'single',
           isRequired: Boolean(cat.is_required),
           minSelection: cat.min_selection || 0,
           maxSelection: cat.max_selection || 1,
@@ -404,7 +406,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
   }
 }
 
-export async function invalidateBootstrapCache(tenantId: string, env: Env): Promise<void> {
+export async function invalidateBootstrapCache(tenantId: string, env: Env, strict = false): Promise<void> {
   const cacheKey = `tenant:${tenantId}:bootstrap`;
   if (env.ORDER_STATE) {
     try {
@@ -412,6 +414,7 @@ export async function invalidateBootstrapCache(tenantId: string, env: Env): Prom
       console.log(`[Bootstrap] Invalidated KV cache for tenant ${tenantId}`);
     } catch (e) {
       console.error(`[Bootstrap] Failed to invalidate cache for ${tenantId}:`, e);
+      if (strict) throw e;
     }
   }
 }

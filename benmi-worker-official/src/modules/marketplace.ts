@@ -47,7 +47,8 @@ export function isStoreCurrentlyOpen(
   const currentTimeStr = `${currentHours}:${currentMinutes}`;
 
   const shifts = parsedHours[dayOfWeek];
-  if (!shifts || !Array.isArray(shifts) || shifts.length === 0) {
+  if (Array.isArray(shifts) && shifts.length === 0) return false;
+  if (!shifts || !Array.isArray(shifts)) {
     // If no specific shifts defined, fallback to 11:00 - 21:00
     return currentTimeStr >= '11:00' && currentTimeStr <= '21:00';
   }
@@ -208,13 +209,14 @@ export async function getMarketplaceTenants(request: Request, env: Env): Promise
 /**
  * Invalidates the Marketplace KV Cache across edge nodes.
  */
-export async function invalidateMarketplaceCache(env: Env): Promise<void> {
+export async function invalidateMarketplaceCache(env: Env, strict = false): Promise<void> {
   if (env.ORDER_STATE) {
     try {
       await env.ORDER_STATE.delete(MARKETPLACE_CACHE_KEY);
       console.log('[Marketplace] Invalidated marketplace cache');
     } catch (e) {
       console.error('[Marketplace] Failed to invalidate marketplace cache:', e);
+      if (strict) throw e;
     }
   }
 }

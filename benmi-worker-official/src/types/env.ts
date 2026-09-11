@@ -3,6 +3,13 @@ export interface Env {
   ORDER_STATE: KVNamespace;
   DB: D1Database;
 
+  // Internal onboarding service. No browser may supply these settings.
+  ONBOARDING_ENABLED?: string;
+  ONBOARDING_CREDENTIAL_KEY?: string;
+  ONBOARDING_CUSTOMER_BASE_URL?: string;
+  ONBOARDING_PLATFORM_BASE_URL?: string;
+  ONBOARDING_STAFF_ROLES?: string;
+
   // Global Admin Secret
   ADMIN_API_KEY?: any;
 

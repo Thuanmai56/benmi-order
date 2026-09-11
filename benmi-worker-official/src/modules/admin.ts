@@ -2,11 +2,14 @@ import { Env } from '../types/env';
 import { json } from '../utils/http';
 import { resolveSecret } from '../utils/secrets';
 import { invalidateTenantCache } from './tenant';
+import { invalidateBootstrapCache } from './bootstrap';
+import { digest } from '../onboarding/crypto';
 
 async function verifyAdminAuth(request: Request, env: Env): Promise<boolean> {
   const adminKeyHeader = request.headers.get("X-Admin-Key");
-  const expectedKey = (await resolveSecret(env.ADMIN_API_KEY)) || "benmi_admin_secret_2026";
-  return adminKeyHeader === expectedKey;
+  const expectedKey = await resolveSecret(env.ADMIN_API_KEY);
+  if (!adminKeyHeader || !expectedKey) return false;
+  return await digest(adminKeyHeader) === await digest(expectedKey);
 }
 
 export async function handleAdminRoute(request: Request, env: Env, path: string): Promise<Response> {
@@ -41,7 +44,7 @@ export async function handleAdminRoute(request: Request, env: Env, path: string)
       if (!tenant) return json({ error: "Tenant not found" }, 404);
 
       const config = await env.DB.prepare(
-        "SELECT * FROM tenant_config WHERE tenant_id = ?"
+        "SELECT tenant_id, brand_name, brand_color, store_address, operating_hours, locale, liff_id, liff_url, is_active FROM tenant_config WHERE tenant_id = ?"
       ).bind(tenantId).first();
 
       return json({ tenant, config });
@@ -80,6 +83,8 @@ export async function handleAdminRoute(request: Request, env: Env, path: string)
       if (!tenant_id || !brand_name) {
         return json({ error: "Missing required fields: tenant_id and brand_name" }, 400);
       }
+      const managed = await env.DB.prepare('SELECT onboarding_status FROM tenant_config WHERE tenant_id = ?').bind(tenant_id).first<{ onboarding_status: string | null }>();
+      if (managed?.onboarding_status) return json({ error: 'Use the internal onboarding service for this tenant' }, 409);
 
       const tenantName = name || brand_name;
 
@@ -146,6 +151,7 @@ export async function handleAdminRoute(request: Request, env: Env, path: string)
 
       // Invalidate KV cache for this tenant
       await invalidateTenantCache(tenant_id, env);
+      await invalidateBootstrapCache(tenant_id, env);
 
       return json({ success: true, tenant_id });
     } catch (e: any) {
@@ -164,6 +170,7 @@ export async function handleAdminRoute(request: Request, env: Env, path: string)
       ).bind(tenantId).run();
 
       await invalidateTenantCache(tenantId, env);
+      await invalidateBootstrapCache(tenantId, env);
 
       return json({ success: true, message: `Tenant ${tenantId} deactivated` });
     } catch (e: any) {

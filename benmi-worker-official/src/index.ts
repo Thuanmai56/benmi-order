@@ -12,11 +12,19 @@ import { handleAdminRoute } from './modules/admin';
 import { getTenantBootstrap } from './modules/bootstrap';
 import { getItemAnalyticsReport } from './modules/reports';
 import { getMarketplaceTenants } from './modules/marketplace';
+import { pendingWebhook, tenantReadiness } from './onboarding/gate';
+import { drainOutbox } from './onboarding/provision';
+import { hasPosSession, needsPosSession } from './onboarding/pos-session';
+export { TenantAdminService } from './onboarding/service';
 
 export default {
+  async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(drainOutbox(env));
+  },
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     const path = url.pathname;
+    if (path === '/api/debug') return json({ error: 'Not Found' }, 404);
 
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: corsHeaders() });
@@ -39,6 +47,8 @@ export default {
       const webhookMatch = path.match(/^\/webhook\/([a-zA-Z0-9_-]+)$/);
       if (webhookMatch) {
         const tenantId = webhookMatch[1];
+        const pending = await pendingWebhook(request, env, tenantId);
+        if (pending) return pending;
         const tenantCtx = await resolveTenantContext(tenantId, env);
         if (!tenantCtx) {
           return json({ error: `Unknown or inactive tenant: ${tenantId}` }, 404);
@@ -49,7 +59,14 @@ export default {
 
     // 3. Resolve Tenant Context for API Requests
     const tenantId = getTenantId(request);
+    if (path.startsWith('/api/') && !['/api/marketplace', '/api/marketplace/tenants', '/api/health'].includes(path)) {
+      const readiness = await tenantReadiness(env, tenantId);
+      if (readiness.blocked) return json({ error: 'Tenant not ready' }, 404);
+    }
     const tenantCtx = await resolveTenantContext(tenantId, env);
+
+    if (tenantCtx?.requiresPosSession && needsPosSession(path, request.method) && !await hasPosSession(request, env, tenantId))
+      return json({ error: 'pos_session_required' }, 401, { 'Cache-Control': 'no-store' });
 
     // 4. API Endpoints
     if (request.method === "GET" && (path === "/api/marketplace/tenants" || path === "/api/marketplace")) return getMarketplaceTenants(request, env);

@@ -1,26 +1,15 @@
 import { Env } from '../types/env';
 import { TenantContext } from '../types/tenant';
 import { resolveSecret } from '../utils/secrets';
-
-const TENANT_CACHE_TTL = 300; // 5 minutes
+import { unseal } from '../onboarding/crypto';
+import { credentialKey } from '../onboarding/credentials';
 
 export async function resolveTenantContext(
   tenantId: string,
   env: Env
 ): Promise<TenantContext | null> {
-  const cacheKey = `tenant:${tenantId}:config_cache`;
-
-  // 1. Check KV Cache
-  if (env.ORDER_STATE) {
-    try {
-      const cached = await env.ORDER_STATE.get(cacheKey);
-      if (cached) {
-        return JSON.parse(cached);
-      }
-    } catch (e) {
-      console.error(`[Tenant] KV cache read error for tenant ${tenantId}:`, e);
-    }
-  }
+  // Credential-bearing context must never be loaded from or written to KV.
+  // Public bootstrap remains cached separately; credentials are resolved from D1.
 
   // 2. Query D1 Database
   if (env.DB) {
@@ -30,6 +19,10 @@ export async function resolveTenantContext(
       ).bind(tenantId).first<any>();
 
       if (row) {
+        if (row.onboarding_status && row.onboarding_status !== 'ready') return null;
+        const encrypted = row.credential_encoding === 'enc:v1';
+        const token = encrypted ? await unseal(row.line_channel_token, credentialKey(env), `${tenantId}:line_channel_token`) : row.line_channel_token;
+        const secret = encrypted ? await unseal(row.line_channel_secret, credentialKey(env), `${tenantId}:line_channel_secret`) : row.line_channel_secret;
         const quickReplies = row.quick_replies ? JSON.parse(row.quick_replies) : [];
         let features: string[] = [];
         try {
@@ -41,11 +34,12 @@ export async function resolveTenantContext(
         }
 
         const ctx: TenantContext = {
+          requiresPosSession: !!row.onboarding_status,
           tenantId,
-          lineChannelToken: row.line_channel_token || '',
-          lineChannelSecret: row.line_channel_secret || null,
-          liffId: row.liff_id || env.LIFF_ID || '',
-          liffUrl: row.liff_url || env.LIFF_URL || '',
+          lineChannelToken: token || '',
+          lineChannelSecret: secret || null,
+          liffId: row.liff_id || (row.onboarding_status ? '' : env.LIFF_ID) || '',
+          liffUrl: row.liff_url || (row.onboarding_status ? '' : env.LIFF_URL) || '',
           groqApiKey: row.groq_api_key || null,
           groqModel: row.groq_model || 'openai/gpt-oss-120b',
           openrouterApiKey: row.openrouter_api_key || null,
@@ -72,17 +66,6 @@ export async function resolveTenantContext(
           cuisineType: row.cuisine_type || 'vietnamese',
           isMarketplaceVisible: row.is_marketplace_visible !== undefined && row.is_marketplace_visible !== null ? Boolean(row.is_marketplace_visible) : true,
         };
-
-        // Cache in KV
-        if (env.ORDER_STATE) {
-          try {
-            await env.ORDER_STATE.put(cacheKey, JSON.stringify(ctx), {
-              expirationTtl: TENANT_CACHE_TTL
-            });
-          } catch (e) {
-            console.error(`[Tenant] KV cache write error for tenant ${tenantId}:`, e);
-          }
-        }
 
         return ctx;
       }
@@ -141,13 +124,14 @@ export async function resolveTenantContext(
   return null;
 }
 
-export async function invalidateTenantCache(tenantId: string, env: Env): Promise<void> {
+export async function invalidateTenantCache(tenantId: string, env: Env, strict = false): Promise<void> {
   const cacheKey = `tenant:${tenantId}:config_cache`;
   if (env.ORDER_STATE) {
     try {
       await env.ORDER_STATE.delete(cacheKey);
     } catch (e) {
       console.error(`[Tenant] Failed to invalidate cache for ${tenantId}:`, e);
+      if (strict) throw e;
     }
   }
 }

@@ -4,6 +4,7 @@ export interface QuickReply {
 }
 
 export interface TenantContext {
+  requiresPosSession?: boolean;
   tenantId: string;
   // LINE Integration
   lineChannelToken: string;

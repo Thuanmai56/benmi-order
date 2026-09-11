@@ -1498,7 +1498,9 @@ async function promptUnlinkStoreDevice() {
 
   try {
     const workerUrl = typeof WORKER_BASE !== "undefined" ? WORKER_BASE : "https://benmi-worker-official.thuanmnc.workers.dev";
-    const res = await fetch(`${workerUrl}/api/auth?pw=${encodeURIComponent(pin.trim())}&tenant_id=${encodeURIComponent(currentTenant)}`);
+    const res = await fetch(`${workerUrl}/api/auth?tenant_id=${encodeURIComponent(currentTenant)}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pin.trim(), tenant_id: currentTenant })
+    });
     const data = await res.json().catch(() => ({ ok: false }));
 
     if (data && data.ok) {
@@ -1523,5 +1525,4 @@ async function promptUnlinkStoreDevice() {
 
 window.renderStorePairingSection = renderStorePairingSection;
 window.promptUnlinkStoreDevice = promptUnlinkStoreDevice;
-
 
