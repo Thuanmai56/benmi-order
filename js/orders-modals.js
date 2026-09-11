@@ -61,6 +61,14 @@ function openReview(orderKey) {
   const elCont = document.getElementById("review-content");
   if (elCont) elCont.innerHTML = formatContentHtml(order);
 
+  if (typeof ensureTenantCustomizations === "function") {
+    ensureTenantCustomizations().then(custs => {
+      if (Array.isArray(custs) && custs.length > 0 && reviewingOrder && reviewingOrder.key === order.key) {
+        if (elCont) elCont.innerHTML = formatContentHtml(reviewingOrder);
+      }
+    });
+  }
+
   const actionsNew = document.getElementById("review-actions");
   const actionsAccepted = document.getElementById("review-actions-accepted");
   const actionsWaiting = document.getElementById("review-actions-waiting");

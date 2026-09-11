@@ -101,11 +101,43 @@ async function initTenantBranding() {
         try {
           localStorage.setItem("tenant_customizations_" + tenantId, JSON.stringify(data.customizations));
         } catch(e) {}
+        if (window.reviewingOrder && typeof formatContentHtml === "function") {
+          const elCont = document.getElementById("review-content");
+          if (elCont) elCont.innerHTML = formatContentHtml(window.reviewingOrder);
+        }
       }
     }
   } catch(e) {}
 }
 initTenantBranding();
+
+async function ensureTenantCustomizations() {
+  if (Array.isArray(window.tenantCustomizations) && window.tenantCustomizations.length > 0) {
+    return window.tenantCustomizations;
+  }
+  const tenantId = getTenantIdFromUrl();
+  try {
+    const cached = localStorage.getItem("tenant_customizations_" + tenantId);
+    if (cached) {
+      window.tenantCustomizations = JSON.parse(cached);
+      tenantCustomizations = window.tenantCustomizations;
+      if (window.tenantCustomizations.length > 0) return window.tenantCustomizations;
+    }
+    const res = await fetch(`${WORKER_BASE}/api/tenant/bootstrap?tenant_id=${tenantId}&_t=${Date.now()}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data.customizations)) {
+        window.tenantCustomizations = data.customizations;
+        tenantCustomizations = data.customizations;
+        try {
+          localStorage.setItem("tenant_customizations_" + tenantId, JSON.stringify(data.customizations));
+        } catch(e) {}
+      }
+    }
+  } catch(e) {}
+  return window.tenantCustomizations || [];
+}
+window.ensureTenantCustomizations = ensureTenantCustomizations;
 
 // Global POS State
 var latestOrders = [];
