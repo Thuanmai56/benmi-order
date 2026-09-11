@@ -79,11 +79,11 @@ export async function getMenu(request: Request, env: Env): Promise<Response> {
     // 2. Cache Miss: Truy vấn từ D1 Database
     // Sử dụng batch queries để giảm thiểu số vòng kết nối mạng
     const [categoriesRes, itemsRes] = await env.DB.batch([
-      env.DB.prepare("SELECT id, name, slug FROM menu_categories WHERE tenant_id = ? ORDER BY sort_order ASC").bind(tenantId),
+      env.DB.prepare("SELECT id, name, short_name, slug FROM menu_categories WHERE tenant_id = ? ORDER BY sort_order ASC").bind(tenantId),
       env.DB.prepare("SELECT id, category_id, name, price, description, out_of_stock_until FROM menu_items WHERE tenant_id = ? ORDER BY sort_order ASC").bind(tenantId)
     ]);
 
-    const categories = categoriesRes.results as Array<{ id: string; name: string; slug: string }>;
+    const categories = categoriesRes.results as Array<{ id: string; name: string; short_name: string | null; slug: string }>;
     const items = itemsRes.results as Array<{
       id: string;
       category_id: string;
@@ -102,7 +102,8 @@ export async function getMenu(request: Request, env: Env): Promise<Response> {
     // 3. Xây dựng cấu trúc JSON Menu tương thích ngược
     const menuData: Menu = {
       out_of_stock: [],
-      _category_names: {} as any
+      _category_names: {} as any,
+      _category_short_names: {} as any
     };
 
     // Tạo các mảng danh mục rỗng
@@ -112,6 +113,9 @@ export async function getMenu(request: Request, env: Env): Promise<Response> {
       catMap.set(cat.id, cat.slug);
       if (menuData._category_names) {
         menuData._category_names[cat.slug] = cat.name;
+      }
+      if (menuData._category_short_names) {
+        menuData._category_short_names[cat.slug] = cat.short_name || cat.name;
       }
     }
 
@@ -234,7 +238,7 @@ export async function updateStockStatus(request: Request, env: Env): Promise<Res
 async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<void> {
   // 1. Nạp danh mục và món ăn hiện có để ánh xạ ID tránh xung đột unique
   const { results: existingCats } = await env.DB.prepare(
-    "SELECT id, slug, name FROM menu_categories WHERE tenant_id = ?"
+    "SELECT id, slug, name, short_name FROM menu_categories WHERE tenant_id = ?"
   ).bind(tenantId).all();
 
   const { results: existingItems } = await env.DB.prepare(
@@ -243,12 +247,17 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
 
   const catIdMap = new Map<string, string>();
   const catNameMap = new Map<string, string>();
+  const catShortNameMap = new Map<string, string>();
   for (const cat of (existingCats || [])) {
     catIdMap.set(cat.slug as string, cat.id as string);
     catIdMap.set(cat.id as string, cat.id as string);
     if (cat.name) {
       catNameMap.set(cat.slug as string, cat.name as string);
       catNameMap.set(cat.id as string, cat.name as string);
+    }
+    if (cat.short_name) {
+      catShortNameMap.set(cat.slug as string, cat.short_name as string);
+      catShortNameMap.set(cat.id as string, cat.short_name as string);
     }
   }
 
@@ -284,6 +293,7 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
 
     const itemsMap = menuData[slug];
     const customCatName = (itemsMap && (itemsMap.__title || itemsMap._name)) || null;
+    const customCatShortName = (itemsMap && (itemsMap.__short_name || itemsMap._short_name || itemsMap.__short_title || itemsMap._short_title)) || null;
     const customCatType = (itemsMap && (itemsMap.__type || itemsMap._type)) || 'catalog';
     const allowCustomization = (itemsMap && (itemsMap.__allow_customization !== undefined || itemsMap._allow_customization !== undefined))
       ? ((itemsMap.__allow_customization ?? itemsMap._allow_customization) ? 1 : 0)
@@ -298,19 +308,21 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
     }
 
     const catName = customCatName || catNameMap.get(slug) || defaultCategoryNamesZh[slug] || slug;
+    const catShortName = customCatShortName || (customCatName ? customCatName : (catShortNameMap.get(slug) || catName));
 
     statements.push(
       env.DB.prepare(
-        `INSERT INTO menu_categories (id, tenant_id, name, slug, category_type, allow_customization, applied_modifiers, sort_order)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO menu_categories (id, tenant_id, name, short_name, slug, category_type, allow_customization, applied_modifiers, sort_order)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET 
            name = excluded.name, 
+           short_name = excluded.short_name,
            slug = excluded.slug,
            category_type = excluded.category_type,
            allow_customization = excluded.allow_customization,
            applied_modifiers = excluded.applied_modifiers,
            sort_order = excluded.sort_order`
-      ).bind(catId, tenantId, catName, slug, customCatType, allowCustomization, appliedModifiers, catSortOrder++)
+      ).bind(catId, tenantId, catName, catShortName, slug, customCatType, allowCustomization, appliedModifiers, catSortOrder++)
     );
 
     if (itemsMap && typeof itemsMap === "object") {

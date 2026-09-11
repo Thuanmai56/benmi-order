@@ -59,6 +59,7 @@ async function loadMenuData() {
         categories.push({
           id: cat.slug,
           title: cat.name,
+          shortName: cat.shortName || cat.name,
           type: 'catalog',
           allowCustomization: cat.allowCustomization !== undefined ? cat.allowCustomization : (cat.slug !== 'drinks'),
           appliedModifiers: cat.appliedModifiers || (cat.allowCustomization === false ? [] : ['*']),
@@ -79,6 +80,7 @@ async function loadMenuData() {
           categories.push({
             id: mod.slug,
             title: mod.name,
+            shortName: mod.shortName || mod.name,
             type: 'modifier',
             items: mod.options.map(opt => ({
               name: opt.name,
@@ -137,7 +139,8 @@ async function loadMenuData() {
       rawMenuData = await res.json();
       currentMenuData = getBenmiDefaultCategories().map(cat => ({
         id: cat.id,
-        title: cat.label,
+        title: (rawMenuData._category_names && rawMenuData._category_names[cat.id]) || cat.label,
+        shortName: (rawMenuData._category_short_names && rawMenuData._category_short_names[cat.id]) || (rawMenuData._category_names && rawMenuData._category_names[cat.id]) || cat.label,
         type: 'catalog',
         items: Object.entries(rawMenuData[cat.id] || {}).map(([name, price]) => {
           const isOos = rawMenuData.out_of_stock && rawMenuData.out_of_stock.includes(`${cat.id}:${name}`);
@@ -309,7 +312,7 @@ function renderCategoriesManagerView() {
         <div class="cat-mgr-index">#${idx + 1}</div>
         <div class="cat-mgr-info">
           ${badge}
-          <span class="cat-mgr-name">${escapeHtml(cat.title)}</span>
+          <span class="cat-mgr-name">${escapeHtml(cat.title)}${cat.shortName && cat.shortName !== cat.title ? ` <span style="font-size: 11.5px; color: #64748b; font-weight: normal;">(${escapeHtml(cat.shortName)})</span>` : ''}</span>
           <span class="cat-mgr-count">${cat.items.length} ${t("menuItemUnit")}</span>
         </div>
         <div class="cat-mgr-actions" onclick="event.stopPropagation()">
@@ -579,6 +582,7 @@ async function saveMenuData(skipConfirm = false) {
   currentMenuData.forEach(cat => {
     output[cat.id] = {
       __title: cat.title,
+      __short_name: cat.shortName || cat.title,
       __type: cat.type || 'catalog',
       __allow_customization: cat.allowCustomization !== false ? 1 : 0,
       __applied_modifiers: cat.appliedModifiers || (cat.allowCustomization === false ? [] : ['*'])
@@ -677,6 +681,9 @@ function openAddCategoryModal() {
   const group = document.getElementById("add-cat-customization-group");
   if (group) group.style.display = "block";
 
+  const shortInp = document.getElementById("add-cat-input-short-name");
+  if (shortInp) shortInp.value = "";
+
   const modal = document.getElementById("addCategoryModal");
   if (modal) {
     modal.style.display = "flex";
@@ -695,6 +702,10 @@ function onAddCategoryTypeChange() {
 function closeAddCategoryModal() {
   const modal = document.getElementById("addCategoryModal");
   if (modal) modal.style.display = "none";
+  const inp = document.getElementById("add-cat-input-name");
+  if (inp) inp.value = "";
+  const shortInp = document.getElementById("add-cat-input-short-name");
+  if (shortInp) shortInp.value = "";
 }
 
 async function confirmAddCategory() {
@@ -706,6 +717,9 @@ async function confirmAddCategory() {
   }
   const typeSelect = document.getElementById("add-cat-select-type");
   const type = typeSelect ? typeSelect.value : "catalog";
+
+  const shortInp = document.getElementById("add-cat-input-short-name");
+  const shortName = (shortInp && shortInp.value.trim()) ? shortInp.value.trim() : name;
 
   const selectedMods = [];
   document.querySelectorAll('input[name="add-cat-mod"]:checked').forEach(cb => {
@@ -726,6 +740,7 @@ async function confirmAddCategory() {
   const newCat = {
     id: slug,
     title: name,
+    shortName: shortName,
     type: type,
     allowCustomization: allowCust,
     appliedModifiers: appliedMods,
@@ -759,6 +774,7 @@ function promptRenameCategoryAtIndex(idx) {
     }
     syncMenuDataFromDOM();
     currentCat.title = trimmed;
+    currentCat.shortName = trimmed;
     markMenuDirty();
     renderMenuCategories();
     if (isCategoryManagerOpen) {

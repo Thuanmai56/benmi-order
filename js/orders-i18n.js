@@ -217,6 +217,8 @@ const I18N = {
     addCategoryModalTitle: "新增菜單分類",
     categoryNameLabel: "分類名稱",
     categoryNamePlaceholder: "例: 豆漿 意仁漿, 經典主食",
+    categoryShortNameLabel: "導航簡稱 (選填，手機版頁籤顯示)",
+    categoryShortNamePlaceholder: "留空則與分類名稱相同",
     categoryTypeLabel: "分類類型",
     categoryTypeCatalog: "🍽️ 菜單品項 (主餐 / 飲料)",
     categoryTypeModifier: "⚙️ 客製化選項 (加辣 / 加料 / 甜度)",
@@ -549,6 +551,8 @@ const I18N = {
     addCategoryModalTitle: "Thêm phân loại thực đơn mới",
     categoryNameLabel: "Tên phân loại",
     categoryNamePlaceholder: "VD: 豆漿 意仁漿, Món ăn kèm",
+    categoryShortNameLabel: "Tên rút gọn thanh điều hướng (tùy chọn, hiển thị trên tab mobile)",
+    categoryShortNamePlaceholder: "Để trống sẽ lấy theo tên phân loại",
     categoryTypeLabel: "Loại phân loại",
     categoryTypeCatalog: "🍽️ Danh mục món (Món chính / Đồ uống)",
     categoryTypeModifier: "⚙️ Tùy biến chọn kèm (Thêm cay / Topping)",
@@ -1094,6 +1098,10 @@ function applyLanguageToDOM() {
   if (addCatLblN) addCatLblN.innerText = dict.categoryNameLabel;
   const addCatInpN = document.getElementById("add-cat-input-name");
   if (addCatInpN) addCatInpN.placeholder = dict.categoryNamePlaceholder;
+  const addCatLblSN = document.getElementById("i18n-add-cat-label-short-name");
+  if (addCatLblSN) addCatLblSN.innerText = dict.categoryShortNameLabel;
+  const addCatInpSN = document.getElementById("add-cat-input-short-name");
+  if (addCatInpSN) addCatInpSN.placeholder = dict.categoryShortNamePlaceholder;
   const addCatLblT = document.getElementById("i18n-add-cat-label-type");
   if (addCatLblT) addCatLblT.innerText = dict.categoryTypeLabel;
   const addCatOptCat = document.getElementById("i18n-add-cat-opt-catalog");
