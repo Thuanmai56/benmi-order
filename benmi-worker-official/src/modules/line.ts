@@ -210,8 +210,8 @@ export function buildOrderFlexMessage(
     const lines = (order.content || "").split("\n");
     for (const rawLine of lines) {
       const l = rawLine.trim();
-      if (l.includes("口味設定")) {
-        const inlineFlavors = l.replace(/.*口味設定[：:]\s*/, '').replace(/[【】]/g, '').trim();
+      if (l.includes("口味設定") || l.includes("客製化設定")) {
+        const inlineFlavors = l.replace(/.*(?:口味設定|客製化設定)[：:]\s*/, '').replace(/[【】]/g, '').trim();
         if (inlineFlavors) {
           const parts = inlineFlavors.split(/[・·|]/).map(p => cleanItemVal(p.trim())).filter(Boolean);
           parts.forEach(p => {
@@ -397,8 +397,8 @@ export function buildOrderFlexMessage(
     const lines = (order.content || "").split("\n").map(l => l.trim()).filter(l => l.length > 0);
     const itemLines = lines.filter(l => {
       if (l.startsWith("[") || l.startsWith("【")) return false;
-      if (l.includes("訂單編號") || l.includes("訂單內容") || l.includes("用餐方式") || l.includes("取餐時間") || l.includes("點餐時間") || l.includes("總金額") || l.includes("總備註") || l.includes("桌號") || l.includes("口味設定")) return false;
-      if (l.startsWith("•") || l.startsWith("●") || l.startsWith("🧂") || l.startsWith("🧪")) return false;
+      if (l.includes("訂單編號") || l.includes("訂單內容") || l.includes("用餐方式") || l.includes("取餐時間") || l.includes("點餐時間") || l.includes("總金額") || l.includes("總備註") || l.includes("桌號") || l.includes("口味設定") || l.includes("客製化設定")) return false;
+      if (l.startsWith("•") || l.startsWith("●") || l.startsWith("🧂") || l.startsWith("🧪") || l.startsWith("🎛️")) return false;
       return true;
     });
 
@@ -1772,7 +1772,7 @@ export async function handleLineWebhook(
       }
 
       let contentStart = -1;
-      const flavorMatch = userText.match(/(?:[🧂🧪]?\s*(?:口味設定|Hương vị|Khẩu vị)[：:])/);
+      const flavorMatch = userText.match(/(?:[🧂🧪🎛️]?\s*(?:口味設定|客製化設定|Hương vị|Khẩu vị)[：:]|【客製化設定】)/);
       if (flavorMatch && flavorMatch.index !== undefined) {
         contentStart = flavorMatch.index;
       } else {

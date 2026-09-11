@@ -2488,3 +2488,54 @@ body {
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06) !important;
 }
+
+/* ==========================================
+   POS Order Customization Card (Tablet-First)
+   ========================================== */
+.pos-custom-settings-card {
+  margin: 12px 0 16px 0;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1.5px dashed #cbd5e1;
+  font-size: 18px;
+  color: #475569;
+  line-height: 1.6;
+}
+
+.pos-custom-header {
+  font-weight: 900;
+  color: #0f172a;
+  margin-bottom: 8px;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pos-custom-header svg {
+  flex-shrink: 0;
+}
+
+.pos-custom-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pos-custom-item {
+  font-size: 18px;
+  line-height: 1.55;
+  word-break: break-word;
+}
+
+.pos-custom-label {
+  font-weight: 800;
+  color: #1e293b;
+}
+
+.pos-custom-value {
+  font-weight: 700;
+  color: #334155;
+}
+

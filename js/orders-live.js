@@ -350,6 +350,130 @@ function reviewNextNewOrder() {
   dismissNewAlert();
 }
 
+function extractCustomizationsFromLines(lines) {
+  if (!lines || lines.length === 0) return { customItems: [], remainingLines: [] };
+  const customItems = [];
+  const remainingLines = [];
+  let inCustomSection = false;
+
+  const storeCusts = (typeof tenantCustomizations !== "undefined" && Array.isArray(tenantCustomizations))
+    ? tenantCustomizations
+    : ((typeof window !== "undefined" && Array.isArray(window.tenantCustomizations)) ? window.tenantCustomizations : []);
+
+  for (let i = 0; i < lines.length; i++) {
+    const rawLine = lines[i];
+    const line = String(rawLine || "").trim();
+    if (!line) continue;
+
+    const isCustomHeader = (
+      line.includes("口味設定") ||
+      line.includes("客製化設定") ||
+      line.includes("口味調整") ||
+      line.includes("Tùy chọn khẩu vị") ||
+      line.includes("Khẩu vị")
+    );
+
+    if (isCustomHeader) {
+      const colonIdx = line.indexOf("：") !== -1 ? line.indexOf("：") : line.indexOf(":");
+      const inlinePart = colonIdx !== -1 ? line.substring(colonIdx + 1).trim() : "";
+
+      if (inlinePart) {
+        const parts = inlinePart.split(/[・·|,]\s*|\s+[・·|]\s+/).map(p => p.trim()).filter(Boolean);
+        const radioGroups = storeCusts.filter(g => g && (g.type === 'radio' || !g.type));
+        const targetGroups = (radioGroups.length === parts.length) ? radioGroups : storeCusts;
+
+        parts.forEach((part, idx) => {
+          const pColon = part.indexOf("：") !== -1 ? part.indexOf("：") : part.indexOf(":");
+          if (pColon !== -1) {
+            const lbl = part.substring(0, pColon).replace(/^[✦•\-*●]\s*/, '').replace(/選擇|調整/g, '').trim();
+            const val = part.substring(pColon + 1).trim();
+            customItems.push({ label: lbl, value: val });
+          } else if (targetGroups.length > 0 && targetGroups[idx]) {
+            const group = targetGroups[idx];
+            const cleanTitle = (group.title || group.name || '')
+              .replace(/^[✦•\-*●]\s*/, '')
+              .replace(/選擇|調整/g, '')
+              .replace(/\(朝天椒\)/g, '')
+              .replace(/（朝天椒）/g, '')
+              .trim();
+            customItems.push({ label: cleanTitle || '', value: part });
+          } else {
+            customItems.push({ label: '', value: part });
+          }
+        });
+      }
+      inCustomSection = true;
+      continue;
+    }
+
+    const isBullet = line.startsWith("•") || line.startsWith("-") || line.startsWith("*") || line.startsWith("●");
+    if (inCustomSection && isBullet) {
+      const cleanBullet = line.replace(/^[•\-*●]\s*/, "");
+      const bColon = cleanBullet.indexOf("：") !== -1 ? cleanBullet.indexOf("：") : cleanBullet.indexOf(":");
+      if (bColon !== -1) {
+        const lbl = cleanBullet.substring(0, bColon).replace(/^[✦•\-*●]\s*/, '').replace(/選擇|調整/g, '').trim();
+        const val = cleanBullet.substring(bColon + 1).trim();
+        customItems.push({ label: lbl, value: val });
+        continue;
+      }
+    } else if (inCustomSection && (
+      line.includes("訂單內容") ||
+      line.includes("Món") ||
+      line.startsWith("1份") ||
+      line.startsWith("2份") ||
+      line.startsWith("3份") ||
+      line.startsWith("4份") ||
+      line.startsWith("5份") ||
+      line.match(/^\d+\s*份\s*[xX×]/) ||
+      line.includes("用餐方式") ||
+      line.includes("取餐時間") ||
+      line.startsWith("[")
+    )) {
+      inCustomSection = false;
+    }
+
+    remainingLines.push(rawLine);
+  }
+
+  return { customItems, remainingLines };
+}
+
+function renderCustomizationsHtml(customItems) {
+  if (!customItems || customItems.length === 0) return "";
+  const lang = window.currentLang || (typeof currentLang !== "undefined" ? currentLang : "zh-TW");
+  const title = (typeof t === "function" ? t("customizationSettings") : null) || (lang === "vi" ? "Tùy chọn khẩu vị" : "客製化設定");
+  const svgIcon = (typeof POS_SVG !== "undefined" && POS_SVG.sliders) || `
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-2px; margin-right:6px;">
+      <line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line>
+      <line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line>
+      <line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line>
+      <line x1="17" y1="16" x2="23" y2="16"></line>
+    </svg>
+  `;
+
+  const itemsHtml = customItems.map(it => {
+    const lbl = escapeHtml(it.label);
+    const val = escapeHtml(it.value);
+    if (lbl) {
+      return `<div class="pos-custom-item"><b class="pos-custom-label">${lbl}：</b><span class="pos-custom-value">${val}</span></div>`;
+    }
+    return `<div class="pos-custom-item"><span class="pos-custom-value">${val}</span></div>`;
+  }).join("");
+
+  return `
+    <div class="pos-custom-settings-card">
+      <div class="pos-custom-header">
+        ${svgIcon}
+        <span>${escapeHtml(title)}</span>
+      </div>
+      <div class="pos-custom-list">
+        ${itemsHtml}
+      </div>
+    </div>
+  `;
+}
+
 function formatContentHtml(order) {
   const raw = String(order?.content || "");
   if (order?.reason === "Đơn qua tin nhắn") {
@@ -400,7 +524,10 @@ function formatContentHtml(order) {
         ? rd.header.replace(/^\[/, '').replace(/\]$/, '')
         : (idx === 0 ? t('roundBlockInitial') : t('roundBlockTitle', { n: idx + 1 }));
 
-      const linesHtml = rd.lines.map(line => {
+      const { customItems, remainingLines } = extractCustomizationsFromLines(rd.lines);
+      const customCardHtml = renderCustomizationsHtml(customItems);
+
+      const linesHtml = remainingLines.map(line => {
         const text = line.trimStart();
         const isSub = text.startsWith("-") || text.startsWith("•") || text.startsWith("↳") || text.startsWith("－");
         return `<div style="${isSub ? 'padding-left:16px; color:#4b5563; font-size:20px;' : 'font-weight:800; margin-top:8px; font-size:22px;'}">${escapeHtml(line)}</div>`;
@@ -412,6 +539,7 @@ function formatContentHtml(order) {
             <span style="font-weight:900; font-size:18px; color:${isLatest ? '#6b21a8' : '#334155'};">${POS_SVG.dineIn}${escapeHtml(headerText)}</span>
             ${isLatest ? `<span style="background:#7e22ce; color:#ffffff; font-size:12px; font-weight:800; padding:2px 8px; border-radius:6px; letter-spacing:0.3px;">${t('roundBlockLatest')}</span>` : ''}
           </div>
+          ${customCardHtml}
           ${linesHtml}
         </div>
       `;
@@ -420,11 +548,29 @@ function formatContentHtml(order) {
     const lines = raw.split("\n").map(l => l.trimEnd()).filter(l => l.trim() !== "");
     if (lines.length === 0) return `<div style="background:rgba(0,185,0,0.07); border:1.5px solid rgba(0,185,0,0.25); border-radius:16px; padding:18px;">-</div>`;
 
-    contentHtml = lines.map(line => {
+    const { customItems, remainingLines } = extractCustomizationsFromLines(lines);
+    const customCardHtml = renderCustomizationsHtml(customItems);
+
+    const renderedLines = [];
+    let customInserted = false;
+
+    remainingLines.forEach(line => {
       const text = line.trimStart();
+      const isHeader = text.startsWith("訂單編號") || text.startsWith("Mã đơn");
       const isSub = text.startsWith("-") || text.startsWith("•") || text.startsWith("↳") || text.startsWith("－");
-      return `<div style="${isSub ? 'padding-left:16px; color:#4b5563; font-size:20px;' : 'font-weight:800; margin-top:8px; font-size:22px;'}">${escapeHtml(line)}</div>`;
-    }).join("");
+      renderedLines.push(`<div style="${isSub ? 'padding-left:16px; color:#4b5563; font-size:20px;' : 'font-weight:800; margin-top:8px; font-size:22px;'}">${escapeHtml(line)}</div>`);
+
+      if (isHeader && !customInserted && customCardHtml) {
+        renderedLines.push(customCardHtml);
+        customInserted = true;
+      }
+    });
+
+    if (!customInserted && customCardHtml) {
+      renderedLines.unshift(customCardHtml);
+    }
+
+    contentHtml = renderedLines.join("");
   }
 
   let footer = "";
@@ -439,6 +585,9 @@ function formatContentHtml(order) {
 
   return `<div style="background:rgba(0,185,0,0.07); border:1.5px solid rgba(0,185,0,0.25); border-radius:16px; padding:18px; line-height:1.7;">${contentHtml}${footer}</div>`;
 }
+
+window.extractCustomizationsFromLines = extractCustomizationsFromLines;
+window.renderCustomizationsHtml = renderCustomizationsHtml;
 
 async function updateStatus(key, status, extra = {}, btn = null) {
   if (!key) return;

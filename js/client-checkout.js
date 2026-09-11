@@ -446,7 +446,7 @@ function formatGlobalCustomizationsText() {
                     });
                 }
                 const subPart = subOpts.length > 0 ? ` (${subOpts.join('、')})` : '';
-                mainFlavors.push(`${val}${subPart}`);
+                mainFlavors.push(`  • ${cleanTitle || '口味'}：${val}${subPart}`);
             }
         } else if (group.type === 'checkbox') {
             const checkedBoxes = Array.from(document.querySelectorAll(`input[name="opt-${group.key}"]:checked`));
@@ -461,7 +461,10 @@ function formatGlobalCustomizationsText() {
     });
 
     if (mainFlavors.length === 0 && extraIngredients.length === 0) return "";
-    let result = `🧂 口味設定：${mainFlavors.join('・')}\n`;
+    let result = `🧂 客製化設定：\n`;
+    if (mainFlavors.length > 0) {
+        result += `${mainFlavors.join('\n')}\n`;
+    }
     if (extraIngredients.length > 0) {
         result += `${extraIngredients.join('\n')}\n`;
     }
