@@ -1248,7 +1248,7 @@ button.sidebar-nav-item.active {
 .tile-action-btn.btn-action-pickup,
 .tile-action-btn.btn-action-paid {
   position: relative !important;
-  padding-left: 26px !important;
+  padding: 6px 8px !important;
 }
 
 .tile-action-btn.btn-action-ready > svg,
