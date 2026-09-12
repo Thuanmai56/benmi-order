@@ -22,27 +22,30 @@
         function extractTenantId() {
             try {
                 const searchParams = new URLSearchParams(window.location.search);
-                if (searchParams.has('tenant_id')) return searchParams.get('tenant_id');
-                if (searchParams.has('tenant')) return searchParams.get('tenant');
+                if (searchParams.has('tenant_id') && searchParams.get('tenant_id')) return searchParams.get('tenant_id');
+                if (searchParams.has('tenant') && searchParams.get('tenant')) return searchParams.get('tenant');
 
                 const liffState = searchParams.get('liff.state');
                 if (liffState) {
                     const decoded = decodeURIComponent(liffState);
                     const queryPart = decoded.includes('?') ? decoded.split('?')[1] : decoded;
                     const stateParams = new URLSearchParams(queryPart);
-                    if (stateParams.has('tenant_id')) return stateParams.get('tenant_id');
-                    if (stateParams.has('tenant')) return stateParams.get('tenant');
+                    if (stateParams.has('tenant_id') && stateParams.get('tenant_id')) return stateParams.get('tenant_id');
+                    if (stateParams.has('tenant') && stateParams.get('tenant')) return stateParams.get('tenant');
                 }
 
                 if (window.location.hash) {
                     const hashStr = window.location.hash.substring(1);
                     const hashParams = new URLSearchParams(hashStr.includes('?') ? hashStr.split('?')[1] : hashStr);
-                    if (hashParams.has('tenant_id')) return hashParams.get('tenant_id');
-                    if (hashParams.has('tenant')) return hashParams.get('tenant');
+                    if (hashParams.has('tenant_id') && hashParams.get('tenant_id')) return hashParams.get('tenant_id');
+                    if (hashParams.has('tenant') && hashParams.get('tenant')) return hashParams.get('tenant');
                 }
 
                 const sessionTenant = sessionStorage.getItem('current_tenant_id');
                 if (sessionTenant) return sessionTenant;
+
+                const localTenant = localStorage.getItem('current_tenant_id') || localStorage.getItem('benmi_last_tenant_id');
+                if (localTenant) return localTenant;
             } catch (e) {}
             return "benmi";
         }
@@ -50,7 +53,13 @@
         (function () {
             const tenantId = extractTenantId();
             window.__INITIAL_TENANT_ID = tenantId;
-            sessionStorage.setItem('current_tenant_id', tenantId);
+            try {
+                sessionStorage.setItem('current_tenant_id', tenantId);
+                if (tenantId && tenantId !== 'benmi') {
+                    localStorage.setItem('current_tenant_id', tenantId);
+                    localStorage.setItem('benmi_last_tenant_id', tenantId);
+                }
+            } catch(e) {}
             try {
                 const cached = localStorage.getItem("tenant_bootstrap_" + tenantId) || localStorage.getItem("tenant_branding_" + tenantId) || localStorage.getItem("tenant_theme_" + tenantId);
                 if (cached) {
@@ -1660,7 +1669,27 @@
                 url.searchParams.delete('state');
                 url.searchParams.delete('liffClientId');
                 url.searchParams.delete('liffRedirectUri');
+                url.searchParams.delete('liff.state');
                 url.hash = '';
+
+                // Normalize path: /index.html -> /
+                if (url.pathname === '/index.html') {
+                    url.pathname = '/';
+                }
+
+                // Ensure explicit tenant_id is preserved in query params
+                const currentTenant = (typeof getTenantIdFromUrl === 'function' ? getTenantIdFromUrl() : window.__INITIAL_TENANT_ID) || 'benmi';
+                if (currentTenant) {
+                    url.searchParams.set('tenant_id', currentTenant);
+                    url.searchParams.delete('tenant');
+                }
+
+                // If running on custom domain (blabfood.app), align host to registered LINE LIFF Endpoint domain
+                // Because LINE Developers Console registered Endpoint URLs on benmi-order.pages.dev
+                if (url.hostname === 'blabfood.app' || url.hostname === 'www.blabfood.app') {
+                    url.hostname = 'benmi-order.pages.dev';
+                }
+
                 return url.toString();
             } catch (e) {
                 return window.location.href;
@@ -1813,10 +1842,24 @@
                 const tenantId = getTenantIdFromUrl();
                 const storageKey = `cart_save_${tenantId}`;
                 try {
+                    sessionStorage.setItem('current_tenant_id', tenantId);
+                    if (tenantId && tenantId !== 'benmi') {
+                        localStorage.setItem('current_tenant_id', tenantId);
+                        localStorage.setItem('benmi_last_tenant_id', tenantId);
+                    }
                     localStorage.setItem(storageKey, JSON.stringify({ cart, customizeData, comboDrinkData, bundleCartData: window.bundleCartData || {} }));
                 } catch(e) {}
                 const cleanRedirectUri = getCleanLiffRedirectUri();
-                liff.login({ redirectUri: cleanRedirectUri });
+                try {
+                    liff.login({ redirectUri: cleanRedirectUri });
+                } catch (loginErr) {
+                    console.warn('[LIFF] Desktop login with redirectUri notice:', loginErr);
+                    try {
+                        liff.login();
+                    } catch (fallbackErr) {
+                        console.error('[LIFF] Desktop fallback login error:', fallbackErr);
+                    }
+                }
             }
         }
 

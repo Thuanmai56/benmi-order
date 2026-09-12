@@ -672,7 +672,7 @@ var MarketplaceApp = {
           '</div>';
       }
 
-      var orderUrl = "/index.html?tenant=" + encodeURIComponent(t.tenantId);
+      var orderUrl = "/?tenant_id=" + encodeURIComponent(t.tenantId);
 
       return [
         '<div class="store-card' + (self.activeTenantId === t.tenantId ? ' active-focus' : '') + '"',
@@ -983,7 +983,7 @@ var MarketplaceApp = {
           : '<span>' + (t.brandName.charAt(0)) + '</span>';
         var statusText = isOpen ? self.t("openNow") : (t.storeStatus === "busy" ? self.t("busy") : self.t("closed"));
         var distStr = formatDistance(t.distanceKm, self.currentLang);
-        var orderUrl = "/index.html?tenant=" + encodeURIComponent(t.tenantId);
+        var orderUrl = "/?tenant_id=" + encodeURIComponent(t.tenantId);
 
         var popupHtml = [
           '<div class="map-popup-card">',
@@ -1154,7 +1154,7 @@ var MarketplaceApp = {
     if (tenant.allowScheduledPickup) diningBadges.push('<span class="feature-pill">' + MARKETPLACE_SVG.clock + ' ' + this.t("modalDiningScheduled") + '</span>');
     diningBadges.push('<span class="feature-pill">' + MARKETPLACE_SVG.shoppingBag + ' ' + this.t("modalDiningTakeaway") + '</span>');
 
-    var orderUrl = "/index.html?tenant=" + encodeURIComponent(tenant.tenantId);
+    var orderUrl = "/?tenant_id=" + encodeURIComponent(tenant.tenantId);
 
     body.innerHTML = [
       '<div class="modal-banner" style="background: linear-gradient(135deg, ' + (tenant.brandColor || '#059669') + ' 0%, #10b981 100%);">',

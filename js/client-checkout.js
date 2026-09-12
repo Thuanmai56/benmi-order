@@ -1070,9 +1070,25 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                     }
 
                     const storageKey = `cart_save_${tenantId}`;
-                    localStorage.setItem(storageKey, JSON.stringify({ cart, customizeData, comboDrinkData, bundleCartData: window.bundleCartData || {} }));
+                    try {
+                        sessionStorage.setItem('current_tenant_id', tenantId);
+                        if (tenantId && tenantId !== 'benmi') {
+                            localStorage.setItem('current_tenant_id', tenantId);
+                            localStorage.setItem('benmi_last_tenant_id', tenantId);
+                        }
+                        localStorage.setItem(storageKey, JSON.stringify({ cart, customizeData, comboDrinkData, bundleCartData: window.bundleCartData || {} }));
+                    } catch(e) {}
                     const cleanRedirectUri = (typeof window.getCleanLiffRedirectUri === 'function') ? window.getCleanLiffRedirectUri() : window.location.href;
-                    liff.login({ redirectUri: cleanRedirectUri });
+                    try {
+                        liff.login({ redirectUri: cleanRedirectUri });
+                    } catch (loginErr) {
+                        console.warn('[LIFF] Checkout login with redirectUri notice:', loginErr);
+                        try {
+                            liff.login();
+                        } catch (fallbackErr) {
+                            console.error('[LIFF] Checkout fallback login error:', fallbackErr);
+                        }
+                    }
                     return;
                 }
             } catch (liffAuthErr) {

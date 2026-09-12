@@ -195,8 +195,8 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
     const storeAddress = tenantCtx?.storeAddress || (tenantId === 'benmi' ? '新北市土城區中央路二段135號' : null);
     const operatingHours = tenantCtx?.operatingHours || null;
     const deliveryPolicy = tenantCtx?.deliveryPolicy || null;
-    const liffId = tenantCtx?.liffId || env.LIFF_ID || null;
-    const liffUrl = tenantCtx?.liffUrl || env.LIFF_URL || null;
+    const liffId = tenantCtx?.liffId || (tenantId === 'benmi' ? (env.LIFF_ID || null) : null);
+    const liffUrl = tenantCtx?.liffUrl || (tenantId === 'benmi' ? (env.LIFF_URL || null) : null);
     const locale = tenantCtx?.locale || 'zh-TW';
 
     const logoUrl = tenantCtx?.logoUrl || (tenantId === 'benmi' ? './benmi_logo.png' : null);
@@ -555,11 +555,13 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
 }
 
 export async function invalidateBootstrapCache(tenantId: string, env: Env): Promise<void> {
-  const cacheKey = `tenant:${tenantId}:bootstrap`;
   if (env.ORDER_STATE) {
     try {
-      await env.ORDER_STATE.delete(cacheKey);
-      console.log(`[Bootstrap] Invalidated KV cache for tenant ${tenantId}`);
+      await Promise.all([
+        env.ORDER_STATE.delete(`tenant:${tenantId}:bootstrap`),
+        env.ORDER_STATE.delete(`tenant:${tenantId}:config_cache`)
+      ]);
+      console.log(`[Bootstrap] Invalidated KV cache and config_cache for tenant ${tenantId}`);
     } catch (e) {
       console.error(`[Bootstrap] Failed to invalidate cache for ${tenantId}:`, e);
     }
