@@ -175,9 +175,31 @@ function openReview(orderKey) {
   if (typeof PrinterService !== "undefined" && typeof PrinterService.parseOrderItems === "function") {
     const parsedItems = PrinterService.parseOrderItems(order, false) || [];
     parsedItems.forEach(it => {
-      const p = Number(String(it.price).replace(/[$,]/g, '')) || 0;
-      const q = Number(it.quantity) || 1;
-      if (p > 0) {
+      let linePrice = Number(String(it.price || "").replace(/[^0-9.]/g, '')) || 0;
+      if (linePrice === 0) {
+        const unitNum = Number(String(it.unitPrice || "").replace(/[^0-9.]/g, '')) || 0;
+        const q = Math.max(1, Number(it.quantity) || 1);
+        if (unitNum > 0) {
+          linePrice = unitNum * q;
+        } else if (it.name && typeof lookupItemPrice === "function") {
+          const lp = lookupItemPrice(it.name);
+          if (lp != null && Number(lp) > 0) {
+            linePrice = Number(lp) * q;
+          }
+        }
+      }
+      if (linePrice > 0) {
+        itemsSubtotal += linePrice;
+      }
+    });
+  } else if (Array.isArray(order?.items) && order.items.length > 0) {
+    order.items.forEach(it => {
+      const q = Math.max(1, Number(it.quantity) || 1);
+      const sub = Number(it.subtotal);
+      if (!isNaN(sub) && sub > 0) {
+        itemsSubtotal += sub;
+      } else {
+        const p = Number(it.price ?? it.unit_price ?? it.unitPrice) || 0;
         itemsSubtotal += p * q;
       }
     });
