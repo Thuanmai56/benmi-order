@@ -538,8 +538,9 @@ function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, ma
     for (let key in cart) {
         if (cart[key] > 0) {
             const itemInfo = resolveCatalogItem(key);
-            const { catSlug, origName, displayName } = itemInfo;
-            let itemStr = `${cart[key]}份 x ${displayName}`;
+            const { catSlug, origName, displayName, basePrice } = itemInfo;
+            const pricePart = (typeof basePrice === 'number' && basePrice > 0) ? ` $${basePrice}` : '';
+            let itemStr = `${cart[key]}份 x ${displayName}${pricePart}`;
 
             if (catSlug === 'combo') {
                 let drinks = comboDrinkData[origName] || [];
@@ -620,8 +621,9 @@ function formatAppendItemsOnlyText() {
     for (let key in cart) {
         if (cart[key] > 0) {
             const itemInfo = resolveCatalogItem(key);
-            const { catSlug, origName, displayName } = itemInfo;
-            lines.push(`${cart[key]}份 x ${displayName}`);
+            const { catSlug, origName, displayName, basePrice } = itemInfo;
+            const pricePart = (typeof basePrice === 'number' && basePrice > 0) ? ` $${basePrice}` : '';
+            lines.push(`${cart[key]}份 x ${displayName}${pricePart}`);
 
             if (catSlug === 'combo') {
                 let drinks = comboDrinkData[origName] || [];

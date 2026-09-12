@@ -63,19 +63,12 @@ function getOrderItemsPreview(order) {
       if (line.startsWith("↳") || line.startsWith("-") || line.startsWith("+") || line.startsWith("•") || line.startsWith("－")) continue;
       const m = line.match(/^(\d+)\s*(?:份|x|X)\s*(?:x\s*)?(.+)$/) || line.match(/^(.+?)\s*[xX*]\s*(\d+)$/);
       if (m) {
-        items.push({ name: (m[2] || m[1] || "").trim(), quantity: Number(m[1] || m[2]) || 1 });
+        items.push({ name: (m[2] || m[1] || "").replace(/\$[\d,.]+/g, '').trim(), quantity: Number(m[1] || m[2]) || 1 });
       } else if (!line.startsWith("[") && line.length > 1 && line.length < 30) {
-        items.push({ name: line.replace(/\$[\d,]+/g, '').trim(), quantity: 1 });
+        items.push({ name: line.replace(/\$[\d,.]+/g, '').trim(), quantity: 1 });
       }
     }
   }
-
-  let stickerIndex = 0;
-  if (allParsedItems) allParsedItems = allParsedItems.map(item => {
-    const result = { ...item, stickerIndex };
-    stickerIndex += Math.max(1, parseInt(item.quantity, 10) || 1);
-    return result;
-  });
 
   // Filter out any metadata that might have been parsed as item names
   items = items.filter(it => it && it.name && !isOrderMetadataText(it.name));
@@ -436,27 +429,6 @@ function reviewNextNewOrder() {
   dismissNewAlert();
 }
 
-var preparedOrderItems = window.preparedOrderItems || new Set();
-window.preparedOrderItems = preparedOrderItems;
-
-function toggleItemPreparedState(orderKey, itemIdx, checkbox) {
-  const itemKey = `${orderKey}_item_${itemIdx}`;
-  if (checkbox && checkbox.checked) {
-    preparedOrderItems.add(itemKey);
-  } else {
-    preparedOrderItems.delete(itemKey);
-  }
-  const row = document.getElementById(`review-item-${orderKey}-${itemIdx}`);
-  if (row) {
-    if (checkbox && checkbox.checked) {
-      row.classList.add('item-prepared');
-    } else {
-      row.classList.remove('item-prepared');
-    }
-  }
-}
-window.toggleItemPreparedState = toggleItemPreparedState;
-
 function extractFlavorSettings(rawContent) {
   if (!rawContent) return null;
   const lines = String(rawContent).split("\n");
@@ -579,6 +551,13 @@ function renderItemRowHtml(it, idx, orderKey) {
   const printLabel = (typeof t === "function" && t("btnPrintStickerShort")) || "印貼紙";
   const printerIcon = (typeof POS_SVG !== "undefined" && POS_SVG.printer) || "";
 
+  let displayPrice = it.price;
+  if ((!displayPrice || displayPrice === "—") && it.name && typeof lookupItemPrice === "function") {
+    const lp = lookupItemPrice(it.name);
+    if (lp != null) displayPrice = `$${lp}`;
+  }
+  const isEmptyPrice = !displayPrice || displayPrice === "—";
+
   return `
     <div class="review-item-row " id="review-item-${escapeHtml(orderKey)}-${idx}">
       <div class="review-item-details">
@@ -588,7 +567,7 @@ function renderItemRowHtml(it, idx, orderKey) {
         ${optionsHtml}
         ${noteHtml}
       </div>
-      <div class="review-item-price">${escapeHtml(it.price || "—")}</div>
+      <div class="review-item-price ${isEmptyPrice ? 'is-empty' : ''}">${escapeHtml(displayPrice || "—")}</div>
       <button type="button" class="btn btn-ghost review-item-print-btn" onclick="if(typeof PrinterService !== 'undefined') PrinterService.printSingleItemSticker('${escapeHtml(orderKey)}', ${it.stickerIndex ?? idx})" title="${escapeHtml(printLabel)}">
         ${printerIcon}
         <span>${escapeHtml(printLabel)}</span>
@@ -612,6 +591,12 @@ function formatContentHtml(order) {
   // Filter out any metadata lines that might have been parsed as items
   if (allParsedItems && Array.isArray(allParsedItems)) {
     allParsedItems = allParsedItems.filter(it => it && it.name && !isOrderMetadataText(it.name));
+    let stickerIndex = 0;
+    allParsedItems = allParsedItems.map(item => {
+      const result = { ...item, stickerIndex };
+      stickerIndex += Math.max(1, parseInt(item.quantity, 10) || 1);
+      return result;
+    });
   }
 
   // 1. Extract and render Customer Change Requests

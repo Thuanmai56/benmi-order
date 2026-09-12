@@ -378,10 +378,14 @@
       const items = [];
       if (Array.isArray(order.items) && order.items.length > 0) {
         order.items.forEach(it => {
-          const rawPrice = it.price ?? it.unit_price ?? it.unitPrice;
-          const itemPrice = rawPrice != null ? (String(rawPrice).startsWith('$') ? String(rawPrice) : `$${rawPrice}`) : '';
+          let rawPrice = it.price ?? it.unit_price ?? it.unitPrice;
+          const itemName = it.name || it.item_name || '餐點';
+          if ((rawPrice == null || rawPrice === '') && typeof lookupItemPrice === 'function') {
+            rawPrice = lookupItemPrice(itemName);
+          }
+          const itemPrice = rawPrice != null && rawPrice !== '' ? (String(rawPrice).startsWith('$') ? String(rawPrice) : `$${rawPrice}`) : '';
           items.push({
-            name: it.name || it.item_name || '餐點',
+            name: itemName,
             quantity: Number(it.quantity) || 1,
             price: itemPrice,
             options: this.formatPrintOptions(it.options || it.selected_options),
@@ -420,15 +424,24 @@
             }
           } else {
             const priceMatch = line.match(/\$[\d,.]+/);
-            const itemPrice = priceMatch ? priceMatch[0] : '';
+            let itemPrice = priceMatch ? priceMatch[0] : '';
             const match = line.match(/^(\d+)\s*(?:份|x|X)\s*(?:x\s*)?(.+)$/) || line.match(/^(.+?)\s*[xX*]\s*(\d+)$/);
             if (match) {
               const qty = Number(match[1]) || Number(match[2]) || 1;
               const name = (match[2] || match[1] || line).replace(/\$[\d,.]+/g, '').trim();
+              if (!itemPrice && name && typeof lookupItemPrice === 'function') {
+                const lp = lookupItemPrice(name);
+                if (lp != null) itemPrice = `$${lp}`;
+              }
               currentItem = { name, quantity: qty, price: itemPrice, options: '', note: '', round: currentRound };
               items.push(currentItem);
             } else {
-              currentItem = { name: line.replace(/\$[\d,.]+/g, '').trim(), quantity: 1, price: itemPrice, options: '', note: '', round: currentRound };
+              const name = line.replace(/\$[\d,.]+/g, '').trim();
+              if (!itemPrice && name && typeof lookupItemPrice === 'function') {
+                const lp = lookupItemPrice(name);
+                if (lp != null) itemPrice = `$${lp}`;
+              }
+              currentItem = { name, quantity: 1, price: itemPrice, options: '', note: '', round: currentRound };
               items.push(currentItem);
             }
           }

@@ -173,6 +173,10 @@ async function loadMenuData() {
       items: []
     }));
 
+    if (typeof updatePosCatalogPriceMap === 'function') {
+      updatePosCatalogPriceMap(currentMenuData);
+    }
+
     clearMenuDirty();
     activeCategoryIndex = currentMenuData.length > 0 ? 0 : -1;
     renderMenuCategories();
@@ -202,6 +206,9 @@ async function loadMenuData() {
           return { name, price: typeof price === 'object' ? price.price : price, badgeText: typeof price === 'object' ? (price.badge_text || '') : '', isOos, originalName: name };
         })
       }));
+      if (typeof updatePosCatalogPriceMap === 'function') {
+        updatePosCatalogPriceMap(currentMenuData);
+      }
       clearMenuDirty();
       activeCategoryIndex = currentMenuData.length > 0 ? 0 : -1;
       renderMenuCategories();
@@ -701,6 +708,9 @@ async function saveMenuData(skipConfirm = false) {
     });
     if (!res.ok) throw new Error("API returned " + res.status);
     clearMenuDirty();
+    if (typeof updatePosCatalogPriceMap === 'function') {
+      updatePosCatalogPriceMap(currentMenuData);
+    }
     if (!skipConfirm) {
       alert(t("menuSaveSuccess"));
     }

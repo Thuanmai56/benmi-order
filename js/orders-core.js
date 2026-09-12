@@ -161,6 +161,54 @@ function applyTenantBranding(tenant) {
   document.documentElement.style.setProperty('--primary', '#00b900');
 }
 
+window.tenantItemPriceMap = {};
+
+function updatePosCatalogPriceMap(catalog) {
+  if (!catalog) return;
+  var priceMap = {};
+  var categories = Array.isArray(catalog) ? catalog : Object.values(catalog);
+  categories.forEach(function(cat) {
+    if (cat && Array.isArray(cat.items)) {
+      cat.items.forEach(function(item) {
+        if (item && item.name && typeof item.price === 'number') {
+          var rawName = String(item.name).trim();
+          priceMap[rawName] = item.price;
+          var clean = rawName.replace(/\s*\([^\)]+\)/g, '').trim();
+          if (clean && priceMap[clean] == null) {
+            priceMap[clean] = item.price;
+          }
+        }
+      });
+    }
+  });
+  window.tenantItemPriceMap = Object.assign(window.tenantItemPriceMap || {}, priceMap);
+}
+window.updatePosCatalogPriceMap = updatePosCatalogPriceMap;
+
+function lookupItemPrice(name) {
+  if (!name || typeof name !== 'string') return null;
+  var trimmed = name.trim();
+  var map = window.tenantItemPriceMap || {};
+  if (map[trimmed] != null) return map[trimmed];
+  var clean = trimmed.replace(/\s*\([^\)]+\)/g, '').trim();
+  if (map[clean] != null) return map[clean];
+  if (typeof currentMenuData !== 'undefined' && Array.isArray(currentMenuData)) {
+    for (var i = 0; i < currentMenuData.length; i++) {
+      var cat = currentMenuData[i];
+      if (cat && Array.isArray(cat.items)) {
+        for (var j = 0; j < cat.items.length; j++) {
+          var item = cat.items[j];
+          if (item && (item.name === trimmed || item.name === clean) && typeof item.price === 'number') {
+            return item.price;
+          }
+        }
+      }
+    }
+  }
+  return null;
+}
+window.lookupItemPrice = lookupItemPrice;
+
 async function initTenantBranding() {
   const tenantId = getTenantIdFromUrl();
   if (!tenantId) {
@@ -176,6 +224,10 @@ async function initTenantBranding() {
     if (cached) {
       applyTenantBranding(JSON.parse(cached));
     }
+    const cachedCat = localStorage.getItem("tenant_catalog_" + tenantId);
+    if (cachedCat) {
+      updatePosCatalogPriceMap(JSON.parse(cachedCat));
+    }
   } catch(e) {}
 
   // 2. Fetch fresh config from Server and update cache
@@ -189,6 +241,15 @@ async function initTenantBranding() {
           localStorage.setItem("tenant_theme_" + tenantId, JSON.stringify(data.tenant));
         } catch(e) {}
         applyTenantBranding(data.tenant);
+      }
+      if (data.catalog) {
+        try {
+          localStorage.setItem("tenant_catalog_" + tenantId, JSON.stringify(data.catalog));
+        } catch(e) {}
+        updatePosCatalogPriceMap(data.catalog);
+        if (typeof renderAll === "function") {
+          renderAll();
+        }
       }
     }
   } catch(e) {}
