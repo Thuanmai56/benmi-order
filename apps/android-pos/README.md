@@ -73,8 +73,8 @@ apps/android-pos/
 ├── build.sh                             # Script tự động copy HTML, CSS, JS sang dist/
 ├── capacitor.config.ts                  # Cấu hình Capacitor App (Hỗ trợ dev-local, pilot, prod)
 ├── package.json                         # Scripts build:apk, build:apk:dev, build:apk:pilot, sync:dev
-├── blab-pos-dev-v1.9.0.apk              # File cài đặt APK Dev mới nhất (v1.9.0 / v1.9)
-├── blab-pos-pilot-v1.8.9.apk            # File cài đặt APK Pilot
+├── blab-pos-dev-v0.9.1.apk              # File cài đặt APK Dev mới nhất (v0.9.1)
+├── blab-pos-pilot-v0.9.1.apk            # File cài đặt APK Pilot mới nhất (v0.9.1)
 └── README.md                            # Tài liệu hướng dẫn này
 ```
 
@@ -181,6 +181,7 @@ Vào biểu tượng **⚙️ Cài đặt (Settings) > Máy in & xuất vé**:
 
 | Phiên Bản | Ngày Phát Hành | Điểm Nâng Cấp Chính |
 | :--- | :--- | :--- |
+| **v0.9.1** | 12/09/2026 | - **Phiên bản v0.9.1 (Code 19)**: Build đồng thời bản **Dev** (`com.benmi.pos.dev`) và **Production Pilot** (`com.benmi.pos.pilot`).<br>- **Tối ưu hóa In Bill & Xuất Vé**: Tính tổng giá dòng cho món xSố lượng (`qty * unitPrice + modifiers`); canh cùng dòng `#order.key` và `外帶自取` sang phải; thụt dòng đồng bộ `  ↳ ` cho toàn bộ các phần (phần 1, 2, 3); in kèm tùy biến khẩu vị toàn menu (`口味與客製設定`).<br>- **Tối ưu hóa UI POS**: Đồng bộ tiêu đề mục con Cài đặt; đưa ghi chú khách hàng lên cùng dòng với `顧客備註`; cân bằng thị giác nút "Đã chuẩn bị xong". |
 | **v1.9.0** | 10/09/2026 | - **Phiên bản Dev 1.9**: Nâng cấp `versionCode: 18`, `versionName: "1.9.0"`.<br>- Tích hợp toàn bộ tối ưu hóa mới nhất từ commit `2f248c7`: Tối ưu giao diện menu POS và xem lại đơn hàng (Order review UI), hỗ trợ tùy chỉnh món của Jiangjiejie.<br>- Đóng gói trực tiếp web assets chạy độc lập cho môi trường Dev với `appId: com.benmi.pos.dev`, tiêu đề `Blab POS Dev` và trỏ API về Cloudflare Worker Dev. |
 | **v1.8.5** | 08/09/2026 | - **Bản Dev hỗ trợ Remote Cloud Loader OTA toàn diện**: Cấu hình `APP_ENV=dev` nạp trực tiếp giao diện từ Cloudflare Pages Dev (`https://dev.benmi-order.pages.dev/orders.html`). Khi cập nhật CSS/JS/HTML chỉ cần push lên nhánh `dev`, máy tính bảng mở hoặc reload lại app là tự động nhận giao diện mới nhất 100% mà không cần build hay cài lại APK.<br>- Bổ sung lệnh `build:apk:local` và `sync:local` cho trường hợp muốn đóng gói web assets offline nội bộ. |
 | **v1.8.4** | 08/09/2026 | - **Tối ưu toàn diện nút thao tác đơn hàng trên Tablet**: Khắc phục hiện tượng nhảy dòng, tăng khoảng cách cột `order-detail-grid`, padding `6px 8px`, chống rớt/tràn chữ trên màn hình cảm ứng POS.<br>- **Sửa lỗi cuộn modal**: Tự động đưa vị trí cuộn về đầu trang (top) khi mở bất kỳ modal nào.<br>- **Chuẩn hóa I18N tiếng Trung phồn thể thuần túy**: Chuyển nút xem đơn hàng sang "查看訂單" (thay cho "Review 訂單").<br>- **Tối ưu bộ lọc Lịch sử đơn hàng**: Khắc phục sự kiện click trùng lặp trên các tab trạng thái. |
