@@ -5,9 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title id="page-title">線上點餐</title>
-    <link rel="preload" href="index.css?v=20260912_bundle_ux_v3" as="style">
-    <link rel="preload" href="js/client-checkout.js?v=20260912_bundle_ux_v3" as="script">
-    <link rel="stylesheet" href="index.css?v=20260912_bundle_ux_v3">
+    <link rel="preload" href="index.css?v=20260912_bundle_ux_v4" as="style">
+    <link rel="preload" href="js/client-checkout.js?v=20260912_bundle_ux_v4" as="script">
+    <link rel="stylesheet" href="index.css?v=20260912_bundle_ux_v4">
     <script>
         // Redirect root visits on blabfood.app to /landing
         try {
@@ -2612,7 +2612,7 @@
                 if (it.categoryId && bootstrapData?.catalog) {
                     const cat = bootstrapData.catalog.find(c => c.id === it.categoryId || c.slug === it.categoryId);
                     if (cat && !catMap.has(cat.id || cat.slug)) {
-                        let cleanCatName = (cat.name || '')
+                        let cleanCatName = (cat.shortName || cat.short_name) || (cat.name || '')
                             .replace(/\s*\(一律.*?\)/g, '')
                             .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F000}-\u{1F02F}\u{1F0A0}-\u{1F0FF}\u{1F100}-\u{1F64F}\u{1F680}-\u{1F6FF}]/gu, '')
                             .trim();
