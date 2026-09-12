@@ -420,7 +420,7 @@
           if (line.startsWith('↳') || line.startsWith('-') || line.startsWith('+') || line.startsWith('•') || line.startsWith('－')) {
             if (currentItem) {
               const opt = line.replace(/^[↳\-+•－]\s*/, '').trim();
-              currentItem.options = currentItem.options ? `${currentItem.options}、${opt}` : opt;
+              currentItem.options = currentItem.options ? `${currentItem.options}\n${opt}` : opt;
             }
           } else {
             const priceMatch = line.match(/\$[\d,.]+/);
@@ -460,9 +460,25 @@
       const expanded = [];
       items.forEach(it => {
         const qty = Math.max(1, parseInt(it.quantity, 10) || 1);
+        const parsedPortions = (typeof parsePortionCustomizations === 'function')
+          ? parsePortionCustomizations(it.options)
+          : null;
+
         for (let q = 0; q < qty; q++) {
+          let unitOptions = it.options;
+          if (parsedPortions && parsedPortions.portions && parsedPortions.portions.length > 0) {
+            const matchedPortion = parsedPortions.portions[q];
+            const pChips = matchedPortion ? matchedPortion.chips : [];
+            const common = (parsedPortions.commonChips && parsedPortions.commonChips.length > 0)
+              ? parsedPortions.commonChips
+              : [];
+            const combinedChips = [...common, ...pChips];
+            unitOptions = combinedChips.length > 0 ? combinedChips.join('、') : '';
+          }
+
           expanded.push({
             ...it,
+            options: unitOptions,
             quantity: 1,
             originalQty: qty,
             unitIndex: q + 1
