@@ -1958,7 +1958,7 @@
                     if (group.type === 'radio') {
                         html += `<div class="flavor-option-container">
                             <label class="radio-label${thresholdClass}" ${thresholdDataAttr} ${combinedStyle}>
-                                <input type="radio" name="${inputName}" value="${escapeHtml(optName)}" ${thresholdAttrs} ${isChecked} ${disabledAttr} onchange="handleCustomizationChange(event)"> 
+                                <input type="radio" name="${inputName}" data-price="${optPrice}" data-group-title="${escapeHtml(group.title)}" value="${escapeHtml(optName)}" ${thresholdAttrs} ${isChecked} ${disabledAttr} onchange="handleCustomizationChange(event)"> 
                                 <span>${escapeHtml(optName)}${priceLabel}</span>${thresholdBadgeHTML}${oosBadge}
                             </label>`;
 
@@ -1975,7 +1975,7 @@
                         html += `</div>`;
                     } else {
                         html += `<label class="checkbox-label${thresholdClass}" ${thresholdDataAttr} ${combinedStyle}>
-                            <input type="checkbox" name="${inputName}" data-price="${optPrice}" value="${escapeHtml(optName)}" ${thresholdAttrs} ${disabledAttr} onchange="handleCustomizationChange(event)"> 
+                            <input type="checkbox" name="${inputName}" data-price="${optPrice}" data-group-title="${escapeHtml(group.title)}" value="${escapeHtml(optName)}" ${thresholdAttrs} ${disabledAttr} onchange="handleCustomizationChange(event)"> 
                             <span>${escapeHtml(optName)}${priceLabel}</span>${thresholdBadgeHTML}${oosBadge}
                         </label>`;
                     }
@@ -2997,8 +2997,10 @@
                                     subDetails = ` (${subOpts.join('、')})`;
                                 }
                             }
+                            const p = Number(checkedRadio.getAttribute('data-price')) || 0;
+                            const priceSuffix = p > 0 ? ` (+$${p})` : '';
                             const groupTitle = (group.title || '').replace(/^✦\s*/, '').replace(/選擇|調整/g, '').trim();
-                            customSummaries.push(`<div><b style="color:#1e293b;">${groupTitle || '口味'}：</b>${val}${subDetails}</div>`);
+                            customSummaries.push(`<div><b style="color:#1e293b;">${groupTitle || '口味'}：</b>${val}${priceSuffix}${subDetails}</div>`);
                         }
                     } else if (group.type === 'checkbox') {
                         let selectedChecks = [];
@@ -3183,16 +3185,19 @@
 
             total -= totalCategoryDiscounts;
 
-            // Add Global Customization Addons if selected
+            // Add Global Customization Addons if selected (radio & checkbox)
             let addonsTotal = 0;
-            const checkedAddons = document.querySelectorAll('.custom-panel input[type="checkbox"]:checked');
+            const checkedAddons = document.querySelectorAll('.custom-panel input[data-price]:checked');
             checkedAddons.forEach(chk => {
                 const p = Number(chk.getAttribute('data-price')) || 0;
                 if (p > 0) {
                     addonsTotal += p;
+                    const rawGroupTitle = chk.getAttribute('data-group-title') || '';
+                    const cleanGroup = rawGroupTitle.replace(/^✦\s*/, '').replace(/選擇|調整/g, '').trim();
+                    const labelText = cleanGroup ? `${cleanGroup} (${chk.value})` : chk.value;
                     summaryHTML += `
                         <div style="display:flex; justify-content:space-between; margin-bottom:6px; color:#059669; font-size:13.5px; font-weight:700;">
-                            <div>+ 加購：${chk.value}</div>
+                            <div>+ 加購：${labelText}</div>
                             <div>+$${p}</div>
                         </div>
                     `;

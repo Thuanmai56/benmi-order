@@ -446,7 +446,9 @@ function formatGlobalCustomizationsText() {
                     });
                 }
                 const subPart = subOpts.length > 0 ? ` (${subOpts.join('、')})` : '';
-                mainFlavors.push(`  • ${cleanTitle || '口味'}：${val}${subPart}`);
+                const p = Number(checkedRadio.getAttribute('data-price')) || 0;
+                const pricePart = p > 0 ? `(+$${p})` : '';
+                mainFlavors.push(`  • ${cleanTitle || '口味'}：${val}${pricePart}${subPart}`);
             }
         } else if (group.type === 'checkbox') {
             const checkedBoxes = Array.from(document.querySelectorAll(`input[name="opt-${group.key}"]:checked`));
@@ -499,11 +501,13 @@ function getStructuredGlobalCustomizations() {
                 }
                 const subPart = subOpts.length > 0 ? ` (${subOpts.join('、')})` : '';
                 const optionId = checkedRadio.getAttribute('data-option-id') || val;
+                const p = Number(checkedRadio.getAttribute('data-price')) || 0;
                 result.push({
                     key: group.key,
                     label: cleanTitle || '口味',
-                    value: `${val}${subPart}`,
-                    optionId: optionId
+                    value: `${val}${p > 0 ? `(+$${p})` : ''}${subPart}`,
+                    optionId: optionId,
+                    price: p
                 });
             }
         } else if (group.type === 'checkbox') {
