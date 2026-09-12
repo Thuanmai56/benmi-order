@@ -543,6 +543,54 @@
       return this.transmitReceiptBitmap(base64Png, config, `Test-${stationType}`);
     }
 
+    // Format date as [M/D] (no leading zero) and combine with HH:mm
+    formatShortDateTime(timeStr, createdAt) {
+      let month = null;
+      let day = null;
+      if (timeStr) {
+        const m = String(timeStr).match(/(?:(\d{4})[-/])?(\d{1,2})[-/](\d{1,2})/);
+        if (m) {
+          month = parseInt(m[2], 10);
+          day = parseInt(m[3], 10);
+        }
+      }
+      if (!month || !day) {
+        let d = null;
+        if (createdAt) {
+          const ms = typeof createdAt === 'number'
+            ? createdAt
+            : new Date(String(createdAt).endsWith('Z') ? createdAt : createdAt + 'Z').getTime();
+          if (!Number.isNaN(ms) && ms > 0) {
+            d = new Date(ms);
+          }
+        }
+        if (!d || isNaN(d.getTime())) {
+          d = new Date();
+        }
+        month = d.getMonth() + 1;
+        day = d.getDate();
+      }
+
+      let cleanTime = String(timeStr || '').match(/\d{1,2}:\d{2}/)?.[0];
+      if (!cleanTime) {
+        let d = null;
+        if (createdAt) {
+          const ms = typeof createdAt === 'number'
+            ? createdAt
+            : new Date(String(createdAt).endsWith('Z') ? createdAt : createdAt + 'Z').getTime();
+          if (!Number.isNaN(ms) && ms > 0) {
+            d = new Date(ms);
+          }
+        }
+        if (!d || isNaN(d.getTime())) {
+          d = new Date();
+        }
+        cleanTime = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+      }
+
+      return `${month}/${day} ${cleanTime}`;
+    }
+
     // --- 6. PURE HTML5 CANVAS RECEIPT PAINTER (Zero-Taint, 100% Crisp Typography) ---
     // Measure first, then paint at the required height so large fonts never clip.
     wrapPrintText(ctx, text, maxWidth) {
@@ -579,7 +627,7 @@
       const ctx = canvas.getContext('2d');
       const operations = [];
       let y = padding;
-      const row = (left, size, right = '', weight = 'bold', centered = false) => {
+      const row = (left, size, right = '', weight = 'normal', centered = false) => {
         const font = `${weight} ${size}px sans-serif`;
         ctx.font = font;
         const gap = 16;
@@ -600,24 +648,24 @@
       };
       const divider = () => { y += 8; operations.push({ line: true, y }); y += 16; };
       const brand = window.currentTenantBrandName || order.storeName || order.tenantName || '';
-      if (brand) row(brand, 51, '', '900', true);
-      if (isKitchen) row('廚房出餐聯', 45, '', '900', true);
+      if (brand) row(brand, 51, '', 'normal', true);
+      if (isKitchen) row('廚房出餐聯', 45, '', 'normal', true);
       divider();
-      row('#' + order.key, 39);
-      row(order.diningOption === 'dine_in' ? '內用 桌號：' + (order.tableNumber || '-') : '外帶自取', 33);
-      row('顧客：' + (order.customer || '顧客'), 29);
+      row('#' + order.key, 39, '', 'bold');
+      row(order.diningOption === 'dine_in' ? '內用 桌號：' + (order.tableNumber || '-') : '外帶自取', 33, '', 'normal');
+      row('顧客：' + (order.customer || '顧客'), 29, '', 'normal');
       row('時間：' + (order.time || ''), 29, '', 'normal');
       divider();
       for (const item of this.parseOrderItems(order, false)) {
-        if (item.round) row(item.round, 30);
-        row(item.quantity + ' x ' + item.name, isKitchen ? 42 : 36, isKitchen ? '' : (item.price || '—'), '900');
+        if (item.round) row(item.round, 30, '', 'normal');
+        row(item.quantity + ' x ' + item.name, isKitchen ? 42 : 36, isKitchen ? '' : (item.price || '—'), 'normal');
         if (item.options) row('  ' + item.options, 30, '', 'normal');
         if (item.note) row('  ' + item.note, 30, '', 'normal');
       }
-      if (order.note?.trim()) { divider(); row('備註：' + order.note, 29); }
+      if (order.note?.trim()) { divider(); row('備註：' + order.note, 29, '', 'normal'); }
       if (!isKitchen) {
         divider();
-        row('應收總計', 48, '$' + (order.total ?? 0), '900');
+        row('應收總計', 48, '$' + (order.total ?? 0), 'bold');
         divider();
         // Keep the Chinese greeting and attribution on separate centered rows.
         // Sharing one row made both strings wrap on narrow 58 mm paper.
@@ -676,11 +724,11 @@
       const topHeight = Math.round((height - padding * 2) * 0.22);
       const bottomHeight = Math.round((height - padding * 2) * 0.18);
       const gap = Math.round(6 * scale);
-      const draw = (text, top, boxHeight, target) => {
+      const draw = (text, top, boxHeight, target, weight = 'normal') => {
         let size = Math.round(target * scale);
         let lines;
         do {
-          ctx.font = 'bold ' + size + 'px sans-serif';
+          ctx.font = `${weight} ${size}px sans-serif`;
           lines = this.wrapPrintText(ctx, text, available);
           if (lines.length * Math.ceil(size * 1.15) <= boxHeight) break;
           size--;
@@ -688,9 +736,9 @@
         const lineHeight = Math.ceil(size * 1.15);
         lines.forEach((line, i) => ctx.fillText(line, padding, top + i * lineHeight));
       };
-      draw(header, padding, topHeight, sizes[0]);
-      draw(body, padding + topHeight + gap, height - padding * 2 - topHeight - bottomHeight - gap * 2, sizes[1]);
-      draw(footer, height - padding - bottomHeight, bottomHeight, sizes[2]);
+      draw(header, padding, topHeight, sizes[0], 'normal');
+      draw(body, padding + topHeight + gap, height - padding * 2 - topHeight - bottomHeight - gap * 2, sizes[1], 'normal');
+      draw(footer, height - padding - bottomHeight, bottomHeight, sizes[2], 'normal');
       return canvas.toDataURL('image/png');
     }
 
@@ -699,19 +747,17 @@
       const dining = orderContext.diningOption === 'dine_in' ? '桌:' + (orderContext.tableNumber || '-') : '外帶';
       const header = '#' + orderContext.key + ' ' + dining + ' [' + itemIdx + '/' + totalItems + ']';
       const body = [item.name + ' x' + item.quantity, item.options, item.note].filter(Boolean).join('\n');
-      const time = String(orderContext.time || '').match(/\d{1,2}:\d{2}/)?.[0] || '';
-      return this.drawStickerLayout(header, body, (orderContext.customer || '顧客') + ' ' + time,
+      const dateTime = this.formatShortDateTime(orderContext.time, orderContext.createdAt);
+      return this.drawStickerLayout(header, body, (orderContext.customer || '顧客') + ' ' + dateTime,
         widthMm, heightMm, dpi, compact ? [28, 36, 22] : [34, 45, 26]);
     }
 
     drawQuickNoteStickerToCanvas(text, orderContext = null, widthMm = 40, heightMm = 30, dpi = 203) {
       const compact = widthMm <= 42;
       const context = orderContext || {};
-      const now = new Date();
-      const time = String(context.time || '').match(/\d{1,2}:\d{2}/)?.[0]
-        || String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+      const dateTime = this.formatShortDateTime(context.time, context.createdAt);
       return this.drawStickerLayout(context.key ? '#' + context.key : '備註',
-        String(text || '').trim(), (window.currentTenantBrandName || '') + ' ' + time,
+        String(text || '').trim(), (window.currentTenantBrandName || '') + ' ' + dateTime,
         widthMm, heightMm, dpi, compact ? [26, 72, 22] : [32, 90, 26]);
     }
 
