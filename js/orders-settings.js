@@ -861,6 +861,36 @@ function updatePrintModeCardStyles(isAuto) {
   }
 }
 
+function updatePrintActionAvailability() {
+  if (typeof PrinterService === 'undefined') return;
+  const capabilities = PrinterService.getPrintCapabilities();
+  const disabledBillTitle = (typeof t === 'function' && t('printDisabledBill')) || '請先啟用並設定 Bill 印表機';
+  const disabledStickersTitle = (typeof t === 'function' && t('printDisabledStickers')) || '請先啟用並設定貼紙印表機';
+  const disabledFullTitle = (typeof t === 'function' && t('printDisabledFull')) || '整單列印需要同時啟用 Bill 與貼紙印表機';
+
+  document.querySelectorAll('[data-print-action]').forEach((control) => {
+    const action = control.dataset.printAction;
+    const enabled = action === 'bill'
+      ? capabilities.bill
+      : action === 'stickers'
+        ? capabilities.stickers
+        : capabilities.bill && capabilities.stickers;
+    const disabledTitle = action === 'bill'
+      ? disabledBillTitle
+      : action === 'stickers'
+        ? disabledStickersTitle
+        : disabledFullTitle;
+
+    control.disabled = !enabled;
+    control.setAttribute('aria-disabled', String(!enabled));
+    control.classList.toggle('is-printer-disabled', !enabled);
+    if (!enabled) control.setAttribute('title', disabledTitle);
+    else if (control.dataset.printActionTitle) control.setAttribute('title', control.dataset.printActionTitle);
+    else control.removeAttribute('title');
+  });
+}
+window.updatePrintActionAvailability = updatePrintActionAvailability;
+
 let printerAutoSaveDebounceTimer = null;
 function attachPrinterAutoSave() {
   const card = document.getElementById("setting-card-printer");
@@ -1014,6 +1044,7 @@ function loadPOSPrinterSettings() {
 
   // Update header printer status pill
   updateSettingsPrinterStatusDisplay();
+  updatePrintActionAvailability();
 }
 
 function savePOSPrinterSettings(silent = false) {
@@ -1108,6 +1139,7 @@ function savePOSPrinterSettings(silent = false) {
 
   const success = PrinterService.saveSettings(newSettings);
   updateSettingsPrinterStatusDisplay();
+  updatePrintActionAvailability();
   const status = document.getElementById('printer-save-status');
   if (status) {
     status.textContent = t(success ? 'printerSavedLocally' : 'printerSaveFailed');

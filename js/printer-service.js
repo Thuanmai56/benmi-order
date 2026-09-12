@@ -140,6 +140,27 @@
       }
     }
 
+    isStationConfigured(station, config = null) {
+      const target = config || this.getSettings()?.[station] || {};
+      if (!target.enabled) return false;
+      return target.interface_type === 'bluetooth'
+        ? !!String(target.mac_address || '').trim()
+        : !!String(target.ip || '').trim();
+    }
+
+    getPrintCapabilities() {
+      const settings = this.getSettings() || {};
+      return {
+        bill: this.isStationConfigured('cashier', settings.cashier),
+        stickers: this.isStationConfigured('kitchen', settings.kitchen)
+      };
+    }
+
+    canPrintFullOrder() {
+      const capabilities = this.getPrintCapabilities();
+      return capabilities.bill && capabilities.stickers;
+    }
+
     // --- 2. DEDUPLICATION SET (Prevent duplicate auto-printing) ---
     getPrintedOrders() {
       const tenantId = this.getTenantId();
@@ -187,8 +208,8 @@
         if (status === 'NEW' && !this.isOrderAlreadyPrinted(order.key)) {
           console.log(`[PrinterService] 🖨️ Auto-printing new incoming order #${order.key}...`);
           try {
-            await this.printDualStation(order);
-            this.markOrderAsPrinted(order.key);
+            const result = await this.printDualStation(order);
+            if (result?.success) this.markOrderAsPrinted(order.key);
           } catch (err) {
             console.error(`[PrinterService] Auto-print failed for #${order.key}:`, err);
           }
@@ -199,29 +220,34 @@
     // --- 4. PRINT DISPATCHERS ---
     async printDualStation(order) {
       const settings = this.getSettings();
-      const tasks = [];
+      const results = [];
+      const isCashierConfigured = this.isStationConfigured('cashier', settings.cashier);
+      const isKitchenConfigured = this.isStationConfigured('kitchen', settings.kitchen);
 
-      const isCashierConfigured = settings.cashier.enabled && (
-        settings.cashier.interface_type === 'bluetooth' ? !!settings.cashier.mac_address : !!settings.cashier.ip
-      );
-      const isKitchenConfigured = settings.kitchen.enabled && (
-        settings.kitchen.interface_type === 'bluetooth' ? !!settings.kitchen.mac_address : !!settings.kitchen.ip
-      );
-
+      // Native printer bridges are not reliably re-entrant. Keep the order deterministic:
+      // bill first, then every sticker for the order.
       if (isCashierConfigured) {
-        tasks.push(this.printCashierReceipt(order, settings.cashier));
+        try {
+          results.push({ station: 'cashier', result: await this.printCashierReceipt(order, settings.cashier) });
+        } catch (error) {
+          results.push({ station: 'cashier', error });
+          console.error(`[PrinterService] Cashier print failed for #${order.key}:`, error);
+        }
       }
       if (isKitchenConfigured) {
-        tasks.push(this.printKitchenTicket(order, settings.kitchen));
+        try {
+          results.push({ station: 'kitchen', result: await this.printKitchenTicket(order, settings.kitchen) });
+        } catch (error) {
+          results.push({ station: 'kitchen', error });
+          console.error(`[PrinterService] Sticker print failed for #${order.key}:`, error);
+        }
       }
 
-      if (tasks.length === 0) {
+      if (results.length === 0) {
         console.warn('[PrinterService] No printer stations are enabled in settings.');
         return { success: false, reason: 'NO_PRINTERS_ENABLED' };
       }
-
-      const results = await Promise.allSettled(tasks);
-      return results;
+      return { success: results.every(entry => !entry.error), results };
     }
 
     async printManual(orderKey, stationTarget = 'all') {
@@ -233,12 +259,14 @@
 
       const settings = this.getSettings();
       const tasks = [];
+      const canPrintBill = this.isStationConfigured('cashier', settings.cashier);
+      const canPrintStickers = this.isStationConfigured('kitchen', settings.kitchen);
 
-      if ((stationTarget === 'all' || stationTarget === 'cashier') && settings.cashier.enabled) {
-        tasks.push(this.printCashierReceipt(order, settings.cashier));
+      if ((stationTarget === 'all' || stationTarget === 'cashier') && canPrintBill) {
+        tasks.push({ station: 'cashier', run: () => this.printCashierReceipt(order, settings.cashier) });
       }
-      if ((stationTarget === 'all' || stationTarget === 'kitchen') && settings.kitchen.enabled) {
-        tasks.push(this.printKitchenTicket(order, settings.kitchen));
+      if ((stationTarget === 'all' || stationTarget === 'kitchen') && canPrintStickers) {
+        tasks.push({ station: 'kitchen', run: () => this.printKitchenTicket(order, settings.kitchen) });
       }
 
       if (tasks.length === 0) {
@@ -248,7 +276,8 @@
 
       try {
         if (typeof showToast === 'function') showToast(`🖨️ 正在列印訂單 #${orderKey}...`);
-        await Promise.all(tasks);
+        // Keep manual full-order reprints in the same bill -> stickers order as autoprint.
+        for (const task of tasks) await task.run();
         this.markOrderAsPrinted(orderKey);
         if (typeof showToast === 'function') showToast(`✅ 訂單 #${orderKey} 列印完成！`);
       } catch (err) {
@@ -258,6 +287,10 @@
     }
 
     async printFullOrder(orderKey) {
+      if (!this.canPrintFullOrder()) {
+        if (typeof showToast === 'function') showToast('⚠️ 請先啟用收銀 Bill 與貼紙印表機');
+        return;
+      }
       return this.printManual(orderKey, 'all');
     }
 
@@ -279,8 +312,8 @@
       }
       const targetItem = items[idx];
       const settings = this.getSettings();
-      const config = (settings.kitchen && settings.kitchen.enabled) ? settings.kitchen : settings.cashier;
-      if (!config || !config.enabled) {
+      const config = settings.kitchen;
+      if (!this.isStationConfigured('kitchen', config)) {
         if (typeof showToast === 'function') showToast('⚠️ 請先在設定中啟用印表機');
         return;
       }
@@ -305,8 +338,8 @@
       if (!cleanText) return;
 
       const settings = this.getSettings();
-      const config = (settings.kitchen && settings.kitchen.enabled) ? settings.kitchen : settings.cashier;
-      if (!config || !config.enabled) {
+      const config = settings.kitchen;
+      if (!this.isStationConfigured('kitchen', config)) {
         if (typeof showToast === 'function') showToast('⚠️ 請先在設定中啟用印表機');
         return;
       }
@@ -513,11 +546,13 @@
         const dim = this.resolveLabelDimensions(config);
         if (config.tspl_mode === 'item_stickers') {
           const items = this.parseOrderItems(order);
-          const tasks = items.map((it, idx) => {
+          const results = [];
+          for (let idx = 0; idx < items.length; idx++) {
+            const it = items[idx];
             const png = this.drawItemStickerToCanvas(it, order, idx + 1, items.length, dim.widthMm, dim.heightMm, dim.dpi);
-            return this.transmitReceiptBitmap(png, config, `Kitchen Sticker #${order.key} (${idx + 1}/${items.length})`);
-          });
-          return Promise.all(tasks);
+            results.push(await this.transmitReceiptBitmap(png, config, `Kitchen Sticker #${order.key} (${idx + 1}/${items.length})`));
+          }
+          return results;
         } else {
           const base64Png = this.drawOrderLabelToCanvas(order, true, dim.widthMm, dim.heightMm, dim.dpi);
           return this.transmitReceiptBitmap(base64Png, config, `Kitchen TSPL Label #${order.key}`);

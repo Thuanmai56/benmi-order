@@ -265,6 +265,7 @@ function openReview(orderKey) {
 
   const elCont = document.getElementById("review-content");
   if (elCont) elCont.innerHTML = formatContentHtml(order);
+  if (typeof updatePrintActionAvailability === "function") updatePrintActionAvailability();
 
   if (typeof ensureTenantCustomizations === "function") {
     ensureTenantCustomizations().then(custs => {
@@ -927,5 +928,4 @@ window.closeQuickStickerModal = closeQuickStickerModal;
 window.renderQuickStickerOptions = renderQuickStickerOptions;
 window.printQuickModifierOption = printQuickModifierOption;
 window.printCustomQuickSticker = printCustomQuickSticker;
-
 
