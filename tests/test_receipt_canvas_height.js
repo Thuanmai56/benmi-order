@@ -41,6 +41,7 @@ const historical = window.PrinterService.parseOrderItems({ items: [
   { item_name: 'Tea', quantity: 2, unit_price: 35, selected_options: '[{"choice":"半糖"}]' },
   { name: 'Gift', quantity: 1, price: 0 }
 ] }, false);
-assert.equal(historical[0].price, '$35');
+assert.equal(historical[0].price, '$70');
+assert.equal(historical[0].unitPrice, '$35');
 assert.equal(historical[0].options, '半糖');
 assert.equal(historical[1].price, '$0');
