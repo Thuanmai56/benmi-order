@@ -160,7 +160,7 @@ const tsplSettings = {
 };
 service.saveSettings(tsplSettings);
 const loadedTspl = service.getSettings();
-assert.strictEqual(loadedTspl.cashier.protocol, "tspl", "Cashier protocol should be tspl");
+assert.strictEqual(loadedTspl.cashier.protocol, "esc_pos", "Cashier protocol should be esc_pos (enforced)");
 assert.strictEqual(loadedTspl.cashier.tspl_label_size, "100x150", "Cashier label size should match");
 assert.strictEqual(loadedTspl.kitchen.tspl_mode, "item_stickers", "Kitchen label mode should match");
 console.log("✅ Test 7 Passed: TSPL Dual-Station Settings persistence verified.");

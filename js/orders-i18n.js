@@ -1466,7 +1466,11 @@ function applyLanguageToDOM() {
 
   // Settings
   const setT = document.getElementById("i18n-settings-title");
-  if (setT) setT.innerText = dict.settingsTitle;
+  if (typeof updateSettingsPanelHeaderTitle === "function") {
+    updateSettingsPanelHeaderTitle();
+  } else if (setT) {
+    setT.innerText = dict.settingsTitle;
+  }
   const setS = document.getElementById("i18n-settings-sub");
   if (setS) setS.innerText = dict.settingsSub || "";
   const setSync = document.getElementById("i18n-settings-sync-status");
@@ -1539,6 +1543,9 @@ function applyLanguageToDOM() {
   if (tocRep) tocRep.innerText = dict.tocReports;
   const tocStoreP = document.getElementById("i18n-toc-store-pairing");
   if (tocStoreP) tocStoreP.innerText = dict.tocStorePairing;
+  if (typeof updateSettingsPanelHeaderTitle === "function") {
+    updateSettingsPanelHeaderTitle();
+  }
 
   // Language Setting Card
   const setLangT = document.getElementById("i18n-setting-lang-title");

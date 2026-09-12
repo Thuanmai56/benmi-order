@@ -403,8 +403,99 @@
       if (typeof value === 'string') {
         try { return this.formatPrintOptions(JSON.parse(value)); } catch { return value; }
       }
-      if (Array.isArray(value)) return value.map(option => typeof option === 'string' ? option : option.choice || option.name || '').filter(Boolean).join('、');
+      if (Array.isArray(value)) {
+        const portionGroups = {};
+        const otherOptions = [];
+        let hasPortions = false;
+        value.forEach(option => {
+          const text = typeof option === 'string' ? option : (option.choice || option.name || '');
+          if (!text) return;
+          const m = text.match(/^(第(?:\d+|[一二三四五六七八九十]+)份)[：:]\s*(.+)$/);
+          if (m) {
+            hasPortions = true;
+            const pKey = m[1];
+            if (!portionGroups[pKey]) portionGroups[pKey] = [];
+            portionGroups[pKey].push(m[2]);
+          } else {
+            otherOptions.push(text);
+          }
+        });
+        if (hasPortions) {
+          const lines = Object.entries(portionGroups).map(([p, arr]) => `${p}: ${arr.join('、')}`);
+          if (otherOptions.length > 0) lines.push(otherOptions.join('、'));
+          return lines.join('\n');
+        }
+        return value.map(option => typeof option === 'string' ? option : option.choice || option.name || '').filter(Boolean).join('、');
+      }
       return '';
+    }
+
+    getGlobalCustomizations(order) {
+      if (!order) return [];
+      // 1. Check structured customizations array
+      const rawCust = order.customizations;
+      if (rawCust) {
+        const list = Array.isArray(rawCust) ? rawCust : (typeof rawCust === 'string' ? (() => { try { return JSON.parse(rawCust); } catch { return []; } })() : []);
+        if (list.length > 0) {
+          return list.map(c => ({
+            label: c.label || c.title || '',
+            value: c.value || c.choice || ''
+          })).filter(c => c.value);
+        }
+      }
+
+      // 2. Check global flavor extractor if available
+      const content = order.content || order.raw_content || '';
+      if (typeof extractFlavorSettings === 'function') {
+        const data = extractFlavorSettings(content);
+        if (data) {
+          const res = [];
+          if (Array.isArray(data.flavors)) {
+            data.flavors.forEach(f => res.push({ label: f.label || '', value: f.value || '' }));
+          }
+          if (Array.isArray(data.extraIngredients)) {
+            data.extraIngredients.forEach(e => {
+              if (typeof e === 'object' && e) {
+                res.push({ label: e.label || '', value: e.value || '' });
+              } else if (e) {
+                res.push({ label: '', value: String(e) });
+              }
+            });
+          }
+          if (res.length > 0) return res;
+        }
+      }
+
+      // 3. Built-in inline parsing fallback
+      const lines = String(content).split('\n');
+      const res = [];
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.includes('口味設定') || trimmed.includes('Hương vị') || trimmed.includes('Khẩu vị')) {
+          const inline = trimmed.replace(/.*(?:口味設定|Hương vị|Khẩu vị)[：:]\s*/, '').replace(/[【】🧂]/g, '').trim();
+          if (inline) {
+            const parts = inline.split(/[・·|,|｜]/).map(p => p.trim()).filter(Boolean);
+            parts.forEach(p => {
+              const m = p.match(/^([^：:]+)[：:]\s*(.+)$/);
+              if (m) {
+                res.push({ label: m[1].replace(/✦/g, '').replace(/選擇|調整/g, '').trim(), value: m[2].trim() });
+              } else {
+                res.push({ label: '', value: p });
+              }
+            });
+          }
+        } else if (trimmed.startsWith('•') || trimmed.startsWith('-') || trimmed.startsWith('*')) {
+          const extraMatch = trimmed.match(/^[•\-*]\s*([^：:]+)[：:]\s*(.+)$/);
+          if (extraMatch) {
+            const label = extraMatch[1].replace(/✦/g, '').replace(/選擇|調整/g, '').trim();
+            const val = extraMatch[2].trim();
+            if (label && val && !label.includes('訂單') && !label.includes('總金額') && !label.includes('時間') && !label.includes('取餐') && !label.includes('用餐方式')) {
+              res.push({ label, value: val });
+            }
+          }
+        }
+      }
+      return res;
     }
 
     parseOrderItems(order, expand = true) {
@@ -416,11 +507,31 @@
           if ((rawPrice == null || rawPrice === '') && typeof lookupItemPrice === 'function') {
             rawPrice = lookupItemPrice(itemName);
           }
-          const itemPrice = rawPrice != null && rawPrice !== '' ? (String(rawPrice).startsWith('$') ? String(rawPrice) : `$${rawPrice}`) : '';
+          const qty = Math.max(1, Number(it.quantity) || 1);
+          const unitNum = rawPrice != null && rawPrice !== '' ? (Number(String(rawPrice).replace(/[^0-9.]/g, '')) || 0) : null;
+
+          let lineTotal = null;
+          if (it.subtotal != null && Number(it.subtotal) > 0) {
+            lineTotal = Number(it.subtotal);
+          } else if (unitNum != null && unitNum > 0) {
+            let optExtra = 0;
+            const rawOptions = it.options || it.selected_options;
+            if (Array.isArray(rawOptions)) {
+              rawOptions.forEach(opt => {
+                if (opt && opt.price && Number(opt.price) > 0) {
+                  optExtra += Number(opt.price);
+                }
+              });
+            }
+            lineTotal = (unitNum * qty) + optExtra;
+          }
+
+          const itemPrice = lineTotal != null ? `$${lineTotal}` : (rawPrice != null && rawPrice !== '' ? (String(rawPrice).startsWith('$') ? String(rawPrice) : `$${rawPrice}`) : '');
           items.push({
             name: itemName,
-            quantity: Number(it.quantity) || 1,
+            quantity: qty,
             price: itemPrice,
+            unitPrice: unitNum != null ? `$${unitNum}` : '',
             options: this.formatPrintOptions(it.options || it.selected_options),
             note: it.note || it.notes || '',
             round: it.round || (Number(order.roundCount || order.round_count) > 1 ? '[第' + (it.round_number || 1) + '輪]' : '')
@@ -454,27 +565,35 @@
             if (currentItem) {
               const opt = line.replace(/^[↳\-+•－]\s*/, '').trim();
               currentItem.options = currentItem.options ? `${currentItem.options}\n${opt}` : opt;
+              const addMatch = opt.match(/(?:\(\s*\+\s*\$|\+\s*\$)(\d+(?:\.\d+)?)/);
+              if (addMatch && currentItem._lineTotal != null) {
+                currentItem._lineTotal += Number(addMatch[1]) || 0;
+                currentItem.price = `$${currentItem._lineTotal}`;
+              }
             }
           } else {
             const priceMatch = line.match(/\$[\d,.]+/);
-            let itemPrice = priceMatch ? priceMatch[0] : '';
+            let rawNum = priceMatch ? Number(priceMatch[0].replace(/[^0-9.]/g, '')) : null;
             const match = line.match(/^(\d+)\s*(?:份|x|X)\s*(?:x\s*)?(.+)$/) || line.match(/^(.+?)\s*[xX*]\s*(\d+)$/);
             if (match) {
               const qty = Number(match[1]) || Number(match[2]) || 1;
               const name = (match[2] || match[1] || line).replace(/\$[\d,.]+/g, '').trim();
-              if (!itemPrice && name && typeof lookupItemPrice === 'function') {
+              if ((rawNum == null || isNaN(rawNum)) && name && typeof lookupItemPrice === 'function') {
                 const lp = lookupItemPrice(name);
-                if (lp != null) itemPrice = `$${lp}`;
+                if (lp != null) rawNum = Number(lp);
               }
-              currentItem = { name, quantity: qty, price: itemPrice, options: '', note: '', round: currentRound };
+              const totalNum = rawNum != null ? rawNum * qty : null;
+              const itemPrice = totalNum != null ? `$${totalNum}` : '';
+              currentItem = { name, quantity: qty, price: itemPrice, _lineTotal: totalNum, options: '', note: '', round: currentRound };
               items.push(currentItem);
             } else {
               const name = line.replace(/\$[\d,.]+/g, '').trim();
-              if (!itemPrice && name && typeof lookupItemPrice === 'function') {
+              if ((rawNum == null || isNaN(rawNum)) && name && typeof lookupItemPrice === 'function') {
                 const lp = lookupItemPrice(name);
-                if (lp != null) itemPrice = `$${lp}`;
+                if (lp != null) rawNum = Number(lp);
               }
-              currentItem = { name, quantity: 1, price: itemPrice, options: '', note: '', round: currentRound };
+              const itemPrice = rawNum != null ? `$${rawNum}` : '';
+              currentItem = { name, quantity: 1, price: itemPrice, _lineTotal: rawNum, options: '', note: '', round: currentRound };
               items.push(currentItem);
             }
           }
@@ -678,22 +797,28 @@
       const ctx = canvas.getContext('2d');
       const operations = [];
       let y = padding;
-      const row = (left, size, right = '', weight = 'normal', centered = false) => {
+      const row = (left, size, right = '', weight = 'normal', centered = false, rightSize = null, rightWeight = null) => {
         const font = `${weight} ${size}px sans-serif`;
-        ctx.font = font;
+        const rWeight = rightWeight || weight;
+        const rSize = rightSize || size;
+        const rFont = `${rWeight} ${rSize}px sans-serif`;
+        ctx.font = rFont;
         const gap = 16;
-        const rightWidth = right ? Math.min(available * 0.4,
-          typeof ctx.measureText === 'function' ? ctx.measureText(String(right)).width : available * 0.4) : 0;
+        const maxRightWidth = available * 0.52;
+        const rightWidth = right ? Math.min(maxRightWidth,
+          typeof ctx.measureText === 'function' ? ctx.measureText(String(right)).width : maxRightWidth) : 0;
+        ctx.font = font;
         const leftLines = this.wrapPrintText(ctx, left, available - (right ? rightWidth + gap : 0));
+        ctx.font = rFont;
         const rightLines = right ? this.wrapPrintText(ctx, right, rightWidth) : [];
-        const lineHeight = Math.ceil(size * 1.25);
+        const lineHeight = Math.ceil(Math.max(size, rSize) * 1.25);
         leftLines.forEach((text, i) => operations.push({
           text, x: centered ? width / 2 : padding,
           y: y + i * lineHeight, font, align: centered ? 'center' : 'left'
         }));
         rightLines.forEach((text, i) => operations.push({
           text, x: width - padding,
-          y: y + i * lineHeight, font, align: 'right'
+          y: y + i * lineHeight, font: rFont, align: 'right'
         }));
         y += Math.max(leftLines.length, rightLines.length) * lineHeight + 6;
       };
@@ -702,16 +827,42 @@
       if (brand) row(brand, 51, '', 'normal', true);
       if (isKitchen) row('廚房出餐聯', 45, '', 'normal', true);
       divider();
-      row('#' + order.key, 39, '', 'bold');
-      row(order.diningOption === 'dine_in' ? '內用 桌號：' + (order.tableNumber || '-') : '外帶自取', 33, '', 'normal');
+      const diningText = order.diningOption === 'dine_in'
+        ? '內用 ' + (order.tableNumber ? '桌號：' + order.tableNumber : '')
+        : '外帶自取';
+      row('#' + order.key, 36, diningText, 'bold', false, 32, 'bold');
       row('顧客：' + (order.customer || '顧客'), 29, '', 'normal');
       row('時間：' + (order.time || ''), 29, '', 'normal');
       divider();
+
+      const globalCustomizations = this.getGlobalCustomizations(order);
+      if (globalCustomizations && globalCustomizations.length > 0) {
+        const flavorTitle = (typeof t === 'function' && t('flavorTitle')) || '口味與客製設定';
+        row(`【${flavorTitle}】`, 32, '', 'bold');
+        for (const gc of globalCustomizations) {
+          const text = gc.label ? `${gc.label}：${gc.value}` : `${gc.value}`;
+          row('  • ' + text, 29, '', 'normal');
+        }
+        divider();
+      }
+
       for (const item of this.parseOrderItems(order, false)) {
         if (item.round) row(item.round, 30, '', 'normal');
         row(item.quantity + ' x ' + item.name, isKitchen ? 42 : 36, isKitchen ? '' : (item.price || '—'), 'normal');
-        if (item.options) row('  ' + item.options, 30, '', 'normal');
-        if (item.note) row('  ' + item.note, 30, '', 'normal');
+        if (item.options) {
+          const optLines = String(item.options).split('\n').map(l => l.trim()).filter(Boolean);
+          optLines.forEach(l => {
+            const clean = l.replace(/^[↳\-+•－]\s*/, '').trim();
+            row('  ↳ ' + clean, 30, '', 'normal');
+          });
+        }
+        if (item.note) {
+          const noteLines = String(item.note).split('\n').map(l => l.trim()).filter(Boolean);
+          noteLines.forEach(l => {
+            const clean = l.replace(/^[↳\-+•－*]\s*/, '').trim();
+            row('  * ' + clean, 30, '', 'normal');
+          });
+        }
       }
       if (order.note?.trim()) { divider(); row('備註：' + order.note, 29, '', 'normal'); }
       if (!isKitchen) {

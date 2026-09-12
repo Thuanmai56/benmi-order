@@ -577,7 +577,8 @@ function renderItemRowHtml(it, idx, orderKey) {
   let displayPrice = it.price;
   if ((!displayPrice || displayPrice === "—") && it.name && typeof lookupItemPrice === "function") {
     const lp = lookupItemPrice(it.name);
-    if (lp != null) displayPrice = `$${lp}`;
+    const qty = Math.max(1, Number(it.quantity) || 1);
+    if (lp != null) displayPrice = `$${Number(lp) * qty}`;
   }
   const isEmptyPrice = !displayPrice || displayPrice === "—";
 
