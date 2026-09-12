@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title id="pos-page-title">Blab POS</title>
   <base href="/" />
-  <link rel="stylesheet" href="css/orders.css?v=20260912_ui_opt_v1" />
+  <link rel="stylesheet" href="css/orders.css?v=20260912_print_v2" />
     <script>
       (function () {
         document.documentElement.style.setProperty('--primary', '#00b900');
@@ -1439,15 +1439,15 @@
               <span id="i18n-print-tools-label">出單與列印工具</span>
             </div>
             <div class="review-print-macro-bar" id="review-print-macro-bar">
-              <button type="button" class="btn btn-print-full" id="btn-review-print-full" onclick="if(typeof reviewingOrder !== 'undefined' && reviewingOrder && typeof PrinterService !== 'undefined') PrinterService.printFullOrder(reviewingOrder.key)">
+              <button type="button" class="btn btn-print-full" id="btn-review-print-full" data-print-action="full" onclick="if(typeof reviewingOrder !== 'undefined' && reviewingOrder && typeof PrinterService !== 'undefined') PrinterService.printFullOrder(reviewingOrder.key)">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
                 <span id="i18n-btn-print-full">整單全印<br>(明細+標籤）</span>
               </button>
-              <button type="button" class="btn btn-print-bill" id="btn-review-print-bill" onclick="if(typeof reviewingOrder !== 'undefined' && reviewingOrder && typeof PrinterService !== 'undefined') PrinterService.printCashierOnly(reviewingOrder.key)">
+              <button type="button" class="btn btn-print-bill" id="btn-review-print-bill" data-print-action="bill" onclick="if(typeof reviewingOrder !== 'undefined' && reviewingOrder && typeof PrinterService !== 'undefined') PrinterService.printCashierOnly(reviewingOrder.key)">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"></path><path d="M16 8h-8"></path><path d="M16 12h-8"></path><path d="M10 16h-4"></path></svg>
                 <span id="i18n-btn-print-bill-only">僅印收銀明細</span>
               </button>
-              <button type="button" class="btn btn-print-custom" id="btn-review-print-custom" onclick="openQuickStickerModal(reviewingOrder ? reviewingOrder.key : '')">
+              <button type="button" class="btn btn-print-custom" id="btn-review-print-custom" data-print-action="stickers" onclick="openQuickStickerModal(reviewingOrder ? reviewingOrder.key : '')">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                 <span id="i18n-btn-print-custom-opt">補印客製<br>標籤</span>
               </button>
@@ -2007,16 +2007,16 @@
   </div>
 
   <!-- Benmi POS Modular Architecture Scripts -->
-  <script src="js/orders-i18n.js?v=20260912_ui_opt_v1"></script>
-  <script src="js/orders-core.js?v=20260912_ui_opt_v1"></script>
-  <script src="js/orders-audio.js?v=20260912_ui_opt_v1"></script>
-  <script src="js/printer-service.js?v=20260912_ui_opt_v1"></script>
-  <script src="js/orders-live.js?v=20260912_ui_opt_v1"></script>
-  <script src="js/orders-modals.js?v=20260912_ui_opt_v1"></script>
-  <script src="js/orders-history.js?v=20260912_ui_opt_v1"></script>
-  <script src="js/orders-reports.js?v=20260912_ui_opt_v1"></script>
-  <script src="js/orders-settings.js?v=20260912_ui_opt_v1"></script>
-  <script src="js/orders-menu.js?v=20260912_ui_opt_v1"></script>
+  <script src="js/orders-i18n.js?v=20260912_print_v2"></script>
+  <script src="js/orders-core.js?v=20260912_print_v2"></script>
+  <script src="js/orders-audio.js?v=20260912_print_v2"></script>
+  <script src="js/printer-service.js?v=20260912_print_v2"></script>
+  <script src="js/orders-live.js?v=20260912_print_v2"></script>
+  <script src="js/orders-modals.js?v=20260912_print_v2"></script>
+  <script src="js/orders-history.js?v=20260912_print_v2"></script>
+  <script src="js/orders-reports.js?v=20260912_print_v2"></script>
+  <script src="js/orders-settings.js?v=20260912_print_v2"></script>
+  <script src="js/orders-menu.js?v=20260912_print_v2"></script>
 
   <!-- POS Bootstrap & Initialization -->
   <script>

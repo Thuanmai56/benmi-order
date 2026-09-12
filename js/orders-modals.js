@@ -266,6 +266,7 @@ function openReview(orderKey) {
 
   const elCont = document.getElementById("review-content");
   if (elCont) elCont.innerHTML = formatContentHtml(order);
+  if (typeof updatePrintActionAvailability === "function") updatePrintActionAvailability();
 
   // Dynamic 3-level Print Macro Bar Label & Item Count
   let parsedItems = (typeof PrinterService !== "undefined" && typeof PrinterService.parseOrderItems === "function")
@@ -920,5 +921,4 @@ window.closeQuickStickerModal = closeQuickStickerModal;
 window.renderQuickStickerOptions = renderQuickStickerOptions;
 window.printQuickModifierOption = printQuickModifierOption;
 window.printCustomQuickSticker = printCustomQuickSticker;
-
 

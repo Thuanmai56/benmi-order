@@ -571,6 +571,8 @@ function renderItemRowHtml(it, idx, orderKey) {
   const noteHtml = it.note ? `<div class="review-item-note">${noteIcon}${escapeHtml(it.note)}</div>` : "";
   const printLabel = (typeof t === "function" && t("btnPrintStickerShort")) || "印貼紙";
   const printerIcon = (typeof POS_SVG !== "undefined" && POS_SVG.printer) || "";
+  const canPrintStickers = typeof PrinterService !== "undefined"
+    && PrinterService.getPrintCapabilities().stickers;
 
   let displayPrice = it.price;
   if ((!displayPrice || displayPrice === "—") && it.name && typeof lookupItemPrice === "function") {
@@ -589,7 +591,7 @@ function renderItemRowHtml(it, idx, orderKey) {
         ${noteHtml}
       </div>
       <div class="review-item-price ${isEmptyPrice ? 'is-empty' : ''}">${escapeHtml(displayPrice || "—")}</div>
-      <button type="button" class="btn btn-ghost review-item-print-btn" onclick="if(typeof PrinterService !== 'undefined') PrinterService.printSingleItemSticker('${escapeHtml(orderKey)}', ${it.stickerIndex ?? idx})" title="${escapeHtml(printLabel)}">
+      <button type="button" class="btn btn-ghost review-item-print-btn" data-print-action="stickers" data-print-action-title="${escapeHtml(printLabel)}" ${canPrintStickers ? "" : "disabled aria-disabled=\"true\""} onclick="if(typeof PrinterService !== 'undefined') PrinterService.printSingleItemSticker('${escapeHtml(orderKey)}', ${it.stickerIndex ?? idx})" title="${escapeHtml(printLabel)}">
         ${printerIcon}
         <span>${escapeHtml(printLabel)}</span>
       </button>

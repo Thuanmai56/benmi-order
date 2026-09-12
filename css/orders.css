@@ -5532,6 +5532,25 @@ select.form-input {
   color: #0c4a6e;
 }
 
+/* Keep unavailable print actions visibly and semantically disabled when a station is off. */
+[data-print-action].is-printer-disabled,
+[data-print-action]:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+  filter: saturate(0.45);
+  box-shadow: none;
+}
+
+[data-print-action].is-printer-disabled:hover,
+[data-print-action]:disabled:hover,
+[data-print-action].is-printer-disabled:active,
+[data-print-action]:disabled:active {
+  background: inherit;
+  border-color: inherit;
+  color: inherit;
+  transform: none;
+}
+
 /* ==========================================================================
    Elevated Modal Lifecycle Footer (Compact Tablet-Friendly 40px Buttons)
    ========================================================================== */

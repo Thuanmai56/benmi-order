@@ -456,7 +456,7 @@
             </span>
 
             <!-- Reprint Vector Icon Button -->
-            <button type="button" class="kds-icon-action-btn" title="${t('kdsReprintTooltip') || '列印單據'}" onclick="reprintKdsOrder('${escapeHtml(order.key)}', event)">
+            <button type="button" class="kds-icon-action-btn" data-print-action="full" data-print-action-title="${escapeHtml(t('kdsReprintTooltip') || '列印單據')}" title="${t('kdsReprintTooltip') || '列印單據'}" onclick="reprintKdsOrder('${escapeHtml(order.key)}', event)">
               ${KDS_SVG.printer}
             </button>
           </div>
@@ -1071,4 +1071,3 @@
   };
 
 })(window);
-

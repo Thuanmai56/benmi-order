@@ -347,6 +347,9 @@ const I18N = {
     btnPrintBillOnly: "僅印收銀明細",
     btnPrintCustomOption: "補印客製<br>標籤",
     btnPrintSingleItem: "印此品項貼紙",
+    printDisabledBill: "請先啟用並設定 Bill 印表機",
+    printDisabledStickers: "請先啟用並設定貼紙印表機",
+    printDisabledFull: "整單列印需要同時啟用 Bill 與貼紙印表機",
     itemPrepared: "已完成",
     markPrepared: "標記已出餐",
     printSingleItemSuccess: "已列印「{name}」貼紙！",
@@ -1036,6 +1039,9 @@ const I18N = {
     btnPrintBillOnly: "IN BILL THU NGÂN",
     btnPrintCustomOption: "IN BÙ TEM<br>TÙY CHỌN",
     btnPrintSingleItem: "In tem món",
+    printDisabledBill: "Vui lòng bật và thiết lập máy in Bill",
+    printDisabledStickers: "Vui lòng bật và thiết lập máy in Tem",
+    printDisabledFull: "In cả đơn cần bật cả máy in Bill và máy in Tem",
     itemPrepared: "Đã hoàn thành",
     markPrepared: "Đánh dấu đã hoàn thành",
     printSingleItemSuccess: "Đã in tem món \"{name}\"!",
@@ -1158,6 +1164,7 @@ function setLanguage(lang) {
   window.currentLang = lang;
   if (typeof localStorage !== "undefined") localStorage.setItem("benmi_lang", lang);
   applyLanguageToDOM();
+  if (typeof updatePrintActionAvailability === "function") updatePrintActionAvailability();
   if (typeof renderAll === "function") renderAll();
   if (typeof activeTab !== "undefined" && activeTab === "settings") {
     if (typeof renderOperatingHours === "function") renderOperatingHours();
