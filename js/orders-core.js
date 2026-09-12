@@ -504,6 +504,51 @@ function formatOrderTotal(order) {
   return order?.total !== undefined && order?.total !== null && order?.total !== "" ? `$${order.total}` : "-";
 }
 
+function parsePortionCustomizations(rawOpts) {
+  if (!rawOpts) return null;
+  const str = String(rawOpts).trim();
+  if (!/(?:第\s*[一二三四五六七八九十\d]+\s*份|Phần\s*\d+)/i.test(str)) {
+    return null;
+  }
+
+  const regex = /(?:^|[、\n])\s*(第\s*[一二三四五六七八九十\d]+\s*份|Phần\s*\d+)[:：\s]?\s*/gi;
+  const matches = [];
+  let m;
+  while ((m = regex.exec(str)) !== null) {
+    matches.push({
+      index: m.index,
+      matchLength: m[0].length,
+      label: m[1].replace(/\s+/g, '')
+    });
+  }
+
+  if (matches.length === 0) return null;
+
+  let commonChips = [];
+  if (matches[0].index > 0) {
+    const preContent = str.substring(0, matches[0].index).trim();
+    if (preContent) {
+      commonChips = preContent.split(/[、,，\n]+/).map(s => s.trim()).filter(Boolean);
+    }
+  }
+
+  const portions = [];
+  for (let i = 0; i < matches.length; i++) {
+    const cur = matches[i];
+    const contentStart = cur.index + cur.matchLength;
+    const nextIndex = (i + 1 < matches.length) ? matches[i + 1].index : str.length;
+    const rawContent = str.substring(contentStart, nextIndex).trim();
+    const chips = rawContent.split(/[、,，\n]+/).map(s => s.trim()).filter(Boolean);
+    portions.push({
+      label: cur.label,
+      chips: chips
+    });
+  }
+
+  return portions.length > 0 ? { commonChips, portions } : null;
+}
+window.parsePortionCustomizations = parsePortionCustomizations;
+
 function switchTab(tab) {
   if (activeTab === "menu" && tab !== "menu" && typeof confirmLeaveMenu === "function" && !confirmLeaveMenu()) return;
   if (tab === "reports" && isNativeAppPlatform()) {

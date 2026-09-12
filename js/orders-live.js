@@ -541,9 +541,30 @@ function renderItemRowHtml(it, idx, orderKey) {
   let optionsHtml = "";
   if (it.options) {
     const rawOpts = String(it.options);
-    const splitOpts = rawOpts.split(/[、,，\n]+/).map(s => s.trim()).filter(Boolean);
-    if (splitOpts.length > 0) {
-      optionsHtml = `<div class="review-item-options">${splitOpts.map(opt => `<span class="mod-chip">${escapeHtml(opt)}</span>`).join("")}</div>`;
+    const parsed = typeof parsePortionCustomizations === "function" ? parsePortionCustomizations(rawOpts) : null;
+    if (parsed && parsed.portions && parsed.portions.length > 0) {
+      let commonHtml = "";
+      if (parsed.commonChips && parsed.commonChips.length > 0) {
+        commonHtml = `<div class="review-item-options">${parsed.commonChips.map(c => `<span class="mod-chip">${escapeHtml(c)}</span>`).join("")}</div>`;
+      }
+      const portionsHtml = `
+        <div class="review-item-portions-container">
+          ${parsed.portions.map(p => `
+            <div class="review-item-portion-row">
+              <span class="portion-badge">${escapeHtml(p.label)}</span>
+              <div class="portion-chips-wrap">
+                ${p.chips.length > 0 ? p.chips.map(chip => `<span class="mod-chip">${escapeHtml(chip)}</span>`).join("") : `<span class="portion-default-chip">—</span>`}
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      `;
+      optionsHtml = commonHtml + portionsHtml;
+    } else {
+      const splitOpts = rawOpts.split(/[、,，\n]+/).map(s => s.trim()).filter(Boolean);
+      if (splitOpts.length > 0) {
+        optionsHtml = `<div class="review-item-options">${splitOpts.map(opt => `<span class="mod-chip">${escapeHtml(opt)}</span>`).join("")}</div>`;
+      }
     }
   }
   const noteIcon = (typeof POS_SVG !== "undefined" && POS_SVG.note) || "";

@@ -503,7 +503,7 @@ function renderMenuCategoryEditor(index) {
     
     let modifiersHtml = '';
     if (storeModifiers.length === 0) {
-      modifiersHtml = `<div style="font-size: 12px; color: #94a3b8; padding: 2px 0;">${t("noModifiersInStore")}</div>`;
+      modifiersHtml = `<div class="no-modifiers-hint" style="font-size: 12px; color: #94a3b8; margin: 0; padding: 0; line-height: 1.3;">${t("noModifiersInStore")}</div>`;
     } else {
       modifiersHtml = `
         <div style="display: flex; gap: 6px; margin-bottom: 6px;">
