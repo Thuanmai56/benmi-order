@@ -498,10 +498,12 @@ function getStructuredGlobalCustomizations() {
                     });
                 }
                 const subPart = subOpts.length > 0 ? ` (${subOpts.join('、')})` : '';
+                const optionId = checkedRadio.getAttribute('data-option-id') || val;
                 result.push({
                     key: group.key,
                     label: cleanTitle || '口味',
-                    value: `${val}${subPart}`
+                    value: `${val}${subPart}`,
+                    optionId: optionId
                 });
             }
         } else if (group.type === 'checkbox') {
@@ -541,6 +543,20 @@ function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, ma
             const itemInfo = resolveCatalogItem(key);
             const { catSlug, origName, displayName } = itemInfo;
             let itemStr = `${cart[key]}份 x ${displayName}`;
+
+            // Format Universal Bundle Selections
+            if (typeof window !== 'undefined' && window.bundleCartData && window.bundleCartData[key]) {
+                const portions = window.bundleCartData[key].slice(0, cart[key]);
+                portions.forEach((p, pIdx) => {
+                    const pPrefix = portions.length > 1 ? `第${pIdx + 1}份 ` : '';
+                    (p.groups || []).forEach(g => {
+                        const itemsStr = (g.items || []).map(it => `${it.name} x${it.quantity}`).join('、');
+                        if (itemsStr) {
+                            itemStr += `\n   ↳ ${pPrefix}${g.groupName || '配菜'}：${itemsStr}`;
+                        }
+                    });
+                });
+            }
 
             if (catSlug === 'combo') {
                 let drinks = comboDrinkData[origName] || [];
@@ -619,6 +635,20 @@ function formatAppendItemsOnlyText() {
             const itemInfo = resolveCatalogItem(key);
             const { catSlug, origName, displayName } = itemInfo;
             lines.push(`${cart[key]}份 x ${displayName}`);
+
+            // Format Universal Bundle Selections
+            if (typeof window !== 'undefined' && window.bundleCartData && window.bundleCartData[key]) {
+                const portions = window.bundleCartData[key].slice(0, cart[key]);
+                portions.forEach((p, pIdx) => {
+                    const pPrefix = portions.length > 1 ? `第${pIdx + 1}份 ` : '';
+                    (p.groups || []).forEach(g => {
+                        const itemsStr = (g.items || []).map(it => `${it.name} x${it.quantity}`).join('、');
+                        if (itemsStr) {
+                            lines.push(`   ↳ ${pPrefix}${g.groupName || '配菜'}：${itemsStr}`);
+                        }
+                    });
+                });
+            }
 
             if (catSlug === 'combo') {
                 let drinks = comboDrinkData[origName] || [];
@@ -713,6 +743,16 @@ function buildStructuredCartItems() {
                 });
             }
 
+            // Universal Bundle Selections attachment
+            let bundleSelections = null;
+            if (typeof window !== 'undefined' && window.bundleCartData && window.bundleCartData[key]) {
+                const portions = window.bundleCartData[key].slice(0, qty);
+                bundleSelections = {
+                    bundleRuleId: itemInfo?.bundleRule?.id || undefined,
+                    portions: portions
+                };
+            }
+
             items.push({
                 itemId: itemId,
                 name: displayName,
@@ -720,7 +760,9 @@ function buildStructuredCartItems() {
                 quantity: qty,
                 price: basePrice,
                 subtotal: basePrice * qty,
-                options: options
+                options: options,
+                bundleSelections: bundleSelections,
+                bundle_snapshot_json: bundleSelections ? JSON.stringify(bundleSelections) : null
             });
         }
     }
@@ -1028,13 +1070,36 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                     }
 
                     const storageKey = `cart_save_${tenantId}`;
-                    localStorage.setItem(storageKey, JSON.stringify({ cart, customizeData, comboDrinkData }));
+                    localStorage.setItem(storageKey, JSON.stringify({ cart, customizeData, comboDrinkData, bundleCartData: window.bundleCartData || {} }));
                     const cleanRedirectUri = (typeof window.getCleanLiffRedirectUri === 'function') ? window.getCleanLiffRedirectUri() : window.location.href;
                     liff.login({ redirectUri: cleanRedirectUri });
                     return;
                 }
             } catch (liffAuthErr) {
                 console.warn("LIFF Auth check ignored:", liffAuthErr);
+            }
+        }
+
+        // Pre-flight check 1: Threshold-Gated Customizations validation
+        if (typeof getActiveThresholdViolations === 'function') {
+            const violations = getActiveThresholdViolations();
+            if (violations.length > 0) {
+                isSubmitting = false;
+                setAllSubmitButtonsState(false, '確認下單', { cursor: 'pointer', opacity: '1' });
+                const v = violations[0];
+                customAlert(v.errorMsg || `您選擇的口味「${v.name}」需全單消費滿 $${v.minSubtotal} 元方可送出（目前金額 $${v.currentSubtotal} 元，還差 $${v.minSubtotal - v.currentSubtotal} 元）`);
+                return;
+            }
+        }
+
+        // Pre-flight check 2: Bundle Selections completeness validation
+        if (typeof checkAllBundlesComplete === 'function') {
+            const bundleCheck = checkAllBundlesComplete();
+            if (!bundleCheck.valid) {
+                isSubmitting = false;
+                setAllSubmitButtonsState(false, '確認下單', { cursor: 'pointer', opacity: '1' });
+                customAlert(bundleCheck.error || '請為套餐選擇內容搭配');
+                return;
             }
         }
 

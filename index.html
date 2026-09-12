@@ -580,6 +580,37 @@
         </div>
     </div>
 
+    <!-- Universal Mobile-First Bundle Builder Modal -->
+    <div id="bundle-builder-modal" class="custom-alert-overlay" style="display:none; z-index: 2600; align-items: flex-end; padding: 0;">
+        <div class="bundle-modal-sheet" style="background: #ffffff; width: 100%; max-width: 580px; max-height: 86vh; border-radius: 20px 20px 0 0; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 -10px 40px rgba(0,0,0,0.2); margin: 0 auto; animation: bundleSlideUp 0.25s ease-out;">
+            <!-- Sheet Header -->
+            <div style="padding: 16px 20px 12px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: flex-start; position: sticky; top: 0; background: #fff; z-index: 10;">
+                <div style="padding-right: 12px;">
+                    <div id="bundle-modal-item-name" style="font-size: 17px; font-weight: 900; color: #0f172a; line-height: 1.3;">套餐名稱</div>
+                    <div id="bundle-modal-group-name" style="font-size: 13px; color: #64748b; margin-top: 3px;">
+                        請選擇配菜（已選 <span id="bundle-modal-current-count" style="font-weight: 800; color: var(--primary, #00b900);">0</span> / <span id="bundle-modal-max-count">6</span> 樣）
+                    </div>
+                </div>
+                <button type="button" onclick="closeBundleBuilderModal()" style="border: none; background: #f1f5f9; width: 34px; height: 34px; border-radius: 50%; font-size: 16px; color: #64748b; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">✕</button>
+            </div>
+
+            <!-- Category Filter Tabs -->
+            <div id="bundle-cat-tabs" style="display: flex; gap: 8px; padding: 10px 16px; overflow-x: auto; -webkit-overflow-scrolling: touch; border-bottom: 1px solid #f1f5f9; background: #fafafa; scrollbar-width: none;">
+            </div>
+
+            <!-- Items List Scroll Area -->
+            <div id="bundle-items-list" style="flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px;">
+            </div>
+
+            <!-- Bottom Sticky Confirmation Bar -->
+            <div style="padding: 12px 20px 24px; border-top: 1px solid #f1f5f9; background: #ffffff; box-shadow: 0 -4px 12px rgba(0,0,0,0.03);">
+                <button id="bundle-confirm-btn" type="button" onclick="confirmBundleSelection()" disabled style="width: 100%; height: 50px; border-radius: 12px; border: none; font-size: 16px; font-weight: 800; background: #94a3b8; color: #ffffff; cursor: not-allowed; transition: all 0.2s ease;">
+                    還需選擇 6 樣配菜
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script>
         // --- WORKER BASE & TENANT RESOLUTION ---
@@ -617,6 +648,7 @@
         let cart = {};
         let customizeData = {};
         let comboDrinkData = {};
+        window.bundleCartData = window.bundleCartData || {};
         let currentPopup = null;
         let alertCallback = null;
         window.isSubmitting = false;
@@ -1217,6 +1249,54 @@
             updateDesktopAuthUI();
         }
 
+        function calculateCurrentFoodSubtotal() {
+            let subtotal = 0;
+            if (typeof cart === 'undefined' || !bootstrapData?.catalog) return 0;
+            const priceMap = {};
+            bootstrapData.catalog.forEach(cat => {
+                cat.items.forEach(it => { priceMap[`${cat.slug}_${it.name}`] = it.price; });
+            });
+            for (let key in cart) {
+                if (cart[key] > 0) {
+                    const itemInfo = resolveCatalogItem(key);
+                    const basePrice = itemInfo.basePrice || priceMap[key] || 0;
+                    subtotal += (basePrice * cart[key]);
+                }
+            }
+            return subtotal;
+        }
+
+        function getActiveThresholdViolations() {
+            const violations = [];
+            const currentSubtotal = calculateCurrentFoodSubtotal();
+
+            document.querySelectorAll('.custom-panel input[type="radio"]:checked').forEach(radio => {
+                const minSub = Number(radio.getAttribute('data-min-subtotal')) || 0;
+                if (minSub > 0 && currentSubtotal < minSub) {
+                    violations.push({
+                        name: radio.getAttribute('data-option-name') || radio.value,
+                        minSubtotal: minSub,
+                        currentSubtotal: currentSubtotal,
+                        errorMsg: radio.getAttribute('data-error-msg')
+                    });
+                }
+            });
+
+            document.querySelectorAll('.custom-panel input[type="checkbox"]:checked').forEach(chk => {
+                const minSub = Number(chk.getAttribute('data-min-subtotal')) || 0;
+                if (minSub > 0 && currentSubtotal < minSub) {
+                    violations.push({
+                        name: chk.getAttribute('data-option-name') || chk.value,
+                        minSubtotal: minSub,
+                        currentSubtotal: currentSubtotal,
+                        errorMsg: chk.getAttribute('data-error-msg')
+                    });
+                }
+            });
+
+            return violations;
+        }
+
         function renderCustomizationsPanel(container, list) {
             if (!container || !list || list.length === 0) return;
             const escapeHtml = (str) => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -1243,18 +1323,26 @@
                     const disabledAttr = isOos ? 'disabled' : '';
                     const oosStyle = isOos ? 'style="opacity: 0.5; pointer-events: none; text-decoration: line-through; color: #94a3b8;"' : '';
 
+                    const minSubtotal = (typeof opt === 'object' && opt && (opt.minOrderSubtotal || opt.min_order_amount)) ? Number(opt.minOrderSubtotal || opt.min_order_amount) : 0;
+                    const optRuleMsg = (typeof opt === 'object' && opt && opt.ruleErrorMessage) ? opt.ruleErrorMessage : '';
+                    const optId = (typeof opt === 'object' && opt && opt.id) ? opt.id : optName;
+                    const thresholdBadgeHTML = minSubtotal > 0 ? `<span class="threshold-badge">滿$${minSubtotal}可選</span>` : '';
+                    const thresholdAttrs = minSubtotal > 0
+                        ? `data-min-subtotal="${minSubtotal}" data-option-id="${escapeHtml(optId)}" data-option-name="${escapeHtml(optName)}" data-error-msg="${escapeHtml(optRuleMsg)}"`
+                        : `data-option-id="${escapeHtml(optId)}" data-option-name="${escapeHtml(optName)}"`;
+
                     if (group.type === 'radio') {
                         html += `<div class="flavor-option-container">
                             <label class="radio-label" ${oosStyle}>
-                                <input type="radio" name="${inputName}" value="${escapeHtml(optName)}" ${isChecked} ${disabledAttr} onchange="handleCustomizationChange()"> 
-                                <span>${escapeHtml(optName)}${priceLabel}</span>${oosBadge}
+                                <input type="radio" name="${inputName}" value="${escapeHtml(optName)}" ${thresholdAttrs} ${isChecked} ${disabledAttr} onchange="handleCustomizationChange(event)"> 
+                                <span>${escapeHtml(optName)}${priceLabel}</span>${thresholdBadgeHTML}${oosBadge}
                             </label>`;
 
                         if (subOpts.length > 0) {
                             html += `<div class="sub-option-container" data-parent-flavor="${escapeHtml(optName)}" style="display: ${(optIdx === 0 && !isOos) ? 'flex' : 'none'};">`;
                             subOpts.forEach((sub) => {
                                 html += `<label class="checkbox-label sub-chip">
-                                    <input type="checkbox" class="sub-opt-chk" data-flavor="${escapeHtml(optName)}" value="${escapeHtml(sub)}" onchange="handleCustomizationChange()"> 
+                                    <input type="checkbox" class="sub-opt-chk" data-flavor="${escapeHtml(optName)}" value="${escapeHtml(sub)}" onchange="handleCustomizationChange(event)"> 
                                     <span>${escapeHtml(sub)}</span>
                                 </label>`;
                             });
@@ -1263,8 +1351,8 @@
                         html += `</div>`;
                     } else {
                         html += `<label class="checkbox-label" ${oosStyle}>
-                            <input type="checkbox" name="${inputName}" data-price="${optPrice}" value="${escapeHtml(optName)}" ${disabledAttr} onchange="handleCustomizationChange()"> 
-                            <span>${escapeHtml(optName)}${priceLabel}</span>${oosBadge}
+                            <input type="checkbox" name="${inputName}" data-price="${optPrice}" value="${escapeHtml(optName)}" ${thresholdAttrs} ${disabledAttr} onchange="handleCustomizationChange(event)"> 
+                            <span>${escapeHtml(optName)}${priceLabel}</span>${thresholdBadgeHTML}${oosBadge}
                         </label>`;
                     }
                 });
@@ -1297,8 +1385,47 @@
             toggleFlavorSubOptions();
         }
 
-        function handleCustomizationChange() {
+        function handleCustomizationChange(event) {
             if (!checkDesktopAuthGuard()) return;
+
+            // Check threshold condition on immediate user selection
+            if (event && event.target && (event.target.type === 'radio' || event.target.type === 'checkbox')) {
+                const target = event.target;
+                const minSub = Number(target.getAttribute('data-min-subtotal')) || 0;
+                if (minSub > 0 && target.checked) {
+                    const currentSubtotal = calculateCurrentFoodSubtotal();
+                    if (currentSubtotal < minSub) {
+                        const optName = target.getAttribute('data-option-name') || target.value;
+                        const customMsg = target.getAttribute('data-error-msg') || `此選項「${optName}」需全單商品消費滿 $${minSub} 元方可選擇（目前金額 $${currentSubtotal} 元，還差 $${minSub - currentSubtotal} 元）`;
+
+                        if (target.type === 'radio') {
+                            const groupRadios = document.querySelectorAll(`input[name="${target.name}"]`);
+                            let fallbackRadio = null;
+                            groupRadios.forEach(r => {
+                                const rMin = Number(r.getAttribute('data-min-subtotal')) || 0;
+                                if (rMin === 0 && !fallbackRadio) fallbackRadio = r;
+                            });
+                            if (fallbackRadio) {
+                                fallbackRadio.checked = true;
+                            } else if (groupRadios.length > 0) {
+                                groupRadios[0].checked = true;
+                            }
+                        } else {
+                            target.checked = false;
+                        }
+
+                        if (typeof customAlert === 'function') {
+                            customAlert(customMsg);
+                        } else {
+                            alert(customMsg);
+                        }
+                        toggleFlavorSubOptions();
+                        if (typeof updateTotal === 'function') updateTotal();
+                        return;
+                    }
+                }
+            }
+
             toggleFlavorSubOptions();
             if (typeof updateTotal === 'function') updateTotal();
         }
@@ -1353,6 +1480,14 @@
                 </button>
             `;
 
+            const hasBundleRule = Boolean(item.bundleRule);
+            const bundleEditBtnHTML = `
+                <button class="bundle-edit-btn" id="bundle-edit-btn-${catSlug}-${item.name}" onclick="openBundleBuilderModal('${safeCatSlug}','${safeItemName}', 0)" style="pointer-events: auto; display: ${(!isOos && qty > 0 && hasBundleRule) ? 'flex' : 'none'};">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                    <span>調整套餐配菜</span>
+                </button>
+            `;
+
             div.innerHTML = `
                 <div class="card-main" style="${isOos ? 'pointer-events: none;' : ''}">
                     ${imgHTML}
@@ -1367,6 +1502,7 @@
                     </div>
                 </div>
                 ${customizeBtnHTML}
+                ${bundleEditBtnHTML}
                 <div id="combo-container-${catSlug}-${item.name}"></div>
             `;
 
@@ -1410,6 +1546,13 @@
                         const catModifiers = getCategoryModifiers(cat.slug);
                         const hasModifiers = catModifiers.length > 0;
                         custBtn.style.display = (!item.isOutOfStock && qty > 0 && hasModifiers) ? 'block' : 'none';
+                    }
+
+                    const bundleEditBtn = card.querySelector('.bundle-edit-btn');
+                    if (bundleEditBtn) {
+                        const qty = cart[`${cat.slug}_${item.name}`] || 0;
+                        const hasBundleRule = Boolean(item.bundleRule);
+                        bundleEditBtn.style.display = (!item.isOutOfStock && qty > 0 && hasBundleRule) ? 'flex' : 'none';
                     }
                 });
             });
@@ -1504,7 +1647,8 @@
                 targetItem,
                 basePrice: Number(targetItem?.price) || 0,
                 categoryName: targetCat?.name || catSlug || "Món",
-                itemId: targetItem?.id || key
+                itemId: targetItem?.id || key,
+                bundleRule: targetItem?.bundleRule || null
             };
         }
 
@@ -1669,7 +1813,7 @@
                 const tenantId = getTenantIdFromUrl();
                 const storageKey = `cart_save_${tenantId}`;
                 try {
-                    localStorage.setItem(storageKey, JSON.stringify({ cart, customizeData, comboDrinkData }));
+                    localStorage.setItem(storageKey, JSON.stringify({ cart, customizeData, comboDrinkData, bundleCartData: window.bundleCartData || {} }));
                 } catch(e) {}
                 const cleanRedirectUri = getCleanLiffRedirectUri();
                 liff.login({ redirectUri: cleanRedirectUri });
@@ -1733,11 +1877,319 @@
                 if (pageBody) pageBody.classList.add('desktop-guest-locked');
             }
         }
+        // --- UNIVERSAL BUNDLE BUILDER MODAL STATE & LOGIC ---
+        let currentBundleModalContext = null;
+        let activeBundleCatTab = 'all';
+
+        function openBundleBuilderModal(catSlug, origName, portionIndex) {
+            const key = catSlug + '_' + origName;
+            const itemInfo = resolveCatalogItem(key);
+            const bundleRule = itemInfo?.bundleRule || (itemInfo?.targetItem && itemInfo.targetItem.bundleRule);
+            if (!bundleRule || !bundleRule.groups || bundleRule.groups.length === 0) return;
+
+            const group = bundleRule.groups[0]; // Primary selection group
+            const currentQty = cart[key] || 0;
+            const targetPortionIndex = (typeof portionIndex === 'number' && portionIndex >= 0) ? portionIndex : currentQty;
+
+            // Clone existing selections for this portion if already selected
+            const existingPortion = (window.bundleCartData && window.bundleCartData[key] && window.bundleCartData[key][targetPortionIndex]) ? window.bundleCartData[key][targetPortionIndex] : null;
+            const initialSelections = {};
+            if (existingPortion && existingPortion.groups) {
+                existingPortion.groups.forEach(g => {
+                    initialSelections[g.groupId] = {};
+                    (g.items || []).forEach(it => {
+                        initialSelections[g.groupId][it.itemId] = it.quantity || 0;
+                    });
+                });
+            }
+            if (!initialSelections[group.id]) {
+                initialSelections[group.id] = {};
+            }
+
+            currentBundleModalContext = {
+                catSlug,
+                origName,
+                key,
+                itemInfo,
+                bundleRule,
+                group,
+                portionIndex: targetPortionIndex,
+                selections: initialSelections
+            };
+
+            const modal = document.getElementById('bundle-builder-modal');
+            const titleEl = document.getElementById('bundle-modal-item-name');
+            const maxCountEl = document.getElementById('bundle-modal-max-count');
+
+            const portionLabel = (currentQty > 1 || targetPortionIndex > 0) ? ` (第 ${targetPortionIndex + 1} 份)` : '';
+            if (titleEl) titleEl.innerText = (itemInfo.displayName || origName) + portionLabel;
+
+            const maxRequired = group.maxSelections ?? group.requiredCount ?? 6;
+            if (maxCountEl) maxCountEl.innerText = maxRequired;
+
+            // Render category tabs & items
+            activeBundleCatTab = 'all';
+            renderBundleCategoryTabs(group);
+            renderBundleItemsList();
+            updateBundleModalState();
+
+            if (modal) modal.style.display = 'flex';
+        }
+
+        function closeBundleBuilderModal() {
+            const modal = document.getElementById('bundle-builder-modal');
+            if (modal) modal.style.display = 'none';
+            currentBundleModalContext = null;
+        }
+
+        function renderBundleCategoryTabs(group) {
+            const container = document.getElementById('bundle-cat-tabs');
+            if (!container) return;
+
+            const catMap = new Map();
+            catMap.set('all', { id: 'all', name: '全部' });
+
+            (group.eligibleItems || []).forEach(it => {
+                if (it.categoryId && bootstrapData?.catalog) {
+                    const cat = bootstrapData.catalog.find(c => c.id === it.categoryId || c.slug === it.categoryId);
+                    if (cat && !catMap.has(cat.id || cat.slug)) {
+                        const cleanCatName = (cat.name || '').replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
+                        catMap.set(cat.id || cat.slug, { id: cat.id || cat.slug, name: cleanCatName || cat.name });
+                    }
+                }
+            });
+
+            let html = '';
+            catMap.forEach((catObj) => {
+                const isActive = catObj.id === activeBundleCatTab ? 'active' : '';
+                html += `<button type="button" class="bundle-cat-tab-btn ${isActive}" onclick="setBundleCategoryFilter('${catObj.id}', this)">${catObj.name}</button>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function setBundleCategoryFilter(catId, btnEl) {
+            activeBundleCatTab = catId;
+            document.querySelectorAll('.bundle-cat-tab-btn').forEach(b => b.classList.remove('active'));
+            if (btnEl) btnEl.classList.add('active');
+            renderBundleItemsList();
+        }
+
+        function renderBundleItemsList() {
+            const container = document.getElementById('bundle-items-list');
+            if (!container || !currentBundleModalContext) return;
+
+            const group = currentBundleModalContext.group;
+            const selMap = currentBundleModalContext.selections[group.id] || {};
+            const totalCount = Object.values(selMap).reduce((s, q) => s + q, 0);
+            const maxAllowed = group.maxSelections ?? group.requiredCount ?? 6;
+
+            let filteredItems = group.eligibleItems || [];
+            if (activeBundleCatTab !== 'all') {
+                filteredItems = filteredItems.filter(it => it.categoryId === activeBundleCatTab || (bootstrapData?.catalog?.find(c => (c.id === it.categoryId || c.slug === it.categoryId) && (c.id === activeBundleCatTab || c.slug === activeBundleCatTab))));
+            }
+
+            let html = '';
+            filteredItems.forEach(it => {
+                const isOos = Boolean(it.isOutOfStock);
+                const currentQty = selMap[it.id] || 0;
+                const priceLabel = it.surcharge > 0 ? ` (+<span style="color:#059669; font-weight:800;">$${it.surcharge}</span>)` : '';
+                const cardClass = currentQty > 0 ? 'bundle-item-card selected' : 'bundle-item-card';
+                const oosBadge = isOos ? `<span class="oos-badge" style="color:#dc2626; font-size:12px; font-weight:800; margin-left:6px;">(已售完)</span>` : '';
+                const disabledMinus = currentQty <= 0;
+                const disabledPlus = isOos || (totalCount >= maxAllowed);
+
+                html += `
+                    <div class="${cardClass}" style="${isOos ? 'opacity: 0.55; pointer-events: none;' : ''}">
+                        <div style="font-weight: 700; font-size: 14.5px; color: #1e293b; display: flex; align-items: center;">
+                            <span>${it.name}</span>${priceLabel}${oosBadge}
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <button type="button" class="btn-qty" ${disabledMinus ? 'disabled style="opacity:0.4; cursor:not-allowed;"' : ''} onclick="changeBundleItemQty('${it.id}', -1)">-</button>
+                            <span style="font-size: 15px; font-weight: 800; min-width: 20px; text-align: center; color: ${currentQty > 0 ? 'var(--primary, #00b900)' : '#64748b'};">${currentQty}</span>
+                            <button type="button" class="btn-qty" ${disabledPlus ? 'disabled style="opacity:0.4; cursor:not-allowed;"' : ''} onclick="changeBundleItemQty('${it.id}', 1)">+</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function changeBundleItemQty(itemId, delta) {
+            if (!currentBundleModalContext) return;
+            const group = currentBundleModalContext.group;
+            if (!currentBundleModalContext.selections[group.id]) {
+                currentBundleModalContext.selections[group.id] = {};
+            }
+            const selMap = currentBundleModalContext.selections[group.id];
+            const currentQty = selMap[itemId] || 0;
+            const totalCount = Object.values(selMap).reduce((s, q) => s + q, 0);
+            const maxAllowed = group.maxSelections ?? group.requiredCount ?? 6;
+
+            if (delta > 0) {
+                if (totalCount >= maxAllowed) return;
+                selMap[itemId] = currentQty + 1;
+            } else if (delta < 0) {
+                if (currentQty <= 0) return;
+                selMap[itemId] = currentQty - 1;
+                if (selMap[itemId] === 0) delete selMap[itemId];
+            }
+
+            renderBundleItemsList();
+            updateBundleModalState();
+        }
+
+        function updateBundleModalState() {
+            if (!currentBundleModalContext) return;
+            const group = currentBundleModalContext.group;
+            const selMap = currentBundleModalContext.selections[group.id] || {};
+            const totalCount = Object.values(selMap).reduce((s, q) => s + q, 0);
+            const minRequired = group.minSelections ?? group.requiredCount ?? 6;
+
+            const countSpan = document.getElementById('bundle-modal-current-count');
+            if (countSpan) countSpan.innerText = totalCount;
+
+            const confirmBtn = document.getElementById('bundle-confirm-btn');
+            if (!confirmBtn) return;
+
+            if (totalCount < minRequired) {
+                confirmBtn.disabled = true;
+                confirmBtn.style.background = '#94a3b8';
+                confirmBtn.style.cursor = 'not-allowed';
+                confirmBtn.innerText = `還需選擇 ${minRequired - totalCount} 樣${group.name || '配菜'}`;
+            } else {
+                confirmBtn.disabled = false;
+                confirmBtn.style.background = 'var(--primary, #00b900)';
+                confirmBtn.style.cursor = 'pointer';
+                confirmBtn.innerText = `確認選擇（已選 ${totalCount} 樣）`;
+            }
+        }
+
+        function confirmBundleSelection() {
+            if (!currentBundleModalContext) return;
+            const { key, catSlug, origName, group, portionIndex, selections } = currentBundleModalContext;
+            const selMap = selections[group.id] || {};
+            const totalCount = Object.values(selMap).reduce((s, q) => s + q, 0);
+            const minRequired = group.minSelections ?? group.requiredCount ?? 6;
+
+            if (totalCount < minRequired) {
+                const msg = `請至少選擇 ${minRequired} 樣${group.name || '配菜'}`;
+                if (typeof customAlert === 'function') customAlert(msg);
+                else alert(msg);
+                return;
+            }
+
+            const portionData = {
+                portionIndex: portionIndex,
+                groups: [
+                    {
+                        groupId: group.id,
+                        groupName: group.name || '配菜',
+                        items: Object.entries(selMap).map(([itId, q]) => {
+                            const it = (group.eligibleItems || []).find(x => x.id === itId);
+                            return {
+                                itemId: itId,
+                                name: it ? it.name : itId,
+                                quantity: q,
+                                price: it ? it.price || 0 : 0
+                            };
+                        })
+                    }
+                ]
+            };
+
+            if (!window.bundleCartData) window.bundleCartData = {};
+            if (!window.bundleCartData[key]) window.bundleCartData[key] = [];
+            window.bundleCartData[key][portionIndex] = portionData;
+
+            // If this is adding a new portion beyond current cart qty, increment cart[key]
+            const currentQty = cart[key] || 0;
+            if (portionIndex >= currentQty) {
+                cart[key] = currentQty + 1;
+            }
+
+            // Update UI card
+            const qtySpan = document.getElementById('qty-' + catSlug + '-' + origName);
+            if (qtySpan) {
+                qtySpan.innerText = cart[key];
+                qtySpan.style.color = cart[key] > 0 ? 'var(--primary)' : 'inherit';
+            }
+
+            const bundleBtn = document.getElementById('bundle-edit-btn-' + catSlug + '-' + origName);
+            if (bundleBtn) {
+                bundleBtn.style.display = cart[key] > 0 ? 'flex' : 'none';
+            }
+
+            closeBundleBuilderModal();
+            updateTotal();
+        }
+
+        function checkAllBundlesComplete() {
+            if (typeof cart === 'undefined' || !bootstrapData?.catalog) return { valid: true };
+            for (let key in cart) {
+                const qty = cart[key];
+                if (qty > 0) {
+                    const itemInfo = resolveCatalogItem(key);
+                    const bundleRule = itemInfo?.bundleRule || (itemInfo?.targetItem && itemInfo.targetItem.bundleRule);
+                    if (bundleRule && bundleRule.groups) {
+                        const portions = (window.bundleCartData && window.bundleCartData[key]) || [];
+                        if (portions.length < qty) {
+                            return {
+                                valid: false,
+                                error: `「${itemInfo.displayName || itemInfo.origName}」尚有第 ${portions.length + 1} 份未完成配菜選擇，請點擊「+」或「調整」完成搭配`
+                            };
+                        }
+                        for (let i = 0; i < qty; i++) {
+                            const portion = portions[i];
+                            if (!portion || !portion.groups) {
+                                return {
+                                    valid: false,
+                                    error: `「${itemInfo.displayName || itemInfo.origName}」第 ${i + 1} 份尚未選擇配菜`
+                                };
+                            }
+                            for (const gRule of bundleRule.groups) {
+                                const selGroup = portion.groups.find(g => g.groupId === gRule.id);
+                                const selCount = (selGroup?.items || []).reduce((s, it) => s + (it.quantity || 0), 0);
+                                const min = gRule.minSelections ?? gRule.requiredCount ?? 0;
+                                if (selCount < min) {
+                                    return {
+                                        valid: false,
+                                        error: `「${itemInfo.displayName || itemInfo.origName}」第 ${i + 1} 份的${gRule.name || '配菜'}還需選擇 ${min - selCount} 樣`
+                                    };
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return { valid: true };
+        }
+
         function updateQty(category, origName, change) {
             if (change > 0 && !checkDesktopAuthGuard()) {
                 return;
             }
             const key = category + '_' + origName;
+            const itemInfo = resolveCatalogItem(key);
+            const bundleRule = itemInfo?.bundleRule || (itemInfo?.targetItem && itemInfo.targetItem.bundleRule);
+
+            // Intercept bundle item increment: open builder modal instead of direct cart increment
+            if (bundleRule && change > 0) {
+                const currentQty = cart[key] || 0;
+                openBundleBuilderModal(category, origName, currentQty);
+                return;
+            }
+
+            // Decrement bundle item: remove the last portion selection
+            if (bundleRule && change < 0) {
+                if (window.bundleCartData && window.bundleCartData[key] && window.bundleCartData[key].length > 0) {
+                    window.bundleCartData[key].pop();
+                    if (window.bundleCartData[key].length === 0) {
+                        delete window.bundleCartData[key];
+                    }
+                }
+            }
+
             cart[key] = (cart[key] || 0) + change;
             if (cart[key] < 0) cart[key] = 0;
 
@@ -1752,6 +2204,11 @@
                 const catModifiers = getCategoryModifiers(category);
                 const hasModifiers = catModifiers.length > 0;
                 btn.style.display = (cart[key] > 0 && hasModifiers) ? 'block' : 'none';
+            }
+
+            const bundleBtn = document.getElementById('bundle-edit-btn-' + category + '-' + origName);
+            if (bundleBtn) {
+                bundleBtn.style.display = (cart[key] > 0 && bundleRule) ? 'flex' : 'none';
             }
 
             if (category === 'combo') renderComboDrinksInline(origName, cart[key]);
@@ -1964,6 +2421,22 @@
                         </div>
                     `;
 
+                    if (it.itemInfo?.bundleRule && window.bundleCartData && window.bundleCartData[key]) {
+                        const portions = window.bundleCartData[key].slice(0, qty);
+                        portions.forEach((p, pIdx) => {
+                            const pNum = zhNumbers[pIdx] || `第 ${pIdx + 1} 份`;
+                            (p.groups || []).forEach(g => {
+                                const itemsStr = (g.items || []).map(item => `${item.name} x${item.quantity}`).join('、');
+                                if (itemsStr) {
+                                    portionsHTML += `<div style="font-size:13px; color:#475569; margin-left:10px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
+                                        <span>↳ ${pNum} ${g.groupName || '配菜'}：${itemsStr}</span>
+                                        <button type="button" onclick="openBundleBuilderModal('${catSlug}','${itemName.replace(/'/g, "\\'")}', ${pIdx})" style="border:none; background:#f1f5f9; color:#0f172a; padding:2px 8px; border-radius:6px; font-size:11.5px; font-weight:700; cursor:pointer; margin-left:8px;">調整</button>
+                                    </div>`;
+                                }
+                            });
+                        });
+                    }
+
                     if (catSlug === 'combo') {
                         let drinks = comboDrinkData[itemName] || [];
                         let drinkCounts = {};
@@ -2023,6 +2496,17 @@
                 if (totalQty === 0 && addonsTotal === 0) {
                     summaryContainer.innerHTML = '<div style="text-align:center; color:#9ca3af;">(目前沒有已選商品)</div>';
                 } else {
+                    const violations = (typeof getActiveThresholdViolations === 'function') ? getActiveThresholdViolations() : [];
+                    if (violations.length > 0) {
+                        const vList = violations.map(v => `「${v.name}」(需滿$${v.minSubtotal})`).join('、');
+                        const warningHTML = `
+                            <div class="threshold-warning-banner">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                                <div>口味條件未達門檻：${vList}，目前餐點金額 $${violations[0].currentSubtotal} 元，下單前請補足金額或修改口味。</div>
+                            </div>
+                        `;
+                        summaryHTML = warningHTML + summaryHTML;
+                    }
                     summaryHTML += `<div style="display:flex; justify-content:space-between; font-weight:900; margin-top:12px; font-size:16px;">
                         <div>總計</div><div style="color:var(--primary);">$${total}</div>
                     </div>`;
@@ -2416,6 +2900,7 @@
                     cart = parsed.cart || {};
                     customizeData = parsed.customizeData || {};
                     comboDrinkData = parsed.comboDrinkData || {};
+                    window.bundleCartData = parsed.bundleCartData || {};
                     localStorage.removeItem(`cart_save_${tenantId}`);
                     for (let key in cart) {
                         if (cart[key] > 0) {

@@ -63,6 +63,35 @@ export interface OrderItemOption {
   price?: number;
 }
 
+export interface OrderBundleItemSelection {
+  itemId?: string;
+  item_id?: string;
+  name: string;
+  quantity: number;
+  price?: number;
+  surcharge?: number;
+}
+
+export interface OrderBundleGroupSelection {
+  groupId?: string;
+  group_id?: string;
+  groupName?: string;
+  group_name?: string;
+  items: OrderBundleItemSelection[];
+}
+
+export interface OrderBundlePortion {
+  portionIndex?: number;
+  portion_index?: number;
+  groups: OrderBundleGroupSelection[];
+}
+
+export interface OrderBundleSnapshot {
+  bundleRuleId?: string;
+  bundle_rule_id?: string;
+  portions: OrderBundlePortion[];
+}
+
 export interface OrderItemInput {
   itemId?: string;
   item_id?: string;
@@ -75,6 +104,8 @@ export interface OrderItemInput {
   subtotal?: number;
   options?: OrderItemOption[];
   selected_options?: OrderItemOption[] | string;
+  bundleSelections?: any;
+  bundle_snapshot_json?: string | null;
   note?: string;
   notes?: string;
 }
@@ -91,6 +122,7 @@ export interface OrderItemRecord {
   unit_price: number;
   subtotal: number;
   selected_options?: string | null;
+  bundle_snapshot_json?: string | null;
   notes?: string | null;
   created_at?: string;
 }

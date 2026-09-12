@@ -25,6 +25,30 @@ export function formatItemsToText(items: OrderItemInput[]): string {
   return items.map(item => {
     const qty = Number(item.quantity) || 1;
     let line = `${qty}份 x ${item.name}`;
+
+    if (item.bundleSelections) {
+      try {
+        const bData = typeof item.bundleSelections === 'string' ? JSON.parse(item.bundleSelections) : item.bundleSelections;
+        const portions: any[] = bData.portions || (Array.isArray(bData) ? (bData[0]?.groups ? bData : [{ groups: bData }]) : []);
+        if (portions.length > 0) {
+          portions.forEach((portion: any, pIdx: number) => {
+            const portionPrefix = portions.length > 1 ? `第${pIdx + 1}份 ` : '';
+            const groups = portion.groups || [];
+            groups.forEach((g: any) => {
+              const groupName = g.groupName || g.group_name || '';
+              const gItems = (g.items || []).map((it: any) => `${it.name} x${it.quantity || 1}`).join('、');
+              if (gItems) {
+                const label = groupName ? `${portionPrefix}${groupName}` : `${portionPrefix}搭配`;
+                line += `\n   ↳ ${label}: ${gItems}`;
+              }
+            });
+          });
+        }
+      } catch (e) {
+        console.warn("[formatItemsToText] Failed to parse bundleSelections:", e);
+      }
+    }
+
     const rawOptions = item.options || item.selected_options;
     const options: any[] = Array.isArray(rawOptions) ? rawOptions : (typeof rawOptions === 'string' ? JSON.parse(rawOptions || '[]') : []);
     if (options.length > 0) {
@@ -83,6 +107,189 @@ export async function getNextDailyOrderSeq(
   }
 }
 
+export function extractAllOrderSearchNames(rawItems: OrderItemInput[]): string[] {
+  const names: string[] = [];
+  for (const item of rawItems) {
+    if (item.name) names.push(item.name);
+    if (item.itemId || item.item_id) names.push((item.itemId || item.item_id)!);
+    if (item.bundleSelections) {
+      try {
+        const bData = typeof item.bundleSelections === 'string' ? JSON.parse(item.bundleSelections) : item.bundleSelections;
+        const portions: any[] = bData.portions || (Array.isArray(bData) ? (bData[0]?.groups ? bData : [{ groups: bData }]) : []);
+        for (const p of portions) {
+          for (const g of (p.groups || [])) {
+            for (const child of (g.items || [])) {
+              if (child.name) names.push(child.name);
+              if (child.itemId || child.item_id) names.push((child.itemId || child.item_id)!);
+            }
+          }
+        }
+      } catch (e) {}
+    }
+  }
+  return Array.from(new Set(names.filter(Boolean)));
+}
+
+export async function validateOrderBundles(
+  env: Env,
+  tenantId: string,
+  rawItems: OrderItemInput[]
+): Promise<{ valid: boolean; error?: string; code?: string }> {
+  if (!env.DB || rawItems.length === 0) return { valid: true };
+
+  try {
+    const bundleRulesRes = await env.DB.prepare(
+      `SELECT parent_item_id, schema_version, config_json 
+       FROM menu_bundle_rules 
+       WHERE tenant_id = ? AND is_active = 1`
+    ).bind(tenantId).all<{ parent_item_id: string; schema_version: number; config_json: string }>();
+
+    if (!bundleRulesRes.results || bundleRulesRes.results.length === 0) return { valid: true };
+
+    const rulesMap = new Map<string, any>();
+    for (const r of bundleRulesRes.results) {
+      try {
+        rulesMap.set(r.parent_item_id, typeof r.config_json === 'string' ? JSON.parse(r.config_json) : r.config_json);
+      } catch (e) {}
+    }
+
+    for (const item of rawItems) {
+      const itemId = item.itemId || item.item_id || "";
+      const rule = rulesMap.get(itemId);
+      if (!rule) continue;
+
+      const qty = Number(item.quantity) || 1;
+      if (!item.bundleSelections) {
+        return {
+          valid: false,
+          error: `餐點【${item.name}】需選擇內容搭配，請完成選擇後再下單`,
+          code: "BUNDLE_SELECTION_REQUIRED"
+        };
+      }
+
+      let bData: any = typeof item.bundleSelections === 'string' ? JSON.parse(item.bundleSelections) : item.bundleSelections;
+      const portions: any[] = bData.portions || (Array.isArray(bData) ? (bData[0]?.groups ? bData : [{ groups: bData }]) : []);
+
+      if (portions.length !== qty) {
+        return {
+          valid: false,
+          error: `餐點【${item.name}】選配數量（${portions.length} 份）與購買數量（${qty} 份）不符`,
+          code: "INVALID_BUNDLE_SELECTION"
+        };
+      }
+
+      for (let pIdx = 0; pIdx < portions.length; pIdx++) {
+        const portion = portions[pIdx];
+        const pLabel = portions.length > 1 ? `第 ${pIdx + 1} 份 ` : '';
+
+        for (const groupRule of (rule.groups || [])) {
+          const selectedGroup = (portion.groups || []).find((g: any) => (g.groupId === groupRule.id || g.group_id === groupRule.id));
+          const childItems: any[] = selectedGroup ? (selectedGroup.items || []) : [];
+          const totalGroupQty = childItems.reduce((sum: number, it: any) => sum + (Number(it.quantity) || 1), 0);
+
+          const groupName = (typeof groupRule.label === 'object' ? (groupRule.label['zh-TW'] || groupRule.label['vi']) : groupRule.label) || groupRule.name || '配菜';
+          const minQty = groupRule.minSelections ?? groupRule.minQuantity ?? groupRule.requiredCount ?? 1;
+          const maxQty = groupRule.maxSelections ?? groupRule.maxQuantity ?? groupRule.requiredCount ?? 1;
+
+          if (totalGroupQty < minQty || totalGroupQty > maxQty) {
+            return {
+              valid: false,
+              error: `餐點【${item.name}】${pLabel}【${groupName}】選配數量不符（規定 ${minQty} 樣，已選 ${totalGroupQty} 樣）`,
+              code: "INVALID_BUNDLE_SELECTION"
+            };
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn(`[validateOrderBundles] Error:`, err);
+  }
+
+  return { valid: true };
+}
+
+export async function validateThresholdCustomizations(
+  env: Env,
+  tenantId: string,
+  rawItems: OrderItemInput[],
+  customizations: any[]
+): Promise<{ valid: boolean; error?: string; code?: string; minSubtotal?: number; currentSubtotal?: number }> {
+  if (!env.DB || !Array.isArray(customizations) || customizations.length === 0) return { valid: true };
+
+  try {
+    const rulesRes = await env.DB.prepare(
+      `SELECT customization_key, option_id, rule_type, min_order_subtotal, threshold_basis, error_message
+       FROM menu_customization_option_rules
+       WHERE tenant_id = ? AND is_active = 1`
+    ).bind(tenantId).all<{
+      customization_key: string;
+      option_id: string;
+      rule_type: string;
+      min_order_subtotal: number;
+      threshold_basis: string;
+      error_message: string | null;
+    }>();
+
+    if (!rulesRes.results || rulesRes.results.length === 0) return { valid: true };
+
+    const foodMerchandiseSubtotal = rawItems.reduce((sum, it) => sum + (Number(it.price || it.unit_price || 0) * Number(it.quantity || 1)), 0);
+
+    const custDefRes = await env.DB.prepare(
+      `SELECT key, options_json FROM menu_customizations WHERE tenant_id = ?`
+    ).bind(tenantId).all<{ key: string; options_json: string }>();
+    const optMap = new Map<string, { id: string; name: string }[]>();
+    for (const d of (custDefRes.results || [])) {
+      try {
+        optMap.set(d.key, JSON.parse(d.options_json));
+      } catch (e) {}
+    }
+
+    for (const rule of rulesRes.results) {
+      if (foodMerchandiseSubtotal >= rule.min_order_subtotal) {
+        continue;
+      }
+
+      const userSelection = customizations.find((c: any) => c.key === rule.customization_key);
+      if (!userSelection) continue;
+
+      const optsForGroup = optMap.get(rule.customization_key) || [];
+      const ruleOption = optsForGroup.find(o => o.id === rule.option_id);
+      const ruleOptName = ruleOption ? ruleOption.name : rule.option_id;
+
+      const userVal = String(userSelection.value || "").trim();
+      const userOptId = userSelection.optionId || userSelection.option_id || userSelection.id || "";
+
+      let matched = false;
+      if (userOptId && (userOptId === rule.option_id || userOptId === ruleOptName)) {
+        matched = true;
+      } else if (userVal) {
+        if (ruleOptName === "要") {
+          matched = userVal === "要" || userVal.startsWith("要(") || userVal.startsWith("要（");
+        } else if (ruleOptName === "多") {
+          matched = userVal.startsWith("多");
+        } else {
+          matched = userVal.includes(ruleOptName);
+        }
+      }
+
+      if (matched) {
+        const defaultMsg = `客製化「${ruleOptName}」需全單消費滿 $${rule.min_order_subtotal} 元方可選擇（目前金額 $${foodMerchandiseSubtotal} 元，還差 $${rule.min_order_subtotal - foodMerchandiseSubtotal} 元）`;
+        return {
+          valid: false,
+          error: rule.error_message || defaultMsg,
+          code: "MIN_ORDER_SUBTOTAL_NOT_MET",
+          minSubtotal: rule.min_order_subtotal,
+          currentSubtotal: foodMerchandiseSubtotal
+        };
+      }
+    }
+  } catch (err) {
+    console.warn(`[validateThresholdCustomizations] Error:`, err);
+  }
+
+  return { valid: true };
+}
+
 export async function createOrder(
   request: Request,
   env: Env,
@@ -128,9 +335,9 @@ export async function createOrder(
   const parentOrderKey = data.parent_order_key || data.parentOrderKey || null;
   const rawItems: OrderItemInput[] = Array.isArray(data.items) ? data.items : [];
 
-  // 1. Kiểm tra tồn kho tại CSDL D1 cho các món trong đơn hàng
+  // 1. Kiểm tra tồn kho tại CSDL D1 cho các món trong đơn hàng (bao gồm món con trong combo)
   if (rawItems.length > 0 && env.DB) {
-    const rawNames = rawItems.map(i => i.name).filter(Boolean);
+    const rawNames = extractAllOrderSearchNames(rawItems);
     if (rawNames.length > 0) {
       const cleanNames = rawNames.map(n => n.replace(/\s+(L|S|M)$/i, '').replace(/^\[[^\]]+\]\s*/, '').trim());
       const allSearchNames = Array.from(new Set([...rawNames, ...cleanNames]));
@@ -158,6 +365,24 @@ export async function createOrder(
         console.warn(`[createOrder] Stock check warning:`, stockCheckErr);
       }
     }
+  }
+
+  // 1.1 Validate Combo Bundle Selections
+  const bundleCheck = await validateOrderBundles(env, tenantId, rawItems);
+  if (!bundleCheck.valid) {
+    return json({ error: bundleCheck.error, code: bundleCheck.code }, 400);
+  }
+
+  // 1.2 Validate Threshold-Gated Customizations
+  const clientCustomizations = data.customizations || data.global_customizations || [];
+  const thresholdCheck = await validateThresholdCustomizations(env, tenantId, rawItems, clientCustomizations);
+  if (!thresholdCheck.valid) {
+    return json({
+      error: thresholdCheck.error,
+      code: thresholdCheck.code,
+      minSubtotal: thresholdCheck.minSubtotal,
+      currentSubtotal: thresholdCheck.currentSubtotal
+    }, 400);
   }
 
   // 1.1 Nếu client chủ động truyền parent_order_key thì chuyển sang xử lý append
@@ -197,7 +422,7 @@ export async function createOrder(
     status: "NEW",
     createdAt: Date.now(),
     userId: data.userId,
-    total: data.total,
+    total: Number(data.total) || 0,
     reason: data.reason || "",
     note: data.note || "",
     diningOption: diningOption,
@@ -250,9 +475,10 @@ export async function createOrder(
         const subtotal = Number(item.subtotal) || (unitPrice * itemQty);
         const optionsJson = JSON.stringify(item.options || item.selected_options || []);
         const itemNote = item.note || item.notes || "";
+        const bundleJson = item.bundle_snapshot_json || (item.bundleSelections ? JSON.stringify(item.bundleSelections) : null);
         return env.DB.prepare(
-          `INSERT INTO order_items (tenant_id, order_key, round_number, item_id, item_name, category_name, quantity, unit_price, subtotal, selected_options, notes, created_at)
-           VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+          `INSERT INTO order_items (tenant_id, order_key, round_number, item_id, item_name, category_name, quantity, unit_price, subtotal, selected_options, bundle_snapshot_json, notes, created_at)
+           VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
         ).bind(
           tenantId,
           order.key,
@@ -263,6 +489,7 @@ export async function createOrder(
           unitPrice,
           subtotal,
           optionsJson,
+          bundleJson,
           itemNote
         );
       })
@@ -326,9 +553,9 @@ export async function executeAppendOrderInternal(
     return json({ error: "Database not configured", code: "NO_DB" }, 500);
   }
 
-  // 0. Kiểm tra tồn kho tại CSDL D1 cho các món 加點
-  if (rawItems.length > 0) {
-    const rawNames = rawItems.map(i => i.name).filter(Boolean);
+  // 0. Kiểm tra tồn kho tại CSDL D1 cho các món 加點 (bao gồm món con trong combo)
+  if (rawItems.length > 0 && env.DB) {
+    const rawNames = extractAllOrderSearchNames(rawItems);
     if (rawNames.length > 0) {
       const cleanNames = rawNames.map(n => n.replace(/\s+(L|S|M)$/i, '').replace(/^\[[^\]]+\]\s*/, '').trim());
       const allSearchNames = Array.from(new Set([...rawNames, ...cleanNames]));
@@ -355,6 +582,14 @@ export async function executeAppendOrderInternal(
       } catch (stockCheckErr) {
         console.warn(`[appendOrder] Stock check warning:`, stockCheckErr);
       }
+    }
+  }
+
+  // 0.1 Validate Combo Bundle Selections on append
+  if (rawItems.length > 0) {
+    const bundleCheck = await validateOrderBundles(env, tenantId, rawItems);
+    if (!bundleCheck.valid) {
+      return json({ error: bundleCheck.error, code: bundleCheck.code }, 400);
     }
   }
 
@@ -424,9 +659,10 @@ export async function executeAppendOrderInternal(
         const subtotal = Number(item.subtotal) || (unitPrice * itemQty);
         const optionsJson = JSON.stringify(item.options || item.selected_options || []);
         const itemNote = item.note || item.notes || "";
+        const bundleJson = item.bundle_snapshot_json || (item.bundleSelections ? JSON.stringify(item.bundleSelections) : null);
         return env.DB.prepare(
-          `INSERT INTO order_items (tenant_id, order_key, round_number, item_id, item_name, category_name, quantity, unit_price, subtotal, selected_options, notes, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+          `INSERT INTO order_items (tenant_id, order_key, round_number, item_id, item_name, category_name, quantity, unit_price, subtotal, selected_options, bundle_snapshot_json, notes, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
         ).bind(
           tenantId,
           parentKey,
@@ -438,6 +674,7 @@ export async function executeAppendOrderInternal(
           unitPrice,
           subtotal,
           optionsJson,
+          bundleJson,
           itemNote
         );
       })
@@ -1077,11 +1314,11 @@ export async function saveOrder(env: Env, order: Order, tenantId: string): Promi
     order.uuid || null,
     tenantId,
     order.userId || null,
-    order.customer,
-    order.time,
-    order.status,
-    order.total,
-    order.content,
+    order.customer || "顧客",
+    order.time || "",
+    order.status || "NEW",
+    order.total ?? 0,
+    order.content || "",
     order.reason || "",
     order.note || "",
     order.diningOption || "takeaway",

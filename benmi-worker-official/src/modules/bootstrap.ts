@@ -3,6 +3,33 @@ import { json } from '../utils/http';
 import { getTenantId } from './menu';
 import { resolveTenantContext } from './tenant';
 
+export interface BootstrapBundleGroup {
+  id: string;
+  name: string;
+  label?: any;
+  minQuantity: number;
+  maxQuantity: number;
+  allowRepeats: boolean;
+  sources: Array<{
+    type: 'category' | 'item_list';
+    refId?: string;
+    itemIds?: string[];
+  }>;
+  eligibleItems?: Array<{
+    id: string;
+    name: string;
+    price: number;
+    surcharge: number;
+    isOutOfStock: boolean;
+    categoryId?: string;
+  }>;
+}
+
+export interface BootstrapBundleRule {
+  version: number;
+  groups: BootstrapBundleGroup[];
+}
+
 export interface BootstrapResponse {
   tenant: {
     id: string;
@@ -42,6 +69,9 @@ export interface BootstrapResponse {
       imageUrl: string | null;
       isOutOfStock: boolean;
       isRecommended: boolean;
+      badgeText?: string | null;
+      badge?: string | null;
+      bundleRule?: BootstrapBundleRule | null;
       sortOrder: number;
     }>;
   }>;
@@ -68,8 +98,13 @@ export interface BootstrapResponse {
     type: 'radio' | 'checkbox';
     sortOrder: number;
     options: Array<{
+      id?: string;
       name: string;
       price?: number;
+      min_order_amount?: number;
+      minOrderSubtotal?: number;
+      thresholdBasis?: string;
+      ruleErrorMessage?: string;
       sub_options?: string[];
     }>;
   }>;
@@ -170,6 +205,8 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
     let categories: any[] = [];
     let items: any[] = [];
     let rawCustomizations: any[] = [];
+    let bundleRulesRows: any[] = [];
+    let customRulesRows: any[] = [];
 
     if (env.DB) {
       try {
@@ -207,29 +244,143 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
         categories = (catsRes.results as any[]) || [];
         items = (itemsRes.results as any[]) || [];
         rawCustomizations = (customRes.results as any[]) || [];
+
+        try {
+          const [bRes, rRes] = await env.DB.batch([
+            env.DB.prepare(
+              `SELECT parent_item_id, schema_version, config_json
+               FROM menu_bundle_rules
+               WHERE tenant_id = ? AND is_active = 1`
+            ).bind(tenantId),
+            env.DB.prepare(
+              `SELECT customization_key, option_id, rule_type, min_order_subtotal, threshold_basis, error_message
+               FROM menu_customization_option_rules
+               WHERE tenant_id = ? AND is_active = 1`
+            ).bind(tenantId)
+          ]);
+          bundleRulesRows = (bRes.results as any[]) || [];
+          customRulesRows = (rRes.results as any[]) || [];
+        } catch (subRulesErr) {
+          console.warn(`[Bootstrap] menu_bundle_rules or option_rules query warning for ${tenantId}:`, subRulesErr);
+        }
       } catch (dbErr) {
         console.error(`[Bootstrap] D1 Query error for ${tenantId}:`, dbErr);
       }
+    }
+
+    const now = new Date();
+
+    // Map customization option rules
+    const customRulesMap = new Map<string, any>();
+    for (const r of customRulesRows) {
+      customRulesMap.set(`${r.customization_key}::${r.option_id}`, r);
     }
 
     const customizations: BootstrapResponse['customizations'] = [];
     for (const c of rawCustomizations) {
       try {
         const opts = typeof c.options_json === 'string' ? JSON.parse(c.options_json) : (c.options_json || []);
+        const enrichedOpts = opts.map((opt: any) => {
+          const optId = opt.id || opt.name;
+          const rule = customRulesMap.get(`${c.key}::${optId}`) || customRulesMap.get(`${c.key}::${opt.name}`);
+          const minSubtotal = rule ? rule.min_order_subtotal : (opt.min_order_amount || 0);
+
+          return {
+            ...opt,
+            id: optId,
+            minOrderSubtotal: minSubtotal > 0 ? minSubtotal : undefined,
+            min_order_amount: minSubtotal > 0 ? minSubtotal : (opt.min_order_amount || undefined),
+            thresholdBasis: rule?.threshold_basis,
+            ruleErrorMessage: rule?.error_message
+          };
+        });
+
         customizations.push({
           id: c.id,
           key: c.key,
           title: c.title,
           type: c.type || 'radio',
           sortOrder: c.sort_order || 0,
-          options: opts
+          options: enrichedOpts
         });
       } catch (e) {
         console.error(`[Bootstrap] Failed to parse options_json for ${c.id}:`, e);
       }
     }
 
-    const now = new Date();
+    // Resolve bundle rules and populate eligibleItems
+    const bundleRulesByItemId = new Map<string, BootstrapBundleRule>();
+    for (const row of bundleRulesRows) {
+      try {
+        const parsed = typeof row.config_json === 'string' ? JSON.parse(row.config_json) : row.config_json;
+        if (!parsed || !Array.isArray(parsed.groups)) continue;
+
+        const resolvedGroups: BootstrapBundleGroup[] = parsed.groups.map((group: any) => {
+          const eligibleItems: any[] = [];
+          const seenItemIds = new Set<string>();
+
+          if (Array.isArray(group.sources)) {
+            for (const src of group.sources) {
+              const targetCatId = src.refId || src.categoryId;
+              if (src.type === 'category' && targetCatId) {
+                const catItems = items.filter(it => it.category_id === targetCatId);
+                for (const it of catItems) {
+                  if (!seenItemIds.has(it.id)) {
+                    seenItemIds.add(it.id);
+                    const isOos = Boolean(it.out_of_stock_until && new Date(it.out_of_stock_until) > now);
+                    eligibleItems.push({
+                      id: it.id,
+                      name: it.name,
+                      price: it.price,
+                      surcharge: 0,
+                      isOutOfStock: isOos,
+                      categoryId: it.category_id
+                    });
+                  }
+                }
+              } else if (src.type === 'item_list' && Array.isArray(src.itemIds)) {
+                for (const itemId of src.itemIds) {
+                  const it = items.find(i => i.id === itemId);
+                  if (it && !seenItemIds.has(it.id)) {
+                    seenItemIds.add(it.id);
+                    const isOos = Boolean(it.out_of_stock_until && new Date(it.out_of_stock_until) > now);
+                    eligibleItems.push({
+                      id: it.id,
+                      name: it.name,
+                      price: it.price,
+                      surcharge: 0,
+                      isOutOfStock: isOos,
+                      categoryId: it.category_id
+                    });
+                  }
+                }
+              }
+            }
+          }
+
+          const groupName = group.name || (typeof group.label === 'object' ? (group.label[locale] || group.label['zh-TW'] || group.label['vi'] || Object.values(group.label)[0]) : group.label) || `任選 ${group.minQuantity} 樣菜`;
+          const allowRepeats = group.allowRepeats !== undefined ? Boolean(group.allowRepeats) : (group.allowRepeat !== undefined ? Boolean(group.allowRepeat) : true);
+
+          return {
+            id: group.id,
+            name: groupName,
+            label: group.label || groupName,
+            minQuantity: group.minQuantity ?? 1,
+            maxQuantity: group.maxQuantity ?? 1,
+            allowRepeats: allowRepeats,
+            sources: group.sources || [],
+            eligibleItems: eligibleItems
+          };
+        });
+
+        bundleRulesByItemId.set(row.parent_item_id, {
+          version: parsed.version || 1,
+          groups: resolvedGroups
+        });
+      } catch (e) {
+        console.error(`[Bootstrap] Failed to parse bundle rule for ${row.parent_item_id}:`, e);
+      }
+    }
 
     // Load image_list to accurately attach imageUrl only to items with uploaded image
     let imageList: string[] = [];
@@ -257,6 +408,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
       const hasImage = imageList.includes(item.name) ||
                        imageList.some(k => k.endsWith(`_${item.name}`) || (k.includes('_') && k.split('_').slice(1).join('_') === item.name));
       const imageUrl = hasImage ? `/api/image?tenant_id=${tenantId}&name=${encodeURIComponent(item.name)}` : null;
+      const bundleRule = bundleRulesByItemId.get(item.id) || null;
 
       itemsByCatId.get(item.category_id)!.push({
         id: item.id,
@@ -268,6 +420,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
         isRecommended: isRec,
         badgeText: item.badge_text || null,
         badge: badge,
+        bundleRule: bundleRule,
         sortOrder: item.sort_order || 0
       });
     }
