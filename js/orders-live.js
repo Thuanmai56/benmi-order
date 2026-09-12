@@ -757,8 +757,8 @@ function formatContentHtml(order) {
     const noteTitle = (typeof t === "function" && t("customerNoteLabel")) || "顧客備註";
     noteHtml = `
       <div class="order-note-alert">
-        <div class="order-note-alert-header">${noteIcon}<span>${escapeHtml(noteTitle)}</span></div>
-        <div class="order-note-alert-body">“${escapeHtml(order.note)}”</div>
+        <span class="order-note-alert-header">${noteIcon}<span>${escapeHtml(noteTitle)}：</span></span>
+        <span class="order-note-alert-body">“${escapeHtml(order.note)}”</span>
       </div>
     `;
   }
