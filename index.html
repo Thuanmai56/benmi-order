@@ -5,9 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title id="page-title">線上點餐</title>
-    <link rel="preload" href="index.css?v=20260912_bundle_tabs_v2" as="style">
-    <link rel="preload" href="js/client-checkout.js?v=20260912_bundle_tabs_v2" as="script">
-    <link rel="stylesheet" href="index.css?v=20260912_bundle_tabs_v2">
+    <link rel="preload" href="index.css?v=20260912_threshold_disabled_v1" as="style">
+    <link rel="preload" href="js/client-checkout.js?v=20260912_threshold_disabled_v1" as="script">
+    <link rel="stylesheet" href="index.css?v=20260912_threshold_disabled_v1">
     <script>
         // Redirect root visits on blabfood.app to /landing
         try {
@@ -155,6 +155,37 @@
             display: inline-flex;
             align-items: center;
             white-space: nowrap;
+        }
+
+        /* Threshold-gated customization options disabled state */
+        .custom-panel label.radio-label.threshold-disabled,
+        .custom-panel label.checkbox-label.threshold-disabled,
+        .custom-panel label.radio-label:has(input:disabled),
+        .custom-panel label.checkbox-label:has(input:disabled) {
+            opacity: 0.42 !important;
+            background-color: #f1f5f9 !important;
+            border-color: #e2e8f0 !important;
+            color: #94a3b8 !important;
+            cursor: not-allowed !important;
+            box-shadow: none !important;
+            user-select: none !important;
+        }
+
+        .custom-panel label.radio-label.threshold-disabled input,
+        .custom-panel label.checkbox-label.threshold-disabled input,
+        .custom-panel label.radio-label:has(input:disabled) input,
+        .custom-panel label.checkbox-label:has(input:disabled) input {
+            cursor: not-allowed !important;
+            opacity: 0.4 !important;
+        }
+
+        .custom-panel label.radio-label.threshold-disabled .threshold-badge,
+        .custom-panel label.checkbox-label.threshold-disabled .threshold-badge,
+        .custom-panel label.radio-label:has(input:disabled) .threshold-badge,
+        .custom-panel label.checkbox-label:has(input:disabled) .threshold-badge {
+            background: #e2e8f0 !important;
+            color: #64748b !important;
+            border: 1px solid #cbd5e1 !important;
         }
 
         .bundle-edit-btn {
@@ -1418,6 +1449,86 @@
             return subtotal;
         }
 
+        function updateCustomizationThresholdUI() {
+            const currentSubtotal = typeof calculateCurrentFoodSubtotal === 'function' ? calculateCurrentFoodSubtotal() : 0;
+            const thresholdInputs = document.querySelectorAll('.custom-panel input[data-min-subtotal]');
+            if (!thresholdInputs || thresholdInputs.length === 0) return;
+
+            let hasStateChanged = false;
+
+            thresholdInputs.forEach(input => {
+                const minSub = Number(input.getAttribute('data-min-subtotal')) || 0;
+                if (minSub <= 0) return;
+
+                const labelEl = input.closest('label');
+                const isEligible = currentSubtotal >= minSub;
+                const isOos = input.hasAttribute('data-oos') || (labelEl && (labelEl.classList.contains('oos') || (labelEl.style.textDecoration && labelEl.style.textDecoration.includes('line-through'))));
+
+                if (!isEligible || isOos) {
+                    input.disabled = true;
+                    if (labelEl) {
+                        labelEl.classList.add('threshold-disabled');
+                        labelEl.setAttribute('data-threshold-disabled', 'true');
+                    }
+
+                    // If currently checked, revert to a valid default option (usually the first option or opt with min_subtotal === 0)
+                    if (input.checked) {
+                        hasStateChanged = true;
+                        if (input.type === 'radio') {
+                            const groupRadios = document.querySelectorAll(`input[name="${input.name}"]`);
+                            let fallbackRadio = null;
+                            groupRadios.forEach(r => {
+                                const rMin = Number(r.getAttribute('data-min-subtotal')) || 0;
+                                if (rMin === 0 && !r.disabled && !fallbackRadio) {
+                                    fallbackRadio = r;
+                                }
+                            });
+                            if (fallbackRadio) {
+                                fallbackRadio.checked = true;
+                            } else if (groupRadios.length > 0 && !groupRadios[0].disabled) {
+                                groupRadios[0].checked = true;
+                            }
+                        } else {
+                            input.checked = false;
+                        }
+                    }
+                } else {
+                    // Eligible and not OOS -> Enable!
+                    input.disabled = false;
+                    if (labelEl) {
+                        labelEl.classList.remove('threshold-disabled');
+                        labelEl.removeAttribute('data-threshold-disabled');
+                    }
+                }
+            });
+
+            if (hasStateChanged && typeof toggleFlavorSubOptions === 'function') {
+                toggleFlavorSubOptions();
+            }
+        }
+
+        // Global capturing click interceptor for threshold-disabled options to give friendly notice
+        document.addEventListener('click', function(e) {
+            const disabledLabel = e.target.closest('.threshold-disabled');
+            if (disabledLabel) {
+                e.preventDefault();
+                e.stopPropagation();
+                const input = disabledLabel.querySelector('input');
+                if (input) {
+                    const minSub = Number(input.getAttribute('data-min-subtotal')) || 0;
+                    const currentSub = typeof calculateCurrentFoodSubtotal === 'function' ? calculateCurrentFoodSubtotal() : 0;
+                    const optName = input.getAttribute('data-option-name') || input.value;
+                    const diff = Math.max(0, minSub - currentSub);
+                    const customMsg = input.getAttribute('data-error-msg') || `此選項「${optName}」需全單商品消費滿 $${minSub} 元方可選擇（目前餐點金額 $${currentSub} 元，還差 $${diff} 元）`;
+                    if (typeof customAlert === 'function') {
+                        customAlert(customMsg);
+                    } else {
+                        alert(customMsg);
+                    }
+                }
+            }
+        }, true);
+
         function getActiveThresholdViolations() {
             const violations = [];
             const currentSubtotal = calculateCurrentFoodSubtotal();
@@ -1457,6 +1568,8 @@
             <div class="custom-panel-wrapper">
             <div class="custom-panel">`;
 
+            const currentSubtotal = typeof calculateCurrentFoodSubtotal === 'function' ? calculateCurrentFoodSubtotal() : 0;
+
             list.forEach((group, groupIdx) => {
                 const topMargin = groupIdx > 0 ? 'margin-top: 16px; border-top: 1px dashed #f1f5f9; padding-top: 14px;' : '';
                 html += `<div class="custom-group" style="${topMargin}">
@@ -1472,8 +1585,6 @@
                     const isChecked = (group.type === 'radio' && !isOos) ? (optIdx === 0 ? 'checked' : '') : '';
                     const priceLabel = optPrice > 0 ? ` (+<span style="color:#059669; font-weight:800;">$${optPrice}</span>)` : '';
                     const oosBadge = isOos ? ` <span class="oos-badge" style="color:#dc2626; font-size:12px; font-weight:900; text-decoration:none;">(已售完)</span>` : '';
-                    const disabledAttr = isOos ? 'disabled' : '';
-                    const oosStyle = isOos ? 'style="opacity: 0.5; pointer-events: none; text-decoration: line-through; color: #94a3b8;"' : '';
 
                     const minSubtotal = (typeof opt === 'object' && opt && (opt.minOrderSubtotal || opt.min_order_amount)) ? Number(opt.minOrderSubtotal || opt.min_order_amount) : 0;
                     const optRuleMsg = (typeof opt === 'object' && opt && opt.ruleErrorMessage) ? opt.ruleErrorMessage : '';
@@ -1483,9 +1594,16 @@
                         ? `data-min-subtotal="${minSubtotal}" data-option-id="${escapeHtml(optId)}" data-option-name="${escapeHtml(optName)}" data-error-msg="${escapeHtml(optRuleMsg)}"`
                         : `data-option-id="${escapeHtml(optId)}" data-option-name="${escapeHtml(optName)}"`;
 
+                    const isThresholdBlocked = (minSubtotal > 0 && currentSubtotal < minSubtotal);
+                    const isEffectivelyDisabled = isOos || isThresholdBlocked;
+                    const disabledAttr = isEffectivelyDisabled ? 'disabled' : '';
+                    const thresholdClass = isThresholdBlocked ? ' threshold-disabled' : '';
+                    const thresholdDataAttr = isThresholdBlocked ? ' data-threshold-disabled="true"' : '';
+                    const oosStyle = isOos ? 'style="opacity: 0.5; pointer-events: none; text-decoration: line-through; color: #94a3b8;"' : '';
+
                     if (group.type === 'radio') {
                         html += `<div class="flavor-option-container">
-                            <label class="radio-label" ${oosStyle}>
+                            <label class="radio-label${thresholdClass}" ${thresholdDataAttr} ${oosStyle}>
                                 <input type="radio" name="${inputName}" value="${escapeHtml(optName)}" ${thresholdAttrs} ${isChecked} ${disabledAttr} onchange="handleCustomizationChange(event)"> 
                                 <span>${escapeHtml(optName)}${priceLabel}</span>${thresholdBadgeHTML}${oosBadge}
                             </label>`;
@@ -1502,7 +1620,7 @@
                         }
                         html += `</div>`;
                     } else {
-                        html += `<label class="checkbox-label" ${oosStyle}>
+                        html += `<label class="checkbox-label${thresholdClass}" ${thresholdDataAttr} ${oosStyle}>
                             <input type="checkbox" name="${inputName}" data-price="${optPrice}" value="${escapeHtml(optName)}" ${thresholdAttrs} ${disabledAttr} onchange="handleCustomizationChange(event)"> 
                             <span>${escapeHtml(optName)}${priceLabel}</span>${thresholdBadgeHTML}${oosBadge}
                         </label>`;
@@ -1535,6 +1653,7 @@
             html += `</div>`; // Close .custom-panel-wrapper
             container.innerHTML = html;
             toggleFlavorSubOptions();
+            updateCustomizationThresholdUI();
         }
 
         function handleCustomizationChange(event) {
@@ -2443,6 +2562,9 @@
         }
 
         function updateTotal() {
+            if (typeof updateCustomizationThresholdUI === 'function') {
+                updateCustomizationThresholdUI();
+            }
             let total = 0;
             let totalQty = 0;
             let summaryHTML = '';

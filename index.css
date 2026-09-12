@@ -718,6 +718,36 @@ input[type="checkbox"] {
     font-weight: 700;
 }
 
+.custom-panel label.radio-label.threshold-disabled,
+.custom-panel label.checkbox-label.threshold-disabled,
+.custom-panel label.radio-label:has(input:disabled),
+.custom-panel label.checkbox-label:has(input:disabled) {
+    opacity: 0.42 !important;
+    background: #f1f5f9 !important;
+    border-color: #e2e8f0 !important;
+    color: #94a3b8 !important;
+    cursor: not-allowed !important;
+    box-shadow: none !important;
+    user-select: none !important;
+}
+
+.custom-panel label.radio-label.threshold-disabled input,
+.custom-panel label.checkbox-label.threshold-disabled input,
+.custom-panel label.radio-label:has(input:disabled) input,
+.custom-panel label.checkbox-label:has(input:disabled) input {
+    cursor: not-allowed !important;
+    opacity: 0.4 !important;
+}
+
+.custom-panel label.radio-label.threshold-disabled .threshold-badge,
+.custom-panel label.checkbox-label.threshold-disabled .threshold-badge,
+.custom-panel label.radio-label:has(input:disabled) .threshold-badge,
+.custom-panel label.checkbox-label:has(input:disabled) .threshold-badge {
+    background: #e2e8f0 !important;
+    color: #64748b !important;
+    border: 1px solid #cbd5e1 !important;
+}
+
 .flavor-option-container {
     display: inline-flex;
     flex-direction: column;
