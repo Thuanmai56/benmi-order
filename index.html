@@ -5,9 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title id="page-title">線上點餐</title>
-    <link rel="preload" href="index.css?v=20260913_customization_grid" as="style">
+    <link rel="preload" href="index.css?v=20260913_custom_badge_fix_v1" as="style">
     <link rel="preload" href="js/client-checkout.js?v=20260912_bundle_ux_v4" as="script">
-    <link rel="stylesheet" href="index.css?v=20260913_customization_grid">
+    <link rel="stylesheet" href="index.css?v=20260913_custom_badge_fix_v1">
     <script>
         // Redirect root visits on blabfood.app to /landing
         try {
@@ -1939,7 +1939,7 @@
                     const firstAvailableIdx = (group.options || []).findIndex(o => !Boolean(typeof o === 'object' && o && (o.is_out_of_stock || o.isOutOfStock || o.out_of_stock)));
                     const explicitDefaults = (group.options || []).some(o => o && typeof o === 'object' && o.is_default !== undefined);
                     const isChecked = (group.type === 'radio' && !isOos && (explicitDefaults ? opt.is_default === true : optIdx === firstAvailableIdx)) ? 'checked' : '';
-                    const priceLabel = optPrice > 0 ? ` (+<span style="color:#059669; font-weight:800;">$${optPrice}</span>)` : '';
+                    const priceLabel = optPrice > 0 ? ` (+<span style="color:#059669; font-weight:800; white-space:nowrap;">$${optPrice}</span>)` : '';
                     const oosBadge = isOos ? ` <span class="oos-badge" style="color:#dc2626; font-size:12px; font-weight:900; text-decoration:none;">(已售完)</span>` : '';
 
                     const minSubtotal = (typeof opt === 'object' && opt && (opt.minOrderSubtotal || opt.min_order_amount)) ? Number(opt.minOrderSubtotal || opt.min_order_amount) : 0;
