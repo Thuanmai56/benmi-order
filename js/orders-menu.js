@@ -168,16 +168,22 @@ async function loadMenuData() {
           }))
         : [];
 
-      categories.unshift({
+      categories.push({
         id: 'sec-flavor',
         title: currentLang === 'vi' ? 'Tùy chọn khẩu vị & biến thể' : '口味與客製化選擇',
+        shortName: currentLang === 'vi' ? 'Khẩu vị' : '口味選擇',
         type: 'order_customization',
         allowCustomization: false,
         appliedModifiers: [],
+        sortOrder: data.customizationSortOrder ?? 0,
         groups: customGroups,
         items: []
       });
     }
+
+    // The customization panel is a real sortable section. Keep its saved
+    // position interleaved with catalog categories rather than forcing it first.
+    categories.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
 
     currentMenuData = categories.length > 0 ? categories : getBenmiDefaultCategories().map(cat => ({
       id: cat.id,
@@ -382,6 +388,9 @@ function renderCategoriesManagerView() {
 
         if (changed) {
           currentMenuData = reordered;
+          currentMenuData.forEach((category, order) => {
+            category.sortOrder = order + 1;
+          });
           markMenuDirty();
           renderMenuCategories();
         }
@@ -404,7 +413,7 @@ function renderCategoriesManagerView() {
       const trashSvg = (typeof POS_SVG !== "undefined" && POS_SVG.trash) || "";
 
       const actionsHtml = isSystemCustomization
-        ? `<span style="font-size: 12px; color: #94a3b8; font-weight: 600; padding-right: 6px;">(${currentLang === 'vi' ? 'Cố định' : '系統內建'})</span>`
+        ? `<span style="font-size: 12px; color: #64748b; font-weight: 600; padding-right: 6px;">${t("customizationPositionHint")}</span>`
         : `
           <button type="button" class="btn btn-ghost cat-mgr-btn" onclick="promptRenameCategoryAtIndex(${idx})">
             ${editSvg}<span>${t("btnCategoryRename")}</span>
@@ -1022,8 +1031,12 @@ function serializeMenuData(categories) {
   const output = {};
   categories.forEach(cat => {
     if (cat.type === 'order_customization' || cat.id === 'sec-flavor') {
-      if (cat.groups && cat.groups.length > 0) {
-        output.__customizations = cat.groups.map((grp, gIdx) => ({
+      output.__customizations = {
+        id: cat.id,
+        title: cat.title,
+        shortName: cat.shortName || cat.title,
+        sortOrder: cat.sortOrder !== undefined ? cat.sortOrder : Object.keys(output).length + 1,
+        groups: (cat.groups || []).map((grp, gIdx) => ({
           id: grp.id,
           key: grp.key,
           title: grp.title,
@@ -1038,13 +1051,14 @@ function serializeMenuData(categories) {
             isOutOfStock: Boolean(opt.isOos),
             sub_options: Array.isArray(opt.sub_options) ? opt.sub_options : []
           }))
-        }));
-      }
+        }))
+      };
       return;
     }
 
     output[cat.id] = {
       __title: cat.title,
+      __short_name: cat.shortName || cat.title,
       __type: cat.type || 'catalog',
       __allow_customization: cat.allowCustomization !== false ? 1 : 0,
       __applied_modifiers: cat.appliedModifiers || (cat.allowCustomization === false ? [] : ['*'])

@@ -686,10 +686,10 @@ input[type="checkbox"] {
 }
 
 .custom-options-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    align-items: center;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    align-items: stretch;
 }
 
 .custom-panel label.radio-label,
@@ -697,7 +697,10 @@ input[type="checkbox"] {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 14px;
+    padding: 10px 12px;
+    min-height: 48px;
+    min-width: 0;
+    box-sizing: border-box;
     border: 1.5px solid #e2e8f0;
     border-radius: 10px;
     background: #f8fafc;
@@ -705,7 +708,9 @@ input[type="checkbox"] {
     font-weight: 700;
     font-size: 15px;
     color: #1e293b;
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    flex-wrap: wrap;
     user-select: none;
     transition: all 0.15s ease;
 }
@@ -719,14 +724,14 @@ input[type="checkbox"] {
 }
 
 .flavor-option-container {
-    display: inline-flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
-    max-width: 100%;
+    /* Preserve the parent/child DOM relationship used by checkout, while
+       placing every primary choice in the same grid. */
+    display: contents;
 }
 
 .sub-option-container {
+    grid-column: 1 / -1;
+    order: 1;
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
@@ -737,6 +742,7 @@ input[type="checkbox"] {
     border-radius: 10px;
     margin-top: 2px;
     width: 100%;
+    box-sizing: border-box;
 }
 
 .custom-panel label.sub-chip {
@@ -751,6 +757,23 @@ input[type="checkbox"] {
     border-color: var(--primary);
     background: rgba(0, 185, 0, 0.08);
     color: #065f46;
+}
+
+.custom-panel label.radio-label > span:first-of-type,
+.custom-panel label.checkbox-label > span:first-of-type {
+    flex: 1;
+    min-width: 0;
+}
+
+.custom-panel .threshold-badge {
+    max-width: 100%;
+    white-space: normal;
+}
+
+@media (min-width: 600px) {
+    .custom-options-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
 }
 
 /* Footer */

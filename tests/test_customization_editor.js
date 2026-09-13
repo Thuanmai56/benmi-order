@@ -121,9 +121,10 @@ const serialized = serializeMenuData(sampleCategories);
 
 // Verify __customizations is extracted
 assert(serialized.__customizations, "__customizations should be present in serialized output");
-assert.strictEqual(serialized.__customizations.length, 2, "__customizations should contain 2 groups");
+const customGroups = Array.isArray(serialized.__customizations) ? serialized.__customizations : (serialized.__customizations.groups || []);
+assert.strictEqual(customGroups.length, 2, "__customizations should contain 2 groups");
 
-const flavorGroup = serialized.__customizations[0];
+const flavorGroup = customGroups[0];
 assert.strictEqual(flavorGroup.key, 'flavor');
 assert.strictEqual(flavorGroup.options.length, 4);
 assert.deepStrictEqual(flavorGroup.options[2].sub_options, ['不加香油', '不加鹽巴']);

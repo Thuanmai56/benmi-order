@@ -300,9 +300,11 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
 
   const catIdMap = new Map<string, string>();
   const catNameMap = new Map<string, string>();
+  const catShortNameMap = new Map<string, string>();
   for (const cat of (existingCats || [])) {
     catIdMap.set(cat.slug as string, cat.id as string);
     if (cat.name) catNameMap.set(cat.slug as string, cat.name as string);
+    if (cat.short_name) catShortNameMap.set(cat.slug as string, cat.short_name as string);
   }
 
   const itemIdMap = new Map<string, string>();
@@ -328,8 +330,10 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
 
   let catSortOrder = 1;
   for (const slug of Object.keys(menuData)) {
+    const currentSortOrder = catSortOrder++;
     if (slug === '__customizations') {
-      const customList = Array.isArray(menuData[slug]) ? menuData[slug] : (menuData[slug]?.groups || menuData[slug]?.list || []);
+      const customizationData = menuData[slug];
+      const customList = Array.isArray(customizationData) ? customizationData : (customizationData?.groups || customizationData?.list || []);
       const activeCustomIds: string[] = [];
       for (const cust of customList) {
         if (!cust || !cust.key) continue;
@@ -365,9 +369,26 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
         );
       }
 
-      // Cleanup legacy sec-flavor category from menu_categories if present
+      // Persist a lightweight category record so this panel participates in the
+      // same ordering mechanism as every other catalog section.
+      const customCategoryId = catIdMap.get(customizationData?.id) || catIdMap.get('sec-flavor') || customizationData?.id || `${tenantId}_sec-flavor`;
+      const customCategoryName = customizationData?.title || '口味與客製化選擇';
+      const customCategoryShortName = customizationData?.shortName || customCategoryName;
+      const customCategorySortOrder = Number(customizationData?.sortOrder ?? currentSortOrder);
+      activeCategoryIds.push(customCategoryId);
       statements.push(
-        env.DB.prepare("DELETE FROM menu_categories WHERE tenant_id = ? AND (slug = 'sec-flavor' OR id LIKE '%_sec-flavor')").bind(tenantId)
+        env.DB.prepare(
+          `INSERT INTO menu_categories (id, tenant_id, name, short_name, slug, category_type, allow_customization, applied_modifiers, sort_order)
+           VALUES (?, ?, ?, ?, 'sec-flavor', 'order_customization', 0, '[]', ?)
+           ON CONFLICT(id) DO UPDATE SET
+             name = excluded.name,
+             short_name = excluded.short_name,
+             slug = excluded.slug,
+             category_type = excluded.category_type,
+             allow_customization = excluded.allow_customization,
+             applied_modifiers = excluded.applied_modifiers,
+             sort_order = excluded.sort_order`
+        ).bind(customCategoryId, tenantId, customCategoryName, customCategoryShortName, customCategorySortOrder)
       );
       continue;
     }
@@ -380,7 +401,14 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
 
     const itemsMap = menuData[slug];
     const customCatName = (itemsMap && (itemsMap.__title || itemsMap._name)) || null;
+    const customCatShortName = (itemsMap && (itemsMap.__short_name || itemsMap._short_name || itemsMap.__short_title || itemsMap._short_title)) || null;
     const customCatType = (itemsMap && (itemsMap.__type || itemsMap._type)) || 'catalog';
+
+    // Skip order_customization / sec-flavor UI containers from being saved as catalog categories
+    if (slug === 'sec-flavor' || slug.startsWith('sec-') || customCatType === 'order_customization') {
+      continue;
+    }
+
     const allowCustomization = (itemsMap && (itemsMap.__allow_customization !== undefined || itemsMap._allow_customization !== undefined))
       ? ((itemsMap.__allow_customization ?? itemsMap._allow_customization) ? 1 : 0)
       : (slug === 'drinks' ? 0 : 1);
@@ -394,18 +422,21 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
     }
 
     const catName = customCatName || catNameMap.get(slug) || defaultCategoryNamesZh[slug] || slug;
+    const catShortName = customCatShortName || (customCatName ? customCatName : (catShortNameMap.get(slug) || catName));
 
     statements.push(
       env.DB.prepare(
-        `INSERT INTO menu_categories (id, tenant_id, name, slug, category_type, allow_customization, applied_modifiers, sort_order)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO menu_categories (id, tenant_id, name, short_name, slug, category_type, allow_customization, applied_modifiers, sort_order)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET 
            name = excluded.name, 
+           short_name = excluded.short_name,
+           slug = excluded.slug,
            category_type = excluded.category_type,
            allow_customization = excluded.allow_customization,
            applied_modifiers = excluded.applied_modifiers,
            sort_order = excluded.sort_order`
-      ).bind(catId, tenantId, catName, slug, customCatType, allowCustomization, appliedModifiers, catSortOrder++)
+      ).bind(catId, tenantId, catName, catShortName, slug, customCatType, allowCustomization, appliedModifiers, currentSortOrder)
     );
 
     if (itemsMap && typeof itemsMap === "object") {
