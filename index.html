@@ -1707,18 +1707,27 @@
             if (!bootstrapData || !bootstrapData.catalog) return;
 
             const hasCustomizations = (Array.isArray(bootstrapData.customizations) && bootstrapData.customizations.length > 0);
+            const catalogSections = bootstrapData.catalog.map(cat => ({ type: 'catalog', sortOrder: cat.sortOrder || 0, category: cat }));
+            if (hasCustomizations) {
+                catalogSections.push({
+                    type: 'customizations',
+                    // Older tenants have no saved position yet; retain the existing top placement.
+                    sortOrder: bootstrapData.customizationSortOrder ?? 0
+                });
+            }
+            catalogSections.sort((a, b) => a.sortOrder - b.sortOrder);
 
             // 1. Navigation Tabs
             const nav = document.getElementById('main-nav');
             let navHTML = '';
 
-            const hasFlavorInCatalog = bootstrapData.catalog.some(c => c.slug === 'sec-flavor' || c.slug === 'flavor' || c.categoryType === 'order_customization');
-            if (hasCustomizations && !hasFlavorInCatalog) {
-                navHTML += `<div class="nav-btn active" onclick="scrollToSec('sec-flavor')">口味選擇</div>`;
-            }
-
-            bootstrapData.catalog.forEach((cat, idx) => {
-                const isActive = (!hasCustomizations && idx === 0) || (hasFlavorInCatalog && idx === 0);
+            catalogSections.forEach((section, idx) => {
+                const isActive = idx === 0;
+                if (section.type === 'customizations') {
+                    navHTML += `<div class="nav-btn ${isActive ? 'active' : ''}" onclick="scrollToSec('sec-flavor')">口味選擇</div>`;
+                    return;
+                }
+                const cat = section.category;
                 const navTitle = (cat.shortName && cat.name && cat.name.includes(cat.shortName)) ? cat.shortName : cat.name;
                 navHTML += `<div class="nav-btn ${isActive ? 'active' : ''}" onclick="scrollToSec('sec-${cat.slug}')">${navTitle}</div>`;
             });
@@ -1729,22 +1738,15 @@
             const container = document.getElementById('catalog-sections');
             container.innerHTML = '';
 
-            if (hasCustomizations && !hasFlavorInCatalog) {
-                const flavorSec = document.createElement('div');
-                flavorSec.className = 'section-container';
-                flavorSec.id = 'sec-flavor';
-                renderCustomizationsPanel(flavorSec, bootstrapData.customizations);
-                container.appendChild(flavorSec);
-            }
-
-            bootstrapData.catalog.forEach(cat => {
+            catalogSections.forEach(section => {
                 const sec = document.createElement('div');
                 sec.className = 'section-container';
-                sec.id = `sec-${cat.slug}`;
-
-                if (cat.slug === 'sec-flavor' || cat.slug === 'flavor' || cat.categoryType === 'order_customization') {
+                if (section.type === 'customizations') {
+                    sec.id = 'sec-flavor';
                     renderCustomizationsPanel(sec, bootstrapData.customizations || []);
                 } else {
+                    const cat = section.category;
+                    sec.id = `sec-${cat.slug}`;
                     const titleDiv = document.createElement('div');
                     titleDiv.className = 'section-title';
                     const promoBadge = cat.pricingRules?.promo_label ? `<span style="margin-left:auto; font-size:12px; font-weight:700; color:#059669; background:#ecfdf5; border:1px solid #a7f3d0; padding:2px 8px; border-radius:9999px;">${cat.pricingRules.promo_label}</span>` : '';

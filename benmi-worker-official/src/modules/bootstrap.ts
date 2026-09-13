@@ -108,6 +108,8 @@ export interface BootstrapResponse {
       sub_options?: string[];
     }>;
   }>;
+  /** Position of the store-wide customization panel among catalog sections. */
+  customizationSortOrder?: number;
   translations?: Record<string, string>;
   recommended?: string[];
 }
@@ -435,9 +437,11 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
     // 5. Separate Catalog vs Modifiers
     const catalog: BootstrapResponse['catalog'] = [];
     const modifiers: BootstrapResponse['modifiers'] = [];
+    let customizationSortOrder: number | undefined;
 
     for (const cat of categories) {
       if (cat.slug === 'sec-flavor' || cat.slug === 'flavor' || cat.category_type === 'order_customization') {
+        customizationSortOrder = cat.sort_order || 0;
         continue;
       }
       const catType = cat.category_type || (cat.slug === 'topping' ? 'modifier' : 'catalog');
@@ -540,6 +544,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
       catalog,
       modifiers,
       customizations: customizations.length > 0 ? customizations : undefined,
+      customizationSortOrder,
       translations: tenantId === 'benmi' ? BENMI_TRANSLATIONS : undefined,
       recommended: items.filter(it => it.is_recommended || it.badge_text).map(it => it.name)
     };

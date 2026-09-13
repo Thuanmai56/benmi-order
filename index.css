@@ -783,6 +783,20 @@ input[type="checkbox"] {
     color: #065f46;
 }
 
+/* A flavour with dependent choices must own the full row on narrow screens.
+   Without this, flex shrink-to-fit lets the next radio option sit beside its
+   dependent choices, which makes the hierarchy look broken in LIFF/Safari. */
+@media (max-width: 767px) {
+    .flavor-option-container:has(.sub-option-container) {
+        flex: 0 0 100%;
+        width: 100%;
+    }
+
+    .sub-option-container {
+        box-sizing: border-box;
+    }
+}
+
 /* Footer */
 .footer {
     position: fixed;
@@ -2274,6 +2288,5 @@ input[type="checkbox"] {
     gap: 8px;
     line-height: 1.4;
 }
-
 
 

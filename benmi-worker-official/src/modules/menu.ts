@@ -342,8 +342,10 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
 
   let catSortOrder = 1;
   for (const slug of Object.keys(menuData)) {
+    const currentSortOrder = catSortOrder++;
     if (slug === '__customizations') {
-      const customList = Array.isArray(menuData[slug]) ? menuData[slug] : (menuData[slug]?.groups || menuData[slug]?.list || []);
+      const customizationData = menuData[slug];
+      const customList = Array.isArray(customizationData) ? customizationData : (customizationData?.groups || customizationData?.list || []);
       const activeCustomIds: string[] = [];
       for (const cust of customList) {
         if (!cust || !cust.key) continue;
@@ -379,9 +381,26 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
         );
       }
 
-      // Cleanup legacy sec-flavor category from menu_categories if present
+      // Persist a lightweight category record so this panel participates in the
+      // same ordering mechanism as every other catalog section.
+      const customCategoryId = catIdMap.get(customizationData?.id) || catIdMap.get('sec-flavor') || customizationData?.id || `${tenantId}_sec-flavor`;
+      const customCategoryName = customizationData?.title || '口味與客製化選擇';
+      const customCategoryShortName = customizationData?.shortName || customCategoryName;
+      const customCategorySortOrder = Number(customizationData?.sortOrder ?? currentSortOrder);
+      activeCategoryIds.push(customCategoryId);
       statements.push(
-        env.DB.prepare("DELETE FROM menu_categories WHERE tenant_id = ? AND (slug = 'sec-flavor' OR id LIKE '%_sec-flavor')").bind(tenantId)
+        env.DB.prepare(
+          `INSERT INTO menu_categories (id, tenant_id, name, short_name, slug, category_type, allow_customization, applied_modifiers, sort_order)
+           VALUES (?, ?, ?, ?, 'sec-flavor', 'order_customization', 0, '[]', ?)
+           ON CONFLICT(id) DO UPDATE SET
+             name = excluded.name,
+             short_name = excluded.short_name,
+             slug = excluded.slug,
+             category_type = excluded.category_type,
+             allow_customization = excluded.allow_customization,
+             applied_modifiers = excluded.applied_modifiers,
+             sort_order = excluded.sort_order`
+        ).bind(customCategoryId, tenantId, customCategoryName, customCategoryShortName, customCategorySortOrder)
       );
       continue;
     }
@@ -429,7 +448,7 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
            allow_customization = excluded.allow_customization,
            applied_modifiers = excluded.applied_modifiers,
            sort_order = excluded.sort_order`
-      ).bind(catId, tenantId, catName, catShortName, slug, customCatType, allowCustomization, appliedModifiers, catSortOrder++)
+      ).bind(catId, tenantId, catName, catShortName, slug, customCatType, allowCustomization, appliedModifiers, currentSortOrder)
     );
 
     if (itemsMap && typeof itemsMap === "object") {

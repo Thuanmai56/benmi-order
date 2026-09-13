@@ -244,6 +244,7 @@ const I18N = {
     menuItemTotalCount: "(全部 {count} 項)",
     menuItemUnit: "項",
     modifierPrefix: "[客製化]",
+    customizationPositionHint: "可拖曳調整位置",
     stockStatusInStock: "🟢 正常供應",
     stockStatusOutOfStock: "🔴 暫時售完",
     btnItemImage: "📷 圖片",
@@ -594,6 +595,7 @@ const I18N = {
     menuItemTotalCount: "(Tất cả {count} món)",
     menuItemUnit: "món",
     modifierPrefix: "[Tùy biến]",
+    customizationPositionHint: "Có thể kéo để đổi vị trí",
     stockStatusInStock: "🟢 Còn hàng",
     stockStatusOutOfStock: "🔴 Hết hàng",
     btnItemImage: "📷 Ảnh",
@@ -1236,4 +1238,3 @@ function applyLanguageToDOM() {
   const btnContUpg = document.getElementById("i18n-btn-contact-upgrade");
   if (btnContUpg) btnContUpg.innerHTML = `<span>💬</span> <span>${dict.btnContactUpgrade}</span>`;
 }
-
