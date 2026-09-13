@@ -4,6 +4,12 @@
  * ==========================================================================
  */
 
+// Menu links remain on the legacy host until the production LIFF Endpoint is
+// migrated to order.blabfood.app.
+function buildMarketplaceOrderUrl(tenantId) {
+  return "https://benmi-order.pages.dev/?tenant_id=" + encodeURIComponent(tenantId);
+}
+
 // 1. SVG Iconography Repository (Lucide Icons - MIT Licensed)
 var MARKETPLACE_SVG = {
   search: '<svg class="icon-svg" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>',
@@ -672,7 +678,7 @@ var MarketplaceApp = {
           '</div>';
       }
 
-      var orderUrl = "/?tenant_id=" + encodeURIComponent(t.tenantId);
+      var orderUrl = buildMarketplaceOrderUrl(t.tenantId);
 
       return [
         '<div class="store-card' + (self.activeTenantId === t.tenantId ? ' active-focus' : '') + '"',
@@ -983,7 +989,7 @@ var MarketplaceApp = {
           : '<span>' + (t.brandName.charAt(0)) + '</span>';
         var statusText = isOpen ? self.t("openNow") : (t.storeStatus === "busy" ? self.t("busy") : self.t("closed"));
         var distStr = formatDistance(t.distanceKm, self.currentLang);
-        var orderUrl = "/?tenant_id=" + encodeURIComponent(t.tenantId);
+        var orderUrl = buildMarketplaceOrderUrl(t.tenantId);
 
         var popupHtml = [
           '<div class="map-popup-card">',
@@ -1154,7 +1160,7 @@ var MarketplaceApp = {
     if (tenant.allowScheduledPickup) diningBadges.push('<span class="feature-pill">' + MARKETPLACE_SVG.clock + ' ' + this.t("modalDiningScheduled") + '</span>');
     diningBadges.push('<span class="feature-pill">' + MARKETPLACE_SVG.shoppingBag + ' ' + this.t("modalDiningTakeaway") + '</span>');
 
-    var orderUrl = "/?tenant_id=" + encodeURIComponent(tenant.tenantId);
+    var orderUrl = buildMarketplaceOrderUrl(tenant.tenantId);
 
     body.innerHTML = [
       '<div class="modal-banner" style="background: linear-gradient(135deg, ' + (tenant.brandColor || '#059669') + ' 0%, #10b981 100%);">',
