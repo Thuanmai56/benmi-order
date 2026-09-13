@@ -73,8 +73,8 @@ apps/android-pos/
 ├── build.sh                             # Script tự động copy HTML, CSS, JS sang dist/
 ├── capacitor.config.ts                  # Cấu hình Capacitor App (Hỗ trợ dev-local, pilot, prod)
 ├── package.json                         # Scripts build:apk, build:apk:dev, build:apk:pilot, sync:dev
-├── blab-pos-dev-v0.9.3.apk              # File cài đặt APK Dev mới nhất (v0.9.3)
-├── blab-pos-pilot-v0.9.3.apk            # File cài đặt APK Pilot mới nhất (v0.9.3)
+├── blab-pos-dev-v0.9.4.apk              # File cài đặt APK Dev mới nhất (v0.9.4)
+├── blab-pos-pilot-v0.9.4.apk            # File cài đặt APK Pilot mới nhất (v0.9.4)
 └── README.md                            # Tài liệu hướng dẫn này
 ```
 
