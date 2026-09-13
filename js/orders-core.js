@@ -767,6 +767,15 @@ function renderAll() {
       renderHistory(historyOrders);
     }
   }
+
+  // Keep open Order Detail modal countdown updated dynamically
+  const revModal = document.getElementById("reviewModal");
+  if (revModal && revModal.style.display !== "none" && typeof reviewingOrder !== "undefined" && reviewingOrder) {
+    const updatedReviewOrder = (latestOrders && latestOrders.find(o => o && o.key === reviewingOrder.key)) || reviewingOrder;
+    if (typeof updateReviewModalEta === "function") {
+      updateReviewModalEta(updatedReviewOrder);
+    }
+  }
 }
 
 function copyToClipboard(text, msgZh, msgVi) {

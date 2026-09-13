@@ -100,6 +100,9 @@ function openReview(orderKey) {
   const isDineIn = typeof isOrderDineIn === "function" ? isOrderDineIn(order) : order.diningOption === "dine_in";
   const roundCount = Number(order.round_count || order.roundCount) || 1;
   const isAppended = isDineIn && (roundCount > 1 || Boolean(order.lastAppendedAt || order.last_appended_at));
+  const isFinished = ["PICKED_UP", "PAID", "CANCELLED", "REJECTED"].includes(order.status);
+  const lang = window.currentLang || (typeof currentLang !== "undefined" ? currentLang : "zh-TW");
+  const isVi = lang === "vi";
 
   const elPickLabel = document.getElementById("i18n-label-pickup");
   if (elPickLabel) {
@@ -144,7 +147,6 @@ function openReview(orderKey) {
   const elCustSub = document.getElementById("review-customer-sub");
   if (elCustSub) {
     const tableNum = typeof getOrderTableNumber === "function" ? getOrderTableNumber(order) : (order.tableNumber || "");
-    const lang = window.currentLang || (typeof currentLang !== "undefined" ? currentLang : "zh-TW");
     if (order.phone) {
       elCustSub.innerText = order.phone;
     } else if (isDineIn) {
@@ -155,16 +157,81 @@ function openReview(orderKey) {
   }
 
   const elPick = document.getElementById("review-pickup");
+  const clockSvg = (typeof POS_SVG !== "undefined" && POS_SVG.clock) || "";
+  const pickTimeStr = isDineIn
+    ? (typeof formatDineInTimeDisplay === "function" ? formatDineInTimeDisplay(order) : (typeof formatOrderSubmissionTime === "function" ? formatOrderSubmissionTime(order) : formatPickupTimeDisplay(order.time)))
+    : formatPickupTimeDisplay(order.time, order.createdAt, order.content);
+
   if (elPick) {
-    const clockSvg = (typeof POS_SVG !== "undefined" && POS_SVG.clock) || "";
-    const pickTimeStr = isDineIn ? formatDineInTimeDisplay(order) : formatPickupTimeDisplay(order.time);
     elPick.innerHTML = `${clockSvg}<span>${escapeHtml(pickTimeStr)}</span>`;
+  }
+
+  let etaText = "";
+  if (isFinished) {
+    if (order.status === "PICKED_UP") etaText = isVi ? (t("statusPillPicked") || "Đã giao hàng") : (t("statusPillPicked") || "已取餐");
+    else if (order.status === "PAID") etaText = isVi ? (t("statusPillPaid") || "Đã hoàn thành") : (t("statusPillPaid") || "已結帳");
+    else etaText = isVi ? (t("statusPillRejected") || "Đã hủy") : (t("statusPillRejected") || "已取消");
+  } else {
+    etaText = isDineIn
+      ? (typeof formatSubmissionElapsedTime === "function" ? formatSubmissionElapsedTime(order) : formatDineInElapsedTime(order))
+      : formatEta(order.time);
   }
 
   const elEta = document.getElementById("review-eta");
   if (elEta) {
-    elEta.innerText = isDineIn ? formatDineInElapsedTime(order) : formatEta(order.time);
-    elEta.style.color = isDineIn ? "#7c3aed" : "var(--brand-red)";
+    elEta.innerText = etaText;
+    if (isFinished) {
+      elEta.className = "timing-card-val";
+      elEta.style.color = order.status === "PICKED_UP" || order.status === "PAID" ? "#059669" : "#64748b";
+    } else if (isDineIn) {
+      elEta.className = "timing-card-val timing-eta-dinein";
+      elEta.style.color = "#7c3aed";
+    } else {
+      const targetMs = parsePickupTimeMs(order.time);
+      const diffMin = Math.round((targetMs - Date.now()) / 60000);
+      if (!Number.isNaN(targetMs) && diffMin <= 0) {
+        elEta.className = "timing-card-val timing-eta-overdue";
+        elEta.style.color = "var(--brand-red, #dc2626)";
+      } else if (!Number.isNaN(targetMs) && diffMin <= 15) {
+        elEta.className = "timing-card-val timing-eta-urgent";
+        elEta.style.color = "#ea580c";
+      } else {
+        elEta.className = "timing-card-val";
+        elEta.style.color = "var(--brand-red, #dc2626)";
+      }
+    }
+  }
+
+  // Update meta bar pickup & ETA chip in left column
+  const elMetaPickupVal = document.getElementById("review-meta-pickup-val");
+  const elMetaEtaVal = document.getElementById("review-meta-eta-val");
+  const elMetaPickup = document.getElementById("review-meta-pickup");
+  const elMetaPickupDivider = document.getElementById("review-meta-pickup-divider");
+
+  if (elMetaPickup && elMetaPickupVal && elMetaEtaVal) {
+    if (pickTimeStr && pickTimeStr !== "-") {
+      elMetaPickupVal.innerText = pickTimeStr;
+      elMetaEtaVal.innerText = etaText;
+      elMetaEtaVal.className = "order-detail-meta-eta-badge";
+      if (isFinished) {
+        elMetaEtaVal.style.background = "#f1f5f9";
+        elMetaEtaVal.style.color = "#475569";
+        elMetaEtaVal.style.borderColor = "#e2e8f0";
+      } else if (isDineIn) {
+        elMetaEtaVal.classList.add("eta-dinein");
+      } else {
+        const targetMs = parsePickupTimeMs(order.time);
+        const diffMin = Math.round((targetMs - Date.now()) / 60000);
+        if (!Number.isNaN(targetMs) && diffMin <= 0) {
+          elMetaEtaVal.classList.add("eta-overdue");
+        }
+      }
+      elMetaPickup.style.display = "inline-flex";
+      if (elMetaPickupDivider) elMetaPickupDivider.style.display = "inline";
+    } else {
+      elMetaPickup.style.display = "none";
+      if (elMetaPickupDivider) elMetaPickupDivider.style.display = "none";
+    }
   }
 
   const elTot = document.getElementById("review-total");
@@ -236,7 +303,6 @@ function openReview(orderKey) {
   const elStatusTitle = document.getElementById("review-status-title");
   let statusText = order.status || "-";
   let statusCls = "status-pill-default";
-  const lang = window.currentLang || (typeof currentLang !== "undefined" ? currentLang : "zh-TW");
 
   if (order.status === "NEW") {
     statusText = t("statusPillNew") || (lang === "vi" ? "Chờ xác nhận" : "待處理");
@@ -277,7 +343,6 @@ function openReview(orderKey) {
   const elDining = document.getElementById("review-dining");
   if (elDining) {
     const tableNum = typeof getOrderTableNumber === "function" ? getOrderTableNumber(order) : (order.tableNumber || "");
-    const lang = window.currentLang || (typeof currentLang !== "undefined" ? currentLang : "zh-TW");
     const tableSuffix = tableNum ? (lang === 'vi' ? ` · Bàn ${tableNum}` : ` · 桌號 ${tableNum}`) : "";
     const svgDineIn = (typeof POS_SVG !== "undefined" && POS_SVG.dineIn) || "";
     const svgTakeaway = (typeof POS_SVG !== "undefined" && POS_SVG.takeaway) || "";
@@ -300,13 +365,11 @@ function openReview(orderKey) {
   const itemCount = (parsedItems && parsedItems.length) || 1;
   const elItemsCount = document.getElementById("review-items-count");
   if (elItemsCount) {
-    const isVi = (typeof currentLang !== "undefined" && currentLang === "vi") || (typeof window !== "undefined" && window.currentLang === "vi");
     elItemsCount.innerText = isVi ? `${itemCount} món` : `${itemCount} 項`;
   }
 
   const btnFullLabel = document.getElementById("i18n-btn-print-full");
   if (btnFullLabel) {
-    const isVi = (typeof currentLang !== "undefined" && currentLang === "vi") || (typeof window !== "undefined" && window.currentLang === "vi");
     btnFullLabel.innerHTML = (typeof t === "function" && t("btnPrintFullOrder", { n: itemCount })) || (isVi ? `IN CẢ ĐƠN<br>(1 Bill + ${itemCount} Tem)` : `整單全印<br>(明細+標籤）`);
   }
 
@@ -331,7 +394,6 @@ function openReview(orderKey) {
       btnPik.style.display = "inline-flex";
       const span = btnPik.querySelector("span");
       if (span) {
-        const lang = window.currentLang || (typeof currentLang !== "undefined" ? currentLang : "zh-TW");
         if (isDineIn) {
           span.textContent = lang === "vi" ? "Đã xong" : "已完成";
         } else {
@@ -937,6 +999,74 @@ async function printCustomQuickSticker() {
   await printQuickModifierOption(val);
   if (input) input.value = "";
 }
+
+function updateReviewModalEta(order) {
+  if (!order) return;
+  const revModal = document.getElementById("reviewModal");
+  if (!revModal || revModal.style.display === "none") return;
+
+  const isDineIn = typeof isOrderDineIn === "function" ? isOrderDineIn(order) : order.diningOption === "dine_in";
+  const elEta = document.getElementById("review-eta");
+  if (!elEta) return;
+
+  const isFinished = ["PICKED_UP", "PAID", "CANCELLED", "REJECTED"].includes(order.status);
+  const lang = window.currentLang || (typeof currentLang !== "undefined" ? currentLang : "zh-TW");
+  const isVi = lang === "vi";
+
+  let etaText = "";
+  if (isFinished) {
+    if (order.status === "PICKED_UP") etaText = isVi ? (t("statusPillPicked") || "Đã giao hàng") : (t("statusPillPicked") || "已取餐");
+    else if (order.status === "PAID") etaText = isVi ? (t("statusPillPaid") || "Đã hoàn thành") : (t("statusPillPaid") || "已結帳");
+    else etaText = isVi ? (t("statusPillRejected") || "Đã hủy") : (t("statusPillRejected") || "已取消");
+    elEta.className = "timing-card-val";
+    elEta.style.color = order.status === "PICKED_UP" || order.status === "PAID" ? "#059669" : "#64748b";
+  } else {
+    etaText = isDineIn
+      ? (typeof formatSubmissionElapsedTime === "function" ? formatSubmissionElapsedTime(order) : formatDineInElapsedTime(order))
+      : formatEta(order.time);
+
+    if (isDineIn) {
+      elEta.className = "timing-card-val timing-eta-dinein";
+      elEta.style.color = "#7c3aed";
+    } else {
+      const targetMs = parsePickupTimeMs(order.time);
+      const diffMin = Math.round((targetMs - Date.now()) / 60000);
+      if (!Number.isNaN(targetMs) && diffMin <= 0) {
+        elEta.className = "timing-card-val timing-eta-overdue";
+        elEta.style.color = "var(--brand-red, #dc2626)";
+      } else if (!Number.isNaN(targetMs) && diffMin <= 15) {
+        elEta.className = "timing-card-val timing-eta-urgent";
+        elEta.style.color = "#ea580c";
+      } else {
+        elEta.className = "timing-card-val";
+        elEta.style.color = "var(--brand-red, #dc2626)";
+      }
+    }
+  }
+
+  elEta.innerText = etaText;
+
+  const elMetaEtaVal = document.getElementById("review-meta-eta-val");
+  if (elMetaEtaVal) {
+    elMetaEtaVal.innerText = etaText;
+    if (isFinished) {
+      elMetaEtaVal.style.background = "#f1f5f9";
+      elMetaEtaVal.style.color = "#475569";
+      elMetaEtaVal.style.borderColor = "#e2e8f0";
+    } else if (isDineIn) {
+      elMetaEtaVal.className = "order-detail-meta-eta-badge eta-dinein";
+    } else {
+      const targetMs = parsePickupTimeMs(order.time);
+      const diffMin = Math.round((targetMs - Date.now()) / 60000);
+      if (!Number.isNaN(targetMs) && diffMin <= 0) {
+        elMetaEtaVal.className = "order-detail-meta-eta-badge eta-overdue";
+      } else {
+        elMetaEtaVal.className = "order-detail-meta-eta-badge";
+      }
+    }
+  }
+}
+window.updateReviewModalEta = updateReviewModalEta;
 
 window.openQuickStickerModal = openQuickStickerModal;
 window.closeQuickStickerModal = closeQuickStickerModal;

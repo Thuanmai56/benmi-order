@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title id="pos-page-title">Blab POS</title>
   <base href="/" />
-  <link rel="stylesheet" href="css/orders.css?v=20260912_tile_btn_center_v1" />
+  <link rel="stylesheet" href="css/orders.css?v=20260913_scheduled_pickup_eta_v1" />
     <script>
       (function () {
         document.documentElement.style.setProperty('--primary', '#00b900');
@@ -1317,14 +1317,10 @@
       <!-- Hidden compatibility hooks for existing script references -->
       <div id="review-order-key" style="display:none;"></div>
       <div id="i18n-review-title" style="display:none;">訂單詳情</div>
-      <div id="review-pickup" style="display:none;">-</div>
-      <div id="review-eta" style="display:none;">-</div>
       <div id="review-status" style="display:none;">-</div>
       <div id="i18n-label-customer" style="display:none;"></div>
       <div id="i18n-label-dining" style="display:none;"></div>
       <div id="i18n-label-status" style="display:none;"></div>
-      <div id="i18n-label-pickup" style="display:none;"></div>
-      <div id="i18n-label-eta" style="display:none;"></div>
       <div id="i18n-label-total" style="display:none;"></div>
       <div id="i18n-review-items-title" style="display:none;"></div>
 
@@ -1337,6 +1333,14 @@
             <span class="order-detail-items-count" id="review-items-count">0 mặt hàng</span>
             <span class="order-detail-meta-divider">•</span>
             <span class="order-detail-dining-tag" id="review-dining">-</span>
+            <span class="order-detail-meta-divider" id="review-meta-pickup-divider" style="display:none;">•</span>
+            <span class="order-detail-meta-pickup" id="review-meta-pickup" style="display:none;">
+              <span class="meta-pickup-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-1px; opacity:0.85;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              </span>
+              <span class="meta-pickup-time" id="review-meta-pickup-val">-</span>
+              <span class="order-detail-meta-eta-badge" id="review-meta-eta-val">-</span>
+            </span>
           </div>
 
           <!-- Items Content -->
@@ -1365,6 +1369,19 @@
           <div class="order-detail-status-header">
             <h2 class="order-detail-status-title" id="review-status-title">Đang làm</h2>
             <div class="order-detail-time-text" id="review-time-display">-</div>
+          </div>
+
+          <!-- Scheduled Pickup & ETA Countdown Card -->
+          <div class="order-detail-timing-card" id="review-timing-card">
+            <div class="timing-card-box pickup-box">
+              <div class="timing-card-label" id="i18n-label-pickup">取餐時間</div>
+              <div class="timing-card-val" id="review-pickup">-</div>
+            </div>
+            <div class="timing-card-divider"></div>
+            <div class="timing-card-box eta-box">
+              <div class="timing-card-label" id="i18n-label-eta">剩餘時間</div>
+              <div class="timing-card-val" id="review-eta">-</div>
+            </div>
           </div>
 
           <!-- Customer & Order Info Card -->
@@ -2008,11 +2025,11 @@
 
   <!-- Benmi POS Modular Architecture Scripts -->
   <script src="js/orders-i18n.js?v=20260913_customization_editor_v2"></script>
-  <script src="js/orders-core.js?v=20260912_tile_btn_center_v1"></script>
+  <script src="js/orders-core.js?v=20260913_scheduled_pickup_eta_v1"></script>
   <script src="js/orders-audio.js?v=20260912_tile_btn_center_v1"></script>
   <script src="js/printer-service.js?v=20260912_tile_btn_center_v1"></script>
   <script src="js/orders-live.js?v=20260912_tile_btn_center_v1"></script>
-  <script src="js/orders-modals.js?v=20260913_fix_subtotal_calc_v1"></script>
+  <script src="js/orders-modals.js?v=20260913_scheduled_pickup_eta_v1"></script>
   <script src="js/orders-history.js?v=20260912_tile_btn_center_v1"></script>
   <script src="js/orders-reports.js?v=20260912_tile_btn_center_v1"></script>
   <script src="js/orders-settings.js?v=20260912_tile_btn_center_v1"></script>
