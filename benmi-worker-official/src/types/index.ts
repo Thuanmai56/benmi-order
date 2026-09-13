@@ -13,7 +13,11 @@ export type OrderStatus =
   | 'FORCE_REJECT';
 
 export interface Order {
+  /** Immutable server UUID; never show this as the receipt number. */
   key: string;
+  displayKey?: string;
+  legacyKey?: string | null;
+  businessDate?: string;
   uuid?: string | null;
   customer: string;
   time: string; // "YYYY-MM-DD HH:mm"

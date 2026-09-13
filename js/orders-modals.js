@@ -33,7 +33,7 @@ function openReview(orderKey) {
   if (elEtaLabel) elEtaLabel.innerText = isDineIn ? t("dineInElapsedHeader") : t("labelEta");
 
   const elKey = document.getElementById("review-order-key");
-  if (elKey) elKey.innerText = order.key || "-";
+  if (elKey) elKey.innerText = order.displayKey || order.key || "-";
   const elCust = document.getElementById("review-customer");
   if (elCust) elCust.innerText = order.customer || "-";
   const elPick = document.getElementById("review-pickup");
