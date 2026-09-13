@@ -437,6 +437,9 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
     const modifiers: BootstrapResponse['modifiers'] = [];
 
     for (const cat of categories) {
+      if (cat.slug === 'sec-flavor' || cat.slug === 'flavor' || cat.category_type === 'order_customization') {
+        continue;
+      }
       const catType = cat.category_type || (cat.slug === 'topping' ? 'modifier' : 'catalog');
       const catItems = itemsByCatId.get(cat.id) || [];
 

@@ -344,6 +344,7 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
   for (const slug of Object.keys(menuData)) {
     if (slug === '__customizations') {
       const customList = Array.isArray(menuData[slug]) ? menuData[slug] : (menuData[slug]?.groups || menuData[slug]?.list || []);
+      const activeCustomIds: string[] = [];
       for (const cust of customList) {
         if (!cust || !cust.key) continue;
         const custKey = cust.key;
@@ -353,6 +354,7 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
         const optionsList = Array.isArray(cust.options) ? cust.options : [];
         const optionsJson = JSON.stringify(optionsList);
         const custId = cust.id || `custom_${tenantId}_${custKey}`;
+        activeCustomIds.push(custId);
 
         statements.push(
           env.DB.prepare(
@@ -367,6 +369,20 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
           ).bind(custId, tenantId, custKey, custTitle, custType, custSort, optionsJson)
         );
       }
+
+      if (activeCustomIds.length > 0) {
+        const placeholders = activeCustomIds.map(() => '?').join(',');
+        statements.push(
+          env.DB.prepare(
+            `DELETE FROM menu_customizations WHERE tenant_id = ? AND id NOT IN (${placeholders})`
+          ).bind(tenantId, ...activeCustomIds)
+        );
+      }
+
+      // Cleanup legacy sec-flavor category from menu_categories if present
+      statements.push(
+        env.DB.prepare("DELETE FROM menu_categories WHERE tenant_id = ? AND (slug = 'sec-flavor' OR id LIKE '%_sec-flavor')").bind(tenantId)
+      );
       continue;
     }
 
