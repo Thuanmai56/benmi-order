@@ -7,6 +7,7 @@ import { saveOrder, getPendingMap, getOrderQueueAhead, getUserLatestActiveOrder 
 import { callAI, FewShotExample } from '../integrations/groq';
 import { syncToGoogleSheets } from '../integrations/googleSheets';
 import { getTenantId, getMenuData, formatMenuForPrompt } from './menu';
+import { formatOperatingHoursForDisplay } from './bootstrap';
 
 export async function getLineToken(env: Env, tenantCtx?: TenantContext | null): Promise<string> {
   if (tenantCtx?.lineChannelToken) {
@@ -1295,37 +1296,81 @@ export async function replyWithLiffRedirect(
 
 export function handleQuickReply(text: string, tenantCtx?: TenantContext | null): string | null {
   const msg = String(text || "").trim();
+  if (!msg) return null;
 
-  // 1. Dynamic Config from TenantContext
-  if (tenantCtx) {
-    if (msg.includes("營業時間") && tenantCtx.operatingHours) {
-      return `我們的營業時間：${tenantCtx.operatingHours}`;
+  const lowerMsg = msg.toLowerCase();
+
+  // 1. Check custom quick replies configured for this tenant
+  if (tenantCtx && Array.isArray(tenantCtx.quickReplies)) {
+    for (const qr of tenantCtx.quickReplies) {
+      if (Array.isArray(qr.triggers) && qr.triggers.some(tr => tr && lowerMsg.includes(tr.toLowerCase()))) {
+        return qr.reply;
+      }
     }
-    if ((msg.includes("地址") || msg.includes("在哪")) && tenantCtx.storeAddress) {
+  }
+
+  // Detect language: Vietnamese triggers or tenant locale
+  const isViTrigger = [
+    "giờ mở cửa", "thời gian mở cửa", "mở cửa mấy giờ", "mấy giờ mở", "mấy giờ đóng", "có mở cửa",
+    "địa chỉ", "ở đâu", "vị trí",
+    "giao hàng", "ship", "có ship không", "phí ship"
+  ].some(k => lowerMsg.includes(k));
+  const isVi = isViTrigger || tenantCtx?.locale === 'vi';
+
+  // 2. Business / Operating Hours
+  const hoursTriggers = [
+    "營業時間", "幾點開", "開到幾點", "幾點關", "幾點打烊", "有開嗎", "營業到幾點", "什麼時候開",
+    "giờ mở cửa", "thời gian mở cửa", "mở cửa mấy giờ", "mấy giờ mở", "mấy giờ đóng", "có mở cửa",
+    "opening hours", "operating hours", "business hours"
+  ];
+  if (hoursTriggers.some(k => lowerMsg.includes(k))) {
+    const formatted = formatOperatingHoursForDisplay(
+      tenantCtx?.operatingHours,
+      isVi ? 'vi' : (tenantCtx?.locale || 'zh-TW'),
+      tenantCtx?.tenantId || ''
+    );
+    return isVi ? `Giờ mở cửa của chúng tôi:\n${formatted}` : `我們的營業時間：\n${formatted}`;
+  }
+
+  // 3. Address
+  const addressTriggers = [
+    "地址", "在哪", "位置", "在哪裡", "在哪裏",
+    "địa chỉ", "ở đâu", "vị trí", "địa điểm",
+    "address", "location"
+  ];
+  if (addressTriggers.some(k => lowerMsg.includes(k))) {
+    if (tenantCtx?.storeAddress) {
       return tenantCtx.storeAddress;
     }
-    if (msg.includes("外送嗎") && tenantCtx.deliveryPolicy) {
-      return tenantCtx.deliveryPolicy;
+    if (tenantCtx?.tenantId === 'benmi' || !tenantCtx) {
+      return "新北市土城區中央路二段135號";
     }
+    return isVi ? "Hiện tại quán chưa cập nhật địa chỉ cửa hàng." : "目前尚未設定店家地址，敬請見諒。";
   }
 
-  // 2. Fallback to hardcoded keywords if matching Benmi defaults
-  if (msg.includes("營業時間")) {
-    return tenantCtx?.operatingHours
-      ? `我們的營業時間：${tenantCtx.operatingHours}`
-      : "我們的營業時間：11:00-21:00（一到五），7:30-21:00（六日）。";
-  }
-  if (msg.includes("地址") || msg.includes("在哪")) {
-    return tenantCtx?.storeAddress || "新北市土城區中央路二段135號";
-  }
-  if (msg.includes("外送嗎")) {
-    return tenantCtx?.deliveryPolicy ||
-      "Benmi 最新外送說明如下：\n" +
-      "滿 2,000 元： 不限距離，土城全區皆享免運！\n" +
-      "滿 800 元：\n" +
-      "距離店址 2公里內 ➔ 免運\n" +
-      "距離店址 超過2公里 ➔ 酌收 80元 運費。\n" +
-      "未滿 800 元： 也別擔心！歡迎直接點擊 UberEats 平台直接下單，美味一樣送到家 https://cutt.ly/Mt9w2fAD";
+  // 4. Delivery Policy
+  const deliveryTriggers = [
+    "外送嗎", "外送", "送外賣", "有外送", "可以外送", "外送服務",
+    "giao hàng", "ship", "có ship không", "phí ship",
+    "delivery"
+  ];
+  if (deliveryTriggers.some(k => lowerMsg.includes(k))) {
+    if (tenantCtx?.deliveryPolicy) {
+      return tenantCtx.deliveryPolicy;
+    }
+    if (tenantCtx?.tenantId === 'benmi' || !tenantCtx) {
+      return (
+        "Benmi 最新外送說明如下：\n" +
+        "滿 2,000 元： 不限距離，土城全區皆享免運！\n" +
+        "滿 800 元：\n" +
+        "距離店址 2公里內 ➔ 免運\n" +
+        "距離店址 超過2公里 ➔ 酌收 80元 運費。\n" +
+        "未滿 800 元： 也別擔心！歡迎直接點擊 UberEats 平台直接下單，美味一樣送到家 https://cutt.ly/Mt9w2fAD"
+      );
+    }
+    return isVi
+      ? "Hiện tại quán chưa có chính sách giao hàng trực tiếp. Vui lòng đặt qua các ứng dụng giao đồ ăn hoặc đến lấy trực tiếp."
+      : "目前尚未提供外送服務，歡迎透過外送平台訂購或到店自取，謝謝！";
   }
 
   return null;

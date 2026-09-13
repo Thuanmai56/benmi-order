@@ -42,6 +42,7 @@ export interface BootstrapResponse {
     announcement?: string | null;
     operatingHours: string | null;
     parsedHours: Record<string, Array<{ start: string; end: string }>>;
+    formattedHours?: string;
     deliveryPolicy: string | null;
     allowScheduledPickup: boolean;
     allowDineIn: boolean;
@@ -128,42 +129,200 @@ const BENMI_TRANSLATIONS: Record<string, string> = {
   "雪碧": "Cocacola / Sprite"
 };
 
-export function parseOperatingHours(raw: string | null, tenantId: string): Record<string, Array<{ start: string; end: string }>> {
+export function parseOperatingHours(raw: any, tenantId: string): Record<string, Array<{ start: string; end: string }>> {
   const result: Record<string, Array<{ start: string; end: string }>> = {};
 
-  if (!raw || raw.trim() === '') {
+  if (!raw || (typeof raw === 'string' && raw.trim() === '')) {
     const defaultShifts = [{ start: "11:00", end: "21:00" }];
     for (let i = 0; i < 7; i++) result[String(i)] = defaultShifts;
     return result;
   }
 
   try {
-    const parsed = JSON.parse(raw);
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
     if (typeof parsed === 'object' && parsed !== null) {
-      return parsed;
+      if (Array.isArray(parsed)) {
+        for (let i = 0; i < 7; i++) result[String(i)] = parsed;
+        return result;
+      }
+      for (let i = 0; i < 7; i++) {
+        const s = parsed[String(i)] !== undefined ? parsed[String(i)] : parsed[i];
+        result[String(i)] = Array.isArray(s) ? s : [];
+      }
+      return result;
     }
   } catch (e) {
     // Plain text parser
   }
 
-  const timeMatch = raw.match(/(\d{1,2}:\d{2})\s*[-~至到]\s*(\d{1,2}:\d{2})/);
-  if (timeMatch) {
-    const start = timeMatch[1].padStart(5, '0');
-    const end = timeMatch[2].padStart(5, '0');
-    const shift = [{ start, end }];
-    for (let i = 0; i < 7; i++) {
-      result[String(i)] = shift;
+  if (typeof raw === 'string') {
+    const timeMatch = raw.match(/(\d{1,2}:\d{2})\s*[-~至到]\s*(\d{1,2}:\d{2})/);
+    if (timeMatch) {
+      const start = timeMatch[1].padStart(5, '0');
+      const end = timeMatch[2].padStart(5, '0');
+      const shift = [{ start, end }];
+      for (let i = 0; i < 7; i++) {
+        result[String(i)] = shift;
+      }
+      if (tenantId === 'benmi' && raw.includes('7:30')) {
+        result['0'] = [{ start: '07:30', end: '21:00' }]; // Sun
+        result['6'] = [{ start: '07:30', end: '21:00' }]; // Sat
+      }
+      return result;
     }
-    if (tenantId === 'benmi' && raw.includes('7:30')) {
-      result['0'] = [{ start: '07:30', end: '21:00' }]; // Sun
-      result['6'] = [{ start: '07:30', end: '21:00' }]; // Sat
-    }
-    return result;
   }
 
   const fallback = [{ start: "11:00", end: "21:00" }];
   for (let i = 0; i < 7; i++) result[String(i)] = fallback;
   return result;
+}
+
+/**
+ * Formats tenant operating hours (whether JSON string, parsed object, or plain text)
+ * into a human-readable multiline string for LINE messages, AI replies, or UI display.
+ */
+export function formatOperatingHoursForDisplay(
+  raw: any,
+  locale: string = 'zh-TW',
+  tenantId: string = ''
+): string {
+  const isVi = locale === 'vi' || (typeof locale === 'string' && locale.toLowerCase().startsWith('vi'));
+
+  if (!raw || (typeof raw === 'string' && raw.trim() === '')) {
+    return isVi ? 'Thứ 2 - Chủ Nhật: 11:00 - 21:00' : '週一至週日 11:00 - 21:00';
+  }
+
+  // If raw is already human text (does not look like JSON object or array)
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) {
+      return trimmed;
+    }
+  }
+
+  let parsed: Record<string, Array<{ start: string; end: string }>>;
+  if (typeof raw === 'object' && raw !== null) {
+    if (Array.isArray(raw)) {
+      parsed = {};
+      for (let i = 0; i < 7; i++) parsed[String(i)] = raw;
+    } else {
+      parsed = {};
+      for (let i = 0; i < 7; i++) {
+        const s = raw[String(i)] !== undefined ? raw[String(i)] : raw[i];
+        parsed[String(i)] = Array.isArray(s) ? s : [];
+      }
+    }
+  } else {
+    parsed = parseOperatingHours(raw, tenantId);
+  }
+
+  const dayNamesZh: Record<string, string> = {
+    '1': '週一',
+    '2': '週二',
+    '3': '週三',
+    '4': '週四',
+    '5': '週五',
+    '6': '週六',
+    '0': '週日',
+  };
+
+  const dayNamesVi: Record<string, string> = {
+    '1': 'Thứ 2',
+    '2': 'Thứ 3',
+    '3': 'Thứ 4',
+    '4': 'Thứ 5',
+    '5': 'Thứ 6',
+    '6': 'Thứ 7',
+    '0': 'Chủ Nhật',
+  };
+
+  const dayNames = isVi ? dayNamesVi : dayNamesZh;
+  const closedLabel = isVi ? 'Nghỉ' : '公休';
+
+  // Week order from Monday to Sunday: 1, 2, 3, 4, 5, 6, 0
+  const weekDays = ['1', '2', '3', '4', '5', '6', '0'];
+
+  const daySchedules: Array<{ day: string; schedule: string; isOpen: boolean }> = weekDays.map((d) => {
+    const shifts = Array.isArray(parsed[d]) ? parsed[d] : [];
+    if (shifts.length === 0) {
+      return { day: d, schedule: closedLabel, isOpen: false };
+    }
+    const formattedShift = shifts
+      .map((s: any) => `${s.start || ''} - ${s.end || ''}`.trim())
+      .filter((s: string) => s.length > 2)
+      .join(', ');
+    return {
+      day: d,
+      schedule: formattedShift || closedLabel,
+      isOpen: !!formattedShift && formattedShift !== closedLabel,
+    };
+  });
+
+  // Check if all 7 days are identical
+  const allSame = daySchedules.every((ds) => ds.schedule === daySchedules[0].schedule);
+  if (allSame) {
+    if (!daySchedules[0].isOpen) {
+      return isVi ? 'Tạm ngưng hoạt động' : '暫停營業';
+    }
+    return isVi
+      ? `Thứ 2 - Chủ Nhật: ${daySchedules[0].schedule}`
+      : `週一至週日 ${daySchedules[0].schedule}`;
+  }
+
+  // Check standard Mon-Fri vs Sat-Sun split
+  const monFriSame = daySchedules.slice(0, 5).every((ds) => ds.schedule === daySchedules[0].schedule);
+  const satSunSame = daySchedules[5].schedule === daySchedules[6].schedule;
+
+  if (monFriSame && satSunSame) {
+    const weekdaySched = daySchedules[0].schedule;
+    const weekendSched = daySchedules[5].schedule;
+    if (isVi) {
+      return `Thứ 2 - Thứ 6: ${weekdaySched}\nThứ 7, Chủ Nhật: ${weekendSched}`;
+    } else {
+      return `週一至週五 ${weekdaySched}\n週六、週日 ${weekendSched}`;
+    }
+  }
+
+  // General consecutive grouping
+  const groups: Array<{ days: string[]; schedule: string; isOpen: boolean }> = [];
+  let currentGroup: { days: string[]; schedule: string; isOpen: boolean } | null = null;
+
+  for (const ds of daySchedules) {
+    if (currentGroup && currentGroup.schedule === ds.schedule) {
+      currentGroup.days.push(ds.day);
+    } else {
+      currentGroup = { days: [ds.day], schedule: ds.schedule, isOpen: ds.isOpen };
+      groups.push(currentGroup);
+    }
+  }
+
+  const lines: string[] = [];
+  for (const group of groups) {
+    const startName = dayNames[group.days[0]];
+    const endName = dayNames[group.days[group.days.length - 1]];
+
+    if (group.days.length >= 3) {
+      if (isVi) {
+        lines.push(`${startName} - ${endName}: ${group.schedule}`);
+      } else {
+        lines.push(`${startName}至${endName} ${group.schedule}`);
+      }
+    } else if (group.days.length === 2) {
+      if (isVi) {
+        lines.push(`${startName}, ${endName}: ${group.schedule}`);
+      } else {
+        lines.push(`${startName}、${endName} ${group.schedule}`);
+      }
+    } else {
+      if (isVi) {
+        lines.push(`${startName}: ${group.schedule}`);
+      } else {
+        lines.push(`${startName} ${group.schedule}`);
+      }
+    }
+  }
+
+  return lines.join('\n');
 }
 
 export async function getTenantBootstrap(request: Request, env: Env): Promise<Response> {
@@ -531,6 +690,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
         announcement: tenantCtx?.announcement || null,
         operatingHours,
         parsedHours: parseOperatingHours(operatingHours, tenantId),
+        formattedHours: formatOperatingHoursForDisplay(operatingHours, locale, tenantId),
         deliveryPolicy,
         allowScheduledPickup: tenantCtx?.allowScheduledPickup !== undefined ? tenantCtx.allowScheduledPickup : true,
         allowDineIn: tenantCtx?.allowDineIn !== undefined ? tenantCtx.allowDineIn : true,
