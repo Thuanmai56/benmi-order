@@ -172,8 +172,8 @@ async function loadMenuData() {
 
       categories.push({
         id: 'sec-flavor',
-        title: (typeof t === 'function' && t('customizationManageTitle')) || '整單口味與客製化設定',
-        shortName: '口味選擇',
+        title: currentLang === 'vi' ? 'Tùy chọn khẩu vị & biến thể' : '口味與客製化選擇',
+        shortName: currentLang === 'vi' ? 'Khẩu vị' : '口味選擇',
         type: 'order_customization',
         allowCustomization: false,
         appliedModifiers: [],
