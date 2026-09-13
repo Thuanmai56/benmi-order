@@ -202,7 +202,7 @@ function renderHistory(orders) {
         <div class="history-tile-info">
           <div class="history-tile-top">
             <span class="history-tile-customer" title="${escapeHtml(order.customer || t('defaultCustomer'))}">${escapeHtml(order.customer || t('defaultCustomer'))}</span>
-            <span class="history-tile-key">#${escapeHtml(order.key)}</span>
+            <span class="history-tile-key">#${escapeHtml(order.displayKey || order.key)}</span>
             ${diningBadge}
             ${appendBadge}
             ${badge}

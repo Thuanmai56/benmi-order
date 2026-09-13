@@ -150,7 +150,7 @@ function renderListLeft(orders) {
       <div class="tile-info">
         <div class="tile-top">
           <span class="tile-customer" title="${escapeHtml(order.customer || t('defaultCustomer'))}">${escapeHtml(order.customer || t('defaultCustomer'))}</span>
-          <span class="tile-order-key">#${escapeHtml(order.key)}</span>
+          <span class="tile-order-key">#${escapeHtml(order.displayKey || order.key)}</span>
           ${diningBadge}
           ${appendBadge}
         </div>
@@ -226,7 +226,7 @@ function renderListRight(orders) {
       <div class="tile-info">
         <div class="tile-top">
           <span class="tile-customer" title="${escapeHtml(order.customer || t('defaultCustomer'))}">${escapeHtml(order.customer || t('defaultCustomer'))}</span>
-          <span class="tile-order-key">#${escapeHtml(order.key)}</span>
+          <span class="tile-order-key">#${escapeHtml(order.displayKey || order.key)}</span>
           ${diningBadge}
           ${appendBadge}
         </div>

@@ -6,6 +6,7 @@
 // Append Mode Global State
 window.isAppendMode = false;
 window.parentOrderKey = null;
+window.parentOrderDisplayKey = null;
 window.appendTableNumber = null;
 
 function getUrlParamsWithLiffState() {
@@ -66,9 +67,14 @@ function initAppendModeIfPresent() {
     if (parentOrderKey && (mode === 'append' || mode === 'add')) {
         window.isAppendMode = true;
         window.parentOrderKey = parentOrderKey;
+        window.parentOrderDisplayKey = urlParams.get('parent_display_key') || (parentOrderKey.length === 36 ? '' : parentOrderKey);
         window.appendTableNumber = paramTableNumber || '';
         try {
+            if (!urlParams.get('parent_display_key') && sessionStorage.getItem('benmi_append_parent') === parentOrderKey) {
+                window.parentOrderDisplayKey = sessionStorage.getItem('benmi_append_display') || window.parentOrderDisplayKey;
+            }
             sessionStorage.setItem('benmi_append_parent', parentOrderKey);
+            sessionStorage.setItem('benmi_append_display', window.parentOrderDisplayKey);
             if (paramTableNumber) sessionStorage.setItem('benmi_append_table', paramTableNumber);
         } catch (e) {}
 
@@ -79,7 +85,7 @@ function initAppendModeIfPresent() {
             const tableEl = document.getElementById('append-mode-table');
             if (tableEl) tableEl.innerText = paramTableNumber ? `桌號 ${paramTableNumber}` : '現場內用';
             const keyEl = document.getElementById('append-mode-key');
-            if (keyEl) keyEl.innerText = `#${parentOrderKey}`;
+            if (keyEl) keyEl.innerText = `#${window.parentOrderDisplayKey}`;
         }
 
         // Lock Dining Option to Dine-In
@@ -111,9 +117,11 @@ function initAppendModeIfPresent() {
 function cancelAppendMode() {
     window.isAppendMode = false;
     window.parentOrderKey = null;
+    window.parentOrderDisplayKey = null;
     window.appendTableNumber = null;
     try {
         sessionStorage.removeItem('benmi_append_parent');
+        sessionStorage.removeItem('benmi_append_display');
         sessionStorage.removeItem('benmi_append_table');
     } catch(e) {}
 
@@ -1269,6 +1277,10 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                 throw new Error(errData.error || `API returned status ${res.status}`);
             }
 
+            const appendResult = await res.json();
+            window.parentOrderKey = appendResult.key;
+            window.parentOrderDisplayKey = appendResult.displayKey || window.parentOrderDisplayKey;
+
             setAllSubmitButtonsState(true, '加點已送出', { cursor: 'not-allowed', opacity: '0.6' });
 
             if (typeof liff !== 'undefined' && liff.isInClient) {
@@ -1276,7 +1288,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                     if (liff.isInClient() && typeof liff.sendMessages === 'function') {
                         const tablePart = currentTable ? `\n桌號：${currentTable}` : '';
                         const notePart = mainNote ? `\n📝 備註：${mainNote}` : '';
-                        const appendChatMsg = `[加點 #${window.parentOrderKey}]${tablePart}\n現場加點品項：\n${rawItemsText}${notePart}\n\n💰 加點金額：+$${currentTotal}`;
+                        const appendChatMsg = `[加點 #${window.parentOrderDisplayKey || ""}]\n訂單參考：${window.parentOrderKey}${tablePart}\n現場加點品項：\n${rawItemsText}${notePart}\n\n💰 加點金額：+$${currentTotal}`;
                         await liff.sendMessages([{ type: 'text', text: appendChatMsg }]);
                     }
                 } catch (liffMsgErr) {
@@ -1289,6 +1301,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
             comboDrinkData = {};
             try {
                 sessionStorage.removeItem('benmi_append_parent');
+                sessionStorage.removeItem('benmi_append_display');
                 sessionStorage.removeItem('benmi_append_table');
             } catch(e) {}
             if (typeof updateTotal === 'function') updateTotal();
@@ -1368,8 +1381,9 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
 
         const resData = await res.json().catch(() => ({}));
         if (resData && resData.key) {
-            orderNum = resData.key;
+            orderNum = resData.displayKey || resData.key;
             msg = formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, mainNote);
+            msg += `\n訂單參考：${resData.key}`;
         }
 
         orderSubmittedSuccessfully = true;
@@ -1425,7 +1439,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                     const currentTable = (tableInput && tableInput.value.trim()) || window.appendTableNumber || window.currentTableNumber || '';
                     const tablePart = currentTable ? `\n桌號：${currentTable}` : '';
                     const notePart = mainNote ? `\n📝 備註：${mainNote}` : '';
-                    const appendChatMsg = `[加點 #${window.parentOrderKey}]${tablePart}\n現場加點品項：\n${rawItemsText}${notePart}\n\n💰 加點金額：+$${currentTotal}`;
+                    const appendChatMsg = `[加點 #${window.parentOrderDisplayKey || ""}]\n訂單參考：${window.parentOrderKey}${tablePart}\n現場加點品項：\n${rawItemsText}${notePart}\n\n💰 加點金額：+$${currentTotal}`;
                     await liff.sendMessages([{ type: 'text', text: appendChatMsg }]);
                 } else {
                     const isDineIn = (window.currentDiningOption === 'dine_in');
@@ -1442,6 +1456,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                 comboDrinkData = {};
                 try {
                     sessionStorage.removeItem('benmi_append_parent');
+                    sessionStorage.removeItem('benmi_append_display');
                     sessionStorage.removeItem('benmi_append_table');
                 } catch(e) {}
                 if (typeof updateTotal === 'function') updateTotal();

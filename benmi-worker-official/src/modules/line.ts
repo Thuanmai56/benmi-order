@@ -1,9 +1,10 @@
+import { resolveOrderKey, findOrderForCustomer, isOrderId } from './order-identity';
 import { Env } from '../types/env';
 import { TenantContext, resolveTenantOrderPrefix, generateStandardOrderId } from '../types/tenant';
 import { Order, DiningOption, OrderItemInput } from '../types/index';
 import { corsHeaders } from '../utils/http';
 import { resolveSecret } from '../utils/secrets';
-import { saveOrder, getPendingMap, getOrderQueueAhead, getUserLatestActiveOrder } from './orders';
+import { getNextDailyOrderSeq, saveOrder, getPendingMap, getOrderQueueAhead, getUserLatestActiveOrder } from './orders';
 import { callAI, FewShotExample } from '../integrations/groq';
 import { syncToGoogleSheets } from '../integrations/googleSheets';
 import { getTenantId, getMenuData, formatMenuForPrompt } from './menu';
@@ -444,7 +445,7 @@ export function buildOrderFlexMessage(
           layout: "horizontal",
           contents: [
             { type: "text", text: "訂單明細", size: "xs", weight: "bold", color: "#64748B", flex: 0 },
-            { type: "text", text: `#${order.key}`, size: "sm", weight: "bold", color: "#059669", align: "end", flex: 1 }
+            { type: "text", text: `#${order.displayKey || order.key}`, size: "sm", weight: "bold", color: "#059669", align: "end", flex: 1 }
           ]
         },
         {
@@ -546,7 +547,7 @@ export function buildOrderFlexMessage(
         const buttons: any[] = [];
 
         if (isDineIn) {
-          const appendUrl = `${liffBaseUrl}?tenant_id=${encodeURIComponent(tenantId)}&parent_order_key=${encodeURIComponent(order.key)}&table_number=${encodeURIComponent(tableNum)}&mode=append`;
+          const appendUrl = `${liffBaseUrl}?tenant_id=${encodeURIComponent(tenantId)}&parent_order_key=${encodeURIComponent(order.key)}&parent_display_key=${encodeURIComponent(order.displayKey || order.key)}&table_number=${encodeURIComponent(tableNum)}&mode=append`;
           buttons.push({
             type: "button",
             style: "primary",
@@ -631,7 +632,7 @@ export function buildProgressFlexMessage(order: Order, queueAheadCount: number, 
           layout: "horizontal",
           contents: [
             { type: "text", text: "訂單進度狀態", size: "xs", weight: "bold", color: "#64748B", flex: 0 },
-            { type: "text", text: `#${order.key}`, size: "sm", weight: "bold", color: "#0F172A", align: "end", flex: 1 }
+            { type: "text", text: `#${order.displayKey || order.key}`, size: "sm", weight: "bold", color: "#0F172A", align: "end", flex: 1 }
           ]
         },
         {
@@ -692,7 +693,7 @@ export function buildProgressFlexMessage(order: Order, queueAheadCount: number, 
         const buttons: any[] = [];
 
         if (isDineIn && (order.status === "NEW" || order.status === "ACCEPTED" || order.status === "DONE")) {
-          const appendUrl = `${liffBaseUrl}?tenant_id=${encodeURIComponent(tenantId)}&parent_order_key=${encodeURIComponent(order.key)}&table_number=${encodeURIComponent(tableNum)}&mode=append`;
+          const appendUrl = `${liffBaseUrl}?tenant_id=${encodeURIComponent(tenantId)}&parent_order_key=${encodeURIComponent(order.key)}&parent_display_key=${encodeURIComponent(order.displayKey || order.key)}&table_number=${encodeURIComponent(tableNum)}&mode=append`;
           buttons.push({
             type: "button",
             style: "primary",
@@ -778,7 +779,7 @@ export function buildAppendConfirmationFlexMessage(
           layout: "horizontal",
           contents: [
             { type: "text", text: `現場加點 (第 ${roundNumber} 輪)`, size: "xs", weight: "bold", color: "#7C3AED", flex: 0 },
-            { type: "text", text: `#${order.key}`, size: "sm", weight: "bold", color: "#0F172A", align: "end", flex: 1 }
+            { type: "text", text: `#${order.displayKey || order.key}`, size: "sm", weight: "bold", color: "#0F172A", align: "end", flex: 1 }
           ]
         },
         {
@@ -844,7 +845,7 @@ export function buildAppendConfirmationFlexMessage(
           action: {
             type: "uri",
             label: "再次加點",
-            uri: `${liffBaseUrl}?tenant_id=${encodeURIComponent(tenantId)}&parent_order_key=${encodeURIComponent(order.key)}&table_number=${encodeURIComponent(rawTable || '')}&mode=append`
+            uri: `${liffBaseUrl}?tenant_id=${encodeURIComponent(tenantId)}&parent_order_key=${encodeURIComponent(order.key)}&parent_display_key=${encodeURIComponent(order.displayKey || order.key)}&table_number=${encodeURIComponent(rawTable || '')}&mode=append`
           }
         },
         {
@@ -867,7 +868,8 @@ export function createRejectFlexBubble(
   orderKey: string,
   reason: string,
   brandName: string = "店家",
-  brandColor: string = "#DC2626"
+  brandColor: string = "#DC2626",
+  displayKey: string = orderKey
 ): any {
   return {
     type: "bubble",
@@ -884,7 +886,7 @@ export function createRejectFlexBubble(
           contents: [
             {
               type: "text",
-              text: `訂單 #${orderKey}`,
+              text: `訂單 #${displayKey}`,
               size: "sm",
               weight: "bold",
               color: "#DC2626"
@@ -953,7 +955,8 @@ export function createRejectFlexBubble(
 export function createTimeChangeFlexBubble(
   orderKey: string,
   newTime: string,
-  brandName: string = "店家"
+  brandName: string = "店家",
+  displayKey: string = orderKey
 ): any {
   const timeDisplay = newTime || "稍後";
   return {
@@ -971,7 +974,7 @@ export function createTimeChangeFlexBubble(
           contents: [
             {
               type: "text",
-              text: `訂單 #${orderKey}`,
+              text: `訂單 #${displayKey}`,
               size: "sm",
               weight: "bold",
               color: "#64748B"
@@ -1042,7 +1045,8 @@ export function createTimeChangeConfirmedFlexBubble(
   orderKey: string,
   newTime: string,
   liffUrl: string = "https://liff.line.me/",
-  brandName: string = "店家"
+  brandName: string = "店家",
+  displayKey: string = orderKey
 ): any {
   const timeDisplay = newTime || "稍後";
   return {
@@ -1067,7 +1071,7 @@ export function createTimeChangeConfirmedFlexBubble(
             },
             {
               type: "text",
-              text: `#${orderKey}`,
+              text: `#${displayKey}`,
               size: "sm",
               weight: "bold",
               color: "#0F172A",
@@ -1077,7 +1081,7 @@ export function createTimeChangeConfirmedFlexBubble(
         },
         {
           type: "text",
-          text: `訂單 #${orderKey} 已確認修改！`,
+          text: `訂單 #${displayKey} 已確認修改！`,
           weight: "bold",
           size: "lg",
           color: "#0F172A",
@@ -1135,9 +1139,10 @@ export function createChangeFlexBubble(
   reason: string,
   note: string = "",
   brandName: string = "店家",
-  brandColor: string = "#F59E0B"
+  brandColor: string = "#F59E0B",
+  displayKey: string = orderKey
 ): any {
-  return createTimeChangeFlexBubble(orderKey, note, brandName);
+  return createTimeChangeFlexBubble(orderKey, note, brandName, displayKey);
 }
 
 export async function replyWithLiffRedirect(
@@ -1421,7 +1426,7 @@ export async function handleLineWebhook(
         const res = orderKey ? await getOrderQueueAhead(env, tenantId, orderKey) : await getUserLatestActiveOrder(env, tenantId, userId);
         if (res && res.order) {
           const flex = buildProgressFlexMessage(res.order, res.queueAhead, tenantCtx);
-          await replyLineFlexMessage(replyToken, `訂單進度 #${res.order.key}`, flex, env, tenantCtx);
+          await replyLineFlexMessage(replyToken, `訂單進度 #${res.order.displayKey || res.order.key}`, flex, env, tenantCtx);
         } else {
           await replyText(replyToken, "找不到您的相關訂單紀錄。", env, tenantCtx);
         }
@@ -1466,6 +1471,9 @@ export async function handleLineWebhook(
         }
       }
 
+      if (orderKey) orderKey = await resolveOrderKey(env, tenantId, orderKey) || '';
+      const actionOrder = orderKey ? await env.DB.prepare('SELECT display_key FROM orders WHERE key = ? AND tenant_id = ?').bind(orderKey, tenantId).first<{ display_key: string }>() : null;
+      const displayKey = actionOrder?.display_key || '';
       if (action && orderKey && env.DB) {
         try {
           if (action === "reject_agree") {
@@ -1475,7 +1483,7 @@ export async function handleLineWebhook(
             await env.DB.prepare(
               "DELETE FROM pending_actions WHERE tenant_id = ? AND (order_key = ? OR user_id = ?)"
             ).bind(tenantId, orderKey, userId).run();
-            await replyText(replyToken, `✅ 訂單 #${orderKey} 已確認取消。期待下次能為您服務！`, env, tenantCtx);
+            await replyText(replyToken, `✅ 訂單 #${displayKey} 已確認取消。期待下次能為您服務！`, env, tenantCtx);
           } else if (action === "reject_disagree") {
             await env.DB.prepare(
               "UPDATE orders SET status = 'NEW', updated_at = strftime('%Y-%m-%d %H:%M:%f', 'now') WHERE tenant_id = ? AND key = ?"
@@ -1483,7 +1491,7 @@ export async function handleLineWebhook(
             await env.DB.prepare(
               "DELETE FROM pending_actions WHERE tenant_id = ? AND (order_key = ? OR user_id = ?)"
             ).bind(tenantId, orderKey, userId).run();
-            await replyText(replyToken, `感謝您的回覆！店家將盡快與您聯繫或重新為您確認訂單 #${orderKey}。`, env, tenantCtx);
+            await replyText(replyToken, `感謝您的回覆！店家將盡快與您聯繫或重新為您確認訂單 #${displayKey}。`, env, tenantCtx);
           } else if (action === "change_agree") {
             const pendingRow = await env.DB.prepare(
               "SELECT * FROM pending_actions WHERE tenant_id = ? AND (order_key = ? OR user_id = ?) LIMIT 1"
@@ -1505,6 +1513,9 @@ export async function handleLineWebhook(
             if (orderRow) {
               const updatedOrder: Order = {
                 key: orderRow.key,
+                displayKey: orderRow.display_key,
+                legacyKey: orderRow.legacy_key,
+                businessDate: orderRow.business_date,
                 customer: orderRow.customer_name || "顧客",
                 time: updatedPickupTime,
                 content: orderRow.order_content || "",
@@ -1533,8 +1544,8 @@ export async function handleLineWebhook(
             ).bind(tenantId, orderKey, userId).run();
 
             const liffUrl = tenantCtx?.liffUrl || (await resolveSecret(env.LIFF_URL)) || "https://liff.line.me/";
-            const confirmedFlex = createTimeChangeConfirmedFlexBubble(orderKey, newTimeParam, liffUrl, brandName);
-            await replyLineFlexMessage(replyToken, `訂單 #${orderKey} 已確認修改！`, confirmedFlex, env, tenantCtx);
+            const confirmedFlex = createTimeChangeConfirmedFlexBubble(orderKey, newTimeParam, liffUrl, brandName, displayKey);
+            await replyLineFlexMessage(replyToken, `訂單 #${displayKey} 已確認修改！`, confirmedFlex, env, tenantCtx);
           } else if (action === "change_cancel") {
             const orderRow = await env.DB.prepare(
               "SELECT * FROM orders WHERE tenant_id = ? AND key = ? LIMIT 1"
@@ -1543,6 +1554,9 @@ export async function handleLineWebhook(
             if (orderRow) {
               const updatedOrder: Order = {
                 key: orderRow.key,
+                displayKey: orderRow.display_key,
+                legacyKey: orderRow.legacy_key,
+                businessDate: orderRow.business_date,
                 customer: orderRow.customer_name || "顧客",
                 time: orderRow.pickup_time || "",
                 content: orderRow.order_content || "",
@@ -1570,7 +1584,7 @@ export async function handleLineWebhook(
             await env.DB.prepare(
               "DELETE FROM pending_actions WHERE tenant_id = ? AND (order_key = ? OR user_id = ?)"
             ).bind(tenantId, orderKey, userId).run();
-            await replyText(replyToken, `收到，已為您取消訂單 #${orderKey}，謝謝您！`, env, tenantCtx);
+            await replyText(replyToken, `收到，已為您取消訂單 #${displayKey}，謝謝您！`, env, tenantCtx);
           }
           continue;
         } catch (postbackErr) {
@@ -1608,10 +1622,11 @@ export async function handleLineWebhook(
         orderKey = match[0];
       }
 
-      const res = orderKey ? await getOrderQueueAhead(env, tenantId, orderKey) : await getUserLatestActiveOrder(env, tenantId, userId);
+      if (orderKey) orderKey = (await findOrderForCustomer(env, tenantId, orderKey, userId))?.key || '';
+      const res = orderKey ? await getOrderQueueAhead(env, tenantId, orderKey) : (match ? null : await getUserLatestActiveOrder(env, tenantId, userId));
       if (res && res.order) {
         const flex = buildProgressFlexMessage(res.order, res.queueAhead, tenantCtx);
-        await replyLineFlexMessage(replyToken, `訂單進度 #${res.order.key}`, flex, env, tenantCtx);
+        await replyLineFlexMessage(replyToken, `訂單進度 #${res.order.displayKey || res.order.key}`, flex, env, tenantCtx);
       } else {
         await replyText(replyToken, "目前查無您的進行中訂單。", env, tenantCtx);
       }
@@ -1628,8 +1643,11 @@ export async function handleLineWebhook(
       try { await env.ORDER_STATE.delete(draftKey); } catch { }
 
       let orderKey = "";
-      const match = userText.match(/(?:\d{4}-[DT]\d{3,4}|[A-Z0-9]{1,6}\d{4}-[A-Z0-9]{2,8}|[A-Z0-9]+\d{4}-\d{4}-\d{4}|BD\d+-\d+-\d+|BM\d+-\d+)/i) || userText.match(/#([A-Za-z0-9_-]+)/);
-      if (match) {
+      const match = userText.match(/#([0-9a-f]{8}-[0-9a-f-]{27})/i) || userText.match(/(?:\d{4}-[DT]\d{3,4}|[A-Z0-9]{1,6}\d{4}-[A-Z0-9]{2,8}|[A-Z0-9]+\d{4}-\d{4}-\d{4}|BD\d+-\d+-\d+|BM\d+-\d+)/i) || userText.match(/#([A-Za-z0-9_-]+)/);
+      const appendReference = userText.match(/^訂單參考：(.+)$/m);
+      if (appendReference) {
+        orderKey = appendReference[1].trim();
+      } else if (match) {
         orderKey = (match[1] || match[0]).replace('#', '').trim();
       }
 
@@ -1640,6 +1658,7 @@ export async function handleLineWebhook(
         if (activeRow && activeRow.key) orderKey = activeRow.key;
       }
 
+      if (orderKey) orderKey = await resolveOrderKey(env, tenantId, orderKey) || '';
       if (orderKey && env.DB) {
         const row = await env.DB.prepare(
           "SELECT * FROM orders WHERE key = ? AND tenant_id = ?"
@@ -1648,6 +1667,9 @@ export async function handleLineWebhook(
         if (row && replyToken) {
           const order: Order = {
             key: row.key,
+            displayKey: row.display_key,
+            legacyKey: row.legacy_key,
+            businessDate: row.business_date,
             customer: row.customer_name || "顧客",
             time: row.pickup_time || "",
             content: row.order_content || "",
@@ -1689,7 +1711,7 @@ export async function handleLineWebhook(
             tenantCtx
           );
 
-          await replyLineFlexMessage(replyToken, `現場加點 (第 ${order.roundCount} 輪) #${order.key}`, flexBubble, env, tenantCtx);
+          await replyLineFlexMessage(replyToken, `現場加點 (第 ${order.roundCount} 輪) #${order.displayKey || order.key}`, flexBubble, env, tenantCtx);
         }
       }
       continue;
@@ -1716,7 +1738,11 @@ export async function handleLineWebhook(
       const diningOption: DiningOption = isDineIn ? "dine_in" : "takeaway";
       const prefix = resolveTenantOrderPrefix(tenantCtx, tenantId);
       const fallbackOrderKey = generateStandardOrderId(diningOption, new Date(), undefined, prefix);
-      const orderKey = keyLine ? keyLine.replace("訂單編號：", "").trim() : fallbackOrderKey;
+      const numberReference = keyLine ? keyLine.replace("訂單編號：", "").trim() : fallbackOrderKey;
+      const idLine = lines.find((l: string) => l.startsWith('訂單參考：'));
+      const reference = idLine ? idLine.slice('訂單參考：'.length).trim() : numberReference;
+      let orderKey = await resolveOrderKey(env, tenantId, reference) || '';
+      let displayKey = numberReference;
       const nowTw = new Date(Date.now() + 8 * 3600000);
       const defaultTimeStr = `${nowTw.getUTCFullYear()}-${String(nowTw.getUTCMonth() + 1).padStart(2, "0")}-${String(nowTw.getUTCDate()).padStart(2, "0")} ${String(nowTw.getUTCHours()).padStart(2, "0")}:${String(nowTw.getUTCMinutes()).padStart(2, "0")}`;
       const timeStr = timeLine ? timeLine.replace(/🕒\s*(?:取餐時間|訂餐時間|點餐時間)[：:]\s*/, "").replace(/\s*\([^)]*\)/g, '').trim() : defaultTimeStr;
@@ -1741,10 +1767,12 @@ export async function handleLineWebhook(
       let custName = "顧客 (線上)";
 
       const existingOrder = await env.DB.prepare(
-        "SELECT * FROM orders WHERE key = ?"
-      ).bind(orderKey).first<any>();
+        "SELECT * FROM orders WHERE key = ? AND tenant_id = ?"
+      ).bind(orderKey, tenantId).first<any>();
 
       if (existingOrder) {
+        displayKey = existingOrder.display_key;
+        if (existingOrder.user_id && existingOrder.user_id !== userId) continue;
         if (existingOrder.customer_name && existingOrder.customer_name !== "顧客 (線上)" && existingOrder.customer_name !== "Khách (Web)") {
           custName = existingOrder.customer_name;
         }
@@ -1767,6 +1795,9 @@ export async function handleLineWebhook(
           try {
             const existingOrderData: Order = {
               key: existingOrder.key,
+              displayKey: existingOrder.display_key,
+              legacyKey: existingOrder.legacy_key,
+              businessDate: existingOrder.business_date,
               customer: existingOrder.customer_name || custName,
               time: existingOrder.pickup_time || timeStr,
               content: existingOrder.order_content || "",
@@ -1785,7 +1816,7 @@ export async function handleLineWebhook(
             const queueRes = await getOrderQueueAhead(env, tenantId, orderKey);
             const queueAheadCount = queueRes ? queueRes.queueAhead : 0;
             const flexBubble = buildProgressFlexMessage(existingOrderData, queueAheadCount, tenantCtx);
-            await replyLineFlexMessage(replyToken, `訂單進度 #${orderKey}`, flexBubble, env, tenantCtx);
+            await replyLineFlexMessage(replyToken, `訂單進度 #${displayKey}`, flexBubble, env, tenantCtx);
           } catch (replyErr) {
             console.error(`[${brandName}] Reply existing order progress error:`, replyErr);
           }
@@ -1835,8 +1866,14 @@ export async function handleLineWebhook(
           .trim();
       }
 
+      // Never recreate an unknown immutable reference (e.g. an old/deleted receipt).
+      if (isOrderId(reference)) continue;
+      ({ key: displayKey } = await getNextDailyOrderSeq(env, tenantId, diningOption, new Date(), prefix));
+      orderKey = crypto.randomUUID();
       const orderData: Order = {
         key: orderKey,
+        displayKey,
+        businessDate: new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10),
         customer: custName,
         time: timeStr,
         content: extractedContent,
@@ -1857,7 +1894,7 @@ export async function handleLineWebhook(
           const queueRes = await getOrderQueueAhead(env, tenantId, orderKey);
           const queueAheadCount = queueRes ? queueRes.queueAhead : 0;
           const flexBubble = buildProgressFlexMessage(orderData, queueAheadCount, tenantCtx);
-          await replyLineFlexMessage(replyToken, `訂單進度 #${orderKey}`, flexBubble, env, tenantCtx);
+          await replyLineFlexMessage(replyToken, `訂單進度 #${displayKey}`, flexBubble, env, tenantCtx);
         } catch (replyErr) {
           console.error(`[${brandName}] Reply progress flex confirmation error:`, replyErr);
         }
@@ -1953,6 +1990,9 @@ export async function handleLineWebhook(
         if (orderRow) {
           const order: Order = {
             key: orderRow.key,
+            displayKey: orderRow.display_key,
+            legacyKey: orderRow.legacy_key,
+            businessDate: orderRow.business_date,
             customer: orderRow.customer_name,
             time: orderRow.pickup_time,
             content: orderRow.order_content,
@@ -1981,7 +2021,7 @@ export async function handleLineWebhook(
 
             if (isCancel) {
               order.status = "REJECTED";
-              await replyText(replyToken, `收到，已為您取消訂單 #${order.key}，謝謝您！`, env, tenantCtx);
+              await replyText(replyToken, `收到，已為您取消訂單 #${order.displayKey || order.key}，謝謝您！`, env, tenantCtx);
               const cleanup = async () => { await saveOrder(env, order, tenantId); await finishPending(); await syncToGoogleSheets(order, env, tenantCtx); };
               if (ctx && ctx.waitUntil) ctx.waitUntil(cleanup()); else await cleanup();
             }
@@ -2000,8 +2040,8 @@ export async function handleLineWebhook(
               order.status = "NEW"; // Tái xuất hiện thông báo đơn mới trên Dashboard với giờ mới để quán bấm nhận
 
               const liffUrl = tenantCtx?.liffUrl || (await resolveSecret(env.LIFF_URL)) || "https://liff.line.me/";
-              const confirmedFlex = createTimeChangeConfirmedFlexBubble(order.key, newSuggestedTime, liffUrl, brandName);
-              await replyLineFlexMessage(replyToken, `訂單 #${order.key} 已確認修改！`, confirmedFlex, env, tenantCtx);
+              const confirmedFlex = createTimeChangeConfirmedFlexBubble(order.key, newSuggestedTime, liffUrl, brandName, order.displayKey);
+              await replyLineFlexMessage(replyToken, `訂單 #${order.displayKey || order.key} 已確認修改！`, confirmedFlex, env, tenantCtx);
 
               const cleanup = async () => { await saveOrder(env, order, tenantId); await finishPending(); };
               if (ctx && ctx.waitUntil) ctx.waitUntil(cleanup()); else await cleanup();
@@ -2077,7 +2117,7 @@ export async function handleLineWebhook(
 
             if (isCancel) {
               order.status = "REJECTED";
-              await replyText(replyToken, `好的，已為您取消訂單 #${orderKey}。`, env, tenantCtx);
+              await replyText(replyToken, `好的，已為您取消訂單 #${order.displayKey || order.key}。`, env, tenantCtx);
               const cleanup = async () => { await saveOrder(env, order, tenantId); await finishPending(); await syncToGoogleSheets(order, env, tenantCtx); };
               if (ctx && ctx.waitUntil) ctx.waitUntil(cleanup()); else await cleanup();
               continue;
@@ -2108,7 +2148,7 @@ export async function handleLineWebhook(
               const reason = order.reason || "（未提供原因）";
               await replyText(
                 replyToken,
-                `非常抱歉！${brandName} 無法接下您的訂單 #${orderKey}。\n原因：${reason}\n感謝您訂購 ${brandName}，歡迎您下次再訂購。`,
+                `非常抱歉！${brandName} 無法接下您的訂單 #${order.displayKey || order.key}。\n原因：${reason}\n感謝您訂購 ${brandName}，歡迎您下次再訂購。`,
                 env,
                 tenantCtx
               );
@@ -2121,7 +2161,7 @@ export async function handleLineWebhook(
               order.status = "NEW";
               await replyText(
                 replyToken,
-                `謝謝您的回覆！我已將訂單 #${orderKey} 回到「等待店家接單」狀態，店家會再為您確認。`,
+                `謝謝您的回覆！我已將訂單 #${order.displayKey || order.key} 回到「等待店家接單」狀態，店家會再為您確認。`,
                 env,
                 tenantCtx
               );
