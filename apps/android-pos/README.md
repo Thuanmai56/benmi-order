@@ -73,8 +73,8 @@ apps/android-pos/
 ├── build.sh                             # Script tự động copy HTML, CSS, JS sang dist/
 ├── capacitor.config.ts                  # Cấu hình Capacitor App (Hỗ trợ dev-local, pilot, prod)
 ├── package.json                         # Scripts build:apk, build:apk:dev, build:apk:pilot, sync:dev
-├── blab-pos-dev-v0.9.2.apk              # File cài đặt APK Dev mới nhất (v0.9.2)
-├── blab-pos-pilot-v0.9.2.apk            # File cài đặt APK Pilot mới nhất (v0.9.2)
+├── blab-pos-dev-v0.9.3.apk              # File cài đặt APK Dev mới nhất (v0.9.3)
+├── blab-pos-pilot-v0.9.3.apk            # File cài đặt APK Pilot mới nhất (v0.9.3)
 └── README.md                            # Tài liệu hướng dẫn này
 ```
 
@@ -181,6 +181,7 @@ Vào biểu tượng **⚙️ Cài đặt (Settings) > Máy in & xuất vé**:
 
 | Phiên Bản | Ngày Phát Hành | Điểm Nâng Cấp Chính |
 | :--- | :--- | :--- |
+| **v0.9.3** | 13/09/2026 | - **Phiên bản v0.9.3 (Code 21)**: Build đồng thời bản **Dev** (`com.benmi.pos.dev`) và **Production Pilot** (`com.benmi.pos.pilot`).<br>- **Bổ sung Đếm Ngược Đơn Đặt Giờ trong Chi Tiết Đơn (Tab Live)**: Bổ sung Card Giờ Hẹn & Đếm Ngược Số Phút Còn Lại (`review-timing-card` và `review-meta-pickup`) với cơ chế cập nhật thời gian thực không cần đóng mở lại modal, phân biệt màu cảnh báo theo độ khẩn cấp (cam `<= 15m`, đỏ `quá giờ`), tuân thủ chuẩn SVG tối giản không icon trẻ con.<br>- **Biên Tập Tùy Chọn & Món 2 Cấp (Tầng 1 & Tầng 2)**: Tách biệt hoàn toàn `sec-flavor` khỏi Catalog, hỗ trợ toàn diện thêm/sửa/xóa nhóm tùy chọn, chuyển đổi linh hoạt `Đơn tuyển` / `Đa tuyển`, và thêm sửa nhanh các lựa chọn và nhánh phụ không dùng popup prompt. |
 | **v0.9.2** | 12/09/2026 | - **Phiên bản v0.9.2 (Code 20)**: Build đồng thời bản **Dev** (`com.benmi.pos.dev`) và **Production Pilot** (`com.benmi.pos.pilot`).<br>- **Khắc phục triệt để căn giữa nút thẻ đơn hàng (`.tile-action-btn`)**: Loại bỏ `padding-left: 26px !important` gây lệch chữ sang phải; chuẩn hóa padding đối xứng đều 2 bên `padding: 6px 8px !important;` giúp các nút Đã xong, Đã lấy (`已取餐`), Đã TT canh giữa hoàn hảo 100%. |
 | **v0.9.1** | 12/09/2026 | - **Phiên bản v0.9.1 (Code 19)**: Build đồng thời bản **Dev** (`com.benmi.pos.dev`) và **Production Pilot** (`com.benmi.pos.pilot`).<br>- **Tối ưu hóa In Bill & Xuất Vé**: Tính tổng giá dòng cho món xSố lượng (`qty * unitPrice + modifiers`); canh cùng dòng `#order.key` và `外帶自取` sang phải; thụt dòng đồng bộ `  ↳ ` cho toàn bộ các phần (phần 1, 2, 3); in kèm tùy biến khẩu vị toàn menu (`口味與客製設定`).<br>- **Tối ưu hóa UI POS**: Đồng bộ tiêu đề mục con Cài đặt; đưa ghi chú khách hàng lên cùng dòng với `顧客備註`; cân bằng thị giác nút "Đã chuẩn bị xong". |
 | **v1.9.0** | 10/09/2026 | - **Phiên bản Dev 1.9**: Nâng cấp `versionCode: 18`, `versionName: "1.9.0"`.<br>- Tích hợp toàn bộ tối ưu hóa mới nhất từ commit `2f248c7`: Tối ưu giao diện menu POS và xem lại đơn hàng (Order review UI), hỗ trợ tùy chỉnh món của Jiangjiejie.<br>- Đóng gói trực tiếp web assets chạy độc lập cho môi trường Dev với `appId: com.benmi.pos.dev`, tiêu đề `Blab POS Dev` và trỏ API về Cloudflare Worker Dev. |
