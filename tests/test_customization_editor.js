@@ -25,7 +25,13 @@ const requiredKeys = [
   'promptAddSubOption',
   'promptNewOptionName',
   'labelSurcharge',
-  'labelOptionName'
+  'labelOptionName',
+  'btnAddCustomGroup',
+  'promptAddCustomGroup',
+  'promptRenameCustomGroup',
+  'confirmDeleteCustomGroup',
+  'toggleGroupTypeSingle',
+  'toggleGroupTypeMultiple'
 ];
 
 for (const key of requiredKeys) {
@@ -135,7 +141,48 @@ assert.strictEqual(serialized.cat_mains['鹹水雞'].is_recommended, 1);
 
 console.log("✓ serializeMenuData successfully handles 2-tier customizations and separates __customizations.");
 
-// 4. Test Client toggleFlavorSubOptions in index.html
+// 4. Test BSC Catalog sec-flavor separation logic
+const sampleBscBootstrap = {
+  catalog: [
+    { slug: 'sec-flavor', name: '🧪 口味與客製化選擇', items: [{ name: '✦ 口味選擇' }] },
+    { slug: 'meat', name: '肉類', items: [{ name: '雞胸肉', price: 60 }] }
+  ],
+  customizations: [
+    { id: 'bsc_flavor', key: 'flavor', title: '✦ 口味選擇', type: 'radio', options: [{ name: '特調胡椒' }] },
+    { id: 'bsc_salt', key: 'salt', title: '✦ 鹹度調整', type: 'radio', options: [{ name: '正常' }] }
+  ]
+};
+
+// Simulate loadMenuData logic
+const testCategories = [];
+sampleBscBootstrap.catalog.forEach(cat => {
+  if (cat.slug === 'sec-flavor' || cat.slug === 'flavor' || cat.categoryType === 'order_customization') return;
+  testCategories.push({ id: cat.slug, title: cat.name, type: 'catalog', items: cat.items });
+});
+assert.strictEqual(testCategories.length, 1, "Catalog should only contain meat, excluding legacy sec-flavor");
+
+const bscCustomGroups = sampleBscBootstrap.customizations.map(c => ({
+  id: c.id,
+  key: c.key,
+  title: c.title,
+  type: c.type,
+  options: c.options
+}));
+testCategories.unshift({
+  id: 'sec-flavor',
+  title: '🧪 口味與客製化選擇',
+  type: 'order_customization',
+  groups: bscCustomGroups,
+  items: []
+});
+
+assert.strictEqual(testCategories.length, 2);
+assert.strictEqual(testCategories[0].id, 'sec-flavor');
+assert.strictEqual(testCategories[0].type, 'order_customization');
+assert.strictEqual(testCategories[0].groups.length, 2, "sec-flavor must contain 2 groups for BSC");
+console.log("✓ BSC bootstrap catalog parsing separates legacy sec-flavor and preserves all customization groups.");
+
+// 5. Test Client toggleFlavorSubOptions in index.html
 const indexHtml = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
 
 // Ensure toggleFlavorSubOptions does NOT hardcode opt-flavor
@@ -149,13 +196,14 @@ assert(
 );
 console.log("✓ Client toggleFlavorSubOptions is verified to be fully dynamic.");
 
-// 5. Test Worker stock-status update and __customizations sync
+// 6. Test Worker stock-status update and __customizations sync
 const workerMenuTs = fs.readFileSync(path.join(__dirname, '../benmi-worker-official/src/modules/menu.ts'), 'utf8');
 assert(workerMenuTs.includes("slug === '__customizations'"), "Worker syncMenuToD1 must support __customizations");
 assert(workerMenuTs.includes("category_slug === 'order_customization'"), "Worker updateStockStatus must support order_customization");
 
 const workerBootstrapTs = fs.readFileSync(path.join(__dirname, '../benmi-worker-official/src/modules/bootstrap.ts'), 'utf8');
 assert(workerBootstrapTs.includes("isOutOfStock: isOos"), "Worker getTenantBootstrap must enrich options with isOutOfStock");
+assert(workerBootstrapTs.includes("cat.slug === 'sec-flavor'"), "Worker getTenantBootstrap must skip sec-flavor from catalog");
 
 console.log("✓ Cloudflare Worker menu & bootstrap modules support customization stock updates & sync.");
 

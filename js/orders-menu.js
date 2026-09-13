@@ -109,6 +109,9 @@ async function loadMenuData() {
     const categories = [];
     if (data.catalog) {
       data.catalog.forEach(cat => {
+        if (cat.slug === 'sec-flavor' || cat.slug === 'flavor' || cat.categoryType === 'order_customization' || cat.category_type === 'order_customization') {
+          return;
+        }
         categories.push({
           id: cat.slug,
           title: cat.name,
@@ -146,20 +149,14 @@ async function loadMenuData() {
       });
     }
 
-    if (data.customizations && data.customizations.length > 0) {
-      if (!categories.some(c => c.type === 'order_customization' || c.id === 'sec-flavor')) {
-        categories.unshift({
-          id: 'sec-flavor',
-          title: currentLang === 'vi' ? 'Tùy chọn khẩu vị & biến thể' : '口味與客製化選擇',
-          type: 'order_customization',
-          allowCustomization: false,
-          appliedModifiers: [],
-          groups: data.customizations.map(cust => ({
-            id: cust.id,
-            key: cust.key,
-            title: cust.title,
+    if (!categories.some(c => c.type === 'order_customization' || c.id === 'sec-flavor')) {
+      const customGroups = (data.customizations && data.customizations.length > 0)
+        ? data.customizations.map((cust, gIdx) => ({
+            id: cust.id || `custom_${tenantId}_${cust.key || gIdx}`,
+            key: cust.key || `custom_${gIdx}`,
+            title: cust.title || cust.name || '',
             type: cust.type || 'radio',
-            sortOrder: cust.sortOrder || 0,
+            sortOrder: cust.sortOrder !== undefined ? cust.sortOrder : gIdx,
             options: (cust.options || []).map(opt => ({
               id: opt.id || opt.name,
               name: opt.name || opt.title || '',
@@ -168,10 +165,18 @@ async function loadMenuData() {
               sub_options: Array.isArray(opt.sub_options) ? [...opt.sub_options] : (Array.isArray(opt.subOptions) ? [...opt.subOptions] : []),
               originalName: opt.name || opt.title || ''
             }))
-          })),
-          items: []
-        });
-      }
+          }))
+        : [];
+
+      categories.unshift({
+        id: 'sec-flavor',
+        title: currentLang === 'vi' ? 'Tùy chọn khẩu vị & biến thể' : '口味與客製化選擇',
+        type: 'order_customization',
+        allowCustomization: false,
+        appliedModifiers: [],
+        groups: customGroups,
+        items: []
+      });
     }
 
     currentMenuData = categories.length > 0 ? categories : getBenmiDefaultCategories().map(cat => ({
@@ -517,9 +522,18 @@ function renderMenuCategoryEditor(index) {
   if (cat.type === 'order_customization' || cat.id === 'sec-flavor') {
     if (renameBtn) renameBtn.style.display = "none";
     if (deleteBtn) deleteBtn.style.display = "none";
-    if (addItemBtn) addItemBtn.style.display = "none";
+    if (addItemBtn) {
+      addItemBtn.style.display = "inline-flex";
+      addItemBtn.innerText = `+ ${t("btnAddCustomGroup") || "新增分組"}`;
+      addItemBtn.onclick = () => addCustomizationGroup(index);
+    }
     renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), cat, index);
     return;
+  }
+
+  if (addItemBtn) {
+    addItemBtn.innerText = `+ ${t("btnMenuAddItem") || "新增項目"}`;
+    addItemBtn.onclick = () => addNewMenuItem();
   }
 
   if (renameBtn) renameBtn.style.display = "inline-flex";
@@ -685,89 +699,177 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
     emptyDiv.style.color = "#94a3b8";
     emptyDiv.innerText = t("noCategoriesPrompt") || "尚無任何客製化設定";
     container.appendChild(emptyDiv);
-    return;
-  }
+  } else {
+    const trashSvg = (typeof POS_SVG !== "undefined" && POS_SVG.trash) || "";
+    const plusSvg = (typeof POS_SVG !== "undefined" && POS_SVG.plus) || "+";
+    const plusSvgSmall = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
 
-  const trashSvg = (typeof POS_SVG !== "undefined" && POS_SVG.trash) || "";
-  const plusSvg = (typeof POS_SVG !== "undefined" && POS_SVG.plus) || "+";
-  const plusSvgSmall = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
+    cat.groups.forEach((grp, gIdx) => {
+      const card = document.createElement("div");
+      card.className = "cust-group-card";
+      card.setAttribute("data-cust-group-index", gIdx);
 
-  cat.groups.forEach((grp, gIdx) => {
-    const card = document.createElement("div");
-    card.className = "cust-group-card";
-    card.setAttribute("data-cust-group-index", gIdx);
+      const typeBadge = grp.type === 'checkbox'
+        ? `<span class="cat-type-badge cat-type-modifier" style="font-size: 11px;">${currentLang === 'vi' ? 'Chọn nhiều' : '多選'}</span>`
+        : `<span class="cat-type-badge cat-type-catalog" style="font-size: 11px;">${currentLang === 'vi' ? 'Chọn 1' : '單選'}</span>`;
 
-    const typeBadge = grp.type === 'checkbox'
-      ? `<span class="cat-type-badge cat-type-modifier" style="font-size: 11px;">${currentLang === 'vi' ? 'Chọn nhiều' : '多選'}</span>`
-      : `<span class="cat-type-badge cat-type-catalog" style="font-size: 11px;">${currentLang === 'vi' ? 'Chọn 1' : '單選'}</span>`;
+      const optionsCount = (grp.options || []).length;
 
-    const optionsCount = (grp.options || []).length;
+      let optionsHtml = '';
+      (grp.options || []).forEach((opt, oIdx) => {
+        const oosText = opt.isOos ? t("stockStatusOutOfStock") : t("stockStatusInStock");
+        const subChipsHtml = (opt.sub_options || []).map((sub, sIdx) => `
+          <span class="cust-sub-chip">
+            <span>${escapeHtml(sub)}</span>
+            <button type="button" class="cust-sub-chip-remove" onclick="removeSubOptionChip(${cIdx}, ${gIdx}, ${oIdx}, ${sIdx})" title="✕">✕</button>
+          </span>
+        `).join('');
 
-    let optionsHtml = '';
-    (grp.options || []).forEach((opt, oIdx) => {
-      const oosText = opt.isOos ? t("stockStatusOutOfStock") : t("stockStatusInStock");
-      const subChipsHtml = (opt.sub_options || []).map((sub, sIdx) => `
-        <span class="cust-sub-chip">
-          <span>${escapeHtml(sub)}</span>
-          <button type="button" class="cust-sub-chip-remove" onclick="removeSubOptionChip(${cIdx}, ${gIdx}, ${oIdx}, ${sIdx})" title="✕">✕</button>
-        </span>
-      `).join('');
-
-      optionsHtml += `
-        <div class="cust-option-block" data-gidx="${gIdx}" data-oidx="${oIdx}">
-          <div class="cust-option-row">
-            <input type="text" class="menu-item-name-input" value="${escapeHtml(opt.name)}"
-              data-cust-name-cidx="${cIdx}" data-cust-gidx="${gIdx}" data-cust-oidx="${oIdx}"
-              oninput="markMenuDirty()" placeholder="${t("labelOptionName")}">
-            <label class="menu-item-price-label" title="${t("labelSurcharge")}">
-              <span class="price-currency">+$</span>
-              <input type="number" class="menu-item-price-input" value="${opt.price !== null && opt.price !== undefined ? opt.price : 0}"
-                data-cust-price-cidx="${cIdx}" data-cust-gidx="${gIdx}" data-cust-oidx="${oIdx}"
-                oninput="markMenuDirty()" placeholder="0">
-            </label>
-            <div class="menu-item-actions" style="margin-left: auto;">
-              <button type="button" class="menu-item-status-pill ${opt.isOos ? 'oos' : 'in-stock'}"
-                onclick="openStockModalForCustomization(${cIdx}, ${gIdx}, ${oIdx})" title="${oosText}">
-                <span class="status-dot"></span>
-                <span class="status-text">${oosText}</span>
-              </button>
-              <button type="button" class="btn btn-ghost menu-item-action-btn btn-danger-ghost"
-                onclick="removeCustomizationOption(${cIdx}, ${gIdx}, ${oIdx})" title="${t("btnItemDelete")}">
-                ${trashSvg}<span>${t("btnItemDelete")}</span>
+        optionsHtml += `
+          <div class="cust-option-block" data-gidx="${gIdx}" data-oidx="${oIdx}">
+            <div class="cust-option-row">
+              <input type="text" class="menu-item-name-input" value="${escapeHtml(opt.name)}"
+                data-cust-name-cidx="${cIdx}" data-cust-gidx="${gIdx}" data-cust-oidx="${oIdx}"
+                oninput="syncMenuDataFromDOM(); markMenuDirty()" placeholder="${t("labelOptionName")}">
+              <label class="menu-item-price-label" title="${t("labelSurcharge")}">
+                <span class="price-currency">+$</span>
+                <input type="number" class="menu-item-price-input" value="${opt.price !== null && opt.price !== undefined ? opt.price : 0}"
+                  data-cust-price-cidx="${cIdx}" data-cust-gidx="${gIdx}" data-cust-oidx="${oIdx}"
+                  oninput="syncMenuDataFromDOM(); markMenuDirty()" placeholder="0">
+              </label>
+              <div class="menu-item-actions" style="margin-left: auto;">
+                <button type="button" class="menu-item-status-pill ${opt.isOos ? 'oos' : 'in-stock'}"
+                  onclick="openStockModalForCustomization(${cIdx}, ${gIdx}, ${oIdx})" title="${oosText}">
+                  <span class="status-dot"></span>
+                  <span class="status-text">${oosText}</span>
+                </button>
+                <button type="button" class="btn btn-ghost menu-item-action-btn btn-danger-ghost"
+                  onclick="removeCustomizationOption(${cIdx}, ${gIdx}, ${oIdx})" title="${t("btnItemDelete")}">
+                  ${trashSvg}<span>${t("btnItemDelete")}</span>
+                </button>
+              </div>
+            </div>
+            <div class="cust-sub-options-container">
+              <span class="cust-sub-label">${t("subOptionsLabel")}</span>
+              ${subChipsHtml}
+              <button type="button" class="btn btn-ghost cust-add-sub-chip-btn"
+                onclick="promptAddSubOptionChip(${cIdx}, ${gIdx}, ${oIdx})">
+                ${plusSvgSmall}<span>${t("btnAddSubOption")}</span>
               </button>
             </div>
           </div>
-          <div class="cust-sub-options-container">
-            <span class="cust-sub-label">${t("subOptionsLabel")}</span>
-            ${subChipsHtml}
-            <button type="button" class="btn btn-ghost cust-add-sub-chip-btn"
-              onclick="promptAddSubOptionChip(${cIdx}, ${gIdx}, ${oIdx})">
-              ${plusSvgSmall}<span>${t("btnAddSubOption")}</span>
+        `;
+      });
+
+      card.innerHTML = `
+        <div class="cust-group-header">
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span class="cust-group-title">${escapeHtml(grp.title)}</span>
+            <button type="button" class="menu-item-btn btn-ghost" style="padding: 2px 7px; font-size: 12px; border: 1px solid #cbd5e1;"
+              onclick="renameCustomizationGroup(${cIdx}, ${gIdx})" title="${t("btnCategoryRename")}">✏️</button>
+            <button type="button" style="cursor: pointer; border: none; background: transparent; padding: 0;"
+              onclick="toggleCustomizationGroupType(${cIdx}, ${gIdx})" title="${grp.type === 'checkbox' ? t('toggleGroupTypeSingle') : t('toggleGroupTypeMultiple')}">
+              ${typeBadge}
+            </button>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; margin-left: auto;">
+            <span style="font-size: 13px; color: #64748b; font-weight: 600;">${optionsCount} ${t("menuItemUnit")}</span>
+            <button type="button" class="menu-item-btn btn-ghost" style="border: 1px solid #fee2e2; background: #fff5f5; color: var(--brand-red); padding: 3px 8px; font-size: 12px;"
+              onclick="removeCustomizationGroup(${cIdx}, ${gIdx})" title="${t("btnCategoryDelete")}">
+              🗑️
             </button>
           </div>
         </div>
-      `;
-    });
-
-    card.innerHTML = `
-      <div class="cust-group-header">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span class="cust-group-title">${escapeHtml(grp.title)}</span>
-          ${typeBadge}
+        <div class="cust-options-list">
+          ${optionsHtml}
         </div>
-        <span style="font-size: 13px; color: #64748b; font-weight: 600;">${optionsCount} ${t("menuItemUnit")}</span>
-      </div>
-      <div class="cust-options-list">
-        ${optionsHtml}
-      </div>
-      <button type="button" class="cat-mgr-add-btn" style="margin-top: 10px;" onclick="addCustomizationOption(${cIdx}, ${gIdx})">
-        ${plusSvg}<span>${t("btnAddCustomOption")}</span>
-      </button>
-    `;
+        <button type="button" class="cat-mgr-add-btn" style="margin-top: 10px;" onclick="addCustomizationOption(${cIdx}, ${gIdx})">
+          <span>+</span> <span>${t("btnAddCustomOption")}</span>
+        </button>
+      `;
 
-    container.appendChild(card);
-  });
+      container.appendChild(card);
+    });
+  }
+
+  // Always show button to add new customization group (Tầng 1)
+  const addGroupBtn = document.createElement("button");
+  addGroupBtn.type = "button";
+  addGroupBtn.className = "cat-mgr-add-btn";
+  addGroupBtn.style.marginTop = "16px";
+  addGroupBtn.style.background = "#f8fafc";
+  addGroupBtn.style.border = "2px dashed #94a3b8";
+  addGroupBtn.innerHTML = `<span>+</span> <span>${t("btnAddCustomGroup")}</span>`;
+  addGroupBtn.onclick = () => addCustomizationGroup(cIdx);
+  container.appendChild(addGroupBtn);
 }
+
+function addCustomizationGroup(cIdx) {
+  syncMenuDataFromDOM();
+  const groupTitle = prompt(t("promptAddCustomGroup"));
+  if (groupTitle !== null) {
+    const trimmed = groupTitle.trim();
+    if (!trimmed) return;
+    const cat = currentMenuData[cIdx];
+    if (cat) {
+      if (!Array.isArray(cat.groups)) cat.groups = [];
+      const tenantId = getTenantIdFromUrl();
+      const newKey = `group_${Date.now().toString(36)}`;
+      const newId = `custom_${tenantId}_${newKey}`;
+      cat.groups.push({
+        id: newId,
+        key: newKey,
+        title: trimmed,
+        type: 'radio',
+        sortOrder: cat.groups.length,
+        options: []
+      });
+      markMenuDirty();
+      renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), cat, cIdx);
+      renderMenuCategories();
+    }
+  }
+}
+window.addCustomizationGroup = addCustomizationGroup;
+
+function renameCustomizationGroup(cIdx, gIdx) {
+  syncMenuDataFromDOM();
+  const grp = currentMenuData[cIdx]?.groups?.[gIdx];
+  if (!grp) return;
+  const newTitle = prompt(t("promptRenameCustomGroup"), grp.title);
+  if (newTitle !== null) {
+    const trimmed = newTitle.trim();
+    if (!trimmed) return;
+    grp.title = trimmed;
+    markMenuDirty();
+    renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), currentMenuData[cIdx], cIdx);
+    renderMenuCategories();
+  }
+}
+window.renameCustomizationGroup = renameCustomizationGroup;
+
+function toggleCustomizationGroupType(cIdx, gIdx) {
+  syncMenuDataFromDOM();
+  const grp = currentMenuData[cIdx]?.groups?.[gIdx];
+  if (!grp) return;
+  grp.type = grp.type === 'checkbox' ? 'radio' : 'checkbox';
+  markMenuDirty();
+  renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), currentMenuData[cIdx], cIdx);
+}
+window.toggleCustomizationGroupType = toggleCustomizationGroupType;
+
+function removeCustomizationGroup(cIdx, gIdx) {
+  const grp = currentMenuData[cIdx]?.groups?.[gIdx];
+  if (!grp) return;
+  if (confirm(t("confirmDeleteCustomGroup"))) {
+    syncMenuDataFromDOM();
+    currentMenuData[cIdx].groups.splice(gIdx, 1);
+    markMenuDirty();
+    renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), currentMenuData[cIdx], cIdx);
+    renderMenuCategories();
+  }
+}
+window.removeCustomizationGroup = removeCustomizationGroup;
 
 function promptAddSubOptionChip(cIdx, gIdx, oIdx) {
   syncMenuDataFromDOM();
@@ -801,26 +903,29 @@ window.removeSubOptionChip = removeSubOptionChip;
 
 function addCustomizationOption(cIdx, gIdx) {
   syncMenuDataFromDOM();
-  const optName = prompt(t("promptNewOptionName"));
-  if (optName !== null) {
-    const trimmed = optName.trim();
-    if (!trimmed) return;
-    const group = currentMenuData[cIdx]?.groups?.[gIdx];
-    if (group) {
-      if (!Array.isArray(group.options)) group.options = [];
-      const newId = `opt_${Date.now().toString(36)}`;
-      group.options.push({
-        id: newId,
-        name: trimmed,
-        price: 0,
-        isOos: false,
-        sub_options: [],
-        originalName: trimmed
-      });
-      markMenuDirty();
-      renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), currentMenuData[cIdx], cIdx);
-      renderMenuCategories();
-    }
+  const group = currentMenuData[cIdx]?.groups?.[gIdx];
+  if (group) {
+    if (!Array.isArray(group.options)) group.options = [];
+    const newId = `opt_${Date.now().toString(36)}`;
+    const defaultName = t("newItemPlaceholder") || "新選項";
+    group.options.push({
+      id: newId,
+      name: defaultName,
+      price: 0,
+      isOos: false,
+      sub_options: [],
+      originalName: defaultName
+    });
+    markMenuDirty();
+    renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), currentMenuData[cIdx], cIdx);
+    renderMenuCategories();
+    setTimeout(() => {
+      const newInp = document.querySelector(`input[data-cust-name-cidx="${cIdx}"][data-cust-gidx="${gIdx}"][data-cust-oidx="${group.options.length - 1}"]`);
+      if (newInp) {
+        newInp.focus();
+        newInp.select();
+      }
+    }, 50);
   }
 }
 window.addCustomizationOption = addCustomizationOption;
@@ -852,7 +957,14 @@ function removeMenuItemAt(cIdx, iIdx) {
 function addNewMenuItem() {
   if (activeCategoryIndex < 0 || !currentMenuData) return;
   syncMenuDataFromDOM();
-  currentMenuData[activeCategoryIndex].items.unshift({ name: t("newItemPlaceholder"), price: 0, badgeText: "" });
+  const cat = currentMenuData[activeCategoryIndex];
+  if (cat && (cat.type === 'order_customization' || cat.id === 'sec-flavor')) {
+    addCustomizationGroup(activeCategoryIndex);
+    return;
+  }
+  if (cat && Array.isArray(cat.items)) {
+    cat.items.unshift({ name: t("newItemPlaceholder"), price: 0, badgeText: "" });
+  }
   markMenuDirty();
   renderMenuCategoryEditor(activeCategoryIndex);
   renderMenuCategories();
@@ -1488,6 +1600,7 @@ async function saveStockStatus() {
     closeStockModal();
     if (isCustom) {
       renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), currentMenuData[targetCidx], targetCidx);
+      renderMenuCategories();
     } else {
       renderMenuCategoryEditor(targetCidx);
     }
