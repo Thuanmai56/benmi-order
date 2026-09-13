@@ -774,11 +774,74 @@ function buildStructuredCartItems() {
     return items;
 }
 
-function isPickupTimeValid(dateTime) {
-    if (typeof isStoreOpen === 'function') {
-        return isStoreOpen(dateTime);
+function isStoreOpen(twTime) {
+    if (!storeConfig || !storeConfig.operatingHours) {
+        const day = twTime.getDay();
+        const hours = twTime.getHours();
+        const minutes = twTime.getMinutes();
+        const timeValue = hours + minutes / 60;
+        if (day >= 1 && day <= 5) {
+            return (timeValue >= 11 && timeValue < 21);
+        } else {
+            return (timeValue >= 9 && timeValue < 21);
+        }
     }
-    return true;
+    
+    const day = twTime.getDay();
+    const hours = twTime.getHours();
+    const minutes = twTime.getMinutes();
+    const timeValue = hours + minutes / 60;
+    
+    // 1. Kiểm tra các ca mở cửa trong ngày hôm nay
+    const shifts = storeConfig.operatingHours[day] || storeConfig.operatingHours[String(day)] || [];
+    for (let shift of shifts) {
+        if (!shift || !shift.start || !shift.end) continue;
+        const [sH, sM] = shift.start.split(':').map(Number);
+        const [eH, eM] = shift.end.split(':').map(Number);
+        const startVal = sH + sM / 60;
+        let endVal = eH + eM / 60;
+        
+        // Chuẩn hóa giờ đóng cửa nửa đêm: 00:00, 24:00 hoặc 12:00 đêm khi bắt đầu vào buổi chiều/tối
+        if (shift.end === '00:00' || shift.end === '24:00' || (eH === 0 && eM === 0) || (startVal >= 12 && eH === 12 && eM === 0)) {
+            endVal = 24.0;
+        }
+        
+        if (endVal > startVal) {
+            if (timeValue >= startVal && timeValue < endVal) {
+                return true;
+            }
+        } else {
+            if (timeValue >= startVal) {
+                return true;
+            }
+        }
+    }
+    
+    // 2. Kiểm tra nếu ngày hôm qua có ca qua đêm vẫn đang mở vào rạng sáng hôm nay
+    const yesterday = (day + 6) % 7;
+    const yesterdayShifts = storeConfig.operatingHours[yesterday] || storeConfig.operatingHours[String(yesterday)] || [];
+    for (let shift of yesterdayShifts) {
+        if (!shift || !shift.start || !shift.end) continue;
+        const [sH, sM] = shift.start.split(':').map(Number);
+        const [eH, eM] = shift.end.split(':').map(Number);
+        const startVal = sH + sM / 60;
+        let endVal = eH + eM / 60;
+        if (shift.end === '00:00' || shift.end === '24:00' || (eH === 0 && eM === 0) || (startVal >= 12 && eH === 12 && eM === 0)) {
+            endVal = 24.0;
+        }
+        if (endVal < startVal && timeValue < endVal) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+if (typeof window !== 'undefined') {
+    window.isStoreOpen = isStoreOpen;
+}
+
+function isPickupTimeValid(dateTime) {
+    return isStoreOpen(dateTime);
 }
 
 // 9. Thực thi gửi đơn hàng với Timeout 8s & Bảo vệ nút bấm
