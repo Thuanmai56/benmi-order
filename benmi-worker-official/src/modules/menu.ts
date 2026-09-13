@@ -176,7 +176,7 @@ export async function getMenu(request: Request, env: Env): Promise<Response> {
 // POST /api/menu/stock-status
 export async function updateStockStatus(request: Request, env: Env): Promise<Response> {
   try {
-    const { category_slug, name, status, duration, until_date } = (await request.json()) as any;
+    const { category_slug, name, status, duration, until_date, customization_key } = (await request.json()) as any;
 
     if (!category_slug || !name || !status) {
       return json({ error: "Missing category_slug, name, or status" }, 400);
@@ -205,7 +205,59 @@ export async function updateStockStatus(request: Request, env: Env): Promise<Res
       }
     }
 
-    // 1. Cập nhật trạng thái trong D1 Database
+    // Helper to update stock status in menu_customizations
+    async function updateCustomizationStock(): Promise<boolean> {
+      let query = "SELECT id, key, options_json FROM menu_customizations WHERE tenant_id = ?";
+      const params: any[] = [tenantId];
+      if (customization_key) {
+        query += " AND (key = ? OR id = ?)";
+        params.push(customization_key, customization_key);
+      } else if (category_slug && category_slug !== 'order_customization' && category_slug !== 'sec-flavor') {
+        query += " AND (key = ? OR id = ?)";
+        params.push(category_slug, category_slug);
+      }
+      const { results: customRows } = await env.DB.prepare(query).bind(...params).all<any>();
+      if (!customRows || customRows.length === 0) return false;
+
+      for (const row of customRows) {
+        try {
+          const opts = typeof row.options_json === 'string' ? JSON.parse(row.options_json) : (row.options_json || []);
+          let found = false;
+          for (const opt of opts) {
+            const optName = opt.name || opt.id || opt.title;
+            if (optName === name || opt.id === name) {
+              opt.is_out_of_stock = (status === "out_of_stock");
+              opt.out_of_stock_until = outOfStockUntil;
+              found = true;
+              break;
+            }
+          }
+          if (found) {
+            await env.DB.prepare(
+              "UPDATE menu_customizations SET options_json = ?, updated_at = datetime('now') WHERE id = ? AND tenant_id = ?"
+            ).bind(JSON.stringify(opts), row.id, tenantId).run();
+
+            const cacheKey = `tenant:${tenantId}:menu`;
+            await env.ORDER_STATE.delete(cacheKey);
+            await invalidateBootstrapCache(tenantId, env);
+            return true;
+          }
+        } catch (e) {
+          console.error("Failed to parse/update options_json:", e);
+        }
+      }
+      return false;
+    }
+
+    // 1. If explicit customization request, update menu_customizations first
+    if (category_slug === 'order_customization' || category_slug === 'sec-flavor' || customization_key) {
+      const updated = await updateCustomizationStock();
+      if (updated) {
+        return json({ success: true, message: "Customization stock status updated and cache invalidated." });
+      }
+    }
+
+    // 2. Cập nhật trạng thái trong menu_items
     const dbRes = await env.DB.prepare(
       `UPDATE menu_items 
        SET out_of_stock_until = ?, updated_at = datetime('now') 
@@ -215,10 +267,15 @@ export async function updateStockStatus(request: Request, env: Env): Promise<Res
     ).bind(outOfStockUntil, tenantId, name, tenantId, category_slug, category_slug).run();
 
     if (dbRes.meta.changes === 0) {
+      // Fallback: check menu_customizations if not found in menu_items
+      const updatedFallback = await updateCustomizationStock();
+      if (updatedFallback) {
+        return json({ success: true, message: "Customization stock status updated and cache invalidated." });
+      }
       return json({ error: "Menu item not found or unauthorized" }, 404);
     }
 
-    // 2. Invalidate bộ nhớ đệm KV của tenant
+    // 3. Invalidate bộ nhớ đệm KV của tenant
     const cacheKey = `tenant:${tenantId}:menu`;
     await env.ORDER_STATE.delete(cacheKey);
     await invalidateBootstrapCache(tenantId, env);
@@ -271,6 +328,34 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
 
   let catSortOrder = 1;
   for (const slug of Object.keys(menuData)) {
+    if (slug === '__customizations') {
+      const customList = Array.isArray(menuData[slug]) ? menuData[slug] : (menuData[slug]?.groups || menuData[slug]?.list || []);
+      for (const cust of customList) {
+        if (!cust || !cust.key) continue;
+        const custKey = cust.key;
+        const custTitle = cust.title || custKey;
+        const custType = cust.type || 'radio';
+        const custSort = Number(cust.sortOrder ?? cust.sort_order ?? 0);
+        const optionsList = Array.isArray(cust.options) ? cust.options : [];
+        const optionsJson = JSON.stringify(optionsList);
+        const custId = cust.id || `custom_${tenantId}_${custKey}`;
+
+        statements.push(
+          env.DB.prepare(
+            `INSERT INTO menu_customizations (id, tenant_id, key, title, type, sort_order, options_json, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+             ON CONFLICT(id) DO UPDATE SET
+               title = excluded.title,
+               type = excluded.type,
+               sort_order = excluded.sort_order,
+               options_json = excluded.options_json,
+               updated_at = datetime('now')`
+          ).bind(custId, tenantId, custKey, custTitle, custType, custSort, optionsJson)
+        );
+      }
+      continue;
+    }
+
     let catId = catIdMap.get(slug);
     if (!catId) {
       catId = `${tenantId}_${slug}`;

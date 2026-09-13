@@ -215,24 +215,35 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
       }
     }
 
+    const now = new Date();
     const customizations: BootstrapResponse['customizations'] = [];
     for (const c of rawCustomizations) {
       try {
         const opts = typeof c.options_json === 'string' ? JSON.parse(c.options_json) : (c.options_json || []);
+        const enrichedOpts = opts.map((opt: any) => {
+          const isOos = Boolean(
+            opt.is_out_of_stock ||
+            opt.isOutOfStock ||
+            (opt.out_of_stock_until && new Date(opt.out_of_stock_until) > now)
+          );
+          return {
+            ...opt,
+            isOutOfStock: isOos,
+            is_out_of_stock: isOos
+          };
+        });
         customizations.push({
           id: c.id,
           key: c.key,
           title: c.title,
           type: c.type || 'radio',
           sortOrder: c.sort_order || 0,
-          options: opts
+          options: enrichedOpts
         });
       } catch (e) {
         console.error(`[Bootstrap] Failed to parse options_json for ${c.id}:`, e);
       }
     }
-
-    const now = new Date();
 
     // Load image_list to accurately attach imageUrl only to items with uploaded image
     let imageList: string[] = [];
