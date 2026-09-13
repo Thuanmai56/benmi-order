@@ -119,7 +119,7 @@ async function loadMenuData() {
 
       categories.push({
         id: 'sec-flavor',
-        title: '🧪 口味與客製化選擇',
+        title: (typeof t === 'function' && t('customizationManageTitle')) || '整單口味與客製化設定',
         shortName: '口味選擇',
         type: 'order_customization',
         allowCustomization: false,
@@ -242,9 +242,15 @@ function updateCategoryCardIndexes(cardsList) {
   });
 }
 
+function formatPlusBtnText(text, fallback) {
+  const raw = String(text || fallback || '').trim();
+  if (!raw) return '';
+  return raw.startsWith('+') ? raw : `+ ${raw}`;
+}
+
 function renderCategoriesManagerView() {
   const titleEl = document.getElementById("menu-editor-title");
-  if (titleEl) titleEl.innerText = `⚙️ ${t("manageCategoriesTitle")}`;
+  if (titleEl) titleEl.innerText = t("manageCategoriesTitle");
   const subEl = document.getElementById("i18n-menu-edit-sub");
   if (subEl) subEl.innerText = t("manageCategoriesSub");
 
@@ -331,7 +337,7 @@ function renderCategoriesManagerView() {
         ? `<span style="font-size: 11.5px; padding: 3px 8px; background: #e0e7ff; color: #4338ca; border-radius: 6px; font-weight: 800;">${t("modifierPrefix")}</span>`
         : isSystemCustomization
         ? `<span style="font-size: 11.5px; padding: 3px 8px; background: #fef3c7; color: #92400e; border-radius: 6px; font-weight: 800;">${currentLang === 'vi' ? 'Khẩu vị' : '客製化'}</span>`
-        : `<span style="font-size: 11.5px; padding: 3px 8px; background: #ecfdf5; color: #047857; border-radius: 6px; font-weight: 800;">🍽️ ${t("categoryTypeCatalogBadge") || "餐點"}</span>`;
+        : `<span style="font-size: 11.5px; padding: 3px 8px; background: #ecfdf5; color: #047857; border-radius: 6px; font-weight: 800;">${t("categoryTypeCatalogBadge") || "餐點"}</span>`;
 
       const itemCount = isSystemCustomization
         ? (cat.groups ? cat.groups.reduce((acc, g) => acc + (g.options ? g.options.length : 0), 0) : 0)
@@ -340,8 +346,8 @@ function renderCategoriesManagerView() {
       const actionsHtml = isSystemCustomization
         ? `<span style="font-size: 12px; color: #64748b; font-weight: 600; padding-right: 6px;">${t("customizationPositionHint")}</span>`
         : `
-          <button type="button" class="btn btn-ghost" style="border: 1px solid #cbd5e1; background:#fff; padding: 6px 12px; font-size: 13px; font-weight: 700; border-radius: 8px;" onclick="promptRenameCategoryAtIndex(${idx})">✏️ ${t("btnCategoryRename")}</button>
-          <button type="button" class="btn btn-ghost" style="border: 1px solid #fee2e2; background:#fff5f5; color:var(--brand-red); padding: 6px 12px; font-size: 13px; font-weight: 700; border-radius: 8px;" onclick="deleteCategoryAtIndex(${idx})">🗑️ ${t("btnCategoryDelete")}</button>
+          <button type="button" class="btn btn-ghost" style="border: 1px solid #cbd5e1; background:#fff; padding: 6px 12px; font-size: 13px; font-weight: 700; border-radius: 8px; display:inline-flex; align-items:center; gap:4px;" onclick="promptRenameCategoryAtIndex(${idx})">${(typeof POS_SVG !== 'undefined' && POS_SVG.edit) || ''} <span>${t("btnCategoryRename")}</span></button>
+          <button type="button" class="btn btn-ghost" style="border: 1px solid #fee2e2; background:#fff5f5; color:var(--brand-red); padding: 6px 12px; font-size: 13px; font-weight: 700; border-radius: 8px; display:inline-flex; align-items:center; gap:4px;" onclick="deleteCategoryAtIndex(${idx})">${(typeof POS_SVG !== 'undefined' && POS_SVG.trash) || ''} <span>${t("btnCategoryDelete")}</span></button>
         `;
 
       card.innerHTML = `
@@ -454,7 +460,7 @@ function renderMenuCategoryEditor(index) {
     if (deleteBtn) deleteBtn.style.display = "none";
     if (addItemBtn) {
       addItemBtn.style.display = "inline-flex";
-      addItemBtn.innerText = `+ ${t("btnAddCustomGroup") || "新增分組"}`;
+      addItemBtn.innerText = formatPlusBtnText(t("btnAddCustomGroup"), "新增客製化分組");
       addItemBtn.onclick = () => addCustomizationGroup(index);
     }
     renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), cat, index);
@@ -462,7 +468,7 @@ function renderMenuCategoryEditor(index) {
   }
 
   if (addItemBtn) {
-    addItemBtn.innerText = `+ ${t("btnMenuAddItem") || "新增項目"}`;
+    addItemBtn.innerText = formatPlusBtnText(t("btnMenuAddItem"), "新增項目");
     addItemBtn.onclick = () => addNewMenuItem();
   }
 
@@ -573,16 +579,16 @@ function renderMenuCategoryEditor(index) {
         <input type="number" class="menu-item-price-input" value="${item.price !== null && item.price !== undefined ? item.price : ''}" data-cidx="${index}" data-iidx="${iIdx}" oninput="markMenuDirty()"
         placeholder="${t("priceHiddenPlaceholder")}">
       </label>
-      <label class="menu-item-badge-label" title="標籤 / 推薦 (例如: 雞肉足足100g, 👍 推薦)">
-        <span style="font-size:14px; color:#ef4444;">🏷️</span>
+      <label class="menu-item-badge-label" title="標籤 / 推薦">
+        <span style="display:inline-flex; align-items:center; color:#ef4444;">${(typeof POS_SVG !== 'undefined' && POS_SVG.tag) || ''}</span>
         <input type="text" class="menu-item-badge-input" value="${escapeHtml(item.badgeText || '')}" data-badge-cidx="${index}" data-badge-iidx="${iIdx}" oninput="markMenuDirty()"
           placeholder="標籤/推薦">
       </label>
       <div class="menu-item-actions">
-        <button class="menu-item-btn" style="background: ${oosBg}; color: ${oosColor}; border: 1px solid ${oosBorder};"
-          onclick="openStockModal(${index}, ${iIdx})">${oosText}</button>
-        <button class="menu-item-btn btn-ghost" style="border: 1px solid #cbd5e1; background:#fff;" onclick="openImageModal('${cat.id}', '${escapeHtml(item.name)}')">${t("btnItemImage")}</button>
-        <button class="menu-item-btn btn-ghost" style="border: 1px solid #fee2e2; background: #fff5f5; color: var(--brand-red);" onclick="removeMenuItemAt(${index}, ${iIdx})">${t("btnItemDelete")}</button>
+        <button class="menu-item-btn" style="background: ${oosBg}; color: ${oosColor}; border: 1px solid ${oosBorder}; display: inline-flex; align-items: center; gap: 5px;"
+          onclick="openStockModal(${index}, ${iIdx})"><span style="width: 7px; height: 7px; border-radius: 50%; background: currentColor; display: inline-block;"></span> <span>${oosText}</span></button>
+        <button class="menu-item-btn btn-ghost" style="border: 1px solid #cbd5e1; background:#fff; display: inline-flex; align-items: center; gap: 4px;" onclick="openImageModal('${cat.id}', '${escapeHtml(item.name)}')">${(typeof POS_SVG !== 'undefined' && POS_SVG.image) || ''} <span>${t("btnItemImage")}</span></button>
+        <button class="menu-item-btn btn-ghost" style="border: 1px solid #fee2e2; background: #fff5f5; color: var(--brand-red); display: inline-flex; align-items: center; gap: 4px;" onclick="removeMenuItemAt(${index}, ${iIdx})">${(typeof POS_SVG !== 'undefined' && POS_SVG.trash) || ''} <span>${t("btnItemDelete")}</span></button>
       </div>
     `;
     itemsContainer.appendChild(row);
@@ -654,13 +660,13 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
                   oninput="syncMenuDataFromDOM(); markMenuDirty()" placeholder="0">
               </label>
               <div class="menu-item-actions" style="margin-left: auto;">
-                <button type="button" class="menu-item-btn" style="background: ${oosBg}; color: ${oosColor}; border: 1px solid ${oosBorder};"
+                <button type="button" class="menu-item-btn" style="background: ${oosBg}; color: ${oosColor}; border: 1px solid ${oosBorder}; display: inline-flex; align-items: center; gap: 5px;"
                   onclick="openStockModalForCustomization(${cIdx}, ${gIdx}, ${oIdx})" title="${oosText}">
-                  ${oosText}
+                  <span style="width: 7px; height: 7px; border-radius: 50%; background: currentColor; display: inline-block;"></span> <span>${oosText}</span>
                 </button>
-                <button type="button" class="menu-item-btn btn-ghost" style="border: 1px solid #fee2e2; background: #fff5f5; color: var(--brand-red);"
+                <button type="button" class="menu-item-btn btn-ghost" style="border: 1px solid #fee2e2; background: #fff5f5; color: var(--brand-red); display:inline-flex; align-items:center; gap:4px;"
                   onclick="removeCustomizationOption(${cIdx}, ${gIdx}, ${oIdx})" title="${t("btnItemDelete")}">
-                  🗑️ ${t("btnItemDelete")}
+                  ${(typeof POS_SVG !== 'undefined' && POS_SVG.trash) || ''} <span>${t("btnItemDelete")}</span>
                 </button>
               </div>
             </div>
@@ -669,7 +675,7 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
               ${subChipsHtml}
               <button type="button" class="cust-add-sub-chip-btn"
                 onclick="promptAddSubOptionChip(${cIdx}, ${gIdx}, ${oIdx})">
-                <span>+</span> <span>${t("btnAddSubOption")}</span>
+                <span>${formatPlusBtnText(t("btnAddSubOption"), "新增細項")}</span>
               </button>
             </div>
           </div>
@@ -680,8 +686,8 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
         <div class="cust-group-header">
           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
             <span class="cust-group-title">${escapeHtml(grp.title)}</span>
-            <button type="button" class="menu-item-btn btn-ghost" style="padding: 2px 7px; font-size: 12px; border: 1px solid #cbd5e1;"
-              onclick="renameCustomizationGroup(${cIdx}, ${gIdx})" title="${t("btnCategoryRename")}">✏️</button>
+            <button type="button" class="menu-item-btn btn-ghost" style="padding: 3px 6px; font-size: 12px; border: 1px solid #cbd5e1; display:inline-flex; align-items:center; justify-content:center;"
+              onclick="renameCustomizationGroup(${cIdx}, ${gIdx})" title="${t("btnCategoryRename")}">${(typeof POS_SVG !== 'undefined' && POS_SVG.edit) || ''}</button>
             <button type="button" style="cursor: pointer; border: none; background: transparent; padding: 0;"
               onclick="toggleCustomizationGroupType(${cIdx}, ${gIdx})" title="${grp.type === 'checkbox' ? t('toggleGroupTypeSingle') : t('toggleGroupTypeMultiple')}">
               ${typeBadge}
@@ -689,9 +695,9 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
           </div>
           <div style="display: flex; align-items: center; gap: 8px; margin-left: auto;">
             <span style="font-size: 13px; color: #64748b; font-weight: 600;">${optionsCount} ${t("menuItemUnit")}</span>
-            <button type="button" class="menu-item-btn btn-ghost" style="border: 1px solid #fee2e2; background: #fff5f5; color: var(--brand-red); padding: 3px 8px; font-size: 12px;"
+            <button type="button" class="menu-item-btn btn-ghost" style="border: 1px solid #fee2e2; background: #fff5f5; color: var(--brand-red); padding: 3px 6px; font-size: 12px; display:inline-flex; align-items:center; justify-content:center;"
               onclick="removeCustomizationGroup(${cIdx}, ${gIdx})" title="${t("btnCategoryDelete")}">
-              🗑️
+              ${(typeof POS_SVG !== 'undefined' && POS_SVG.trash) || ''}
             </button>
           </div>
         </div>
@@ -699,7 +705,7 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
           ${optionsHtml}
         </div>
         <button type="button" class="cat-mgr-add-btn" style="margin-top: 10px;" onclick="addCustomizationOption(${cIdx}, ${gIdx})">
-          <span>+</span> <span>${t("btnAddCustomOption")}</span>
+          <span>${formatPlusBtnText(t("btnAddCustomOption"), "新增選項")}</span>
         </button>
       `;
 
@@ -714,7 +720,7 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
   addGroupBtn.style.marginTop = "16px";
   addGroupBtn.style.background = "#f8fafc";
   addGroupBtn.style.border = "2px dashed #94a3b8";
-  addGroupBtn.innerHTML = `<span>+</span> <span>${t("btnAddCustomGroup")}</span>`;
+  addGroupBtn.innerHTML = `<span>${formatPlusBtnText(t("btnAddCustomGroup"), "新增客製化分組")}</span>`;
   addGroupBtn.onclick = () => addCustomizationGroup(cIdx);
   container.appendChild(addGroupBtn);
 }

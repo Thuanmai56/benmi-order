@@ -18,10 +18,10 @@ const I18N = {
     rangeToday: "今天",
     range7d: "近 7 天",
     range30d: "近 30 天",
-    kpiTopItem: "🏆 熱銷第一名",
-    kpiTotalSold: "📦 總銷售份數",
-    kpiTotalRevenue: "💰 餐點總營收",
-    kpiTotalOrders: "🧾 成交訂單數",
+    kpiTopItem: "熱銷第一名",
+    kpiTotalSold: "總銷售份數",
+    kpiTotalRevenue: "餐點總營收",
+    kpiTotalOrders: "成交訂單數",
     completedOrdersSub: "已完成 / 已結帳",
     tableTitle: "品項銷售明細排行榜",
     colRank: "排名",
@@ -205,7 +205,7 @@ const I18N = {
     // Menu Editor
     menuCatTitle: "菜單分類",
     menuCatSub: "點擊左側分類以管理品項",
-    btnManageCategories: "⚙️ 管理分類",
+    btnManageCategories: "管理分類",
     manageCategoriesTitle: "管理菜單分類",
     manageCategoriesSub: "拖曳調整分類順序，亦可新增或刪除分類",
     btnCloseManager: "✕ 關閉",
@@ -220,15 +220,15 @@ const I18N = {
     categoryShortNameLabel: "導航簡稱 (選填，手機版頁籤顯示)",
     categoryShortNamePlaceholder: "留空則與分類名稱相同",
     categoryTypeLabel: "分類類型",
-    categoryTypeCatalog: "🍽️ 菜單品項 (主餐 / 飲料)",
-    categoryTypeModifier: "⚙️ 客製化選項 (加辣 / 加料 / 甜度)",
+    categoryTypeCatalog: "菜單品項 (主餐 / 飲料)",
+    categoryTypeModifier: "客製化選項 (加辣 / 加料 / 甜度)",
     confirmDeleteCategory: "確定要刪除整個「{name}」分類及其內部所有品項嗎？",
     promptCategoryNameEmpty: "請輸入有效的分類名稱！",
     promptCategoryNamePrompt: "請輸入新的分類名稱：",
     customizationSettings: "客製化設定",
     allowCustomizationLabel: "允許客製化選項 (加料 / 辣度 / 備註)",
     allowCustomizationDesc: "開啟後，顧客在點選此分類餐點時可選擇客製化設定",
-    appliedModifiersTitle: "🔧 適用客製化選項",
+    appliedModifiersTitle: "適用客製化選項",
     appliedModifiersDesc: "勾選顧客在點選此分類餐點時可使用的客製化選項 (預設為全部勾選)",
     btnSelectAll: "全選",
     btnUnselectAll: "清除 (全不選)",
@@ -245,9 +245,9 @@ const I18N = {
     menuItemUnit: "項",
     modifierPrefix: "[客製化]",
     customizationPositionHint: "可拖曳調整位置",
-    stockStatusInStock: "🟢 正常供應",
-    stockStatusOutOfStock: "🔴 暫時售完",
-    btnItemImage: "📷 圖片",
+    stockStatusInStock: "正常供應",
+    stockStatusOutOfStock: "暫時售完",
+    btnItemImage: "圖片",
     btnItemDelete: "刪除",
     confirmDeleteItem: "確定要刪除這個項目嗎？",
     newItemPlaceholder: "新項目",
@@ -280,8 +280,8 @@ const I18N = {
     stockModalTitle: "庫存狀態設定",
     stockModalItem: "庫存設定：{name}",
     stockLabelStatus: "狀態：",
-    stockOptInStock: "🟢 正常供應 (In Stock)",
-    stockOptOutOfStock: "🔴 暫時售完 (Out of Stock)",
+    stockOptInStock: "正常供應 (In Stock)",
+    stockOptOutOfStock: "暫時售完 (Out of Stock)",
     stockLabelDuration: "售完時限：",
     stockOptToday: "今日 (明日凌晨 4:00 自動恢復)",
     stockOptMultipleDays: "指定日期 (選擇恢復日期)",
@@ -369,10 +369,10 @@ const I18N = {
     rangeToday: "Hôm nay",
     range7d: "7 ngày qua",
     range30d: "30 ngày qua",
-    kpiTopItem: "🏆 Top 1 Bán chạy nhất",
-    kpiTotalSold: "📦 Tổng phần đã bán",
-    kpiTotalRevenue: "💰 Tổng doanh thu món",
-    kpiTotalOrders: "🧾 Tổng đơn thành công",
+    kpiTopItem: "Top 1 Bán chạy nhất",
+    kpiTotalSold: "Tổng phần đã bán",
+    kpiTotalRevenue: "Tổng doanh thu món",
+    kpiTotalOrders: "Tổng đơn thành công",
     completedOrdersSub: "Đã xong / Đã thanh toán",
     tableTitle: "Bảng xếp hạng chi tiết món bán",
     colRank: "Hạng",
@@ -556,7 +556,7 @@ const I18N = {
     // Menu Editor
     menuCatTitle: "Danh mục thực đơn",
     menuCatSub: "Chọn danh mục bên trái để quản lý món",
-    btnManageCategories: "⚙️ Quản lý phân loại",
+    btnManageCategories: "Quản lý phân loại",
     manageCategoriesTitle: "Quản lý phân loại thực đơn",
     manageCategoriesSub: "Kéo thả để đổi thứ tự, thêm mới hoặc xóa phân loại",
     btnCloseManager: "✕ Đóng",
@@ -571,15 +571,15 @@ const I18N = {
     categoryShortNameLabel: "Tên rút gọn thanh điều hướng (tùy chọn, hiển thị trên tab mobile)",
     categoryShortNamePlaceholder: "Để trống sẽ lấy theo tên phân loại",
     categoryTypeLabel: "Loại phân loại",
-    categoryTypeCatalog: "🍽️ Danh mục món (Món chính / Đồ uống)",
-    categoryTypeModifier: "⚙️ Tùy biến chọn kèm (Thêm cay / Topping)",
+    categoryTypeCatalog: "Danh mục món (Món chính / Đồ uống)",
+    categoryTypeModifier: "Tùy biến chọn kèm (Thêm cay / Topping)",
     confirmDeleteCategory: "Bạn có chắc muốn xóa toàn bộ phân loại「{name}」và các món bên trong không?",
     promptCategoryNameEmpty: "Vui lòng nhập tên phân loại hợp lệ!",
     promptCategoryNamePrompt: "Nhập tên phân loại mới:",
     customizationSettings: "Tùy chọn khẩu vị",
     allowCustomizationLabel: "Cho phép tùy chỉnh món (Topping / Độ cay / Ghi chú)",
     allowCustomizationDesc: "Khi bật, khách hàng có thể tùy chỉnh thêm topping, mức cay cho các món trong loại này",
-    appliedModifiersTitle: "🔧 Tùy biến áp dụng cho loại này",
+    appliedModifiersTitle: "Tùy biến áp dụng cho loại này",
     appliedModifiersDesc: "Chọn các tùy biến khách hàng có thể chọn khi gọi món trong loại này (Mặc định chọn tất cả)",
     btnSelectAll: "Chọn tất cả",
     btnUnselectAll: "Bỏ chọn tất cả",
@@ -596,9 +596,9 @@ const I18N = {
     menuItemUnit: "món",
     modifierPrefix: "[Tùy biến]",
     customizationPositionHint: "Có thể kéo để đổi vị trí",
-    stockStatusInStock: "🟢 Còn hàng",
-    stockStatusOutOfStock: "🔴 Hết hàng",
-    btnItemImage: "📷 Ảnh",
+    stockStatusInStock: "Còn hàng",
+    stockStatusOutOfStock: "Hết hàng",
+    btnItemImage: "Ảnh",
     btnItemDelete: "Xóa",
     confirmDeleteItem: "Bạn có chắc muốn xóa món này không?",
     newItemPlaceholder: "Món mới",
@@ -631,8 +631,8 @@ const I18N = {
     stockModalTitle: "Cài đặt trạng thái kho",
     stockModalItem: "Cài đặt kho: {name}",
     stockLabelStatus: "Trạng thái:",
-    stockOptInStock: "🟢 Còn hàng (In Stock)",
-    stockOptOutOfStock: "🔴 Hết hàng (Out of Stock)",
+    stockOptInStock: "Còn hàng (In Stock)",
+    stockOptOutOfStock: "Hết hàng (Out of Stock)",
     stockLabelDuration: "Thời hạn hết hàng:",
     stockOptToday: "Hôm nay (Tự hồi phục lúc 4h sáng mai)",
     stockOptMultipleDays: "Nhiều ngày (Chọn ngày khôi phục)",
@@ -1117,15 +1117,21 @@ function applyLanguageToDOM() {
   if (menuCatS) menuCatS.innerText = dict.menuCatSub;
 
   const btnManageCats = document.getElementById("btn-menu-manage-cats");
-  if (btnManageCats) btnManageCats.innerText = dict.btnManageCategories;
+  if (btnManageCats) {
+    btnManageCats.innerHTML = `${(typeof POS_SVG !== 'undefined' && POS_SVG.settings) || ''} <span>${dict.btnManageCategories}</span>`;
+  }
   const btnManageClose = document.getElementById("btn-menu-manage-close");
   if (btnManageClose) btnManageClose.innerText = dict.btnCloseManager;
   const btnAddCatTop = document.getElementById("btn-menu-add-cat-top");
   if (btnAddCatTop) btnAddCatTop.innerText = dict.btnAddCategory;
   const btnCatDel = document.getElementById("btn-category-delete");
-  if (btnCatDel) btnCatDel.innerText = dict.btnCategoryDelete;
+  if (btnCatDel) {
+    btnCatDel.innerHTML = `${(typeof POS_SVG !== 'undefined' && POS_SVG.trash) || ''} <span>${dict.btnCategoryDelete}</span>`;
+  }
   const btnCatRen = document.getElementById("btn-category-rename");
-  if (btnCatRen) btnCatRen.innerText = dict.btnCategoryRename;
+  if (btnCatRen) {
+    btnCatRen.innerHTML = `${(typeof POS_SVG !== 'undefined' && POS_SVG.edit) || ''} <span>${dict.btnCategoryRename}</span>`;
+  }
   const addCatModT = document.getElementById("i18n-add-cat-modal-title");
   if (addCatModT) addCatModT.innerText = dict.addCategoryModalTitle;
   const addCatLblN = document.getElementById("i18n-add-cat-label-name");

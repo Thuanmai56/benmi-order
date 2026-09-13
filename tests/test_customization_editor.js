@@ -65,7 +65,7 @@ const mockSandbox = {
   currentLang: 'zh-TW',
   WORKER_BASE: 'https://test.workers.dev',
   getTenantIdFromUrl: () => 'bsc',
-  POS_SVG: { grip: '::', trash: 'trash', plus: '+' },
+  POS_SVG: { grip: '::', trash: 'trash', plus: '+', edit: 'edit', settings: 'settings', tag: 'tag', image: 'image' },
   console: console
 };
 vm.createContext(mockSandbox);
@@ -121,9 +121,10 @@ const serialized = serializeMenuData(sampleCategories);
 
 // Verify __customizations is extracted
 assert(serialized.__customizations, "__customizations should be present in serialized output");
-assert.strictEqual(serialized.__customizations.length, 2, "__customizations should contain 2 groups");
+const customGroups = Array.isArray(serialized.__customizations) ? serialized.__customizations : (serialized.__customizations.groups || []);
+assert.strictEqual(customGroups.length, 2, "__customizations should contain 2 groups");
 
-const flavorGroup = serialized.__customizations[0];
+const flavorGroup = customGroups[0];
 assert.strictEqual(flavorGroup.key, 'flavor');
 assert.strictEqual(flavorGroup.options.length, 4);
 assert.deepStrictEqual(flavorGroup.options[2].sub_options, ['不加香油', '不加鹽巴']);
@@ -170,7 +171,7 @@ const bscCustomGroups = sampleBscBootstrap.customizations.map(c => ({
 }));
 testCategories.unshift({
   id: 'sec-flavor',
-  title: '🧪 口味與客製化選擇',
+  title: '整單口味與客製化設定',
   type: 'order_customization',
   groups: bscCustomGroups,
   items: []
