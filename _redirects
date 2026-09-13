@@ -1,5 +1,2 @@
-# Cloudflare Pages Redirects & Rewrites
-
-# Clean marketplace routes
-/marketplace   /marketplace.html    200
-/marketplace/  /marketplace.html    200
+# Marketplace is served from /marketplace.html by Pages' clean-URL asset
+# resolver. No explicit rewrite is needed (and one would cause a 308 loop).

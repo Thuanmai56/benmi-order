@@ -28,7 +28,7 @@ async function dispatch(url) {
 test("explore root serves marketplace without redirect and retains query", async () => {
   const result = await dispatch("https://explore.blabfood.app/?source=qr");
   assert.equal(result.response.status, 200);
-  assert.equal(new URL(result.servedAsset).pathname, "/marketplace.html");
+  assert.equal(new URL(result.servedAsset).pathname, "/marketplace");
   assert.equal(new URL(result.servedAsset).search, "?source=qr");
   assert.equal(result.response.headers.get("location"), null);
 });

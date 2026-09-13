@@ -14,7 +14,9 @@ export async function onRequest(context) {
   }
 
   const assetUrl = new URL(context.request.url);
-  assetUrl.pathname = "/marketplace.html";
+  // Ask the Pages asset server for the clean asset route. Requesting the
+  // .html filename here triggers Pages' canonical .html redirect.
+  assetUrl.pathname = "/marketplace";
   const response = await context.env.ASSETS.fetch(new Request(assetUrl, context.request));
   const headers = new Headers(response.headers);
   headers.set("Cache-Control", "public, max-age=0, must-revalidate");
