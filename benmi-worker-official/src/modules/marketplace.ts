@@ -47,15 +47,55 @@ export function isStoreCurrentlyOpen(
   const currentTimeStr = `${currentHours}:${currentMinutes}`;
 
   const shifts = parsedHours[dayOfWeek];
+  const timeValue = taiwanTime.getUTCHours() + taiwanTime.getUTCMinutes() / 60;
+
   if (!shifts || !Array.isArray(shifts) || shifts.length === 0) {
     // If no specific shifts defined, fallback to 11:00 - 21:00
     return currentTimeStr >= '11:00' && currentTimeStr <= '21:00';
   }
 
+  // 1. Check shifts starting today
   for (const shift of shifts) {
-    if (shift.start && shift.end) {
-      if (currentTimeStr >= shift.start && currentTimeStr <= shift.end) {
-        return true;
+    if (shift && shift.start && shift.end) {
+      const [sH, sM] = shift.start.split(':').map(Number);
+      const [eH, eM] = shift.end.split(':').map(Number);
+      const startVal = sH + sM / 60;
+      let endVal = eH + eM / 60;
+
+      if (shift.end === '00:00' || shift.end === '24:00' || (eH === 0 && eM === 0) || (startVal >= 12 && eH === 12 && eM === 0)) {
+        endVal = 24.0;
+      }
+
+      if (endVal > startVal) {
+        if (timeValue >= startVal && timeValue < endVal) {
+          return true;
+        }
+      } else {
+        if (timeValue >= startVal) {
+          return true;
+        }
+      }
+    }
+  }
+
+  // 2. Check overnight shifts from yesterday spilling into early morning today
+  const yesterday = String((taiwanTime.getUTCDay() + 6) % 7);
+  const yesterdayShifts = parsedHours[yesterday];
+  if (yesterdayShifts && Array.isArray(yesterdayShifts)) {
+    for (const shift of yesterdayShifts) {
+      if (shift && shift.start && shift.end) {
+        const [sH, sM] = shift.start.split(':').map(Number);
+        const [eH, eM] = shift.end.split(':').map(Number);
+        const startVal = sH + sM / 60;
+        let endVal = eH + eM / 60;
+
+        if (shift.end === '00:00' || shift.end === '24:00' || (eH === 0 && eM === 0) || (startVal >= 12 && eH === 12 && eM === 0)) {
+          endVal = 24.0;
+        }
+
+        if (endVal < startVal && timeValue < endVal) {
+          return true;
+        }
       }
     }
   }

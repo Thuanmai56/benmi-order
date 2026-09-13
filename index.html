@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title id="page-title">線上點餐</title>
     <link rel="preload" href="index.css?v=20260913_custom_badge_fix_v1" as="style">
-    <link rel="preload" href="js/client-checkout.js?v=20260912_bundle_ux_v4" as="script">
+    <link rel="preload" href="js/client-checkout.js?v=20260913_operating_hours_v1" as="script">
     <link rel="stylesheet" href="index.css?v=20260913_custom_badge_fix_v1">
     <script>
         // Redirect root visits on blabfood.app to /landing
@@ -3495,16 +3495,51 @@
             const minutes = twTime.getMinutes();
             const timeValue = hours + minutes / 60;
             
+            // 1. Kiểm tra các ca mở cửa trong ngày hôm nay
             const shifts = storeConfig.operatingHours[day] || [];
             for (let shift of shifts) {
+                if (!shift || !shift.start || !shift.end) continue;
                 const [sH, sM] = shift.start.split(':').map(Number);
                 const [eH, eM] = shift.end.split(':').map(Number);
                 const startVal = sH + sM / 60;
-                const endVal = eH + eM / 60;
-                if (timeValue >= startVal && timeValue < endVal) {
+                let endVal = eH + eM / 60;
+                
+                // Chuẩn hóa giờ đóng cửa nửa đêm: 00:00, 24:00 hoặc 12:00 đêm khi bắt đầu vào buổi chiều/tối
+                if (shift.end === '00:00' || shift.end === '24:00' || (eH === 0 && eM === 0) || (startVal >= 12 && eH === 12 && eM === 0)) {
+                    endVal = 24.0;
+                }
+                
+                if (endVal > startVal) {
+                    // Ca bình thường trong ngày (VD: 11:00-21:00 hoặc 16:50-24:00)
+                    if (timeValue >= startVal && timeValue < endVal) {
+                        return true;
+                    }
+                } else {
+                    // Ca qua đêm (VD: 18:00 - 02:00 sáng hôm sau): ngày hôm nay mở từ startVal đến 24:00
+                    if (timeValue >= startVal) {
+                        return true;
+                    }
+                }
+            }
+            
+            // 2. Kiểm tra nếu ngày hôm qua có ca qua đêm vẫn đang mở vào rạng sáng hôm nay
+            const yesterday = (day + 6) % 7;
+            const yesterdayShifts = storeConfig.operatingHours[yesterday] || [];
+            for (let shift of yesterdayShifts) {
+                if (!shift || !shift.start || !shift.end) continue;
+                const [sH, sM] = shift.start.split(':').map(Number);
+                const [eH, eM] = shift.end.split(':').map(Number);
+                const startVal = sH + sM / 60;
+                let endVal = eH + eM / 60;
+                if (shift.end === '00:00' || shift.end === '24:00' || (eH === 0 && eM === 0) || (startVal >= 12 && eH === 12 && eM === 0)) {
+                    endVal = 24.0;
+                }
+                // Nếu ca hôm qua là ca qua đêm (endVal < startVal) và giờ hiện tại chưa tới giờ đóng cửa rạng sáng
+                if (endVal < startVal && timeValue < endVal) {
                     return true;
                 }
             }
+            
             return false;
         }
 
@@ -3704,7 +3739,7 @@
             </button>
         </div>
     </div>
-    <script src="js/client-checkout.js?v=20260912_bundle_ux_v3"></script>
+    <script src="js/client-checkout.js?v=20260913_operating_hours_v1"></script>
 </body>
 
 </html>

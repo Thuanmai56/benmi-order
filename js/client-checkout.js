@@ -233,6 +233,7 @@ function getNextOpeningInfo(twNow) {
     // 1. Kiểm tra các ca sau trong cùng ngày
     const todayShifts = storeConfig.operatingHours[currentDay] || [];
     for (const shift of todayShifts) {
+        if (!shift || !shift.start) continue;
         const [sH, sM] = shift.start.split(':').map(Number);
         if (sH + sM / 60 > currentHours) {
             return { timeStr: shift.start, dayText: '今日' };
@@ -243,7 +244,7 @@ function getNextOpeningInfo(twNow) {
     for (let offset = 1; offset <= 7; offset++) {
         const nextDay = (currentDay + offset) % 7;
         const shifts = storeConfig.operatingHours[nextDay] || [];
-        if (shifts.length > 0) {
+        if (shifts.length > 0 && shifts[0] && shifts[0].start) {
             const dayLabel = offset === 1 ? '明日' : `${daysName[nextDay]}`;
             return { timeStr: shifts[0].start, dayText: dayLabel };
         }
