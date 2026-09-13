@@ -103,14 +103,22 @@ async function loadMenuData() {
           type: 'order_customization',
           allowCustomization: false,
           appliedModifiers: [],
-          items: data.customizations.map(cust => ({
-            name: cust.title,
-            price: 0,
-            isOos: false,
-            badgeText: cust.type === 'radio' ? '單選' : '多選',
-            isRecommended: false,
-            originalName: cust.title
-          }))
+          groups: data.customizations.map(cust => ({
+            id: cust.id,
+            key: cust.key,
+            title: cust.title,
+            type: cust.type || 'radio',
+            sortOrder: cust.sortOrder || 0,
+            options: (cust.options || []).map(opt => ({
+              id: opt.id || opt.name,
+              name: opt.name || opt.title || '',
+              price: opt.price !== undefined ? opt.price : (opt.surcharge !== undefined ? opt.surcharge : 0),
+              isOos: Boolean(opt.isOutOfStock || opt.is_out_of_stock),
+              sub_options: Array.isArray(opt.sub_options) ? [...opt.sub_options] : (Array.isArray(opt.subOptions) ? [...opt.subOptions] : []),
+              originalName: opt.name || opt.title || ''
+            }))
+          })),
+          items: []
         });
       }
     }
@@ -304,9 +312,23 @@ function renderCategoriesManagerView() {
         renderCategoriesManagerView();
       });
 
+      const isSystemCustomization = cat.type === 'order_customization' || cat.id === 'sec-flavor';
       const badge = cat.type === 'modifier'
         ? `<span style="font-size: 11.5px; padding: 3px 8px; background: #e0e7ff; color: #4338ca; border-radius: 6px; font-weight: 800;">${t("modifierPrefix")}</span>`
+        : isSystemCustomization
+        ? `<span style="font-size: 11.5px; padding: 3px 8px; background: #fef3c7; color: #92400e; border-radius: 6px; font-weight: 800;">${currentLang === 'vi' ? 'Khẩu vị' : '客製化'}</span>`
         : `<span style="font-size: 11.5px; padding: 3px 8px; background: #ecfdf5; color: #047857; border-radius: 6px; font-weight: 800;">🍽️ ${t("categoryTypeCatalogBadge") || "餐點"}</span>`;
+
+      const itemCount = isSystemCustomization
+        ? (cat.groups ? cat.groups.reduce((acc, g) => acc + (g.options ? g.options.length : 0), 0) : 0)
+        : cat.items.length;
+
+      const actionsHtml = isSystemCustomization
+        ? `<span style="font-size: 12px; color: #94a3b8; font-weight: 600; padding-right: 6px;">(${currentLang === 'vi' ? 'Cố định' : '系統內建'})</span>`
+        : `
+          <button type="button" class="btn btn-ghost" style="border: 1px solid #cbd5e1; background:#fff; padding: 6px 12px; font-size: 13px; font-weight: 700; border-radius: 8px;" onclick="promptRenameCategoryAtIndex(${idx})">✏️ ${t("btnCategoryRename")}</button>
+          <button type="button" class="btn btn-ghost" style="border: 1px solid #fee2e2; background:#fff5f5; color:var(--brand-red); padding: 6px 12px; font-size: 13px; font-weight: 700; border-radius: 8px;" onclick="deleteCategoryAtIndex(${idx})">🗑️ ${t("btnCategoryDelete")}</button>
+        `;
 
       card.innerHTML = `
         <div class="cat-mgr-drag-handle" title="Kéo rê để đổi thứ tự / 拖曳排序">☰</div>
@@ -314,11 +336,10 @@ function renderCategoriesManagerView() {
         <div class="cat-mgr-info">
           ${badge}
           <span class="cat-mgr-name">${escapeHtml(cat.title)}${cat.shortName && cat.shortName !== cat.title ? ` <span style="font-size: 11.5px; color: #64748b; font-weight: normal;">(${escapeHtml(cat.shortName)})</span>` : ''}</span>
-          <span class="cat-mgr-count">${cat.items.length} ${t("menuItemUnit")}</span>
+          <span class="cat-mgr-count">${itemCount} ${t("menuItemUnit")}</span>
         </div>
         <div class="cat-mgr-actions" onclick="event.stopPropagation()">
-          <button type="button" class="btn btn-ghost" style="border: 1px solid #cbd5e1; background:#fff; padding: 6px 12px; font-size: 13px; font-weight: 700; border-radius: 8px;" onclick="promptRenameCategoryAtIndex(${idx})">✏️ ${t("btnCategoryRename")}</button>
-          <button type="button" class="btn btn-ghost" style="border: 1px solid #fee2e2; background:#fff5f5; color:var(--brand-red); padding: 6px 12px; font-size: 13px; font-weight: 700; border-radius: 8px;" onclick="deleteCategoryAtIndex(${idx})">🗑️ ${t("btnCategoryDelete")}</button>
+          ${actionsHtml}
         </div>
       `;
 
@@ -349,14 +370,23 @@ function renderMenuCategories() {
     const div = document.createElement("div");
     div.className = `menu-cat-item ${activeCategoryIndex === index && !isCategoryManagerOpen ? 'active' : ''}`;
 
-    const badge = cat.type === 'modifier' ? `<span style="font-size: 11px; padding: 2px 6px; background: #e0e7ff; color: #4338ca; border-radius: 4px; font-weight: 700; margin-right: 6px;">${t("modifierPrefix")}</span>` : '';
+    const isSystemCustomization = cat.type === 'order_customization' || cat.id === 'sec-flavor';
+    const badge = cat.type === 'modifier'
+      ? `<span style="font-size: 11px; padding: 2px 6px; background: #e0e7ff; color: #4338ca; border-radius: 4px; font-weight: 700; margin-right: 6px;">${t("modifierPrefix")}</span>`
+      : isSystemCustomization
+      ? `<span style="font-size: 11px; padding: 2px 6px; background: #fef3c7; color: #92400e; border-radius: 4px; font-weight: 700; margin-right: 6px;">${currentLang === 'vi' ? 'Khẩu vị' : '客製化'}</span>`
+      : '';
+
+    const itemCount = isSystemCustomization
+      ? (cat.groups ? cat.groups.reduce((acc, g) => acc + (g.options ? g.options.length : 0), 0) : 0)
+      : cat.items.length;
 
     div.innerHTML = `
       <div style="display:flex; align-items:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;">
         ${badge}
         <span class="menu-cat-title">${escapeHtml(cat.title)}</span>
       </div>
-      <span class="menu-cat-count">${cat.items.length} ${t("menuItemUnit")}</span>
+      <span class="menu-cat-count">${itemCount} ${t("menuItemUnit")}</span>
     `;
 
     div.onclick = () => {
@@ -403,10 +433,19 @@ function renderMenuCategoryEditor(index) {
     return;
   }
 
+  const cat = currentMenuData[index];
+
+  if (cat.type === 'order_customization' || cat.id === 'sec-flavor') {
+    if (renameBtn) renameBtn.style.display = "none";
+    if (deleteBtn) deleteBtn.style.display = "none";
+    if (addItemBtn) addItemBtn.style.display = "none";
+    renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), cat, index);
+    return;
+  }
+
   if (renameBtn) renameBtn.style.display = "inline-flex";
   if (deleteBtn) deleteBtn.style.display = "inline-flex";
 
-  const cat = currentMenuData[index];
   const titleEl = document.getElementById("menu-editor-title");
   if (titleEl) titleEl.innerText = `${cat.title} ${t("menuItemTotalCount", { count: cat.items.length })}`;
 
@@ -528,6 +567,184 @@ function renderMenuCategoryEditor(index) {
   container.appendChild(itemsContainer);
 }
 
+function renderOrderCustomizationEditor(container, cat, cIdx) {
+  if (!container) return;
+  container.innerHTML = "";
+
+  const titleEl = document.getElementById("menu-editor-title");
+  if (titleEl) {
+    const totalOptions = cat.groups ? cat.groups.reduce((acc, g) => acc + (g.options ? g.options.length : 0), 0) : 0;
+    titleEl.innerText = `${cat.title} ${t("menuItemTotalCount", { count: totalOptions })}`;
+  }
+
+  const banner = document.createElement("div");
+  banner.className = "cust-header-banner";
+  banner.innerHTML = `
+    <div class="cust-title">${t("customizationManageTitle")}</div>
+    <div class="cust-desc">${t("customizationManageDesc")}</div>
+  `;
+  container.appendChild(banner);
+
+  if (!cat.groups || cat.groups.length === 0) {
+    const emptyDiv = document.createElement("div");
+    emptyDiv.style.textAlign = "center";
+    emptyDiv.style.padding = "24px";
+    emptyDiv.style.color = "#94a3b8";
+    emptyDiv.innerText = t("noCategoriesPrompt") || "尚無任何客製化設定";
+    container.appendChild(emptyDiv);
+    return;
+  }
+
+  cat.groups.forEach((grp, gIdx) => {
+    const card = document.createElement("div");
+    card.className = "cust-group-card";
+    card.setAttribute("data-cust-group-index", gIdx);
+
+    const typeBadge = grp.type === 'checkbox'
+      ? `<span style="font-size: 11.5px; padding: 3px 8px; background: #e0e7ff; color: #4338ca; border-radius: 6px; font-weight: 800;">${currentLang === 'vi' ? 'Chọn nhiều' : '多選'}</span>`
+      : `<span style="font-size: 11.5px; padding: 3px 8px; background: #ecfdf5; color: #047857; border-radius: 6px; font-weight: 800;">${currentLang === 'vi' ? 'Chọn 1' : '單選'}</span>`;
+
+    const optionsCount = (grp.options || []).length;
+
+    let optionsHtml = '';
+    (grp.options || []).forEach((opt, oIdx) => {
+      const oosBg = opt.isOos ? '#fee2e2' : '#d1fae5';
+      const oosColor = opt.isOos ? '#b91c1c' : '#065f46';
+      const oosBorder = opt.isOos ? '#fca5a5' : '#6ee7b7';
+      const oosText = opt.isOos ? t("stockStatusOutOfStock") : t("stockStatusInStock");
+
+      const subChipsHtml = (opt.sub_options || []).map((sub, sIdx) => `
+        <span class="cust-sub-chip">
+          <span>${escapeHtml(sub)}</span>
+          <button type="button" class="cust-sub-chip-remove" onclick="removeSubOptionChip(${cIdx}, ${gIdx}, ${oIdx}, ${sIdx})" title="✕">✕</button>
+        </span>
+      `).join('');
+
+      optionsHtml += `
+        <div class="cust-option-block" data-gidx="${gIdx}" data-oidx="${oIdx}">
+          <div class="cust-option-row">
+            <input type="text" class="menu-item-name-input" value="${escapeHtml(opt.name)}"
+              data-cust-name-cidx="${cIdx}" data-cust-gidx="${gIdx}" data-cust-oidx="${oIdx}"
+              oninput="markMenuDirty()" placeholder="${t("labelOptionName")}">
+            <label class="menu-item-price-label" title="${t("labelSurcharge")}">
+              <span>+$</span>
+              <input type="number" class="menu-item-price-input" value="${opt.price !== null && opt.price !== undefined ? opt.price : 0}"
+                data-cust-price-cidx="${cIdx}" data-cust-gidx="${gIdx}" data-cust-oidx="${oIdx}"
+                oninput="markMenuDirty()" placeholder="0">
+            </label>
+            <div class="menu-item-actions" style="margin-left: auto;">
+              <button type="button" class="menu-item-btn" style="background: ${oosBg}; color: ${oosColor}; border: 1px solid ${oosBorder};"
+                onclick="openStockModalForCustomization(${cIdx}, ${gIdx}, ${oIdx})" title="${oosText}">
+                ${oosText}
+              </button>
+              <button type="button" class="menu-item-btn btn-ghost" style="border: 1px solid #fee2e2; background: #fff5f5; color: var(--brand-red);"
+                onclick="removeCustomizationOption(${cIdx}, ${gIdx}, ${oIdx})" title="${t("btnItemDelete")}">
+                🗑️ ${t("btnItemDelete")}
+              </button>
+            </div>
+          </div>
+          <div class="cust-sub-options-container">
+            <span class="cust-sub-label">${t("subOptionsLabel")}</span>
+            ${subChipsHtml}
+            <button type="button" class="cust-add-sub-chip-btn"
+              onclick="promptAddSubOptionChip(${cIdx}, ${gIdx}, ${oIdx})">
+              <span>+</span> <span>${t("btnAddSubOption")}</span>
+            </button>
+          </div>
+        </div>
+      `;
+    });
+
+    card.innerHTML = `
+      <div class="cust-group-header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="cust-group-title">${escapeHtml(grp.title)}</span>
+          ${typeBadge}
+        </div>
+        <span style="font-size: 13px; color: #64748b; font-weight: 600;">${optionsCount} ${t("menuItemUnit")}</span>
+      </div>
+      <div class="cust-options-list">
+        ${optionsHtml}
+      </div>
+      <button type="button" class="cat-mgr-add-btn" style="margin-top: 10px;" onclick="addCustomizationOption(${cIdx}, ${gIdx})">
+        <span>+</span> <span>${t("btnAddCustomOption")}</span>
+      </button>
+    `;
+
+    container.appendChild(card);
+  });
+}
+
+function promptAddSubOptionChip(cIdx, gIdx, oIdx) {
+  syncMenuDataFromDOM();
+  const subName = prompt(t("promptAddSubOption"));
+  if (subName !== null) {
+    const trimmed = subName.trim();
+    if (!trimmed) return;
+    const opt = currentMenuData[cIdx]?.groups?.[gIdx]?.options?.[oIdx];
+    if (opt) {
+      if (!Array.isArray(opt.sub_options)) opt.sub_options = [];
+      if (!opt.sub_options.includes(trimmed)) {
+        opt.sub_options.push(trimmed);
+        markMenuDirty();
+        renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), currentMenuData[cIdx], cIdx);
+      }
+    }
+  }
+}
+window.promptAddSubOptionChip = promptAddSubOptionChip;
+
+function removeSubOptionChip(cIdx, gIdx, oIdx, sIdx) {
+  syncMenuDataFromDOM();
+  const opt = currentMenuData[cIdx]?.groups?.[gIdx]?.options?.[oIdx];
+  if (opt && Array.isArray(opt.sub_options)) {
+    opt.sub_options.splice(sIdx, 1);
+    markMenuDirty();
+    renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), currentMenuData[cIdx], cIdx);
+  }
+}
+window.removeSubOptionChip = removeSubOptionChip;
+
+function addCustomizationOption(cIdx, gIdx) {
+  syncMenuDataFromDOM();
+  const optName = prompt(t("promptNewOptionName"));
+  if (optName !== null) {
+    const trimmed = optName.trim();
+    if (!trimmed) return;
+    const group = currentMenuData[cIdx]?.groups?.[gIdx];
+    if (group) {
+      if (!Array.isArray(group.options)) group.options = [];
+      const newId = `opt_${Date.now().toString(36)}`;
+      group.options.push({
+        id: newId,
+        name: trimmed,
+        price: 0,
+        isOos: false,
+        sub_options: [],
+        originalName: trimmed
+      });
+      markMenuDirty();
+      renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), currentMenuData[cIdx], cIdx);
+      renderMenuCategories();
+    }
+  }
+}
+window.addCustomizationOption = addCustomizationOption;
+
+function removeCustomizationOption(cIdx, gIdx, oIdx) {
+  const group = currentMenuData[cIdx]?.groups?.[gIdx];
+  const opt = group?.options?.[oIdx];
+  if (!opt) return;
+  if (confirm(t("confirmDeleteItem"))) {
+    syncMenuDataFromDOM();
+    group.options.splice(oIdx, 1);
+    markMenuDirty();
+    renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), currentMenuData[cIdx], cIdx);
+    renderMenuCategories();
+  }
+}
+window.removeCustomizationOption = removeCustomizationOption;
+
 function removeMenuItemAt(cIdx, iIdx) {
   if (confirm(t("confirmDeleteItem"))) {
     syncMenuDataFromDOM();
@@ -571,17 +788,49 @@ function syncMenuDataFromDOM() {
       currentMenuData[cIdx].items[iIdx].badgeText = inp.value.trim();
     }
   });
+  document.querySelectorAll("#menu-editor-body input[data-cust-name-cidx]").forEach(inp => {
+    const cIdx = parseInt(inp.getAttribute("data-cust-name-cidx"), 10);
+    const gIdx = parseInt(inp.getAttribute("data-cust-gidx"), 10);
+    const oIdx = parseInt(inp.getAttribute("data-cust-oidx"), 10);
+    if (currentMenuData[cIdx]?.groups?.[gIdx]?.options?.[oIdx]) {
+      currentMenuData[cIdx].groups[gIdx].options[oIdx].name = inp.value.trim();
+    }
+  });
+  document.querySelectorAll("#menu-editor-body input[data-cust-price-cidx]").forEach(inp => {
+    const cIdx = parseInt(inp.getAttribute("data-cust-price-cidx"), 10);
+    const gIdx = parseInt(inp.getAttribute("data-cust-gidx"), 10);
+    const oIdx = parseInt(inp.getAttribute("data-cust-oidx"), 10);
+    const val = inp.value.trim() === "" ? 0 : parseInt(inp.value, 10) || 0;
+    if (currentMenuData[cIdx]?.groups?.[gIdx]?.options?.[oIdx]) {
+      currentMenuData[cIdx].groups[gIdx].options[oIdx].price = val;
+    }
+  });
 }
 
-async function saveMenuData(skipConfirm = false) {
-  if (!currentMenuData) return;
-  if (!skipConfirm && !confirm(t("confirmSaveMenu"))) return;
-  syncMenuDataFromDOM();
-
-  // Convert to rich item map format for API
+function serializeMenuData(categories) {
   const output = {};
-  currentMenuData.forEach(cat => {
-    if (cat.type === 'order_customization' || cat.id === 'sec-flavor') return;
+  categories.forEach(cat => {
+    if (cat.type === 'order_customization' || cat.id === 'sec-flavor') {
+      if (cat.groups && cat.groups.length > 0) {
+        output.__customizations = cat.groups.map((grp, gIdx) => ({
+          id: grp.id,
+          key: grp.key,
+          title: grp.title,
+          type: grp.type || 'radio',
+          sortOrder: grp.sortOrder !== undefined ? grp.sortOrder : (gIdx + 1),
+          options: (grp.options || []).map(opt => ({
+            id: opt.id || opt.name,
+            name: opt.name,
+            surcharge: opt.price || 0,
+            price: opt.price || 0,
+            is_out_of_stock: Boolean(opt.isOos),
+            isOutOfStock: Boolean(opt.isOos),
+            sub_options: Array.isArray(opt.sub_options) ? opt.sub_options : []
+          }))
+        }));
+      }
+      return;
+    }
     output[cat.id] = {
       __title: cat.title,
       __short_name: cat.shortName || cat.title,
@@ -599,6 +848,16 @@ async function saveMenuData(skipConfirm = false) {
       }
     });
   });
+  return output;
+}
+
+async function saveMenuData(skipConfirm = false) {
+  if (!currentMenuData) return;
+  if (!skipConfirm && !confirm(t("confirmSaveMenu"))) return;
+  syncMenuDataFromDOM();
+
+  // Convert to rich item map format for API
+  const output = serializeMenuData(currentMenuData);
 
   const btn = document.querySelector("#view-menu .btn-primary");
   const oldText = btn ? btn.innerText : "";
@@ -955,6 +1214,8 @@ async function deleteItemImage() {
 // --- Stock Management ---
 let currentStockCidx = null;
 let currentStockIidx = null;
+let currentStockGidx = null;
+let currentStockOidx = null;
 
 function openStockModal(cIdx, iIdx) {
   // Sync changes currently typed in DOM
@@ -962,6 +1223,8 @@ function openStockModal(cIdx, iIdx) {
 
   currentStockCidx = cIdx;
   currentStockIidx = iIdx;
+  currentStockGidx = null;
+  currentStockOidx = null;
 
   const item = currentMenuData[cIdx].items[iIdx];
   document.getElementById("stock-modal-title").innerText = t("stockModalItem", { name: item.name });
@@ -979,10 +1242,40 @@ function openStockModal(cIdx, iIdx) {
   document.getElementById("stockModal").style.display = "flex";
 }
 
+function openStockModalForCustomization(cIdx, gIdx, oIdx) {
+  syncMenuDataFromDOM();
+  currentStockCidx = cIdx;
+  currentStockIidx = null;
+  currentStockGidx = gIdx;
+  currentStockOidx = oIdx;
+
+  const group = currentMenuData[cIdx]?.groups?.[gIdx];
+  const option = group?.options?.[oIdx];
+  if (!group || !option) return;
+
+  const titleEl = document.getElementById("stock-modal-title");
+  if (titleEl) titleEl.innerText = t("stockModalItem", { name: `${group.title} - ${option.name}` });
+
+  const statusSelect = document.getElementById("stock-status-select");
+  if (statusSelect) statusSelect.value = option.isOos ? "out_of_stock" : "in_stock";
+
+  const durationSelect = document.getElementById("stock-duration-select");
+  if (durationSelect) durationSelect.value = "today";
+  const untilDateInput = document.getElementById("oos-until-date");
+  if (untilDateInput) untilDateInput.value = "";
+
+  handleStockStatusChange();
+  const modal = document.getElementById("stockModal");
+  if (modal) modal.style.display = "flex";
+}
+window.openStockModalForCustomization = openStockModalForCustomization;
+
 function closeStockModal() {
   document.getElementById("stockModal").style.display = "none";
   currentStockCidx = null;
   currentStockIidx = null;
+  currentStockGidx = null;
+  currentStockOidx = null;
 }
 
 function handleStockStatusChange() {
@@ -1009,13 +1302,12 @@ function handleStockDurationChange() {
 }
 
 async function saveStockStatus() {
-  if (currentStockCidx === null || currentStockIidx === null) return;
+  const isCustom = (currentStockGidx !== null && currentStockOidx !== null);
+  if (currentStockCidx === null || (!isCustom && currentStockIidx === null)) return;
 
   // Sync current data from DOM
   syncMenuDataFromDOM();
 
-  const categorySlug = currentMenuData[currentStockCidx].id;
-  const item = currentMenuData[currentStockCidx].items[currentStockIidx];
   const status = document.getElementById("stock-status-select").value;
   const duration = document.getElementById("stock-duration-select").value;
   const untilDate = document.getElementById("oos-until-date").value;
@@ -1025,13 +1317,32 @@ async function saveStockStatus() {
     return;
   }
 
-  const body = {
-    category_slug: categorySlug,
-    name: item.originalName || item.name,
-    status: status,
-    duration: duration,
-    until_date: untilDate ? `${untilDate}T04:00:00+07:00` : null
-  };
+  let body;
+  let targetItem;
+
+  if (isCustom) {
+    const group = currentMenuData[currentStockCidx]?.groups?.[currentStockGidx];
+    targetItem = group?.options?.[currentStockOidx];
+    if (!targetItem) return;
+    body = {
+      category_slug: 'order_customization',
+      customization_key: group.key || group.id,
+      name: targetItem.originalName || targetItem.name,
+      status: status,
+      duration: duration,
+      until_date: untilDate ? `${untilDate}T04:00:00+07:00` : null
+    };
+  } else {
+    const categorySlug = currentMenuData[currentStockCidx].id;
+    targetItem = currentMenuData[currentStockCidx].items[currentStockIidx];
+    body = {
+      category_slug: categorySlug,
+      name: targetItem.originalName || targetItem.name,
+      status: status,
+      duration: duration,
+      until_date: untilDate ? `${untilDate}T04:00:00+07:00` : null
+    };
+  }
 
   try {
     const res = await fetch(`${WORKER_BASE}/api/menu/stock-status?tenant_id=${getTenantIdFromUrl()}`, {
@@ -1046,11 +1357,16 @@ async function saveStockStatus() {
     }
 
     // Update local state
-    item.isOos = (status === "out_of_stock");
+    targetItem.isOos = (status === "out_of_stock");
 
     const targetCidx = currentStockCidx;
     closeStockModal();
-    renderMenuCategoryEditor(targetCidx);
+    if (isCustom) {
+      renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), currentMenuData[targetCidx], targetCidx);
+      renderMenuCategories();
+    } else {
+      renderMenuCategoryEditor(targetCidx);
+    }
   } catch (e) {
     alert(t("stockUpdateFail") + e.message);
   }

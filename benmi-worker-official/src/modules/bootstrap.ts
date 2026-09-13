@@ -284,10 +284,17 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
           const optId = opt.id || opt.name;
           const rule = customRulesMap.get(`${c.key}::${optId}`) || customRulesMap.get(`${c.key}::${opt.name}`);
           const minSubtotal = rule ? rule.min_order_subtotal : (opt.min_order_amount || 0);
+          const isOos = Boolean(
+            opt.is_out_of_stock ||
+            opt.isOutOfStock ||
+            (opt.out_of_stock_until && new Date(opt.out_of_stock_until) > now)
+          );
 
           return {
             ...opt,
             id: optId,
+            isOutOfStock: isOos,
+            is_out_of_stock: isOos,
             minOrderSubtotal: minSubtotal > 0 ? minSubtotal : undefined,
             min_order_amount: minSubtotal > 0 ? minSubtotal : (opt.min_order_amount || undefined),
             thresholdBasis: rule?.threshold_basis,
