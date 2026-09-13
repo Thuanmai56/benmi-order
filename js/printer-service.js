@@ -205,7 +205,7 @@
 
       for (const order of ordersList) {
         const status = (order.status || '').toUpperCase();
-        if (status === 'NEW' && !this.isOrderAlreadyPrinted(order.key)) {
+        if (status === 'NEW' && !this.isOrderAlreadyPrinted(order.key) && !(order.legacyKey && this.isOrderAlreadyPrinted(order.legacyKey))) {
           console.log(`[PrinterService] 🖨️ Auto-printing new incoming order #${order.key}...`);
           try {
             const result = await this.printDualStation(order);
@@ -879,7 +879,7 @@
       const diningText = order.diningOption === 'dine_in'
         ? '內用 ' + (order.tableNumber ? '桌號：' + order.tableNumber : '')
         : '外帶自取';
-      row('#' + order.key, 36, diningText, 'bold', false, 32, 'bold');
+      row('#' + (order.displayKey || order.key), 36, diningText, 'bold', false, 32, 'bold');
       row('顧客：' + (order.customer || '顧客'), 29, '', 'normal');
       row('時間：' + (order.time || ''), 29, '', 'normal');
       divider();
@@ -953,7 +953,7 @@
       const body = this.parseOrderItems(order, false).map(item =>
         [item.quantity + ' x ' + item.name, item.options, item.note].filter(Boolean).join('\n')).join('\n');
       return this.drawStickerLayout(
-        [window.currentTenantBrandName, '#' + order.key, dining].filter(Boolean).join(' '),
+        [window.currentTenantBrandName, '#' + (order.displayKey || order.key), dining].filter(Boolean).join(' '),
         [body, order.note].filter(Boolean).join('\n'),
         isKitchen ? (order.customer || '') : '應收總計：$' + (order.total ?? 0),
         widthMm, heightMm, dpi, [60, 36, 52]);
@@ -996,7 +996,7 @@
     drawItemStickerToCanvas(item, orderContext, itemIdx, totalItems, widthMm = 40, heightMm = 30, dpi = 203) {
       const compact = widthMm <= 42;
       const dining = orderContext.diningOption === 'dine_in' ? '桌:' + (orderContext.tableNumber || '-') : '外帶';
-      const header = '#' + orderContext.key + ' ' + dining + ' [' + itemIdx + '/' + totalItems + ']';
+      const header = '#' + (orderContext.displayKey || orderContext.key) + ' ' + dining + ' [' + itemIdx + '/' + totalItems + ']';
       const body = [item.name + ' x' + item.quantity, item.options, item.note].filter(Boolean).join('\n');
       const dateTime = this.formatShortDateTime(orderContext.time, orderContext.createdAt);
       return this.drawStickerLayout(header, body, (orderContext.customer || '顧客') + ' ' + dateTime,
@@ -1007,7 +1007,7 @@
       const compact = widthMm <= 42;
       const context = orderContext || {};
       const dateTime = this.formatShortDateTime(context.time, context.createdAt);
-      return this.drawStickerLayout(context.key ? '#' + context.key : '備註',
+      return this.drawStickerLayout(context.key ? '#' + (context.displayKey || context.key) : '備註',
         String(text || '').trim(), (window.currentTenantBrandName || '') + ' ' + dateTime,
         widthMm, heightMm, dpi, compact ? [26, 72, 22] : [32, 90, 26]);
     }

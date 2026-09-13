@@ -358,7 +358,7 @@
     return `
       <div class="kds-card-mini" onclick="openReview('${escapeHtml(order.key)}')">
         <div class="kds-card-mini-header">
-          <span class="kds-card-mini-code">#${escapeHtml(order.key)}</span>
+          <span class="kds-card-mini-code">#${escapeHtml(order.displayKey || order.key)}</span>
           <span class="kds-card-mini-time">${KDS_SVG.clock} ${escapeHtml(pickupTimeStr)}</span>
         </div>
 
@@ -445,7 +445,7 @@
         <!-- Header -->
         <div class="kds-card-header">
           <div class="kds-card-id-block">
-            <span class="kds-card-code">#${escapeHtml(order.key)}</span>
+            <span class="kds-card-code">#${escapeHtml(order.displayKey || order.key)}</span>
             ${diningBadge}
           </div>
 
@@ -516,7 +516,7 @@
     return `
       <div class="kds-card-ready" onclick="openReview('${escapeHtml(order.key)}')">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span class="kds-ready-code-callout">#${escapeHtml(order.key)}</span>
+          <span class="kds-ready-code-callout">#${escapeHtml(order.displayKey || order.key)}</span>
           ${diningBadge}
         </div>
 
