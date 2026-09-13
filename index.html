@@ -5,9 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title id="page-title">線上點餐</title>
-    <link rel="preload" href="index.css?v=20260913_custom_badge_fix_v1" as="style">
+    <link rel="preload" href="index.css?v=20260913_dense_custom_options_v1" as="style">
     <link rel="preload" href="js/client-checkout.js?v=20260913_operating_hours_v2" as="script">
-    <link rel="stylesheet" href="index.css?v=20260913_custom_badge_fix_v1">
+    <link rel="stylesheet" href="index.css?v=20260913_dense_custom_options_v1">
     <script>
         // Redirect root visits on blabfood.app to /landing
         try {
@@ -1924,11 +1924,33 @@
 
             const currentSubtotal = typeof calculateCurrentFoodSubtotal === 'function' ? calculateCurrentFoodSubtotal() : 0;
 
+            function formatOptionContent(name, priceLabelHtml) {
+                const raw = String(name || '');
+                const match = raw.match(/^([^(（]+?)\s*[（(]([^)）]+)[）)]\s*$/);
+                if (match) {
+                    const title = match[1].trim();
+                    const subtitle = match[2].trim();
+                    return `<div class="choice-content">
+                        <span class="choice-title">${escapeHtml(title)}${priceLabelHtml}</span>
+                        <span class="choice-subtitle">${escapeHtml(subtitle)}</span>
+                    </div>`;
+                }
+                return `<div class="choice-content">
+                    <span class="choice-title">${escapeHtml(raw)}${priceLabelHtml}</span>
+                </div>`;
+            }
+
             list.forEach((group, groupIdx) => {
                 const topMargin = groupIdx > 0 ? 'margin-top: 16px; border-top: 1px dashed #f1f5f9; padding-top: 14px;' : '';
+                const hasDenseOptions = (group.options || []).some(o => {
+                    const name = typeof o === 'string' ? o : (o ? o.name || '' : '');
+                    return name.length > 8 || /[（(].+[)）]/.test(name);
+                });
+                const denseGridClass = hasDenseOptions ? ' dense-grid' : '';
+
                 html += `<div class="custom-group" style="${topMargin}">
                     <label class="custom-label">${escapeHtml(group.title)}</label>
-                    <div class="custom-options-grid">`;
+                    <div class="custom-options-grid${denseGridClass}">`;
 
                 (group.options || []).forEach((opt, optIdx) => {
                     const optName = typeof opt === 'string' ? opt : (opt ? opt.name || '' : '');
@@ -1963,7 +1985,7 @@
                         html += `<div class="flavor-option-container${subOpts.length > 0 ? ' has-sub-options' : ''}">
                             <label class="radio-label${thresholdClass}" ${thresholdDataAttr} ${combinedStyle}>
                                 <input type="radio" name="${inputName}" data-price="${optPrice}" data-group-title="${escapeHtml(group.title)}" value="${escapeHtml(optName)}" ${thresholdAttrs} ${isChecked} ${disabledAttr} onchange="handleCustomizationChange(event)"> 
-                                <span>${escapeHtml(optName)}${priceLabel}</span>${thresholdBadgeHTML}${oosBadge}
+                                ${formatOptionContent(optName, priceLabel)}${thresholdBadgeHTML}${oosBadge}
                             </label>`;
 
                         if (subOpts.length > 0) {
@@ -1980,7 +2002,7 @@
                     } else {
                         html += `<label class="checkbox-label${thresholdClass}" ${thresholdDataAttr} ${combinedStyle}>
                             <input type="checkbox" name="${inputName}" data-price="${optPrice}" data-group-title="${escapeHtml(group.title)}" value="${escapeHtml(optName)}" ${thresholdAttrs} ${disabledAttr} onchange="handleCustomizationChange(event)"> 
-                            <span>${escapeHtml(optName)}${priceLabel}</span>${thresholdBadgeHTML}${oosBadge}
+                            ${formatOptionContent(optName, priceLabel)}${thresholdBadgeHTML}${oosBadge}
                         </label>`;
                     }
                 });
