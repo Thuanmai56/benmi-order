@@ -242,6 +242,11 @@ async function loadMenuData() {
   }
 }
 
+function formatPlusBtnText(text, fallback) {
+  const raw = (text || fallback || "").trim();
+  return raw.startsWith('+') ? raw : `+ ${raw}`;
+}
+
 let draggedCategoryIndex = null;
 let isCategoryManagerOpen = false;
 
@@ -524,7 +529,7 @@ function renderMenuCategoryEditor(index) {
     if (deleteBtn) deleteBtn.style.display = "none";
     if (addItemBtn) {
       addItemBtn.style.display = "inline-flex";
-      addItemBtn.innerText = `+ ${t("btnAddCustomGroup") || "新增分組"}`;
+      addItemBtn.innerText = formatPlusBtnText(t("btnAddCustomGroup"), "新增客製化分組");
       addItemBtn.onclick = () => addCustomizationGroup(index);
     }
     renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), cat, index);
@@ -532,7 +537,7 @@ function renderMenuCategoryEditor(index) {
   }
 
   if (addItemBtn) {
-    addItemBtn.innerText = `+ ${t("btnMenuAddItem") || "新增項目"}`;
+    addItemBtn.innerText = formatPlusBtnText(t("btnMenuAddItem"), "新增項目");
     addItemBtn.onclick = () => addNewMenuItem();
   }
 
@@ -754,7 +759,7 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
               ${subChipsHtml}
               <button type="button" class="btn btn-ghost cust-add-sub-chip-btn"
                 onclick="promptAddSubOptionChip(${cIdx}, ${gIdx}, ${oIdx})">
-                ${plusSvgSmall}<span>${t("btnAddSubOption")}</span>
+                <span>${formatPlusBtnText(t("btnAddSubOption"), "新增細項")}</span>
               </button>
             </div>
           </div>
@@ -765,8 +770,8 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
         <div class="cust-group-header">
           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
             <span class="cust-group-title">${escapeHtml(grp.title)}</span>
-            <button type="button" class="menu-item-btn btn-ghost" style="padding: 2px 7px; font-size: 12px; border: 1px solid #cbd5e1;"
-              onclick="renameCustomizationGroup(${cIdx}, ${gIdx})" title="${t("btnCategoryRename")}">✏️</button>
+            <button type="button" class="menu-item-btn btn-ghost" style="padding: 3px 6px; font-size: 12px; border: 1px solid #cbd5e1; display:inline-flex; align-items:center; justify-content:center;"
+              onclick="renameCustomizationGroup(${cIdx}, ${gIdx})" title="${t("btnCategoryRename")}">${(typeof POS_SVG !== 'undefined' && POS_SVG.edit) || ''}</button>
             <button type="button" style="cursor: pointer; border: none; background: transparent; padding: 0;"
               onclick="toggleCustomizationGroupType(${cIdx}, ${gIdx})" title="${grp.type === 'checkbox' ? t('toggleGroupTypeSingle') : t('toggleGroupTypeMultiple')}">
               ${typeBadge}
@@ -774,9 +779,9 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
           </div>
           <div style="display: flex; align-items: center; gap: 8px; margin-left: auto;">
             <span style="font-size: 13px; color: #64748b; font-weight: 600;">${optionsCount} ${t("menuItemUnit")}</span>
-            <button type="button" class="menu-item-btn btn-ghost" style="border: 1px solid #fee2e2; background: #fff5f5; color: var(--brand-red); padding: 3px 8px; font-size: 12px;"
+            <button type="button" class="menu-item-btn btn-ghost" style="border: 1px solid #fee2e2; background: #fff5f5; color: var(--brand-red); padding: 3px 6px; font-size: 12px; display:inline-flex; align-items:center; justify-content:center;"
               onclick="removeCustomizationGroup(${cIdx}, ${gIdx})" title="${t("btnCategoryDelete")}">
-              🗑️
+              ${(typeof POS_SVG !== 'undefined' && POS_SVG.trash) || ''}
             </button>
           </div>
         </div>
@@ -784,7 +789,7 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
           ${optionsHtml}
         </div>
         <button type="button" class="cat-mgr-add-btn" style="margin-top: 10px;" onclick="addCustomizationOption(${cIdx}, ${gIdx})">
-          <span>+</span> <span>${t("btnAddCustomOption")}</span>
+          <span>${formatPlusBtnText(t("btnAddCustomOption"), "新增選項")}</span>
         </button>
       `;
 
@@ -799,7 +804,7 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
   addGroupBtn.style.marginTop = "16px";
   addGroupBtn.style.background = "#f8fafc";
   addGroupBtn.style.border = "2px dashed #94a3b8";
-  addGroupBtn.innerHTML = `<span>+</span> <span>${t("btnAddCustomGroup")}</span>`;
+  addGroupBtn.innerHTML = `<span>${formatPlusBtnText(t("btnAddCustomGroup"), "新增客製化分組")}</span>`;
   addGroupBtn.onclick = () => addCustomizationGroup(cIdx);
   container.appendChild(addGroupBtn);
 }
