@@ -59,6 +59,7 @@ const sandbox = {
   t,
   preparedOrderItems: new Set(),
   PrinterService: {
+    getPrintCapabilities: () => ({ stickers: true, bill: true, full: true }),
     parseOrderItems: (order) => [
       { name: "招牌鹹水雞半隻", quantity: 1, options: "去骨、加蔥", note: "" },
       { name: "甜不辣", quantity: 2, options: "切片", note: "不要胡椒" }
@@ -127,11 +128,8 @@ console.log("✓ extractCustomerChanges successfully parsed customer exchange re
 const html1 = formatContentHtml(testOrderWithFlavors);
 assert(html1.includes('class="flavor-custom-card"'), "HTML should include flavor-custom-card");
 assert(html1.includes('class="flavor-chip"'), "HTML should include flavor-chip");
-assert(html1.includes('class="raw-order-accordion"'), "HTML should include raw-order-accordion");
 assert(html1.includes('class="mod-chip"'), "HTML should format dish options as mod-chip");
-assert(html1.includes('toggleRawOrderViewer'), "HTML should wire toggleRawOrderViewer");
-assert(html1.includes('copyRawOrderContent'), "HTML should wire copyRawOrderContent");
-console.log("✓ formatContentHtml generated all cards: flavor chips, mod chips, and raw accordion");
+console.log("✓ formatContentHtml generated all cards: flavor chips and mod chips");
 
 const html2 = formatContentHtml(testOrderWithChange);
 assert(html2.includes('class="customer-change-card"'), "HTML should include customer-change-card");

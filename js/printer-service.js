@@ -304,7 +304,7 @@
         if (typeof showToast === 'function') showToast(`❌ 找不到訂單 #${orderKey}`);
         return;
       }
-      const items = this.parseOrderItems(order);
+      const items = this.parseOrderItems(order, true);
       const idx = parseInt(itemIndex, 10);
       if (isNaN(idx) || idx < 0 || idx >= items.length) {
         if (typeof showToast === 'function') showToast('❌ 找不到該項餐點');
@@ -320,15 +320,62 @@
 
       const dim = this.resolveLabelDimensions(config);
       try {
-        if (typeof showToast === 'function') showToast(`🏷️ 正在列印「${targetItem.name}」貼紙...`);
+        const itemLabelName = targetItem.name + (targetItem.originalQty > 1 ? ` (${targetItem.unitIndex}/${targetItem.originalQty})` : '');
+        if (typeof showToast === 'function') showToast(`🏷️ 正在列印「${itemLabelName}」貼紙...`);
         const png = this.drawItemStickerToCanvas(targetItem, order, idx + 1, items.length, dim.widthMm, dim.heightMm, dim.dpi);
         await this.transmitReceiptBitmap(png, config, `Single Sticker #${order.key} (${idx + 1}/${items.length})`);
         if (typeof showToast === 'function') {
-          const successMsg = (typeof t === 'function' && t('printSingleItemSuccess', { name: targetItem.name })) || `✅ 已列印「${targetItem.name}」貼紙！`;
+          const successMsg = (typeof t === 'function' && t('printSingleItemSuccess', { name: itemLabelName })) || `✅ 已列印「${itemLabelName}」貼紙！`;
           showToast(successMsg);
         }
       } catch (err) {
         console.error('[PrinterService] Single item print failed:', err);
+        if (typeof showToast === 'function') showToast(`❌ 列印失敗: ${err.message || err}`);
+      }
+    }
+
+    async printItemRangeStickers(orderKey, startIndex, count, itemName = '') {
+      const order = this.resolveOrder(orderKey);
+      if (!order) {
+        if (typeof showToast === 'function') showToast(`❌ 找不到訂單 #${orderKey}`);
+        return;
+      }
+      const items = this.parseOrderItems(order, true);
+      const start = parseInt(startIndex, 10);
+      const qty = parseInt(count, 10) || 1;
+      if (isNaN(start) || start < 0 || start >= items.length) {
+        if (typeof showToast === 'function') showToast('❌ 找不到該項餐點');
+        return;
+      }
+      const settings = this.getSettings();
+      const config = settings.kitchen;
+      if (!this.isStationConfigured('kitchen', config)) {
+        if (typeof showToast === 'function') showToast('⚠️ 請先在設定中啟用印表機');
+        return;
+      }
+
+      const dim = this.resolveLabelDimensions(config);
+      try {
+        const end = Math.min(start + qty, items.length);
+        const totalToPrint = end - start;
+        const displayName = itemName || items[start].name;
+        if (typeof showToast === 'function') {
+          const printingMsg = (typeof t === 'function' && t('printPortionsPrinting', { count: totalToPrint, name: displayName }))
+            || `🏷️ 正在列印「${displayName}」${totalToPrint} 張貼紙...`;
+          showToast(printingMsg);
+        }
+        for (let i = start; i < end; i++) {
+          const it = items[i];
+          const png = this.drawItemStickerToCanvas(it, order, i + 1, items.length, dim.widthMm, dim.heightMm, dim.dpi);
+          await this.transmitReceiptBitmap(png, config, `Sticker #${order.key} (${i + 1}/${items.length})`);
+        }
+        if (typeof showToast === 'function') {
+          const successMsg = (typeof t === 'function' && t('printPortionsSuccess', { count: totalToPrint, name: displayName }))
+            || `✅ 已列印「${displayName}」${totalToPrint} 張貼紙！`;
+          showToast(successMsg);
+        }
+      } catch (err) {
+        console.error('[PrinterService] Print range stickers failed:', err);
         if (typeof showToast === 'function') showToast(`❌ 列印失敗: ${err.message || err}`);
       }
     }
@@ -645,12 +692,14 @@
       if (config.protocol === 'tspl') {
         const dim = this.resolveLabelDimensions(config);
         if (config.tspl_mode === 'item_stickers') {
-          const items = this.parseOrderItems(order);
-          const tasks = items.map((it, idx) => {
+          const items = this.parseOrderItems(order, true);
+          const results = [];
+          for (let idx = 0; idx < items.length; idx++) {
+            const it = items[idx];
             const png = this.drawItemStickerToCanvas(it, order, idx + 1, items.length, dim.widthMm, dim.heightMm, dim.dpi);
-            return this.transmitReceiptBitmap(png, config, `Sticker #${order.key} (${idx + 1}/${items.length})`);
-          });
-          return Promise.all(tasks);
+            results.push(await this.transmitReceiptBitmap(png, config, `Sticker #${order.key} (${idx + 1}/${items.length})`));
+          }
+          return results;
         } else {
           const base64Png = this.drawOrderLabelToCanvas(order, false, dim.widthMm, dim.heightMm, dim.dpi);
           return this.transmitReceiptBitmap(base64Png, config, `TSPL Label #${order.key}`);

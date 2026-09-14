@@ -146,12 +146,13 @@ function openReview(orderKey) {
   const elCustSub = document.getElementById("review-customer-sub");
   if (elCustSub) {
     const tableNum = typeof getOrderTableNumber === "function" ? getOrderTableNumber(order) : (order.tableNumber || "");
+    const diningText = isDineIn
+      ? (tableNum ? (lang === 'vi' ? `Bàn ${tableNum}` : `桌號 ${tableNum}`) : (t('dineIn') || (lang === 'vi' ? "Dùng tại quán" : "內用")))
+      : (t('takeaway') || (lang === 'vi' ? "Mang đi" : "外帶"));
     if (order.phone) {
-      elCustSub.innerText = order.phone;
-    } else if (isDineIn) {
-      elCustSub.innerText = tableNum ? (lang === 'vi' ? `Bàn ${tableNum}` : `桌號 ${tableNum}`) : (t('dineIn') || (lang === 'vi' ? "Dùng tại quán" : "內用"));
+      elCustSub.innerText = `${diningText} · ${order.phone}`;
     } else {
-      elCustSub.innerText = t('takeaway') || (lang === 'vi' ? "Mang đi" : "外帶");
+      elCustSub.innerText = diningText;
     }
   }
 
@@ -201,30 +202,14 @@ function openReview(orderKey) {
     }
   }
 
-  // Update meta bar pickup & ETA chip in left column
+  // Update meta bar pickup in left column (ETA badge on the left removed per UI optimization)
   const elMetaPickupVal = document.getElementById("review-meta-pickup-val");
-  const elMetaEtaVal = document.getElementById("review-meta-eta-val");
   const elMetaPickup = document.getElementById("review-meta-pickup");
   const elMetaPickupDivider = document.getElementById("review-meta-pickup-divider");
 
-  if (elMetaPickup && elMetaPickupVal && elMetaEtaVal) {
+  if (elMetaPickup && elMetaPickupVal) {
     if (pickTimeStr && pickTimeStr !== "-") {
       elMetaPickupVal.innerText = pickTimeStr;
-      elMetaEtaVal.innerText = etaText;
-      elMetaEtaVal.className = "order-detail-meta-eta-badge";
-      if (isFinished) {
-        elMetaEtaVal.style.background = "#f1f5f9";
-        elMetaEtaVal.style.color = "#475569";
-        elMetaEtaVal.style.borderColor = "#e2e8f0";
-      } else if (isDineIn) {
-        elMetaEtaVal.classList.add("eta-dinein");
-      } else {
-        const targetMs = parsePickupTimeMs(order.time);
-        const diffMin = Math.round((targetMs - Date.now()) / 60000);
-        if (!Number.isNaN(targetMs) && diffMin <= 0) {
-          elMetaEtaVal.classList.add("eta-overdue");
-        }
-      }
       elMetaPickup.style.display = "inline-flex";
       if (elMetaPickupDivider) elMetaPickupDivider.style.display = "inline";
     } else {
@@ -1052,26 +1037,6 @@ function updateReviewModalEta(order) {
   }
 
   elEta.innerText = etaText;
-
-  const elMetaEtaVal = document.getElementById("review-meta-eta-val");
-  if (elMetaEtaVal) {
-    elMetaEtaVal.innerText = etaText;
-    if (isFinished) {
-      elMetaEtaVal.style.background = "#f1f5f9";
-      elMetaEtaVal.style.color = "#475569";
-      elMetaEtaVal.style.borderColor = "#e2e8f0";
-    } else if (isDineIn) {
-      elMetaEtaVal.className = "order-detail-meta-eta-badge eta-dinein";
-    } else {
-      const targetMs = parsePickupTimeMs(order.time);
-      const diffMin = Math.round((targetMs - Date.now()) / 60000);
-      if (!Number.isNaN(targetMs) && diffMin <= 0) {
-        elMetaEtaVal.className = "order-detail-meta-eta-badge eta-overdue";
-      } else {
-        elMetaEtaVal.className = "order-detail-meta-eta-badge";
-      }
-    }
-  }
 }
 window.updateReviewModalEta = updateReviewModalEta;
 

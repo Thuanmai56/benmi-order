@@ -5484,11 +5484,11 @@ select.form-input {
    Flavor Options & Unstructured Order Data Styles
    ========================================================================== */
 .flavor-custom-card {
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   padding: 10px 14px;
-  background: #fffbeb;
-  border: 1.5px solid #fef3c7;
-  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
 }
 
 .flavor-card-header {
@@ -5496,55 +5496,59 @@ select.form-input {
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  font-weight: 800;
-  color: #92400e;
+  font-weight: 700;
+  color: #64748b;
   margin-bottom: 8px;
   text-transform: uppercase;
   letter-spacing: 0.3px;
 }
 
+.flavor-card-header svg {
+  color: #64748b;
+}
+
 .flavor-chips-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px 14px;
 }
 
 .flavor-chip {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 10px;
-  background: #ffffff;
-  border: 1.2px solid #fde68a;
-  border-radius: 8px;
+  padding: 0;
+  background: transparent;
+  border: none;
   font-size: 13px;
-  color: #78350f;
-  box-shadow: 0 1px 2px rgba(180, 83, 9, 0.05);
+  color: #334155;
+  box-shadow: none;
 }
 
 .flavor-chip .flavor-label {
-  font-size: 11.5px;
-  color: #b45309;
+  font-size: 12px;
+  color: #475569;
   font-weight: 600;
 }
 
 .flavor-chip .flavor-val {
   font-weight: 800;
-  color: #78350f;
+  color: #0f172a;
 }
 
 .flavor-chip.extra-chip {
-  background: #fdf2f8;
-  border-color: #fbcfe8;
-  color: #9d174d;
+  background: transparent;
+  border: none;
+  color: #334155;
+  box-shadow: none;
 }
 
 .flavor-chip.extra-chip .flavor-label {
-  color: #be185d;
+  color: #475569;
 }
 
 .flavor-chip.extra-chip .flavor-val {
-  color: #831843;
+  color: #0f172a;
 }
 
 /* Customer Change Alert Banner */
@@ -5633,6 +5637,40 @@ select.form-input {
   font-size: 12px;
   color: #94a3b8;
   font-style: italic;
+}
+
+.portion-print-btn {
+  margin-left: auto;
+  min-height: 28px;
+  height: 28px;
+  padding: 2px 7px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 5px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.portion-print-btn svg {
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.portion-print-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.portion-print-btn:hover svg {
+  color: #0f172a;
 }
 
 /* Raw Order Accordion (Dedicated Unstructured Data Fallback) */
@@ -5765,56 +5803,8 @@ select.form-input {
   align-items: stretch;
 }
 
-.btn-print-full {
-  min-height: 38px;
-  padding: 4px 6px;
-  font-size: 11.5px;
-  font-weight: 700;
-  line-height: 1.25;
-  text-align: center;
-  border-radius: 6px;
-  background: #ecfdf5;
-  color: #047857;
-  border: 1.2px solid #a7f3d0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.btn-print-full:hover {
-  background: #d1fae5;
-  border-color: #6ee7b7;
-  color: #065f46;
-}
-
-.btn-print-bill {
-  min-height: 38px;
-  padding: 4px 6px;
-  font-size: 11.5px;
-  font-weight: 700;
-  line-height: 1.25;
-  text-align: center;
-  border-radius: 6px;
-  background: #ffffff;
-  border: 1.2px solid #cbd5e1;
-  color: #334155;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.btn-print-bill:hover {
-  background: #f1f5f9;
-  border-color: #94a3b8;
-  color: #0f172a;
-}
-
+.btn-print-full,
+.btn-print-bill,
 .btn-print-custom {
   min-height: 38px;
   padding: 4px 6px;
@@ -5823,9 +5813,9 @@ select.form-input {
   line-height: 1.25;
   text-align: center;
   border-radius: 6px;
-  background: #f0f9ff;
-  border: 1.2px solid #bae6fd;
-  color: #0369a1;
+  background: #ffffff;
+  color: #334155;
+  border: 1.2px solid #cbd5e1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -5834,10 +5824,24 @@ select.form-input {
   transition: all 0.15s ease;
 }
 
+.btn-print-full svg,
+.btn-print-bill svg,
+.btn-print-custom svg {
+  color: #475569;
+}
+
+.btn-print-full:hover,
+.btn-print-bill:hover,
 .btn-print-custom:hover {
-  background: #e0f2fe;
-  border-color: #7dd3fc;
-  color: #0c4a6e;
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.btn-print-full:hover svg,
+.btn-print-bill:hover svg,
+.btn-print-custom:hover svg {
+  color: #0f172a;
 }
 
 /* Keep unavailable print actions visibly and semantically disabled when a station is off. */

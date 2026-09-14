@@ -662,6 +662,14 @@ window.copyRawOrderContent = copyRawOrderContent;
 
 function renderItemRowHtml(it, idx, orderKey) {
   let optionsHtml = "";
+  const startStickerIndex = (typeof it.stickerIndex === "number") ? it.stickerIndex : idx;
+  const itemQty = Math.max(1, parseInt(it.quantity, 10) || 1);
+  const printLabel = (typeof t === "function" && t("btnPrintStickerShort")) || "印貼紙";
+  const printerIcon = (typeof POS_SVG !== "undefined" && POS_SVG.printer) || "";
+  const canPrintStickers = typeof PrinterService !== "undefined"
+    && typeof PrinterService.getPrintCapabilities === "function"
+    && PrinterService.getPrintCapabilities().stickers;
+
   if (it.options) {
     const rawOpts = String(it.options);
     const parsed = typeof parsePortionCustomizations === "function" ? parsePortionCustomizations(rawOpts) : null;
@@ -672,14 +680,22 @@ function renderItemRowHtml(it, idx, orderKey) {
       }
       const portionsHtml = `
         <div class="review-item-portions-container">
-          ${parsed.portions.map(p => `
+          ${parsed.portions.map((p, pIdx) => {
+            const portionStickerIdx = startStickerIndex + pIdx;
+            const portionPrintTitle = (typeof t === "function" && t("btnPrintPortion")) || (document.documentElement.lang === "vi" ? `In tem ${p.label}` : `列印${p.label}標籤`);
+            return `
             <div class="review-item-portion-row">
               <span class="portion-badge">${escapeHtml(p.label)}</span>
               <div class="portion-chips-wrap">
                 ${p.chips.length > 0 ? p.chips.map(chip => `<span class="mod-chip">${escapeHtml(chip)}</span>`).join("") : `<span class="portion-default-chip">—</span>`}
               </div>
+              <button type="button" class="btn btn-ghost portion-print-btn" data-print-action="stickers" ${canPrintStickers ? "" : "disabled aria-disabled=\"true\""} onclick="if(typeof PrinterService !== 'undefined') PrinterService.printSingleItemSticker('${escapeHtml(orderKey)}', ${portionStickerIdx})" title="${escapeHtml(portionPrintTitle)}">
+                ${printerIcon}
+                <span>${escapeHtml(printLabel)}</span>
+              </button>
             </div>
-          `).join("")}
+          `;
+          }).join("")}
         </div>
       `;
       optionsHtml = commonHtml + portionsHtml;
@@ -692,10 +708,6 @@ function renderItemRowHtml(it, idx, orderKey) {
   }
   const noteIcon = (typeof POS_SVG !== "undefined" && POS_SVG.note) || "";
   const noteHtml = it.note ? `<div class="review-item-note">${noteIcon}${escapeHtml(it.note)}</div>` : "";
-  const printLabel = (typeof t === "function" && t("btnPrintStickerShort")) || "印貼紙";
-  const printerIcon = (typeof POS_SVG !== "undefined" && POS_SVG.printer) || "";
-  const canPrintStickers = typeof PrinterService !== "undefined"
-    && PrinterService.getPrintCapabilities().stickers;
 
   let displayPrice = it.price;
   if ((!displayPrice || displayPrice === "—") && it.name && typeof lookupItemPrice === "function") {
@@ -704,6 +716,11 @@ function renderItemRowHtml(it, idx, orderKey) {
     if (lp != null) displayPrice = `$${Number(lp) * qty}`;
   }
   const isEmptyPrice = !displayPrice || displayPrice === "—";
+
+  const mainPrintLabel = (itemQty > 1 && typeof t === "function") ? t("btnPrintAllPortionsShort", { n: itemQty }) : printLabel;
+  const mainPrintAction = (itemQty > 1)
+    ? `if(typeof PrinterService !== 'undefined') PrinterService.printItemRangeStickers('${escapeHtml(orderKey)}', ${startStickerIndex}, ${itemQty}, '${escapeHtml(it.name)}')`
+    : `if(typeof PrinterService !== 'undefined') PrinterService.printSingleItemSticker('${escapeHtml(orderKey)}', ${startStickerIndex})`;
 
   return `
     <div class="review-item-row " id="review-item-${escapeHtml(orderKey)}-${idx}">
@@ -715,9 +732,9 @@ function renderItemRowHtml(it, idx, orderKey) {
         ${noteHtml}
       </div>
       <div class="review-item-price ${isEmptyPrice ? 'is-empty' : ''}">${escapeHtml(displayPrice || "—")}</div>
-      <button type="button" class="btn btn-ghost review-item-print-btn" data-print-action="stickers" data-print-action-title="${escapeHtml(printLabel)}" ${canPrintStickers ? "" : "disabled aria-disabled=\"true\""} onclick="if(typeof PrinterService !== 'undefined') PrinterService.printSingleItemSticker('${escapeHtml(orderKey)}', ${it.stickerIndex ?? idx})" title="${escapeHtml(printLabel)}">
+      <button type="button" class="btn btn-ghost review-item-print-btn" data-print-action="stickers" data-print-action-title="${escapeHtml(mainPrintLabel)}" ${canPrintStickers ? "" : "disabled aria-disabled=\"true\""} onclick="${mainPrintAction}" title="${escapeHtml(mainPrintLabel)}">
         ${printerIcon}
-        <span>${escapeHtml(printLabel)}</span>
+        <span>${escapeHtml(mainPrintLabel)}</span>
       </button>
     </div>
   `;
