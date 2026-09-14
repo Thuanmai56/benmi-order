@@ -1497,4 +1497,3 @@ export async function getUserLatestActiveOrder(env: Env, tenantId: string, userI
     return { order: null, queueAhead: 0 };
   }
 }
-
