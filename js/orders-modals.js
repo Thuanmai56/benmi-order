@@ -202,21 +202,11 @@ function openReview(orderKey) {
     }
   }
 
-  // Update meta bar pickup in left column (ETA badge on the left removed per UI optimization)
-  const elMetaPickupVal = document.getElementById("review-meta-pickup-val");
+  // Pickup time and ETA are kept in the right timing card; left meta bar displays item count only
   const elMetaPickup = document.getElementById("review-meta-pickup");
   const elMetaPickupDivider = document.getElementById("review-meta-pickup-divider");
-
-  if (elMetaPickup && elMetaPickupVal) {
-    if (pickTimeStr && pickTimeStr !== "-") {
-      elMetaPickupVal.innerText = pickTimeStr;
-      elMetaPickup.style.display = "inline-flex";
-      if (elMetaPickupDivider) elMetaPickupDivider.style.display = "inline";
-    } else {
-      elMetaPickup.style.display = "none";
-      if (elMetaPickupDivider) elMetaPickupDivider.style.display = "none";
-    }
-  }
+  if (elMetaPickup) elMetaPickup.style.display = "none";
+  if (elMetaPickupDivider) elMetaPickupDivider.style.display = "none";
 
   const elTot = document.getElementById("review-total");
   if (elTot) elTot.innerText = formatOrderTotal(order);

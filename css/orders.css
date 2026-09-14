@@ -1558,10 +1558,10 @@ button.sidebar-nav-item.active {
   color: #111827;
 }
 
-/* 2-Column Grid Layout (Uber Eats Merchant Standard) */
+/* 2-Column Grid Layout (Uber Eats Merchant Standard - Food Items Dominant ~70%) */
 .order-detail-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
+  grid-template-columns: minmax(0, 1fr) 290px;
   gap: 24px;
   align-items: start;
 }
@@ -1572,7 +1572,7 @@ button.sidebar-nav-item.active {
   }
 
   .order-detail-grid {
-    grid-template-columns: minmax(0, 1fr) minmax(280px, 0.8fr);
+    grid-template-columns: minmax(0, 1fr) 280px;
     gap: 16px;
   }
 }
@@ -1593,10 +1593,10 @@ button.sidebar-nav-item.active {
 .order-detail-meta-bar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #e5e7eb;
-  margin-bottom: 8px;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 6px;
 }
 
 .order-detail-items-count {

@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title id="pos-page-title">Blab POS</title>
   <base href="/" />
-  <link rel="stylesheet" href="css/orders.css?v=20260914_order_detail_price_layout_v3" />
+  <link rel="stylesheet" href="css/orders.css?v=20260914_pos_landscape_clean_v1" />
     <script>
       (function () {
         document.documentElement.style.setProperty('--primary', '#00b900');
@@ -1328,15 +1328,12 @@
       <div class="order-detail-grid">
         <!-- Left Column: Items & Totals -->
         <div class="order-detail-main-col">
-          <!-- Meta Header Row -->
+          <!-- Meta Header Row (Only item count on left; pickup and ETA kept in right timing card) -->
           <div class="order-detail-meta-bar">
             <span class="order-detail-items-count" id="review-items-count">0 mặt hàng</span>
             <span class="order-detail-dining-tag" id="review-dining" style="display:none;">-</span>
             <span class="order-detail-meta-divider" id="review-meta-pickup-divider" style="display:none;">•</span>
             <span class="order-detail-meta-pickup" id="review-meta-pickup" style="display:none;">
-              <span class="meta-pickup-icon">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-1px; opacity:0.85;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-              </span>
               <span class="meta-pickup-time" id="review-meta-pickup-val">-</span>
             </span>
           </div>
@@ -1363,10 +1360,10 @@
 
         <!-- Right Column: Status Card & Action Dock -->
         <div class="order-detail-side-col">
-          <!-- Status Heading -->
+          <!-- Status Heading (time display hidden per UI optimization, kept in timing card) -->
           <div class="order-detail-status-header">
             <h2 class="order-detail-status-title" id="review-status-title">Đang làm</h2>
-            <div class="order-detail-time-text" id="review-time-display">-</div>
+            <div class="order-detail-time-text" id="review-time-display" style="display:none;">-</div>
           </div>
 
           <!-- Scheduled Pickup & ETA Countdown Card -->
@@ -2036,7 +2033,7 @@
   <script src="js/orders-audio.js?v=20260912_tile_btn_center_v1"></script>
   <script src="js/printer-service.js?v=20260914_order_identity"></script>
   <script src="js/orders-live.js?v=20260914_order_identity"></script>
-  <script src="js/orders-modals.js?v=20260914_order_identity"></script>
+  <script src="js/orders-modals.js?v=20260914_pos_landscape_clean_v1"></script>
   <script src="js/orders-history.js?v=20260914_order_identity"></script>
   <script src="js/orders-reports.js?v=20260912_tile_btn_center_v1"></script>
   <script src="js/orders-settings.js?v=20260912_tile_btn_center_v1"></script>
