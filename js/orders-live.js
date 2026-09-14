@@ -781,41 +781,72 @@ function formatContentHtml(order) {
     `;
   }
 
-  // 2. Extract and render Global Flavor Settings
+  // 2. Extract and render Global Flavor Settings & Customer Note (merged in top section)
   const flavorData = extractFlavorSettings(raw);
+  let noteText = (order?.note || "").trim();
+  if (!noteText && raw) {
+    const m = raw.match(/(?:📝\s*)?(?:顧客備註|備註|Ghi chú)[：:\s]+([^\n]+)/i);
+    if (m && m[1]) {
+      noteText = m[1].trim();
+    }
+  }
+
   let flavorHtml = "";
-  if (flavorData) {
+  if (flavorData || noteText) {
     const flameIcon = (typeof POS_SVG !== "undefined" && POS_SVG.flame) || "";
+    const noteIcon = (typeof POS_SVG !== "undefined" && POS_SVG.note) || "";
     const flavorTitle = (typeof t === "function" && t("flavorTitle")) || "口味與客製設定";
+    const noteTitle = (typeof t === "function" && t("customerNoteLabel")) || "顧客備註";
     const optLabelFallback = (typeof t === "function" && t("colOptions")) || "配料";
-    const chips = [
-      ...flavorData.flavors.map(f => `
-        <span class="flavor-chip">
-          ${f.label ? `<span class="flavor-label">${escapeHtml(f.label)}:</span>` : ""}
-          <strong class="flavor-val">${escapeHtml(f.value)}</strong>
-        </span>
-      `),
-      ...flavorData.extraIngredients.map(e => {
-        const lbl = (typeof e === 'object' && e && e.label) ? e.label : optLabelFallback;
-        const val = (typeof e === 'object' && e && e.value) ? e.value : String(e);
-        return `
-          <span class="flavor-chip extra-chip">
-            <span class="flavor-label">${escapeHtml(lbl)}:</span>
-            <strong class="flavor-val">${escapeHtml(val)}</strong>
+
+    let chipsHtml = "";
+    if (flavorData) {
+      const chips = [
+        ...flavorData.flavors.map(f => `
+          <span class="flavor-chip">
+            ${f.label ? `<span class="flavor-label">${escapeHtml(f.label)}:</span>` : ""}
+            <strong class="flavor-val">${escapeHtml(f.value)}</strong>
           </span>
-        `;
-      })
-    ].join("");
+        `),
+        ...flavorData.extraIngredients.map(e => {
+          const lbl = (typeof e === 'object' && e && e.label) ? e.label : optLabelFallback;
+          const val = (typeof e === 'object' && e && e.value) ? e.value : String(e);
+          return `
+            <span class="flavor-chip extra-chip">
+              <span class="flavor-label">${escapeHtml(lbl)}:</span>
+              <strong class="flavor-val">${escapeHtml(val)}</strong>
+            </span>
+          `;
+        })
+      ].join("");
+
+      chipsHtml = `<div class="flavor-chips-grid">${chips}</div>`;
+    }
+
+    let noteRowHtml = "";
+    if (noteText) {
+      const cleanNote = noteText.replace(/^["“”']+|["“”']+$/g, '').trim();
+      noteRowHtml = `
+        <div class="flavor-card-note order-note-alert ${flavorData ? 'has-flavors' : 'note-only'}">
+          <span class="flavor-note-label order-note-alert-header">${noteIcon}<span>${escapeHtml(noteTitle)}：</span></span>
+          <span class="flavor-note-val order-note-alert-body">“${escapeHtml(cleanNote)}”</span>
+        </div>
+      `;
+    }
+
+    const headerIcon = flavorData ? flameIcon : noteIcon;
+    const headerTitle = flavorData ? flavorTitle : noteTitle;
 
     flavorHtml = `
       <div class="flavor-custom-card">
-        <div class="flavor-card-header">
-          ${flameIcon}
-          <span>${escapeHtml(flavorTitle)}</span>
-        </div>
-        <div class="flavor-chips-grid">
-          ${chips}
-        </div>
+        ${flavorData ? `
+          <div class="flavor-card-header">
+            ${headerIcon}
+            <span>${escapeHtml(headerTitle)}</span>
+          </div>
+        ` : ''}
+        ${chipsHtml}
+        ${noteRowHtml}
       </div>
     `;
   }
@@ -890,20 +921,7 @@ function formatContentHtml(order) {
     `;
   }
 
-  // 4. Customer note section
-  let noteHtml = "";
-  if (order?.note) {
-    const noteIcon = (typeof POS_SVG !== "undefined" && POS_SVG.note) || "";
-    const noteTitle = (typeof t === "function" && t("customerNoteLabel")) || "顧客備註";
-    noteHtml = `
-      <div class="order-note-alert">
-        <span class="order-note-alert-header">${noteIcon}<span>${escapeHtml(noteTitle)}：</span></span>
-        <span class="order-note-alert-body">“${escapeHtml(order.note)}”</span>
-      </div>
-    `;
-  }
-
-  return `<div class="review-content-card">${changeHtml}${flavorHtml}${contentHtml}${noteHtml}</div>`;
+  return `<div class="review-content-card">${changeHtml}${flavorHtml}${contentHtml}</div>`;
 }
 
 window.extractCustomizationsFromLines = extractCustomizationsFromLines;

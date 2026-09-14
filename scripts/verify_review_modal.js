@@ -136,6 +136,29 @@ assert(html2.includes('class="customer-change-card"'), "HTML should include cust
 assert(html2.includes('好喔 還有什麼可以換'), "HTML should show customer change text");
 console.log("✓ formatContentHtml generated customer change alert banner");
 
+// Test customer note merged into flavor custom card
+const testOrderWithFlavorsAndNote = {
+  ...testOrderWithFlavors,
+  note: "不要辣，謝謝"
+};
+const html3 = formatContentHtml(testOrderWithFlavorsAndNote);
+assert(html3.includes('class="flavor-custom-card"'), "HTML should include flavor-custom-card");
+assert(html3.includes('flavor-card-note'), "HTML should include flavor-card-note inside flavor card");
+assert(html3.includes('不要辣，謝謝'), "HTML should contain customer note inside flavor card");
+assert(html3.indexOf('flavor-card-note') < html3.indexOf('review-items-list'), "Customer note must be at the top above items list");
+console.log("✓ Customer note is properly merged into top flavor section above items");
+
+const testOrderWithOnlyNote = {
+  key: "test-003",
+  content: "1 份 原味鹹水雞 $100",
+  note: "Giao trước 12h"
+};
+const html4 = formatContentHtml(testOrderWithOnlyNote);
+assert(html4.includes('class="flavor-custom-card"'), "Only note should still render in top card");
+assert(html4.includes('Giao trước 12h'), "HTML should contain note text");
+assert(html4.indexOf('flavor-card-note') < html4.indexOf('review-items-list'), "Customer note must be above items list");
+console.log("✓ Standalone customer note is properly placed in top card above items");
+
 // 4. Verify orders.html modal footer structure
 const htmlContent = fs.readFileSync(path.join(__dirname, '../orders.html'), 'utf-8');
 assert(htmlContent.includes('class="modal-print-toolbar"'), "orders.html missing modal-print-toolbar");
