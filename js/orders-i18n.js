@@ -100,6 +100,7 @@ const I18N = {
     blabContextSupportDesc: "門市營運遇到疑問、出單機連線異常或需要功能協助，歡迎隨時透過下方官方管道與我們聯繫。",
     startShiftTitle: "開始接收訂單",
     startShiftDesc: "點擊下方按鈕以啟動即時訂單提示音與工作階段，確保第一時間收到顧客點餐通知。",
+    startShiftStatus: "即時連線・就緒接收新訂單",
     btnStartShift: "開始接單 (啟用提示音)",
     // Badges & Buttons
     badgeNew: "新訂單",
@@ -684,6 +685,7 @@ const I18N = {
     blabContextSupportDesc: "Quý quán gặp sự cố vận hành, lỗi kết nối máy in hoặc cần hỗ trợ thao tác, vui lòng kết nối ngay với đội ngũ kỹ thuật BLAB.",
     startShiftTitle: "Bắt đầu nhận đơn",
     startShiftDesc: "Nhấn nút bên dưới để kích hoạt chuông báo và sẵn sàng nhận đơn hàng mới từ khách hàng.",
+    startShiftStatus: "Kết nối máy chủ・Sẵn sàng nhận đơn",
     btnStartShift: "Bắt đầu nhận đơn (Bật chuông)",
     // Badges & Buttons
     badgeNew: "MỚI",
@@ -1387,6 +1389,8 @@ function applyLanguageToDOM() {
   if (startShiftT) startShiftT.innerText = dict.startShiftTitle;
   const startShiftD = document.getElementById("i18n-start-shift-desc");
   if (startShiftD) startShiftD.innerText = dict.startShiftDesc;
+  const startShiftS = document.getElementById("i18n-start-shift-status");
+  if (startShiftS && dict.startShiftStatus) startShiftS.innerText = dict.startShiftStatus;
   const btnStartShiftText = document.getElementById("i18n-btn-start-shift-text");
   if (btnStartShiftText) btnStartShiftText.innerText = dict.btnStartShift;
 

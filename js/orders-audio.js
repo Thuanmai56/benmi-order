@@ -111,7 +111,11 @@ async function startOrderShift() {
 
 function checkInitialSessionModal() {
   const modal = document.getElementById("startShiftModal");
-  if (modal) modal.style.display = "flex";
+  if (modal) {
+    modal.style.display = "flex";
+    const btn = document.getElementById("i18n-btn-start-shift");
+    if (btn) btn.focus();
+  }
 }
 
 async function testSound() {
