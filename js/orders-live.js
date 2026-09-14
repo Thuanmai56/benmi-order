@@ -25,6 +25,22 @@ function getOrderTableNumber(order) {
   return "";
 }
 
+// Live tiles show the clock time only; dates are not useful in the active queue.
+function formatLiveOrderTimeDisplay(order) {
+  if (!order) return "-";
+
+  const isElapsed = typeof isOrderElapsedMode === "function"
+    ? isOrderElapsedMode(order)
+    : isOrderDineIn(order);
+  const rawDisplay = isElapsed
+    ? (typeof formatOrderSubmissionTime === "function" ? formatOrderSubmissionTime(order) : formatPickupTimeDisplay(order.time))
+    : formatPickupTimeDisplay(order.time, order.createdAt, order.content);
+  const timeMatch = String(rawDisplay || "").match(/(\d{1,2}):(\d{2})/);
+
+  if (!timeMatch) return rawDisplay || "-";
+  return `${String(parseInt(timeMatch[1], 10)).padStart(2, "0")}:${timeMatch[2]}`;
+}
+
 function setDiningFilter(filter) {
   currentDiningFilter = filter;
   const filterAllBtn = document.getElementById("filter-btn-all");
@@ -210,9 +226,7 @@ function renderListLeft(orders) {
       ? `<span class="tile-badge badge-new-pulse">${POS_SVG.tag}${t('badgeNewOrder')}</span>`
       : "";
 
-    const pickupDisplay = isElapsed
-      ? (typeof formatOrderSubmissionTime === "function" ? formatOrderSubmissionTime(order) : formatPickupTimeDisplay(order.time))
-      : formatPickupTimeDisplay(order.time, order.createdAt, order.content);
+    const pickupDisplay = formatLiveOrderTimeDisplay(order);
 
     const etaDisplay = isElapsed
       ? (typeof formatSubmissionElapsedTime === "function" ? formatSubmissionElapsedTime(order) : formatDineInElapsedTime(order))
@@ -289,9 +303,7 @@ function renderListRight(orders) {
       ? `<span class="tile-badge badge-append">${t('badgeAppendRound', { n: roundCount })}</span>`
       : "";
 
-    const pickupDisplay = isElapsed
-      ? (typeof formatOrderSubmissionTime === "function" ? formatOrderSubmissionTime(order) : formatPickupTimeDisplay(order.time))
-      : formatPickupTimeDisplay(order.time, order.createdAt, order.content);
+    const pickupDisplay = formatLiveOrderTimeDisplay(order);
 
     const etaDisplay = isElapsed
       ? (typeof formatSubmissionElapsedTime === "function" ? formatSubmissionElapsedTime(order) : formatDineInElapsedTime(order))
