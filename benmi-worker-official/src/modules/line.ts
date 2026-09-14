@@ -1146,8 +1146,13 @@ export async function replyWithLiffRedirect(
   env: Env,
   tenantCtx?: TenantContext | null
 ): Promise<boolean> {
-  const token = await getLineToken(env, tenantCtx);
   const brand = tenantCtx?.brandName || "Bot";
+  if (tenantCtx?.aiOrderRedirectEnabled === false) {
+    console.log(`[${brand}] AI order redirect disabled for tenant=${tenantCtx.tenantId}`);
+    return false;
+  }
+
+  const token = await getLineToken(env, tenantCtx);
   if (!token || !replyToken) return false;
 
   const liffUrl = tenantCtx?.liffUrl || (await resolveSecret(env.LIFF_URL)) || "https://liff.line.me/";
@@ -1284,7 +1289,7 @@ export async function replyWithLiffRedirect(
     }
 
     try {
-      await env.ORDER_STATE.put(`liff_redirected:${userId}`, "1", { expirationTtl: 300 });
+      await env.ORDER_STATE.put(`liff_redirected:${tenantCtx?.tenantId || "legacy"}:${userId}`, "1", { expirationTtl: 300 });
     } catch { }
 
     return true;
@@ -1896,8 +1901,13 @@ export async function handleLineWebhook(
       continue;
     }
 
-    // 0.5) If stale draft exists, check intent and redirect to LIFF or stay silent
-    const draftRaw = await env.ORDER_STATE.get(draftKey);
+    // 0.5) If no pending action exists, a stale draft may be classified for LIFF redirect.
+    // Pending actions must win so a change/reject response can never enter the generic order flow.
+    const pendingMapBeforeDraft = await getPendingMap(env, tenantId, userId);
+    const hasPendingAction = Object.keys(pendingMapBeforeDraft).length > 0;
+    const draftRaw = tenantCtx?.aiOrderRedirectEnabled === false || hasPendingAction
+      ? null
+      : await env.ORDER_STATE.get(draftKey);
     if (draftRaw) {
       let draft: any = {};
       try { draft = JSON.parse(draftRaw); } catch { }
@@ -1907,7 +1917,7 @@ export async function handleLineWebhook(
         await env.ORDER_STATE.delete(draftKey);
       } else {
         const processDraft = async () => {
-          const alreadySent = await env.ORDER_STATE.get(`liff_redirected:${userId}`);
+          const alreadySent = await env.ORDER_STATE.get(`liff_redirected:${tenantId}:${userId}`);
           if (alreadySent) {
             try { await env.ORDER_STATE.delete(draftKey); } catch { }
             return;
@@ -1920,7 +1930,8 @@ export async function handleLineWebhook(
           const ctxPrompt = `顧客之前的草稿訂單：「${draft.text || '（空）'}」\n顧客剛剛傳來：「${userText}」\n\n請問顧客這句話是：在【繼續點餐 / 追加餐點 / 回答取餐時間 / 確認訂單】嗎？\n如果是 → 回覆「ORDER」\n如果不是（單純發問、聊天、詢問食材等）→ 回覆「IGNORE」\n請嚴格只回覆 ORDER 或 IGNORE。`;
           const ctxRes = await callAI(ctxPrompt, env, tenantCtx, 8000, systemPrompt);
           const upper = (ctxRes || "").toUpperCase();
-          if (upper.includes("ORDER") || !ctxRes) {
+          const isOrder = /\bORDER\b/.test(upper) && !/\bIGNORE\b/.test(upper);
+          if (isOrder) {
             try { await env.ORDER_STATE.delete(draftKey); } catch { }
             await replyWithLiffRedirect(replyToken, userId, env, tenantCtx);
           } else {
@@ -1937,7 +1948,7 @@ export async function handleLineWebhook(
     }
 
     // 1) Pending flow priority
-    const pMap = await getPendingMap(env, tenantId, userId);
+    const pMap = pendingMapBeforeDraft;
     const pKeys = Object.keys(pMap).sort((a, b) => (pMap[b].createdAt || 0) - (pMap[a].createdAt || 0));
 
     if (pKeys.length > 0) {
@@ -2013,7 +2024,7 @@ export async function handleLineWebhook(
           }
 
           // CÁC TRƯỜNG HỢP KHÁC: DÙNG AI ĐỂ XỬ LÝ
-          let aiSaysNo = false;
+          let aiDecision: "YES" | "NO" | "UNKNOWN" = questionText ? "UNKNOWN" : "YES";
           if (questionText) {
             const menuData = await getMenuData(env, tenantId);
             const menuContext = formatMenuForPrompt(menuData);
@@ -2066,9 +2077,10 @@ export async function handleLineWebhook(
             const aiRes = await callAI(prompt, env, tenantCtx, 8000, systemPrompt, changeFewShot);
             if (aiRes) {
               const up = aiRes.toUpperCase();
-              if (up.includes("NO") && !up.includes("YES")) {
-                aiSaysNo = true;
-              }
+              const hasYes = /\bYES\b/.test(up);
+              const hasNo = /\bNO\b/.test(up);
+              if (hasYes && !hasNo) aiDecision = "YES";
+              else if (hasNo && !hasYes) aiDecision = "NO";
             }
           }
 
@@ -2083,7 +2095,7 @@ export async function handleLineWebhook(
               continue;
             }
 
-            if (aiSaysNo) {
+            if (aiDecision !== "YES") {
               await replyText(replyToken, `請您明確告訴我們想換什麼品項，或者回覆「取消」直接取消訂單。`, env, tenantCtx);
               continue;
             }
@@ -2152,8 +2164,12 @@ export async function handleLineWebhook(
     }
 
     // 3) AI fallback - Detect ordering intent and redirect to LIFF
+    if (tenantCtx?.aiOrderRedirectEnabled === false) {
+      continue;
+    }
+
     const aiPromise = async () => {
-      const alreadySent = await env.ORDER_STATE.get(`liff_redirected:${userId}`);
+      const alreadySent = await env.ORDER_STATE.get(`liff_redirected:${tenantId}:${userId}`);
       if (alreadySent) return;
 
       const menuData = await getMenuData(env, tenantId);
@@ -2164,14 +2180,16 @@ export async function handleLineWebhook(
       const intentRes = await callAI(intentPrompt, env, tenantCtx, 8000, systemPrompt);
       const resUpper = (intentRes || "").toUpperCase();
 
-      if (resUpper.includes("YES")) {
+      const hasYes = /\bYES\b/.test(resUpper);
+      const hasNo = /\bNO\b/.test(resUpper);
+
+      if (hasYes && !hasNo) {
         await replyWithLiffRedirect(replyToken, userId, env, tenantCtx);
         return;
       }
 
-      if (resUpper.includes("NO")) return;
-
-      await replyWithLiffRedirect(replyToken, userId, env, tenantCtx);
+      // Unknown, empty, mixed, or malformed AI output is fail-closed.
+      return;
     };
     if (ctx && ctx.waitUntil) {
       ctx.waitUntil(aiPromise());

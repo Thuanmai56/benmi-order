@@ -50,6 +50,9 @@ export async function resolveTenantContext(
           groqModel: row.groq_model || 'openai/gpt-oss-120b',
           openrouterApiKey: row.openrouter_api_key || null,
           openrouterModel: row.openrouter_model || 'google/gemini-2.5-flash:free',
+          aiOrderRedirectEnabled: row.ai_order_redirect_enabled === undefined || row.ai_order_redirect_enabled === null
+            ? true
+            : Boolean(row.ai_order_redirect_enabled),
           brandName: row.brand_name || tenantId,
           brandSubtitle: row.brand_subtitle || null,
           brandColor: row.brand_color || '#00b900',
@@ -109,6 +112,7 @@ export async function resolveTenantContext(
       groqModel: env.GROQ_MODEL || 'openai/gpt-oss-120b',
       openrouterApiKey: globalOpenRouterKey,
       openrouterModel: env.OPENROUTER_MODEL || 'google/gemini-2.5-flash:free',
+      aiOrderRedirectEnabled: true,
       brandName: 'Benmi 越式法國麵包',
       brandColor: '#00b900',
       storeAddress: '新北市土城區中央路二段135號',

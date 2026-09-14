@@ -15,6 +15,7 @@ export interface TenantContext {
   groqModel: string;
   openrouterApiKey: string | null;
   openrouterModel: string;
+  aiOrderRedirectEnabled: boolean;
   // Branding
   brandName: string;
   brandSubtitle?: string | null;
