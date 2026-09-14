@@ -723,19 +723,19 @@ function renderItemRowHtml(it, idx, orderKey) {
     : `if(typeof PrinterService !== 'undefined') PrinterService.printSingleItemSticker('${escapeHtml(orderKey)}', ${startStickerIndex})`;
 
   return `
-    <div class="review-item-row " id="review-item-${escapeHtml(orderKey)}-${idx}">
-      <div class="review-item-details">
-        <div class="review-item-header">
-          <span class="review-item-name">${it.quantity || 1} x ${escapeHtml(it.name)}</span>
+    <div class="review-item-row" id="review-item-${escapeHtml(orderKey)}-${idx}">
+      <div class="review-item-header">
+        <span class="review-item-name">${it.quantity || 1} x ${escapeHtml(it.name)}</span>
+        <div class="review-item-meta-right">
+          <span class="review-item-price ${isEmptyPrice ? 'is-empty' : ''}">${escapeHtml(displayPrice || "—")}</span>
+          <button type="button" class="btn btn-ghost review-item-print-btn" data-print-action="stickers" data-print-action-title="${escapeHtml(mainPrintLabel)}" ${canPrintStickers ? "" : "disabled aria-disabled=\"true\""} onclick="${mainPrintAction}" title="${escapeHtml(mainPrintLabel)}">
+            ${printerIcon}
+            <span>${escapeHtml(mainPrintLabel)}</span>
+          </button>
         </div>
-        ${optionsHtml}
-        ${noteHtml}
       </div>
-      <div class="review-item-price ${isEmptyPrice ? 'is-empty' : ''}">${escapeHtml(displayPrice || "—")}</div>
-      <button type="button" class="btn btn-ghost review-item-print-btn" data-print-action="stickers" data-print-action-title="${escapeHtml(mainPrintLabel)}" ${canPrintStickers ? "" : "disabled aria-disabled=\"true\""} onclick="${mainPrintAction}" title="${escapeHtml(mainPrintLabel)}">
-        ${printerIcon}
-        <span>${escapeHtml(mainPrintLabel)}</span>
-      </button>
+      ${optionsHtml}
+      ${noteHtml}
     </div>
   `;
 }
