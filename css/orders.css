@@ -5547,7 +5547,7 @@ select.form-input {
   background: transparent;
   border: none;
   font-size: 13px;
-  color: #78350f;
+  color: #b45309;
   box-shadow: none;
 }
 
@@ -5559,13 +5559,13 @@ select.form-input {
 
 .flavor-chip .flavor-val {
   font-weight: 800;
-  color: #78350f;
+  color: #b45309;
 }
 
 .flavor-chip.extra-chip {
   background: transparent;
   border: none;
-  color: #9d174d;
+  color: #be185d;
   box-shadow: none;
 }
 
@@ -5577,7 +5577,7 @@ select.form-input {
 
 .flavor-chip.extra-chip .flavor-val {
   font-weight: 800;
-  color: #831843;
+  color: #be185d;
 }
 
 /* Customer Change Alert Banner */
