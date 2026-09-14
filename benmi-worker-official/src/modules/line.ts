@@ -1518,6 +1518,7 @@ export async function handleLineWebhook(
             if (orderRow) {
               const updatedOrder: Order = {
                 key: orderRow.key,
+                orderId: orderRow.order_id,
                 displayKey: orderRow.display_key,
                 legacyKey: orderRow.legacy_key,
                 businessDate: orderRow.business_date,
@@ -1559,6 +1560,7 @@ export async function handleLineWebhook(
             if (orderRow) {
               const updatedOrder: Order = {
                 key: orderRow.key,
+                orderId: orderRow.order_id,
                 displayKey: orderRow.display_key,
                 legacyKey: orderRow.legacy_key,
                 businessDate: orderRow.business_date,
@@ -1672,6 +1674,7 @@ export async function handleLineWebhook(
         if (row && replyToken) {
           const order: Order = {
             key: row.key,
+                orderId: row.order_id,
             displayKey: row.display_key,
             legacyKey: row.legacy_key,
             businessDate: row.business_date,
@@ -1800,6 +1803,7 @@ export async function handleLineWebhook(
           try {
             const existingOrderData: Order = {
               key: existingOrder.key,
+                orderId: existingOrder.order_id,
               displayKey: existingOrder.display_key,
               legacyKey: existingOrder.legacy_key,
               businessDate: existingOrder.business_date,
@@ -1877,6 +1881,7 @@ export async function handleLineWebhook(
       orderKey = crypto.randomUUID();
       const orderData: Order = {
         key: orderKey,
+        orderId: orderKey,
         displayKey,
         businessDate: new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10),
         customer: custName,
@@ -1891,7 +1896,7 @@ export async function handleLineWebhook(
         diningOption: diningOption
       };
 
-      await saveOrder(env, orderData, tenantId);
+      await saveOrder(env, orderData, tenantId, true);
 
       // Reply Progress Flex Message (Order confirmation + status check button) to customer (Free reply)
       if (replyToken) {
@@ -2001,6 +2006,7 @@ export async function handleLineWebhook(
         if (orderRow) {
           const order: Order = {
             key: orderRow.key,
+                orderId: orderRow.order_id,
             displayKey: orderRow.display_key,
             legacyKey: orderRow.legacy_key,
             businessDate: orderRow.business_date,

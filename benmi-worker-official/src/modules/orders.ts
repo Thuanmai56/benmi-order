@@ -1,4 +1,4 @@
-import { resolveOrderKey, isOrderId } from './order-identity';
+import { resolveOrderKey } from './order-identity';
 import { Env } from '../types/env';
 import { Order, DiningOption, AppendOrderPayload, OrderItemInput } from '../types/index';
 import { corsHeaders, json } from '../utils/http';
@@ -308,12 +308,12 @@ export async function createOrder(
   if (orderUuid && env.DB) {
     try {
       const existing = await env.DB.prepare(
-        "SELECT key, display_key, status, total_amount FROM orders WHERE uuid = ? AND tenant_id = ?"
-      ).bind(orderUuid, tenantId).first<{ key: string; display_key: string; status: string; total_amount: number }>();
+        "SELECT key, order_id, display_key, status, total_amount FROM orders WHERE uuid = ? AND tenant_id = ?"
+      ).bind(orderUuid, tenantId).first<{ key: string; order_id: string; display_key: string; status: string; total_amount: number }>();
 
       if (existing && existing.key) {
         console.log(`[createOrder] Idempotent hit for UUID ${orderUuid} -> returning existing key ${existing.key}`);
-        return json({ success: true, key: existing.key, displayKey: existing.display_key, uuid: orderUuid, idempotent: true });
+        return json({ success: true, key: existing.key, orderId: existing.order_id, displayKey: existing.display_key, uuid: orderUuid, idempotent: true });
       }
     } catch (e) {
       console.warn(`[createOrder] Idempotency check warning:`, e);
@@ -403,7 +403,11 @@ export async function createOrder(
   } catch {
     return json({ error: 'Order numbering unavailable. Please retry.', code: 'ORDER_COUNTER_UNAVAILABLE' }, 503);
   }
-  const orderKey = crypto.randomUUID();
+  const orderId = crypto.randomUUID();
+  // Keep the old browser contract when the receipt is still globally unused.
+  // A collision uses the UUID as compatibility key, never an upsert of another order.
+  const occupied = await env.DB.prepare('SELECT 1 FROM orders WHERE key = ?').bind(displayKey).first();
+  const orderKey = occupied ? orderId : displayKey;
   const businessDate = new Date(createdAt.getTime() + 8 * 3600000).toISOString().slice(0, 10);
 
   let orderContent = String(data.content || "").trim();
@@ -413,6 +417,7 @@ export async function createOrder(
 
   const order: Order = {
     key: orderKey,
+    orderId,
     displayKey,
     businessDate,
     uuid: orderUuid,
@@ -431,65 +436,73 @@ export async function createOrder(
     round_count: 1
   };
 
-  try {
-    if (rawItems.length > 0 && env.DB) {
-      const batchStatements: any[] = [
-        env.DB.prepare(
-          `INSERT INTO orders (key, display_key, business_date, uuid, tenant_id, user_id, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, round_count, last_appended_at, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'NEW', ?, ?, ?, ?, ?, ?, 1, NULL, datetime(?, 'unixepoch'), datetime('now'))`
-        ).bind(
-          order.key,
-          order.displayKey,
-          order.businessDate,
-          order.uuid || null,
-          tenantId,
-          order.userId || null,
-          order.customer,
-          order.time,
-          order.total,
-          order.content,
-          order.reason || "",
-          order.note || "",
-          order.diningOption || "takeaway",
-          order.tableNumber || null,
-          Math.floor((order.createdAt || Date.now()) / 1000)
-        ),
-        ...rawItems.map(item => {
-          const itemQty = Number(item.quantity) || 1;
-          const unitPrice = Number(item.price || item.unit_price) || 0;
-          const subtotal = Number(item.subtotal) || (unitPrice * itemQty);
-          const optionsJson = JSON.stringify(item.options || item.selected_options || []);
-          const itemNote = item.note || item.notes || "";
-          const bundleJson = item.bundle_snapshot_json || (item.bundleSelections ? JSON.stringify(item.bundleSelections) : null);
-          return env.DB.prepare(
-            `INSERT INTO order_items (tenant_id, order_key, round_number, item_id, item_name, category_name, quantity, unit_price, subtotal, selected_options, bundle_snapshot_json, notes, created_at)
-             VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      if (rawItems.length > 0 && env.DB) {
+        const batchStatements: any[] = [
+          env.DB.prepare(
+            `INSERT INTO orders (key, order_id, display_key, business_date, uuid, tenant_id, user_id, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, round_count, last_appended_at, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'NEW', ?, ?, ?, ?, ?, ?, 1, NULL, datetime(?, 'unixepoch'), datetime('now'))`
           ).bind(
-            tenantId,
             order.key,
-            item.itemId || item.item_id || null,
-            item.name || "Món",
-            item.category || item.category_name || null,
-            itemQty,
-            unitPrice,
-            subtotal,
-            optionsJson,
-            bundleJson,
-            itemNote
-          );
-        })
-      ];
-      await env.DB.batch(batchStatements);
-    } else {
-      await saveOrder(env, order, tenantId);
+            order.orderId,
+            order.displayKey,
+            order.businessDate,
+            order.uuid || null,
+            tenantId,
+            order.userId || null,
+            order.customer,
+            order.time,
+            order.total,
+            order.content,
+            order.reason || "",
+            order.note || "",
+            order.diningOption || "takeaway",
+            order.tableNumber || null,
+            Math.floor((order.createdAt || Date.now()) / 1000)
+          ),
+          ...rawItems.map(item => {
+            const itemQty = Number(item.quantity) || 1;
+            const unitPrice = Number(item.price || item.unit_price) || 0;
+            const subtotal = Number(item.subtotal) || (unitPrice * itemQty);
+            const optionsJson = JSON.stringify(item.options || item.selected_options || []);
+            const itemNote = item.note || item.notes || "";
+            const bundleJson = item.bundle_snapshot_json || (item.bundleSelections ? JSON.stringify(item.bundleSelections) : null);
+            return env.DB.prepare(
+              `INSERT INTO order_items (tenant_id, order_key, round_number, item_id, item_name, category_name, quantity, unit_price, subtotal, selected_options, bundle_snapshot_json, notes, created_at)
+               VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+            ).bind(
+              tenantId,
+              order.key,
+              item.itemId || item.item_id || null,
+              item.name || "Món",
+              item.category || item.category_name || null,
+              itemQty,
+              unitPrice,
+              subtotal,
+              optionsJson,
+              bundleJson,
+              itemNote
+            );
+          })
+        ];
+        await env.DB.batch(batchStatements);
+      } else {
+        await saveOrder(env, order, tenantId, true);
+      }
+      break;
+    } catch (error) {
+      if (orderUuid) {
+        const existing = await env.DB.prepare('SELECT key, order_id, display_key FROM orders WHERE tenant_id = ? AND uuid = ?')
+          .bind(tenantId, orderUuid).first<{ key: string; order_id: string; display_key: string }>();
+        if (existing) return json({ success: true, key: existing.key, orderId: existing.order_id, displayKey: existing.display_key, uuid: orderUuid, idempotent: true });
+      }
+      if (attempt === 0 && order.key !== orderId && String(error).includes('UNIQUE constraint failed: orders.key')) {
+        order.key = orderId;
+        continue;
+      }
+      throw error;
     }
-  } catch (error) {
-    if (orderUuid) {
-      const existing = await env.DB.prepare('SELECT key, display_key FROM orders WHERE tenant_id = ? AND uuid = ?')
-        .bind(tenantId, orderUuid).first<{ key: string; display_key: string }>();
-      if (existing) return json({ success: true, key: existing.key, displayKey: existing.display_key, uuid: orderUuid, idempotent: true });
-    }
-    throw error;
   }
 
   // 2. Tự động gửi LINE Flex Message xác nhận đơn hàng đầy đủ nội dung cho khách đặt qua Desktop
@@ -516,7 +529,7 @@ export async function createOrder(
     }
   }
 
-  return json({ success: true, key: orderKey, displayKey, uuid: orderUuid });
+  return json({ success: true, key: order.key, orderId, displayKey, uuid: orderUuid });
 }
 
 export async function executeAppendOrderInternal(
@@ -700,6 +713,7 @@ export async function executeAppendOrderInternal(
   // 7. Construct updated order object for notification & response
   const updatedOrder: Order = {
     key: parentKey,
+    orderId: row.order_id,
     displayKey: row.display_key,
     legacyKey: row.legacy_key,
     businessDate: row.business_date,
@@ -762,6 +776,7 @@ export async function executeAppendOrderInternal(
   return json({
     success: true,
     key: parentKey,
+    orderId: row.order_id,
     displayKey: row.display_key,
     legacyKey: row.legacy_key,
     businessDate: row.business_date,
@@ -856,6 +871,7 @@ export async function updateOrder(
 
   const order: Order = {
     key: orderRow.key,
+      orderId: orderRow.order_id,
     displayKey: orderRow.display_key,
     legacyKey: orderRow.legacy_key,
     businessDate: orderRow.business_date,
@@ -1139,6 +1155,7 @@ function mapOrderRows(results: any[]): Order[] {
 
     return {
       key: row.key,
+      orderId: row.order_id,
       displayKey: row.display_key,
       legacyKey: row.legacy_key,
       businessDate: row.business_date,
@@ -1197,7 +1214,7 @@ export async function getOrders(request: Request, env: Env): Promise<Response> {
     const startOfTodayUTC = new Date(new Date(`${todayTwStr}T00:00:00+08:00`).getTime()).toISOString().replace("T", " ").replace(/\.\d+Z$/, "");
 
     const { results } = await env.DB.prepare(
-      `SELECT key, display_key, business_date, legacy_key, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, round_count, last_appended_at, created_at
+      `SELECT key, order_id, display_key, business_date, legacy_key, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, round_count, last_appended_at, created_at
        FROM orders 
        WHERE tenant_id = ? 
          AND (status IN ('NEW', 'ACCEPTED', 'WAITING_CUSTOMER_CHANGE', 'WAITING_CUSTOMER_REJECT', 'DONE') 
@@ -1256,7 +1273,7 @@ export async function getOrdersByDate(request: Request, env: Env): Promise<Respo
 
   try {
     const { results } = await env.DB.prepare(
-      `SELECT key, display_key, business_date, legacy_key, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, round_count, last_appended_at, created_at
+      `SELECT key, order_id, display_key, business_date, legacy_key, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, round_count, last_appended_at, created_at
        FROM orders 
        WHERE tenant_id = ? 
          AND status IN ('PICKED_UP', 'REJECTED', 'PAID')
@@ -1278,7 +1295,7 @@ export async function getHistoryAll(request: Request, env: Env): Promise<Respons
 
   try {
     const { results } = await env.DB.prepare(
-      `SELECT key, display_key, business_date, legacy_key, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, round_count, last_appended_at, created_at
+      `SELECT key, order_id, display_key, business_date, legacy_key, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, round_count, last_appended_at, created_at
        FROM orders 
        WHERE tenant_id = ? 
          AND status IN ('PICKED_UP', 'REJECTED', 'PAID')
@@ -1294,13 +1311,12 @@ export async function getHistoryAll(request: Request, env: Env): Promise<Respons
   }
 }
 
-export async function saveOrder(env: Env, order: Order, tenantId: string): Promise<void> {
-  if (!isOrderId(order.key)) throw new Error('ORDER_ID_REQUIRED');
+export async function saveOrder(env: Env, order: Order, tenantId: string, createOnly = false): Promise<void> {
   // Save order to D1
   await env.DB.prepare(
-    `INSERT INTO orders (key, display_key, business_date, uuid, tenant_id, user_id, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, round_count, last_appended_at, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, 1), ?, datetime(?, 'unixepoch'), datetime('now'))
-     ON CONFLICT(key) DO UPDATE SET
+    `INSERT INTO orders (key, order_id, display_key, business_date, uuid, tenant_id, user_id, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, round_count, last_appended_at, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, 1), ?, datetime(?, 'unixepoch'), datetime('now'))
+     ${createOnly ? '' : `ON CONFLICT(key) DO UPDATE SET
        uuid = CASE WHEN excluded.uuid IS NOT NULL THEN excluded.uuid ELSE orders.uuid END,
        status = CASE
          WHEN orders.status IN ('ACCEPTED', 'DONE', 'REJECTED', 'PICKED_UP', 'PAID') AND excluded.status = 'NEW'
@@ -1317,9 +1333,10 @@ export async function saveOrder(env: Env, order: Order, tenantId: string): Promi
        table_number = excluded.table_number,
        round_count = CASE WHEN excluded.round_count > orders.round_count THEN excluded.round_count ELSE orders.round_count END,
        last_appended_at = CASE WHEN excluded.last_appended_at IS NOT NULL THEN excluded.last_appended_at ELSE orders.last_appended_at END,
-       updated_at = datetime('now')`
+       updated_at = datetime('now') WHERE orders.tenant_id = excluded.tenant_id`}`
   ).bind(
     order.key,
+    order.orderId || null,
     order.displayKey || order.key,
     order.businessDate || new Date((order.createdAt || Date.now()) + 8 * 3600000).toISOString().slice(0, 10),
     order.uuid || null,
@@ -1391,13 +1408,14 @@ export async function getOrderQueueAhead(env: Env, tenantId: string, orderKey: s
   if (!env.DB) return { order: null, queueAhead: 0 };
   try {
     const row = await env.DB.prepare(
-      "SELECT key, display_key, business_date, legacy_key, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, round_count, last_appended_at, created_at, user_id FROM orders WHERE key = ? AND tenant_id = ?"
+      "SELECT key, order_id, display_key, business_date, legacy_key, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, round_count, last_appended_at, created_at, user_id FROM orders WHERE key = ? AND tenant_id = ?"
     ).bind(await resolveOrderKey(env, tenantId, orderKey), tenantId).first<any>();
 
     if (!row) return { order: null, queueAhead: 0 };
 
     const order: Order = {
       key: row.key,
+      orderId: row.order_id,
       displayKey: row.display_key,
       legacyKey: row.legacy_key,
       businessDate: row.business_date,
@@ -1475,5 +1493,4 @@ export async function getUserLatestActiveOrder(env: Env, tenantId: string, userI
     return { order: null, queueAhead: 0 };
   }
 }
-
 

@@ -1,54 +1,33 @@
-# Order identity rollout — 2026-09-14
+# Online browser release: order identity — 2026-09-14
 
-## Contract
+## Contract and compatibility
 
-`orders.key` / API `key` is a server-created UUID and the immutable primary key. `display_key` / API `displayKey` is the short receipt number. `business_date` uses the existing Asia/Taipei business-day convention. Receipt uniqueness is `(tenant_id, business_date, display_key)`; the same short number can be used by different tenants or in a later year without overwriting an order.
+`orders.order_id` / API `orderId` is the immutable server UUID. `orders.uuid` remains the tenant-scoped client retry token. `display_key` / `displayKey` is the human receipt number; `business_date` follows the existing UTC+8 convention.
 
-`orders.uuid` / request `uuid` remains the **client retry token**, not the order primary key. It is unique per tenant. Repeating a committed request, including concurrent requests, returns the original key and displayKey. An unavailable counter returns 503 rather than inventing a random number. The counter increment can leave gaps if an order fails; consecutive gapless numbering is not promised.
+`orders.key` / API `key` stays a permanent compatibility reference. Existing keys, foreign keys, LINE buttons and Sheets row keys are never rewritten. New orders keep the short key when unused; if another tenant/year already owns it, a UUID becomes the compatibility key. A concurrent collision retries a strict INSERT with that UUID. It never updates the colliding order. Modern browser labels use displayKey. An already-open old tab can show the UUID in this collision case until reloaded, but continues operating on the correct order.
 
-All POS actions, append URLs, LINE postbacks, order_items and pending_actions use the primary key. UI and printed receipts use displayKey. LINE text receipts carry a separate reference so a webhook never matches a new order by an ambiguous short number. Human progress lookup is restricted to the customer and refuses ambiguous numbers. Existing authentication and general order pricing/state-machine concerns are outside this change.
+UUID and compatibility-key lookups are tenant scoped. New browser/LINE actions retain compatibility references during this release. This deliberately leaves physical foreign keys on the existing column; moving those is unnecessary to separate identity from numbering. A later API/client migration can adopt orderId everywhere. Short display numbers alone are not mutation identifiers, except where they are already the permanent stored compatibility key.
 
-## Two independently prepared branches
+## Migration and rollout
 
-- `codex/order-uuid-main`, based on main `6036c32`: retains bundle/threshold validation and existing production UI.
-- `codex/order-uuid-dev`, based on dev `5cff231`: retains structured print items and native printer UI.
+0055_expand_order_identity.sql is additive. It fills identity columns on existing orders without modifying their business fields or children. An INSERT trigger populates the fields for old Worker requests that overlap deployment or rollback. Existing Worker upserts do not change these fields. UUID uniqueness and immutability are enforced; receipt lookup is indexed, and counters are advanced past historical sequence numbers. Number allocation fails with 503 on counter outage; gaps are allowed.
 
-Do not merge dev into main to obtain this change. Review/merge the matching implementation into each base. Both contain the identical 0054 migration and the same D1 identity test suite. No remote migration, push, merge or deployment was executed during implementation.
+0054_add_ai_order_redirect_enabled.sql already exists in main and production. The earlier, unreleased destructive 0054_separate_order_identity.sql MUST NOT be applied. The release branches supersede the earlier order-uuid branches. Keep the distinct current main/dev features; never merge all of dev into main just to ship identity.
 
-## Migration 0054
+1. Verify each remote migration ledger, schema, invalid dates, foreign keys and unique retry tokens. Record current Worker and Pages versions and a D1 Time Travel bookmark.
+2. Run frontend validation, TypeScript and the local D1 identity suite, including actual legacy handlers. Exercise main bundle rules and dev browser printing separately. Synthetic tests stub outbound LINE and Sheets requests.
+3. Apply only the expected additive migration on dev while the old Worker remains active. Check identities and foreign keys; deploy the tested dev Worker; publish matching dev browser assets through the dev Git branch.
+4. Verify live dev read-only endpoints/assets and browser loading. Repeat the verified sequence for main. No APK is required for this browser-only release because there are no app users.
+5. Check migration ledger, populated UUIDs, foreign keys, deployment versions, HTML cachebusters and JS responses. Never submit fake customer orders or send test LINE/Sheets notifications on production.
 
-The migration changes existing physical primary keys in one transaction with deferred foreign-key validation. It preserves the client retry UUID, short number, amounts, timestamps, content and status. It updates order_items and pending_actions, and retains a tenant-scoped `order_legacy_keys` mapping plus `orders.legacy_key` for historical links/devices. It also advances daily counters past recognizable legacy sequence numbers and enforces immutable identity on subsequent writes.
+D1 briefly serializes schema/backfill work. This is an online rollout without a scheduled write pause, not a guarantee of zero milliseconds of latency or zero unrelated failures. Backfill must be re-evaluated for much larger databases; the inspected DBs currently contain about 3,451 production and 2,086 dev orders.
 
-The mapping is permanent compatibility data, not a cache. A pre-migration reference always resolves to its original order, even when a later year's receipt number is identical. New short numbers are never accepted as mutation identifiers. UUIDs are not access credentials; authorization must still be enforced separately.
+## Rollback
 
-Google Sheets receives `orderId` (UUID) and `displayKey`; its existing `key` remains the legacy key for migrated orders so an external upsert does not create a second row. New orders use UUID for that external key. Confirm the receiver's behavior in staging; no external Sheets deployment was modified.
+Leave additive columns, trigger and populated UUIDs in place. Restore the previous browser and Worker versions if required; old handlers remain schema compatible and all key references remain valid. Do not drop columns, rewrite keys, or restore a whole database over new orders. A baseline Worker still has its historical cross-year/prefix collision weakness; prefer a forward fix if a collision is involved. New UUIDs remain retained even when old code creates orders during rollback.
 
-## Required coordinated release
+## Verification
 
-This is a primary-key migration, not a safe rolling mixed-version DB change. Old Worker code cannot continue writing after 0054. Pre-migration clients retain compatible references for historical orders, but must reload for correct display of new UUID orders. Bundled Android assets require a rebuilt app/release; HTML cache busting alone does not update an offline bundled APK.
+Run `npm run check`, `npm run test:order-identity`, and `benmi-worker-official/node_modules/.bin/tsc --noEmit -p benmi-worker-official/tsconfig.json`.
 
-1. Before release, verify the actual migration ledger and schema on the target DB: all previous required schema migrations through 0053 must be present. Check extra custom foreign keys/integrations to `orders.key`, null/invalid created_at values, orphan items/pending actions, counts and totals. This implementation was tested on synthetic local D1, not a production snapshot.
-2. Export a recoverable snapshot / record a restore point. Retain the export securely. Measure 0054 on a staging copy at actual volume; the backfill updates every order and child row and may require a separate batched migration plan at large scale.
-3. Release and verify dev first using its matching branch and `blab-db-dev`. Stage production's matching branch against a staging copy before main release. Do not assume dev and production have identical schema/data from their branch names.
-4. Schedule a write pause for order APIs, LINE webhook processing and POS mutations. Drain requests and pending background writes; do not rely only on `store_status=paused`, which does not stop every mutation. Preserve/retry LINE delivery rather than acknowledging unprocessed events. Keep writers stopped while migration and Worker activation take place.
-5. Apply 0054 through Wrangler migrations on the correct database/environment, then activate the matching Worker, then publish refreshed HTML/JS and update/reload POS devices. Existing env config and LIFF/domain selection remain unchanged.
-6. While writes are still paused, verify `PRAGMA foreign_key_check`, unchanged order/item counts and totals, UUID keys and alias mapping. Smoke-test one synthetic tenant: create, retry, append, status, old LINE button, new LINE button, history and cashier/kitchen print. Verify no external duplicate Sheets row.
-7. Resume traffic and watch error rates, SQL errors, unknown references, print duplicates, and create/append results. Keep the mapping and old integration aliases.
-
-### Rollback
-
-Do not deploy an old Worker against the migrated DB and do not reconstruct old primary keys from display_key: new orders can now have identical display numbers across tenants/years. Before traffic resumes, rollback is restoration of the verified pre-migration snapshot together with the previous Worker/client. After new writes, prefer a forward fix; any full restore requires stopping writers and reconciling every new order/append/payment first. There is no automatic destructive down migration.
-
-## Local verification
-
-Install the matching Worker's dependencies (`npm ci` in benmi-worker-official), then from the repository root:
-
-```sh
-npm run check
-npm run test:order-identity
-./benmi-worker-official/node_modules/.bin/tsc --noEmit -p benmi-worker-official/tsconfig.json
-```
-
-Identity checks run real local D1 through Miniflare, execute the migration transaction, then run real source handlers. Outbound fetches are stubbed; they never send real LINE messages or Sheets writes. Python 3 is used only to split SQL statements correctly with SQLite's parser. Frontend checks do not replace device acceptance testing.
-
-Additional main checks: Dapinglin bundle rules and order-prefix migration tests. Additional dev checks: order print items, printer sequence, receipt canvas sizing, display number on receipt/sticker, and suppression of reprinting migrated orders.
+For the actual prior dev handler use `ORDER_IDENTITY_LEGACY_REF=e6e2d95 npm run test:order-identity`; main defaults to prior production 2e3600b. The suite runs actual D1 through Miniflare, verifies existing child links and UUID immutability, exercises concurrent retries and same-prefix tenants, and calls the legacy create/retry/list/update handlers on expanded schema. These checks do not replace acceptance on physical printer hardware. APK builds are deferred.

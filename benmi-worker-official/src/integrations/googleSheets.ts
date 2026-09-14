@@ -11,7 +11,7 @@ export async function syncToGoogleSheets(order: Order, env: Env, tenantCtx?: Ten
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         key: order.legacyKey || order.key,
-        orderId: order.key,
+        orderId: order.orderId,
         displayKey: order.displayKey || order.key,
         customer: order.customer || "Unknown",
         status: order.status,

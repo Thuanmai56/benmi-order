@@ -13,8 +13,10 @@ export type OrderStatus =
   | 'FORCE_REJECT';
 
 export interface Order {
-  /** Immutable server UUID; never show this as the receipt number. */
+  /** Stable compatibility key, retained for existing browsers and integrations. */
   key: string;
+  /** Immutable server UUID, independent of receipt number and client retry token. */
+  orderId?: string;
   displayKey?: string;
   legacyKey?: string | null;
   businessDate?: string;
