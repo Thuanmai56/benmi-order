@@ -350,18 +350,6 @@ function updateNewAlert() {
     return;
   }
 
-  // Check if any review-related modals are currently open
-  const isReviewing =
-    (document.getElementById("reviewModal") && document.getElementById("reviewModal").style.display === "flex") ||
-    (document.getElementById("changeModal") && document.getElementById("changeModal").style.display === "flex") ||
-    (document.getElementById("rejectModal") && document.getElementById("rejectModal").style.display === "flex");
-
-  if (isReviewing) {
-    alertEl.style.display = "none";
-    if (typeof stopContinuousAlarm === "function") stopContinuousAlarm();
-    return;
-  }
-
   if (Date.now() < newAlertSnoozeUntilMs) {
     // If a brand-new order or append arrived that wasn't in the snoozed set, wake up immediately!
     const hasBrandNew = pendingNewOrders.some(o => o?.key && !snoozedNewOrderKeys.has(o.key));
@@ -416,16 +404,30 @@ function dismissNewAlert() {
 }
 
 function reviewNextNewOrder() {
-  if (pendingNewOrders.length > 0) {
-    openReview(pendingNewOrders[0].key);
+  const isReviewOpen = document.getElementById("reviewModal") && document.getElementById("reviewModal").style.display === "flex";
+  const currentKey = (isReviewOpen && typeof reviewingOrder !== "undefined" && reviewingOrder) ? reviewingOrder.key : null;
+
+  // Prioritize another pending new order if current order is already displayed
+  let targetOrder = pendingNewOrders.find(o => o && o.key && o.key !== currentKey);
+  if (!targetOrder && pendingNewOrders.length > 0) {
+    targetOrder = pendingNewOrders[0];
+  }
+
+  if (targetOrder) {
+    dismissNewAlert();
+    openReview(targetOrder.key);
     return;
   }
+
   if (typeof unacknowledgedAppends !== "undefined" && unacknowledgedAppends.size > 0) {
-    const firstAppendKey = unacknowledgedAppends.keys().next().value;
-    unacknowledgedAppends.delete(firstAppendKey);
-    openReview(firstAppendKey);
+    let nextAppendKey = Array.from(unacknowledgedAppends.keys()).find(k => k !== currentKey);
+    if (!nextAppendKey) nextAppendKey = unacknowledgedAppends.keys().next().value;
+    unacknowledgedAppends.delete(nextAppendKey);
+    dismissNewAlert();
+    openReview(nextAppendKey);
     return;
   }
+
   dismissNewAlert();
 }
 
@@ -968,7 +970,7 @@ async function reviewAccept(btn) {
   if (!reviewingOrder?.key) return;
   await updateStatus(reviewingOrder.key, "ACCEPTED", {}, btn);
   closeModal();
-  dismissNewAlert();
+  if (typeof updateNewAlert === "function") updateNewAlert();
   switchTab("live");
 }
 

@@ -137,7 +137,7 @@ const I18N = {
     alertTitle: "{count} 單 新訂單",
     alertTitleAppend: "{count} 單 現場加點",
     alertTitleCombined: "{newCount} 單新訂單，{appendCount} 單現場加點",
-    alertSub: "點擊 “Review 訂單” 查看詳情並接單",
+    alertSub: "點擊「審核訂單」查看詳情並接單",
     alertSubAppend: "桌號：{tables} 剛加點新品項，請盡速製作",
     alertBtnReview: "審核訂單",
     alertBtnDismiss: "暫時隱藏",
@@ -1394,9 +1394,17 @@ function applyLanguageToDOM() {
   const alertSub = document.getElementById("new-alert-sub");
   if (alertSub) alertSub.innerText = dict.alertSub;
   const btnAlertRev = document.getElementById("btn-alert-review");
-  if (btnAlertRev) btnAlertRev.innerText = dict.alertBtnReview;
+  if (btnAlertRev) {
+    const spanRev = btnAlertRev.querySelector(".btn-text") || btnAlertRev.querySelector("span");
+    if (spanRev) spanRev.innerText = dict.alertBtnReview;
+    else btnAlertRev.innerText = dict.alertBtnReview;
+  }
   const btnAlertDis = document.getElementById("btn-alert-dismiss");
-  if (btnAlertDis) btnAlertDis.innerText = dict.alertBtnDismiss;
+  if (btnAlertDis) {
+    const spanDis = btnAlertDis.querySelector(".btn-text") || btnAlertDis.querySelector("span");
+    if (spanDis) spanDis.innerText = dict.alertBtnDismiss;
+    else btnAlertDis.innerText = dict.alertBtnDismiss;
+  }
 
   // Review Modal
   const revTitle = document.getElementById("i18n-review-title");

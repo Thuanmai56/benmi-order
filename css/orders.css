@@ -1374,48 +1374,149 @@ button.sidebar-nav-item.active {
   width: 100%;
 }
 
-/* Fullscreen new order alert */
+/* ==========================================================================
+   Modern New Order Alert Modal (Tablet-First POS Standard)
+   ========================================================================== */
 .new-alert {
   position: fixed;
   inset: 0;
-  z-index: 2000;
+  z-index: 3500;
   display: none;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, rgba(211, 47, 47, 0.97), rgba(255, 204, 0, 0.92));
-  padding: 20px;
-  text-align: center;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 24px;
+  box-sizing: border-box;
 }
 
 .new-alert-box {
-  width: min(680px, 96vw);
-  background: rgba(255, 255, 255, 0.92);
-  border: 2px solid rgba(255, 255, 255, 0.55);
-  border-radius: 22px;
-  padding: 22px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  position: relative;
+  width: min(440px, 92vw);
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 20px;
+  padding: 32px 28px 26px;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.2);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.new-alert-badge-wrap {
+  position: relative;
+  width: 68px;
+  height: 68px;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.new-alert-pulse-ring {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: rgba(220, 38, 38, 0.2);
+  animation: alertPulseRing 2s infinite ease-in-out;
+}
+
+@keyframes alertPulseRing {
+  0% { transform: scale(0.92); opacity: 0.8; }
+  50% { transform: scale(1.18); opacity: 0.2; }
+  100% { transform: scale(0.92); opacity: 0.8; }
+}
+
+.new-alert-icon {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: #fef2f2;
+  border: 1.5px solid #fee2e2;
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.15);
 }
 
 .new-alert-title {
-  font-size: 34px;
-  font-weight: 1200;
+  font-size: 24px;
+  font-weight: 800;
   margin: 0;
-  color: #111827;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
 }
 
 .new-alert-sub {
-  margin-top: 10px;
-  color: #111827;
-  font-weight: 1000;
-  font-size: 14px;
-  opacity: 0.75;
+  margin-top: 8px;
+  margin-bottom: 24px;
+  color: #64748b;
+  font-weight: 500;
+  font-size: 14.5px;
+  line-height: 1.5;
 }
 
 .new-alert-actions {
-  margin-top: 16px;
-  display: grid;
-  grid-template-columns: 1fr;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
   gap: 10px;
+}
+
+.new-alert-btn-review {
+  width: 100%;
+  height: 52px;
+  min-height: 48px;
+  font-size: 16px;
+  font-weight: 700;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--primary, #00b900);
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 4px 14px rgba(0, 185, 0, 0.3);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.new-alert-btn-review:hover,
+.new-alert-btn-review:active {
+  background: #009900;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 185, 0, 0.4);
+}
+
+.new-alert-btn-dismiss {
+  width: 100%;
+  height: 48px;
+  min-height: 48px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.new-alert-btn-dismiss:hover,
+.new-alert-btn-dismiss:active {
+  background: #f1f5f9;
+  color: #334155;
+  border-color: #cbd5e1;
 }
 
 /* Modal Overlay & Base */

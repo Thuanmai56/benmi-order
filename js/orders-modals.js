@@ -56,6 +56,11 @@ if (typeof window !== "undefined" && !window.__orderModalEscRegistered) {
   window.__orderModalEscRegistered = true;
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" || e.key === "Esc") {
+      const alertEl = document.getElementById("new-alert");
+      if (alertEl && alertEl.style.display === "flex") {
+        dismissNewAlert();
+        return;
+      }
       const revModal = document.getElementById("reviewModal");
       if (revModal && revModal.style.display !== "none") {
         closeModal();
