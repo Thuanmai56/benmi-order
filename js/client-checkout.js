@@ -1382,7 +1382,10 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
         const resData = await res.json().catch(() => ({}));
         if (resData && resData.key) {
             orderNum = resData.displayKey || resData.key;
-            msg = formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, mainNote);
+            // Older LINE Workers read 訂單編號 as a lookup key. Keep that reference
+            // stable during rolling deployment; show the receipt separately on collision.
+            msg = formatOrderTextMessage(resData.key, dateInput, timeInput, currentTotal, mainNote);
+            if (orderNum !== resData.key) msg = `取餐號碼：${orderNum}\n` + msg;
             msg += `\n訂單參考：${resData.key}`;
         }
 

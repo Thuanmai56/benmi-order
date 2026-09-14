@@ -157,5 +157,19 @@ async function check(name, fn) { await fn(); passed++; console.log(`PASS ${name}
    const list=await (await old.getOrders(request('/api/orders'),env)).json();assert(Array.isArray(list));
    assert.equal((await DB.prepare('PRAGMA foreign_key_check').all()).results.length,0);
  });
+
+ await check('legacy LINE receipt parser follows compatibility key on a receipt collision',async()=>{
+   const id=crypto.randomUUID();
+   await orders.saveOrder(env,{key:id,orderId:id,displayKey:'B0914-T007',businessDate:'2027-09-14',customer:'Collision',total:11,content:'Item',time:'12:00',status:'NEW',createdAt:Date.now()},'a',true);
+   const Module=require('node:module'); const legacy=new Module(path.join(workerRoot,'src/modules/legacy-line.ts'),module);
+   legacy.filename=path.join(workerRoot,'src/modules/legacy-line.ts');legacy.paths=Module._nodeModulePaths(path.dirname(legacy.filename));
+   const source=execFileSync('git',['show',(process.env.ORDER_IDENTITY_LEGACY_REF || '2e3600b')+':benmi-worker-official/src/modules/line.ts'],{cwd:root,encoding:'utf8'});
+   legacy._compile(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,legacy.filename);
+   const before=(await DB.prepare('SELECT count(*) n FROM orders').first()).n;
+   const text=`取餐號碼：B0914-T007\n訂單編號：${id}\n📦 訂單內容：\nItem\n💰 總金額：$11\n訂單參考：${id}`;
+   await legacy.exports.handleLineWebhook(request('/webhook/a',{events:[{type:'message',source:{userId:'legacy-line-user'},message:{type:'text',text}}]}),env,{waitUntil:()=>{}},tenant('a'));
+   assert.equal((await DB.prepare('SELECT count(*) n FROM orders').first()).n,before);
+   assert.equal((await DB.prepare('SELECT user_id FROM orders WHERE key=?').bind(id).first()).user_id,'legacy-line-user');
+ });
  console.log(`${passed} order identity checks passed`);
 })().catch(error=>{console.error(error);process.exitCode=1}).finally(async()=>{global.fetch=originalFetch;await mf.dispose()});
