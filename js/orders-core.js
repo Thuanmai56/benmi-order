@@ -8,7 +8,7 @@ const _forcedEnv = window.POS_BUNDLED_ENV || _coreParams.get("env") || (typeof l
 
 const _isDev = (
   _forcedEnv === "dev" ||
-  ((_coreHostname === "localhost" || _coreHostname === "127.0.0.1") && _forcedEnv !== "prod") ||
+  ((_coreHostname === "localhost" || _coreHostname === "127.0.0.1" || !_coreHostname) && _forcedEnv !== "prod") ||
   _coreHostname.startsWith("dev.") ||
   _coreHostname.includes(".dev.") ||
   _coreHostname.includes("-dev.") ||

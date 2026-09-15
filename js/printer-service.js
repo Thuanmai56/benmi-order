@@ -651,6 +651,30 @@
             combinedOptionsList = bundleOpts;
           }
 
+          // Defensive fallback: If no bundle snapshot was found, extract any ↳ bundle lines for this item from order.content
+          if (bundleOpts.length === 0 && order && order.content) {
+            const contentLines = String(order.content).split('\n');
+            let matchedItem = false;
+            const fallbackOpts = [];
+            for (const cLine of contentLines) {
+              const trimmed = cLine.trim();
+              if (!matchedItem && (trimmed.includes(itemName) || (trimmed.startsWith(qty + '份') && trimmed.includes(itemName)))) {
+                matchedItem = true;
+                continue;
+              }
+              if (matchedItem) {
+                if (trimmed.startsWith('↳') || (trimmed.startsWith('-') && !trimmed.includes('口味設定') && !trimmed.includes('備註') && !trimmed.includes('Ghi chú') && !trimmed.includes('Khẩu vị') && !trimmed.includes('Hương vị'))) {
+                  fallbackOpts.push(trimmed);
+                } else if (!trimmed.startsWith('↳') && !trimmed.startsWith('-') && !trimmed.startsWith('•') && trimmed.length > 0) {
+                  break;
+                }
+              }
+            }
+            if (fallbackOpts.length > 0) {
+              combinedOptionsList = [...combinedOptionsList, ...fallbackOpts];
+            }
+          }
+
           const itemPrice = lineTotal != null ? `$${lineTotal}` : (rawPrice != null && rawPrice !== '' ? (String(rawPrice).startsWith('$') ? String(rawPrice) : `$${rawPrice}`) : '');
           items.push({
             name: itemName,
