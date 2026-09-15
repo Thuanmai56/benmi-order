@@ -24,7 +24,7 @@ global.localStorage = {
   clear: () => mockLocalStorage.clear()
 };
 
-function createResolver(searchStr = "") {
+function createResolver(searchStr = "", isNativeApp = true) {
   return function getTenantId() {
     const params = new URLSearchParams(searchStr);
     const fromUrl = params.get("tenant") || params.get("tenant_id");
@@ -37,6 +37,10 @@ function createResolver(searchStr = "") {
         return savedTenant.trim();
       }
     }
+    // When running in a standard web browser (not native app), default to "benmi"
+    if (!isNativeApp) {
+      return "benmi";
+    }
     return "";
   };
 }
@@ -45,7 +49,7 @@ function createResolver(searchStr = "") {
 {
   mockLocalStorage.clear();
   mockLocalStorage.set("pos_device_tenant_id", "benmi");
-  const resolver = createResolver("?tenant=bsc");
+  const resolver = createResolver("?tenant=bsc", true);
   assert.strictEqual(resolver(), "bsc", "Should prioritize URL query param ?tenant=bsc");
   console.log("✅ Test 1 Passed: ?tenant=bsc overrides localStorage.");
 }
@@ -53,7 +57,7 @@ function createResolver(searchStr = "") {
 // Test 2: URL query param ?tenant_id=zhadantongxue
 {
   mockLocalStorage.clear();
-  const resolver = createResolver("?tenant_id=zhadantongxue");
+  const resolver = createResolver("?tenant_id=zhadantongxue", true);
   assert.strictEqual(resolver(), "zhadantongxue", "Should support ?tenant_id= param");
   console.log("✅ Test 2 Passed: ?tenant_id= query param supported.");
 }
@@ -62,17 +66,33 @@ function createResolver(searchStr = "") {
 {
   mockLocalStorage.clear();
   mockLocalStorage.set("pos_device_tenant_id", "bsc");
-  const resolver = createResolver("");
+  const resolver = createResolver("", true);
   assert.strictEqual(resolver(), "bsc", "Should read from pos_device_tenant_id when URL is clean");
   console.log("✅ Test 3 Passed: Resolves from pos_device_tenant_id on tablet app.");
 }
 
-// Test 4: Unactivated device returns empty string
+// Test 4a: Unactivated device on Native App returns empty string (triggers store activation modal)
 {
   mockLocalStorage.clear();
-  const resolver = createResolver("");
-  assert.strictEqual(resolver(), "", "Should return empty string on virgin unactivated tablet");
-  console.log("✅ Test 4 Passed: Returns empty string when device is unactivated.");
+  const resolver = createResolver("", true); // isNativeApp = true
+  assert.strictEqual(resolver(), "", "Should return empty string on virgin unactivated tablet app");
+  console.log("✅ Test 4a Passed: Returns empty string on unactivated native app to prompt activation.");
+}
+
+// Test 4b: Standard Web Browser without tenant param defaults to 'benmi' (no login popup)
+{
+  mockLocalStorage.clear();
+  const resolver = createResolver("", false); // isNativeApp = false
+  assert.strictEqual(resolver(), "benmi", "Browser should default to 'benmi' so POS loads without activation popup");
+  console.log("✅ Test 4b Passed: Browser defaults to 'benmi' without showing login popup.");
+}
+
+// Test 4c: Standard Web Browser with ?tenant=bsc resolves to 'bsc'
+{
+  mockLocalStorage.clear();
+  const resolver = createResolver("?tenant=bsc", false); // isNativeApp = false
+  assert.strictEqual(resolver(), "bsc", "Browser should prioritize query param ?tenant=bsc");
+  console.log("✅ Test 4c Passed: Browser resolves explicit tenant from query params.");
 }
 
 // Test 5: Unlink device cleans storage

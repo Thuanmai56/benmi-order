@@ -752,9 +752,16 @@ function closePrinterGuideModal() {
   if (modal) modal.style.display = "none";
 }
 
-function showStoreActivationModal() {
+function showStoreActivationModal(force = false) {
+  // Hotfix: Never display login/store activation modal when running in a standard web browser (not app)
+  if (!force && typeof isNativeAppPlatform === "function" && !isNativeAppPlatform()) {
+    return;
+  }
   const modal = document.getElementById("storeActivationModal");
   if (!modal) return;
+  if (force) {
+    modal.classList.add("force-show");
+  }
   // If already displayed, do not re-initialize or steal focus from active inputs
   if (modal.style.display === "flex") return;
   showModalFromTop(modal);
@@ -781,7 +788,10 @@ function showStoreActivationModal() {
 
 function closeStoreActivationModal() {
   const modal = document.getElementById("storeActivationModal");
-  if (modal) modal.style.display = "none";
+  if (modal) {
+    modal.style.display = "none";
+    modal.classList.remove("force-show");
+  }
 }
 
 async function submitStoreActivation(e) {
