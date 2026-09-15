@@ -26,7 +26,7 @@
 ## Rủi ro chặn release
 
 1. ~~**Sai/thiếu dữ liệu in món:**~~ (ĐÃ KHẮC PHỤC): `attachOrderPrintItems` đã bổ sung `subtotal` và `bundle_snapshot_json`. `PrinterService.parseOrderItems()` đã ưu tiên `subtotal` lịch sử, format đầy đủ bundle selections vào options và tính fallback phụ thu chính xác. Đã bổ sung bộ test regression `tests/test_order_print_subtotal_bundle.cjs`.
-2. **Chưa xác minh được D1 production:** `wrangler d1 migrations list blab-db-production --remote` bị Cloudflare từ chối với mã `7403` (account không hợp lệ hoặc không có quyền). Chưa thể xác nhận migration ledger, schema production hay trạng thái backfill.
+2. **Đã xác minh D1 production:** migration ledger báo không còn migration áp dụng; schema production có `subtotal` và `bundle_snapshot_json`. Production hiện có 3.562 orders, 8.623 order items, 0 dòng thiếu `subtotal`, 49 dòng có bundle snapshot. Có 186 dòng có `subtotal` khác `unit_price * quantity`, nên việc đọc đúng subtotal lịch sử là cần thiết.
 3. **Chưa có browser E2E:** test Playwright/POS bị môi trường từ chối khởi chạy Chrome; cần chạy lại trên máy/CI có quyền mở Chrome.
 4. **KV dev/staging dùng cùng namespace ID** trong `wrangler.jsonc`; cần xác nhận đây là chủ ý trước khi deploy staging/production để tránh cache chéo.
 5. GitHub Actions hiện chỉ có các run PR-Agent trên commit cũ; chưa có CI run cho commit sau rebase.
