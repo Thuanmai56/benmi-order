@@ -658,6 +658,9 @@
             price: itemPrice,
             unitPrice: unitNum != null ? `$${unitNum}` : '',
             options: this.formatPrintOptions(combinedOptionsList),
+            baseOptions: this.formatPrintOptions(baseOptions ? (Array.isArray(baseOptions) ? baseOptions : [baseOptions]) : []),
+            bundle_snapshot_json: it.bundle_snapshot_json || (it.bundleSelections ? (typeof it.bundleSelections === 'string' ? it.bundleSelections : JSON.stringify(it.bundleSelections)) : null),
+            bundleData: bundleData,
             note: it.note || it.notes || '',
             round: it.round || (Number(order.roundCount || order.round_count) > 1 ? '[第' + (it.round_number || 1) + '輪]' : '')
           });

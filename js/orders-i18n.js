@@ -358,6 +358,9 @@ const I18N = {
     btnPrintPortion: "印此份貼紙",
     printPortionsPrinting: "正在列印「{name}」{count} 張貼紙...",
     printPortionsSuccess: "已列印「{name}」{count} 張貼紙！",
+    bundleSelectionsTitle: "套餐組合內容",
+    bundlePortionPrefix: "第 {n} 份",
+    bundleGroupFallback: "搭配",
     // Quick Sticker / Emergency Note Modal
     quickStickerModalTitle: "補印客製標籤 (緊急貼紙)",
     quickStickerModalSub: "點擊下方常見選項，立即列印 1 張獨立備註貼紙粘貼於餐點上：",
@@ -1093,6 +1096,9 @@ const I18N = {
     btnPrintPortion: "In tem phần này",
     printPortionsPrinting: "Đang in {count} tem cho \"{name}\"...",
     printPortionsSuccess: "Đã in {count} tem cho \"{name}\"!",
+    bundleSelectionsTitle: "Món trong combo",
+    bundlePortionPrefix: "Phần {n}",
+    bundleGroupFallback: "Món kèm",
     // Quick Sticker / Emergency Note Modal
     quickStickerModalTitle: "In tem tùy chọn / Tem chữa cháy",
     quickStickerModalSub: "Chạm các tùy chọn bên dưới để xả ngay 1 tem ghi chú dán lên món:",

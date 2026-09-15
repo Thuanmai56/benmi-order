@@ -674,6 +674,155 @@ async function copyRawOrderContent(orderKey) {
 }
 window.copyRawOrderContent = copyRawOrderContent;
 
+function extractBundleFromItem(it) {
+  if (!it) return null;
+  let bData = it.bundleData;
+  if (!bData && it.bundle_snapshot_json) {
+    try {
+      bData = typeof it.bundle_snapshot_json === 'string' ? JSON.parse(it.bundle_snapshot_json) : it.bundle_snapshot_json;
+    } catch {}
+  }
+  if (!bData && it.bundleSelections) {
+    try {
+      bData = typeof it.bundleSelections === 'string' ? JSON.parse(it.bundleSelections) : it.bundleSelections;
+    } catch {}
+  }
+
+  if (bData) {
+    const portions = Array.isArray(bData.portions) ? bData.portions : (Array.isArray(bData) ? (bData[0]?.groups ? bData : [{ groups: bData }]) : null);
+    if (portions && portions.length > 0) {
+      return {
+        isStructured: true,
+        portions: portions
+      };
+    }
+  }
+
+  if (it.options) {
+    const lines = String(it.options).split('\n').map(l => l.trim()).filter(Boolean);
+    const parsedGroups = [];
+    const remainingOptions = [];
+
+    lines.forEach(line => {
+      const cleanLine = line.replace(/^[↳\-+•*]\s*/, '').trim();
+      const m = cleanLine.match(/^(?:(第\d+份|Phần \d+)\s*)?([^：:\n]+)[：:]\s*(.+)$/);
+      if (m && !m[2].includes('備註') && !m[2].includes('Ghi chú') && !m[2].includes('口味') && !m[2].includes('Khẩu vị') && !m[2].includes('Hương vị')) {
+        const portionLabel = m[1] || '';
+        const groupName = m[2].trim();
+        const itemsStr = m[3].trim();
+        const rawItems = itemsStr.split(/[、,]+/).map(s => s.trim()).filter(Boolean);
+        const groupItems = rawItems.map(rawIt => {
+          const addMatch = rawIt.match(/(?:\(\s*\+\s*\$|\+\s*\$)(\d+(?:\.\d+)?)/);
+          const surcharge = addMatch ? Number(addMatch[1]) || 0 : 0;
+          const cleanName = rawIt.replace(/\s*\(\s*\+\s*\$\d+(?:\.\d+)?\s*\)/, '').trim();
+          const qMatch = cleanName.match(/^(.+?)\s*[xX*]\s*(\d+)$/) || cleanName.match(/^(\d+)\s*[xX*]\s*(.+)$/);
+          const name = qMatch ? (cleanName.match(/^(.+?)\s*[xX*]\s*(\d+)$/) ? qMatch[1] : qMatch[2]) : cleanName;
+          const qty = qMatch ? Number(qMatch[2] || qMatch[1]) || 1 : 1;
+          return { name, quantity: qty, surcharge };
+        });
+
+        parsedGroups.push({
+          portionLabel,
+          groupName,
+          items: groupItems
+        });
+      } else {
+        remainingOptions.push(line);
+      }
+    });
+
+    if (parsedGroups.length > 0) {
+      return {
+        isStructured: false,
+        textGroups: parsedGroups,
+        remainingOptionsStr: remainingOptions.join('\n')
+      };
+    }
+  }
+
+  return null;
+}
+window.extractBundleFromItem = extractBundleFromItem;
+
+function renderBundleComponentsHtml(bundleInfo) {
+  if (!bundleInfo) return "";
+  const bundleTitle = (typeof t === "function" && t("bundleSelectionsTitle")) || "套餐組合內容";
+  const groupFallback = (typeof t === "function" && t("bundleGroupFallback")) || "搭配";
+  const bundleIcon = (typeof POS_SVG !== "undefined" && POS_SVG.bundle) || "";
+
+  let listHtml = "";
+
+  if (bundleInfo.isStructured && bundleInfo.portions) {
+    const portions = bundleInfo.portions;
+    listHtml = portions.map((p, pIdx) => {
+      const pNum = typeof p.portionIndex === "number" ? p.portionIndex + 1 : pIdx + 1;
+      const pPrefix = portions.length > 1
+        ? (typeof t === "function" ? t("bundlePortionPrefix", { n: pNum }) : `第 ${pNum} 份`)
+        : "";
+      const groups = p.groups || [];
+
+      const groupsHtml = groups.map(g => {
+        const groupName = g.groupName || g.group_name || groupFallback;
+        const items = g.items || [];
+        const itemsHtml = items.map(bi => {
+          const bName = bi.name || bi.item_name || "";
+          const bQty = Number(bi.quantity) || 1;
+          const bSur = Number(bi.surcharge || bi.price || 0);
+          return `
+            <span class="bundle-item-chip">
+              <span class="bundle-item-name">${escapeHtml(bName)}</span>
+              <span class="bundle-item-qty">x${bQty}</span>
+              ${bSur > 0 ? `<span class="bundle-item-surcharge">(+$${bSur * bQty})</span>` : ""}
+            </span>
+          `;
+        }).join("");
+
+        return `
+          <div class="bundle-group-row">
+            <span class="bundle-group-label">${pPrefix ? `${escapeHtml(pPrefix)} ` : ""}${escapeHtml(groupName)}</span>
+            <div class="bundle-group-items">${itemsHtml}</div>
+          </div>
+        `;
+      }).join("");
+
+      return `<div class="bundle-portion-block">${groupsHtml}</div>`;
+    }).join("");
+  } else if (bundleInfo.textGroups) {
+    listHtml = bundleInfo.textGroups.map(tg => {
+      const label = tg.portionLabel ? `${tg.portionLabel} ${tg.groupName}` : tg.groupName;
+      const itemsHtml = tg.items.map(bi => `
+        <span class="bundle-item-chip">
+          <span class="bundle-item-name">${escapeHtml(bi.name)}</span>
+          <span class="bundle-item-qty">x${bi.quantity}</span>
+          ${bi.surcharge > 0 ? `<span class="bundle-item-surcharge">(+$${bi.surcharge * bi.quantity})</span>` : ""}
+        </span>
+      `).join("");
+
+      return `
+        <div class="bundle-group-row">
+          <span class="bundle-group-label">${escapeHtml(label)}</span>
+          <div class="bundle-group-items">${itemsHtml}</div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  if (!listHtml) return "";
+
+  return `
+    <div class="bundle-components-container">
+      <div class="bundle-components-header">
+        ${bundleIcon}
+        <span>${escapeHtml(bundleTitle)}</span>
+      </div>
+      <div class="bundle-portions-list">
+        ${listHtml}
+      </div>
+    </div>
+  `;
+}
+window.renderBundleComponentsHtml = renderBundleComponentsHtml;
+
 function renderItemRowHtml(it, idx, orderKey) {
   let optionsHtml = "";
   const startStickerIndex = (typeof it.stickerIndex === "number") ? it.stickerIndex : idx;
@@ -684,8 +833,18 @@ function renderItemRowHtml(it, idx, orderKey) {
     && typeof PrinterService.getPrintCapabilities === "function"
     && PrinterService.getPrintCapabilities().stickers;
 
-  if (it.options) {
-    const rawOpts = String(it.options);
+  const bundleInfo = extractBundleFromItem(it);
+  const bundleHtml = renderBundleComponentsHtml(bundleInfo);
+
+  let optsToRender = it.options;
+  if (it.baseOptions !== undefined && it.baseOptions !== null) {
+    optsToRender = it.baseOptions;
+  } else if (bundleInfo && bundleInfo.remainingOptionsStr !== undefined) {
+    optsToRender = bundleInfo.remainingOptionsStr;
+  }
+
+  if (optsToRender) {
+    const rawOpts = String(optsToRender).trim();
     const parsed = typeof parsePortionCustomizations === "function" ? parsePortionCustomizations(rawOpts) : null;
     if (parsed && parsed.portions && parsed.portions.length > 0) {
       let commonHtml = "";
@@ -713,7 +872,7 @@ function renderItemRowHtml(it, idx, orderKey) {
         </div>
       `;
       optionsHtml = commonHtml + portionsHtml;
-    } else {
+    } else if (rawOpts) {
       const splitOpts = rawOpts.split(/[、,，\n]+/).map(s => s.trim()).filter(Boolean);
       if (splitOpts.length > 0) {
         optionsHtml = `<div class="review-item-options">${splitOpts.map(opt => `<span class="mod-chip">${escapeHtml(opt)}</span>`).join("")}</div>`;
@@ -748,6 +907,7 @@ function renderItemRowHtml(it, idx, orderKey) {
           </button>
         </div>
       </div>
+      ${bundleHtml}
       ${optionsHtml}
       ${noteHtml}
     </div>

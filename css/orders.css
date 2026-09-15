@@ -6157,6 +6157,102 @@ select.form-input {
   color: #0f172a;
 }
 
+/* ==========================================================================
+   Universal Bundle / Combo Components Display
+   ========================================================================== */
+.bundle-components-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-left: 3px solid #059669;
+  border-radius: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.bundle-components-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #047857;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.bundle-components-header svg {
+  color: #059669;
+  flex-shrink: 0;
+}
+
+.bundle-portions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.bundle-portion-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bundle-group-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12.5px;
+}
+
+.bundle-group-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #475569;
+  background: #e2e8f0;
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.bundle-group-items {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.bundle-item-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.bundle-item-qty {
+  font-weight: 700;
+  color: #0284c7;
+  font-size: 11.5px;
+}
+
+.bundle-item-surcharge {
+  font-weight: 700;
+  color: #b45309;
+  font-size: 11px;
+}
+
 /* Raw Order Accordion (Dedicated Unstructured Data Fallback) */
 .raw-order-accordion {
   margin-top: 10px;
