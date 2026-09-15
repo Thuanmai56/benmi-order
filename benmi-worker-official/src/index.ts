@@ -6,7 +6,6 @@ import { getConfig, updateConfig } from './modules/config';
 import { getMenu, updateMenu, updateStockStatus, getTenantId } from './modules/menu';
 import { handleAuth, handleAuthChange, handleCreateTempLink, handleVerifyTempLink } from './modules/auth';
 import { getImageList, getImage, updateImage, deleteImage } from './modules/image';
-import { debugKV } from './modules/debug';
 import { resolveTenantContext } from './modules/tenant';
 import { handleAdminRoute } from './modules/admin';
 import { getTenantBootstrap } from './modules/bootstrap';
@@ -77,7 +76,6 @@ export default {
       if (request.method === "POST" && path === "/api/auth/change") return handleAuthChange(request, env, tenantCtx);
       if (request.method === "POST" && path === "/api/auth/templink") return handleCreateTempLink(request, env, tenantCtx);
       if (request.method === "GET" && path === "/api/auth/templink") return handleVerifyTempLink(request, env, tenantCtx);
-      if (request.method === "GET" && path === "/api/debug") return debugKV(env, url);
       if (request.method === "GET" && path === "/api/health") {
         return json({
           status: "ok",
