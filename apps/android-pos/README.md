@@ -73,8 +73,10 @@ apps/android-pos/
 ├── build.sh                             # Script tự động copy HTML, CSS, JS sang dist/
 ├── capacitor.config.ts                  # Cấu hình Capacitor App (Hỗ trợ dev-local, pilot, prod)
 ├── package.json                         # Scripts build:apk, build:apk:dev, build:apk:pilot, sync:dev
-├── blab-pos-dev-v0.9.5.apk              # File cài đặt APK Dev mới nhất (v0.9.5)
-├── blab-pos-pilot-v0.9.5.apk            # File cài đặt APK Pilot mới nhất (v0.9.5)
+├── blab-pos-v1.0.apk                    # File cài đặt APK Production 1.0 Remote Cloud Loader mới nhất
+├── blab-pos.apk                         # Bản sao symlink/alias Production APK
+├── blab-pos-dev-v0.9.5.apk              # File cài đặt APK Dev (v0.9.5)
+├── blab-pos-pilot-v0.9.5.apk            # File cài đặt APK Pilot (v0.9.5)
 └── README.md                            # Tài liệu hướng dẫn này
 ```
 
@@ -181,6 +183,7 @@ Vào biểu tượng **⚙️ Cài đặt (Settings) > Máy in & xuất vé**:
 
 | Phiên Bản | Ngày Phát Hành | Điểm Nâng Cấp Chính |
 | :--- | :--- | :--- |
+| **v1.0 (Prod)** | 16/09/2026 | - **Phiên bản 1.0 Production Phổ Quát (Code 24)**: Xuất xưởng bản Production chính thức (`com.benmi.pos`) tải trực tiếp qua Capacitor Remote Cloud Loader OTA (`https://benmi-order.pages.dev/orders.html`).<br>- **Tự Động Cập Nhật OTA Không Cần Cài Lại APK**: Không dùng chế độ pilot bundle nội bộ các file CSS/JS cũ; WebView nạp trực tiếp giao diện từ Cloudflare Pages Production; khi có UI mới trên `main`, POS tự động cập nhật ngay khi mở app.<br>- **Đồng Bộ Trọn Vẹn UI Mới**: Tích hợp toàn diện giao diện POS mới nhất: Popup cảnh báo đơn mới nổi bật (`z-index: 3500`), modal khởi động ca & kích hoạt điểm bán phong cách tối giản không icon trẻ con, tối ưu tỷ lệ xem đơn hàng (`flex: 1.35`), khóa xoay màn hình ngang `sensorLandscape`, in ngầm silent printing hóa đơn ESC/POS và in tem nhãn decal TSPL. |
 | **v0.9.5** | 14/09/2026 | - **Phiên bản v0.9.5 (Code 23)**: Build đồng thời bản **Dev** (`com.benmi.pos.dev`) và **Production Pilot** (`com.benmi.pos.pilot`).<br>- **Khóa xoay màn hình ngang chuẩn POS (Landscape Orientation Lock)**: Cố định giao diện POS luôn hiển thị ở hướng ngang (`sensorLandscape`), tránh tình trạng xoay dọc gây vỡ layout và tràn chữ trên tablet.<br>- **Tối ưu hóa Chi Tiết Đơn Hàng (Order Review Modal)**: Bỏ ngày giờ nhận đơn bên trái và dưới status "製作中" (giữ nguyên trong khung badge); mở rộng tỷ lệ cột món bên trái (`flex: 1.35`); đưa `顧客備註` (Ghi chú khách hàng) lên trên gộp chung vào section tùy chọn hương vị, giữ màu sắc nổi bật.<br>- **Nâng Cấp Modal Cảnh Báo Đơn Hàng Mới (New Order Alert Modal)**: Hiển thị popup cảnh báo nổi bật lên trên mọi màn hình (`z-index: 3500`), bao gồm cả khi đang mở modal chi tiết đơn hoặc nhắc lại sau 30s; thiết kế lại theo typography tối giản chuẩn POS mới.<br>- **Hiện Đại Hóa Popup Khởi Động POS (Start Shift & Store Activation Modals)**: Thiết kế lại toàn diện modal bắt đầu nhận đơn & kích hoạt điểm bán đồng bộ với phong cách UI mới; loại bỏ hoàn toàn emoji trẻ con; sử dụng icon vector SVG chuẩn thương mại (Lucide bell-ring), hiệu ứng vòng xung nhịp kính mờ cao cấp và nút bấm chuẩn Tablet POS (52px). |
 | **v0.9.4** | 13/09/2026 | - **Phiên bản v0.9.4 (Code 22)**: Build đồng thời bản **Dev** (`com.benmi.pos.dev`) và **Production Pilot** (`com.benmi.pos.pilot`).<br>- Tối ưu hóa xử lý giờ mở cửa quán và hệ thống quick-reply LINE. |
 | **v0.9.3** | 13/09/2026 | - **Phiên bản v0.9.3 (Code 21)**: Build đồng thời bản **Dev** (`com.benmi.pos.dev`) và **Production Pilot** (`com.benmi.pos.pilot`).<br>- **Bổ sung Đếm Ngược Đơn Đặt Giờ trong Chi Tiết Đơn (Tab Live)**: Bổ sung Card Giờ Hẹn & Đếm Ngược Số Phút Còn Lại (`review-timing-card` và `review-meta-pickup`) với cơ chế cập nhật thời gian thực không cần đóng mở lại modal, phân biệt màu cảnh báo theo độ khẩn cấp (cam `<= 15m`, đỏ `quá giờ`), tuân thủ chuẩn SVG tối giản không icon trẻ con.<br>- **Biên Tập Tùy Chọn & Món 2 Cấp (Tầng 1 & Tầng 2)**: Tách biệt hoàn toàn `sec-flavor` khỏi Catalog, hỗ trợ toàn diện thêm/sửa/xóa nhóm tùy chọn, chuyển đổi linh hoạt `Đơn tuyển` / `Đa tuyển`, và thêm sửa nhanh các lựa chọn và nhánh phụ không dùng popup prompt. |
