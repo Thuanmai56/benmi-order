@@ -49,6 +49,11 @@ graph TD
   - **Icon SVG chuẩn thương mại**: Chỉ dùng icon vector SVG nét mảnh cách điệu, 100% miễn phí cho mục đích thương mại (Lucide, Feather, Tabler - MIT/Apache 2.0).
   - Xem chi tiết tại: [ui-design-principles.md](file:///.agents/rules/ui-design-principles.md).
 
+### C. Bắt Buộc Cache-Busting Khi Chỉnh Sửa Frontend (CSS / JS)
+- **BẮT BUỘC**: Mọi thay đổi trong các file `css/*.css`, `index.css` và `js/*.js` đều phải đi kèm việc tăng version cache-buster (`?v=YYYYMMDD_...`) trong các file HTML tương ứng (`orders.html`, `index.html`, `marketplace.html`).
+- **LÝ DO**: Ngăn ngừa hoàn toàn tình trạng thiết bị POS (iPad/Tablet/Capacitor APK) và LINE LIFF chạy code JS/CSS cũ từ cache.
+- Xem chi tiết tại: [frontend-cache-busting.md](file:///.agents/rules/frontend-cache-busting.md).
+
 ---
 
 ## 3. Database & Caching Architecture
@@ -75,6 +80,7 @@ graph TD
 1. **Kiểm thử tĩnh & Phạm vi biến Frontend (BẮT BUỘC)**:
    - Trước khi deploy frontend, **BẮT BUỘC** chạy: `npm run check` (hoặc `node scripts/check-frontend.js`).
    - Lệnh này kiểm tra cú pháp, phát hiện trùng lặp biến toàn cục (`const`/`let`) giữa các thẻ `<script>`, và mô phỏng khởi tạo trong VM context.
+   - **Kiểm tra Cache-Buster**: Đảm bảo các file HTML liên quan (`orders.html`, `index.html`, `marketplace.html`) đã được bump version `?v=...` nếu có file `.css` hoặc `.js` tương ứng bị sửa đổi.
 2. **Phát triển trên Dev**:
    - Lập trình và kiểm thử trên nhánh `dev`.
    - Apply migration: `npx wrangler d1 migrations apply blab-db-dev --remote --env dev`.

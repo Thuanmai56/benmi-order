@@ -2,10 +2,95 @@
 // Benmi POS - Module: Modals & Change/Reject
 // ==========================================
 
+// Reset after display: hidden elements have no scrollable layout to reset.
+function showModalFromTop(modal) {
+  if (!modal) return;
+  modal.style.display = "flex";
+  modal.scrollTop = 0;
+  modal.scrollLeft = 0;
+  modal.querySelectorAll(".modal-body, .modal-content").forEach(region => {
+    region.scrollTop = 0;
+    region.scrollLeft = 0;
+  });
+}
+window.showModalFromTop = showModalFromTop;
+
+function formatOrderDetailHeaderTime(dateOrStr) {
+  let d = null;
+  if (dateOrStr) {
+    if (dateOrStr instanceof Date && !isNaN(dateOrStr.getTime())) {
+      d = dateOrStr;
+    } else {
+      const s = String(dateOrStr).trim();
+      const timeMatch = s.match(/(\d{1,2}):(\d{2})/);
+      const dateMatch = s.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+      if (dateMatch && timeMatch) {
+        d = new Date(parseInt(dateMatch[1], 10), parseInt(dateMatch[2], 10) - 1, parseInt(dateMatch[3], 10), parseInt(timeMatch[1], 10), parseInt(timeMatch[2], 10));
+      } else {
+        const parsed = new Date(s);
+        if (!isNaN(parsed.getTime())) d = parsed;
+      }
+    }
+  }
+  if (!d || isNaN(d.getTime())) d = new Date();
+
+  const lang = (typeof window !== "undefined" && window.currentLang) || "zh-TW";
+  const monthsEn = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const mStr = monthsEn[d.getMonth()];
+  const day = String(d.getDate()).padStart(2, "0");
+  const year = d.getFullYear();
+  const hours = d.getHours();
+  const minutes = String(d.getMinutes()).padStart(2, "0");
+  const ampm = hours >= 12 ? "PM" : "AM";
+  const h12 = hours % 12 || 12;
+
+  if (lang === "vi") {
+    return `${mStr} ${day}, ${year}, ${h12}:${minutes} ${ampm}`;
+  } else {
+    return `${year}年${d.getMonth() + 1}月${d.getDate()}日 ${ampm} ${h12}:${minutes}`;
+  }
+}
+window.formatOrderDetailHeaderTime = formatOrderDetailHeaderTime;
+
+if (typeof window !== "undefined" && !window.__orderModalEscRegistered) {
+  window.__orderModalEscRegistered = true;
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" || e.key === "Esc") {
+      const alertEl = document.getElementById("new-alert");
+      if (alertEl && alertEl.style.display === "flex") {
+        dismissNewAlert();
+        return;
+      }
+      const revModal = document.getElementById("reviewModal");
+      if (revModal && revModal.style.display !== "none") {
+        closeModal();
+      }
+    }
+  });
+}
+
+function initOrderDetailHeaderScroll() {
+  const reviewModal = document.getElementById("reviewModal");
+  if (!reviewModal) return;
+  const detailTopbar = reviewModal.querySelector(".order-detail-topbar");
+  if (!detailTopbar) return;
+
+  if (reviewModal.dataset.headerScrollInit) return;
+  reviewModal.dataset.headerScrollInit = "true";
+  detailTopbar.classList.remove("topbar-hidden");
+  reviewModal.addEventListener("scroll", () => {
+    detailTopbar.classList.toggle("is-scrolled", reviewModal.scrollTop > 20);
+  }, { passive: true });
+}
+window.initOrderDetailHeaderScroll = initOrderDetailHeaderScroll;
+
 function openReview(orderKey) {
   const order = (latestOrders || []).find(o => o && o.key === orderKey) || (typeof lastHistoryOrders !== "undefined" ? (lastHistoryOrders || []).find(o => o && o.key === orderKey) : null);
   if (!order) return;
   reviewingOrder = order;
+
+  const detailTopbar = document.querySelector(".order-detail-topbar");
+  if (detailTopbar) detailTopbar.classList.remove("topbar-hidden", "is-scrolled");
 
   if (typeof unacknowledgedAppends !== "undefined") {
     unacknowledgedAppends.delete(orderKey);
@@ -20,6 +105,9 @@ function openReview(orderKey) {
   const isDineIn = typeof isOrderDineIn === "function" ? isOrderDineIn(order) : order.diningOption === "dine_in";
   const roundCount = Number(order.round_count || order.roundCount) || 1;
   const isAppended = isDineIn && (roundCount > 1 || Boolean(order.lastAppendedAt || order.last_appended_at));
+  const isFinished = ["PICKED_UP", "PAID", "CANCELLED", "REJECTED"].includes(order.status);
+  const lang = window.currentLang || (typeof currentLang !== "undefined" ? currentLang : "zh-TW");
+  const isVi = lang === "vi";
 
   const elPickLabel = document.getElementById("i18n-label-pickup");
   if (elPickLabel) {
@@ -32,34 +120,219 @@ function openReview(orderKey) {
   const elEtaLabel = document.getElementById("i18n-label-eta");
   if (elEtaLabel) elEtaLabel.innerText = isDineIn ? t("dineInElapsedHeader") : t("labelEta");
 
+  const elRevTitle = document.getElementById("i18n-review-title");
+  if (elRevTitle) {
+    elRevTitle.innerText = (order.status === "NEW")
+      ? (t("reviewTitleNew") || "審核訂單")
+      : (t("reviewTitle") || "訂單詳情");
+  }
+
+  const custName = (order.customer && order.customer.trim()) || (typeof t === "function" ? (t("guest") || "顧客") : "顧客");
+  const elCustHeader = document.getElementById("review-customer-header");
+  if (elCustHeader) elCustHeader.innerText = custName;
+
+  const elKeyBadge = document.getElementById("review-order-key-badge");
+  if (elKeyBadge) {
+    elKeyBadge.innerText = (order.displayKey || order.key || "-").replace(/^#/, "");
+  }
+
+  const elCustAvatar = document.getElementById("review-customer-avatar");
+  if (elCustAvatar) {
+    elCustAvatar.innerText = custName ? custName.charAt(0).toUpperCase() : "👤";
+  }
+
   const elKey = document.getElementById("review-order-key");
   if (elKey) elKey.innerText = order.displayKey || order.key || "-";
   const elCust = document.getElementById("review-customer");
-  if (elCust) elCust.innerText = order.customer || "-";
+  if (elCust) {
+    elCust.innerText = order.customer ? order.customer.trim() : "-";
+  }
+
+  const elCustSub = document.getElementById("review-customer-sub");
+  if (elCustSub) {
+    const tableNum = typeof getOrderTableNumber === "function" ? getOrderTableNumber(order) : (order.tableNumber || "");
+    const diningText = isDineIn
+      ? (tableNum ? (lang === 'vi' ? `Bàn ${tableNum}` : `桌號 ${tableNum}`) : (t('dineIn') || (lang === 'vi' ? "Dùng tại quán" : "內用")))
+      : (t('takeaway') || (lang === 'vi' ? "Mang đi" : "外帶"));
+    if (order.phone) {
+      elCustSub.innerText = `${diningText} · ${order.phone}`;
+    } else {
+      elCustSub.innerText = diningText;
+    }
+  }
+
   const elPick = document.getElementById("review-pickup");
-  if (elPick) elPick.innerText = isDineIn ? formatDineInTimeDisplay(order) : formatPickupTimeDisplay(order.time);
+  const clockSvg = (typeof POS_SVG !== "undefined" && POS_SVG.clock) || "";
+  const pickTimeStr = isDineIn
+    ? (typeof formatDineInTimeDisplay === "function" ? formatDineInTimeDisplay(order) : (typeof formatOrderSubmissionTime === "function" ? formatOrderSubmissionTime(order) : formatPickupTimeDisplay(order.time)))
+    : formatPickupTimeDisplay(order.time, order.createdAt, order.content);
+
+  if (elPick) {
+    elPick.innerHTML = `${clockSvg}<span>${escapeHtml(pickTimeStr)}</span>`;
+  }
+
+  let etaText = "";
+  if (isFinished) {
+    if (order.status === "PICKED_UP") etaText = isVi ? (t("statusPillPicked") || "Đã giao hàng") : (t("statusPillPicked") || "已取餐");
+    else if (order.status === "PAID") etaText = isVi ? (t("statusPillPaid") || "Đã hoàn thành") : (t("statusPillPaid") || "已結帳");
+    else etaText = isVi ? (t("statusPillRejected") || "Đã hủy") : (t("statusPillRejected") || "已取消");
+  } else {
+    etaText = isDineIn
+      ? (typeof formatSubmissionElapsedTime === "function" ? formatSubmissionElapsedTime(order) : formatDineInElapsedTime(order))
+      : formatEta(order.time);
+  }
+
   const elEta = document.getElementById("review-eta");
   if (elEta) {
-    elEta.innerText = isDineIn ? formatDineInElapsedTime(order) : formatEta(order.time);
-    elEta.style.color = isDineIn ? "#7c3aed" : "var(--brand-red)";
+    elEta.innerText = etaText;
+    if (isFinished) {
+      elEta.className = "timing-card-val";
+      elEta.style.color = order.status === "PICKED_UP" || order.status === "PAID" ? "#059669" : "#64748b";
+    } else if (isDineIn) {
+      elEta.className = "timing-card-val timing-eta-dinein";
+      elEta.style.color = "#7c3aed";
+    } else {
+      const targetMs = parsePickupTimeMs(order.time);
+      const diffMin = Math.round((targetMs - Date.now()) / 60000);
+      if (!Number.isNaN(targetMs) && diffMin <= 0) {
+        elEta.className = "timing-card-val timing-eta-overdue";
+        elEta.style.color = "var(--brand-red, #dc2626)";
+      } else if (!Number.isNaN(targetMs) && diffMin <= 15) {
+        elEta.className = "timing-card-val timing-eta-urgent";
+        elEta.style.color = "#ea580c";
+      } else {
+        elEta.className = "timing-card-val";
+        elEta.style.color = "var(--brand-red, #dc2626)";
+      }
+    }
   }
+
+  // Pickup time and ETA are kept in the right timing card; left meta bar displays item count only
+  const elMetaPickup = document.getElementById("review-meta-pickup");
+  const elMetaPickupDivider = document.getElementById("review-meta-pickup-divider");
+  if (elMetaPickup) elMetaPickup.style.display = "none";
+  if (elMetaPickupDivider) elMetaPickupDivider.style.display = "none";
+
   const elTot = document.getElementById("review-total");
   if (elTot) elTot.innerText = formatOrderTotal(order);
+
+  // Check if there is an item subtotal vs total discrepancy (discount / combo savings)
+  let itemsSubtotal = 0;
+  if (typeof PrinterService !== "undefined" && typeof PrinterService.parseOrderItems === "function") {
+    const parsedItems = PrinterService.parseOrderItems(order, false) || [];
+    parsedItems.forEach(it => {
+      let linePrice = Number(String(it.price || "").replace(/[^0-9.]/g, '')) || 0;
+      if (linePrice === 0) {
+        const unitNum = Number(String(it.unitPrice || "").replace(/[^0-9.]/g, '')) || 0;
+        const q = Math.max(1, Number(it.quantity) || 1);
+        if (unitNum > 0) {
+          linePrice = unitNum * q;
+        } else if (it.name && typeof lookupItemPrice === "function") {
+          const lp = lookupItemPrice(it.name);
+          if (lp != null && Number(lp) > 0) {
+            linePrice = Number(lp) * q;
+          }
+        }
+      }
+      if (linePrice > 0) {
+        itemsSubtotal += linePrice;
+      }
+    });
+  } else if (Array.isArray(order?.items) && order.items.length > 0) {
+    order.items.forEach(it => {
+      const q = Math.max(1, Number(it.quantity) || 1);
+      const sub = Number(it.subtotal);
+      if (!isNaN(sub) && sub > 0) {
+        itemsSubtotal += sub;
+      } else {
+        const p = Number(it.price ?? it.unit_price ?? it.unitPrice) || 0;
+        itemsSubtotal += p * q;
+      }
+    });
+  }
+
+  let finalTotalNum = 0;
+  if (order?.total !== undefined && order?.total !== null && !isNaN(order.total) && Number(order.total) > 0) {
+    finalTotalNum = Number(order.total);
+  } else if (order?.content) {
+    const match = String(order.content).match(/💰\s*總金額[：:]\s*\$?(\d+)/) || String(order.content).match(/Tổng\s*(?:tiền)?[：:]\s*(\d+)/i);
+    if (match) {
+      finalTotalNum = Number(match[1]);
+    }
+  }
+
+  const subtotalRow = document.getElementById("review-subtotal-row");
+  const discountRow = document.getElementById("review-discount-row");
+  const elSubtot = document.getElementById("review-subtotal");
+  const elDiscount = document.getElementById("review-discount");
+
+  if (itemsSubtotal > finalTotalNum && finalTotalNum > 0) {
+    const discountAmount = itemsSubtotal - finalTotalNum;
+    if (subtotalRow) subtotalRow.style.display = "flex";
+    if (discountRow) discountRow.style.display = "flex";
+    if (elSubtot) elSubtot.innerText = `$${itemsSubtotal.toLocaleString()}`;
+    if (elDiscount) elDiscount.innerText = `-$${discountAmount.toLocaleString()}`;
+  } else {
+    // Normal order without discount: hide subtotal & discount rows so merchant sees only one clean "Tổng cộng"
+    if (subtotalRow) subtotalRow.style.display = "none";
+    if (discountRow) discountRow.style.display = "none";
+  }
+
   const elSt = document.getElementById("review-status");
-  if (elSt) elSt.innerText = order.status || "-";
+  const elStatusTitle = document.getElementById("review-status-title");
+  let statusText = order.status || "-";
+  let statusCls = "status-pill-default";
+
+  if (order.status === "NEW") {
+    statusText = t("statusPillNew") || (lang === "vi" ? "Chờ xác nhận" : "待處理");
+    statusCls = "status-pill-new";
+  } else if (order.status === "ACCEPTED") {
+    statusText = t("statusPillAccepted") || (lang === "vi" ? "Đang làm" : "製作中");
+    statusCls = "status-pill-accepted";
+  } else if (order.status === "DONE") {
+    statusText = t("statusPillDone") || (lang === "vi" ? (isDineIn ? "Chờ hoàn thành" : "Chờ lấy món") : "待取餐");
+    statusCls = "status-pill-done";
+  } else if (order.status === "PICKED_UP") {
+    statusText = t("statusPillPicked") || (lang === "vi" ? "Đã giao hàng" : "已取餐");
+    statusCls = "status-pill-picked";
+  } else if (order.status === "PAID") {
+    statusText = t("statusPillPaid") || (lang === "vi" ? "Đã hoàn thành" : "已結帳");
+    statusCls = "status-pill-paid";
+  } else if (order.status === "REJECTED" || order.status === "CANCELLED") {
+    statusText = t("statusPillRejected") || (lang === "vi" ? "Đã hủy" : "已取消");
+    statusCls = "status-pill-rejected";
+  } else if (order.status === "WAITING_CUSTOMER_CHANGE" || order.status === "WAITING_CUSTOMER_REJECT") {
+    statusText = t("statusPillWaiting") || (lang === "vi" ? "Chờ khách xác nhận" : "待客人確認");
+    statusCls = "status-pill-waiting";
+  }
+
+  if (elSt) {
+    elSt.className = `status-pill ${statusCls}`;
+    elSt.innerText = statusText;
+  }
+  if (elStatusTitle) {
+    elStatusTitle.innerText = statusText;
+  }
+
+  const elTimeDisplay = document.getElementById("review-time-display");
+  if (elTimeDisplay) {
+    elTimeDisplay.innerText = formatOrderDetailHeaderTime(order.time || order.created_at);
+  }
+
   const elDining = document.getElementById("review-dining");
   if (elDining) {
     const tableNum = typeof getOrderTableNumber === "function" ? getOrderTableNumber(order) : (order.tableNumber || "");
-    const lang = window.currentLang || (typeof currentLang !== "undefined" ? currentLang : "zh-TW");
     const tableSuffix = tableNum ? (lang === 'vi' ? ` · Bàn ${tableNum}` : ` · 桌號 ${tableNum}`) : "";
     const svgDineIn = (typeof POS_SVG !== "undefined" && POS_SVG.dineIn) || "";
     const svgTakeaway = (typeof POS_SVG !== "undefined" && POS_SVG.takeaway) || "";
     elDining.innerHTML = isDineIn
-      ? `<span style="color:#6d28d9; font-weight:1000;">${svgDineIn}${t('dineIn')}${escapeHtml(tableSuffix)}</span>`
-      : `<span style="color:#047857; font-weight:1000;">${svgTakeaway}${t('takeaway')}</span>`;
+      ? `<span class="dining-pill dine-in">${svgDineIn}${t('dineIn')}${escapeHtml(tableSuffix)}</span>`
+      : `<span class="dining-pill takeaway">${svgTakeaway}${t('takeaway')}</span>`;
   }
+
   const elCont = document.getElementById("review-content");
   if (elCont) elCont.innerHTML = formatContentHtml(order);
+  if (typeof updatePrintActionAvailability === "function") updatePrintActionAvailability();
 
   if (typeof ensureTenantCustomizations === "function") {
     ensureTenantCustomizations().then(custs => {
@@ -67,6 +340,24 @@ function openReview(orderKey) {
         if (elCont) elCont.innerHTML = formatContentHtml(reviewingOrder);
       }
     });
+  }
+
+  // Dynamic 3-level Print Macro Bar Label
+  let parsedItems = (typeof PrinterService !== "undefined" && typeof PrinterService.parseOrderItems === "function")
+    ? PrinterService.parseOrderItems(order, true)
+    : [];
+  if (parsedItems && Array.isArray(parsedItems) && typeof isOrderMetadataText === "function") {
+    parsedItems = parsedItems.filter(it => it && it.name && !isOrderMetadataText(it.name));
+  }
+  const itemCount = (parsedItems && parsedItems.length) || 1;
+  const elItemsCount = document.getElementById("review-items-count");
+  if (elItemsCount) {
+    elItemsCount.innerText = isVi ? `${itemCount} món` : `${itemCount} 項`;
+  }
+
+  const btnFullLabel = document.getElementById("i18n-btn-print-full");
+  if (btnFullLabel) {
+    btnFullLabel.innerHTML = (typeof t === "function" && t("btnPrintFullOrder", { n: itemCount })) || (isVi ? `IN CẢ ĐƠN<br>(1 Bill + ${itemCount} Tem)` : `整單全印<br>(明細+標籤）`);
   }
 
   const actionsNew = document.getElementById("review-actions");
@@ -86,21 +377,34 @@ function openReview(orderKey) {
   } else if (order.status === "DONE") {
     if (actionsDone) actionsDone.style.display = "grid";
     const btnPik = document.getElementById("btn-review-picked");
-    const btnPaid = document.getElementById("btn-review-paid");
-    if (isDineIn) {
-      if (btnPik) btnPik.style.display = "none";
-      if (btnPaid) btnPaid.style.display = "inline-flex";
-    } else {
-      if (btnPik) btnPik.style.display = "inline-flex";
-      if (btnPaid) btnPaid.style.display = "none";
+    if (btnPik) {
+      btnPik.style.display = "inline-flex";
+      const span = btnPik.querySelector("span");
+      if (span) {
+        if (isDineIn) {
+          span.textContent = lang === "vi" ? "Đã xong" : "已完成";
+        } else {
+          span.textContent = lang === "vi" ? (t("btnPickedUp") || "Đã lấy") : (t("btnPickedUp") || "已取餐");
+        }
+      }
     }
   } else if (order.status === "WAITING_CUSTOMER_CHANGE" || order.status === "WAITING_CUSTOMER_REJECT") {
     if (actionsWaiting) actionsWaiting.style.display = "grid";
   }
 
   const revModal = document.getElementById("reviewModal");
-  if (revModal) revModal.style.display = "flex";
+  if (revModal) {
+    showModalFromTop(revModal);
+  }
 }
+
+function completeOrderFromReview(btn) {
+  if (!reviewingOrder) return;
+  const isDineIn = typeof isOrderDineIn === "function" ? isOrderDineIn(reviewingOrder) : reviewingOrder.diningOption === "dine_in";
+  const targetStatus = isDineIn ? "PAID" : "PICKED_UP";
+  updateStatus(reviewingOrder.key, targetStatus, {}, btn).then(() => closeModal());
+}
+window.completeOrderFromReview = completeOrderFromReview;
 
 function selectChangeReason(val) {
   const sel = document.getElementById("change-reason");
@@ -222,6 +526,7 @@ async function fetchTenantMenuItems() {
     return tenantMenuItemsCache;
   }
   const tenantId = getTenantIdFromUrl();
+  if (!tenantId) return [];
   try {
     const res = await fetch(`${WORKER_BASE}/api/tenant/bootstrap?tenant_id=${tenantId}&_t=${Date.now()}`);
     if (res.ok) {
@@ -322,7 +627,7 @@ function reviewOpenChange() {
   onChangeReasonChange();
   renderTimePresets();
   applyTimePreset(10);
-  document.getElementById("changeModal").style.display = "flex";
+  showModalFromTop(document.getElementById("changeModal"));
 }
 
 function reviewOpenReject() {
@@ -334,7 +639,7 @@ function reviewOpenReject() {
   currentOrderKey = savedKey;           // Restore after closeModal
   document.getElementById("reject-reason").selectedIndex = 0;
   selectRejectReason("今日已售完");
-  document.getElementById("rejectModal").style.display = "flex";
+  showModalFromTop(document.getElementById("rejectModal"));
 }
 
 function onChangeReasonChange() {
@@ -386,12 +691,353 @@ async function confirmAction(type, btn) {
   closeModal();
 }
 
-function openBlabContactModal() {
+function openBlabContactModal(topic = 'general') {
   const modal = document.getElementById("blabContactModal");
-  if (modal) modal.style.display = "flex";
+  if (!modal) return;
+
+  const currentLang = (typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW');
+  const dict = (typeof I18N !== 'undefined' && I18N[currentLang]) ? I18N[currentLang] : (window.I18N ? window.I18N['zh-TW'] : {});
+
+  const bannerEl = document.getElementById("blab-contact-context-banner");
+  const titleEl = document.getElementById("blab-context-banner-title");
+  const descEl = document.getElementById("blab-context-banner-desc");
+  const iconEl = document.getElementById("blab-context-banner-icon");
+
+  if (bannerEl && titleEl && descEl) {
+    if (topic === 'history') {
+      bannerEl.style.display = "flex";
+      bannerEl.style.background = "#f0fdf4";
+      bannerEl.style.borderColor = "#86efac";
+      if (iconEl) {
+        iconEl.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"></path><path d="M1 3h22v5H1z"></path><path d="M10 12h4"></path></svg>`;
+      }
+      titleEl.innerText = dict.blabContextHistoryTitle || (currentLang === 'vi' ? "Tra cứu dữ liệu lịch sử > 30 ngày" : "歷史訂單進階調閱");
+      descEl.innerText = dict.blabContextHistoryDesc || (currentLang === 'vi' ? "Hệ thống hiển thị dữ liệu 30 ngày gần nhất. Dữ liệu trên 30 ngày được lưu trữ an toàn trên đám mây, quý khách cần tra cứu hoặc xuất báo cáo đối soát vui lòng liên hệ chuyên viên qua kênh dưới đây." : "系統預設提供近 30 天即時訂單記錄。超過 30 天之歷史資料封存於雲端資料庫，如需查詢或匯出完整財務報表，請透過下方管道聯繫技術團隊為您處理。");
+    } else if (topic === 'upgrade') {
+      bannerEl.style.display = "flex";
+      bannerEl.style.background = "#faf5ff";
+      bannerEl.style.borderColor = "#d8b4fe";
+      if (iconEl) {
+        iconEl.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9333ea" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>`;
+      }
+      titleEl.innerText = dict.blabContextUpgradeTitle || (currentLang === 'vi' ? "Mở khóa tính năng & Nâng cấp gói" : "方案升級與功能解鎖");
+      descEl.innerText = dict.blabContextUpgradeDesc || (currentLang === 'vi' ? "Để kích hoạt các tính năng nâng cao (Ăn tại quán, Báo cáo doanh thu chuyên sâu), chuyên viên BLAB luôn sẵn sàng tư vấn và kích hoạt cho quý quán trong 5 phút." : "如需開通「內用接單」或「銷量與營收報表分析」等進階模組，專員將於 5 分鐘內為您提供說明並線上開通。");
+    } else {
+      bannerEl.style.display = "flex";
+      bannerEl.style.background = "#f8fafc";
+      bannerEl.style.borderColor = "#e2e8f0";
+      if (iconEl) {
+        iconEl.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`;
+      }
+      titleEl.innerText = dict.blabContextSupportTitle || (currentLang === 'vi' ? "Kênh kết nối kỹ thuật trực tiếp" : "即時專屬支援管道");
+      descEl.innerText = dict.blabContextSupportDesc || (currentLang === 'vi' ? "Quý quán gặp sự cố vận hành, lỗi kết nối máy in hoặc cần hỗ trợ thao tác, vui lòng kết nối ngay với đội ngũ kỹ thuật BLAB." : "門市營運遇到疑問、出單機連線異常或需要功能協助，歡迎隨時透過下方官方管道與我們聯繫。");
+    }
+  }
+
+  showModalFromTop(modal);
 }
 
 function closeBlabContactModal() {
   const modal = document.getElementById("blabContactModal");
   if (modal) modal.style.display = "none";
 }
+
+function openPrinterGuideModal() {
+  const modal = document.getElementById("printerGuideModal");
+  if (modal) showModalFromTop(modal);
+}
+
+function closePrinterGuideModal() {
+  const modal = document.getElementById("printerGuideModal");
+  if (modal) modal.style.display = "none";
+}
+
+function showStoreActivationModal() {
+  const modal = document.getElementById("storeActivationModal");
+  if (!modal) return;
+  // If already displayed, do not re-initialize or steal focus from active inputs
+  if (modal.style.display === "flex") return;
+  showModalFromTop(modal);
+
+  const inpTenant = document.getElementById("activation-tenant-id");
+  const inpPin = document.getElementById("activation-pin");
+  const errDiv = document.getElementById("activation-error-msg");
+
+  if (inpTenant) {
+    const saved = (typeof localStorage !== "undefined" && localStorage.getItem("pos_device_tenant_id")) || "";
+    if (saved) {
+      inpTenant.value = saved;
+      if (inpPin) inpPin.focus();
+    } else {
+      inpTenant.focus();
+    }
+  }
+  if (inpPin && (!inpTenant || !inpTenant.value)) inpPin.value = "";
+  if (errDiv) {
+    errDiv.style.display = "none";
+    errDiv.innerText = "";
+  }
+}
+
+function closeStoreActivationModal() {
+  const modal = document.getElementById("storeActivationModal");
+  if (modal) modal.style.display = "none";
+}
+
+async function submitStoreActivation(e) {
+  if (e && e.preventDefault) e.preventDefault();
+
+  const inpTenant = document.getElementById("activation-tenant-id");
+  const inpPin = document.getElementById("activation-pin");
+  const btnSubmit = document.getElementById("btn-submit-activation");
+  const btnText = document.getElementById("i18n-btn-submit-activation-text");
+  const errDiv = document.getElementById("activation-error-msg");
+
+  const tenantId = inpTenant ? inpTenant.value.trim().toLowerCase() : "";
+  const pin = inpPin ? inpPin.value.trim() : "";
+
+  if (!tenantId || !pin) {
+    if (errDiv) {
+      errDiv.innerText = (typeof t === "function" && t("activationErrorRequired")) || "請完整填寫門市代碼與管理 PIN 碼。";
+      errDiv.style.display = "block";
+    }
+    return;
+  }
+
+  // Loading state
+  if (btnSubmit) btnSubmit.disabled = true;
+  if (btnText) btnText.innerText = (typeof t === "function" && t("btnVerifying")) || "正在驗證中...";
+  if (errDiv) {
+    errDiv.style.display = "none";
+    errDiv.innerText = "";
+  }
+
+  try {
+    const workerUrl = typeof WORKER_BASE !== "undefined" ? WORKER_BASE : "https://benmi-worker-official.thuanmnc.workers.dev";
+    const res = await fetch(`${workerUrl}/api/auth?pw=${encodeURIComponent(pin)}&tenant_id=${encodeURIComponent(tenantId)}`);
+    const data = await res.json().catch(() => ({ ok: false }));
+
+    if (res.ok && data && data.ok) {
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem("pos_device_tenant_id", tenantId);
+        try {
+          const bootRes = await fetch(`${workerUrl}/api/tenant/bootstrap?tenant_id=${tenantId}&_t=${Date.now()}`);
+          if (bootRes.ok) {
+            const bootData = await bootRes.json();
+            if (bootData.tenant) {
+              localStorage.setItem("tenant_branding_" + tenantId, JSON.stringify(bootData.tenant));
+              localStorage.setItem("tenant_theme_" + tenantId, JSON.stringify(bootData.tenant));
+            }
+          }
+        } catch (err) {}
+      }
+
+      closeStoreActivationModal();
+
+      // Reload with query param to ensure clean bootstrap
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.set("tenant", tenantId);
+      window.location.href = currentUrl.toString();
+    } else {
+      if (errDiv) {
+        if (data && data.error === "invalid_tenant") {
+          errDiv.innerText = (typeof t === "function" && t("activationErrorTenantNotFound")) || "門市代碼不存在或已停用，請重新確認。";
+        } else if (data && data.error === "invalid_password") {
+          errDiv.innerText = (typeof t === "function" && t("activationErrorWrongPin")) || "管理 PIN 碼錯誤，請重新確認。";
+        } else {
+          errDiv.innerText = (data && data.message) || (typeof t === "function" && t("activationErrorInvalid")) || "門市代碼或管理 PIN 碼錯誤，請重新確認。";
+        }
+        errDiv.style.display = "block";
+      }
+    }
+  } catch (err) {
+    if (errDiv) {
+      errDiv.innerText = (typeof t === "function" && t("activationErrorNetwork")) || "連線驗證失敗，請檢查網路連線後重試。";
+      errDiv.style.display = "block";
+    }
+  } finally {
+    if (btnSubmit) btnSubmit.disabled = false;
+    if (btnText) btnText.innerText = (typeof t === "function" && t("btnSubmitActivation")) || "啟用終端並開始接單";
+  }
+}
+
+window.showStoreActivationModal = showStoreActivationModal;
+window.closeStoreActivationModal = closeStoreActivationModal;
+window.submitStoreActivation = submitStoreActivation;
+
+// ==========================================
+// Quick Sticker / Emergency Note Sticker Modal
+// ==========================================
+var quickStickerOrderKey = null;
+
+function openQuickStickerModal(orderKey) {
+  quickStickerOrderKey = orderKey || (typeof reviewingOrder !== "undefined" && reviewingOrder ? reviewingOrder.key : null);
+  const modal = document.getElementById("quickStickerModal");
+  if (modal) showModalFromTop(modal);
+  const customInput = document.getElementById("quick-sticker-custom-input");
+  if (customInput) {
+    customInput.value = "";
+    setTimeout(() => customInput.focus(), 100);
+  }
+  renderQuickStickerOptions();
+}
+
+function closeQuickStickerModal() {
+  const modal = document.getElementById("quickStickerModal");
+  if (modal) modal.style.display = "none";
+  quickStickerOrderKey = null;
+}
+
+function renderQuickStickerOptions() {
+  const container = document.getElementById("quick-sticker-chips-container");
+  if (!container) return;
+
+  const currentLanguage = (typeof currentLang !== "undefined" && currentLang) || (typeof window !== "undefined" && window.currentLang) || "zh-TW";
+  const isVi = currentLanguage === "vi";
+
+  const groups = [];
+
+  // If menu data has modifier categories
+  if (typeof currentMenuData !== "undefined" && Array.isArray(currentMenuData) && currentMenuData.length > 0) {
+    const modCats = currentMenuData.filter(c => c && (c.type === 'modifier' || (c.name && (c.name.includes('辣') || c.name.includes('客製') || c.name.includes('加料') || c.name.includes('甜度') || c.name.includes('冰量') || c.name.toLowerCase().includes('topping') || c.name.toLowerCase().includes('cay') || c.name.toLowerCase().includes('đường')))));
+    modCats.forEach(cat => {
+      if (Array.isArray(cat.items) && cat.items.length > 0) {
+        groups.push({
+          title: cat.name || (isVi ? "Tùy chọn món" : "客製選項"),
+          options: cat.items.map(it => typeof it === 'string' ? it : (it.name || '')).filter(Boolean)
+        });
+      }
+    });
+  }
+
+  // Fallback / Standard F&B Fast-Tap groups if empty or supplementary
+  if (groups.length === 0) {
+    if (isVi) {
+      groups.push({
+        title: (typeof t === "function" && t("quickStickerGroupSpice")) || "Gia vị cay",
+        options: ["Không cay", "Cay nhẹ", "Cay vừa", "Cay nhiều", "Ớt hiểm tươi"]
+      });
+      groups.push({
+        title: (typeof t === "function" && t("quickStickerGroupVeggie")) || "Rau gia vị",
+        options: ["Không ngò / rau mùi", "Không hành tây", "Không đồ chua", "Không hành lá", "Thêm ngò", "Thêm hành"]
+      });
+      groups.push({
+        title: (typeof t === "function" && t("quickStickerGroupIceSugar")) || "Đá & Đường",
+        options: ["Không đá", "Ít đá", "Đá vừa", "Uống nóng", "Không đường", "Ít đường", "50% đường"]
+      });
+      groups.push({
+        title: (typeof t === "function" && t("quickStickerGroupKitchen")) || "Ghi chú bếp",
+        options: ["Để riêng từng món", "Kèm muỗng nĩa", "Nước sốt để riêng", "Làm gấp đơn này", "In lại tem"]
+      });
+    } else {
+      groups.push({
+        title: (typeof t === "function" && t("quickStickerGroupSpice")) || "辣度選項",
+        options: ["不辣", "微辣", "小辣", "中辣", "大辣", "生辣椒"]
+      });
+      groups.push({
+        title: (typeof t === "function" && t("quickStickerGroupVeggie")) || "蔥花與香菜",
+        options: ["不要香菜", "不要洋蔥", "不要酸菜", "不要蔥花", "加量香菜", "加量洋蔥"]
+      });
+      groups.push({
+        title: (typeof t === "function" && t("quickStickerGroupIceSugar")) || "甜度與冰量",
+        options: ["去冰", "微冰", "少冰", "熱飲", "無糖", "微糖", "半糖"]
+      });
+      groups.push({
+        title: (typeof t === "function" && t("quickStickerGroupKitchen")) || "出餐與分裝",
+        options: ["外帶分裝", "餐具另外放", "醬汁另外裝", "先做此單", "補印單品"]
+      });
+    }
+  }
+
+  let html = "";
+  groups.forEach(grp => {
+    html += `
+      <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 12px 14px;">
+        <div style="font-size: 13px; font-weight: 800; color: #64748b; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">${escapeHtml(grp.title)}</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+          ${grp.options.map(opt => `
+            <button type="button" class="btn btn-ghost quick-sticker-chip" style="min-height: 44px; padding: 8px 14px; font-size: 15px; font-weight: 800; border-radius: 8px; background: #ffffff; border: 1.5px solid #cbd5e1; color: #1e293b; cursor: pointer; transition: all 0.15s ease;" onclick="printQuickModifierOption('${escapeHtml(opt)}')">
+              ${escapeHtml(opt)}
+            </button>
+          `).join("")}
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+async function printQuickModifierOption(text) {
+  if (!text) return;
+  const order = (typeof latestOrders !== "undefined" ? latestOrders.find(o => o && o.key === quickStickerOrderKey) : null) || (typeof reviewingOrder !== "undefined" ? reviewingOrder : null);
+  if (typeof PrinterService !== "undefined" && typeof PrinterService.printQuickModifierSticker === "function") {
+    await PrinterService.printQuickModifierSticker(text, order);
+  }
+}
+
+async function printCustomQuickSticker() {
+  const input = document.getElementById("quick-sticker-custom-input");
+  const val = input ? input.value.trim() : "";
+  if (!val) {
+    if (input) input.focus();
+    return;
+  }
+  await printQuickModifierOption(val);
+  if (input) input.value = "";
+}
+
+function updateReviewModalEta(order) {
+  if (!order) return;
+  const revModal = document.getElementById("reviewModal");
+  if (!revModal || revModal.style.display === "none") return;
+
+  const isDineIn = typeof isOrderDineIn === "function" ? isOrderDineIn(order) : order.diningOption === "dine_in";
+  const elEta = document.getElementById("review-eta");
+  if (!elEta) return;
+
+  const isFinished = ["PICKED_UP", "PAID", "CANCELLED", "REJECTED"].includes(order.status);
+  const lang = window.currentLang || (typeof currentLang !== "undefined" ? currentLang : "zh-TW");
+  const isVi = lang === "vi";
+
+  let etaText = "";
+  if (isFinished) {
+    if (order.status === "PICKED_UP") etaText = isVi ? (t("statusPillPicked") || "Đã giao hàng") : (t("statusPillPicked") || "已取餐");
+    else if (order.status === "PAID") etaText = isVi ? (t("statusPillPaid") || "Đã hoàn thành") : (t("statusPillPaid") || "已結帳");
+    else etaText = isVi ? (t("statusPillRejected") || "Đã hủy") : (t("statusPillRejected") || "已取消");
+    elEta.className = "timing-card-val";
+    elEta.style.color = order.status === "PICKED_UP" || order.status === "PAID" ? "#059669" : "#64748b";
+  } else {
+    etaText = isDineIn
+      ? (typeof formatSubmissionElapsedTime === "function" ? formatSubmissionElapsedTime(order) : formatDineInElapsedTime(order))
+      : formatEta(order.time);
+
+    if (isDineIn) {
+      elEta.className = "timing-card-val timing-eta-dinein";
+      elEta.style.color = "#7c3aed";
+    } else {
+      const targetMs = parsePickupTimeMs(order.time);
+      const diffMin = Math.round((targetMs - Date.now()) / 60000);
+      if (!Number.isNaN(targetMs) && diffMin <= 0) {
+        elEta.className = "timing-card-val timing-eta-overdue";
+        elEta.style.color = "var(--brand-red, #dc2626)";
+      } else if (!Number.isNaN(targetMs) && diffMin <= 15) {
+        elEta.className = "timing-card-val timing-eta-urgent";
+        elEta.style.color = "#ea580c";
+      } else {
+        elEta.className = "timing-card-val";
+        elEta.style.color = "var(--brand-red, #dc2626)";
+      }
+    }
+  }
+
+  elEta.innerText = etaText;
+}
+window.updateReviewModalEta = updateReviewModalEta;
+
+window.openQuickStickerModal = openQuickStickerModal;
+window.closeQuickStickerModal = closeQuickStickerModal;
+window.renderQuickStickerOptions = renderQuickStickerOptions;
+window.printQuickModifierOption = printQuickModifierOption;
+window.printCustomQuickSticker = printCustomQuickSticker;
+

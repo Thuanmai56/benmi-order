@@ -8,6 +8,7 @@ import { getTenantId } from './menu';
 
 import { TenantContext, tenantHasFeature, resolveTenantOrderPrefix, generateStandardOrderId } from '../types/tenant';
 import { resolveTenantContext } from './tenant';
+import { attachOrderPrintItems } from './order-print-items';
 
 function jsonWithETag(data: any, version: string, status: number = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -27,17 +28,24 @@ export function formatItemsToText(items: OrderItemInput[]): string {
     const qty = Number(item.quantity) || 1;
     let line = `${qty}份 x ${item.name}`;
 
-    if (item.bundleSelections) {
+    const rawBundle = item.bundleSelections || item.bundle_snapshot_json;
+    if (rawBundle) {
       try {
-        const bData = typeof item.bundleSelections === 'string' ? JSON.parse(item.bundleSelections) : item.bundleSelections;
+        const bData = typeof rawBundle === 'string' ? JSON.parse(rawBundle) : rawBundle;
         const portions: any[] = bData.portions || (Array.isArray(bData) ? (bData[0]?.groups ? bData : [{ groups: bData }]) : []);
         if (portions.length > 0) {
           portions.forEach((portion: any, pIdx: number) => {
-            const portionPrefix = portions.length > 1 ? `第${pIdx + 1}份 ` : '';
+            const pNum = typeof portion.portionIndex === 'number' ? portion.portionIndex + 1 : pIdx + 1;
+            const portionPrefix = portions.length > 1 ? `第${pNum}份 ` : '';
             const groups = portion.groups || [];
             groups.forEach((g: any) => {
               const groupName = g.groupName || g.group_name || '';
-              const gItems = (g.items || []).map((it: any) => `${it.name} x${it.quantity || 1}`).join('、');
+              const gItems = (g.items || []).map((it: any) => {
+                const bQty = Number(it.quantity) || 1;
+                const sur = Number(it.surcharge || it.price || 0);
+                const surStr = sur > 0 ? ` (+$${sur})` : '';
+                return `${it.name} x${bQty}${surStr}`;
+              }).join('、');
               if (gItems) {
                 const label = groupName ? `${portionPrefix}${groupName}` : `${portionPrefix}搭配`;
                 line += `\n   ↳ ${label}: ${gItems}`;
@@ -94,7 +102,6 @@ export async function getNextDailyOrderSeq(
   ).bind(tenantId, dateStr, diningOption).first<{ last_seq: number }>();
   if (!res?.last_seq) throw new Error('ORDER_COUNTER_UNAVAILABLE');
   return { key: `${p}${mm}${dd}-${typePrefix}${String(res.last_seq).padStart(3, "0")}`, seq: res.last_seq };
-
 }
 
 export function extractAllOrderSearchNames(rawItems: OrderItemInput[]): string[] {
@@ -102,9 +109,10 @@ export function extractAllOrderSearchNames(rawItems: OrderItemInput[]): string[]
   for (const item of rawItems) {
     if (item.name) names.push(item.name);
     if (item.itemId || item.item_id) names.push((item.itemId || item.item_id)!);
-    if (item.bundleSelections) {
+    const rawBundle = item.bundleSelections || item.bundle_snapshot_json;
+    if (rawBundle) {
       try {
-        const bData = typeof item.bundleSelections === 'string' ? JSON.parse(item.bundleSelections) : item.bundleSelections;
+        const bData = typeof rawBundle === 'string' ? JSON.parse(rawBundle) : rawBundle;
         const portions: any[] = bData.portions || (Array.isArray(bData) ? (bData[0]?.groups ? bData : [{ groups: bData }]) : []);
         for (const p of portions) {
           for (const g of (p.groups || [])) {
@@ -1114,7 +1122,7 @@ export async function getWaitingCount(request: Request, env: Env): Promise<Respo
       }
     }
 
-    const currentVersion = `identity2_${waitingCount}_${lastUpdated}`;
+    const currentVersion = `identity3_items_${waitingCount}_${lastUpdated}`;
 
     const clientETag = request.headers.get("if-none-match")?.replace(/^W\//, '').replace(/"/g, '');
     if (clientETag && clientETag === currentVersion) {
@@ -1193,7 +1201,7 @@ export async function getOrders(request: Request, env: Env): Promise<Response> {
     const lastKey = verRow?.key || "empty";
     const lastStatus = verRow?.status || "none";
     const lastRound = verRow?.round_count || 1;
-    const currentVersion = `identity2_${lastUpdated}_${lastKey}_${lastStatus}_${lastRound}`;
+    const currentVersion = `identity3_items_${lastUpdated}_${lastKey}_${lastStatus}_${lastRound}`;
 
     // 2. Client gửi Header "If-None-Match" -> So sánh với D1 version
     const clientETag = request.headers.get("if-none-match")?.replace(/^W\//, '').replace(/"/g, '');
@@ -1223,6 +1231,7 @@ export async function getOrders(request: Request, env: Env): Promise<Response> {
     ).bind(tenantId, startOfTodayUTC).all<any>();
 
     const orders = mapOrderRows(results || []);
+    await attachOrderPrintItems(env, tenantId, orders);
     return jsonWithETag(orders, currentVersion);
   } catch (e: any) {
     console.error("[getOrders] D1 error:", e);
@@ -1282,6 +1291,7 @@ export async function getOrdersByDate(request: Request, env: Env): Promise<Respo
     ).bind(tenantId, dateStr).all<any>();
 
     const orders = mapOrderRows(results || []);
+    await attachOrderPrintItems(env, tenantId, orders);
     return json(orders);
   } catch (e: any) {
     console.error("[getOrdersByDate] D1 error:", e);
@@ -1304,6 +1314,7 @@ export async function getHistoryAll(request: Request, env: Env): Promise<Respons
     ).bind(tenantId).all<any>();
 
     const orders = mapOrderRows(results || []);
+    await attachOrderPrintItems(env, tenantId, orders);
     return json(orders);
   } catch (e: any) {
     console.error("[getHistoryAll] D1 error:", e);
@@ -1493,4 +1504,3 @@ export async function getUserLatestActiveOrder(env: Env, tenantId: string, userI
     return { order: null, queueAhead: 0 };
   }
 }
-

@@ -304,6 +304,20 @@ export function buildOrderFlexMessage(
         optionTexts.push(it.notes.trim());
       }
 
+      const isVi = (order.content || "").includes("Đợt") || (order.content || "").includes("Bàn số") || (order.content || "").includes("Mang về");
+
+      // Parse bundle selections
+      const rawBundle = it.bundleSelections || it.bundle_snapshot_json;
+      let bundlePortions: any[] = [];
+      if (rawBundle) {
+        try {
+          const bData = typeof rawBundle === 'string' ? JSON.parse(rawBundle) : rawBundle;
+          bundlePortions = bData.portions || (Array.isArray(bData) ? (bData[0]?.groups ? bData : [{ groups: bData }]) : []);
+        } catch (e) {
+          console.warn("[buildOrderFlexMessage] Failed to parse bundle:", e);
+        }
+      }
+
       const itemBoxContents: any[] = [
         {
           type: "box",
@@ -340,6 +354,70 @@ export function buildOrderFlexMessage(
           ]
         }
       ];
+
+      if (bundlePortions.length > 0) {
+        const bundleRows: any[] = [];
+        bundlePortions.forEach((p: any, pIdx: number) => {
+          const pNum = typeof p.portionIndex === 'number' ? p.portionIndex + 1 : pIdx + 1;
+          const pPrefix = bundlePortions.length > 1 ? (isVi ? `Phần ${pNum}: ` : `第${pNum}份 `) : '';
+          const groups = p.groups || [];
+          groups.forEach((g: any) => {
+            const groupName = g.groupName || g.group_name || (isVi ? 'Món kèm' : '搭配');
+            (g.items || []).forEach((bi: any) => {
+              const bName = bi.name || bi.item_name || '';
+              const bQty = Number(bi.quantity) || 1;
+              const bSur = Number(bi.surcharge || bi.price || 0);
+              const label = `${pPrefix}${groupName}`;
+              
+              bundleRows.push({
+                type: "box",
+                layout: "horizontal",
+                alignItems: "center",
+                contents: [
+                  {
+                    type: "text",
+                    text: label,
+                    size: "xxs",
+                    color: "#64748B",
+                    flex: 2,
+                    wrap: true
+                  },
+                  {
+                    type: "text",
+                    text: `${bName} x${bQty}`,
+                    size: "xs",
+                    color: "#1E293B",
+                    weight: "bold",
+                    flex: 3,
+                    wrap: true
+                  },
+                  {
+                    type: "text",
+                    text: bSur > 0 ? `+$${bSur * bQty}` : " ",
+                    size: "xs",
+                    color: bSur > 0 ? "#0F172A" : "#64748B",
+                    align: "end",
+                    flex: 1
+                  }
+                ]
+              });
+            });
+          });
+        });
+
+        if (bundleRows.length > 0) {
+          itemBoxContents.push({
+            type: "box",
+            layout: "vertical",
+            spacing: "xs",
+            backgroundColor: "#F8FAFC",
+            cornerRadius: "md",
+            paddingAll: "8px",
+            margin: "xs",
+            contents: bundleRows
+          });
+        }
+      }
 
       if (optionTexts.length > 0) {
         itemBoxContents.push({

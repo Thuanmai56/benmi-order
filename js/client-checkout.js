@@ -554,8 +554,9 @@ function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, ma
     for (let key in cart) {
         if (cart[key] > 0) {
             const itemInfo = resolveCatalogItem(key);
-            const { catSlug, origName, displayName } = itemInfo;
-            let itemStr = `${cart[key]}份 x ${displayName}`;
+            const { catSlug, origName, displayName, basePrice } = itemInfo;
+            const pricePart = (typeof basePrice === 'number' && basePrice > 0) ? ` $${basePrice}` : '';
+            let itemStr = `${cart[key]}份 x ${displayName}${pricePart}`;
 
             // Format Universal Bundle Selections
             if (typeof window !== 'undefined' && window.bundleCartData && window.bundleCartData[key]) {
@@ -643,11 +644,16 @@ function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, ma
 // 8.2 Định dạng danh sách món cho luồng Gọi thêm (không kèm tiền tổng hoặc mã đơn ảo)
 function formatAppendItemsOnlyText() {
     const lines = [];
+    const globalFlavor = formatGlobalCustomizationsText();
+    if (globalFlavor) {
+        lines.push(globalFlavor.trim());
+    }
     for (let key in cart) {
         if (cart[key] > 0) {
             const itemInfo = resolveCatalogItem(key);
-            const { catSlug, origName, displayName } = itemInfo;
-            lines.push(`${cart[key]}份 x ${displayName}`);
+            const { catSlug, origName, displayName, basePrice } = itemInfo;
+            const pricePart = (typeof basePrice === 'number' && basePrice > 0) ? ` $${basePrice}` : '';
+            lines.push(`${cart[key]}份 x ${displayName}${pricePart}`);
 
             // Format Universal Bundle Selections
             if (typeof window !== 'undefined' && window.bundleCartData && window.bundleCartData[key]) {
@@ -698,7 +704,7 @@ function formatAppendItemsOnlyText() {
                     if (c.customText && c.customText.trim() !== '') parts.push(c.customText.trim());
 
                     if (parts.length > 0) {
-                        const prefixLabel = cart[key] > 1 ? `第${i + 1}份` : '';
+                        const prefixLabel = cart[key] > 1 ? `第${i + 1}份: ` : '';
                         lines.push(`   ↳ ${prefixLabel}${parts.join('、')}`);
                     }
                 });
@@ -722,10 +728,11 @@ function buildStructuredCartItems() {
             if (cust && Array.isArray(cust)) {
                 cust.slice(0, qty).forEach((c, idx) => {
                     if (!c) return;
+                    const portionPrefix = qty > 1 ? `第${idx + 1}份: ` : '';
                     if (c.single) {
                         for (let s in c.single) {
                             if (c.single[s] && c.single[s] !== '不辣' && c.single[s] !== '不需要') {
-                                options.push({ group: s, choice: c.single[s], price: 0 });
+                                options.push({ group: s, choice: `${portionPrefix}${c.single[s]}`, price: 0 });
                             }
                         }
                     }
@@ -733,18 +740,18 @@ function buildStructuredCartItems() {
                         for (let t in c.multiple) {
                             if (c.multiple[t]) {
                                 const addP = (typeof modPriceMap !== 'undefined' && modPriceMap[t]) ? modPriceMap[t] : 0;
-                                options.push({ group: '客製化', choice: t, price: addP });
+                                options.push({ group: '客製化', choice: `${portionPrefix}${t}`, price: addP });
                             }
                         }
                     }
                     if (c.topping && c.topping !== '') {
-                        options.push({ group: '客製化', choice: c.topping, price: 0 });
+                        options.push({ group: '客製化', choice: `${portionPrefix}${c.topping}`, price: 0 });
                     }
                     if (c.spicy && c.spicy !== '不辣') {
-                        options.push({ group: '辣度', choice: c.spicy, price: 0 });
+                        options.push({ group: '辣度', choice: `${portionPrefix}${c.spicy}`, price: 0 });
                     }
                     if (c.customText && c.customText.trim() !== '') {
-                        options.push({ group: '備註', choice: c.customText.trim(), price: 0 });
+                        options.push({ group: '備註', choice: `${portionPrefix}${c.customText.trim()}`, price: 0 });
                     }
                 });
             }
@@ -865,6 +872,16 @@ async function submitOrder() {
 
     const hasItem = Object.values(cart || {}).some(q => q > 0);
     if (!hasItem) return customAlert('請先選擇餐點品項加入購物車');
+
+    // Minimum spend excludes order-wide add-on charges themselves.
+    updateTotal();
+    const selectedOrderOptions = Array.from(document.querySelectorAll('.custom-panel input[data-price]:checked'));
+    const orderAddons = selectedOrderOptions.reduce((sum, input) => sum + (Number(input.getAttribute('data-price')) || 0), 0);
+    const foodSubtotal = (Number(document.getElementById('total-price')?.innerText) || 0) - orderAddons;
+    const unavailableOption = selectedOrderOptions.find(input => foodSubtotal < (Number(input.getAttribute('data-min-order-amount')) || 0));
+    if (unavailableOption) {
+        return customAlert(`${unavailableOption.getAttribute('data-group-title')}：餐點金額需滿 ${unavailableOption.getAttribute('data-min-order-amount')} 元，請調整餐點或選項。`);
+    }
 
     const twNow = getTaiwanDate();
     const isDineIn = (window.currentDiningOption === 'dine_in');
@@ -1235,6 +1252,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                 note: mainNote,
                 tenant_id: tenantId,
                 items: structuredItems,
+                customizations: getStructuredGlobalCustomizations(),
                 is_desktop: isDesktop,
                 isDesktop: isDesktop
             };

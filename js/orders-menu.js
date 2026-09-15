@@ -6,6 +6,8 @@ let currentMenuData = null;   // Array form for editor
 let rawMenuData = null;       // Original object form from API
 let activeCategoryIndex = -1;
 let isMenuDirty = false;
+let savedMenuSnapshot = null;
+let isMenuSaving = false;
 
 function getBenmiDefaultCategories() {
   return [
@@ -17,31 +19,82 @@ function getBenmiDefaultCategories() {
   ];
 }
 
+function updateMenuSaveState() {
+  const btn = document.getElementById("btn-menu-save");
+  const label = document.getElementById("btn-menu-save-text");
+  if (!btn) return;
+  btn.disabled = isMenuSaving || !isMenuDirty;
+  btn.classList.toggle("has-changes", isMenuDirty);
+  const text = t(isMenuSaving ? "menuSaving" : isMenuDirty ? "btnMenuSave" : "menuSaved");
+  if (label) label.textContent = text;
+  else btn.textContent = text;
+}
+
 function markMenuDirty() {
   isMenuDirty = true;
-  const btn = document.querySelector("#view-menu .btn-primary");
-  if (btn) {
-    btn.style.backgroundColor = "var(--brand-red)";
-    btn.innerText = t("btnMenuDirty");
-  }
+  updateMenuSaveState();
 }
 
 function clearMenuDirty() {
   isMenuDirty = false;
-  const btn = document.querySelector("#view-menu .btn-primary");
-  if (btn) {
-    btn.style.backgroundColor = ""; // revert to CSS default
-    btn.innerText = t("btnMenuSave");
-  }
+  savedMenuSnapshot = JSON.stringify(currentMenuData);
+  updateMenuSaveState();
 }
 
+function confirmLeaveMenu() {
+  if (isMenuSaving) return false;
+  if (!isMenuDirty) return true;
+  if (!confirm(t("menuDiscardConfirm"))) return false;
+  currentMenuData = savedMenuSnapshot ? JSON.parse(savedMenuSnapshot) : null;
+  activeCategoryIndex = currentMenuData?.length ? Math.max(0, Math.min(activeCategoryIndex, currentMenuData.length - 1)) : -1;
+  clearMenuDirty();
+  renderMenuCategories();
+  if (activeCategoryIndex >= 0) renderMenuCategoryEditor(activeCategoryIndex);
+  else {
+    const body = document.getElementById("menu-editor-body");
+    if (body) body.textContent = t("menuSelectPrompt");
+  }
+  return true;
+}
+window.confirmLeaveMenu = confirmLeaveMenu;
+
+// All help disclosures, including dynamically rendered category help.
+document.addEventListener('click', event => {
+  document.querySelectorAll('.menu-help[open]').forEach(help => {
+    if (!help.contains(event.target)) help.open = false;
+  });
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape') document.querySelectorAll('.menu-help[open]').forEach(help => { help.open = false; });
+});
+
+window.addEventListener("beforeunload", event => {
+  if (!isMenuDirty && !isMenuSaving) return;
+  event.preventDefault();
+  event.returnValue = "";
+});
+
 function openMenuSettings() {
+  if (isMenuDirty) syncMenuDataFromDOM();
   activeTab = "menu";
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".mini-btn").forEach(t => t.classList.remove("active"));
+  const tabMenu = document.getElementById("tab-menu");
+  if (tabMenu) tabMenu.classList.add("active");
+  if (typeof updateSidebarActive === "function") {
+    updateSidebarActive("menu");
+  }
   document.querySelectorAll(".content").forEach(c => c.style.display = "none");
   const viewMenu = document.getElementById("view-menu");
   if (viewMenu) viewMenu.style.display = "block";
-  if (!currentMenuData) loadMenuData();
+  if (!currentMenuData) {
+    loadMenuData();
+  } else {
+    renderMenuCategories();
+    if (activeCategoryIndex >= 0) {
+      renderMenuCategoryEditor(activeCategoryIndex);
+    }
+  }
 }
 
 async function loadMenuData() {
@@ -119,8 +172,8 @@ async function loadMenuData() {
 
       categories.push({
         id: 'sec-flavor',
-        title: (typeof t === 'function' && t('customizationManageTitle')) || '整單口味與客製化設定',
-        shortName: '口味選擇',
+        title: currentLang === 'vi' ? 'Tùy chọn khẩu vị & biến thể' : '口味與客製化選擇',
+        shortName: currentLang === 'vi' ? 'Khẩu vị' : '口味選擇',
         type: 'order_customization',
         allowCustomization: false,
         appliedModifiers: [],
@@ -141,15 +194,24 @@ async function loadMenuData() {
       items: []
     }));
 
-    activeCategoryIndex = -1;
+    if (typeof updatePosCatalogPriceMap === 'function') {
+      updatePosCatalogPriceMap(currentMenuData);
+    }
+
+    clearMenuDirty();
+    activeCategoryIndex = currentMenuData.length > 0 ? 0 : -1;
     renderMenuCategories();
-    if (bodyEl) bodyEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;" id="i18n-menu-select-prompt">${t("menuSelectPrompt")}</div>`;
-    const titleEl = document.getElementById("menu-editor-title");
-    if (titleEl) titleEl.innerText = t("menuEditorTitle");
-    const renameBtn = document.getElementById("btn-category-rename");
-    const deleteBtn = document.getElementById("btn-category-delete");
-    if (renameBtn) renameBtn.style.display = "none";
-    if (deleteBtn) deleteBtn.style.display = "none";
+    if (activeCategoryIndex >= 0) {
+      renderMenuCategoryEditor(0);
+    } else {
+      if (bodyEl) bodyEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;" id="i18n-menu-select-prompt">${t("menuSelectPrompt")}</div>`;
+      const titleEl = document.getElementById("menu-editor-title");
+      if (titleEl) titleEl.innerText = t("menuEditorTitle");
+      const renameBtn = document.getElementById("btn-category-rename");
+      const deleteBtn = document.getElementById("btn-category-delete");
+      if (renameBtn) renameBtn.style.display = "none";
+      if (deleteBtn) deleteBtn.style.display = "none";
+    }
   } catch (e) {
     console.warn("Bootstrap load failed, falling back to legacy /api/menu:", e);
     try {
@@ -166,15 +228,23 @@ async function loadMenuData() {
           return { name, price: typeof price === 'object' ? price.price : price, badgeText: typeof price === 'object' ? (price.badge_text || '') : '', isOos, originalName: name };
         })
       }));
-      activeCategoryIndex = -1;
+      if (typeof updatePosCatalogPriceMap === 'function') {
+        updatePosCatalogPriceMap(currentMenuData);
+      }
+      clearMenuDirty();
+      activeCategoryIndex = currentMenuData.length > 0 ? 0 : -1;
       renderMenuCategories();
-      if (bodyEl) bodyEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;" id="i18n-menu-select-prompt">${t("menuSelectPrompt")}</div>`;
-      const titleEl = document.getElementById("menu-editor-title");
-      if (titleEl) titleEl.innerText = t("menuEditorTitle");
-      const renameBtn = document.getElementById("btn-category-rename");
-      const deleteBtn = document.getElementById("btn-category-delete");
-      if (renameBtn) renameBtn.style.display = "none";
-      if (deleteBtn) deleteBtn.style.display = "none";
+      if (activeCategoryIndex >= 0) {
+        renderMenuCategoryEditor(0);
+      } else {
+        if (bodyEl) bodyEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;" id="i18n-menu-select-prompt">${t("menuSelectPrompt")}</div>`;
+        const titleEl = document.getElementById("menu-editor-title");
+        if (titleEl) titleEl.innerText = t("menuEditorTitle");
+        const renameBtn = document.getElementById("btn-category-rename");
+        const deleteBtn = document.getElementById("btn-category-delete");
+        if (renameBtn) renameBtn.style.display = "none";
+        if (deleteBtn) deleteBtn.style.display = "none";
+      }
     } catch (err2) {
       alert(t("menuLoadFail") + err2.message);
     }
@@ -185,7 +255,7 @@ let draggedCategoryIndex = null;
 let isCategoryManagerOpen = false;
 
 function openCategoriesManager() {
-  syncMenuDataFromDOM();
+  if (!confirmLeaveMenu()) return;
   isCategoryManagerOpen = true;
   activeCategoryIndex = -1;
   renderMenuCategories();
@@ -193,7 +263,7 @@ function openCategoriesManager() {
 }
 
 function closeCategoriesManager() {
-  syncMenuDataFromDOM();
+  if (!confirmLeaveMenu()) return;
   isCategoryManagerOpen = false;
   activeCategoryIndex = (currentMenuData && currentMenuData.length > 0) ? 0 : -1;
   renderMenuCategories();
@@ -349,9 +419,10 @@ function renderCategoriesManagerView() {
           <button type="button" class="btn btn-ghost" style="border: 1px solid #cbd5e1; background:#fff; padding: 6px 12px; font-size: 13px; font-weight: 700; border-radius: 8px; display:inline-flex; align-items:center; gap:4px;" onclick="promptRenameCategoryAtIndex(${idx})">${(typeof POS_SVG !== 'undefined' && POS_SVG.edit) || ''} <span>${t("btnCategoryRename")}</span></button>
           <button type="button" class="btn btn-ghost" style="border: 1px solid #fee2e2; background:#fff5f5; color:var(--brand-red); padding: 6px 12px; font-size: 13px; font-weight: 700; border-radius: 8px; display:inline-flex; align-items:center; gap:4px;" onclick="deleteCategoryAtIndex(${idx})">${(typeof POS_SVG !== 'undefined' && POS_SVG.trash) || ''} <span>${t("btnCategoryDelete")}</span></button>
         `;
+      const gripSvg = (typeof POS_SVG !== "undefined" && POS_SVG.grip) || "";
 
       card.innerHTML = `
-        <div class="cat-mgr-drag-handle" title="Kéo rê để đổi thứ tự / 拖曳排序">☰</div>
+        <div class="cat-mgr-drag-handle" title="Kéo rê để đổi thứ tự / 拖曳排序">${gripSvg}</div>
         <div class="cat-mgr-index">#${idx + 1}</div>
         <div class="cat-mgr-info">
           ${badge}
@@ -373,7 +444,8 @@ function renderCategoriesManagerView() {
   const bottomAddBtn = document.createElement("button");
   bottomAddBtn.type = "button";
   bottomAddBtn.className = "cat-mgr-add-btn";
-  bottomAddBtn.innerHTML = `<span>${t("btnAddCategoryBottom")}</span>`;
+  const plusSvg = (typeof POS_SVG !== "undefined" && POS_SVG.plus) || "";
+  bottomAddBtn.innerHTML = `${plusSvg}<span>${t("btnAddCategoryBottom")}</span>`;
   bottomAddBtn.onclick = () => openAddCategoryModal();
   mgrContainer.appendChild(bottomAddBtn);
 
@@ -410,7 +482,8 @@ function renderMenuCategories() {
     `;
 
     div.onclick = () => {
-      syncMenuDataFromDOM();
+      if (index !== activeCategoryIndex && !confirmLeaveMenu()) return;
+      if (index === activeCategoryIndex && isMenuDirty) syncMenuDataFromDOM();
       isCategoryManagerOpen = false;
       activeCategoryIndex = index;
       renderMenuCategories();
@@ -422,8 +495,11 @@ function renderMenuCategories() {
   // Bottom Add Category Button in Left Panel
   const bottomDiv = document.createElement("div");
   bottomDiv.style.padding = "12px 14px";
+  const plusIcon = (typeof POS_SVG !== "undefined" && POS_SVG.plus) || "";
   bottomDiv.innerHTML = `
-    <button type="button" class="btn btn-ghost btn-block" style="border: 1.5px dashed #cbd5e1; background: #f8fafc; color: #475569; font-weight: 800; padding: 9px 12px; border-radius: 8px; font-size: 13px; cursor: pointer; transition: all 0.2s ease;" onclick="openAddCategoryModal()">${t("btnMenuAddCategory")}</button>
+    <button type="button" class="btn btn-ghost btn-block menu-cat-add-bottom" onclick="openAddCategoryModal()">
+      ${plusIcon}<span>${t("btnMenuAddCategory")}</span>
+    </button>
   `;
   container.appendChild(bottomDiv);
 }
@@ -488,26 +564,26 @@ function renderMenuCategoryEditor(index) {
 
     const toggleDiv = document.createElement("div");
     toggleDiv.className = "category-customization-box";
-    toggleDiv.style.cssText = "margin-bottom: 20px; background: #f8fafc; padding: 16px; border-radius: 12px; border: 1.5px solid #e2e8f0;";
+
     
     let modifiersHtml = '';
     if (storeModifiers.length === 0) {
-      modifiersHtml = `<div style="font-size: 13px; color: #94a3b8; padding: 4px 0;">${t("noModifiersInStore")}</div>`;
+      modifiersHtml = `<div class="no-modifiers-hint" style="font-size: 12px; color: #94a3b8; margin: 0; padding: 0; line-height: 1.3;">${t("noModifiersInStore")}</div>`;
     } else {
       modifiersHtml = `
-        <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-          <button type="button" class="btn btn-ghost" style="padding: 6px 12px; font-size: 13px; font-weight: 700; background: #fff; border: 1.5px solid #cbd5e1; border-radius: 8px; cursor: pointer;" onclick="selectAllCategoryModifiers(${index}, true)">${t("btnSelectAll")}</button>
-          <button type="button" class="btn btn-ghost" style="padding: 6px 12px; font-size: 13px; font-weight: 700; background: #fff; border: 1.5px solid #cbd5e1; border-radius: 8px; color: #64748b; cursor: pointer;" onclick="selectAllCategoryModifiers(${index}, false)">${t("btnUnselectAll")}</button>
+        <div style="display: flex; gap: 6px; margin-bottom: 6px;">
+          <button type="button" class="btn btn-ghost" style="padding: 4px 10px; font-size: 12.5px; font-weight: 700; background: #fff; border: 1.5px solid #cbd5e1; border-radius: 6px; cursor: pointer;" onclick="selectAllCategoryModifiers(${index}, true)">${t("btnSelectAll")}</button>
+          <button type="button" class="btn btn-ghost" style="padding: 4px 10px; font-size: 12.5px; font-weight: 700; background: #fff; border: 1.5px solid #cbd5e1; border-radius: 6px; color: #64748b; cursor: pointer;" onclick="selectAllCategoryModifiers(${index}, false)">${t("btnUnselectAll")}</button>
         </div>
-        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
       `;
 
       storeModifiers.forEach(mod => {
         const isModSelected = appliedMods.includes('*') || appliedMods.includes(mod.id);
         const safeModId = mod.id.replace(/'/g, "\\'");
         modifiersHtml += `
-          <label style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; min-height: 48px; background: ${isModSelected ? '#ecfdf5' : '#fff'}; border: 1.5px solid ${isModSelected ? '#10b981' : '#cbd5e1'}; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 700; color: ${isModSelected ? '#065f46' : '#475569'}; user-select: none;">
-            <input type="checkbox" ${isModSelected ? 'checked' : ''} style="width: 20px; height: 20px; accent-color: #10b981; cursor: pointer;" onchange="toggleCategoryModifierItem(${index}, '${safeModId}', this.checked)">
+          <label style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; min-height: 40px; background: ${isModSelected ? '#ecfdf5' : '#fff'}; border: 1.5px solid ${isModSelected ? '#10b981' : '#cbd5e1'}; border-radius: 8px; cursor: pointer; font-size: 13.5px; font-weight: 700; color: ${isModSelected ? '#065f46' : '#475569'}; user-select: none;">
+            <input type="checkbox" ${isModSelected ? 'checked' : ''} style="width: 18px; height: 18px; accent-color: #10b981; cursor: pointer;" onchange="toggleCategoryModifierItem(${index}, '${safeModId}', this.checked)">
             <span>${escapeHtml(mod.title)}</span>
           </label>
         `;
@@ -516,9 +592,9 @@ function renderMenuCategoryEditor(index) {
     }
 
     toggleDiv.innerHTML = `
-      <div style="margin-bottom: 12px;">
-        <div style="font-weight: 800; font-size: 15px; color: #1e293b;" id="i18n-applied-modifiers-title">${t("appliedModifiersTitle")}</div>
-        <div style="font-size: 12px; color: #64748b; margin-top: 2px;" id="i18n-applied-modifiers-desc">${t("appliedModifiersDesc")}</div>
+      <div class="help-title-row" style="margin-bottom: 4px;">
+        <div style="font-weight: 800; font-size: 13.5px; color: #1e293b;" id="i18n-applied-modifiers-title">${t("appliedModifiersTitle")}</div>
+        <details class="menu-help"><summary aria-labelledby="i18n-applied-modifiers-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v6m0 3v1"/></svg></summary><div class="menu-help-text" id="i18n-applied-modifiers-desc">${t("appliedModifiersDesc")}</div></details>
       </div>
       ${modifiersHtml}
     `;
@@ -570,25 +646,39 @@ function renderMenuCategoryEditor(index) {
     const oosBorder = item.isOos ? '#fca5a5' : '#6ee7b7';
     const oosText = item.isOos ? t("stockStatusOutOfStock") : t("stockStatusInStock");
 
+    const gripSvg = (typeof POS_SVG !== "undefined" && POS_SVG.grip) || "⋮⋮";
+    const tagSvg = (typeof POS_SVG !== "undefined" && POS_SVG.tag) || "";
+    const imageSvg = (typeof POS_SVG !== "undefined" && POS_SVG.image) || "";
+    const trashSvg = (typeof POS_SVG !== "undefined" && POS_SVG.trash) || "";
+
     row.innerHTML = `
-      <div class="menu-item-drag">☰</div>
-      <input type="text" class="menu-item-name-input" value="${escapeHtml(item.name)}" data-name-cidx="${index}" data-name-iidx="${iIdx}" oninput="markMenuDirty()"
-        placeholder="${t("newItemPlaceholder")}">
-      <label class="menu-item-price-label">
-        <span>$</span>
-        <input type="number" class="menu-item-price-input" value="${item.price !== null && item.price !== undefined ? item.price : ''}" data-cidx="${index}" data-iidx="${iIdx}" oninput="markMenuDirty()"
-        placeholder="${t("priceHiddenPlaceholder")}">
-      </label>
-      <label class="menu-item-badge-label" title="標籤 / 推薦">
-        <span style="display:inline-flex; align-items:center; color:#ef4444;">${(typeof POS_SVG !== 'undefined' && POS_SVG.tag) || ''}</span>
-        <input type="text" class="menu-item-badge-input" value="${escapeHtml(item.badgeText || '')}" data-badge-cidx="${index}" data-badge-iidx="${iIdx}" oninput="markMenuDirty()"
-          placeholder="標籤/推薦">
-      </label>
+      <div class="menu-item-main-fields">
+        <div class="menu-item-drag" title="Kéo để đổi thứ tự">${gripSvg}</div>
+        <input type="text" class="menu-item-name-input" value="${escapeHtml(item.name)}" data-name-cidx="${index}" data-name-iidx="${iIdx}" oninput="markMenuDirty()"
+          placeholder="${t("newItemPlaceholder")}">
+        <label class="menu-item-price-label">
+          <span class="price-currency">$</span>
+          <input type="number" class="menu-item-price-input" value="${item.price !== null && item.price !== undefined ? item.price : ''}" data-cidx="${index}" data-iidx="${iIdx}" oninput="markMenuDirty()"
+            placeholder="${t("priceHiddenPlaceholder")}">
+        </label>
+        <label class="menu-item-badge-label" title="${t('menuItemBadgePlaceholder')}">
+          <span class="badge-icon">${tagSvg}</span>
+          <input type="text" class="menu-item-badge-input" value="${escapeHtml(item.badgeText || '')}" data-badge-cidx="${index}" data-badge-iidx="${iIdx}" oninput="markMenuDirty()"
+            placeholder="${t('menuItemBadgePlaceholder')}">
+        </label>
+      </div>
       <div class="menu-item-actions">
-        <button class="menu-item-btn" style="background: ${oosBg}; color: ${oosColor}; border: 1px solid ${oosBorder}; display: inline-flex; align-items: center; gap: 5px;"
-          onclick="openStockModal(${index}, ${iIdx})"><span style="width: 7px; height: 7px; border-radius: 50%; background: currentColor; display: inline-block;"></span> <span>${oosText}</span></button>
-        <button class="menu-item-btn btn-ghost" style="border: 1px solid #cbd5e1; background:#fff; display: inline-flex; align-items: center; gap: 4px;" onclick="openImageModal('${cat.id}', '${escapeHtml(item.name)}')">${(typeof POS_SVG !== 'undefined' && POS_SVG.image) || ''} <span>${t("btnItemImage")}</span></button>
-        <button class="menu-item-btn btn-ghost" style="border: 1px solid #fee2e2; background: #fff5f5; color: var(--brand-red); display: inline-flex; align-items: center; gap: 4px;" onclick="removeMenuItemAt(${index}, ${iIdx})">${(typeof POS_SVG !== 'undefined' && POS_SVG.trash) || ''} <span>${t("btnItemDelete")}</span></button>
+        <button type="button" class="menu-item-status-pill ${item.isOos ? 'oos' : 'in-stock'}"
+          onclick="openStockModal(${index}, ${iIdx})" title="${oosText}">
+          <span class="status-dot"></span>
+          <span class="status-text">${oosText}</span>
+        </button>
+        <button type="button" class="btn btn-ghost menu-item-action-btn" onclick="openImageModal('${cat.id}', '${escapeHtml(item.name)}')">
+          ${imageSvg}<span>${t("btnItemImage")}</span>
+        </button>
+        <button type="button" class="btn btn-ghost menu-item-action-btn btn-danger-ghost" onclick="removeMenuItemAt(${index}, ${iIdx})">
+          ${trashSvg}<span>${t("btnItemDelete")}</span>
+        </button>
       </div>
     `;
     itemsContainer.appendChild(row);
@@ -983,16 +1073,15 @@ function serializeMenuData(categories) {
 }
 
 async function saveMenuData(skipConfirm = false) {
-  if (!currentMenuData) return;
+  if (!currentMenuData || isMenuSaving) return;
   if (!skipConfirm && !confirm(t("confirmSaveMenu"))) return;
   syncMenuDataFromDOM();
-
-  // Convert to rich item map format for API
   const output = serializeMenuData(currentMenuData);
-
-  const btn = document.querySelector("#view-menu .btn-primary");
-  const oldText = btn ? btn.innerText : "";
-  if (btn) { btn.innerText = t("menuSaving"); btn.disabled = true; }
+  isMenuSaving = true;
+  updateMenuSaveState();
+  const editor = document.getElementById("menu-editor-body");
+  if (editor) editor.inert = true;
+  document.querySelectorAll(".menu-header-actions, #menu-categories").forEach(el => el.inert = true);
 
   try {
     const res = await fetch(`${WORKER_BASE}/api/menu?tenant_id=${getTenantIdFromUrl()}`, {
@@ -1002,6 +1091,9 @@ async function saveMenuData(skipConfirm = false) {
     });
     if (!res.ok) throw new Error("API returned " + res.status);
     clearMenuDirty();
+    if (typeof updatePosCatalogPriceMap === 'function') {
+      updatePosCatalogPriceMap(currentMenuData);
+    }
     if (!skipConfirm) {
       alert(t("menuSaveSuccess"));
     }
@@ -1009,7 +1101,10 @@ async function saveMenuData(skipConfirm = false) {
   } catch (e) {
     alert(t("menuSaveFail") + e.message);
   } finally {
-    if (btn) { btn.innerText = t("btnMenuSave"); btn.disabled = false; }
+    isMenuSaving = false;
+    if (editor) editor.inert = false;
+    document.querySelectorAll(".menu-header-actions, #menu-categories").forEach(el => el.inert = false);
+    updateMenuSaveState();
   }
 }
 
@@ -1050,6 +1145,7 @@ function selectAllCategoryModifiers(catIndex, selectAll) {
 
 // --- Category Management ---
 function openAddCategoryModal() {
+  if (!confirmLeaveMenu()) return;
   const inp = document.getElementById("add-cat-input-name");
   if (inp) inp.value = "";
   const typeSelect = document.getElementById("add-cat-select-type");
@@ -1079,8 +1175,23 @@ function openAddCategoryModal() {
   const modal = document.getElementById("addCategoryModal");
   if (modal) {
     modal.style.display = "flex";
-    if (inp) setTimeout(() => inp.focus(), 50);
+    // Let the user choose when to open the keyboard on a tablet.
+    const body = modal.querySelector(".modal-body");
+    if (body) body.scrollTop = 0;
+    updateAddCategoryViewport();
   }
+}
+
+function updateAddCategoryViewport() {
+  const modal = document.getElementById("addCategoryModal");
+  if (!modal || modal.style.display === "none") return;
+  const viewport = window.visualViewport;
+  modal.style.height = `${viewport ? viewport.height : window.innerHeight}px`;
+  modal.style.top = `${viewport ? viewport.offsetTop : 0}px`;
+}
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", updateAddCategoryViewport);
+  window.visualViewport.addEventListener("scroll", updateAddCategoryViewport);
 }
 
 function onAddCategoryTypeChange() {
@@ -1140,6 +1251,7 @@ async function confirmAddCategory() {
   };
 
   currentMenuData.push(newCat);
+  markMenuDirty();
   closeAddCategoryModal();
   renderMenuCategories();
 
@@ -1150,8 +1262,8 @@ async function confirmAddCategory() {
     renderMenuCategoryEditor(activeCategoryIndex);
   }
 
-  // Auto-save immediately to database & refresh cache
-  await saveMenuData(true);
+  // A new category remains a draft until the explicit Save action.
+  markMenuDirty();
 }
 
 async function promptRenameCategoryAtIndex(idx) {
@@ -1180,13 +1292,38 @@ async function promptRenameCategoryAtIndex(idx) {
 }
 
 async function deleteCategoryAtIndex(idx) {
-  if (!currentMenuData || !currentMenuData[idx]) return;
+  if (isMenuSaving || !currentMenuData || !currentMenuData[idx]) return;
   const cat = currentMenuData[idx];
   if (!confirm(t("confirmDeleteCategory", { name: cat.title }))) return;
 
   syncMenuDataFromDOM();
+  // Persist only the deletion. Other unsaved edits must remain drafts.
+  const saved = savedMenuSnapshot ? JSON.parse(savedMenuSnapshot) : [];
+  if (saved.some(entry => entry.id === cat.id)) {
+    isMenuSaving = true;
+    updateMenuSaveState();
+    const panels = document.querySelectorAll('.menu-split');
+    panels.forEach(el => { el.inert = true; });
+    try {
+      const remaining = saved.filter(entry => entry.id !== cat.id);
+      const res = await fetch(`${WORKER_BASE}/api/menu?tenant_id=${getTenantIdFromUrl()}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(serializeMenuData(remaining))
+      });
+      if (!res.ok) throw new Error('API returned ' + res.status);
+      savedMenuSnapshot = JSON.stringify(remaining);
+    } catch (error) {
+      alert(t('menuSaveFail') + error.message);
+      return;
+    } finally {
+      isMenuSaving = false;
+      panels.forEach(el => { el.inert = false; });
+      updateMenuSaveState();
+    }
+  }
   currentMenuData.splice(idx, 1);
-  markMenuDirty();
+  isMenuDirty = JSON.stringify(currentMenuData) !== savedMenuSnapshot;
+  updateMenuSaveState();
   renderMenuCategories();
 
   if (isCategoryManagerOpen) {
@@ -1502,3 +1639,16 @@ async function saveStockStatus() {
     alert(t("stockUpdateFail") + e.message);
   }
 }
+
+// Position disclosures in viewport coordinates, outside the category columns.
+document.addEventListener('toggle', event => {
+  const help = event.target;
+  if (!help.matches?.('.menu-help') || !help.open) return;
+  const text = help.querySelector('.menu-help-text');
+  if (!text) return;
+  const anchor = help.getBoundingClientRect();
+  text.style.right = 'auto';
+  text.style.maxWidth = (window.innerWidth - 24) + 'px';
+  text.style.left = Math.max(12, Math.min(anchor.left, window.innerWidth - text.offsetWidth - 12)) + 'px';
+  text.style.top = Math.max(12, Math.min(anchor.bottom, window.innerHeight - text.offsetHeight - 12)) + 'px';
+}, true);

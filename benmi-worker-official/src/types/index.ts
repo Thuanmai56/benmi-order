@@ -13,6 +13,16 @@ export type OrderStatus =
   | 'FORCE_REJECT';
 
 export interface Order {
+  items?: Array<{
+    item_name: string;
+    quantity: number;
+    unit_price: number;
+    subtotal?: number;
+    selected_options: string | null;
+    bundle_snapshot_json?: string | null;
+    notes: string | null;
+    round_number: number;
+  }>;
   /** Stable compatibility key, retained for existing browsers and integrations. */
   key: string;
   /** Immutable server UUID, independent of receipt number and client retry token. */

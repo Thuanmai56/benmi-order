@@ -3,15 +3,19 @@
 // ==========================================
 
 const _coreHostname = window.location.hostname;
+const _coreParams = new URLSearchParams(window.location.search);
+const _forcedEnv = window.POS_BUNDLED_ENV || _coreParams.get("env") || (typeof localStorage !== "undefined" && localStorage.getItem("pos_env_override"));
+
 const _isDev = (
-  _coreHostname === "localhost" ||
-  _coreHostname === "127.0.0.1" ||
+  _forcedEnv === "dev" ||
+  ((_coreHostname === "localhost" || _coreHostname === "127.0.0.1" || !_coreHostname) && _forcedEnv !== "prod") ||
   _coreHostname.startsWith("dev.") ||
   _coreHostname.includes(".dev.") ||
   _coreHostname.includes("-dev.") ||
   _coreHostname.startsWith("dev-")
 );
 const _isStaging = (
+  _forcedEnv === "staging" ||
   _coreHostname.startsWith("staging.") ||
   _coreHostname.includes(".staging.") ||
   _coreHostname.includes("-staging.") ||
@@ -36,23 +40,118 @@ var POS_SVG = {
   settings: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-2px;"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>`,
   tag: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-1px;"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"></path><path d="M7 7h.01"></path></svg>`,
   image: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-1px;"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path></svg>`,
-  plus: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-1px;"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>`
+  plus: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-1px;"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>`,
+  printer: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-1px; margin-right:4px;"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>`,
+  note: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-1px; margin-right:4px; opacity:0.75;"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>`,
+  check: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-2px; margin-right:4px;"><polyline points="20 6 9 17 4 12"></polyline></svg>`,
+  checkAll: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-2px; margin-right:4px;"><polyline points="18 6 7 17 2 12"></polyline><path d="m22 10-7.5 7.5L13 16"></path></svg>`,
+  eye: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-2px; margin-right:4px;"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>`,
+  inbox: `<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg>`,
+  partyCheck: `<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`,
+  user: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-2px; margin-right:4px;"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`,
+  x: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>`,
+  flame: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-2px; margin-right:4px;"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path></svg>`,
+  sparkles: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-2px; margin-right:4px;"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path><path d="M5 3v4"></path><path d="M19 17v4"></path><path d="M3 5h4"></path><path d="M17 19h4"></path></svg>`,
+  copy: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-2px; margin-right:4px;"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path></svg>`,
+  fileText: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-2px; margin-right:4px;"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg>`,
+  search: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-2px; margin-right:4px;"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>`,
+  calendar: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-2px; margin-right:4px;"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect><line x1="16" x2="16" y1="2" y2="6"></line><line x1="8" x2="8" y1="2" y2="6"></line><line x1="3" x2="21" y1="10" y2="10"></line></svg>`,
+  folder: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-2px; margin-right:4px;"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"></path></svg>`,
+  folderOpen: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-2px; margin-right:4px;"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"></path></svg>`,
+  sliders: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-2px; margin-right:4px;"><line x1="4" x2="20" y1="21" y2="21"></line><line x1="4" x2="20" y1="14" y2="14"></line><line x1="4" x2="20" y1="7" y2="7"></line><circle cx="8" cy="7" r="2"></circle><circle cx="16" cy="14" r="2"></circle><circle cx="12" cy="21" r="2"></circle></svg>`,
+  edit: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-2px; margin-right:4px;"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>`,
+  trash: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-2px; margin-right:4px;"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" x2="10" y1="11" y2="17"></line><line x1="14" x2="14" y1="11" y2="17"></line></svg>`,
+  plus: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-2px; margin-right:4px;"><line x1="12" x2="12" y1="5" y2="19"></line><line x1="5" x2="19" y1="12" y2="12"></line></svg>`,
+  image: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-2px; margin-right:4px;"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path></svg>`,
+  grip: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-2px;"><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="19" r="1"></circle></svg>`,
+  save: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-2px; margin-right:4px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>`,
+  settings: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-2px; margin-right:4px;"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>`,
+  tag: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-1px;"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"></path><path d="M7 7h.01"></path></svg>`,
+  bundle: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-1px; margin-right:4px;"><rect width="7" height="7" x="3" y="3" rx="1"></rect><rect width="7" height="7" x="14" y="3" rx="1"></rect><rect width="7" height="7" x="14" y="14" rx="1"></rect><rect width="7" height="7" x="3" y="14" rx="1"></rect></svg>`
 };
 window.POS_SVG = POS_SVG;
 
+function isNativeAppPlatform() {
+  if (typeof window === "undefined") return false;
+  if (typeof window.IS_NATIVE_APP !== "undefined") return window.IS_NATIVE_APP;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const p = params.get("platform");
+    if (p === "app" || params.get("app") === "1") return true;
+    if (p === "web" || params.get("web") === "1") return false;
+    if (window.Capacitor) {
+      if (typeof window.Capacitor.isNativePlatform === "function" && window.Capacitor.isNativePlatform()) return true;
+      if (typeof window.Capacitor.getPlatform === "function" && window.Capacitor.getPlatform() !== "web") return true;
+      if (typeof window.Capacitor.isPluginAvailable === "function" && window.Capacitor.isPluginAvailable("ThermalPrinter")) return true;
+    }
+  } catch (e) {}
+  return false;
+}
+window.isNativeAppPlatform = isNativeAppPlatform;
+
+const _isProd = !_isDev && !_isStaging;
+window._isProdEnv = _isProd;
+
+function shouldHideWebPrinter() {
+  if (typeof window === "undefined") return false;
+  if (isNativeAppPlatform()) return false;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const hp = params.get("hide_printer");
+    if (hp === "1") return true;
+    if (hp === "0") return false;
+    return !!_isProd;
+  } catch (e) {
+    return !!_isProd;
+  }
+}
+window.shouldHideWebPrinter = shouldHideWebPrinter;
+
+function syncPlatformClasses() {
+  const isApp = isNativeAppPlatform();
+  const hideWebPrinter = shouldHideWebPrinter();
+  window.IS_NATIVE_APP = isApp;
+  if (typeof document !== "undefined") {
+    [document.documentElement, document.body].forEach(el => {
+      if (el && el.classList && typeof el.classList.toggle === "function") {
+        el.classList.toggle("is-native-app", isApp);
+        el.classList.toggle("is-web-platform", !isApp);
+        el.classList.toggle("is-prod-env", _isProd);
+        el.classList.toggle("is-non-prod-env", !_isProd);
+        el.classList.toggle("hide-web-printer", hideWebPrinter);
+      }
+    });
+  }
+}
+syncPlatformClasses();
+if (typeof document !== "undefined" && typeof document.addEventListener === "function") {
+  document.addEventListener("DOMContentLoaded", syncPlatformClasses);
+}
+
 function getTenantIdFromUrl() {
   const params = new URLSearchParams(window.location.search);
-  return params.get("tenant") || params.get("tenant_id") || "benmi";
+  const fromUrl = params.get("tenant") || params.get("tenant_id");
+  if (fromUrl && fromUrl.trim()) {
+    return fromUrl.trim();
+  }
+  if (typeof localStorage !== "undefined") {
+    const savedTenant = localStorage.getItem("pos_device_tenant_id");
+    if (savedTenant && savedTenant.trim()) {
+      return savedTenant.trim();
+    }
+  }
+  return "";
 }
 
 function applyTenantBranding(tenant) {
   if (!tenant) return;
-  const brandName = tenant.brandName || "Dashboard";
+  const brandName = tenant.brandName || "Blab POS";
+  window.currentTenantBrandName = tenant.brandName || tenant.name || '';
   const bTitle = document.getElementById('brand-title');
   const bLogo = document.getElementById('brand-logo');
 
-  if (bTitle) bTitle.innerText = `${brandName} Dashboard`;
-  document.title = `${brandName} Dashboard`;
+  if (bTitle) bTitle.innerText = brandName;
+  document.title = `${brandName} POS`;
 
   if (bLogo) {
     if (tenant.logoUrl) {
@@ -73,9 +172,63 @@ function applyTenantBranding(tenant) {
 
 var tenantCustomizations = [];
 window.tenantCustomizations = tenantCustomizations;
+window.tenantItemPriceMap = {};
+
+function updatePosCatalogPriceMap(catalog) {
+  if (!catalog) return;
+  var priceMap = {};
+  var categories = Array.isArray(catalog) ? catalog : Object.values(catalog);
+  categories.forEach(function(cat) {
+    if (cat && Array.isArray(cat.items)) {
+      cat.items.forEach(function(item) {
+        if (item && item.name && typeof item.price === 'number') {
+          var rawName = String(item.name).trim();
+          priceMap[rawName] = item.price;
+          var clean = rawName.replace(/\s*\([^\)]+\)/g, '').trim();
+          if (clean && priceMap[clean] == null) {
+            priceMap[clean] = item.price;
+          }
+        }
+      });
+    }
+  });
+  window.tenantItemPriceMap = Object.assign(window.tenantItemPriceMap || {}, priceMap);
+}
+window.updatePosCatalogPriceMap = updatePosCatalogPriceMap;
+
+function lookupItemPrice(name) {
+  if (!name || typeof name !== 'string') return null;
+  var trimmed = name.trim();
+  var map = window.tenantItemPriceMap || {};
+  if (map[trimmed] != null) return map[trimmed];
+  var clean = trimmed.replace(/\s*\([^\)]+\)/g, '').trim();
+  if (map[clean] != null) return map[clean];
+  if (typeof currentMenuData !== 'undefined' && Array.isArray(currentMenuData)) {
+    for (var i = 0; i < currentMenuData.length; i++) {
+      var cat = currentMenuData[i];
+      if (cat && Array.isArray(cat.items)) {
+        for (var j = 0; j < cat.items.length; j++) {
+          var item = cat.items[j];
+          if (item && (item.name === trimmed || item.name === clean) && typeof item.price === 'number') {
+            return item.price;
+          }
+        }
+      }
+    }
+  }
+  return null;
+}
+window.lookupItemPrice = lookupItemPrice;
 
 async function initTenantBranding() {
   const tenantId = getTenantIdFromUrl();
+  if (!tenantId) {
+    if (typeof showStoreActivationModal === "function") {
+      showStoreActivationModal();
+    }
+    return;
+  }
+
   // 1. Instant Cache Render (0ms latency, eliminates any flash of unstyled content)
   try {
     const cached = localStorage.getItem("tenant_branding_" + tenantId) || localStorage.getItem("tenant_theme_" + tenantId);
@@ -86,6 +239,10 @@ async function initTenantBranding() {
     if (cachedCust) {
       window.tenantCustomizations = JSON.parse(cachedCust);
       tenantCustomizations = window.tenantCustomizations;
+    }
+    const cachedCat = localStorage.getItem("tenant_catalog_" + tenantId);
+    if (cachedCat) {
+      updatePosCatalogPriceMap(JSON.parse(cachedCat));
     }
   } catch(e) {}
 
@@ -110,6 +267,15 @@ async function initTenantBranding() {
         if (window.reviewingOrder && typeof formatContentHtml === "function") {
           const elCont = document.getElementById("review-content");
           if (elCont) elCont.innerHTML = formatContentHtml(window.reviewingOrder);
+        }
+      }
+      if (data.catalog) {
+        try {
+          localStorage.setItem("tenant_catalog_" + tenantId, JSON.stringify(data.catalog));
+        } catch(e) {}
+        updatePosCatalogPriceMap(data.catalog);
+        if (typeof renderAll === "function") {
+          renderAll();
         }
       }
     }
@@ -247,14 +413,10 @@ function formatEta(timeStr) {
 
 function isOrderElapsedMode(order) {
   if (!order) return false;
-  if (typeof isOrderDineIn === "function" && isOrderDineIn(order)) return true;
-  if (typeof allowScheduledPickup !== "undefined" && allowScheduledPickup === false) return true;
-  
-  const timeStr = String(order.time || "").trim();
-  if (!timeStr || timeStr === "-" || timeStr === "Unknown" || timeStr.includes("即刻") || timeStr.includes("現場") || timeStr.includes("Làm ngay")) {
-    return true;
-  }
-  return false;
+  // Scheduling settings affect new orders, not the meaning of existing pickup times.
+  return typeof isOrderDineIn === "function"
+    ? isOrderDineIn(order)
+    : (order.diningOption || order.dining_option) === "dine_in";
 }
 
 function formatOrderSubmissionTime(order) {
@@ -397,14 +559,74 @@ function formatOrderTotal(order) {
   return order?.total !== undefined && order?.total !== null && order?.total !== "" ? `$${order.total}` : "-";
 }
 
+function parsePortionCustomizations(rawOpts) {
+  if (!rawOpts) return null;
+  const str = String(rawOpts).trim();
+  if (!/(?:第\s*[一二三四五六七八九十\d]+\s*份|Phần\s*\d+)/i.test(str)) {
+    return null;
+  }
+
+  const regex = /(?:^|[、\n])\s*(第\s*[一二三四五六七八九十\d]+\s*份|Phần\s*\d+)[:：\s]?\s*/gi;
+  const matches = [];
+  let m;
+  while ((m = regex.exec(str)) !== null) {
+    matches.push({
+      index: m.index,
+      matchLength: m[0].length,
+      label: m[1].replace(/\s+/g, '')
+    });
+  }
+
+  if (matches.length === 0) return null;
+
+  let commonChips = [];
+  if (matches[0].index > 0) {
+    const preContent = str.substring(0, matches[0].index).trim();
+    if (preContent) {
+      commonChips = preContent.split(/[、,，\n]+/).map(s => s.trim()).filter(Boolean);
+    }
+  }
+
+  const portions = [];
+  for (let i = 0; i < matches.length; i++) {
+    const cur = matches[i];
+    const contentStart = cur.index + cur.matchLength;
+    const nextIndex = (i + 1 < matches.length) ? matches[i + 1].index : str.length;
+    const rawContent = str.substring(contentStart, nextIndex).trim();
+    const chips = rawContent.split(/[、,，\n]+/).map(s => s.trim()).filter(Boolean);
+    portions.push({
+      label: cur.label,
+      chips: chips
+    });
+  }
+
+  return portions.length > 0 ? { commonChips, portions } : null;
+}
+window.parsePortionCustomizations = parsePortionCustomizations;
+
 function switchTab(tab) {
+  if (activeTab === "menu" && tab !== "menu" && typeof confirmLeaveMenu === "function" && !confirmLeaveMenu()) return;
+  if (tab === "reports" && isNativeAppPlatform()) {
+    tab = "live";
+  }
   activeTab = tab;
   const tabLive = document.getElementById("tab-live");
   const tabHistory = document.getElementById("tab-history");
   const tabReports = document.getElementById("tab-reports");
+  const tabMenu = document.getElementById("tab-menu");
+  const tabSettings = document.getElementById("tab-settings");
+
   if (tabLive) tabLive.classList.toggle("active", tab === "live");
   if (tabHistory) tabHistory.classList.toggle("active", tab === "history");
   if (tabReports) tabReports.classList.toggle("active", tab === "reports");
+  if (tabMenu) tabMenu.classList.toggle("active", tab === "menu");
+  if (tabSettings) tabSettings.classList.toggle("active", tab === "settings");
+
+  document.querySelectorAll(".mini-btn").forEach(t => t.classList.remove("active"));
+
+  if (typeof updateSidebarActive === "function") {
+    updateSidebarActive(tab);
+  }
 
   const viewLive = document.getElementById("view-live");
   const viewHistory = document.getElementById("view-history");
@@ -415,8 +637,8 @@ function switchTab(tab) {
   if (viewLive) viewLive.style.display = tab === "live" ? "block" : "none";
   if (viewHistory) viewHistory.style.display = tab === "history" ? "block" : "none";
   if (viewReports) viewReports.style.display = tab === "reports" ? "block" : "none";
-  if (viewSettings) viewSettings.style.display = "none";
-  if (viewMenu) viewMenu.style.display = "none";
+  if (viewSettings) viewSettings.style.display = tab === "settings" ? "block" : "none";
+  if (viewMenu) viewMenu.style.display = tab === "menu" ? "block" : "none";
 
   if (tab === "live") {
     renderAll();
@@ -430,12 +652,21 @@ function switchTab(tab) {
     if (typeof fetchReportData === "function") {
       fetchReportData(typeof currentReportRange !== "undefined" ? currentReportRange : "today");
     }
+  } else if (tab === "menu") {
+    if (typeof openMenuSettings === "function") {
+      openMenuSettings();
+    }
+  } else if (tab === "settings") {
+    if (typeof openSettings === "function") {
+      openSettings();
+    }
   }
 }
 
 async function fetchOrders() {
   try {
     const tenantId = getTenantIdFromUrl();
+    if (!tenantId) return;
     const headers = { "X-Tenant-ID": tenantId };
     if (lastOrdersETag) {
       headers["If-None-Match"] = lastOrdersETag;
@@ -500,6 +731,12 @@ async function fetchOrders() {
     if (!isFirstLoad && ((newArrivals.length > 0 && pendingNewOrders.length > 0) || hasNewlyAppendedRound || unacknowledgedAppends.size > 0)) {
       if (typeof startContinuousAlarm === "function") startContinuousAlarm();
     }
+
+    // Auto-print newly arrived orders (with built-in deduplication)
+    if (typeof PrinterService !== "undefined" && pendingNewOrders.length > 0) {
+      PrinterService.handleIncomingOrders(pendingNewOrders);
+    }
+
     isFirstLoad = false;
     if (typeof updateNewAlert === "function") updateNewAlert();
 
@@ -551,6 +788,17 @@ function renderAll() {
   const cRight = document.getElementById("count-right");
   if (cRight) cRight.innerText = String(rightOrders.length);
 
+  const sidebarLiveBadge = document.getElementById("sidebar-live-count");
+  if (sidebarLiveBadge) {
+    const totalLive = leftOrders.length + rightOrders.length;
+    if (totalLive > 0) {
+      sidebarLiveBadge.innerText = String(totalLive);
+      sidebarLiveBadge.style.display = "inline-flex";
+    } else {
+      sidebarLiveBadge.style.display = "none";
+    }
+  }
+
   if (typeof updateDiningFilterStats === "function") {
     updateDiningFilterStats(leftOrders.concat(rightOrders));
   }
@@ -572,6 +820,15 @@ function renderAll() {
       fetchHistoryOrders();
     } else if (typeof renderHistory === "function") {
       renderHistory(historyOrders);
+    }
+  }
+
+  // Keep open Order Detail modal countdown updated dynamically
+  const revModal = document.getElementById("reviewModal");
+  if (revModal && revModal.style.display !== "none" && typeof reviewingOrder !== "undefined" && reviewingOrder) {
+    const updatedReviewOrder = (latestOrders && latestOrders.find(o => o && o.key === reviewingOrder.key)) || reviewingOrder;
+    if (typeof updateReviewModalEta === "function") {
+      updateReviewModalEta(updatedReviewOrder);
     }
   }
 }
@@ -615,6 +872,81 @@ window.fetchOrders = fetchOrders;
 window.renderAll = renderAll;
 window.copyToClipboard = copyToClipboard;
 window.closeModal = closeModal;
+
+
+
+// ==========================================
+// Vertical Sidebar Management (Uber Eats Tablet-First)
+// ==========================================
+function toggleSidebar(forceState) {
+  const sidebar = document.getElementById("app-sidebar");
+  if (!sidebar) return;
+  const isExpanded = forceState !== undefined ? forceState : !sidebar.classList.contains("expanded");
+  sidebar.classList.toggle("expanded", isExpanded);
+  try {
+    localStorage.setItem("pos_sidebar_expanded", isExpanded ? "1" : "0");
+  } catch (e) {}
+}
+
+function initSidebarState() {
+  const sidebar = document.getElementById("app-sidebar");
+  if (!sidebar) return;
+  try {
+    const saved = localStorage.getItem("pos_sidebar_expanded");
+    if (saved === "1") {
+      sidebar.classList.add("expanded");
+    } else {
+      sidebar.classList.remove("expanded");
+    }
+  } catch (e) {}
+}
+
+function updateSidebarActive(tabName) {
+  const navItems = document.querySelectorAll(".sidebar-nav-item");
+  navItems.forEach(item => {
+    const itemTab = item.getAttribute("data-tab");
+    item.classList.toggle("active", itemTab === tabName);
+  });
+  updatePageMainTitle(tabName);
+  if (typeof showMainTopbar === "function") showMainTopbar();
+}
+
+function updatePageMainTitle(tabName) {
+  const titleEl = document.getElementById("page-main-title");
+  if (!titleEl) return;
+  const currentLangCode = (typeof currentLang !== "undefined" ? currentLang : "zh-TW");
+  const titles = {
+    "live": currentLangCode === "vi" ? "Đơn hàng" : "訂單",
+    "history": currentLangCode === "vi" ? "Lịch sử đơn" : "歷史訂單",
+    "menu": currentLangCode === "vi" ? "Quản lý thực đơn" : "菜單管理",
+    "settings": currentLangCode === "vi" ? "Cài đặt hệ thống" : "系統設定",
+    "reports": currentLangCode === "vi" ? "Báo cáo doanh thu" : "營業報表"
+  };
+  titleEl.textContent = titles[tabName] || (currentLangCode === "vi" ? "Đơn hàng" : "訂單");
+
+  const brandBadge = document.getElementById("brand-badge-pill");
+  if (brandBadge) {
+    brandBadge.style.display = (tabName === "menu") ? "none" : "";
+  }
+}
+
+// ==========================================
+// Keep the main header visible without changing scroll-container geometry.
+// Retain the initializer used by orders.html, but do not attach scroll handlers.
+// ==========================================
+function initSmartHeaderScroll() {
+  const mainTopbar = document.getElementById("main-topbar");
+  if (mainTopbar) mainTopbar.classList.remove("topbar-hidden");
+}
+
+window.initSmartHeaderScroll = initSmartHeaderScroll;
+
+window.toggleSidebar = toggleSidebar;
+window.initSidebarState = initSidebarState;
+window.updateSidebarActive = updateSidebarActive;
+window.updatePageMainTitle = updatePageMainTitle;
+
+
 
 // 1.5s Polling loop for active order updates - ALWAYS runs across all dashboard tabs!
 setInterval(() => {
