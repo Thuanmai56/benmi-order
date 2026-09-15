@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title id="pos-page-title">Blab POS</title>
   <base href="/" />
-  <link rel="stylesheet" href="css/orders.css?v=20260916_bundle_display_v2" />
+  <link rel="stylesheet" href="css/orders.css?v=20260916_browser_nologin_v1" />
     <script>
       (function () {
         document.documentElement.style.setProperty('--primary', '#00b900');
@@ -64,7 +64,8 @@
         } catch(e) {}
 
         const params = new URLSearchParams(window.location.search);
-        const tenantId = params.get("tenant") || params.get("tenant_id") || (typeof localStorage !== "undefined" && localStorage.getItem("pos_device_tenant_id")) || "";
+        const defaultTenant = (!window.IS_NATIVE_APP) ? "benmi" : "";
+        const tenantId = params.get("tenant") || params.get("tenant_id") || (typeof localStorage !== "undefined" && localStorage.getItem("pos_device_tenant_id")) || defaultTenant;
         window.__INITIAL_TENANT_ID = tenantId;
         try {
           if (tenantId) {
@@ -2056,16 +2057,16 @@
   </div>
 
   <!-- Benmi POS Modular Architecture Scripts -->
-  <script src="js/orders-i18n.js?v=20260916_bundle_display_v2"></script>
-  <script src="js/orders-core.js?v=20260916_bundle_display_v2"></script>
-  <script src="js/orders-audio.js?v=20260916_bundle_display_v2"></script>
-  <script src="js/printer-service.js?v=20260916_bundle_display_v2"></script>
-  <script src="js/orders-live.js?v=20260916_bundle_display_v2"></script>
-  <script src="js/orders-modals.js?v=20260916_bundle_display_v2"></script>
-  <script src="js/orders-history.js?v=20260916_bundle_display_v2"></script>
-  <script src="js/orders-reports.js?v=20260916_bundle_display_v2"></script>
-  <script src="js/orders-settings.js?v=20260916_bundle_display_v2"></script>
-  <script src="js/orders-menu.js?v=20260916_bundle_display_v2"></script>
+  <script src="js/orders-i18n.js?v=20260916_browser_nologin_v1"></script>
+  <script src="js/orders-core.js?v=20260916_browser_nologin_v1"></script>
+  <script src="js/orders-audio.js?v=20260916_browser_nologin_v1"></script>
+  <script src="js/printer-service.js?v=20260916_browser_nologin_v1"></script>
+  <script src="js/orders-live.js?v=20260916_browser_nologin_v1"></script>
+  <script src="js/orders-modals.js?v=20260916_browser_nologin_v1"></script>
+  <script src="js/orders-history.js?v=20260916_browser_nologin_v1"></script>
+  <script src="js/orders-reports.js?v=20260916_browser_nologin_v1"></script>
+  <script src="js/orders-settings.js?v=20260916_browser_nologin_v1"></script>
+  <script src="js/orders-menu.js?v=20260916_browser_nologin_v1"></script>
 
   <!-- POS Bootstrap & Initialization -->
   <script>
@@ -2088,7 +2089,9 @@
       }
       const tenantId = getTenantIdFromUrl();
       if (!tenantId) {
-        showStoreActivationModal();
+        if (typeof isNativeAppPlatform === "function" && isNativeAppPlatform()) {
+          showStoreActivationModal();
+        }
         return;
       }
       fetchOrders();

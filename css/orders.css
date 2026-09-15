@@ -1692,6 +1692,11 @@ button.sidebar-nav-item.active {
   box-sizing: border-box;
 }
 
+/* Never display store activation / login modal on standard web browser */
+html.is-web-platform .store-activation-modal:not(.force-show) {
+  display: none !important;
+}
+
 .store-activation-box {
   position: relative;
   width: min(460px, 92vw);

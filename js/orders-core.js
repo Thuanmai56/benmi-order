@@ -84,6 +84,8 @@ function isNativeAppPlatform() {
       if (typeof window.Capacitor.getPlatform === "function" && window.Capacitor.getPlatform() !== "web") return true;
       if (typeof window.Capacitor.isPluginAvailable === "function" && window.Capacitor.isPluginAvailable("ThermalPrinter")) return true;
     }
+    if (window.AndroidBridge) return true;
+    if (typeof navigator !== "undefined" && navigator.userAgent && navigator.userAgent.includes("BenmiPOS")) return true;
   } catch (e) {}
   return false;
 }
@@ -139,6 +141,10 @@ function getTenantIdFromUrl() {
     if (savedTenant && savedTenant.trim()) {
       return savedTenant.trim();
     }
+  }
+  // When running in a standard web browser (not native app), default to "benmi" to avoid blocking login modal
+  if (typeof isNativeAppPlatform === "function" && !isNativeAppPlatform()) {
+    return "benmi";
   }
   return "";
 }
@@ -223,7 +229,7 @@ window.lookupItemPrice = lookupItemPrice;
 async function initTenantBranding() {
   const tenantId = getTenantIdFromUrl();
   if (!tenantId) {
-    if (typeof showStoreActivationModal === "function") {
+    if (typeof isNativeAppPlatform === "function" && isNativeAppPlatform() && typeof showStoreActivationModal === "function") {
       showStoreActivationModal();
     }
     return;
