@@ -251,11 +251,6 @@ async function loadMenuData() {
   }
 }
 
-function formatPlusBtnText(text, fallback) {
-  const raw = (text || fallback || "").trim();
-  return raw.startsWith('+') ? raw : `+ ${raw}`;
-}
-
 let draggedCategoryIndex = null;
 let isCategoryManagerOpen = false;
 

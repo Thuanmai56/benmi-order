@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title id="pos-page-title">Blab POS</title>
   <base href="/" />
-  <link rel="stylesheet" href="css/orders.css?v=20260914_live_time_detail_rows_v1" />
+  <link rel="stylesheet" href="css/orders.css?v=20260915_release_rebase_v1" />
     <script>
       (function () {
         document.documentElement.style.setProperty('--primary', '#00b900');
@@ -207,7 +207,7 @@
             </button>
             <div class="store-status-menu" id="store-status-menu">
               <div class="status-menu-header" id="i18n-status-menu-header">門市接單狀態</div>
-              
+
               <div class="status-option active" data-status="open" onclick="setStoreStatus('open')">
                 <div class="status-option-left">
                   <span class="status-dot dot-open"></span>
@@ -374,7 +374,7 @@
           <h2 style="font-size:22px; font-weight:900; color:var(--text, #1e293b); margin:0 0 4px;" id="i18n-reports-title">餐點銷量與營收分析</h2>
           <p style="font-size:13.5px; color:var(--muted, #64748b); margin:0;" id="i18n-reports-sub">即時統計門市各品項銷售數據與加料偏好</p>
         </div>
-        
+
         <div style="display:flex; align-items:center; gap:8px;">
           <div class="report-range-group" style="display:flex; background:#e2e8f0; padding:4px; border-radius:12px; gap:4px;">
             <button type="button" class="report-range-btn active" data-range="today" onclick="selectReportRange('today')" id="i18n-range-today" style="border:none; padding:7px 14px; border-radius:8px; font-size:14px; font-weight:900; background:var(--primary, #00b900); color:#fff; cursor:pointer;">今天</button>
@@ -617,7 +617,7 @@
                 <button class="btn btn-primary" style="padding: 10px 20px; font-size: 15px; border-radius: 8px;"
                   onclick="saveScheduledPickupSetting()" id="btn-save-pickup-setting">儲存設定</button>
               </div>
-              
+
               <div style="padding: 20px; display: flex; flex-direction: column; gap: 14px;">
                 <label class="setting-mode-card" id="mode-card-scheduled" style="display: flex; align-items: flex-start; gap: 14px; padding: 16px; border-radius: 12px; border: 2px solid var(--border); cursor: pointer; transition: all 0.15s ease;">
                   <input type="radio" name="pickup-mode-radio" id="setting-allow-scheduled-true" value="true" onchange="onPickupModeChange(true)" style="width: 20px; height: 20px; margin-top: 3px; accent-color: var(--primary);">
@@ -769,7 +769,7 @@
                 <button class="btn btn-primary" style="padding: 10px 20px; font-size: 15px; border-radius: 8px;"
                   onclick="saveDineInSetting()" id="btn-save-dinein-setting">儲存設定</button>
               </div>
-              
+
               <div id="setting-dinein-body" style="padding: 20px;">
                 <div id="setting-dinein-unlocked-body" style="display: flex; flex-direction: column; gap: 14px;">
                   <label class="setting-mode-card" id="mode-card-dinein-true" style="display: flex; align-items: flex-start; gap: 14px; padding: 16px; border-radius: 12px; border: 2px solid var(--border); cursor: pointer; transition: all 0.15s ease;">
@@ -836,7 +836,7 @@
                 </div>
               </div>
               <div style="padding: 20px; display: flex; flex-direction: column; gap: 20px;">
-                
+
                 <!-- Print Mode Selector (Auto-Print vs Manual-Print) -->
                 <div style="background: #f8fafc; padding: 18px 20px; border-radius: 14px; border: 1.5px solid var(--border); display: flex; flex-direction: column; gap: 12px;">
                   <div>
@@ -863,7 +863,7 @@
 
                 <!-- Dual Stations Grid -->
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
-                  
+
                   <!-- Cashier Printer Config -->
                   <div class="printer-station-card" id="printer-station-card-cashier">
                     <div class="printer-station-header">
@@ -884,7 +884,7 @@
                         <span class="ui-switch-label i18n-printer-enable-lbl">啟用</span>
                       </label>
                     </div>
-                    
+
                     <!-- Protocol Selector -->
                     <div>
                       <label class="i18n-printer-protocol-lbl printer-field-label">列印指令協定 (Protocol)</label>
@@ -1016,7 +1016,7 @@
                         <span class="ui-switch-label i18n-printer-enable-lbl">啟用</span>
                       </label>
                     </div>
-                    
+
                     <!-- Protocol Selector -->
                     <div>
                       <label class="i18n-printer-protocol-lbl printer-field-label">列印指令協定 (Protocol)</label>
@@ -1140,7 +1140,7 @@
                   <div style="font-size: 13px; color: var(--muted); font-weight: 600; margin-top: 2px;" id="i18n-setting-reports-sub">查看門市餐點銷售統計、營收排行與加料偏好</div>
                 </div>
               </div>
-              
+
               <div id="setting-reports-body" style="padding: 20px;">
                 <!-- Unlocked View -->
                 <div id="setting-reports-unlocked-body" style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 16px 20px; gap: 16px; flex-wrap: wrap;">
@@ -1555,7 +1555,7 @@
                 <button type="button" class="stepper-btn" onclick="adjustTimeMinutes(5)" title="+5m">＋</button>
               </div>
             </div>
-            
+
             <div class="presets-container">
               <div class="presets-header">
                 <span id="i18n-change-quick-select">點擊快速選擇延後時間:</span>
@@ -1674,7 +1674,7 @@
         </h3>
         <div class="modal-close" onclick="closeAddCategoryModal()">✕</div>
       </div>
-      
+
       <div class="modal-body">
         <div style="margin-bottom: 16px;">
           <label style="display: block; font-size: 14px; font-weight: 700; color: #374151; margin-bottom: 6px;" id="i18n-add-cat-label-name">
@@ -1689,8 +1689,6 @@
         <input type="text" id="add-cat-input-short-name" class="input" style="width: 100%; box-sizing: border-box; padding: 10px 12px; font-size: 15px; border-radius: 8px; border: 1.5px solid var(--border);" placeholder="留空則與分類名稱相同" />
       </div>
 
-        <div>
-        </div>
 
         <div style="margin-bottom: 16px;">
           <label style="display: block; font-size: 14px; font-weight: 700; color: #374151; margin-bottom: 6px;" id="i18n-add-cat-label-type">
@@ -1991,11 +1989,11 @@
           </svg>
         </div>
       </div>
-      
+
       <h2 class="start-shift-title" id="i18n-start-shift-title">
         開始接收訂單
       </h2>
-      
+
       <p class="start-shift-sub" id="i18n-start-shift-desc">
         點擊下方按鈕以啟動即時訂單提示音與工作階段，確保第一時間收到顧客點餐通知。
       </p>
@@ -2058,16 +2056,16 @@
   </div>
 
   <!-- Benmi POS Modular Architecture Scripts -->
-  <script src="js/orders-i18n.js?v=20260914_startup_modals_modern_v1"></script>
-  <script src="js/orders-core.js?v=20260913_scheduled_pickup_eta_v1"></script>
-  <script src="js/orders-audio.js?v=20260914_startup_modals_modern_v1"></script>
-  <script src="js/printer-service.js?v=20260914_order_identity"></script>
-  <script src="js/orders-live.js?v=20260914_live_time_detail_rows_v1"></script>
-  <script src="js/orders-modals.js?v=20260914_new_order_alert_modern_v1"></script>
-  <script src="js/orders-history.js?v=20260914_order_identity"></script>
-  <script src="js/orders-reports.js?v=20260912_tile_btn_center_v1"></script>
-  <script src="js/orders-settings.js?v=20260912_tile_btn_center_v1"></script>
-  <script src="js/orders-menu.js?v=20260913_customization_editor_v2"></script>
+  <script src="js/orders-i18n.js?v=20260915_release_rebase_v1"></script>
+  <script src="js/orders-core.js?v=20260915_release_rebase_v1"></script>
+  <script src="js/orders-audio.js?v=20260915_release_rebase_v1"></script>
+  <script src="js/printer-service.js?v=20260915_release_rebase_v1"></script>
+  <script src="js/orders-live.js?v=20260915_release_rebase_v1"></script>
+  <script src="js/orders-modals.js?v=20260915_release_rebase_v1"></script>
+  <script src="js/orders-history.js?v=20260915_release_rebase_v1"></script>
+  <script src="js/orders-reports.js?v=20260915_release_rebase_v1"></script>
+  <script src="js/orders-settings.js?v=20260915_release_rebase_v1"></script>
+  <script src="js/orders-menu.js?v=20260915_release_rebase_v1"></script>
 
   <!-- POS Bootstrap & Initialization -->
   <script>
