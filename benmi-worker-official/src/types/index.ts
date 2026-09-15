@@ -17,7 +17,9 @@ export interface Order {
     item_name: string;
     quantity: number;
     unit_price: number;
+    subtotal?: number;
     selected_options: string | null;
+    bundle_snapshot_json?: string | null;
     notes: string | null;
     round_number: number;
   }>;

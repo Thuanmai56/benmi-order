@@ -469,12 +469,52 @@
         });
         if (hasPortions) {
           const lines = Object.entries(portionGroups).map(([p, arr]) => `${p}: ${arr.join('、')}`);
-          if (otherOptions.length > 0) lines.push(otherOptions.join('、'));
+          if (otherOptions.length > 0) lines.unshift(otherOptions.join('、'));
           return lines.join('\n');
         }
         return value.map(option => typeof option === 'string' ? option : option.choice || option.name || '').filter(Boolean).join('、');
       }
       return '';
+    }
+
+    parseBundleSnapshotData(value) {
+      if (!value) return null;
+      if (typeof value === 'string') {
+        try { return JSON.parse(value); } catch { return null; }
+      }
+      return typeof value === 'object' ? value : null;
+    }
+
+    extractBundleOptions(bundleData, qty = 1) {
+      if (!bundleData) return [];
+      const portions = Array.isArray(bundleData.portions) ? bundleData.portions : (Array.isArray(bundleData) ? bundleData : null);
+      if (!portions || portions.length === 0) return [];
+
+      const result = [];
+      portions.forEach((p, pIdx) => {
+        const pNum = (typeof p.portionIndex === 'number') ? p.portionIndex + 1 : pIdx + 1;
+        const pPrefix = portions.length > 1 ? `第${pNum}份: ` : '';
+        (p.groups || []).forEach(g => {
+          const gName = g.groupName || g.group_name || '配菜';
+          const itemsStr = (g.items || []).map(bi => {
+            const bName = bi.name || bi.item_name || '';
+            const bQty = Number(bi.quantity) || 1;
+            const bQtyStr = bQty > 1 ? ` x${bQty}` : '';
+            const bSur = Number(bi.surcharge || bi.price || 0);
+            const bSurStr = bSur > 0 ? ` (+$${bSur})` : '';
+            return `${bName}${bQtyStr}${bSurStr}`;
+          }).filter(Boolean).join('、');
+
+          if (itemsStr) {
+            result.push({
+              group: gName,
+              choice: `${pPrefix}${gName}：${itemsStr}`,
+              price: 0
+            });
+          }
+        });
+      });
+      return result;
     }
 
     getGlobalCustomizations(order) {
@@ -558,11 +598,14 @@
           const unitNum = rawPrice != null && rawPrice !== '' ? (Number(String(rawPrice).replace(/[^0-9.]/g, '')) || 0) : null;
 
           let lineTotal = null;
-          if (it.subtotal != null && Number(it.subtotal) > 0) {
+          if (it.subtotal != null && it.subtotal !== '' && !isNaN(Number(it.subtotal))) {
             lineTotal = Number(it.subtotal);
-          } else if (unitNum != null && unitNum > 0) {
+          } else if (unitNum != null && !isNaN(unitNum)) {
             let optExtra = 0;
-            const rawOptions = it.options || it.selected_options;
+            let rawOptions = it.options || it.selected_options;
+            if (typeof rawOptions === 'string') {
+              try { rawOptions = JSON.parse(rawOptions); } catch (e) {}
+            }
             if (Array.isArray(rawOptions)) {
               rawOptions.forEach(opt => {
                 if (opt && opt.price && Number(opt.price) > 0) {
@@ -570,7 +613,42 @@
                 }
               });
             }
-            lineTotal = (unitNum * qty) + optExtra;
+            let bundleExtra = 0;
+            const bundleData = this.parseBundleSnapshotData(it.bundleSelections || it.bundle_snapshot_json);
+            if (bundleData) {
+              const portions = Array.isArray(bundleData.portions) ? bundleData.portions : (Array.isArray(bundleData) ? bundleData : null);
+              if (portions) {
+                portions.forEach(p => {
+                  (p.groups || []).forEach(g => {
+                    (g.items || []).forEach(bi => {
+                      const sur = Number(bi.surcharge || bi.price || 0);
+                      if (sur > 0) {
+                        const bQty = Number(bi.quantity) || 1;
+                        bundleExtra += sur * bQty;
+                      }
+                    });
+                  });
+                });
+              }
+            }
+            lineTotal = (unitNum * qty) + optExtra + bundleExtra;
+          }
+
+          const bundleData = this.parseBundleSnapshotData(it.bundleSelections || it.bundle_snapshot_json);
+          const bundleOpts = this.extractBundleOptions(bundleData, qty);
+
+          let baseOptions = it.options || it.selected_options;
+          if (typeof baseOptions === 'string') {
+            try { baseOptions = JSON.parse(baseOptions); } catch (e) {}
+          }
+
+          let combinedOptionsList = [];
+          if (Array.isArray(baseOptions)) {
+            combinedOptionsList = [...baseOptions, ...bundleOpts];
+          } else if (typeof baseOptions === 'string' && baseOptions.trim()) {
+            combinedOptionsList = [baseOptions, ...bundleOpts];
+          } else {
+            combinedOptionsList = bundleOpts;
           }
 
           const itemPrice = lineTotal != null ? `$${lineTotal}` : (rawPrice != null && rawPrice !== '' ? (String(rawPrice).startsWith('$') ? String(rawPrice) : `$${rawPrice}`) : '');
@@ -579,7 +657,7 @@
             quantity: qty,
             price: itemPrice,
             unitPrice: unitNum != null ? `$${unitNum}` : '',
-            options: this.formatPrintOptions(it.options || it.selected_options),
+            options: this.formatPrintOptions(combinedOptionsList),
             note: it.note || it.notes || '',
             round: it.round || (Number(order.roundCount || order.round_count) > 1 ? '[第' + (it.round_number || 1) + '輪]' : '')
           });
