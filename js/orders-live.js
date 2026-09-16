@@ -574,14 +574,24 @@ function extractFlavorSettings(rawContent) {
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
-    if (line.includes("口味設定") || line.includes("Hương vị") || line.includes("Khẩu vị")) {
-      const inline = line.replace(/.*(?:口味設定|Hương vị|Khẩu vị)[：:]\s*/, "").replace(/[【】]/g, "").trim();
+    if (
+      line.includes("口味設定") ||
+      line.includes("Hương vị") ||
+      line.includes("Khẩu vị") ||
+      line.includes("客製化設定") ||
+      line.includes("客製設定") ||
+      line.includes("Tùy chọn khẩu vị")
+    ) {
+      const inline = line
+        .replace(/.*(?:口味設定|Hương vị|Khẩu vị|客製化設定|客製設定|Tùy chọn khẩu vị)[：:]\s*/, "")
+        .replace(/[【】🧂🧪]/g, "")
+        .trim();
       if (inline) {
         const parts = inline.split(/[・·|,|｜]/).map(p => p.trim()).filter(Boolean);
         parts.forEach(p => {
           const m = p.match(/^([^：:]+)[：:]\s*(.+)$/);
           if (m) {
-            const key = m[1].replace(/✦/g, "").replace(/選擇|調整/g, "").replace(/[\(（]朝天椒[\)）]/g, "").trim();
+            const key = m[1].replace(/^[✦•\-*●]\s*/, "").replace(/選擇|調整/g, "").replace(/[\(（]朝天椒[\)）]/g, "").trim();
             const val = m[2].trim();
             flavors.push({ label: key, value: val });
           } else {
@@ -590,12 +600,24 @@ function extractFlavorSettings(rawContent) {
         });
       }
     } else {
-      const extraMatch = line.match(/^[•\-*]\s*([^：:]+)[：:]\s*(.+)$/);
+      const extraMatch = line.match(/^[•\-*●]\s*([^：:]+)[：:]\s*(.+)$/);
       if (extraMatch) {
-        const label = extraMatch[1].replace(/✦/g, "").replace(/選擇|調整/g, "").trim();
+        const label = extraMatch[1]
+          .replace(/^[✦•\-*●]\s*/, "")
+          .replace(/選擇|調整/g, "")
+          .replace(/[\(（]朝天椒[\)）]/g, "")
+          .trim();
         const val = extraMatch[2].trim();
-        if (label && val && !label.includes("訂單") && !label.includes("總金額") && !label.includes("時間") && !label.includes("取餐") && !label.includes("用餐方式")) {
-          extraIngredients.push(val);
+        if (
+          label &&
+          val &&
+          !label.includes("訂單") &&
+          !label.includes("總金額") &&
+          !label.includes("時間") &&
+          !label.includes("取餐") &&
+          !label.includes("用餐方式")
+        ) {
+          extraIngredients.push({ label, value: val });
         }
       } else if (line.includes("| 口味:") || line.includes("| 口味：") || line.includes("｜ 口味:") || line.includes("｜ 口味：")) {
         const flavorPart = line.split(/[|｜]/).slice(1).join("|").trim();
@@ -956,7 +978,20 @@ function formatContentHtml(order) {
   }
 
   // 2. Extract and render Global Flavor Settings & Customer Note (merged in top section)
-  const flavorData = extractFlavorSettings(raw);
+  let flavorData = extractFlavorSettings(raw);
+  if ((!flavorData || (flavorData.flavors.length === 0 && flavorData.extraIngredients.length === 0)) && Array.isArray(order?.customizations) && order.customizations.length > 0) {
+    const valid = order.customizations.filter(c => c && (c.value || c.name));
+    if (valid.length > 0) {
+      flavorData = {
+        flavors: valid.map(c => ({
+          label: c.label || c.title || c.group_title || '',
+          value: c.value || c.name || ''
+        })),
+        extraIngredients: []
+      };
+    }
+  }
+
   let noteText = (order?.note || "").trim();
   if (!noteText && raw) {
     const m = raw.match(/(?:📝\s*)?(?:顧客備註|備註|Ghi chú)[：:\s]+([^\n]+)/i);
@@ -971,7 +1006,7 @@ function formatContentHtml(order) {
     const noteIcon = (typeof POS_SVG !== "undefined" && POS_SVG.note) || "";
     const flavorTitle = (typeof t === "function" && t("flavorTitle")) || "口味與客製設定";
     const noteTitle = (typeof t === "function" && t("customerNoteLabel")) || "顧客備註";
-    const optLabelFallback = (typeof t === "function" && t("colOptions")) || "配料";
+    const optLabelFallback = (typeof t === "function" && (t("extraIngredientLabel") || t("labelTopping"))) || "配料";
 
     let chipsHtml = "";
     if (flavorData) {
