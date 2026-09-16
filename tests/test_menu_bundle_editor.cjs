@@ -261,8 +261,8 @@ assert.ok(htmlContent.includes('id="btn-bundle-remove-config"'), "orders.html mu
 assert.ok(cssContent.includes('.menu-item-bundle-btn'), "orders.css must contain .menu-item-bundle-btn");
 assert.ok(cssContent.includes('.bundle-stepper-btn'), "orders.css must contain .bundle-stepper-btn");
 assert.ok(cssContent.includes('.bundle-editor-modal-content'), "orders.css must contain .bundle-editor-modal-content");
-assert.ok(htmlContent.includes('orders.css?v=20260916_menu_bundle_editor_v1'), "orders.css cache buster bumped");
-assert.ok(htmlContent.includes('orders-menu.js?v=20260916_menu_bundle_editor_v1'), "orders-menu.js cache buster bumped");
+assert.ok(htmlContent.includes('orders.css?v=20260916_menu_bundle_editor_v2'), "orders.css cache buster bumped");
+assert.ok(htmlContent.includes('orders-menu.js?v=20260916_menu_bundle_editor_v2'), "orders-menu.js cache buster bumped");
 console.log("✓ Modal markup, CSS classes, and cache-busting verified.");
 
 console.log("\n====================================================");

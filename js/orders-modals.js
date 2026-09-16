@@ -64,6 +64,14 @@ if (typeof window !== "undefined" && !window.__orderModalEscRegistered) {
       const revModal = document.getElementById("reviewModal");
       if (revModal && revModal.style.display !== "none") {
         closeModal();
+        return;
+      }
+      const bundleModal = document.getElementById("modal-bundle-editor");
+      if (bundleModal && bundleModal.style.display !== "none") {
+        if (typeof closeBundleEditorModal === "function") {
+          closeBundleEditorModal();
+          return;
+        }
       }
     }
   });
@@ -71,16 +79,27 @@ if (typeof window !== "undefined" && !window.__orderModalEscRegistered) {
 
 function initOrderDetailHeaderScroll() {
   const reviewModal = document.getElementById("reviewModal");
-  if (!reviewModal) return;
-  const detailTopbar = reviewModal.querySelector(".order-detail-topbar");
-  if (!detailTopbar) return;
+  if (reviewModal && !reviewModal.dataset.headerScrollInit) {
+    const detailTopbar = reviewModal.querySelector(".order-detail-topbar");
+    if (detailTopbar) {
+      reviewModal.dataset.headerScrollInit = "true";
+      detailTopbar.classList.remove("topbar-hidden");
+      reviewModal.addEventListener("scroll", () => {
+        detailTopbar.classList.toggle("is-scrolled", reviewModal.scrollTop > 20);
+      }, { passive: true });
+    }
+  }
 
-  if (reviewModal.dataset.headerScrollInit) return;
-  reviewModal.dataset.headerScrollInit = "true";
-  detailTopbar.classList.remove("topbar-hidden");
-  reviewModal.addEventListener("scroll", () => {
-    detailTopbar.classList.toggle("is-scrolled", reviewModal.scrollTop > 20);
-  }, { passive: true });
+  const bundleModal = document.getElementById("modal-bundle-editor");
+  if (bundleModal && !bundleModal.dataset.headerScrollInit) {
+    const bundleTopbar = bundleModal.querySelector(".bundle-modal-topbar");
+    if (bundleTopbar) {
+      bundleModal.dataset.headerScrollInit = "true";
+      bundleModal.addEventListener("scroll", () => {
+        bundleTopbar.classList.toggle("is-scrolled", bundleModal.scrollTop > 20);
+      }, { passive: true });
+    }
+  }
 }
 window.initOrderDetailHeaderScroll = initOrderDetailHeaderScroll;
 

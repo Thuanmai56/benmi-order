@@ -6904,40 +6904,90 @@ select.form-input {
   color: #334155;
 }
 
-/* Modal Content & Header */
-#modal-bundle-editor .bundle-editor-modal-content {
-  width: min(940px, 96vw);
-  max-height: min(88vh, 88dvh);
-  height: 640px;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  background: #ffffff;
-  border-radius: 20px;
-  overflow: hidden;
-  box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.35);
-  border: 1px solid #e2e8f0;
+/* ==========================================================================
+   Full-Page Menu Bundle Editor (Uber Eats / POS Tablet Merchant Standard)
+   ========================================================================== */
+#modal-bundle-editor.order-detail-fullpage,
+#modal-bundle-editor.bundle-editor-fullpage,
+#modal-bundle-editor {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2000 !important;
+  background: #ffffff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  display: none;
+  flex-direction: column !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
 }
 
-.bundle-modal-header {
+.bundle-editor-page-container,
+#modal-bundle-editor .bundle-editor-modal-content {
+  width: 100% !important;
+  min-height: 100% !important;
+  max-width: 1240px !important;
+  height: auto !important;
+  max-height: none !important;
+  margin: 0 auto !important;
+  background: #ffffff !important;
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 24px 44px 56px 44px !important;
+  box-sizing: border-box !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+}
+
+@media (max-width: 960px) {
+  .bundle-editor-page-container,
+  #modal-bundle-editor .bundle-editor-modal-content {
+    padding: 16px 20px 32px 20px !important;
+  }
+}
+
+/* Top Navigation Bar */
+.bundle-modal-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: #ffffff;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 24px;
-  border-bottom: 1px solid #e2e8f0;
-  background: #ffffff;
+  padding: 16px 0;
+  margin-bottom: 24px;
+  border-bottom: 1px solid #f1f5f9;
   flex-shrink: 0;
+  transition: box-shadow 0.22s ease;
 }
 
-.bundle-modal-title-wrap {
+.bundle-modal-topbar.is-scrolled {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.bundle-modal-topbar-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
+  min-width: 0;
 }
 
 .bundle-modal-badge-icon {
   width: 44px;
   height: 44px;
+  min-width: 44px;
+  min-height: 44px;
   border-radius: 12px;
   background: #eef2ff;
   border: 1.5px solid #c7d2fe;
@@ -6948,14 +6998,22 @@ select.form-input {
   flex-shrink: 0;
 }
 
+.bundle-modal-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
 .bundle-modal-title {
-  font-size: 18px;
+  font-size: 24px;
   font-weight: 800;
-  color: #0f172a;
+  color: #111827;
   margin: 0;
+  letter-spacing: -0.5px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
@@ -6964,61 +7022,53 @@ select.form-input {
 }
 
 .bundle-target-item-price {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   color: #64748b;
   background: #f1f5f9;
-  padding: 2px 8px;
-  border-radius: 6px;
+  padding: 3px 10px;
+  border-radius: 8px;
 }
 
 .bundle-modal-sub {
-  font-size: 12.5px;
+  font-size: 13px;
   color: #64748b;
-  margin: 3px 0 0 0;
+  margin: 0;
+  line-height: 1.4;
 }
 
-.bundle-modal-close-btn {
-  width: 44px;
-  height: 44px;
-  min-width: 44px;
-  min-height: 44px;
-  border-radius: 50%;
-  border: none;
-  background: #f1f5f9;
-  color: #64748b;
-  font-size: 18px;
+.bundle-modal-topbar-right {
   display: flex;
   align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.15s ease;
+  gap: 10px;
+  flex-shrink: 0;
 }
 
-.bundle-modal-close-btn:hover {
-  background: #e2e8f0;
-  color: #0f172a;
-}
-
-/* 2-Column Master-Detail Layout */
+/* Master-Detail 2-Column Grid Layout */
 .bundle-editor-body {
   display: grid;
-  grid-template-columns: 320px 1fr;
+  grid-template-columns: 340px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
   flex: 1;
-  min-height: 0;
-  overflow: hidden;
-  background: #f8fafc;
+  width: 100%;
 }
 
 /* Left Column: Sidebar Navigator */
 .bundle-groups-sidebar {
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #e2e8f0;
   background: #f8fafc;
-  padding: 16px;
-  min-height: 0;
-  overflow: hidden;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 18px;
+  gap: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  position: sticky;
+  top: 96px;
+  max-height: calc(100vh - 130px);
+  max-height: calc(100dvh - 130px);
+  overflow-y: auto;
 }
 
 .bundle-sidebar-header {
@@ -7529,17 +7579,38 @@ select.form-input {
   color: #991b1b;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 960px) {
   .bundle-editor-body {
     grid-template-columns: 1fr;
-    grid-template-rows: 180px 1fr;
+    gap: 20px;
   }
   .bundle-groups-sidebar {
-    border-right: none;
-    border-bottom: 1px solid #e2e8f0;
+    position: static;
+    max-height: none;
+  }
+  .bundle-modal-topbar {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .bundle-modal-topbar-right {
+    width: 100%;
+    justify-content: flex-end;
   }
   .bundle-group-name-inputs {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .bundle-modal-title {
+    font-size: 19px;
+  }
+  .bundle-modal-topbar-right {
+    justify-content: stretch;
+  }
+  .bundle-modal-topbar-right .btn {
+    flex: 1;
+    justify-content: center;
   }
 }
 
