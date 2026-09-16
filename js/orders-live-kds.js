@@ -233,8 +233,14 @@
     const lines = String(content).split("\n");
     for (const line of lines) {
       const trimmed = line.trim();
-      if (trimmed.includes("口味設定") || trimmed.includes("Khẩu vị") || trimmed.includes("Hương vị")) {
-        return trimmed.replace(/^.*?[：:]\s*/, "").replace(/[【】]/g, "").trim();
+      if (
+        trimmed.includes("口味設定") ||
+        trimmed.includes("Khẩu vị") ||
+        trimmed.includes("Hương vị") ||
+        trimmed.includes("客製化設定") ||
+        trimmed.includes("客製設定")
+      ) {
+        return trimmed.replace(/^.*?[：:]\s*/, "").replace(/[【】🧂🧪]/g, "").trim();
       }
     }
     return "";

@@ -105,8 +105,13 @@ assert(flavors.flavors[1].value === "正常", `Second flavor val should be 正�
 assert(flavors.flavors[2].label === "辣度", `Third flavor label should be 辣度, got: ${flavors.flavors[2].label}`);
 assert(flavors.flavors[2].value === "不辣", `Third flavor val should be 不辣, got: ${flavors.flavors[2].value}`);
 assert(flavors.extraIngredients.length === 1, "Should have 1 extra ingredient");
-assert(flavors.extraIngredients[0] === "加蔥、加蒜", "Extra ingredients should be 加蔥、加蒜");
-console.log("✓ extractFlavorSettings successfully parsed real flavor and ingredients lines");
+const extraItem = flavors.extraIngredients[0];
+const extraVal = (typeof extraItem === 'object' && extraItem) ? extraItem.value : extraItem;
+assert(extraVal === "加蔥、加蒜", "Extra ingredients should be 加蔥、加蒜");
+if (typeof extraItem === 'object' && extraItem) {
+  assert(extraItem.label === "配料", `Extra ingredients label should be 配料, got: ${extraItem.label}`);
+}
+console.log("✓ extractFlavorSettings successfully parsed real flavor and ingredients lines with exact labels");
 
 // Test sample customer change order
 const testOrderWithChange = {
