@@ -720,19 +720,50 @@ function extractBundleFromItem(it) {
     }
   }
 
+  // If item comes from structured order_items and explicitly has no bundle snapshot,
+  // do not parse regular customizations as a bundle
+  if ((it.bundle_snapshot_json === null || it.bundle_snapshot_json === undefined) &&
+      (it.bundleSelections === null || it.bundleSelections === undefined) &&
+      !it.bundleData &&
+      it.baseOptions !== undefined && it.baseOptions !== null) {
+    return null;
+  }
+
   if (it.options) {
     const lines = String(it.options).split('\n').map(l => l.trim()).filter(Boolean);
     const parsedGroups = [];
     const remainingOptions = [];
 
+    // Regular customization / modifier categories that are NEVER bundle groups
+    const modifierCategoryPattern = /^(?:第\s*[一二三四五六七八九十\d]+\s*份|Phần\s*\d+|辣度|甜度|冰塊|溫度|客製化|客製設定|配料|加料|選項|備註|Ghi chú|Khẩu vị|Hương vị|Độ cay|Đường|Đá|Topping)$/i;
+
     lines.forEach(line => {
       const cleanLine = line.replace(/^[↳\-+•*]\s*/, '').trim();
-      const m = cleanLine.match(/^(?:(第\d+份|Phần \d+)\s*)?([^：:\n]+)[：:]\s*(.+)$/);
-      if (m && !m[2].includes('備註') && !m[2].includes('Ghi chú') && !m[2].includes('口味') && !m[2].includes('Khẩu vị') && !m[2].includes('Hương vị')) {
-        const portionLabel = m[1] || '';
+
+      // If the line starts with a portion indicator directly followed by colon (e.g. "第1份: 不加辣" or "第一份: 加生菜"),
+      // this is 100% a portion customization line, NOT a bundle component!
+      if (/^(?:第\s*[一二三四五六七八九十\d]+\s*份|Phần\s*\d+)\s*[:：]/i.test(cleanLine)) {
+        remainingOptions.push(line);
+        return;
+      }
+
+      // Match bundle pattern: optional portion label, group name, colon, and items
+      // Example: "配菜：地瓜球 x1 (+$10)、洋蔥圈 x1" or "第1份 配菜：地瓜球 x1"
+      const m = cleanLine.match(/^(?:(第\s*[一二三四五六七八九十\d]+\s*份|Phần\s*\d+)\s+)?([^：:\n]+)[：:]\s*(.+)$/);
+      if (m) {
+        const portionLabel = (m[1] || '').trim();
         const groupName = m[2].trim();
         const itemsStr = m[3].trim();
+
+        // If groupName is a modifier category or portion label, it's NOT a bundle group!
+        if (modifierCategoryPattern.test(groupName)) {
+          remainingOptions.push(line);
+          return;
+        }
+
         const rawItems = itemsStr.split(/[、,]+/).map(s => s.trim()).filter(Boolean);
+        let hasBundleSignals = false;
+
         const groupItems = rawItems.map(rawIt => {
           const addMatch = rawIt.match(/(?:\(\s*\+\s*\$|\+\s*\$)(\d+(?:\.\d+)?)/);
           const surcharge = addMatch ? Number(addMatch[1]) || 0 : 0;
@@ -740,17 +771,26 @@ function extractBundleFromItem(it) {
           const qMatch = cleanName.match(/^(.+?)\s*[xX*]\s*(\d+)$/) || cleanName.match(/^(\d+)\s*[xX*]\s*(.+)$/);
           const name = qMatch ? (cleanName.match(/^(.+?)\s*[xX*]\s*(\d+)$/) ? qMatch[1] : qMatch[2]) : cleanName;
           const qty = qMatch ? Number(qMatch[2] || qMatch[1]) || 1 : 1;
+          if (qMatch || surcharge > 0) {
+            hasBundleSignals = true;
+          }
           return { name, quantity: qty, surcharge };
         });
 
-        parsedGroups.push({
-          portionLabel,
-          groupName,
-          items: groupItems
-        });
-      } else {
-        remainingOptions.push(line);
+        // Known bundle group keywords
+        const isKnownBundleGroup = /^(?:主餐|副餐|附餐|副食|點心|配菜|飲料|搭配|組合|套餐|Combo|Bundle|Group|Món chính|Món phụ|Đồ uống)/i.test(groupName);
+
+        if (hasBundleSignals || isKnownBundleGroup) {
+          parsedGroups.push({
+            portionLabel,
+            groupName,
+            items: groupItems
+          });
+          return;
+        }
       }
+
+      remainingOptions.push(line);
     });
 
     if (parsedGroups.length > 0) {
