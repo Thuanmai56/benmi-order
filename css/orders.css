@@ -7241,7 +7241,15 @@ select.form-input {
   margin: 0;
 }
 
-/* Right Column: Configuration Panel */
+/* Right Column: Configuration Panel & Danger Zone */
+.bundle-editor-right-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+  gap: 16px;
+}
+
 .bundle-group-config-panel {
   display: flex;
   flex-direction: column;
@@ -7535,48 +7543,185 @@ select.form-input {
 }
 
 .bundle-footer-btn {
-  min-height: 48px;
-  padding: 0 20px;
-  font-size: 14px;
+  min-height: 44px;
+  padding: 0 18px;
+  font-size: 14.5px;
   font-weight: 700;
   border-radius: 12px;
   cursor: pointer;
   box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+#btn-bundle-modal-cancel {
+  background: #f1f5f9;
+  border: 1.5px solid #e2e8f0;
+  color: #475569;
+}
+
+#btn-bundle-modal-cancel:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+  border-color: #cbd5e1;
 }
 
 .bundle-btn-save {
   background: #00b900;
-  border: none;
+  border: 1.5px solid transparent;
   color: #ffffff;
-  display: inline-flex;
-  align-items: center;
   gap: 8px;
+  box-shadow: 0 2px 8px rgba(0, 185, 0, 0.25);
 }
 
 .bundle-btn-save:hover {
   background: #009900;
+  box-shadow: 0 4px 12px rgba(0, 185, 0, 0.35);
+}
+
+/* Danger Zone Card (Convert Combo back to Single Item) */
+.bundle-danger-zone-card {
+  background: #fffafa;
+  border: 1.5px dashed #fca5a5;
+  border-radius: 16px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  box-sizing: border-box;
+}
+
+.bundle-danger-zone-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  flex: 1;
+  min-width: 240px;
+}
+
+.bundle-danger-zone-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #fee2e2;
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.bundle-danger-zone-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.bundle-danger-zone-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #991b1b;
+  margin: 0;
+}
+
+.bundle-danger-zone-desc {
+  font-size: 12.5px;
+  color: #7f1d1d;
+  margin: 0;
+  line-height: 1.45;
+}
+
+.bundle-danger-zone-action {
+  flex-shrink: 0;
 }
 
 .bundle-btn-delete-config {
   min-height: 44px;
-  padding: 0 14px;
-  border: 1.5px solid #fee2e2;
-  background: #fff5f5;
-  color: #b91c1c;
-  font-size: 13px;
+  padding: 0 16px;
+  border: 1.5px solid #fca5a5;
+  background: #ffffff;
+  color: #dc2626;
+  font-size: 13.5px;
   font-weight: 700;
   border-radius: 10px;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(220, 38, 38, 0.05);
   transition: all 0.15s ease;
 }
 
 .bundle-btn-delete-config:hover {
   background: #fee2e2;
-  border-color: #fca5a5;
+  border-color: #ef4444;
   color: #991b1b;
+}
+
+/* Bundle Guide Trigger Button & Modal */
+.bundle-modal-header-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.bundle-guide-topbar-btn {
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #eef2ff;
+  color: #4f46e5;
+  border: 1.5px solid #c7d2fe;
+  box-shadow: 0 1px 2px rgba(79, 70, 229, 0.08);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.bundle-guide-topbar-btn:hover {
+  background: #e0e7ff;
+  border-color: #a5b4fc;
+  color: #4338ca;
+}
+
+.bundle-sidebar-guide-link {
+  margin-top: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: #4f46e5;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-align: left;
+  transition: color 0.15s ease;
+}
+
+.bundle-sidebar-guide-link:hover {
+  color: #3730a3;
+}
+
+#bundleGuideModal {
+  z-index: 2200 !important;
+}
+
+#bundleGuideModal .bundle-guide-modal-content {
+  animation: modalScaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @media (max-width: 960px) {
@@ -7598,6 +7743,18 @@ select.form-input {
   }
   .bundle-group-name-inputs {
     grid-template-columns: 1fr;
+  }
+  .bundle-danger-zone-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+  .bundle-danger-zone-action {
+    display: flex;
+  }
+  .bundle-danger-zone-action .bundle-btn-delete-config {
+    width: 100%;
+    justify-content: center;
   }
 }
 

@@ -1764,10 +1764,15 @@ async function openBundleEditorModal(catIdx, itemIdx) {
   const priceEl = document.getElementById("bundle-modal-item-price");
   if (priceEl) priceEl.textContent = `$${targetItem.price !== null && targetItem.price !== undefined ? targetItem.price : 0}`;
 
-  // Show/hide remove combo button
+  // Show/hide remove combo button & danger zone card
   const removeBtn = document.getElementById("btn-bundle-remove-config");
+  const dangerZoneCard = document.getElementById("bundle-danger-zone-card");
+  const isExistingCombo = Boolean(targetItem.bundleRule && targetItem.bundleRule.groups?.length > 0);
   if (removeBtn) {
-    removeBtn.style.display = (targetItem.bundleRule && targetItem.bundleRule.groups?.length > 0) ? "inline-flex" : "none";
+    removeBtn.style.display = isExistingCombo ? "inline-flex" : "none";
+  }
+  if (dangerZoneCard) {
+    dangerZoneCard.style.display = isExistingCombo ? "flex" : "none";
   }
 
   const modal = document.getElementById("modal-bundle-editor");

@@ -66,6 +66,13 @@ if (typeof window !== "undefined" && !window.__orderModalEscRegistered) {
         closeModal();
         return;
       }
+      const bundleGuideModal = document.getElementById("bundleGuideModal");
+      if (bundleGuideModal && bundleGuideModal.style.display !== "none") {
+        if (typeof closeBundleGuideModal === "function") {
+          closeBundleGuideModal();
+          return;
+        }
+      }
       const bundleModal = document.getElementById("modal-bundle-editor");
       if (bundleModal && bundleModal.style.display !== "none") {
         if (typeof closeBundleEditorModal === "function") {
@@ -770,6 +777,18 @@ function closePrinterGuideModal() {
   const modal = document.getElementById("printerGuideModal");
   if (modal) modal.style.display = "none";
 }
+
+function openBundleGuideModal() {
+  const modal = document.getElementById("bundleGuideModal");
+  if (modal) showModalFromTop(modal);
+}
+window.openBundleGuideModal = openBundleGuideModal;
+
+function closeBundleGuideModal() {
+  const modal = document.getElementById("bundleGuideModal");
+  if (modal) modal.style.display = "none";
+}
+window.closeBundleGuideModal = closeBundleGuideModal;
 
 function showStoreActivationModal(force = false) {
   // Hotfix: Never display login/store activation modal when running in a standard web browser (not app)

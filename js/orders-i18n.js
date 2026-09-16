@@ -600,7 +600,9 @@ const I18N = {
     bundleGroupListTitle: "自選分組列表",
     btnAddBundleGroup: "新增自選分組",
     btnRemoveBundleConfig: "解除組合 (轉為一般單點)",
-    confirmRemoveBundleConfig: "確定要解除此項目的組合設定嗎？解除後將變為普通單點餐點。",
+    confirmRemoveBundleConfig: "確定要解除此餐點的組合設定嗎？解除後將變回一般單點品項（原有選菜規則將被清除）。",
+    bundleDangerZoneTitle: "變更餐點類型",
+    bundleDangerZoneDesc: "此餐點目前已設定為自選組合。若要改為普通單點販售（無需自選配菜），可點擊此處解除組合設定。",
     bundleGroupDetailTitle: "分組詳細設定",
     bundleGroupNameZh: "分組名稱 (繁體中文)",
     bundleGroupNameVi: "分組名稱 (Tiếng Việt)",
@@ -624,10 +626,40 @@ const I18N = {
     bundleDefaultGroupName: "任選配菜",
     bundleItemUnit: "樣",
     bundleSurchargeNotice: "包含於套餐內 (如需個別加價請於菜品單價中設定)",
-    btnBundleSave: "儲存套餐組合",
-    btnBundleCancel: "取消",
+    btnBundleSave: "儲存設定",
+    btnBundleCancel: "關閉",
     bundleTipTitle: "提示說明",
-    bundleTipDesc: "顧客在點餐時必須逐一完成每個分組的選擇數量，方可加入購物車。"
+    bundleTipDesc: "顧客在點餐時必須逐一完成每個分組的選擇數量，方可加入購物車。",
+    btnBundleGuide: "套餐說明與範例",
+    btnBundleSidebarGuide: "查看 Combo 說明與範例",
+    bundleGuideModalTitle: "套餐組合設定指南與實例",
+    bundleGuideModalSub: "深入了解套餐概念、3步驟設定流程與常見餐飲實例",
+    bundleGuideWhatTag: "概念",
+    bundleGuideWhatTitle: "1. 套餐組合 (Combo / Bundle) 是什麼？",
+    bundleGuideWhatDesc: "套餐組合是將多樣餐點（如：主餐 + 配菜 + 飲料）綁定在一起以固定套餐價販售的功能。顧客在手機（LINE LIFF）或店員於 POS 點餐時，需依各群組規定選滿指定數量方可加入購物車。此功能有助於提高客單價、加快出單與備料流程。",
+    bundleGuideStepsTag: "流程",
+    bundleGuideStepsTitle: "2. 套餐設定 3 步驟",
+    bundleGuideStep1Tag: "步驟 1",
+    bundleGuideStep1Title: "新增自選分組",
+    bundleGuideStep1Desc: "點擊左側「+ 新增自選分組」，設定繁中與越南語名稱（例：請選擇 1 樣主餐、請選擇 6 樣配菜）。",
+    bundleGuideStep2Tag: "步驟 2",
+    bundleGuideStep2Title: "設定數量與重複規則",
+    bundleGuideStep2Desc: "使用 [ - ] 和 [ + ] 調整顧客必須選滿的數量。若顧客可重複選相同品項（如：2 份玉米筍），請勾選「允許重複選同一品項」。",
+    bundleGuideStep3Tag: "步驟 3",
+    bundleGuideStep3Title: "指定選菜來源",
+    bundleGuideStep3Desc: "可選擇「依整個分類自動匯入」（如：所有蔬菜類或飲料類），或切換至「手動勾選特定品項」。",
+    bundleGuideExamplesTag: "範例",
+    bundleGuideExamplesTitle: "3. 常見餐飲實例 (Example Use Cases)",
+    bundleEx1Title: "🍗 鹹水雞 / 滷味 / 炸物店實例 (例：蔣姐姐鹹水雞)",
+    bundleEx1Badge: "1 組 • 6 樣菜",
+    bundleEx1Desc: "<strong>品項：</strong>套餐 A (3隻鹹水雞翅+6樣菜) - $150<br><strong>設定：</strong>建立 1 個自選分組「請選擇 6 樣配菜」，需求數量設為 6，<strong>勾選</strong>「允許重複選同一品項」。選菜來源勾選「海裡」、「時蔬」、「內臟」、「滷味」等分類。",
+    bundleEx2Title: "🥖 越式法國麵包 / 早午餐 / 輕食店實例",
+    bundleEx2Badge: "2 組 • 主餐 + 飲料",
+    bundleEx2Desc: "<strong>品項：</strong>元氣早午餐特惠套餐 - $99<br><strong>設定：</strong><br>• 分組 1：「選 1 樣主餐麵包」（數量 = 1，來源：法國麵包分類）<br>• 分組 2：「選 1 杯飲品」（數量 = 1，來源：咖啡與茶飲分類）",
+    bundleEx3Title: "🍲 火鍋 / 燒烤 / 雙人便當店實例",
+    bundleEx3Badge: "3 組 • 湯底 + 肉品 + 副餐",
+    bundleEx3Desc: "<strong>品項：</strong>雙人特選火鍋套餐 - $450<br><strong>設定：</strong><br>• 分組 1：「選 1 款湯底」（數量 = 1，來源：原味、麻辣、番茄等）<br>• 分組 2：「選 2 盤肉品」（數量 = 2，允許重複，來源：牛肉片、豬五花、雞腿肉）<br>• 分組 3：「選 2 樣副餐」（數量 = 2，來源：白飯、冬粉、王子麵）",
+    btnBundleGuideGotIt: "我知道了"
   },
   "vi": {
     langBtn: "Tiếng Việt",
@@ -1225,8 +1257,10 @@ const I18N = {
     modalBundleSub: "Cấu hình các nhóm món tự chọn, nguồn món và quy tắc số lượng cho combo này",
     bundleGroupListTitle: "Danh sách nhóm chọn",
     btnAddBundleGroup: "Thêm nhóm chọn mới",
-    btnRemoveBundleConfig: "Hủy cấu hình Combo (chuyển về món thường)",
-    confirmRemoveBundleConfig: "Bạn có chắc muốn xóa cấu hình Combo cho món này? Món sẽ trở thành món đơn thông thường.",
+    btnRemoveBundleConfig: "Gỡ bỏ Combo (chuyển về món thường)",
+    confirmRemoveBundleConfig: "Bạn có chắc muốn gỡ bỏ cấu hình Combo cho món này? Món sẽ trở thành món đơn bán lẻ thông thường (toàn bộ quy tắc chọn nhóm sẽ bị xóa).",
+    bundleDangerZoneTitle: "Chuyển đổi loại món",
+    bundleDangerZoneDesc: "Món này hiện đang được thiết lập là món Combo tự chọn. Nếu muốn bán như một món đơn lẻ bình thường (không yêu cầu khách chọn nhóm món), bạn có thể gỡ bỏ cấu hình combo tại đây.",
     bundleGroupDetailTitle: "Chi tiết nhóm chọn",
     bundleGroupNameZh: "Tên nhóm (Tiếng Trung)",
     bundleGroupNameVi: "Tên nhóm (Tiếng Việt)",
@@ -1250,10 +1284,40 @@ const I18N = {
     bundleDefaultGroupName: "Món tự chọn",
     bundleItemUnit: "món",
     bundleSurchargeNotice: "Đã bao gồm trong giá combo",
-    btnBundleSave: "Lưu cấu hình Combo",
-    btnBundleCancel: "Hủy",
+    btnBundleSave: "Lưu cấu hình",
+    btnBundleCancel: "Đóng",
     bundleTipTitle: "Mẹo thiết lập",
-    bundleTipDesc: "Khách hàng phải hoàn tất đủ số lượng món trong từng nhóm mới có thể thêm vào giỏ hàng."
+    bundleTipDesc: "Khách hàng phải hoàn tất đủ số lượng món trong từng nhóm mới có thể thêm vào giỏ hàng.",
+    btnBundleGuide: "Hướng dẫn & Ví dụ Combo",
+    btnBundleSidebarGuide: "Xem Combo là gì & Ví dụ mẫu",
+    bundleGuideModalTitle: "Hướng Dẫn Thiết Lập Combo Món Ăn",
+    bundleGuideModalSub: "Tìm hiểu khái niệm Combo, cách cấu hình theo bước và các mô hình quán thực tế",
+    bundleGuideWhatTag: "Khái niệm",
+    bundleGuideWhatTitle: "1. Combo Món Ăn là gì?",
+    bundleGuideWhatDesc: "Combo (hay Set menu / Bundle) là gói gồm nhiều món thành phần được bán cùng nhau với mức giá trọn gói. Khách khi gọi món trên điện thoại (LINE LIFF) hoặc nhân viên gọi tại POS sẽ được chọn các món theo từng nhóm quy định (ví dụ: chọn món chính, chọn món ăn kèm, chọn đồ uống). Khách phải chọn đủ số lượng yêu cầu mới có thể thêm vào giỏ hàng.",
+    bundleGuideStepsTag: "Quy trình",
+    bundleGuideStepsTitle: "2. Cách Tạo Combo Trong 3 Bước",
+    bundleGuideStep1Tag: "BƯỚC 1",
+    bundleGuideStep1Title: "Thêm Nhóm Chọn",
+    bundleGuideStep1Desc: "Nhấn '+ Thêm nhóm chọn mới' ở cột trái. Nhập tên nhóm bằng tiếng Trung và tiếng Việt (VD: Chọn 1 Món chính, Chọn 6 Món ăn kèm).",
+    bundleGuideStep2Tag: "BƯỚC 2",
+    bundleGuideStep2Title: "Quy Tắc Số Lượng",
+    bundleGuideStep2Desc: "Dùng nút [ - ] và [ + ] chỉnh số lượng món khách bắt buộc phải chọn. Bật 'Cho phép chọn trùng' nếu khách được lấy nhiều suất cùng 1 món (VD: 2 phần bắp ngô).",
+    bundleGuideStep3Tag: "BƯỚC 3",
+    bundleGuideStep3Title: "Nguồn Món Tự Chọn",
+    bundleGuideStep3Desc: "Chọn 'Theo toàn bộ danh mục' (như Rau củ, Nước uống) hoặc 'Chọn lọc từng món cụ thể' để chỉ định chính xác các món được chọn trong nhóm.",
+    bundleGuideExamplesTag: "Ví dụ mẫu",
+    bundleGuideExamplesTitle: "3. Ví Dụ Cấu Hình Thực Tế (Example Use Cases)",
+    bundleEx1Title: "🍗 Mô hình Quán Gà / Đồ Ăn Vặt (VD: Gà Muối Tiêu 蔣姐姐)",
+    bundleEx1Badge: "1 Nhóm • 6 Món kèm",
+    bundleEx1Desc: "<strong>Món:</strong> 套餐 A (3隻鹹水雞翅+6樣菜) - $150<br><strong>Cấu hình:</strong> Tạo 1 nhóm chọn duy nhất: 'Chọn 6 món ăn kèm'. Cài đặt số lượng = 6, <strong>BẬT</strong> 'Cho phép chọn trùng'. Nguồn món: Chọn danh mục 'Hải sản', 'Rau củ', 'Nội tạng', 'Đồ kho'.",
+    bundleEx2Title: "🥖 Mô hình Bánh Mì / Cà Phê / Ăn Sáng",
+    bundleEx2Badge: "2 Nhóm • Món chính + Nước",
+    bundleEx2Desc: "<strong>Món:</strong> Combo Bữa Sáng Năng Lượng - $99<br><strong>Cấu hình:</strong><br>• Nhóm 1: 'Chọn 1 Bánh Mì' (Số lượng = 1, Nguồn: Toàn bộ danh mục Bánh mì)<br>• Nhóm 2: 'Chọn 1 Đồ Uống' (Số lượng = 1, Nguồn: Toàn bộ danh mục Cà phê & Trà)",
+    bundleEx3Title: "🍲 Mô hình Quán Lẩu / Nướng / Cơm Gia Đình",
+    bundleEx3Badge: "3 Nhóm • Nước lẩu + Thịt + Tinh bột",
+    bundleEx3Desc: "<strong>Món:</strong> Set Lẩu Uyên Ương 2 Người - $450<br><strong>Cấu hình:</strong><br>• Nhóm 1: 'Chọn 1 Vị Nước Lẩu' (Số lượng = 1, Nguồn: Lẩu Thái, Lẩu Nấm, Lẩu Kim chi)<br>• Nhóm 2: 'Chọn 2 Đĩa Thịt' (Số lượng = 2, Cho phép chọn trùng: BẬT, Nguồn: Ba chỉ bò, Đùi gà, Bắp hoa)<br>• Nhóm 3: 'Chọn 2 Món Ăn Kèm / Tinh Bột' (Số lượng = 2, Nguồn: Mì tôm, Miến dong, Rau tổng hợp)",
+    btnBundleGuideGotIt: "Đã hiểu"
   }
 };
 
@@ -2201,4 +2265,68 @@ function applyLanguageToDOM() {
   if (bndlTipT) bndlTipT.innerText = dict.bundleTipTitle;
   const bndlTipD = document.getElementById("i18n-bundle-tip-desc");
   if (bndlTipD) bndlTipD.innerText = dict.bundleTipDesc;
+  const bndlDangerT = document.getElementById("i18n-bundle-danger-title");
+  if (bndlDangerT) bndlDangerT.innerText = dict.bundleDangerZoneTitle;
+  const bndlDangerD = document.getElementById("i18n-bundle-danger-desc");
+  if (bndlDangerD) bndlDangerD.innerText = dict.bundleDangerZoneDesc;
+  const bndlGrdB = document.getElementById("i18n-btn-bundle-guide");
+  if (bndlGrdB) bndlGrdB.innerText = dict.btnBundleGuide;
+  const bndlSbG = document.getElementById("i18n-btn-bundle-sidebar-guide");
+  if (bndlSbG) bndlSbG.innerText = dict.btnBundleSidebarGuide;
+  const bndlGMTitle = document.getElementById("i18n-bundle-guide-modal-title");
+  if (bndlGMTitle) bndlGMTitle.innerText = dict.bundleGuideModalTitle;
+  const bndlGMSub = document.getElementById("i18n-bundle-guide-modal-sub");
+  if (bndlGMSub) bndlGMSub.innerText = dict.bundleGuideModalSub;
+  const bndlGWhatTag = document.getElementById("i18n-bundle-guide-what-tag");
+  if (bndlGWhatTag) bndlGWhatTag.innerText = dict.bundleGuideWhatTag;
+  const bndlGWhatT = document.getElementById("i18n-bundle-guide-what-title");
+  if (bndlGWhatT) bndlGWhatT.innerText = dict.bundleGuideWhatTitle;
+  const bndlGWhatD = document.getElementById("i18n-bundle-guide-what-desc");
+  if (bndlGWhatD) bndlGWhatD.innerHTML = dict.bundleGuideWhatDesc;
+  const bndlGStepsTag = document.getElementById("i18n-bundle-guide-steps-tag");
+  if (bndlGStepsTag) bndlGStepsTag.innerText = dict.bundleGuideStepsTag;
+  const bndlGStepsT = document.getElementById("i18n-bundle-guide-steps-title");
+  if (bndlGStepsT) bndlGStepsT.innerText = dict.bundleGuideStepsTitle;
+  const bndlGS1Tag = document.getElementById("i18n-bundle-guide-step1-tag");
+  if (bndlGS1Tag) bndlGS1Tag.innerText = dict.bundleGuideStep1Tag;
+  const bndlGS1T = document.getElementById("i18n-bundle-guide-step1-title");
+  if (bndlGS1T) bndlGS1T.innerText = dict.bundleGuideStep1Title;
+  const bndlGS1D = document.getElementById("i18n-bundle-guide-step1-desc");
+  if (bndlGS1D) bndlGS1D.innerHTML = dict.bundleGuideStep1Desc;
+  const bndlGS2Tag = document.getElementById("i18n-bundle-guide-step2-tag");
+  if (bndlGS2Tag) bndlGS2Tag.innerText = dict.bundleGuideStep2Tag;
+  const bndlGS2T = document.getElementById("i18n-bundle-guide-step2-title");
+  if (bndlGS2T) bndlGS2T.innerText = dict.bundleGuideStep2Title;
+  const bndlGS2D = document.getElementById("i18n-bundle-guide-step2-desc");
+  if (bndlGS2D) bndlGS2D.innerHTML = dict.bundleGuideStep2Desc;
+  const bndlGS3Tag = document.getElementById("i18n-bundle-guide-step3-tag");
+  if (bndlGS3Tag) bndlGS3Tag.innerText = dict.bundleGuideStep3Tag;
+  const bndlGS3T = document.getElementById("i18n-bundle-guide-step3-title");
+  if (bndlGS3T) bndlGS3T.innerText = dict.bundleGuideStep3Title;
+  const bndlGS3D = document.getElementById("i18n-bundle-guide-step3-desc");
+  if (bndlGS3D) bndlGS3D.innerHTML = dict.bundleGuideStep3Desc;
+  const bndlGExTag = document.getElementById("i18n-bundle-guide-examples-tag");
+  if (bndlGExTag) bndlGExTag.innerText = dict.bundleGuideExamplesTag;
+  const bndlGExT = document.getElementById("i18n-bundle-guide-examples-title");
+  if (bndlGExT) bndlGExT.innerText = dict.bundleGuideExamplesTitle;
+  const bndlEx1T = document.getElementById("i18n-bundle-ex1-title");
+  if (bndlEx1T) bndlEx1T.innerText = dict.bundleEx1Title;
+  const bndlEx1B = document.getElementById("i18n-bundle-ex1-badge");
+  if (bndlEx1B) bndlEx1B.innerText = dict.bundleEx1Badge;
+  const bndlEx1D = document.getElementById("i18n-bundle-ex1-desc");
+  if (bndlEx1D) bndlEx1D.innerHTML = dict.bundleEx1Desc;
+  const bndlEx2T = document.getElementById("i18n-bundle-ex2-title");
+  if (bndlEx2T) bndlEx2T.innerText = dict.bundleEx2Title;
+  const bndlEx2B = document.getElementById("i18n-bundle-ex2-badge");
+  if (bndlEx2B) bndlEx2B.innerText = dict.bundleEx2Badge;
+  const bndlEx2D = document.getElementById("i18n-bundle-ex2-desc");
+  if (bndlEx2D) bndlEx2D.innerHTML = dict.bundleEx2Desc;
+  const bndlEx3T = document.getElementById("i18n-bundle-ex3-title");
+  if (bndlEx3T) bndlEx3T.innerText = dict.bundleEx3Title;
+  const bndlEx3B = document.getElementById("i18n-bundle-ex3-badge");
+  if (bndlEx3B) bndlEx3B.innerText = dict.bundleEx3Badge;
+  const bndlEx3D = document.getElementById("i18n-bundle-ex3-desc");
+  if (bndlEx3D) bndlEx3D.innerHTML = dict.bundleEx3Desc;
+  const btnBndlGGotIt = document.getElementById("i18n-btn-bundle-guide-gotit");
+  if (btnBndlGGotIt) btnBndlGGotIt.innerText = dict.btnBundleGuideGotIt;
 }

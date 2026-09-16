@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title id="pos-page-title">Blab POS</title>
   <base href="/" />
-  <link rel="stylesheet" href="css/orders.css?v=20260916_menu_bundle_editor_v2" />
+  <link rel="stylesheet" href="css/orders.css?v=20260916_menu_bundle_editor_v4" />
     <script>
       (function () {
         document.documentElement.style.setProperty('--primary', '#00b900');
@@ -1807,27 +1807,29 @@
             </svg>
           </div>
           <div class="order-detail-header-text bundle-modal-header-text">
-            <h1 class="order-detail-title bundle-modal-title" id="bundle-modal-item-title">
-              <span id="i18n-bundle-modal-title">設定套餐組合</span>
-              <span class="order-title-dot">•</span>
-              <span id="bundle-modal-item-name" class="bundle-target-item-name">--</span>
-              <span id="bundle-modal-item-price" class="bundle-target-item-price"></span>
-            </h1>
+            <div class="bundle-modal-header-row">
+              <h1 class="order-detail-title bundle-modal-title" id="bundle-modal-item-title">
+                <span id="i18n-bundle-modal-title">設定套餐組合</span>
+                <span class="order-title-dot">•</span>
+                <span id="bundle-modal-item-name" class="bundle-target-item-name">--</span>
+                <span id="bundle-modal-item-price" class="bundle-target-item-price"></span>
+              </h1>
+              <button type="button" class="btn bundle-guide-topbar-btn" onclick="openBundleGuideModal()" id="btn-open-bundle-guide" title="說明與範例 / Hướng dẫn & Ví dụ">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                  <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+                <span id="i18n-btn-bundle-guide">套餐說明與範例</span>
+              </button>
+            </div>
             <p class="bundle-modal-sub" id="i18n-bundle-modal-sub">設定該套餐所包含的自選群組、選菜來源與數量規則</p>
           </div>
         </div>
 
         <div class="order-detail-topbar-right bundle-modal-topbar-right">
-          <button type="button" class="btn bundle-btn-delete-config" id="btn-bundle-remove-config" onclick="clearBundleConfig()" style="display: none;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3 6h18"></path>
-              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-            </svg>
-            <span id="i18n-btn-delete-bundle-config">解除組合 (轉為一般單點)</span>
-          </button>
           <button type="button" class="btn btn-ghost bundle-footer-btn" onclick="closeBundleEditorModal()" id="btn-bundle-modal-cancel">
-            <span id="i18n-btn-bundle-cancel">取消</span>
+            <span id="i18n-btn-bundle-cancel">關閉</span>
           </button>
           <button type="button" class="btn btn-primary bundle-footer-btn bundle-btn-save" id="btn-bundle-modal-save" onclick="saveBundleConfig()">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -1835,7 +1837,7 @@
               <polyline points="17 21 17 13 7 13 7 21"/>
               <polyline points="7 3 7 8 15 8"/>
             </svg>
-            <span id="i18n-btn-bundle-save">儲存套餐組合</span>
+            <span id="i18n-btn-bundle-save">儲存設定</span>
           </button>
         </div>
       </div>
@@ -1868,13 +1870,169 @@
               <span id="i18n-bundle-tip-title">提示說明</span>
             </div>
             <p id="i18n-bundle-tip-desc">顧客在點餐時必須逐一完成每個分組的選擇數量，方可加入購物車。</p>
+            <button type="button" class="bundle-sidebar-guide-link" onclick="openBundleGuideModal()" id="btn-open-bundle-sidebar-guide">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+              </svg>
+              <span id="i18n-btn-bundle-sidebar-guide">查看 Combo 說明與範例</span>
+            </button>
           </div>
         </div>
 
-        <!-- Right Column: Current Group Detailed Configuration -->
-        <div class="bundle-group-config-panel" id="bundle-group-config-panel">
-          <!-- Dynamically populated or empty state -->
+        <!-- Right Column: Current Group Detailed Configuration & Danger Zone -->
+        <div class="bundle-editor-right-col">
+          <div class="bundle-group-config-panel" id="bundle-group-config-panel">
+            <!-- Dynamically populated or empty state -->
+          </div>
+
+          <!-- Danger Zone Card: Convert back to Single Item -->
+          <div class="bundle-danger-zone-card" id="bundle-danger-zone-card" style="display: none;">
+            <div class="bundle-danger-zone-header">
+              <div class="bundle-danger-zone-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+                  <line x1="12" y1="9" x2="12" y2="13"/>
+                  <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+              </div>
+              <div class="bundle-danger-zone-text">
+                <h4 class="bundle-danger-zone-title" id="i18n-bundle-danger-title">變更餐點類型</h4>
+                <p class="bundle-danger-zone-desc" id="i18n-bundle-danger-desc">
+                  此餐點目前已設定為自選組合。若要改為普通單點販售（無需自選配菜），可解除組合設定。
+                </p>
+              </div>
+            </div>
+            <div class="bundle-danger-zone-action">
+              <button type="button" class="btn bundle-btn-delete-config" id="btn-bundle-remove-config" onclick="clearBundleConfig()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 6h18"></path>
+                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                </svg>
+                <span id="i18n-btn-delete-bundle-config">解除組合 (轉為一般單點)</span>
+              </button>
+            </div>
+          </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Hướng Dẫn Thiết Lập Combo & Ví Dụ Thực Tế (Combo Guide Modal) -->
+  <div class="modal" id="bundleGuideModal" style="display: none;" onclick="if(event.target === this) closeBundleGuideModal()">
+    <div class="modal-content bundle-guide-modal-content" style="max-width: 860px; border-radius: 18px; padding: 24px; box-shadow: 0 24px 48px rgba(0, 0, 0, 0.22);">
+      <div class="modal-title" style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 14px; border-bottom: 1px solid var(--border);">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="width: 40px; height: 40px; border-radius: 10px; background: #eef2ff; border: 1.5px solid #c7d2fe; color: #4f46e5; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.9a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/>
+              <path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/>
+              <path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>
+            </svg>
+          </div>
+          <div>
+            <div style="font-weight: 1000; font-size: 18px; color: #0f172a;" id="i18n-bundle-guide-modal-title">套餐組合設定指南與實例</div>
+            <div style="font-size: 13px; color: #64748b; margin-top: 2px;" id="i18n-bundle-guide-modal-sub">深入了解套餐概念、3步驟設定流程與常見餐飲實例</div>
+          </div>
+        </div>
+        <button type="button" class="modal-close" onclick="closeBundleGuideModal()" aria-label="Close" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #94a3b8; padding: 4px 8px; border-radius: 8px;">✕</button>
+      </div>
+
+      <div class="modal-body" style="padding: 20px 4px 10px 4px; max-height: 72vh; overflow-y: auto; display: flex; flex-direction: column; gap: 20px;">
+        
+        <!-- Section 1: Combo là gì? -->
+        <div class="bundle-guide-section" style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 18px 20px;">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+            <span style="font-size: 12px; font-weight: 800; background: #e0e7ff; color: #4338ca; padding: 2px 8px; border-radius: 6px; text-transform: uppercase;" id="i18n-bundle-guide-what-tag">概念</span>
+            <h3 style="margin: 0; font-size: 16px; font-weight: 900; color: #1e293b;" id="i18n-bundle-guide-what-title">1. 套餐組合 (Combo / Bundle) 是什麼？</h3>
+          </div>
+          <p style="margin: 0; font-size: 13.5px; color: #475569; line-height: 1.6;" id="i18n-bundle-guide-what-desc">
+            套餐組合是將多樣餐點（如：主餐 + 配菜 + 飲料）綁定在一起以固定套餐價販售的功能。顧客在手機（LINE LIFF）或店員於 POS 點餐時，需依各群組規定選滿指定數量方可加入購物車。此功能有助於提高客單價、加快出單與備料流程。
+          </p>
+        </div>
+
+        <!-- Section 2: Cách tạo combo qua 3 bước -->
+        <div class="bundle-guide-section" style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 18px 20px;">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+            <span style="font-size: 12px; font-weight: 800; background: #ecfdf5; color: #065f46; padding: 2px 8px; border-radius: 6px; text-transform: uppercase;" id="i18n-bundle-guide-steps-tag">流程</span>
+            <h3 style="margin: 0; font-size: 16px; font-weight: 900; color: #1e293b;" id="i18n-bundle-guide-steps-title">2. 套餐設定 3 步驟</h3>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px;">
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px;">
+              <div style="font-size: 12.5px; font-weight: 800; color: #6366f1; margin-bottom: 4px;" id="i18n-bundle-guide-step1-tag">步驟 1</div>
+              <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 6px;" id="i18n-bundle-guide-step1-title">新增自選分組</div>
+              <div style="font-size: 12.5px; color: #64748b; line-height: 1.5;" id="i18n-bundle-guide-step1-desc">點擊左側「+ 新增自選分組」，設定繁中與越南語名稱（例：請選擇 1 樣主餐、請選擇 6 樣配菜）。</div>
+            </div>
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px;">
+              <div style="font-size: 12.5px; font-weight: 800; color: #10b981; margin-bottom: 4px;" id="i18n-bundle-guide-step2-tag">步驟 2</div>
+              <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 6px;" id="i18n-bundle-guide-step2-title">設定數量與重複規則</div>
+              <div style="font-size: 12.5px; color: #64748b; line-height: 1.5;" id="i18n-bundle-guide-step2-desc">使用 [ - ] 和 [ + ] 調整顧客必須選滿的數量。若顧客可重複選相同品項（如：2 份玉米筍），請勾選「允許重複選同一品項」。</div>
+            </div>
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px;">
+              <div style="font-size: 12.5px; font-weight: 800; color: #f59e0b; margin-bottom: 4px;" id="i18n-bundle-guide-step3-tag">步驟 3</div>
+              <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 6px;" id="i18n-bundle-guide-step3-title">指定選菜來源</div>
+              <div style="font-size: 12.5px; color: #64748b; line-height: 1.5;" id="i18n-bundle-guide-step3-desc">可選擇「依整個分類自動匯入」（如：所有蔬菜類或飲料類），或切換至「手動勾選特定品項」。</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: Các Ví Dụ Mẫu Thực Tế (Example Use Cases) -->
+        <div class="bundle-guide-section" style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 18px 20px;">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+            <span style="font-size: 12px; font-weight: 800; background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 6px; text-transform: uppercase;" id="i18n-bundle-guide-examples-tag">範例</span>
+            <h3 style="margin: 0; font-size: 16px; font-weight: 900; color: #1e293b;" id="i18n-bundle-guide-examples-title">3. 常見餐飲實例 (Example Use Cases)</h3>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            
+            <!-- Example 1: Jiangjiejie Salted Chicken -->
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
+                <div style="font-size: 14.5px; font-weight: 800; color: #0f172a;" id="i18n-bundle-ex1-title">🍗 鹹水雞 / 滷味 / 炸物店實例 (例：蔣姐姐鹹水雞)</div>
+                <span style="font-size: 12px; font-weight: 700; color: #059669; background: #ecfdf5; padding: 2px 8px; border-radius: 6px;" id="i18n-bundle-ex1-badge">1 組 • 6 樣菜</span>
+              </div>
+              <div style="font-size: 13px; color: #475569; line-height: 1.5;" id="i18n-bundle-ex1-desc">
+                <strong>品項：</strong>套餐 A (3隻鹹水雞翅+6樣菜) - $150<br>
+                <strong>設定：</strong>建立 1 個自選分組「請選擇 6 樣配菜」，需求數量設為 6，<strong>勾選</strong>「允許重複選同一品項」。選菜來源勾選「海裡」、「時蔬」、「內臟」、「滷味」等分類。
+              </div>
+            </div>
+
+            <!-- Example 2: Banh Mi / Fast Food -->
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
+                <div style="font-size: 14.5px; font-weight: 800; color: #0f172a;" id="i18n-bundle-ex2-title">🥖 越式法國麵包 / 早午餐 / 輕食店實例</div>
+                <span style="font-size: 12px; font-weight: 700; color: #2563eb; background: #eff6ff; padding: 2px 8px; border-radius: 6px;" id="i18n-bundle-ex2-badge">2 組 • 主餐 + 飲料</span>
+              </div>
+              <div style="font-size: 13px; color: #475569; line-height: 1.5;" id="i18n-bundle-ex2-desc">
+                <strong>品項：</strong>元氣早午餐特惠套餐 - $99<br>
+                <strong>設定：</strong><br>
+                • 分組 1：「選 1 樣主餐麵包」（數量 = 1，來源：法國麵包分類）<br>
+                • 分組 2：「選 1 杯飲品」（數量 = 1，來源：咖啡與茶飲分類）
+              </div>
+            </div>
+
+            <!-- Example 3: Hotpot / BBQ -->
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
+                <div style="font-size: 14.5px; font-weight: 800; color: #0f172a;" id="i18n-bundle-ex3-title">🍲 火鍋 / 燒烤 / 雙人便當店實例</div>
+                <span style="font-size: 12px; font-weight: 700; color: #d97706; background: #fffbeb; padding: 2px 8px; border-radius: 6px;" id="i18n-bundle-ex3-badge">3 組 • 湯底 + 肉品 + 副餐</span>
+              </div>
+              <div style="font-size: 13px; color: #475569; line-height: 1.5;" id="i18n-bundle-ex3-desc">
+                <strong>品項：</strong>雙人特選火鍋套餐 - $450<br>
+                <strong>設定：</strong><br>
+                • 分組 1：「選 1 款湯底」（數量 = 1，來源：原味、麻辣、番茄等）<br>
+                • 分組 2：「選 2 盤肉品」（數量 = 2，允許重複，來源：牛肉片、豬五花、雞腿肉）<br>
+                • 分組 3：「選 2 樣副餐」（數量 = 2，來源：白飯、冬粉、王子麵）
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer" style="padding-top: 16px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end;">
+        <button type="button" class="btn btn-primary" onclick="closeBundleGuideModal()" style="min-height: 44px; padding: 0 24px; font-size: 14.5px; font-weight: 800; border-radius: 10px;" id="i18n-btn-bundle-guide-gotit">我知道了</button>
       </div>
     </div>
   </div>
@@ -2146,16 +2304,16 @@
   </div>
 
   <!-- Benmi POS Modular Architecture Scripts -->
-  <script src="js/orders-i18n.js?v=20260916_menu_bundle_editor_v2"></script>
-  <script src="js/orders-core.js?v=20260916_menu_bundle_editor_v2"></script>
-  <script src="js/orders-audio.js?v=20260916_menu_bundle_editor_v2"></script>
-  <script src="js/printer-service.js?v=20260916_menu_bundle_editor_v2"></script>
-  <script src="js/orders-live.js?v=20260916_menu_bundle_editor_v2"></script>
-  <script src="js/orders-modals.js?v=20260916_menu_bundle_editor_v2"></script>
-  <script src="js/orders-history.js?v=20260916_menu_bundle_editor_v2"></script>
-  <script src="js/orders-reports.js?v=20260916_menu_bundle_editor_v2"></script>
-  <script src="js/orders-settings.js?v=20260916_menu_bundle_editor_v2"></script>
-  <script src="js/orders-menu.js?v=20260916_menu_bundle_editor_v2"></script>
+  <script src="js/orders-i18n.js?v=20260916_menu_bundle_editor_v4"></script>
+  <script src="js/orders-core.js?v=20260916_menu_bundle_editor_v4"></script>
+  <script src="js/orders-audio.js?v=20260916_menu_bundle_editor_v4"></script>
+  <script src="js/printer-service.js?v=20260916_menu_bundle_editor_v4"></script>
+  <script src="js/orders-live.js?v=20260916_menu_bundle_editor_v4"></script>
+  <script src="js/orders-modals.js?v=20260916_menu_bundle_editor_v4"></script>
+  <script src="js/orders-history.js?v=20260916_menu_bundle_editor_v4"></script>
+  <script src="js/orders-reports.js?v=20260916_menu_bundle_editor_v4"></script>
+  <script src="js/orders-settings.js?v=20260916_menu_bundle_editor_v4"></script>
+  <script src="js/orders-menu.js?v=20260916_menu_bundle_editor_v4"></script>
 
   <!-- POS Bootstrap & Initialization -->
   <script>
