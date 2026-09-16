@@ -1893,22 +1893,28 @@ function deleteBundleGroup(groupIdx, event) {
 }
 window.deleteBundleGroup = deleteBundleGroup;
 
-function updateBundleGroupLabel(lang, val) {
+function updateBundleGroupName(val) {
   if (!bundleDraftRule || !bundleDraftRule.groups[bundleActiveGroupIndex]) return;
   const grp = bundleDraftRule.groups[bundleActiveGroupIndex];
+  grp.name = val;
   if (!grp.label || typeof grp.label !== 'object') {
-    grp.label = { "zh-TW": "", "vi": "" };
+    grp.label = {};
   }
-  grp.label[lang] = val;
-  grp.name = grp.label["zh-TW"] || grp.label["vi"] || val;
+  grp.label["zh-TW"] = val;
+  grp.label["vi"] = val;
 
   // Update card title live
   const cards = document.querySelectorAll("#bundle-groups-list .bundle-group-card");
   if (cards[bundleActiveGroupIndex]) {
     const titleEl = cards[bundleActiveGroupIndex].querySelector(".bundle-group-card-title");
-    const displayVal = (grp.label && (grp.label[currentLang] || grp.label['zh-TW'] || grp.label['vi'])) || grp.name || `${t("bundleBadge")} #${bundleActiveGroupIndex + 1}`;
+    const displayVal = val || `${t("bundleBadge")} #${bundleActiveGroupIndex + 1}`;
     if (titleEl) titleEl.textContent = displayVal;
   }
+}
+window.updateBundleGroupName = updateBundleGroupName;
+
+function updateBundleGroupLabel(lang, val) {
+  updateBundleGroupName(val);
 }
 window.updateBundleGroupLabel = updateBundleGroupLabel;
 
@@ -2079,14 +2085,13 @@ function renderBundleGroupConfigPanel() {
   }
 
   const grp = bundleDraftRule.groups[bundleActiveGroupIndex];
-  const zhName = (grp.label && grp.label['zh-TW']) || '';
-  const viName = (grp.label && grp.label['vi']) || '';
+  const grpName = grp.name || (grp.label && (grp.label[currentLang] || grp.label['zh-TW'] || grp.label['vi'])) || '';
   const qty = grp.minQuantity || 1;
   const isRepeat = Boolean(grp.allowRepeats);
   const eligibleCount = computeEligibleItemsCount(grp);
 
   panel.innerHTML = `
-    <!-- Section 1: Group Name (I18N) -->
+    <!-- Section 1: Group Name -->
     <div class="bundle-config-section">
       <div class="bundle-config-section-title">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -2097,14 +2102,9 @@ function renderBundleGroupConfigPanel() {
       </div>
       <div class="bundle-group-name-inputs">
         <div class="bundle-field-group">
-          <label class="bundle-field-label" id="i18n-bundle-name-zh-lbl">${t("bundleGroupNameZh")}</label>
-          <input type="text" class="bundle-input-text" id="bundle-group-name-zh" value="${escapeHtml(zhName)}"
-            placeholder="${t("bundleGroupNamePlaceholder")}" oninput="updateBundleGroupLabel('zh-TW', this.value)">
-        </div>
-        <div class="bundle-field-group">
-          <label class="bundle-field-label" id="i18n-bundle-name-vi-lbl">${t("bundleGroupNameVi")}</label>
-          <input type="text" class="bundle-input-text" id="bundle-group-name-vi" value="${escapeHtml(viName)}"
-            placeholder="${t("bundleGroupNamePlaceholder")}" oninput="updateBundleGroupLabel('vi', this.value)">
+          <label class="bundle-field-label" id="i18n-bundle-name-lbl">${t("bundleGroupName")}</label>
+          <input type="text" class="bundle-input-text" id="bundle-group-name" value="${escapeHtml(grpName)}"
+            placeholder="${t("bundleGroupNamePlaceholder")}" oninput="updateBundleGroupName(this.value)">
         </div>
       </div>
     </div>

@@ -106,7 +106,7 @@ const requiredKeys = [
   'btnSetBundle', 'btnEditBundle', 'bundleBadge', 'bundleGroupUnit',
   'modalBundleTitle', 'modalBundleSub', 'bundleGroupListTitle', 'btnAddBundleGroup',
   'btnRemoveBundleConfig', 'confirmRemoveBundleConfig', 'bundleGroupDetailTitle',
-  'bundleGroupNameZh', 'bundleGroupNameVi', 'bundleQuantityRule', 'bundleAllowRepeat',
+  'bundleGroupName', 'bundleGroupNameZh', 'bundleGroupNameVi', 'bundleQuantityRule', 'bundleAllowRepeat',
   'bundleSourceType', 'bundleSourceCategory', 'bundleSourceItems', 'bundleEligiblePreview',
   'bundleSaveSuccess', 'bundleSaveFail', 'btnBundleSave', 'btnBundleCancel',
   'bundleDangerZoneTitle', 'bundleDangerZoneDesc',
@@ -224,6 +224,13 @@ vm.runInContext(`toggleBundleRepeat(true);`, context);
 grp1 = vm.runInContext(`bundleDraftRule.groups[0]`, context);
 assert.strictEqual(grp1.allowRepeats, true, "allowRepeats should be true");
 
+// Update single group name
+vm.runInContext(`updateBundleGroupName('精選自選菜色');`, context);
+grp1 = vm.runInContext(`bundleDraftRule.groups[0]`, context);
+assert.strictEqual(grp1.name, '精選自選菜色', "Group name should update");
+assert.strictEqual(grp1.label['zh-TW'], '精選自選菜色', "Group zh-TW label should update");
+assert.strictEqual(grp1.label['vi'], '精選自選菜色', "Group vi label should update");
+
 // Add third group
 vm.runInContext(`addBundleGroup();`, context);
 let groupCount = vm.runInContext(`bundleDraftRule.groups.length`, context);
@@ -265,8 +272,8 @@ assert.ok(cssContent.includes('.bundle-stepper-btn'), "orders.css must contain .
 assert.ok(htmlContent.includes('id="bundleGuideModal"'), "orders.html must contain #bundleGuideModal");
 assert.ok(htmlContent.includes('id="btn-open-bundle-guide"'), "orders.html must contain #btn-open-bundle-guide");
 assert.ok(cssContent.includes('.bundle-guide-topbar-btn'), "orders.css must contain .bundle-guide-topbar-btn");
-assert.ok(htmlContent.includes('orders.css?v=20260916_menu_bundle_editor_v4'), "orders.css cache buster bumped");
-assert.ok(htmlContent.includes('orders-menu.js?v=20260916_menu_bundle_editor_v4'), "orders-menu.js cache buster bumped");
+assert.ok(htmlContent.includes('orders.css?v=20260916_menu_bundle_editor_v5'), "orders.css cache buster bumped");
+assert.ok(htmlContent.includes('orders-menu.js?v=20260916_menu_bundle_editor_v5'), "orders-menu.js cache buster bumped");
 console.log("✓ Modal markup, CSS classes, Danger Zone, Guide Modal, and cache-busting verified.");
 
 console.log("\n====================================================");
