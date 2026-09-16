@@ -457,14 +457,15 @@
         value.forEach(option => {
           const text = typeof option === 'string' ? option : (option.choice || option.name || '');
           if (!text) return;
-          const m = text.match(/^(第(?:\d+|[一二三四五六七八九十]+)份)[：:]\s*(.+)$/);
+          const cleanText = text.replace(/^[↳\-+•*]\s*/, '').trim();
+          const m = cleanText.match(/^(第(?:\d+|[一二三四五六七八九十]+)份)[：:]\s*(.+)$/);
           if (m) {
             hasPortions = true;
             const pKey = m[1];
             if (!portionGroups[pKey]) portionGroups[pKey] = [];
             portionGroups[pKey].push(m[2]);
           } else {
-            otherOptions.push(text);
+            otherOptions.push(cleanText);
           }
         });
         if (hasPortions) {
@@ -651,8 +652,9 @@
             combinedOptionsList = bundleOpts;
           }
 
-          // Defensive fallback: If no bundle snapshot was found, extract any ↳ bundle lines for this item from order.content
-          if (bundleOpts.length === 0 && order && order.content) {
+          // Defensive fallback: If no bundle snapshot was found AND this item has no options, check order.content
+          const hasExistingOptions = combinedOptionsList.length > 0;
+          if (!hasExistingOptions && order && order.content) {
             const contentLines = String(order.content).split('\n');
             let matchedItem = false;
             const fallbackOpts = [];
@@ -663,10 +665,11 @@
                 continue;
               }
               if (matchedItem) {
+                if (!trimmed.startsWith('↳') && !trimmed.startsWith('-') && !trimmed.startsWith('•') && trimmed.length > 0) {
+                  break;
+                }
                 if (trimmed.startsWith('↳') || (trimmed.startsWith('-') && !trimmed.includes('口味設定') && !trimmed.includes('備註') && !trimmed.includes('Ghi chú') && !trimmed.includes('Khẩu vị') && !trimmed.includes('Hương vị'))) {
                   fallbackOpts.push(trimmed);
-                } else if (!trimmed.startsWith('↳') && !trimmed.startsWith('-') && !trimmed.startsWith('•') && trimmed.length > 0) {
-                  break;
                 }
               }
             }
