@@ -590,7 +590,44 @@ const I18N = {
     promptUnlinkPin: "請輸入門市管理 PIN 碼以解除綁定：",
     unlinkSuccess: "已成功解除設備綁定！即將返回門市啟用畫面。",
     unlinkWrongPin: "管理 PIN 碼錯誤，無法解除綁定。",
-    unpaired: "未綁定"
+    unpaired: "未綁定",
+    btnSetBundle: "設為組合",
+    btnEditBundle: "編輯組合",
+    bundleBadge: "組合",
+    bundleGroupUnit: "組",
+    modalBundleTitle: "設定套餐組合",
+    modalBundleSub: "設定該套餐所包含的自選群組、選菜來源與數量規則",
+    bundleGroupListTitle: "自選分組列表",
+    btnAddBundleGroup: "新增自選分組",
+    btnRemoveBundleConfig: "解除組合 (轉為一般單點)",
+    confirmRemoveBundleConfig: "確定要解除此項目的組合設定嗎？解除後將變為普通單點餐點。",
+    bundleGroupDetailTitle: "分組詳細設定",
+    bundleGroupNameZh: "分組名稱 (繁體中文)",
+    bundleGroupNameVi: "分組名稱 (Tiếng Việt)",
+    bundleGroupNamePlaceholder: "例如：請選擇 6 樣配菜",
+    bundleQuantityRule: "選菜數量要求",
+    bundleQuantityExact: "必須恰好選取",
+    bundleAllowRepeat: "允許重複選取相同菜色",
+    bundleAllowRepeatDesc: "客人可在該分組中重複點選同一個品項 (如：2 份甜不辣)",
+    bundleSourceType: "選菜來源 (菜品清單)",
+    bundleSourceCategory: "依全部分類 (自動包含分類內所有菜品)",
+    bundleSourceCategoryDesc: "未來若此分類新增餐點，套餐將自動同步包含",
+    bundleSourceItems: "指定個別菜品",
+    bundleSelectCategories: "勾選適用的菜品分類",
+    bundleSelectItems: "勾選適用的餐點",
+    bundleEligiblePreview: "此組預覽可選菜品總數",
+    bundleSaveSuccess: "套餐組合設定已成功儲存！",
+    bundleSaveFail: "儲存套餐組合失敗：",
+    bundleValidationEmptyGroups: "請至少新增 1 個自選分組！",
+    bundleValidationEmptyName: "分組名稱不能為空！",
+    bundleValidationEmptySources: "請為分組選擇至少一個分類或菜品來源！",
+    bundleDefaultGroupName: "任選配菜",
+    bundleItemUnit: "樣",
+    bundleSurchargeNotice: "包含於套餐內 (如需個別加價請於菜品單價中設定)",
+    btnBundleSave: "儲存套餐組合",
+    btnBundleCancel: "取消",
+    bundleTipTitle: "提示說明",
+    bundleTipDesc: "顧客在點餐時必須逐一完成每個分組的選擇數量，方可加入購物車。"
   },
   "vi": {
     langBtn: "Tiếng Việt",
@@ -1179,7 +1216,44 @@ const I18N = {
     promptUnlinkPin: "Vui lòng nhập mã PIN quản lý của quán để hủy ghép đôi:",
     unlinkSuccess: "Đã hủy ghép đôi thiết bị thành công! Đang chuyển về màn hình kích hoạt.",
     unlinkWrongPin: "Mã PIN quản lý không đúng. Không thể hủy ghép đôi.",
-    unpaired: "Chưa liên kết"
+    unpaired: "Chưa liên kết",
+    btnSetBundle: "Cấu hình Combo",
+    btnEditBundle: "Sửa Combo",
+    bundleBadge: "Combo",
+    bundleGroupUnit: "nhóm",
+    modalBundleTitle: "Thiết Lập Combo Món Ăn",
+    modalBundleSub: "Cấu hình các nhóm món tự chọn, nguồn món và quy tắc số lượng cho combo này",
+    bundleGroupListTitle: "Danh sách nhóm chọn",
+    btnAddBundleGroup: "Thêm nhóm chọn mới",
+    btnRemoveBundleConfig: "Hủy cấu hình Combo (chuyển về món thường)",
+    confirmRemoveBundleConfig: "Bạn có chắc muốn xóa cấu hình Combo cho món này? Món sẽ trở thành món đơn thông thường.",
+    bundleGroupDetailTitle: "Chi tiết nhóm chọn",
+    bundleGroupNameZh: "Tên nhóm (Tiếng Trung)",
+    bundleGroupNameVi: "Tên nhóm (Tiếng Việt)",
+    bundleGroupNamePlaceholder: "Ví dụ: Chọn 6 món ăn kèm",
+    bundleQuantityRule: "Số lượng món yêu cầu",
+    bundleQuantityExact: "Bắt buộc chọn đúng",
+    bundleAllowRepeat: "Cho phép chọn trùng món cùng loại",
+    bundleAllowRepeatDesc: "Khách có thể chọn nhiều phần cùng 1 món (ví dụ: 2 phần bắp ngô)",
+    bundleSourceType: "Nguồn món ăn được phép chọn",
+    bundleSourceCategory: "Theo toàn bộ danh mục (tự động gồm các món trong danh mục)",
+    bundleSourceCategoryDesc: "Món mới thêm vào danh mục sau này sẽ tự động có trong combo",
+    bundleSourceItems: "Chọn lọc từng món cụ thể",
+    bundleSelectCategories: "Chọn các danh mục áp dụng",
+    bundleSelectItems: "Chọn các món áp dụng",
+    bundleEligiblePreview: "Tổng số món khả dụng trong nhóm này",
+    bundleSaveSuccess: "Đã lưu cấu hình Combo thành công!",
+    bundleSaveFail: "Lưu cấu hình Combo thất bại: ",
+    bundleValidationEmptyGroups: "Vui lòng thêm ít nhất 1 nhóm chọn!",
+    bundleValidationEmptyName: "Tên nhóm không được để trống!",
+    bundleValidationEmptySources: "Vui lòng chọn ít nhất một danh mục hoặc món ăn làm nguồn!",
+    bundleDefaultGroupName: "Món tự chọn",
+    bundleItemUnit: "món",
+    bundleSurchargeNotice: "Đã bao gồm trong giá combo",
+    btnBundleSave: "Lưu cấu hình Combo",
+    btnBundleCancel: "Hủy",
+    bundleTipTitle: "Mẹo thiết lập",
+    bundleTipDesc: "Khách hàng phải hoàn tất đủ số lượng món trong từng nhóm mới có thể thêm vào giỏ hàng."
   }
 };
 
@@ -2107,4 +2181,24 @@ function applyLanguageToDOM() {
   if (actInpP) actInpP.placeholder = dict.activationPinPlaceholder;
   const btnActTxt = document.getElementById("i18n-btn-submit-activation-text");
   if (btnActTxt) btnActTxt.innerText = dict.btnSubmitActivation;
+
+  // Bundle Editor Modal DOM mappings
+  const bndlModT = document.getElementById("i18n-bundle-modal-title");
+  if (bndlModT) bndlModT.innerText = dict.modalBundleTitle;
+  const bndlModS = document.getElementById("i18n-bundle-modal-sub");
+  if (bndlModS) bndlModS.innerText = dict.modalBundleSub;
+  const bndlGrpT = document.getElementById("i18n-bundle-groups-title");
+  if (bndlGrpT) bndlGrpT.innerText = dict.bundleGroupListTitle;
+  const btnAddBndlG = document.getElementById("i18n-btn-add-bundle-group");
+  if (btnAddBndlG) btnAddBndlG.innerText = dict.btnAddBundleGroup;
+  const btnDelBndlC = document.getElementById("i18n-btn-delete-bundle-config");
+  if (btnDelBndlC) btnDelBndlC.innerText = dict.btnRemoveBundleConfig;
+  const btnBndlCancel = document.getElementById("i18n-btn-bundle-cancel");
+  if (btnBndlCancel) btnBndlCancel.innerText = dict.btnBundleCancel;
+  const btnBndlSave = document.getElementById("i18n-btn-bundle-save");
+  if (btnBndlSave) btnBndlSave.innerText = dict.btnBundleSave;
+  const bndlTipT = document.getElementById("i18n-bundle-tip-title");
+  if (bndlTipT) bndlTipT.innerText = dict.bundleTipTitle;
+  const bndlTipD = document.getElementById("i18n-bundle-tip-desc");
+  if (bndlTipD) bndlTipD.innerText = dict.bundleTipDesc;
 }

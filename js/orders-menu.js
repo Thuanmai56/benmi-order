@@ -114,17 +114,20 @@ async function loadMenuData() {
         }
         categories.push({
           id: cat.slug,
+          catId: cat.id || cat.slug,
           title: cat.name,
           shortName: cat.shortName || cat.name,
           type: 'catalog',
           allowCustomization: cat.allowCustomization !== undefined ? cat.allowCustomization : (cat.slug !== 'drinks'),
           appliedModifiers: cat.appliedModifiers || (cat.allowCustomization === false ? [] : ['*']),
           items: cat.items.map(it => ({
+            id: it.id || null,
             name: it.name,
             price: it.price,
             isOos: it.isOutOfStock,
             badgeText: it.badgeText || (it.badge || ''),
             isRecommended: it.isRecommended || false,
+            bundleRule: it.bundleRule || null,
             originalName: it.name
           }))
         });
@@ -650,6 +653,30 @@ function renderMenuCategoryEditor(index) {
     const tagSvg = (typeof POS_SVG !== "undefined" && POS_SVG.tag) || "";
     const imageSvg = (typeof POS_SVG !== "undefined" && POS_SVG.image) || "";
     const trashSvg = (typeof POS_SVG !== "undefined" && POS_SVG.trash) || "";
+    const layersSvg = (typeof POS_SVG !== "undefined" && POS_SVG.layers) || "";
+    const plusSvg = (typeof POS_SVG !== "undefined" && POS_SVG.plus) || "";
+
+    const hasBundle = Boolean(item.bundleRule && Array.isArray(item.bundleRule.groups) && item.bundleRule.groups.length > 0);
+    const bundleCount = hasBundle ? item.bundleRule.groups.length : 0;
+    let bundleBtnHtml = '';
+    if (cat.type === 'catalog') {
+      if (hasBundle) {
+        const bundleText = currentLang === 'vi'
+          ? `${t("bundleBadge")} (${bundleCount} ${t("bundleGroupUnit")})`
+          : `${t("bundleBadge")} (${bundleCount}${t("bundleGroupUnit")})`;
+        bundleBtnHtml = `
+          <button type="button" class="menu-item-bundle-btn is-bundle" onclick="openBundleEditorModal(${index}, ${iIdx})" title="${t('btnEditBundle')}">
+            ${layersSvg}<span>${bundleText}</span>
+          </button>
+        `;
+      } else {
+        bundleBtnHtml = `
+          <button type="button" class="menu-item-bundle-btn is-not-bundle" onclick="openBundleEditorModal(${index}, ${iIdx})" title="${t('btnSetBundle')}">
+            ${plusSvg}<span>${t("btnSetBundle")}</span>
+          </button>
+        `;
+      }
+    }
 
     row.innerHTML = `
       <div class="menu-item-main-fields">
@@ -673,6 +700,7 @@ function renderMenuCategoryEditor(index) {
           <span class="status-dot"></span>
           <span class="status-text">${oosText}</span>
         </button>
+        ${bundleBtnHtml}
         <button type="button" class="btn btn-ghost menu-item-action-btn" onclick="openImageModal('${cat.id}', '${escapeHtml(item.name)}')">
           ${imageSvg}<span>${t("btnItemImage")}</span>
         </button>
@@ -1652,3 +1680,597 @@ document.addEventListener('toggle', event => {
   text.style.left = Math.max(12, Math.min(anchor.left, window.innerWidth - text.offsetWidth - 12)) + 'px';
   text.style.top = Math.max(12, Math.min(anchor.bottom, window.innerHeight - text.offsetHeight - 12)) + 'px';
 }, true);
+
+// ==========================================================================
+// POS Menu Bundle / Combo Editor Controller
+// ==========================================================================
+
+let bundleEditingTarget = null; // { catIndex, itemIndex, item }
+let bundleDraftRule = null; // { version: 1, groups: [...] }
+let bundleActiveGroupIndex = 0;
+let bundleSourceTab = 'category'; // 'category' | 'items'
+
+async function openBundleEditorModal(catIdx, itemIdx) {
+  if (isMenuDirty) syncMenuDataFromDOM();
+  if (!currentMenuData || !currentMenuData[catIdx] || !currentMenuData[catIdx].items[itemIdx]) return;
+
+  const targetItem = currentMenuData[catIdx].items[itemIdx];
+  if (!targetItem.name || targetItem.name.trim() === '') {
+    alert(t("bundleValidationEmptyName") || "請先填寫菜單項目名稱");
+    return;
+  }
+
+  // If item is freshly added and hasn't been saved to D1 yet, prompt to save
+  if (isMenuDirty && !targetItem.id) {
+    const shouldSave = confirm(currentLang === 'vi' 
+      ? "Món mới cần được lưu vào hệ thống trước khi thiết lập Combo. Bạn có muốn lưu thực đơn ngay bây giờ không?" 
+      : "新建立的菜單項目需先儲存至資料庫方可設定組合，是否立即儲存？");
+    if (shouldSave) {
+      await saveMenuData(true);
+    } else {
+      return;
+    }
+  }
+
+  bundleEditingTarget = {
+    catIndex: catIdx,
+    itemIndex: itemIdx,
+    item: currentMenuData[catIdx].items[itemIdx]
+  };
+
+  if (targetItem.bundleRule && Array.isArray(targetItem.bundleRule.groups) && targetItem.bundleRule.groups.length > 0) {
+    bundleDraftRule = JSON.parse(JSON.stringify(targetItem.bundleRule));
+    // Ensure group properties
+    bundleDraftRule.groups.forEach((grp, idx) => {
+      grp.id = grp.id || `group_${idx + 1}_${Date.now()}`;
+      if (!grp.label || typeof grp.label !== 'object') {
+        grp.label = {
+          "zh-TW": grp.name || `自選分組 #${idx + 1}`,
+          "vi": grp.name || `Nhóm chọn #${idx + 1}`
+        };
+      }
+      grp.minQuantity = Math.max(1, Number(grp.minQuantity || 1));
+      grp.maxQuantity = Math.max(grp.minQuantity, Number(grp.maxQuantity || grp.minQuantity));
+      grp.allowRepeats = grp.allowRepeats !== undefined ? Boolean(grp.allowRepeats) : (grp.allowRepeat !== undefined ? Boolean(grp.allowRepeat) : true);
+      grp.sources = Array.isArray(grp.sources) ? grp.sources : [];
+    });
+  } else {
+    // Default initial bundle structure with 1 group
+    bundleDraftRule = {
+      version: 1,
+      groups: [
+        {
+          id: `group_1_${Date.now()}`,
+          label: {
+            "zh-TW": "請選擇 1 樣餐點",
+            "vi": "Chọn 1 món"
+          },
+          name: "請選擇 1 樣餐點",
+          minQuantity: 1,
+          maxQuantity: 1,
+          allowRepeats: false,
+          sources: []
+        }
+      ]
+    };
+  }
+
+  bundleActiveGroupIndex = 0;
+  bundleSourceTab = 'category';
+
+  // Set modal header details
+  const nameEl = document.getElementById("bundle-modal-item-name");
+  if (nameEl) nameEl.textContent = targetItem.name;
+  const priceEl = document.getElementById("bundle-modal-item-price");
+  if (priceEl) priceEl.textContent = `$${targetItem.price !== null && targetItem.price !== undefined ? targetItem.price : 0}`;
+
+  // Show/hide remove combo button
+  const removeBtn = document.getElementById("btn-bundle-remove-config");
+  if (removeBtn) {
+    removeBtn.style.display = (targetItem.bundleRule && targetItem.bundleRule.groups?.length > 0) ? "inline-flex" : "none";
+  }
+
+  const modal = document.getElementById("modal-bundle-editor");
+  if (modal) modal.style.display = "flex";
+
+  renderBundleEditorSidebar();
+  renderBundleGroupConfigPanel();
+}
+window.openBundleEditorModal = openBundleEditorModal;
+
+function closeBundleEditorModal() {
+  const modal = document.getElementById("modal-bundle-editor");
+  if (modal) modal.style.display = "none";
+  bundleEditingTarget = null;
+  bundleDraftRule = null;
+  bundleActiveGroupIndex = 0;
+}
+window.closeBundleEditorModal = closeBundleEditorModal;
+
+function syncBundleCurrentGroupFromDOM() {
+  if (!bundleDraftRule || !bundleDraftRule.groups[bundleActiveGroupIndex]) return;
+  const grp = bundleDraftRule.groups[bundleActiveGroupIndex];
+  const zhInp = document.getElementById("bundle-group-name-zh");
+  const viInp = document.getElementById("bundle-group-name-vi");
+  if (zhInp) grp.label["zh-TW"] = zhInp.value;
+  if (viInp) grp.label["vi"] = viInp.value;
+  grp.name = grp.label["zh-TW"] || grp.label["vi"] || grp.name;
+}
+
+function renderBundleEditorSidebar() {
+  const listEl = document.getElementById("bundle-groups-list");
+  const badgeEl = document.getElementById("bundle-group-count-badge");
+  if (!listEl || !bundleDraftRule) return;
+
+  if (badgeEl) badgeEl.textContent = String(bundleDraftRule.groups.length);
+  listEl.innerHTML = "";
+
+  bundleDraftRule.groups.forEach((grp, gIdx) => {
+    const isActive = gIdx === bundleActiveGroupIndex;
+    const grpName = (grp.label && (grp.label[currentLang] || grp.label['zh-TW'] || grp.label['vi'])) || grp.name || `${t("bundleBadge")} #${gIdx + 1}`;
+    const qty = grp.minQuantity || 1;
+    const repeatText = grp.allowRepeats ? (currentLang === 'vi' ? 'Được chọn lặp lại' : '可重複選') : (currentLang === 'vi' ? 'Không lặp lại' : '不可重複');
+    const ruleSummary = currentLang === 'vi'
+      ? `Bắt buộc ${qty} ${t("bundleItemUnit")} • ${repeatText}`
+      : `必須選取 ${qty} ${t("bundleItemUnit")} • ${repeatText}`;
+
+    const card = document.createElement("div");
+    card.className = `bundle-group-card ${isActive ? 'active' : ''}`;
+    card.onclick = () => selectBundleGroup(gIdx);
+
+    let deleteBtnHtml = '';
+    if (bundleDraftRule.groups.length > 1) {
+      deleteBtnHtml = `
+        <button type="button" class="bundle-group-card-delete" onclick="deleteBundleGroup(${gIdx}, event)" title="${t('btnItemDelete')}">
+          ${POS_SVG.trash}
+        </button>
+      `;
+    }
+
+    card.innerHTML = `
+      <div class="bundle-group-card-header">
+        <span class="bundle-group-card-title">${escapeHtml(grpName)}</span>
+        <span class="bundle-group-card-badge">#${gIdx + 1}</span>
+      </div>
+      <div class="bundle-group-card-rule">
+        <span>${ruleSummary}</span>
+      </div>
+      ${deleteBtnHtml}
+    `;
+    listEl.appendChild(card);
+  });
+}
+
+function selectBundleGroup(groupIdx) {
+  syncBundleCurrentGroupFromDOM();
+  bundleActiveGroupIndex = groupIdx;
+  renderBundleEditorSidebar();
+  renderBundleGroupConfigPanel();
+}
+window.selectBundleGroup = selectBundleGroup;
+
+function addBundleGroup() {
+  syncBundleCurrentGroupFromDOM();
+  const newIdx = bundleDraftRule.groups.length + 1;
+  bundleDraftRule.groups.push({
+    id: `group_${newIdx}_${Date.now()}`,
+    label: {
+      "zh-TW": `請選擇 1 樣餐點 (組 ${newIdx})`,
+      "vi": `Chọn 1 món (Nhóm ${newIdx})`
+    },
+    name: `請選擇 1 樣餐點 (組 ${newIdx})`,
+    minQuantity: 1,
+    maxQuantity: 1,
+    allowRepeats: false,
+    sources: []
+  });
+  bundleActiveGroupIndex = bundleDraftRule.groups.length - 1;
+  renderBundleEditorSidebar();
+  renderBundleGroupConfigPanel();
+}
+window.addBundleGroup = addBundleGroup;
+
+function deleteBundleGroup(groupIdx, event) {
+  if (event) event.stopPropagation();
+  if (bundleDraftRule.groups.length <= 1) {
+    alert(t("bundleValidationEmptyGroups"));
+    return;
+  }
+  const confirmMsg = currentLang === 'vi' ? "Bạn có chắc muốn xóa nhóm chọn này?" : "確定要刪除此分組嗎？";
+  if (!confirm(confirmMsg)) return;
+
+  bundleDraftRule.groups.splice(groupIdx, 1);
+  if (bundleActiveGroupIndex >= bundleDraftRule.groups.length) {
+    bundleActiveGroupIndex = bundleDraftRule.groups.length - 1;
+  }
+  renderBundleEditorSidebar();
+  renderBundleGroupConfigPanel();
+}
+window.deleteBundleGroup = deleteBundleGroup;
+
+function updateBundleGroupLabel(lang, val) {
+  if (!bundleDraftRule || !bundleDraftRule.groups[bundleActiveGroupIndex]) return;
+  const grp = bundleDraftRule.groups[bundleActiveGroupIndex];
+  if (!grp.label || typeof grp.label !== 'object') {
+    grp.label = { "zh-TW": "", "vi": "" };
+  }
+  grp.label[lang] = val;
+  grp.name = grp.label["zh-TW"] || grp.label["vi"] || val;
+
+  // Update card title live
+  const cards = document.querySelectorAll("#bundle-groups-list .bundle-group-card");
+  if (cards[bundleActiveGroupIndex]) {
+    const titleEl = cards[bundleActiveGroupIndex].querySelector(".bundle-group-card-title");
+    const displayVal = (grp.label && (grp.label[currentLang] || grp.label['zh-TW'] || grp.label['vi'])) || grp.name || `${t("bundleBadge")} #${bundleActiveGroupIndex + 1}`;
+    if (titleEl) titleEl.textContent = displayVal;
+  }
+}
+window.updateBundleGroupLabel = updateBundleGroupLabel;
+
+function stepBundleQty(delta) {
+  if (!bundleDraftRule || !bundleDraftRule.groups[bundleActiveGroupIndex]) return;
+  const grp = bundleDraftRule.groups[bundleActiveGroupIndex];
+  const newQty = Math.max(1, (grp.minQuantity || 1) + delta);
+  grp.minQuantity = newQty;
+  grp.maxQuantity = newQty;
+
+  const valEl = document.getElementById("bundle-stepper-val");
+  if (valEl) valEl.textContent = String(newQty);
+  renderBundleEditorSidebar();
+}
+window.stepBundleQty = stepBundleQty;
+
+function toggleBundleRepeat(isChecked) {
+  if (!bundleDraftRule || !bundleDraftRule.groups[bundleActiveGroupIndex]) return;
+  bundleDraftRule.groups[bundleActiveGroupIndex].allowRepeats = isChecked;
+  const lbl = document.getElementById("bundle-repeat-label");
+  if (lbl) lbl.classList.toggle("checked", isChecked);
+  renderBundleEditorSidebar();
+}
+window.toggleBundleRepeat = toggleBundleRepeat;
+
+function switchBundleSourceTab(tab) {
+  bundleSourceTab = tab;
+  renderBundleSourcesSection();
+}
+window.switchBundleSourceTab = switchBundleSourceTab;
+
+function toggleBundleSourceCategory(catId, isChecked) {
+  if (!bundleDraftRule || !bundleDraftRule.groups[bundleActiveGroupIndex]) return;
+  const grp = bundleDraftRule.groups[bundleActiveGroupIndex];
+  if (isChecked) {
+    if (!grp.sources.some(s => s.type === 'category' && (s.categoryId === catId || s.refId === catId))) {
+      grp.sources.push({ type: 'category', categoryId: catId, refId: catId });
+    }
+  } else {
+    grp.sources = grp.sources.filter(s => !(s.type === 'category' && (s.categoryId === catId || s.refId === catId)));
+  }
+  renderBundleSourcesSection();
+  renderBundleEligiblePreview();
+}
+window.toggleBundleSourceCategory = toggleBundleSourceCategory;
+
+function toggleBundleSourceItem(itemId, isChecked) {
+  if (!bundleDraftRule || !bundleDraftRule.groups[bundleActiveGroupIndex]) return;
+  const grp = bundleDraftRule.groups[bundleActiveGroupIndex];
+  let itemListSrc = grp.sources.find(s => s.type === 'item_list');
+  if (!itemListSrc) {
+    itemListSrc = { type: 'item_list', itemIds: [] };
+    grp.sources.push(itemListSrc);
+  }
+  if (isChecked) {
+    if (!itemListSrc.itemIds.includes(itemId)) itemListSrc.itemIds.push(itemId);
+  } else {
+    itemListSrc.itemIds = itemListSrc.itemIds.filter(id => id !== itemId);
+  }
+  if (itemListSrc.itemIds.length === 0) {
+    grp.sources = grp.sources.filter(s => s !== itemListSrc);
+  }
+  renderBundleSourcesSection();
+  renderBundleEligiblePreview();
+}
+window.toggleBundleSourceItem = toggleBundleSourceItem;
+
+function computeEligibleItemsCount(grp) {
+  if (!grp || !Array.isArray(grp.sources) || grp.sources.length === 0 || !currentMenuData) return 0;
+  const itemSet = new Set();
+  currentMenuData.forEach(cat => {
+    if (cat.type !== 'catalog' || !Array.isArray(cat.items)) return;
+    const catMatches = grp.sources.some(s => s.type === 'category' && (s.categoryId === cat.catId || s.refId === cat.catId || s.categoryId === cat.id || s.refId === cat.id));
+    if (catMatches) {
+      cat.items.forEach(it => {
+        if (it.name) itemSet.add(it.id || it.name);
+      });
+    } else {
+      const itemSrc = grp.sources.find(s => s.type === 'item_list');
+      if (itemSrc && Array.isArray(itemSrc.itemIds)) {
+        cat.items.forEach(it => {
+          if (itemSrc.itemIds.includes(it.id) || itemSrc.itemIds.includes(it.name)) {
+            itemSet.add(it.id || it.name);
+          }
+        });
+      }
+    }
+  });
+  return itemSet.size;
+}
+
+function renderBundleEligiblePreview() {
+  const previewEl = document.getElementById("bundle-eligible-count");
+  if (!previewEl || !bundleDraftRule || !bundleDraftRule.groups[bundleActiveGroupIndex]) return;
+  const grp = bundleDraftRule.groups[bundleActiveGroupIndex];
+  const count = computeEligibleItemsCount(grp);
+  previewEl.textContent = String(count);
+}
+
+function renderBundleSourcesSection() {
+  const container = document.getElementById("bundle-sources-container");
+  if (!container || !bundleDraftRule || !bundleDraftRule.groups[bundleActiveGroupIndex]) return;
+  const grp = bundleDraftRule.groups[bundleActiveGroupIndex];
+
+  const catTabActive = bundleSourceTab === 'category';
+  const itemTabActive = bundleSourceTab === 'items';
+
+  let sourcesHtml = `
+    <div class="bundle-source-type-segmented">
+      <button type="button" class="bundle-source-type-pill ${catTabActive ? 'active' : ''}" onclick="switchBundleSourceTab('category')">
+        ${POS_SVG.folder}<span>${t("bundleSourceCategory")}</span>
+      </button>
+      <button type="button" class="bundle-source-type-pill ${itemTabActive ? 'active' : ''}" onclick="switchBundleSourceTab('items')">
+        ${POS_SVG.tag}<span>${t("bundleSourceItems")}</span>
+      </button>
+    </div>
+  `;
+
+  if (catTabActive) {
+    sourcesHtml += `<div class="bundle-sources-grid" style="margin-top: 10px;">`;
+    (currentMenuData || []).forEach(cat => {
+      if (cat.type !== 'catalog') return;
+      const catKey = cat.catId || cat.id;
+      const isSelected = grp.sources.some(s => s.type === 'category' && (s.categoryId === catKey || s.refId === catKey || s.categoryId === cat.id));
+      const itemCount = (cat.items && cat.items.length) || 0;
+      sourcesHtml += `
+        <label class="bundle-source-chip ${isSelected ? 'selected' : ''}">
+          <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleBundleSourceCategory('${escapeHtml(catKey)}', this.checked)">
+          <span class="bundle-source-chip-name">${escapeHtml(cat.title)}</span>
+          <span class="bundle-source-chip-count">${itemCount} ${t("bundleItemUnit")}</span>
+        </label>
+      `;
+    });
+    sourcesHtml += `</div>`;
+  } else {
+    // Individual Items selector
+    sourcesHtml += `<div class="bundle-sources-grid" style="margin-top: 10px; max-height: 260px;">`;
+    let itemListSrc = grp.sources.find(s => s.type === 'item_list');
+    const selectedItemIds = itemListSrc && Array.isArray(itemListSrc.itemIds) ? itemListSrc.itemIds : [];
+
+    (currentMenuData || []).forEach(cat => {
+      if (cat.type !== 'catalog' || !cat.items || cat.items.length === 0) return;
+      cat.items.forEach(it => {
+        const itemKey = it.id || it.name;
+        const isSelected = selectedItemIds.includes(itemKey);
+        sourcesHtml += `
+          <label class="bundle-source-chip ${isSelected ? 'selected' : ''}" title="${escapeHtml(cat.title)} - ${escapeHtml(it.name)}">
+            <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleBundleSourceItem('${escapeHtml(itemKey)}', this.checked)">
+            <span class="bundle-source-chip-name">${escapeHtml(it.name)}</span>
+            <span class="bundle-source-chip-count">$${it.price || 0}</span>
+          </label>
+        `;
+      });
+    });
+    sourcesHtml += `</div>`;
+  }
+
+  container.innerHTML = sourcesHtml;
+}
+
+function renderBundleGroupConfigPanel() {
+  const panel = document.getElementById("bundle-group-config-panel");
+  if (!panel) return;
+
+  if (!bundleDraftRule || !bundleDraftRule.groups || !bundleDraftRule.groups[bundleActiveGroupIndex]) {
+    panel.innerHTML = `<div style="text-align:center; padding: 40px; color:#94a3b8;">${t("bundleValidationEmptyGroups")}</div>`;
+    return;
+  }
+
+  const grp = bundleDraftRule.groups[bundleActiveGroupIndex];
+  const zhName = (grp.label && grp.label['zh-TW']) || '';
+  const viName = (grp.label && grp.label['vi']) || '';
+  const qty = grp.minQuantity || 1;
+  const isRepeat = Boolean(grp.allowRepeats);
+  const eligibleCount = computeEligibleItemsCount(grp);
+
+  panel.innerHTML = `
+    <!-- Section 1: Group Name (I18N) -->
+    <div class="bundle-config-section">
+      <div class="bundle-config-section-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+        <span id="i18n-bundle-section-name">${t("bundleGroupDetailTitle")}</span>
+      </div>
+      <div class="bundle-group-name-inputs">
+        <div class="bundle-field-group">
+          <label class="bundle-field-label" id="i18n-bundle-name-zh-lbl">${t("bundleGroupNameZh")}</label>
+          <input type="text" class="bundle-input-text" id="bundle-group-name-zh" value="${escapeHtml(zhName)}"
+            placeholder="${t("bundleGroupNamePlaceholder")}" oninput="updateBundleGroupLabel('zh-TW', this.value)">
+        </div>
+        <div class="bundle-field-group">
+          <label class="bundle-field-label" id="i18n-bundle-name-vi-lbl">${t("bundleGroupNameVi")}</label>
+          <input type="text" class="bundle-input-text" id="bundle-group-name-vi" value="${escapeHtml(viName)}"
+            placeholder="${t("bundleGroupNamePlaceholder")}" oninput="updateBundleGroupLabel('vi', this.value)">
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 2: Quantity Rule & Repeat -->
+    <div class="bundle-config-section">
+      <div class="bundle-config-section-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="m9 12 2 2 4-4"/>
+        </svg>
+        <span id="i18n-bundle-section-rule">${t("bundleQuantityRule")}</span>
+      </div>
+      <div class="bundle-quantity-stepper-row">
+        <div class="bundle-stepper-control">
+          <button type="button" class="bundle-stepper-btn" onclick="stepBundleQty(-1)" aria-label="Decrease">-</button>
+          <span class="bundle-stepper-value" id="bundle-stepper-val">${qty}</span>
+          <button type="button" class="bundle-stepper-btn" onclick="stepBundleQty(1)" aria-label="Increase">+</button>
+        </div>
+        <label class="bundle-checkbox-label ${isRepeat ? 'checked' : ''}" id="bundle-repeat-label">
+          <input type="checkbox" class="bundle-checkbox-input" ${isRepeat ? 'checked' : ''} onchange="toggleBundleRepeat(this.checked)">
+          <div class="bundle-checkbox-text">
+            <span class="bundle-checkbox-title">${t("bundleAllowRepeat")}</span>
+            <span class="bundle-checkbox-desc">${t("bundleAllowRepeatDesc")}</span>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Section 3: Sources Selector -->
+    <div class="bundle-config-section">
+      <div class="bundle-config-section-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.9a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/>
+          <path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/>
+          <path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>
+        </svg>
+        <span id="i18n-bundle-section-source">${t("bundleSourceType")}</span>
+      </div>
+      <div id="bundle-sources-container"></div>
+    </div>
+
+    <!-- Section 4: Live Eligible Items Preview -->
+    <div class="bundle-config-section" style="margin-top: auto; padding-top: 10px; border-top: 1px dashed #e2e8f0;">
+      <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: #475569;">
+        <span>${t("bundleEligiblePreview")}:</span>
+        <strong style="font-size: 16px; color: #4338ca;"><span id="bundle-eligible-count">${eligibleCount}</span> ${t("bundleItemUnit")}</strong>
+      </div>
+    </div>
+  `;
+
+  renderBundleSourcesSection();
+}
+
+async function saveBundleConfig() {
+  if (!bundleEditingTarget || !bundleDraftRule) return;
+  syncBundleCurrentGroupFromDOM();
+
+  if (!bundleDraftRule.groups || bundleDraftRule.groups.length === 0) {
+    alert(t("bundleValidationEmptyGroups"));
+    return;
+  }
+
+  for (let i = 0; i < bundleDraftRule.groups.length; i++) {
+    const grp = bundleDraftRule.groups[i];
+    const zh = grp.label && grp.label["zh-TW"];
+    const vi = grp.label && grp.label["vi"];
+    if ((!zh || zh.trim() === '') && (!vi || vi.trim() === '') && (!grp.name || grp.name.trim() === '')) {
+      alert(`${t("bundleValidationEmptyName")} (#${i + 1})`);
+      selectBundleGroup(i);
+      return;
+    }
+    if (!grp.sources || grp.sources.length === 0) {
+      alert(`${t("bundleValidationEmptySources")} (#${i + 1})`);
+      selectBundleGroup(i);
+      return;
+    }
+  }
+
+  const btnSave = document.getElementById("btn-bundle-modal-save");
+  if (btnSave) {
+    btnSave.disabled = true;
+    btnSave.textContent = t("menuSaving");
+  }
+
+  try {
+    const tenantId = getTenantIdFromUrl();
+    const cat = currentMenuData[bundleEditingTarget.catIndex];
+    const payload = {
+      parent_item_id: bundleEditingTarget.item.id || null,
+      item_name: bundleEditingTarget.item.name,
+      category_id: cat.catId || null,
+      category_slug: cat.id,
+      config: {
+        version: 1,
+        groups: bundleDraftRule.groups
+      }
+    };
+
+    const res = await fetch(`${WORKER_BASE}/api/menu/bundle-rules?tenant_id=${tenantId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    const resData = await res.json();
+    if (!res.ok || resData.error) {
+      throw new Error(resData.error || res.statusText);
+    }
+
+    bundleEditingTarget.item.bundleRule = resData.bundleRule || bundleDraftRule;
+    alert(t("bundleSaveSuccess"));
+    const catIdx = bundleEditingTarget.catIndex;
+    closeBundleEditorModal();
+    renderMenuCategoryEditor(catIdx);
+  } catch (err) {
+    alert(t("bundleSaveFail") + (err.message || err));
+  } finally {
+    if (btnSave) {
+      btnSave.disabled = false;
+      btnSave.innerHTML = `
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+          <polyline points="17 21 17 13 7 13 7 21"/>
+          <polyline points="7 3 7 8 15 8"/>
+        </svg>
+        <span id="i18n-btn-bundle-save">${t("btnBundleSave")}</span>
+      `;
+    }
+  }
+}
+window.saveBundleConfig = saveBundleConfig;
+
+async function clearBundleConfig() {
+  if (!bundleEditingTarget) return;
+  if (!confirm(t("confirmRemoveBundleConfig"))) return;
+
+  const btnDel = document.getElementById("btn-bundle-remove-config");
+  if (btnDel) btnDel.disabled = true;
+
+  try {
+    const tenantId = getTenantIdFromUrl();
+    const cat = currentMenuData[bundleEditingTarget.catIndex];
+    const payload = {
+      parent_item_id: bundleEditingTarget.item.id || null,
+      item_name: bundleEditingTarget.item.name,
+      category_id: cat.catId || null,
+      category_slug: cat.id,
+      delete: true
+    };
+
+    const res = await fetch(`${WORKER_BASE}/api/menu/bundle-rules?tenant_id=${tenantId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    const resData = await res.json();
+    if (!res.ok || resData.error) {
+      throw new Error(resData.error || res.statusText);
+    }
+
+    bundleEditingTarget.item.bundleRule = null;
+    const catIdx = bundleEditingTarget.catIndex;
+    closeBundleEditorModal();
+    renderMenuCategoryEditor(catIdx);
+  } catch (err) {
+    alert(t("bundleSaveFail") + (err.message || err));
+  } finally {
+    if (btnDel) btnDel.disabled = false;
+  }
+}
+window.clearBundleConfig = clearBundleConfig;
+

@@ -665,3 +665,103 @@ export function formatMenuForPrompt(menuData: Menu): string {
 
   return lines.join("\n");
 }
+
+/**
+ * Creates, updates, or deletes a bundle rule for a menu item.
+ * POST /api/menu/bundle-rules?tenant_id={tenantId}
+ */
+export async function updateBundleRule(request: Request, env: Env): Promise<Response> {
+  try {
+    const tenantId = getTenantId(request);
+    if (!env.DB) {
+      return json({ error: "Database not bound" }, 500);
+    }
+
+    const body: any = await request.json();
+    let parentItemId = body.parent_item_id;
+
+    // Fallback resolution if parentItemId is missing but name & category are given
+    if (!parentItemId && body.item_name && (body.category_id || body.category_slug)) {
+      const catSlug = body.category_slug || body.category_id;
+      const itemRow = await env.DB.prepare(
+        `SELECT id FROM menu_items 
+         WHERE tenant_id = ? AND name = ? 
+           AND category_id = (SELECT id FROM menu_categories WHERE tenant_id = ? AND (slug = ? OR id = ?))
+         LIMIT 1`
+      ).bind(tenantId, body.item_name, tenantId, catSlug, catSlug).first();
+
+      if (itemRow && itemRow.id) {
+        parentItemId = itemRow.id as string;
+      }
+    }
+
+    if (!parentItemId) {
+      return json({ error: "parent_item_id is required" }, 400);
+    }
+
+    // 1. Delete / Deactivate bundle rule
+    if (body.delete === true || body.isActive === false || (body.config && Array.isArray(body.config.groups) && body.config.groups.length === 0)) {
+      await env.DB.prepare(
+        "DELETE FROM menu_bundle_rules WHERE tenant_id = ? AND parent_item_id = ?"
+      ).bind(tenantId, parentItemId).run();
+
+      const cacheKey = `tenant:${tenantId}:menu`;
+      if (env.ORDER_STATE) await env.ORDER_STATE.delete(cacheKey);
+      await invalidateBootstrapCache(tenantId, env);
+
+      return json({ success: true, deleted: true });
+    }
+
+    // 2. Validate & normalize bundle config
+    const config = body.config;
+    if (!config || !Array.isArray(config.groups) || config.groups.length === 0) {
+      return json({ error: "config.groups array is required and must not be empty" }, 400);
+    }
+
+    const normalizedGroups = config.groups.map((grp: any, gIdx: number) => {
+      const gId = grp.id || `group_${gIdx + 1}_${Date.now()}`;
+      const minQty = Math.max(1, Number(grp.minQuantity ?? 1));
+      const maxQty = Math.max(minQty, Number(grp.maxQuantity ?? minQty));
+      const allowRepeats = grp.allowRepeats !== undefined ? Boolean(grp.allowRepeats) : (grp.allowRepeat !== undefined ? Boolean(grp.allowRepeat) : true);
+
+      return {
+        id: gId,
+        label: grp.label || (grp.name ? { "zh-TW": grp.name, "vi": grp.name } : { "zh-TW": `選擇 ${minQty} 樣`, "vi": `Chọn ${minQty} món` }),
+        name: typeof grp.label === 'object' ? (grp.label['zh-TW'] || grp.label['vi'] || grp.name) : (grp.name || grp.label),
+        minQuantity: minQty,
+        maxQuantity: maxQty,
+        allowRepeat: allowRepeats,
+        allowRepeats: allowRepeats,
+        sources: Array.isArray(grp.sources) ? grp.sources : [],
+        pricing: grp.pricing || { type: "included" }
+      };
+    });
+
+    const ruleConfig = {
+      version: config.version || 1,
+      groups: normalizedGroups
+    };
+    const configJson = JSON.stringify(ruleConfig);
+    const ruleId = `rule_${tenantId}_${parentItemId}`;
+
+    await env.DB.prepare(
+      `INSERT INTO menu_bundle_rules (id, tenant_id, parent_item_id, schema_version, config_json, is_active, updated_at)
+       VALUES (?, ?, ?, 1, ?, 1, datetime('now'))
+       ON CONFLICT(tenant_id, parent_item_id) DO UPDATE SET
+         schema_version = 1,
+         config_json = excluded.config_json,
+         is_active = 1,
+         updated_at = datetime('now')`
+    ).bind(ruleId, tenantId, parentItemId, configJson).run();
+
+    // Invalidate KV & Bootstrap Cache
+    const cacheKey = `tenant:${tenantId}:menu`;
+    if (env.ORDER_STATE) await env.ORDER_STATE.delete(cacheKey);
+    await invalidateBootstrapCache(tenantId, env);
+
+    return json({ success: true, bundleRule: ruleConfig });
+  } catch (err: any) {
+    console.error("[updateBundleRule] Failed:", err);
+    return json({ error: err.message || "Internal Server Error" }, 500);
+  }
+}

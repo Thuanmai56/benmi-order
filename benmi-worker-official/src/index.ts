@@ -3,7 +3,7 @@ import { corsHeaders, json } from './utils/http';
 import { handleLineWebhook } from './modules/line';
 import { createOrder, appendOrder, updateOrder, getOrders, getWaitingCount, getHistorySummary, getOrdersByDate, getHistoryAll, handleOrdersMigration } from './modules/orders';
 import { getConfig, updateConfig } from './modules/config';
-import { getMenu, updateMenu, updateStockStatus, getTenantId } from './modules/menu';
+import { getMenu, updateMenu, updateStockStatus, updateBundleRule, getTenantId } from './modules/menu';
 import { handleAuth, handleAuthChange, handleCreateTempLink, handleVerifyTempLink } from './modules/auth';
 import { getImageList, getImage, updateImage, deleteImage } from './modules/image';
 import { resolveTenantContext } from './modules/tenant';
@@ -68,6 +68,7 @@ export default {
       if (request.method === "GET" && path === "/api/menu") return getMenu(request, env);
       if (request.method === "POST" && path === "/api/menu") return updateMenu(request, env);
       if (request.method === "POST" && path === "/api/menu/stock-status") return updateStockStatus(request, env);
+      if (request.method === "POST" && path === "/api/menu/bundle-rules") return updateBundleRule(request, env);
       if ((request.method === "GET" || request.method === "HEAD") && path === "/api/image_list") return getImageList(request, env);
       if ((request.method === "GET" || request.method === "HEAD") && path === "/api/image") return getImage(request, env);
       if (request.method === "POST" && path === "/api/image") return updateImage(request, env);
