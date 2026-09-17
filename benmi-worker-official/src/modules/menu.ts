@@ -36,6 +36,7 @@ export function getTenantId(request: Request): string {
   // 3. Phân tích Subdomain từ URL hostname
   const hostname = url.hostname || "";
   const parts = hostname.split(".");
+  const RESERVED_SUBDOMAINS = new Set(["www", "api", "admin", "explore", "pos", "staging", "dev", "order", "test", "preview"]);
   
   console.log("[Tenant] Analyzing hostname:", hostname, "parts length:", parts.length);
 
@@ -43,13 +44,13 @@ export function getTenantId(request: Request): string {
   // parts sẽ có dạng: ['spring-smoke-46ba', 'thuanmnc', 'workers', 'dev'] (4 phần)
   // Chỉ khi cấu hình dạng tenant.worker-name.subdomain.workers.dev (5 phần) ta mới trích xuất parts[0] làm tenant
   if (hostname.endsWith("workers.dev")) {
-    if (parts.length >= 5 && parts[0] !== "www") {
+    if (parts.length >= 5 && !RESERVED_SUBDOMAINS.has(parts[0])) {
       console.log("[Tenant] Found worker subdomain tenant:", parts[0]);
       return parts[0];
     }
   } else {
     // Với domain thông thường (ví dụ: shop.benmi.vn hoặc tenant.localhost:8787)
-    if (parts.length > 2 && parts[0] !== "www" && !parts[0].includes("localhost") && !parts[0].includes("127")) {
+    if (parts.length > 2 && !RESERVED_SUBDOMAINS.has(parts[0]) && !parts[0].includes("localhost") && !parts[0].includes("127")) {
       console.log("[Tenant] Found custom domain tenant:", parts[0]);
       return parts[0];
     }

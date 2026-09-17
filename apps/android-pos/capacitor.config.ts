@@ -14,7 +14,7 @@ const getRemoteUrl = (env: string): string | undefined => {
       return undefined; // Uses bundled local dist/
     case 'prod':
     default:
-      return 'https://benmi-order.pages.dev/orders.html';
+      return 'https://pos.blabfood.app';
   }
 };
 

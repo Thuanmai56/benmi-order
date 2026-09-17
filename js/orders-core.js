@@ -136,6 +136,33 @@ function getTenantIdFromUrl() {
   if (fromUrl && fromUrl.trim()) {
     return fromUrl.trim();
   }
+
+  // Check URL pathname for RESTful routing: e.g. /:tenant/orders or /:tenant
+  if (typeof window !== "undefined" && window.location && window.location.pathname) {
+    const pathParts = window.location.pathname.split("/").filter(Boolean);
+    const RESERVED_PATHS = [
+      "orders", "orders.html", "index", "index.html",
+      "landing", "landing.html", "marketplace", "marketplace.html",
+      "css", "js", "icons", "fonts", "sound", "audio", "dist", "api"
+    ];
+
+    // Pattern 1: /:tenant/orders (e.g. /bsc/orders)
+    if (pathParts.length >= 2 && pathParts[1] === "orders") {
+      const candidate = pathParts[0].trim();
+      if (candidate && !RESERVED_PATHS.includes(candidate)) {
+        return candidate;
+      }
+    }
+
+    // Pattern 2: /:tenant (e.g. /bsc on pos.blabfood.app or custom domain)
+    if (pathParts.length === 1) {
+      const candidate = pathParts[0].trim();
+      if (candidate && !candidate.includes(".") && !RESERVED_PATHS.includes(candidate)) {
+        return candidate;
+      }
+    }
+  }
+
   if (typeof localStorage !== "undefined") {
     const savedTenant = localStorage.getItem("pos_device_tenant_id");
     if (savedTenant && savedTenant.trim()) {
