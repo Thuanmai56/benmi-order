@@ -61,6 +61,7 @@ const I18N = {
     emptyLiveAcceptedTitle: "目前無製作中訂單",
     emptyLiveAcceptedSub: "已接單的餐點將在此顯示製作進度",
     badgeNewOrder: "新訂單",
+    badgeModifiedOrder: "已更換品項",
 
     emptyHistory: "尚無歷史訂單",
     historyTitle: "訂單歷史",
@@ -650,6 +651,7 @@ const I18N = {
     emptyLiveAcceptedTitle: "Không có đơn đang thực hiện",
     emptyLiveAcceptedSub: "Các đơn đã nhận sẽ hiển thị tiến độ tại đây",
     badgeNewOrder: "ĐƠN MỚI",
+    badgeModifiedOrder: "Đã đổi món",
 
     emptyHistory: "Chưa có lịch sử đơn hàng",
     historyTitle: "Lịch sử đơn hàng",

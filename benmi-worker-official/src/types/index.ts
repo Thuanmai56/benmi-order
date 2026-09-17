@@ -46,6 +46,8 @@ export interface Order {
   round_count?: number;
   lastAppendedAt?: string | null;
   last_appended_at?: string | null;
+  is_modified?: number;
+  isModified?: boolean;
 }
 
 export interface AppendOrderPayload {

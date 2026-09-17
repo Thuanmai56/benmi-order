@@ -9,6 +9,14 @@ window.parentOrderKey = null;
 window.parentOrderDisplayKey = null;
 window.appendTableNumber = null;
 
+// Sold Out Edit Order Mode Global State
+window.isEditOrderMode = false;
+window.editOrderKey = null;
+window.editOrderDisplayKey = null;
+window.editOrderOriginalTotal = 0;
+window.editOrderSoldOutNames = [];
+window.editOrderContextLoaded = false;
+
 function getUrlParamsWithLiffState() {
     const merged = new URLSearchParams();
 
@@ -147,10 +155,136 @@ function cancelAppendMode() {
     if (typeof updateFooterButtonState === 'function') updateFooterButtonState();
 }
 
+async function initEditOrderModeIfPresent() {
+    const urlParams = getUrlParamsWithLiffState();
+    let orderKey = urlParams.get('order_key') || urlParams.get('key');
+    let mode = urlParams.get('mode');
+
+    // Check sessionStorage fallback if page reloaded
+    if (!orderKey) {
+        try {
+            orderKey = sessionStorage.getItem('benmi_edit_order_key');
+            if (orderKey) mode = 'edit_order';
+        } catch (e) {}
+    }
+
+    if (orderKey && (mode === 'edit_order' || mode === 'edit')) {
+        window.isEditOrderMode = true;
+        window.editOrderKey = orderKey;
+        try {
+            sessionStorage.setItem('benmi_edit_order_key', orderKey);
+        } catch (e) {}
+
+        const tenantId = (typeof getTenantIdFromUrl === 'function' ? getTenantIdFromUrl() : null) || 'benmi';
+        console.log(`[EditOrder] Fetching edit context for order ${orderKey} (tenant: ${tenantId})...`);
+
+        try {
+            const res = await fetch(`${WORKER_BASE}/api/order/edit-context?key=${encodeURIComponent(orderKey)}&tenant_id=${tenantId}`);
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                console.warn('[EditOrder] Failed to load edit context:', errData);
+                return;
+            }
+
+            const data = await res.json();
+            if (!data.success || !data.order) {
+                console.warn('[EditOrder] Invalid response:', data);
+                return;
+            }
+
+            window.editOrderDisplayKey = data.order.displayKey || orderKey;
+            window.editOrderOriginalTotal = Number(data.order.total) || 0;
+            window.editOrderSoldOutNames = Array.isArray(data.soldOutItemNames) ? data.soldOutItemNames : [];
+            window.editOrderContextLoaded = true;
+
+            // 1. Show Edit Order Mode Banner
+            const bannerEl = document.getElementById('edit-order-mode-banner');
+            if (bannerEl) {
+                bannerEl.style.display = 'flex';
+                const keyEl = document.getElementById('edit-order-mode-key');
+                if (keyEl) keyEl.innerText = `#${window.editOrderDisplayKey}`;
+            }
+
+            // 2. Hide dining option switchers & table input (order details are fixed)
+            const toggleWrapper = document.getElementById('dining-option-wrapper');
+            if (toggleWrapper) toggleWrapper.style.display = 'none';
+            const checkoutToggleGroup = document.getElementById('checkout-dining-option-group');
+            if (checkoutToggleGroup) checkoutToggleGroup.style.display = 'none';
+            const tableGroup = document.getElementById('dinein-table-input-group');
+            if (tableGroup) tableGroup.style.display = 'none';
+            const pickupSection = document.getElementById('pickup-time-section');
+            if (pickupSection) pickupSection.style.display = 'none';
+
+            // 3. Pre-fill cart, customizeData, comboDrinkData, bundleCartData
+            if (Array.isArray(data.items) && data.items.length > 0) {
+                // Clear existing cart
+                for (let k in cart) delete cart[k];
+                for (let k in customizeData) delete customizeData[k];
+                for (let k in comboDrinkData) delete comboDrinkData[k];
+                if (window.bundleCartData) {
+                    for (let k in window.bundleCartData) delete window.bundleCartData[k];
+                } else {
+                    window.bundleCartData = {};
+                }
+
+                data.items.forEach(item => {
+                    let matchedKey = null;
+                    if (typeof bootstrapData !== 'undefined' && bootstrapData && bootstrapData.catalog) {
+                        for (const cat of bootstrapData.catalog) {
+                            if (cat.items) {
+                                const found = cat.items.find(i => i.name === item.name || i.id === item.itemId);
+                                if (found) {
+                                    matchedKey = `${cat.slug}_${found.name}`;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (!matchedKey) {
+                        const slug = (item.category || 'other').toLowerCase();
+                        matchedKey = `${slug}_${item.name}`;
+                    }
+
+                    const qty = Number(item.quantity) || 1;
+                    cart[matchedKey] = (cart[matchedKey] || 0) + qty;
+
+                    if (item.bundleSelections && item.bundleSelections.portions) {
+                        window.bundleCartData[matchedKey] = item.bundleSelections.portions;
+                    }
+                });
+
+                // Update UI quantity labels on cards
+                for (let k in cart) {
+                    if (typeof parseCartKey === 'function') {
+                        const { catSlug, origName } = parseCartKey(k);
+                        const qtySpan = document.getElementById('qty-' + catSlug + '-' + origName);
+                        if (qtySpan) {
+                            qtySpan.innerText = cart[k];
+                            qtySpan.style.color = cart[k] > 0 ? 'var(--primary)' : 'inherit';
+                        }
+                        const bundleBtn = document.getElementById('bundle-edit-btn-' + catSlug + '-' + origName);
+                        if (bundleBtn) {
+                            bundleBtn.style.display = (cart[k] > 0 && window.bundleCartData && window.bundleCartData[k]) ? 'flex' : 'none';
+                        }
+                    }
+                }
+
+                if (typeof updateTotal === 'function') updateTotal();
+            }
+        } catch (err) {
+            console.error('[EditOrder] Error initializing edit order mode:', err);
+        }
+    }
+}
+
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initAppendModeIfPresent);
+    document.addEventListener('DOMContentLoaded', () => {
+        initAppendModeIfPresent();
+        initEditOrderModeIfPresent();
+    });
 } else {
     initAppendModeIfPresent();
+    initEditOrderModeIfPresent();
 }
 
 // 1. Kiểm tra vị trí hiển thị của khu vực thanh toán
@@ -170,6 +304,38 @@ function updateFooterButtonState() {
     if (window.isAppendMode) {
         btn.innerHTML = '<span>確認加點</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 4px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>';
         return;
+    }
+
+    if (window.isEditOrderMode) {
+        if (window.editOrderHasSoldOutRemaining) {
+            btn.innerHTML = '<span>請先移除或更換已售完品項</span>';
+            btn.disabled = true;
+            btn.style.opacity = '0.6';
+            btn.style.cursor = 'not-allowed';
+            const deskBtn = document.getElementById('btn-desktop-submit');
+            if (deskBtn) {
+                deskBtn.innerText = '請先移除或更換已售完品項';
+                deskBtn.disabled = true;
+                deskBtn.style.opacity = '0.6';
+            }
+            return;
+        } else {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+            const deskBtn = document.getElementById('btn-desktop-submit');
+            if (deskBtn) {
+                deskBtn.disabled = false;
+                deskBtn.style.opacity = '1';
+            }
+            const currentTot = typeof updateTotal === 'function' ? (Number(document.getElementById('total-price')?.innerText) || 0) : 0;
+            const diff = currentTot - (window.editOrderOriginalTotal || 0);
+            const diffSign = diff > 0 ? `(+$${diff})` : (diff < 0 ? `(-$${Math.abs(diff)})` : '($0)');
+            const btnText = `確認更換品項 ${diffSign}`;
+            btn.innerHTML = `<span>${btnText}</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 4px;"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+            if (deskBtn) deskBtn.innerText = btnText;
+            return;
+        }
     }
 
     if (isCheckoutSectionVisible()) {
@@ -883,6 +1049,15 @@ async function submitOrder() {
         return customAlert(`${unavailableOption.getAttribute('data-group-title')}：餐點金額需滿 ${unavailableOption.getAttribute('data-min-order-amount')} 元，請調整餐點或選項。`);
     }
 
+    // In Edit Order Mode, items must not contain any sold-out items
+    if (window.isEditOrderMode) {
+        if (window.editOrderHasSoldOutRemaining) {
+            return customAlert('購物車內仍有已售完品項，請先移除或更換後再送出！');
+        }
+        // Direct execution for order modification
+        return doSubmitOrderExecution('', '');
+    }
+
     const twNow = getTaiwanDate();
     const isDineIn = (window.currentDiningOption === 'dine_in');
     const isScheduledEnabled = !(storeConfig && storeConfig.allowScheduledPickup === false);
@@ -1332,6 +1507,94 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                             <polyline points="20 6 9 17 4 12"></polyline>
                         </svg>
                     </div>
+                </div>
+            `, () => {
+                if (typeof closeAndExitLiff === 'function') closeAndExitLiff();
+            });
+
+            return;
+        }
+
+        // 10.2 Xử lý riêng cho luồng 更換品項 (Sold Out Edit Order Mode)
+        if (window.isEditOrderMode && window.editOrderKey) {
+            const modifyPayload = {
+                order_key: window.editOrderKey,
+                items: structuredItems,
+                total: currentTotal,
+                new_total: currentTotal,
+                note: mainNote,
+                tenant_id: tenantId,
+                is_desktop: isDesktop,
+                isDesktop: isDesktop
+            };
+
+            const res = await fetch(`${WORKER_BASE}/api/orders/modify?tenant_id=${tenantId}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Tenant-ID": tenantId
+                },
+                body: JSON.stringify(modifyPayload),
+                signal: abortController.signal
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                if (errData && errData.code === 'ITEMS_OUT_OF_STOCK') {
+                    const outOfStockNames = errData.outOfStockItems || [];
+                    const itemListHtml = outOfStockNames.map(name => `• 【${name}】`).join('<br>');
+                    try {
+                        if (typeof updateDynamicStockAndPrices === 'function') updateDynamicStockAndPrices();
+                        if (typeof renderDynamicCatalog === 'function') renderDynamicCatalog();
+                    } catch(e) {}
+                    return customAlert(
+                        `<div style="font-size: 16px; font-weight: 900; color: #dc2626; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 6px;">` +
+                        `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M16 16s-1.5-2-4-2-4 2-4 2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>` +
+                        `<span>部分更換餐點已售完</span>` +
+                        `</div>` +
+                        `<div style="font-size: 14px; color: #374151; line-height: 1.6; text-align: left; margin: 12px 0;">` +
+                        `抱歉，您選擇的更換餐點目前已售完：<br>` +
+                        `<div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 10px 12px; margin-top: 8px; color: #b91c1c; font-weight: 700;">` +
+                        `${itemListHtml}` +
+                        `</div>` +
+                        `</div>` +
+                        `<div style="font-size: 13px; color: #6b7280;">請重新調整購物車內容後再送出。</div>`
+                    );
+                }
+                throw new Error(errData.error || `API returned status ${res.status}`);
+            }
+
+            const modifyResult = await res.json();
+            setAllSubmitButtonsState(true, '品項已更新', { cursor: 'not-allowed', opacity: '0.6' });
+
+            cart = {};
+            customizeData = {};
+            comboDrinkData = {};
+            try {
+                sessionStorage.removeItem('benmi_edit_order_key');
+            } catch(e) {}
+            if (typeof updateTotal === 'function') updateTotal();
+
+            const delta = modifyResult.deltaAmount || (currentTotal - (window.editOrderOriginalTotal || 0));
+            let deltaMsg = '無差額 ($0)';
+            if (delta > 0) deltaMsg = `需補差額 $${delta}`;
+            else if (delta < 0) deltaMsg = `店家退還差額 $${Math.abs(delta)}`;
+
+            customAlert(`
+                <div style="margin-bottom: 16px;">
+                    <div style="width: 60px; height: 60px; margin: 0 auto; background: #ecfdf5; border: 2px solid #a7f3d0; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                    </div>
+                </div>
+                <div style="font-size: 19px; font-weight: 900; color: #111827; margin-bottom: 6px;">品項更換成功！</div>
+                <div style="font-size: 14.5px; line-height: 1.5; color: #4b5563;">
+                    門市已收到您的更新訂單！<br>
+                    <strong>新總計：$${currentTotal}</strong> (${deltaMsg})<br>
+                    系統已發送確認卡片至您的 LINE 聊天室 🙏
                 </div>
             `, () => {
                 if (typeof closeAndExitLiff === 'function') closeAndExitLiff();

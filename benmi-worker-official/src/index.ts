@@ -1,7 +1,7 @@
 import { Env } from './types/env';
 import { corsHeaders, json } from './utils/http';
 import { handleLineWebhook } from './modules/line';
-import { createOrder, appendOrder, updateOrder, getOrders, getWaitingCount, getHistorySummary, getOrdersByDate, getHistoryAll, handleOrdersMigration } from './modules/orders';
+import { createOrder, appendOrder, updateOrder, getOrders, getWaitingCount, getHistorySummary, getOrdersByDate, getHistoryAll, handleOrdersMigration, getOrderEditContext, modifyOrder } from './modules/orders';
 import { getConfig, updateConfig } from './modules/config';
 import { getMenu, updateMenu, updateStockStatus, getTenantId } from './modules/menu';
 import { handleAuth, handleAuthChange, handleCreateTempLink, handleVerifyTempLink } from './modules/auth';
@@ -54,6 +54,8 @@ export default {
       // 4. API Endpoints
       if (request.method === "GET" && (path === "/api/marketplace/tenants" || path === "/api/marketplace")) return getMarketplaceTenants(request, env);
       if (request.method === "GET" && (path === "/api/tenant/bootstrap" || path === "/api/bootstrap")) return getTenantBootstrap(request, env);
+      if (request.method === "GET" && (path === "/api/order/edit-context" || path === "/api/orders/edit-context")) return getOrderEditContext(request, env, tenantCtx);
+      if (request.method === "POST" && (path === "/api/orders/modify" || path === "/api/modify")) return modifyOrder(request, env, ctx, tenantCtx);
       if (request.method === "POST" && path === "/api/create") return createOrder(request, env, ctx, tenantCtx);
       if (request.method === "POST" && (path === "/api/orders/append" || path === "/api/append")) return appendOrder(request, env, ctx, tenantCtx);
       if (request.method === "POST" && path === "/api/update") return updateOrder(request, env, ctx, tenantCtx);

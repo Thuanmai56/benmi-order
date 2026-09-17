@@ -222,6 +222,11 @@ function renderListLeft(orders) {
       ? `<span class="tile-badge badge-append">${t('badgeAppendRound', { n: roundCount })}</span>`
       : "";
 
+    const isModified = (order.is_modified === 1 || order.isModified === true);
+    const modifiedBadge = isModified
+      ? `<span class="tile-badge badge-modified">${POS_SVG.modify || ''}${t('badgeModifiedOrder')}</span>`
+      : "";
+
     const newBadge = isNew
       ? `<span class="tile-badge badge-new-pulse">${POS_SVG.tag}${t('badgeNewOrder')}</span>`
       : "";
@@ -240,6 +245,7 @@ function renderListLeft(orders) {
           <span class="tile-customer" title="${escapeHtml(order.customer || t('defaultCustomer'))}">${escapeHtml(order.customer || t('defaultCustomer'))}</span>
           <span class="tile-order-key">#${escapeHtml(order.displayKey || order.key)}</span>
           ${newBadge}
+          ${modifiedBadge}
           ${diningBadge}
           ${appendBadge}
         </div>
@@ -303,6 +309,11 @@ function renderListRight(orders) {
       ? `<span class="tile-badge badge-append">${t('badgeAppendRound', { n: roundCount })}</span>`
       : "";
 
+    const isModified = (order.is_modified === 1 || order.isModified === true);
+    const modifiedBadge = isModified
+      ? `<span class="tile-badge badge-modified">${POS_SVG.modify || ''}${t('badgeModifiedOrder')}</span>`
+      : "";
+
     const pickupDisplay = formatLiveOrderTimeDisplay(order);
 
     const etaDisplay = isElapsed
@@ -316,6 +327,7 @@ function renderListRight(orders) {
         <div class="tile-top">
           <span class="tile-customer" title="${escapeHtml(order.customer || t('defaultCustomer'))}">${escapeHtml(order.customer || t('defaultCustomer'))}</span>
           <span class="tile-order-key">#${escapeHtml(order.displayKey || order.key)}</span>
+          ${modifiedBadge}
           ${diningBadge}
           ${appendBadge}
         </div>
