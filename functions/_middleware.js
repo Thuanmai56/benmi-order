@@ -52,7 +52,11 @@ function isPosRoute(pathname) {
 async function serveInternalAsset(context, assetPath) {
   const assetUrl = new URL(context.request.url);
   assetUrl.pathname = assetPath;
-  const response = await context.env.ASSETS.fetch(new Request(assetUrl, context.request));
+  let response = await context.env.ASSETS.fetch(new Request(assetUrl, context.request));
+  if (response.status >= 300 && response.status < 400 && response.headers.has("location")) {
+    const redirectUrl = new URL(response.headers.get("location"), context.request.url);
+    response = await context.env.ASSETS.fetch(new Request(redirectUrl, context.request));
+  }
   const headers = new Headers(response.headers);
   headers.set("Cache-Control", "public, max-age=0, must-revalidate");
 

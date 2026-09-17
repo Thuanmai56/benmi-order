@@ -1,5 +1,24 @@
 {
   "version": 1,
-  "include": ["/", "/index.html"],
-  "exclude": []
+  "include": ["/*"],
+  "exclude": [
+    "/index.css",
+    "/css/*",
+    "/js/*",
+    "/apps/*",
+    "/docs/*",
+    "/sound/*",
+    "/audio/*",
+    "/dist/*",
+    "/favicon.ico",
+    "/manifest.json",
+    "/benmi_logo.png",
+    "/blab_icon.png",
+    "/blab_logo.png",
+    "/bsc_logo.png",
+    "/zhadan_logo.png",
+    "/zhadan_logo.jpg",
+    "/hero_app_mockup.png"
+  ]
 }
+
