@@ -210,6 +210,54 @@ assert(workerBootstrapTs.includes("cat.slug === 'sec-flavor'"), "Worker getTenan
 
 console.log("✓ Cloudflare Worker menu & bootstrap modules support customization stock updates & sync.");
 
+// 7. Test Category Sort Order Preservation & Interleaving
+const sampleCatalogReorder = {
+  catalog: [
+    { slug: 'mains', name: '主餐', sortOrder: 1, items: [] },
+    { slug: 'drinks', name: '飲料', sortOrder: 3, items: [] }
+  ],
+  customizations: [
+    { id: 'flavor_grp', key: 'flavor', title: '口味設定', options: [] }
+  ],
+  customizationSortOrder: 2
+};
+
+const reorderedCats = [];
+sampleCatalogReorder.catalog.forEach((cat, idx) => {
+  reorderedCats.push({
+    id: cat.slug,
+    title: cat.name,
+    type: 'catalog',
+    sortOrder: Number(cat.sortOrder !== undefined ? cat.sortOrder : (idx + 1)),
+    items: []
+  });
+});
+reorderedCats.push({
+  id: 'sec-flavor',
+  title: '口味與客製化選擇',
+  type: 'order_customization',
+  sortOrder: Number(sampleCatalogReorder.customizationSortOrder !== undefined ? sampleCatalogReorder.customizationSortOrder : 0),
+  items: []
+});
+reorderedCats.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+
+assert.strictEqual(reorderedCats[0].id, 'mains', "mains (sortOrder 1) should be first");
+assert.strictEqual(reorderedCats[1].id, 'sec-flavor', "sec-flavor (sortOrder 2) should be second");
+assert.strictEqual(reorderedCats[2].id, 'drinks', "drinks (sortOrder 3) should be third");
+
+// Verify serializeMenuData with reordered categories
+// Re-evaluate serializeMenuData using the implementation in js/orders-menu.js
+const ordersMenuJs = fs.readFileSync(path.join(__dirname, '../js/orders-menu.js'), 'utf8');
+const serializeFnMatch = ordersMenuJs.match(/function serializeMenuData\(categories\) \{([\s\S]*?)\n\}/);
+assert(serializeFnMatch, "serializeMenuData must be found in orders-menu.js");
+const serializeMenuDataUpdated = new Function('categories', serializeFnMatch[1]);
+const reorderedSerialized = serializeMenuDataUpdated(reorderedCats);
+assert.strictEqual(reorderedSerialized.__customizations.sortOrder, 2, "Serialized __customizations sortOrder must be 2");
+assert.strictEqual(reorderedSerialized.mains.__sort_order, 1, "Serialized mains __sort_order must be 1");
+assert.strictEqual(reorderedSerialized.drinks.__sort_order, 3, "Serialized drinks __sort_order must be 3");
+
+console.log("✓ Customization relative sort order positioning & serialization verified.");
+
 console.log("=================================================");
 console.log("🎉 All customization tests passed successfully!");
 console.log("=================================================");

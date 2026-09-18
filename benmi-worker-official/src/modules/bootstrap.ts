@@ -84,6 +84,7 @@ export interface BootstrapResponse {
     isRequired: boolean;
     minSelection: number;
     maxSelection: number;
+    sortOrder?: number;
     options: Array<{
       id: string;
       name: string;
@@ -618,6 +619,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
           isRequired: Boolean(cat.is_required),
           minSelection: cat.min_selection || 0,
           maxSelection: cat.max_selection || 1,
+          sortOrder: cat.sort_order || 0,
           options: catItems.map((opt, idx) => ({
             id: opt.id,
             name: opt.name,

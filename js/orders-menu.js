@@ -108,7 +108,7 @@ async function loadMenuData() {
 
     const categories = [];
     if (data.catalog) {
-      data.catalog.forEach(cat => {
+      data.catalog.forEach((cat, cIdx) => {
         if (cat.slug === 'sec-flavor' || cat.slug === 'flavor' || cat.categoryType === 'order_customization' || cat.category_type === 'order_customization') {
           return;
         }
@@ -119,6 +119,7 @@ async function loadMenuData() {
           type: 'catalog',
           allowCustomization: cat.allowCustomization !== undefined ? cat.allowCustomization : (cat.slug !== 'drinks'),
           appliedModifiers: cat.appliedModifiers || (cat.allowCustomization === false ? [] : ['*']),
+          sortOrder: Number(cat.sortOrder !== undefined ? cat.sortOrder : (cat.sort_order !== undefined ? cat.sort_order : (cIdx + 1))),
           items: cat.items.map(it => ({
             name: it.name,
             price: it.price,
@@ -131,13 +132,14 @@ async function loadMenuData() {
       });
     }
     if (data.modifiers) {
-      data.modifiers.forEach(mod => {
+      data.modifiers.forEach((mod, mIdx) => {
         if (!categories.some(c => c.id === mod.slug)) {
           categories.push({
             id: mod.slug,
             title: mod.name,
             shortName: mod.shortName || mod.name,
             type: 'modifier',
+            sortOrder: Number(mod.sortOrder !== undefined ? mod.sortOrder : (mod.sort_order !== undefined ? mod.sort_order : (100 + mIdx))),
             items: mod.options.map(opt => ({
               name: opt.name,
               price: opt.price,
@@ -181,7 +183,7 @@ async function loadMenuData() {
           type: 'order_customization',
           allowCustomization: false,
           appliedModifiers: [],
-          sortOrder: data.customizationSortOrder ?? 0,
+          sortOrder: Number(data.customizationSortOrder !== undefined ? data.customizationSortOrder : 0),
           groups: customGroups,
           items: []
         });
@@ -357,6 +359,9 @@ function renderCategoriesManagerView() {
 
     cardsList.addEventListener("dragover", (e) => {
       e.preventDefault();
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = "move";
+      }
       const draggingCard = cardsList.querySelector(".cat-mgr-card.dragging");
       if (!draggingCard) return;
       const afterElement = getDragAfterElement(cardsList, e.clientY, '.cat-mgr-card');
@@ -368,6 +373,14 @@ function renderCategoriesManagerView() {
       updateCategoryCardIndexes(cardsList);
     });
 
+    cardsList.addEventListener("dragenter", (e) => {
+      e.preventDefault();
+    });
+
+    cardsList.addEventListener("drop", (e) => {
+      e.preventDefault();
+    });
+
     currentMenuData.forEach((cat, idx) => {
       const card = document.createElement("div");
       card.className = "cat-mgr-card";
@@ -375,12 +388,17 @@ function renderCategoriesManagerView() {
       card.setAttribute("data-cat-id", cat.id);
 
       card.addEventListener("dragstart", (e) => {
-        e.dataTransfer.effectAllowed = "move";
+        if (e.dataTransfer) {
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("text/plain", cat.id);
+        }
+        draggedCategoryIndex = idx;
         setTimeout(() => card.classList.add("dragging"), 0);
       });
 
-      card.addEventListener("dragend", () => {
+      card.addEventListener("dragend", async () => {
         card.classList.remove("dragging");
+        draggedCategoryIndex = null;
 
         // Extract new order from DOM
         const newOrderIds = [...cardsList.querySelectorAll('.cat-mgr-card')].map(c => c.getAttribute('data-cat-id'));
@@ -388,10 +406,14 @@ function renderCategoriesManagerView() {
         const reordered = newOrderIds.map(id => catMap.get(id)).filter(Boolean);
 
         let changed = false;
-        for (let i = 0; i < reordered.length; i++) {
-          if (reordered[i].id !== currentMenuData[i].id) {
-            changed = true;
-            break;
+        if (reordered.length !== currentMenuData.length) {
+          changed = true;
+        } else {
+          for (let i = 0; i < reordered.length; i++) {
+            if (reordered[i].id !== currentMenuData[i].id) {
+              changed = true;
+              break;
+            }
           }
         }
 
@@ -402,7 +424,7 @@ function renderCategoriesManagerView() {
           });
           markMenuDirty();
           renderMenuCategories();
-          saveMenuData(true);
+          await saveMenuData(true);
         }
         renderCategoriesManagerView();
       });
@@ -1037,13 +1059,14 @@ function syncMenuDataFromDOM() {
 
 function serializeMenuData(categories) {
   const output = {};
-  categories.forEach(cat => {
+  categories.forEach((cat, cIdx) => {
+    const currentOrder = cat.sortOrder !== undefined ? cat.sortOrder : (cIdx + 1);
     if (cat.type === 'order_customization' || cat.id === 'sec-flavor') {
       output.__customizations = {
         id: cat.id,
         title: cat.title,
         shortName: cat.shortName || cat.title,
-        sortOrder: cat.sortOrder !== undefined ? cat.sortOrder : Object.keys(output).length + 1,
+        sortOrder: currentOrder,
         groups: (cat.groups || []).map((grp, gIdx) => ({
           id: grp.id,
           key: grp.key,
@@ -1068,7 +1091,8 @@ function serializeMenuData(categories) {
       __short_name: cat.shortName || cat.title,
       __type: cat.type || 'catalog',
       __allow_customization: cat.allowCustomization !== false ? 1 : 0,
-      __applied_modifiers: cat.appliedModifiers || (cat.allowCustomization === false ? [] : ['*'])
+      __applied_modifiers: cat.appliedModifiers || (cat.allowCustomization === false ? [] : ['*']),
+      __sort_order: currentOrder
     };
     cat.items.forEach(item => {
       if (item.name && item.name.trim() !== "" && item.price !== null) {

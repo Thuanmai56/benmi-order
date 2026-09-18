@@ -422,6 +422,9 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
     const customCatName = (itemsMap && (itemsMap.__title || itemsMap._name)) || null;
     const customCatShortName = (itemsMap && (itemsMap.__short_name || itemsMap._short_name || itemsMap.__short_title || itemsMap._short_title)) || null;
     const customCatType = (itemsMap && (itemsMap.__type || itemsMap._type)) || 'catalog';
+    const customCatSort = (itemsMap && (itemsMap.__sort_order !== undefined || itemsMap._sort_order !== undefined))
+      ? Number(itemsMap.__sort_order ?? itemsMap._sort_order)
+      : currentSortOrder;
 
     // Skip order_customization / sec-flavor UI containers from being saved to menu_categories
     if (slug === 'sec-flavor' || slug.startsWith('sec-') || customCatType === 'order_customization') {
@@ -461,7 +464,7 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
            allow_customization = excluded.allow_customization,
            applied_modifiers = excluded.applied_modifiers,
            sort_order = excluded.sort_order`
-      ).bind(catId, tenantId, catName, catShortName, slug, customCatType, allowCustomization, appliedModifiers, currentSortOrder)
+      ).bind(catId, tenantId, catName, catShortName, slug, customCatType, allowCustomization, appliedModifiers, customCatSort)
     );
 
     if (itemsMap && typeof itemsMap === "object") {
