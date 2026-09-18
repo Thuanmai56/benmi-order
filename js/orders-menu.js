@@ -151,36 +151,41 @@ async function loadMenuData() {
       });
     }
 
-    if (!categories.some(c => c.type === 'order_customization' || c.id === 'sec-flavor')) {
-      const customGroups = (data.customizations && data.customizations.length > 0)
-        ? data.customizations.map((cust, gIdx) => ({
-            id: cust.id || `custom_${tenantId}_${cust.key || gIdx}`,
-            key: cust.key || `custom_${gIdx}`,
-            title: cust.title || cust.name || '',
-            type: cust.type || 'radio',
-            sortOrder: cust.sortOrder !== undefined ? cust.sortOrder : gIdx,
-            options: (cust.options || []).map(opt => ({
-              id: opt.id || opt.name,
-              name: opt.name || opt.title || '',
-              price: opt.price !== undefined ? opt.price : (opt.surcharge !== undefined ? opt.surcharge : 0),
-              isOos: Boolean(opt.isOutOfStock || opt.is_out_of_stock),
-              sub_options: Array.isArray(opt.sub_options) ? [...opt.sub_options] : (Array.isArray(opt.subOptions) ? [...opt.subOptions] : []),
-              originalName: opt.name || opt.title || ''
-            }))
-          }))
-        : [];
+    const hasCustomizations = (Array.isArray(data.customizations) && data.customizations.length > 0);
+    const hasCustomInCatalog = (data.catalog && data.catalog.some(c => c.slug === 'sec-flavor' || c.categoryType === 'order_customization' || c.category_type === 'order_customization'));
 
-      categories.push({
-        id: 'sec-flavor',
-        title: currentLang === 'vi' ? 'Tùy chọn khẩu vị & biến thể' : '口味與客製化選擇',
-        shortName: currentLang === 'vi' ? 'Khẩu vị' : '口味選擇',
-        type: 'order_customization',
-        allowCustomization: false,
-        appliedModifiers: [],
-        sortOrder: data.customizationSortOrder ?? 0,
-        groups: customGroups,
-        items: []
-      });
+    if (hasCustomizations || hasCustomInCatalog) {
+      if (!categories.some(c => c.type === 'order_customization' || c.id === 'sec-flavor')) {
+        const customGroups = hasCustomizations
+          ? data.customizations.map((cust, gIdx) => ({
+              id: cust.id || `custom_${tenantId}_${cust.key || gIdx}`,
+              key: cust.key || `custom_${gIdx}`,
+              title: cust.title || cust.name || '',
+              type: cust.type || 'radio',
+              sortOrder: cust.sortOrder !== undefined ? cust.sortOrder : gIdx,
+              options: (cust.options || []).map(opt => ({
+                id: opt.id || opt.name,
+                name: opt.name || opt.title || '',
+                price: opt.price !== undefined ? opt.price : (opt.surcharge !== undefined ? opt.surcharge : 0),
+                isOos: Boolean(opt.isOutOfStock || opt.is_out_of_stock),
+                sub_options: Array.isArray(opt.sub_options) ? [...opt.sub_options] : (Array.isArray(opt.subOptions) ? [...opt.subOptions] : []),
+                originalName: opt.name || opt.title || ''
+              }))
+            }))
+          : [];
+
+        categories.push({
+          id: 'sec-flavor',
+          title: currentLang === 'vi' ? 'Tùy chọn khẩu vị & biến thể' : '口味與客製化選擇',
+          shortName: currentLang === 'vi' ? 'Khẩu vị' : '口味選擇',
+          type: 'order_customization',
+          allowCustomization: false,
+          appliedModifiers: [],
+          sortOrder: data.customizationSortOrder ?? 0,
+          groups: customGroups,
+          items: []
+        });
+      }
     }
 
     // The customization panel is a real sortable section. Keep its saved
@@ -414,7 +419,10 @@ function renderCategoriesManagerView() {
         : cat.items.length;
 
       const actionsHtml = isSystemCustomization
-        ? `<span style="font-size: 12px; color: #64748b; font-weight: 600; padding-right: 6px;">${t("customizationPositionHint")}</span>`
+        ? `
+          <span style="font-size: 12px; color: #64748b; font-weight: 600; padding-right: 6px;">${t("customizationPositionHint")}</span>
+          <button type="button" class="btn btn-ghost" style="border: 1px solid #fee2e2; background:#fff5f5; color:var(--brand-red); padding: 6px 12px; font-size: 13px; font-weight: 700; border-radius: 8px; display:inline-flex; align-items:center; gap:4px;" onclick="deleteCategoryAtIndex(${idx})">${(typeof POS_SVG !== 'undefined' && POS_SVG.trash) || ''} <span>${t("btnCategoryDelete")}</span></button>
+        `
         : `
           <button type="button" class="btn btn-ghost" style="border: 1px solid #cbd5e1; background:#fff; padding: 6px 12px; font-size: 13px; font-weight: 700; border-radius: 8px; display:inline-flex; align-items:center; gap:4px;" onclick="promptRenameCategoryAtIndex(${idx})">${(typeof POS_SVG !== 'undefined' && POS_SVG.edit) || ''} <span>${t("btnCategoryRename")}</span></button>
           <button type="button" class="btn btn-ghost" style="border: 1px solid #fee2e2; background:#fff5f5; color:var(--brand-red); padding: 6px 12px; font-size: 13px; font-weight: 700; border-radius: 8px; display:inline-flex; align-items:center; gap:4px;" onclick="deleteCategoryAtIndex(${idx})">${(typeof POS_SVG !== 'undefined' && POS_SVG.trash) || ''} <span>${t("btnCategoryDelete")}</span></button>
@@ -533,7 +541,10 @@ function renderMenuCategoryEditor(index) {
 
   if (cat.type === 'order_customization' || cat.id === 'sec-flavor') {
     if (renameBtn) renameBtn.style.display = "none";
-    if (deleteBtn) deleteBtn.style.display = "none";
+    if (deleteBtn) {
+      deleteBtn.style.display = "inline-flex";
+      deleteBtn.onclick = () => deleteCategoryAtIndex(index);
+    }
     if (addItemBtn) {
       addItemBtn.style.display = "inline-flex";
       addItemBtn.innerText = formatPlusBtnText(t("btnAddCustomGroup"), "新增客製化分組");
@@ -1091,6 +1102,10 @@ async function saveMenuData(skipConfirm = false) {
     });
     if (!res.ok) throw new Error("API returned " + res.status);
     clearMenuDirty();
+    try {
+      const tid = getTenantIdFromUrl();
+      localStorage.removeItem("tenant_customizations_" + tid);
+    } catch(e) {}
     if (typeof updatePosCatalogPriceMap === 'function') {
       updatePosCatalogPriceMap(currentMenuData);
     }
@@ -1197,8 +1212,18 @@ if (window.visualViewport) {
 function onAddCategoryTypeChange() {
   const typeSelect = document.getElementById("add-cat-select-type");
   const group = document.getElementById("add-cat-customization-group");
+  const nameInp = document.getElementById("add-cat-input-name");
+  const shortInp = document.getElementById("add-cat-input-short-name");
   if (group && typeSelect) {
     group.style.display = typeSelect.value === "catalog" ? "block" : "none";
+  }
+  if (typeSelect && typeSelect.value === "order_customization") {
+    if (nameInp && !nameInp.value.trim()) {
+      nameInp.value = currentLang === 'vi' ? 'Tùy chọn khẩu vị & biến thể' : '口味與客製化選擇';
+    }
+    if (shortInp && !shortInp.value.trim()) {
+      shortInp.value = currentLang === 'vi' ? 'Khẩu vị' : '口味選擇';
+    }
   }
 }
 
@@ -1223,6 +1248,39 @@ async function confirmAddCategory() {
 
   const shortInp = document.getElementById("add-cat-input-short-name");
   const shortName = (shortInp && shortInp.value.trim()) ? shortInp.value.trim() : name;
+
+  if (type === "order_customization") {
+    if (currentMenuData && currentMenuData.some(c => c.type === 'order_customization' || c.id === 'sec-flavor')) {
+      alert(currentLang === 'vi' ? 'Đã tồn tại phân loại Tùy biến toàn đơn!' : '已存在整單客製化分類！');
+      return;
+    }
+    if (!currentMenuData) currentMenuData = [];
+    syncMenuDataFromDOM();
+
+    const newCat = {
+      id: 'sec-flavor',
+      title: name || (currentLang === 'vi' ? 'Tùy chọn khẩu vị & biến thể' : '口味與客製化選擇'),
+      shortName: shortName || (currentLang === 'vi' ? 'Khẩu vị' : '口味選擇'),
+      type: 'order_customization',
+      allowCustomization: false,
+      appliedModifiers: [],
+      groups: [],
+      items: []
+    };
+
+    currentMenuData.push(newCat);
+    markMenuDirty();
+    closeAddCategoryModal();
+    renderMenuCategories();
+
+    if (isCategoryManagerOpen) {
+      renderCategoriesManagerView();
+    } else {
+      activeCategoryIndex = currentMenuData.length - 1;
+      renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), newCat, activeCategoryIndex);
+    }
+    return;
+  }
 
   const selectedMods = [];
   document.querySelectorAll('input[name="add-cat-mod"]:checked').forEach(cb => {

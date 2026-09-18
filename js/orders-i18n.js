@@ -427,6 +427,7 @@ const I18N = {
     categoryTypeLabel: "分類類型",
     categoryTypeCatalog: "菜單品項 (主餐 / 飲料)",
     categoryTypeModifier: "客製化選項 (加辣 / 加料 / 甜度)",
+    categoryTypeCustomization: "整單口味與客製化 (例如：口味、鹹度、配料調整)",
     categoryTypeCatalogBadge: "餐點",
     confirmDeleteCategory: "確定要刪除整個「{name}」分類及其內部所有品項嗎？",
     promptCategoryNameEmpty: "請輸入有效的分類名稱！",
@@ -892,6 +893,7 @@ const I18N = {
     categoryTypeLabel: "Loại phân loại",
     categoryTypeCatalog: "Danh mục món (Món chính / Đồ uống)",
     categoryTypeModifier: "Tùy biến chọn kèm (Thêm cay / Topping)",
+    categoryTypeCustomization: "Tùy biến toàn đơn (VD: Khẩu vị, Độ mặn, Gia vị)",
     categoryTypeCatalogBadge: "Món ăn",
     confirmDeleteCategory: "Bạn có chắc muốn xóa toàn bộ phân loại「{name}」và các món bên trong không?",
     promptCategoryNameEmpty: "Vui lòng nhập tên phân loại hợp lệ!",
@@ -1760,6 +1762,8 @@ function applyLanguageToDOM() {
   if (addCatOptCat) addCatOptCat.innerText = dict.categoryTypeCatalog;
   const addCatOptMod = document.getElementById("i18n-add-cat-opt-modifier");
   if (addCatOptMod) addCatOptMod.innerText = dict.categoryTypeModifier;
+  const addCatOptCust = document.getElementById("i18n-add-cat-opt-customization");
+  if (addCatOptCust) addCatOptCust.innerText = dict.categoryTypeCustomization;
   const addCatCustLbl = document.getElementById("i18n-add-cat-customization-label");
   if (addCatCustLbl) addCatCustLbl.innerText = dict.allowCustomizationLabel;
   const addCatCustDesc = document.getElementById("i18n-add-cat-customization-desc");

@@ -31,7 +31,8 @@ const requiredKeys = [
   'promptRenameCustomGroup',
   'confirmDeleteCustomGroup',
   'toggleGroupTypeSingle',
-  'toggleGroupTypeMultiple'
+  'toggleGroupTypeMultiple',
+  'categoryTypeCustomization'
 ];
 
 for (const key of requiredKeys) {
@@ -201,6 +202,7 @@ console.log("✓ Client toggleFlavorSubOptions is verified to be fully dynamic."
 const workerMenuTs = fs.readFileSync(path.join(__dirname, '../benmi-worker-official/src/modules/menu.ts'), 'utf8');
 assert(workerMenuTs.includes("slug === '__customizations'"), "Worker syncMenuToD1 must support __customizations");
 assert(workerMenuTs.includes("category_slug === 'order_customization'"), "Worker updateStockStatus must support order_customization");
+assert(workerMenuTs.includes("DELETE FROM menu_customizations WHERE tenant_id = ?"), "Worker syncMenuToD1 must support deleting all customizations when empty");
 
 const workerBootstrapTs = fs.readFileSync(path.join(__dirname, '../benmi-worker-official/src/modules/bootstrap.ts'), 'utf8');
 assert(workerBootstrapTs.includes("isOutOfStock: isOos"), "Worker getTenantBootstrap must enrich options with isOutOfStock");

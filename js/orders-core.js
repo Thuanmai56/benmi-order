@@ -291,11 +291,21 @@ async function initTenantBranding() {
         } catch(e) {}
         applyTenantBranding(data.tenant);
       }
-      if (Array.isArray(data.customizations)) {
+      if (Array.isArray(data.customizations) && data.customizations.length > 0) {
         window.tenantCustomizations = data.customizations;
         tenantCustomizations = data.customizations;
         try {
           localStorage.setItem("tenant_customizations_" + tenantId, JSON.stringify(data.customizations));
+        } catch(e) {}
+        if (window.reviewingOrder && typeof formatContentHtml === "function") {
+          const elCont = document.getElementById("review-content");
+          if (elCont) elCont.innerHTML = formatContentHtml(window.reviewingOrder);
+        }
+      } else {
+        window.tenantCustomizations = [];
+        tenantCustomizations = [];
+        try {
+          localStorage.removeItem("tenant_customizations_" + tenantId);
         } catch(e) {}
         if (window.reviewingOrder && typeof formatContentHtml === "function") {
           const elCont = document.getElementById("review-content");
@@ -331,12 +341,20 @@ async function ensureTenantCustomizations() {
     const res = await fetch(`${WORKER_BASE}/api/tenant/bootstrap?tenant_id=${tenantId}&_t=${Date.now()}`);
     if (res.ok) {
       const data = await res.json();
-      if (Array.isArray(data.customizations)) {
+      if (Array.isArray(data.customizations) && data.customizations.length > 0) {
         window.tenantCustomizations = data.customizations;
         tenantCustomizations = data.customizations;
         try {
           localStorage.setItem("tenant_customizations_" + tenantId, JSON.stringify(data.customizations));
         } catch(e) {}
+        return data.customizations;
+      } else {
+        window.tenantCustomizations = [];
+        tenantCustomizations = [];
+        try {
+          localStorage.removeItem("tenant_customizations_" + tenantId);
+        } catch(e) {}
+        return [];
       }
     }
   } catch(e) {}

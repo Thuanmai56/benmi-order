@@ -380,29 +380,41 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
             `DELETE FROM menu_customizations WHERE tenant_id = ? AND id NOT IN (${placeholders})`
           ).bind(tenantId, ...activeCustomIds)
         );
-      }
 
-      // Persist a lightweight category record so this panel participates in the
-      // same ordering mechanism as every other catalog section.
-      const customCategoryId = catIdMap.get(customizationData?.id) || catIdMap.get('sec-flavor') || customizationData?.id || `${tenantId}_sec-flavor`;
-      const customCategoryName = customizationData?.title || '口味與客製化選擇';
-      const customCategoryShortName = customizationData?.shortName || customCategoryName;
-      const customCategorySortOrder = Number(customizationData?.sortOrder ?? currentSortOrder);
-      activeCategoryIds.push(customCategoryId);
-      statements.push(
-        env.DB.prepare(
-          `INSERT INTO menu_categories (id, tenant_id, name, short_name, slug, category_type, allow_customization, applied_modifiers, sort_order)
-           VALUES (?, ?, ?, ?, 'sec-flavor', 'order_customization', 0, '[]', ?)
-           ON CONFLICT(id) DO UPDATE SET
-             name = excluded.name,
-             short_name = excluded.short_name,
-             slug = excluded.slug,
-             category_type = excluded.category_type,
-             allow_customization = excluded.allow_customization,
-             applied_modifiers = excluded.applied_modifiers,
-             sort_order = excluded.sort_order`
-        ).bind(customCategoryId, tenantId, customCategoryName, customCategoryShortName, customCategorySortOrder)
-      );
+        // Persist a lightweight category record so this panel participates in the
+        // same ordering mechanism as every other catalog section.
+        const customCategoryId = catIdMap.get(customizationData?.id) || catIdMap.get('sec-flavor') || customizationData?.id || `${tenantId}_sec-flavor`;
+        const customCategoryName = customizationData?.title || '口味與客製化選擇';
+        const customCategoryShortName = customizationData?.shortName || customCategoryName;
+        const customCategorySortOrder = Number(customizationData?.sortOrder ?? currentSortOrder);
+        activeCategoryIds.push(customCategoryId);
+        statements.push(
+          env.DB.prepare(
+            `INSERT INTO menu_categories (id, tenant_id, name, short_name, slug, category_type, allow_customization, applied_modifiers, sort_order)
+             VALUES (?, ?, ?, ?, 'sec-flavor', 'order_customization', 0, '[]', ?)
+             ON CONFLICT(id) DO UPDATE SET
+               name = excluded.name,
+               short_name = excluded.short_name,
+               slug = excluded.slug,
+               category_type = excluded.category_type,
+               allow_customization = excluded.allow_customization,
+               applied_modifiers = excluded.applied_modifiers,
+               sort_order = excluded.sort_order`
+          ).bind(customCategoryId, tenantId, customCategoryName, customCategoryShortName, customCategorySortOrder)
+        );
+      } else {
+        // No customization groups remaining -> delete all customization rows for this tenant
+        statements.push(
+          env.DB.prepare(
+            `DELETE FROM menu_customizations WHERE tenant_id = ?`
+          ).bind(tenantId)
+        );
+        statements.push(
+          env.DB.prepare(
+            `DELETE FROM menu_categories WHERE tenant_id = ? AND (slug = 'sec-flavor' OR id LIKE '%_sec-flavor' OR category_type = 'order_customization')`
+          ).bind(tenantId)
+        );
+      }
       continue;
     }
 
@@ -491,6 +503,15 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
         );
       }
     }
+  }
+
+  if (!('__customizations' in menuData)) {
+    statements.push(
+      env.DB.prepare("DELETE FROM menu_customizations WHERE tenant_id = ?").bind(tenantId)
+    );
+    statements.push(
+      env.DB.prepare("DELETE FROM menu_categories WHERE tenant_id = ? AND (slug = 'sec-flavor' OR id LIKE '%_sec-flavor' OR category_type = 'order_customization')").bind(tenantId)
+    );
   }
 
   // Find which items currently in DB were NOT in the active submitted items
