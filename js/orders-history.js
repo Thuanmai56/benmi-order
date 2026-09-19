@@ -354,6 +354,11 @@ function renderHistory(orders) {
         ? `<span class="badge badge-append" style="font-size:11px; padding:2px 6px; border-radius:4px; font-weight:800; white-space:nowrap; flex-shrink:0;">${t('badgeAppendRound', { n: roundCount })}</span>`
         : "";
 
+      const isModified = (order.is_modified === 1 || order.isModified === true);
+      const modifiedBadge = isModified
+        ? `<span class="badge badge-modified" style="font-size:11px; padding:2px 6px; margin-left:4px;">${POS_SVG.modify || ''}${t('badgeModifiedOrder')}</span>`
+        : "";
+
       const formattedTime = isElapsed
         ? (typeof formatOrderSubmissionTime === "function" ? formatOrderSubmissionTime(order) : formatPickupTimeDisplay(order.time))
         : formatPickupTimeDisplay(order.time, order.createdAt, order.content);
@@ -369,6 +374,7 @@ function renderHistory(orders) {
             <span class="history-tile-key">#${escapeHtml(order.displayKey || order.key)}</span>
             ${diningBadge}
             ${appendBadge}
+            ${modifiedBadge}
             ${badge}
           </div>
           <div class="history-tile-meta-row">

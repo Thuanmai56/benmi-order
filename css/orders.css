@@ -1016,6 +1016,14 @@ button.sidebar-nav-item.active {
   border: 1px solid #fed7aa;
 }
 
+.tile-badge.badge-modified,
+.badge.badge-modified {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+  font-weight: 800;
+}
+
 .tile-badge.badge-new-pulse {
   background: #fee2e2;
   color: #b91c1c;

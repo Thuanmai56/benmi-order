@@ -8,9 +8,14 @@ This module contains the serverless backend for the **Benmi Multi-Tenant Order P
 
 All endpoints are multi-tenant aware and extract `tenant_id` via query param `?tenant_id=...` or request header `X-Tenant-Id`:
 - **`src/modules/bootstrap.ts`**: High-performance `/api/tenant/bootstrap` endpoint returning catalog, modifiers, branding, and operating hours. Cached in Workers KV (`tenant:{tenant_id}:bootstrap`) for < 10ms response time.
-- **`src/modules/orders.ts`**: Order lifecycle management (`/api/orders`, `/api/create`, `/api/orders/append`, `/api/orders/status`, `/api/orders/stream`). Supports Dine-in, Takeaway, Table numbers, and Multi-round appends.
+- **`src/modules/orders.ts`**: Order lifecycle management (`/api/orders`, `/api/create`, `/api/orders/append`, `/api/orders/status`, `/api/orders/modify`, `/api/order/edit-context`, `/api/orders/stream`). Supports Dine-in, Takeaway, Table numbers, Multi-round appends, and Customer-side Sold-out Order Modification.
 - **`src/modules/menu.ts`**: Menu synchronization and stock management (`/api/menu`, `/api/menu/stock`, `/api/menu/image`).
-- **`src/modules/line.ts`**: LINE Messaging API webhook, Flex Message builders, Quick Replies, and AI Assistant integration (Groq / OpenRouter).
+- **`src/modules/line.ts`**: LINE Messaging API webhook dispatcher, API client (`pushLineMessage`, `replyText`, `replyLineFlexMessage`), Quick Replies, and AI Assistant intent router (Groq / OpenRouter).
+- **`src/modules/line/templates/`**: Dedicated, modular LINE Flex Message builders:
+  - **`order-receipt.ts`**: Order confirmation flex (`buildOrderFlexMessage`), progress status tracker (`buildProgressFlexMessage`), and table append confirmation (`buildAppendConfirmationFlexMessage`).
+  - **`order-status.ts`**: Rejection bubbles (`createRejectFlexBubble`), time change negotiation bubbles (`createTimeChangeFlexBubble`, `createTimeChangeConfirmedFlexBubble`), and change bubbles (`createChangeFlexBubble`).
+  - **`order-sold-out.ts`**: Interactive sold-out item alert bubble with LIFF edit link (`createSoldOutItemFlexBubble`) and modified order confirmation bubble (`createOrderModifiedConfirmationFlexBubble`).
+  - **`index.ts`**: Centralized re-export barrel.
 - **`src/modules/tenant.ts`**: Tenant context resolution and feature configuration.
 
 ---

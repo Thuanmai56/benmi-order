@@ -3,12 +3,13 @@ import { Env } from '../types/env';
 import { Order, DiningOption, AppendOrderPayload, OrderItemInput } from '../types/index';
 import { corsHeaders, json } from '../utils/http';
 import { syncToGoogleSheets } from '../integrations/googleSheets';
-import { pushLineMessage, pushLineFlexMessage, buildOrderFlexMessage, buildAppendConfirmationFlexMessage, buildProgressFlexMessage, createRejectFlexBubble, createChangeFlexBubble, createTimeChangeFlexBubble } from './line';
+import { pushLineMessage, pushLineFlexMessage, buildOrderFlexMessage, buildAppendConfirmationFlexMessage, buildProgressFlexMessage, createRejectFlexBubble, createChangeFlexBubble, createTimeChangeFlexBubble, createSoldOutItemFlexBubble, createOrderModifiedConfirmationFlexBubble } from './line';
 import { getTenantId } from './menu';
 
 import { TenantContext, tenantHasFeature, resolveTenantOrderPrefix, generateStandardOrderId } from '../types/tenant';
 import { resolveTenantContext } from './tenant';
 import { attachOrderPrintItems } from './order-print-items';
+import { invalidateBootstrapCache } from './bootstrap';
 
 function jsonWithETag(data: any, version: string, status: number = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -902,7 +903,9 @@ export async function updateOrder(
   const incoming = data.status;
 
   if (data.reason !== undefined) order.reason = data.reason;
-  if (data.note !== undefined) order.note = data.note;
+  if (data.note !== undefined && !(incoming === "CHANGED" && data.reason === "口味售完")) {
+    order.note = data.note;
+  }
 
   // Employee 接單
   if (incoming === "ACCEPTED") {
@@ -940,16 +943,47 @@ export async function updateOrder(
     order.status = "WAITING_CUSTOMER_CHANGE";
     await saveOrder(env, order, tenantId);
 
+    const reason = data.reason || order.reason || "未提供原因";
+    const changeNote = data.note !== undefined ? data.note : (order.note || "");
+
+    // Tự động tắt món trong CSDL D1 và xóa cache KV khi báo 口味售完
+    if (reason === "口味售完" && changeNote) {
+      try {
+        const soldOutItems = changeNote.split(/[,、]/).map((s: string) => s.trim()).filter(Boolean);
+        if (soldOutItems.length > 0) {
+          // Tự động khôi phục lúc 04:00 AM ngày hôm sau (theo múi giờ GMT+7)
+          const nowGmt7 = new Date(new Date().getTime() + 7 * 60 * 60 * 1000);
+          const tomorrow4AmGmt7 = new Date(nowGmt7);
+          tomorrow4AmGmt7.setDate(nowGmt7.getDate() + 1);
+          tomorrow4AmGmt7.setHours(4, 0, 0, 0);
+          const outOfStockUntil = new Date(tomorrow4AmGmt7.getTime() - 7 * 60 * 60 * 1000).toISOString();
+
+          for (const itName of soldOutItems) {
+            await env.DB.prepare(
+              `UPDATE menu_items 
+               SET out_of_stock_until = ?, updated_at = datetime('now') 
+               WHERE tenant_id = ? AND name = ?`
+            ).bind(outOfStockUntil, tenantId, itName).run();
+          }
+
+          const cacheKey = `tenant:${tenantId}:menu`;
+          await env.ORDER_STATE.delete(cacheKey);
+          await invalidateBootstrapCache(tenantId, env);
+        }
+      } catch (stockErr) {
+        console.error("[Orders] Failed to auto-disable sold out items in menu:", stockErr);
+      }
+    }
+
     if (order.userId) {
       let notifyText = "";
-      const reason = order.reason || "未提供原因";
-      const note = order.note || "";
+      const note = changeNote;
 
       if (reason === "時間需調整") {
         const t = note || "稍後";
         notifyText = `目前現場較忙碌，為了提供最佳品質，請問可以改成${t}嗎？。請協助點選下方按鈕回覆，謝謝您！`;
       } else if (order.reason && order.reason.startsWith("賣完了：")) {
-        const items = order.reason.replace("賣完了：", "").split(",").map(s => s.trim()).filter(Boolean);
+        const items = order.reason.replace("賣完了：", "").split(",").map((s: string) => s.trim()).filter(Boolean);
         let joinedItems = items.join("、");
         if (items.length === 2) {
           joinedItems = items.join("跟");
@@ -958,7 +992,7 @@ export async function updateOrder(
         }
         notifyText = `不好意思 ${joinedItems}我們現在賣完了，請問可以幫您換別的嗎？`;
       } else if (reason === "口味售完") {
-        const items = (note || "").split(",").map(s => s.trim()).filter(Boolean);
+        const items = (note || "").split(",").map((s: string) => s.trim()).filter(Boolean);
         let joinedItems = items[0] || "";
         if (items.length === 2) {
           joinedItems = items.join("跟");
@@ -991,8 +1025,17 @@ export async function updateOrder(
         if (!flexSent) {
           await pushLineMessage(order.userId, notifyText, env, tenantCtx);
         }
+      } else if (reason === "口味售完" || (order.reason && order.reason.startsWith("賣完了"))) {
+        const liffUrl = tenantCtx?.liffUrl || (tenantCtx?.liffId ? `https://liff.line.me/${tenantCtx.liffId}` : "https://liff.line.me/");
+        const rawSoldItems = (note || "").split(/[,、]/).map((s: string) => s.trim()).filter(Boolean);
+        const fallbackSoldItems = (order.reason || "").replace("賣完了：", "").split(/[,、]/).map((s: string) => s.trim()).filter(Boolean);
+        const soldOutList = rawSoldItems.length > 0 ? rawSoldItems : fallbackSoldItems;
+        const soldOutFlex = createSoldOutItemFlexBubble(order.key, soldOutList.length > 0 ? soldOutList : (note || "部分品項"), brandName, order.displayKey, liffUrl, tenantId);
+        const flexSent = await pushLineFlexMessage(order.userId, `[${brandName}] 品項售完通知 #${order.displayKey || order.key}`, soldOutFlex, env, tenantCtx);
+        if (!flexSent) {
+          await pushLineMessage(order.userId, notifyText, env, tenantCtx);
+        }
       } else {
-        // Revert về push message text cho trường hợp đổi món (không áp dụng Flex message nút đồng ý/hủy đơn)
         await pushLineMessage(order.userId, notifyText, env, tenantCtx);
       }
     }
@@ -1181,7 +1224,9 @@ function mapOrderRows(results: any[]): Order[] {
       roundCount: Number(row.round_count) || 1,
       round_count: Number(row.round_count) || 1,
       lastAppendedAt: parsedLastAppendedAt || row.last_appended_at || null,
-      last_appended_at: parsedLastAppendedAt || row.last_appended_at || null
+      last_appended_at: parsedLastAppendedAt || row.last_appended_at || null,
+      is_modified: Number(row.is_modified) || 0,
+      isModified: Number(row.is_modified) === 1
     };
   });
 }
@@ -1222,7 +1267,7 @@ export async function getOrders(request: Request, env: Env): Promise<Response> {
     const startOfTodayUTC = new Date(new Date(`${todayTwStr}T00:00:00+08:00`).getTime()).toISOString().replace("T", " ").replace(/\.\d+Z$/, "");
 
     const { results } = await env.DB.prepare(
-      `SELECT key, order_id, display_key, business_date, legacy_key, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, round_count, last_appended_at, created_at
+      `SELECT key, order_id, display_key, business_date, legacy_key, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, round_count, last_appended_at, created_at, is_modified
        FROM orders 
        WHERE tenant_id = ? 
          AND (status IN ('NEW', 'ACCEPTED', 'WAITING_CUSTOMER_CHANGE', 'WAITING_CUSTOMER_REJECT', 'DONE') 
@@ -1504,3 +1549,323 @@ export async function getUserLatestActiveOrder(env: Env, tenantId: string, userI
     return { order: null, queueAhead: 0 };
   }
 }
+
+export async function getOrderEditContext(request: Request, env: Env, tenantCtx?: TenantContext | null): Promise<Response> {
+  const url = new URL(request.url);
+  const rawKey = url.searchParams.get("key") || url.searchParams.get("order_key");
+  const tenantId = tenantCtx?.tenantId || getTenantId(request);
+
+  if (!rawKey) {
+    return json({ error: "Missing order key parameter", code: "MISSING_KEY" }, 400);
+  }
+  if (!env.DB) {
+    return json({ error: "Database not configured", code: "NO_DB" }, 500);
+  }
+
+  try {
+    const resolvedKey = await resolveOrderKey(env, tenantId, rawKey);
+    if (!resolvedKey) {
+      return json({ error: "Order not found", code: "ORDER_NOT_FOUND" }, 404);
+    }
+
+    const orderRow = await env.DB.prepare(
+      `SELECT * FROM orders WHERE tenant_id = ? AND key = ? LIMIT 1`
+    ).bind(tenantId, resolvedKey).first<any>();
+
+    if (!orderRow) {
+      return json({ error: "Order not found", code: "ORDER_NOT_FOUND" }, 404);
+    }
+
+    const pendingRow = await env.DB.prepare(
+      `SELECT reason, note FROM pending_actions WHERE tenant_id = ? AND order_key = ? LIMIT 1`
+    ).bind(tenantId, resolvedKey).first<any>();
+
+    let soldOutItemNames: string[] = [];
+    if (pendingRow?.note) {
+      soldOutItemNames = pendingRow.note.split(/[,、]/).map((s: string) => s.trim()).filter(Boolean);
+    } else if (orderRow.note && orderRow.reason === '口味售完') {
+      soldOutItemNames = orderRow.note.split(/[,、]/).map((s: string) => s.trim()).filter(Boolean);
+    }
+
+    const itemsRes = await env.DB.prepare(
+      `SELECT * FROM order_items WHERE tenant_id = ? AND order_key = ? ORDER BY round_number ASC, id ASC`
+    ).bind(tenantId, resolvedKey).all<any>();
+
+    const items = (itemsRes.results || []).map((row: any) => {
+      let options = [];
+      let bundleSelections = null;
+      try { if (row.selected_options) options = JSON.parse(row.selected_options); } catch {}
+      try { if (row.bundle_snapshot_json) bundleSelections = JSON.parse(row.bundle_snapshot_json); } catch {}
+
+      return {
+        id: row.id,
+        itemId: row.item_id,
+        name: row.item_name,
+        category: row.category_name,
+        quantity: row.quantity,
+        unitPrice: row.unit_price,
+        subtotal: row.subtotal,
+        options,
+        bundleSelections,
+        note: row.notes || "",
+        roundNumber: row.round_number
+      };
+    });
+
+    return json({
+      success: true,
+      order: {
+        key: orderRow.key,
+        orderId: orderRow.order_id,
+        displayKey: orderRow.display_key,
+        businessDate: orderRow.business_date,
+        customer: orderRow.customer_name,
+        time: orderRow.pickup_time,
+        status: orderRow.status,
+        total: orderRow.total_amount,
+        content: orderRow.order_content,
+        reason: orderRow.reason,
+        note: orderRow.note,
+        diningOption: orderRow.dining_option,
+        tableNumber: orderRow.table_number,
+        userId: orderRow.user_id,
+        isModified: Number(orderRow.is_modified) === 1
+      },
+      soldOutItemNames,
+      items
+    });
+  } catch (err: any) {
+    console.error("[getOrderEditContext] error:", err);
+    return json({ error: err.message || "Failed to load order edit context", code: "INTERNAL_ERROR" }, 500);
+  }
+}
+
+export async function modifyOrder(
+  request: Request,
+  env: Env,
+  ctx?: ExecutionContext,
+  tenantCtx?: TenantContext | null
+): Promise<Response> {
+  if (!env.DB) {
+    return json({ error: "Database not configured", code: "NO_DB" }, 500);
+  }
+
+  try {
+    const payload: any = await request.json();
+    const rawKey = payload.order_key || payload.key;
+    const tenantId = tenantCtx?.tenantId || payload.tenant_id || getTenantId(request);
+
+    if (!rawKey) {
+      return json({ error: "Missing order_key", code: "MISSING_KEY" }, 400);
+    }
+
+    const resolvedKey = await resolveOrderKey(env, tenantId, rawKey);
+    if (!resolvedKey) {
+      return json({ error: "Order not found", code: "ORDER_NOT_FOUND" }, 404);
+    }
+
+    const orderRow = await env.DB.prepare(
+      `SELECT * FROM orders WHERE tenant_id = ? AND key = ? LIMIT 1`
+    ).bind(tenantId, resolvedKey).first<any>();
+
+    if (!orderRow) {
+      return json({ error: "Order not found", code: "ORDER_NOT_FOUND" }, 404);
+    }
+
+    if (orderRow.status !== 'WAITING_CUSTOMER_CHANGE') {
+      return json({
+        error: "此訂單目前狀態不允許修改 / Trạng thái đơn hàng hiện tại không cho phép chỉnh sửa",
+        code: "ORDER_NOT_MODIFIABLE",
+        currentStatus: orderRow.status
+      }, 400);
+    }
+
+    const rawItems: OrderItemInput[] = Array.isArray(payload.items) ? payload.items : [];
+    if (rawItems.length === 0) {
+      return json({ error: "購物車不能為空 / Giỏ hàng không được để trống", code: "EMPTY_ITEMS" }, 400);
+    }
+
+    // 1. Kiểm tra tồn kho tại CSDL D1 cho các món mới chọn
+    const rawNames = extractAllOrderSearchNames(rawItems);
+    if (rawNames.length > 0) {
+      const cleanNames = rawNames.map(n => n.replace(/\s+(L|S|M)$/i, '').replace(/^\[[^\]]+\]\s*/, '').trim());
+      const allSearchNames = Array.from(new Set([...rawNames, ...cleanNames]));
+      const placeholders = allSearchNames.map(() => '?').join(',');
+
+      try {
+        const oosQuery = await env.DB.prepare(
+          `SELECT name FROM menu_items 
+           WHERE tenant_id = ? 
+             AND (name IN (${placeholders}) OR id IN (${placeholders})) 
+             AND out_of_stock_until IS NOT NULL 
+             AND datetime(out_of_stock_until) > datetime('now')`
+        ).bind(tenantId, ...allSearchNames, ...allSearchNames).all<{ name: string }>();
+
+        if (oosQuery.results && oosQuery.results.length > 0) {
+          const oosNames = Array.from(new Set(oosQuery.results.map(r => r.name)));
+          return json({
+            error: `抱歉，您選擇的餐點【${oosNames.join('、')}】目前已售完，請更換其他品項！`,
+            code: "ITEMS_OUT_OF_STOCK",
+            outOfStockItems: oosNames
+          }, 400);
+        }
+      } catch (stockCheckErr) {
+        console.warn(`[modifyOrder] Stock check warning:`, stockCheckErr);
+      }
+    }
+
+    // 2. Validate combo bundle selections
+    const bundleCheck = await validateOrderBundles(env, tenantId, rawItems);
+    if (!bundleCheck.valid) {
+      return json({ error: bundleCheck.error, code: bundleCheck.code }, 400);
+    }
+
+    // 3. Format updated content & calculate totals
+    const newItemsText = formatItemsToText(rawItems);
+    const newTotal = Number(payload.new_total) || Number(payload.total) || rawItems.reduce((sum, it) => {
+      const qty = Number(it.quantity) || 1;
+      const unit = Number(it.price || it.unit_price) || 0;
+      return sum + (it.subtotal ? Number(it.subtotal) : unit * qty);
+    }, 0);
+
+    const oldTotal = Number(orderRow.total_amount) || 0;
+    const deltaAmount = newTotal - oldTotal;
+
+    const separator = "--------------------------------";
+    let updatedContent = `【顧客更換品項 - 已更新】\n${newItemsText.trim()}`;
+    if (orderRow.order_content) {
+      updatedContent += `\n\n${separator}\n[原訂單明細 (更換前)]:\n${orderRow.order_content.trim()}`;
+    }
+
+    const customerNote = payload.note ? String(payload.note).trim() : (orderRow.note || "");
+
+    // 4. Atomic D1 Batch: Update orders, delete old order_items & insert new ones, delete pending_actions
+    const batchStatements: any[] = [
+      env.DB.prepare(
+        `UPDATE orders SET
+           order_content = ?,
+           total_amount = ?,
+           status = 'NEW',
+           is_modified = 1,
+           reason = '',
+           note = ?,
+           updated_at = datetime('now')
+         WHERE key = ? AND tenant_id = ?`
+      ).bind(
+        updatedContent,
+        newTotal,
+        customerNote,
+        resolvedKey,
+        tenantId
+      ),
+      env.DB.prepare(
+        `DELETE FROM order_items WHERE tenant_id = ? AND order_key = ?`
+      ).bind(tenantId, resolvedKey),
+      ...rawItems.map(item => {
+        const itemQty = Number(item.quantity) || 1;
+        const unitPrice = Number(item.price || item.unit_price) || 0;
+        const subtotal = Number(item.subtotal) || (unitPrice * itemQty);
+        const optionsJson = JSON.stringify(item.options || item.selected_options || []);
+        const itemNote = item.note || item.notes || "";
+        const bundleJson = item.bundle_snapshot_json || (item.bundleSelections ? JSON.stringify(item.bundleSelections) : null);
+        return env.DB.prepare(
+          `INSERT INTO order_items (tenant_id, order_key, round_number, item_id, item_name, category_name, quantity, unit_price, subtotal, selected_options, bundle_snapshot_json, notes, created_at)
+           VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+        ).bind(
+          tenantId,
+          resolvedKey,
+          item.itemId || item.item_id || null,
+          item.name || "Món",
+          item.category || item.category_name || null,
+          itemQty,
+          unitPrice,
+          subtotal,
+          optionsJson,
+          bundleJson,
+          itemNote
+        );
+      }),
+      env.DB.prepare(
+        `DELETE FROM pending_actions WHERE tenant_id = ? AND order_key = ?`
+      ).bind(tenantId, resolvedKey)
+    ];
+
+    await env.DB.batch(batchStatements);
+
+    // 5. Construct updated order object
+    const updatedOrder: Order = {
+      key: resolvedKey,
+      orderId: orderRow.order_id,
+      displayKey: orderRow.display_key,
+      legacyKey: orderRow.legacy_key,
+      businessDate: orderRow.business_date,
+      customer: orderRow.customer_name || "顧客",
+      time: orderRow.pickup_time || "",
+      content: updatedContent,
+      status: "NEW",
+      createdAt: orderRow.created_at ? new Date(orderRow.created_at + "Z").getTime() : Date.now(),
+      userId: orderRow.user_id || undefined,
+      total: newTotal,
+      reason: "",
+      note: customerNote,
+      diningOption: (orderRow.dining_option as any) || 'takeaway',
+      tableNumber: orderRow.table_number || undefined,
+      roundCount: Number(orderRow.round_count) || 1,
+      round_count: Number(orderRow.round_count) || 1,
+      is_modified: 1,
+      isModified: true
+    };
+
+    // 6. Sync Google Sheets in background
+    if (ctx && ctx.waitUntil) {
+      ctx.waitUntil(syncToGoogleSheets(updatedOrder, env, tenantCtx));
+    } else {
+      await syncToGoogleSheets(updatedOrder, env, tenantCtx);
+    }
+
+    // 7. Send LINE Confirmation Flex Message to customer
+    // Only push if customer edited via Desktop (outside LIFF) where liff.sendMessages cannot run.
+    // On mobile LIFF, the customer sends an order text message and the LINE webhook replies with free replyMessage.
+    const isDesktop = payload.is_desktop === true || payload.isDesktop === true;
+    const brandName = tenantCtx?.brandName || "Benmi";
+    if (orderRow.user_id && typeof orderRow.user_id === 'string' && orderRow.user_id.startsWith('U') && isDesktop) {
+      try {
+        const confirmBubble = createOrderModifiedConfirmationFlexBubble(
+          resolvedKey,
+          newTotal,
+          deltaAmount,
+          brandName,
+          orderRow.displayKey
+        );
+        const pushPromise = pushLineFlexMessage(
+          orderRow.user_id,
+          `[${brandName}] 訂單品項已成功更換 #${orderRow.displayKey || resolvedKey}`,
+          confirmBubble,
+          env,
+          tenantCtx
+        );
+        if (ctx && ctx.waitUntil) {
+          ctx.waitUntil(pushPromise);
+        } else {
+          await pushPromise;
+        }
+      } catch (pushErr) {
+        console.error(`[${tenantId}] Failed to push modify confirmation Flex Message:`, pushErr);
+      }
+    }
+
+    return json({
+      success: true,
+      key: resolvedKey,
+      displayKey: orderRow.display_key,
+      oldTotal,
+      newTotal,
+      deltaAmount,
+      isModified: true
+    });
+  } catch (err: any) {
+    console.error("[modifyOrder] error:", err);
+    return json({ error: err.message || "Failed to modify order", code: "INTERNAL_ERROR" }, 500);
+  }
+}
+

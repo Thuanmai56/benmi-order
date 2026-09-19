@@ -5,9 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title id="page-title">線上點餐</title>
-    <link rel="preload" href="index.css?v=20260915_release_rebase_v1" as="style">
-    <link rel="preload" href="js/client-checkout.js?v=20260915_release_rebase_v1" as="script">
-    <link rel="stylesheet" href="index.css?v=20260915_release_rebase_v1">
+    <link rel="preload" href="index.css?v=20260919_sold_out_v7" as="style">
+    <link rel="preload" href="js/client-checkout.js?v=20260919_sold_out_v7" as="script">
+    <link rel="stylesheet" href="index.css?v=20260919_sold_out_v7">
     <script>
         // Redirect root visits on blabfood.app to /landing
         try {
@@ -49,6 +49,38 @@
             } catch (e) {}
             return "benmi";
         }
+
+        // Early detection for edit order mode to prevent FOUC / flash of $0
+        (function () {
+            try {
+                let isEdit = false;
+                const sp = new URLSearchParams(window.location.search);
+                let mode = sp.get('mode');
+                if (mode === 'edit_order' || mode === 'edit') isEdit = true;
+
+                if (!isEdit && sp.has('liff.state')) {
+                    const liffState = decodeURIComponent(sp.get('liff.state') || '');
+                    const qPart = liffState.includes('?') ? liffState.split('?')[1] : liffState;
+                    const lp = new URLSearchParams(qPart);
+                    if (lp.get('mode') === 'edit_order' || lp.get('mode') === 'edit') isEdit = true;
+                }
+
+                if (!isEdit && window.location.hash) {
+                    const hRaw = decodeURIComponent(window.location.hash.substring(1));
+                    const hp = new URLSearchParams(hRaw.includes('?') ? hRaw.split('?')[1] : hRaw);
+                    if (hp.get('mode') === 'edit_order' || hp.get('mode') === 'edit') isEdit = true;
+                }
+
+                if (!isEdit) {
+                    const savedKey = sessionStorage.getItem('benmi_edit_order_key');
+                    if (savedKey && !sp.has('table') && !sp.has('takeaway') && !sp.has('mode')) isEdit = true;
+                }
+
+                if (isEdit) {
+                    document.documentElement.classList.add('is-edit-order-loading');
+                }
+            } catch (e) {}
+        })();
 
         (function () {
             const tenantId = extractTenantId();
@@ -574,6 +606,15 @@
 </head>
 
 <body>
+    <!-- Edit Order Loading Overlay (Prevents $0 / Empty Cart FOUC) -->
+    <div id="edit-order-loading-overlay" class="edit-order-loading-overlay">
+        <div class="edit-order-loading-card">
+            <div class="edit-order-spinner"></div>
+            <div class="edit-order-loading-title">正在載入訂單內容</div>
+            <div class="edit-order-loading-sub">正在確認剩餘餐點與金額，請稍候...</div>
+        </div>
+    </div>
+
     <div id="desktop-auth-bar" class="desktop-auth-bar" style="display: none;">
         <div class="desktop-auth-inner">
             <div class="desktop-auth-user" id="desktop-auth-logged-in" style="display: none;">
@@ -759,6 +800,22 @@
             <button type="button" onclick="cancelAppendMode()" style="background: rgba(255,255,255,0.22); border: 1px solid rgba(255,255,255,0.45); color: #fff; padding: 5px 10px; border-radius: 8px; font-size: 12.5px; font-weight: 800; cursor: pointer; white-space: nowrap; transition: all 0.15s ease;">
                 ✕ 建立新單
             </button>
+        </div>
+
+        <!-- Sold Out Edit Order Mode Banner -->
+        <div id="edit-order-mode-banner" class="edit-order-mode-banner" style="display: none;">
+            <div style="width: 34px; height: 34px; border-radius: 10px; background: rgba(255,255,255,0.22); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+            </div>
+            <div style="flex: 1;">
+                <div id="edit-order-mode-title" style="font-weight: 900; font-size: 15px; letter-spacing: 0.2px;">已移除售完餐點</div>
+                <div id="edit-order-mode-desc" style="font-size: 13px; color: #fef3c7; margin-top: 2px; font-weight: 600; line-height: 1.4;">
+                    訂單 <strong id="edit-order-mode-key">#-</strong> 部分品項售完，請直接調整購物車更換餐點
+                </div>
+            </div>
         </div>
 
         <!-- Store Status Dynamic Alert Banners -->
@@ -1161,6 +1218,16 @@
         function getTenantIdFromUrl() {
             return typeof extractTenantId === 'function' ? extractTenantId() : "benmi";
         }
+
+        function escapeHtml(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+        window.escapeHtml = escapeHtml;
 
         // State
         let storeConfig = null;
@@ -1781,7 +1848,14 @@
             });
             for (let key in cart) {
                 if (cart[key] > 0) {
+                    if (typeof isItemOutOfStock === 'function' && isItemOutOfStock(key)) continue;
                     const itemInfo = resolveCatalogItem(key);
+                    const dName = itemInfo.displayName || itemInfo.origName;
+                    if (window.isEditOrderMode && Array.isArray(window.editOrderSoldOutNames) && (
+                        window.editOrderSoldOutNames.includes(dName) ||
+                        window.editOrderSoldOutNames.includes(itemInfo.origName) ||
+                        window.editOrderSoldOutNames.some(s => s && s.trim() && (dName.includes(s.trim()) || (itemInfo.origName && itemInfo.origName.includes(s.trim()))))
+                    )) continue;
                     const basePrice = itemInfo.basePrice || priceMap[key] || 0;
                     subtotal += (basePrice * cart[key]);
                 }
@@ -1916,7 +1990,6 @@
 
         function renderCustomizationsPanel(container, list) {
             if (!container || !list || list.length === 0) return;
-            const escapeHtml = (str) => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
             let html = `<div class="section-title">口味與客製化選擇</div>
             <div class="custom-panel-wrapper">
@@ -2908,7 +2981,16 @@
                 return;
             }
             const key = category + '_' + origName;
+            if (change > 0 && typeof isItemOutOfStock === 'function' && isItemOutOfStock(key)) {
+                return;
+            }
             const itemInfo = resolveCatalogItem(key);
+            if (change > 0 && window.isEditOrderMode && Array.isArray(window.editOrderSoldOutNames)) {
+                const dName = itemInfo?.displayName || origName;
+                if (window.editOrderSoldOutNames.includes(dName) || window.editOrderSoldOutNames.includes(origName) || window.editOrderSoldOutNames.some(s => s && s.trim() && (dName.includes(s.trim()) || (origName && origName.includes(s.trim()))))) {
+                    return;
+                }
+            }
             const bundleRule = itemInfo?.bundleRule || (itemInfo?.targetItem && itemInfo.targetItem.bundleRule);
 
             // Intercept bundle item increment: open builder modal instead of direct cart increment
@@ -3085,7 +3167,20 @@
                     const itemInfo = resolveCatalogItem(key);
                     const { catSlug, itemName } = parseCartKey(key);
                     const qty = cart[key];
-                    totalQty += qty;
+                    const dName = itemInfo.displayName || itemName;
+
+                    const isOutOfStock = (
+                        (typeof isItemOutOfStock === 'function' && isItemOutOfStock(key)) ||
+                        (window.isEditOrderMode && Array.isArray(window.editOrderSoldOutNames) && (
+                            window.editOrderSoldOutNames.includes(dName) ||
+                            window.editOrderSoldOutNames.includes(itemName) ||
+                            window.editOrderSoldOutNames.some(s => s && s.trim() && (dName.includes(s.trim()) || (itemName && itemName.includes(s.trim()))))
+                        ))
+                    );
+
+                    if (!isOutOfStock) {
+                        totalQty += qty;
+                    }
 
                     const itemBasePrice = itemInfo.basePrice || priceMap[key] || 0;
                     if (!itemsByCategory[catSlug]) itemsByCategory[catSlug] = [];
@@ -3094,9 +3189,10 @@
                         itemInfo,
                         catSlug,
                         itemName,
-                        displayName: itemInfo.displayName || itemName,
+                        displayName: dName,
                         qty,
-                        price: itemBasePrice
+                        price: itemBasePrice,
+                        isOutOfStock
                     });
                 }
             }
@@ -3109,10 +3205,11 @@
 
                 const catMeta = categoryMetaMap[slug] || {};
                 const catRule = catMeta.pricingRules;
-                const bundleRes = calculateCategoryBundleSubtotal(catRule, catItems);
+                const activeCatItems = catItems.filter(it => !it.isOutOfStock);
+                const bundleRes = calculateCategoryBundleSubtotal(catRule, activeCatItems);
 
                 catItems.forEach(it => {
-                    const { key, catSlug, itemName, displayName, qty, price } = it;
+                    const { key, catSlug, itemName, displayName, qty, price, isOutOfStock } = it;
                     let itemModifiersTotal = 0;
                     let portionsHTML = '';
 
@@ -3125,7 +3222,7 @@
                                     if (val && val !== '不辣' && val !== '不需要') {
                                         const addP = modPriceMap[val] || 0;
                                         if (addP > 0) {
-                                            itemModifiersTotal += addP;
+                                            if (!isOutOfStock) itemModifiersTotal += addP;
                                             parts.push(`${val} (+$${addP})`);
                                         } else {
                                             parts.push(val);
@@ -3137,7 +3234,7 @@
                                 for (let topName in c.multiple) {
                                     if (c.multiple[topName]) {
                                         const topPrice = modPriceMap[topName] || 0;
-                                        itemModifiersTotal += topPrice;
+                                        if (!isOutOfStock) itemModifiersTotal += topPrice;
                                         if (topPrice > 0) {
                                             parts.push(`${topName} (+$${topPrice})`);
                                         } else {
@@ -3157,39 +3254,53 @@
 
                     let lineTotal = (qty * price) + itemModifiersTotal;
 
-                    summaryHTML += `
-                        <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                            <div style="font-weight:800; color: #111;">${qty}x ${displayName}</div>
-                            <div style="font-weight:700;">$${lineTotal}</div>
-                        </div>
-                    `;
+                    if (isOutOfStock) {
+                        summaryHTML += `
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; opacity:0.6; text-decoration:line-through; color:#94a3b8;">
+                                <div style="font-weight:700;">
+                                    <span>${qty}x ${displayName}</span>
+                                    <span style="display:inline-block; margin-left:6px; font-size:11px; font-weight:700; background:#fee2e2; color:#dc2626; padding:1px 6px; border-radius:4px; text-decoration:none; vertical-align:middle;">已移除</span>
+                                </div>
+                                <div style="font-weight:700; color:#94a3b8;">$${lineTotal}</div>
+                            </div>
+                        `;
+                    } else {
+                        summaryHTML += `
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                <div style="font-weight:800; color: #111; display:flex; align-items:center; flex-wrap:wrap;">
+                                    <span>${qty}x ${displayName}</span>
+                                </div>
+                                <div style="font-weight:700;">$${lineTotal}</div>
+                            </div>
+                        `;
 
-                    if (it.itemInfo?.bundleRule && window.bundleCartData && window.bundleCartData[key]) {
-                        const portions = window.bundleCartData[key].slice(0, qty);
-                        portions.forEach((p, pIdx) => {
-                            const pNum = zhNumbers[pIdx] || `第 ${pIdx + 1} 份`;
-                            (p.groups || []).forEach(g => {
-                                const itemsStr = (g.items || []).map(item => `${item.name} x${item.quantity}`).join('、');
-                                if (itemsStr) {
-                                    portionsHTML += `<div style="font-size:13px; color:#475569; margin-left:10px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
-                                        <span>↳ ${pNum} ${g.groupName || '配菜'}：${itemsStr}</span>
-                                        <button type="button" onclick="openBundleBuilderModal('${catSlug}','${itemName.replace(/'/g, "\\'")}', ${pIdx})" style="border:none; background:#f1f5f9; color:#0f172a; padding:2px 8px; border-radius:6px; font-size:11.5px; font-weight:700; cursor:pointer; margin-left:8px;">調整</button>
-                                    </div>`;
-                                }
+                        if (it.itemInfo?.bundleRule && window.bundleCartData && window.bundleCartData[key]) {
+                            const portions = window.bundleCartData[key].slice(0, qty);
+                            portions.forEach((p, pIdx) => {
+                                const pNum = zhNumbers[pIdx] || `第 ${pIdx + 1} 份`;
+                                (p.groups || []).forEach(g => {
+                                    const itemsStr = (g.items || []).map(item => `${item.name} x${item.quantity}`).join('、');
+                                    if (itemsStr) {
+                                        portionsHTML += `<div style="font-size:13px; color:#475569; margin-left:10px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
+                                            <span>↳ ${pNum} ${g.groupName || '配菜'}：${itemsStr}</span>
+                                            <button type="button" onclick="openBundleBuilderModal('${catSlug}','${itemName.replace(/'/g, "\\'")}', ${pIdx})" style="border:none; background:#f1f5f9; color:#0f172a; padding:2px 8px; border-radius:6px; font-size:11.5px; font-weight:700; cursor:pointer; margin-left:8px;">調整</button>
+                                        </div>`;
+                                    }
+                                });
                             });
-                        });
-                    }
+                        }
 
-                    if (catSlug === 'combo') {
-                        let drinks = comboDrinkData[itemName] || [];
-                        let drinkCounts = {};
-                        drinks.slice(0, qty).forEach(d => { drinkCounts[d] = (drinkCounts[d] || 0) + 1; });
-                        let drinkStr = Object.entries(drinkCounts).map(([n, c]) => `${n} x${c}`).join('、');
-                        if (drinkStr) summaryHTML += `<div style="font-size:13px; color:#6b7280; margin-left:10px; margin-bottom:6px;">↳ 飲料：${drinkStr}</div>`;
-                    }
+                        if (catSlug === 'combo') {
+                            let drinks = comboDrinkData[itemName] || [];
+                            let drinkCounts = {};
+                            drinks.slice(0, qty).forEach(d => { drinkCounts[d] = (drinkCounts[d] || 0) + 1; });
+                            let drinkStr = Object.entries(drinkCounts).map(([n, c]) => `${n} x${c}`).join('、');
+                            if (drinkStr) summaryHTML += `<div style="font-size:13px; color:#6b7280; margin-left:10px; margin-bottom:6px;">↳ 飲料：${drinkStr}</div>`;
+                        }
 
-                    summaryHTML += portionsHTML;
-                    total += lineTotal;
+                        summaryHTML += portionsHTML;
+                        total += lineTotal;
+                    }
                 });
 
                 if (bundleRes.discountAmount > 0) {
@@ -3206,6 +3317,25 @@
                     `;
                 }
 
+                summaryHTML += `<div style="border-bottom: 1px dashed #eee; margin-bottom: 8px;"></div>`;
+            }
+
+            // Render removed sold-out items from previous order with line-through and '已移除' tag
+            if (window.isEditOrderMode && Array.isArray(window.editOrderRemovedItems) && window.editOrderRemovedItems.length > 0) {
+                window.editOrderRemovedItems.forEach(rem => {
+                    const rQty = Number(rem.quantity) || 1;
+                    const rPrice = Number(rem.subtotal) || ((Number(rem.price) || 0) * rQty);
+                    const rName = rem.displayName || rem.name || '';
+                    summaryHTML += `
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; opacity:0.6; text-decoration:line-through; color:#94a3b8;">
+                            <div style="font-weight:700;">
+                                <span>${rQty}x ${(typeof escapeHtml === 'function' ? escapeHtml(rName) : rName)}</span>
+                                <span style="display:inline-block; margin-left:6px; font-size:11px; font-weight:700; background:#fee2e2; color:#dc2626; padding:1px 6px; border-radius:4px; text-decoration:none; vertical-align:middle;">已移除</span>
+                            </div>
+                            <div style="font-weight:700; color:#94a3b8;">$${rPrice}</div>
+                        </div>
+                    `;
+                });
                 summaryHTML += `<div style="border-bottom: 1px dashed #eee; margin-bottom: 8px;"></div>`;
             }
 
@@ -3231,6 +3361,9 @@
             });
             total += addonsTotal;
 
+            // Sold out items are automatically crossed out, tagged 已移除, and deducted from total
+            window.editOrderHasSoldOutRemaining = false;
+
             const totalEl = document.getElementById('total-price');
             if (totalEl) totalEl.innerText = total;
 
@@ -3239,7 +3372,8 @@
 
             const summaryContainer = document.getElementById('cart-summary');
             if (summaryContainer) {
-                if (totalQty === 0 && addonsTotal === 0) {
+                const hasRemovedItems = window.isEditOrderMode && Array.isArray(window.editOrderRemovedItems) && window.editOrderRemovedItems.length > 0;
+                if (totalQty === 0 && addonsTotal === 0 && !hasRemovedItems) {
                     summaryContainer.innerHTML = '<div style="text-align:center; color:#9ca3af;">(目前沒有已選商品)</div>';
                 } else {
                     const violations = (typeof getActiveThresholdViolations === 'function') ? getActiveThresholdViolations() : [];
@@ -3253,6 +3387,35 @@
                         `;
                         summaryHTML = warningHTML + summaryHTML;
                     }
+
+                    // Render Price Delta Box in Edit Order Mode
+                    if (window.isEditOrderMode) {
+                        const origTot = window.editOrderOriginalTotal || 0;
+                        const diff = total - origTot;
+                        let diffText = '無差額 ($0)';
+                        let diffColor = '#64748b';
+                        if (diff > 0) {
+                            diffText = `需補差額 +$${diff}`;
+                            diffColor = '#dc2626';
+                        } else if (diff < 0) {
+                            diffText = `退還差額 -$${Math.abs(diff)}`;
+                            diffColor = '#059669';
+                        }
+                        const deltaHTML = `
+                            <div class="edit-order-delta-box">
+                                <div style="display:flex; justify-content:space-between; align-items:center; font-weight:800;">
+                                    <span>原金額 $${origTot} → 新總計 $${total}</span>
+                                    <span style="color:${diffColor}; font-weight:900;">${diffText}</span>
+                                </div>
+                            </div>
+                        `;
+                        summaryHTML = deltaHTML + summaryHTML;
+                    }
+
+                    if (totalQty === 0 && addonsTotal === 0 && hasRemovedItems) {
+                        summaryHTML += '<div style="text-align:center; color:#dc2626; font-weight:700; font-size:13px; margin:8px 0;">(購物車內餐點已全數售完，請由上方菜單挑選更換餐點)</div>';
+                    }
+
                     summaryHTML += `<div style="display:flex; justify-content:space-between; font-weight:900; margin-top:12px; font-size:16px;">
                         <div>總計</div><div style="color:var(--primary);">$${total}</div>
                     </div>`;
@@ -3671,22 +3834,29 @@
             if (typeof initAppendModeIfPresent === 'function') {
                 initAppendModeIfPresent();
             }
+            if (typeof initEditOrderModeIfPresent === 'function') {
+                initEditOrderModeIfPresent();
+            }
             applyPickupConfig();
 
             try {
                 const tenantId = getTenantIdFromUrl();
-                const saved = localStorage.getItem(`cart_save_${tenantId}`);
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    cart = parsed.cart || {};
-                    customizeData = parsed.customizeData || {};
-                    comboDrinkData = parsed.comboDrinkData || {};
-                    window.bundleCartData = parsed.bundleCartData || {};
-                    localStorage.removeItem(`cart_save_${tenantId}`);
-                    for (let key in cart) {
-                        if (cart[key] > 0) {
-                            const { catSlug, origName } = parseCartKey(key);
-                            updateQty(catSlug, origName, 0);
+                const urlParams = new URLSearchParams(window.location.search);
+                const isEditOrderUrl = urlParams.get('mode') === 'edit_order' || urlParams.get('mode') === 'edit';
+                if (!window.isEditOrderMode && !isEditOrderUrl) {
+                    const saved = localStorage.getItem(`cart_save_${tenantId}`);
+                    if (saved) {
+                        const parsed = JSON.parse(saved);
+                        cart = parsed.cart || {};
+                        customizeData = parsed.customizeData || {};
+                        comboDrinkData = parsed.comboDrinkData || {};
+                        window.bundleCartData = parsed.bundleCartData || {};
+                        localStorage.removeItem(`cart_save_${tenantId}`);
+                        for (let key in cart) {
+                            if (cart[key] > 0) {
+                                const { catSlug, origName } = parseCartKey(key);
+                                updateQty(catSlug, origName, 0);
+                            }
                         }
                     }
                 }
@@ -3761,7 +3931,7 @@
             </button>
         </div>
     </div>
-    <script src="js/client-checkout.js?v=20260915_release_rebase_v1"></script>
+    <script src="js/client-checkout.js?v=20260919_sold_out_v7"></script>
 </body>
 
 </html>
