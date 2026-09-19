@@ -54,12 +54,14 @@ assert.ok(clientCheckoutJs.includes('window.isEditOrderMode'), 'client-checkout.
 assert.ok(clientCheckoutJs.includes('initEditOrderModeIfPresent'), 'initEditOrderModeIfPresent implemented');
 assert.ok(clientCheckoutJs.includes('dismissEditOrderLoadingOverlay'), 'dismissEditOrderLoadingOverlay implemented');
 assert.ok(clientCheckoutJs.includes('window.editOrderRemovedItems'), 'client-checkout.js defines editOrderRemovedItems');
+assert.ok(clientCheckoutJs.includes('[更換品項 #'), 'client-checkout.js sends order details message via liff.sendMessages');
+assert.ok(lineTs.includes('[更換品項'), 'line.ts webhook handles [更換品項 message to clear pending actions');
 assert.ok(indexHtml.includes('window.editOrderRemovedItems'), 'index.html renders editOrderRemovedItems');
-console.log('✓ Test 5 Passed: Customer LIFF edit mode banner, loading overlay, context pre-fill, delta indicator, and submission wired');
+console.log('✓ Test 5 Passed: Customer LIFF edit mode banner, loading overlay, context pre-fill, delta indicator, and customer chat message submission wired');
 
 // Test 6: Cache-busting verification
-assert.ok(indexHtml.includes('20260919_sold_out_v6'), 'index.html cache busters bumped to 20260919_sold_out_v6');
-assert.ok(ordersHtml.includes('20260919_sold_out_v6'), 'orders.html cache busters bumped to 20260919_sold_out_v6');
+assert.ok(indexHtml.includes('20260919_sold_out_v7'), 'index.html cache busters bumped to 20260919_sold_out_v7');
+assert.ok(ordersHtml.includes('20260919_sold_out_v7'), 'orders.html cache busters bumped to 20260919_sold_out_v7');
 console.log('✓ Test 6 Passed: Cache-busting query strings correctly bumped in index.html and orders.html');
 
 console.log('\n🎉 ALL SOLD-OUT ORDER MODIFICATION TESTS PASSED!');

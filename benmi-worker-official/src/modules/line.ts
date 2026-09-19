@@ -760,10 +760,21 @@ export async function handleLineWebhook(
       continue;
     }
 
+    // 0.28) Handle Edit/Modify Order text message from LIFF: Acknowledge and clear pending actions
+    if (userText.includes("[更換品項") || userText.includes("更換品項內容")) {
+      console.log(`[${brandName}] Webhook received edit order notification message from customer.`);
+      try {
+        await env.DB.prepare("DELETE FROM pending_actions WHERE tenant_id = ? AND user_id = ?")
+          .bind(tenantId, userId).run();
+      } catch { }
+      try { await env.ORDER_STATE.delete(draftKey); } catch { }
+      continue;
+    }
+
     // 0.3) Priority Catch new order from LIFF text message (Bypasses pending states)
     if (userText.includes("訂單編號：") && userText.includes("📦 訂單內容：")) {
-      if (userText.includes("[已收到]") || userText.includes("[Đã nhận]") || userText.includes("[加點") || userText.includes("加點餐點") || userText.includes("加點成功")) {
-        console.log(`[${brandName}] Webhook received receipt/append message. Skipping to avoid duplicate order.`);
+      if (userText.includes("[已收到]") || userText.includes("[Đã nhận]") || userText.includes("[加點") || userText.includes("加點餐點") || userText.includes("加點成功") || userText.includes("[更換品項")) {
+        console.log(`[${brandName}] Webhook received receipt/append/modify message. Skipping to avoid duplicate order.`);
         try {
           await env.DB.prepare("DELETE FROM pending_actions WHERE tenant_id = ? AND user_id = ?")
             .bind(tenantId, userId).run();

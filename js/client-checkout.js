@@ -1784,6 +1784,20 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
             const modifyResult = await res.json();
             setAllSubmitButtonsState(true, '品項已更新', { cursor: 'not-allowed', opacity: '0.6' });
 
+            // Gửi tin nhắn xác nhận nội dung đơn từ phía khách hàng vào phòng chat LINE
+            if (typeof liff !== 'undefined' && liff.isInClient) {
+                try {
+                    if (liff.isInClient() && typeof liff.sendMessages === 'function') {
+                        const rawItemsText = typeof formatAppendItemsOnlyText === 'function' ? formatAppendItemsOnlyText() : '';
+                        const notePart = mainNote ? `\n📝 備註：${mainNote}` : '';
+                        const editChatMsg = `[更換品項 #${window.editOrderDisplayKey || window.editOrderKey || ""}]\n訂單參考：${window.editOrderKey || ""}\n\n📦 更新後餐點內容：\n${rawItemsText}${notePart}\n\n💰 更新後金額：$${currentTotal}`;
+                        await liff.sendMessages([{ type: 'text', text: editChatMsg }]);
+                    }
+                } catch (liffMsgErr) {
+                    console.warn("liff.sendMessages notice:", liffMsgErr);
+                }
+            }
+
             cart = {};
             customizeData = {};
             comboDrinkData = {};
@@ -1959,7 +1973,12 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
             const mainNote = document.getElementById('note') ? document.getElementById('note').value : '';
 
             if (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient() && typeof liff.sendMessages === 'function') {
-                if (window.isAppendMode && window.parentOrderKey) {
+                if (window.isEditOrderMode && window.editOrderKey) {
+                    const rawItemsText = typeof formatAppendItemsOnlyText === 'function' ? formatAppendItemsOnlyText() : '';
+                    const notePart = mainNote ? `\n📝 備註：${mainNote}` : '';
+                    const editChatMsg = `[更換品項 #${window.editOrderDisplayKey || window.editOrderKey || ""}]\n訂單參考：${window.editOrderKey || ""}\n\n📦 更新後餐點內容：\n${rawItemsText}${notePart}\n\n💰 更新後金額：$${currentTotal}`;
+                    await liff.sendMessages([{ type: 'text', text: editChatMsg }]);
+                } else if (window.isAppendMode && window.parentOrderKey) {
                     const rawItemsText = formatAppendItemsOnlyText();
                     const tableInput = document.getElementById('dinein-table-number');
                     const currentTable = (tableInput && tableInput.value.trim()) || window.appendTableNumber || window.currentTableNumber || '';
