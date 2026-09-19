@@ -592,6 +592,29 @@ const I18N = {
     promptUnlinkPin: "請輸入門市管理 PIN 碼以解除綁定：",
     unlinkSuccess: "已成功解除設備綁定！即將返回門市啟用畫面。",
     unlinkWrongPin: "管理 PIN 碼錯誤，無法解除綁定。",
+    btnStaffOrder: "桌邊點餐",
+    btnStaffOrderDesc: "開啟專用點餐頁面",
+    tabTables: "桌號管理",
+    tabTablesSub: "管理店內桌號、排序與啟用狀態",
+    tableAddBtn: "新增桌號",
+    tableName: "桌號名稱",
+    tableNamePlaceholder: "例：A-01, 1號桌...",
+    tableSort: "排序",
+    tableSortPlaceholder: "數字越小排越前",
+    tableStatus: "狀態",
+    tableStatusActive: "啟用中",
+    tableStatusDisabled: "已停用",
+    tableAction: "操作",
+    tableEdit: "編輯",
+    tableSave: "儲存",
+    tableCancel: "取消",
+    tableOccupied: "使用中",
+    tableEmpty: "空桌",
+    tableHasActiveOrder: "該桌尚有未結帳訂單，無法修改或停用",
+    tableDeleteDisabledHint: "系統保留桌號以維護歷史報表完整性，僅支援停用",
+    tableConfirmDisable: "確定要停用此桌號嗎？",
+    tableSaveSuccess: "桌號儲存成功",
+    tableSaveFail: "桌號儲存失敗，請重試",
     unpaired: "未綁定"
   },
   "vi": {
@@ -1183,6 +1206,29 @@ const I18N = {
     promptUnlinkPin: "Vui lòng nhập mã PIN quản lý của quán để hủy ghép đôi:",
     unlinkSuccess: "Đã hủy ghép đôi thiết bị thành công! Đang chuyển về màn hình kích hoạt.",
     unlinkWrongPin: "Mã PIN quản lý không đúng. Không thể hủy ghép đôi.",
+    btnStaffOrder: "Nhận đơn tại bàn",
+    btnStaffOrderDesc: "Mở trang nhận đơn chuyên biệt",
+    tabTables: "Quản lý bàn",
+    tabTablesSub: "Quản lý danh sách bàn, thứ tự và trạng thái sử dụng",
+    tableAddBtn: "Thêm bàn mới",
+    tableName: "Tên bàn",
+    tableNamePlaceholder: "Ví dụ: Bàn 01, Tầng 1...",
+    tableSort: "Thứ tự",
+    tableSortPlaceholder: "Số nhỏ hiển thị trước",
+    tableStatus: "Trạng thái",
+    tableStatusActive: "Đang sử dụng",
+    tableStatusDisabled: "Ngừng sử dụng",
+    tableAction: "Thao tác",
+    tableEdit: "Sửa",
+    tableSave: "Lưu",
+    tableCancel: "Hủy",
+    tableOccupied: "Có khách",
+    tableEmpty: "Bàn trống",
+    tableHasActiveOrder: "Bàn đang có đơn chưa thanh toán, không thể sửa hoặc ngừng sử dụng",
+    tableDeleteDisabledHint: "Hệ thống lưu giữ bàn để bảo toàn lịch sử báo cáo, chỉ hỗ trợ ngừng sử dụng",
+    tableConfirmDisable: "Bạn có chắc chắn muốn ngừng sử dụng bàn này?",
+    tableSaveSuccess: "Lưu thông tin bàn thành công",
+    tableSaveFail: "Lưu thông tin bàn thất bại, vui lòng thử lại",
     unpaired: "Chưa liên kết"
   }
 };
@@ -1613,6 +1659,24 @@ function applyLanguageToDOM() {
   if (tocRep) tocRep.innerText = dict.tocReports;
   const tocStoreP = document.getElementById("i18n-toc-store-pairing");
   if (tocStoreP) tocStoreP.innerText = dict.tocStorePairing;
+  const tocTables = document.getElementById("i18n-toc-tables");
+  if (tocTables) tocTables.innerText = dict.tabTables;
+  const btnStaffOrder = document.getElementById("i18n-btn-staff-order");
+  if (btnStaffOrder) btnStaffOrder.innerText = dict.btnStaffOrder;
+  const setTablesT = document.getElementById("i18n-setting-tables-title");
+  if (setTablesT) setTablesT.innerText = dict.tabTables;
+  const setTablesS = document.getElementById("i18n-setting-tables-sub");
+  if (setTablesS) setTablesS.innerText = dict.tabTablesSub;
+  const btnAddTable = document.getElementById("i18n-table-add-btn");
+  if (btnAddTable) btnAddTable.innerText = dict.tableAddBtn;
+  const thTableName = document.getElementById("i18n-th-table-name");
+  if (thTableName) thTableName.innerText = dict.tableName;
+  const thTableSort = document.getElementById("i18n-th-table-sort");
+  if (thTableSort) thTableSort.innerText = dict.tableSort;
+  const thTableStatus = document.getElementById("i18n-th-table-status");
+  if (thTableStatus) thTableStatus.innerText = dict.tableStatus;
+  const thTableAction = document.getElementById("i18n-th-table-action");
+  if (thTableAction) thTableAction.innerText = dict.tableAction;
   if (typeof updateSettingsPanelHeaderTitle === "function") {
     updateSettingsPanelHeaderTitle();
   }

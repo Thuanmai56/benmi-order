@@ -647,6 +647,14 @@ export async function executeAppendOrderInternal(
     return json({ error: "找不到原訂單 / Order not found", code: "ORDER_NOT_FOUND" }, 404);
   }
 
+  // 1.1 Guard: Disallow customer append endpoint from modifying staff orders
+  if (row.source === 'staff') {
+    return json({
+      error: "現場桌邊訂單請洽現場服務人員加點 / Đơn hàng tại bàn vui lòng báo nhân viên để gọi thêm",
+      code: "STAFF_ORDER_RESTRICTED"
+    }, 403);
+  }
+
   // 2. Lock boundary: Cannot append if order is PICKED_UP, REJECTED, or PAID
   if (row.status === 'PICKED_UP' || row.status === 'REJECTED' || row.status === 'PAID') {
     return json({

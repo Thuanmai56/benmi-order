@@ -205,13 +205,36 @@
 
       for (const order of ordersList) {
         const status = (order.status || '').toUpperCase();
-        if (status === 'NEW' && !this.isOrderAlreadyPrinted(order.key) && !(order.legacyKey && this.isOrderAlreadyPrinted(order.legacyKey))) {
+        const isNew = status === 'NEW';
+        const isStaffNew = order.source === 'staff' && (status === 'ACCEPTED' || status === 'NEW');
+        if ((isNew || isStaffNew) && !this.isOrderAlreadyPrinted(order.key) && !(order.legacyKey && this.isOrderAlreadyPrinted(order.legacyKey))) {
           console.log(`[PrinterService] 🖨️ Auto-printing new incoming order #${order.key}...`);
           try {
             const result = await this.printDualStation(order);
             if (result?.success) this.markOrderAsPrinted(order.key);
           } catch (err) {
             console.error(`[PrinterService] Auto-print failed for #${order.key}:`, err);
+          }
+        }
+      }
+    }
+
+    async handleAppendedRounds(appendedList) {
+      const settings = this.getSettings();
+      if (!settings.autoPrintNewOrders) return;
+      if (!Array.isArray(appendedList) || appendedList.length === 0) return;
+
+      for (const item of appendedList) {
+        const order = item.order || item;
+        const toRound = item.toRound || Number(order.round_count || order.roundCount) || 1;
+        const roundPrintKey = `${order.key}_round_${toRound}`;
+        if (!this.isOrderAlreadyPrinted(roundPrintKey)) {
+          console.log(`[PrinterService] 🖨️ Auto-printing appended round ${toRound} for order #${order.key}...`);
+          try {
+            const result = await this.printDualStation(order);
+            if (result?.success) this.markOrderAsPrinted(roundPrintKey);
+          } catch (err) {
+            console.error(`[PrinterService] Auto-print failed for round #${roundPrintKey}:`, err);
           }
         }
       }
