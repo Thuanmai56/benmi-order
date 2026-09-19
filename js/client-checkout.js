@@ -446,10 +446,7 @@ function updateFooterButtonState() {
                 deskBtn.disabled = false;
                 deskBtn.style.opacity = '1';
             }
-            const currentTot = typeof updateTotal === 'function' ? (Number(document.getElementById('total-price')?.innerText) || 0) : 0;
-            const diff = currentTot - (window.editOrderOriginalTotal || 0);
-            const diffSign = diff > 0 ? `(+$${diff})` : (diff < 0 ? `(-$${Math.abs(diff)})` : '($0)');
-            const btnText = `確認更換品項 ${diffSign}`;
+            const btnText = '確認下單';
             btn.innerHTML = `<span>${btnText}</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 4px;"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
             if (deskBtn) deskBtn.innerText = btnText;
             return;
@@ -1750,7 +1747,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                     } catch(e) {}
                     const hasRemaining = typeof hasAvailableCartItems === 'function' ? hasAvailableCartItems() : false;
                     if (hasRemaining) {
-                        setAllSubmitButtonsState(false, '確認更換品項', { cursor: 'pointer', opacity: '1' });
+                        setAllSubmitButtonsState(false, '確認下單', { cursor: 'pointer', opacity: '1' });
                         return customAlert(
                             `<div style="font-size: 16px; font-weight: 900; color: #dc2626; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 6px;">` +
                             `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M16 16s-1.5-2-4-2-4 2-4 2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>` +

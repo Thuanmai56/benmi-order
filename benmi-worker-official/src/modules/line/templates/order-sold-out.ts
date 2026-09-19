@@ -64,7 +64,7 @@ export function createSoldOutItemFlexBubble(
           contents: [
             {
               type: "text",
-              text: `售完品項：${itemsDisplayText}`,
+              text: itemsDisplayText,
               size: "sm",
               color: "#B45309",
               weight: "bold",
@@ -122,10 +122,6 @@ export function createOrderModifiedConfirmationFlexBubble(
   brandName: string = "店家",
   displayKey: string = orderKey
 ): any {
-  const deltaText = deltaAmount > 0
-    ? ` (補差額 +$${deltaAmount})`
-    : (deltaAmount < 0 ? ` (退差額 -$${Math.abs(deltaAmount)})` : ' (金額不變)');
-
   return {
     type: "bubble",
     size: "kilo",
@@ -175,7 +171,7 @@ export function createOrderModifiedConfirmationFlexBubble(
           contents: [
             {
               type: "text",
-              text: `更新後總金額：$${total}${deltaText}`,
+              text: `更新後金額：$${total}`,
               size: "sm",
               color: "#15803D",
               weight: "bold"

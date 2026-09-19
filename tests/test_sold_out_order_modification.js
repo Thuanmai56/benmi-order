@@ -24,7 +24,9 @@ console.log('✓ Test 1 Passed: Worker API endpoints mounted in index.ts');
 // Test 2: LINE Flex messages for sold-out and confirmation
 assert.ok(lineTs.includes('createSoldOutItemFlexBubble'), 'createSoldOutItemFlexBubble re-exported in line.ts');
 assert.ok(orderSoldOutTs.includes('function createSoldOutItemFlexBubble'), 'createSoldOutItemFlexBubble exists in order-sold-out.ts');
+assert.ok(orderSoldOutTs.includes('text: itemsDisplayText,'), 'Sold-out bubble shows item names without duplicate prefix title');
 assert.ok(orderSoldOutTs.includes('function createOrderModifiedConfirmationFlexBubble'), 'createOrderModifiedConfirmationFlexBubble exists in order-sold-out.ts');
+assert.ok(orderSoldOutTs.includes('text: `更新後金額：$${total}`'), 'Modified confirmation bubble displays clean updated amount without parentheses');
 assert.ok(orderSoldOutTs.includes('mode=edit_order'), 'Sold-out bubble links to LIFF edit_order mode');
 console.log('✓ Test 2 Passed: LINE Flex message templates implemented and exported');
 
@@ -44,6 +46,7 @@ console.log('✓ Test 4 Passed: POS dashboard displays modified order badge');
 
 // Test 5: Customer LIFF edit mode banner, loading overlay, and logic
 assert.ok(indexHtml.includes('id="edit-order-mode-banner"'), 'index.html contains edit-order-mode-banner');
+assert.ok(indexHtml.includes('已移除售完餐點'), 'index.html banner displays 已移除售完餐點');
 assert.ok(indexHtml.includes('id="edit-order-loading-overlay"'), 'index.html contains edit-order-loading-overlay');
 assert.ok(indexCss.includes('.edit-order-mode-banner'), 'index.css contains .edit-order-mode-banner styling');
 assert.ok(indexCss.includes('.edit-order-loading-overlay'), 'index.css contains .edit-order-loading-overlay styling');
@@ -55,8 +58,8 @@ assert.ok(indexHtml.includes('window.editOrderRemovedItems'), 'index.html render
 console.log('✓ Test 5 Passed: Customer LIFF edit mode banner, loading overlay, context pre-fill, delta indicator, and submission wired');
 
 // Test 6: Cache-busting verification
-assert.ok(indexHtml.includes('20260919_sold_out_v5'), 'index.html cache busters bumped to 20260919_sold_out_v5');
-assert.ok(ordersHtml.includes('20260919_sold_out_v5'), 'orders.html cache busters bumped to 20260919_sold_out_v5');
+assert.ok(indexHtml.includes('20260919_sold_out_v6'), 'index.html cache busters bumped to 20260919_sold_out_v6');
+assert.ok(ordersHtml.includes('20260919_sold_out_v6'), 'orders.html cache busters bumped to 20260919_sold_out_v6');
 console.log('✓ Test 6 Passed: Cache-busting query strings correctly bumped in index.html and orders.html');
 
 console.log('\n🎉 ALL SOLD-OUT ORDER MODIFICATION TESTS PASSED!');
