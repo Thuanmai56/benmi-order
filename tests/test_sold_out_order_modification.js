@@ -52,8 +52,8 @@ assert.ok(indexHtml.includes('edit-order-delta-box'), 'updateTotal calculates an
 console.log('✓ Test 5 Passed: Customer LIFF edit mode banner, context pre-fill, delta indicator, and submission wired');
 
 // Test 6: Cache-busting verification
-assert.ok(indexHtml.includes('20260917_sold_out_edit_v1'), 'index.html cache busters bumped to 20260917_sold_out_edit_v1');
-assert.ok(ordersHtml.includes('20260917_sold_out_edit_v1'), 'orders.html cache busters bumped to 20260917_sold_out_edit_v1');
+assert.ok(indexHtml.includes('20260919_sold_out_v2'), 'index.html cache busters bumped to 20260919_sold_out_v2');
+assert.ok(ordersHtml.includes('20260919_sold_out_v2'), 'orders.html cache busters bumped to 20260919_sold_out_v2');
 console.log('✓ Test 6 Passed: Cache-busting query strings correctly bumped in index.html and orders.html');
 
 console.log('\n🎉 ALL SOLD-OUT ORDER MODIFICATION TESTS PASSED!');

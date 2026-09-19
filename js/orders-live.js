@@ -1045,6 +1045,13 @@ function formatContentHtml(order) {
   }
 
   let noteText = (order?.note || "").trim();
+  // Guard: Never display sold-out items as customer notes in order review
+  if (order?.reason === "口味售完" || order?.reason?.startsWith("賣完了：")) {
+    const soldItems = (order.reason.startsWith("賣完了：") ? order.reason.replace("賣完了：", "") : (order.note || "")).split(/[,、]/).map(s => s.trim()).filter(Boolean);
+    if (soldItems.length > 0 && (soldItems.includes(noteText) || noteText.split(/[,、]/).every(s => soldItems.includes(s.trim())))) {
+      noteText = "";
+    }
+  }
   if (!noteText && raw) {
     const m = raw.match(/(?:📝\s*)?(?:顧客備註|備註|Ghi chú)[：:\s]+([^\n]+)/i);
     if (m && m[1]) {

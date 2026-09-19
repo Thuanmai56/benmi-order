@@ -9,6 +9,7 @@ import { getTenantId } from './menu';
 import { TenantContext, tenantHasFeature, resolveTenantOrderPrefix, generateStandardOrderId } from '../types/tenant';
 import { resolveTenantContext } from './tenant';
 import { attachOrderPrintItems } from './order-print-items';
+import { invalidateBootstrapCache } from './bootstrap';
 
 function jsonWithETag(data: any, version: string, status: number = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -902,7 +903,9 @@ export async function updateOrder(
   const incoming = data.status;
 
   if (data.reason !== undefined) order.reason = data.reason;
-  if (data.note !== undefined) order.note = data.note;
+  if (data.note !== undefined && !(incoming === "CHANGED" && data.reason === "口味售完")) {
+    order.note = data.note;
+  }
 
   // Employee 接單
   if (incoming === "ACCEPTED") {
@@ -940,16 +943,47 @@ export async function updateOrder(
     order.status = "WAITING_CUSTOMER_CHANGE";
     await saveOrder(env, order, tenantId);
 
+    const reason = data.reason || order.reason || "未提供原因";
+    const changeNote = data.note !== undefined ? data.note : (order.note || "");
+
+    // Tự động tắt món trong CSDL D1 và xóa cache KV khi báo 口味售完
+    if (reason === "口味售完" && changeNote) {
+      try {
+        const soldOutItems = changeNote.split(/[,、]/).map((s: string) => s.trim()).filter(Boolean);
+        if (soldOutItems.length > 0) {
+          // Tự động khôi phục lúc 04:00 AM ngày hôm sau (theo múi giờ GMT+7)
+          const nowGmt7 = new Date(new Date().getTime() + 7 * 60 * 60 * 1000);
+          const tomorrow4AmGmt7 = new Date(nowGmt7);
+          tomorrow4AmGmt7.setDate(nowGmt7.getDate() + 1);
+          tomorrow4AmGmt7.setHours(4, 0, 0, 0);
+          const outOfStockUntil = new Date(tomorrow4AmGmt7.getTime() - 7 * 60 * 60 * 1000).toISOString();
+
+          for (const itName of soldOutItems) {
+            await env.DB.prepare(
+              `UPDATE menu_items 
+               SET out_of_stock_until = ?, updated_at = datetime('now') 
+               WHERE tenant_id = ? AND name = ?`
+            ).bind(outOfStockUntil, tenantId, itName).run();
+          }
+
+          const cacheKey = `tenant:${tenantId}:menu`;
+          await env.ORDER_STATE.delete(cacheKey);
+          await invalidateBootstrapCache(tenantId, env);
+        }
+      } catch (stockErr) {
+        console.error("[Orders] Failed to auto-disable sold out items in menu:", stockErr);
+      }
+    }
+
     if (order.userId) {
       let notifyText = "";
-      const reason = order.reason || "未提供原因";
-      const note = order.note || "";
+      const note = changeNote;
 
       if (reason === "時間需調整") {
         const t = note || "稍後";
         notifyText = `目前現場較忙碌，為了提供最佳品質，請問可以改成${t}嗎？。請協助點選下方按鈕回覆，謝謝您！`;
       } else if (order.reason && order.reason.startsWith("賣完了：")) {
-        const items = order.reason.replace("賣完了：", "").split(",").map(s => s.trim()).filter(Boolean);
+        const items = order.reason.replace("賣完了：", "").split(",").map((s: string) => s.trim()).filter(Boolean);
         let joinedItems = items.join("、");
         if (items.length === 2) {
           joinedItems = items.join("跟");
@@ -958,7 +992,7 @@ export async function updateOrder(
         }
         notifyText = `不好意思 ${joinedItems}我們現在賣完了，請問可以幫您換別的嗎？`;
       } else if (reason === "口味售完") {
-        const items = (note || "").split(",").map(s => s.trim()).filter(Boolean);
+        const items = (note || "").split(",").map((s: string) => s.trim()).filter(Boolean);
         let joinedItems = items[0] || "";
         if (items.length === 2) {
           joinedItems = items.join("跟");
@@ -993,8 +1027,8 @@ export async function updateOrder(
         }
       } else if (reason === "口味售完" || (order.reason && order.reason.startsWith("賣完了"))) {
         const liffUrl = tenantCtx?.liffUrl || (tenantCtx?.liffId ? `https://liff.line.me/${tenantCtx.liffId}` : "https://liff.line.me/");
-        const rawSoldItems = (note || "").split(/[,、]/).map(s => s.trim()).filter(Boolean);
-        const fallbackSoldItems = (order.reason || "").replace("賣完了：", "").split(/[,、]/).map(s => s.trim()).filter(Boolean);
+        const rawSoldItems = (note || "").split(/[,、]/).map((s: string) => s.trim()).filter(Boolean);
+        const fallbackSoldItems = (order.reason || "").replace("賣完了：", "").split(/[,、]/).map((s: string) => s.trim()).filter(Boolean);
         const soldOutList = rawSoldItems.length > 0 ? rawSoldItems : fallbackSoldItems;
         const soldOutFlex = createSoldOutItemFlexBubble(order.key, soldOutList.length > 0 ? soldOutList : (note || "部分品項"), brandName, order.displayKey, liffUrl, tenantId);
         const flexSent = await pushLineFlexMessage(order.userId, `[${brandName}] 品項售完通知 #${order.displayKey || order.key}`, soldOutFlex, env, tenantCtx);

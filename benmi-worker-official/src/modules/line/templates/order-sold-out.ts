@@ -50,7 +50,7 @@ export function createSoldOutItemFlexBubble(
         },
         {
           type: "text",
-          text: "部分餐點目前已售完",
+          text: "售完品項",
           weight: "bold",
           size: "lg",
           color: "#0F172A"
@@ -64,7 +64,7 @@ export function createSoldOutItemFlexBubble(
           contents: [
             {
               type: "text",
-              text: `售製品項：${itemsDisplayText}`,
+              text: `售完品項：${itemsDisplayText}`,
               size: "sm",
               color: "#B45309",
               weight: "bold",
