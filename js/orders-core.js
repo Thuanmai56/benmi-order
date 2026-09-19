@@ -321,6 +321,9 @@ async function initTenantBranding() {
           renderAll();
         }
       }
+      if (typeof checkStaffOrderingCapability === "function") {
+        checkStaffOrderingCapability();
+      }
     }
   } catch(e) {}
 }
@@ -748,6 +751,7 @@ async function fetchOrders() {
 
     // Track round count increases on existing orders (Appended rounds)
     let hasNewlyAppendedRound = false;
+    const newlyAppendedOrders = [];
     latestOrders.forEach(o => {
       if (o?.key) {
         const currentRound = Number(o.round_count || o.roundCount) || 1;
@@ -755,6 +759,7 @@ async function fetchOrders() {
           const prevRound = knownOrderRounds.get(o.key);
           if (currentRound > prevRound) {
             hasNewlyAppendedRound = true;
+            newlyAppendedOrders.push({ order: o, fromRound: prevRound + 1, toRound: currentRound });
             if (typeof localOverrides !== "undefined" && localOverrides[o.key]) {
               delete localOverrides[o.key];
             }
@@ -777,15 +782,25 @@ async function fetchOrders() {
       }
     });
 
-    // NEW orders or newly appended rounds => alert sound
+    // Check for new staff arrivals (which arrive directly as ACCEPTED)
+    const newStaffArrivals = newArrivals.filter(o => o && o.source === "staff" && o.status === "ACCEPTED");
+    const hasNewStaffOrders = !isFirstLoad && newStaffArrivals.length > 0;
+
+    // NEW orders or newly appended rounds or new staff arrivals => alert sound
     pendingNewOrders = latestOrders.filter(o => o && o.status === "NEW").slice().sort(sortByPickupTimeAsc);
-    if (!isFirstLoad && ((newArrivals.length > 0 && pendingNewOrders.length > 0) || hasNewlyAppendedRound || unacknowledgedAppends.size > 0)) {
+    if (!isFirstLoad && ((newArrivals.length > 0 && pendingNewOrders.length > 0) || hasNewStaffOrders || hasNewlyAppendedRound || unacknowledgedAppends.size > 0)) {
       if (typeof startContinuousAlarm === "function") startContinuousAlarm();
     }
 
-    // Auto-print newly arrived orders (with built-in deduplication)
-    if (typeof PrinterService !== "undefined" && pendingNewOrders.length > 0) {
-      PrinterService.handleIncomingOrders(pendingNewOrders);
+    // Auto-print newly arrived orders and newly appended rounds (with built-in deduplication)
+    if (typeof PrinterService !== "undefined") {
+      const ordersToPrint = [...pendingNewOrders, ...newStaffArrivals];
+      if (ordersToPrint.length > 0) {
+        PrinterService.handleIncomingOrders(ordersToPrint);
+      }
+      if (newlyAppendedOrders.length > 0 && typeof PrinterService.handleAppendedRounds === "function") {
+        PrinterService.handleAppendedRounds(newlyAppendedOrders);
+      }
     }
 
     isFirstLoad = false;

@@ -19,7 +19,7 @@ export async function handleAdminRoute(request: Request, env: Env, path: string)
     try {
       const { results } = await env.DB.prepare(
         `SELECT t.id, t.name, tc.brand_name, tc.brand_color, tc.liff_id, tc.liff_url,
-                tc.ai_order_redirect_enabled, tc.is_active, tc.created_at, tc.updated_at
+                tc.ai_order_redirect_enabled, tc.staff_ordering_enabled, tc.is_active, tc.created_at, tc.updated_at
          FROM tenants t
          LEFT JOIN tenant_config tc ON t.id = tc.tenant_id
          ORDER BY t.created_at DESC`
@@ -67,6 +67,7 @@ export async function handleAdminRoute(request: Request, env: Env, path: string)
         openrouter_api_key,
         openrouter_model,
         ai_order_redirect_enabled,
+        staff_ordering_enabled,
         brand_name,
         brand_color,
         store_address,
@@ -101,10 +102,10 @@ export async function handleAdminRoute(request: Request, env: Env, path: string)
         `INSERT INTO tenant_config (
           tenant_id, line_channel_token, line_channel_secret, liff_id, liff_url,
           groq_api_key, groq_model, openrouter_api_key, openrouter_model,
-          ai_order_redirect_enabled,
+          ai_order_redirect_enabled, staff_ordering_enabled,
           brand_name, brand_color, store_address, operating_hours, delivery_policy,
           quick_replies, default_password, locale, google_sheets_url, is_active, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
         ON CONFLICT(tenant_id) DO UPDATE SET
           line_channel_token = COALESCE(excluded.line_channel_token, tenant_config.line_channel_token),
           line_channel_secret = COALESCE(excluded.line_channel_secret, tenant_config.line_channel_secret),
@@ -115,6 +116,7 @@ export async function handleAdminRoute(request: Request, env: Env, path: string)
           openrouter_api_key = COALESCE(excluded.openrouter_api_key, tenant_config.openrouter_api_key),
           openrouter_model = COALESCE(excluded.openrouter_model, tenant_config.openrouter_model),
           ai_order_redirect_enabled = COALESCE(excluded.ai_order_redirect_enabled, tenant_config.ai_order_redirect_enabled),
+          staff_ordering_enabled = COALESCE(excluded.staff_ordering_enabled, tenant_config.staff_ordering_enabled),
           brand_name = excluded.brand_name,
           brand_color = COALESCE(excluded.brand_color, tenant_config.brand_color),
           store_address = COALESCE(excluded.store_address, tenant_config.store_address),
@@ -139,6 +141,9 @@ export async function handleAdminRoute(request: Request, env: Env, path: string)
         ai_order_redirect_enabled === undefined || ai_order_redirect_enabled === null
           ? null
           : (ai_order_redirect_enabled ? 1 : 0),
+        staff_ordering_enabled === undefined || staff_ordering_enabled === null
+          ? null
+          : (staff_ordering_enabled ? 1 : 0),
         brand_name,
         brand_color || '#00b900',
         store_address || null,

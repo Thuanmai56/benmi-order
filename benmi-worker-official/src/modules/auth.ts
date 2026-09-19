@@ -6,7 +6,7 @@ import { TenantContext } from '../types/tenant';
 
 export const DEFAULT_PASSWORD = "12345678";
 
-async function getStoredPassword(env: Env, tenantId: string, tenantCtx?: TenantContext | null): Promise<string> {
+export async function getStoredPassword(env: Env, tenantId: string, tenantCtx?: TenantContext | null): Promise<string> {
   const cacheKey = `tenant:${tenantId}:password`;
   let stored = await env.ORDER_STATE.get(cacheKey);
   if (!stored && tenantId === "benmi") {
@@ -73,6 +73,18 @@ export async function handleAuthChange(request: Request, env: Env, tenantCtx?: T
   
   const cacheKey = `tenant:${tenantId}:password`;
   await env.ORDER_STATE.put(cacheKey, newPassword);
+
+  // Revoke all active staff sessions for this tenant when store PIN changes
+  if (env.DB) {
+    try {
+      await env.DB.prepare(
+        "UPDATE staff_sessions SET revoked_at = datetime('now') WHERE tenant_id = ? AND revoked_at IS NULL"
+      ).bind(tenantId).run();
+    } catch (e) {
+      console.warn(`[handleAuthChange] Failed to revoke staff sessions for ${tenantId}:`, e);
+    }
+  }
+
   return json({ ok: true });
 }
 

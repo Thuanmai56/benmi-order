@@ -147,6 +147,7 @@ function openSettings() {
   loadOperatingHours();
   renderLanguageSetting();
   renderDineInSetting();
+  loadRestaurantTablesSetting();
   renderReportsSetting();
   renderStorePairingSection();
   loadPOSPrinterSettings();
@@ -1234,6 +1235,7 @@ const SETTINGS_SECTIONS = [
   { id: "setting-card-store-info", tocId: "toc-item-store-info" },
   { id: "setting-card-language", tocId: "toc-item-language" },
   { id: "setting-card-dinein", tocId: "toc-item-dinein" },
+  { id: "setting-card-tables", tocId: "toc-item-tables" },
   { id: "setting-card-printer", tocId: "toc-item-printer" },
   { id: "setting-card-reports", tocId: "toc-item-reports" },
   { id: "setting-card-store-pairing", tocId: "toc-item-store-pairing" }
@@ -1595,3 +1597,338 @@ async function promptUnlinkStoreDevice() {
 
 window.renderStorePairingSection = renderStorePairingSection;
 window.promptUnlinkStoreDevice = promptUnlinkStoreDevice;
+
+// =======================================================
+// RESTAURANT TABLES & STAFF ORDERING MANAGEMENT
+// =======================================================
+let currentRestaurantTables = [];
+
+async function checkStaffOrderingCapability() {
+  const tenantId = (typeof getTenantIdFromUrl === "function" && getTenantIdFromUrl()) || "";
+  if (!tenantId) return false;
+  try {
+    const workerUrl = typeof WORKER_BASE !== "undefined" ? WORKER_BASE : "https://benmi-worker-official.thuanmnc.workers.dev";
+    const res = await fetch(`${workerUrl}/api/staff/capabilities?tenant_id=${encodeURIComponent(tenantId)}&_t=${Date.now()}`);
+    if (res.ok) {
+      const data = await res.json();
+      const enabled = !!data.staff_ordering_enabled;
+      window.isStaffOrderingEnabled = enabled;
+      const btnPill = document.getElementById("btn-staff-order-pill");
+      if (btnPill) {
+        btnPill.style.display = enabled ? "inline-flex" : "none";
+      }
+      const lockedBody = document.getElementById("setting-tables-locked-body");
+      const unlockedBody = document.getElementById("setting-tables-unlocked-body");
+      const addBtn = document.getElementById("i18n-table-add-btn");
+      if (lockedBody && unlockedBody) {
+        if (enabled) {
+          lockedBody.style.display = "none";
+          unlockedBody.style.display = "flex";
+          if (addBtn) addBtn.style.display = "inline-flex";
+        } else {
+          lockedBody.style.display = "flex";
+          unlockedBody.style.display = "none";
+          if (addBtn) addBtn.style.display = "none";
+        }
+      }
+      return enabled;
+    }
+  } catch (e) {
+    console.warn("[Staff] Failed to check staff capabilities:", e);
+  }
+  return false;
+}
+
+async function getStaffSessionToken(forcePrompt = false) {
+  const tenantId = (typeof getTenantIdFromUrl === "function" && getTenantIdFromUrl()) || "";
+  if (!tenantId) return null;
+  const storageKey = "staff_session_token_" + tenantId;
+  if (!forcePrompt && typeof sessionStorage !== "undefined") {
+    const saved = sessionStorage.getItem(storageKey);
+    if (saved) return saved;
+  }
+
+  const promptMsg = (typeof t === "function" && t("promptStaffPin")) || "請輸入門市管理 PIN 碼以存取桌號管理 / Vui lòng nhập mã PIN quán:";
+  const pin = prompt(promptMsg);
+  if (!pin || !pin.trim()) return null;
+
+  try {
+    const workerUrl = typeof WORKER_BASE !== "undefined" ? WORKER_BASE : "https://benmi-worker-official.thuanmnc.workers.dev";
+    const res = await fetch(`${workerUrl}/api/staff/session?tenant_id=${encodeURIComponent(tenantId)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pin: pin.trim() })
+    });
+    const data = await res.json().catch(() => ({ ok: false }));
+    if (res.ok && data && data.ok && data.token) {
+      if (typeof sessionStorage !== "undefined") {
+        sessionStorage.setItem(storageKey, data.token);
+      }
+      return data.token;
+    } else {
+      alert((data && data.message) || (typeof t === "function" && t("activationErrorWrongPin")) || "PIN 碼錯誤，無法存取");
+      return null;
+    }
+  } catch (e) {
+    alert("連線驗證失敗: " + (e.message || e));
+    return null;
+  }
+}
+
+async function loadRestaurantTablesSetting() {
+  const enabled = await checkStaffOrderingCapability();
+  if (enabled) {
+    await loadRestaurantTables();
+  }
+}
+
+async function loadRestaurantTables() {
+  const tenantId = (typeof getTenantIdFromUrl === "function" && getTenantIdFromUrl()) || "";
+  if (!tenantId) return;
+
+  const tbody = document.getElementById("tables-list-tbody");
+  if (tbody) {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 24px; color: #94a3b8;">載入中...</td></tr>`;
+  }
+
+  let token = await getStaffSessionToken();
+  if (!token) {
+    if (tbody) {
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 24px; color: #ef4444;">尚未驗證 PIN 碼，請點擊重試。 <button class="btn btn-sm" onclick="loadRestaurantTables()" style="margin-left:8px;">重試</button></td></tr>`;
+    }
+    return;
+  }
+
+  const workerUrl = typeof WORKER_BASE !== "undefined" ? WORKER_BASE : "https://benmi-worker-official.thuanmnc.workers.dev";
+  let res = await fetch(`${workerUrl}/api/staff/tables?tenant_id=${encodeURIComponent(tenantId)}&include_inactive=1&_t=${Date.now()}`, {
+    headers: { "Authorization": "Bearer " + token }
+  });
+
+  if (res.status === 401) {
+    token = await getStaffSessionToken(true);
+    if (!token) return;
+    res = await fetch(`${workerUrl}/api/staff/tables?tenant_id=${encodeURIComponent(tenantId)}&include_inactive=1&_t=${Date.now()}`, {
+      headers: { "Authorization": "Bearer " + token }
+    });
+  }
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    if (tbody) {
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 24px; color: #ef4444;">${escapeHtml(err.message || "載入失敗")}</td></tr>`;
+    }
+    return;
+  }
+
+  const data = await res.json();
+  currentRestaurantTables = data.tables || [];
+  renderRestaurantTablesList();
+}
+
+function renderRestaurantTablesList() {
+  const tbody = document.getElementById("tables-list-tbody");
+  if (!tbody) return;
+
+  if (currentRestaurantTables.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 32px 16px; color: #94a3b8;">尚未新增任何桌號。點擊上方「新增桌號」開始使用。</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = currentRestaurantTables.map(t => {
+    const isActive = t.is_active === 1 || t.is_active === true;
+    const hasActiveOrder = !!t.active_order_key;
+    let statusPill = "";
+    if (isActive) {
+      if (hasActiveOrder) {
+        statusPill = `<span style="display:inline-flex; align-items:center; gap:6px; background:#fef3c7; color:#b45309; padding:4px 10px; border-radius:6px; font-weight:700; font-size:12.5px;">
+          <span style="width:6px; height:6px; border-radius:50%; background:#f59e0b;"></span>
+          <span>使用中 #${escapeHtml(t.active_display_key || t.active_order_id || '')}</span>
+        </span>`;
+      } else {
+        statusPill = `<span style="display:inline-flex; align-items:center; gap:6px; background:#dcfce7; color:#15803d; padding:4px 10px; border-radius:6px; font-weight:700; font-size:12.5px;">
+          <span style="width:6px; height:6px; border-radius:50%; background:#22c55e;"></span>
+          <span>空桌 / 啟用中</span>
+        </span>`;
+      }
+    } else {
+      statusPill = `<span style="display:inline-flex; align-items:center; gap:6px; background:#f1f5f9; color:#64748b; padding:4px 10px; border-radius:6px; font-weight:700; font-size:12.5px;">
+        <span style="width:6px; height:6px; border-radius:50%; background:#94a3b8;"></span>
+        <span>已停用</span>
+      </span>`;
+    }
+
+    const disableAction = hasActiveOrder ? `disabled title="該桌尚有未結帳訂單，無法修改狀態"` : '';
+
+    return `
+      <tr style="border-bottom: 1px solid var(--border); transition: background 0.15s ease;">
+        <td style="padding: 14px 16px; font-weight: 800; color: #1e293b; font-size: 15px;">
+          ${escapeHtml(t.label)}
+        </td>
+        <td style="padding: 14px 16px; color: #64748b; font-weight: 600;">
+          ${t.sort_order || 0}
+        </td>
+        <td style="padding: 14px 16px;">
+          ${statusPill}
+        </td>
+        <td style="padding: 14px 16px; text-align: right; white-space: nowrap;">
+          <button type="button" class="btn btn-ghost btn-sm" style="margin-right: 6px; padding: 6px 12px; font-weight: 700; border-radius: 6px; min-height: 38px;" onclick="openEditTableModal('${t.id}')">
+            編輯
+          </button>
+          <button type="button" class="btn ${isActive ? 'btn-ghost' : 'btn-primary'} btn-sm" style="padding: 6px 12px; font-weight: 700; border-radius: 6px; min-height: 38px; ${isActive ? 'color: #ef4444; border-color: #fee2e2;' : ''}" ${disableAction} onclick="toggleTableActive('${t.id}', ${isActive ? 0 : 1})">
+            ${isActive ? '停用' : '啟用'}
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function openAddTableModal() {
+  const modal = document.getElementById("tableEditorModal");
+  if (!modal) return;
+  const title = document.getElementById("table-editor-modal-title");
+  if (title) title.innerText = (typeof t === "function" && t("tableEditorAddTitle")) || "新增桌號";
+  document.getElementById("table-editor-id").value = "";
+  document.getElementById("table-editor-label").value = "";
+  document.getElementById("table-editor-sort").value = "0";
+  const activeGrp = document.getElementById("table-editor-active-group");
+  if (activeGrp) activeGrp.style.display = "none";
+  modal.style.display = "flex";
+  setTimeout(() => {
+    const inp = document.getElementById("table-editor-label");
+    if (inp) inp.focus();
+  }, 100);
+}
+
+function openEditTableModal(tableId) {
+  const table = currentRestaurantTables.find(t => t.id === tableId);
+  if (!table) return;
+  const modal = document.getElementById("tableEditorModal");
+  if (!modal) return;
+  const title = document.getElementById("table-editor-modal-title");
+  if (title) title.innerText = (typeof t === "function" && t("tableEditorEditTitle")) || "編輯桌號";
+  document.getElementById("table-editor-id").value = table.id;
+  document.getElementById("table-editor-label").value = table.label;
+  document.getElementById("table-editor-sort").value = table.sort_order || 0;
+  const activeGrp = document.getElementById("table-editor-active-group");
+  if (activeGrp) {
+    activeGrp.style.display = "block";
+    const chk = document.getElementById("table-editor-active");
+    if (chk) chk.checked = (table.is_active === 1 || table.is_active === true);
+  }
+  modal.style.display = "flex";
+}
+
+function closeTableEditorModal() {
+  const modal = document.getElementById("tableEditorModal");
+  if (modal) modal.style.display = "none";
+}
+
+async function submitTableEditor() {
+  const tenantId = (typeof getTenantIdFromUrl === "function" && getTenantIdFromUrl()) || "";
+  if (!tenantId) return;
+
+  const id = document.getElementById("table-editor-id").value.trim();
+  const label = document.getElementById("table-editor-label").value.trim();
+  const sort = parseInt(document.getElementById("table-editor-sort").value, 10) || 0;
+  const chkActive = document.getElementById("table-editor-active");
+  const isActive = chkActive ? (chkActive.checked ? 1 : 0) : 1;
+
+  if (!label) {
+    alert("請輸入桌號名稱 / Vui lòng nhập tên bàn");
+    return;
+  }
+
+  const token = await getStaffSessionToken();
+  if (!token) return;
+
+  const btnSave = document.getElementById("btn-save-table-editor");
+  if (btnSave) btnSave.disabled = true;
+
+  try {
+    const workerUrl = typeof WORKER_BASE !== "undefined" ? WORKER_BASE : "https://benmi-worker-official.thuanmnc.workers.dev";
+    let res;
+    if (id) {
+      res = await fetch(`${workerUrl}/api/staff/tables/${encodeURIComponent(id)}?tenant_id=${encodeURIComponent(tenantId)}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + token
+        },
+        body: JSON.stringify({ label, sort_order: sort, is_active: isActive })
+      });
+    } else {
+      res = await fetch(`${workerUrl}/api/staff/tables?tenant_id=${encodeURIComponent(tenantId)}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + token
+        },
+        body: JSON.stringify({ label, sort_order: sort })
+      });
+    }
+
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data && data.ok) {
+      closeTableEditorModal();
+      await loadRestaurantTables();
+      if (typeof showToast === "function") {
+        showToast("✅ 桌號設定已儲存 / Đã lưu cài đặt bàn");
+      }
+    } else {
+      alert((data && data.message) || "操作失敗 / Thao tác thất bại");
+    }
+  } catch (e) {
+    alert("連線錯誤: " + (e.message || e));
+  } finally {
+    if (btnSave) btnSave.disabled = false;
+  }
+}
+
+async function toggleTableActive(tableId, newActive) {
+  const tenantId = (typeof getTenantIdFromUrl === "function" && getTenantIdFromUrl()) || "";
+  if (!tenantId) return;
+
+  const token = await getStaffSessionToken();
+  if (!token) return;
+
+  try {
+    const workerUrl = typeof WORKER_BASE !== "undefined" ? WORKER_BASE : "https://benmi-worker-official.thuanmnc.workers.dev";
+    const res = await fetch(`${workerUrl}/api/staff/tables/${encodeURIComponent(tableId)}?tenant_id=${encodeURIComponent(tenantId)}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + token
+      },
+      body: JSON.stringify({ is_active: newActive })
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data && data.ok) {
+      await loadRestaurantTables();
+    } else {
+      alert((data && data.message) || "更新失敗 / Cập nhật thất bại");
+    }
+  } catch (e) {
+    alert("連線錯誤: " + (e.message || e));
+  }
+}
+
+function openStaffOrderWindow() {
+  const tenantId = (typeof getTenantIdFromUrl === "function" && getTenantIdFromUrl()) || "";
+  if (!tenantId) return;
+  const url = `staff-order.html?tenant_id=${encodeURIComponent(tenantId)}`;
+  window.open(url, "_blank");
+}
+
+window.checkStaffOrderingCapability = checkStaffOrderingCapability;
+window.loadRestaurantTablesSetting = loadRestaurantTablesSetting;
+window.loadRestaurantTables = loadRestaurantTables;
+window.renderRestaurantTablesList = renderRestaurantTablesList;
+window.openAddTableModal = openAddTableModal;
+window.openEditTableModal = openEditTableModal;
+window.closeTableEditorModal = closeTableEditorModal;
+window.submitTableEditor = submitTableEditor;
+window.toggleTableActive = toggleTableActive;
+window.openStaffOrderWindow = openStaffOrderWindow;
+
