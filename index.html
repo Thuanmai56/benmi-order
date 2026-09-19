@@ -5,9 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title id="page-title">線上點餐</title>
-    <link rel="preload" href="index.css?v=20260919_sold_out_v3" as="style">
-    <link rel="preload" href="js/client-checkout.js?v=20260919_sold_out_v3" as="script">
-    <link rel="stylesheet" href="index.css?v=20260919_sold_out_v3">
+    <link rel="preload" href="index.css?v=20260919_sold_out_v4" as="style">
+    <link rel="preload" href="js/client-checkout.js?v=20260919_sold_out_v4" as="script">
+    <link rel="stylesheet" href="index.css?v=20260919_sold_out_v4">
     <script>
         // Redirect root visits on blabfood.app to /landing
         try {
@@ -1178,6 +1178,16 @@
             return typeof extractTenantId === 'function' ? extractTenantId() : "benmi";
         }
 
+        function escapeHtml(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+        window.escapeHtml = escapeHtml;
+
         // State
         let storeConfig = null;
         let bootstrapData = null;
@@ -1803,7 +1813,7 @@
                     if (window.isEditOrderMode && Array.isArray(window.editOrderSoldOutNames) && (
                         window.editOrderSoldOutNames.includes(dName) ||
                         window.editOrderSoldOutNames.includes(itemInfo.origName) ||
-                        window.editOrderSoldOutNames.some(s => dName.includes(s) || itemInfo.origName.includes(s))
+                        window.editOrderSoldOutNames.some(s => s && s.trim() && (dName.includes(s.trim()) || (itemInfo.origName && itemInfo.origName.includes(s.trim()))))
                     )) continue;
                     const basePrice = itemInfo.basePrice || priceMap[key] || 0;
                     subtotal += (basePrice * cart[key]);
@@ -1939,7 +1949,6 @@
 
         function renderCustomizationsPanel(container, list) {
             if (!container || !list || list.length === 0) return;
-            const escapeHtml = (str) => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
             let html = `<div class="section-title">口味與客製化選擇</div>
             <div class="custom-panel-wrapper">
@@ -2937,7 +2946,7 @@
             const itemInfo = resolveCatalogItem(key);
             if (change > 0 && window.isEditOrderMode && Array.isArray(window.editOrderSoldOutNames)) {
                 const dName = itemInfo?.displayName || origName;
-                if (window.editOrderSoldOutNames.includes(dName) || window.editOrderSoldOutNames.includes(origName) || window.editOrderSoldOutNames.some(s => dName.includes(s) || origName.includes(s))) {
+                if (window.editOrderSoldOutNames.includes(dName) || window.editOrderSoldOutNames.includes(origName) || window.editOrderSoldOutNames.some(s => s && s.trim() && (dName.includes(s.trim()) || (origName && origName.includes(s.trim()))))) {
                     return;
                 }
             }
@@ -3124,7 +3133,7 @@
                         (window.isEditOrderMode && Array.isArray(window.editOrderSoldOutNames) && (
                             window.editOrderSoldOutNames.includes(dName) ||
                             window.editOrderSoldOutNames.includes(itemName) ||
-                            window.editOrderSoldOutNames.some(s => dName.includes(s) || itemName.includes(s))
+                            window.editOrderSoldOutNames.some(s => s && s.trim() && (dName.includes(s.trim()) || (itemName && itemName.includes(s.trim()))))
                         ))
                     );
 
@@ -3279,7 +3288,7 @@
                     summaryHTML += `
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; opacity:0.6; text-decoration:line-through; color:#94a3b8;">
                             <div style="font-weight:700;">
-                                <span>${rQty}x ${escapeHtml(rName)}</span>
+                                <span>${rQty}x ${(typeof escapeHtml === 'function' ? escapeHtml(rName) : rName)}</span>
                                 <span style="display:inline-block; margin-left:6px; font-size:11px; font-weight:700; background:#fee2e2; color:#dc2626; padding:1px 6px; border-radius:4px; text-decoration:none; vertical-align:middle;">已移除</span>
                             </div>
                             <div style="font-weight:700; color:#94a3b8;">$${rPrice}</div>
@@ -3791,18 +3800,22 @@
 
             try {
                 const tenantId = getTenantIdFromUrl();
-                const saved = localStorage.getItem(`cart_save_${tenantId}`);
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    cart = parsed.cart || {};
-                    customizeData = parsed.customizeData || {};
-                    comboDrinkData = parsed.comboDrinkData || {};
-                    window.bundleCartData = parsed.bundleCartData || {};
-                    localStorage.removeItem(`cart_save_${tenantId}`);
-                    for (let key in cart) {
-                        if (cart[key] > 0) {
-                            const { catSlug, origName } = parseCartKey(key);
-                            updateQty(catSlug, origName, 0);
+                const urlParams = new URLSearchParams(window.location.search);
+                const isEditOrderUrl = urlParams.get('mode') === 'edit_order' || urlParams.get('mode') === 'edit';
+                if (!window.isEditOrderMode && !isEditOrderUrl) {
+                    const saved = localStorage.getItem(`cart_save_${tenantId}`);
+                    if (saved) {
+                        const parsed = JSON.parse(saved);
+                        cart = parsed.cart || {};
+                        customizeData = parsed.customizeData || {};
+                        comboDrinkData = parsed.comboDrinkData || {};
+                        window.bundleCartData = parsed.bundleCartData || {};
+                        localStorage.removeItem(`cart_save_${tenantId}`);
+                        for (let key in cart) {
+                            if (cart[key] > 0) {
+                                const { catSlug, origName } = parseCartKey(key);
+                                updateQty(catSlug, origName, 0);
+                            }
                         }
                     }
                 }
@@ -3877,7 +3890,7 @@
             </button>
         </div>
     </div>
-    <script src="js/client-checkout.js?v=20260919_sold_out_v3"></script>
+    <script src="js/client-checkout.js?v=20260919_sold_out_v4"></script>
 </body>
 
 </html>

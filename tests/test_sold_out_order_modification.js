@@ -52,8 +52,8 @@ assert.ok(indexHtml.includes('window.editOrderRemovedItems'), 'index.html render
 console.log('✓ Test 5 Passed: Customer LIFF edit mode banner, context pre-fill, delta indicator, and submission wired');
 
 // Test 6: Cache-busting verification
-assert.ok(indexHtml.includes('20260919_sold_out_v3'), 'index.html cache busters bumped to 20260919_sold_out_v3');
-assert.ok(ordersHtml.includes('20260919_sold_out_v3'), 'orders.html cache busters bumped to 20260919_sold_out_v3');
+assert.ok(indexHtml.includes('20260919_sold_out_v4'), 'index.html cache busters bumped to 20260919_sold_out_v4');
+assert.ok(ordersHtml.includes('20260919_sold_out_v4'), 'orders.html cache busters bumped to 20260919_sold_out_v4');
 console.log('✓ Test 6 Passed: Cache-busting query strings correctly bumped in index.html and orders.html');
 
 console.log('\n🎉 ALL SOLD-OUT ORDER MODIFICATION TESTS PASSED!');

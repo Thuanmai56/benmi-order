@@ -29,7 +29,7 @@ function hasAvailableCartItems() {
             } catch(e) {}
             const origName = (typeof parseCartKey === 'function') ? parseCartKey(key).itemName : key;
             if (window.isEditOrderMode && Array.isArray(window.editOrderSoldOutNames)) {
-                if (window.editOrderSoldOutNames.includes(dName) || window.editOrderSoldOutNames.includes(origName) || window.editOrderSoldOutNames.some(s => dName.includes(s) || origName.includes(s))) {
+                if (window.editOrderSoldOutNames.includes(dName) || window.editOrderSoldOutNames.includes(origName) || window.editOrderSoldOutNames.some(s => s && s.trim() && (dName.includes(s.trim()) || origName.includes(s.trim())))) {
                     continue;
                 }
             }
@@ -177,7 +177,11 @@ function cancelAppendMode() {
     if (typeof updateFooterButtonState === 'function') updateFooterButtonState();
 }
 
+let editOrderInitPromise = null;
+
 async function initEditOrderModeIfPresent() {
+    if (editOrderInitPromise) return editOrderInitPromise;
+
     const urlParams = getUrlParamsWithLiffState();
     let orderKey = urlParams.get('order_key') || urlParams.get('key');
     let mode = urlParams.get('mode');
@@ -190,7 +194,11 @@ async function initEditOrderModeIfPresent() {
         } catch (e) {}
     }
 
-    if (orderKey && (mode === 'edit_order' || mode === 'edit')) {
+    if (!orderKey || (mode !== 'edit_order' && mode !== 'edit')) {
+        return;
+    }
+
+    editOrderInitPromise = (async () => {
         window.isEditOrderMode = true;
         window.editOrderKey = orderKey;
         try {
@@ -199,6 +207,14 @@ async function initEditOrderModeIfPresent() {
 
         const tenantId = (typeof getTenantIdFromUrl === 'function' ? getTenantIdFromUrl() : null) || 'benmi';
         console.log(`[EditOrder] Fetching edit context for order ${orderKey} (tenant: ${tenantId})...`);
+
+        // Ensure fresh catalog & bootstrap data are fully loaded first
+        if (typeof window.menuPromise !== 'undefined' && window.menuPromise) {
+            await window.menuPromise.catch(() => {});
+        }
+        if (typeof fetchMenu === 'function' && (!bootstrapData || !bootstrapData.catalog)) {
+            await fetchMenu().catch(() => {});
+        }
 
         try {
             const res = await fetch(`${WORKER_BASE}/api/order/edit-context?key=${encodeURIComponent(orderKey)}&tenant_id=${tenantId}`);
@@ -216,7 +232,7 @@ async function initEditOrderModeIfPresent() {
 
             window.editOrderDisplayKey = data.order.displayKey || orderKey;
             window.editOrderOriginalTotal = Number(data.order.total) || 0;
-            window.editOrderSoldOutNames = Array.isArray(data.soldOutItemNames) ? data.soldOutItemNames : [];
+            window.editOrderSoldOutNames = Array.isArray(data.soldOutItemNames) ? data.soldOutItemNames.filter(s => s && s.trim()) : [];
             window.editOrderContextLoaded = true;
 
             // Automatically mark sold-out items as isOutOfStock in catalog so customer cannot pick them
@@ -225,14 +241,13 @@ async function initEditOrderModeIfPresent() {
                     if (typeof bootstrapData !== 'undefined' && bootstrapData && bootstrapData.catalog) {
                         bootstrapData.catalog.forEach(cat => {
                             (cat.items || []).forEach(it => {
-                                if (window.editOrderSoldOutNames.includes(it.name) || window.editOrderSoldOutNames.some(s => it.name.includes(s))) {
+                                if (window.editOrderSoldOutNames.includes(it.name) || window.editOrderSoldOutNames.some(s => s && s.trim() && it.name.includes(s.trim()))) {
                                     it.isOutOfStock = true;
                                 }
                             });
                         });
                     }
                     if (typeof updateDynamicStockAndPrices === 'function') updateDynamicStockAndPrices();
-                    if (typeof renderDynamicCatalog === 'function') renderDynamicCatalog();
                 } catch (e) {
                     console.warn('[EditOrder] Stock update notice:', e);
                 }
@@ -296,7 +311,7 @@ async function initEditOrderModeIfPresent() {
                         (Array.isArray(window.editOrderSoldOutNames) && (
                             window.editOrderSoldOutNames.includes(itemName) ||
                             window.editOrderSoldOutNames.includes(catalogItem?.name || '') ||
-                            window.editOrderSoldOutNames.some(s => s && (itemName.includes(s) || (catalogItem?.name && catalogItem.name.includes(s))))
+                            window.editOrderSoldOutNames.some(s => s && s.trim() && (itemName.includes(s.trim()) || (catalogItem?.name && catalogItem.name.includes(s.trim()))))
                         ))
                     );
 
@@ -317,6 +332,12 @@ async function initEditOrderModeIfPresent() {
                     }
                 });
 
+                // Re-render dynamic catalog and stock so cards display the exact initial cart quantity and sold-out states
+                try {
+                    if (typeof updateDynamicStockAndPrices === 'function') updateDynamicStockAndPrices();
+                    if (typeof renderDynamicCatalog === 'function') renderDynamicCatalog();
+                } catch(e) {}
+
                 // Update UI quantity labels on cards
                 for (let k in cart) {
                     if (typeof parseCartKey === 'function') {
@@ -334,11 +355,14 @@ async function initEditOrderModeIfPresent() {
                 }
 
                 if (typeof updateTotal === 'function') updateTotal();
+                if (typeof updateFooterButtonState === 'function') updateFooterButtonState();
             }
         } catch (err) {
             console.error('[EditOrder] Error initializing edit order mode:', err);
         }
-    }
+    })();
+
+    return editOrderInitPromise;
 }
 
 if (document.readyState === 'loading') {
@@ -788,7 +812,7 @@ function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, ma
             const itemInfo = resolveCatalogItem(key);
             const { catSlug, origName, displayName, basePrice } = itemInfo;
             if (window.isEditOrderMode && Array.isArray(window.editOrderSoldOutNames)) {
-                if (window.editOrderSoldOutNames.includes(displayName) || window.editOrderSoldOutNames.includes(origName) || window.editOrderSoldOutNames.some(s => displayName.includes(s) || origName.includes(s))) {
+                if (window.editOrderSoldOutNames.includes(displayName) || window.editOrderSoldOutNames.includes(origName) || window.editOrderSoldOutNames.some(s => s && s.trim() && (displayName.includes(s.trim()) || origName.includes(s.trim())))) {
                     continue;
                 }
             }
@@ -891,7 +915,7 @@ function formatAppendItemsOnlyText() {
             const itemInfo = resolveCatalogItem(key);
             const { catSlug, origName, displayName, basePrice } = itemInfo;
             if (window.isEditOrderMode && Array.isArray(window.editOrderSoldOutNames)) {
-                if (window.editOrderSoldOutNames.includes(displayName) || window.editOrderSoldOutNames.includes(origName) || window.editOrderSoldOutNames.some(s => displayName.includes(s) || origName.includes(s))) {
+                if (window.editOrderSoldOutNames.includes(displayName) || window.editOrderSoldOutNames.includes(origName) || window.editOrderSoldOutNames.some(s => s && s.trim() && (displayName.includes(s.trim()) || origName.includes(s.trim())))) {
                     continue;
                 }
             }
@@ -966,7 +990,7 @@ function buildStructuredCartItems() {
             const itemInfo = resolveCatalogItem(key);
             const { catSlug, origName, displayName, basePrice, categoryName, itemId } = itemInfo;
             if (window.isEditOrderMode && Array.isArray(window.editOrderSoldOutNames)) {
-                if (window.editOrderSoldOutNames.includes(displayName) || window.editOrderSoldOutNames.includes(origName) || window.editOrderSoldOutNames.some(s => displayName.includes(s) || origName.includes(s))) {
+                if (window.editOrderSoldOutNames.includes(displayName) || window.editOrderSoldOutNames.includes(origName) || window.editOrderSoldOutNames.some(s => s && s.trim() && (displayName.includes(s.trim()) || origName.includes(s.trim())))) {
                     continue;
                 }
             }
