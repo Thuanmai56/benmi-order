@@ -42,18 +42,21 @@ assert.ok(ordersCss.includes('.badge-modified'), 'CSS badge-modified styling add
 assert.ok(ordersLiveJs.includes('badge-modified'), 'orders-live.js renders modified badge on order tiles');
 console.log('✓ Test 4 Passed: POS dashboard displays modified order badge');
 
-// Test 5: Customer LIFF edit mode banner and logic
+// Test 5: Customer LIFF edit mode banner, loading overlay, and logic
 assert.ok(indexHtml.includes('id="edit-order-mode-banner"'), 'index.html contains edit-order-mode-banner');
+assert.ok(indexHtml.includes('id="edit-order-loading-overlay"'), 'index.html contains edit-order-loading-overlay');
 assert.ok(indexCss.includes('.edit-order-mode-banner'), 'index.css contains .edit-order-mode-banner styling');
+assert.ok(indexCss.includes('.edit-order-loading-overlay'), 'index.css contains .edit-order-loading-overlay styling');
 assert.ok(clientCheckoutJs.includes('window.isEditOrderMode'), 'client-checkout.js defines isEditOrderMode');
 assert.ok(clientCheckoutJs.includes('initEditOrderModeIfPresent'), 'initEditOrderModeIfPresent implemented');
+assert.ok(clientCheckoutJs.includes('dismissEditOrderLoadingOverlay'), 'dismissEditOrderLoadingOverlay implemented');
 assert.ok(clientCheckoutJs.includes('window.editOrderRemovedItems'), 'client-checkout.js defines editOrderRemovedItems');
 assert.ok(indexHtml.includes('window.editOrderRemovedItems'), 'index.html renders editOrderRemovedItems');
-console.log('✓ Test 5 Passed: Customer LIFF edit mode banner, context pre-fill, delta indicator, and submission wired');
+console.log('✓ Test 5 Passed: Customer LIFF edit mode banner, loading overlay, context pre-fill, delta indicator, and submission wired');
 
 // Test 6: Cache-busting verification
-assert.ok(indexHtml.includes('20260919_sold_out_v4'), 'index.html cache busters bumped to 20260919_sold_out_v4');
-assert.ok(ordersHtml.includes('20260919_sold_out_v4'), 'orders.html cache busters bumped to 20260919_sold_out_v4');
+assert.ok(indexHtml.includes('20260919_sold_out_v5'), 'index.html cache busters bumped to 20260919_sold_out_v5');
+assert.ok(ordersHtml.includes('20260919_sold_out_v5'), 'orders.html cache busters bumped to 20260919_sold_out_v5');
 console.log('✓ Test 6 Passed: Cache-busting query strings correctly bumped in index.html and orders.html');
 
 console.log('\n🎉 ALL SOLD-OUT ORDER MODIFICATION TESTS PASSED!');

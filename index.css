@@ -259,6 +259,81 @@ body {
     color: #92400e;
 }
 
+/* Fast Loading Overlay for Edit Order Mode (Prevents $0 / empty cart flash) */
+.edit-order-loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 99999;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    opacity: 1;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+html.is-edit-order-loading .edit-order-loading-overlay {
+    display: flex !important;
+}
+
+html.is-edit-order-loading .footer,
+html.is-edit-order-loading .desktop-sidebar-checkout,
+html.is-edit-order-loading #cart-summary {
+    visibility: hidden !important;
+}
+
+.edit-order-loading-card {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 32px 28px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    max-width: 320px;
+    width: calc(100% - 48px);
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.08);
+    border: 1px solid #f1f5f9;
+}
+
+.edit-order-spinner {
+    width: 44px;
+    height: 44px;
+    border: 3.5px solid #f1f5f9;
+    border-top-color: #d97706;
+    border-radius: 50%;
+    animation: editOrderSpin 0.8s cubic-bezier(0.6, 0.2, 0.4, 0.9) infinite;
+    margin-bottom: 18px;
+}
+
+@keyframes editOrderSpin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.edit-order-loading-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 6px;
+    letter-spacing: 0.2px;
+}
+
+.edit-order-loading-sub {
+    font-size: 13.5px;
+    font-weight: 500;
+    color: #64748b;
+    line-height: 1.45;
+}
+
 .store-detail-row {
     display: flex;
     align-items: flex-start;

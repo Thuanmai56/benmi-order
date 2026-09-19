@@ -177,6 +177,24 @@ function cancelAppendMode() {
     if (typeof updateFooterButtonState === 'function') updateFooterButtonState();
 }
 
+function dismissEditOrderLoadingOverlay() {
+    try {
+        const overlay = document.getElementById('edit-order-loading-overlay');
+        if (overlay) {
+            overlay.style.opacity = '0';
+            overlay.style.pointerEvents = 'none';
+            setTimeout(() => {
+                overlay.style.display = 'none';
+                document.documentElement.classList.remove('is-edit-order-loading');
+            }, 240);
+        } else {
+            document.documentElement.classList.remove('is-edit-order-loading');
+        }
+    } catch (e) {
+        document.documentElement.classList.remove('is-edit-order-loading');
+    }
+}
+
 let editOrderInitPromise = null;
 
 async function initEditOrderModeIfPresent() {
@@ -195,28 +213,34 @@ async function initEditOrderModeIfPresent() {
     }
 
     if (!orderKey || (mode !== 'edit_order' && mode !== 'edit')) {
+        dismissEditOrderLoadingOverlay();
         return;
     }
 
     editOrderInitPromise = (async () => {
-        window.isEditOrderMode = true;
-        window.editOrderKey = orderKey;
-        try {
-            sessionStorage.setItem('benmi_edit_order_key', orderKey);
-        } catch (e) {}
-
-        const tenantId = (typeof getTenantIdFromUrl === 'function' ? getTenantIdFromUrl() : null) || 'benmi';
-        console.log(`[EditOrder] Fetching edit context for order ${orderKey} (tenant: ${tenantId})...`);
-
-        // Ensure fresh catalog & bootstrap data are fully loaded first
-        if (typeof window.menuPromise !== 'undefined' && window.menuPromise) {
-            await window.menuPromise.catch(() => {});
-        }
-        if (typeof fetchMenu === 'function' && (!bootstrapData || !bootstrapData.catalog)) {
-            await fetchMenu().catch(() => {});
-        }
+        // Safety timeout so user is never trapped even if network drops
+        const safetyTimer = setTimeout(() => {
+            dismissEditOrderLoadingOverlay();
+        }, 8000);
 
         try {
+            window.isEditOrderMode = true;
+            window.editOrderKey = orderKey;
+            try {
+                sessionStorage.setItem('benmi_edit_order_key', orderKey);
+            } catch (e) {}
+
+            const tenantId = (typeof getTenantIdFromUrl === 'function' ? getTenantIdFromUrl() : null) || 'benmi';
+            console.log(`[EditOrder] Fetching edit context for order ${orderKey} (tenant: ${tenantId})...`);
+
+            // Ensure fresh catalog & bootstrap data are fully loaded first
+            if (typeof window.menuPromise !== 'undefined' && window.menuPromise) {
+                await window.menuPromise.catch(() => {});
+            }
+            if (typeof fetchMenu === 'function' && (!bootstrapData || !bootstrapData.catalog)) {
+                await fetchMenu().catch(() => {});
+            }
+
             const res = await fetch(`${WORKER_BASE}/api/order/edit-context?key=${encodeURIComponent(orderKey)}&tenant_id=${tenantId}`);
             if (!res.ok) {
                 const errData = await res.json().catch(() => ({}));
@@ -356,9 +380,15 @@ async function initEditOrderModeIfPresent() {
 
                 if (typeof updateTotal === 'function') updateTotal();
                 if (typeof updateFooterButtonState === 'function') updateFooterButtonState();
+            } else {
+                if (typeof updateTotal === 'function') updateTotal();
+                if (typeof updateFooterButtonState === 'function') updateFooterButtonState();
             }
         } catch (err) {
             console.error('[EditOrder] Error initializing edit order mode:', err);
+        } finally {
+            clearTimeout(safetyTimer);
+            dismissEditOrderLoadingOverlay();
         }
     })();
 

@@ -5,9 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title id="page-title">線上點餐</title>
-    <link rel="preload" href="index.css?v=20260919_sold_out_v4" as="style">
-    <link rel="preload" href="js/client-checkout.js?v=20260919_sold_out_v4" as="script">
-    <link rel="stylesheet" href="index.css?v=20260919_sold_out_v4">
+    <link rel="preload" href="index.css?v=20260919_sold_out_v5" as="style">
+    <link rel="preload" href="js/client-checkout.js?v=20260919_sold_out_v5" as="script">
+    <link rel="stylesheet" href="index.css?v=20260919_sold_out_v5">
     <script>
         // Redirect root visits on blabfood.app to /landing
         try {
@@ -49,6 +49,38 @@
             } catch (e) {}
             return "benmi";
         }
+
+        // Early detection for edit order mode to prevent FOUC / flash of $0
+        (function () {
+            try {
+                let isEdit = false;
+                const sp = new URLSearchParams(window.location.search);
+                let mode = sp.get('mode');
+                if (mode === 'edit_order' || mode === 'edit') isEdit = true;
+
+                if (!isEdit && sp.has('liff.state')) {
+                    const liffState = decodeURIComponent(sp.get('liff.state') || '');
+                    const qPart = liffState.includes('?') ? liffState.split('?')[1] : liffState;
+                    const lp = new URLSearchParams(qPart);
+                    if (lp.get('mode') === 'edit_order' || lp.get('mode') === 'edit') isEdit = true;
+                }
+
+                if (!isEdit && window.location.hash) {
+                    const hRaw = decodeURIComponent(window.location.hash.substring(1));
+                    const hp = new URLSearchParams(hRaw.includes('?') ? hRaw.split('?')[1] : hRaw);
+                    if (hp.get('mode') === 'edit_order' || hp.get('mode') === 'edit') isEdit = true;
+                }
+
+                if (!isEdit) {
+                    const savedKey = sessionStorage.getItem('benmi_edit_order_key');
+                    if (savedKey && !sp.has('table') && !sp.has('takeaway') && !sp.has('mode')) isEdit = true;
+                }
+
+                if (isEdit) {
+                    document.documentElement.classList.add('is-edit-order-loading');
+                }
+            } catch (e) {}
+        })();
 
         (function () {
             const tenantId = extractTenantId();
@@ -574,6 +606,15 @@
 </head>
 
 <body>
+    <!-- Edit Order Loading Overlay (Prevents $0 / Empty Cart FOUC) -->
+    <div id="edit-order-loading-overlay" class="edit-order-loading-overlay">
+        <div class="edit-order-loading-card">
+            <div class="edit-order-spinner"></div>
+            <div class="edit-order-loading-title">正在載入訂單內容</div>
+            <div class="edit-order-loading-sub">正在確認剩餘餐點與金額，請稍候...</div>
+        </div>
+    </div>
+
     <div id="desktop-auth-bar" class="desktop-auth-bar" style="display: none;">
         <div class="desktop-auth-inner">
             <div class="desktop-auth-user" id="desktop-auth-logged-in" style="display: none;">
@@ -3890,7 +3931,7 @@
             </button>
         </div>
     </div>
-    <script src="js/client-checkout.js?v=20260919_sold_out_v4"></script>
+    <script src="js/client-checkout.js?v=20260919_sold_out_v5"></script>
 </body>
 
 </html>
