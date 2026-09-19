@@ -267,15 +267,18 @@ async function initEditOrderModeIfPresent() {
                 } else {
                     window.bundleCartData = {};
                 }
+                window.editOrderRemovedItems = [];
 
                 data.items.forEach(item => {
                     let matchedKey = null;
+                    let catalogItem = null;
                     if (typeof bootstrapData !== 'undefined' && bootstrapData && bootstrapData.catalog) {
                         for (const cat of bootstrapData.catalog) {
                             if (cat.items) {
                                 const found = cat.items.find(i => i.name === item.name || i.id === item.itemId);
                                 if (found) {
                                     matchedKey = `${cat.slug}_${found.name}`;
+                                    catalogItem = found;
                                     break;
                                 }
                             }
@@ -287,10 +290,30 @@ async function initEditOrderModeIfPresent() {
                     }
 
                     const qty = Number(item.quantity) || 1;
-                    cart[matchedKey] = (cart[matchedKey] || 0) + qty;
+                    const itemName = item.name || '';
+                    const isSoldOut = (
+                        (catalogItem && catalogItem.isOutOfStock) ||
+                        (Array.isArray(window.editOrderSoldOutNames) && (
+                            window.editOrderSoldOutNames.includes(itemName) ||
+                            window.editOrderSoldOutNames.includes(catalogItem?.name || '') ||
+                            window.editOrderSoldOutNames.some(s => s && (itemName.includes(s) || (catalogItem?.name && catalogItem.name.includes(s))))
+                        ))
+                    );
 
-                    if (item.bundleSelections && item.bundleSelections.portions) {
-                        window.bundleCartData[matchedKey] = item.bundleSelections.portions;
+                    if (isSoldOut) {
+                        // Tự động bỏ món đã hết ra khỏi giỏ hàng khi đổi món
+                        window.editOrderRemovedItems.push({
+                            name: itemName,
+                            displayName: itemName,
+                            quantity: qty,
+                            price: Number(item.unitPrice || item.price) || 0,
+                            subtotal: Number(item.subtotal) || ((Number(item.unitPrice || item.price) || 0) * qty)
+                        });
+                    } else {
+                        cart[matchedKey] = (cart[matchedKey] || 0) + qty;
+                        if (item.bundleSelections && item.bundleSelections.portions) {
+                            window.bundleCartData[matchedKey] = item.bundleSelections.portions;
+                        }
                     }
                 });
 
@@ -1313,6 +1336,12 @@ async function validateCartStockBeforeSubmit() {
                         if (displayName && !outOfStockItems.includes(displayName)) {
                             outOfStockItems.push(displayName);
                         }
+
+                        // Tự động loại bỏ món đã hết khỏi giỏ hàng
+                        delete cart[key];
+                        if (customizeData && customizeData[key]) delete customizeData[key];
+                        if (comboDrinkData && comboDrinkData[key]) delete comboDrinkData[key];
+                        if (window.bundleCartData && window.bundleCartData[key]) delete window.bundleCartData[key];
                     }
                 }
             }
@@ -1324,6 +1353,7 @@ async function validateCartStockBeforeSubmit() {
             try {
                 if (typeof updateDynamicStockAndPrices === 'function') updateDynamicStockAndPrices();
                 if (typeof renderDynamicCatalog === 'function') renderDynamicCatalog();
+                if (typeof updateTotal === 'function') updateTotal();
             } catch(renderErr) {
                 console.warn("[Validation] UI re-render notice:", renderErr);
             }

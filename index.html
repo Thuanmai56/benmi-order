@@ -5,9 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title id="page-title">線上點餐</title>
-    <link rel="preload" href="index.css?v=20260919_sold_out_v2" as="style">
-    <link rel="preload" href="js/client-checkout.js?v=20260919_sold_out_v2" as="script">
-    <link rel="stylesheet" href="index.css?v=20260919_sold_out_v2">
+    <link rel="preload" href="index.css?v=20260919_sold_out_v3" as="style">
+    <link rel="preload" href="js/client-checkout.js?v=20260919_sold_out_v3" as="script">
+    <link rel="stylesheet" href="index.css?v=20260919_sold_out_v3">
     <script>
         // Redirect root visits on blabfood.app to /landing
         try {
@@ -3270,6 +3270,25 @@
                 summaryHTML += `<div style="border-bottom: 1px dashed #eee; margin-bottom: 8px;"></div>`;
             }
 
+            // Render removed sold-out items from previous order with line-through and '已移除' tag
+            if (window.isEditOrderMode && Array.isArray(window.editOrderRemovedItems) && window.editOrderRemovedItems.length > 0) {
+                window.editOrderRemovedItems.forEach(rem => {
+                    const rQty = Number(rem.quantity) || 1;
+                    const rPrice = Number(rem.subtotal) || ((Number(rem.price) || 0) * rQty);
+                    const rName = rem.displayName || rem.name || '';
+                    summaryHTML += `
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; opacity:0.6; text-decoration:line-through; color:#94a3b8;">
+                            <div style="font-weight:700;">
+                                <span>${rQty}x ${escapeHtml(rName)}</span>
+                                <span style="display:inline-block; margin-left:6px; font-size:11px; font-weight:700; background:#fee2e2; color:#dc2626; padding:1px 6px; border-radius:4px; text-decoration:none; vertical-align:middle;">已移除</span>
+                            </div>
+                            <div style="font-weight:700; color:#94a3b8;">$${rPrice}</div>
+                        </div>
+                    `;
+                });
+                summaryHTML += `<div style="border-bottom: 1px dashed #eee; margin-bottom: 8px;"></div>`;
+            }
+
             total -= totalCategoryDiscounts;
 
             // Add Global Customization Addons if selected (radio & checkbox)
@@ -3303,13 +3322,9 @@
 
             const summaryContainer = document.getElementById('cart-summary');
             if (summaryContainer) {
-                if (totalQty === 0 && addonsTotal === 0) {
-                    const hasAnyRawItem = Object.values(cart || {}).some(q => q > 0);
-                    if (hasAnyRawItem) {
-                        summaryContainer.innerHTML = summaryHTML + '<div style="text-align:center; color:#dc2626; font-weight:700; font-size:13px; margin-top:8px;">(購物車內餐點已全數售完)</div>';
-                    } else {
-                        summaryContainer.innerHTML = '<div style="text-align:center; color:#9ca3af;">(目前沒有已選商品)</div>';
-                    }
+                const hasRemovedItems = window.isEditOrderMode && Array.isArray(window.editOrderRemovedItems) && window.editOrderRemovedItems.length > 0;
+                if (totalQty === 0 && addonsTotal === 0 && !hasRemovedItems) {
+                    summaryContainer.innerHTML = '<div style="text-align:center; color:#9ca3af;">(目前沒有已選商品)</div>';
                 } else {
                     const violations = (typeof getActiveThresholdViolations === 'function') ? getActiveThresholdViolations() : [];
                     if (violations.length > 0) {
@@ -3345,6 +3360,10 @@
                             </div>
                         `;
                         summaryHTML = deltaHTML + summaryHTML;
+                    }
+
+                    if (totalQty === 0 && addonsTotal === 0 && hasRemovedItems) {
+                        summaryHTML += '<div style="text-align:center; color:#dc2626; font-weight:700; font-size:13px; margin:8px 0;">(購物車內餐點已全數售完，請由上方菜單挑選更換餐點)</div>';
                     }
 
                     summaryHTML += `<div style="display:flex; justify-content:space-between; font-weight:900; margin-top:12px; font-size:16px;">
@@ -3858,7 +3877,7 @@
             </button>
         </div>
     </div>
-    <script src="js/client-checkout.js?v=20260919_sold_out_v2"></script>
+    <script src="js/client-checkout.js?v=20260919_sold_out_v3"></script>
 </body>
 
 </html>

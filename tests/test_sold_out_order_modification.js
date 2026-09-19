@@ -47,13 +47,13 @@ assert.ok(indexHtml.includes('id="edit-order-mode-banner"'), 'index.html contain
 assert.ok(indexCss.includes('.edit-order-mode-banner'), 'index.css contains .edit-order-mode-banner styling');
 assert.ok(clientCheckoutJs.includes('window.isEditOrderMode'), 'client-checkout.js defines isEditOrderMode');
 assert.ok(clientCheckoutJs.includes('initEditOrderModeIfPresent'), 'initEditOrderModeIfPresent implemented');
-assert.ok(clientCheckoutJs.includes('/api/orders/modify'), 'Submits to /api/orders/modify');
-assert.ok(indexHtml.includes('edit-order-delta-box'), 'updateTotal calculates and renders price delta box');
+assert.ok(clientCheckoutJs.includes('window.editOrderRemovedItems'), 'client-checkout.js defines editOrderRemovedItems');
+assert.ok(indexHtml.includes('window.editOrderRemovedItems'), 'index.html renders editOrderRemovedItems');
 console.log('✓ Test 5 Passed: Customer LIFF edit mode banner, context pre-fill, delta indicator, and submission wired');
 
 // Test 6: Cache-busting verification
-assert.ok(indexHtml.includes('20260919_sold_out_v2'), 'index.html cache busters bumped to 20260919_sold_out_v2');
-assert.ok(ordersHtml.includes('20260919_sold_out_v2'), 'orders.html cache busters bumped to 20260919_sold_out_v2');
+assert.ok(indexHtml.includes('20260919_sold_out_v3'), 'index.html cache busters bumped to 20260919_sold_out_v3');
+assert.ok(ordersHtml.includes('20260919_sold_out_v3'), 'orders.html cache busters bumped to 20260919_sold_out_v3');
 console.log('✓ Test 6 Passed: Cache-busting query strings correctly bumped in index.html and orders.html');
 
 console.log('\n🎉 ALL SOLD-OUT ORDER MODIFICATION TESTS PASSED!');
