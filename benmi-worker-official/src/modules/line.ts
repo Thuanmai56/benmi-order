@@ -24,7 +24,8 @@ export {
 import {
   buildProgressFlexMessage,
   createTimeChangeConfirmedFlexBubble,
-  buildAppendConfirmationFlexMessage
+  buildAppendConfirmationFlexMessage,
+  createOrderModifiedConfirmationFlexBubble
 } from './line/templates';
 
 export async function getLineToken(env: Env, tenantCtx?: TenantContext | null): Promise<string> {
@@ -760,7 +761,7 @@ export async function handleLineWebhook(
       continue;
     }
 
-    // 0.28) Handle Edit/Modify Order text message from LIFF: Acknowledge and clear pending actions
+    // 0.28) Handle Edit/Modify Order text message from LIFF: Acknowledge, clear pending actions, and reply with free Confirmation Flex
     if (userText.includes("[更換品項") || userText.includes("更換品項內容")) {
       console.log(`[${brandName}] Webhook received edit order notification message from customer.`);
       try {
@@ -768,6 +769,66 @@ export async function handleLineWebhook(
           .bind(tenantId, userId).run();
       } catch { }
       try { await env.ORDER_STATE.delete(draftKey); } catch { }
+
+      if (replyToken) {
+        try {
+          let orderKey = "";
+          const orderRefMatch = userText.match(/^訂單參考：(.+)$/m) || userText.match(/訂單參考：([^\s\n]+)/);
+          const headerMatch = userText.match(/\[更換品項\s*#?([^\]]+)\]/);
+          if (orderRefMatch) {
+            orderKey = orderRefMatch[1].trim();
+          } else if (headerMatch) {
+            orderKey = headerMatch[1].trim();
+          }
+
+          if (!orderKey && env.DB) {
+            const activeRow = await env.DB.prepare(
+              `SELECT key FROM orders WHERE tenant_id = ? AND user_id = ? AND is_modified = 1 ORDER BY updated_at DESC LIMIT 1`
+            ).bind(tenantId, userId).first<{ key: string }>();
+            if (activeRow && activeRow.key) orderKey = activeRow.key;
+          }
+
+          if (orderKey) {
+            orderKey = (await resolveOrderKey(env, tenantId, orderKey)) || orderKey;
+          }
+
+          let displayKey = headerMatch ? headerMatch[1].replace('#', '').trim() : (orderKey || "");
+          let newTotal = 0;
+          const totalMatch = userText.match(/💰\s*更新後金額：\$?(\d+)/);
+          if (totalMatch) {
+            newTotal = Number(totalMatch[1]) || 0;
+          }
+
+          if (orderKey && env.DB) {
+            const row = await env.DB.prepare(
+              `SELECT key, display_key, total_amount FROM orders WHERE key = ? AND tenant_id = ? LIMIT 1`
+            ).bind(orderKey, tenantId).first<any>();
+
+            if (row) {
+              if (row.display_key) displayKey = row.display_key;
+              if (row.total_amount != null) newTotal = Number(row.total_amount) || 0;
+            }
+          }
+
+          const confirmBubble = createOrderModifiedConfirmationFlexBubble(
+            orderKey || displayKey,
+            newTotal,
+            0,
+            brandName,
+            displayKey || orderKey
+          );
+
+          await replyLineFlexMessage(
+            replyToken,
+            `[${brandName}] 訂單品項已成功更換 #${displayKey || orderKey}`,
+            confirmBubble,
+            env,
+            tenantCtx
+          );
+        } catch (replyErr) {
+          console.error(`[${brandName}] Failed to send edit confirmation via reply message:`, replyErr);
+        }
+      }
       continue;
     }
 

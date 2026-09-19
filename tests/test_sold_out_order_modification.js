@@ -56,8 +56,10 @@ assert.ok(clientCheckoutJs.includes('dismissEditOrderLoadingOverlay'), 'dismissE
 assert.ok(clientCheckoutJs.includes('window.editOrderRemovedItems'), 'client-checkout.js defines editOrderRemovedItems');
 assert.ok(clientCheckoutJs.includes('[更換品項 #'), 'client-checkout.js sends order details message via liff.sendMessages');
 assert.ok(lineTs.includes('[更換品項'), 'line.ts webhook handles [更換品項 message to clear pending actions');
+assert.ok(lineTs.includes('createOrderModifiedConfirmationFlexBubble') && lineTs.includes('replyLineFlexMessage'), 'line.ts webhook replies with free confirmation flex message');
+assert.ok(ordersTs.includes('isDesktop') && ordersTs.includes('createOrderModifiedConfirmationFlexBubble'), 'orders.ts restricts push message to desktop fallback');
 assert.ok(indexHtml.includes('window.editOrderRemovedItems'), 'index.html renders editOrderRemovedItems');
-console.log('✓ Test 5 Passed: Customer LIFF edit mode banner, loading overlay, context pre-fill, delta indicator, and customer chat message submission wired');
+console.log('✓ Test 5 Passed: Customer LIFF edit mode banner, loading overlay, context pre-fill, customer chat message submission, and free reply confirmation wired');
 
 // Test 6: Cache-busting verification
 assert.ok(indexHtml.includes('20260919_sold_out_v7'), 'index.html cache busters bumped to 20260919_sold_out_v7');

@@ -1824,8 +1824,11 @@ export async function modifyOrder(
     }
 
     // 7. Send LINE Confirmation Flex Message to customer
+    // Only push if customer edited via Desktop (outside LIFF) where liff.sendMessages cannot run.
+    // On mobile LIFF, the customer sends an order text message and the LINE webhook replies with free replyMessage.
+    const isDesktop = payload.is_desktop === true || payload.isDesktop === true;
     const brandName = tenantCtx?.brandName || "Benmi";
-    if (orderRow.user_id && typeof orderRow.user_id === 'string' && orderRow.user_id.startsWith('U')) {
+    if (orderRow.user_id && typeof orderRow.user_id === 'string' && orderRow.user_id.startsWith('U') && isDesktop) {
       try {
         const confirmBubble = createOrderModifiedConfirmationFlexBubble(
           resolvedKey,
