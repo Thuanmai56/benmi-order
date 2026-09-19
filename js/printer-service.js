@@ -300,6 +300,27 @@
       }
     }
 
+    async handleAppendedRounds(appendedList) {
+      const settings = this.getSettings();
+      if (!settings.autoPrintNewOrders) return;
+      if (!Array.isArray(appendedList) || appendedList.length === 0) return;
+
+      for (const item of appendedList) {
+        const order = item.order || item;
+        const toRound = item.toRound || Number(order.round_count || order.roundCount) || 1;
+        const roundPrintKey = `${order.key}_round_${toRound}`;
+        if (!this.isOrderAlreadyPrinted(roundPrintKey)) {
+          console.log(`[PrinterService] 🖨️ Auto-printing appended round ${toRound} for order #${order.key}...`);
+          try {
+            const result = await this.printDualStation(order);
+            if (result?.success) this.markOrderAsPrinted(roundPrintKey);
+          } catch (err) {
+            console.error(`[PrinterService] Auto-print failed for round #${roundPrintKey}:`, err);
+          }
+        }
+      }
+    }
+
     // --- 4. PRINT DISPATCHERS ---
     async printDualStation(order) {
       const settings = this.getSettings();

@@ -19,6 +19,7 @@
     "test:pos-contract": "node --experimental-sqlite --test tests/test_pos_option_groups_contract.cjs",
     "test:smoke:dev": "node scripts/smoke-test-live-worker.mjs --env dev",
     "test:smoke:staging": "node scripts/smoke-test-live-worker.mjs --env staging",
+    "test:staff-ordering": "node tests/test_staff_ordering.cjs",
     "test:order-identity": "node tests/test_order_identity.cjs",
     "test:line-order-receipts": "node --test scripts/test-line-order-receipts.cjs",
     "test:liff-message-retry": "node --test scripts/test-liff-message-retry.cjs",

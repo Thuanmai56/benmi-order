@@ -12,6 +12,7 @@ import { getImageList, getImage, updateImage, deleteImage } from './modules/imag
 import { resolveTenantContext } from './modules/tenant';
 import { handleLineWebhookProbe, LineRuntimeError } from './modules/line-runtime';
 import { handleAdminRoute } from './modules/admin';
+import { handleStaffRoute } from './modules/staff';
 import { getTenantBootstrap } from './modules/bootstrap';
 import { getItemAnalyticsReport } from './modules/reports';
 import { getMarketplaceTenants } from './modules/marketplace';
@@ -67,6 +68,12 @@ export default {
         && await tenantIsDeleted(env.DB, tenantId)) return json({ error: 'TENANT_DELETED' }, 410, { 'Cache-Control': 'no-store' });
       const tenantCtx = await resolveTenantContext(tenantId, env);
 
+      // 4. Staff API Routes
+      if (path.startsWith("/api/staff")) {
+        return handleStaffRoute(request, env, path, tenantCtx);
+      }
+
+      // 5. API Endpoints
       // 4. API Endpoints
       if (request.method === "POST" && path === "/api/line/order-receipt/push") return requestOrderReceiptPush(request, env, tenantCtx);
       if (request.method === "POST" && path === "/api/line/client-error") return recordLiffClientError(request, tenantCtx);
