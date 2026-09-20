@@ -49,6 +49,7 @@ async function check(name, fn) { await fn(); passed++; console.log(`PASS ${name}
  INSERT INTO pending_actions(tenant_id,user_id,order_key,action_type,question_text) VALUES ('a','u','B0914-T007','CHANGE','time?');`);
  await check('migration preserves items/pending/amount and assigns a server UUID', async()=>{
    await apply(fs.readFileSync(path.join(workerRoot,'migrations/0055_expand_order_identity.sql'),'utf8'));
+   await apply(fs.readFileSync(path.join(workerRoot,'migrations/0056_add_order_modified_tracking.sql'),'utf8'));
    const old=await DB.prepare('SELECT * FROM orders').first();
    assert(identity.isOrderId(old.order_id)); assert.equal(old.key,'B0914-T007'); assert.equal(old.display_key,'B0914-T007'); assert.equal(old.total_amount,100);
    assert.equal((await DB.prepare('SELECT order_key FROM order_items').first()).order_key,old.key);
