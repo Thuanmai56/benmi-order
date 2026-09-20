@@ -145,6 +145,13 @@ export async function validateOrderBundles(
 
     if (!bundleRulesRes.results || bundleRulesRes.results.length === 0) return { valid: true };
 
+    // Selection IDs and prices from a browser are untrusted. Fetch the tenant
+    // scoped menu graph once and use the rule sources as the authority.
+    const menuItemsRes = await env.DB.prepare(
+      `SELECT id, category_id FROM menu_items WHERE tenant_id = ?`
+    ).bind(tenantId).all<{ id: string; category_id: string }>();
+    const itemById = new Map((menuItemsRes.results || []).map(item => [item.id, item]));
+
     const rulesMap = new Map<string, any>();
     for (const r of bundleRulesRes.results) {
       try {
@@ -196,6 +203,26 @@ export async function validateOrderBundles(
               error: `餐點【${item.name}】${pLabel}【${groupName}】選配數量不符（規定 ${minQty} 樣，已選 ${totalGroupQty} 樣）`,
               code: "INVALID_BUNDLE_SELECTION"
             };
+          }
+
+          const allowed = new Set<string>();
+          for (const source of (groupRule.sources || [])) {
+            if (source.type === 'category') {
+              const categoryId = source.categoryId || source.refId;
+              for (const menuItem of itemById.values()) if (menuItem.category_id === categoryId) allowed.add(menuItem.id);
+            } else if (source.type === 'item_list') {
+              for (const itemId of (source.itemIds || [])) allowed.add(itemId);
+            }
+          }
+          for (const selected of childItems) {
+            const selectedId = selected.itemId || selected.item_id;
+            if (!selectedId || !allowed.has(selectedId) || !itemById.has(selectedId)) {
+              return {
+                valid: false,
+                error: `餐點【${item.name}】${pLabel}【${groupName}】包含不允許的選配項目`,
+                code: 'INVALID_BUNDLE_SELECTION'
+              };
+            }
           }
         }
       }
@@ -1868,4 +1895,3 @@ export async function modifyOrder(
     return json({ error: err.message || "Failed to modify order", code: "INTERNAL_ERROR" }, 500);
   }
 }
-
