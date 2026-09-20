@@ -82,10 +82,12 @@ async function check(name, fn) {
     );
   `);
 
-  // --- TEST 1: Migration 0056 runs cleanly ---
-  await check('migration 0056 applies without errors and sets up tables schema', async () => {
-    const mig0056 = fs.readFileSync(path.join(workerRoot, 'migrations/0056_staff_ordering_tables.sql'), 'utf8');
-    await apply(mig0056);
+  // --- TEST 1: Migration 0057 & 0061 run cleanly ---
+  await check('migration 0057 and 0061 apply without errors and set up tables schema', async () => {
+    const mig0057 = fs.readFileSync(path.join(workerRoot, 'migrations/0057_create_staff_ordering_and_tables.sql'), 'utf8');
+    await apply(mig0057);
+    const mig0061 = fs.readFileSync(path.join(workerRoot, 'migrations/0061_add_staff_order_revision_guard.sql'), 'utf8');
+    await apply(mig0061);
 
     // Verify restaurant_tables, staff_order_requests, staff_sessions exist
     const tblCheck = await DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='restaurant_tables'").first();

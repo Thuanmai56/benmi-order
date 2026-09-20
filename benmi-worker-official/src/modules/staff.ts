@@ -500,12 +500,12 @@ export async function handleStaffRoute(
 
     // Check staff_order_requests for duplicate submission
     const existingReq = await env.DB.prepare(
-      "SELECT request_hash, response_body FROM staff_order_requests WHERE tenant_id = ? AND request_id = ?"
-    ).bind(tenantId, requestId).first<{ request_hash: string; response_body: string }>();
+      "SELECT request_hash, response_json FROM staff_order_requests WHERE tenant_id = ? AND request_id = ?"
+    ).bind(tenantId, requestId).first<{ request_hash: string; response_json: string }>();
 
     if (existingReq) {
       if (existingReq.request_hash === requestHash) {
-        const cachedRes = JSON.parse(existingReq.response_body);
+        const cachedRes = JSON.parse(existingReq.response_json);
         return json({ ...cachedRes, idempotent: true }, 200);
       } else {
         return json({ ok: false, error: "REQUEST_COLLISION", message: "Request ID 重複且內容不符 / Trùng lặp request ID" }, 409);
@@ -634,7 +634,7 @@ export async function handleStaffRoute(
           );
         }),
         env.DB.prepare(
-          `INSERT INTO staff_order_requests (tenant_id, request_id, request_hash, order_key, round_number, response_body, created_at)
+          `INSERT INTO staff_order_requests (tenant_id, request_id, request_hash, order_key, round_number, response_json, created_at)
            VALUES (?, ?, ?, ?, 1, ?, datetime('now'))`
         ).bind(
           tenantId,
@@ -697,12 +697,12 @@ export async function handleStaffRoute(
 
     // Check staff_order_requests for duplicate submission
     const existingReq = await env.DB.prepare(
-      "SELECT request_hash, response_body FROM staff_order_requests WHERE tenant_id = ? AND request_id = ?"
-    ).bind(tenantId, requestId).first<{ request_hash: string; response_body: string }>();
+      "SELECT request_hash, response_json FROM staff_order_requests WHERE tenant_id = ? AND request_id = ?"
+    ).bind(tenantId, requestId).first<{ request_hash: string; response_json: string }>();
 
     if (existingReq) {
       if (existingReq.request_hash === requestHash) {
-        const cachedRes = JSON.parse(existingReq.response_body);
+        const cachedRes = JSON.parse(existingReq.response_json);
         return json({ ...cachedRes, idempotent: true }, 200);
       } else {
         return json({ ok: false, error: "REQUEST_COLLISION", message: "Request ID 重複且內容不符 / Trùng lặp request ID" }, 409);
@@ -725,6 +725,16 @@ export async function handleStaffRoute(
         ok: false,
         error: "ORDER_FINALIZED",
         message: "訂單已結帳或已取消，無法再加點 / Đơn hàng đã kết thúc hoặc hủy, không thể gọi thêm"
+      }, 409);
+    }
+
+    // Optimistic Concurrency Control Check: Verify revision matches
+    if (expectedRevision !== undefined && expectedRevision !== null && Number(parent.revision) !== Number(expectedRevision)) {
+      return json({
+        ok: false,
+        error: "REVISION_CONFLICT",
+        message: "訂單版本已更新或已結帳，請重新確認最新內容 / Đơn hàng đã được cập nhật bởi thiết bị khác hoặc đã kết thúc, vui lòng kiểm tra lại",
+        currentOrder: parent
       }, 409);
     }
 
@@ -826,7 +836,7 @@ export async function handleStaffRoute(
           );
         }),
         env.DB.prepare(
-          `INSERT INTO staff_order_requests (tenant_id, request_id, request_hash, order_key, round_number, response_body, created_at)
+          `INSERT INTO staff_order_requests (tenant_id, request_id, request_hash, order_key, round_number, response_json, created_at)
            VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`
         ).bind(
           tenantId,
