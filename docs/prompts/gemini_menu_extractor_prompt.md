@@ -33,7 +33,16 @@ Each purchasable or dish-level group belongs in `categories`:
 - These groups map to `menu_customizations.options_json` and appear before the catalog, as in BSC. Do not also create modifier duplicates or fake purchasable menu items for them.
 - `categories` should include `allow_customization` and `applied_modifiers` (explicit modifier IDs) for dish-level applicability. If there are no dish-level options, use `false` and `[]`; order-wide groups remain visible independently.
 - Preserve paid choices and minimum-spend conditions. Paid radio customizations require the accompanying radio pricing support; put unsupported paid-radio/conditional-charge requirements in top-level `review_notes` and retain the source price/condition. Do not silently make them free or split an exclusive radio choice into independent checkboxes.
-- If scope is unclear, include it in `review_notes` for confirmation before seeding.
+### 2b. Mandatory Core Component / Starch / Bundle Rules (Dish-level Bundle)
+- **CRITICAL DISTINCTION: Mandatory Base vs. Optional Modifier**:
+  - **Mandatory Base / Starch (Thành phần bắt buộc - Không có không nấu được)**:
+    If a dish cannot be prepared without choosing 1 or N items from a base pool (e.g., 鍋燒 MUST choose 1 noodle type: 意麵/冬粉/烏龍/泡飯/油麵; Bento/快餐 MUST choose 4 side dishes from a veggie pool; Combo MUST choose 1 drink), this MUST be extracted as a `bundle_rule` on the item, NOT as a passive modifier!
+    - *Why?* Passive modifiers auto-default to the first option without prompting on `+`, causing customers to unintentionally order the wrong noodle/base. A `bundle_rule` immediately opens the configurator modal upon tapping `+`.
+    - **How to structure**:
+      1. Create a category containing the base choices (e.g., `cat_noodle_type` with items: 意麵 $0, 冬粉 $0, 烏龍 $0...).
+      2. In the main catalog item, attach a `bundle_rule` specifying `min_quantity: 1, max_quantity: 1` referencing that category.
+  - **Optional Modifiers / Toppings (Gia vị & Topping thêm)**:
+    Items like extra meat (+40), extra cheese (+15), or spice levels (加辣/不辣) that modify an already complete dish belong in `"modifier"` categories referenced via `applied_modifiers`.
 
 ### 3. Modifier Rules (For `"modifier"` categories)
 - `selection_type`:
@@ -167,6 +176,31 @@ You MUST respond strictly with a valid JSON object wrapped in a ````json codeblo
       ]
     }
   ]
+}
+```
+
+For an item with a mandatory core choice (e.g., 鍋燒 choosing 1 noodle type, bento choosing 4 side dishes, combo choosing 1 drink), attach a `bundle_rule` to the item and provide its source category in `categories`:
+```json
+{
+  "id": "hs_gs_01",
+  "name": "原味鍋燒",
+  "price": 70,
+  "bundle_rule": {
+    "version": 1,
+    "groups": [
+      {
+        "id": "noodle-type",
+        "name": "麵體",
+        "label": { "zh-TW": "請選擇 1 樣麵體", "vi": "Chọn 1 loại mì" },
+        "min_quantity": 1,
+        "max_quantity": 1,
+        "allow_repeats": false,
+        "sources": [
+          { "type": "category", "category_id": "cat_hs_noodle_type" }
+        ]
+      }
+    ]
+  }
 }
 ```
 

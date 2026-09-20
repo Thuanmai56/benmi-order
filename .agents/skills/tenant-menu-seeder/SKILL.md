@@ -18,15 +18,15 @@ The input can be:
 ### Standard Schema Expected:
 The extractor contract also supports top-level `customizations` and `review_notes`; missing `customizations` in older input means no order-wide groups.
 
-### Classify by scope before generating SQL
-- Printed square checkboxes are not evidence of multi-select. When the user specifies one choice per group, map every such group to `type: "radio"` in menu_customizations (`selection_type: "single"` only for dish modifiers). Do not infer mandatory selection or defaults from this instruction.
-- Standalone products go to catalog categories. Options selected separately for each dish go to modifier categories.
-- Seasoning selected once for the whole order/bag belongs in `menu_customizations`, like BSC's first flavor section. This is a data-model distinction, not a tenant-name special case. Confirm ambiguous scope from the menu/user.
-- Each `customizations` entry has `id`, tenant-unique `key`, `title`, `type` (`radio`/`checkbox`), `sort_order`, and `options`; serialize `options` to `options_json`. Preserve option names, order, prices, sub-options and availability.
-- Bootstrap already exposes these rows as `customizations`; index renders them before products. Do not duplicate them as modifiers, menu items or a synthetic category unless the current renderer explicitly requires it.
-- Set catalog `allow_customization` and `applied_modifiers` explicitly for remaining dish-level modifiers. When none remain, use `0` and `'[]'`; this does not disable order-level choices.
-- Inspect charging/submission code before moving paid or conditional choices. Current customer radio customizations display prices but do not add them to the total. Preserve such requirements in `review_notes`; implement the missing behavior or resolve the representation before applying that conversion. Do not erase surcharges or turn exclusive options into independent checkboxes.
-- BSC is a reference for structure, not a source of option names/defaults. Never infer order-level scope solely from a cuisine, slug or tenant name.
+### Classify by scope before generating SQL (The 3-Level F&B Choice Hierarchy)
+1. **Level 1 - Order-Wide Customizations**:
+   - Seasoning selected once for the whole order/bag (pepper, chili, garlic, oil, broth, etc.) belongs in `menu_customizations`, like BSC's first flavor section. Each entry has `id`, `key`, `title`, `type` (`radio`/`checkbox`), `sort_order`, and `options_json`.
+2. **Level 2 - Mandatory Core Component / Starch / Combo (Bundle Rules)**:
+   - If a dish CANNOT be prepared without choosing from a fixed set of bases (e.g., 鍋燒 MUST choose 1 noodle type: 意麵/冬粉/烏龍/泡飯/油麵; Bento MUST choose 4 side dishes; Combo MUST choose 1 drink), this MUST be seeded as a `menu_bundle_rules` (min: 1, max: 1), NOT as a passive modifier!
+   - *Why?* Passive modifiers auto-default silently without prompting the customer on `+`. A `bundle_rule` triggers the All-in-One Dish Configurator modal immediately with zero delay.
+   - Seed the underlying choices in a category (e.g., `cat_<tenant>_noodle_type`) with items priced at $0 (or surcharges), then attach `menu_bundle_rules`.
+3. **Level 3 - Dish-Level Modifiers & Add-on Toppings**:
+   - Optional toppings (加肉, 加起司), spice level adjustments, or drink ice/sugar that modify an already complete dish belong in `menu_categories` with `category_type: "modifier"` and are linked via `applied_modifiers`.
 
 Example order-wide group:
 ```json
@@ -130,6 +130,25 @@ INSERT OR REPLACE INTO menu_items (
 ) VALUES
 ('<tenant>_item_01', '<tenant_id>', 'cat_<tenant>_main', '...', 50, '...', '👍 推薦', 1, 1),
 ('<tenant>_top_01', '<tenant_id>', 'cat_<tenant>_topping', '...', 10, NULL, NULL, 0, 1);
+
+-- 5. Bundle Rules Table (Mandatory Starch / Base / Combos)
+-- Required when an item cannot be prepared without picking 1 or N items from a base category
+INSERT OR REPLACE INTO menu_bundle_rules (
+    id, tenant_id, item_id, name, group_id, group_name,
+    min_selections, max_selections, selection_type, rule_json
+) VALUES
+(
+    'rule_<tenant>_<item_id>_base',
+    '<tenant_id>',
+    '<tenant>_item_01',
+    '麵體',
+    'noodle-type',
+    '麵體',
+    1,
+    1,
+    'fixed',
+    '{"version":1,"groups":[{"id":"noodle-type","name":"麵體","label":{"zh-TW":"請選擇 1 樣麵體","vi":"Chọn 1 loại mì"},"minQuantity":1,"maxQuantity":1,"allowRepeats":false,"sources":[{"type":"category","categoryId":"cat_<tenant>_noodle_type"}]}]}'
+);
 ```
 
 ### Step 3: Apply Migration to D1
