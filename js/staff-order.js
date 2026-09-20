@@ -85,7 +85,10 @@
       optSingleChoice: "Chọn 1",
       optMultiChoice: "Tùy chọn",
       optItemNote: "Ghi chú riêng món này",
-      optItemNotePlaceholder: "Ví dụ: ít đường, không đá, ít cay..."
+      optItemNotePlaceholder: "Ví dụ: ít đường, không đá, ít cay...",
+      flavorNavTitle: "Chọn vị",
+      flavorSectionTitle: "Chọn vị & Tùy chọn chung",
+      flavorCartHeader: "Vị chung cho bàn:"
     },
     "zh-TW": {
       staffBadge: "桌邊點餐",
@@ -144,7 +147,10 @@
       optSingleChoice: "單選",
       optMultiChoice: "可複選",
       optItemNote: "餐點專屬備註",
-      optItemNotePlaceholder: "例如：微糖、去冰、少辣..."
+      optItemNotePlaceholder: "例如：微糖、去冰、少辣...",
+      flavorNavTitle: "口味選擇",
+      flavorSectionTitle: "口味與客製化選擇",
+      flavorCartHeader: "整單口味："
     }
   };
 
@@ -159,11 +165,13 @@
     tableFilter: "all",
     tableSearchQuery: "",
     currentTable: null,
-    catalog: [],        // Flattened list of all items across categories with cat metadata
-    categories: [],     // List of category objects from bootstrap: { id, slug, name, shortName, items: [...], appliedModifiers, ... }
-    modifiers: [],      // Modifier groups from bootstrap
-    customizations: [], // Global customization groups from bootstrap
-    translations: {},   // Translations mapping from bootstrap
+    catalog: [],                  // Flattened list of all items across categories with cat metadata
+    categories: [],               // List of category objects from bootstrap: { id, slug, name, shortName, items: [...], appliedModifiers, ... }
+    modifiers: [],                // Per-category modifier groups from bootstrap
+    customizations: [],           // Global customization groups (chọn vị chung) from bootstrap
+    customizationSortOrder: 0,    // Position of global customizations panel among catalog sections
+    selectedGlobalCustomizations: {}, // Table's selected flavor options: { [groupKey]: string[] }
+    translations: {},             // Translations mapping from bootstrap
     activeCategory: "all",
     cart: [],
     selectedItem: null,
@@ -500,7 +508,7 @@
 
     state.currentTable = table;
 
-    // Load draft cart for this table if exists
+    // Load draft cart and draft global flavor for this table
     loadDraftCart(table.id);
 
     stopTablePolling();
@@ -581,6 +589,7 @@
           slug: cat.slug || cat.id,
           name: cat.name || "",
           shortName: cat.shortName || "",
+          sortOrder: cat.sortOrder || 0,
           allowCustomization: cat.allowCustomization !== false,
           appliedModifiers: cat.appliedModifiers || ['*'],
           pricingRules: cat.pricingRules || null,
@@ -602,7 +611,13 @@
         state.catalog = allItems;
         state.modifiers = data.modifiers || [];
         state.customizations = data.customizations || [];
+        state.customizationSortOrder = data.customizationSortOrder ?? 0;
         state.translations = data.translations || {};
+
+        // Initialize default global flavor selections if not set from draft
+        if (Object.keys(state.selectedGlobalCustomizations).length === 0) {
+          state.selectedGlobalCustomizations = initDefaultGlobalCustomizations();
+        }
 
         renderCategories();
         renderMenuItems();
@@ -613,16 +628,60 @@
     }
   }
 
+  function initDefaultGlobalCustomizations() {
+    const defaults = {};
+    (state.customizations || []).forEach(group => {
+      if (group.type === 'radio') {
+        const firstOpt = (group.options || []).find(o => {
+          const isOos = Boolean(o && typeof o === 'object' && (o.is_out_of_stock || o.isOutOfStock));
+          return !isOos;
+        });
+        const optName = firstOpt ? (typeof firstOpt === 'string' ? firstOpt : firstOpt.name) : "";
+        defaults[group.key] = optName ? [optName] : [];
+      } else {
+        defaults[group.key] = [];
+      }
+    });
+    return defaults;
+  }
+
+  function getCatalogSections() {
+    const sections = state.categories.map(cat => ({
+      type: 'catalog',
+      sortOrder: cat.sortOrder || 0,
+      category: cat
+    }));
+
+    if (state.customizations && state.customizations.length > 0) {
+      sections.push({
+        type: 'customizations',
+        sortOrder: state.customizationSortOrder ?? 0
+      });
+    }
+    sections.sort((a, b) => a.sortOrder - b.sortOrder);
+    return sections;
+  }
+
   function renderCategories() {
     const nav = document.getElementById("category-tabs-nav");
     if (!nav) return;
 
-    if (!state.categories || state.categories.length === 0) {
+    const sections = getCatalogSections();
+    if (sections.length === 0) {
       nav.innerHTML = "";
       return;
     }
 
-    const catBtns = state.categories.map((cat, idx) => {
+    nav.innerHTML = sections.map((sec, idx) => {
+      if (sec.type === 'customizations') {
+        const isActive = (state.activeCategory === 'flavor' || (state.activeCategory === 'all' && idx === 0));
+        return `
+          <button type="button" class="cat-tab-btn ${isActive ? 'active' : ''}" data-cat-slug="flavor" onclick="scrollToCategory('flavor', this)">
+            ${escapeHtml(t("flavorNavTitle"))}
+          </button>
+        `;
+      }
+      const cat = sec.category;
       const navTitle = (cat.shortName && cat.name && cat.name.includes(cat.shortName)) ? cat.shortName : cat.name;
       const isActive = (state.activeCategory === cat.slug || (state.activeCategory === 'all' && idx === 0));
       return `
@@ -631,8 +690,6 @@
         </button>
       `;
     }).join("");
-
-    nav.innerHTML = catBtns;
   }
 
   function scrollToCategory(slug, el) {
@@ -713,12 +770,12 @@
     return allMods.filter(m => applied.includes(m.slug) || applied.includes(m.id));
   }
 
+  // Dishes only have per-item customization if their category has applied modifiers or combo bundle rule!
+  // Global customizations (chọn vị chung) are NOT per-item!
   function hasCustomizations(cat, item) {
-    if (item.bundleRule) return true;
+    if (item && item.bundleRule) return true;
     const mods = getCategoryModifiers(cat);
-    if (mods.length > 0) return true;
-    if (state.customizations && state.customizations.length > 0) return true;
-    return false;
+    return mods.length > 0;
   }
 
   function getItemActionControlInner(itemId, qty) {
@@ -814,17 +871,19 @@
     const badgeText = item.badge || item.badgeText || (item.isRecommended ? (state.currentLang === 'vi' ? 'Đặc trưng' : '推薦') : '');
     const badgeHtml = badgeText ? `<span class="badge">${escapeHtml(badgeText)}</span>` : '';
 
+    const canCustomize = hasCustomizations(cat, item);
+    const cardClickAction = canCustomize ? `openItemModal('${item.id}')` : `handleItemAddClick('${item.id}', event)`;
+
     let imgHtml = '';
     if (item.imageUrl) {
       const fullImg = item.imageUrl.startsWith('http') ? item.imageUrl : `${WORKER_BASE}${item.imageUrl}`;
-      imgHtml = `<img src="${escapeHtml(fullImg)}" class="item-img" loading="lazy" alt="${escapeHtml(item.name)}" onclick="openItemModal('${item.id}')" onerror="this.style.display='none'">`;
+      imgHtml = `<img src="${escapeHtml(fullImg)}" class="item-img" loading="lazy" alt="${escapeHtml(item.name)}" onclick="${cardClickAction}" onerror="this.style.display='none'">`;
     }
 
     const trans = (state.translations && state.translations[item.name]) || item.description || '';
     const transHtml = trans ? `<div class="card-trans">${escapeHtml(trans)}</div>` : '';
 
     const currentQty = getItemTotalCartQty(item.id);
-    const canCustomize = hasCustomizations(cat, item);
 
     let actionControlsHtml = "";
     if (isOos) {
@@ -859,7 +918,7 @@
         <div class="card-main">
           ${imgHtml}
           <div class="card-info">
-            <div onclick="openItemModal('${item.id}')" style="cursor: pointer;">
+            <div onclick="${cardClickAction}" style="cursor: pointer;">
               <div class="card-title">
                 <span>${escapeHtml(item.name)}</span>
                 ${badgeHtml}
@@ -877,16 +936,131 @@
     `;
   }
 
+  // Render Global Customizations Section (#sec-flavor like index.html)
+  function renderFlavorSectionHtml() {
+    if (!state.customizations || state.customizations.length === 0) return "";
+
+    let groupsHtml = "";
+    state.customizations.forEach((group, gIdx) => {
+      const isRadio = group.type === "radio";
+      const selectedVals = state.selectedGlobalCustomizations[group.key] || [];
+      const topMargin = gIdx > 0 ? 'margin-top: 14px; padding-top: 14px; border-top: 1px dashed #e2e8f0;' : '';
+
+      const optionsHtml = (group.options || []).map((opt) => {
+        const optName = typeof opt === "string" ? opt : opt.name;
+        const optPrice = typeof opt === "object" ? Number(opt.price) || 0 : 0;
+        const priceLabel = optPrice > 0 ? ` <span class="flavor-price">(+$${optPrice})</span>` : "";
+        const isChecked = selectedVals.includes(optName);
+
+        return `
+          <label class="flavor-chip-label ${isChecked ? 'checked' : ''}">
+            <input type="${isRadio ? 'radio' : 'checkbox'}" 
+                   name="global-flavor-${escapeHtml(group.key)}" 
+                   value="${escapeHtml(optName)}" 
+                   data-group-key="${escapeHtml(group.key)}"
+                   data-price="${optPrice}"
+                   ${isChecked ? 'checked' : ''} 
+                   onchange="handleGlobalFlavorChange('${escapeHtml(group.key)}', '${escapeHtml(optName)}', ${isRadio}, this.checked)">
+            <span class="flavor-name">${escapeHtml(optName)}</span>${priceLabel}
+          </label>
+        `;
+      }).join("");
+
+      groupsHtml += `
+        <div class="custom-group" style="${topMargin}">
+          <div class="custom-group-header">
+            <label class="custom-label">${escapeHtml(group.title)}</label>
+            <span class="custom-group-badge">${isRadio ? t("optSingleChoice") : t("optMultiChoice")}</span>
+          </div>
+          <div class="custom-options-grid">
+            ${optionsHtml}
+          </div>
+        </div>
+      `;
+    });
+
+    return `
+      <div class="section-container" id="sec-flavor">
+        <div class="section-title">
+          <span>${t("flavorSectionTitle")}</span>
+        </div>
+        <div class="custom-panel">
+          ${groupsHtml}
+        </div>
+      </div>
+    `;
+  }
+
+  function handleGlobalFlavorChange(groupKey, optName, isRadio, isChecked) {
+    if (isRadio) {
+      state.selectedGlobalCustomizations[groupKey] = [optName];
+      document.querySelectorAll(`input[name="global-flavor-${groupKey}"]`).forEach(inp => {
+        const label = inp.closest('.flavor-chip-label');
+        if (label) label.classList.toggle('checked', inp.value === optName);
+      });
+    } else {
+      let current = state.selectedGlobalCustomizations[groupKey] || [];
+      if (isChecked) {
+        if (!current.includes(optName)) current.push(optName);
+      } else {
+        current = current.filter(v => v !== optName);
+      }
+      state.selectedGlobalCustomizations[groupKey] = current;
+      const inp = document.querySelector(`input[name="global-flavor-${groupKey}"][value="${optName}"]`);
+      if (inp) {
+        const label = inp.closest('.flavor-chip-label');
+        if (label) label.classList.toggle('checked', isChecked);
+      }
+    }
+
+    if (state.currentTable) {
+      saveDraftCart(state.currentTable.id);
+    }
+  }
+
+  function getSelectedGlobalCustomizations() {
+    const result = [];
+    if (!state.customizations || state.customizations.length === 0) return result;
+
+    state.customizations.forEach(group => {
+      const selectedVals = state.selectedGlobalCustomizations[group.key] || [];
+      selectedVals.forEach(val => {
+        const optObj = (group.options || []).find(o => (typeof o === 'string' ? o : o.name) === val);
+        const optPrice = (optObj && typeof optObj === 'object' && Number(optObj.price)) || 0;
+        const cleanTitle = (group.title || '').replace(/^✦\s*/, '').replace(/選擇|調整/g, '').trim();
+        result.push({
+          key: group.key,
+          label: cleanTitle || group.title || 'Vị',
+          value: val + (optPrice > 0 ? ` (+$${optPrice})` : ''),
+          price: optPrice
+        });
+      });
+    });
+
+    return result;
+  }
+
+  function formatGlobalCustomizationsSummary() {
+    const structured = getSelectedGlobalCustomizations();
+    if (structured.length === 0) return "";
+    return structured.map(s => `${s.label}: ${s.value}`).join(" • ");
+  }
+
   function renderMenuItems() {
     const container = document.getElementById("catalog-sections");
     if (!container) return;
 
-    if (!state.categories || state.categories.length === 0) {
+    const sections = getCatalogSections();
+    if (sections.length === 0) {
       container.innerHTML = `<div style="text-align: center; padding: 48px 16px; color: #94a3b8; font-size: 15px;">${t("noItemsInCat")}</div>`;
       return;
     }
 
-    container.innerHTML = state.categories.map(cat => {
+    container.innerHTML = sections.map(sec => {
+      if (sec.type === 'customizations') {
+        return renderFlavorSectionHtml();
+      }
+      const cat = sec.category;
       const items = cat.items || [];
       if (items.length === 0) return "";
 
@@ -910,7 +1084,7 @@
     }).join("");
   }
 
-  // --- 10. ITEM CUSTOMIZATION MODAL ---
+  // --- 10. PER-ITEM CUSTOMIZATION MODAL (MODIFIERS ONLY, NO GLOBAL FLAVOR) ---
   function getItemCustomizationGroups(item) {
     const groups = [];
     const cat = state.categories.find(c => c.id === item.categoryId || c.slug === item.categorySlug);
@@ -919,21 +1093,9 @@
     catMods.forEach(m => {
       groups.push({
         key: m.slug || m.id,
-        title: m.name || m.title || (state.currentLang === 'vi' ? 'Tùy biến' : '客製化'),
+        title: m.name || m.title || (state.currentLang === 'vi' ? 'Tùy chọn' : '客製化'),
         type: m.type || (m.max_selection === 1 || m.single_choice ? "radio" : "checkbox"),
         options: (m.options || []).map(opt => ({
-          name: typeof opt === 'string' ? opt : (opt.name || opt.label),
-          price: typeof opt === 'object' ? (Number(opt.price) || 0) : 0
-        }))
-      });
-    });
-
-    (state.customizations || []).forEach((c, idx) => {
-      groups.push({
-        key: c.key || `global_${idx}`,
-        title: c.title || c.name || (state.currentLang === 'vi' ? 'Tùy chọn chung' : '通用選項'),
-        type: c.type || "radio",
-        options: (c.options || []).map(opt => ({
           name: typeof opt === 'string' ? opt : (opt.name || opt.label),
           price: typeof opt === 'object' ? (Number(opt.price) || 0) : 0
         }))
@@ -1130,6 +1292,22 @@
       contextEl.innerText = `${state.currentLang === "vi" ? "Bàn" : "桌號"} ${state.currentTable.label} • ${isAppend ? t("modeAppend") : t("modeNew")}`;
     }
 
+    // Render flavor summary in cart
+    const flavorSummaryText = formatGlobalCustomizationsSummary();
+    let flavorBox = document.getElementById("cart-flavor-summary-box");
+    if (!flavorBox && contextEl && contextEl.parentNode) {
+      flavorBox = document.createElement("div");
+      flavorBox.id = "cart-flavor-summary-box";
+      flavorBox.className = "cart-flavor-summary";
+      contextEl.parentNode.insertBefore(flavorBox, contextEl.nextSibling);
+    }
+    if (flavorBox) {
+      flavorBox.innerHTML = `
+        <div class="cart-flavor-title">${t("flavorCartHeader")}</div>
+        <div class="cart-flavor-content">${escapeHtml(flavorSummaryText) || (state.currentLang === "vi" ? "Tiêu chuẩn / Mặc định" : "標準口味")}</div>
+      `;
+    }
+
     const listEl = document.getElementById("cart-items-list");
     if (!listEl) return;
 
@@ -1200,19 +1378,25 @@
   function saveDraftCart(tableId) {
     if (!tableId || typeof sessionStorage === "undefined") return;
     sessionStorage.setItem(`staff_cart_${state.tenantId}_${tableId}`, JSON.stringify(state.cart));
+    sessionStorage.setItem(`staff_flavor_${state.tenantId}_${tableId}`, JSON.stringify(state.selectedGlobalCustomizations));
   }
 
   function loadDraftCart(tableId) {
     if (!tableId || typeof sessionStorage === "undefined") {
       state.cart = [];
+      state.selectedGlobalCustomizations = initDefaultGlobalCustomizations();
       refreshAllCardActionUIs();
       return;
     }
     try {
       const raw = sessionStorage.getItem(`staff_cart_${state.tenantId}_${tableId}`);
       state.cart = raw ? JSON.parse(raw) : [];
+
+      const rawFlavor = sessionStorage.getItem(`staff_flavor_${state.tenantId}_${tableId}`);
+      state.selectedGlobalCustomizations = rawFlavor ? JSON.parse(rawFlavor) : initDefaultGlobalCustomizations();
     } catch (e) {
       state.cart = [];
+      state.selectedGlobalCustomizations = initDefaultGlobalCustomizations();
     }
     refreshAllCardActionUIs();
   }
@@ -1220,7 +1404,9 @@
   function clearDraftCart(tableId) {
     if (!tableId || typeof sessionStorage === "undefined") return;
     sessionStorage.removeItem(`staff_cart_${state.tenantId}_${tableId}`);
+    sessionStorage.removeItem(`staff_flavor_${state.tenantId}_${tableId}`);
     state.cart = [];
+    state.selectedGlobalCustomizations = initDefaultGlobalCustomizations();
     refreshAllCardActionUIs();
   }
 
@@ -1247,6 +1433,7 @@
       tableId: state.currentTable.id,
       customer,
       note,
+      customizations: getSelectedGlobalCustomizations(),
       items: state.cart.map(c => ({
         itemId: c.itemId,
         name: c.name,
@@ -1351,6 +1538,7 @@
   window.goToTableSelection = goToTableSelection;
   window.selectCategory = scrollToCategory;
   window.scrollToCategory = scrollToCategory;
+  window.handleGlobalFlavorChange = handleGlobalFlavorChange;
   window.handleItemAddClick = handleItemAddClick;
   window.handleQuickQty = handleQuickQty;
   window.openItemModal = openItemModal;

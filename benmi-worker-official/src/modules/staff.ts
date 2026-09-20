@@ -480,6 +480,7 @@ export async function handleStaffRoute(
     const requestId = String(body.requestId || body.request_id || "").trim();
     const tableId = String(body.tableId || body.table_id || "").trim();
     const rawItems: OrderItemInput[] = Array.isArray(body.items) ? body.items : [];
+    const clientCustomizations: any[] = Array.isArray(body.customizations) ? body.customizations : [];
     const note = String(body.note || "").trim();
     const customer = String(body.customer || "").trim();
 
@@ -496,7 +497,7 @@ export async function handleStaffRoute(
     if (!env.DB) return json({ ok: false, error: "NO_DB" }, 500);
 
     // Compute deterministic request hash for idempotency
-    const requestHash = await sha256Hex(JSON.stringify({ requestId, tableId, items: rawItems, note, customer }));
+    const requestHash = await sha256Hex(JSON.stringify({ requestId, tableId, items: rawItems, customizations: clientCustomizations, note, customer }));
 
     // Check staff_order_requests for duplicate submission
     const existingReq = await env.DB.prepare(
@@ -539,7 +540,7 @@ export async function handleStaffRoute(
     }
 
     // Authoritative Server-side Price Calculation
-    const calcResult = await calculateAuthoritativeItems(env, tenantId, rawItems);
+    const calcResult = await calculateAuthoritativeItems(env, tenantId, rawItems, clientCustomizations);
     if (!calcResult.valid) {
       return json({ ok: false, error: calcResult.code || "INVALID_ITEMS", message: calcResult.error }, 400);
     }
@@ -561,7 +562,12 @@ export async function handleStaffRoute(
     const nowTw = new Date(Date.now() + 8 * 3600000);
     const timeStr = `${String(nowTw.getUTCHours()).padStart(2, "0")}:${String(nowTw.getUTCMinutes()).padStart(2, "0")}`;
 
-    const formattedContent = `[第 1 輪 / Đợt 1 - ${timeStr}]\n${formatItemsToText(calcResult.calculatedItems)}`;
+    let customSummary = "";
+    if (clientCustomizations.length > 0) {
+      const flavorLines = clientCustomizations.map((c: any) => `  • ${c.label || 'Vị'}: ${c.value || c.name || ''}`).join("\n");
+      customSummary = `\n\n🧂 客製化設定 / Chọn vị:\n${flavorLines}`;
+    }
+    const formattedContent = `[第 1 輪 / Đợt 1 - ${timeStr}]\n${formatItemsToText(calcResult.calculatedItems)}${customSummary}`;
     const customerName = customer || table.label;
 
     const responsePayload = {
@@ -676,6 +682,7 @@ export async function handleStaffRoute(
     const requestId = String(body.requestId || body.request_id || "").trim();
     const expectedRevision = Number(body.expectedRevision ?? body.expected_revision);
     const rawItems: OrderItemInput[] = Array.isArray(body.items) ? body.items : [];
+    const clientCustomizations: any[] = Array.isArray(body.customizations) ? body.customizations : [];
     const note = String(body.note || "").trim();
 
     if (!requestId) {
@@ -693,7 +700,7 @@ export async function handleStaffRoute(
     const resolvedParentKey = await resolveOrderKey(env, tenantId, rawParentKey) || rawParentKey;
 
     // Compute deterministic request hash for idempotency
-    const requestHash = await sha256Hex(JSON.stringify({ requestId, parentKey: resolvedParentKey, expectedRevision, items: rawItems, note }));
+    const requestHash = await sha256Hex(JSON.stringify({ requestId, parentKey: resolvedParentKey, expectedRevision, items: rawItems, customizations: clientCustomizations, note }));
 
     // Check staff_order_requests for duplicate submission
     const existingReq = await env.DB.prepare(
@@ -739,7 +746,7 @@ export async function handleStaffRoute(
     }
 
     // Server-side Authoritative Price Calculation for appended items
-    const calcResult = await calculateAuthoritativeItems(env, tenantId, rawItems);
+    const calcResult = await calculateAuthoritativeItems(env, tenantId, rawItems, clientCustomizations);
     if (!calcResult.valid) {
       return json({ ok: false, error: calcResult.code || "INVALID_ITEMS", message: calcResult.error }, 400);
     }
@@ -756,7 +763,12 @@ export async function handleStaffRoute(
       previousRounds = `[第 1 輪 / Đợt 1]\n${previousRounds}`;
     }
     const separator = "--------------------------------";
-    const newRoundBlock = `[第 ${nextRound} 輪 加點 / Đợt ${nextRound} - ${timeStr}]\n${formatItemsToText(calcResult.calculatedItems)}`;
+    let customSummary = "";
+    if (clientCustomizations.length > 0) {
+      const flavorLines = clientCustomizations.map((c: any) => `  • ${c.label || 'Vị'}: ${c.value || c.name || ''}`).join("\n");
+      customSummary = `\n🧂 客製化設定 / Chọn vị:\n${flavorLines}\n`;
+    }
+    const newRoundBlock = `[第 ${nextRound} 輪 加點 / Đợt ${nextRound} - ${timeStr}]\n${formatItemsToText(calcResult.calculatedItems)}${customSummary ? `\n${customSummary}` : ''}`;
     const updatedContent = `${newRoundBlock}\n\n${separator}\n${previousRounds}`;
 
     const combinedNote = note
