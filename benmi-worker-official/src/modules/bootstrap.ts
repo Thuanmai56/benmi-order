@@ -608,6 +608,9 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
         continue;
       }
       const catType = cat.category_type || (cat.slug === 'topping' ? 'modifier' : 'catalog');
+      // A bundle pool only supplies eligible choices for a bundle rule. It is
+      // intentionally hidden from standalone catalog and modifier rendering.
+      if (catType === 'bundle_pool') continue;
       const catItems = itemsByCatId.get(cat.id) || [];
 
       if (catType === 'modifier') {
