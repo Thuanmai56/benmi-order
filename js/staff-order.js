@@ -76,9 +76,16 @@
       pinError: "Mã PIN không đúng hoặc cửa hàng chưa kích hoạt tính năng.",
       featureDisabled: "Cửa hàng chưa kích hoạt tính năng nhận đơn tại bàn.",
       soldOut: "Hết hàng",
+      soldOutToday: "Hết hàng",
       allItems: "Tất cả món",
       emptyTablesList: "Không tìm thấy bàn nào.",
-      noItemsInCat: "Không có món trong danh mục này."
+      noItemsInCat: "Không có món trong danh mục này.",
+      btnQuickAdd: "Thêm",
+      btnCustomize: "Tùy biến",
+      optSingleChoice: "Chọn 1",
+      optMultiChoice: "Tùy chọn",
+      optItemNote: "Ghi chú riêng món này",
+      optItemNotePlaceholder: "Ví dụ: ít đường, không đá, ít cay..."
     },
     "zh-TW": {
       staffBadge: "桌邊點餐",
@@ -128,9 +135,16 @@
       pinError: "PIN 碼錯誤或門市尚未啟用桌邊點餐功能。",
       featureDisabled: "店家尚未啟用桌邊點餐功能。",
       soldOut: "已售完",
+      soldOutToday: "今日已售完",
       allItems: "全部餐點",
       emptyTablesList: "找不到符合條件的桌號。",
-      noItemsInCat: "此分類目前尚無餐點。"
+      noItemsInCat: "此分類目前尚無餐點。",
+      btnQuickAdd: "點餐",
+      btnCustomize: "客製化",
+      optSingleChoice: "單選",
+      optMultiChoice: "可複選",
+      optItemNote: "餐點專屬備註",
+      optItemNotePlaceholder: "例如：微糖、去冰、少辣..."
     }
   };
 
@@ -145,9 +159,11 @@
     tableFilter: "all",
     tableSearchQuery: "",
     currentTable: null,
-    catalog: [],
-    categories: [],
-    customizations: [],
+    catalog: [],        // Flattened list of all items across categories with cat metadata
+    categories: [],     // List of category objects from bootstrap: { id, slug, name, shortName, items: [...], appliedModifiers, ... }
+    modifiers: [],      // Modifier groups from bootstrap
+    customizations: [], // Global customization groups from bootstrap
+    translations: {},   // Translations mapping from bootstrap
     activeCategory: "all",
     cart: [],
     selectedItem: null,
@@ -552,18 +568,45 @@
     }
   }
 
-  // --- 9. CATALOG & BOOTSTRAP LOADING ---
+  // --- 9. CATALOG & BOOTSTRAP LOADING (GROUPED BY CATEGORIES LIKE INDEX.HTML) ---
   async function loadBootstrapMenu() {
     try {
       const res = await fetch(`${WORKER_BASE}/api/tenant/bootstrap?tenant_id=${encodeURIComponent(state.tenantId)}&_t=${Date.now()}`);
       if (res.ok) {
         const data = await res.json();
-        state.catalog = (data.catalog && (data.catalog.items || data.catalog)) || [];
-        state.categories = (data.catalog && data.catalog.categories) || [];
+        
+        const rawCatalog = Array.isArray(data.catalog) ? data.catalog : (data.catalog?.categories || []);
+        state.categories = rawCatalog.map(cat => ({
+          id: cat.id || cat.slug,
+          slug: cat.slug || cat.id,
+          name: cat.name || "",
+          shortName: cat.shortName || "",
+          allowCustomization: cat.allowCustomization !== false,
+          appliedModifiers: cat.appliedModifiers || ['*'],
+          pricingRules: cat.pricingRules || null,
+          items: Array.isArray(cat.items) ? cat.items : []
+        }));
+
+        // Flatten all items across categories with category metadata
+        const allItems = [];
+        state.categories.forEach(cat => {
+          (cat.items || []).forEach(item => {
+            allItems.push({
+              ...item,
+              categoryId: cat.id,
+              categorySlug: cat.slug,
+              categoryName: cat.name
+            });
+          });
+        });
+        state.catalog = allItems;
+        state.modifiers = data.modifiers || [];
         state.customizations = data.customizations || [];
+        state.translations = data.translations || {};
 
         renderCategories();
         renderMenuItems();
+        setupScrollSpy();
       }
     } catch (e) {
       console.warn("[StaffOrder] Error loading catalog:", e);
@@ -574,58 +617,293 @@
     const nav = document.getElementById("category-tabs-nav");
     if (!nav) return;
 
-    const allBtn = `
-      <button type="button" class="cat-tab-btn ${state.activeCategory === 'all' ? 'active' : ''}" onclick="selectCategory('all', this)">
-        ${t("allItems")}
-      </button>
-    `;
-
-    const catBtns = state.categories.map(cat => `
-      <button type="button" class="cat-tab-btn ${state.activeCategory === cat.id ? 'active' : ''}" onclick="selectCategory('${cat.id}', this)">
-        ${escapeHtml(cat.name)}
-      </button>
-    `).join("");
-
-    nav.innerHTML = allBtn + catBtns;
-  }
-
-  function selectCategory(catId, el) {
-    state.activeCategory = catId;
-    document.querySelectorAll(".cat-tab-btn").forEach(btn => btn.classList.remove("active"));
-    if (el) el.classList.add("active");
-    renderMenuItems();
-  }
-
-  function renderMenuItems() {
-    const grid = document.getElementById("menu-items-grid");
-    if (!grid) return;
-
-    let items = state.catalog;
-    if (state.activeCategory !== "all") {
-      items = items.filter(it => it.category_id === state.activeCategory || it.categoryId === state.activeCategory);
-    }
-
-    if (items.length === 0) {
-      grid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 48px 16px; color: #94a3b8; font-size: 15px;">${t("noItemsInCat")}</div>`;
+    if (!state.categories || state.categories.length === 0) {
+      nav.innerHTML = "";
       return;
     }
 
-    grid.innerHTML = items.map(it => {
-      const isOos = it.out_of_stock_until && new Date(it.out_of_stock_until) > new Date();
-      const priceStr = `$${it.price || 0}`;
+    const catBtns = state.categories.map((cat, idx) => {
+      const navTitle = (cat.shortName && cat.name && cat.name.includes(cat.shortName)) ? cat.shortName : cat.name;
+      const isActive = (state.activeCategory === cat.slug || (state.activeCategory === 'all' && idx === 0));
+      return `
+        <button type="button" class="cat-tab-btn ${isActive ? 'active' : ''}" data-cat-slug="${escapeHtml(cat.slug)}" onclick="scrollToCategory('${escapeHtml(cat.slug)}', this)">
+          ${escapeHtml(navTitle)}
+        </button>
+      `;
+    }).join("");
+
+    nav.innerHTML = catBtns;
+  }
+
+  function scrollToCategory(slug, el) {
+    state.activeCategory = slug;
+    document.querySelectorAll("#category-tabs-nav .cat-tab-btn").forEach(btn => btn.classList.remove("active"));
+    if (el) el.classList.add("active");
+
+    const targetSec = document.getElementById(`sec-${slug}`);
+    if (targetSec) {
+      targetSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  let isScrollSpyActive = false;
+  function setupScrollSpy() {
+    if (isScrollSpyActive) return;
+    isScrollSpyActive = true;
+
+    let scrollTimeout = null;
+    window.addEventListener("scroll", () => {
+      if (scrollTimeout) return;
+      scrollTimeout = setTimeout(() => {
+        scrollTimeout = null;
+        updateActiveNavOnScroll();
+      }, 80);
+    }, { passive: true });
+  }
+
+  function updateActiveNavOnScroll() {
+    const menuView = document.getElementById("view-menu");
+    if (!menuView || menuView.style.display === "none") return;
+
+    const sections = document.querySelectorAll(".section-container");
+    if (sections.length === 0) return;
+
+    let currentSlug = "";
+    const offset = 140;
+
+    sections.forEach(sec => {
+      const rect = sec.getBoundingClientRect();
+      if (rect.top <= offset && rect.bottom > offset) {
+        currentSlug = sec.id.replace(/^sec-/, '');
+      }
+    });
+
+    if (!currentSlug && sections.length > 0) {
+      const firstRect = sections[0].getBoundingClientRect();
+      if (firstRect.top > offset) {
+        currentSlug = sections[0].id.replace(/^sec-/, '');
+      }
+    }
+
+    if (currentSlug && currentSlug !== state.activeCategory) {
+      state.activeCategory = currentSlug;
+      const btns = document.querySelectorAll("#category-tabs-nav .cat-tab-btn");
+      btns.forEach(btn => {
+        const match = btn.getAttribute("data-cat-slug") === currentSlug;
+        btn.classList.toggle("active", match);
+        if (match) {
+          btn.scrollIntoView({ behavior: "smooth", inline: "nearest", block: "nearest" });
+        }
+      });
+    }
+  }
+
+  function getItemTotalCartQty(itemId) {
+    return state.cart
+      .filter(c => c.itemId === itemId)
+      .reduce((sum, c) => sum + c.quantity, 0);
+  }
+
+  function getCategoryModifiers(cat) {
+    if (!cat || cat.allowCustomization === false) return [];
+    const applied = cat.appliedModifiers || ['*'];
+    if (applied.length === 0) return [];
+    const allMods = state.modifiers || [];
+    if (applied.includes('*')) return allMods;
+    return allMods.filter(m => applied.includes(m.slug) || applied.includes(m.id));
+  }
+
+  function hasCustomizations(cat, item) {
+    if (item.bundleRule) return true;
+    const mods = getCategoryModifiers(cat);
+    if (mods.length > 0) return true;
+    if (state.customizations && state.customizations.length > 0) return true;
+    return false;
+  }
+
+  function getItemActionControlInner(itemId, qty) {
+    if (qty <= 0) {
+      return `<button type="button" class="btn-quick-add" onclick="handleItemAddClick('${itemId}', event)">+ ${t("btnQuickAdd")}</button>`;
+    }
+    return `
+      <div class="qty-control">
+        <button type="button" class="btn-qty" onclick="handleQuickQty('${itemId}', -1, event)">-</button>
+        <span class="qty-text" id="card-qty-${itemId}">${qty}</span>
+        <button type="button" class="btn-qty" onclick="handleQuickQty('${itemId}', 1, event)">+</button>
+      </div>
+    `;
+  }
+
+  function updateCardActionUI(itemId) {
+    const wrap = document.getElementById(`card-action-${itemId}`);
+    if (!wrap) return;
+    const qty = getItemTotalCartQty(itemId);
+    wrap.innerHTML = getItemActionControlInner(itemId, qty);
+  }
+
+  function refreshAllCardActionUIs() {
+    state.catalog.forEach(item => {
+      updateCardActionUI(item.id);
+    });
+  }
+
+  function handleItemAddClick(itemId, e) {
+    if (e) e.stopPropagation();
+    const item = state.catalog.find(i => i.id === itemId);
+    if (!item) return;
+
+    state.cart.push({
+      uid: crypto.randomUUID(),
+      itemId: item.id,
+      name: item.name,
+      price: Number(item.price) || 0,
+      quantity: 1,
+      options: [],
+      note: ""
+    });
+
+    if (state.currentTable) {
+      saveDraftCart(state.currentTable.id);
+    }
+
+    updateCardActionUI(itemId);
+    updateStickyCartBar();
+  }
+
+  function handleQuickQty(itemId, delta, e) {
+    if (e) e.stopPropagation();
+    if (delta > 0) {
+      const existing = [...state.cart].reverse().find(c => c.itemId === itemId);
+      if (existing) {
+        existing.quantity += 1;
+      } else {
+        const item = state.catalog.find(i => i.id === itemId);
+        if (!item) return;
+        state.cart.push({
+          uid: crypto.randomUUID(),
+          itemId: item.id,
+          name: item.name,
+          price: Number(item.price) || 0,
+          quantity: 1,
+          options: [],
+          note: ""
+        });
+      }
+    } else if (delta < 0) {
+      const idx = state.cart.map(c => c.itemId).lastIndexOf(itemId);
+      if (idx >= 0) {
+        state.cart[idx].quantity -= 1;
+        if (state.cart[idx].quantity <= 0) {
+          state.cart.splice(idx, 1);
+        }
+      }
+    }
+
+    if (state.currentTable) {
+      saveDraftCart(state.currentTable.id);
+    }
+
+    updateCardActionUI(itemId);
+    updateStickyCartBar();
+  }
+
+  function createItemCardHtml(cat, item) {
+    const isOos = Boolean(item.isOutOfStock || (item.out_of_stock_until && new Date(item.out_of_stock_until) > new Date()));
+    const priceStr = `$${item.price || 0}`;
+
+    const badgeText = item.badge || item.badgeText || (item.isRecommended ? (state.currentLang === 'vi' ? 'Đặc trưng' : '推薦') : '');
+    const badgeHtml = badgeText ? `<span class="badge">${escapeHtml(badgeText)}</span>` : '';
+
+    let imgHtml = '';
+    if (item.imageUrl) {
+      const fullImg = item.imageUrl.startsWith('http') ? item.imageUrl : `${WORKER_BASE}${item.imageUrl}`;
+      imgHtml = `<img src="${escapeHtml(fullImg)}" class="item-img" loading="lazy" alt="${escapeHtml(item.name)}" onclick="openItemModal('${item.id}')" onerror="this.style.display='none'">`;
+    }
+
+    const trans = (state.translations && state.translations[item.name]) || item.description || '';
+    const transHtml = trans ? `<div class="card-trans">${escapeHtml(trans)}</div>` : '';
+
+    const currentQty = getItemTotalCartQty(item.id);
+    const canCustomize = hasCustomizations(cat, item);
+
+    let actionControlsHtml = "";
+    if (isOos) {
+      actionControlsHtml = `<div class="sold-out-tag">${t("soldOutToday")}</div>`;
+    } else {
+      actionControlsHtml = `
+        <div class="card-action-wrap" id="card-action-${item.id}">
+          ${getItemActionControlInner(item.id, currentQty)}
+        </div>
+      `;
+    }
+
+    const customizeBtnHtml = (!isOos && canCustomize) ? `
+      <button type="button" class="btn-customize-item" onclick="openItemModal('${item.id}')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="4" y1="21" x2="4" y2="14"></line>
+          <line x1="4" y1="10" x2="4" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12" y2="3"></line>
+          <line x1="20" y1="21" x2="20" y2="16"></line>
+          <line x1="20" y1="12" x2="20" y2="3"></line>
+          <line x1="1" y1="14" x2="7" y2="14"></line>
+          <line x1="9" y1="8" x2="15" y2="8"></line>
+          <line x1="17" y1="16" x2="23" y2="16"></line>
+        </svg>
+        <span>${t("btnCustomize")}</span>
+      </button>
+    ` : '';
+
+    return `
+      <div class="card ${isOos ? 'sold-out' : ''}" id="card-item-${item.id}">
+        <div class="card-main">
+          ${imgHtml}
+          <div class="card-info">
+            <div onclick="openItemModal('${item.id}')" style="cursor: pointer;">
+              <div class="card-title">
+                <span>${escapeHtml(item.name)}</span>
+                ${badgeHtml}
+              </div>
+              ${transHtml}
+            </div>
+            <div class="card-footer">
+              <div class="card-price">${priceStr}</div>
+              ${actionControlsHtml}
+            </div>
+          </div>
+        </div>
+        ${customizeBtnHtml}
+      </div>
+    `;
+  }
+
+  function renderMenuItems() {
+    const container = document.getElementById("catalog-sections");
+    if (!container) return;
+
+    if (!state.categories || state.categories.length === 0) {
+      container.innerHTML = `<div style="text-align: center; padding: 48px 16px; color: #94a3b8; font-size: 15px;">${t("noItemsInCat")}</div>`;
+      return;
+    }
+
+    container.innerHTML = state.categories.map(cat => {
+      const items = cat.items || [];
+      if (items.length === 0) return "";
+
+      const promoBadge = cat.pricingRules?.promo_label 
+        ? `<span class="cat-promo-badge">${escapeHtml(cat.pricingRules.promo_label)}</span>` 
+        : '';
+
+      const cardsHtml = items.map(item => createItemCardHtml(cat, item)).join("");
 
       return `
-        <div class="menu-item-card ${isOos ? 'sold-out' : ''}">
-          ${it.image_url ? `<img src="${escapeHtml(it.image_url)}" class="menu-item-image" loading="lazy" alt="${escapeHtml(it.name)}">` : ''}
-          <div class="menu-item-content">
-            <div class="menu-item-name">${escapeHtml(it.name)}</div>
-            ${it.description ? `<div class="menu-item-desc">${escapeHtml(it.description)}</div>` : ''}
-            <div class="menu-item-footer">
-              <div class="menu-item-price">${priceStr}</div>
-              <button type="button" class="btn-add-item" ${isOos ? 'disabled' : ''} onclick="openItemModal('${it.id}')">
-                ${isOos ? t("soldOut") : `+ ${t("btnAddItem")}`}
-              </button>
-            </div>
+        <div class="section-container" id="sec-${escapeHtml(cat.slug)}">
+          <div class="section-title">
+            <span>${escapeHtml(cat.name)}</span>
+            ${promoBadge}
+          </div>
+          <div class="items-grid" id="grid-${escapeHtml(cat.slug)}">
+            ${cardsHtml}
           </div>
         </div>
       `;
@@ -633,6 +911,38 @@
   }
 
   // --- 10. ITEM CUSTOMIZATION MODAL ---
+  function getItemCustomizationGroups(item) {
+    const groups = [];
+    const cat = state.categories.find(c => c.id === item.categoryId || c.slug === item.categorySlug);
+    const catMods = getCategoryModifiers(cat);
+
+    catMods.forEach(m => {
+      groups.push({
+        key: m.slug || m.id,
+        title: m.name || m.title || (state.currentLang === 'vi' ? 'Tùy biến' : '客製化'),
+        type: m.type || (m.max_selection === 1 || m.single_choice ? "radio" : "checkbox"),
+        options: (m.options || []).map(opt => ({
+          name: typeof opt === 'string' ? opt : (opt.name || opt.label),
+          price: typeof opt === 'object' ? (Number(opt.price) || 0) : 0
+        }))
+      });
+    });
+
+    (state.customizations || []).forEach((c, idx) => {
+      groups.push({
+        key: c.key || `global_${idx}`,
+        title: c.title || c.name || (state.currentLang === 'vi' ? 'Tùy chọn chung' : '通用選項'),
+        type: c.type || "radio",
+        options: (c.options || []).map(opt => ({
+          name: typeof opt === 'string' ? opt : (opt.name || opt.label),
+          price: typeof opt === 'object' ? (Number(opt.price) || 0) : 0
+        }))
+      });
+    });
+
+    return groups;
+  }
+
   function openItemModal(itemId) {
     const item = state.catalog.find(i => i.id === itemId);
     if (!item) return;
@@ -666,26 +976,28 @@
     const container = document.getElementById("modal-item-options-body");
     if (!container) return;
 
-    if (!state.customizations || state.customizations.length === 0) {
+    const groups = getItemCustomizationGroups(item);
+
+    if (groups.length === 0) {
       container.innerHTML = `
         <div class="form-group" style="margin-top: 10px;">
-          <label style="font-size: 13px; font-weight: 700; color: #475569; margin-bottom: 6px;">${state.currentLang === "vi" ? "Ghi chú món" : "餐點備註"}</label>
-          <input type="text" id="modal-item-single-note" placeholder="${state.currentLang === "vi" ? "Ví dụ: ít đường, không đá..." : "例如：微糖、去冰..."}" style="width: 100%; min-height: 44px; padding: 8px 12px; border: 1.5px solid var(--border); border-radius: 8px;">
+          <label style="font-size: 13px; font-weight: 700; color: #475569; margin-bottom: 6px;">${t("optItemNote")}</label>
+          <input type="text" id="modal-item-single-note" placeholder="${t("optItemNotePlaceholder")}" style="width: 100%; min-height: 44px; padding: 8px 12px; border: 1.5px solid var(--border); border-radius: 8px;">
         </div>
       `;
       return;
     }
 
     let html = "";
-    state.customizations.forEach((grp, gIdx) => {
+    groups.forEach((grp, gIdx) => {
       const isRadio = grp.type === "radio";
-      const grpTitle = escapeHtml(grp.title || grp.name || `Tùy chọn ${gIdx + 1}`);
+      const grpTitle = escapeHtml(grp.title || `Tùy chọn ${gIdx + 1}`);
 
       html += `
         <div class="option-group">
           <div class="option-group-title">
             <span>${grpTitle}</span>
-            <span class="option-group-badge">${isRadio ? (state.currentLang === "vi" ? "Chọn 1" : "單選") : (state.currentLang === "vi" ? "Tùy chọn" : "可複選")}</span>
+            <span class="option-group-badge">${isRadio ? t("optSingleChoice") : t("optMultiChoice")}</span>
           </div>
           <div class="option-choices-list">
       `;
@@ -716,8 +1028,8 @@
 
     html += `
       <div class="form-group" style="margin-top: 16px;">
-        <label style="font-size: 13px; font-weight: 700; color: #475569; margin-bottom: 6px;">${state.currentLang === "vi" ? "Ghi chú riêng món này" : "餐點專屬備註"}</label>
-        <input type="text" id="modal-item-single-note" placeholder="${state.currentLang === "vi" ? "Ví dụ: ít cay, chia 2 đĩa..." : "例如：少辣、分開裝..."}" style="width: 100%; min-height: 44px; padding: 8px 12px; border: 1.5px solid var(--border); border-radius: 8px;">
+        <label style="font-size: 13px; font-weight: 700; color: #475569; margin-bottom: 6px;">${t("optItemNote")}</label>
+        <input type="text" id="modal-item-single-note" placeholder="${t("optItemNotePlaceholder")}" style="width: 100%; min-height: 44px; padding: 8px 12px; border: 1.5px solid var(--border); border-radius: 8px;">
       </div>
     `;
 
@@ -777,6 +1089,7 @@
       saveDraftCart(state.currentTable.id);
     }
 
+    updateCardActionUI(state.selectedItem.id);
     closeItemModal();
     updateStickyCartBar();
   }
@@ -859,6 +1172,7 @@
 
   function changeCartItemQty(index, delta) {
     if (!state.cart[index]) return;
+    const itemId = state.cart[index].itemId;
     state.cart[index].quantity += delta;
     if (state.cart[index].quantity <= 0) {
       state.cart.splice(index, 1);
@@ -867,16 +1181,19 @@
       saveDraftCart(state.currentTable.id);
     }
     renderCartDrawer();
+    updateCardActionUI(itemId);
     updateStickyCartBar();
   }
 
   function removeCartItem(index) {
     if (!state.cart[index]) return;
+    const itemId = state.cart[index].itemId;
     state.cart.splice(index, 1);
     if (state.currentTable) {
       saveDraftCart(state.currentTable.id);
     }
     renderCartDrawer();
+    updateCardActionUI(itemId);
     updateStickyCartBar();
   }
 
@@ -888,6 +1205,7 @@
   function loadDraftCart(tableId) {
     if (!tableId || typeof sessionStorage === "undefined") {
       state.cart = [];
+      refreshAllCardActionUIs();
       return;
     }
     try {
@@ -896,12 +1214,14 @@
     } catch (e) {
       state.cart = [];
     }
+    refreshAllCardActionUIs();
   }
 
   function clearDraftCart(tableId) {
     if (!tableId || typeof sessionStorage === "undefined") return;
     sessionStorage.removeItem(`staff_cart_${state.tenantId}_${tableId}`);
     state.cart = [];
+    refreshAllCardActionUIs();
   }
 
   // --- 12. SUBMIT STAFF ORDER (NEW OR APPEND ROUND) ---
@@ -957,14 +1277,12 @@
       const data = await res.json().catch(() => ({}));
 
       if (res.status === 409) {
-        // Revision mismatch or duplicate table opening
         closeCartModal();
         showConflictModal((data && data.message) || t("conflictDesc"));
         return;
       }
 
       if (res.ok && data && data.ok) {
-        // SUCCESS!
         clearDraftCart(state.currentTable.id);
         closeCartModal();
         updateStickyCartBar();
@@ -1011,7 +1329,6 @@
 
   async function handleResolveConflict() {
     document.getElementById("conflictModal").style.display = "none";
-    // Refresh table status while preserving cart!
     if (state.currentTable) {
       await loadTablesData();
       const updatedTable = state.tables.find(t => t.id === state.currentTable.id);
@@ -1032,7 +1349,10 @@
   window.handleTableSearch = handleTableSearch;
   window.handleSelectTable = handleSelectTable;
   window.goToTableSelection = goToTableSelection;
-  window.selectCategory = selectCategory;
+  window.selectCategory = scrollToCategory;
+  window.scrollToCategory = scrollToCategory;
+  window.handleItemAddClick = handleItemAddClick;
+  window.handleQuickQty = handleQuickQty;
   window.openItemModal = openItemModal;
   window.closeItemModal = closeItemModal;
   window.changeModalQty = changeModalQty;
