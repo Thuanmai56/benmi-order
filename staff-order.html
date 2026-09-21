@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/staff-order.css?v=20260920_global_flavor_v3">
+  <link rel="stylesheet" href="css/staff-order.css?v=20260921_staff_dine_in_v4">
 </head>
 <body class="staff-body">
 
@@ -23,11 +23,19 @@
           <path d="M3 3h18v18H3zM3 9h18M9 21V9"/>
         </svg>
         <span id="header-table-label">Bàn: --</span>
-        <button type="button" class="btn-change-table" title="Đổi bàn / 更換桌號" id="i18n-btn-change-table">Đổi bàn</button>
+        <button type="button" class="btn-change-table" title="Đổi bàn / 更換桌號" id="i18n-btn-change-table" onclick="event.stopPropagation(); openChangeDraftTableModal()">Đổi bàn</button>
       </div>
     </div>
 
     <div class="header-right">
+      <!-- Back to POS Button -->
+      <button type="button" class="btn-topbar-pos" id="btn-back-pos" onclick="goToPosScreen()" title="Quay lại POS / 返回 POS">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-1px; margin-right:3px;">
+          <path d="m15 18-6-6 6-6"/>
+        </svg>
+        <span id="i18n-back-pos">Quay lại POS</span>
+      </button>
+
       <!-- Language Switcher -->
       <button type="button" class="btn-lang-toggle" id="btn-lang-toggle" onclick="toggleLanguage()" title="Chuyển ngôn ngữ / 切換語言">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -206,34 +214,26 @@
   <!-- MODAL: CART & REVIEW DRAWER -->
   <div class="modal-backdrop" id="cartModal" style="display: none;">
     <div class="modal-sheet modal-cart-sheet">
-      <div class="modal-sheet-header">
-        <div>
+      <div class="modal-sheet-header modal-cart-header">
+        <div class="modal-cart-title-row">
           <h3 class="modal-cart-title" id="i18n-cart-title">Giỏ hàng nhận đơn</h3>
-          <div class="modal-cart-subtitle" id="cart-order-context-desc">Bàn A-01 • Mở đơn mới</div>
+          <span class="modal-cart-badge" id="cart-order-context-desc">Bàn A-01 • Mở đơn mới</span>
         </div>
         <button type="button" class="btn-close-modal" onclick="closeCartModal()">✕</button>
       </div>
 
       <div class="modal-sheet-body">
-        <!-- Customer details (Optional) -->
-        <div class="cart-form-section">
-          <div class="form-row">
-            <div class="form-group flex-1">
-              <label for="cart-customer-name" id="i18n-label-customer">Tên khách (không bắt buộc)</label>
-              <input type="text" id="cart-customer-name" placeholder="Ví dụ: Anh Nam, Chị Linh..." autocomplete="off">
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group flex-1">
-              <label for="cart-order-note" id="i18n-label-note">Ghi chú đơn (không bắt buộc)</label>
-              <input type="text" id="cart-order-note" placeholder="Ví dụ: Làm nhanh, không hành tây..." autocomplete="off">
-            </div>
-          </div>
-        </div>
-
         <!-- Selected Items List -->
         <div class="cart-items-list" id="cart-items-list">
           <!-- Rendered via JS -->
+        </div>
+
+        <!-- Order Note (Optional - at bottom of list) -->
+        <div class="cart-note-section">
+          <div class="form-group flex-1">
+            <label for="cart-order-note" id="i18n-label-note">Ghi chú đơn (không bắt buộc)</label>
+            <input type="text" id="cart-order-note" placeholder="Ví dụ: Làm nhanh, không hành tây..." autocomplete="off">
+          </div>
         </div>
 
         <!-- Price Summary -->
@@ -315,6 +315,44 @@
     </div>
   </div>
 
-  <script src="js/staff-order.js?v=20260920_global_flavor_v3"></script>
+  <!-- MODAL: TRANSFER TABLE MODAL (Active Order) -->
+  <div class="modal-backdrop" id="transferModal" style="display: none;">
+    <div class="modal-card modal-transfer-card">
+      <div class="modal-card-header">
+        <h3 class="modal-card-title" id="i18n-transfer-title">Đổi số bàn phục vụ</h3>
+        <button type="button" class="btn-close-modal" onclick="closeTransferModal()">✕</button>
+      </div>
+      <div class="modal-card-body">
+        <p class="transfer-desc" id="transfer-modal-desc">Chuyển đơn từ bàn hiện tại sang bàn trống khác:</p>
+        <div class="transfer-tables-grid" id="transfer-tables-grid">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+      <div class="modal-card-footer">
+        <button type="button" class="btn btn-ghost" onclick="closeTransferModal()" id="i18n-btn-cancel-transfer">Hủy</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CHANGE DRAFT TABLE MODAL (Ordering in progress) -->
+  <div class="modal-backdrop" id="changeDraftTableModal" style="display: none;">
+    <div class="modal-card modal-transfer-card">
+      <div class="modal-card-header">
+        <h3 class="modal-card-title" id="i18n-change-draft-title">Đổi bàn đang chọn món</h3>
+        <button type="button" class="btn-close-modal" onclick="closeChangeDraftTableModal()">✕</button>
+      </div>
+      <div class="modal-card-body">
+        <p class="transfer-desc" id="change-draft-modal-desc">Chọn bàn mới để chuyển toàn bộ món trong giỏ hàng sang:</p>
+        <div class="transfer-tables-grid" id="change-draft-tables-grid">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+      <div class="modal-card-footer">
+        <button type="button" class="btn btn-ghost" onclick="closeChangeDraftTableModal()" id="i18n-btn-cancel-change-draft">Hủy</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/staff-order.js?v=20260921_staff_dine_in_v4"></script>
 </body>
 </html>

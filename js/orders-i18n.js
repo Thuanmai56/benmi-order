@@ -15,6 +15,7 @@ const I18N = {
     tabMenu: "菜單",
     tabSettings: "設定",
     sidebarLive: "即時訂單",
+    sidebarStaffOrder: "桌邊點餐",
     sidebarHistory: "歷史訂單",
     sidebarMenu: "菜單管理",
     sidebarPrinter: "出單印表機",
@@ -629,6 +630,7 @@ const I18N = {
     tabMenu: "Thực đơn",
     tabSettings: "Cài đặt",
     sidebarLive: "Đơn hàng",
+    sidebarStaffOrder: "Nhận đơn tại bàn",
     sidebarHistory: "Lịch sử đơn",
     sidebarMenu: "Thực đơn",
     sidebarPrinter: "Máy in",
@@ -1301,6 +1303,11 @@ function applyLanguageToDOM() {
   } else {
     const tabLive = document.getElementById("tab-live");
     if (tabLive) tabLive.innerText = dict.tabLive;
+  }
+
+  const labelStaffOrder = document.getElementById("i18n-tab-staff-order");
+  if (labelStaffOrder) {
+    labelStaffOrder.innerText = dict.sidebarStaffOrder || "桌邊點餐";
   }
 
   const labelHistory = document.getElementById("i18n-tab-history");

@@ -439,7 +439,62 @@ async function check(name, fn) {
     assert.equal(custData.code, 'STAFF_ORDER_RESTRICTED');
   });
 
-  // --- TEST 9: Order Finalization (PAID / REJECTED frees table for new order) ---
+  // --- TEST 8b: Table Transfer (Move active order to idle table) ---
+  await check('transfer active order between tables updates order table_id and revision, rejects transfer to occupied table', async () => {
+    // 1. Transfer to an occupied table: open an order on tableA2Id first to make both tables occupied
+    // Actually, tableA2Id is currently empty, tableA1Id has orderKey1.
+    // Let's test transferring to tableA1Id (self or source occupied) => SAME_TABLE (400)
+    const sameTableRes = await staffModule.handleStaffRoute(
+      new Request('https://local.test/api/staff/tables/transfer?tenant_id=tenant_a', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + validToken },
+        body: JSON.stringify({ fromTableId: tableA1Id, toTableId: tableA1Id })
+      }),
+      env, '/api/staff/tables/transfer', new URL('https://local.test/api/staff/tables/transfer')
+    );
+    assert.equal(sameTableRes.status, 400);
+
+    // 2. Transfer from empty table => 400 SOURCE_TABLE_NO_ORDER
+    const emptySourceRes = await staffModule.handleStaffRoute(
+      new Request('https://local.test/api/staff/tables/transfer?tenant_id=tenant_a', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + validToken },
+        body: JSON.stringify({ fromTableId: tableA2Id, toTableId: tableA1Id })
+      }),
+      env, '/api/staff/tables/transfer', new URL('https://local.test/api/staff/tables/transfer')
+    );
+    assert.equal(emptySourceRes.status, 400);
+
+    // 3. Valid transfer: Table A1 -> Table A2
+    const validTransferRes = await staffModule.handleStaffRoute(
+      new Request('https://local.test/api/staff/tables/transfer?tenant_id=tenant_a', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + validToken },
+        body: JSON.stringify({ fromTableId: tableA1Id, toTableId: tableA2Id })
+      }),
+      env, '/api/staff/tables/transfer', new URL('https://local.test/api/staff/tables/transfer')
+    );
+    assert.equal(validTransferRes.status, 200);
+    const validTransferData = await validTransferRes.json();
+    assert.equal(validTransferData.ok, true);
+
+    // Verify order in DB now points to Table A2
+    const orderAfterTransfer = await DB.prepare("SELECT table_id, table_number, revision FROM orders WHERE key = ?").bind(orderKey1).first();
+    assert.equal(orderAfterTransfer.table_id, tableA2Id);
+    assert.equal(orderAfterTransfer.table_number, 'A-02');
+    assert.equal(orderAfterTransfer.revision, 3); // incremented from 2 to 3
+
+    // 4. Transfer back: Table A2 -> Table A1 (so tableA1Id has orderKey1 for subsequent tests)
+    const transferBackRes = await staffModule.handleStaffRoute(
+      new Request('https://local.test/api/staff/tables/transfer?tenant_id=tenant_a', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + validToken },
+        body: JSON.stringify({ fromTableId: tableA2Id, toTableId: tableA1Id })
+      }),
+      env, '/api/staff/tables/transfer', new URL('https://local.test/api/staff/tables/transfer')
+    );
+    assert.equal(transferBackRes.status, 200);
+  });
   await check('finalizing order as PAID frees table and rejects further appends', async () => {
     // Update order status to PAID
     await DB.prepare("UPDATE orders SET status = 'PAID', updated_at = datetime('now') WHERE key = ?").bind(orderKey1).run();

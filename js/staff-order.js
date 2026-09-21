@@ -88,7 +88,19 @@
       optItemNotePlaceholder: "Ví dụ: ít đường, không đá, ít cay...",
       flavorNavTitle: "Chọn vị",
       flavorSectionTitle: "Chọn vị & Tùy chọn chung",
-      flavorCartHeader: "Vị chung cho bàn:"
+      flavorCartHeader: "Vị chung cho bàn:",
+      btnBackPos: "Quay lại POS",
+      transferTitle: "Đổi số bàn phục vụ",
+      transferDesc: "Chuyển đơn từ {tableName} sang bàn trống khác:",
+      btnCancelTransfer: "Hủy",
+      destTableOccupied: "Bàn đích đang có khách phục vụ, không thể chuyển sang bàn này!",
+      transferSuccess: "Đã chuyển đơn sang {tableName} thành công!",
+      changeDraftTitle: "Đổi bàn đang chọn món",
+      changeDraftDesc: "Chọn bàn mới để chuyển giỏ hàng sang:",
+      btnCancelChangeDraft: "Hủy",
+      takeawayTableLabel: "Mang về",
+      takeawayBannerSub: "Đơn mang về • Chọn món để bắt đầu",
+      transferBtnCard: "Đổi bàn"
     },
     "zh-TW": {
       staffBadge: "桌邊點餐",
@@ -150,7 +162,19 @@
       optItemNotePlaceholder: "例如：微糖、去冰、少辣...",
       flavorNavTitle: "口味選擇",
       flavorSectionTitle: "口味與客製化選擇",
-      flavorCartHeader: "整單口味："
+      flavorCartHeader: "整單口味：",
+      btnBackPos: "返回 POS",
+      transferTitle: "更換服務桌號",
+      transferDesc: "將 {tableName} 的訂單轉移至其他空桌：",
+      btnCancelTransfer: "取消",
+      destTableOccupied: "目標桌號使用中，無法轉移至此桌！",
+      transferSuccess: "已成功轉移訂單至 {tableName}！",
+      changeDraftTitle: "變更點餐桌號",
+      changeDraftDesc: "請選擇要轉入目前購物車內容的桌號：",
+      btnCancelChangeDraft: "取消",
+      takeawayTableLabel: "外帶",
+      takeawayBannerSub: "外帶訂單 • 請選取餐點",
+      transferBtnCard: "轉桌"
     }
   };
 
@@ -246,6 +270,7 @@
 
     const mapping = {
       "i18n-staff-badge": "staffBadge",
+      "i18n-back-pos": "btnBackPos",
       "i18n-login-title": "loginTitle",
       "i18n-login-desc": "loginDesc",
       "i18n-label-pin": "labelPin",
@@ -261,12 +286,10 @@
       "i18n-btn-back-tables": "btnBackTables",
       "i18n-btn-view-cart": "cartViewBtn",
       "i18n-cart-title": "cartTitle",
-      "i18n-label-customer": "labelCustomer",
       "i18n-label-note": "labelNote",
       "i18n-summary-subtotal": "summarySubtotal",
       "i18n-summary-total": "summaryTotal",
       "i18n-btn-continue-ordering": "btnContinueOrdering",
-      "i18n-btn-confirm-order": "btnConfirmOrder",
       "i18n-btn-add-item": "btnAddItem",
       "i18n-success-title": "successTitle",
       "i18n-success-order-key": "successOrderKey",
@@ -274,12 +297,27 @@
       "i18n-success-round": "successRound",
       "i18n-success-total": "successTotal",
       "i18n-btn-success-back": "btnSuccessBack",
-      "i18n-btn-resolve-conflict": "btnResolveConflict"
+      "i18n-btn-resolve-conflict": "btnResolveConflict",
+      "i18n-transfer-title": "transferTitle",
+      "i18n-btn-cancel-transfer": "btnCancelTransfer",
+      "i18n-change-draft-title": "changeDraftTitle",
+      "i18n-btn-cancel-change-draft": "btnCancelChangeDraft"
     };
 
     for (const [domId, key] of Object.entries(mapping)) {
       const el = document.getElementById(domId);
       if (el) el.innerText = t(key);
+    }
+
+    // Safely update or restore confirm order button text & span
+    const spanConfirm = document.getElementById("i18n-btn-confirm-order");
+    if (spanConfirm) {
+      spanConfirm.innerText = t("btnConfirmOrder");
+    } else {
+      const btnSubmit = document.getElementById("btn-submit-order");
+      if (btnSubmit) {
+        btnSubmit.innerHTML = `<span id="i18n-btn-confirm-order">${t("btnConfirmOrder")}</span>`;
+      }
     }
 
     const searchInp = document.getElementById("inp-table-search");
@@ -406,6 +444,16 @@
     }
   }
 
+  function goToPosScreen() {
+    const params = new URLSearchParams();
+    if (state.tenantId) params.set("tenant_id", state.tenantId);
+    const searchParams = new URLSearchParams(window.location.search);
+    const env = searchParams.get("env");
+    if (env) params.set("env", env);
+    const qs = params.toString();
+    window.location.href = `orders.html${qs ? '?' + qs : ''}`;
+  }
+
   async function loadTablesData() {
     if (!state.token) return;
 
@@ -423,6 +471,20 @@
       if (res.ok) {
         const data = await res.json();
         state.tables = data.tables || [];
+
+        // Auto-skip table selection for Takeaway stores (no tables configured or allowDineIn === false)
+        if (state.tables.length === 0 || state.allowDineIn === false) {
+          stopTablePolling();
+          state.currentTable = {
+            id: "takeaway",
+            label: t("takeawayTableLabel"),
+            is_takeout: true
+          };
+          loadDraftCart("takeaway");
+          await showMenuView();
+          return;
+        }
+
         renderTablesGrid();
       }
     } catch (e) {
@@ -483,6 +545,10 @@
         detailHtml = `<div class="table-card-empty-info" style="color: #94a3b8; font-size: 13px;">${state.currentLang === "vi" ? "Sẵn sàng đón khách" : "隨時可開桌"}</div>`;
       }
 
+      const transferBtn = isOccupied
+        ? `<button type="button" class="btn-card-transfer" onclick="event.stopPropagation(); openTransferTableModal('${tbl.id}')">${t("transferBtnCard")}</button>`
+        : '';
+
       return `
         <div class="table-card ${isOccupied ? 'occupied' : 'empty'}" onclick="handleSelectTable('${tbl.id}')">
           <div class="table-card-top">
@@ -494,7 +560,10 @@
           </div>
           <div class="table-card-bottom">
             <span></span>
-            <button type="button" class="btn-card-action">${actionText}</button>
+            <div class="table-card-actions">
+              ${transferBtn}
+              <button type="button" class="btn-card-action">${actionText}</button>
+            </div>
           </div>
         </div>
       `;
@@ -516,6 +585,10 @@
   }
 
   function goToTableSelection() {
+    if (state.currentTable && (state.currentTable.is_takeout || state.currentTable.id === 'takeaway')) {
+      goToPosScreen();
+      return;
+    }
     if (state.currentTable) {
       saveDraftCart(state.currentTable.id);
     }
@@ -532,9 +605,24 @@
     // Header table badge
     const headBadge = document.getElementById("header-table-badge");
     const headLabel = document.getElementById("header-table-label");
+    const btnChangeTbl = document.getElementById("i18n-btn-change-table");
+    const isTakeout = state.currentTable && (state.currentTable.is_takeout || state.currentTable.id === 'takeaway');
+
     if (headBadge && headLabel && state.currentTable) {
-      headLabel.innerText = `${state.currentLang === "vi" ? "Bàn" : "桌號"}: ${state.currentTable.label}`;
+      if (isTakeout) {
+        headLabel.innerText = t("takeawayTableLabel");
+        if (btnChangeTbl) btnChangeTbl.style.display = "none";
+      } else {
+        headLabel.innerText = `${state.currentLang === "vi" ? "Bàn" : "桌號"}: ${state.currentTable.label}`;
+        if (btnChangeTbl) btnChangeTbl.style.display = "inline-block";
+      }
       headBadge.style.display = "inline-flex";
+    }
+
+    // Hide or show back button in View 3
+    const backBtn = document.querySelector(".btn-back-tables");
+    if (backBtn) {
+      backBtn.style.display = isTakeout ? "none" : "inline-flex";
     }
 
     updateOrderBanner();
@@ -551,20 +639,25 @@
 
   function updateOrderBanner() {
     if (!state.currentTable) return;
-    const isAppend = !!state.currentTable.active_order_key;
+    const isTakeout = state.currentTable.is_takeout || state.currentTable.id === 'takeaway';
+    const isAppend = !isTakeout && !!state.currentTable.active_order_key;
     const nameEl = document.getElementById("banner-table-name");
     const pillEl = document.getElementById("banner-mode-pill");
     const subEl = document.getElementById("banner-subtext");
 
-    if (nameEl) nameEl.innerText = `${state.currentLang === "vi" ? "Bàn" : "桌號"} ${state.currentTable.label}`;
+    if (nameEl) {
+      nameEl.innerText = isTakeout ? t("takeawayTableLabel") : `${state.currentLang === "vi" ? "Bàn" : "桌號"} ${state.currentTable.label}`;
+    }
 
     if (pillEl) {
-      pillEl.className = `order-mode-pill ${isAppend ? 'append' : 'new'}`;
-      pillEl.innerText = isAppend ? t("modeAppend") : t("modeNew");
+      pillEl.className = `order-mode-pill ${isTakeout ? 'new' : (isAppend ? 'append' : 'new')}`;
+      pillEl.innerText = isTakeout ? t("takeawayTableLabel") : (isAppend ? t("modeAppend") : t("modeNew"));
     }
 
     if (subEl) {
-      if (isAppend) {
+      if (isTakeout) {
+        subEl.innerText = t("takeawayBannerSub");
+      } else if (isAppend) {
         subEl.innerText = t("bannerAppendSub", {
           displayKey: state.currentTable.active_display_key || state.currentTable.active_order_id || "",
           total: `$${state.currentTable.active_total_amount || 0}`,
@@ -616,7 +709,11 @@
 
         // Initialize default global flavor selections if not set from draft
         if (Object.keys(state.selectedGlobalCustomizations).length === 0) {
-          state.selectedGlobalCustomizations = initDefaultGlobalCustomizations();
+          if (state.currentTable && state.currentTable.active_customizations && state.currentTable.active_customizations.length > 0) {
+            state.selectedGlobalCustomizations = hydrateGlobalCustomizationsFromActive(state.currentTable.active_customizations);
+          } else {
+            state.selectedGlobalCustomizations = initDefaultGlobalCustomizations();
+          }
         }
 
         renderCategories();
@@ -643,6 +740,40 @@
       }
     });
     return defaults;
+  }
+
+  function hydrateGlobalCustomizationsFromActive(activeCustomizations) {
+    if (!Array.isArray(activeCustomizations) || activeCustomizations.length === 0) {
+      return initDefaultGlobalCustomizations();
+    }
+    const result = {};
+    (state.customizations || []).forEach(group => {
+      result[group.key] = [];
+      const matches = activeCustomizations.filter(c => c.key === group.key || c.label === group.title);
+      if (matches.length > 0) {
+        matches.forEach(m => {
+          const rawVal = m.value || "";
+          const foundOpt = (group.options || []).find(opt => {
+            const optName = typeof opt === 'string' ? opt : opt.name;
+            return rawVal === optName || rawVal.startsWith(optName);
+          });
+          if (foundOpt) {
+            const optName = typeof foundOpt === 'string' ? foundOpt : foundOpt.name;
+            if (!result[group.key].includes(optName)) {
+              result[group.key].push(optName);
+            }
+          }
+        });
+      }
+      // If radio group and nothing matched, fallback to default first non-oos option
+      if (group.type === 'radio' && result[group.key].length === 0) {
+        const firstOpt = (group.options || []).find(o => !o?.is_out_of_stock && !o?.isOutOfStock);
+        if (firstOpt) {
+          result[group.key] = [typeof firstOpt === 'string' ? firstOpt : firstOpt.name];
+        }
+      }
+    });
+    return result;
   }
 
   function getCatalogSections() {
@@ -1288,18 +1419,26 @@
   function renderCartDrawer() {
     const contextEl = document.getElementById("cart-order-context-desc");
     if (contextEl && state.currentTable) {
-      const isAppend = !!state.currentTable.active_order_key;
-      contextEl.innerText = `${state.currentLang === "vi" ? "Bàn" : "桌號"} ${state.currentTable.label} • ${isAppend ? t("modeAppend") : t("modeNew")}`;
+      const isTakeout = state.currentTable.is_takeout || state.currentTable.id === 'takeaway';
+      if (isTakeout) {
+        contextEl.innerText = t("takeawayTableLabel");
+      } else {
+        const isAppend = !!state.currentTable.active_order_key;
+        contextEl.innerText = `${state.currentLang === "vi" ? "Bàn" : "桌號"} ${state.currentTable.label} • ${isAppend ? t("modeAppend") : t("modeNew")}`;
+      }
     }
 
-    // Render flavor summary in cart
+    const listEl = document.getElementById("cart-items-list");
+    if (!listEl) return;
+
+    // Render flavor summary in cart body (above items list)
     const flavorSummaryText = formatGlobalCustomizationsSummary();
     let flavorBox = document.getElementById("cart-flavor-summary-box");
-    if (!flavorBox && contextEl && contextEl.parentNode) {
+    if (!flavorBox && listEl.parentNode) {
       flavorBox = document.createElement("div");
       flavorBox.id = "cart-flavor-summary-box";
       flavorBox.className = "cart-flavor-summary";
-      contextEl.parentNode.insertBefore(flavorBox, contextEl.nextSibling);
+      listEl.parentNode.insertBefore(flavorBox, listEl);
     }
     if (flavorBox) {
       flavorBox.innerHTML = `
@@ -1307,9 +1446,6 @@
         <div class="cart-flavor-content">${escapeHtml(flavorSummaryText) || (state.currentLang === "vi" ? "Tiêu chuẩn / Mặc định" : "標準口味")}</div>
       `;
     }
-
-    const listEl = document.getElementById("cart-items-list");
-    if (!listEl) return;
 
     if (state.cart.length === 0) {
       listEl.innerHTML = `<div style="text-align: center; padding: 32px 0; color: #94a3b8;">${t("cartItemsPreviewEmpty")}</div>`;
@@ -1393,7 +1529,16 @@
       state.cart = raw ? JSON.parse(raw) : [];
 
       const rawFlavor = sessionStorage.getItem(`staff_flavor_${state.tenantId}_${tableId}`);
-      state.selectedGlobalCustomizations = rawFlavor ? JSON.parse(rawFlavor) : initDefaultGlobalCustomizations();
+      if (rawFlavor) {
+        state.selectedGlobalCustomizations = JSON.parse(rawFlavor);
+      } else {
+        const table = state.tables.find(t => t.id === tableId);
+        if (table && table.active_customizations && table.active_customizations.length > 0) {
+          state.selectedGlobalCustomizations = hydrateGlobalCustomizationsFromActive(table.active_customizations);
+        } else {
+          state.selectedGlobalCustomizations = initDefaultGlobalCustomizations();
+        }
+      }
     } catch (e) {
       state.cart = [];
       state.selectedGlobalCustomizations = initDefaultGlobalCustomizations();
@@ -1410,28 +1555,199 @@
     refreshAllCardActionUIs();
   }
 
-  // --- 12. SUBMIT STAFF ORDER (NEW OR APPEND ROUND) ---
+  // --- 12. TABLE TRANSFER & CHANGE DRAFT TABLE ---
+  let transferSourceTableId = null;
+
+  function openTransferTableModal(tableId) {
+    const table = state.tables.find(t => t.id === tableId);
+    if (!table) return;
+
+    transferSourceTableId = tableId;
+    const modal = document.getElementById("transferModal");
+    const descEl = document.getElementById("transfer-modal-desc");
+    const gridEl = document.getElementById("transfer-tables-grid");
+
+    if (descEl) {
+      descEl.innerText = t("transferDesc", { tableName: `${state.currentLang === "vi" ? "Bàn" : "桌號"} ${table.label}` });
+    }
+
+    if (gridEl) {
+      const targetTables = state.tables.filter(t => t.id !== tableId);
+      if (targetTables.length === 0) {
+        gridEl.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; color: #94a3b8; padding: 20px;">${t("emptyTablesList")}</div>`;
+      } else {
+        gridEl.innerHTML = targetTables.map(tDest => {
+          const isDestOccupied = !!tDest.active_order_key;
+          const statusText = isDestOccupied ? t("occupiedStatus") : t("emptyStatus");
+          const chipClass = isDestOccupied ? "transfer-table-chip occupied disabled" : "transfer-table-chip";
+          const clickHandler = isDestOccupied
+            ? `alert('${t("destTableOccupied")}')`
+            : `confirmTransferTable('${tDest.id}')`;
+
+          return `
+            <div class="${chipClass}" onclick="${clickHandler}">
+              <span class="chip-table-name">${escapeHtml(tDest.label)}</span>
+              <span class="chip-table-status">${statusText}</span>
+            </div>
+          `;
+        }).join("");
+      }
+    }
+
+    if (modal) modal.style.display = "flex";
+  }
+
+  function closeTransferModal() {
+    transferSourceTableId = null;
+    const modal = document.getElementById("transferModal");
+    if (modal) modal.style.display = "none";
+  }
+
+  async function confirmTransferTable(toTableId) {
+    if (!transferSourceTableId || !toTableId) return;
+    const fromTable = state.tables.find(t => t.id === transferSourceTableId);
+    const toTable = state.tables.find(t => t.id === toTableId);
+    if (!fromTable || !toTable) return;
+
+    try {
+      const res = await fetch(`${WORKER_BASE}/api/staff/tables/transfer?tenant_id=${encodeURIComponent(state.tenantId)}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + state.token
+        },
+        body: JSON.stringify({
+          fromTableId: transferSourceTableId,
+          toTableId: toTableId
+        })
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 409) {
+        alert(t("destTableOccupied"));
+        return;
+      }
+
+      if (res.ok && data && data.ok) {
+        // Migrate any draft cart in sessionStorage if exists
+        try {
+          const oldDraft = sessionStorage.getItem(`staff_cart_${state.tenantId}_${transferSourceTableId}`);
+          const oldFlavor = sessionStorage.getItem(`staff_flavor_${state.tenantId}_${transferSourceTableId}`);
+          if (oldDraft) {
+            sessionStorage.setItem(`staff_cart_${state.tenantId}_${toTableId}`, oldDraft);
+            sessionStorage.removeItem(`staff_cart_${state.tenantId}_${transferSourceTableId}`);
+          }
+          if (oldFlavor) {
+            sessionStorage.setItem(`staff_flavor_${state.tenantId}_${toTableId}`, oldFlavor);
+            sessionStorage.removeItem(`staff_flavor_${state.tenantId}_${transferSourceTableId}`);
+          }
+        } catch (e) {}
+
+        closeTransferModal();
+        alert(t("transferSuccess", { tableName: `${state.currentLang === "vi" ? "Bàn" : "桌號"} ${toTable.label}` }));
+        await loadTablesData();
+      } else {
+        alert((data && data.message) || (state.currentLang === "vi" ? "Đổi bàn thất bại" : "轉桌失敗"));
+      }
+    } catch (err) {
+      alert((state.currentLang === "vi" ? "Lỗi kết nối: " : "連線錯誤: ") + (err.message || err));
+    }
+  }
+
+  function openChangeDraftTableModal() {
+    if (!state.currentTable) return;
+
+    const modal = document.getElementById("changeDraftTableModal");
+    const gridEl = document.getElementById("change-draft-tables-grid");
+
+    if (gridEl) {
+      const availableTables = state.tables;
+      if (availableTables.length === 0) {
+        gridEl.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; color: #94a3b8; padding: 20px;">${t("emptyTablesList")}</div>`;
+      } else {
+        gridEl.innerHTML = availableTables.map(tbl => {
+          const isCurrent = tbl.id === state.currentTable.id;
+          const isOccupied = !!tbl.active_order_key;
+          const statusText = isCurrent
+            ? (state.currentLang === "vi" ? "Hiện tại" : "目前")
+            : (isOccupied ? t("occupiedStatus") : t("emptyStatus"));
+          const chipClass = isCurrent ? "transfer-table-chip current" : "transfer-table-chip";
+
+          return `
+            <div class="${chipClass}" onclick="${isCurrent ? '' : `changeDraftTable('${tbl.id}')`}">
+              <span class="chip-table-name">${escapeHtml(tbl.label)}</span>
+              <span class="chip-table-status">${statusText}</span>
+            </div>
+          `;
+        }).join("");
+      }
+    }
+
+    if (modal) modal.style.display = "flex";
+  }
+
+  function closeChangeDraftTableModal() {
+    const modal = document.getElementById("changeDraftTableModal");
+    if (modal) modal.style.display = "none";
+  }
+
+  function changeDraftTable(newTableId) {
+    const newTable = state.tables.find(t => t.id === newTableId);
+    if (!newTable || !state.currentTable || newTable.id === state.currentTable.id) return;
+
+    const oldTableId = state.currentTable.id;
+    // Migrate active draft cart and flavor selections in sessionStorage
+    try {
+      sessionStorage.setItem(`staff_cart_${state.tenantId}_${newTable.id}`, JSON.stringify(state.cart));
+      sessionStorage.setItem(`staff_flavor_${state.tenantId}_${newTable.id}`, JSON.stringify(state.selectedGlobalCustomizations));
+      sessionStorage.removeItem(`staff_cart_${state.tenantId}_${oldTableId}`);
+      sessionStorage.removeItem(`staff_flavor_${state.tenantId}_${oldTableId}`);
+    } catch (e) {}
+
+    state.currentTable = newTable;
+    closeChangeDraftTableModal();
+
+    // Update UI elements
+    updateOrderBanner();
+    updateStickyCartBar();
+    const headLabel = document.getElementById("header-table-label");
+    if (headLabel) {
+      headLabel.innerText = `${state.currentLang === "vi" ? "Bàn" : "桌號"}: ${newTable.label}`;
+    }
+    const contextEl = document.getElementById("cart-order-context-desc");
+    if (contextEl) {
+      const isAppend = !!newTable.active_order_key;
+      contextEl.innerText = `${state.currentLang === "vi" ? "Bàn" : "桌號"} ${newTable.label} • ${isAppend ? t("modeAppend") : t("modeNew")}`;
+    }
+  }
+
+  // --- 13. SUBMIT STAFF ORDER (NEW OR APPEND ROUND) ---
   async function submitStaffOrder() {
     if (!state.currentTable || state.cart.length === 0) return;
 
     const btnSubmit = document.getElementById("btn-submit-order");
+    const spanConfirm = document.getElementById("i18n-btn-confirm-order");
     if (btnSubmit) {
       btnSubmit.disabled = true;
-      btnSubmit.innerText = t("btnSending");
+      if (spanConfirm) {
+        spanConfirm.innerText = t("btnSending");
+      } else {
+        btnSubmit.innerHTML = `<span id="i18n-btn-confirm-order">${t("btnSending")}</span>`;
+      }
     }
 
-    const customerInp = document.getElementById("cart-customer-name");
     const noteInp = document.getElementById("cart-order-note");
-    const customer = customerInp ? customerInp.value.trim() : "";
     const note = noteInp ? noteInp.value.trim() : "";
 
     const requestId = crypto.randomUUID();
-    const isAppend = !!state.currentTable.active_order_key;
+    const isTakeout = state.currentTable.is_takeout || state.currentTable.id === 'takeaway';
+    const isAppend = !isTakeout && !!state.currentTable.active_order_key;
 
     const payload = {
       requestId,
       tableId: state.currentTable.id,
-      customer,
+      dining_option: isTakeout ? 'takeout' : 'dine_in',
+      customer: '',
       note,
       customizations: getSelectedGlobalCustomizations(),
       items: state.cart.map(c => ({
@@ -1471,29 +1787,35 @@
 
       if (res.ok && data && data.ok) {
         clearDraftCart(state.currentTable.id);
+        if (noteInp) noteInp.value = "";
         closeCartModal();
         updateStickyCartBar();
 
         showSuccessModal({
           displayKey: data.displayKey || data.orderId || "---",
-          tableName: state.currentTable.label,
+          tableName: isTakeout ? t("takeawayTableLabel") : state.currentTable.label,
           roundCount: data.roundCount || 1,
           total: data.total || data.grandTotal || 0
         });
       } else {
-        alert((data && data.message) || "Gửi đơn thất bại / 送出失敗");
+        alert((data && data.message) || (state.currentLang === "vi" ? "Gửi đơn thất bại" : "送出失敗"));
       }
     } catch (err) {
-      alert("Lỗi kết nối / 連線錯誤: " + (err.message || err));
+      alert((state.currentLang === "vi" ? "Lỗi kết nối: " : "連線錯誤: ") + (err.message || err));
     } finally {
       if (btnSubmit) {
         btnSubmit.disabled = false;
-        btnSubmit.innerText = t("btnConfirmOrder");
+        const curSpan = document.getElementById("i18n-btn-confirm-order");
+        if (curSpan) {
+          curSpan.innerText = t("btnConfirmOrder");
+        } else {
+          btnSubmit.innerHTML = `<span id="i18n-btn-confirm-order">${t("btnConfirmOrder")}</span>`;
+        }
       }
     }
   }
 
-  // --- 13. SUCCESS & CONFLICT MODALS ---
+  // --- 14. SUCCESS & CONFLICT MODALS ---
   function showSuccessModal({ displayKey, tableName, roundCount, total }) {
     document.getElementById("success-display-key").innerText = `#${displayKey}`;
     document.getElementById("success-table-name").innerText = tableName;
@@ -1505,6 +1827,11 @@
 
   function handleSuccessBackToTables() {
     document.getElementById("successModal").style.display = "none";
+    if (state.currentTable && (state.currentTable.is_takeout || state.currentTable.id === 'takeaway')) {
+      clearDraftCart("takeaway");
+      showMenuView();
+      return;
+    }
     goToTableSelection();
   }
 
@@ -1527,8 +1854,9 @@
     }
   }
 
-  // --- 14. EXPOSE GLOBAL FUNCTIONS ---
+  // --- 15. EXPOSE GLOBAL FUNCTIONS ---
   window.toggleLanguage = toggleLanguage;
+  window.goToPosScreen = goToPosScreen;
   window.handleStaffLogin = handleStaffLogin;
   window.handleStaffLogout = handleStaffLogout;
   window.loadTablesData = loadTablesData;
@@ -1550,6 +1878,12 @@
   window.closeCartModal = closeCartModal;
   window.changeCartItemQty = changeCartItemQty;
   window.removeCartItem = removeCartItem;
+  window.openTransferTableModal = openTransferTableModal;
+  window.closeTransferModal = closeTransferModal;
+  window.confirmTransferTable = confirmTransferTable;
+  window.openChangeDraftTableModal = openChangeDraftTableModal;
+  window.closeChangeDraftTableModal = closeChangeDraftTableModal;
+  window.changeDraftTable = changeDraftTable;
   window.submitStaffOrder = submitStaffOrder;
   window.handleSuccessBackToTables = handleSuccessBackToTables;
   window.handleResolveConflict = handleResolveConflict;

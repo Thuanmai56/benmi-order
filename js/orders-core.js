@@ -660,6 +660,14 @@ function parsePortionCustomizations(rawOpts) {
 }
 window.parsePortionCustomizations = parsePortionCustomizations;
 
+function openStaffOrderPage() {
+  const currentTenant = typeof getTenantIdFromUrl === "function" ? getTenantIdFromUrl() : (window.currentTenantId || "benmi");
+  const params = new URLSearchParams(window.location.search);
+  params.set("tenant", currentTenant);
+  window.location.href = `staff-order.html?${params.toString()}`;
+}
+window.openStaffOrderPage = openStaffOrderPage;
+
 function switchTab(tab) {
   if (activeTab === "menu" && tab !== "menu" && typeof confirmLeaveMenu === "function" && !confirmLeaveMenu()) return;
   if (tab === "reports" && isNativeAppPlatform()) {

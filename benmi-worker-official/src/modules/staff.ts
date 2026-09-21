@@ -12,7 +12,7 @@ import {
   validateThresholdCustomizations
 } from './orders';
 import { resolveOrderKey } from './order-identity';
-import { OrderItemInput } from '../types/index';
+import { OrderItemInput, DiningOption } from '../types/index';
 
 // ==========================================
 // 1. HELPERS & CRYPTO UTILITIES
@@ -346,14 +346,34 @@ export async function handleStaffRoute(
              o.display_key AS active_display_key, o.status AS active_order_status,
              o.total_amount AS active_total_amount, o.round_count AS active_round_count,
              o.revision AS active_revision, o.customer_name AS active_customer_name,
-             o.created_at AS active_created_at, o.last_appended_at AS active_last_appended_at
+             o.created_at AS active_created_at, o.last_appended_at AS active_last_appended_at,
+             (
+               SELECT r.response_json 
+               FROM staff_order_requests r 
+               WHERE r.tenant_id = t.tenant_id AND r.order_key = o.key 
+               ORDER BY r.round_number DESC LIMIT 1
+             ) AS active_response_json
       FROM restaurant_tables t
       LEFT JOIN orders o ON o.table_id = t.id AND o.source = 'staff' AND o.status NOT IN ('PAID', 'REJECTED', 'PICKED_UP')
       WHERE t.tenant_id = ? ${includeInactive ? '' : 'AND t.is_active = 1'}
       ORDER BY t.sort_order ASC, t.label ASC
     `;
     const { results } = await env.DB.prepare(query).bind(tenantId).all();
-    return json({ ok: true, tables: results || [] });
+    const tables = (results || []).map((row: any) => {
+      let activeCustomizations: any[] = [];
+      if (row.active_response_json) {
+        try {
+          const parsed = JSON.parse(row.active_response_json);
+          if (Array.isArray(parsed.customizations)) {
+            activeCustomizations = parsed.customizations;
+          }
+        } catch (e) {}
+      }
+      const cloned = { ...row, active_customizations: activeCustomizations };
+      delete cloned.active_response_json;
+      return cloned;
+    });
+    return json({ ok: true, tables });
   }
 
   // --- 5. POST /api/staff/tables (Add table) ---
@@ -445,6 +465,68 @@ export async function handleStaffRoute(
     }
   }
 
+  // --- 6b. POST /api/staff/tables/transfer (Transfer active order from one table to an idle table) ---
+  if (request.method === "POST" && path === "/api/staff/tables/transfer") {
+    const body: any = await request.json().catch(() => ({}));
+    const fromTableId = String(body.fromTableId || body.from_table_id || "").trim();
+    const toTableId = String(body.toTableId || body.to_table_id || "").trim();
+
+    if (!fromTableId || !toTableId) {
+      return json({ ok: false, error: "MISSING_TABLE_PARAMS", message: "缺少桌號參數 / Thiếu thông tin bàn cần chuyển" }, 400);
+    }
+    if (fromTableId === toTableId) {
+      return json({ ok: false, error: "SAME_TABLE", message: "來源與目的桌號相同 / Bàn nguồn và bàn đích trùng nhau" }, 400);
+    }
+    if (!env.DB) return json({ ok: false, error: "NO_DB" }, 500);
+
+    // 1. Verify fromTable and its active order
+    const fromTable = await env.DB.prepare(
+      `SELECT t.id, t.label, o.key AS active_order_key, o.order_id AS active_order_id, o.revision AS active_revision
+       FROM restaurant_tables t
+       JOIN orders o ON o.table_id = t.id AND o.source = 'staff' AND o.status NOT IN ('PAID', 'REJECTED', 'PICKED_UP')
+       WHERE t.id = ? AND t.tenant_id = ?`
+    ).bind(fromTableId, tenantId).first<any>();
+
+    if (!fromTable || !fromTable.active_order_key) {
+      return json({ ok: false, error: "SOURCE_TABLE_NO_ORDER", message: "來源桌號目前無進行中訂單 / Bàn nguồn hiện không có đơn nào đang mở" }, 400);
+    }
+
+    // 2. Verify toTable and ensure it is IDLE (no active un-finalized order)
+    const toTable = await env.DB.prepare(
+      `SELECT t.id, t.label, t.is_active, o.key AS active_order_key
+       FROM restaurant_tables t
+       LEFT JOIN orders o ON o.table_id = t.id AND o.source = 'staff' AND o.status NOT IN ('PAID', 'REJECTED', 'PICKED_UP')
+       WHERE t.id = ? AND t.tenant_id = ?`
+    ).bind(toTableId, tenantId).first<any>();
+
+    if (!toTable || !toTable.is_active) {
+      return json({ ok: false, error: "DEST_TABLE_NOT_FOUND", message: "目的桌號不存在或已停用 / Bàn đích không tồn tại hoặc đã ngừng sử dụng" }, 404);
+    }
+    if (toTable.active_order_key) {
+      return json({ ok: false, error: "DEST_TABLE_OCCUPIED", message: `【${toTable.label}】目前已有客人使用，無法轉入 / Bàn ${toTable.label} đang có khách, vui lòng chọn bàn trống khác` }, 409);
+    }
+
+    // 3. Move order from fromTable to toTable (atomic D1 update)
+    const nextRevision = (Number(fromTable.active_revision) || 0) + 1;
+    await env.DB.prepare(
+      `UPDATE orders 
+       SET table_id = ?, table_number = ?, revision = ?, updated_at = datetime('now')
+       WHERE key = ? AND tenant_id = ?`
+    ).bind(toTable.id, toTable.label, nextRevision, fromTable.active_order_key, tenantId).run();
+
+    console.log(`[StaffTransfer] Tenant ${tenantId}: Order ${fromTable.active_order_key} transferred from Table ${fromTable.label} (${fromTable.id}) to Table ${toTable.label} (${toTable.id})`);
+
+    return json({
+      ok: true,
+      message: `已將訂單從【${fromTable.label}】轉至【${toTable.label}】 / Đã chuyển đơn từ bàn ${fromTable.label} sang bàn ${toTable.label}`,
+      fromTableId,
+      toTableId,
+      fromLabel: fromTable.label,
+      toLabel: toTable.label,
+      orderKey: fromTable.active_order_key
+    });
+  }
+
   // --- 7. GET /api/staff/orders/:key (Read staff order details) ---
   const orderGetMatch = path.match(/^\/api\/staff\/orders\/([a-zA-Z0-9_-]+)$/);
   if (request.method === "GET" && orderGetMatch) {
@@ -483,11 +565,12 @@ export async function handleStaffRoute(
     const clientCustomizations: any[] = Array.isArray(body.customizations) ? body.customizations : [];
     const note = String(body.note || "").trim();
     const customer = String(body.customer || "").trim();
+    const isTakeout = body.dining_option === 'takeout' || body.diningOption === 'takeout' || tableId === 'takeaway' || tableId === 'takeout';
 
     if (!requestId) {
       return json({ ok: false, error: "MISSING_REQUEST_ID", message: "缺少 requestId / Thiếu requestId" }, 400);
     }
-    if (!tableId) {
+    if (!isTakeout && !tableId) {
       return json({ ok: false, error: "MISSING_TABLE_ID", message: "請選擇桌號 / Vui lòng chọn bàn" }, 400);
     }
     if (rawItems.length === 0) {
@@ -497,7 +580,7 @@ export async function handleStaffRoute(
     if (!env.DB) return json({ ok: false, error: "NO_DB" }, 500);
 
     // Compute deterministic request hash for idempotency
-    const requestHash = await sha256Hex(JSON.stringify({ requestId, tableId, items: rawItems, customizations: clientCustomizations, note, customer }));
+    const requestHash = await sha256Hex(JSON.stringify({ requestId, tableId: isTakeout ? 'takeout' : tableId, items: rawItems, customizations: clientCustomizations, note, customer }));
 
     // Check staff_order_requests for duplicate submission
     const existingReq = await env.DB.prepare(
@@ -513,30 +596,36 @@ export async function handleStaffRoute(
       }
     }
 
-    // Verify table exists & active
-    const table = await env.DB.prepare(
-      "SELECT id, label, is_active FROM restaurant_tables WHERE id = ? AND tenant_id = ?"
-    ).bind(tableId, tenantId).first<{ id: string; label: string; is_active: number }>();
+    let table: { id: string; label: string; is_active: number } | null = null;
+    const defaultTakeoutLabel = tenantCtx.locale === 'vi' ? 'Mang về' : '外帶';
+    const resolvedTableName = isTakeout ? defaultTakeoutLabel : '';
 
-    if (!table || !table.is_active) {
-      return json({ ok: false, error: "TABLE_NOT_AVAILABLE", message: "該桌號不存在或已停用 / Bàn không tồn tại hoặc đã ngừng sử dụng" }, 404);
-    }
+    if (!isTakeout) {
+      // Verify table exists & active
+      table = await env.DB.prepare(
+        "SELECT id, label, is_active FROM restaurant_tables WHERE id = ? AND tenant_id = ?"
+      ).bind(tableId, tenantId).first<{ id: string; label: string; is_active: number }>();
 
-    // Check table occupancy (Pre-check)
-    const activeOrder = await env.DB.prepare(
-      `SELECT key, order_id, display_key, total_amount, round_count, revision, created_at 
-       FROM orders 
-       WHERE tenant_id = ? AND table_id = ? AND source = 'staff' AND status NOT IN ('PAID', 'REJECTED', 'PICKED_UP') 
-       LIMIT 1`
-    ).bind(tenantId, tableId).first<any>();
+      if (!table || !table.is_active) {
+        return json({ ok: false, error: "TABLE_NOT_AVAILABLE", message: "該桌號不存在或已停用 / Bàn không tồn tại hoặc đã ngừng sử dụng" }, 404);
+      }
 
-    if (activeOrder) {
-      return json({
-        ok: false,
-        error: "TABLE_OCCUPIED",
-        message: `桌號【${table.label}】已有使用中訂單 #${activeOrder.display_key || activeOrder.key} / Bàn đang có đơn hoạt động`,
-        activeOrder
-      }, 409);
+      // Check table occupancy (Pre-check)
+      const activeOrder = await env.DB.prepare(
+        `SELECT key, order_id, display_key, total_amount, round_count, revision, created_at 
+         FROM orders 
+         WHERE tenant_id = ? AND table_id = ? AND source = 'staff' AND status NOT IN ('PAID', 'REJECTED', 'PICKED_UP') 
+         LIMIT 1`
+      ).bind(tenantId, tableId).first<any>();
+
+      if (activeOrder) {
+        return json({
+          ok: false,
+          error: "TABLE_OCCUPIED",
+          message: `桌號【${table.label}】已有使用中訂單 #${activeOrder.display_key || activeOrder.key} / Bàn đang có đơn hoạt động`,
+          activeOrder
+        }, 409);
+      }
     }
 
     // Authoritative Server-side Price Calculation
@@ -548,9 +637,10 @@ export async function handleStaffRoute(
     // Generate authoritative sequential number
     const prefix = resolveTenantOrderPrefix(tenantCtx, tenantId);
     const createdAt = new Date();
+    const diningOption: DiningOption = isTakeout ? 'takeaway' : 'dine_in';
     let displayKey: string;
     try {
-      ({ key: displayKey } = await getNextDailyOrderSeq(env, tenantId, 'dine_in', createdAt, prefix));
+      ({ key: displayKey } = await getNextDailyOrderSeq(env, tenantId, diningOption, createdAt, prefix));
     } catch {
       return json({ ok: false, error: "ORDER_COUNTER_UNAVAILABLE", message: "序號產生失敗，請重試 / Lỗi tạo mã đơn" }, 503);
     }
@@ -567,8 +657,14 @@ export async function handleStaffRoute(
       const flavorLines = clientCustomizations.map((c: any) => `  • ${c.label || 'Vị'}: ${c.value || c.name || ''}`).join("\n");
       customSummary = `\n\n🧂 客製化設定 / Chọn vị:\n${flavorLines}`;
     }
-    const formattedContent = `[第 1 輪 / Đợt 1 - ${timeStr}]\n${formatItemsToText(calcResult.calculatedItems)}${customSummary}`;
-    const customerName = customer || table.label;
+    const headerRoundPrefix = isTakeout
+      ? `[${defaultTakeoutLabel} - ${timeStr}]`
+      : `[第 1 輪 / Đợt 1 - ${timeStr}]`;
+    const formattedContent = `${headerRoundPrefix}\n${formatItemsToText(calcResult.calculatedItems)}${customSummary}`;
+    const customerName = customer || (isTakeout ? defaultTakeoutLabel : (table ? table.label : 'Khách'));
+
+    const finalTableName = isTakeout ? defaultTakeoutLabel : (table ? table.label : '');
+    const finalTableId = isTakeout ? null : (table ? table.id : null);
 
     const responsePayload = {
       ok: true,
@@ -580,9 +676,11 @@ export async function handleStaffRoute(
       roundCount: 1,
       revision: 1,
       total: calcResult.grandTotal,
-      tableId: table.id,
-      tableNumber: table.label,
+      tableId: finalTableId,
+      tableNumber: finalTableName,
+      diningOption,
       customerName,
+      customizations: clientCustomizations,
       createdAt: createdAt.toISOString()
     };
 
@@ -596,7 +694,7 @@ export async function handleStaffRoute(
              table_id, source, revision, round_count, created_at, updated_at
            ) VALUES (
              ?, ?, ?, ?, ?, ?, ?,
-             'ACCEPTED', ?, ?, ?, 'dine_in', ?,
+             'ACCEPTED', ?, ?, ?, ?, ?,
              ?, 'staff', 1, 1, datetime('now'), datetime('now')
            )`
         ).bind(
@@ -610,8 +708,9 @@ export async function handleStaffRoute(
           calcResult.grandTotal,
           formattedContent,
           note,
-          table.label,
-          table.id
+          diningOption,
+          finalTableName,
+          finalTableId
         ),
         ...calcResult.calculatedItems.map(item => {
           const itemQty = Number(item.quantity) || 1;
@@ -663,10 +762,11 @@ export async function handleStaffRoute(
            LIMIT 1`
         ).bind(tenantId, tableId).first<any>();
 
+        const labelText = table?.label || resolvedTableName || tableId;
         return json({
           ok: false,
           error: "TABLE_OCCUPIED",
-          message: `桌號【${table.label}】剛已被其他裝置開單，請確認是否改為加點 / Bàn vừa được mở bởi thiết bị khác, vui lòng kiểm tra lại`,
+          message: `桌號【${labelText}】剛已被其他裝置開單，請確認是否改為加點 / Bàn vừa được mở bởi thiết bị khác, vui lòng kiểm tra lại`,
           activeOrder: freshActive
         }, 409);
       }
@@ -789,7 +889,8 @@ export async function handleStaffRoute(
       tableId: parent.table_id,
       tableNumber: parent.table_number,
       appendedItems: calcResult.calculatedItems,
-      appendedTotal: calcResult.grandTotal
+      appendedTotal: calcResult.grandTotal,
+      customizations: clientCustomizations
     };
 
     // D1 Batch Transaction with Optimistic Concurrency Revision Check
