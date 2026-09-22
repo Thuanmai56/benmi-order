@@ -293,15 +293,75 @@ export async function updateStockStatus(request: Request, env: Env): Promise<Res
   }
 }
 
+// Missing fields are never deletion instructions. Validate the complete request
+// before constructing a batch so malformed customization data cannot erase rows.
+function validateMenuUpdate(data: any): void {
+  const record = (value: any) => value !== null && typeof value === 'object' && !Array.isArray(value);
+  const text = (value: any) => typeof value === 'string' && value.trim().length > 0;
+  if (!record(data)) throw new Error('INVALID_MENU_PAYLOAD');
+  if ('__delete' in data) {
+    if (!record(data.__delete)) throw new Error('INVALID_MENU_DELETIONS');
+    for (const [key, ids] of Object.entries(data.__delete)) {
+      if (!['categories', 'items', 'customizations'].includes(key) ||
+          !Array.isArray(ids) || !ids.every(text) || new Set(ids).size !== ids.length) {
+        throw new Error('INVALID_MENU_DELETIONS');
+      }
+    }
+  }
+  if ('__customizations' in data) {
+    const section = data.__customizations;
+    const groups = Array.isArray(section) ? section : record(section) ? (section.groups ?? section.list) : undefined;
+    if (!Array.isArray(groups)) throw new Error('INVALID_CUSTOMIZATIONS');
+    const keys = new Set();
+    const ids = new Set();
+    for (const group of groups) {
+      if (!record(group) || !text(group.key) || keys.has(group.key) ||
+          (group.id !== undefined && (!text(group.id) || ids.has(group.id))) ||
+          !Array.isArray(group.options) ||
+          (group.type !== undefined && !['radio', 'checkbox'].includes(group.type))) {
+        throw new Error('INVALID_CUSTOMIZATION_GROUP');
+      }
+      keys.add(group.key);
+      if (group.id) ids.add(group.id);
+      for (const option of group.options) {
+        if (!record(option) || !text(option.name) ||
+            (option.price !== undefined && (typeof option.price !== 'number' || !Number.isFinite(option.price))) ||
+            (option.surcharge !== undefined && (typeof option.surcharge !== 'number' || !Number.isFinite(option.surcharge))) ||
+            (option.sub_options !== undefined && !Array.isArray(option.sub_options))) {
+          throw new Error('INVALID_CUSTOMIZATION_OPTION');
+        }
+      }
+    }
+  }
+  for (const [key, category] of Object.entries(data) as [string, any][]) {
+    if (key === '__delete' || key === '__customizations') continue;
+    if (key.startsWith('_') || !record(category)) throw new Error('INVALID_MENU_CATEGORY');
+    for (const [name, item] of Object.entries(category) as [string, any][]) {
+      if (name.startsWith('_')) continue;
+      const price = record(item) ? item.price : item;
+      if (!text(name) || typeof price !== 'number' || !Number.isFinite(price) || price < 0 ||
+          (record(item) && item.id !== undefined && !text(item.id))) throw new Error('INVALID_MENU_ITEM');
+    }
+  }
+}
+
 async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<void> {
+  validateMenuUpdate(menuData);
   // 1. Nạp danh mục và món ăn hiện có để ánh xạ ID tránh xung đột unique
   const { results: existingCats } = await env.DB.prepare(
-    "SELECT id, slug, name, short_name FROM menu_categories WHERE tenant_id = ?"
+    "SELECT id, slug, name, short_name, category_type FROM menu_categories WHERE tenant_id = ?"
   ).bind(tenantId).all();
 
   const { results: existingItems } = await env.DB.prepare(
     "SELECT id, category_id, name FROM menu_items WHERE tenant_id = ?"
   ).bind(tenantId).all();
+
+  const { results: existingCustomizations } = await env.DB.prepare(
+    "SELECT id, key FROM menu_customizations WHERE tenant_id = ?"
+  ).bind(tenantId).all();
+  const customIdMap = new Map((existingCustomizations || []).map(row => [row.key as string, row.id as string]));
+  const ownedItemIds = new Set((existingItems || []).map(row => row.id as string));
+  const ownedCustomIds = new Set((existingCustomizations || []).map(row => row.id as string));
 
   const catIdMap = new Map<string, string>();
   const catNameMap = new Map<string, string>();
@@ -338,11 +398,23 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
     drinks: "🥤 單點飲料"
   };
 
+  const deletions = menuData.__delete || {};
+  const categoryDeletes: string[] = (deletions.categories || []).map((id: string) => {
+    const resolved = catIdMap.get(id);
+    if (!resolved) throw new Error('UNKNOWN_MENU_CATEGORY_DELETE');
+    return resolved;
+  });
+  const itemDeletes: string[] = deletions.items || [];
+  const customDeletes: string[] = deletions.customizations || [];
+  if (itemDeletes.some(id => !ownedItemIds.has(id)) || customDeletes.some(id => !ownedCustomIds.has(id))) {
+    throw new Error('UNKNOWN_MENU_DELETE_ID');
+  }
   const activeCategoryIds: string[] = [];
   const activeItemIds: string[] = [];
 
   let catSortOrder = 1;
   for (const slug of Object.keys(menuData)) {
+    if (slug === '__delete') continue;
     const currentSortOrder = catSortOrder++;
     if (slug === '__customizations') {
       const customizationData = menuData[slug];
@@ -356,7 +428,11 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
         const custSort = Number(cust.sortOrder ?? cust.sort_order ?? 0);
         const optionsList = Array.isArray(cust.options) ? cust.options : [];
         const optionsJson = JSON.stringify(optionsList);
-        const custId = cust.id || `custom_${tenantId}_${custKey}`;
+        const custId = cust.id || customIdMap.get(custKey) || `custom_${tenantId}_${custKey}`;
+        if (cust.id && !ownedCustomIds.has(cust.id) && !cust.id.startsWith(`custom_${tenantId}_`)) {
+          throw new Error('INVALID_CUSTOMIZATION_ID');
+        }
+        if (customDeletes.includes(custId)) throw new Error('CONFLICTING_MENU_DELETE');
         activeCustomIds.push(custId);
 
         statements.push(
@@ -368,22 +444,16 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
                type = excluded.type,
                sort_order = excluded.sort_order,
                options_json = excluded.options_json,
-               updated_at = datetime('now')`
+               updated_at = datetime('now')
+             WHERE menu_customizations.tenant_id = excluded.tenant_id`
           ).bind(custId, tenantId, custKey, custTitle, custType, custSort, optionsJson)
         );
       }
 
       if (activeCustomIds.length > 0) {
-        const placeholders = activeCustomIds.map(() => '?').join(',');
-        statements.push(
-          env.DB.prepare(
-            `DELETE FROM menu_customizations WHERE tenant_id = ? AND id NOT IN (${placeholders})`
-          ).bind(tenantId, ...activeCustomIds)
-        );
-
         // Persist a lightweight category record so this panel participates in the
         // same ordering mechanism as every other catalog section.
-        const customCategoryId = catIdMap.get(customizationData?.id) || catIdMap.get('sec-flavor') || customizationData?.id || `${tenantId}_sec-flavor`;
+        const customCategoryId = catIdMap.get(customizationData?.id) || catIdMap.get('sec-flavor') || `${tenantId}_sec-flavor`;
         const customCategoryName = customizationData?.title || '口味與客製化選擇';
         const customCategoryShortName = customizationData?.shortName || customCategoryName;
         const customCategorySortOrder = Number(customizationData?.sortOrder ?? currentSortOrder);
@@ -399,20 +469,9 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
                category_type = excluded.category_type,
                allow_customization = excluded.allow_customization,
                applied_modifiers = excluded.applied_modifiers,
-               sort_order = excluded.sort_order`
+               sort_order = excluded.sort_order
+             WHERE menu_categories.tenant_id = excluded.tenant_id`
           ).bind(customCategoryId, tenantId, customCategoryName, customCategoryShortName, customCategorySortOrder)
-        );
-      } else {
-        // No customization groups remaining -> delete all customization rows for this tenant
-        statements.push(
-          env.DB.prepare(
-            `DELETE FROM menu_customizations WHERE tenant_id = ?`
-          ).bind(tenantId)
-        );
-        statements.push(
-          env.DB.prepare(
-            `DELETE FROM menu_categories WHERE tenant_id = ? AND (slug = 'sec-flavor' OR id LIKE '%_sec-flavor' OR category_type = 'order_customization')`
-          ).bind(tenantId)
         );
       }
       continue;
@@ -463,7 +522,8 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
            category_type = excluded.category_type,
            allow_customization = excluded.allow_customization,
            applied_modifiers = excluded.applied_modifiers,
-           sort_order = excluded.sort_order`
+           sort_order = excluded.sort_order
+             WHERE menu_categories.tenant_id = excluded.tenant_id`
       ).bind(catId, tenantId, catName, catShortName, slug, customCatType, allowCustomization, appliedModifiers, customCatSort)
     );
 
@@ -485,7 +545,10 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
         }
         if (isNaN(price)) continue;
 
-        let itemId = itemIdMap.get(`${catId}:${itemName}`);
+        if (itemVal?.id && !ownedItemIds.has(itemVal.id) && !itemVal.id.startsWith(`${tenantId}_`)) {
+          throw new Error('INVALID_MENU_ITEM_ID');
+        }
+        let itemId = itemVal?.id || itemIdMap.get(`${catId}:${itemName}`);
         if (!itemId) {
           itemId = `${tenantId}_${slug}_${itemName}`;
         }
@@ -501,56 +564,31 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
                price = excluded.price, 
                badge_text = excluded.badge_text, 
                is_recommended = excluded.is_recommended, 
-               sort_order = excluded.sort_order`
+               sort_order = excluded.sort_order
+             WHERE menu_items.tenant_id = excluded.tenant_id`
           ).bind(itemId, tenantId, catId, itemName, price, badgeText, isRec, itemSortOrder++)
         );
       }
     }
   }
 
-  if (!('__customizations' in menuData)) {
-    statements.push(
-      env.DB.prepare("DELETE FROM menu_customizations WHERE tenant_id = ?").bind(tenantId)
-    );
-    statements.push(
-      env.DB.prepare("DELETE FROM menu_categories WHERE tenant_id = ? AND (slug = 'sec-flavor' OR id LIKE '%_sec-flavor' OR category_type = 'order_customization')").bind(tenantId)
-    );
+  if (activeCategoryIds.some(id => categoryDeletes.includes(id)) ||
+      activeItemIds.some(id => itemDeletes.includes(id))) throw new Error('CONFLICTING_MENU_DELETE');
+
+  // Explicit category deletion also removes its child items. No absent row is deleted.
+  for (const id of categoryDeletes) {
+    statements.push(env.DB.prepare('DELETE FROM menu_items WHERE tenant_id = ? AND category_id = ?').bind(tenantId, id));
   }
-
-  // Find which items currently in DB were NOT in the active submitted items
-  const activeItemSet = new Set(activeItemIds);
-  const itemsToDelete = (existingItems || [])
-    .map((item: any) => item.id as string)
-    .filter(id => !activeItemSet.has(id));
-
-  // Find which categories currently in DB were NOT in the active submitted categories
-  const activeCatSet = new Set(activeCategoryIds);
-  const catsToDelete = (existingCats || [])
-    .map((cat: any) => cat.id as string)
-    .filter(id => !activeCatSet.has(id));
-
-  // Keep each DELETE below D1's limit of 100 bound parameters (including tenant_id).
-  if (itemsToDelete.length > 0) {
-    for (let i = 0; i < itemsToDelete.length; i += 50) {
-      const chunk = itemsToDelete.slice(i, i + 50);
-      const placeholders = chunk.map(() => "?").join(",");
-      statements.push(
-        env.DB.prepare(
-          `DELETE FROM menu_items WHERE tenant_id = ? AND id IN (${placeholders})`
-        ).bind(tenantId, ...chunk)
-      );
-    }
-  }
-
-  if (catsToDelete.length > 0) {
-    for (let i = 0; i < catsToDelete.length; i += 50) {
-      const chunk = catsToDelete.slice(i, i + 50);
-      const placeholders = chunk.map(() => "?").join(",");
-      statements.push(
-        env.DB.prepare(
-          `DELETE FROM menu_categories WHERE tenant_id = ? AND id IN (${placeholders})`
-        ).bind(tenantId, ...chunk)
-      );
+  for (const [table, ids] of [
+    ['menu_items', itemDeletes],
+    ['menu_customizations', customDeletes],
+    ['menu_categories', categoryDeletes]
+  ] as [string, string[]][]) {
+    for (let i = 0; i < ids.length; i += 50) {
+      const chunk = ids.slice(i, i + 50);
+      statements.push(env.DB.prepare(
+        `DELETE FROM ${table} WHERE tenant_id = ? AND id IN (${chunk.map(() => '?').join(',')})`
+      ).bind(tenantId, ...chunk));
     }
   }
 
@@ -565,15 +603,8 @@ export async function updateMenu(request: Request, env: Env): Promise<Response> 
     const tenantId = getTenantId(request);
     const data = await request.json();
 
-    // 1. Đồng bộ vào D1 Database nếu có liên kết DB
-    if (env.DB) {
-      await syncMenuToD1(tenantId, data, env);
-    }
-
-    // 2. Ghi KV fallback cho tenant mặc định benmi
-    if (tenantId === "benmi") {
-      await env.ORDER_STATE.put("menu:latest", JSON.stringify(data));
-    }
+    if (!env.DB) return json({ error: 'MENU_DATABASE_UNAVAILABLE' }, 503);
+    await syncMenuToD1(tenantId, data, env);
 
     // 3. Xóa cache đa hộ thuê để force reload ở lượt đọc sau
     const cacheKey = `tenant:${tenantId}:menu`;

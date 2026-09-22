@@ -8,6 +8,7 @@ let activeCategoryIndex = -1;
 let isMenuDirty = false;
 let savedMenuSnapshot = null;
 let isMenuSaving = false;
+let isMenuLoadedCompletely = false;
 
 function getBenmiDefaultCategories() {
   return [
@@ -23,7 +24,7 @@ function updateMenuSaveState() {
   const btn = document.getElementById("btn-menu-save");
   const label = document.getElementById("btn-menu-save-text");
   if (!btn) return;
-  btn.disabled = isMenuSaving || !isMenuDirty;
+  btn.disabled = isMenuSaving || !isMenuLoadedCompletely || !isMenuDirty;
   btn.classList.toggle("has-changes", isMenuDirty);
   const text = t(isMenuSaving ? "menuSaving" : isMenuDirty ? "btnMenuSave" : "menuSaved");
   if (label) label.textContent = text;
@@ -87,7 +88,7 @@ function openMenuSettings() {
   document.querySelectorAll(".content").forEach(c => c.style.display = "none");
   const viewMenu = document.getElementById("view-menu");
   if (viewMenu) viewMenu.style.display = "block";
-  if (!currentMenuData) {
+  if (!currentMenuData || !isMenuLoadedCompletely) {
     loadMenuData();
   } else {
     renderMenuCategories();
@@ -98,6 +99,8 @@ function openMenuSettings() {
 }
 
 async function loadMenuData() {
+  isMenuLoadedCompletely = false;
+  updateMenuSaveState();
   const bodyEl = document.getElementById("menu-editor-body");
   if (bodyEl) bodyEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">${t("menuLoading")}</div>`;
   try {
@@ -105,6 +108,10 @@ async function loadMenuData() {
     const res = await fetch(`${WORKER_BASE}/api/tenant/bootstrap?tenant_id=${tenantId}&_t=${Date.now()}`);
     if (!res.ok) throw new Error("Failed to load bootstrap");
     const data = await res.json();
+    if (data.menuComplete !== true || !Array.isArray(data.catalog) || !Array.isArray(data.modifiers) ||
+        (data.customizations !== undefined && !Array.isArray(data.customizations))) {
+      throw new Error('Incomplete menu');
+    }
 
     const categories = [];
     if (data.catalog) {
@@ -114,6 +121,7 @@ async function loadMenuData() {
         }
         categories.push({
           id: cat.slug,
+          databaseId: cat.id,
           title: cat.name,
           shortName: cat.shortName || cat.name,
           type: 'catalog',
@@ -121,6 +129,7 @@ async function loadMenuData() {
           appliedModifiers: cat.appliedModifiers || (cat.allowCustomization === false ? [] : ['*']),
           sortOrder: Number(cat.sortOrder !== undefined ? cat.sortOrder : (cat.sort_order !== undefined ? cat.sort_order : (cIdx + 1))),
           items: cat.items.map(it => ({
+            id: it.id,
             name: it.name,
             price: it.price,
             isOos: it.isOutOfStock,
@@ -136,11 +145,13 @@ async function loadMenuData() {
         if (!categories.some(c => c.id === mod.slug)) {
           categories.push({
             id: mod.slug,
+            databaseId: mod.id,
             title: mod.name,
             shortName: mod.shortName || mod.name,
             type: 'modifier',
             sortOrder: Number(mod.sortOrder !== undefined ? mod.sortOrder : (mod.sort_order !== undefined ? mod.sort_order : (100 + mIdx))),
             items: mod.options.map(opt => ({
+              id: opt.id,
               name: opt.name,
               price: opt.price,
               isOos: opt.isOutOfStock,
@@ -178,6 +189,7 @@ async function loadMenuData() {
 
         categories.push({
           id: 'sec-flavor',
+          databaseId: data.customizationCategoryId || null,
           title: currentLang === 'vi' ? 'Tùy chọn khẩu vị & biến thể' : '口味與客製化選擇',
           shortName: currentLang === 'vi' ? 'Khẩu vị' : '口味選擇',
           type: 'order_customization',
@@ -194,12 +206,8 @@ async function loadMenuData() {
     // position interleaved with catalog categories rather than forcing it first.
     categories.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
 
-    currentMenuData = categories.length > 0 ? categories : getBenmiDefaultCategories().map(cat => ({
-      id: cat.id,
-      title: cat.label,
-      type: 'catalog',
-      items: []
-    }));
+    currentMenuData = categories;
+    isMenuLoadedCompletely = true;
 
     if (typeof updatePosCatalogPriceMap === 'function') {
       updatePosCatalogPriceMap(currentMenuData);
@@ -220,40 +228,22 @@ async function loadMenuData() {
       if (deleteBtn) deleteBtn.style.display = "none";
     }
   } catch (e) {
-    console.warn("Bootstrap load failed, falling back to legacy /api/menu:", e);
-    try {
-      const res = await fetch(`${WORKER_BASE}/api/menu?tenant_id=${getTenantIdFromUrl()}&_t=${Date.now()}`);
-      if (!res.ok) throw new Error("Failed to load");
-      rawMenuData = await res.json();
-      currentMenuData = getBenmiDefaultCategories().map(cat => ({
-        id: cat.id,
-        title: (rawMenuData._category_names && rawMenuData._category_names[cat.id]) || cat.label,
-        shortName: (rawMenuData._category_short_names && rawMenuData._category_short_names[cat.id]) || (rawMenuData._category_names && rawMenuData._category_names[cat.id]) || cat.label,
-        type: 'catalog',
-        items: Object.entries(rawMenuData[cat.id] || {}).map(([name, price]) => {
-          const isOos = rawMenuData.out_of_stock && rawMenuData.out_of_stock.includes(`${cat.id}:${name}`);
-          return { name, price: typeof price === 'object' ? price.price : price, badgeText: typeof price === 'object' ? (price.badge_text || '') : '', isOos, originalName: name };
-        })
-      }));
-      if (typeof updatePosCatalogPriceMap === 'function') {
-        updatePosCatalogPriceMap(currentMenuData);
-      }
-      clearMenuDirty();
-      activeCategoryIndex = currentMenuData.length > 0 ? 0 : -1;
-      renderMenuCategories();
-      if (activeCategoryIndex >= 0) {
-        renderMenuCategoryEditor(0);
-      } else {
-        if (bodyEl) bodyEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;" id="i18n-menu-select-prompt">${t("menuSelectPrompt")}</div>`;
-        const titleEl = document.getElementById("menu-editor-title");
-        if (titleEl) titleEl.innerText = t("menuEditorTitle");
-        const renameBtn = document.getElementById("btn-category-rename");
-        const deleteBtn = document.getElementById("btn-category-delete");
-        if (renameBtn) renameBtn.style.display = "none";
-        if (deleteBtn) deleteBtn.style.display = "none";
-      }
-    } catch (err2) {
-      alert(t("menuLoadFail") + err2.message);
+    console.warn("Complete menu load failed:", e);
+    isMenuLoadedCompletely = false;
+    currentMenuData = null;
+    savedMenuSnapshot = null;
+    isMenuDirty = false;
+    activeCategoryIndex = -1;
+    renderMenuCategories();
+    updateMenuSaveState();
+    if (bodyEl) {
+      bodyEl.textContent = t('menuIncompleteReload');
+      const retry = document.createElement('button');
+      retry.type = 'button';
+      retry.textContent = t('menuRetryLoad');
+      retry.style.minHeight = '48px';
+      retry.addEventListener('click', loadMenuData);
+      bodyEl.appendChild(retry);
     }
   }
 }
@@ -1062,8 +1052,9 @@ function serializeMenuData(categories) {
   categories.forEach((cat, cIdx) => {
     const currentOrder = cat.sortOrder !== undefined ? cat.sortOrder : (cIdx + 1);
     if (cat.type === 'order_customization' || cat.id === 'sec-flavor') {
+      if (cat.groups?.length && !cat.databaseId) cat.databaseId = `${getTenantIdFromUrl()}_${cat.id}`;
       output.__customizations = {
-        id: cat.id,
+        id: cat.databaseId || cat.id,
         title: cat.title,
         shortName: cat.shortName || cat.title,
         sortOrder: currentOrder,
@@ -1096,7 +1087,10 @@ function serializeMenuData(categories) {
     };
     cat.items.forEach(item => {
       if (item.name && item.name.trim() !== "" && item.price !== null) {
+        if (Object.prototype.hasOwnProperty.call(output[cat.id], item.name.trim())) throw new Error(t('menuDuplicateItem'));
+        if (!item.id) item.id = `${getTenantIdFromUrl()}_item_${crypto.randomUUID()}`;
         output[cat.id][item.name.trim()] = {
+          id: item.id,
           price: item.price,
           badge_text: item.badgeText || null,
           is_recommended: (item.badgeText && item.badgeText.includes('推薦')) || item.isRecommended ? 1 : 0
@@ -1107,11 +1101,35 @@ function serializeMenuData(categories) {
   return output;
 }
 
+// Deletions are computed only against the fully loaded editor snapshot, never
+// against whatever happens to exist on the server when this request arrives.
+function getMenuDeletions(before, after) {
+  const remainingCategories = new Set(after.map(cat => cat.id));
+  const remainingItems = new Set(after.flatMap(cat => (cat.items || []).map(item => item.id)));
+  const remainingGroups = new Set(after.flatMap(cat => (cat.groups || []).map(group => group.id)));
+  return {
+    categories: before.filter(cat => !remainingCategories.has(cat.id))
+      .map(cat => cat.type === 'order_customization' ? cat.databaseId : (cat.databaseId || cat.id)).filter(Boolean),
+    items: before.filter(cat => remainingCategories.has(cat.id)).flatMap(cat =>
+      (cat.items || []).filter(item => item.id && !remainingItems.has(item.id)).map(item => item.id)),
+    customizations: before.flatMap(cat =>
+      (cat.groups || []).filter(group => group.id && !remainingGroups.has(group.id)).map(group => group.id))
+  };
+}
+
 async function saveMenuData(skipConfirm = false) {
+  if (!isMenuLoadedCompletely) { alert(t('menuIncompleteReload')); return; }
   if (!currentMenuData || isMenuSaving) return;
   if (!skipConfirm && !confirm(t("confirmSaveMenu"))) return;
   syncMenuDataFromDOM();
-  const output = serializeMenuData(currentMenuData);
+  let output;
+  try {
+    output = serializeMenuData(currentMenuData);
+    output.__delete = getMenuDeletions(JSON.parse(savedMenuSnapshot || '[]'), currentMenuData);
+  } catch (error) {
+    alert(t('menuSaveFail') + error.message);
+    return;
+  }
   isMenuSaving = true;
   updateMenuSaveState();
   const editor = document.getElementById("menu-editor-body");
@@ -1374,6 +1392,7 @@ async function promptRenameCategoryAtIndex(idx) {
 }
 
 async function deleteCategoryAtIndex(idx) {
+  if (!isMenuLoadedCompletely) { alert(t('menuIncompleteReload')); return; }
   if (isMenuSaving || !currentMenuData || !currentMenuData[idx]) return;
   const cat = currentMenuData[idx];
   if (!confirm(t("confirmDeleteCategory", { name: cat.title }))) return;
@@ -1390,7 +1409,7 @@ async function deleteCategoryAtIndex(idx) {
       const remaining = saved.filter(entry => entry.id !== cat.id);
       const res = await fetch(`${WORKER_BASE}/api/menu?tenant_id=${getTenantIdFromUrl()}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(serializeMenuData(remaining))
+        body: JSON.stringify({ __delete: getMenuDeletions(saved, remaining) })
       });
       if (!res.ok) throw new Error('API returned ' + res.status);
       savedMenuSnapshot = JSON.stringify(remaining);
@@ -1423,8 +1442,7 @@ async function deleteCategoryAtIndex(idx) {
     if (deleteBtn) deleteBtn.style.display = "none";
   }
 
-  // Auto-save immediately to database & refresh edge cache
-  await saveMenuData(true);
+
 }
 
 function promptRenameCategory() {

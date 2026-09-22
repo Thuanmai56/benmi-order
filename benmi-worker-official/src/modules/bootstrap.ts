@@ -367,6 +367,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
     const logoUrl = tenantCtx?.logoUrl || (tenantId === 'benmi' ? './benmi_logo.png' : null);
 
     // 3. Batch Query D1 Database
+    let menuComplete = false;
     let categories: any[] = [];
     let items: any[] = [];
     let rawCustomizations: any[] = [];
@@ -406,9 +407,13 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
              ORDER BY sort_order ASC`
           ).bind(tenantId)
         ]);
+        if ([catsRes, itemsRes, customRes].some(result => !result.success || !Array.isArray(result.results))) {
+          throw new Error('Incomplete menu query');
+        }
         categories = (catsRes.results as any[]) || [];
         items = (itemsRes.results as any[]) || [];
         rawCustomizations = (customRes.results as any[]) || [];
+        menuComplete = true;
 
         try {
           const [bRes, rRes] = await env.DB.batch([
@@ -444,7 +449,8 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
     const customizations: BootstrapResponse['customizations'] = [];
     for (const c of rawCustomizations) {
       try {
-        const opts = typeof c.options_json === 'string' ? JSON.parse(c.options_json) : (c.options_json || []);
+        const opts = typeof c.options_json === 'string' ? JSON.parse(c.options_json) : c.options_json;
+        if (!Array.isArray(opts)) throw new Error('Invalid customization options');
         const enrichedOpts = opts.map((opt: any) => {
           const optId = opt.id || opt.name;
           const rule = customRulesMap.get(`${c.key}::${optId}`) || customRulesMap.get(`${c.key}::${opt.name}`);
@@ -476,6 +482,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
           options: enrichedOpts
         });
       } catch (e) {
+        menuComplete = false;
         console.error(`[Bootstrap] Failed to parse options_json for ${c.id}:`, e);
       }
     }
@@ -601,10 +608,12 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
     const catalog: BootstrapResponse['catalog'] = [];
     const modifiers: BootstrapResponse['modifiers'] = [];
     let customizationSortOrder: number | undefined;
+    let customizationCategoryId: string | null = null;
 
     for (const cat of categories) {
       if (cat.slug === 'sec-flavor' || cat.slug === 'flavor' || cat.category_type === 'order_customization') {
         customizationSortOrder = cat.sort_order || 0;
+        customizationCategoryId = cat.id;
         continue;
       }
       const catType = cat.category_type || (cat.slug === 'topping' ? 'modifier' : 'catalog');
@@ -686,7 +695,9 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
       });
     }
 
-    const payload: BootstrapResponse = {
+    const payload: BootstrapResponse & { menuComplete: boolean; customizationCategoryId: string | null } = {
+      menuComplete,
+      customizationCategoryId,
       tenant: {
         id: tenantId,
         brandName,
@@ -718,7 +729,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
     };
 
     // 6. Cache in KV Edge Cache
-    if (env.ORDER_STATE) {
+    if (menuComplete && env.ORDER_STATE) {
       try {
         await env.ORDER_STATE.put(cacheKey, JSON.stringify(payload), { expirationTtl: 3600 });
       } catch (kvErr) {

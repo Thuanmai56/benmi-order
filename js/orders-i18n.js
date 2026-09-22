@@ -473,6 +473,9 @@ const I18N = {
     restoreSuccess: "已成功恢復預設菜單！",
     restoreFail: "恢復菜單失敗：",
     menuLoadFail: "無法載入菜單資料：",
+    menuIncompleteReload: "菜單未完整載入，暫時無法儲存。請重新載入後再編輯。",
+    menuRetryLoad: "重新載入菜單",
+    menuDuplicateItem: "同一分類不能有重複的餐點名稱。",
     priceHiddenPlaceholder: "隱藏",
     // Image Modal
     imageModalTitle: "圖片管理",
@@ -940,6 +943,9 @@ const I18N = {
     restoreSuccess: "Đã khôi phục menu gốc thành công!",
     restoreFail: "Khôi phục menu thất bại: ",
     menuLoadFail: "Không thể tải dữ liệu thực đơn: ",
+    menuIncompleteReload: "Thực đơn chưa tải đầy đủ nên chưa thể lưu. Vui lòng tải lại trước khi chỉnh sửa.",
+    menuRetryLoad: "Tải lại thực đơn",
+    menuDuplicateItem: "Tên món trong cùng một danh mục không được trùng nhau.",
     priceHiddenPlaceholder: "Ẩn",
     // Image Modal
     imageModalTitle: "Quản lý hình ảnh",
