@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>BLAB Staff Order - Nhận đơn tại bàn</title>
-  <link rel="stylesheet" href="css/staff-order.css?v=20260923_staff_index_style_v6">
+  <link rel="stylesheet" href="css/staff-order.css?v=20260923_staff_table_transfer_v7">
 </head>
 <body class="staff-body">
 
@@ -15,12 +15,12 @@
         <span class="brand-title" id="display-brand-name">BLAB POS</span>
         <span class="staff-mode-badge" id="i18n-staff-badge">Nhận đơn tại bàn</span>
       </div>
-      <div class="active-table-badge" id="header-table-badge" style="display: none;" onclick="goToTableSelection()">
+      <div class="active-table-badge" id="header-table-badge" style="display: none;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M3 3h18v18H3zM3 9h18M9 21V9"/>
         </svg>
         <span id="header-table-label">Bàn: --</span>
-        <button type="button" class="btn-change-table" title="Đổi bàn / 更換桌號" id="i18n-btn-change-table" onclick="event.stopPropagation(); openChangeDraftTableModal()">Đổi bàn</button>
+        <button type="button" class="btn-change-table" title="Đổi bàn / 更換桌號" id="i18n-btn-change-table" onclick="openChangeTableForCurrent()">Đổi bàn</button>
       </div>
     </div>
 
@@ -142,13 +142,14 @@
           <button type="button" class="btn btn-ghost btn-order-detail" id="btn-menu-order-detail" style="display:none" onclick="openCurrentStaffOrderDetail()">
             <span id="i18n-view-order-menu">Xem đơn</span>
           </button>
-          <button type="button" class="btn btn-ghost btn-back-tables" onclick="goToTableSelection()">
+          <button type="button" class="btn btn-ghost btn-back-tables" onclick="openChangeTableForCurrent()">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="19" y1="12" x2="5" y2="12"></line>
             <polyline points="12 19 5 12 12 5"></polyline>
           </svg>
           <span id="i18n-btn-back-tables">Đổi bàn</span>
           </button>
+          <button type="button" class="btn btn-ghost btn-table-list" onclick="goToTableSelection()" id="i18n-btn-table-list">Danh sách bàn</button>
         </div>
       </div>
 
@@ -374,6 +375,6 @@
     </div>
   </div>
 
-  <script src="js/staff-order.js?v=20260923_staff_index_style_v5"></script>
+  <script src="js/staff-order.js?v=20260923_staff_table_transfer_v7"></script>
 </body>
 </html>

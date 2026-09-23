@@ -508,11 +508,30 @@ export async function handleStaffRoute(
 
     // 3. Move order from fromTable to toTable (atomic D1 update)
     const nextRevision = (Number(fromTable.active_revision) || 0) + 1;
-    await env.DB.prepare(
-      `UPDATE orders 
-       SET table_id = ?, table_number = ?, revision = ?, updated_at = datetime('now')
-       WHERE key = ? AND tenant_id = ?`
-    ).bind(toTable.id, toTable.label, nextRevision, fromTable.active_order_key, tenantId).run();
+    let updateResult: D1Result;
+    try {
+      updateResult = await env.DB.prepare(
+        `UPDATE orders
+         SET table_id = ?, table_number = ?, revision = revision + 1, updated_at = datetime('now')
+         WHERE key = ? AND tenant_id = ? AND table_id = ? AND revision = ?
+           AND status NOT IN ('PAID', 'REJECTED', 'PICKED_UP')
+           AND NOT EXISTS (
+             SELECT 1 FROM orders AS destination
+             WHERE destination.tenant_id = ? AND destination.table_id = ?
+               AND destination.source = 'staff'
+               AND destination.status NOT IN ('PAID', 'REJECTED', 'PICKED_UP')
+           )`
+      ).bind(toTable.id, toTable.label, fromTable.active_order_key, tenantId, fromTableId,
+        fromTable.active_revision, tenantId, toTableId).run();
+    } catch (err: any) {
+      if (String(err).includes('UNIQUE constraint failed')) {
+        return json({ ok: false, error: 'DEST_TABLE_OCCUPIED', message: `Bàn ${toTable.label} đã có đơn, vui lòng chọn bàn trống khác` }, 409);
+      }
+      throw err;
+    }
+    if (!updateResult.meta.changes) {
+      return json({ ok: false, error: 'TABLE_TRANSFER_CONFLICT', message: 'Đơn hoặc bàn đã thay đổi, vui lòng tải lại danh sách bàn' }, 409);
+    }
 
     console.log(`[StaffTransfer] Tenant ${tenantId}: Order ${fromTable.active_order_key} transferred from Table ${fromTable.label} (${fromTable.id}) to Table ${toTable.label} (${toTable.id})`);
 
@@ -523,7 +542,8 @@ export async function handleStaffRoute(
       toTableId,
       fromLabel: fromTable.label,
       toLabel: toTable.label,
-      orderKey: fromTable.active_order_key
+      orderKey: fromTable.active_order_key,
+      revision: nextRevision
     });
   }
 

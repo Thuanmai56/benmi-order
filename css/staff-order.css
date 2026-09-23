@@ -120,6 +120,9 @@ body.staff-body {
   background: #e2e8f0;
 }
 
+.active-table-badge { cursor: default; }
+.transfer-table-chip { font: inherit; width: 100%; }
+
 .btn-change-table {
   background: none;
   border: none;
@@ -1773,7 +1776,7 @@ body.staff-body { background: #f4f6f8; color: #1f2937; }
 .btn-card-detail { background: #eaf8ea; color: #008f00; border: 1px solid #cceccc; cursor: pointer; }
 .btn-card-detail:hover { background: #d9f3d9; }
 .table-card-actions { flex-wrap: wrap; gap: 8px; }
-.staff-order-context-actions { display: flex; align-items: center; gap: 8px; }
+.staff-order-context-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
 .btn-order-detail { border-color: #cceccc; color: #008f00; }
 .staff-detail-backdrop { z-index: 250; }
 .staff-detail-sheet { width: min(100%, 640px); max-height: min(88vh, 900px); display: flex; flex-direction: column; text-align: left; }

@@ -52,6 +52,10 @@
       bannerAppendSub: "Đơn hiện tại: #{displayKey} • {total} • Lượt {round}",
       btnChangeTable: "Đổi bàn",
       btnBackTables: "Đổi bàn",
+      btnTableList: "Danh sách bàn",
+      noEmptyTransferTable: "Không còn bàn trống để chuyển đến.",
+      transferUnavailable: "Đơn tại bàn này đã thay đổi. Vui lòng kiểm tra lại danh sách bàn.",
+      destinationHasDraft: "Bàn đích có món chưa gửi trên thiết bị này. Vui lòng xử lý giỏ đó trước khi chuyển đơn.",
       cartViewBtn: "Xem giỏ hàng",
       cartItemsPreviewEmpty: "Chưa có món nào",
       cartTitle: "Giỏ hàng nhận đơn",
@@ -139,6 +143,10 @@
       bannerAppendSub: "目前訂單：#{displayKey} • {total} • 第 {round} 輪",
       btnChangeTable: "更換桌號",
       btnBackTables: "更換桌號",
+      btnTableList: "桌號列表",
+      noEmptyTransferTable: "目前沒有可轉入的空桌。",
+      transferUnavailable: "此桌訂單已有變更，請重新查看桌號列表。",
+      destinationHasDraft: "目標桌號在此裝置上有尚未送出的餐點，請先處理該購物車。",
       cartViewBtn: "查看購物車",
       cartItemsPreviewEmpty: "尚未選取餐點",
       cartTitle: "點餐購物車",
@@ -312,6 +320,7 @@
       "i18n-filter-occupied": "filterOccupied",
       "i18n-btn-change-table": "btnChangeTable",
       "i18n-btn-back-tables": "btnBackTables",
+      "i18n-btn-table-list": "btnTableList",
       "i18n-view-order-menu": "viewOrder",
       "i18n-btn-view-cart": "cartViewBtn",
       "i18n-cart-title": "cartTitle",
@@ -691,6 +700,8 @@
     if (backBtn) {
       backBtn.style.display = isTakeout ? "none" : "inline-flex";
     }
+    const tableListBtn = document.getElementById("i18n-btn-table-list");
+    if (tableListBtn) tableListBtn.style.display = isTakeout ? "none" : "inline-flex";
 
     updateOrderBanner();
     const detailButton = document.getElementById("btn-menu-order-detail");
@@ -1628,10 +1639,49 @@
 
   // --- 12. TABLE TRANSFER & CHANGE DRAFT TABLE ---
   let transferSourceTableId = null;
+  let transferInProgress = false;
 
-  function openTransferTableModal(tableId) {
+  async function refreshTablesForTransfer() {
+    const res = await fetch(`${WORKER_BASE}/api/staff/tables?tenant_id=${encodeURIComponent(state.tenantId)}&_t=${Date.now()}`, {
+      headers: { "Authorization": "Bearer " + state.token }
+    });
+    if (res.status === 401) {
+      showLoginView();
+      throw new Error(t("pinError"));
+    }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) throw new Error(data.message || t("transferUnavailable"));
+    state.tables = data.tables || [];
+  }
+
+  async function openChangeTableForCurrent() {
+    if (!state.currentTable || state.currentTable.is_takeout) return;
+    try {
+      await refreshTablesForTransfer();
+      const current = state.tables.find(table => table.id === state.currentTable.id);
+      if (!current) throw new Error(t("transferUnavailable"));
+      state.currentTable = current;
+      updateOrderBanner();
+      if (current.active_order_key) {
+        await openTransferTableModal(current.id, true);
+      } else {
+        await openChangeDraftTableModal(true);
+      }
+    } catch (err) {
+      alert(err.message || t("transferUnavailable"));
+    }
+  }
+
+  async function openTransferTableModal(tableId, refreshed = false) {
+    if (!refreshed) {
+      try { await refreshTablesForTransfer(); }
+      catch (err) { alert(err.message || t("transferUnavailable")); return; }
+    }
     const table = state.tables.find(t => t.id === tableId);
-    if (!table) return;
+    if (!table || !table.active_order_key) {
+      alert(t("transferUnavailable"));
+      return;
+    }
 
     transferSourceTableId = tableId;
     const modal = document.getElementById("transferModal");
@@ -1643,23 +1693,16 @@
     }
 
     if (gridEl) {
-      const targetTables = state.tables.filter(t => t.id !== tableId);
+      const targetTables = state.tables.filter(t => t.id !== tableId && !t.active_order_key && t.is_active !== 0);
       if (targetTables.length === 0) {
-        gridEl.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; color: #94a3b8; padding: 20px;">${t("emptyTablesList")}</div>`;
+        gridEl.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; color: #64748b; padding: 20px;">${t("noEmptyTransferTable")}</div>`;
       } else {
         gridEl.innerHTML = targetTables.map(tDest => {
-          const isDestOccupied = !!tDest.active_order_key;
-          const statusText = isDestOccupied ? t("occupiedStatus") : t("emptyStatus");
-          const chipClass = isDestOccupied ? "transfer-table-chip occupied disabled" : "transfer-table-chip";
-          const clickHandler = isDestOccupied
-            ? `alert('${t("destTableOccupied")}')`
-            : `confirmTransferTable('${tDest.id}')`;
-
           return `
-            <div class="${chipClass}" onclick="${clickHandler}">
+            <button type="button" class="transfer-table-chip" onclick="confirmTransferTable('${tDest.id}')">
               <span class="chip-table-name">${escapeHtml(tDest.label)}</span>
-              <span class="chip-table-status">${statusText}</span>
-            </div>
+              <span class="chip-table-status">${t("emptyStatus")}</span>
+            </button>
           `;
         }).join("");
       }
@@ -1675,10 +1718,23 @@
   }
 
   async function confirmTransferTable(toTableId) {
-    if (!transferSourceTableId || !toTableId) return;
+    if (!transferSourceTableId || !toTableId || transferInProgress) return;
     const fromTable = state.tables.find(t => t.id === transferSourceTableId);
     const toTable = state.tables.find(t => t.id === toTableId);
-    if (!fromTable || !toTable) return;
+    if (!fromTable || !fromTable.active_order_key || !toTable || toTable.active_order_key) {
+      alert(t("transferUnavailable"));
+      return;
+    }
+    try {
+      const destinationDraft = JSON.parse(sessionStorage.getItem(`staff_cart_${state.tenantId}_${toTableId}`) || "[]");
+      if (Array.isArray(destinationDraft) && destinationDraft.length > 0) {
+        alert(t("destinationHasDraft"));
+        return;
+      }
+    } catch (_) {}
+    const fromTableId = transferSourceTableId;
+    transferInProgress = true;
+    document.querySelectorAll("#transfer-tables-grid button").forEach(button => { button.disabled = true; });
 
     try {
       const res = await fetch(`${WORKER_BASE}/api/staff/tables/transfer?tenant_id=${encodeURIComponent(state.tenantId)}`, {
@@ -1688,67 +1744,80 @@
           "Authorization": "Bearer " + state.token
         },
         body: JSON.stringify({
-          fromTableId: transferSourceTableId,
+          fromTableId,
           toTableId: toTableId
         })
       });
 
       const data = await res.json().catch(() => ({}));
       if (res.status === 409) {
-        alert(t("destTableOccupied"));
+        alert(data.message || t("transferUnavailable"));
+        closeTransferModal();
+        await loadTablesData();
         return;
       }
 
       if (res.ok && data && data.ok) {
         // Migrate any draft cart in sessionStorage if exists
         try {
-          const oldDraft = sessionStorage.getItem(`staff_cart_${state.tenantId}_${transferSourceTableId}`);
-          const oldFlavor = sessionStorage.getItem(`staff_flavor_${state.tenantId}_${transferSourceTableId}`);
+          const oldDraft = sessionStorage.getItem(`staff_cart_${state.tenantId}_${fromTableId}`);
+          const oldFlavor = sessionStorage.getItem(`staff_flavor_${state.tenantId}_${fromTableId}`);
           if (oldDraft) {
             sessionStorage.setItem(`staff_cart_${state.tenantId}_${toTableId}`, oldDraft);
-            sessionStorage.removeItem(`staff_cart_${state.tenantId}_${transferSourceTableId}`);
+            sessionStorage.removeItem(`staff_cart_${state.tenantId}_${fromTableId}`);
           }
           if (oldFlavor) {
             sessionStorage.setItem(`staff_flavor_${state.tenantId}_${toTableId}`, oldFlavor);
-            sessionStorage.removeItem(`staff_flavor_${state.tenantId}_${transferSourceTableId}`);
+            sessionStorage.removeItem(`staff_flavor_${state.tenantId}_${fromTableId}`);
           }
         } catch (e) {}
 
         closeTransferModal();
         alert(t("transferSuccess", { tableName: `${state.currentLang === "vi" ? "Bàn" : "桌號"} ${toTable.label}` }));
         await loadTablesData();
+        if (state.currentTable && state.currentTable.id === fromTableId) {
+          const updatedTable = state.tables.find(table => table.id === toTableId);
+          if (updatedTable) {
+            state.currentTable = updatedTable;
+            await showMenuView();
+          }
+        }
       } else {
         alert((data && data.message) || (state.currentLang === "vi" ? "Đổi bàn thất bại" : "轉桌失敗"));
       }
     } catch (err) {
       alert((state.currentLang === "vi" ? "Lỗi kết nối: " : "連線錯誤: ") + (err.message || err));
+    } finally {
+      transferInProgress = false;
+      document.querySelectorAll("#transfer-tables-grid button").forEach(button => { button.disabled = false; });
     }
   }
 
-  function openChangeDraftTableModal() {
+  async function openChangeDraftTableModal(refreshed = false) {
     if (!state.currentTable) return;
+    if (state.currentTable.active_order_key) {
+      await openTransferTableModal(state.currentTable.id, refreshed);
+      return;
+    }
+    if (!refreshed) {
+      try { await refreshTablesForTransfer(); }
+      catch (err) { alert(err.message || t("transferUnavailable")); return; }
+    }
 
     const modal = document.getElementById("changeDraftTableModal");
     const gridEl = document.getElementById("change-draft-tables-grid");
 
     if (gridEl) {
-      const availableTables = state.tables;
+      const availableTables = state.tables.filter(table => table.id !== state.currentTable.id && !table.active_order_key && table.is_active !== 0);
       if (availableTables.length === 0) {
-        gridEl.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; color: #94a3b8; padding: 20px;">${t("emptyTablesList")}</div>`;
+        gridEl.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; color: #64748b; padding: 20px;">${t("noEmptyTransferTable")}</div>`;
       } else {
         gridEl.innerHTML = availableTables.map(tbl => {
-          const isCurrent = tbl.id === state.currentTable.id;
-          const isOccupied = !!tbl.active_order_key;
-          const statusText = isCurrent
-            ? (state.currentLang === "vi" ? "Hiện tại" : "目前")
-            : (isOccupied ? t("occupiedStatus") : t("emptyStatus"));
-          const chipClass = isCurrent ? "transfer-table-chip current" : "transfer-table-chip";
-
           return `
-            <div class="${chipClass}" onclick="${isCurrent ? '' : `changeDraftTable('${tbl.id}')`}">
+            <button type="button" class="transfer-table-chip" onclick="changeDraftTable('${tbl.id}')">
               <span class="chip-table-name">${escapeHtml(tbl.label)}</span>
-              <span class="chip-table-status">${statusText}</span>
-            </div>
+              <span class="chip-table-status">${t("emptyStatus")}</span>
+            </button>
           `;
         }).join("");
       }
@@ -1764,7 +1833,7 @@
 
   function changeDraftTable(newTableId) {
     const newTable = state.tables.find(t => t.id === newTableId);
-    if (!newTable || !state.currentTable || newTable.id === state.currentTable.id) return;
+    if (!newTable || !state.currentTable || newTable.id === state.currentTable.id || newTable.active_order_key || state.currentTable.active_order_key) return;
 
     const oldTableId = state.currentTable.id;
     // Migrate active draft cart and flavor selections in sessionStorage
@@ -2040,6 +2109,7 @@
   window.closeTransferModal = closeTransferModal;
   window.confirmTransferTable = confirmTransferTable;
   window.openChangeDraftTableModal = openChangeDraftTableModal;
+  window.openChangeTableForCurrent = openChangeTableForCurrent;
   window.closeChangeDraftTableModal = closeChangeDraftTableModal;
   window.changeDraftTable = changeDraftTable;
   window.submitStaffOrder = submitStaffOrder;
