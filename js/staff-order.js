@@ -100,7 +100,20 @@
       btnCancelChangeDraft: "Hủy",
       takeawayTableLabel: "Mang về",
       takeawayBannerSub: "Đơn mang về • Chọn món để bắt đầu",
-      transferBtnCard: "Đổi bàn"
+      transferBtnCard: "Chuyển đơn",
+      viewOrder: "Xem đơn",
+      orderDetailTitle: "Chi tiết đơn",
+      orderDetailLoading: "Đang tải chi tiết đơn…",
+      orderDetailFailed: "Không tải được chi tiết đơn. Vui lòng thử lại.",
+      orderDetailRetry: "Thử lại",
+      orderDetailNoItems: "Đơn chưa có món nào.",
+      orderDetailRound: "Lượt {round}",
+      orderDetailAppend: "Gọi thêm món",
+      orderDetailTotal: "Tổng đơn",
+      orderDetailStatus: "Trạng thái: {status}",
+      orderDetailNote: "Ghi chú: {note}",
+      orderDetailClosed: "Đơn đã kết thúc; không thể gọi thêm món.",
+      menuSearchPlaceholder: "Tìm món trong thực đơn"
     },
     "zh-TW": {
       staffBadge: "桌邊點餐",
@@ -174,7 +187,20 @@
       btnCancelChangeDraft: "取消",
       takeawayTableLabel: "外帶",
       takeawayBannerSub: "外帶訂單 • 請選取餐點",
-      transferBtnCard: "轉桌"
+      transferBtnCard: "轉移訂單",
+      viewOrder: "查看訂單",
+      orderDetailTitle: "訂單明細",
+      orderDetailLoading: "正在載入訂單明細…",
+      orderDetailFailed: "無法載入訂單明細，請重試。",
+      orderDetailRetry: "重試",
+      orderDetailNoItems: "此訂單尚無餐點。",
+      orderDetailRound: "第 {round} 輪",
+      orderDetailAppend: "繼續加點",
+      orderDetailTotal: "訂單總額",
+      orderDetailStatus: "狀態：{status}",
+      orderDetailNote: "備註：{note}",
+      orderDetailClosed: "訂單已結束，無法繼續加點。",
+      menuSearchPlaceholder: "搜尋餐點"
     }
   };
 
@@ -202,7 +228,9 @@
     modalQty: 1,
     modalSelectedOptions: [],
     currentLang: (typeof localStorage !== "undefined" && localStorage.getItem("staff_order_lang")) || "vi",
-    pollTimer: null
+    pollTimer: null,
+    detailTableId: null,
+    detailRequestId: 0
   };
 
   function t(key, vars = {}) {
@@ -284,6 +312,7 @@
       "i18n-filter-occupied": "filterOccupied",
       "i18n-btn-change-table": "btnChangeTable",
       "i18n-btn-back-tables": "btnBackTables",
+      "i18n-view-order-menu": "viewOrder",
       "i18n-btn-view-cart": "cartViewBtn",
       "i18n-cart-title": "cartTitle",
       "i18n-label-note": "labelNote",
@@ -322,6 +351,14 @@
 
     const searchInp = document.getElementById("inp-table-search");
     if (searchInp) searchInp.placeholder = t("searchPlaceholder");
+    const menuSearch = document.getElementById("inp-menu-search");
+    if (menuSearch) menuSearch.placeholder = t("menuSearchPlaceholder");
+    const detailTitle = document.getElementById("staff-detail-title");
+    const detailClose = document.getElementById("staff-detail-close");
+    const detailAppend = document.getElementById("staff-detail-append");
+    if (detailTitle) detailTitle.innerText = t("orderDetailTitle");
+    if (detailClose) detailClose.innerText = state.currentLang === "vi" ? "Đóng" : "關閉";
+    if (detailAppend) detailAppend.innerText = t("orderDetailAppend");
   }
 
   function toggleLanguage() {
@@ -337,6 +374,8 @@
     renderTablesGrid();
     renderCategories();
     renderMenuItems();
+    const menuSearch = document.getElementById("inp-menu-search");
+    if (menuSearch) handleMenuSearch(menuSearch.value);
     renderCartDrawer();
   }
 
@@ -504,6 +543,30 @@
     renderTablesGrid();
   }
 
+  function handleMenuSearch(query) {
+    const normalizedQuery = String(query || "").toLocaleLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+    const sections = document.querySelectorAll("#catalog-sections .section-container");
+    sections.forEach(section => {
+      if (section.id === "sec-flavor") return;
+      const cards = section.querySelectorAll("[id^='card-item-']");
+      let visibleCount = 0;
+      cards.forEach(card => {
+        const cardText = card.textContent.toLocaleLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const matches = !normalizedQuery || cardText.includes(normalizedQuery);
+        card.hidden = !matches;
+        if (matches) visibleCount++;
+      });
+      section.hidden = visibleCount === 0;
+      const slug = section.id.replace(/^sec-/, "");
+      const navButton = [...document.querySelectorAll("#category-tabs-nav [data-cat-slug]")].find(button => button.dataset.catSlug === slug);
+      if (navButton) navButton.hidden = visibleCount === 0;
+    });
+    if (!normalizedQuery) {
+      document.querySelectorAll("#catalog-sections .section-container").forEach(section => { section.hidden = false; });
+      document.querySelectorAll("#category-tabs-nav [data-cat-slug]").forEach(button => { button.hidden = false; });
+    }
+  }
+
   function renderTablesGrid() {
     const grid = document.getElementById("tables-grid");
     if (!grid) return;
@@ -548,6 +611,9 @@
       const transferBtn = isOccupied
         ? `<button type="button" class="btn-card-transfer" onclick="event.stopPropagation(); openTransferTableModal('${tbl.id}')">${t("transferBtnCard")}</button>`
         : '';
+      const detailBtn = isOccupied
+        ? `<button type="button" class="btn-card-detail" onclick="event.stopPropagation(); openStaffOrderDetail('${escapeHtml(tbl.active_order_key)}', '${escapeHtml(tbl.id)}')">${t("viewOrder")}</button>`
+        : '';
 
       return `
         <div class="table-card ${isOccupied ? 'occupied' : 'empty'}" onclick="handleSelectTable('${tbl.id}')">
@@ -561,8 +627,9 @@
           <div class="table-card-bottom">
             <span></span>
             <div class="table-card-actions">
+              ${detailBtn}
               ${transferBtn}
-              <button type="button" class="btn-card-action">${actionText}</button>
+              <button type="button" class="btn-card-action" onclick="event.stopPropagation(); handleSelectTable('${escapeHtml(tbl.id)}')">${actionText}</button>
             </div>
           </div>
         </div>
@@ -626,6 +693,8 @@
     }
 
     updateOrderBanner();
+    const detailButton = document.getElementById("btn-menu-order-detail");
+    if (detailButton) detailButton.style.display = state.currentTable && state.currentTable.active_order_key ? "inline-flex" : "none";
     updateStickyCartBar();
 
     // Load catalog if not yet loaded
@@ -667,6 +736,8 @@
         subEl.innerText = t("bannerNewSub");
       }
     }
+    const menuDetailButton = document.getElementById("btn-menu-order-detail");
+    if (menuDetailButton) menuDetailButton.style.display = isAppend ? "inline-flex" : "none";
   }
 
   // --- 9. CATALOG & BOOTSTRAP LOADING (GROUPED BY CATEGORIES LIKE INDEX.HTML) ---
@@ -1815,6 +1886,92 @@
     }
   }
 
+  function openCurrentStaffOrderDetail() {
+    if (!state.currentTable || !state.currentTable.active_order_key) return;
+    openStaffOrderDetail(state.currentTable.active_order_key, state.currentTable.id);
+  }
+
+  async function openStaffOrderDetail(orderKey, tableId) {
+    if (!orderKey || !state.token) return;
+    state.detailTableId = tableId || (state.currentTable && state.currentTable.id) || null;
+    const requestId = ++state.detailRequestId;
+    const modal = document.getElementById("staffOrderDetailModal");
+    const body = document.getElementById("staff-detail-body");
+    const subtitle = document.getElementById("staff-detail-subtitle");
+    const appendBtn = document.getElementById("staff-detail-append");
+    const table = state.tables.find(x => x.id === state.detailTableId);
+    if (subtitle) subtitle.innerText = table ? `${t("viewOrder")} · ${table.label} · #${table.active_display_key || table.active_order_id || ""}` : "";
+    if (body) body.innerHTML = `<p class="staff-detail-loading">${t("orderDetailLoading")}</p>`;
+    if (appendBtn) appendBtn.style.display = "none";
+    if (modal) modal.style.display = "flex";
+    try {
+      const res = await fetch(`${WORKER_BASE}/api/staff/orders/${encodeURIComponent(orderKey)}?tenant_id=${encodeURIComponent(state.tenantId)}`, {
+        headers: { "Authorization": "Bearer " + state.token }
+      });
+      const data = await res.json().catch(() => ({}));
+      if (requestId !== state.detailRequestId || !modal || modal.style.display === "none") return;
+      if (!res.ok || !data.ok || !data.order) throw new Error(data.message || t("orderDetailFailed"));
+      renderStaffOrderDetail(data.order, data.items || []);
+      const canAppend = !["PAID", "REJECTED", "PICKED_UP", "CANCELLED"].includes(data.order.status);
+      if (appendBtn) appendBtn.style.display = canAppend ? "inline-flex" : "none";
+    } catch (err) {
+      if (requestId !== state.detailRequestId || !body) return;
+      body.innerHTML = `<div class="staff-detail-error">${escapeHtml(err.message || t("orderDetailFailed"))}<button type="button" class="btn btn-ghost" onclick="openStaffOrderDetail('${escapeHtml(orderKey)}', '${escapeHtml(state.detailTableId || "")}')">${t("orderDetailRetry")}</button></div>`;
+    }
+  }
+
+  function renderStaffOrderDetail(order, items) {
+    const body = document.getElementById("staff-detail-body");
+    const subtitle = document.getElementById("staff-detail-subtitle");
+    if (!body) return;
+    const table = state.tables.find(x => x.id === state.detailTableId);
+    const label = table ? table.label : (order.table_number || "");
+    if (subtitle) subtitle.innerText = `${label ? `${state.currentLang === "vi" ? "Bàn" : "桌號"} ${label} · ` : ""}#${order.display_key || order.order_id || order.key || ""}`;
+    const status = order.status || "";
+    const groups = new Map();
+    (items || []).forEach(item => {
+      const round = Number(item.round_number) || 1;
+      if (!groups.has(round)) groups.set(round, []);
+      groups.get(round).push(item);
+    });
+    const roundsHtml = [...groups.entries()].sort((a,b) => b[0]-a[0]).map(([round, roundItems]) => {
+      const roundTotal = roundItems.reduce((sum, item) => sum + (Number(item.subtotal) || Number(item.unit_price) * Number(item.quantity)), 0);
+      const rows = roundItems.map(item => {
+        let options = [];
+        try { options = typeof item.selected_options === "string" ? JSON.parse(item.selected_options || "[]") : (item.selected_options || []); } catch (_) {}
+        const optionText = Array.isArray(options) ? options.map(opt => typeof opt === "string" ? opt : (opt.name || opt.label || "")).filter(Boolean).join("、") : "";
+        let bundleText = "";
+        try { const bundle = typeof item.bundle_snapshot_json === "string" ? JSON.parse(item.bundle_snapshot_json || "null") : item.bundle_snapshot_json; bundleText = bundle ? (typeof bundle === "string" ? bundle : JSON.stringify(bundle)) : ""; } catch (_) {}
+        const meta = [optionText, bundleText, item.notes].filter(Boolean).join(" · ");
+        const lineTotal = Number(item.subtotal) || Number(item.unit_price) * Number(item.quantity);
+        return `<div class="staff-detail-item"><div class="staff-detail-item-main"><div class="staff-detail-item-name">${escapeHtml(item.item_name || "") } × ${Number(item.quantity) || 0}</div>${meta ? `<div class="staff-detail-item-meta">${escapeHtml(meta)}</div>` : ""}</div><div class="staff-detail-item-total">$${lineTotal}</div></div>`;
+      }).join("");
+      return `<section class="staff-detail-round"><h3><span>${t("orderDetailRound", { round })}</span><span>$${roundTotal}</span></h3>${rows}</section>`;
+    }).join("");
+    const noteHtml = order.note ? `<p class="staff-detail-status">${t("orderDetailNote", { note: escapeHtml(order.note) })}</p>` : "";
+    const closed = ["PAID", "REJECTED", "PICKED_UP", "CANCELLED"].includes(status);
+    body.innerHTML = `<div class="staff-detail-status">${t("orderDetailStatus", { status: escapeHtml(status) })}${closed ? `<br>${t("orderDetailClosed")}` : ""}</div>${noteHtml}${roundsHtml || `<p class="staff-detail-loading">${t("orderDetailNoItems")}</p>`}<div class="staff-detail-total"><span>${t("orderDetailTotal")}</span><span>$${Number(order.total_amount) || 0}</span></div>`;
+  }
+
+  function closeStaffOrderDetail() {
+    state.detailRequestId++;
+    const modal = document.getElementById("staffOrderDetailModal");
+    if (modal) modal.style.display = "none";
+  }
+
+  async function appendFromOrderDetail() {
+    const tableId = state.detailTableId;
+    closeStaffOrderDetail();
+    if (!tableId) return;
+    await loadTablesData();
+    const table = state.tables.find(x => x.id === tableId);
+    if (!table || !table.active_order_key) {
+      alert(state.currentLang === "vi" ? "Đơn đã kết thúc hoặc bàn không còn đơn mở." : "訂單已結束或桌號目前沒有進行中的訂單。");
+      return;
+    }
+    await handleSelectTable(tableId);
+  }
+
   // --- 14. SUCCESS & CONFLICT MODALS ---
   function showSuccessModal({ displayKey, tableName, roundCount, total }) {
     document.getElementById("success-display-key").innerText = `#${displayKey}`;
@@ -1862,6 +2019,7 @@
   window.loadTablesData = loadTablesData;
   window.setTableFilter = setTableFilter;
   window.handleTableSearch = handleTableSearch;
+  window.handleMenuSearch = handleMenuSearch;
   window.handleSelectTable = handleSelectTable;
   window.goToTableSelection = goToTableSelection;
   window.selectCategory = scrollToCategory;
@@ -1887,6 +2045,14 @@
   window.submitStaffOrder = submitStaffOrder;
   window.handleSuccessBackToTables = handleSuccessBackToTables;
   window.handleResolveConflict = handleResolveConflict;
+  window.openStaffOrderDetail = openStaffOrderDetail;
+  window.openCurrentStaffOrderDetail = openCurrentStaffOrderDetail;
+  window.closeStaffOrderDetail = closeStaffOrderDetail;
+  window.appendFromOrderDetail = appendFromOrderDetail;
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeStaffOrderDetail();
+  });
 
   // Run on DOM ready
   if (document.readyState === "loading") {
