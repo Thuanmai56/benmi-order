@@ -7,6 +7,9 @@ export interface BootstrapBundleGroup {
   id: string;
   name: string;
   label?: any;
+  type?: 'choice' | 'fixed';
+  items?: Array<{ itemId: string; quantity: number; surcharge: number }>;
+  surcharges?: Record<string, number>;
   minQuantity: number;
   maxQuantity: number;
   allowRepeats: boolean;
@@ -22,6 +25,8 @@ export interface BootstrapBundleGroup {
     surcharge: number;
     isOutOfStock: boolean;
     categoryId?: string;
+    allowCustomization?: boolean;
+    appliedModifiers?: string[];
   }>;
 }
 
@@ -490,50 +495,50 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
           const eligibleItems: any[] = [];
           const seenItemIds = new Set<string>();
 
+          const addEligible = (it: any) => {
+            if (!it || seenItemIds.has(it.id) || it.id === row.parent_item_id || bundleRulesRows.some((rule: any) => rule.parent_item_id === it.id)) return;
+            seenItemIds.add(it.id);
+            const cat = categories.find((category: any) => category.id === it.category_id);
+            let appliedModifiers: string[] = [];
+            if (cat?.allow_customization) {
+              try { appliedModifiers = JSON.parse(cat.applied_modifiers || '[]'); }
+              catch { appliedModifiers = String(cat.applied_modifiers || '').split(',').map((s: string) => s.trim()).filter(Boolean); }
+            }
+            eligibleItems.push({ id: it.id, name: it.name, price: it.price,
+              surcharge: Number(group.type === 'fixed' ? (group.items || []).find((x: any) => x.itemId === it.id)?.surcharge || 0 : group.surcharges?.[it.id] || 0),
+              isOutOfStock: Boolean(it.out_of_stock_until && new Date(it.out_of_stock_until) > now),
+              categoryId: it.category_id, allowCustomization: appliedModifiers.length > 0, appliedModifiers });
+          };
+
+          if (group.type === 'fixed') {
+            for (const fixedItem of group.items || []) addEligible(items.find((it: any) => it.id === fixedItem.itemId));
+          }
+
           if (Array.isArray(group.sources)) {
             for (const src of group.sources) {
               const targetCatId = src.refId || src.categoryId;
               if (src.type === 'category' && targetCatId) {
                 const catItems = items.filter(it => it.category_id === targetCatId);
                 for (const it of catItems) {
-                  if (!seenItemIds.has(it.id)) {
-                    seenItemIds.add(it.id);
-                    const isOos = Boolean(it.out_of_stock_until && new Date(it.out_of_stock_until) > now);
-                    eligibleItems.push({
-                      id: it.id,
-                      name: it.name,
-                      price: it.price,
-                      surcharge: 0,
-                      isOutOfStock: isOos,
-                      categoryId: it.category_id
-                    });
-                  }
+                  addEligible(it);
                 }
               } else if (src.type === 'item_list' && Array.isArray(src.itemIds)) {
                 for (const itemId of src.itemIds) {
                   const it = items.find(i => i.id === itemId);
-                  if (it && !seenItemIds.has(it.id)) {
-                    seenItemIds.add(it.id);
-                    const isOos = Boolean(it.out_of_stock_until && new Date(it.out_of_stock_until) > now);
-                    eligibleItems.push({
-                      id: it.id,
-                      name: it.name,
-                      price: it.price,
-                      surcharge: 0,
-                      isOutOfStock: isOos,
-                      categoryId: it.category_id
-                    });
-                  }
+                  addEligible(it);
                 }
               }
             }
           }
 
-          const groupName = group.name || (typeof group.label === 'object' ? (group.label[locale] || group.label['zh-TW'] || group.label['vi'] || Object.values(group.label)[0]) : group.label) || `任選 ${group.minQuantity} 樣菜`;
+          const groupName = (typeof group.label === 'object' ? (group.label[locale] || group.label['zh-TW'] || group.label['vi']) : group.label) || group.name || `任選 ${group.minQuantity} 樣菜`;
           const allowRepeats = group.allowRepeats !== undefined ? Boolean(group.allowRepeats) : (group.allowRepeat !== undefined ? Boolean(group.allowRepeat) : true);
 
           return {
             id: group.id,
+            type: group.type || 'choice',
+            items: group.items || [],
+            surcharges: group.surcharges || {},
             name: groupName,
             label: group.label || groupName,
             minQuantity: group.minQuantity ?? 1,

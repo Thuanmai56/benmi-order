@@ -597,6 +597,14 @@ const I18N = {
     bundleGroupUnit: "組",
     modalBundleTitle: "設定套餐組合",
     modalBundleSub: "設定該套餐所包含的自選群組、選菜來源與數量規則",
+    comboCreateTitle: "建立套餐", comboEditTitle: "編輯套餐", comboClose: "關閉", comboBack: "上一步", comboContinue: "下一步", comboSave: "儲存套餐",
+    comboStepInfo: "基本資料", comboStepParts: "套餐內容", comboStepPreview: "預覽並儲存", comboProductName: "套餐名稱", comboBasePrice: "套餐基本價格", comboCategory: "顯示分類",
+    comboImage: "管理圖片", comboImageAfterSave: "儲存套餐後即可新增圖片。", comboTemplateMeal: "主餐 + 飲料", comboTemplateMany: "任選 N 樣", comboTemplateFixed: "固定套餐",
+    comboFixedGroup: "固定包含", comboChoiceGroup: "顧客自選", comboRemove: "移除", comboLabelZh: "繁體中文名稱", comboLabelVi: "越南文名稱", comboQuantity: "數量", comboRepeat: "允許重複選同一餐點",
+    comboSearch: "搜尋餐點", comboFilterCategory: "篩選分類", comboAllCategories: "全部分類", comboSurcharge: "加價", comboWholeCategory: "進階：選取整個分類", comboWholeCategoryHelp: "此分類將來新增的餐點也會自動加入可選清單。",
+    comboAddChoice: "新增自選分組", comboAddFixed: "新增固定內容", comboRestoreDraft: "找到未完成的套餐草稿，是否繼續編輯？", comboLeaveDraft: "要關閉嗎？草稿會保留，下次可繼續。",
+    comboNeedName: "請填寫套餐名稱。", comboNeedPrice: "請填寫有效價格。", comboNeedGroup: "請加入至少一組內容。", comboNeedLabels: "請填寫兩種語言的分組名稱。", comboNeedItems: "餐點數量不足或選擇的餐點已不存在。", comboSaveFailed: "無法儲存套餐。", comboSaved: "套餐已儲存。",
+    comboIncluded: "已包含在套餐價格", comboSelect: "選擇", comboPreviewComplete: "所有分組已完成", comboPreviewIncomplete: "請選完所有分組",
     bundleGroupListTitle: "自選分組列表",
     btnAddBundleGroup: "新增自選分組",
     btnRemoveBundleConfig: "解除組合 (轉為一般單點)",
@@ -1256,6 +1264,14 @@ const I18N = {
     bundleGroupUnit: "nhóm",
     modalBundleTitle: "Thiết Lập Combo Món Ăn",
     modalBundleSub: "Cấu hình các nhóm món tự chọn, nguồn món và quy tắc số lượng cho combo này",
+    comboCreateTitle: "Tạo combo", comboEditTitle: "Sửa combo", comboClose: "Đóng", comboBack: "Quay lại", comboContinue: "Tiếp tục", comboSave: "Lưu combo",
+    comboStepInfo: "Thông tin", comboStepParts: "Thành phần", comboStepPreview: "Xem trước và lưu", comboProductName: "Tên combo", comboBasePrice: "Giá combo", comboCategory: "Danh mục hiển thị",
+    comboImage: "Quản lý ảnh", comboImageAfterSave: "Có thể thêm ảnh sau khi lưu combo.", comboTemplateMeal: "Món chính + nước", comboTemplateMany: "Chọn N món", comboTemplateFixed: "Combo cố định",
+    comboFixedGroup: "Món có sẵn", comboChoiceGroup: "Khách tự chọn", comboRemove: "Xóa", comboLabelZh: "Tên tiếng Trung phồn thể", comboLabelVi: "Tên tiếng Việt", comboQuantity: "Số lượng", comboRepeat: "Cho chọn trùng món",
+    comboSearch: "Tìm món", comboFilterCategory: "Lọc danh mục", comboAllCategories: "Tất cả danh mục", comboSurcharge: "Phụ thu", comboWholeCategory: "Nâng cao: chọn cả danh mục", comboWholeCategoryHelp: "Món mới trong danh mục này sẽ tự được đưa vào combo.",
+    comboAddChoice: "Thêm nhóm tự chọn", comboAddFixed: "Thêm món có sẵn", comboRestoreDraft: "Có bản nháp combo chưa hoàn tất. Tiếp tục chỉnh sửa?", comboLeaveDraft: "Đóng trình tạo? Bản nháp sẽ được giữ để chỉnh tiếp.",
+    comboNeedName: "Nhập tên combo.", comboNeedPrice: "Nhập giá hợp lệ.", comboNeedGroup: "Thêm ít nhất một nhóm.", comboNeedLabels: "Nhập tên nhóm bằng cả hai ngôn ngữ.", comboNeedItems: "Chưa đủ món hợp lệ hoặc món đã bị xóa.", comboSaveFailed: "Không thể lưu combo.", comboSaved: "Đã lưu combo.",
+    comboIncluded: "Đã gồm trong giá combo", comboSelect: "Chọn", comboPreviewComplete: "Đã hoàn thành mọi nhóm", comboPreviewIncomplete: "Hãy chọn đủ các nhóm",
     bundleGroupListTitle: "Danh sách nhóm chọn",
     btnAddBundleGroup: "Thêm nhóm chọn mới",
     btnRemoveBundleConfig: "Gỡ bỏ Combo (chuyển về món thường)",
@@ -1919,6 +1935,7 @@ function applyLanguageToDOM() {
   const btnMenuAdd = document.getElementById("btn-menu-add-item");
   if (btnMenuAdd) btnMenuAdd.innerText = dict.btnMenuAddItem;
   if (typeof updateMenuSaveState === "function") updateMenuSaveState();
+  if (typeof renderComboWizard === "function" && document.getElementById('bundle-wizard')?.style.display === 'flex') renderComboWizard();
   const menuHelp = document.getElementById("menu-help-toggle");
   if (menuHelp) menuHelp.setAttribute("aria-label", dict.menuHelp);
   const menuPrompt = document.getElementById("i18n-menu-select-prompt");

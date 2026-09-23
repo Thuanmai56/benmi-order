@@ -5,9 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title id="page-title">線上點餐</title>
-    <link rel="preload" href="index.css?v=20260915_release_rebase_v1" as="style">
-    <link rel="preload" href="js/client-checkout.js?v=20260915_release_rebase_v1" as="script">
-    <link rel="stylesheet" href="index.css?v=20260915_release_rebase_v1">
+    <link rel="preload" href="index.css?v=20260923_combo_v2" as="style">
+    <link rel="preload" href="js/client-checkout.js?v=20260923_combo_v2" as="script">
+    <link rel="stylesheet" href="index.css?v=20260923_combo_v2">
     <script>
         // Redirect root visits on blabfood.app to /landing
         try {
@@ -1097,7 +1097,7 @@
                 <div style="flex: 1; padding-right: 12px; min-width: 0;">
                     <div id="bundle-modal-item-name" class="bundle-header-title">套餐名稱</div>
                     <div id="bundle-modal-group-name" class="bundle-header-subtitle">
-                        <span>請選擇配菜</span>
+                        <span id="bundle-modal-group-label">請選擇配菜</span>
                         <span class="bundle-header-dot">·</span>
                         <span>已選 <strong id="bundle-modal-current-count">0</strong>/<span id="bundle-modal-max-count">6</span> 樣</span>
                         <span id="bundle-quota-badge" class="bundle-quota-badge" style="display: none;">已選滿</span>
@@ -1116,12 +1116,16 @@
             </div>
 
             <!-- Category Filter Tabs -->
+            <div id="bundle-step-nav" class="bundle-v2-step-nav"></div>
+            <button type="button" id="bundle-refresh-prices" class="bundle-v2-copy" onclick="bundleRefreshPrices()" style="display:none">價格已變更，查看並套用新價格</button>
+            <button type="button" id="bundle-copy-previous" class="bundle-v2-copy" onclick="bundleCopyPrevious()" style="display:none">與上一份相同</button>
             <div id="bundle-cat-tabs" class="bundle-cat-tabs-row">
             </div>
 
             <!-- Items List Scroll Area -->
             <div id="bundle-items-list" class="bundle-items-scroll-list">
             </div>
+            <div id="bundle-modifier-editor" class="bundle-v2-mod-overlay" style="display:none"></div>
 
             <!-- Bottom Sticky Confirmation Bar -->
             <div class="bundle-sheet-footer">
@@ -2096,12 +2100,22 @@
             });
         }
 
+        function isBundleUnavailable(item) {
+            const groups = item.bundleRule?.groups || [];
+            return groups.some(group => {
+                const available = (group.eligibleItems || []).filter(candidate => !candidate.isOutOfStock);
+                if (group.type === 'fixed') return (group.items || []).some(fixed => !available.some(candidate => candidate.id === fixed.itemId));
+                return available.length < (group.allowRepeats ? 1 : Number(group.minQuantity || 1));
+            });
+        }
+
         function createDynamicItemCard(catSlug, item) {
             const div = document.createElement('div');
             div.className = 'card';
             div.id = `item-${catSlug}-${item.name}`;
 
-            const isOos = item.isOutOfStock;
+            const bundleUnavailable = isBundleUnavailable(item);
+            const isOos = item.isOutOfStock || bundleUnavailable;
             if (isOos) {
                 div.style.opacity = '0.65';
                 div.style.pointerEvents = 'none';
@@ -2132,6 +2146,8 @@
             `;
 
             const hasBundleRule = Boolean(item.bundleRule);
+            const bundleCardEscape = value => String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
+            const bundleStructureHTML = hasBundleRule ? `<div class="bundle-card-structure">${(item.bundleRule.groups || []).map(group => bundleCardEscape(String(group.name || (group.type === 'fixed' ? '包含餐點' : `選擇 ${group.minQuantity || 1} 樣`)).trim())).join(' · ')}</div>` : '';
             const bundleEditBtnHTML = `
                 <button class="bundle-edit-btn" id="bundle-edit-btn-${catSlug}-${item.name}" onclick="openBundleBuilderModal('${safeCatSlug}','${safeItemName}', 0)" style="pointer-events: auto; display: ${(!isOos && qty > 0 && hasBundleRule) ? 'flex' : 'none'};">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
@@ -2146,6 +2162,8 @@
                         <div>
                             <div class="card-title">${item.name} ${badgeHTML}</div>
                             ${transHTML}
+                            ${bundleStructureHTML}
+                            ${bundleUnavailable ? '<div class="bundle-card-unavailable">套餐可選餐點不足，暫時無法點餐</div>' : ''}
                         </div>
                         <div class="card-footer">
                             ${footerHTML}
@@ -2183,12 +2201,13 @@
                 cat.items.forEach(item => {
                     const card = document.getElementById(`item-${cat.slug}-${item.name}`);
                     if (!card) return;
-                    card.style.opacity = item.isOutOfStock ? '0.65' : '1';
-                    card.style.pointerEvents = item.isOutOfStock ? 'none' : 'auto';
+                    const isOos = item.isOutOfStock || isBundleUnavailable(item);
+                    card.style.opacity = isOos ? '0.65' : '1';
+                    card.style.pointerEvents = isOos ? 'none' : 'auto';
 
                     const footer = card.querySelector('.card-footer');
                     if (footer) {
-                        footer.innerHTML = getDynamicItemFooterHTML(cat.slug, item.name, item.price, item.isOutOfStock);
+                        footer.innerHTML = getDynamicItemFooterHTML(cat.slug, item.name, item.price, isOos);
                     }
 
                     const custBtn = card.querySelector('.customize-btn');
@@ -2196,14 +2215,14 @@
                         const qty = cart[`${cat.slug}_${item.name}`] || 0;
                         const catModifiers = getCategoryModifiers(cat.slug);
                         const hasModifiers = catModifiers.length > 0;
-                        custBtn.style.display = (!item.isOutOfStock && qty > 0 && hasModifiers) ? 'block' : 'none';
+                        custBtn.style.display = (!isOos && qty > 0 && hasModifiers) ? 'block' : 'none';
                     }
 
                     const bundleEditBtn = card.querySelector('.bundle-edit-btn');
                     if (bundleEditBtn) {
                         const qty = cart[`${cat.slug}_${item.name}`] || 0;
                         const hasBundleRule = Boolean(item.bundleRule);
-                        bundleEditBtn.style.display = (!item.isOutOfStock && qty > 0 && hasBundleRule) ? 'flex' : 'none';
+                        bundleEditBtn.style.display = (!isOos && qty > 0 && hasBundleRule) ? 'flex' : 'none';
                     }
                 });
             });
@@ -2913,6 +2932,7 @@
 
             // Intercept bundle item increment: open builder modal instead of direct cart increment
             if (bundleRule && change > 0) {
+                if (typeof window.bundleQuickAdd === 'function' && window.bundleQuickAdd(category, origName)) return;
                 const currentQty = cart[key] || 0;
                 openBundleBuilderModal(category, origName, currentQty);
                 return;
@@ -3155,7 +3175,8 @@
                         });
                     }
 
-                    let lineTotal = (qty * price) + itemModifiersTotal;
+                    const bundleExtra = it.itemInfo?.bundleRule ? (window.bundleCartData?.[key] || []).slice(0, qty).reduce((sum, portion) => sum + window.bundlePortionExtra(portion), 0) : 0;
+                    let lineTotal = (qty * price) + itemModifiersTotal + bundleExtra;
 
                     summaryHTML += `
                         <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
@@ -3169,11 +3190,11 @@
                         portions.forEach((p, pIdx) => {
                             const pNum = zhNumbers[pIdx] || `第 ${pIdx + 1} 份`;
                             (p.groups || []).forEach(g => {
-                                const itemsStr = (g.items || []).map(item => `${item.name} x${item.quantity}`).join('、');
+                                const itemsStr = (g.items || []).map(item => `${item.name} x${item.quantity}${(item.modifiers || []).length ? ` (${item.modifiers.map(mod => mod.name).join('、')})` : ''}`).join('、');
                                 if (itemsStr) {
                                     portionsHTML += `<div style="font-size:13px; color:#475569; margin-left:10px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
                                         <span>↳ ${pNum} ${g.groupName || '配菜'}：${itemsStr}</span>
-                                        <button type="button" onclick="openBundleBuilderModal('${catSlug}','${itemName.replace(/'/g, "\\'")}', ${pIdx})" style="border:none; background:#f1f5f9; color:#0f172a; padding:2px 8px; border-radius:6px; font-size:11.5px; font-weight:700; cursor:pointer; margin-left:8px;">調整</button>
+                                        <span><button type="button" onclick="openBundleBuilderModal('${catSlug}','${itemName.replace(/'/g, "\\'")}', ${pIdx})" style="min-height:44px; border:1px solid #cbd5e1; background:#fff; border-radius:8px; padding:6px 10px; margin-left:8px;">調整</button><button type="button" onclick="bundleRemovePortion('${catSlug}','${itemName.replace(/'/g, "\\'")}', ${pIdx})" style="min-height:44px; border:1px solid #cbd5e1; background:#fff; border-radius:8px; padding:6px 10px; margin-left:8px;">移除</button></span>
                                     </div>`;
                                 }
                             });
@@ -3761,7 +3782,8 @@
             </button>
         </div>
     </div>
-    <script src="js/client-checkout.js?v=20260915_release_rebase_v1"></script>
+    <script src="js/bundle-builder-v2.js?v=20260923_combo_v2"></script>
+    <script src="js/client-checkout.js?v=20260923_combo_v2"></script>
 </body>
 
 </html>

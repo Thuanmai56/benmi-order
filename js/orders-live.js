@@ -829,10 +829,12 @@ function renderBundleComponentsHtml(bundleInfo) {
         const itemsHtml = items.map(bi => {
           const bName = bi.name || bi.item_name || "";
           const bQty = Number(bi.quantity) || 1;
-          const bSur = Number(bi.surcharge || bi.price || 0);
+          const bSur = Number(bi.surcharge || 0) + (bi.modifiers || []).reduce((sum, mod) => sum + Number(mod.price || 0), 0);
+          const modNames = (bi.modifiers || []).map(mod => mod.name).filter(Boolean).join('、');
           return `
             <span class="bundle-item-chip">
               <span class="bundle-item-name">${escapeHtml(bName)}</span>
+              ${modNames ? `<span class="bundle-item-modifiers">${escapeHtml(modNames)}</span>` : ""}
               <span class="bundle-item-qty">x${bQty}</span>
               ${bSur > 0 ? `<span class="bundle-item-surcharge">(+$${bSur * bQty})</span>` : ""}
             </span>

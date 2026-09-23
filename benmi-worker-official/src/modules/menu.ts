@@ -2,6 +2,7 @@ import { Env } from '../types/env';
 import { Menu } from '../types/index';
 import { json } from '../utils/http';
 import { invalidateBootstrapCache } from './bootstrap';
+import { loadBundleCatalog, normalizeBundleConfig } from './bundle-rules';
 
 export const DEFAULT_MENU: Menu = {
   small: { "燒肉": 56, "火腿": 56, "雞肉": 68, "烤肉": 72, "雙層烤肉": 78, "綜合": 79 },
@@ -699,6 +700,12 @@ export async function updateBundleRule(request: Request, env: Env): Promise<Resp
       return json({ error: "parent_item_id is required" }, 400);
     }
 
+    const existingRule = await env.DB.prepare('SELECT schema_version FROM menu_bundle_rules WHERE tenant_id = ? AND parent_item_id = ?')
+      .bind(tenantId, parentItemId).first<{ schema_version: number }>();
+    if (existingRule && existingRule.schema_version >= 2) {
+      return json({ error: 'Edit this combo with the new combo editor', code: 'BUNDLE_EDITOR_VERSION' }, 409);
+    }
+
     // 1. Delete / Deactivate bundle rule
     if (body.delete === true || body.isActive === false || (body.config && Array.isArray(body.config.groups) && body.config.groups.length === 0)) {
       await env.DB.prepare(
@@ -763,5 +770,57 @@ export async function updateBundleRule(request: Request, env: Env): Promise<Resp
   } catch (err: any) {
     console.error("[updateBundleRule] Failed:", err);
     return json({ error: err.message || "Internal Server Error" }, 500);
+  }
+}
+
+/** Save a product and its v2 bundle configuration in one D1 transaction. */
+export async function saveBundleProduct(request: Request, env: Env): Promise<Response> {
+  try {
+    const tenantId = getTenantId(request);
+    const tenantConfig = await env.DB.prepare('SELECT features FROM tenant_config WHERE tenant_id = ?').bind(tenantId).first<{ features: string | null }>();
+    let tenantFeatures: string[] = [];
+    try { tenantFeatures = JSON.parse(tenantConfig?.features || '[]'); } catch { tenantFeatures = []; }
+    if (Array.isArray(tenantFeatures) && tenantFeatures.includes('disable_bundle_builder_v2')) {
+      return json({ code: 'BUNDLE_EDITOR_DISABLED', error: 'Combo editor is temporarily unavailable' }, 423);
+    }
+    const body: any = await request.json();
+    const product = body.product || {};
+    const name = String(product.name || '').trim();
+    const categoryId = String(product.categoryId || '');
+    const price = Number(product.price);
+    if (!name || !Number.isFinite(price) || price < 0 || Math.abs(Math.round(price * 100) - price * 100) >= 0.000001) {
+      return json({ code: 'BUNDLE_INVALID_PRODUCT', error: 'Invalid product name or price' }, 400);
+    }
+    const category = await env.DB.prepare("SELECT id FROM menu_categories WHERE tenant_id = ? AND id = ? AND category_type = 'catalog'")
+      .bind(tenantId, categoryId).first();
+    if (!category) return json({ code: 'BUNDLE_INVALID_CATEGORY', error: 'Category not found' }, 400);
+    const catalog = await loadBundleCatalog(env, tenantId);
+    const itemId = product.id ? String(product.id) : crypto.randomUUID();
+    const existing = catalog.items.get(itemId);
+    if (product.id && !existing) return json({ code: 'BUNDLE_PRODUCT_NOT_FOUND', error: 'Product not found' }, 404);
+    if ([...catalog.items.values()].some(item => item.id !== itemId && item.category_id === categoryId && item.name === name)) {
+      return json({ code: 'BUNDLE_DUPLICATE_PRODUCT', error: 'A product with this name already exists in the category' }, 409);
+    }
+    const childItems = new Map([...catalog.items].filter(([id, item]) => !catalog.rules.has(id) && catalog.categories.get(item.category_id)?.category_type === 'catalog'));
+    let config;
+    try { config = normalizeBundleConfig(body.config, childItems, itemId); }
+    catch (error: any) { return json({ code: 'BUNDLE_INVALID_CONFIG', error: error.message }, 400); }
+    const ruleId = `rule_${tenantId}_${itemId}`;
+    await env.DB.batch([
+      env.DB.prepare(`INSERT INTO menu_items (id, tenant_id, category_id, name, price, sort_order)
+        VALUES (?, ?, ?, ?, ?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM menu_items WHERE tenant_id = ? AND category_id = ?))
+        ON CONFLICT(id) DO UPDATE SET category_id = excluded.category_id, name = excluded.name, price = excluded.price, updated_at = datetime('now')`)
+        .bind(itemId, tenantId, categoryId, name, price, tenantId, categoryId),
+      env.DB.prepare(`INSERT INTO menu_bundle_rules (id, tenant_id, parent_item_id, schema_version, config_json, is_active, updated_at)
+        VALUES (?, ?, ?, 2, ?, 1, datetime('now'))
+        ON CONFLICT(tenant_id, parent_item_id) DO UPDATE SET schema_version = 2, config_json = excluded.config_json, is_active = 1, updated_at = datetime('now')`)
+        .bind(ruleId, tenantId, itemId, JSON.stringify(config))
+    ]);
+    if (env.ORDER_STATE) await env.ORDER_STATE.delete(`tenant:${tenantId}:menu`);
+    await invalidateBootstrapCache(tenantId, env);
+    return json({ success: true, product: { id: itemId, categoryId, name, price }, bundleRule: config });
+  } catch (error: any) {
+    console.error('[saveBundleProduct]', error);
+    return json({ code: 'BUNDLE_SAVE_FAILED', error: 'Could not save combo' }, 500);
   }
 }

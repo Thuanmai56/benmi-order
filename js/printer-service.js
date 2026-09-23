@@ -501,9 +501,10 @@
             const bName = bi.name || bi.item_name || '';
             const bQty = Number(bi.quantity) || 1;
             const bQtyStr = bQty > 1 ? ` x${bQty}` : '';
-            const bSur = Number(bi.surcharge || bi.price || 0);
+            const bSur = Number(bi.surcharge || 0) + (bi.modifiers || []).reduce((sum, mod) => sum + Number(mod.price || 0), 0);
             const bSurStr = bSur > 0 ? ` (+$${bSur})` : '';
-            return `${bName}${bQtyStr}${bSurStr}`;
+            const modNames = (bi.modifiers || []).map(mod => mod.name).filter(Boolean).join('、');
+            return `${bName}${bQtyStr}${modNames ? ` (${modNames})` : ''}${bSurStr}`;
           }).filter(Boolean).join('、');
 
           if (itemsStr) {
@@ -622,7 +623,7 @@
                 portions.forEach(p => {
                   (p.groups || []).forEach(g => {
                     (g.items || []).forEach(bi => {
-                      const sur = Number(bi.surcharge || bi.price || 0);
+                      const sur = Number(bi.surcharge || 0) + (bi.modifiers || []).reduce((sum, mod) => sum + Number(mod.price || 0), 0);
                       if (sur > 0) {
                         const bQty = Number(bi.quantity) || 1;
                         bundleExtra += sur * bQty;

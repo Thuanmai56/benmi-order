@@ -524,6 +524,10 @@ function renderMenuCategoryEditor(index) {
   if (addCatTopBtn) addCatTopBtn.style.display = "none";
   if (closeBtn) closeBtn.style.display = "none";
   if (addItemBtn) addItemBtn.style.display = "inline-flex";
+  const addBundleBtn = document.getElementById('btn-menu-add-bundle');
+  if (addBundleBtn) addBundleBtn.style.display = currentMenuData?.[index]?.type === 'catalog' && !window.currentTenantFeatures?.includes('disable_bundle_builder_v2') ? 'inline-flex' : 'none';
+  const addBundleLabel = document.getElementById('i18n-btn-create-bundle');
+  if (addBundleLabel) addBundleLabel.textContent = t('comboCreateTitle');
   if (subEl) subEl.innerText = t("menuEditSub");
 
   if (!currentMenuData || !currentMenuData[index]) {
@@ -659,19 +663,19 @@ function renderMenuCategoryEditor(index) {
     const hasBundle = Boolean(item.bundleRule && Array.isArray(item.bundleRule.groups) && item.bundleRule.groups.length > 0);
     const bundleCount = hasBundle ? item.bundleRule.groups.length : 0;
     let bundleBtnHtml = '';
-    if (cat.type === 'catalog') {
+    if (cat.type === 'catalog' && !window.currentTenantFeatures?.includes('disable_bundle_builder_v2')) {
       if (hasBundle) {
         const bundleText = currentLang === 'vi'
           ? `${t("bundleBadge")} (${bundleCount} ${t("bundleGroupUnit")})`
           : `${t("bundleBadge")} (${bundleCount}${t("bundleGroupUnit")})`;
         bundleBtnHtml = `
-          <button type="button" class="menu-item-bundle-btn is-bundle" onclick="openBundleEditorModal(${index}, ${iIdx})" title="${t('btnEditBundle')}">
+          <button type="button" class="menu-item-bundle-btn is-bundle" onclick="openBundleWizard(${index}, ${iIdx})" title="${t('btnEditBundle')}">
             ${layersSvg}<span>${bundleText}</span>
           </button>
         `;
       } else {
         bundleBtnHtml = `
-          <button type="button" class="menu-item-bundle-btn is-not-bundle" onclick="openBundleEditorModal(${index}, ${iIdx})" title="${t('btnSetBundle')}">
+          <button type="button" class="menu-item-bundle-btn is-not-bundle" onclick="openBundleWizard(${index}, ${iIdx})" title="${t('btnSetBundle')}">
             ${plusSvg}<span>${t("btnSetBundle")}</span>
           </button>
         `;
@@ -2278,4 +2282,3 @@ async function clearBundleConfig() {
   }
 }
 window.clearBundleConfig = clearBundleConfig;
-

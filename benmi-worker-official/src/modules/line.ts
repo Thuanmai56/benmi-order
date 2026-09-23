@@ -366,7 +366,8 @@ export function buildOrderFlexMessage(
             (g.items || []).forEach((bi: any) => {
               const bName = bi.name || bi.item_name || '';
               const bQty = Number(bi.quantity) || 1;
-              const bSur = Number(bi.surcharge || bi.price || 0);
+              const bSur = Number(bi.surcharge || 0) + (bi.modifiers || []).reduce((sum: number, mod: any) => sum + Number(mod.price || 0), 0);
+              const modNames = (bi.modifiers || []).map((mod: any) => mod.name).filter(Boolean).join('、');
               const label = `${pPrefix}${groupName}`;
               
               bundleRows.push({
@@ -384,7 +385,7 @@ export function buildOrderFlexMessage(
                   },
                   {
                     type: "text",
-                    text: `${bName} x${bQty}`,
+                    text: `${bName} x${bQty}${modNames ? ` (${modNames})` : ''}`,
                     size: "xs",
                     color: "#1E293B",
                     weight: "bold",
