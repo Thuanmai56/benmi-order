@@ -1255,13 +1255,6 @@ function applyLanguageToDOM() {
   const brandSub = document.getElementById("i18n-brand-sub");
   if (brandSub) brandSub.innerText = dict.brandSub;
 
-  const btnFs = document.getElementById("btn-fullscreen-toggle");
-  if (btnFs) {
-    const fsTitle = currentLang === "vi" ? "Toàn màn hình" : "全螢幕";
-    btnFs.setAttribute("title", fsTitle);
-    btnFs.setAttribute("aria-label", fsTitle);
-  }
-
   const labelLive = document.getElementById("i18n-tab-live");
   if (labelLive) {
     labelLive.innerText = dict.sidebarLive || dict.tabLive || "即時訂單";

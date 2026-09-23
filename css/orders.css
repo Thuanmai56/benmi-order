@@ -283,52 +283,8 @@ button.sidebar-nav-item.active {
   gap: 12px;
   flex-shrink: 0;
   box-sizing: border-box;
-  transition: margin-top 0.28s cubic-bezier(0.16, 1, 0.3, 1),
-              opacity 0.22s ease,
-              visibility 0.28s ease;
-  will-change: margin-top, opacity;
   z-index: 50;
   position: relative;
-}
-
-.main-topbar.topbar-hidden {
-  margin-top: -65px;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-
-.topbar-fullscreen-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: #ffffff;
-  color: #4b5563;
-  cursor: pointer;
-  outline: none;
-  transition: all 0.15s ease;
-  padding: 0;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.topbar-fullscreen-btn:hover {
-  background: #f8fafc;
-  color: #111827;
-  border-color: #cbd5e1;
-}
-
-.topbar-fullscreen-btn:active {
-  transform: scale(0.95);
-}
-
-.is-native-app .topbar-fullscreen-btn {
-  display: none !important;
 }
 
 .main-topbar-left {
@@ -1959,20 +1915,11 @@ html.is-web-platform .store-activation-modal:not(.force-show) {
   margin-bottom: 24px;
   border-bottom: 1px solid #f1f5f9;
   flex-shrink: 0;
-  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
-              opacity 0.22s ease,
-              box-shadow 0.22s ease;
-  will-change: transform, opacity;
+  transition: box-shadow 0.22s ease;
 }
 
 .order-detail-topbar.is-scrolled {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
-}
-
-.order-detail-topbar.topbar-hidden {
-  transform: translateY(-100%);
-  opacity: 0;
-  pointer-events: none;
 }
 
 .order-detail-topbar-left {
