@@ -5,7 +5,10 @@ const comboText = key => t(key);
 const comboGroups = () => comboWizard?.config.groups || [];
 const comboDraftKey = () => `bundle_wizard:${getTenantIdFromUrl()}:${comboWizard.product.id || 'new'}`;
 const comboCatalogItems = () => (currentMenuData || []).filter(cat => cat.type === 'catalog').flatMap(cat => cat.items.filter(item => item.id && item.id !== comboWizard?.product.id && !item.bundleRule).map(item => ({ id: item.id, name: item.name, categoryId: cat.catId, categoryName: cat.title })));
-const comboLabel = (zh, vi) => ({ 'zh-TW': zh, vi });
+// Keep the legacy API label fields synchronized with the single editable name.
+const comboLabel = (zh, vi) => { const name = currentLang === 'vi' ? vi : zh; return { 'zh-TW': name, vi: name }; };
+const comboGroupName = group => typeof group.label === 'string' ? group.label : (group.label?.[currentLang] || group.name || group.label?.['zh-TW'] || group.label?.vi || '');
+function comboSetGroupName(group, name) { group.name = name; group.label = { 'zh-TW': name, vi: name }; }
 const comboNewGroup = type => ({ id: `group_${crypto.randomUUID()}`, type, label: comboLabel('', ''), minQuantity: 1, maxQuantity: 1, allowRepeats: false, sources: [], items: [], surcharges: {} });
 
 function persistComboWizard() {
@@ -24,7 +27,7 @@ function openBundleWizard(catIndex = activeCategoryIndex, itemIndex = null) {
   const config = item?.bundleRule?.groups?.length ? {
     version: 2,
     groups: item.bundleRule.groups.map(group => ({ id: group.id, type: group.type || 'choice',
-      label: { 'zh-TW': group.label?.['zh-TW'] || group.name || '', vi: group.label?.vi || group.name || '' },
+      label: comboGroupName(group),
       minQuantity: Number(group.minQuantity || 1), maxQuantity: Number(group.maxQuantity || group.minQuantity || 1),
       allowRepeats: Boolean(group.allowRepeats), sources: group.sources || [], items: group.items || [], surcharges: group.surcharges || {} }))
   } : { version: 2, groups: [] };
@@ -33,6 +36,7 @@ function openBundleWizard(catIndex = activeCategoryIndex, itemIndex = null) {
   if (saved && confirm(comboText('comboRestoreDraft'))) {
     try { const parsed = JSON.parse(saved); comboWizard.product = parsed.product; comboWizard.config = parsed.config; comboWizard.step = parsed.step || 0; comboWizard.changed = true; } catch { localStorage.removeItem(comboDraftKey()); }
   }
+  comboGroups().forEach(group => comboSetGroupName(group, comboGroupName(group)));
   document.body.classList.add('bundle-wizard-open');
   document.getElementById('bundle-wizard').style.display = 'flex';
   renderComboWizard();
@@ -82,7 +86,7 @@ function comboWizardImage(event) {
 window.comboWizardImage = comboWizardImage;
 function comboWizardGroupField(index, field, value) {
   const group = comboGroups()[index]; if (!group) return;
-  if (field === 'zh' || field === 'vi') group.label[field === 'zh' ? 'zh-TW' : 'vi'] = value;
+  if (field === 'name') comboSetGroupName(group, value);
   else if (field === 'minQuantity') { group.minQuantity = Math.max(1, Number(value)); group.maxQuantity = group.minQuantity; }
   else if (field === 'allowRepeats') group.allowRepeats = Boolean(value);
   persistComboWizard();
@@ -160,7 +164,7 @@ function comboWizardError() {
   const validIds = new Set(comboCatalogItems().map(item => item.id));
   for (let i = 0; i < comboGroups().length; i++) {
     const group = comboGroups()[i];
-    if (!group.label['zh-TW']?.trim() || !group.label.vi?.trim()) return `${i + 1}: ${comboText('comboNeedLabels')}`;
+    if (!comboGroupName(group).trim()) return `${i + 1}: ${comboText('comboNeedGroupName')}`;
     if (group.type === 'fixed') {
       if (!group.items.length || new Set(group.items.map(item => item.itemId)).size !== group.items.length || group.items.some(item => !validIds.has(item.itemId) || !Number.isInteger(Number(item.quantity)) || Number(item.quantity) < 1 || !Number.isFinite(Number(item.surcharge)) || Number(item.surcharge) < 0)) return `${i + 1}: ${comboText('comboNeedItems')}`;
     } else {
@@ -223,7 +227,7 @@ function renderComboWizard() {
       const filter = comboWizard.filters?.[index] || 'all';
       const visible = candidates.filter(item => (filter === 'all' || item.categoryId === filter) && item.name.toLowerCase().includes(search.toLowerCase()));
       return `<section class="bundle-wizard-group"><header><h2>${index + 1}. ${comboText(group.type === 'fixed' ? 'comboFixedGroup' : 'comboChoiceGroup')}</h2><button type="button" onclick="comboWizardRemoveGroup(${index})">${comboText('comboRemove')}</button></header><p class="bundle-wizard-hint">${comboText(group.type === 'fixed' ? 'comboFixedHelp' : 'comboChoiceHelp')}</p>
-        <div class="bundle-wizard-two"><label>${comboText('comboLabelZh')}<input value="${comboEscape(group.label['zh-TW'])}" oninput="comboWizardGroupField(${index},'zh',this.value)"></label><label>${comboText('comboLabelVi')}<input value="${comboEscape(group.label.vi)}" oninput="comboWizardGroupField(${index},'vi',this.value)"></label></div>
+        <label>${comboText('comboGroupName')}<input value="${comboEscape(comboGroupName(group))}" oninput="comboWizardGroupField(${index},'name',this.value)"></label>
         ${group.type === 'choice' ? `<div class="bundle-wizard-two"><label>${comboText('comboQuantity')}<input type="number" min="1" value="${group.minQuantity}" onchange="comboWizardGroupField(${index},'minQuantity',this.value)"></label><label class="bundle-wizard-check"><input type="checkbox" ${group.allowRepeats ? 'checked' : ''} onchange="comboWizardGroupField(${index},'allowRepeats',this.checked)">${comboText('comboRepeat')}</label></div>` : ''}
         <div class="bundle-wizard-two"><input id="combo-search-${index}" type="search" placeholder="${comboText('comboSearch')}" value="${comboEscape(search)}" oninput="comboWizardSearch(${index},this.value)"><select aria-label="${comboText('comboFilterCategory')}" onchange="comboWizardFilter(${index},this.value)"><option value="all">${comboText('comboAllCategories')}</option>${categories.map(cat => `<option value="${comboEscape(cat.catId)}" ${filter === cat.catId ? 'selected' : ''}>${comboEscape(cat.title)}</option>`).join('')}</select></div>
         <div class="bundle-wizard-candidates">${visible.map(item => {
@@ -242,7 +246,7 @@ function renderComboWizard() {
     let previewExtra = 0;
     let complete = true;
     const sections = comboGroups().map((group, index) => {
-      const name = comboEscape(group.label[currentLang] || group.label['zh-TW']);
+      const name = comboEscape(comboGroupName(group));
       if (group.type === 'fixed') {
         const details = group.items.map(fixed => {
           const item = candidates.find(candidate => candidate.id === fixed.itemId);
