@@ -52,9 +52,6 @@ function renderStoreStatusUI(status) {
   document.querySelectorAll(".status-select-box").forEach(box => {
     box.classList.toggle("active", box.id === `status-box-${currentStoreStatus}`);
   });
-  document.querySelectorAll('input[name="store-status-radio"]').forEach(radio => {
-    radio.checked = (radio.value === currentStoreStatus);
-  });
 }
 
 async function setStoreStatus(newStatus) {

@@ -3963,8 +3963,8 @@ html.is-web-platform .store-activation-modal:not(.force-show) {
 
 .status-select-box {
   display: flex;
-  align-items: flex-start;
-  gap: 14px;
+  flex-direction: column;
+  gap: 6px;
   padding: 16px;
   border: 2px solid var(--border, #e2e8f0);
   border-radius: 12px;
@@ -3979,22 +3979,19 @@ html.is-web-platform .store-activation-modal:not(.force-show) {
   background: #fafafa;
 }
 
-.status-select-box.active,
-.status-select-box:has(input:checked) {
+.status-select-box.active {
   border-color: var(--primary, #00b900) !important;
   background: #f0fdf4 !important;
   box-shadow: 0 0 0 3px rgba(0, 185, 0, 0.1) !important;
 }
 
-.status-select-box.active#status-box-busy,
-.status-select-box#status-box-busy:has(input:checked) {
+.status-select-box.active#status-box-busy {
   border-color: #d97706 !important;
   background: #fffbeb !important;
   box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.1) !important;
 }
 
-.status-select-box.active#status-box-paused,
-.status-select-box#status-box-paused:has(input:checked) {
+.status-select-box.active#status-box-paused {
   border-color: #dc2626 !important;
   background: #fef2f2 !important;
   box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1) !important;
