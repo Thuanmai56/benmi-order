@@ -1017,6 +1017,96 @@ function initSmartHeaderScroll() {
 
 window.initSmartHeaderScroll = initSmartHeaderScroll;
 
+// ==========================================
+// Auto-hide Native Browser Address Bar on Touch Swipe Up
+// ==========================================
+function initBrowserAddressBarAutoHide() {
+  if (typeof window === "undefined" || typeof document === "undefined") return;
+  // On native Capacitor app, there is no browser address bar
+  if (typeof isNativeAppPlatform === "function" && isNativeAppPlatform()) return;
+
+  let touchStartY = 0;
+  let isSwiping = false;
+
+  window.addEventListener("touchstart", (e) => {
+    if (e.touches && e.touches.length === 1) {
+      touchStartY = e.touches[0].clientY;
+      isSwiping = true;
+    }
+  }, { passive: true });
+
+  window.addEventListener("touchmove", (e) => {
+    if (!isSwiping || !e.touches || e.touches.length !== 1) return;
+    // Skip if interacting inside an open modal or input/textarea
+    const target = e.target;
+    if (target && target.closest && (target.closest(".modal:not(#reviewModal)") || target.closest("input, textarea, select"))) {
+      return;
+    }
+
+    const currentY = e.touches[0].clientY;
+    const deltaY = currentY - touchStartY; // deltaY < 0: swiping finger UP (scrolling page down)
+
+    // When swiping finger up:
+    // Scroll the root window to collapse Safari/Chrome address bar (max 60px)
+    if (deltaY < -8 && window.scrollY < 60) {
+      const scrollStep = Math.min(60 - window.scrollY, Math.abs(deltaY));
+      window.scrollBy(0, scrollStep);
+    } else if (deltaY > 8 && window.scrollY > 0) {
+      // When user is at the top of the internal scroll container and pulls down
+      const scrollTarget = target && target.closest && target.closest(".live-panel-body, .settings-content-body, .menu-panel-body, #reviewModal");
+      if (!scrollTarget || scrollTarget.scrollTop <= 2) {
+        window.scrollBy(0, -Math.min(window.scrollY, deltaY));
+      }
+    }
+  }, { passive: true });
+
+  window.addEventListener("touchend", () => {
+    isSwiping = false;
+  }, { passive: true });
+}
+
+window.initBrowserAddressBarAutoHide = initBrowserAddressBarAutoHide;
+
+function togglePosFullscreen() {
+  const doc = document;
+  const isFs = doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement;
+  if (!isFs) {
+    const el = doc.documentElement;
+    if (el.requestFullscreen) {
+      el.requestFullscreen().catch(() => {});
+    } else if (el.webkitRequestFullscreen) {
+      el.webkitRequestFullscreen();
+    } else if (el.msRequestFullscreen) {
+      el.msRequestFullscreen();
+    }
+  } else {
+    if (doc.exitFullscreen) {
+      doc.exitFullscreen().catch(() => {});
+    } else if (doc.webkitExitFullscreen) {
+      doc.webkitExitFullscreen();
+    } else if (doc.msExitFullscreen) {
+      doc.msExitFullscreen();
+    }
+  }
+}
+window.togglePosFullscreen = togglePosFullscreen;
+
+function updateFullscreenIcon() {
+  const doc = document;
+  const isFs = !!(doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement);
+  const btn = document.getElementById("btn-fullscreen-toggle");
+  if (!btn) return;
+  const enterIcon = btn.querySelector(".icon-enter-fullscreen");
+  const exitIcon = btn.querySelector(".icon-exit-fullscreen");
+  if (enterIcon) enterIcon.style.display = isFs ? "none" : "block";
+  if (exitIcon) exitIcon.style.display = isFs ? "block" : "none";
+}
+
+if (typeof document !== "undefined") {
+  document.addEventListener("fullscreenchange", updateFullscreenIcon);
+  document.addEventListener("webkitfullscreenchange", updateFullscreenIcon);
+}
+
 window.toggleSidebar = toggleSidebar;
 window.initSidebarState = initSidebarState;
 window.updateSidebarActive = updateSidebarActive;
