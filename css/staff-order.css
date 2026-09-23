@@ -1765,7 +1765,7 @@ body.staff-body { background: #f4f6f8; color: #1f2937; }
 .card { border-radius: 14px; }
 .card-price { color: #009900; }
 .category-tabs-nav { background: #f8fafc; border-bottom-color: #e2e8f0; }
-.cat-tab-btn.active { color: #009900; border-bottom-color: #00b900; }
+.cat-tab-btn.active { color: #ffffff; background: #00b900; border-color: #00b900; border-bottom-color: #00b900; }
 .sticky-cart-bar { padding-bottom: env(safe-area-inset-bottom, 0px); }
 .btn-card-detail, .btn-card-transfer, .btn-card-action {
   min-height: 44px; padding: 8px 12px; border-radius: 10px; font: inherit; font-size: 13px; font-weight: 700;
