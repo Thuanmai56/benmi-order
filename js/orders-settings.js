@@ -52,14 +52,19 @@ function renderStoreStatusUI(status) {
   document.querySelectorAll(".status-select-box").forEach(box => {
     box.classList.toggle("active", box.id === `status-box-${currentStoreStatus}`);
   });
+  document.querySelectorAll('input[name="store-status-radio"]').forEach(radio => {
+    radio.checked = (radio.value === currentStoreStatus);
+  });
 }
 
 async function setStoreStatus(newStatus) {
   if (!['open', 'busy', 'paused'].includes(newStatus)) return;
-  const prevStatus = currentStoreStatus;
-  renderStoreStatusUI(newStatus);
   const dd = document.getElementById("store-status-dropdown");
   if (dd) dd.classList.remove("open");
+  if (newStatus === currentStoreStatus) return;
+
+  const prevStatus = currentStoreStatus;
+  renderStoreStatusUI(newStatus);
 
   try {
     const res = await fetch(`${WORKER_BASE}/api/config?tenant_id=${getTenantIdFromUrl()}`, {
