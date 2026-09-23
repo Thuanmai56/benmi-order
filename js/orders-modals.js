@@ -63,7 +63,11 @@ if (typeof window !== "undefined" && !window.__orderModalEscRegistered) {
       }
       const revModal = document.getElementById("reviewModal");
       if (revModal && revModal.style.display !== "none") {
-        closeModal();
+        if (typeof dismissReviewModal === "function") {
+          dismissReviewModal();
+        } else {
+          closeModal();
+        }
       }
     }
   });
@@ -97,6 +101,9 @@ function openReview(orderKey) {
   }
 
   if (order.status === "NEW") {
+    if (typeof captureReturnContext === "function") {
+      captureReturnContext();
+    }
     dismissNewAlert();
   } else if (typeof updateNewAlert === "function") {
     updateNewAlert();
@@ -688,7 +695,16 @@ async function confirmAction(type, btn) {
   }
 
   await updateStatus(key, status, { reason, note }, btn);
-  closeModal();
+
+  const nextKey = typeof getRemainingNewOrderKey === "function" ? getRemainingNewOrderKey(key) : null;
+  if (nextKey && typeof openReview === "function") {
+    closeModal();
+    openReview(nextKey);
+  } else if (typeof finishReviewFlow === "function") {
+    finishReviewFlow();
+  } else {
+    closeModal();
+  }
 }
 
 function openBlabContactModal(topic = 'general') {

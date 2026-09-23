@@ -427,7 +427,76 @@ function dismissNewAlert() {
   }, 30_000);
 }
 
+let posReturnContext = null;
+
+function captureReturnContext() {
+  if (posReturnContext) return;
+
+  const currentOpenOrderKey = (typeof reviewingOrder !== "undefined" && reviewingOrder && reviewingOrder.key && reviewingOrder.status !== "NEW")
+    ? reviewingOrder.key
+    : null;
+
+  let currentSettingsSubTab = null;
+  if (typeof activeTab !== "undefined" && activeTab === "settings") {
+    const activeCard = document.querySelector(".settings-card.active");
+    currentSettingsSubTab = activeCard ? activeCard.id : ((typeof sessionStorage !== "undefined" && sessionStorage.getItem("last_settings_tab")) || "setting-card-status");
+  }
+
+  posReturnContext = {
+    tab: (typeof activeTab !== "undefined" && activeTab) ? activeTab : "live",
+    orderKey: currentOpenOrderKey,
+    settingsSubTab: currentSettingsSubTab
+  };
+}
+
+function getRemainingNewOrderKey(currentHandledKey) {
+  if (Array.isArray(pendingNewOrders)) {
+    const nextOrder = pendingNewOrders.find(o => o && o.key && o.key !== currentHandledKey);
+    if (nextOrder) return nextOrder.key;
+  }
+
+  if (typeof unacknowledgedAppends !== "undefined" && unacknowledgedAppends && unacknowledgedAppends.size > 0) {
+    const nextAppendKey = Array.from(unacknowledgedAppends.keys()).find(k => k !== currentHandledKey);
+    if (nextAppendKey) return nextAppendKey;
+  }
+
+  return null;
+}
+
+function finishReviewFlow() {
+  closeModal();
+  if (typeof updateNewAlert === "function") updateNewAlert();
+
+  if (posReturnContext) {
+    const ctx = posReturnContext;
+    posReturnContext = null;
+
+    if (ctx.tab && ctx.tab !== activeTab && typeof switchTab === "function") {
+      switchTab(ctx.tab);
+    }
+
+    if (ctx.tab === "settings" && ctx.settingsSubTab && typeof switchSettingTab === "function") {
+      switchSettingTab(ctx.settingsSubTab);
+    }
+
+    if (ctx.orderKey && typeof openReview === "function") {
+      setTimeout(() => {
+        openReview(ctx.orderKey);
+      }, 50);
+    }
+  }
+}
+
+function dismissReviewModal() {
+  if (posReturnContext) {
+    finishReviewFlow();
+  } else {
+    closeModal();
+  }
+}
+
 function reviewNextNewOrder() {
+  captureReturnContext();
   const isReviewOpen = document.getElementById("reviewModal") && document.getElementById("reviewModal").style.display === "flex";
   const currentKey = (isReviewOpen && typeof reviewingOrder !== "undefined" && reviewingOrder) ? reviewingOrder.key : null;
 
@@ -1234,25 +1303,36 @@ async function updateStatus(key, status, extra = {}, btn = null) {
 
 async function reviewAccept(btn) {
   if (!reviewingOrder?.key) return;
-  await updateStatus(reviewingOrder.key, "ACCEPTED", {}, btn);
-  closeModal();
+  const handledKey = reviewingOrder.key;
+  await updateStatus(handledKey, "ACCEPTED", {}, btn);
   if (typeof updateNewAlert === "function") updateNewAlert();
-  switchTab("live");
+
+  const nextKey = getRemainingNewOrderKey(handledKey);
+  if (nextKey && typeof openReview === "function") {
+    openReview(nextKey);
+  } else {
+    finishReviewFlow();
+  }
 }
 
 async function markReadyFromReview(btn) {
   if (!reviewingOrder?.key) return;
   await updateStatus(reviewingOrder.key, "DONE", {}, btn);
-  closeModal();
-  switchTab("live");
+  finishReviewFlow();
 }
 
 async function reviewForceCancel(btn) {
   if (!reviewingOrder?.key) return;
   if (!confirm(t("confirmForceCancel"))) return;
-  await updateStatus(reviewingOrder.key, "FORCE_REJECT", {}, btn);
-  closeModal();
-  switchTab("live");
+  const handledKey = reviewingOrder.key;
+  await updateStatus(handledKey, "FORCE_REJECT", {}, btn);
+
+  const nextKey = getRemainingNewOrderKey(handledKey);
+  if (nextKey && typeof openReview === "function") {
+    openReview(nextKey);
+  } else {
+    finishReviewFlow();
+  }
 }
 
 window.isOrderDineIn = isOrderDineIn;
@@ -1273,3 +1353,14 @@ window.toggleRawOrderViewer = toggleRawOrderViewer;
 window.copyRawOrderContent = copyRawOrderContent;
 window.extractFlavorSettings = extractFlavorSettings;
 window.extractCustomerChanges = extractCustomerChanges;
+if (typeof window !== "undefined") {
+  Object.defineProperty(window, "posReturnContext", {
+    get() { return posReturnContext; },
+    set(v) { posReturnContext = v; },
+    configurable: true
+  });
+}
+window.captureReturnContext = captureReturnContext;
+window.getRemainingNewOrderKey = getRemainingNewOrderKey;
+window.finishReviewFlow = finishReviewFlow;
+window.dismissReviewModal = dismissReviewModal;
