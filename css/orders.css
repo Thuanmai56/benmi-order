@@ -7770,7 +7770,10 @@ select.form-input {
     justify-content: center;
   }
 }
-.bundle-wizard-page { width:min(960px, 100%); height:100%; background:#fff; display:flex; flex-direction:column; }
+.bundle-wizard-screen { position:fixed; inset:0; z-index:2200; width:100%; height:100%; height:100dvh; background:#fff; }
+body.bundle-wizard-open { overflow:hidden; }
+body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { visibility:hidden; }
+.bundle-wizard-page { width:100%; height:100%; min-height:0; background:#fff; display:flex; flex-direction:column; padding-top:env(safe-area-inset-top); }
 #imageModal { z-index: 2300; }
 .bundle-wizard-head, .bundle-wizard-footer { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 24px; border-bottom:1px solid #e2e8f0; }
 .bundle-wizard-footer { border-top:1px solid #e2e8f0; border-bottom:0; }
@@ -7801,3 +7804,33 @@ select.form-input {
 .bundle-wizard-preview-choice button { min-width:48px; min-height:48px; border:1px solid #94a3b8; border-radius:8px; background:#fff; }
 .bundle-wizard-image-preview { width:120px; height:120px; object-fit:cover; border-radius:12px; border:1px solid #cbd5e1; }
 @media(max-width:600px) { .bundle-wizard-head, .bundle-wizard-footer, .bundle-wizard-body { padding:12px 16px; } }
+
+/* Full-screen combo workspace: guidance stays with the step it explains. */
+.bundle-wizard-head, .bundle-wizard-footer, .bundle-wizard-steps { flex-shrink:0; }
+.bundle-wizard-footer { padding-bottom:max(16px, env(safe-area-inset-bottom)); }
+.bundle-wizard-body { min-height:0; overscroll-behavior:contain; padding:24px clamp(16px, 4vw, 64px); background:#f8fafc; }
+.bundle-wizard-guide { background:#fff; border:1px solid #dbe3ec; border-radius:12px; padding:20px; }
+.bundle-wizard-guide h2 { margin:0 0 10px; font-size:20px; color:#0f172a; }
+.bundle-wizard-guide p, .bundle-wizard-hint { margin:0 0 12px; color:#475569; line-height:1.6; max-width:90ch; font-weight:400; }
+.bundle-wizard-guide p:last-child { margin-bottom:0; }
+.bundle-wizard-guide summary, .bundle-wizard-group summary { min-height:48px; padding:12px 0; cursor:pointer; font-weight:700; }
+.bundle-wizard-info-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; padding:24px; background:#fff; border:1px solid #dbe3ec; border-radius:12px; }
+.bundle-wizard-templates { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+.bundle-wizard-templates .bundle-template-card { display:flex; flex-direction:column; align-items:flex-start; text-align:start; padding:20px; gap:12px; color:#0f172a; line-height:1.5; }
+.bundle-template-card strong { font-size:18px; }
+.bundle-template-card span { font-weight:400; }
+.bundle-template-card .bundle-template-example { color:#475569; font-size:14px; }
+.bundle-template-card .bundle-template-action { margin-top:auto; padding-top:8px; color:#065f46; font-weight:700; }
+.bundle-template-card:hover { border-color:#047857; background:#f0fdf4; }
+.bundle-wizard-screen :is(button, input, select, summary):focus-visible { outline:3px solid #047857; outline-offset:3px; }
+.bundle-wizard-group { background:#fff; }
+.bundle-wizard-two > input, .bundle-wizard-two > select { flex:1; min-width:0; }
+.bundle-wizard-steps span { min-width:0; }
+@media (max-width:700px) {
+  .bundle-wizard-templates, .bundle-wizard-info-fields { grid-template-columns:1fr; }
+  .bundle-wizard-info-fields, .bundle-wizard-guide { padding:16px; }
+  .bundle-wizard-steps { padding:12px 16px; gap:4px; font-size:13px; }
+  .bundle-wizard-steps span { padding:8px 4px; }
+  .bundle-wizard-two { flex-direction:column; }
+  .bundle-wizard-head h1 { font-size:20px; }
+}

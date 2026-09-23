@@ -28,23 +28,31 @@ function openBundleWizard(catIndex = activeCategoryIndex, itemIndex = null) {
       minQuantity: Number(group.minQuantity || 1), maxQuantity: Number(group.maxQuantity || group.minQuantity || 1),
       allowRepeats: Boolean(group.allowRepeats), sources: group.sources || [], items: group.items || [], surcharges: group.surcharges || {} }))
   } : { version: 2, groups: [] };
-  comboWizard = { product, config, step: 0, changed: false };
+  comboWizard = { product, config, step: 0, changed: false, returnFocus: document.activeElement };
   const saved = localStorage.getItem(comboDraftKey());
   if (saved && confirm(comboText('comboRestoreDraft'))) {
     try { const parsed = JSON.parse(saved); comboWizard.product = parsed.product; comboWizard.config = parsed.config; comboWizard.step = parsed.step || 0; comboWizard.changed = true; } catch { localStorage.removeItem(comboDraftKey()); }
   }
+  document.body.classList.add('bundle-wizard-open');
   document.getElementById('bundle-wizard').style.display = 'flex';
   renderComboWizard();
+  document.getElementById('bundle-wizard-title').focus();
 }
 window.openBundleWizard = openBundleWizard;
 
 function closeBundleWizard() {
   if (!comboWizard) return;
   if (comboWizard.changed && !confirm(comboText('comboLeaveDraft'))) return;
-  document.getElementById('bundle-wizard').style.display = 'none';
-  comboWizard = null;
+  dismissComboWizard();
 }
 window.closeBundleWizard = closeBundleWizard;
+function dismissComboWizard() {
+  const returnFocus = comboWizard?.returnFocus;
+  document.getElementById('bundle-wizard').style.display = 'none';
+  document.body.classList.remove('bundle-wizard-open');
+  comboWizard = null;
+  returnFocus?.focus();
+}
 
 function comboWizardBack() { if (comboWizard?.step > 0) { comboWizard.step--; persistComboWizard(); renderComboWizard(); } }
 window.bundleWizardBack = comboWizardBack;
@@ -82,12 +90,14 @@ function comboWizardGroupField(index, field, value) {
 window.comboWizardGroupField = comboWizardGroupField;
 
 function comboWizardTemplate(kind) {
-  const categories = (currentMenuData || []).filter(cat => cat.type === 'catalog');
+  if (comboGroups().length && !confirm(comboText('comboReplaceTemplate'))) return;
   const newChoice = (zh, vi) => { const group = comboNewGroup('choice'); group.label = comboLabel(zh, vi); return group; };
   if (kind === 'meal') comboWizard.config.groups = [newChoice('選擇主餐', 'Chọn món chính'), newChoice('選擇飲料', 'Chọn đồ uống')];
-  if (kind === 'many') comboWizard.config.groups = [newChoice('任選餐點', 'Chọn món')];
+  if (kind === 'many') { const group = newChoice('任選餐點', 'Chọn món'); group.minQuantity = group.maxQuantity = 2; comboWizard.config.groups = [group]; }
   if (kind === 'fixed') { const group = comboNewGroup('fixed'); group.label = comboLabel('套餐內容', 'Món trong combo'); comboWizard.config.groups = [group]; }
+  comboWizard.preview = {}; comboWizard.search = {}; comboWizard.filters = {};
   persistComboWizard(); renderComboWizard();
+  document.querySelector('.bundle-wizard-group input')?.focus();
 }
 window.comboWizardTemplate = comboWizardTemplate;
 function comboWizardAddGroup(type) { comboGroups().push(comboNewGroup(type)); persistComboWizard(); renderComboWizard(); }
@@ -178,30 +188,41 @@ window.bundleWizardNext = comboWizardNext;
 function renderComboWizard() {
   if (!comboWizard) return;
   const { product, step } = comboWizard;
+  document.getElementById('bundle-wizard-steps').setAttribute('aria-label', comboText('comboStepsLabel'));
+  document.getElementById('bundle-wizard-error').textContent = '';
   document.getElementById('bundle-wizard-title').textContent = product.id ? comboText('comboEditTitle') : comboText('comboCreateTitle');
   document.getElementById('bundle-wizard-close').textContent = comboText('comboClose');
   document.getElementById('bundle-wizard-prev').textContent = comboText('comboBack');
   document.getElementById('bundle-wizard-prev').disabled = step === 0;
   document.getElementById('bundle-wizard-next').textContent = comboText(step === 2 ? 'comboSave' : 'comboContinue');
-  document.getElementById('bundle-wizard-steps').innerHTML = ['comboStepInfo', 'comboStepParts', 'comboStepPreview'].map((key, index) => `<span class="${step === index ? 'active' : ''}">${index + 1}. ${comboText(key)}</span>`).join('');
+  document.getElementById('bundle-wizard-steps').innerHTML = ['comboStepInfo', 'comboStepParts', 'comboStepPreview'].map((key, index) => `<span ${step === index ? 'aria-current="step"' : ''} class="${step === index ? 'active' : ''}">${index + 1}. ${comboText(key)}</span>`).join('');
   const body = document.getElementById('bundle-wizard-body');
+  if (comboWizard.renderedStep !== step) body.scrollTop = 0;
+  comboWizard.renderedStep = step;
   if (step === 0) {
-    body.innerHTML = `<label>${comboText('comboProductName')}<input type="text" value="${comboEscape(product.name)}" oninput="comboWizardField('name',this.value)"></label>
+    body.innerHTML = `<aside class="bundle-wizard-guide"><h2>${comboText('comboWhatTitle')}</h2><p>${comboText('comboWhatBody')}</p><p>${comboText('comboPriceHelp')}</p><p>${comboText('comboSetupHelp')}</p></aside><div class="bundle-wizard-info-fields"><label>${comboText('comboProductName')}<input type="text" value="${comboEscape(product.name)}" oninput="comboWizardField('name',this.value)"></label>
       <label>${comboText('comboBasePrice')}<input type="number" min="0" step="1" value="${product.price}" oninput="comboWizardField('price',this.value)"></label>
       <label>${comboText('comboCategory')}<select onchange="comboWizardField('categoryId',this.value)">${currentMenuData.filter(cat => cat.type === 'catalog').map(cat => `<option value="${comboEscape(cat.catId)}" ${cat.catId === product.categoryId ? 'selected' : ''}>${comboEscape(cat.title)}</option>`).join('')}</select></label>
       <label>${comboText('comboImage')}<input type="file" accept="image/*" onchange="comboWizardImage(event)"></label>
       ${comboWizard.imageDataUri ? `<img src="${comboWizard.imageDataUri}" alt="${comboText('comboImage')}" class="bundle-wizard-image-preview">` : ''}
-      ${product.id ? `<button type="button" class="btn btn-ghost" onclick="openImageModal('${comboEscape(currentMenuData.find(cat => cat.catId === product.categoryId)?.id || '')}','${comboEscape(product.name)}')">${comboText('comboImage')}</button>` : ''}`;
+      ${product.id ? `<button type="button" class="btn btn-ghost" onclick="openImageModal('${comboEscape(currentMenuData.find(cat => cat.catId === product.categoryId)?.id || '')}','${comboEscape(product.name)}')">${comboText('comboImage')}</button>` : ''}</div>`;
   } else if (step === 1) {
     const candidates = comboCatalogItems();
     const categories = currentMenuData.filter(cat => cat.type === 'catalog');
-    const templates = `<div class="bundle-wizard-templates"><button type="button" onclick="comboWizardTemplate('meal')">${comboText('comboTemplateMeal')}</button><button type="button" onclick="comboWizardTemplate('many')">${comboText('comboTemplateMany')}</button><button type="button" onclick="comboWizardTemplate('fixed')">${comboText('comboTemplateFixed')}</button></div>`;
+    const cards = ['meal', 'many', 'fixed'].map(kind => {
+      const key = { meal: 'Meal', many: 'Many', fixed: 'Fixed' }[kind];
+      return `<button type="button" class="bundle-template-card" onclick="comboWizardTemplate('${kind}')"><strong>${comboText('comboTemplate' + key)}</strong><span>${comboText('comboTemplate' + key + 'Help')}</span><span class="bundle-template-example">${comboText('comboTemplate' + key + 'Example')}</span><span class="bundle-template-action">${comboText('comboUseTemplate')}</span></button>`;
+    }).join('');
+    const templateContent = `<p>${comboText('comboTemplatesHelp')}</p><div class="bundle-wizard-templates">${cards}</div>`;
+    const templates = `<section class="bundle-wizard-guide"><h2>${comboText('comboPartsTitle')}</h2><p>${comboText('comboPartsHelp')}</p></section>` + (comboGroups().length
+      ? `<details class="bundle-wizard-guide"><summary>${comboText('comboChangeTemplate')}</summary>${templateContent}</details>`
+      : `<section class="bundle-wizard-guide"><h2>${comboText('comboTemplatesTitle')}</h2>${templateContent}</section>`);
     body.innerHTML = templates + comboGroups().map((group, index) => {
       const selectedIds = group.type === 'fixed' ? group.items.map(it => it.itemId) : group.sources.filter(src => src.type === 'item_list').flatMap(src => src.itemIds || []);
       const search = comboWizard.search?.[index] || '';
       const filter = comboWizard.filters?.[index] || 'all';
       const visible = candidates.filter(item => (filter === 'all' || item.categoryId === filter) && item.name.toLowerCase().includes(search.toLowerCase()));
-      return `<section class="bundle-wizard-group"><header><h2>${index + 1}. ${comboText(group.type === 'fixed' ? 'comboFixedGroup' : 'comboChoiceGroup')}</h2><button type="button" onclick="comboWizardRemoveGroup(${index})">${comboText('comboRemove')}</button></header>
+      return `<section class="bundle-wizard-group"><header><h2>${index + 1}. ${comboText(group.type === 'fixed' ? 'comboFixedGroup' : 'comboChoiceGroup')}</h2><button type="button" onclick="comboWizardRemoveGroup(${index})">${comboText('comboRemove')}</button></header><p class="bundle-wizard-hint">${comboText(group.type === 'fixed' ? 'comboFixedHelp' : 'comboChoiceHelp')}</p>
         <div class="bundle-wizard-two"><label>${comboText('comboLabelZh')}<input value="${comboEscape(group.label['zh-TW'])}" oninput="comboWizardGroupField(${index},'zh',this.value)"></label><label>${comboText('comboLabelVi')}<input value="${comboEscape(group.label.vi)}" oninput="comboWizardGroupField(${index},'vi',this.value)"></label></div>
         ${group.type === 'choice' ? `<div class="bundle-wizard-two"><label>${comboText('comboQuantity')}<input type="number" min="1" value="${group.minQuantity}" onchange="comboWizardGroupField(${index},'minQuantity',this.value)"></label><label class="bundle-wizard-check"><input type="checkbox" ${group.allowRepeats ? 'checked' : ''} onchange="comboWizardGroupField(${index},'allowRepeats',this.checked)">${comboText('comboRepeat')}</label></div>` : ''}
         <div class="bundle-wizard-two"><input id="combo-search-${index}" type="search" placeholder="${comboText('comboSearch')}" value="${comboEscape(search)}" oninput="comboWizardSearch(${index},this.value)"><select aria-label="${comboText('comboFilterCategory')}" onchange="comboWizardFilter(${index},this.value)"><option value="all">${comboText('comboAllCategories')}</option>${categories.map(cat => `<option value="${comboEscape(cat.catId)}" ${filter === cat.catId ? 'selected' : ''}>${comboEscape(cat.title)}</option>`).join('')}</select></div>
@@ -270,8 +291,7 @@ async function saveComboWizard() {
       });
       if (!imageResponse.ok) throw new Error(`${comboText('comboSaved')} · ${comboText('imageUploadFail')}`);
     }
-    document.getElementById('bundle-wizard').style.display = 'none';
-    comboWizard = null;
+    dismissComboWizard();
     await loadMenuData();
     alert(comboText('comboSaved'));
   } catch (error) {

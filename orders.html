@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title id="pos-page-title">Blab POS</title>
   <base href="/" />
-  <link rel="stylesheet" href="css/orders.css?v=20260923_combo_v2" />
+  <link rel="stylesheet" href="css/orders.css?v=20260923_combo_page_v3" />
     <script>
       (function () {
         document.documentElement.style.setProperty('--primary', '#00b900');
@@ -2306,13 +2306,13 @@
     </div>
   </div>
 
-  <div id="bundle-wizard" class="modal order-detail-fullpage" style="display:none" role="dialog" aria-modal="true" aria-labelledby="bundle-wizard-title">
-    <div class="order-detail-page-container bundle-wizard-page">
+  <section id="bundle-wizard" class="bundle-wizard-screen" style="display:none" aria-labelledby="bundle-wizard-title">
+    <div class="bundle-wizard-page">
       <div class="bundle-wizard-head">
-        <h1 id="bundle-wizard-title"></h1>
+        <h1 id="bundle-wizard-title" tabindex="-1"></h1>
         <button type="button" class="btn btn-ghost" onclick="closeBundleWizard()" id="bundle-wizard-close"></button>
       </div>
-      <nav id="bundle-wizard-steps" class="bundle-wizard-steps" aria-label="Combo steps"></nav>
+      <nav id="bundle-wizard-steps" class="bundle-wizard-steps" aria-label=""></nav>
       <div id="bundle-wizard-body" class="bundle-wizard-body"></div>
       <div id="bundle-wizard-error" class="bundle-wizard-error" role="alert"></div>
       <div class="bundle-wizard-footer">
@@ -2320,10 +2320,10 @@
         <button type="button" class="btn btn-primary" id="bundle-wizard-next" onclick="bundleWizardNext()"></button>
       </div>
     </div>
-  </div>
+  </section>
 
   <!-- Benmi POS Modular Architecture Scripts -->
-  <script src="js/orders-i18n.js?v=20260923_combo_v2"></script>
+  <script src="js/orders-i18n.js?v=20260923_combo_page_v3"></script>
   <script src="js/orders-core.js?v=20260916_menu_bundle_editor_v5"></script>
   <script src="js/orders-audio.js?v=20260916_menu_bundle_editor_v5"></script>
   <script src="js/printer-service.js?v=20260923_combo_v2"></script>
@@ -2333,7 +2333,7 @@
   <script src="js/orders-reports.js?v=20260916_menu_bundle_editor_v5"></script>
   <script src="js/orders-settings.js?v=20260916_menu_bundle_editor_v5"></script>
   <script src="js/orders-menu.js?v=20260923_combo_v2"></script>
-  <script src="js/orders-bundle-wizard.js?v=20260923_combo_v2"></script>
+  <script src="js/orders-bundle-wizard.js?v=20260923_combo_page_v3"></script>
 
   <!-- POS Bootstrap & Initialization -->
   <script>
