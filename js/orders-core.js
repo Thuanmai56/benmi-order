@@ -1007,65 +1007,147 @@ function updatePageMainTitle(tabName) {
 }
 
 // ==========================================
-// Keep the main header visible without changing scroll-container geometry.
-// Retain the initializer used by orders.html, but do not attach scroll handlers.
+// Smart Hide-on-Scroll Topbar (Auto-collapse on scroll down, reveal on scroll up)
 // ==========================================
 function initSmartHeaderScroll() {
   const mainTopbar = document.getElementById("main-topbar");
-  if (mainTopbar) mainTopbar.classList.remove("topbar-hidden");
-}
+  const mainLayout = document.getElementById("main-layout");
+  if (!mainTopbar || !mainLayout) return;
 
-window.initSmartHeaderScroll = initSmartHeaderScroll;
+  const lastScrollPositions = new WeakMap();
+  let ticking = false;
+  const THRESHOLD = 6;
 
-// ==========================================
-// Auto-hide Native Browser Address Bar on Touch Swipe Up
-// ==========================================
-function initBrowserAddressBarAutoHide() {
-  if (typeof window === "undefined" || typeof document === "undefined") return;
-  // On native Capacitor app, there is no browser address bar
-  if (typeof isNativeAppPlatform === "function" && isNativeAppPlatform()) return;
-
-  let touchStartY = 0;
-  let isSwiping = false;
-
-  window.addEventListener("touchstart", (e) => {
-    if (e.touches && e.touches.length === 1) {
-      touchStartY = e.touches[0].clientY;
-      isSwiping = true;
+  function showMainTopbar() {
+    if (mainTopbar.classList.contains("topbar-hidden")) {
+      mainTopbar.classList.remove("topbar-hidden");
     }
-  }, { passive: true });
+  }
 
-  window.addEventListener("touchmove", (e) => {
-    if (!isSwiping || !e.touches || e.touches.length !== 1) return;
-    // Skip if interacting inside an open modal or input/textarea
+  function isModalOverlayActive() {
+    const modals = document.querySelectorAll(".modal");
+    for (let i = 0; i < modals.length; i++) {
+      const m = modals[i];
+      if (m.id === "reviewModal") continue; // reviewModal is full-page detail with its own header logic
+      if (m.style && (m.style.display === "flex" || m.style.display === "block")) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function hideMainTopbar() {
+    // Never hide if store status dropdown menu is open
+    const statusDropdown = document.getElementById("store-status-dropdown");
+    if (statusDropdown && statusDropdown.classList.contains("open")) {
+      return;
+    }
+    const statusMenu = document.getElementById("store-status-menu");
+    if (statusMenu && (statusMenu.classList.contains("show") || statusMenu.style.display === "block")) {
+      return;
+    }
+    // Never hide if language dropdown menu is open
+    const langDropdown = document.getElementById("lang-dropdown");
+    if (langDropdown && langDropdown.classList.contains("open")) {
+      return;
+    }
+    // Never hide if a modal is open
+    if (isModalOverlayActive()) {
+      return;
+    }
+    if (!mainTopbar.classList.contains("topbar-hidden")) {
+      mainTopbar.classList.add("topbar-hidden");
+    }
+  }
+
+  window.showMainTopbar = showMainTopbar;
+  window.hideMainTopbar = hideMainTopbar;
+
+  // 1. Capture-phase scroll listener on all scroll containers in mainLayout
+  window.addEventListener("scroll", (e) => {
     const target = e.target;
-    if (target && target.closest && (target.closest(".modal:not(#reviewModal)") || target.closest("input, textarea, select"))) {
+    if (target && target.closest && target.closest(".modal")) return;
+
+    let st = 0;
+    if (target === document || target === window) {
+      st = window.pageYOffset || document.documentElement.scrollTop;
+    } else if (target && typeof target.scrollTop === "number") {
+      st = target.scrollTop;
+    } else {
       return;
     }
 
-    const currentY = e.touches[0].clientY;
-    const deltaY = currentY - touchStartY; // deltaY < 0: swiping finger UP (scrolling page down)
+    if (target && typeof target === "object") {
+      target.__latestSt = st;
+    }
 
-    // When swiping finger up:
-    // Scroll the root window to collapse Safari/Chrome address bar (max 60px)
-    if (deltaY < -8 && window.scrollY < 60) {
-      const scrollStep = Math.min(60 - window.scrollY, Math.abs(deltaY));
-      window.scrollBy(0, scrollStep);
-    } else if (deltaY > 8 && window.scrollY > 0) {
-      // When user is at the top of the internal scroll container and pulls down
-      const scrollTarget = target && target.closest && target.closest(".live-panel-body, .settings-content-body, .menu-panel-body, #reviewModal");
-      if (!scrollTarget || scrollTarget.scrollTop <= 2) {
-        window.scrollBy(0, -Math.min(window.scrollY, deltaY));
+    if (!ticking) {
+      const rAF = (typeof window !== "undefined" && window.requestAnimationFrame) || (cb => setTimeout(cb, 16));
+      rAF(() => {
+        let currentSt = 0;
+        if (target === document || target === window) {
+          currentSt = window.pageYOffset || document.documentElement.scrollTop;
+        } else if (target && typeof target.scrollTop === "number") {
+          currentSt = target.scrollTop;
+        }
+
+        const prevSt = lastScrollPositions.get(target) || 0;
+        const diff = currentSt - prevSt;
+
+        if (currentSt <= 15) {
+          showMainTopbar();
+        } else if (Math.abs(diff) >= THRESHOLD) {
+          if (diff > 0 && currentSt > 25) {
+            hideMainTopbar();
+          } else if (diff < 0) {
+            showMainTopbar();
+          }
+        }
+        lastScrollPositions.set(target, currentSt);
+        ticking = false;
+      });
+      ticking = true;
+    }
+  }, { capture: true, passive: true });
+
+  // 2. Touch gesture listener on mainLayout for immediate response on touch screens (iPad / Tablets)
+  let touchLastY = 0;
+
+  mainLayout.addEventListener("touchstart", (e) => {
+    if (e.touches && e.touches.length === 1) {
+      touchLastY = e.touches[0].clientY;
+    }
+  }, { passive: true });
+
+  mainLayout.addEventListener("touchmove", (e) => {
+    if (e.target && e.target.closest && e.target.closest(".modal")) return;
+    if (e.touches && e.touches.length === 1) {
+      const currentY = e.touches[0].clientY;
+      const deltaY = currentY - touchLastY; // > 0: pulling down (scroll up), < 0: pushing up (scroll down)
+      touchLastY = currentY;
+
+      if (deltaY > 10) {
+        showMainTopbar();
+      } else if (deltaY < -10) {
+        hideMainTopbar();
       }
     }
   }, { passive: true });
 
-  window.addEventListener("touchend", () => {
-    isSwiping = false;
+  // 3. Wheel event listener on mainLayout for mouse / trackpad
+  mainLayout.addEventListener("wheel", (e) => {
+    if (e.target && e.target.closest && e.target.closest(".modal")) return;
+    if (Math.abs(e.deltaY) > 5) {
+      if (e.deltaY > 0) {
+        hideMainTopbar();
+      } else if (e.deltaY < 0) {
+        showMainTopbar();
+      }
+    }
   }, { passive: true });
 }
 
-window.initBrowserAddressBarAutoHide = initBrowserAddressBarAutoHide;
+window.initSmartHeaderScroll = initSmartHeaderScroll;
 
 function togglePosFullscreen() {
   const doc = document;

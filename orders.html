@@ -4,12 +4,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <title id="pos-page-title">Blab POS</title>
   <base href="/" />
-  <link rel="stylesheet" href="css/orders.css?v=20260923_browser_bar_v1" />
+  <link rel="stylesheet" href="css/orders.css?v=20260923_autohide_header_v1" />
     <script>
       (function () {
         document.documentElement.style.setProperty('--primary', '#00b900');
@@ -2071,12 +2068,12 @@
   </div>
 
   <!-- Benmi POS Modular Architecture Scripts -->
-  <script src="js/orders-i18n.js?v=20260923_browser_bar_v1"></script>
-  <script src="js/orders-core.js?v=20260923_browser_bar_v1"></script>
+  <script src="js/orders-i18n.js?v=20260923_autohide_header_v1"></script>
+  <script src="js/orders-core.js?v=20260923_autohide_header_v1"></script>
   <script src="js/orders-audio.js?v=20260919_sold_out_v7"></script>
   <script src="js/printer-service.js?v=20260919_sold_out_v7"></script>
   <script src="js/orders-live.js?v=20260919_sold_out_v7"></script>
-  <script src="js/orders-modals.js?v=20260923_browser_bar_v1"></script>
+  <script src="js/orders-modals.js?v=20260923_autohide_header_v1"></script>
   <script src="js/orders-history.js?v=20260919_sold_out_v7"></script>
   <script src="js/orders-reports.js?v=20260919_sold_out_v7"></script>
   <script src="js/orders-settings.js?v=20260919_sold_out_v7"></script>
@@ -2100,9 +2097,6 @@
       }
       if (typeof initOrderDetailHeaderScroll === "function") {
         initOrderDetailHeaderScroll();
-      }
-      if (typeof initBrowserAddressBarAutoHide === "function") {
-        initBrowserAddressBarAutoHide();
       }
       const tenantId = getTenantIdFromUrl();
       if (!tenantId) {
