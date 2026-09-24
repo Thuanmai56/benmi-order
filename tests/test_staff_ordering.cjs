@@ -395,8 +395,13 @@ async function check(name, fn) {
 
     assert.equal(appendData.roundCount, 2);
     assert.equal(appendData.revision, 2);
+    assert.equal(appendData.status, 'ACCEPTED');
     // Previous total 280 + (2 * 50 = 100) = 380
     assert.equal(appendData.total, 380);
+
+    // Verify order status in DB remains ACCEPTED (not reset to NEW)
+    const orderR2 = await DB.prepare("SELECT status FROM orders WHERE key = ?").bind(orderKey1).first();
+    assert.equal(orderR2.status, 'ACCEPTED');
 
     // Verify items in DB for round 2
     const itemsR2 = await DB.prepare("SELECT * FROM order_items WHERE order_key = ? AND round_number = 2").bind(orderKey1).all();

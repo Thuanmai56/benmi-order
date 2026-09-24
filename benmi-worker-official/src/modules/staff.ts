@@ -902,7 +902,7 @@ export async function handleStaffRoute(
       key: parent.key,
       orderId: parent.order_id,
       displayKey: parent.display_key,
-      status: "NEW",
+      status: "ACCEPTED",
       roundCount: nextRound,
       revision: nextRevision,
       total: newTotal,
@@ -929,7 +929,7 @@ export async function handleStaffRoute(
              last_appended_at = datetime('now'),
              order_content = ?,
              note = ?,
-             status = 'NEW',
+             status = 'ACCEPTED',
              updated_at = datetime('now')
            WHERE key = ? AND tenant_id = ?`
         ).bind(
