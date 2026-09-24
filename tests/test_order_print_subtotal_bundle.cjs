@@ -156,7 +156,8 @@ const singleBundleOrder = {
 const parsed3 = service.parseOrderItems(singleBundleOrder, false);
 assert.strictEqual(parsed3[0].price, "$125");
 assert(parsed3[0].options.includes("胡麻醬"), "Options should include base options (胡麻醬)");
-assert(parsed3[0].options.includes("配菜：水煮蛋、地瓜 (+$5)"), "Options should include formatted bundle snapshot items");
+assert(parsed3[0].options.includes("配菜：水煮蛋、地瓜"), "Options should include bundle names without surcharge annotations");
+assert(!parsed3[0].options.includes("+$"), "Bundle surcharges must not appear in printed options");
 console.log("  ✓ Single bundle options formatted: " + parsed3[0].options);
 
 // --- TEST 4: Multi-portion bundle snapshot rendering & sticker expansion ---
@@ -236,6 +237,36 @@ assert(drawnText.includes("$240"), "Receipt text must include correct historical
 assert(drawnText.includes("生菜、玉米"), "Receipt text must include portion 1 bundle items");
 assert(drawnText.includes("花椰菜、蕃茄"), "Receipt text must include portion 2 bundle items");
 console.log("  ✓ Receipt canvas correctly rendered subtotal and bundle selections");
+
+// Existing orders can have surcharge annotations embedded in their saved option text.
+const savedOptions = [
+  { choice: '第1份: 白蘿蔔 (+$20)', price: 20 },
+  { choice: '第2份: 地瓜（+$20.50） x2', price: 20.5 }
+];
+const savedOrder = { total: 240.5, items: [{
+  item_name: '套餐', quantity: 2, unit_price: 100,
+  selected_options: JSON.stringify(savedOptions), notes: '保留備註 (+$20)'
+}] };
+const originalOrder = JSON.stringify(savedOrder);
+const savedItems = service.parseOrderItems(savedOrder, false);
+assert.equal(savedItems[0].price, '$240.5');
+assert.equal(savedItems[0].options, '第1份: 白蘿蔔\n第2份: 地瓜 x2');
+assert.equal(savedItems[0].note, '保留備註 (+$20)');
+assert.equal(JSON.stringify(savedOrder), originalOrder, 'Printing must not change stored order data');
+assert(service.parseOrderItems(savedOrder, true).every(item => !item.options.includes('+$')));
+assert.equal(service.formatPrintOptions('白蘿蔔 (+$20)、57號地瓜 (大份)'), '白蘿蔔、57號地瓜 (大份)');
+const legacy = service.parseOrderItems({ content: '1份 套餐 $100\n↳ 白蘿蔔 (+$20)' }, false);
+assert.equal(legacy[0].options, '白蘿蔔');
+assert.equal(legacy[0].price, '$120', 'Legacy surcharge calculation must remain unchanged');
+const contentFallback = service.parseOrderItems({
+  items: [{ item_name: '套餐', quantity: 1, subtotal: 120 }],
+  content: '1份 套餐 $100\n↳ 白蘿蔔 (+$20)'
+}, false);
+assert(!contentFallback[0].options.includes('+$'));
+canvases.length = 0;
+service.drawReceiptToCanvas(singleBundleOrder, false, 80);
+assert(!canvases[0].text.join('\n').includes('+$'), 'Receipt drawing must omit bundle surcharge annotations');
+assert(canvases[0].text.includes('$125'), 'Receipt drawing must preserve the line total');
 
 console.log("\n=================================================");
 console.log("🎉 ALL ORDER PRINT SUBTOTAL & BUNDLE TESTS PASSED!");

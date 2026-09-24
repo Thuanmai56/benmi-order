@@ -445,10 +445,15 @@
       return { widthMm, heightMm, dpi, xOffsetMm, yOffsetMm };
     }
 
+    stripPrintOptionSurcharges(value) {
+      // Only remove price annotations from printed options; preserve quantities and notes.
+      return String(value).replace(/[ \t]*[（(]\s*\+\s*\$\s*\d[\d,]*(?:\.\d+)?\s*[)）]/g, '').trim();
+    }
+
     formatPrintOptions(value) {
       if (!value) return '';
       if (typeof value === 'string') {
-        try { return this.formatPrintOptions(JSON.parse(value)); } catch { return value; }
+        try { return this.formatPrintOptions(JSON.parse(value)); } catch { return this.stripPrintOptionSurcharges(value); }
       }
       if (Array.isArray(value)) {
         const portionGroups = {};
@@ -457,7 +462,7 @@
         value.forEach(option => {
           const text = typeof option === 'string' ? option : (option.choice || option.name || '');
           if (!text) return;
-          const cleanText = text.replace(/^[↳\-+•*]\s*/, '').trim();
+          const cleanText = this.stripPrintOptionSurcharges(text).replace(/^[↳\-+•*]\s*/, '').trim();
           const m = cleanText.match(/^(第(?:\d+|[一二三四五六七八九十]+)份)[：:]\s*(.+)$/);
           if (m) {
             hasPortions = true;
@@ -473,7 +478,7 @@
           if (otherOptions.length > 0) lines.unshift(otherOptions.join('、'));
           return lines.join('\n');
         }
-        return value.map(option => typeof option === 'string' ? option : option.choice || option.name || '').filter(Boolean).join('、');
+        return value.map(option => this.stripPrintOptionSurcharges(typeof option === 'string' ? option : option.choice || option.name || '')).filter(Boolean).join('、');
       }
       return '';
     }
@@ -501,9 +506,7 @@
             const bName = bi.name || bi.item_name || '';
             const bQty = Number(bi.quantity) || 1;
             const bQtyStr = bQty > 1 ? ` x${bQty}` : '';
-            const bSur = Number(bi.surcharge || bi.price || 0);
-            const bSurStr = bSur > 0 ? ` (+$${bSur})` : '';
-            return `${bName}${bQtyStr}${bSurStr}`;
+            return `${bName}${bQtyStr}`;
           }).filter(Boolean).join('、');
 
           if (itemsStr) {
@@ -719,7 +722,8 @@
           if (line.startsWith('↳') || line.startsWith('-') || line.startsWith('+') || line.startsWith('•') || line.startsWith('－')) {
             if (currentItem) {
               const opt = line.replace(/^[↳\-+•－]\s*/, '').trim();
-              currentItem.options = currentItem.options ? `${currentItem.options}\n${opt}` : opt;
+              const printOpt = this.stripPrintOptionSurcharges(opt);
+              currentItem.options = currentItem.options ? `${currentItem.options}\n${printOpt}` : printOpt;
               const addMatch = opt.match(/(?:\(\s*\+\s*\$|\+\s*\$)(\d+(?:\.\d+)?)/);
               if (addMatch && currentItem._lineTotal != null) {
                 currentItem._lineTotal += Number(addMatch[1]) || 0;
