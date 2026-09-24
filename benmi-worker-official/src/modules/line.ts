@@ -38,6 +38,14 @@ export async function getLineToken(env: Env, tenantCtx?: TenantContext | null): 
   return await resolveSecret(env.LINE_CHANNEL_TOKEN);
 }
 
+export function normalizeLineText(text: string): string {
+  if (!text) return "";
+  return String(text)
+    .replace(/\r\n/g, "\n")
+    .replace(/\\r\\n/g, "\n")
+    .replace(/\\n/g, "\n");
+}
+
 export async function pushLineMessage(
   userId: string,
   text: string,
@@ -49,6 +57,8 @@ export async function pushLineMessage(
   if (!token) { console.error(`[${brand}] pushLineMessage: LINE_CHANNEL_TOKEN missing`); return; }
   if (!userId) { console.error(`[${brand}] pushLineMessage: userId is empty, cannot push`); return; }
 
+  const normalizedText = normalizeLineText(text);
+
   try {
     const res = await fetch("https://api.line.me/v2/bot/message/push", {
       method: "POST",
@@ -58,7 +68,7 @@ export async function pushLineMessage(
       },
       body: JSON.stringify({
         to: userId,
-        messages: [{ type: "text", text }],
+        messages: [{ type: "text", text: normalizedText }],
       }),
     });
 
@@ -83,6 +93,8 @@ export async function replyText(
   const brand = tenantCtx?.brandName || "Bot";
   if (!token || !replyToken) return false;
 
+  const normalizedText = normalizeLineText(text);
+
   try {
     const res = await fetch("https://api.line.me/v2/bot/message/reply", {
       method: "POST",
@@ -92,7 +104,7 @@ export async function replyText(
       },
       body: JSON.stringify({
         replyToken,
-        messages: [{ type: "text", text }],
+        messages: [{ type: "text", text: normalizedText }],
       }),
     });
 
@@ -350,7 +362,7 @@ export function handleQuickReply(text: string, tenantCtx?: TenantContext | null)
   if (tenantCtx && Array.isArray(tenantCtx.quickReplies)) {
     for (const qr of tenantCtx.quickReplies) {
       if (Array.isArray(qr.triggers) && qr.triggers.some(tr => tr && lowerMsg.includes(tr.toLowerCase()))) {
-        return qr.reply;
+        return normalizeLineText(qr.reply);
       }
     }
   }
@@ -402,16 +414,16 @@ export function handleQuickReply(text: string, tenantCtx?: TenantContext | null)
   ];
   if (deliveryTriggers.some(k => lowerMsg.includes(k))) {
     if (tenantCtx?.deliveryPolicy) {
-      return tenantCtx.deliveryPolicy;
+      return normalizeLineText(tenantCtx.deliveryPolicy);
     }
     if (tenantCtx?.tenantId === 'benmi' || !tenantCtx) {
       return (
         "Benmi 最新外送說明如下：\n" +
-        "滿 2,000 元： 不限距離，土城全區皆享免運！\n" +
-        "滿 800 元：\n" +
-        "距離店址 2公里內 ➔ 免運\n" +
+        "🛵 滿 2,000 元： 不限距離，土城全區皆享免運！\n" +
+        "🛵 滿 800 元：\n" +
+        "距離店址 2公里內 ➔ 免運 \n" +
         "距離店址 超過2公里 ➔ 酌收 80元 運費。\n" +
-        "未滿 800 元： 也別擔心！歡迎直接點擊 UberEats 平台直接下單，美味一樣送到家 https://cutt.ly/Mt9w2fAD"
+        "🛵 未滿 800 元： 也別擔心！歡迎直接點擊 UberEats 平台直接下單，美味一樣送到家 👇 👉 https://cutt.ly/Mt9w2fAD"
       );
     }
     return isVi

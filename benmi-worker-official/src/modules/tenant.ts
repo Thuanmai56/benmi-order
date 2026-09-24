@@ -4,6 +4,11 @@ import { resolveSecret } from '../utils/secrets';
 
 const TENANT_CACHE_TTL = 300; // 5 minutes
 
+function normalizeMultiline(text: string | null | undefined): string | null {
+  if (!text) return null;
+  return String(text).replace(/\r\n/g, '\n').replace(/\\r\\n/g, '\n').replace(/\\n/g, '\n');
+}
+
 export async function resolveTenantContext(
   tenantId: string,
   env: Env
@@ -15,7 +20,20 @@ export async function resolveTenantContext(
     try {
       const cached = await env.ORDER_STATE.get(cacheKey);
       if (cached) {
-        return JSON.parse(cached);
+        const parsed = JSON.parse(cached);
+        if (parsed) {
+          if (parsed.deliveryPolicy) parsed.deliveryPolicy = normalizeMultiline(parsed.deliveryPolicy);
+          if (parsed.operatingHours) parsed.operatingHours = normalizeMultiline(parsed.operatingHours);
+          if (parsed.storeAddress) parsed.storeAddress = normalizeMultiline(parsed.storeAddress);
+          if (parsed.announcement) parsed.announcement = normalizeMultiline(parsed.announcement);
+          if (Array.isArray(parsed.quickReplies)) {
+            parsed.quickReplies = parsed.quickReplies.map((qr: any) => ({
+              ...qr,
+              reply: typeof qr.reply === 'string' ? normalizeMultiline(qr.reply) : qr.reply
+            }));
+          }
+        }
+        return parsed;
       }
     } catch (e) {
       console.error(`[Tenant] KV cache read error for tenant ${tenantId}:`, e);
@@ -30,7 +48,11 @@ export async function resolveTenantContext(
       ).bind(tenantId).first<any>();
 
       if (row) {
-        const quickReplies = row.quick_replies ? JSON.parse(row.quick_replies) : [];
+        const rawQuickReplies = row.quick_replies ? JSON.parse(row.quick_replies) : [];
+        const quickReplies = Array.isArray(rawQuickReplies) ? rawQuickReplies.map((qr: any) => ({
+          ...qr,
+          reply: typeof qr.reply === 'string' ? normalizeMultiline(qr.reply) : qr.reply
+        })) : [];
         let features: string[] = [];
         try {
           if (row.features) {
@@ -57,10 +79,10 @@ export async function resolveTenantContext(
           brandSubtitle: row.brand_subtitle || null,
           brandColor: row.brand_color || '#00b900',
           logoUrl: row.logo_url || null,
-          storeAddress: row.store_address || null,
-          announcement: row.announcement || null,
-          operatingHours: row.operating_hours || null,
-          deliveryPolicy: row.delivery_policy || null,
+          storeAddress: normalizeMultiline(row.store_address),
+          announcement: normalizeMultiline(row.announcement),
+          operatingHours: normalizeMultiline(row.operating_hours),
+          deliveryPolicy: normalizeMultiline(row.delivery_policy),
           allowScheduledPickup: row.allow_scheduled_pickup !== undefined && row.allow_scheduled_pickup !== null ? Boolean(row.allow_scheduled_pickup) : true,
           allowDineIn: row.allow_dine_in !== undefined && row.allow_dine_in !== null ? Boolean(row.allow_dine_in) : true,
           storeStatus: (row.store_status as any) || 'open',
@@ -117,7 +139,7 @@ export async function resolveTenantContext(
       brandColor: '#00b900',
       storeAddress: '新北市土城區中央路二段135號',
       operatingHours: '11:00-21:00（一到五），7:30-21:00（六日）',
-      deliveryPolicy: 'Benmi 最新外送說明如下：\n滿 2,000 元： 不限距離，土城全區皆享免運！\n滿 800 元：\n距離店址 2公里內 ➔ 免運\n距離店址 超過2公里 ➔ 酌收 80元 運費。\n未滿 800 元： 也別擔心！歡迎直接點擊 UberEats 平台直接下單，美味一樣送到家 https://cutt.ly/Mt9w2fAD',
+      deliveryPolicy: 'Benmi 最新外送說明如下：\n🛵 滿 2,000 元： 不限距離，土城全區皆享免運！\n🛵 滿 800 元：\n距離店址 2公里內 ➔ 免運 \n距離店址 超過2公里 ➔ 酌收 80元 運費。\n🛵 未滿 800 元： 也別擔心！歡迎直接點擊 UberEats 平台直接下單，美味一樣送到家 👇 👉 https://cutt.ly/Mt9w2fAD',
       allowScheduledPickup: true,
       allowDineIn: false,
       quickReplies: [
@@ -125,7 +147,7 @@ export async function resolveTenantContext(
         { triggers: ['地址', '在哪'], reply: '新北市土城區中央路二段135號' },
         {
           triggers: ['外送嗎'],
-          reply: 'Benmi 最新外送說明如下：\n滿 2,000 元： 不限距離，土城全區皆享免運！\n滿 800 元：\n距離店址 2公里內 ➔ 免運\n距離店址 超過2公里 ➔ 酌收 80元 運費。\n未滿 800 元： 也別擔心！歡迎直接點擊 UberEats 平台直接下單，美味一樣送到家 https://cutt.ly/Mt9w2fAD'
+          reply: 'Benmi 最新外送說明如下：\n🛵 滿 2,000 元： 不限距離，土城全區皆享免運！\n🛵 滿 800 元：\n距離店址 2公里內 ➔ 免運 \n距離店址 超過2公里 ➔ 酌收 80元 運費。\n🛵 未滿 800 元： 也別擔心！歡迎直接點擊 UberEats 平台直接下單，美味一樣送到家 👇 👉 https://cutt.ly/Mt9w2fAD'
         }
       ],
       defaultPassword: '12345678',
