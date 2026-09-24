@@ -992,13 +992,12 @@
   }
 
   function getItemActionControlInner(itemId, qty) {
-    if (qty <= 0) {
-      return `<button type="button" class="btn-quick-add" onclick="handleItemAddClick('${itemId}', event)">+ ${t("btnQuickAdd")}</button>`;
-    }
+    const isZero = qty <= 0;
+    const safeQty = isZero ? 0 : qty;
     return `
       <div class="qty-control">
-        <button type="button" class="btn-qty" onclick="handleQuickQty('${itemId}', -1, event)">-</button>
-        <span class="qty-text" id="card-qty-${itemId}">${qty}</span>
+        <button type="button" class="btn-qty" onclick="handleQuickQty('${itemId}', -1, event)" ${isZero ? 'disabled style="opacity:0.35;cursor:default;"' : ''}>-</button>
+        <span class="qty-text" id="card-qty-${itemId}" style="${isZero ? 'color:#94a3b8;' : 'color:var(--primary);'}">${safeQty}</span>
         <button type="button" class="btn-qty" onclick="handleQuickQty('${itemId}', 1, event)">+</button>
       </div>
     `;
@@ -1997,6 +1996,32 @@
     const label = table ? table.label : (order.table_number || "");
     if (subtitle) subtitle.innerText = `${label ? `${state.currentLang === "vi" ? "Bàn" : "桌號"} ${label} · ` : ""}#${order.display_key || order.order_id || order.key || ""}`;
     const status = order.status || "";
+    const rawContent = order.order_content || order.content || "";
+    const roundFlavorMap = new Map();
+    if (rawContent) {
+      const lines = String(rawContent).split("\n");
+      let curRd = null;
+      let curFlavors = [];
+      for (const line of lines) {
+        const m = line.trim().match(/^\[\s*(?:第\s*(\d+)\s*輪|Đợt\s*(\d+))/i);
+        if (m) {
+          if (curRd != null && curFlavors.length > 0) roundFlavorMap.set(curRd, [...curFlavors]);
+          curRd = parseInt(m[1] || m[2], 10);
+          curFlavors = [];
+        } else if (curRd != null) {
+          const extraMatch = line.trim().match(/^[•\-*●]\s*([^：:]+)[：:]\s*(.+)$/);
+          if (extraMatch) {
+            const lbl = extraMatch[1].replace(/^[✦•\-*●]\s*/, "").trim();
+            const val = extraMatch[2].trim();
+            if (lbl && val && !lbl.includes("客製化") && !lbl.includes("Chọn vị") && !lbl.includes("訂單") && !lbl.includes("時間") && !lbl.includes("用餐方式")) {
+              curFlavors.push(`${lbl}: ${val}`);
+            }
+          }
+        }
+      }
+      if (curRd != null && curFlavors.length > 0) roundFlavorMap.set(curRd, [...curFlavors]);
+    }
+
     const groups = new Map();
     (items || []).forEach(item => {
       const round = Number(item.round_number) || 1;
@@ -2005,6 +2030,10 @@
     });
     const roundsHtml = [...groups.entries()].sort((a,b) => b[0]-a[0]).map(([round, roundItems]) => {
       const roundTotal = roundItems.reduce((sum, item) => sum + (Number(item.subtotal) || Number(item.unit_price) * Number(item.quantity)), 0);
+      const roundFlavors = roundFlavorMap.get(round) || [];
+      const flavorBadgeHtml = roundFlavors.length > 0
+        ? `<div class="staff-round-flavors" style="padding:6px 10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; font-size:12.5px; color:#b45309; margin:6px 0 8px 0; font-weight:600;">🧂 ${escapeHtml(roundFlavors.join(" · "))}</div>`
+        : "";
       const rows = roundItems.map(item => {
         let options = [];
         try { options = typeof item.selected_options === "string" ? JSON.parse(item.selected_options || "[]") : (item.selected_options || []); } catch (_) {}
@@ -2015,7 +2044,7 @@
         const lineTotal = Number(item.subtotal) || Number(item.unit_price) * Number(item.quantity);
         return `<div class="staff-detail-item"><div class="staff-detail-item-main"><div class="staff-detail-item-name">${escapeHtml(item.item_name || "") } × ${Number(item.quantity) || 0}</div>${meta ? `<div class="staff-detail-item-meta">${escapeHtml(meta)}</div>` : ""}</div><div class="staff-detail-item-total">$${lineTotal}</div></div>`;
       }).join("");
-      return `<section class="staff-detail-round"><h3><span>${t("orderDetailRound", { round })}</span><span>$${roundTotal}</span></h3>${rows}</section>`;
+      return `<section class="staff-detail-round"><h3><span>${t("orderDetailRound", { round })}</span><span>$${roundTotal}</span></h3>${flavorBadgeHtml}${rows}</section>`;
     }).join("");
     const noteHtml = order.note ? `<p class="staff-detail-status">${t("orderDetailNote", { note: escapeHtml(order.note) })}</p>` : "";
     const closed = ["PAID", "REJECTED", "PICKED_UP", "CANCELLED"].includes(status);

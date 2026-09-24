@@ -97,4 +97,50 @@ const t = sandbox.window.t;
 const extraIngredientLabel = t("extraIngredientLabel");
 assert.strictEqual(extraIngredientLabel, "配料", "extraIngredientLabel in zh-TW must be '配料'");
 
+// Test Case 4: Multi-round flavor extraction and header filtering
+const sampleMultiRound = `
+[第 1 輪 / Đợt 1]
+2 x 筍片 $60
+2 x 蘋果 $60
+🧂 客製化設定 / Chọn vị:
+• 口味: 原味客製
+• 鹹度: 正常
+• 辣度: 不辣
+
+[第 2 輪 加點 / Đợt 2 - 19:30]
+1 x 日本山藥 $50
+1 x 木耳 $30
+1 x 竹輪 $25
+🧂 客製化設定 / Chọn vị:
+• 口味: 特調胡椒
+• 鹹度: 正常
+• 辣度: 不辣
+
+[第 3 輪 加點 / Đợt 3 - 19:35]
+1 x 花椰菜 $35
+1 x 腐竹豆皮 $35
+1 x 豬耳朵 $35
+🧂 客製化設定 / Chọn vị:
+• 口味: 特調胡椒
+• 鹹度: 正常
+• 辣度: 不辣
+`;
+
+const extractRoundFlavorMap = sandbox.window.extractRoundFlavorMap;
+assert(typeof extractRoundFlavorMap === "function", "extractRoundFlavorMap must be a function");
+const roundMap = extractRoundFlavorMap(sampleMultiRound);
+assert.strictEqual(roundMap.size, 3, "Must extract 3 rounds of flavors");
+
+const r1 = roundMap.get(1);
+assert(r1 && r1.extraIngredients.some(e => e.label === "口味" && e.value === "原味客製"), "Round 1 must have 原味客製");
+assert(!r1.extraIngredients.some(e => e.label.includes("客製化")), "Round 1 must not contain bogus 客製化 chips");
+
+const r2 = roundMap.get(2);
+assert(r2 && r2.extraIngredients.some(e => e.label === "口味" && e.value === "特調胡椒"), "Round 2 must have 特調胡椒");
+
+const r3 = roundMap.get(3);
+assert(r3 && r3.extraIngredients.some(e => e.label === "口味" && e.value === "特調胡椒"), "Round 3 must have 特調胡椒");
+console.log("✅ Test 4 Passed: Multi-round flavors separated per round and header titles filtered.");
+
 console.log("\n🎉 ALL FLAVOR & MODIFIER LABEL RESOLUTION TESTS PASSED!");
+

@@ -595,18 +595,30 @@ function extractFlavorSettings(rawContent) {
       line.includes("Tùy chọn khẩu vị")
     ) {
       const inline = line
-        .replace(/.*(?:口味設定|Hương vị|Khẩu vị|客製化設定|客製設定|Tùy chọn khẩu vị)[：:]\s*/, "")
+        .replace(/.*(?:口味設定|Hương vị|Khẩu vị|客製化設定|客製設定|Tùy chọn khẩu vị)(?:\s*[\/|｜]\s*(?:Chọn vị|Tùy chọn|Khẩu vị|Hương vị))?[：:]\s*/, "")
         .replace(/[【】🧂🧪]/g, "")
         .trim();
+
+      // If the line was just a title like "客製化設定 / Chọn vị:" or "/ Chọn vị:", ignore it
+      if (
+        !inline ||
+        /^(?:\/|｜|\|)?\s*(?:Chọn vị|Tùy chọn|Khẩu vị|Hương vị|客製化設定|客製設定)[：:]?$/i.test(inline)
+      ) {
+        continue;
+      }
+
       if (inline) {
         const parts = inline.split(/[・·|,|｜]/).map(p => p.trim()).filter(Boolean);
         parts.forEach(p => {
+          if (/^(?:Chọn vị|Tùy chọn|Khẩu vị|Hương vị|客製化設定|客製設定)[：:]?$/i.test(p)) return;
           const m = p.match(/^([^：:]+)[：:]\s*(.+)$/);
           if (m) {
             const key = m[1].replace(/^[✦•\-*●]\s*/, "").replace(/選擇|調整/g, "").replace(/[\(（]朝天椒[\)）]/g, "").trim();
             const val = m[2].trim();
-            flavors.push({ label: key, value: val });
-          } else {
+            if (key && val && !key.includes("客製化") && !key.includes("Chọn vị")) {
+              flavors.push({ label: key, value: val });
+            }
+          } else if (!p.includes("客製化") && !p.includes("Chọn vị")) {
             flavors.push({ label: "", value: p });
           }
         });
@@ -623,6 +635,8 @@ function extractFlavorSettings(rawContent) {
         if (
           label &&
           val &&
+          !label.includes("客製化") &&
+          !label.includes("Chọn vị") &&
           !label.includes("訂單") &&
           !label.includes("總金額") &&
           !label.includes("時間") &&
@@ -650,6 +664,88 @@ function extractFlavorSettings(rawContent) {
   return { flavors, extraIngredients };
 }
 window.extractFlavorSettings = extractFlavorSettings;
+
+function extractRoundFlavorMap(rawContent) {
+  const roundMap = new Map();
+  if (!rawContent) return roundMap;
+
+  const lines = String(rawContent).split("\n");
+  let currentRoundNum = null;
+  let currentLines = [];
+
+  function saveCurrentRound(targetRound) {
+    const rNum = targetRound != null ? targetRound : currentRoundNum;
+    if (rNum != null && currentLines.length > 0) {
+      const text = currentLines.join("\n");
+      const flavorData = extractFlavorSettings(text);
+      if (flavorData && (flavorData.flavors.length > 0 || flavorData.extraIngredients.length > 0)) {
+        roundMap.set(rNum, flavorData);
+      }
+    }
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    const m = line.match(/^\[\s*(?:第\s*(\d+)\s*輪|Đợt\s*(\d+))/i);
+    if (m) {
+      const nextNum = parseInt(m[1] || m[2], 10);
+      if (currentRoundNum == null && nextNum > 1 && currentLines.length > 0) {
+        saveCurrentRound(1);
+      } else {
+        saveCurrentRound();
+      }
+      currentRoundNum = nextNum;
+      currentLines = [];
+    } else {
+      currentLines.push(lines[i]);
+    }
+  }
+  saveCurrentRound();
+
+  return roundMap;
+}
+window.extractRoundFlavorMap = extractRoundFlavorMap;
+
+function renderRoundFlavorCardHtml(flavorData) {
+  if (!flavorData) return "";
+  const flameIcon = (typeof POS_SVG !== "undefined" && POS_SVG.flame) || "";
+  const flavorTitle = (typeof t === "function" && t("flavorTitle")) || "口味與客製設定";
+  const optLabelFallback = (typeof t === "function" && (t("extraIngredientLabel") || t("labelTopping"))) || "配料";
+
+  const chips = [
+    ...flavorData.flavors.map(f => `
+      <span class="flavor-chip">
+        ${f.label ? `<span class="flavor-label">${escapeHtml(f.label)}:</span>` : ""}
+        <strong class="flavor-val">${escapeHtml(f.value)}</strong>
+      </span>
+    `),
+    ...flavorData.extraIngredients.map(e => {
+      const lbl = (typeof e === 'object' && e && e.label) ? e.label : optLabelFallback;
+      const val = (typeof e === 'object' && e && e.value) ? e.value : String(e);
+      return `
+        <span class="flavor-chip extra-chip">
+          <span class="flavor-label">${escapeHtml(lbl)}:</span>
+          <strong class="flavor-val">${escapeHtml(val)}</strong>
+        </span>
+      `;
+    })
+  ].join("");
+
+  if (!chips) return "";
+
+  return `
+    <div class="round-flavor-card">
+      <div class="round-flavor-header">
+        ${flameIcon}
+        <span>${escapeHtml(flavorTitle)}</span>
+      </div>
+      <div class="flavor-chips-grid">
+        ${chips}
+      </div>
+    </div>
+  `;
+}
+window.renderRoundFlavorCardHtml = renderRoundFlavorCardHtml;
 
 function extractCustomerChanges(rawContent) {
   if (!rawContent) return null;
@@ -1029,18 +1125,25 @@ function formatContentHtml(order) {
     `;
   }
 
-  // 2. Extract and render Global Flavor Settings & Customer Note (merged in top section)
-  let flavorData = extractFlavorSettings(raw);
-  if ((!flavorData || (flavorData.flavors.length === 0 && flavorData.extraIngredients.length === 0)) && Array.isArray(order?.customizations) && order.customizations.length > 0) {
-    const valid = order.customizations.filter(c => c && (c.value || c.name));
-    if (valid.length > 0) {
-      flavorData = {
-        flavors: valid.map(c => ({
-          label: c.label || c.title || c.group_title || '',
-          value: c.value || c.name || ''
-        })),
-        extraIngredients: []
-      };
+  // 2. Extract and render Global Flavor Settings & Customer Note
+  const hasMultiRound = raw.includes("[第") || raw.includes("[Đợt");
+  const roundFlavorMap = hasMultiRound ? extractRoundFlavorMap(raw) : new Map();
+  const hasPerRoundFlavors = roundFlavorMap.size > 0;
+
+  let flavorData = null;
+  if (!hasPerRoundFlavors) {
+    flavorData = extractFlavorSettings(raw);
+    if ((!flavorData || (flavorData.flavors.length === 0 && flavorData.extraIngredients.length === 0)) && Array.isArray(order?.customizations) && order.customizations.length > 0) {
+      const valid = order.customizations.filter(c => c && (c.value || c.name));
+      if (valid.length > 0) {
+        flavorData = {
+          flavors: valid.map(c => ({
+            label: c.label || c.title || c.group_title || '',
+            value: c.value || c.name || ''
+          })),
+          extraIngredients: []
+        };
+      }
     }
   }
 
@@ -1060,7 +1163,21 @@ function formatContentHtml(order) {
   }
 
   let flavorHtml = "";
-  if (flavorData || noteText) {
+  if (hasPerRoundFlavors) {
+    if (noteText) {
+      const cleanNote = noteText.replace(/^["“”']+|["“”']+$/g, '').trim();
+      const noteIcon = (typeof POS_SVG !== "undefined" && POS_SVG.note) || "";
+      const noteTitle = (typeof t === "function" && t("customerNoteLabel")) || "顧客備註";
+      flavorHtml = `
+        <div class="flavor-custom-card note-only-card">
+          <div class="flavor-card-note order-note-alert note-only">
+            <span class="flavor-note-label order-note-alert-header">${noteIcon}<span>${escapeHtml(noteTitle)}：</span></span>
+            <span class="flavor-note-val order-note-alert-body">“${escapeHtml(cleanNote)}”</span>
+          </div>
+        </div>
+      `;
+    }
+  } else if (flavorData || noteText) {
     const flameIcon = (typeof POS_SVG !== "undefined" && POS_SVG.flame) || "";
     const noteIcon = (typeof POS_SVG !== "undefined" && POS_SVG.note) || "";
     const flavorTitle = (typeof t === "function" && t("flavorTitle")) || "口味與客製設定";
@@ -1120,7 +1237,6 @@ function formatContentHtml(order) {
   }
 
   // 3. Multi-round detection: [第 X 輪 or [Đợt X
-  const hasMultiRound = raw.includes("[第") || raw.includes("[Đợt");
   let contentHtml = "";
 
   if (hasMultiRound && allParsedItems && allParsedItems.length > 0) {
@@ -1151,6 +1267,10 @@ function formatContentHtml(order) {
         ? rd.header.replace(/^\[/, '').replace(/\]$/, '')
         : (idx === 0 ? t('roundBlockInitial') : t('roundBlockTitle', { n: idx + 1 }));
 
+      const rdNum = getRoundNum(rd, idx);
+      const roundFlavor = roundFlavorMap.get(rdNum);
+      const roundFlavorHtml = roundFlavor ? renderRoundFlavorCardHtml(roundFlavor) : "";
+
       const itemsHtml = rd.itemsList.map(entry => renderItemRowHtml(entry.item, entry.globalIdx, orderKey)).join("");
 
       return `
@@ -1159,6 +1279,7 @@ function formatContentHtml(order) {
             <span class="round-title">${POS_SVG.dineIn}${escapeHtml(headerText)}</span>
             ${isLatest ? `<span class="round-latest-badge">${t('roundBlockLatest')}</span>` : ''}
           </div>
+          ${roundFlavorHtml}
           <div class="round-items-container">
             ${itemsHtml}
           </div>

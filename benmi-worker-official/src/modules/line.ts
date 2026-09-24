@@ -710,7 +710,7 @@ export async function handleLineWebhook(
         if (row && replyToken) {
           const order: Order = {
             key: row.key,
-                orderId: row.order_id,
+            orderId: row.order_id,
             displayKey: row.display_key,
             legacyKey: row.legacy_key,
             businessDate: row.business_date,
@@ -896,7 +896,7 @@ export async function handleLineWebhook(
         if (userId && (!existingOrder.user_id || existingOrder.user_id !== userId)) {
           try {
             await env.DB.prepare("UPDATE orders SET user_id = ? WHERE key = ?").bind(userId, orderKey).run();
-          } catch {}
+          } catch { }
         }
 
         try {
@@ -910,7 +910,7 @@ export async function handleLineWebhook(
           try {
             const existingOrderData: Order = {
               key: existingOrder.key,
-                orderId: existingOrder.order_id,
+              orderId: existingOrder.order_id,
               displayKey: existingOrder.display_key,
               legacyKey: existingOrder.legacy_key,
               businessDate: existingOrder.business_date,
@@ -1113,7 +1113,7 @@ export async function handleLineWebhook(
         if (orderRow) {
           const order: Order = {
             key: orderRow.key,
-                orderId: orderRow.order_id,
+            orderId: orderRow.order_id,
             displayKey: orderRow.display_key,
             legacyKey: orderRow.legacy_key,
             businessDate: orderRow.business_date,

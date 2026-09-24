@@ -5941,6 +5941,32 @@ select.form-input {
   border-radius: 10px;
 }
 
+.round-flavor-card {
+  margin: 6px 0 10px 0;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.round-flavor-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #475569;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.round-flavor-header svg {
+  color: #475569;
+  width: 13px;
+  height: 13px;
+}
+
 .flavor-card-header {
   display: flex;
   align-items: center;
