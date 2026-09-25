@@ -50,6 +50,7 @@ function getMock(id) {
         contains(cls) { return mockElements[id].className.includes(cls); }
       },
       style: { display: 'none' },
+      setAttribute(attr, val) { this[attr] = val; },
       querySelector: () => null,
       querySelectorAll: () => []
     };
@@ -72,12 +73,14 @@ const mockPrinterService = {
     }
   },
   getSettings() { return this.settings; },
-  saveSettings(s) { this.settings = s; return true; }
+  saveSettings(s) { this.settings = s; return true; },
+  getPrintCapabilities() { return { hasPrintStation: true, canPrintReceipt: true, canPrintLabels: true }; }
 };
 
 const sandbox = {
   document: {
     getElementById: (id) => getMock(id),
+    querySelector: () => null,
     querySelectorAll: () => [],
     addEventListener: () => {},
     removeEventListener: () => {}

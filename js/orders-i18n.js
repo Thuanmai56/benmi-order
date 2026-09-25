@@ -2000,11 +2000,21 @@ function applyLanguageToDOM() {
   if (btnAddCatTop) btnAddCatTop.innerText = dict.btnAddCategory;
   const btnCatDel = document.getElementById("btn-category-delete");
   if (btnCatDel) {
-    btnCatDel.innerHTML = `${(typeof POS_SVG !== 'undefined' && POS_SVG.trash) || ''} <span>${dict.btnCategoryDelete}</span>`;
+    if (btnCatDel.classList.contains("cat-title-action-btn")) {
+      btnCatDel.setAttribute("title", dict.btnCatDelete || dict.btnCategoryDelete || "刪除分類");
+      btnCatDel.setAttribute("aria-label", dict.btnCatDelete || dict.btnCategoryDelete || "刪除分類");
+    } else {
+      btnCatDel.innerHTML = `${(typeof POS_SVG !== 'undefined' && POS_SVG.trash) || ''} <span>${dict.btnCategoryDelete}</span>`;
+    }
   }
   const btnCatRen = document.getElementById("btn-category-rename");
   if (btnCatRen) {
-    btnCatRen.innerHTML = `${(typeof POS_SVG !== 'undefined' && POS_SVG.edit) || ''} <span>${dict.btnCategoryRename}</span>`;
+    if (btnCatRen.classList.contains("cat-title-action-btn")) {
+      btnCatRen.setAttribute("title", dict.btnCatRename || dict.btnCategoryRename || "重新命名");
+      btnCatRen.setAttribute("aria-label", dict.btnCatRename || dict.btnCategoryRename || "重新命名");
+    } else {
+      btnCatRen.innerHTML = `${(typeof POS_SVG !== 'undefined' && POS_SVG.edit) || ''} <span>${dict.btnCategoryRename}</span>`;
+    }
   }
   const addCatModT = document.getElementById("i18n-add-cat-modal-title");
   if (addCatModT) addCatModT.innerText = dict.addCategoryModalTitle;
@@ -2038,6 +2048,7 @@ function applyLanguageToDOM() {
   if (menuEdT && (typeof currentMenuData === 'undefined' || !currentMenuData || typeof activeCategoryIndex === 'undefined' || activeCategoryIndex < 0)) menuEdT.innerText = dict.menuEditorTitle;
   const menuEdS = document.getElementById("i18n-menu-edit-sub");
   if (menuEdS) menuEdS.innerText = dict.menuEditSub;
+  const btnMenuAdd = document.getElementById("btn-menu-add-item");
   const btnMenuAddText = document.getElementById("i18n-btn-add-item-text");
   if (btnMenuAddText) btnMenuAddText.innerText = dict.btnMenuAddItem;
   else if (btnMenuAdd) btnMenuAdd.innerText = dict.btnMenuAddItem;
@@ -2048,13 +2059,21 @@ function applyLanguageToDOM() {
   }
   const btnCatRename = document.getElementById("btn-category-rename");
   if (btnCatRename) {
-    btnCatRename.setAttribute("title", dict.btnCatRename || "重新命名");
-    btnCatRename.setAttribute("aria-label", dict.btnCatRename || "重新命名");
+    if (typeof btnCatRename.setAttribute === "function") {
+      btnCatRename.setAttribute("title", dict.btnCatRename || dict.btnCategoryRename || "重新命名");
+      btnCatRename.setAttribute("aria-label", dict.btnCatRename || dict.btnCategoryRename || "重新命名");
+    } else {
+      btnCatRename.title = dict.btnCatRename || dict.btnCategoryRename || "重新命名";
+    }
   }
   const btnCatDelete = document.getElementById("btn-category-delete");
   if (btnCatDelete) {
-    btnCatDelete.setAttribute("title", dict.btnCatDelete || "刪除分類");
-    btnCatDelete.setAttribute("aria-label", dict.btnCatDelete || "刪除分類");
+    if (typeof btnCatDelete.setAttribute === "function") {
+      btnCatDelete.setAttribute("title", dict.btnCatDelete || dict.btnCategoryDelete || "刪除分類");
+      btnCatDelete.setAttribute("aria-label", dict.btnCatDelete || dict.btnCategoryDelete || "刪除分類");
+    } else {
+      btnCatDelete.title = dict.btnCatDelete || dict.btnCategoryDelete || "刪除分類";
+    }
   }
   const btnMenuCreateType = document.getElementById("i18n-btn-create-type-text");
   if (btnMenuCreateType) btnMenuCreateType.innerText = dict.btnMenuCreateType;
@@ -2249,7 +2268,7 @@ function applyLanguageToDOM() {
   });
   const printerSaveStatus = document.getElementById('printer-save-status');
   document.querySelectorAll('.i18n-printer-feed-before-cut').forEach(el => { el.textContent = dict.printerFeedBeforeCut || el.textContent; });
-  if (printerSaveStatus) printerSaveStatus.textContent = dict[printerSaveStatus.dataset.state === 'error' ? 'printerSaveFailed' : printerSaveStatus.dataset.state === 'saved' ? 'printerSavedLocally' : 'printerAutoSaveHint'];
+  if (printerSaveStatus) printerSaveStatus.textContent = dict[printerSaveStatus.dataset?.state === 'error' ? 'printerSaveFailed' : printerSaveStatus.dataset?.state === 'saved' ? 'printerSavedLocally' : 'printerAutoSaveHint'];
   const gHwTest = document.getElementById("i18n-printer-guide-hw-test");
   if (gHwTest) gHwTest.innerText = dict.printerGuideHwTest;
   const btnPGuide = document.getElementById("i18n-btn-printer-guide");
