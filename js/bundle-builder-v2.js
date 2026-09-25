@@ -71,18 +71,51 @@
       if (!source) return '';
       const selected = group.type === 'fixed' ? [entry.item] : items.filter(item => item.itemId === source.id);
       const soldOut = Boolean(source.isOutOfStock);
-      const canAdd = !soldOut && group.type !== 'fixed' && (maxOf(group) === 1 ? selected.length === 0 : (items.length < maxOf(group) && (group.allowRepeats || selected.length === 0)));
+      const count = selected.length;
+      const canAdd = !soldOut && group.type !== 'fixed' && (maxOf(group) === 1 ? count === 0 : (items.length < maxOf(group) && (group.allowRepeats || count === 0)));
       const addAction = maxOf(group) === 1 && group.type !== 'fixed' ? `bundleSelectSingle('${esc(source.id)}')` : `bundleAddItem('${esc(source.id)}')`;
       const settings = selected.map((item, localIndex) => {
         const actualIndex = group.type === 'fixed' ? entry.index : items.indexOf(item);
         const mods = optionsFor(source);
+        if (!mods.length) return '';
         const labels = (item.modifiers || []).map(mod => esc(mod.name)).join('、');
-        return `<div class="bundle-v2-detail">${labels ? `<span>${labels}</span>` : ''}${mods.length ? `<button type="button" onclick="bundleEditModifiers(${actualIndex})">客製化${selected.length > 1 ? ` ${localIndex + 1}` : ''}</button>` : ''}${group.type !== 'fixed' ? `<button type="button" onclick="bundleRemoveItem(${actualIndex})" aria-label="移除 ${esc(source.name)}">移除</button>` : ''}</div>`;
-      }).join('');
+        const hasRequired = mods.some(mod => mod.isRequired || Number(mod.minSelection || 0) > 0);
+        const isComplete = mods.every(mod => {
+          const c = (item.modifiers || []).filter(choice => choice.groupId === mod.id).length;
+          return c >= Number(mod.minSelection || (mod.isRequired ? 1 : 0));
+        });
+        const statusLabel = labels ? `<span class="bundle-v2-mod-labels">${labels}</span>`
+          : (hasRequired ? '<span class="bundle-v2-mod-pending">需選擇客製化</span>' : '<span class="bundle-v2-mod-labels">可自選客製化</span>');
+        return `<div class="bundle-v2-detail" onclick="event.stopPropagation()">
+          ${statusLabel}
+          <button type="button" class="bundle-v2-mod-btn ${!isComplete && hasRequired ? 'pulse' : ''}" onclick="bundleEditModifiers(${actualIndex})">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px; vertical-align:-1px;"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>客製化${selected.length > 1 ? ` (${localIndex + 1})` : ''}
+          </button>
+        </div>`;
+      }).filter(Boolean).join('');
       const extra = Number(source.surcharge || 0);
-      return `<div class="bundle-v2-item ${selected.length ? 'selected' : ''} ${soldOut ? 'sold-out' : ''}">
-        <div class="bundle-v2-item-head"><strong>${esc(source.name)}</strong><span>${extra ? `+$${extra}` : '已包含'}</span>
-        ${group.type === 'fixed' ? '<span>已包含</span>' : `<button type="button" onclick="${addAction}" ${canAdd ? '' : 'disabled'}>${maxOf(group) === 1 && selected.length ? '已選擇' : '選擇'}${selected.length > 1 ? ` ×${selected.length}` : ''}</button>`}</div>${settings}
+      const minusDisabled = count === 0;
+      const plusDisabled = !canAdd;
+      const stepper = group.type === 'fixed' ? '<span class="bundle-v2-badge-fixed">已包含</span>' : `
+        <div class="bundle-stepper" onclick="event.stopPropagation()">
+          <button type="button" class="bundle-btn-minus ${minusDisabled ? 'disabled' : ''}" onclick="bundleRemoveLastItemOf('${esc(source.id)}')" ${minusDisabled ? 'disabled' : ''} aria-label="減少 ${esc(source.name)}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          </button>
+          <span class="bundle-qty-val ${count > 0 ? 'active' : ''}">${count}</span>
+          <button type="button" class="bundle-btn-plus ${plusDisabled ? 'disabled' : ''}" onclick="${addAction}" ${plusDisabled ? 'disabled' : ''} aria-label="增加 ${esc(source.name)}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          </button>
+        </div>`;
+      const cardClick = !soldOut && canAdd && count === 0 ? `onclick="${addAction}" style="cursor:pointer;"` : '';
+      return `<div class="bundle-v2-item ${count > 0 ? 'selected' : ''} ${soldOut ? 'sold-out' : ''}" ${cardClick}>
+        <div class="bundle-v2-item-head">
+          <div class="bundle-v2-item-info">
+            <strong class="bundle-v2-item-title">${esc(source.name)}</strong>
+            ${soldOut ? '<span class="bundle-v2-badge-oos">已售完</span>' : (extra ? `<span class="bundle-v2-extra">+$${extra}</span>` : '')}
+          </div>
+          ${stepper}
+        </div>
+        ${settings}
       </div>`;
     }).join('');
     const orphaned = group.type === 'fixed' ? '' : items.map((item, index) => ({ item, index })).filter(({ item }) => !(group.eligibleItems || []).some(source => source.id === item.itemId)).map(({ item, index }) =>
@@ -171,6 +204,19 @@
     render();
   };
   window.bundleRemoveItem = function(index) { if (!draft) return; draft.selections[draft.rule.groups[draft.groupIndex].id].splice(index, 1); render(); };
+  window.bundleRemoveLastItemOf = function(itemId) {
+    if (!draft) return;
+    const group = draft.rule.groups[draft.groupIndex];
+    if (!group || group.type === 'fixed') return;
+    const list = draft.selections[group.id] || [];
+    for (let i = list.length - 1; i >= 0; i--) {
+      if (list[i].itemId === itemId) {
+        list.splice(i, 1);
+        break;
+      }
+    }
+    render();
+  };
   window.bundleEditModifiers = function(index) {
     if (!draft) return;
     const group = draft.rule.groups[draft.groupIndex];
