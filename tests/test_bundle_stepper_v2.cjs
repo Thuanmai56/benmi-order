@@ -19,12 +19,13 @@ assert.ok(htmlContent.includes('js/bundle-builder-v2.js?v=20260925_combo_stepper
 assert.ok(htmlContent.includes('index.css?v=20260925_combo_stepper_v1'), 'index.html must reference index.css with version 20260925_combo_stepper_v1');
 console.log('✓ Cache busters verified in index.html.');
 
-console.log('Test 2: Verify CSS rules for [- 0 +] stepper in index.css...');
-assert.ok(cssContent.includes('.bundle-v2-item .bundle-stepper button.bundle-btn-minus'), 'index.css must style minus button inside bundle-v2-item');
-assert.ok(cssContent.includes('.bundle-v2-item .bundle-stepper button.bundle-btn-plus'), 'index.css must style plus button inside bundle-v2-item');
-assert.ok(cssContent.includes('.bundle-v2-item .bundle-stepper .bundle-qty-val'), 'index.css must style quantity value in bundle stepper');
+console.log('Test 2: Verify original button CSS rules in index.css...');
+assert.ok(cssContent.includes('.bundle-btn-add'), 'index.css must style .bundle-btn-add');
+assert.ok(cssContent.includes('.bundle-btn-minus'), 'index.css must style .bundle-btn-minus');
+assert.ok(cssContent.includes('.bundle-btn-plus'), 'index.css must style .bundle-btn-plus');
+assert.ok(cssContent.includes('.bundle-qty-val'), 'index.css must style .bundle-qty-val');
 assert.ok(cssContent.includes('.bundle-v2-mod-btn'), 'index.css must style customization button');
-console.log('✓ CSS rules present and well-structured.');
+console.log('✓ Original button CSS rules verified.');
 
 console.log('Test 3: Verify JS logic and stepper HTML generation...');
 // Set up mock DOM and environment
@@ -116,32 +117,32 @@ sandbox.window.openBundleBuilderModal('cat_main', 'ComboA', 0);
 
 // Check initial render of group 0 (Single choice: 漢堡, 三明治)
 let itemsHtml = domElements['bundle-items-list'].innerHTML;
-assert.ok(itemsHtml.includes('bundle-stepper'), 'Items list must render bundle-stepper');
-assert.ok(itemsHtml.includes('bundle-btn-minus disabled'), 'Minus button must be disabled when quantity is 0');
-assert.ok(itemsHtml.includes('>0</span>'), 'Must display quantity 0 initially');
-assert.ok(itemsHtml.includes('bundle-btn-plus'), 'Plus button must be rendered');
+assert.ok(itemsHtml.includes('bundle-btn-add'), 'Items list must render bundle-btn-add when count is 0');
+assert.ok(!itemsHtml.includes('bundle-btn-minus'), 'Minus button must NOT appear when count is 0');
+assert.ok(!itemsHtml.includes('bundle-qty-val'), 'Qty value must NOT appear when count is 0');
 assert.ok(!itemsHtml.includes('移除'), 'No old 移除 text button should be present for items with 0 count');
 
-console.log('✓ Initial 0-state stepper rendered with disabled minus and 0 count.');
+console.log('✓ Initial 0-state: only bundle-btn-add is rendered, NO minus button when count is 0.');
 
 // Step 1: Add Burger (single-choice)
 sandbox.window.bundleSelectSingle('item_burger');
 itemsHtml = domElements['bundle-items-list'].innerHTML;
 
-assert.ok(itemsHtml.includes('bundle-qty-val active">1</span>'), 'Burger quantity should now be 1 and active');
+assert.ok(itemsHtml.includes('bundle-btn-minus'), 'Minus button must appear when count > 0');
+assert.ok(itemsHtml.includes('bundle-qty-val">1</span>'), 'Burger quantity should now be 1');
 assert.ok(itemsHtml.includes("bundleRemoveLastItemOf('item_burger')"), 'Minus button must call bundleRemoveLastItemOf for burger');
 assert.ok(itemsHtml.includes('客製化'), 'Burger has modifiers, so 客製化 button must be rendered');
 assert.ok(!itemsHtml.includes('>移除<'), 'Old 移除 button should NOT be in the customization row');
 
-console.log('✓ Single choice selection increments to 1, enables minus, and shows customization button.');
+console.log('✓ Single choice selection increments to 1, renders minus and plus, and shows customization button without 移除.');
 
 // Step 2: Remove Burger with minus stepper button
 sandbox.window.bundleRemoveLastItemOf('item_burger');
 itemsHtml = domElements['bundle-items-list'].innerHTML;
-assert.ok(itemsHtml.includes('>0</span>'), 'Quantity returns to 0 after bundleRemoveLastItemOf');
-assert.ok(itemsHtml.includes('bundle-btn-minus disabled'), 'Minus button returns to disabled state');
+assert.ok(itemsHtml.includes('bundle-btn-add'), 'Reverts back to bundle-btn-add when count returns to 0');
+assert.ok(!itemsHtml.includes('bundle-btn-minus'), 'Minus button disappears when count returns to 0');
 
-console.log('✓ bundleRemoveLastItemOf successfully decrements and disables minus button.');
+console.log('✓ bundleRemoveLastItemOf successfully decrements and reverts to bundle-btn-add without minus.');
 
 // Step 3: Test multi-choice group (Drink group: min 1, max 2, allowRepeats)
 sandbox.window.bundleChooseGroup(1); // switch to drink group
@@ -151,18 +152,18 @@ assert.ok(itemsHtml.includes('紅茶'), 'Must display item 紅茶');
 // Add 1 Tea
 sandbox.window.bundleAddItem('item_tea');
 itemsHtml = domElements['bundle-items-list'].innerHTML;
-assert.ok(itemsHtml.includes('bundle-qty-val active">1</span>'), 'Tea count should be 1');
+assert.ok(itemsHtml.includes('bundle-qty-val">1</span>'), 'Tea count should be 1');
 
 // Add 2nd Tea (repeats allowed, max 2 reached)
 sandbox.window.bundleAddItem('item_tea');
 itemsHtml = domElements['bundle-items-list'].innerHTML;
-assert.ok(itemsHtml.includes('bundle-qty-val active">2</span>'), 'Tea count should be 2');
+assert.ok(itemsHtml.includes('bundle-qty-val">2</span>'), 'Tea count should be 2');
 assert.ok(itemsHtml.includes('bundle-btn-plus disabled'), 'Plus button must be disabled when group max is reached');
 
 // Decrement 1 Tea
 sandbox.window.bundleRemoveLastItemOf('item_tea');
 itemsHtml = domElements['bundle-items-list'].innerHTML;
-assert.ok(itemsHtml.includes('bundle-qty-val active">1</span>'), 'Tea count should return to 1');
+assert.ok(itemsHtml.includes('bundle-qty-val">1</span>'), 'Tea count should return to 1');
 assert.ok(!itemsHtml.includes('bundle-btn-plus disabled'), 'Plus button must re-enable when count < max');
 
 console.log('✓ Multi-choice stepper correctly manages quota, repeats, and re-enabling.');

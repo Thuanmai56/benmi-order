@@ -94,26 +94,53 @@
         </div>`;
       }).filter(Boolean).join('');
       const extra = Number(source.surcharge || 0);
-      const minusDisabled = count === 0;
-      const plusDisabled = !canAdd;
-      const stepper = group.type === 'fixed' ? '<span class="bundle-v2-badge-fixed">已包含</span>' : `
-        <div class="bundle-stepper" onclick="event.stopPropagation()">
-          <button type="button" class="bundle-btn-minus ${minusDisabled ? 'disabled' : ''}" onclick="bundleRemoveLastItemOf('${esc(source.id)}')" ${minusDisabled ? 'disabled' : ''} aria-label="減少 ${esc(source.name)}">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-          </button>
-          <span class="bundle-qty-val ${count > 0 ? 'active' : ''}">${count}</span>
-          <button type="button" class="bundle-btn-plus ${plusDisabled ? 'disabled' : ''}" onclick="${addAction}" ${plusDisabled ? 'disabled' : ''} aria-label="增加 ${esc(source.name)}">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-          </button>
-        </div>`;
-      const cardClick = !soldOut && canAdd && count === 0 ? `onclick="${addAction}" style="cursor:pointer;"` : '';
-      return `<div class="bundle-v2-item ${count > 0 ? 'selected' : ''} ${soldOut ? 'sold-out' : ''}" ${cardClick}>
-        <div class="bundle-v2-item-head">
-          <div class="bundle-v2-item-info">
-            <strong class="bundle-v2-item-title">${esc(source.name)}</strong>
-            ${soldOut ? '<span class="bundle-v2-badge-oos">已售完</span>' : (extra ? `<span class="bundle-v2-extra">+$${extra}</span>` : '')}
+      const cleanName = (source.name || '').replace(/^(\d+|[A-Za-z])\.\s*/, '');
+      const safeName = esc(cleanName);
+      const priceLabel = extra > 0 ? ` (+<span style="color:#059669; font-weight:800;">$${extra}</span>)` : '';
+      const oosBadge = soldOut ? '<span class="oos-badge" style="color:#dc2626; font-size:12px; font-weight:800; margin-left:6px;">(已售完)</span>' : '';
+      const disabledPlus = !canAdd;
+
+      if (group.type === 'fixed') {
+        return `<div class="bundle-item-card selected">
+          <div class="bundle-item-head">
+            <div class="bundle-item-info">
+              <span class="bundle-item-title">${safeName}</span>${priceLabel}
+            </div>
+            <span class="bundle-v2-badge-fixed">已包含</span>
           </div>
-          ${stepper}
+          ${settings}
+        </div>`;
+      }
+
+      if (count === 0) {
+        return `<div class="bundle-item-card ${soldOut ? 'sold-out' : ''}" ${canAdd ? `onclick="${addAction}" style="cursor:pointer;"` : ''} style="${soldOut ? 'opacity: 0.5; pointer-events: none;' : ''}">
+          <div class="bundle-item-head">
+            <div class="bundle-item-info">
+              <span class="bundle-item-title">${safeName}</span>${priceLabel}${oosBadge}
+            </div>
+            <div class="bundle-stepper" onclick="event.stopPropagation()">
+              <button type="button" class="bundle-btn-add ${disabledPlus ? 'disabled' : ''}" onclick="${addAction}" ${disabledPlus ? 'disabled' : ''} aria-label="Add ${safeName}">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              </button>
+            </div>
+          </div>
+        </div>`;
+      }
+
+      return `<div class="bundle-item-card selected ${soldOut ? 'sold-out' : ''}">
+        <div class="bundle-item-head">
+          <div class="bundle-item-info">
+            <span class="bundle-item-title">${safeName}</span>${priceLabel}${oosBadge}
+          </div>
+          <div class="bundle-stepper" onclick="event.stopPropagation()">
+            <button type="button" class="bundle-btn-minus" onclick="bundleRemoveLastItemOf('${esc(source.id)}')" aria-label="Decrease">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            </button>
+            <span class="bundle-qty-val">${count}</span>
+            <button type="button" class="bundle-btn-plus ${disabledPlus ? 'disabled' : ''}" onclick="${addAction}" ${disabledPlus ? 'disabled' : ''} aria-label="Increase">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            </button>
+          </div>
         </div>
         ${settings}
       </div>`;
