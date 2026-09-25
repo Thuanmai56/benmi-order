@@ -443,6 +443,33 @@ const I18N = {
     menuEditSub: "拖曳排序 ✦ 點擊欄位直接修改",
     btnMenuRestore: "恢復預設菜單",
     btnMenuAddItem: "新增項目",
+    btnMenuCreateType: "建立設定",
+    createTypeModalTitle: "選擇菜單設定類型",
+    createTypeModalSub: "請選擇要新增的餐點或客製化類型",
+    createType1Title: "類型 1：特惠套餐 (組合選擇)",
+    createType1Desc: "顧客必須從指定分類中任選 N 樣餐點，支援重複與單品客製。",
+    createType2Title: "類型 2：單品餐點 (含專屬客製選項)",
+    createType2Desc: "一般獨立單品，可靈活綁定辣度、甜度冰塊或加料配料等多組選項。",
+    createType3Title: "類型 3：整單客製化 (餐具、整單備註)",
+    createType3Desc: "適用於整筆訂單的通用偏好設定，支援設定為必填或選填。",
+    btnItemModifiers: "客製選項",
+    itemModifiersModalTitle: "設定餐點客製選項",
+    itemModifiersModalSub: "為此餐點配置專屬的選項群組 (如加料、甜度冰塊、辣度)",
+    btnNewModifierGroup: "新增選項群組",
+    labelModifierGroupName: "群組名稱 (例: 辣度、加料、甜度冰塊)",
+    labelModifierSelectionType: "選擇模式",
+    optionSingleRadio: "單選 (Radio)",
+    optionMultipleCheckbox: "多選 (Checkbox)",
+    labelModifierRequired: "是否必選",
+    badgeRequired: "必填",
+    badgeOptional: "選填",
+    btnAddModifierOption: "新增選項",
+    labelOptionName: "選項名稱",
+    labelOptionPrice: "加價 (+$$)",
+    noModifierGroups: "此品項尚未設定專屬客製選項。點擊上方按鈕開始新增。",
+    btnSaveModifiers: "完成設定",
+    toggleRequiredOn: "切換為必填",
+    toggleRequiredOff: "切換為選填",
     btnMenuSave: "儲存變更",
     menuSaved: "已儲存",
     menuHelp: "編輯說明",
@@ -1006,6 +1033,33 @@ const I18N = {
     menuEditSub: "Kéo thả để sắp xếp ✦ Nhấn vào ô để sửa trực tiếp",
     btnMenuRestore: "Khôi phục Menu gốc",
     btnMenuAddItem: "Thêm món mới",
+    btnMenuCreateType: "Tạo theo loại",
+    createTypeModalTitle: "Chọn loại cấu hình thực đơn",
+    createTypeModalSub: "Chọn phương thức tạo phù hợp cho món ăn hoặc tuỳ chọn",
+    createType1Title: "Loại 1: Gói Combo (Bắt buộc chọn)",
+    createType1Desc: "Khách chọn N món từ các danh mục quy định (kèm tuỳ biến nếu có).",
+    createType2Title: "Loại 2: Món có tuỳ chọn (Độ cay, Đá/Đường, Topping...)",
+    createType2Desc: "Món đơn lẻ với các nhóm tuỳ chọn đi kèm tùy chỉnh linh hoạt.",
+    createType3Title: "Loại 3: Tuỳ chọn toàn đơn (Dụng cụ ăn, Mức cay chung...)",
+    createType3Desc: "Cấu hình lựa chọn áp dụng cho toàn bộ đơn hàng (hỗ trợ bắt buộc chọn).",
+    btnItemModifiers: "Tuỳ chọn món",
+    itemModifiersModalTitle: "Thiết lập tuỳ chọn cho món",
+    itemModifiersModalSub: "Cấu hình các nhóm tuỳ chọn riêng cho món này (Topping, Đường đá, Độ cay...)",
+    btnNewModifierGroup: "Thêm nhóm tuỳ chọn",
+    labelModifierGroupName: "Tên nhóm (VD: Độ cay, Topping, Mức đường đá)",
+    labelModifierSelectionType: "Kiểu chọn",
+    optionSingleRadio: "Chọn 1 (Radio)",
+    optionMultipleCheckbox: "Chọn nhiều (Checkbox)",
+    labelModifierRequired: "Bắt buộc chọn",
+    badgeRequired: "Bắt buộc",
+    badgeOptional: "Tùy chọn",
+    btnAddModifierOption: "Thêm lựa chọn",
+    labelOptionName: "Tên lựa chọn",
+    labelOptionPrice: "Phụ thu (+$$)",
+    noModifierGroups: "Món này chưa có nhóm tuỳ chọn nào. Bấm nút phía trên để tạo mới.",
+    btnSaveModifiers: "Lưu tuỳ chọn",
+    toggleRequiredOn: "Bật bắt buộc",
+    toggleRequiredOff: "Tắt bắt buộc",
     btnMenuSave: "Lưu thay đổi",
     menuSaved: "Đã lưu",
     menuHelp: "Hướng dẫn chỉnh sửa",
@@ -1972,8 +2026,27 @@ function applyLanguageToDOM() {
   if (menuEdT && (typeof currentMenuData === 'undefined' || !currentMenuData || typeof activeCategoryIndex === 'undefined' || activeCategoryIndex < 0)) menuEdT.innerText = dict.menuEditorTitle;
   const menuEdS = document.getElementById("i18n-menu-edit-sub");
   if (menuEdS) menuEdS.innerText = dict.menuEditSub;
-  const btnMenuAdd = document.getElementById("btn-menu-add-item");
-  if (btnMenuAdd) btnMenuAdd.innerText = dict.btnMenuAddItem;
+  const btnMenuAddText = document.getElementById("i18n-btn-add-item-text");
+  if (btnMenuAddText) btnMenuAddText.innerText = dict.btnMenuAddItem;
+  else if (btnMenuAdd) btnMenuAdd.innerText = dict.btnMenuAddItem;
+  const btnMenuCreateType = document.getElementById("i18n-btn-create-type-text");
+  if (btnMenuCreateType) btnMenuCreateType.innerText = dict.btnMenuCreateType;
+  const createTypeT = document.getElementById("i18n-create-type-title");
+  if (createTypeT) createTypeT.innerText = dict.createTypeModalTitle;
+  const createTypeS = document.getElementById("i18n-create-type-sub");
+  if (createTypeS) createTypeS.innerText = dict.createTypeModalSub;
+  const t1Title = document.getElementById("i18n-type-1-title");
+  if (t1Title) t1Title.innerText = dict.createType1Title;
+  const t1Desc = document.getElementById("i18n-type-1-desc");
+  if (t1Desc) t1Desc.innerText = dict.createType1Desc;
+  const t2Title = document.getElementById("i18n-type-2-title");
+  if (t2Title) t2Title.innerText = dict.createType2Title;
+  const t2Desc = document.getElementById("i18n-type-2-desc");
+  if (t2Desc) t2Desc.innerText = dict.createType2Desc;
+  const t3Title = document.getElementById("i18n-type-3-title");
+  if (t3Title) t3Title.innerText = dict.createType3Title;
+  const t3Desc = document.getElementById("i18n-type-3-desc");
+  if (t3Desc) t3Desc.innerText = dict.createType3Desc;
   if (typeof updateMenuSaveState === "function") updateMenuSaveState();
   if (typeof renderComboWizard === "function" && document.getElementById('bundle-wizard')?.style.display === 'flex') renderComboWizard();
   const menuHelp = document.getElementById("menu-help-toggle");

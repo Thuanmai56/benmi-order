@@ -78,6 +78,22 @@ export interface BootstrapResponse {
       badgeText?: string | null;
       badge?: string | null;
       bundleRule?: BootstrapBundleRule | null;
+      itemType?: 'standard' | 'bundle';
+      modifierGroups?: Array<{
+        id: string;
+        name: string;
+        selectionType: 'single' | 'multiple';
+        isRequired: boolean;
+        minSelection: number;
+        maxSelection: number;
+        options: Array<{
+          id: string;
+          name: string;
+          price: number;
+          isDefault: boolean;
+          isOutOfStock: boolean;
+        }>;
+      }>;
       sortOrder: number;
     }>;
   }>;
@@ -102,6 +118,7 @@ export interface BootstrapResponse {
     key: string;
     title: string;
     type: 'radio' | 'checkbox';
+    isRequired?: boolean;
     sortOrder: number;
     options: Array<{
       id?: string;
@@ -376,6 +393,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
     let rawCustomizations: any[] = [];
     let bundleRulesRows: any[] = [];
     let customRulesRows: any[] = [];
+    let itemModifierRows: any[] = [];
 
     if (env.DB) {
       try {
@@ -398,13 +416,15 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
           env.DB.prepare(
             `SELECT id, category_id, name, price, description, out_of_stock_until, sort_order,
                     COALESCE(badge_text, '') AS badge_text,
-                    COALESCE(is_recommended, 0) AS is_recommended
+                    COALESCE(is_recommended, 0) AS is_recommended,
+                    COALESCE(item_type, 'standard') AS item_type
              FROM menu_items 
              WHERE tenant_id = ? 
              ORDER BY sort_order ASC`
           ).bind(tenantId),
           env.DB.prepare(
-            `SELECT id, key, title, type, sort_order, options_json
+            `SELECT id, key, title, type, sort_order, options_json,
+                    COALESCE(is_required, 0) AS is_required
              FROM menu_customizations
              WHERE tenant_id = ?
              ORDER BY sort_order ASC`
@@ -431,6 +451,25 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
           customRulesRows = (rRes.results as any[]) || [];
         } catch (subRulesErr) {
           console.warn(`[Bootstrap] menu_bundle_rules or option_rules query warning for ${tenantId}:`, subRulesErr);
+        }
+
+        try {
+          const modRes = await env.DB.prepare(
+            `SELECT l.item_id, g.id AS group_id, g.name AS group_name, g.selection_type,
+                    COALESCE(g.is_required, 0) AS is_required,
+                    COALESCE(g.min_selection, 0) AS min_selection,
+                    COALESCE(g.max_selection, 1) AS max_selection,
+                    o.id AS option_id, o.name AS option_name, COALESCE(o.price, 0) AS option_price,
+                    COALESCE(o.is_default, 0) AS is_default, o.out_of_stock_until AS option_out_of_stock_until
+             FROM item_modifier_links l
+             JOIN modifier_groups g ON g.id = l.group_id AND g.tenant_id = l.tenant_id
+             LEFT JOIN modifier_options o ON o.group_id = g.id AND o.tenant_id = g.tenant_id
+             WHERE l.tenant_id = ?
+             ORDER BY l.sort_order ASC, g.sort_order ASC, o.sort_order ASC`
+          ).bind(tenantId).all<any>();
+          itemModifierRows = (modRes.results as any[]) || [];
+        } catch (modErr) {
+          // Table may not exist yet or no rows
         }
       } catch (dbErr) {
         console.error(`[Bootstrap] D1 Query error for ${tenantId}:`, dbErr);
@@ -476,6 +515,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
           key: c.key,
           title: c.title,
           type: c.type || 'radio',
+          isRequired: Boolean(c.is_required),
           sortOrder: c.sort_order || 0,
           options: enrichedOpts
         });
@@ -572,6 +612,37 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
     }
 
     // 4. Organize Items by Category
+    const itemModifierGroupsMap = new Map<string, any[]>();
+    for (const row of itemModifierRows) {
+      if (!itemModifierGroupsMap.has(row.item_id)) {
+        itemModifierGroupsMap.set(row.item_id, []);
+      }
+      const groupList = itemModifierGroupsMap.get(row.item_id)!;
+      let grp = groupList.find((g: any) => g.id === row.group_id);
+      if (!grp) {
+        grp = {
+          id: row.group_id,
+          name: row.group_name,
+          selectionType: row.selection_type || 'single',
+          isRequired: Boolean(row.is_required),
+          minSelection: Number(row.min_selection ?? 0),
+          maxSelection: Number(row.max_selection ?? 1),
+          options: []
+        };
+        groupList.push(grp);
+      }
+      if (row.option_id) {
+        const isOptOos = Boolean(row.option_out_of_stock_until && new Date(row.option_out_of_stock_until) > now);
+        grp.options.push({
+          id: row.option_id,
+          name: row.option_name,
+          price: Number(row.option_price || 0),
+          isDefault: Boolean(row.is_default),
+          isOutOfStock: isOptOos
+        });
+      }
+    }
+
     const itemsByCatId = new Map<string, any[]>();
     for (const item of items) {
       if (!itemsByCatId.has(item.category_id)) {
@@ -585,6 +656,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
                        imageList.some(k => k.endsWith(`_${item.name}`) || (k.includes('_') && k.split('_').slice(1).join('_') === item.name));
       const imageUrl = hasImage ? `/api/image?tenant_id=${tenantId}&name=${encodeURIComponent(item.name)}` : null;
       const bundleRule = bundleRulesByItemId.get(item.id) || null;
+      const modGroups = itemModifierGroupsMap.get(item.id) || [];
 
       itemsByCatId.get(item.category_id)!.push({
         id: item.id,
@@ -597,6 +669,8 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
         badgeText: item.badge_text || null,
         badge: badge,
         bundleRule: bundleRule,
+        itemType: item.item_type || 'standard',
+        modifierGroups: modGroups.length > 0 ? modGroups : undefined,
         sortOrder: item.sort_order || 0
       });
     }

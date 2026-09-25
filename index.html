@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title id="page-title">線上點餐</title>
     <link rel="preload" href="index.css?v=20260923_combo_v2" as="style">
-    <link rel="preload" href="js/client-checkout.js?v=20260923_combo_v2" as="script">
+    <link rel="preload" href="js/client-checkout.js?v=20260925_unified_customization_v1" as="script">
     <link rel="stylesheet" href="index.css?v=20260923_combo_v2">
     <script>
         // Redirect root visits on blabfood.app to /landing
@@ -1952,8 +1952,11 @@
                 });
                 const denseGridClass = hasDenseOptions ? ' dense-grid' : '';
 
-                html += `<div class="custom-group" style="${topMargin}">
-                    <label class="custom-label">${escapeHtml(group.title)}</label>
+                html += `<div class="custom-group" data-group-key="${escapeHtml(group.key)}" style="${topMargin}">
+                    <label class="custom-label" style="display:flex; align-items:center; gap:8px;">
+                        <span>${escapeHtml(group.title)}</span>
+                        ${group.isRequired ? '<span class="required-badge" style="font-size:11px; padding:2px 6px; background:#fee2e2; color:#b91c1c; border-radius:4px; font-weight:700;">必選</span>' : ''}
+                    </label>
                     <div class="custom-options-grid${denseGridClass}">`;
 
                 (group.options || []).forEach((opt, optIdx) => {
@@ -2136,8 +2139,8 @@
 
             const qty = cart[`${catSlug}_${item.name}`] || 0;
             const footerHTML = getDynamicItemFooterHTML(catSlug, item.name, item.price, isOos);
-            const catModifiers = getCategoryModifiers(catSlug);
-            const hasModifiers = catModifiers.length > 0;
+            const itemModifiers = getItemModifiers(catSlug, item.name);
+            const hasModifiers = itemModifiers.length > 0;
             const customizeBtnHTML = `
                 <button class="customize-btn" id="customize-btn-${catSlug}-${item.name}" onclick="toggleCustomize('${safeCatSlug}','${safeItemName}')" style="pointer-events: auto; display: ${(!isOos && qty > 0 && hasModifiers) ? 'flex' : 'none'}; align-items: center; justify-content: center; gap: 5px;">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
@@ -2951,6 +2954,23 @@
             cart[key] = (cart[key] || 0) + change;
             if (cart[key] < 0) cart[key] = 0;
 
+            if (change > 0) {
+                const itemModifiers = getItemModifiers(category, origName);
+                if (itemModifiers.length > 0) {
+                    for (let i = Math.max(0, cart[key] - change); i < cart[key]; i++) {
+                        initPortionDefaults(category, origName, i);
+                    }
+                }
+            } else if (change < 0) {
+                if (customizeData[key] && Array.isArray(customizeData[key])) {
+                    if (cart[key] === 0) {
+                        delete customizeData[key];
+                    } else if (customizeData[key].length > cart[key]) {
+                        customizeData[key].splice(cart[key]);
+                    }
+                }
+            }
+
             const qtySpan = document.getElementById('qty-' + category + '-' + origName);
             if (qtySpan) {
                 qtySpan.innerText = cart[key];
@@ -2959,9 +2979,9 @@
 
             const btn = document.getElementById('customize-btn-' + category + '-' + origName);
             if (btn) {
-                const catModifiers = getCategoryModifiers(category);
-                const hasModifiers = catModifiers.length > 0;
-                btn.style.display = (cart[key] > 0 && hasModifiers) ? 'block' : 'none';
+                const itemModifiers = getItemModifiers(category, origName);
+                const hasModifiers = itemModifiers.length > 0;
+                btn.style.display = (cart[key] > 0 && hasModifiers) ? 'flex' : 'none';
             }
 
             const bundleBtn = document.getElementById('bundle-edit-btn-' + category + '-' + origName);
@@ -3091,6 +3111,20 @@
                     mod.options.forEach(opt => { modPriceMap[opt.name] = opt.price || 0; });
                 });
             }
+            if (bootstrapData?.catalog) {
+                bootstrapData.catalog.forEach(cat => {
+                    (cat.items || []).forEach(it => {
+                        if (Array.isArray(it.modifierGroups)) {
+                            it.modifierGroups.forEach(mg => {
+                                (mg.options || []).forEach(opt => {
+                                    modPriceMap[opt.name] = opt.price || 0;
+                                });
+                            });
+                        }
+                    });
+                });
+            }
+            window.modPriceMap = modPriceMap;
 
             // Group active cart items by category
             const itemsByCategory = {};
@@ -3334,6 +3368,34 @@
             container.appendChild(box);
         }
 
+        function getItemModifiers(catSlug, itemName) {
+            const catObj = bootstrapData?.catalog?.find(c => c.slug === catSlug);
+            const itemObj = catObj?.items?.find(it => it.name === itemName);
+            const itemMods = [];
+            if (itemObj && Array.isArray(itemObj.modifierGroups) && itemObj.modifierGroups.length > 0) {
+                itemObj.modifierGroups.forEach((mg, idx) => {
+                    itemMods.push({
+                        id: mg.id || `mg_${idx}`,
+                        slug: mg.id || `mg_${idx}`,
+                        name: mg.name,
+                        selectionType: mg.selectionType || 'single',
+                        isRequired: Boolean(mg.isRequired),
+                        minSelection: mg.minSelection,
+                        maxSelection: mg.maxSelection,
+                        options: (mg.options || []).map(opt => ({
+                            id: opt.id,
+                            name: opt.name,
+                            price: opt.price || 0,
+                            isDefault: Boolean(opt.isDefault),
+                            isOutOfStock: Boolean(opt.isOutOfStock)
+                        }))
+                    });
+                });
+            }
+            const catMods = getCategoryModifiers(catSlug);
+            return [...itemMods, ...catMods];
+        }
+
         function getCategoryModifiers(catSlug) {
             const catObj = bootstrapData?.catalog?.find(c => c.slug === catSlug);
             if (!catObj) return [];
@@ -3345,6 +3407,52 @@
             return allMods.filter(m => applied.includes(m.slug) || applied.includes(m.id));
         }
 
+        function getModifierPrice(optName) {
+            if (!optName || typeof optName !== 'string') return 0;
+            if (bootstrapData?.modifiers) {
+                for (const mod of bootstrapData.modifiers) {
+                    const found = (mod.options || []).find(o => o.name === optName);
+                    if (found && typeof found.price === 'number') return found.price;
+                }
+            }
+            if (bootstrapData?.catalog) {
+                for (const cat of bootstrapData.catalog) {
+                    for (const it of (cat.items || [])) {
+                        if (Array.isArray(it.modifierGroups)) {
+                            for (const mg of it.modifierGroups) {
+                                const found = (mg.options || []).find(o => o.name === optName);
+                                if (found && typeof found.price === 'number') return found.price;
+                            }
+                        }
+                    }
+                }
+            }
+            return 0;
+        }
+        window.getModifierPrice = getModifierPrice;
+
+        function initPortionDefaults(category, origName, portionIndex) {
+            const key = category + '_' + origName;
+            if (!customizeData[key]) customizeData[key] = [];
+            if (!customizeData[key][portionIndex]) {
+                const modifiers = getItemModifiers(category, origName);
+                const defaultSingle = {};
+                modifiers.filter(m => m.selectionType === 'single').forEach(m => {
+                    const defOpt = (m.options || []).find(o => o.isDefault && !o.isOutOfStock) || (m.isRequired ? ((m.options || []).find(o => !o.isOutOfStock) || m.options[0]) : null);
+                    if (defOpt) defaultSingle[m.slug] = defOpt.name;
+                });
+                const defaultMulti = {};
+                modifiers.filter(m => m.selectionType === 'multiple').forEach(m => {
+                    (m.options || []).filter(o => o.isDefault && !o.isOutOfStock).forEach(o => {
+                        defaultMulti[o.name] = true;
+                    });
+                });
+                customizeData[key][portionIndex] = { single: defaultSingle, multiple: defaultMulti, note: '' };
+            }
+            return customizeData[key][portionIndex];
+        }
+        window.initPortionDefaults = initPortionDefaults;
+
         // --- CUSTOMIZE POPUP (SCHEMA-DRIVEN MODIFIERS POPUP) ---
         function toggleCustomize(category, origName) {
             if (!checkDesktopAuthGuard()) return;
@@ -3352,7 +3460,7 @@
             const qty = cart[key];
             if (!qty) return;
 
-            const modifiers = getCategoryModifiers(category);
+            const modifiers = getItemModifiers(category, origName);
             if (!modifiers || modifiers.length === 0) return;
 
             if (!customizeData[key]) customizeData[key] = [];
@@ -3371,14 +3479,7 @@
             `;
 
             for (let i = 0; i < qty; i++) {
-                if (!customizeData[key][i]) {
-                    const defaultSingle = {};
-                    modifiers.filter(m => m.selectionType === 'single').forEach(m => {
-                        const defOpt = m.options.find(o => o.isDefault && !o.isOutOfStock) || m.options.find(o => !o.isOutOfStock) || m.options[0];
-                        if (defOpt) defaultSingle[m.slug] = defOpt.name;
-                    });
-                    customizeData[key][i] = { single: defaultSingle, multiple: {}, note: '' };
-                }
+                initPortionDefaults(category, origName, i);
 
                 const currentPortion = customizeData[key][i];
                 const section = document.createElement('div');
@@ -3783,7 +3884,7 @@
         </div>
     </div>
     <script src="js/bundle-builder-v2.js?v=20260923_combo_v2"></script>
-    <script src="js/client-checkout.js?v=20260923_combo_v2"></script>
+    <script src="js/client-checkout.js?v=20260925_unified_customization_v2"></script>
 </body>
 
 </html>

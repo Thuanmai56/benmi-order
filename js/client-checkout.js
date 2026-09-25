@@ -586,14 +586,23 @@ function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, ma
                     if (c.single) {
                         for (let s in c.single) {
                             if (c.single[s] && c.single[s] !== '不辣' && c.single[s] !== '不需要') {
-                                parts.push(c.single[s]);
+                                const addP = typeof window.getModifierPrice === 'function'
+                                    ? window.getModifierPrice(c.single[s])
+                                    : ((typeof modPriceMap !== 'undefined' && modPriceMap[c.single[s]]) ? modPriceMap[c.single[s]] : 0);
+                                if (addP > 0) {
+                                    parts.push(`${c.single[s]} (+$${addP})`);
+                                } else {
+                                    parts.push(c.single[s]);
+                                }
                             }
                         }
                     }
                     if (c.multiple) {
                         for (let t in c.multiple) {
                             if (c.multiple[t]) {
-                                const addP = (typeof modPriceMap !== 'undefined' && modPriceMap[t]) ? modPriceMap[t] : 0;
+                                const addP = typeof window.getModifierPrice === 'function'
+                                    ? window.getModifierPrice(t)
+                                    : ((typeof modPriceMap !== 'undefined' && modPriceMap[t]) ? modPriceMap[t] : 0);
                                 if (addP > 0) {
                                     parts.push(`${t} (+$${addP})`);
                                 } else {
@@ -683,14 +692,23 @@ function formatAppendItemsOnlyText() {
                     if (c.single) {
                         for (let s in c.single) {
                             if (c.single[s] && c.single[s] !== '不辣' && c.single[s] !== '不需要') {
-                                parts.push(c.single[s]);
+                                const addP = typeof window.getModifierPrice === 'function'
+                                    ? window.getModifierPrice(c.single[s])
+                                    : ((typeof modPriceMap !== 'undefined' && modPriceMap[c.single[s]]) ? modPriceMap[c.single[s]] : 0);
+                                if (addP > 0) {
+                                    parts.push(`${c.single[s]} (+$${addP})`);
+                                } else {
+                                    parts.push(c.single[s]);
+                                }
                             }
                         }
                     }
                     if (c.multiple) {
                         for (let t in c.multiple) {
                             if (c.multiple[t]) {
-                                const addP = (typeof modPriceMap !== 'undefined' && modPriceMap[t]) ? modPriceMap[t] : 0;
+                                const addP = typeof window.getModifierPrice === 'function'
+                                    ? window.getModifierPrice(t)
+                                    : ((typeof modPriceMap !== 'undefined' && modPriceMap[t]) ? modPriceMap[t] : 0);
                                 if (addP > 0) {
                                     parts.push(`${t} (+$${addP})`);
                                 } else {
@@ -724,6 +742,7 @@ function buildStructuredCartItems() {
             const qty = cart[key];
 
             const options = [];
+            let itemModifiersExtra = 0;
             const cust = customizeData[key];
             if (cust && Array.isArray(cust)) {
                 cust.slice(0, qty).forEach((c, idx) => {
@@ -732,14 +751,21 @@ function buildStructuredCartItems() {
                     if (c.single) {
                         for (let s in c.single) {
                             if (c.single[s] && c.single[s] !== '不辣' && c.single[s] !== '不需要') {
-                                options.push({ group: s, choice: `${portionPrefix}${c.single[s]}`, price: 0 });
+                                const addP = typeof window.getModifierPrice === 'function'
+                                    ? window.getModifierPrice(c.single[s])
+                                    : ((typeof modPriceMap !== 'undefined' && modPriceMap[c.single[s]]) ? modPriceMap[c.single[s]] : 0);
+                                itemModifiersExtra += addP;
+                                options.push({ group: s, choice: `${portionPrefix}${c.single[s]}`, price: addP });
                             }
                         }
                     }
                     if (c.multiple) {
                         for (let t in c.multiple) {
                             if (c.multiple[t]) {
-                                const addP = (typeof modPriceMap !== 'undefined' && modPriceMap[t]) ? modPriceMap[t] : 0;
+                                const addP = typeof window.getModifierPrice === 'function'
+                                    ? window.getModifierPrice(t)
+                                    : ((typeof modPriceMap !== 'undefined' && modPriceMap[t]) ? modPriceMap[t] : 0);
+                                itemModifiersExtra += addP;
                                 options.push({ group: '客製化', choice: `${portionPrefix}${t}`, price: addP });
                             }
                         }
@@ -781,7 +807,7 @@ function buildStructuredCartItems() {
                 category: categoryName,
                 quantity: qty,
                 price: basePrice,
-                subtotal: basePrice * qty + bundleExtra,
+                subtotal: basePrice * qty + bundleExtra + itemModifiersExtra,
                 options: options,
                 bundleSelections: bundleSelections,
                 bundle_snapshot_json: bundleSelections ? JSON.stringify(bundleSelections) : null
@@ -874,6 +900,59 @@ async function submitOrder() {
 
     const hasItem = Object.values(cart || {}).some(q => q > 0);
     if (!hasItem) return customAlert('請先選擇餐點品項加入購物車');
+
+    // Validate Required Global Customizations (Type 3)
+    if (typeof bootstrapData !== 'undefined' && bootstrapData && Array.isArray(bootstrapData.customizations)) {
+        for (const group of bootstrapData.customizations) {
+            if (group.isRequired) {
+                const checked = document.querySelectorAll(`input[name="opt-${group.key}"]:checked`);
+                if (!checked || checked.length === 0) {
+                    const panel = document.querySelector(`.custom-group[data-group-key="${group.key}"]`) || document.querySelector(`input[name="opt-${group.key}"]`)?.closest('.custom-panel');
+                    if (panel) {
+                        panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        panel.classList.add('attention-pulse');
+                        setTimeout(() => panel.classList.remove('attention-pulse'), 1500);
+                    }
+                    const groupTitle = group.title || group.name || '客製選項';
+                    return customAlert(`請選擇【${groupTitle}】（此項為必填）`);
+                }
+            }
+        }
+    }
+
+    // Validate Required Item Modifiers (Type 2)
+    if (typeof getItemModifiers === 'function' && typeof bootstrapData !== 'undefined' && bootstrapData) {
+        for (const [key, q] of Object.entries(cart || {})) {
+            if (q <= 0) continue;
+            const sepIdx = key.indexOf('_');
+            if (sepIdx < 0) continue;
+            const catSlug = key.slice(0, sepIdx);
+            const itemName = key.slice(sepIdx + 1);
+            const itemMods = getItemModifiers(catSlug, itemName);
+            const reqMods = itemMods.filter(m => m.isRequired);
+            if (reqMods.length > 0) {
+                const itemPortions = (typeof customizeData !== 'undefined' && customizeData && customizeData[key]) ? customizeData[key] : [];
+                for (let i = 0; i < q; i++) {
+                    const portion = itemPortions[i];
+                    for (const reqM of reqMods) {
+                        let hasSelection = false;
+                        if (reqM.selectionType === 'multiple') {
+                            const reqOptNames = (reqM.options || []).map(o => o.name);
+                            hasSelection = reqOptNames.some(name => portion?.multiple && portion.multiple[name]);
+                        } else {
+                            hasSelection = Boolean(portion?.single && portion.single[reqM.slug]);
+                        }
+                        if (!hasSelection) {
+                            if (typeof toggleCustomize === 'function') {
+                                toggleCustomize(catSlug, itemName);
+                            }
+                            return customAlert(`請為【${itemName}】第 ${i + 1} 份選擇【${reqM.name}】（此項為必選）`);
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     // Minimum spend excludes order-wide add-on charges themselves.
     updateTotal();

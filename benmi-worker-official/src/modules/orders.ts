@@ -346,6 +346,33 @@ export async function createOrder(
       currentSubtotal: thresholdCheck.currentSubtotal
     }, 400);
   }
+  // 1.3 Validate Required Global Customizations (Type 3)
+  if (env.DB) {
+    try {
+      const reqCustRes = await env.DB.prepare(
+        `SELECT key, title FROM menu_customizations WHERE tenant_id = ? AND is_required = 1`
+      ).bind(tenantId).all<{ key: string; title: string }>();
+
+      for (const req of (reqCustRes.results || [])) {
+        const userChoice = clientCustomizations.find((c: any) => c.key === req.key);
+        const hasValue = userChoice && (
+          (typeof userChoice.value === 'string' && userChoice.value.trim() !== '') ||
+          (Array.isArray(userChoice.value) && userChoice.value.length > 0) ||
+          userChoice.optionId
+        );
+        if (!hasValue) {
+          return json({
+            error: `請選擇「${req.title}」`,
+            code: 'ORDER_CUSTOMIZATION_REQUIRED',
+            key: req.key
+          }, 400);
+        }
+      }
+    } catch (reqErr) {
+      // Column is_required may not exist on unmigrated test DBs
+    }
+  }
+
   const bundleAmountCheck = await validateBundleOrderAmount(env, tenantId, rawItems, Number(data.total), clientCustomizations);
   if (!bundleAmountCheck.valid) {
     console.warn('[BundleAmount]', { tenantId, code: bundleAmountCheck.code });

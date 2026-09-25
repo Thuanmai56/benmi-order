@@ -128,6 +128,8 @@ async function loadMenuData() {
             badgeText: it.badgeText || (it.badge || ''),
             isRecommended: it.isRecommended || false,
             bundleRule: it.bundleRule || null,
+            itemType: it.itemType || 'standard',
+            modifierGroups: Array.isArray(it.modifierGroups) ? it.modifierGroups : [],
             originalName: it.name
           }))
         });
@@ -161,6 +163,7 @@ async function loadMenuData() {
             key: cust.key || `custom_${gIdx}`,
             title: cust.title || cust.name || '',
             type: cust.type || 'radio',
+            isRequired: Boolean(cust.isRequired),
             sortOrder: cust.sortOrder !== undefined ? cust.sortOrder : gIdx,
             options: (cust.options || []).map(opt => ({
               id: opt.id || opt.name,
@@ -682,6 +685,22 @@ function renderMenuCategoryEditor(index) {
       }
     }
 
+    let itemModifiersBtnHtml = '';
+    if (cat.type === 'catalog') {
+      const modCount = (item.modifierGroups || []).length;
+      const hasModifiers = modCount > 0;
+      const modBtnClass = hasModifiers ? 'has-modifiers' : 'no-modifiers';
+      const modBtnText = hasModifiers
+        ? `${t("btnItemModifiers")} (${modCount})`
+        : `+ ${t("btnItemModifiers")}`;
+      const slidersSvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="21" y2="21"/><line x1="4" x2="20" y1="14" y2="14"/><line x1="4" x2="20" y1="7" y2="7"/><circle cx="14" cy="21" r="2"/><circle cx="8" cy="14" r="2"/><circle cx="16" cy="7" r="2"/></svg>`;
+      itemModifiersBtnHtml = `
+        <button type="button" class="menu-item-modifiers-btn ${modBtnClass}" onclick="openItemModifiersModal(${index}, ${iIdx})" title="${t('btnItemModifiers')}">
+          ${slidersSvg}<span>${modBtnText}</span>
+        </button>
+      `;
+    }
+
     row.innerHTML = `
       <div class="menu-item-main-fields">
         <div class="menu-item-drag" title="Kéo để đổi thứ tự">${gripSvg}</div>
@@ -705,6 +724,7 @@ function renderMenuCategoryEditor(index) {
           <span class="status-text">${oosText}</span>
         </button>
         ${bundleBtnHtml}
+        ${itemModifiersBtnHtml}
         <button type="button" class="btn btn-ghost menu-item-action-btn" onclick="openImageModal('${cat.id}', '${escapeHtml(item.name)}')">
           ${imageSvg}<span>${t("btnItemImage")}</span>
         </button>
@@ -752,6 +772,10 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
       const typeBadge = grp.type === 'checkbox'
         ? `<span style="font-size: 11.5px; padding: 3px 8px; background: #e0e7ff; color: #4338ca; border-radius: 6px; font-weight: 800;">${currentLang === 'vi' ? 'Chọn nhiều' : '多選'}</span>`
         : `<span style="font-size: 11.5px; padding: 3px 8px; background: #ecfdf5; color: #047857; border-radius: 6px; font-weight: 800;">${currentLang === 'vi' ? 'Chọn 1' : '單選'}</span>`;
+
+      const requiredBadge = grp.isRequired
+        ? `<span style="font-size: 11.5px; padding: 3px 8px; background: #fee2e2; color: #b91c1c; border-radius: 6px; font-weight: 800; border: 1px solid #fca5a5;">${t("badgeRequired")}</span>`
+        : `<span style="font-size: 11.5px; padding: 3px 8px; background: #f1f5f9; color: #64748b; border-radius: 6px; font-weight: 700; border: 1px solid #e2e8f0;">${t("badgeOptional")}</span>`;
 
       const optionsCount = (grp.options || []).length;
 
@@ -813,6 +837,10 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
             <button type="button" style="cursor: pointer; border: none; background: transparent; padding: 0;"
               onclick="toggleCustomizationGroupType(${cIdx}, ${gIdx})" title="${grp.type === 'checkbox' ? t('toggleGroupTypeSingle') : t('toggleGroupTypeMultiple')}">
               ${typeBadge}
+            </button>
+            <button type="button" style="cursor: pointer; border: none; background: transparent; padding: 0;"
+              onclick="toggleCustomizationGroupRequired(${cIdx}, ${gIdx})" title="${grp.isRequired ? t('toggleRequiredOff') : t('toggleRequiredOn')}">
+              ${requiredBadge}
             </button>
           </div>
           <div style="display: flex; align-items: center; gap: 8px; margin-left: auto;">
@@ -900,6 +928,16 @@ function toggleCustomizationGroupType(cIdx, gIdx) {
   renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), currentMenuData[cIdx], cIdx);
 }
 window.toggleCustomizationGroupType = toggleCustomizationGroupType;
+
+function toggleCustomizationGroupRequired(cIdx, gIdx) {
+  syncMenuDataFromDOM();
+  const grp = currentMenuData[cIdx]?.groups?.[gIdx];
+  if (!grp) return;
+  grp.isRequired = !grp.isRequired;
+  markMenuDirty();
+  renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), currentMenuData[cIdx], cIdx);
+}
+window.toggleCustomizationGroupRequired = toggleCustomizationGroupRequired;
 
 function removeCustomizationGroup(cIdx, gIdx) {
   const grp = currentMenuData[cIdx]?.groups?.[gIdx];
@@ -1070,6 +1108,7 @@ function serializeMenuData(categories) {
           key: grp.key,
           title: grp.title,
           type: grp.type || 'radio',
+          isRequired: Boolean(grp.isRequired),
           sortOrder: grp.sortOrder !== undefined ? grp.sortOrder : (gIdx + 1),
           options: (grp.options || []).map(opt => ({
             id: opt.id || opt.name,
@@ -1096,7 +1135,9 @@ function serializeMenuData(categories) {
         output[cat.id][item.name.trim()] = {
           price: item.price,
           badge_text: item.badgeText || null,
-          is_recommended: (item.badgeText && item.badgeText.includes('推薦')) || item.isRecommended ? 1 : 0
+          is_recommended: (item.badgeText && item.badgeText.includes('推薦')) || item.isRecommended ? 1 : 0,
+          item_type: item.itemType || (item.bundleRule && item.bundleRule.groups && item.bundleRule.groups.length > 0 ? 'bundle' : 'standard'),
+          modifier_groups: Array.isArray(item.modifierGroups) ? item.modifierGroups : []
         };
       }
     });
@@ -2282,3 +2323,279 @@ async function clearBundleConfig() {
   }
 }
 window.clearBundleConfig = clearBundleConfig;
+
+// ==========================================
+// Unified Creation & Item Modifiers Editor
+// ==========================================
+
+function openCreationTypeModal() {
+  const modal = document.getElementById("creationTypeModal");
+  if (modal) modal.style.display = "flex";
+}
+window.openCreationTypeModal = openCreationTypeModal;
+
+function closeCreationTypeModal() {
+  const modal = document.getElementById("creationTypeModal");
+  if (modal) modal.style.display = "none";
+}
+window.closeCreationTypeModal = closeCreationTypeModal;
+
+function handleSelectCreateType(type) {
+  closeCreationTypeModal();
+  if (type === 'bundle') {
+    if (typeof openBundleWizard === 'function') {
+      openBundleWizard();
+    }
+  } else if (type === 'item_with_options') {
+    let targetCatIdx = activeCategoryIndex;
+    if (!currentMenuData || targetCatIdx < 0 || currentMenuData[targetCatIdx].type !== 'catalog') {
+      targetCatIdx = currentMenuData ? currentMenuData.findIndex(c => c.type === 'catalog') : -1;
+    }
+    if (targetCatIdx >= 0) {
+      activeCategoryIndex = targetCatIdx;
+      renderMenuCategories();
+      const newItem = {
+        name: "",
+        price: 0,
+        badgeText: "",
+        isRecommended: false,
+        isOos: false,
+        bundleRule: null,
+        itemType: "standard",
+        modifierGroups: []
+      };
+      currentMenuData[targetCatIdx].items.push(newItem);
+      markMenuDirty();
+      const newItemIdx = currentMenuData[targetCatIdx].items.length - 1;
+      renderMenuCategoryEditor(targetCatIdx);
+      openItemModifiersModal(targetCatIdx, newItemIdx);
+    }
+  } else if (type === 'global_customization') {
+    const flavorIdx = currentMenuData ? currentMenuData.findIndex(c => c.type === 'order_customization' || c.id === 'sec-flavor') : -1;
+    if (flavorIdx >= 0) {
+      activeCategoryIndex = flavorIdx;
+      renderMenuCategories();
+      renderMenuCategoryEditor(flavorIdx);
+      addCustomizationGroup(flavorIdx);
+    }
+  }
+}
+window.handleSelectCreateType = handleSelectCreateType;
+
+let currentItemModifiersCidx = null;
+let currentItemModifiersIidx = null;
+let tempItemModifierGroups = [];
+
+function openItemModifiersModal(cIdx, iIdx) {
+  syncMenuDataFromDOM();
+  if (!currentMenuData || !currentMenuData[cIdx] || !currentMenuData[cIdx].items || !currentMenuData[cIdx].items[iIdx]) return;
+  currentItemModifiersCidx = cIdx;
+  currentItemModifiersIidx = iIdx;
+  const item = currentMenuData[cIdx].items[iIdx];
+  tempItemModifierGroups = JSON.parse(JSON.stringify(item.modifierGroups || []));
+
+  const modal = document.getElementById("itemModifiersModal");
+  const titleEl = document.getElementById("item-modifiers-modal-title");
+  if (titleEl) {
+    const itemName = item.name ? item.name.trim() : (t("newItemPlaceholder") || "Món mới");
+    titleEl.innerText = `${t("itemModifiersModalTitle")} - ${itemName}`;
+  }
+  const subEl = document.getElementById("item-modifiers-modal-sub");
+  if (subEl) subEl.innerText = t("itemModifiersModalSub");
+
+  renderItemModifiersEditor();
+  if (modal) modal.style.display = "flex";
+}
+window.openItemModifiersModal = openItemModifiersModal;
+
+function closeItemModifiersModal() {
+  const modal = document.getElementById("itemModifiersModal");
+  if (modal) modal.style.display = "none";
+  currentItemModifiersCidx = null;
+  currentItemModifiersIidx = null;
+  tempItemModifierGroups = [];
+}
+window.closeItemModifiersModal = closeItemModifiersModal;
+
+function syncItemModifiersFromDOM() {
+  const container = document.getElementById("item-modifiers-modal-body");
+  if (!container) return;
+  const groupCards = container.querySelectorAll(".mod-group-card");
+  groupCards.forEach((card, gIdx) => {
+    if (!tempItemModifierGroups[gIdx]) return;
+    const nameInput = card.querySelector(".mod-group-name-input");
+    if (nameInput) tempItemModifierGroups[gIdx].name = nameInput.value.trim();
+    const selTypeSelect = card.querySelector(".mod-group-type-select");
+    if (selTypeSelect) tempItemModifierGroups[gIdx].selectionType = selTypeSelect.value;
+    const reqCheckbox = card.querySelector(".mod-group-req-checkbox");
+    if (reqCheckbox) tempItemModifierGroups[gIdx].isRequired = reqCheckbox.checked;
+
+    const optRows = card.querySelectorAll(".mod-option-row");
+    optRows.forEach((row, oIdx) => {
+      if (!tempItemModifierGroups[gIdx].options || !tempItemModifierGroups[gIdx].options[oIdx]) return;
+      const optNameInput = row.querySelector(".mod-opt-name-input");
+      if (optNameInput) tempItemModifierGroups[gIdx].options[oIdx].name = optNameInput.value.trim();
+      const optPriceInput = row.querySelector(".mod-opt-price-input");
+      if (optPriceInput) tempItemModifierGroups[gIdx].options[oIdx].price = Number(optPriceInput.value) || 0;
+      const optDefCheckbox = row.querySelector(".mod-opt-def-checkbox");
+      if (optDefCheckbox) tempItemModifierGroups[gIdx].options[oIdx].isDefault = optDefCheckbox.checked;
+    });
+  });
+}
+
+function renderItemModifiersEditor() {
+  const container = document.getElementById("item-modifiers-modal-body");
+  if (!container) return;
+  container.innerHTML = "";
+
+  if (tempItemModifierGroups.length === 0) {
+    const empty = document.createElement("div");
+    empty.style.textAlign = "center";
+    empty.style.padding = "32px 16px";
+    empty.style.color = "#94a3b8";
+    empty.style.fontSize = "14px";
+    empty.innerText = t("noModifierGroups") || "此品項尚未設定專屬客製選項。點擊上方按鈕開始新增。";
+    container.appendChild(empty);
+    return;
+  }
+
+  tempItemModifierGroups.forEach((grp, gIdx) => {
+    const card = document.createElement("div");
+    card.className = "mod-group-card";
+    card.setAttribute("data-group-index", gIdx);
+
+    const isSingle = grp.selectionType === 'single';
+    const isReq = Boolean(grp.isRequired);
+
+    let optionsHtml = '';
+    (grp.options || []).forEach((opt, oIdx) => {
+      optionsHtml += `
+        <div class="mod-option-row" data-opt-index="${oIdx}">
+          <input type="text" class="mod-opt-name-input" value="${escapeHtml(opt.name || '')}" placeholder="${t('labelOptionName') || '選項名稱'}" style="flex: 2; min-height: 40px; padding: 6px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13.5px;" oninput="syncItemModifiersFromDOM()">
+          <label style="display: flex; align-items: center; gap: 4px; font-size: 13px; color: #475569; font-weight: 700; white-space: nowrap;">
+            <span>+$</span>
+            <input type="number" class="mod-opt-price-input" value="${opt.price || 0}" placeholder="0" style="width: 70px; min-height: 40px; padding: 6px 8px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13.5px;" oninput="syncItemModifiersFromDOM()">
+          </label>
+          <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: #64748b; font-weight: 600; cursor: pointer; user-select: none;">
+            <input type="checkbox" class="mod-opt-def-checkbox" ${opt.isDefault ? 'checked' : ''} style="width: 16px; height: 16px; accent-color: #2563eb;" onchange="if (this.checked && '${grp.selectionType}' === 'single') { this.closest('.mod-options-container').querySelectorAll('.mod-opt-def-checkbox').forEach(cb => { if (cb !== this) cb.checked = false; }); } syncItemModifiersFromDOM();">
+            <span>${currentLang === 'vi' ? 'Mặc định' : '預設'}</span>
+          </label>
+          <button type="button" class="btn btn-ghost btn-danger-ghost" onclick="removeItemModifierOption(${gIdx}, ${oIdx})" style="min-width: 36px; height: 36px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px;" title="${t('btnItemDelete')}">
+            ${(typeof POS_SVG !== 'undefined' && POS_SVG.trash) || '✕'}
+          </button>
+        </div>
+      `;
+    });
+
+    card.innerHTML = `
+      <div class="mod-group-header">
+        <input type="text" class="mod-group-name-input" value="${escapeHtml(grp.name || '')}" placeholder="${t('labelModifierGroupName') || '群組名稱 (例: 辣度、加料)'}" style="flex: 2; min-width: 160px; min-height: 44px; padding: 8px 12px; font-size: 14.5px; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 8px;" oninput="syncItemModifiersFromDOM()">
+        <select class="mod-group-type-select" style="min-height: 44px; padding: 6px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13.5px; font-weight: 600; background: #f8fafc;" onchange="syncItemModifiersFromDOM()">
+          <option value="single" ${isSingle ? 'selected' : ''}>${t('optionSingleRadio') || '單選 (Radio)'}</option>
+          <option value="multiple" ${!isSingle ? 'selected' : ''}>${t('optionMultipleCheckbox') || '多選 (Checkbox)'}</option>
+        </select>
+        <label style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; min-height: 44px; background: ${isReq ? '#fef2f2' : '#f8fafc'}; border: 1.5px solid ${isReq ? '#fca5a5' : '#cbd5e1'}; border-radius: 8px; cursor: pointer; user-select: none;">
+          <input type="checkbox" class="mod-group-req-checkbox" ${isReq ? 'checked' : ''} style="width: 18px; height: 18px; accent-color: #ef4444;" onchange="syncItemModifiersFromDOM(); this.closest('label').style.background = this.checked ? '#fef2f2' : '#f8fafc'; this.closest('label').style.borderColor = this.checked ? '#fca5a5' : '#cbd5e1';">
+          <span style="font-size: 13px; font-weight: 700; color: ${isReq ? '#b91c1c' : '#475569'};">${t('labelModifierRequired') || '必選'}</span>
+        </label>
+        <button type="button" class="btn btn-ghost btn-danger-ghost" onclick="removeItemModifierGroup(${gIdx})" style="min-width: 44px; height: 44px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; margin-left: auto;" title="${t('btnItemDelete')}">
+          ${(typeof POS_SVG !== 'undefined' && POS_SVG.trash) || '✕'}
+        </button>
+      </div>
+      <div class="mod-options-container" style="display: flex; flex-direction: column; gap: 6px; margin-top: 4px; padding-left: 8px; border-left: 2px solid #e2e8f0;">
+        ${optionsHtml}
+        <button type="button" class="btn btn-ghost" onclick="addItemModifierOption(${gIdx})" style="margin-top: 6px; align-self: flex-start; min-height: 38px; padding: 0 14px; font-size: 12.5px; font-weight: 700; color: #16a34a; background: #f0fdf4; border: 1.5px dashed #86efac; border-radius: 8px;">
+          + ${t('btnAddModifierOption') || '新增選項'}
+        </button>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function addItemModifierGroup() {
+  syncItemModifiersFromDOM();
+  tempItemModifierGroups.push({
+    id: `mg_${Date.now()}_${tempItemModifierGroups.length + 1}`,
+    name: "",
+    selectionType: "single",
+    isRequired: false,
+    minSelection: 0,
+    maxSelection: 1,
+    options: [
+      { id: `mo_${Date.now()}_1`, name: "", price: 0, isDefault: false }
+    ]
+  });
+  renderItemModifiersEditor();
+}
+window.addItemModifierGroup = addItemModifierGroup;
+
+function removeItemModifierGroup(gIdx) {
+  syncItemModifiersFromDOM();
+  tempItemModifierGroups.splice(gIdx, 1);
+  renderItemModifiersEditor();
+}
+window.removeItemModifierGroup = removeItemModifierGroup;
+
+function addItemModifierOption(gIdx) {
+  syncItemModifiersFromDOM();
+  if (!tempItemModifierGroups[gIdx]) return;
+  if (!Array.isArray(tempItemModifierGroups[gIdx].options)) {
+    tempItemModifierGroups[gIdx].options = [];
+  }
+  tempItemModifierGroups[gIdx].options.push({
+    id: `mo_${Date.now()}_${tempItemModifierGroups[gIdx].options.length + 1}`,
+    name: "",
+    price: 0,
+    isDefault: false
+  });
+  renderItemModifiersEditor();
+}
+window.addItemModifierOption = addItemModifierOption;
+
+function removeItemModifierOption(gIdx, oIdx) {
+  syncItemModifiersFromDOM();
+  if (!tempItemModifierGroups[gIdx] || !tempItemModifierGroups[gIdx].options) return;
+  tempItemModifierGroups[gIdx].options.splice(oIdx, 1);
+  renderItemModifiersEditor();
+}
+window.removeItemModifierOption = removeItemModifierOption;
+
+function saveItemModifiersModal() {
+  syncItemModifiersFromDOM();
+  const cleanGroups = tempItemModifierGroups.filter(grp => {
+    return grp.name && grp.name.trim() !== "";
+  }).map(grp => {
+    const cleanOpts = (grp.options || []).filter(opt => opt.name && opt.name.trim() !== "");
+    let seenDefault = false;
+    cleanOpts.forEach(opt => {
+      if (grp.selectionType === 'single') {
+        if (opt.isDefault) {
+          if (seenDefault) opt.isDefault = false;
+          else seenDefault = true;
+        }
+      }
+    });
+    return {
+      id: grp.id || `mg_${Date.now()}`,
+      name: grp.name.trim(),
+      selectionType: grp.selectionType || 'single',
+      isRequired: Boolean(grp.isRequired),
+      minSelection: grp.isRequired ? 1 : 0,
+      maxSelection: grp.selectionType === 'single' ? 1 : 99,
+      options: cleanOpts
+    };
+  });
+
+  if (currentItemModifiersCidx !== null && currentItemModifiersIidx !== null) {
+    const item = currentMenuData[currentItemModifiersCidx]?.items?.[currentItemModifiersIidx];
+    if (item) {
+      item.modifierGroups = cleanGroups;
+      item.itemType = (item.bundleRule && item.bundleRule.groups && item.bundleRule.groups.length > 0) ? 'bundle' : 'standard';
+      markMenuDirty();
+      renderMenuCategoryEditor(currentItemModifiersCidx);
+    }
+  }
+  closeItemModifiersModal();
+}
+window.saveItemModifiersModal = saveItemModifiersModal;

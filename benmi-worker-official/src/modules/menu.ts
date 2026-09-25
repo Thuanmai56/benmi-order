@@ -210,6 +210,23 @@ export async function updateStockStatus(request: Request, env: Env): Promise<Res
       }
     }
 
+    // Helper to update stock status in modifier_options
+    async function updateModifierOptionStock(): Promise<boolean> {
+      const optionRows = await env.DB.prepare(
+        "SELECT id, group_id FROM modifier_options WHERE tenant_id = ? AND (name = ? OR id = ?)"
+      ).bind(tenantId, name, name).all<any>();
+      if (!optionRows.results || optionRows.results.length === 0) return false;
+
+      await env.DB.prepare(
+        "UPDATE modifier_options SET out_of_stock_until = ?, updated_at = datetime('now') WHERE tenant_id = ? AND (name = ? OR id = ?)"
+      ).bind(outOfStockUntil, tenantId, name, name).run();
+
+      const cacheKey = `tenant:${tenantId}:menu`;
+      if (env.ORDER_STATE) await env.ORDER_STATE.delete(cacheKey);
+      await invalidateBootstrapCache(tenantId, env);
+      return true;
+    }
+
     // Helper to update stock status in menu_customizations
     async function updateCustomizationStock(): Promise<boolean> {
       let query = "SELECT id, key, options_json FROM menu_customizations WHERE tenant_id = ?";
@@ -262,6 +279,13 @@ export async function updateStockStatus(request: Request, env: Env): Promise<Res
       }
     }
 
+    if (category_slug === 'modifier_option' || category_slug === 'modifier_group') {
+      const updated = await updateModifierOptionStock();
+      if (updated) {
+        return json({ success: true, message: "Modifier option stock status updated and cache invalidated." });
+      }
+    }
+
     // 2. Cập nhật trạng thái trong D1 Database
     const dbRes = await env.DB.prepare(
       `UPDATE menu_items 
@@ -272,10 +296,15 @@ export async function updateStockStatus(request: Request, env: Env): Promise<Res
     ).bind(outOfStockUntil, tenantId, name, tenantId, category_slug, category_slug).run();
 
     if (dbRes.meta.changes === 0) {
-      // Fallback: check menu_customizations if not found in menu_items
+      // Fallback 1: check menu_customizations if not found in menu_items
       const updatedFallback = await updateCustomizationStock();
       if (updatedFallback) {
         return json({ success: true, message: "Customization stock status updated and cache invalidated." });
+      }
+      // Fallback 2: check modifier_options
+      const updatedModifier = await updateModifierOptionStock();
+      if (updatedModifier) {
+        return json({ success: true, message: "Modifier option stock status updated and cache invalidated." });
       }
       return json({ error: "Menu item not found or unauthorized" }, 404);
     }
@@ -354,6 +383,7 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
         const custTitle = cust.title || custKey;
         const custType = cust.type || 'radio';
         const custSort = Number(cust.sortOrder ?? cust.sort_order ?? 0);
+        const custIsRequired = (cust.isRequired || cust.is_required) ? 1 : 0;
         const optionsList = Array.isArray(cust.options) ? cust.options : [];
         const optionsJson = JSON.stringify(optionsList);
         const custId = cust.id || `custom_${tenantId}_${custKey}`;
@@ -361,15 +391,16 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
 
         statements.push(
           env.DB.prepare(
-            `INSERT INTO menu_customizations (id, tenant_id, key, title, type, sort_order, options_json, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+            `INSERT INTO menu_customizations (id, tenant_id, key, title, type, is_required, sort_order, options_json, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
              ON CONFLICT(id) DO UPDATE SET
                title = excluded.title,
                type = excluded.type,
+               is_required = excluded.is_required,
                sort_order = excluded.sort_order,
                options_json = excluded.options_json,
                updated_at = datetime('now')`
-          ).bind(custId, tenantId, custKey, custTitle, custType, custSort, optionsJson)
+          ).bind(custId, tenantId, custKey, custTitle, custType, custIsRequired, custSort, optionsJson)
         );
       }
 
@@ -460,11 +491,17 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
         let price = 0;
         let badgeText: string | null = null;
         let isRec = 0;
+        let itemType = 'standard';
+        let modifierGroups: any[] | null = null;
 
         if (typeof itemVal === "object" && itemVal !== null) {
           price = Number(itemVal.price);
           badgeText = itemVal.badge_text || itemVal.badgeText || null;
           isRec = itemVal.is_recommended || itemVal.isRecommended ? 1 : 0;
+          itemType = itemVal.item_type || itemVal.itemType || (itemVal.is_bundle ? 'bundle' : 'standard');
+          if (Array.isArray(itemVal.modifier_groups || itemVal.modifierGroups)) {
+            modifierGroups = itemVal.modifier_groups || itemVal.modifierGroups;
+          }
         } else {
           price = Number(itemVal);
         }
@@ -478,17 +515,100 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
 
         statements.push(
           env.DB.prepare(
-            `INSERT INTO menu_items (id, tenant_id, category_id, name, price, badge_text, is_recommended, sort_order)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `INSERT INTO menu_items (id, tenant_id, category_id, name, price, badge_text, is_recommended, sort_order, item_type)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
              ON CONFLICT(id) DO UPDATE SET 
                category_id = excluded.category_id,
                name = excluded.name,
                price = excluded.price, 
                badge_text = excluded.badge_text, 
                is_recommended = excluded.is_recommended, 
-               sort_order = excluded.sort_order`
-          ).bind(itemId, tenantId, catId, itemName, price, badgeText, isRec, itemSortOrder++)
+               sort_order = excluded.sort_order,
+               item_type = excluded.item_type`
+          ).bind(itemId, tenantId, catId, itemName, price, badgeText, isRec, itemSortOrder++, itemType)
         );
+
+        // If modifier groups are provided for this item, persist them
+        if (modifierGroups !== null) {
+          statements.push(
+            env.DB.prepare("DELETE FROM item_modifier_links WHERE tenant_id = ? AND item_id = ?").bind(tenantId, itemId)
+          );
+          let linkOrder = 0;
+          for (const grp of modifierGroups) {
+            linkOrder++;
+            const grpId = grp.id || `mg_${tenantId}_${Date.now()}_${linkOrder}`;
+            const grpName = grp.name || grp.title || '';
+            const selectionType = grp.selectionType || grp.selection_type || 'single';
+            const isReq = (grp.isRequired || grp.is_required) ? 1 : 0;
+            const minSel = Number(grp.minSelection ?? grp.min_selection ?? (isReq ? 1 : 0));
+            const maxSel = Number(grp.maxSelection ?? grp.max_selection ?? (selectionType === 'single' ? 1 : 99));
+            const grpSort = Number(grp.sortOrder ?? grp.sort_order ?? linkOrder);
+
+            statements.push(
+              env.DB.prepare(
+                `INSERT INTO modifier_groups (id, tenant_id, name, selection_type, is_required, min_selection, max_selection, sort_order, updated_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+                 ON CONFLICT(id) DO UPDATE SET
+                   name = excluded.name,
+                   selection_type = excluded.selection_type,
+                   is_required = excluded.is_required,
+                   min_selection = excluded.min_selection,
+                   max_selection = excluded.max_selection,
+                   sort_order = excluded.sort_order,
+                   updated_at = datetime('now')`
+              ).bind(grpId, tenantId, grpName, selectionType, isReq, minSel, maxSel, grpSort)
+            );
+
+            statements.push(
+              env.DB.prepare(
+                `INSERT INTO item_modifier_links (tenant_id, item_id, group_id, sort_order)
+                 VALUES (?, ?, ?, ?)
+                 ON CONFLICT(tenant_id, item_id, group_id) DO UPDATE SET sort_order = excluded.sort_order`
+              ).bind(tenantId, itemId, grpId, linkOrder)
+            );
+
+            const options = Array.isArray(grp.options) ? grp.options : [];
+            const activeOptIds: string[] = [];
+            let optOrder = 0;
+            for (const opt of options) {
+              optOrder++;
+              const optId = opt.id || `mo_${tenantId}_${grpId}_${optOrder}`;
+              activeOptIds.push(optId);
+              const optName = opt.name || opt.title || '';
+              const optPrice = Number(opt.price || 0);
+              const optIsDef = (opt.isDefault || opt.is_default) ? 1 : 0;
+              const optSort = Number(opt.sortOrder ?? opt.sort_order ?? optOrder);
+
+              statements.push(
+                env.DB.prepare(
+                  `INSERT INTO modifier_options (id, tenant_id, group_id, name, price, is_default, sort_order, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+                   ON CONFLICT(id) DO UPDATE SET
+                     name = excluded.name,
+                     price = excluded.price,
+                     is_default = excluded.is_default,
+                     sort_order = excluded.sort_order,
+                     updated_at = datetime('now')`
+                ).bind(optId, tenantId, grpId, optName, optPrice, optIsDef, optSort)
+              );
+            }
+
+            if (activeOptIds.length > 0) {
+              const optPlaceholders = activeOptIds.map(() => '?').join(',');
+              statements.push(
+                env.DB.prepare(
+                  `DELETE FROM modifier_options WHERE tenant_id = ? AND group_id = ? AND id NOT IN (${optPlaceholders})`
+                ).bind(tenantId, grpId, ...activeOptIds)
+              );
+            } else {
+              statements.push(
+                env.DB.prepare(
+                  `DELETE FROM modifier_options WHERE tenant_id = ? AND group_id = ?`
+                ).bind(tenantId, grpId)
+              );
+            }
+          }
+        }
       }
     }
   }
@@ -512,6 +632,11 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
       const placeholders = chunk.map(() => "?").join(",");
       statements.push(
         env.DB.prepare(
+          `DELETE FROM item_modifier_links WHERE tenant_id = ? AND item_id IN (${placeholders})`
+        ).bind(tenantId, ...chunk)
+      );
+      statements.push(
+        env.DB.prepare(
           `DELETE FROM menu_items WHERE tenant_id = ? AND id IN (${placeholders})`
         ).bind(tenantId, ...chunk)
       );
@@ -529,6 +654,18 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
       );
     }
   }
+
+  // Clean up any modifier groups and options that are no longer linked to any items
+  statements.push(
+    env.DB.prepare(
+      `DELETE FROM modifier_options WHERE tenant_id = ? AND group_id NOT IN (SELECT group_id FROM item_modifier_links WHERE tenant_id = ?)`
+    ).bind(tenantId, tenantId)
+  );
+  statements.push(
+    env.DB.prepare(
+      `DELETE FROM modifier_groups WHERE tenant_id = ? AND id NOT IN (SELECT group_id FROM item_modifier_links WHERE tenant_id = ?)`
+    ).bind(tenantId, tenantId)
+  );
 
   // One batch keeps the entire menu update atomic if any statement fails.
   if (statements.length > 0) {
@@ -807,9 +944,9 @@ export async function saveBundleProduct(request: Request, env: Env): Promise<Res
     catch (error: any) { return json({ code: 'BUNDLE_INVALID_CONFIG', error: error.message }, 400); }
     const ruleId = `rule_${tenantId}_${itemId}`;
     await env.DB.batch([
-      env.DB.prepare(`INSERT INTO menu_items (id, tenant_id, category_id, name, price, sort_order)
-        VALUES (?, ?, ?, ?, ?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM menu_items WHERE tenant_id = ? AND category_id = ?))
-        ON CONFLICT(id) DO UPDATE SET category_id = excluded.category_id, name = excluded.name, price = excluded.price, updated_at = datetime('now')`)
+      env.DB.prepare(`INSERT INTO menu_items (id, tenant_id, category_id, name, price, item_type, sort_order)
+        VALUES (?, ?, ?, ?, ?, 'bundle', (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM menu_items WHERE tenant_id = ? AND category_id = ?))
+        ON CONFLICT(id) DO UPDATE SET category_id = excluded.category_id, name = excluded.name, price = excluded.price, item_type = 'bundle', updated_at = datetime('now')`)
         .bind(itemId, tenantId, categoryId, name, price, tenantId, categoryId),
       env.DB.prepare(`INSERT INTO menu_bundle_rules (id, tenant_id, parent_item_id, schema_version, config_json, is_active, updated_at)
         VALUES (?, ?, ?, 2, ?, 1, datetime('now'))
