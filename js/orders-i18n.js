@@ -444,14 +444,20 @@ const I18N = {
     btnMenuRestore: "恢復預設菜單",
     btnMenuAddItem: "新增項目",
     btnMenuCreateType: "建立設定",
+    btnMenuCreateUnified: "建立新項目",
+    btnMenuAddCustomGroup: "新增客製化分組",
+    btnCatRename: "重新命名",
+    btnCatDelete: "刪除分類",
     createTypeModalTitle: "選擇菜單設定類型",
     createTypeModalSub: "請選擇要新增的餐點或客製化類型",
-    createType1Title: "類型 1：特惠套餐 (組合選擇)",
+    createTypeStandardTitle: "一般單品餐點",
+    createTypeStandardDesc: "快速在目前分類新增一筆餐點，直接填寫名稱與價格。",
+    createTypeModifiersTitle: "單品含客製選項",
+    createTypeModifiersDesc: "獨立單品，可配置專屬加料、甜度冰塊、辣度等多組選項。",
+    createType1Title: "特惠套餐 (組合選擇)",
     createType1Desc: "顧客必須從指定分類中任選 N 樣餐點，支援重複與單品客製。",
-    createType2Title: "類型 2：單品餐點 (含專屬客製選項)",
-    createType2Desc: "一般獨立單品，可靈活綁定辣度、甜度冰塊或加料配料等多組選項。",
-    createType3Title: "類型 3：整單客製化 (餐具、整單備註)",
-    createType3Desc: "適用於整筆訂單的通用偏好設定，支援設定為必填或選填。",
+    createType3Title: "整單客製化 (全單設定)",
+    createType3Desc: "適用於整筆訂單的通用偏好設定 (餐具、整單辣度、通用備註)。",
     btnItemModifiers: "客製選項",
     itemModifiersModalTitle: "設定餐點客製選項",
     itemModifiersModalSub: "為此餐點配置專屬的選項群組 (如加料、甜度冰塊、辣度)",
@@ -1034,14 +1040,20 @@ const I18N = {
     btnMenuRestore: "Khôi phục Menu gốc",
     btnMenuAddItem: "Thêm món mới",
     btnMenuCreateType: "Tạo theo loại",
+    btnMenuCreateUnified: "Thêm mới",
+    btnMenuAddCustomGroup: "Thêm nhóm khẩu vị",
+    btnCatRename: "Đổi tên phân loại",
+    btnCatDelete: "Xóa phân loại",
     createTypeModalTitle: "Chọn loại cấu hình thực đơn",
     createTypeModalSub: "Chọn phương thức tạo phù hợp cho món ăn hoặc tuỳ chọn",
-    createType1Title: "Loại 1: Gói Combo (Bắt buộc chọn)",
-    createType1Desc: "Khách chọn N món từ các danh mục quy định (kèm tuỳ biến nếu có).",
-    createType2Title: "Loại 2: Món có tuỳ chọn (Độ cay, Đá/Đường, Topping...)",
-    createType2Desc: "Món đơn lẻ với các nhóm tuỳ chọn đi kèm tùy chỉnh linh hoạt.",
-    createType3Title: "Loại 3: Tuỳ chọn toàn đơn (Dụng cụ ăn, Mức cay chung...)",
-    createType3Desc: "Cấu hình lựa chọn áp dụng cho toàn bộ đơn hàng (hỗ trợ bắt buộc chọn).",
+    createTypeStandardTitle: "Món đơn lẻ thường",
+    createTypeStandardDesc: "Thêm nhanh một món vào phân loại hiện tại để nhập tên và giá.",
+    createTypeModifiersTitle: "Món kèm tùy chọn",
+    createTypeModifiersDesc: "Món lẻ có các nhóm tùy chọn riêng: topping, mức đường, đá, độ cay...",
+    createType1Title: "Combo ưu đãi (Chọn món)",
+    createType1Desc: "Bán combo gồm đủ N món từ các danh mục nguồn + tùy chọn đi kèm.",
+    createType3Title: "Tùy chọn toàn đơn",
+    createType3Desc: "Áp dụng chung cho cả đơn: dụng cụ ăn uống, mức cay toàn đơn, dặn dò...",
     btnItemModifiers: "Tuỳ chọn món",
     itemModifiersModalTitle: "Thiết lập tuỳ chọn cho món",
     itemModifiersModalSub: "Cấu hình các nhóm tuỳ chọn riêng cho món này (Topping, Đường đá, Độ cay...)",
@@ -2029,20 +2041,39 @@ function applyLanguageToDOM() {
   const btnMenuAddText = document.getElementById("i18n-btn-add-item-text");
   if (btnMenuAddText) btnMenuAddText.innerText = dict.btnMenuAddItem;
   else if (btnMenuAdd) btnMenuAdd.innerText = dict.btnMenuAddItem;
+  const btnCreateUnifiedText = document.getElementById("i18n-btn-create-unified-text");
+  if (btnCreateUnifiedText) {
+    const isFlavor = typeof currentMenuData !== 'undefined' && currentMenuData && typeof activeCategoryIndex !== 'undefined' && activeCategoryIndex >= 0 && (currentMenuData[activeCategoryIndex].type === 'order_customization' || currentMenuData[activeCategoryIndex].id === 'sec-flavor');
+    btnCreateUnifiedText.innerText = isFlavor ? (dict.btnMenuAddCustomGroup || "新增客製化分組") : (dict.btnMenuCreateUnified || "建立新項目");
+  }
+  const btnCatRename = document.getElementById("btn-category-rename");
+  if (btnCatRename) {
+    btnCatRename.setAttribute("title", dict.btnCatRename || "重新命名");
+    btnCatRename.setAttribute("aria-label", dict.btnCatRename || "重新命名");
+  }
+  const btnCatDelete = document.getElementById("btn-category-delete");
+  if (btnCatDelete) {
+    btnCatDelete.setAttribute("title", dict.btnCatDelete || "刪除分類");
+    btnCatDelete.setAttribute("aria-label", dict.btnCatDelete || "刪除分類");
+  }
   const btnMenuCreateType = document.getElementById("i18n-btn-create-type-text");
   if (btnMenuCreateType) btnMenuCreateType.innerText = dict.btnMenuCreateType;
   const createTypeT = document.getElementById("i18n-create-type-title");
   if (createTypeT) createTypeT.innerText = dict.createTypeModalTitle;
   const createTypeS = document.getElementById("i18n-create-type-sub");
   if (createTypeS) createTypeS.innerText = dict.createTypeModalSub;
+  const tStdTitle = document.getElementById("i18n-type-std-title");
+  if (tStdTitle) tStdTitle.innerText = dict.createTypeStandardTitle;
+  const tStdDesc = document.getElementById("i18n-type-std-desc");
+  if (tStdDesc) tStdDesc.innerText = dict.createTypeStandardDesc;
+  const tModTitle = document.getElementById("i18n-type-mod-title");
+  if (tModTitle) tModTitle.innerText = dict.createTypeModifiersTitle;
+  const tModDesc = document.getElementById("i18n-type-mod-desc");
+  if (tModDesc) tModDesc.innerText = dict.createTypeModifiersDesc;
   const t1Title = document.getElementById("i18n-type-1-title");
   if (t1Title) t1Title.innerText = dict.createType1Title;
   const t1Desc = document.getElementById("i18n-type-1-desc");
   if (t1Desc) t1Desc.innerText = dict.createType1Desc;
-  const t2Title = document.getElementById("i18n-type-2-title");
-  if (t2Title) t2Title.innerText = dict.createType2Title;
-  const t2Desc = document.getElementById("i18n-type-2-desc");
-  if (t2Desc) t2Desc.innerText = dict.createType2Desc;
   const t3Title = document.getElementById("i18n-type-3-title");
   if (t3Title) t3Title.innerText = dict.createType3Title;
   const t3Desc = document.getElementById("i18n-type-3-desc");

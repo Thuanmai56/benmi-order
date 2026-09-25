@@ -284,12 +284,12 @@ function closeCategoriesManager() {
     if (bodyEl) bodyEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;" id="i18n-menu-select-prompt">${t("menuSelectPrompt")}</div>`;
     const renameBtn = document.getElementById("btn-category-rename");
     const deleteBtn = document.getElementById("btn-category-delete");
-    const addItemBtn = document.getElementById("btn-menu-add-item");
+    const createBtn = document.getElementById("btn-menu-create-unified");
     const addCatTopBtn = document.getElementById("btn-menu-add-cat-top");
     const closeBtn = document.getElementById("btn-menu-manage-close");
     if (renameBtn) renameBtn.style.display = "none";
     if (deleteBtn) deleteBtn.style.display = "none";
-    if (addItemBtn) addItemBtn.style.display = "none";
+    if (createBtn) createBtn.style.display = "none";
     if (addCatTopBtn) addCatTopBtn.style.display = "none";
     if (closeBtn) closeBtn.style.display = "none";
   }
@@ -333,13 +333,13 @@ function renderCategoriesManagerView() {
   // Toggle header action buttons
   const renameBtn = document.getElementById("btn-category-rename");
   const deleteBtn = document.getElementById("btn-category-delete");
-  const addItemBtn = document.getElementById("btn-menu-add-item");
+  const createBtn = document.getElementById("btn-menu-create-unified");
   const addCatTopBtn = document.getElementById("btn-menu-add-cat-top");
   const closeBtn = document.getElementById("btn-menu-manage-close");
 
   if (renameBtn) renameBtn.style.display = "none";
   if (deleteBtn) deleteBtn.style.display = "none";
-  if (addItemBtn) addItemBtn.style.display = "none";
+  if (createBtn) createBtn.style.display = "none";
   if (addCatTopBtn) addCatTopBtn.style.display = "inline-flex";
   if (closeBtn) closeBtn.style.display = "inline-flex";
 
@@ -519,23 +519,20 @@ function renderMenuCategoryEditor(index) {
   isCategoryManagerOpen = false;
   const renameBtn = document.getElementById("btn-category-rename");
   const deleteBtn = document.getElementById("btn-category-delete");
-  const addItemBtn = document.getElementById("btn-menu-add-item");
+  const createBtn = document.getElementById("btn-menu-create-unified");
+  const createBtnText = document.getElementById("i18n-btn-create-unified-text");
   const addCatTopBtn = document.getElementById("btn-menu-add-cat-top");
   const closeBtn = document.getElementById("btn-menu-manage-close");
   const subEl = document.getElementById("i18n-menu-edit-sub");
 
   if (addCatTopBtn) addCatTopBtn.style.display = "none";
   if (closeBtn) closeBtn.style.display = "none";
-  if (addItemBtn) addItemBtn.style.display = "inline-flex";
-  const addBundleBtn = document.getElementById('btn-menu-add-bundle');
-  if (addBundleBtn) addBundleBtn.style.display = currentMenuData?.[index]?.type === 'catalog' && !window.currentTenantFeatures?.includes('disable_bundle_builder_v2') ? 'inline-flex' : 'none';
-  const addBundleLabel = document.getElementById('i18n-btn-create-bundle');
-  if (addBundleLabel) addBundleLabel.textContent = t('comboCreateTitle');
   if (subEl) subEl.innerText = t("menuEditSub");
 
   if (!currentMenuData || !currentMenuData[index]) {
     if (renameBtn) renameBtn.style.display = "none";
     if (deleteBtn) deleteBtn.style.display = "none";
+    if (createBtn) createBtn.style.display = "none";
     return;
   }
 
@@ -544,18 +541,23 @@ function renderMenuCategoryEditor(index) {
   if (cat.type === 'order_customization' || cat.id === 'sec-flavor') {
     if (renameBtn) renameBtn.style.display = "none";
     if (deleteBtn) deleteBtn.style.display = "none";
-    if (addItemBtn) {
-      addItemBtn.style.display = "inline-flex";
-      addItemBtn.innerText = formatPlusBtnText(t("btnAddCustomGroup"), "新增客製化分組");
-      addItemBtn.onclick = () => addCustomizationGroup(index);
+    if (createBtn) {
+      createBtn.style.display = "inline-flex";
+      const customLabel = t("btnMenuAddCustomGroup") || "新增客製化分組";
+      if (createBtnText) createBtnText.innerText = customLabel.replace(/^\+\s*/, '');
+      else createBtn.innerText = customLabel;
+      createBtn.onclick = () => addCustomizationGroup(index);
     }
     renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), cat, index);
     return;
   }
 
-  if (addItemBtn) {
-    addItemBtn.innerText = formatPlusBtnText(t("btnMenuAddItem"), "新增項目");
-    addItemBtn.onclick = () => addNewMenuItem();
+  if (createBtn) {
+    createBtn.style.display = "inline-flex";
+    const unifiedLabel = t("btnMenuCreateUnified") || "建立新項目";
+    if (createBtnText) createBtnText.innerText = unifiedLabel.replace(/^\+\s*/, '');
+    else createBtn.innerText = unifiedLabel;
+    createBtn.onclick = () => handleMenuCreateClick();
   }
 
   if (renameBtn) renameBtn.style.display = "inline-flex";
@@ -1036,19 +1038,7 @@ function removeMenuItemAt(cIdx, iIdx) {
 }
 
 function addNewMenuItem() {
-  if (activeCategoryIndex < 0 || !currentMenuData) return;
-  syncMenuDataFromDOM();
-  const cat = currentMenuData[activeCategoryIndex];
-  if (cat && (cat.type === 'order_customization' || cat.id === 'sec-flavor')) {
-    addCustomizationGroup(activeCategoryIndex);
-    return;
-  }
-  if (cat && Array.isArray(cat.items)) {
-    cat.items.unshift({ name: t("newItemPlaceholder"), price: 0, badgeText: "" });
-  }
-  markMenuDirty();
-  renderMenuCategoryEditor(activeCategoryIndex);
-  renderMenuCategories();
+  handleSelectCreateType('standard_item');
 }
 
 function syncMenuDataFromDOM() {
@@ -2340,17 +2330,56 @@ function closeCreationTypeModal() {
 }
 window.closeCreationTypeModal = closeCreationTypeModal;
 
+function handleMenuCreateClick() {
+  if (activeCategoryIndex >= 0 && currentMenuData && currentMenuData[activeCategoryIndex]) {
+    const cat = currentMenuData[activeCategoryIndex];
+    if (cat.type === 'order_customization' || cat.id === 'sec-flavor') {
+      addCustomizationGroup(activeCategoryIndex);
+      return;
+    }
+  }
+  openCreationTypeModal();
+}
+window.handleMenuCreateClick = handleMenuCreateClick;
+
 function handleSelectCreateType(type) {
   closeCreationTypeModal();
-  if (type === 'bundle') {
+  let targetCatIdx = activeCategoryIndex;
+  if (!currentMenuData || targetCatIdx < 0 || currentMenuData[targetCatIdx].type !== 'catalog') {
+    targetCatIdx = currentMenuData ? currentMenuData.findIndex(c => c.type === 'catalog') : -1;
+  }
+
+  if (type === 'standard_item') {
+    if (targetCatIdx >= 0) {
+      activeCategoryIndex = targetCatIdx;
+      renderMenuCategories();
+      const newItem = {
+        name: "",
+        price: 0,
+        badgeText: "",
+        isRecommended: false,
+        isOos: false,
+        bundleRule: null,
+        itemType: "standard",
+        modifierGroups: []
+      };
+      currentMenuData[targetCatIdx].items.push(newItem);
+      markMenuDirty();
+      const newItemIdx = currentMenuData[targetCatIdx].items.length - 1;
+      renderMenuCategoryEditor(targetCatIdx);
+      setTimeout(() => {
+        const inp = document.querySelector(`input[data-name-cidx="${targetCatIdx}"][data-name-iidx="${newItemIdx}"]`);
+        if (inp) {
+          inp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          inp.focus();
+        }
+      }, 60);
+    }
+  } else if (type === 'bundle') {
     if (typeof openBundleWizard === 'function') {
       openBundleWizard();
     }
   } else if (type === 'item_with_options') {
-    let targetCatIdx = activeCategoryIndex;
-    if (!currentMenuData || targetCatIdx < 0 || currentMenuData[targetCatIdx].type !== 'catalog') {
-      targetCatIdx = currentMenuData ? currentMenuData.findIndex(c => c.type === 'catalog') : -1;
-    }
     if (targetCatIdx >= 0) {
       activeCategoryIndex = targetCatIdx;
       renderMenuCategories();
