@@ -2382,15 +2382,6 @@ input[type="checkbox"] {
 .bundle-v2-nav, .bundle-v2-copy { min-height:44px; padding:8px 14px; border:1px solid #cbd5e1; border-radius:10px; background:#fff; color:#334155; font-weight:700; white-space:nowrap; }
 .bundle-v2-nav.active { border-color:#059669; background:#ecfdf5; color:#065f46; }
 .bundle-v2-copy { margin:8px 16px; }
-.bundle-item-card {
-  flex-wrap: wrap;
-}
-.bundle-item-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-}
 .bundle-v2-badge-fixed {
   font-size: 12px;
   font-weight: 700;

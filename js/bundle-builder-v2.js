@@ -45,22 +45,32 @@
     const group = rule.groups[groupIndex];
     const items = selections[group.id] || [];
     const nav = document.getElementById('bundle-step-nav');
-    nav.innerHTML = rule.groups.map((candidate, index) => `<button type="button" class="bundle-v2-nav ${index === groupIndex ? 'active' : ''}" onclick="bundleChooseGroup(${index})">${validGroup(candidate, selections[candidate.id]) ? '✓ ' : ''}${esc(groupName(candidate))}</button>`).join('');
+    if (nav) {
+      if (rule.groups.length > 1) {
+        if (nav.style) nav.style.display = 'flex';
+        nav.innerHTML = rule.groups.map((candidate, index) => `<button type="button" class="bundle-v2-nav ${index === groupIndex ? 'active' : ''}" onclick="bundleChooseGroup(${index})">${validGroup(candidate, selections[candidate.id]) ? '✓ ' : ''}${esc(groupName(candidate))}</button>`).join('');
+      } else {
+        if (nav.style) nav.style.display = 'none';
+        nav.innerHTML = '';
+      }
+    }
     const stale = rule.groups.some(candidate => (selections[candidate.id] || []).some(item => {
       const current = candidate.eligibleItems?.find(source => source.id === item.itemId);
       return current && Number(current.surcharge || 0) !== Number(item.surcharge || 0);
     }));
     document.getElementById('bundle-refresh-prices').style.display = stale ? 'block' : 'none';
-    document.getElementById('bundle-modal-group-label').textContent = groupName(group);
+    const cleanGroupLabel = (group.name || '').replace(/^請選擇\s*(\d+\s*樣)?/g, '').trim() || '配菜';
+    document.getElementById('bundle-modal-group-label').textContent = `請選擇 ${maxOf(group)} 樣${cleanGroupLabel}`;
     document.getElementById('bundle-modal-current-count').textContent = String(items.length);
     document.getElementById('bundle-modal-max-count').textContent = String(maxOf(group));
-    document.getElementById('bundle-progress-fill').style.width = `${Math.round(rule.groups.filter(g => validGroup(g, selections[g.id])).length * 100 / rule.groups.length)}%`;
+    const fillPct = maxOf(group) > 0 ? Math.min(100, Math.round((items.length / maxOf(group)) * 100)) : 0;
+    document.getElementById('bundle-progress-fill').style.width = `${fillPct}%`;
     document.getElementById('bundle-quota-badge').style.display = validGroup(group, items) ? 'inline-flex' : 'none';
 
     const cats = new Map([['all', '全部']]);
     (group.eligibleItems || []).forEach(item => {
       const cat = bootstrapData?.catalog?.find(candidate => candidate.id === item.categoryId);
-      if (cat) cats.set(cat.id, cat.shortName || cat.name);
+      if (cat) cats.set(cat.id, cat.name || cat.shortName);
     });
     document.getElementById('bundle-cat-tabs').innerHTML = group.type === 'fixed' ? '' : [...cats].map(([id, label]) => `<button type="button" class="bundle-cat-tab-btn ${draft.category === id ? 'active' : ''}" onclick="bundleFilterCategory('${esc(id)}')">${esc(label)}</button>`).join('');
     const list = document.getElementById('bundle-items-list');
@@ -102,59 +112,57 @@
 
       if (group.type === 'fixed') {
         return `<div class="bundle-item-card selected">
-          <div class="bundle-item-head">
-            <div class="bundle-item-info">
-              <span class="bundle-item-title">${safeName}</span>${priceLabel}
-            </div>
-            <span class="bundle-v2-badge-fixed">已包含</span>
+          <div class="bundle-item-info">
+            <span class="bundle-item-title">${safeName}</span>${priceLabel}
           </div>
-          ${settings}
-        </div>`;
+          <span class="bundle-v2-badge-fixed">已包含</span>
+        </div>${settings}`;
       }
 
       if (count === 0) {
         return `<div class="bundle-item-card ${soldOut ? 'sold-out' : ''}" ${canAdd ? `onclick="${addAction}" style="cursor:pointer;"` : ''} style="${soldOut ? 'opacity: 0.5; pointer-events: none;' : ''}">
-          <div class="bundle-item-head">
-            <div class="bundle-item-info">
-              <span class="bundle-item-title">${safeName}</span>${priceLabel}${oosBadge}
-            </div>
-            <div class="bundle-stepper" onclick="event.stopPropagation()">
-              <button type="button" class="bundle-btn-add ${disabledPlus ? 'disabled' : ''}" onclick="${addAction}" ${disabledPlus ? 'disabled' : ''} aria-label="Add ${safeName}">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-              </button>
-            </div>
-          </div>
-        </div>`;
-      }
-
-      return `<div class="bundle-item-card selected ${soldOut ? 'sold-out' : ''}">
-        <div class="bundle-item-head">
           <div class="bundle-item-info">
             <span class="bundle-item-title">${safeName}</span>${priceLabel}${oosBadge}
           </div>
           <div class="bundle-stepper" onclick="event.stopPropagation()">
-            <button type="button" class="bundle-btn-minus" onclick="bundleRemoveLastItemOf('${esc(source.id)}')" aria-label="Decrease">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            </button>
-            <span class="bundle-qty-val">${count}</span>
-            <button type="button" class="bundle-btn-plus ${disabledPlus ? 'disabled' : ''}" onclick="${addAction}" ${disabledPlus ? 'disabled' : ''} aria-label="Increase">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <button type="button" class="bundle-btn-add ${disabledPlus ? 'disabled' : ''}" onclick="${addAction}" ${disabledPlus ? 'disabled' : ''} aria-label="Add ${safeName}">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
             </button>
           </div>
+        </div>`;
+      }
+
+      return `<div class="bundle-item-card selected ${soldOut ? 'sold-out' : ''}" style="${soldOut ? 'opacity: 0.5; pointer-events: none;' : ''}">
+        <div class="bundle-item-info">
+          <span class="bundle-item-title">${safeName}</span>${priceLabel}${oosBadge}
         </div>
-        ${settings}
-      </div>`;
+        <div class="bundle-stepper" onclick="event.stopPropagation()">
+          <button type="button" class="bundle-btn-minus" onclick="bundleRemoveLastItemOf('${esc(source.id)}')" aria-label="Decrease">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          </button>
+          <span class="bundle-qty-val">${count}</span>
+          <button type="button" class="bundle-btn-plus ${disabledPlus ? 'disabled' : ''}" onclick="${addAction}" ${disabledPlus ? 'disabled' : ''} aria-label="Increase">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          </button>
+        </div>
+      </div>${settings}`;
     }).join('');
     const orphaned = group.type === 'fixed' ? '' : items.map((item, index) => ({ item, index })).filter(({ item }) => !(group.eligibleItems || []).some(source => source.id === item.itemId)).map(({ item, index }) =>
-      `<div class="bundle-v2-item sold-out"><strong>${esc(item.name || item.itemId)}</strong><span>已無法選擇，請移除</span><button type="button" onclick="bundleRemoveItem(${index})">移除</button></div>`).join('');
+      `<div class="bundle-item-card sold-out"><div class="bundle-item-info"><span class="bundle-item-title">${esc(item.name || item.itemId)}</span><span style="color:#dc2626; font-size:12px; margin-left:8px;">已無法選擇，請移除</span></div><button type="button" class="bundle-btn-minus" onclick="bundleRemoveItem(${index})">✕</button></div>`).join('');
     list.innerHTML = listed + orphaned || '<p class="bundle-v2-empty">目前沒有可選餐點</p>';
 
-    const extra = rule.groups.reduce((sum, candidate) => sum + (selections[candidate.id] || []).reduce((amount, item) => amount + itemExtra(item), 0), 0);
-    const price = Number(draft.itemInfo?.basePrice ?? draft.itemInfo?.targetItem?.price ?? 0) + extra;
+    const remain = Math.max(0, minOf(group) - items.length);
     const complete = rule.groups.every(candidate => validGroup(candidate, selections[candidate.id]));
     const btn = document.getElementById('bundle-confirm-btn');
-    btn.disabled = !complete;
-    btn.textContent = complete ? `加入購物車 · $${price}` : `請完成所有選擇 · $${price}`;
+    if (!complete) {
+      btn.disabled = true;
+      btn.className = 'bundle-confirm-btn pending';
+      btn.innerHTML = `還需選擇 ${remain} 樣${cleanGroupLabel} <span style="font-size: 13px; font-weight: 600; opacity: 0.85; margin-left: 4px;">(已選 ${items.length}/${maxOf(group)})</span>`;
+    } else {
+      btn.disabled = false;
+      btn.className = 'bundle-confirm-btn ready';
+      btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><polyline points="20 6 9 17 4 12"></polyline></svg>確認${cleanGroupLabel} <span style="font-size: 13px; font-weight: 600; opacity: 0.9; margin-left: 4px;">(已選 ${items.length} 樣)</span>`;
+    }
     const copy = document.getElementById('bundle-copy-previous');
     copy.style.display = draft.portionIndex > 0 && mode === 'new' ? 'block' : 'none';
   }

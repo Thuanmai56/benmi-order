@@ -15,8 +15,8 @@ const cssContent = fs.readFileSync(cssPath, 'utf-8');
 const htmlContent = fs.readFileSync(htmlPath, 'utf-8');
 
 console.log('Test 1: Verify cache-buster version bump in index.html...');
-assert.ok(htmlContent.includes('js/bundle-builder-v2.js?v=20260925_combo_stepper_v1'), 'index.html must reference bundle-builder-v2.js with version 20260925_combo_stepper_v1');
-assert.ok(htmlContent.includes('index.css?v=20260925_combo_stepper_v1'), 'index.html must reference index.css with version 20260925_combo_stepper_v1');
+assert.ok(htmlContent.includes('js/bundle-builder-v2.js?v=20260925_combo_exact_v1'), 'index.html must reference bundle-builder-v2.js with version 20260925_combo_exact_v1');
+assert.ok(htmlContent.includes('index.css?v=20260925_combo_exact_v1'), 'index.html must reference index.css with version 20260925_combo_exact_v1');
 console.log('✓ Cache busters verified in index.html.');
 
 console.log('Test 2: Verify original button CSS rules in index.css...');
@@ -30,7 +30,7 @@ console.log('✓ Original button CSS rules verified.');
 console.log('Test 3: Verify JS logic and stepper HTML generation...');
 // Set up mock DOM and environment
 const domElements = {
-  'bundle-step-nav': { innerHTML: '' },
+  'bundle-step-nav': { innerHTML: '', style: { display: 'none' } },
   'bundle-refresh-prices': { style: { display: 'none' } },
   'bundle-copy-previous': { style: { display: 'none' } },
   'bundle-cat-tabs': { innerHTML: '' },
