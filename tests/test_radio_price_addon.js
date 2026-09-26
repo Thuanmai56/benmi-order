@@ -4,26 +4,27 @@ const path = require('path');
 
 console.log('--- Testing Radio Customization Price Addon (+20) ---');
 
-const indexHtml = fs.readFileSync(path.resolve(__dirname, '../index.html'), 'utf-8');
+const clientMenuJs = fs.readFileSync(path.resolve(__dirname, '../js/client-menu.js'), 'utf-8');
+const clientCartJs = fs.readFileSync(path.resolve(__dirname, '../js/client-cart.js'), 'utf-8');
 const clientCheckoutJs = fs.readFileSync(path.resolve(__dirname, '../js/client-checkout.js'), 'utf-8');
 
 // Test 1: Verify renderCustomizationsPanel produces data-price on radio inputs
 assert.ok(
-    indexHtml.includes('input type="radio" name="${inputName}" data-price="${optPrice}" data-group-title="${escapeHtml(group.title)}"'),
+    clientMenuJs.includes('input type="radio" name="${inputName}" data-price="${optPrice}" data-group-title="${escapeHtml(group.title)}"'),
     'Radio inputs must have data-price and data-group-title in renderCustomizationsPanel'
 );
 console.log('✓ Test 1 Passed: Radio inputs have data-price and data-group-title');
 
 // Test 2: Verify updateTotal queries input[data-price]:checked instead of only checkbox
 assert.ok(
-    indexHtml.includes("document.querySelectorAll('.custom-panel input[data-price]:checked')"),
+    clientCartJs.includes("document.querySelectorAll('.custom-panel input[data-price]:checked')"),
     "updateTotal must select all checked inputs with data-price (.custom-panel input[data-price]:checked)"
 );
 console.log('✓ Test 2 Passed: updateTotal queries .custom-panel input[data-price]:checked');
 
 // Test 3: Verify customSummaries in updateTotal displays price suffix for radio
 assert.ok(
-    indexHtml.includes("const priceSuffix = p > 0 ? ` (+$${p})` : '';"),
+    clientCartJs.includes("const priceSuffix = p > 0 ? ` (+$${p})` : '';"),
     "customSummaries in updateTotal must include price suffix if radio price > 0"
 );
 console.log('✓ Test 3 Passed: customSummaries includes priceSuffix for radio addons');

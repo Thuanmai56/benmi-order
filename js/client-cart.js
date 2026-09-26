@@ -43,6 +43,8 @@ function calculateCurrentFoodSubtotal() {
         cat.items.forEach(it => { priceMap[`${cat.slug}_${it.name}`] = it.price; });
     });
     const resolveFn = typeof resolveCatalogItem === 'function' ? resolveCatalogItem : (window.resolveCatalogItem || (k => ({ origName: k, displayName: k })));
+    const cData = window.customizeData || customizeData;
+    const getPrice = window.getModifierPrice || (typeof getModifierPrice === 'function' ? getModifierPrice : () => 0);
 
     for (let key in cartObj) {
         if (cartObj[key] > 0) {
@@ -55,7 +57,28 @@ function calculateCurrentFoodSubtotal() {
                 window.editOrderSoldOutNames.some(s => s && s.trim() && (dName.includes(s.trim()) || (itemInfo.origName && itemInfo.origName.includes(s.trim()))))
             )) continue;
             const basePrice = itemInfo.basePrice || priceMap[key] || 0;
-            subtotal += (basePrice * cartObj[key]);
+            const qty = cartObj[key];
+            subtotal += (basePrice * qty);
+
+            const portions = cData ? cData[key] : null;
+            if (Array.isArray(portions)) {
+                portions.slice(0, qty).forEach(p => {
+                    if (p) {
+                        if (p.single) {
+                            Object.values(p.single).forEach(optName => {
+                                subtotal += getPrice(optName);
+                            });
+                        }
+                        if (p.multiple) {
+                            Object.keys(p.multiple).forEach(optName => {
+                                if (p.multiple[optName]) {
+                                    subtotal += getPrice(optName);
+                                }
+                            });
+                        }
+                    }
+                });
+            }
         }
     }
     return subtotal;
@@ -380,12 +403,14 @@ function updateTotal() {
             cat.items.forEach(it => { priceMap[`${cat.slug}_${it.name}`] = it.price; });
         });
     }
-    const modPriceMap = {};
-    if (bData?.modifiers) {
-        bData.modifiers.forEach(mod => {
-            mod.options.forEach(opt => { modPriceMap[opt.name] = opt.price || 0; });
-        });
+    if (typeof buildModifierPriceMap === 'function' && (!window.modPriceMap || Object.keys(window.modPriceMap).length === 0)) {
+        buildModifierPriceMap(bData);
     }
+    const getPrice = window.getModifierPrice || (typeof getModifierPrice === 'function' ? getModifierPrice : (opt => {
+        if (!opt) return 0;
+        const m = window.modPriceMap || {};
+        return m[opt] || 0;
+    }));
 
     // Group active cart items by category
     const itemsByCategory = {};
@@ -455,7 +480,7 @@ function updateTotal() {
                         for (let s in c.single) {
                             const val = c.single[s];
                             if (val && val !== '不辣' && val !== '不需要') {
-                                const addP = modPriceMap[val] || 0;
+                                const addP = getPrice(val);
                                 if (addP > 0) {
                                     if (!isOutOfStock) itemModifiersTotal += addP;
                                     parts.push(`${val} (+$${addP})`);
@@ -468,7 +493,7 @@ function updateTotal() {
                     if (c.multiple) {
                         for (let topName in c.multiple) {
                             if (c.multiple[topName]) {
-                                const topPrice = modPriceMap[topName] || 0;
+                                const topPrice = getPrice(topName);
                                 if (!isOutOfStock) itemModifiersTotal += topPrice;
                                 if (topPrice > 0) {
                                     parts.push(`${topName} (+$${topPrice})`);
@@ -527,7 +552,7 @@ function updateTotal() {
                                 for (let s in c.single) {
                                     const val = c.single[s];
                                     if (val && val !== '不辣' && val !== '不需要') {
-                                        const addP = modPriceMap[val] || 0;
+                                        const addP = getPrice(val);
                                         customParts.push(addP > 0 ? `${val} (+$${addP})` : val);
                                     }
                                 }
@@ -535,7 +560,7 @@ function updateTotal() {
                             if (c.multiple) {
                                 for (let topName in c.multiple) {
                                     if (c.multiple[topName]) {
-                                        const topPrice = modPriceMap[topName] || 0;
+                                        const topPrice = getPrice(topName);
                                         customParts.push(topPrice > 0 ? `${topName} (+$${topPrice})` : topName);
                                     }
                                 }

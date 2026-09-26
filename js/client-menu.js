@@ -22,6 +22,9 @@ async function fetchMenu() {
 
             bootstrapData = freshData;
             window.bootstrapData = freshData;
+            if (typeof buildModifierPriceMap === 'function') {
+                buildModifierPriceMap(freshData);
+            }
             storeConfig = bootstrapData.tenant ? {
                 allowScheduledPickup: bootstrapData.tenant.allowScheduledPickup,
                 allowDineIn: bootstrapData.tenant.allowDineIn,

@@ -51,6 +51,7 @@ window.cart = window.cart || {};
 window.customizeData = window.customizeData || {};
 window.comboDrinkData = window.comboDrinkData || {};
 window.bundleCartData = window.bundleCartData || {};
+window.modPriceMap = window.modPriceMap || {};
 window.currentPopup = window.currentPopup || null;
 window.alertCallback = window.alertCallback || null;
 window.isSubmitting = false;
@@ -82,6 +83,59 @@ var itemTranslations = {
     "雪碧": "Sprite"
 };
 window.itemTranslations = itemTranslations;
+
+// Dynamic Modifiers Price Resolution Helpers
+function buildModifierPriceMap(bData) {
+    const data = bData || window.bootstrapData || (typeof bootstrapData !== 'undefined' ? bootstrapData : null);
+    const map = {};
+    if (data?.modifiers && Array.isArray(data.modifiers)) {
+        data.modifiers.forEach(mod => {
+            (mod.options || []).forEach(opt => {
+                const p = Number(opt.price) || 0;
+                if (opt.name) {
+                    const name = String(opt.name).trim();
+                    map[name] = p;
+                    // Provide dual mapping for option names with or without "加" prefix
+                    if (name.startsWith('加')) {
+                        const stripped = name.substring(1).trim();
+                        if (map[stripped] === undefined) map[stripped] = p;
+                    } else {
+                        const added = '加' + name;
+                        if (map[added] === undefined) map[added] = p;
+                    }
+                }
+                if (opt.id) {
+                    map[opt.id] = p;
+                }
+            });
+        });
+    }
+    window.modPriceMap = map;
+    return map;
+}
+
+function getModifierPrice(optName) {
+    if (!optName) return 0;
+    if (!window.modPriceMap || Object.keys(window.modPriceMap).length === 0) {
+        buildModifierPriceMap(window.bootstrapData || (typeof bootstrapData !== 'undefined' ? bootstrapData : null));
+    }
+    const cleanName = String(optName).trim();
+    if (window.modPriceMap && window.modPriceMap[cleanName] !== undefined) {
+        return window.modPriceMap[cleanName];
+    }
+    if (cleanName.startsWith('加')) {
+        const stripped = cleanName.substring(1).trim();
+        if (window.modPriceMap && window.modPriceMap[stripped] !== undefined) {
+            return window.modPriceMap[stripped];
+        }
+    } else {
+        const added = '加' + cleanName;
+        if (window.modPriceMap && window.modPriceMap[added] !== undefined) {
+            return window.modPriceMap[added];
+        }
+    }
+    return 0;
+}
 
 // Dining Option State ('takeaway' | 'dine_in')
 function setCustomerDiningOption(opt) {
@@ -931,6 +985,9 @@ async function initApp() {
             if (parsed && parsed.tenant) {
                 bootstrapData = parsed;
                 window.bootstrapData = parsed;
+                if (typeof buildModifierPriceMap === 'function') {
+                    buildModifierPriceMap(parsed);
+                }
                 storeConfig = {
                     allowScheduledPickup: parsed.tenant.allowScheduledPickup,
                     allowDineIn: parsed.tenant.allowDineIn,
@@ -1049,3 +1106,5 @@ window.isStoreOpen = isStoreOpen;
 window.checkStoreStatus = checkStoreStatus;
 window.fetchWaitingCounter = fetchWaitingCounter;
 window.initApp = initApp;
+window.buildModifierPriceMap = buildModifierPriceMap;
+window.getModifierPrice = getModifierPrice;

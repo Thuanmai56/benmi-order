@@ -167,9 +167,9 @@ function toggleCustomize(category, origName) {
 
     const okBtn = document.createElement('button');
     okBtn.innerText = '完成設定';
-    okBtn.className = 'btn-send';
+    okBtn.className = 'btn-send btn-customize-ok';
     okBtn.style.cssText = 'width:100%; margin-top:8px;';
-    okBtn.onclick = () => { closePopup(); if (typeof updateTotal === 'function') updateTotal(); };
+    okBtn.onclick = () => { closePopup(); };
     box.appendChild(okBtn);
 
     overlay.appendChild(box);
@@ -183,6 +183,38 @@ function toggleCustomize(category, origName) {
     document.body.appendChild(overlay);
     currentPopup = overlay;
     window.currentPopup = overlay;
+
+    updateCustomizeOkBtn(key);
+}
+
+function updateCustomizeOkBtn(key) {
+    const popup = window.currentPopup || currentPopup;
+    if (!popup) return;
+    const okBtn = popup.querySelector('.btn-customize-ok');
+    if (!okBtn) return;
+    const cData = window.customizeData || customizeData;
+    const portions = cData ? cData[key] : null;
+    let extra = 0;
+    const getPrice = window.getModifierPrice || (typeof getModifierPrice === 'function' ? getModifierPrice : () => 0);
+    if (Array.isArray(portions)) {
+        portions.forEach(p => {
+            if (p) {
+                if (p.single) {
+                    Object.values(p.single).forEach(optName => {
+                        extra += getPrice(optName);
+                    });
+                }
+                if (p.multiple) {
+                    Object.keys(p.multiple).forEach(optName => {
+                        if (p.multiple[optName]) {
+                            extra += getPrice(optName);
+                        }
+                    });
+                }
+            }
+        });
+    }
+    okBtn.innerText = extra > 0 ? `完成設定 (+$${extra})` : '完成設定';
 }
 
 // Dynamic tenant modifier helpers
@@ -197,7 +229,9 @@ function selectSingleModifier(key, portionIdx, modSlug, optName, el) {
     const parentRow = el.parentElement;
     if (parentRow) parentRow.querySelectorAll('.modifier-pill').forEach(p => p.classList.remove('active'));
     el.classList.add('active');
+    updateCustomizeOkBtn(key);
     if (typeof updateTotal === 'function') updateTotal();
+    else if (typeof window.updateTotal === 'function') window.updateTotal();
 }
 
 function toggleMultipleModifier(key, portionIdx, optName, el) {
@@ -215,7 +249,9 @@ function toggleMultipleModifier(key, portionIdx, optName, el) {
         cData[key][portionIdx].multiple[optName] = true;
         el.classList.add('active');
     }
+    updateCustomizeOkBtn(key);
     if (typeof updateTotal === 'function') updateTotal();
+    else if (typeof window.updateTotal === 'function') window.updateTotal();
 }
 
 function saveCustomNote(key, portionIdx, val) {
@@ -246,6 +282,11 @@ function closePopup() {
             window.scrollTo(0, savedY);
             document.documentElement.style.scrollBehavior = origScroll;
         }, 10);
+    }
+    if (typeof updateTotal === 'function') {
+        updateTotal();
+    } else if (typeof window.updateTotal === 'function') {
+        window.updateTotal();
     }
 }
 
