@@ -450,8 +450,8 @@ const I18N = {
     btnCatDelete: "刪除分類",
     createTypeModalTitle: "選擇菜單設定類型",
     createTypeModalSub: "請選擇要新增的餐點或客製化類型",
-    createTypeStandardTitle: "一般單品餐點",
-    createTypeStandardDesc: "快速在目前分類新增一筆餐點，直接填寫名稱與價格。",
+    createTypeStandardTitle: "單品餐點",
+    createTypeStandardDesc: "新增單品餐點，設定價格、圖片與推薦標籤，並可隨時配置專屬客製選項。",
     createTypeModifiersTitle: "單品含客製選項",
     createTypeModifiersDesc: "獨立單品，可配置專屬加料、甜度冰塊、辣度等多組選項。",
     createType1Title: "特惠套餐 (組合選擇)",
@@ -726,6 +726,14 @@ const I18N = {
     btnItemSettings: "設定",
     itemDetailTitle: "單品設定",
     itemDetailTitleNamed: "單品設定：{name}",
+    itemCreateTitle: "新增餐點",
+    itemNameLabel: "餐點名稱",
+    itemPriceLabel: "價格 (NT$)",
+    itemNamePlaceholder: "例如：牛肉河粉、波霸奶茶",
+    btnItemCreate: "建立餐點",
+    btnItemCancel: "取消",
+    enterItemName: "請輸入餐點名稱",
+    enterItemNameFirst: "請先輸入餐點名稱",
     itemPhotoTitle: "餐點圖片",
     btnUploadPhoto: "上傳/更換圖片",
     btnRemovePhoto: "移除圖片",
@@ -1068,8 +1076,8 @@ const I18N = {
     btnCatDelete: "Xóa phân loại",
     createTypeModalTitle: "Chọn loại cấu hình thực đơn",
     createTypeModalSub: "Chọn phương thức tạo phù hợp cho món ăn hoặc tuỳ chọn",
-    createTypeStandardTitle: "Món đơn lẻ thường",
-    createTypeStandardDesc: "Thêm nhanh một món vào phân loại hiện tại để nhập tên và giá.",
+    createTypeStandardTitle: "Món đơn (kèm tùy chọn)",
+    createTypeStandardDesc: "Thêm món ăn/đồ uống vào thực đơn, thiết lập giá, ảnh, nhãn và tùy chọn nâng cao.",
     createTypeModifiersTitle: "Món kèm tùy chọn",
     createTypeModifiersDesc: "Món lẻ có các nhóm tùy chọn riêng: topping, mức đường, đá, độ cay...",
     createType1Title: "Combo ưu đãi (Chọn món)",
@@ -1468,6 +1476,14 @@ const I18N = {
     btnItemSettings: "Cài đặt",
     itemDetailTitle: "Thiết lập món",
     itemDetailTitleNamed: "Thiết lập món: {name}",
+    itemCreateTitle: "Thêm món mới",
+    itemNameLabel: "Tên món ăn / đồ uống",
+    itemPriceLabel: "Giá bán (NT$)",
+    itemNamePlaceholder: "Ví dụ: Phở bò đặc biệt, Trà sữa trân châu",
+    btnItemCreate: "Tạo món",
+    btnItemCancel: "Hủy",
+    enterItemName: "Vui lòng nhập tên món",
+    enterItemNameFirst: "Vui lòng nhập tên món trước",
     itemPhotoTitle: "Ảnh minh họa món",
     btnUploadPhoto: "Tải ảnh lên / Thay đổi",
     btnRemovePhoto: "Xóa ảnh",
@@ -2559,6 +2575,12 @@ function applyLanguageToDOM() {
   // Item Detail Hub Modal DOM mappings
   const itemDetailTitle = document.getElementById("item-detail-modal-title");
   if (itemDetailTitle && (typeof itemDetailTitle.getAttribute !== "function" || !itemDetailTitle.getAttribute("data-custom-title"))) itemDetailTitle.innerText = dict.itemDetailTitle;
+  const itemNameLabel = document.getElementById("i18n-item-name-label");
+  if (itemNameLabel) itemNameLabel.innerHTML = `${dict.itemNameLabel} <span style="color: #dc2626;">*</span>`;
+  const itemPriceLabel = document.getElementById("i18n-item-price-label");
+  if (itemPriceLabel) itemPriceLabel.innerText = dict.itemPriceLabel;
+  const itemNameInput = document.getElementById("item-detail-name-input");
+  if (itemNameInput && typeof itemNameInput.setAttribute === "function") itemNameInput.setAttribute("placeholder", dict.itemNamePlaceholder);
   const itemBadgeTitle = document.getElementById("i18n-item-badge-title");
   if (itemBadgeTitle) itemBadgeTitle.innerText = dict.itemBadgeTitle;
   const itemBadgeInput = document.getElementById("item-detail-badge-input");
@@ -2575,6 +2597,8 @@ function applyLanguageToDOM() {
   if (btnItemPhotoUpload) btnItemPhotoUpload.innerText = dict.btnUploadPhoto;
   const btnItemPhotoRemove = document.getElementById("i18n-btn-item-photo-remove");
   if (btnItemPhotoRemove) btnItemPhotoRemove.innerText = dict.btnRemovePhoto;
+  const btnItemDetailCancel = document.getElementById("btn-item-detail-cancel");
+  if (btnItemDetailCancel) btnItemDetailCancel.innerText = dict.btnItemCancel;
   const btnItemDetailDone = document.getElementById("btn-item-detail-done");
-  if (btnItemDetailDone) btnItemDetailDone.innerText = dict.btnDetailDone;
+  if (btnItemDetailDone && (typeof btnItemDetailDone.getAttribute !== "function" || !btnItemDetailDone.getAttribute("data-custom-text"))) btnItemDetailDone.innerText = dict.btnDetailDone;
 }

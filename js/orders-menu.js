@@ -728,6 +728,14 @@ function renderMenuCategoryEditor(index) {
     itemsContainer.appendChild(row);
   });
   container.appendChild(itemsContainer);
+
+  const addItemBtn = document.createElement("button");
+  addItemBtn.type = "button";
+  addItemBtn.className = "cat-mgr-add-btn";
+  addItemBtn.style.marginTop = "12px";
+  addItemBtn.onclick = () => openCreateItemModal(index);
+  addItemBtn.innerHTML = `<span>+ ${t("btnItemCreate") || (currentLang === 'vi' ? 'Thêm món mới' : '新增餐點')}</span>`;
+  container.appendChild(addItemBtn);
 }
 
 function renderOrderCustomizationEditor(container, cat, cIdx) {
@@ -2339,55 +2347,16 @@ function handleSelectCreateType(type) {
     targetCatIdx = currentMenuData ? currentMenuData.findIndex(c => c.type === 'catalog') : -1;
   }
 
-  if (type === 'standard_item') {
+  if (type === 'standard_item' || type === 'item_with_options') {
     if (targetCatIdx >= 0) {
       activeCategoryIndex = targetCatIdx;
       renderMenuCategories();
-      const newItem = {
-        name: "",
-        price: 0,
-        badgeText: "",
-        isRecommended: false,
-        isOos: false,
-        bundleRule: null,
-        itemType: "standard",
-        modifierGroups: []
-      };
-      currentMenuData[targetCatIdx].items.push(newItem);
-      markMenuDirty();
-      const newItemIdx = currentMenuData[targetCatIdx].items.length - 1;
       renderMenuCategoryEditor(targetCatIdx);
-      setTimeout(() => {
-        const inp = document.querySelector(`input[data-name-cidx="${targetCatIdx}"][data-name-iidx="${newItemIdx}"]`);
-        if (inp) {
-          inp.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          inp.focus();
-        }
-      }, 60);
+      openCreateItemModal(targetCatIdx);
     }
   } else if (type === 'bundle') {
     if (typeof openBundleWizard === 'function') {
       openBundleWizard();
-    }
-  } else if (type === 'item_with_options') {
-    if (targetCatIdx >= 0) {
-      activeCategoryIndex = targetCatIdx;
-      renderMenuCategories();
-      const newItem = {
-        name: "",
-        price: 0,
-        badgeText: "",
-        isRecommended: false,
-        isOos: false,
-        bundleRule: null,
-        itemType: "standard",
-        modifierGroups: []
-      };
-      currentMenuData[targetCatIdx].items.push(newItem);
-      markMenuDirty();
-      const newItemIdx = currentMenuData[targetCatIdx].items.length - 1;
-      renderMenuCategoryEditor(targetCatIdx);
-      openItemModifiersModal(targetCatIdx, newItemIdx);
     }
   } else if (type === 'global_customization') {
     const flavorIdx = currentMenuData ? currentMenuData.findIndex(c => c.type === 'order_customization' || c.id === 'sec-flavor') : -1;
@@ -2630,6 +2599,7 @@ window.saveItemModifiersModal = saveItemModifiersModal;
 let activeItemDetailCatIdx = null;
 let activeItemDetailItemIdx = null;
 let currentDetailImageKey = null;
+let isItemDetailCreateMode = false;
 
 async function checkItemDetailImage(categoryId, itemName) {
   const previewEl = document.getElementById("item-detail-img-preview");
@@ -2673,6 +2643,17 @@ async function checkItemDetailImage(categoryId, itemName) {
 }
 
 function triggerItemDetailPhotoUpload() {
+  const nameInput = document.getElementById("item-detail-name-input");
+  const nameVal = nameInput ? nameInput.value.trim() : "";
+  if (!nameVal && (isItemDetailCreateMode || activeItemDetailItemIdx === null)) {
+    alert(t("enterItemNameFirst") || (currentLang === 'vi' ? "Vui lòng nhập tên món trước khi tải ảnh lên" : "請先輸入餐點名稱再上傳圖片"));
+    if (nameInput) nameInput.focus();
+    return;
+  }
+  const cat = currentMenuData[activeItemDetailCatIdx];
+  if (cat && nameVal) {
+    currentDetailImageKey = `${cat.id}_${nameVal}`;
+  }
   const fileInput = document.getElementById("item-detail-file-input");
   if (fileInput) fileInput.click();
 }
@@ -2680,7 +2661,16 @@ window.triggerItemDetailPhotoUpload = triggerItemDetailPhotoUpload;
 
 function handleItemDetailImageSelect(event) {
   const file = event.target.files && event.target.files[0];
-  if (!file || !currentDetailImageKey) return;
+  if (!file) return;
+
+  const nameInput = document.getElementById("item-detail-name-input");
+  const nameVal = (nameInput ? nameInput.value.trim() : "") || (currentMenuData[activeItemDetailCatIdx]?.items?.[activeItemDetailItemIdx]?.name || "").trim();
+  const cat = currentMenuData[activeItemDetailCatIdx];
+  if (!nameVal || !cat) {
+    event.target.value = "";
+    return;
+  }
+  currentDetailImageKey = `${cat.id}_${nameVal}`;
 
   const statusEl = document.getElementById("item-detail-img-status");
   if (statusEl) statusEl.innerText = t("imageUploading");
@@ -2828,18 +2818,119 @@ function autoCommitItemDetailFields() {
   const item = currentMenuData[activeItemDetailCatIdx]?.items?.[activeItemDetailItemIdx];
   if (!item) return;
 
+  const nameInput = document.getElementById("item-detail-name-input");
+  const priceInput = document.getElementById("item-detail-price-input");
   const badgeInput = document.getElementById("item-detail-badge-input");
   const recCheckbox = document.getElementById("item-detail-recommended-checkbox");
 
+  if (nameInput && nameInput.value.trim()) item.name = nameInput.value.trim();
+  if (priceInput && priceInput.value !== "") {
+    const p = parseFloat(priceInput.value);
+    if (!isNaN(p)) item.price = p;
+  }
   if (badgeInput) item.badgeText = badgeInput.value.trim();
   if (recCheckbox) item.isRecommended = recCheckbox.checked;
   markMenuDirty();
 }
 
+function openCreateItemModal(cIdx) {
+  syncMenuDataFromDOM();
+  if (!currentMenuData || !currentMenuData[cIdx]) return;
+
+  isItemDetailCreateMode = true;
+  activeItemDetailCatIdx = cIdx;
+  activeItemDetailItemIdx = null;
+  currentDetailImageKey = null;
+
+  const cat = currentMenuData[cIdx];
+  const modal = document.getElementById("itemDetailModal");
+  const titleEl = document.getElementById("item-detail-modal-title");
+  if (titleEl) {
+    titleEl.innerText = `${t("itemCreateTitle") || (currentLang === 'vi' ? "Thêm món mới" : "新增餐點")} (${cat.title})`;
+    titleEl.setAttribute("data-custom-title", "1");
+  }
+
+  // Name & Price inputs
+  const nameInput = document.getElementById("item-detail-name-input");
+  if (nameInput) {
+    nameInput.value = "";
+    nameInput.oninput = () => {
+      const val = nameInput.value.trim();
+      const photoNameEl = document.getElementById("item-detail-photo-item-name");
+      if (photoNameEl) photoNameEl.innerText = val || "";
+    };
+  }
+  const priceInput = document.getElementById("item-detail-price-input");
+  if (priceInput) priceInput.value = "";
+
+  // Photo
+  const photoNameEl = document.getElementById("item-detail-photo-item-name");
+  if (photoNameEl) photoNameEl.innerText = "";
+  const previewEl = document.getElementById("item-detail-img-preview");
+  const placeholderEl = document.getElementById("item-detail-img-placeholder");
+  const deleteBtn = document.getElementById("btn-item-detail-delete-img");
+  const statusEl = document.getElementById("item-detail-img-status");
+
+  if (previewEl) {
+    previewEl.src = "";
+    previewEl.style.display = "none";
+  }
+  if (placeholderEl) placeholderEl.style.display = "flex";
+  if (deleteBtn) deleteBtn.style.display = "none";
+  if (statusEl) statusEl.innerText = t("imageNoImage");
+
+  // Badge & Recommended
+  const badgeInput = document.getElementById("item-detail-badge-input");
+  if (badgeInput) {
+    badgeInput.value = "";
+    renderQuickTags("");
+    badgeInput.oninput = () => renderQuickTags(badgeInput.value.trim());
+  }
+  const recCheckbox = document.getElementById("item-detail-recommended-checkbox");
+  if (recCheckbox) recCheckbox.checked = false;
+
+  // Advanced Section
+  const advSection = document.getElementById("item-detail-advanced-section");
+  if (cat.type !== 'catalog') {
+    if (advSection) advSection.style.display = "none";
+  } else {
+    if (advSection) advSection.style.display = "block";
+    const modSumEl = document.getElementById("item-detail-mod-summary");
+    if (modSumEl) modSumEl.innerText = t("cardModifiersEmpty");
+
+    const bundleCard = document.getElementById("item-detail-bundle-card");
+    const isBundleDisabled = window.currentTenantFeatures?.includes('disable_bundle_builder_v2');
+    if (isBundleDisabled) {
+      if (bundleCard) bundleCard.style.display = "none";
+    } else {
+      if (bundleCard) bundleCard.style.display = "flex";
+      const bndlSumEl = document.getElementById("item-detail-bundle-summary");
+      if (bndlSumEl) bndlSumEl.innerText = t("cardBundleEmpty");
+    }
+  }
+
+  // Buttons
+  const cancelBtn = document.getElementById("btn-item-detail-cancel");
+  if (cancelBtn) cancelBtn.innerText = t("btnItemCancel") || (currentLang === 'vi' ? "Hủy" : "取消");
+
+  const doneBtn = document.getElementById("btn-item-detail-done");
+  if (doneBtn) {
+    doneBtn.innerText = t("btnItemCreate") || (currentLang === 'vi' ? "Tạo món" : "建立餐點");
+    doneBtn.setAttribute("data-custom-text", "1");
+  }
+
+  if (modal) modal.style.display = "flex";
+  setTimeout(() => {
+    if (nameInput) nameInput.focus();
+  }, 80);
+}
+window.openCreateItemModal = openCreateItemModal;
+
 function openItemDetailModal(cIdx, iIdx) {
   syncMenuDataFromDOM();
   if (!currentMenuData || !currentMenuData[cIdx] || !currentMenuData[cIdx].items || !currentMenuData[cIdx].items[iIdx]) return;
 
+  isItemDetailCreateMode = false;
   activeItemDetailCatIdx = cIdx;
   activeItemDetailItemIdx = iIdx;
 
@@ -2852,6 +2943,21 @@ function openItemDetailModal(cIdx, iIdx) {
     const itemName = item.name ? item.name.trim() : (t("newItemPlaceholder") || "Món mới");
     titleEl.innerText = `${t("itemDetailTitle")} - ${itemName}`;
     titleEl.setAttribute("data-custom-title", "1");
+  }
+
+  // Name & Price inputs
+  const nameInput = document.getElementById("item-detail-name-input");
+  if (nameInput) {
+    nameInput.value = item.name || "";
+    nameInput.oninput = () => {
+      const val = nameInput.value.trim();
+      const photoNameEl = document.getElementById("item-detail-photo-item-name");
+      if (photoNameEl) photoNameEl.innerText = val || "";
+    };
+  }
+  const priceInput = document.getElementById("item-detail-price-input");
+  if (priceInput) {
+    priceInput.value = (item.price !== null && item.price !== undefined) ? item.price : "";
   }
 
   // Photo
@@ -2901,6 +3007,16 @@ function openItemDetailModal(cIdx, iIdx) {
     }
   }
 
+  // Buttons
+  const cancelBtn = document.getElementById("btn-item-detail-cancel");
+  if (cancelBtn) cancelBtn.innerText = t("btnItemCancel") || (currentLang === 'vi' ? "Hủy" : "取消");
+
+  const doneBtn = document.getElementById("btn-item-detail-done");
+  if (doneBtn) {
+    doneBtn.innerText = t("btnDetailDone") || (currentLang === 'vi' ? "Hoàn tất" : "完成");
+    doneBtn.removeAttribute("data-custom-text");
+  }
+
   if (modal) modal.style.display = "flex";
 }
 window.openItemDetailModal = openItemDetailModal;
@@ -2908,6 +3024,7 @@ window.openItemDetailModal = openItemDetailModal;
 function closeItemDetailModal() {
   const modal = document.getElementById("itemDetailModal");
   if (modal) modal.style.display = "none";
+  isItemDetailCreateMode = false;
   activeItemDetailCatIdx = null;
   activeItemDetailItemIdx = null;
   currentDetailImageKey = null;
@@ -2915,29 +3032,107 @@ function closeItemDetailModal() {
 window.closeItemDetailModal = closeItemDetailModal;
 
 function saveItemDetailModal() {
-  if (activeItemDetailCatIdx !== null && activeItemDetailItemIdx !== null) {
-    const item = currentMenuData[activeItemDetailCatIdx]?.items?.[activeItemDetailItemIdx];
-    if (item) {
-      const badgeInput = document.getElementById("item-detail-badge-input");
-      const recCheckbox = document.getElementById("item-detail-recommended-checkbox");
-      if (badgeInput) item.badgeText = badgeInput.value.trim();
-      if (recCheckbox) item.isRecommended = recCheckbox.checked;
+  if (activeItemDetailCatIdx === null) {
+    closeItemDetailModal();
+    return;
+  }
+  const cat = currentMenuData[activeItemDetailCatIdx];
+  if (!cat) {
+    closeItemDetailModal();
+    return;
+  }
 
+  const nameInput = document.getElementById("item-detail-name-input");
+  const priceInput = document.getElementById("item-detail-price-input");
+  const badgeInput = document.getElementById("item-detail-badge-input");
+  const recCheckbox = document.getElementById("item-detail-recommended-checkbox");
+
+  const nameVal = nameInput ? nameInput.value.trim() : "";
+  const priceVal = priceInput && priceInput.value !== "" ? parseFloat(priceInput.value) : 0;
+  const badgeVal = badgeInput ? badgeInput.value.trim() : "";
+  const recVal = recCheckbox ? recCheckbox.checked : false;
+
+  if (!nameVal) {
+    alert(t("enterItemName") || (currentLang === 'vi' ? "Vui lòng nhập tên món" : "請輸入餐點名稱"));
+    if (nameInput) nameInput.focus();
+    return;
+  }
+
+  if (isItemDetailCreateMode || activeItemDetailItemIdx === null) {
+    const newItem = {
+      name: nameVal,
+      price: isNaN(priceVal) ? 0 : priceVal,
+      badgeText: badgeVal,
+      isRecommended: recVal,
+      isOos: false,
+      bundleRule: null,
+      itemType: "standard",
+      modifierGroups: []
+    };
+    cat.items.push(newItem);
+    markMenuDirty();
+    renderMenuCategoryEditor(activeItemDetailCatIdx);
+    renderMenuCategories();
+  } else {
+    const item = cat.items[activeItemDetailItemIdx];
+    if (item) {
+      item.name = nameVal;
+      item.price = isNaN(priceVal) ? 0 : priceVal;
+      item.badgeText = badgeVal;
+      item.isRecommended = recVal;
       markMenuDirty();
       renderMenuCategoryEditor(activeItemDetailCatIdx);
+      renderMenuCategories();
     }
   }
+
   closeItemDetailModal();
 }
 window.saveItemDetailModal = saveItemDetailModal;
 
 function transitionToSubEditor(type) {
-  if (activeItemDetailCatIdx === null || activeItemDetailItemIdx === null) return;
-  autoCommitItemDetailFields();
-
+  if (activeItemDetailCatIdx === null) return;
   const cat = currentMenuData[activeItemDetailCatIdx];
+  if (!cat) return;
+
+  const nameInput = document.getElementById("item-detail-name-input");
+  const priceInput = document.getElementById("item-detail-price-input");
+  const badgeInput = document.getElementById("item-detail-badge-input");
+  const recCheckbox = document.getElementById("item-detail-recommended-checkbox");
+
+  const nameVal = nameInput ? nameInput.value.trim() : "";
+  const priceVal = priceInput && priceInput.value !== "" ? parseFloat(priceInput.value) : 0;
+  const badgeVal = badgeInput ? badgeInput.value.trim() : "";
+  const recVal = recCheckbox ? recCheckbox.checked : false;
+
+  if (isItemDetailCreateMode || activeItemDetailItemIdx === null) {
+    if (!nameVal) {
+      alert(t("enterItemNameFirst") || (currentLang === 'vi' ? "Vui lòng nhập tên món trước khi thiết lập nâng cao" : "請先輸入餐點名稱再進行進階設定"));
+      if (nameInput) nameInput.focus();
+      return;
+    }
+    const newItem = {
+      name: nameVal,
+      price: isNaN(priceVal) ? 0 : priceVal,
+      badgeText: badgeVal,
+      isRecommended: recVal,
+      isOos: false,
+      bundleRule: null,
+      itemType: "standard",
+      modifierGroups: []
+    };
+    cat.items.push(newItem);
+    activeItemDetailItemIdx = cat.items.length - 1;
+    isItemDetailCreateMode = false;
+    markMenuDirty();
+    renderMenuCategoryEditor(activeItemDetailCatIdx);
+    renderMenuCategories();
+  } else {
+    autoCommitItemDetailFields();
+  }
+
   const item = cat.items[activeItemDetailItemIdx];
-  if (!cat || !item) return;
+  if (!item) return;
 
   window._hubModalReturnState = {
     catId: cat.id,

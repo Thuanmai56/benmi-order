@@ -8180,6 +8180,53 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
   box-shadow: 0 0 0 3px rgba(0, 185, 0, 0.12);
 }
 
+.item-detail-fields-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.item-detail-field-name {
+  flex: 2;
+  min-width: 0;
+}
+
+.item-detail-field-price {
+  flex: 1;
+  min-width: 120px;
+}
+
+.item-detail-price-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.item-detail-price-prefix {
+  position: absolute;
+  left: 12px;
+  font-weight: 800;
+  color: #64748b;
+  font-size: 14px;
+  pointer-events: none;
+  user-select: none;
+}
+
+.item-detail-price-wrap .item-detail-input {
+  padding-left: 26px;
+}
+
+@media (max-width: 480px) {
+  .item-detail-fields-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .item-detail-field-name,
+  .item-detail-field-price {
+    width: 100%;
+  }
+}
+
 .item-detail-quick-tags {
   display: flex;
   gap: 8px;
