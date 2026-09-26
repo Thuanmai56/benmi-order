@@ -7942,9 +7942,208 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
 .bundle-wizard-head, .bundle-wizard-footer { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 24px; border-bottom:1px solid #e2e8f0; }
 .bundle-wizard-footer { border-top:1px solid #e2e8f0; border-bottom:0; }
 .bundle-wizard-head h1 { font-size:22px; margin:0; }
-.bundle-wizard-steps { display:flex; gap:8px; padding:12px 24px; overflow:auto; }
-.bundle-wizard-steps span { flex:1; min-width:max-content; padding:10px; background:#f1f5f9; border-radius:9px; text-align:center; font-weight:700; }
-.bundle-wizard-steps span.active { color:#065f46; background:#dcfce7; }
+/* Modern Stepper Component (Bundle Wizard) */
+.bundle-wizard-steps {
+  background: #ffffff;
+  border-bottom: 1.5px solid #e2e8f0;
+  padding: 14px clamp(16px, 4vw, 48px);
+  flex-shrink: 0;
+  overflow-x: auto;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.bundle-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 920px;
+  margin: 0 auto;
+  gap: 10px;
+}
+
+.bundle-step-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  border: 1.5px solid transparent;
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.bundle-step-indicator {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bundle-step-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 800;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.bundle-step-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bundle-step-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bundle-step-badge {
+  display: inline-block;
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 1.5px 6px;
+  border-radius: 4px;
+  line-height: 1.2;
+}
+
+.bundle-step-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+}
+
+.bundle-step-sub {
+  font-size: 11.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+/* Completed State */
+.bundle-step-item.is-completed {
+  border-color: #d1fae5;
+  background: #f0fdf4;
+}
+
+.bundle-step-item.is-completed:hover {
+  background: #dcfce7;
+  border-color: #86efac;
+  transform: translateY(-1px);
+}
+
+.bundle-step-item.is-completed .bundle-step-icon {
+  background: #10b981;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+}
+
+.bundle-step-item.is-completed .bundle-step-badge {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.bundle-step-item.is-completed .bundle-step-title {
+  color: #065f46;
+}
+
+.bundle-step-item.is-completed .bundle-step-sub {
+  color: #059669;
+}
+
+/* Active State */
+.bundle-step-item.is-active {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.08);
+}
+
+.bundle-step-item.is-active .bundle-step-icon {
+  background: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.18), 0 3px 8px rgba(37, 99, 235, 0.3);
+  transform: scale(1.04);
+}
+
+.bundle-step-item.is-active .bundle-step-badge {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.bundle-step-item.is-active .bundle-step-title {
+  color: #1e3a8a;
+  font-weight: 800;
+}
+
+.bundle-step-item.is-active .bundle-step-sub {
+  color: #2563eb;
+  font-weight: 600;
+}
+
+/* Pending State */
+.bundle-step-item.is-pending {
+  border-color: #f1f5f9;
+  background: #f8fafc;
+  opacity: 0.82;
+}
+
+.bundle-step-item.is-pending:hover {
+  opacity: 1;
+  border-color: #e2e8f0;
+}
+
+.bundle-step-item.is-pending .bundle-step-icon {
+  background: #f1f5f9;
+  border: 1.5px solid #cbd5e1;
+  color: #94a3b8;
+}
+
+.bundle-step-item.is-pending .bundle-step-badge {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.bundle-step-item.is-pending .bundle-step-title {
+  color: #64748b;
+}
+
+.bundle-step-item.is-pending .bundle-step-sub {
+  color: #94a3b8;
+}
+
+/* Connector Line */
+.bundle-step-connector {
+  flex: 0 0 28px;
+  height: 3px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.bundle-step-connector.is-completed {
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.3);
+}
 .bundle-wizard-body { flex:1; overflow:auto; padding:18px 24px; display:grid; align-content:start; gap:16px; }
 .bundle-wizard-body label { display:grid; gap:6px; font-weight:700; }
 .bundle-wizard-body input:not([type=checkbox]), .bundle-wizard-body select { min-height:48px; width:100%; padding:8px 12px; border:1px solid #94a3b8; border-radius:9px; font-size:16px; }
@@ -7989,12 +8188,16 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
 .bundle-wizard-screen :is(button, input, select, summary):focus-visible { outline:3px solid #047857; outline-offset:3px; }
 .bundle-wizard-group { background:#fff; }
 .bundle-wizard-two > input, .bundle-wizard-two > select { flex:1; min-width:0; }
-.bundle-wizard-steps span { min-width:0; }
 @media (max-width:700px) {
   .bundle-wizard-templates, .bundle-wizard-info-fields { grid-template-columns:1fr; }
   .bundle-wizard-info-fields, .bundle-wizard-guide { padding:16px; }
-  .bundle-wizard-steps { padding:12px 16px; gap:4px; font-size:13px; }
-  .bundle-wizard-steps span { padding:8px 4px; }
+  .bundle-wizard-steps { padding:10px 14px; }
+  .bundle-stepper { gap:6px; }
+  .bundle-step-item { padding:6px 10px; gap:8px; }
+  .bundle-step-icon { width:32px; height:32px; font-size:13px; }
+  .bundle-step-title { font-size:12.5px; }
+  .bundle-step-sub { display:none; }
+  .bundle-step-connector { flex:0 0 16px; height:2.5px; }
   .bundle-wizard-two { flex-direction:column; }
   .bundle-wizard-head h1 { font-size:20px; }
 }

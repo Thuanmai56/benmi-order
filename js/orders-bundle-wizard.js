@@ -206,7 +206,7 @@ function renderComboWizard() {
   document.getElementById('bundle-wizard-prev').textContent = comboText('comboBack');
   document.getElementById('bundle-wizard-prev').disabled = step === 0;
   document.getElementById('bundle-wizard-next').textContent = comboText(step === 2 ? 'comboSave' : 'comboContinue');
-  document.getElementById('bundle-wizard-steps').innerHTML = ['comboStepInfo', 'comboStepParts', 'comboStepPreview'].map((key, index) => `<span ${step === index ? 'aria-current="step"' : ''} class="${step === index ? 'active' : ''}">${index + 1}. ${comboText(key)}</span>`).join('');
+  renderBundleStepper(step);
   const body = document.getElementById('bundle-wizard-body');
   if (comboWizard.renderedStep !== step) body.scrollTop = 0;
   comboWizard.renderedStep = step;
@@ -322,3 +322,98 @@ async function saveComboWizard() {
     document.getElementById('bundle-wizard-error').textContent = error.message || comboText('comboSaveFailed');
   } finally { btn.disabled = false; }
 }
+
+function comboWizardJumpToStep(targetStep) {
+  if (!comboWizard) return;
+  if (targetStep === comboWizard.step) return;
+
+  if (targetStep < comboWizard.step) {
+    comboWizard.step = targetStep;
+    persistComboWizard();
+    renderComboWizard();
+    return;
+  }
+
+  if (comboWizard.step === 0 || targetStep > 0) {
+    if (!comboWizard.product.name.trim()) {
+      document.getElementById('bundle-wizard-error').textContent = comboText('comboNeedName');
+      return;
+    }
+    if (!Number.isFinite(comboWizard.product.price) || comboWizard.product.price < 0) {
+      document.getElementById('bundle-wizard-error').textContent = comboText('comboNeedPrice');
+      return;
+    }
+  }
+
+  if (targetStep === 2) {
+    const error = comboWizardError();
+    if (error) {
+      document.getElementById('bundle-wizard-error').textContent = error;
+      return;
+    }
+  }
+
+  comboWizard.step = targetStep;
+  persistComboWizard();
+  renderComboWizard();
+}
+window.comboWizardJumpToStep = comboWizardJumpToStep;
+
+function renderBundleStepper(currentStep) {
+  const stepsContainer = document.getElementById('bundle-wizard-steps');
+  if (!stepsContainer) return;
+
+  const stepsConfig = [
+    { key: 'comboStepInfo', subKey: 'comboStepInfoSub', num: 1 },
+    { key: 'comboStepParts', subKey: 'comboStepPartsSub', num: 2 },
+    { key: 'comboStepPreview', subKey: 'comboStepPreviewSub', num: 3 }
+  ];
+
+  const checkSvg = `<svg class="bundle-step-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+
+  let html = `<div class="bundle-stepper">`;
+
+  stepsConfig.forEach((cfg, idx) => {
+    const isCompleted = idx < currentStep;
+    const isActive = idx === currentStep;
+    const isPending = idx > currentStep;
+
+    const stateClass = isCompleted ? 'is-completed' : isActive ? 'is-active' : 'is-pending';
+    const ariaCurrent = isActive ? 'aria-current="step"' : '';
+
+    const badgeText = isCompleted ? comboText('comboStepCompleted') : isActive ? comboText('comboStepCurrent') : comboText('comboStepPending');
+    const titleText = `${cfg.num}. ${comboText(cfg.key)}`;
+    const subText = comboText(cfg.subKey) || '';
+
+    const iconContent = isCompleted ? checkSvg : `<span class="bundle-step-num">${cfg.num}</span>`;
+
+    html += `
+      <div class="bundle-step-item ${stateClass}" ${ariaCurrent} onclick="comboWizardJumpToStep(${idx})" role="button" tabindex="0" title="${titleText}">
+        <div class="bundle-step-indicator">
+          <div class="bundle-step-icon">${iconContent}</div>
+        </div>
+        <div class="bundle-step-content">
+          <div class="bundle-step-header">
+            <span class="bundle-step-badge">${badgeText}</span>
+          </div>
+          <div class="bundle-step-title">${titleText}</div>
+          <div class="bundle-step-sub">${subText}</div>
+        </div>
+      </div>
+    `;
+
+    if (idx < stepsConfig.length - 1) {
+      const connClass = idx < currentStep ? 'is-completed' : 'is-pending';
+      html += `
+        <div class="bundle-step-connector ${connClass}">
+          <div class="bundle-step-connector-fill"></div>
+        </div>
+      `;
+    }
+  });
+
+  html += `</div>`;
+  stepsContainer.innerHTML = html;
+}
+window.renderBundleStepper = renderBundleStepper;
+
