@@ -184,7 +184,7 @@ function renderBundleAddonsSection() {
 
     html += `
         <label style="font-size: 13px; font-weight: 700; color: #475569; display: block; margin: 12px 0 6px 0;">個別備註</label>
-        <input type="text" value="${(addonSelections.note || '').replace(/"/g, '&quot;')}" placeholder="例如：不要香菜、醬料分開裝"
+        <input type="text" maxlength="50" value="${(addonSelections.note || '').replace(/"/g, '&quot;')}" placeholder="例如：不要香菜、醬料分開裝"
                class="bundle-note-input"
                style="width: 100%; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 10px 14px; font-size: 14px; color: #1e293b; background: #fff; outline: none; box-sizing: border-box;"
                oninput="updateBundleAddonNote(this.value)">
@@ -227,7 +227,7 @@ function toggleBundleAddonMultiple(optName, el) {
 
 function updateBundleAddonNote(val) {
     if (!currentBundleModalContext || !currentBundleModalContext.addonSelections) return;
-    currentBundleModalContext.addonSelections.note = val;
+    currentBundleModalContext.addonSelections.note = String(val || '').slice(0, 50);
 }
 
 function renderBundleCategoryTabs(group) {

@@ -3,6 +3,9 @@
  * Quản lý quy trình đặt hàng, kiểm tra hợp lệ, hẹn giờ lấy món và gửi đơn hàng.
  */
 
+var cart = window.cart;
+var customizeData = window.customizeData;
+
 // Append Mode Global State
 window.isAppendMode = false;
 window.parentOrderKey = null;
@@ -892,7 +895,13 @@ function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, ma
                     }
                     if (c.topping && c.topping !== '') parts.push(c.topping);
                     if (c.spicy && c.spicy !== '不辣') parts.push(c.spicy);
-                    if (c.note && c.note.trim() !== '') parts.push(c.note.trim());
+                    const itemNoteText = (c.note || c.customText || '').trim();
+                    if (itemNoteText) {
+                        const formattedNote = (itemNoteText.startsWith('備註:') || itemNoteText.startsWith('備註：') || itemNoteText.startsWith('Ghi chú:') || itemNoteText.startsWith('Ghi chú：'))
+                            ? itemNoteText
+                            : `備註: ${itemNoteText}`;
+                        parts.push(formattedNote);
+                    }
 
                     if (parts.length > 0) {
                         let zhIdx = zhNumbers[i] || `第 ${i + 1} 份`;
@@ -995,7 +1004,13 @@ function formatAppendItemsOnlyText() {
                     }
                     if (c.topping && c.topping !== '') parts.push(c.topping);
                     if (c.spicy && c.spicy !== '不辣') parts.push(c.spicy);
-                    if (c.customText && c.customText.trim() !== '') parts.push(c.customText.trim());
+                    const appendNoteText = (c.note || c.customText || '').trim();
+                    if (appendNoteText) {
+                        const formattedNote = (appendNoteText.startsWith('備註:') || appendNoteText.startsWith('備註：') || appendNoteText.startsWith('Ghi chú:') || appendNoteText.startsWith('Ghi chú：'))
+                            ? appendNoteText
+                            : `備註: ${appendNoteText}`;
+                        parts.push(formattedNote);
+                    }
 
                     if (parts.length > 0) {
                         const prefixLabel = cart[key] > 1 ? `第${i + 1}份: ` : '';
@@ -1050,10 +1065,28 @@ function buildStructuredCartItems() {
                     if (c.spicy && c.spicy !== '不辣') {
                         options.push({ group: '辣度', choice: `${portionPrefix}${c.spicy}`, price: 0 });
                     }
-                    if (c.customText && c.customText.trim() !== '') {
-                        options.push({ group: '備註', choice: `${portionPrefix}${c.customText.trim()}`, price: 0 });
+                    const noteVal = (c.note || c.customText || '').trim();
+                    if (noteVal) {
+                        const formattedNote = (noteVal.startsWith('備註:') || noteVal.startsWith('備註：') || noteVal.startsWith('Ghi chú:') || noteVal.startsWith('Ghi chú：'))
+                            ? noteVal
+                            : `備註: ${noteVal}`;
+                        options.push({ group: '備註', choice: `${portionPrefix}${formattedNote}`, price: 0 });
                     }
                 });
+            }
+
+            let itemNotesSummary = '';
+            if (cust && Array.isArray(cust)) {
+                const validNotes = cust.slice(0, qty)
+                    .map((c, idx) => {
+                        const n = (c && (c.note || c.customText || '')).trim();
+                        if (!n) return '';
+                        return qty > 1 ? `第${idx + 1}份: ${n}` : n;
+                    })
+                    .filter(Boolean);
+                if (validNotes.length > 0) {
+                    itemNotesSummary = validNotes.join(' | ');
+                }
             }
 
             if (catSlug === 'combo' && comboDrinkData[origName]) {
@@ -1081,6 +1114,8 @@ function buildStructuredCartItems() {
                 price: basePrice,
                 subtotal: basePrice * qty,
                 options: options,
+                notes: itemNotesSummary,
+                note: itemNotesSummary,
                 bundleSelections: bundleSelections,
                 bundle_snapshot_json: bundleSelections ? JSON.stringify(bundleSelections) : null
             });

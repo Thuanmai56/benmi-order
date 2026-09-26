@@ -1003,7 +1003,11 @@ function renderItemRowHtml(it, idx, orderKey) {
             <div class="review-item-portion-row">
               <span class="portion-badge">${escapeHtml(p.label)}</span>
               <div class="portion-chips-wrap">
-                ${p.chips.length > 0 ? p.chips.map(chip => `<span class="mod-chip">${escapeHtml(chip)}</span>`).join("") : `<span class="portion-default-chip">—</span>`}
+                ${p.chips.length > 0 ? p.chips.map(chip => {
+                  const isNote = chip.startsWith("備註") || chip.startsWith("Ghi chú") || chip.startsWith("Note");
+                  const chipCls = isNote ? "mod-chip mod-chip-note" : "mod-chip";
+                  return `<span class="${chipCls}">${escapeHtml(chip)}</span>`;
+                }).join("") : `<span class="portion-default-chip">—</span>`}
               </div>
               <button type="button" class="btn btn-ghost portion-print-btn" data-print-action="stickers" ${canPrintStickers ? "" : "disabled aria-disabled=\"true\""} onclick="if(typeof PrinterService !== 'undefined') PrinterService.printSingleItemSticker('${escapeHtml(orderKey)}', ${portionStickerIdx})" title="${escapeHtml(portionPrintTitle)}">
                 ${printerIcon}
@@ -1018,12 +1022,23 @@ function renderItemRowHtml(it, idx, orderKey) {
     } else if (rawOpts) {
       const splitOpts = rawOpts.split(/[、,，\n]+/).map(s => s.trim()).filter(Boolean);
       if (splitOpts.length > 0) {
-        optionsHtml = `<div class="review-item-options">${splitOpts.map(opt => `<span class="mod-chip">${escapeHtml(opt)}</span>`).join("")}</div>`;
+        optionsHtml = `<div class="review-item-options">${splitOpts.map(opt => {
+          const isNote = opt.startsWith("備註") || opt.startsWith("Ghi chú") || opt.startsWith("Note");
+          const chipCls = isNote ? "mod-chip mod-chip-note" : "mod-chip";
+          return `<span class="${chipCls}">${escapeHtml(opt)}</span>`;
+        }).join("")}</div>`;
       }
     }
   }
   const noteIcon = (typeof POS_SVG !== "undefined" && POS_SVG.note) || "";
-  const noteHtml = it.note ? `<div class="review-item-note">${noteIcon}${escapeHtml(it.note)}</div>` : "";
+  let noteHtml = "";
+  if (it.note) {
+    const rawNote = String(it.note).trim();
+    const alreadyShownInOptions = optionsHtml && optionsHtml.includes("mod-chip-note");
+    if (!alreadyShownInOptions && rawNote) {
+      noteHtml = `<div class="review-item-note">${noteIcon}${escapeHtml(rawNote)}</div>`;
+    }
+  }
 
   let displayPrice = it.price;
   if ((!displayPrice || displayPrice === "—") && it.name && typeof lookupItemPrice === "function") {

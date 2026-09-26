@@ -705,6 +705,21 @@
             currentRound = line;
             return;
           }
+          const isSubOption = line.startsWith('↳') || line.startsWith('-') || line.startsWith('+') || line.startsWith('•') || line.startsWith('－');
+          if (isSubOption) {
+            if (currentItem) {
+              const opt = line.replace(/^[↳\-+•－]\s*/, '').trim();
+              const printOpt = this.stripPrintOptionSurcharges(opt);
+              currentItem.options = currentItem.options ? `${currentItem.options}\n${printOpt}` : printOpt;
+              const addMatch = opt.match(/(?:\(\s*\+\s*\$|\+\s*\$)(\d+(?:\.\d+)?)/);
+              if (addMatch && currentItem._lineTotal != null) {
+                currentItem._lineTotal += Number(addMatch[1]) || 0;
+                currentItem.price = `$${currentItem._lineTotal}`;
+              }
+            }
+            return;
+          }
+
           if (
             line.startsWith('----') || line.startsWith('====') || line.includes('【') ||
             line.includes('訂單') || line.includes('總金額') || line.includes('總計') ||
@@ -718,18 +733,6 @@
             line.startsWith('🧂') || line.startsWith('📦')
           ) {
             return;
-          }
-          if (line.startsWith('↳') || line.startsWith('-') || line.startsWith('+') || line.startsWith('•') || line.startsWith('－')) {
-            if (currentItem) {
-              const opt = line.replace(/^[↳\-+•－]\s*/, '').trim();
-              const printOpt = this.stripPrintOptionSurcharges(opt);
-              currentItem.options = currentItem.options ? `${currentItem.options}\n${printOpt}` : printOpt;
-              const addMatch = opt.match(/(?:\(\s*\+\s*\$|\+\s*\$)(\d+(?:\.\d+)?)/);
-              if (addMatch && currentItem._lineTotal != null) {
-                currentItem._lineTotal += Number(addMatch[1]) || 0;
-                currentItem.price = `$${currentItem._lineTotal}`;
-              }
-            }
           } else {
             const priceMatch = line.match(/\$[\d,.]+/);
             let rawNum = priceMatch ? Number(priceMatch[0].replace(/[^0-9.]/g, '')) : null;

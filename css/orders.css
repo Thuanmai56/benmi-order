@@ -6099,6 +6099,13 @@ select.form-input {
   color: #475569;
 }
 
+.mod-chip.mod-chip-note {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #b45309;
+  font-weight: 700;
+}
+
 .review-item-portions-container {
   display: flex;
   flex-direction: column;

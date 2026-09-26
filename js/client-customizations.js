@@ -157,7 +157,7 @@ function toggleCustomize(category, origName) {
 
         sectionInner += `
             <label style="font-size: 13px; font-weight: 800; color: var(--muted); display: block; margin: 14px 0 4px 0;">個別備註</label>
-            <input type="text" value="${currentPortion.note || ''}" placeholder="例如：不要香菜、醬料分開裝" 
+            <input type="text" maxlength="50" value="${(currentPortion.note || '').replace(/"/g, '&quot;')}" placeholder="例如：不要香菜、醬料分開裝" 
                    oninput="saveCustomNote('${key}', ${i}, this.value)">
         `;
 
@@ -220,9 +220,10 @@ function toggleMultipleModifier(key, portionIdx, optName, el) {
 
 function saveCustomNote(key, portionIdx, val) {
     const cData = window.customizeData || customizeData;
+    if (!cData) return;
     if (!cData[key]) cData[key] = [];
     if (!cData[key][portionIdx]) cData[key][portionIdx] = { single: {}, multiple: {}, note: '' };
-    cData[key][portionIdx].note = val;
+    cData[key][portionIdx].note = String(val || '').slice(0, 50);
 }
 
 function closePopup() {
