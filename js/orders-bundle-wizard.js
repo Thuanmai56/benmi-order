@@ -50,12 +50,19 @@ function closeBundleWizard() {
   dismissComboWizard();
 }
 window.closeBundleWizard = closeBundleWizard;
-function dismissComboWizard() {
+function dismissComboWizard(skipRestore = false) {
   const returnFocus = comboWizard?.returnFocus;
   document.getElementById('bundle-wizard').style.display = 'none';
   document.body.classList.remove('bundle-wizard-open');
   comboWizard = null;
   returnFocus?.focus();
+  if (!skipRestore && window._hubModalReturnState) {
+    const state = window._hubModalReturnState;
+    window._hubModalReturnState = null;
+    if (typeof openItemDetailModal === 'function') {
+      openItemDetailModal(state.catIdx, state.itemIdx);
+    }
+  }
 }
 
 function comboWizardBack() { if (comboWizard?.step > 0) { comboWizard.step--; persistComboWizard(); renderComboWizard(); } }
@@ -295,9 +302,22 @@ async function saveComboWizard() {
       });
       if (!imageResponse.ok) throw new Error(`${comboText('comboSaved')} · ${comboText('imageUploadFail')}`);
     }
-    dismissComboWizard();
+    dismissComboWizard(true);
     await loadMenuData();
     alert(comboText('comboSaved'));
+    if (window._hubModalReturnState) {
+      const state = window._hubModalReturnState;
+      window._hubModalReturnState = null;
+      if (Array.isArray(currentMenuData) && typeof openItemDetailModal === 'function') {
+        const freshCatIdx = currentMenuData.findIndex(c => c.id === state.catId);
+        if (freshCatIdx !== -1) {
+          const freshItemIdx = currentMenuData[freshCatIdx].items?.findIndex(it => it.name === state.itemName);
+          if (freshItemIdx !== -1) {
+            openItemDetailModal(freshCatIdx, freshItemIdx);
+          }
+        }
+      }
+    }
   } catch (error) {
     document.getElementById('bundle-wizard-error').textContent = error.message || comboText('comboSaveFailed');
   } finally { btn.disabled = false; }

@@ -721,7 +721,29 @@ const I18N = {
     bundleEx3Title: "🍲 火鍋 / 燒烤 / 雙人便當店實例",
     bundleEx3Badge: "3 組 • 湯底 + 肉品 + 副餐",
     bundleEx3Desc: "<strong>品項：</strong>雙人特選火鍋套餐 - $450<br><strong>設定：</strong><br>• 分組 1：「選 1 款湯底」（數量 = 1，來源：原味、麻辣、番茄等）<br>• 分組 2：「選 2 盤肉品」（數量 = 2，允許重複，來源：牛肉片、豬五花、雞腿肉）<br>• 分組 3：「選 2 樣副餐」（數量 = 2，來源：白飯、冬粉、王子麵）",
-    btnBundleGuideGotIt: "我知道了"
+    btnBundleGuideGotIt: "我知道了",
+    // Item Detail Hub Modal (#itemDetailModal)
+    btnItemSettings: "設定",
+    itemDetailTitle: "單品設定",
+    itemDetailTitleNamed: "單品設定：{name}",
+    itemPhotoTitle: "餐點圖片",
+    btnUploadPhoto: "上傳/更換圖片",
+    btnRemovePhoto: "移除圖片",
+    itemBadgeTitle: "標籤與推薦",
+    itemBadgePlaceholder: "例如：熱銷、主廚推薦",
+    itemRecommendedLabel: "標記為推薦餐點 (在線上菜單置頂凸顯)",
+    itemAdvancedTitle: "進階設定",
+    cardModifiersTitle: "專屬客製化選項 (Modifiers)",
+    cardModifiersEmpty: "尚未設定專屬選項",
+    cardModifiersCount: "已設定 {count} 組客製化選項",
+    cardBundleTitle: "套餐/組合設定 (Bundle)",
+    cardBundleEmpty: "一般單品 (未啟用套餐組合)",
+    cardBundleCount: "套餐組合 ({count} 個選擇組)",
+    btnDetailDone: "完成",
+    quickTagHot: "熱銷",
+    quickTagRecommend: "推薦",
+    quickTagNew: "新品",
+    quickTagSpicy: "辣"
   },
   "vi": {
     langBtn: "Tiếng Việt",
@@ -1441,7 +1463,29 @@ const I18N = {
     bundleEx3Title: "🍲 Mô hình Quán Lẩu / Nướng / Cơm Gia Đình",
     bundleEx3Badge: "3 Nhóm • Nước lẩu + Thịt + Tinh bột",
     bundleEx3Desc: "<strong>Món:</strong> Set Lẩu Uyên Ương 2 Người - $450<br><strong>Cấu hình:</strong><br>• Nhóm 1: 'Chọn 1 Vị Nước Lẩu' (Số lượng = 1, Nguồn: Lẩu Thái, Lẩu Nấm, Lẩu Kim chi)<br>• Nhóm 2: 'Chọn 2 Đĩa Thịt' (Số lượng = 2, Cho phép chọn trùng: BẬT, Nguồn: Ba chỉ bò, Đùi gà, Bắp hoa)<br>• Nhóm 3: 'Chọn 2 Món Ăn Kèm / Tinh Bột' (Số lượng = 2, Nguồn: Mì tôm, Miến dong, Rau tổng hợp)",
-    btnBundleGuideGotIt: "Đã hiểu"
+    btnBundleGuideGotIt: "Đã hiểu",
+    // Item Detail Hub Modal (#itemDetailModal)
+    btnItemSettings: "Cài đặt",
+    itemDetailTitle: "Thiết lập món",
+    itemDetailTitleNamed: "Thiết lập món: {name}",
+    itemPhotoTitle: "Ảnh minh họa món",
+    btnUploadPhoto: "Tải ảnh lên / Thay đổi",
+    btnRemovePhoto: "Xóa ảnh",
+    itemBadgeTitle: "Nhãn hiển thị & Đề xuất",
+    itemBadgePlaceholder: "Ví dụ: Bán chạy, Đặc sản",
+    itemRecommendedLabel: "Đánh dấu là món nổi bật (Khuyên dùng)",
+    itemAdvancedTitle: "Thiết lập nâng cao",
+    cardModifiersTitle: "Tuỳ chọn riêng cho món (Modifiers)",
+    cardModifiersEmpty: "Chưa thiết lập tuỳ chọn riêng",
+    cardModifiersCount: "Đang áp dụng {count} nhóm tuỳ chọn",
+    cardBundleTitle: "Cấu hình Combo / Suất ăn (Bundle)",
+    cardBundleEmpty: "Món tiêu chuẩn (Không phải combo)",
+    cardBundleCount: "Combo {count} nhóm lựa chọn",
+    btnDetailDone: "Hoàn tất",
+    quickTagHot: "Bán chạy",
+    quickTagRecommend: "Khuyên dùng",
+    quickTagNew: "Món mới",
+    quickTagSpicy: "Cay"
   }
 };
 
@@ -2511,4 +2555,26 @@ function applyLanguageToDOM() {
   if (bndlEx3D) bndlEx3D.innerHTML = dict.bundleEx3Desc;
   const btnBndlGGotIt = document.getElementById("i18n-btn-bundle-guide-gotit");
   if (btnBndlGGotIt) btnBndlGGotIt.innerText = dict.btnBundleGuideGotIt;
+
+  // Item Detail Hub Modal DOM mappings
+  const itemDetailTitle = document.getElementById("item-detail-modal-title");
+  if (itemDetailTitle && (typeof itemDetailTitle.getAttribute !== "function" || !itemDetailTitle.getAttribute("data-custom-title"))) itemDetailTitle.innerText = dict.itemDetailTitle;
+  const itemBadgeTitle = document.getElementById("i18n-item-badge-title");
+  if (itemBadgeTitle) itemBadgeTitle.innerText = dict.itemBadgeTitle;
+  const itemBadgeInput = document.getElementById("item-detail-badge-input");
+  if (itemBadgeInput && typeof itemBadgeInput.setAttribute === "function") itemBadgeInput.setAttribute("placeholder", dict.itemBadgePlaceholder);
+  const itemRecLabel = document.getElementById("i18n-item-recommended-label");
+  if (itemRecLabel) itemRecLabel.innerText = dict.itemRecommendedLabel;
+  const itemAdvTitle = document.getElementById("i18n-item-advanced-title");
+  if (itemAdvTitle) itemAdvTitle.innerText = dict.itemAdvancedTitle;
+  const cardModTitle = document.getElementById("i18n-card-mod-title");
+  if (cardModTitle) cardModTitle.innerText = dict.cardModifiersTitle;
+  const cardBundleTitle = document.getElementById("i18n-card-bundle-title");
+  if (cardBundleTitle) cardBundleTitle.innerText = dict.cardBundleTitle;
+  const btnItemPhotoUpload = document.getElementById("i18n-btn-item-photo-upload");
+  if (btnItemPhotoUpload) btnItemPhotoUpload.innerText = dict.btnUploadPhoto;
+  const btnItemPhotoRemove = document.getElementById("i18n-btn-item-photo-remove");
+  if (btnItemPhotoRemove) btnItemPhotoRemove.innerText = dict.btnRemovePhoto;
+  const btnItemDetailDone = document.getElementById("btn-item-detail-done");
+  if (btnItemDetailDone) btnItemDetailDone.innerText = dict.btnDetailDone;
 }

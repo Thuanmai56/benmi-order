@@ -660,46 +660,42 @@ function renderMenuCategoryEditor(index) {
 
     const gripSvg = (typeof POS_SVG !== "undefined" && POS_SVG.grip) || "⋮⋮";
     const tagSvg = (typeof POS_SVG !== "undefined" && POS_SVG.tag) || "";
-    const imageSvg = (typeof POS_SVG !== "undefined" && POS_SVG.image) || "";
     const trashSvg = (typeof POS_SVG !== "undefined" && POS_SVG.trash) || "";
     const layersSvg = (typeof POS_SVG !== "undefined" && POS_SVG.layers) || "";
-    const plusSvg = (typeof POS_SVG !== "undefined" && POS_SVG.plus) || "";
+    const settingsSvg = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`;
+    const slidersSvg = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="21" y2="21"/><line x1="4" x2="20" y1="14" y2="14"/><line x1="4" x2="20" y1="7" y2="7"/><circle cx="14" cy="21" r="2"/><circle cx="8" cy="14" r="2"/><circle cx="16" cy="7" r="2"/></svg>`;
 
+    // --- Indicator Chips: Only render when data exists ---
+    let chipsHtml = '';
     const hasBundle = Boolean(item.bundleRule && Array.isArray(item.bundleRule.groups) && item.bundleRule.groups.length > 0);
     const bundleCount = hasBundle ? item.bundleRule.groups.length : 0;
-    let bundleBtnHtml = '';
-    if (cat.type === 'catalog' && !window.currentTenantFeatures?.includes('disable_bundle_builder_v2')) {
-      if (hasBundle) {
-        const bundleText = currentLang === 'vi'
-          ? `${t("bundleBadge")} (${bundleCount} ${t("bundleGroupUnit")})`
-          : `${t("bundleBadge")} (${bundleCount}${t("bundleGroupUnit")})`;
-        bundleBtnHtml = `
-          <button type="button" class="menu-item-bundle-btn is-bundle" onclick="openBundleWizard(${index}, ${iIdx})" title="${t('btnEditBundle')}">
-            ${layersSvg}<span>${bundleText}</span>
-          </button>
-        `;
-      } else {
-        bundleBtnHtml = `
-          <button type="button" class="menu-item-bundle-btn is-not-bundle" onclick="openBundleWizard(${index}, ${iIdx})" title="${t('btnSetBundle')}">
-            ${plusSvg}<span>${t("btnSetBundle")}</span>
-          </button>
-        `;
-      }
+    const isBundleDisabled = window.currentTenantFeatures?.includes('disable_bundle_builder_v2');
+
+    if (cat.type === 'catalog' && hasBundle && !isBundleDisabled) {
+      const bundleText = currentLang === 'vi'
+        ? `${t("bundleBadge")} (${bundleCount} ${t("bundleGroupUnit")})`
+        : `${t("bundleBadge")} (${bundleCount}${t("bundleGroupUnit")})`;
+      chipsHtml += `
+        <span class="menu-item-chip chip-combo" onclick="openBundleWizard(${index}, ${iIdx})" title="${t('btnEditBundle')}">
+          ${layersSvg}<span>${bundleText}</span>
+        </span>
+      `;
     }
 
-    let itemModifiersBtnHtml = '';
-    if (cat.type === 'catalog') {
-      const modCount = (item.modifierGroups || []).length;
-      const hasModifiers = modCount > 0;
-      const modBtnClass = hasModifiers ? 'has-modifiers' : 'no-modifiers';
-      const modBtnText = hasModifiers
-        ? `${t("btnItemModifiers")} (${modCount})`
-        : `+ ${t("btnItemModifiers")}`;
-      const slidersSvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="21" y2="21"/><line x1="4" x2="20" y1="14" y2="14"/><line x1="4" x2="20" y1="7" y2="7"/><circle cx="14" cy="21" r="2"/><circle cx="8" cy="14" r="2"/><circle cx="16" cy="7" r="2"/></svg>`;
-      itemModifiersBtnHtml = `
-        <button type="button" class="menu-item-modifiers-btn ${modBtnClass}" onclick="openItemModifiersModal(${index}, ${iIdx})" title="${t('btnItemModifiers')}">
-          ${slidersSvg}<span>${modBtnText}</span>
-        </button>
+    const modCount = (item.modifierGroups || []).length;
+    if (cat.type === 'catalog' && modCount > 0) {
+      chipsHtml += `
+        <span class="menu-item-chip chip-modifier" onclick="openItemModifiersModal(${index}, ${iIdx})" title="${t('btnItemModifiers')}">
+          ${slidersSvg}<span>+${modCount} ${t('btnItemModifiers')}</span>
+        </span>
+      `;
+    }
+
+    if (item.badgeText && item.badgeText.trim() !== "") {
+      chipsHtml += `
+        <span class="menu-item-chip chip-badge" onclick="openItemDetailModal(${index}, ${iIdx})" title="${escapeHtml(item.badgeText)}">
+          ${tagSvg}<span>${escapeHtml(item.badgeText)}</span>
+        </span>
       `;
     }
 
@@ -713,11 +709,7 @@ function renderMenuCategoryEditor(index) {
           <input type="number" class="menu-item-price-input" value="${item.price !== null && item.price !== undefined ? item.price : ''}" data-cidx="${index}" data-iidx="${iIdx}" oninput="markMenuDirty()"
             placeholder="${t("priceHiddenPlaceholder")}">
         </label>
-        <label class="menu-item-badge-label" title="${t('menuItemBadgePlaceholder')}">
-          <span class="badge-icon">${tagSvg}</span>
-          <input type="text" class="menu-item-badge-input" value="${escapeHtml(item.badgeText || '')}" data-badge-cidx="${index}" data-badge-iidx="${iIdx}" oninput="markMenuDirty()"
-            placeholder="${t('menuItemBadgePlaceholder')}">
-        </label>
+        <div class="menu-item-indicator-chips">${chipsHtml}</div>
       </div>
       <div class="menu-item-actions">
         <button type="button" class="menu-item-status-pill ${item.isOos ? 'oos' : 'in-stock'}"
@@ -725,13 +717,11 @@ function renderMenuCategoryEditor(index) {
           <span class="status-dot"></span>
           <span class="status-text">${oosText}</span>
         </button>
-        ${bundleBtnHtml}
-        ${itemModifiersBtnHtml}
-        <button type="button" class="btn btn-ghost menu-item-action-btn" onclick="openImageModal('${cat.id}', '${escapeHtml(item.name)}')">
-          ${imageSvg}<span>${t("btnItemImage")}</span>
+        <button type="button" class="menu-item-settings-btn" onclick="openItemDetailModal(${index}, ${iIdx})" title="${t('btnItemSettings')}">
+          ${settingsSvg}<span>${t("btnItemSettings")}</span>
         </button>
-        <button type="button" class="btn btn-ghost menu-item-action-btn btn-danger-ghost" onclick="removeMenuItemAt(${index}, ${iIdx})">
-          ${trashSvg}<span>${t("btnItemDelete")}</span>
+        <button type="button" class="menu-item-delete-btn" onclick="removeMenuItemAt(${index}, ${iIdx})" title="${t('btnItemDelete')}">
+          ${trashSvg}
         </button>
       </div>
     `;
@@ -2440,9 +2430,14 @@ window.openItemModifiersModal = openItemModifiersModal;
 function closeItemModifiersModal() {
   const modal = document.getElementById("itemModifiersModal");
   if (modal) modal.style.display = "none";
+  const returnState = window._hubModalReturnState;
   currentItemModifiersCidx = null;
   currentItemModifiersIidx = null;
   tempItemModifierGroups = [];
+  if (returnState) {
+    window._hubModalReturnState = null;
+    openItemDetailModal(returnState.catIdx, returnState.itemIdx);
+  }
 }
 window.closeItemModifiersModal = closeItemModifiersModal;
 
@@ -2628,3 +2623,337 @@ function saveItemModifiersModal() {
   closeItemModifiersModal();
 }
 window.saveItemModifiersModal = saveItemModifiersModal;
+
+// ==========================================================================
+// Item Detail Hub Modal (#itemDetailModal) Controller
+// ==========================================================================
+let activeItemDetailCatIdx = null;
+let activeItemDetailItemIdx = null;
+let currentDetailImageKey = null;
+
+async function checkItemDetailImage(categoryId, itemName) {
+  const previewEl = document.getElementById("item-detail-img-preview");
+  const placeholderEl = document.getElementById("item-detail-img-placeholder");
+  const deleteBtn = document.getElementById("btn-item-detail-delete-img");
+  const statusEl = document.getElementById("item-detail-img-status");
+
+  if (!previewEl || !placeholderEl || !statusEl) return;
+  statusEl.innerText = t("imageChecking");
+  previewEl.style.display = "none";
+  placeholderEl.style.display = "flex";
+  if (deleteBtn) deleteBtn.style.display = "none";
+
+  const key = `${categoryId}_${itemName}`;
+  const tenantId = getTenantIdFromUrl();
+
+  try {
+    let list = window._tenantImageList;
+    if (!list) {
+      const res = await fetch(`${WORKER_BASE}/api/image_list?tenant_id=${tenantId}&_t=${Date.now()}`);
+      if (res.ok) {
+        const arr = await res.json();
+        list = new Set(arr);
+        window._tenantImageList = list;
+      }
+    }
+    const hasImg = list && (list.has(key) || list.has(itemName));
+    if (hasImg) {
+      const resolvedName = list.has(key) ? key : itemName;
+      previewEl.src = `${WORKER_BASE}/api/image?tenant_id=${tenantId}&name=${encodeURIComponent(resolvedName)}&_t=${Date.now()}`;
+      previewEl.style.display = "block";
+      placeholderEl.style.display = "none";
+      if (deleteBtn) deleteBtn.style.display = "inline-flex";
+      statusEl.innerText = t("imageHasImage");
+    } else {
+      statusEl.innerText = t("imageNoImage");
+    }
+  } catch (e) {
+    statusEl.innerText = t("imageLoadFail");
+  }
+}
+
+function triggerItemDetailPhotoUpload() {
+  const fileInput = document.getElementById("item-detail-file-input");
+  if (fileInput) fileInput.click();
+}
+window.triggerItemDetailPhotoUpload = triggerItemDetailPhotoUpload;
+
+function handleItemDetailImageSelect(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file || !currentDetailImageKey) return;
+
+  const statusEl = document.getElementById("item-detail-img-status");
+  if (statusEl) statusEl.innerText = t("imageUploading");
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = async function() {
+      const MAX_WIDTH = 800;
+      const MAX_HEIGHT = 800;
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height) {
+        if (width > MAX_WIDTH) {
+          height *= MAX_WIDTH / width;
+          width = MAX_WIDTH;
+        }
+      } else {
+        if (height > MAX_HEIGHT) {
+          width *= MAX_HEIGHT / height;
+          height = MAX_HEIGHT;
+        }
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, width, height);
+
+      const dataUri = canvas.toDataURL("image/webp", 0.82);
+
+      try {
+        const tenantId = getTenantIdFromUrl();
+        const res = await fetch(`${WORKER_BASE}/api/image?tenant_id=${tenantId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: currentDetailImageKey, dataUri })
+        });
+        if (!res.ok) throw new Error("Upload failed");
+
+        const previewEl = document.getElementById("item-detail-img-preview");
+        const placeholderEl = document.getElementById("item-detail-img-placeholder");
+        const deleteBtn = document.getElementById("btn-item-detail-delete-img");
+
+        if (previewEl) {
+          previewEl.src = dataUri;
+          previewEl.style.display = "block";
+        }
+        if (placeholderEl) placeholderEl.style.display = "none";
+        if (deleteBtn) deleteBtn.style.display = "inline-flex";
+        if (statusEl) statusEl.innerText = t("imageUploadSuccess");
+
+        if (window._tenantImageList) window._tenantImageList.add(currentDetailImageKey);
+      } catch (err) {
+        alert(t("imageUploadFail") + (err.message || ""));
+        if (statusEl) statusEl.innerText = t("imageLoadFail");
+      }
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  event.target.value = "";
+}
+window.handleItemDetailImageSelect = handleItemDetailImageSelect;
+
+async function deleteItemDetailPhoto() {
+  if (!currentDetailImageKey) return;
+  if (!confirm(t("confirmDeleteImage"))) return;
+
+  const statusEl = document.getElementById("item-detail-img-status");
+  const previewEl = document.getElementById("item-detail-img-preview");
+  const placeholderEl = document.getElementById("item-detail-img-placeholder");
+  const deleteBtn = document.getElementById("btn-item-detail-delete-img");
+
+  if (statusEl) statusEl.innerText = t("imageDeleting");
+  try {
+    const tenantId = getTenantIdFromUrl();
+    const res = await fetch(`${WORKER_BASE}/api/image?tenant_id=${tenantId}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: currentDetailImageKey })
+    });
+    if (!res.ok) throw new Error("Delete failed");
+
+    if (previewEl) {
+      previewEl.src = "";
+      previewEl.style.display = "none";
+    }
+    if (placeholderEl) placeholderEl.style.display = "flex";
+    if (deleteBtn) deleteBtn.style.display = "none";
+    if (statusEl) statusEl.innerText = t("imageNoImage");
+
+    if (window._tenantImageList) window._tenantImageList.delete(currentDetailImageKey);
+  } catch (err) {
+    alert(t("imageDeleteFail") + (err.message || ""));
+    if (statusEl) statusEl.innerText = t("imageLoadFail");
+  }
+}
+window.deleteItemDetailPhoto = deleteItemDetailPhoto;
+
+function renderQuickTags(currentVal) {
+  const container = document.getElementById("item-detail-quick-tags");
+  if (!container) return;
+  container.innerHTML = "";
+
+  const tags = [
+    { key: "quickTagHot", text: t("quickTagHot") },
+    { key: "quickTagRecommend", text: t("quickTagRecommend") },
+    { key: "quickTagNew", text: t("quickTagNew") },
+    { key: "quickTagSpicy", text: t("quickTagSpicy") }
+  ];
+
+  tags.forEach(tg => {
+    const chip = document.createElement("span");
+    chip.className = `quick-tag-chip ${currentVal === tg.text ? 'active' : ''}`;
+    chip.innerText = tg.text;
+    chip.onclick = () => handleQuickTagClick(tg.text);
+    container.appendChild(chip);
+  });
+}
+
+function handleQuickTagClick(tagText) {
+  const badgeInput = document.getElementById("item-detail-badge-input");
+  const recCheckbox = document.getElementById("item-detail-recommended-checkbox");
+  if (!badgeInput) return;
+
+  const currentVal = badgeInput.value.trim();
+  const recTag = t("quickTagRecommend");
+
+  if (currentVal === tagText) {
+    badgeInput.value = "";
+    if (tagText === recTag && recCheckbox) recCheckbox.checked = false;
+  } else {
+    badgeInput.value = tagText;
+    if (tagText === recTag && recCheckbox) recCheckbox.checked = true;
+  }
+  renderQuickTags(badgeInput.value.trim());
+}
+window.handleQuickTagClick = handleQuickTagClick;
+
+function autoCommitItemDetailFields() {
+  if (activeItemDetailCatIdx === null || activeItemDetailItemIdx === null) return;
+  const item = currentMenuData[activeItemDetailCatIdx]?.items?.[activeItemDetailItemIdx];
+  if (!item) return;
+
+  const badgeInput = document.getElementById("item-detail-badge-input");
+  const recCheckbox = document.getElementById("item-detail-recommended-checkbox");
+
+  if (badgeInput) item.badgeText = badgeInput.value.trim();
+  if (recCheckbox) item.isRecommended = recCheckbox.checked;
+  markMenuDirty();
+}
+
+function openItemDetailModal(cIdx, iIdx) {
+  syncMenuDataFromDOM();
+  if (!currentMenuData || !currentMenuData[cIdx] || !currentMenuData[cIdx].items || !currentMenuData[cIdx].items[iIdx]) return;
+
+  activeItemDetailCatIdx = cIdx;
+  activeItemDetailItemIdx = iIdx;
+
+  const cat = currentMenuData[cIdx];
+  const item = cat.items[iIdx];
+
+  const modal = document.getElementById("itemDetailModal");
+  const titleEl = document.getElementById("item-detail-modal-title");
+  if (titleEl) {
+    const itemName = item.name ? item.name.trim() : (t("newItemPlaceholder") || "Món mới");
+    titleEl.innerText = `${t("itemDetailTitle")} - ${itemName}`;
+    titleEl.setAttribute("data-custom-title", "1");
+  }
+
+  // Photo
+  const photoNameEl = document.getElementById("item-detail-photo-item-name");
+  if (photoNameEl) photoNameEl.innerText = item.name || "";
+  currentDetailImageKey = `${cat.id}_${item.name}`;
+  checkItemDetailImage(cat.id, item.name);
+
+  // Badge & Recommended
+  const badgeInput = document.getElementById("item-detail-badge-input");
+  if (badgeInput) {
+    badgeInput.value = item.badgeText || "";
+    renderQuickTags(item.badgeText || "");
+    badgeInput.oninput = () => renderQuickTags(badgeInput.value.trim());
+  }
+  const recCheckbox = document.getElementById("item-detail-recommended-checkbox");
+  if (recCheckbox) {
+    recCheckbox.checked = Boolean(item.isRecommended || (item.badgeText && item.badgeText.includes(t("quickTagRecommend"))));
+  }
+
+  // Advanced Section
+  const advSection = document.getElementById("item-detail-advanced-section");
+  if (cat.type !== 'catalog') {
+    if (advSection) advSection.style.display = "none";
+  } else {
+    if (advSection) advSection.style.display = "block";
+
+    // Modifiers Summary
+    const modCount = (item.modifierGroups || []).length;
+    const modSumEl = document.getElementById("item-detail-mod-summary");
+    if (modSumEl) {
+      modSumEl.innerText = modCount > 0 ? t("cardModifiersCount", { count: modCount }) : t("cardModifiersEmpty");
+    }
+
+    // Bundle Summary
+    const bundleCard = document.getElementById("item-detail-bundle-card");
+    const isBundleDisabled = window.currentTenantFeatures?.includes('disable_bundle_builder_v2');
+    if (isBundleDisabled) {
+      if (bundleCard) bundleCard.style.display = "none";
+    } else {
+      if (bundleCard) bundleCard.style.display = "flex";
+      const bundleCount = (item.bundleRule && Array.isArray(item.bundleRule.groups)) ? item.bundleRule.groups.length : 0;
+      const bndlSumEl = document.getElementById("item-detail-bundle-summary");
+      if (bndlSumEl) {
+        bndlSumEl.innerText = bundleCount > 0 ? t("cardBundleCount", { count: bundleCount }) : t("cardBundleEmpty");
+      }
+    }
+  }
+
+  if (modal) modal.style.display = "flex";
+}
+window.openItemDetailModal = openItemDetailModal;
+
+function closeItemDetailModal() {
+  const modal = document.getElementById("itemDetailModal");
+  if (modal) modal.style.display = "none";
+  activeItemDetailCatIdx = null;
+  activeItemDetailItemIdx = null;
+  currentDetailImageKey = null;
+}
+window.closeItemDetailModal = closeItemDetailModal;
+
+function saveItemDetailModal() {
+  if (activeItemDetailCatIdx !== null && activeItemDetailItemIdx !== null) {
+    const item = currentMenuData[activeItemDetailCatIdx]?.items?.[activeItemDetailItemIdx];
+    if (item) {
+      const badgeInput = document.getElementById("item-detail-badge-input");
+      const recCheckbox = document.getElementById("item-detail-recommended-checkbox");
+      if (badgeInput) item.badgeText = badgeInput.value.trim();
+      if (recCheckbox) item.isRecommended = recCheckbox.checked;
+
+      markMenuDirty();
+      renderMenuCategoryEditor(activeItemDetailCatIdx);
+    }
+  }
+  closeItemDetailModal();
+}
+window.saveItemDetailModal = saveItemDetailModal;
+
+function transitionToSubEditor(type) {
+  if (activeItemDetailCatIdx === null || activeItemDetailItemIdx === null) return;
+  autoCommitItemDetailFields();
+
+  const cat = currentMenuData[activeItemDetailCatIdx];
+  const item = cat.items[activeItemDetailItemIdx];
+  if (!cat || !item) return;
+
+  window._hubModalReturnState = {
+    catId: cat.id,
+    itemName: item.name,
+    catIdx: activeItemDetailCatIdx,
+    itemIdx: activeItemDetailItemIdx
+  };
+
+  const modal = document.getElementById("itemDetailModal");
+  if (modal) modal.style.display = "none";
+
+  if (type === 'modifiers') {
+    openItemModifiersModal(activeItemDetailCatIdx, activeItemDetailItemIdx);
+  } else if (type === 'bundle') {
+    openBundleWizard(activeItemDetailCatIdx, activeItemDetailItemIdx);
+  }
+}
+window.transitionToSubEditor = transitionToSubEditor;
+

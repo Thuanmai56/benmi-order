@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title id="pos-page-title">Blab POS</title>
   <base href="/" />
-  <link rel="stylesheet" href="css/orders.css?v=20260925_menu_streamline_v2" />
+  <link rel="stylesheet" href="css/orders.css?v=20260926_item_actions_streamline_v1" />
     <script>
       (function () {
         document.documentElement.style.setProperty('--primary', '#00b900');
@@ -2136,6 +2136,93 @@
     </div>
   </div>
 
+  <!-- Modal: Thiết Lập Chi Tiết Món (Hub Modal: Detail & Action Center) -->
+  <div id="itemDetailModal" class="modal" style="display: none;" onclick="if(event.target === this) closeItemDetailModal()">
+    <div class="modal-content item-detail-modal-content">
+      <div class="modal-title">
+        <h3 id="item-detail-modal-title">單品設定</h3>
+        <div class="modal-close" onclick="closeItemDetailModal()">✕</div>
+      </div>
+      <div class="modal-body item-detail-modal-body">
+        <!-- Section 1: Photo -->
+        <div class="item-detail-section item-detail-photo-section">
+          <div class="item-detail-photo-preview-wrap">
+            <img id="item-detail-img-preview" src="" alt="Item photo" style="display: none;">
+            <div id="item-detail-img-placeholder" class="item-detail-photo-placeholder">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            </div>
+          </div>
+          <div class="item-detail-photo-info">
+            <div class="item-detail-photo-name" id="item-detail-photo-item-name"></div>
+            <div class="item-detail-photo-status" id="item-detail-img-status"></div>
+            <div class="item-detail-photo-actions">
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-item-detail-upload" onclick="triggerItemDetailPhotoUpload()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <span id="i18n-btn-item-photo-upload">上傳/更換圖片</span>
+              </button>
+              <button type="button" class="btn btn-ghost btn-sm btn-danger-ghost" id="btn-item-detail-delete-img" style="display: none;" onclick="deleteItemDetailPhoto()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                <span id="i18n-btn-item-photo-remove">移除圖片</span>
+              </button>
+            </div>
+            <input type="file" id="item-detail-file-input" accept="image/png, image/jpeg, image/webp" style="display: none;" onchange="handleItemDetailImageSelect(event)">
+          </div>
+        </div>
+
+        <!-- Section 2: Badge & Recommended -->
+        <div class="item-detail-section">
+          <label class="item-detail-label" id="i18n-item-badge-title">標籤與推薦</label>
+          <div class="item-detail-badge-input-wrap">
+            <input type="text" id="item-detail-badge-input" class="item-detail-input" placeholder="例如：熱銷、主廚推薦">
+          </div>
+          <div class="item-detail-quick-tags" id="item-detail-quick-tags">
+            <!-- Rendered via JS based on currentLang -->
+          </div>
+          <label class="item-detail-checkbox-label">
+            <input type="checkbox" id="item-detail-recommended-checkbox">
+            <span id="i18n-item-recommended-label">標記為推薦餐點 (在線上菜單置頂凸顯)</span>
+          </label>
+        </div>
+
+        <!-- Section 3: Advanced Action Cards -->
+        <div class="item-detail-section" id="item-detail-advanced-section">
+          <label class="item-detail-label" id="i18n-item-advanced-title">進階設定</label>
+          
+          <!-- Modifiers Card -->
+          <div class="item-detail-action-card" id="item-detail-mod-card" onclick="transitionToSubEditor('modifiers')">
+            <div class="item-detail-card-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="21" y2="21"/><line x1="4" x2="20" y1="14" y2="14"/><line x1="4" x2="20" y1="7" y2="7"/><circle cx="14" cy="21" r="2"/><circle cx="8" cy="14" r="2"/><circle cx="16" cy="7" r="2"/></svg>
+            </div>
+            <div class="item-detail-card-content">
+              <div class="item-detail-card-title" id="i18n-card-mod-title">專屬客製化選項 (Modifiers)</div>
+              <div class="item-detail-card-sub" id="item-detail-mod-summary">尚未設定專屬選項</div>
+            </div>
+            <div class="item-detail-card-arrow">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+          </div>
+
+          <!-- Bundle Card -->
+          <div class="item-detail-action-card" id="item-detail-bundle-card" onclick="transitionToSubEditor('bundle')">
+            <div class="item-detail-card-icon bundle-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+            </div>
+            <div class="item-detail-card-content">
+              <div class="item-detail-card-title" id="i18n-card-bundle-title">套餐/組合設定 (Bundle)</div>
+              <div class="item-detail-card-sub" id="item-detail-bundle-summary">一般單品 (未啟用套餐組合)</div>
+            </div>
+            <div class="item-detail-card-arrow">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions" style="justify-content: flex-end; padding: 12px 20px;">
+        <button type="button" class="btn btn-primary" id="btn-item-detail-done" onclick="saveItemDetailModal()" style="min-width: 110px;">完成</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Printer Feature Usage Guide Modal (Modern Tablet Dialog) -->
   <div class="modal" id="printerGuideModal" style="display: none;" onclick="if(event.target === this) closePrinterGuideModal()">
     <div class="modal-content" style="max-width: 820px; border-radius: 18px; padding: 24px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18);">
@@ -2419,7 +2506,7 @@
   </section>
 
   <!-- Benmi POS Modular Architecture Scripts -->
-  <script src="js/orders-i18n.js?v=20260925_menu_streamline_v2"></script>
+  <script src="js/orders-i18n.js?v=20260926_item_actions_streamline_v1"></script>
   <script src="js/orders-core.js?v=20260916_menu_bundle_editor_v5"></script>
   <script src="js/orders-audio.js?v=20260916_menu_bundle_editor_v5"></script>
   <script src="js/printer-service.js?v=20260923_combo_v2"></script>
@@ -2428,8 +2515,8 @@
   <script src="js/orders-history.js?v=20260916_menu_bundle_editor_v5"></script>
   <script src="js/orders-reports.js?v=20260916_menu_bundle_editor_v5"></script>
   <script src="js/orders-settings.js?v=20260916_menu_bundle_editor_v5"></script>
-  <script src="js/orders-menu.js?v=20260925_menu_streamline_v2"></script>
-  <script src="js/orders-bundle-wizard.js?v=20260923_combo_single_name_v4"></script>
+  <script src="js/orders-menu.js?v=20260926_item_actions_streamline_v1"></script>
+  <script src="js/orders-bundle-wizard.js?v=20260926_item_actions_streamline_v1"></script>
 
   <!-- POS Bootstrap & Initialization -->
   <script>
