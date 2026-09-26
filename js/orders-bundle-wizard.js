@@ -9,7 +9,7 @@ const comboCatalogItems = () => (currentMenuData || []).filter(cat => cat.type =
 const comboLabel = (zh, vi) => { const name = currentLang === 'vi' ? vi : zh; return { 'zh-TW': name, vi: name }; };
 const comboGroupName = group => typeof group.label === 'string' ? group.label : (group.label?.[currentLang] || group.name || group.label?.['zh-TW'] || group.label?.vi || '');
 function comboSetGroupName(group, name) { group.name = name; group.label = { 'zh-TW': name, vi: name }; }
-const comboNewGroup = type => ({ id: `group_${crypto.randomUUID()}`, type, label: comboLabel('', ''), minQuantity: 1, maxQuantity: 1, allowRepeats: false, sources: [], items: [], surcharges: {} });
+const comboNewGroup = type => ({ id: `group_${crypto.randomUUID()}`, type, label: comboLabel(type === 'fixed' ? '固定內容' : '自選餐點', type === 'fixed' ? 'Món có sẵn' : 'Món tự chọn'), minQuantity: 1, maxQuantity: 1, allowRepeats: false, sources: [], items: [], surcharges: {} });
 
 function persistComboWizard() {
   if (!comboWizard) return;
@@ -111,7 +111,19 @@ function comboWizardTemplate(kind) {
   document.querySelector('.bundle-wizard-group input')?.focus();
 }
 window.comboWizardTemplate = comboWizardTemplate;
-function comboWizardAddGroup(type) { comboGroups().push(comboNewGroup(type)); persistComboWizard(); renderComboWizard(); }
+function comboWizardAddGroup(type) {
+  comboGroups().push(comboNewGroup(type));
+  persistComboWizard();
+  renderComboWizard();
+  setTimeout(() => {
+    const groups = document.querySelectorAll('.bundle-wizard-group');
+    if (groups.length) {
+      const last = groups[groups.length - 1];
+      last.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      last.querySelector('input')?.focus();
+    }
+  }, 40);
+}
 window.comboWizardAddGroup = comboWizardAddGroup;
 function comboWizardRemoveGroup(index) { comboGroups().splice(index, 1); persistComboWizard(); renderComboWizard(); }
 window.comboWizardRemoveGroup = comboWizardRemoveGroup;
@@ -220,32 +232,86 @@ function renderComboWizard() {
   } else if (step === 1) {
     const candidates = comboCatalogItems();
     const categories = currentMenuData.filter(cat => cat.type === 'catalog');
-    const cards = ['meal', 'many', 'fixed'].map(kind => {
-      const key = { meal: 'Meal', many: 'Many', fixed: 'Fixed' }[kind];
-      return `<button type="button" class="bundle-template-card" onclick="comboWizardTemplate('${kind}')"><strong>${comboText('comboTemplate' + key)}</strong><span>${comboText('comboTemplate' + key + 'Help')}</span><span class="bundle-template-example">${comboText('comboTemplate' + key + 'Example')}</span><span class="bundle-template-action">${comboText('comboUseTemplate')}</span></button>`;
-    }).join('');
-    const templateContent = `<p>${comboText('comboTemplatesHelp')}</p><div class="bundle-wizard-templates">${cards}</div>`;
-    const templates = `<section class="bundle-wizard-guide"><h2>${comboText('comboPartsTitle')}</h2><p>${comboText('comboPartsHelp')}</p></section>` + (comboGroups().length
-      ? `<details class="bundle-wizard-guide"><summary>${comboText('comboChangeTemplate')}</summary>${templateContent}</details>`
-      : `<section class="bundle-wizard-guide"><h2>${comboText('comboTemplatesTitle')}</h2>${templateContent}</section>`);
-    body.innerHTML = templates + comboGroups().map((group, index) => {
-      const selectedIds = group.type === 'fixed' ? group.items.map(it => it.itemId) : group.sources.filter(src => src.type === 'item_list').flatMap(src => src.itemIds || []);
-      const search = comboWizard.search?.[index] || '';
-      const filter = comboWizard.filters?.[index] || 'all';
-      const visible = candidates.filter(item => (filter === 'all' || item.categoryId === filter) && item.name.toLowerCase().includes(search.toLowerCase()));
-      return `<section class="bundle-wizard-group"><header><h2>${index + 1}. ${comboText(group.type === 'fixed' ? 'comboFixedGroup' : 'comboChoiceGroup')}</h2><button type="button" onclick="comboWizardRemoveGroup(${index})">${comboText('comboRemove')}</button></header><p class="bundle-wizard-hint">${comboText(group.type === 'fixed' ? 'comboFixedHelp' : 'comboChoiceHelp')}</p>
-        <label>${comboText('comboGroupName')}<input value="${comboEscape(comboGroupName(group))}" oninput="comboWizardGroupField(${index},'name',this.value)"></label>
-        ${group.type === 'choice' ? `<div class="bundle-wizard-two"><label>${comboText('comboQuantity')}<input type="number" min="1" value="${group.minQuantity}" onchange="comboWizardGroupField(${index},'minQuantity',this.value)"></label><label class="bundle-wizard-check"><input type="checkbox" ${group.allowRepeats ? 'checked' : ''} onchange="comboWizardGroupField(${index},'allowRepeats',this.checked)">${comboText('comboRepeat')}</label></div>` : ''}
-        <div class="bundle-wizard-two"><input id="combo-search-${index}" type="search" placeholder="${comboText('comboSearch')}" value="${comboEscape(search)}" oninput="comboWizardSearch(${index},this.value)"><select aria-label="${comboText('comboFilterCategory')}" onchange="comboWizardFilter(${index},this.value)"><option value="all">${comboText('comboAllCategories')}</option>${categories.map(cat => `<option value="${comboEscape(cat.catId)}" ${filter === cat.catId ? 'selected' : ''}>${comboEscape(cat.title)}</option>`).join('')}</select></div>
-        <div class="bundle-wizard-candidates">${visible.map(item => {
-          const selected = selectedIds.includes(item.id);
-          const fixed = group.items.find(f => f.itemId === item.id);
-          const extra = fixed?.surcharge ?? group.surcharges[item.id] ?? 0;
-          return `<div class="bundle-wizard-candidate"><label><input type="checkbox" ${selected ? 'checked' : ''} onchange="comboWizardToggleItem(${index},'${comboEscape(item.id)}',this.checked)"><span>${comboEscape(item.name)} · ${comboEscape(item.categoryName)}</span></label>${selected ? `<label>${comboText('comboSurcharge')}<input type="number" min="0" value="${extra}" onchange="comboWizardItemValue(${index},'${comboEscape(item.id)}','surcharge',this.value)"></label>${fixed ? `<label>${comboText('comboQuantity')}<input type="number" min="1" value="${fixed.quantity}" onchange="comboWizardItemValue(${index},'${comboEscape(item.id)}','quantity',this.value)"></label>` : ''}` : ''}</div>`;
-        }).join('')}</div>
-        ${group.type === 'choice' ? `<details><summary>${comboText('comboWholeCategory')}</summary><p>${comboText('comboWholeCategoryHelp')}</p>${categories.map(cat => `<label class="bundle-wizard-check"><input type="checkbox" ${group.sources.some(src => src.type === 'category' && src.refId === cat.catId) ? 'checked' : ''} onchange="comboWizardToggleCategory(${index},'${comboEscape(cat.catId)}',this.checked)">${comboEscape(cat.title)}</label>`).join('')}</details>` : ''}
-      </section>`;
-    }).join('') + `<div class="bundle-wizard-add"><button type="button" onclick="comboWizardAddGroup('choice')">${comboText('comboAddChoice')}</button><button type="button" onclick="comboWizardAddGroup('fixed')">${comboText('comboAddFixed')}</button></div>`;
+    const groups = comboGroups();
+
+    const guideHeader = `<section class="bundle-wizard-guide">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;">
+        <div>
+          <h2 style="margin:0 0 6px; font-size:18px; color:#0f172a;">${comboText('comboPartsTitle')}</h2>
+          <p style="margin:0; font-size:13.5px; color:#475569; line-height:1.5;">${comboText('comboPartsHelp')}</p>
+        </div>
+        ${groups.length ? `
+          <div style="display:flex; gap:8px; flex-shrink:0;">
+            <button type="button" class="btn btn-primary" onclick="comboWizardAddGroup('choice')" style="font-weight:700; font-size:13px; min-height:40px; padding:6px 14px; border-radius:8px;">+ ${comboText('comboAddChoice')}</button>
+            <button type="button" class="btn btn-secondary" onclick="comboWizardAddGroup('fixed')" style="font-weight:700; font-size:13px; min-height:40px; padding:6px 14px; border-radius:8px;">+ ${comboText('comboAddFixed')}</button>
+          </div>
+        ` : ''}
+      </div>
+    </section>`;
+
+    let contentHtml = '';
+    if (!groups.length) {
+      contentHtml = `<div class="bundle-wizard-empty-state">
+        <div style="width:54px; height:54px; border-radius:50%; background:#f1f5f9; display:flex; align-items:center; justify-content:center; color:#64748b;">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"></rect>
+            <rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect>
+            <rect x="3" y="14" width="7" height="7"></rect>
+          </svg>
+        </div>
+        <div style="font-size:16px; font-weight:700; color:#1e293b;">${comboText('comboEmptyGroupsTitle')}</div>
+        <div style="font-size:13.5px; color:#64748b; max-width:440px; line-height:1.5;">${comboText('comboEmptyGroupsHelp')}</div>
+        <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-top:4px;">
+          <button type="button" class="btn btn-primary" onclick="comboWizardAddGroup('choice')" style="min-height:48px; padding:10px 22px; font-weight:700; border-radius:10px; font-size:14.5px;">
+            + ${comboText('comboAddChoice')}
+          </button>
+          <button type="button" class="btn btn-secondary" onclick="comboWizardAddGroup('fixed')" style="min-height:48px; padding:10px 22px; font-weight:700; border-radius:10px; font-size:14.5px;">
+            + ${comboText('comboAddFixed')}
+          </button>
+        </div>
+      </div>`;
+    } else {
+      const groupsHtml = groups.map((group, index) => {
+        const selectedIds = group.type === 'fixed' ? group.items.map(it => it.itemId) : group.sources.filter(src => src.type === 'item_list').flatMap(src => src.itemIds || []);
+        const search = comboWizard.search?.[index] || '';
+        const filter = comboWizard.filters?.[index] || 'all';
+        const visible = candidates.filter(item => (filter === 'all' || item.categoryId === filter) && item.name.toLowerCase().includes(search.toLowerCase()));
+        const isChoice = group.type === 'choice';
+        const badgeClass = isChoice ? 'badge-choice' : 'badge-fixed';
+        const badgeText = comboText(isChoice ? 'comboChoiceGroup' : 'comboFixedGroup');
+
+        return `<section class="bundle-wizard-group">
+          <header>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="bundle-group-badge ${badgeClass}">${badgeText}</span>
+              <h2 style="margin:0; font-size:17px; font-weight:700;">${index + 1}. ${comboEscape(comboGroupName(group)) || badgeText}</h2>
+            </div>
+            <button type="button" class="btn btn-ghost" style="color:#ef4444; min-height:36px; padding:4px 10px; font-weight:600;" onclick="comboWizardRemoveGroup(${index})">
+              ${comboText('comboRemove')}
+            </button>
+          </header>
+          <p class="bundle-wizard-hint" style="margin:0; font-size:13px; color:#64748b;">${comboText(group.type === 'fixed' ? 'comboFixedHelp' : 'comboChoiceHelp')}</p>
+          <label>${comboText('comboGroupName')}<input value="${comboEscape(comboGroupName(group))}" placeholder="${badgeText}" oninput="comboWizardGroupField(${index},'name',this.value)"></label>
+          ${isChoice ? `<div class="bundle-wizard-two"><label>${comboText('comboQuantity')}<input type="number" min="1" value="${group.minQuantity}" onchange="comboWizardGroupField(${index},'minQuantity',this.value)"></label><label class="bundle-wizard-check"><input type="checkbox" ${group.allowRepeats ? 'checked' : ''} onchange="comboWizardGroupField(${index},'allowRepeats',this.checked)">${comboText('comboRepeat')}</label></div>` : ''}
+          <div class="bundle-wizard-two"><input id="combo-search-${index}" type="search" placeholder="${comboText('comboSearch')}" value="${comboEscape(search)}" oninput="comboWizardSearch(${index},this.value)"><select aria-label="${comboText('comboFilterCategory')}" onchange="comboWizardFilter(${index},this.value)"><option value="all">${comboText('comboAllCategories')}</option>${categories.map(cat => `<option value="${comboEscape(cat.catId)}" ${filter === cat.catId ? 'selected' : ''}>${comboEscape(cat.title)}</option>`).join('')}</select></div>
+          <div class="bundle-wizard-candidates">${visible.map(item => {
+            const selected = selectedIds.includes(item.id);
+            const fixed = group.items.find(f => f.itemId === item.id);
+            const extra = fixed?.surcharge ?? group.surcharges[item.id] ?? 0;
+            return `<div class="bundle-wizard-candidate"><label><input type="checkbox" ${selected ? 'checked' : ''} onchange="comboWizardToggleItem(${index},'${comboEscape(item.id)}',this.checked)"><span>${comboEscape(item.name)} · ${comboEscape(item.categoryName)}</span></label>${selected ? `<label>${comboText('comboSurcharge')}<input type="number" min="0" value="${extra}" onchange="comboWizardItemValue(${index},'${comboEscape(item.id)}','surcharge',this.value)"></label>${fixed ? `<label>${comboText('comboQuantity')}<input type="number" min="1" value="${fixed.quantity}" onchange="comboWizardItemValue(${index},'${comboEscape(item.id)}','quantity',this.value)"></label>` : ''}` : ''}</div>`;
+          }).join('')}</div>
+          ${isChoice ? `<details><summary>${comboText('comboWholeCategory')}</summary><p>${comboText('comboWholeCategoryHelp')}</p>${categories.map(cat => `<label class="bundle-wizard-check"><input type="checkbox" ${group.sources.some(src => src.type === 'category' && src.refId === cat.catId) ? 'checked' : ''} onchange="comboWizardToggleCategory(${index},'${comboEscape(cat.catId)}',this.checked)">${comboEscape(cat.title)}</label>`).join('')}</details>` : ''}
+        </section>`;
+      }).join('');
+
+      contentHtml = groupsHtml + `<div class="bundle-wizard-add">
+        <button type="button" class="btn btn-primary" onclick="comboWizardAddGroup('choice')">+ ${comboText('comboAddChoice')}</button>
+        <button type="button" class="btn btn-secondary" onclick="comboWizardAddGroup('fixed')">+ ${comboText('comboAddFixed')}</button>
+      </div>`;
+    }
+
+    body.innerHTML = guideHeader + contentHtml;
   } else {
     const error = comboWizardError();
     comboWizard.preview = comboWizard.preview || {};

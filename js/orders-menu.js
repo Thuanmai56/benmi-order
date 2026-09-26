@@ -665,19 +665,21 @@ function renderMenuCategoryEditor(index) {
     const settingsSvg = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`;
     const slidersSvg = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="21" y2="21"/><line x1="4" x2="20" y1="14" y2="14"/><line x1="4" x2="20" y1="7" y2="7"/><circle cx="14" cy="21" r="2"/><circle cx="8" cy="14" r="2"/><circle cx="16" cy="7" r="2"/></svg>`;
 
-    // --- Indicator Chips: Only render when data exists ---
+    // --- Prefix & Indicator Chips: Modern Compact Layout ---
     let chipsHtml = '';
+    let prefixHtml = '';
     const hasBundle = Boolean(item.bundleRule && Array.isArray(item.bundleRule.groups) && item.bundleRule.groups.length > 0);
     const bundleCount = hasBundle ? item.bundleRule.groups.length : 0;
     const isBundleDisabled = window.currentTenantFeatures?.includes('disable_bundle_builder_v2');
 
     if (cat.type === 'catalog' && hasBundle && !isBundleDisabled) {
-      const bundleText = currentLang === 'vi'
+      row.classList.add("is-bundle-row");
+      const bundleTooltip = currentLang === 'vi'
         ? `${t("bundleBadge")} (${bundleCount} ${t("bundleGroupUnit")})`
         : `${t("bundleBadge")} (${bundleCount}${t("bundleGroupUnit")})`;
-      chipsHtml += `
-        <span class="menu-item-chip chip-combo" onclick="openBundleWizard(${index}, ${iIdx})" title="${t('btnEditBundle')}">
-          ${layersSvg}<span>${bundleText}</span>
+      prefixHtml = `
+        <span class="item-type-prefix prefix-combo" onclick="openBundleWizard(${index}, ${iIdx})" title="${escapeHtml(bundleTooltip)} - ${t('btnEditBundle')}">
+          ${layersSvg}<span>${t("bundleBadge")}</span>${bundleCount > 1 ? `<span class="prefix-subcount">${bundleCount}</span>` : ''}
         </span>
       `;
     }
@@ -686,7 +688,7 @@ function renderMenuCategoryEditor(index) {
     if (cat.type === 'catalog' && modCount > 0) {
       chipsHtml += `
         <span class="menu-item-chip chip-modifier" onclick="openItemModifiersModal(${index}, ${iIdx})" title="${t('btnItemModifiers')}">
-          ${slidersSvg}<span>+${modCount} ${t('btnItemModifiers')}</span>
+          ${slidersSvg}<span>+${modCount}</span>
         </span>
       `;
     }
@@ -702,14 +704,15 @@ function renderMenuCategoryEditor(index) {
     row.innerHTML = `
       <div class="menu-item-main-fields">
         <div class="menu-item-drag" title="Kéo để đổi thứ tự">${gripSvg}</div>
+        ${prefixHtml}
         <input type="text" class="menu-item-name-input" value="${escapeHtml(item.name)}" data-name-cidx="${index}" data-name-iidx="${iIdx}" oninput="markMenuDirty()"
           placeholder="${t("newItemPlaceholder")}">
+        ${chipsHtml ? `<div class="menu-item-indicator-chips">${chipsHtml}</div>` : ''}
         <label class="menu-item-price-label">
           <span class="price-currency">$</span>
           <input type="number" class="menu-item-price-input" value="${item.price !== null && item.price !== undefined ? item.price : ''}" data-cidx="${index}" data-iidx="${iIdx}" oninput="markMenuDirty()"
             placeholder="${t("priceHiddenPlaceholder")}">
         </label>
-        <div class="menu-item-indicator-chips">${chipsHtml}</div>
       </div>
       <div class="menu-item-actions">
         <button type="button" class="menu-item-status-pill ${item.isOos ? 'oos' : 'in-stock'}"
