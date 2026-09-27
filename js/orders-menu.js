@@ -489,7 +489,6 @@ function renderCategoriesManagerView() {
 
 const collapsedMenuSections = {
   catalog: false,
-  combo: false,
   custom: false
 };
 
@@ -597,14 +596,11 @@ function renderMenuCategories() {
 
   // Partition categories with their original index
   const catalogList = [];
-  const comboList = [];
   const customList = [];
 
   currentMenuData.forEach((cat, originalIndex) => {
     if (isCustomizationCategory(cat)) {
       customList.push({ cat, originalIndex });
-    } else if (isComboCategory(cat)) {
-      comboList.push({ cat, originalIndex });
     } else {
       catalogList.push({ cat, originalIndex });
     }
@@ -617,17 +613,18 @@ function renderMenuCategories() {
       icon: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>`,
       items: catalogList,
       emptyPrompt: null,
-      actionBtnText: t("btnAddCatalogCategory"),
-      actionBtnHandler: () => openAddCategoryModal('catalog')
-    },
-    {
-      key: 'combo',
-      title: t("menuSectionComboTitle"),
-      icon: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>`,
-      items: comboList,
-      emptyPrompt: t("noComboCategoriesPrompt"),
-      actionBtnText: t("btnCreateComboWizard"),
-      actionBtnHandler: () => handleCreateComboFromSidebar()
+      actions: [
+        {
+          text: t("btnAddCatalogCategory"),
+          handler: () => openAddCategoryModal('catalog'),
+          className: "menu-sidebar-action-btn"
+        },
+        {
+          text: t("btnCreateComboWizard"),
+          handler: () => handleCreateComboFromSidebar(),
+          className: "menu-sidebar-action-btn menu-sidebar-action-combo-btn"
+        }
+      ]
     },
     {
       key: 'custom',
@@ -635,8 +632,13 @@ function renderMenuCategories() {
       icon: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>`,
       items: customList,
       emptyPrompt: null,
-      actionBtnText: t("btnCreateCustomGroup"),
-      actionBtnHandler: () => handleCreateCustomFromSidebar()
+      actions: [
+        {
+          text: t("btnCreateCustomGroup"),
+          handler: () => handleCreateCustomFromSidebar(),
+          className: "menu-sidebar-action-btn"
+        }
+      ]
     }
   ];
 
@@ -722,13 +724,17 @@ function renderMenuCategories() {
       });
     }
 
-    // Section Action Button
-    const actionBtn = document.createElement("button");
-    actionBtn.type = "button";
-    actionBtn.className = "menu-sidebar-action-btn";
-    actionBtn.innerHTML = `${plusIcon}<span>${escapeHtml(sec.actionBtnText)}</span>`;
-    actionBtn.onclick = sec.actionBtnHandler;
-    bodyEl.appendChild(actionBtn);
+    // Section Action Buttons
+    if (Array.isArray(sec.actions)) {
+      sec.actions.forEach(action => {
+        const actionBtn = document.createElement("button");
+        actionBtn.type = "button";
+        actionBtn.className = action.className || "menu-sidebar-action-btn";
+        actionBtn.innerHTML = `${plusIcon}<span>${escapeHtml(action.text)}</span>`;
+        actionBtn.onclick = action.handler;
+        bodyEl.appendChild(actionBtn);
+      });
+    }
 
     sectionEl.appendChild(bodyEl);
     container.appendChild(sectionEl);

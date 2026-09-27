@@ -44,11 +44,9 @@ test('Sidebar Sections: Classification logic partitions categories accurately', 
 
 test('Sidebar Sections: orders-i18n.js has bilingual section titles and button labels', () => {
   const i18nJs = fs.readFileSync(path.resolve(__dirname, '../js/orders-i18n.js'), 'utf-8');
-  assert.ok(i18nJs.includes('menuSectionCatalogTitle: "單品菜單"'), 'zh-TW has menuSectionCatalogTitle');
-  assert.ok(i18nJs.includes('menuSectionCatalogTitle: "Thực đơn món lẻ"'), 'vi has menuSectionCatalogTitle');
+  assert.ok(i18nJs.includes('menuSectionCatalogTitle: "單品與特惠套餐"'), 'zh-TW has menuSectionCatalogTitle');
+  assert.ok(i18nJs.includes('menuSectionCatalogTitle: "Thực đơn món & Combo"'), 'vi has menuSectionCatalogTitle');
 
-  assert.ok(i18nJs.includes('menuSectionComboTitle: "特惠套餐"'), 'zh-TW has menuSectionComboTitle');
-  assert.ok(i18nJs.includes('menuSectionComboTitle: "Combo & Set ưu đãi"'), 'vi has menuSectionComboTitle');
 
   assert.ok(i18nJs.includes('menuSectionCustomTitle: "口味與客製化"'), 'zh-TW has menuSectionCustomTitle');
   assert.ok(i18nJs.includes('menuSectionCustomTitle: "Khẩu vị & Tùy chọn"'), 'vi has menuSectionCustomTitle');
