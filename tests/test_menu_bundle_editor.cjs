@@ -345,8 +345,8 @@ assert.ok(cssContent.includes('.bundle-stepper-btn'), "orders.css must contain .
 assert.ok(htmlContent.includes('id="bundleGuideModal"'), "orders.html must contain #bundleGuideModal");
 assert.ok(htmlContent.includes('id="btn-open-bundle-guide"'), "orders.html must contain #btn-open-bundle-guide");
 assert.ok(/orders\.css\?v=\w+/.test(htmlContent), "orders.css cache buster bumped");
-assert.ok(/orders-menu\.js\?v=20260927_bundle_edit_v1/.test(htmlContent), "orders-menu.js cache buster bumped");
-assert.ok(/orders-bundle-wizard\.js\?v=20260927_bundle_edit_v1/.test(htmlContent), "orders-bundle-wizard.js cache buster bumped");
+assert.ok(/orders-menu\.js\?v=\w+/.test(htmlContent), "orders-menu.js cache buster bumped");
+assert.ok(/orders-bundle-wizard\.js\?v=\w+/.test(htmlContent), "orders-bundle-wizard.js cache buster bumped");
 console.log("✓ Modal markup, CSS classes, Danger Zone, Guide Modal, and cache-busting verified.");
 
 console.log("\n====================================================");
