@@ -65,6 +65,57 @@ function getCategoryModifiers(catSlug) {
     return allMods.filter(m => applied.includes(m.slug) || applied.includes(m.id));
 }
 
+function getItemModifiers(catSlug, itemName) {
+    const bData = window.bootstrapData || bootstrapData;
+    const catObj = bData?.catalog?.find(c => c.slug === catSlug);
+    const itemObj = catObj?.items?.find(it => it.name === itemName);
+    const itemMods = [];
+    if (itemObj && Array.isArray(itemObj.modifierGroups) && itemObj.modifierGroups.length > 0) {
+        itemObj.modifierGroups.forEach((mg, idx) => {
+            itemMods.push({
+                id: mg.id || `mg_${idx}`,
+                slug: mg.id || `mg_${idx}`,
+                name: mg.name,
+                selectionType: mg.selectionType || 'single',
+                isRequired: Boolean(mg.isRequired),
+                minSelection: mg.minSelection,
+                maxSelection: mg.maxSelection,
+                options: (mg.options || []).map(opt => ({
+                    id: opt.id,
+                    name: opt.name,
+                    price: opt.price || 0,
+                    isDefault: Boolean(opt.isDefault),
+                    isOutOfStock: Boolean(opt.isOutOfStock)
+                }))
+            });
+        });
+    }
+    const catMods = getCategoryModifiers(catSlug);
+    return [...itemMods, ...catMods];
+}
+
+function initPortionDefaults(category, origName, portionIndex) {
+    const key = category + '_' + origName;
+    const cData = window.customizeData || customizeData;
+    if (!cData[key]) cData[key] = [];
+    if (!cData[key][portionIndex]) {
+        const modifiers = getItemModifiers(category, origName);
+        const defaultSingle = {};
+        modifiers.filter(m => m.selectionType === 'single').forEach(m => {
+            const defOpt = (m.options || []).find(o => o.isDefault && !o.isOutOfStock) || (m.isRequired ? ((m.options || []).find(o => !o.isOutOfStock) || m.options[0]) : null);
+            if (defOpt) defaultSingle[m.slug] = defOpt.name;
+        });
+        const defaultMulti = {};
+        modifiers.filter(m => m.selectionType === 'multiple').forEach(m => {
+            (m.options || []).filter(o => o.isDefault && !o.isOutOfStock).forEach(o => {
+                defaultMulti[o.name] = true;
+            });
+        });
+        cData[key][portionIndex] = { single: defaultSingle, multiple: defaultMulti, note: '' };
+    }
+    return cData[key][portionIndex];
+}
+
 // --- CUSTOMIZE POPUP (SCHEMA-DRIVEN MODIFIERS POPUP) ---
 function toggleCustomize(category, origName) {
     if (typeof checkDesktopAuthGuard === 'function' && !checkDesktopAuthGuard()) return;
@@ -73,7 +124,7 @@ function toggleCustomize(category, origName) {
     const qty = cartObj[key];
     if (!qty) return;
 
-    const modifiers = getCategoryModifiers(category);
+    const modifiers = getItemModifiers(category, origName);
     if (!modifiers || modifiers.length === 0) return;
 
     const cData = window.customizeData || customizeData;
@@ -93,14 +144,7 @@ function toggleCustomize(category, origName) {
     `;
 
     for (let i = 0; i < qty; i++) {
-        if (!cData[key][i]) {
-            const defaultSingle = {};
-            modifiers.filter(m => m.selectionType === 'single').forEach(m => {
-                const defOpt = m.options.find(o => o.isDefault && !o.isOutOfStock) || m.options.find(o => !o.isOutOfStock) || m.options[0];
-                if (defOpt) defaultSingle[m.slug] = defOpt.name;
-            });
-            cData[key][i] = { single: defaultSingle, multiple: {}, note: '' };
-        }
+        initPortionDefaults(category, origName, i);
 
         const currentPortion = cData[key][i];
         const section = document.createElement('div');
@@ -293,6 +337,8 @@ function closePopup() {
 // Window Public Bindings
 window.renderComboDrinksInline = renderComboDrinksInline;
 window.getCategoryModifiers = getCategoryModifiers;
+window.getItemModifiers = getItemModifiers;
+window.initPortionDefaults = initPortionDefaults;
 window.toggleCustomize = toggleCustomize;
 window.selectSingleModifier = selectSingleModifier;
 window.toggleMultipleModifier = toggleMultipleModifier;

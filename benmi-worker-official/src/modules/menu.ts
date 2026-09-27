@@ -2,6 +2,7 @@ import { Env } from '../types/env';
 import { Menu } from '../types/index';
 import { json } from '../utils/http';
 import { invalidateBootstrapCache } from './bootstrap';
+import { loadBundleCatalog, normalizeBundleConfig } from './bundle-rules';
 
 export const DEFAULT_MENU: Menu = {
   small: { "燒肉": 56, "火腿": 56, "雞肉": 68, "烤肉": 72, "雙層烤肉": 78, "綜合": 79 },
@@ -210,6 +211,23 @@ export async function updateStockStatus(request: Request, env: Env): Promise<Res
       }
     }
 
+    // Helper to update stock status in modifier_options
+    async function updateModifierOptionStock(): Promise<boolean> {
+      const optionRows = await env.DB.prepare(
+        "SELECT id, group_id FROM modifier_options WHERE tenant_id = ? AND (name = ? OR id = ?)"
+      ).bind(tenantId, name, name).all<any>();
+      if (!optionRows.results || optionRows.results.length === 0) return false;
+
+      await env.DB.prepare(
+        "UPDATE modifier_options SET out_of_stock_until = ?, updated_at = datetime('now') WHERE tenant_id = ? AND (name = ? OR id = ?)"
+      ).bind(outOfStockUntil, tenantId, name, name).run();
+
+      const cacheKey = `tenant:${tenantId}:menu`;
+      if (env.ORDER_STATE) await env.ORDER_STATE.delete(cacheKey);
+      await invalidateBootstrapCache(tenantId, env);
+      return true;
+    }
+
     // Helper to update stock status in menu_customizations
     async function updateCustomizationStock(): Promise<boolean> {
       let query = "SELECT id, key, options_json FROM menu_customizations WHERE tenant_id = ?";
@@ -262,6 +280,13 @@ export async function updateStockStatus(request: Request, env: Env): Promise<Res
       }
     }
 
+    if (category_slug === 'modifier_option' || category_slug === 'modifier_group') {
+      const updated = await updateModifierOptionStock();
+      if (updated) {
+        return json({ success: true, message: "Modifier option stock status updated and cache invalidated." });
+      }
+    }
+
     // 2. Cập nhật trạng thái trong D1 Database
     const dbRes = await env.DB.prepare(
       `UPDATE menu_items 
@@ -272,10 +297,15 @@ export async function updateStockStatus(request: Request, env: Env): Promise<Res
     ).bind(outOfStockUntil, tenantId, name, tenantId, category_slug, category_slug).run();
 
     if (dbRes.meta.changes === 0) {
-      // Fallback: check menu_customizations if not found in menu_items
+      // Fallback 1: check menu_customizations if not found in menu_items
       const updatedFallback = await updateCustomizationStock();
       if (updatedFallback) {
         return json({ success: true, message: "Customization stock status updated and cache invalidated." });
+      }
+      // Fallback 2: check modifier_options
+      const updatedModifier = await updateModifierOptionStock();
+      if (updatedModifier) {
+        return json({ success: true, message: "Modifier option stock status updated and cache invalidated." });
       }
       return json({ error: "Menu item not found or unauthorized" }, 404);
     }
@@ -426,6 +456,7 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
         const custTitle = cust.title || custKey;
         const custType = cust.type || 'radio';
         const custSort = Number(cust.sortOrder ?? cust.sort_order ?? 0);
+        const custIsRequired = (cust.isRequired || cust.is_required) ? 1 : 0;
         const optionsList = Array.isArray(cust.options) ? cust.options : [];
         const optionsJson = JSON.stringify(optionsList);
         const custId = cust.id || customIdMap.get(custKey) || `custom_${tenantId}_${custKey}`;
@@ -437,16 +468,17 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
 
         statements.push(
           env.DB.prepare(
-            `INSERT INTO menu_customizations (id, tenant_id, key, title, type, sort_order, options_json, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+            `INSERT INTO menu_customizations (id, tenant_id, key, title, type, is_required, sort_order, options_json, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
              ON CONFLICT(id) DO UPDATE SET
                title = excluded.title,
                type = excluded.type,
+               is_required = excluded.is_required,
                sort_order = excluded.sort_order,
                options_json = excluded.options_json,
                updated_at = datetime('now')
              WHERE menu_customizations.tenant_id = excluded.tenant_id`
-          ).bind(custId, tenantId, custKey, custTitle, custType, custSort, optionsJson)
+          ).bind(custId, tenantId, custKey, custTitle, custType, custIsRequired, custSort, optionsJson)
         );
       }
 
@@ -535,11 +567,17 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
         let price = 0;
         let badgeText: string | null = null;
         let isRec = 0;
+        let itemType = 'standard';
+        let modifierGroups: any[] | null = null;
 
         if (typeof itemVal === "object" && itemVal !== null) {
           price = Number(itemVal.price);
           badgeText = itemVal.badge_text || itemVal.badgeText || null;
           isRec = itemVal.is_recommended || itemVal.isRecommended ? 1 : 0;
+          itemType = itemVal.item_type || itemVal.itemType || (itemVal.is_bundle ? 'bundle' : 'standard');
+          if (Array.isArray(itemVal.modifier_groups || itemVal.modifierGroups)) {
+            modifierGroups = itemVal.modifier_groups || itemVal.modifierGroups;
+          }
         } else {
           price = Number(itemVal);
         }
@@ -556,18 +594,101 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
 
         statements.push(
           env.DB.prepare(
-            `INSERT INTO menu_items (id, tenant_id, category_id, name, price, badge_text, is_recommended, sort_order)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `INSERT INTO menu_items (id, tenant_id, category_id, name, price, badge_text, is_recommended, sort_order, item_type)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
              ON CONFLICT(id) DO UPDATE SET 
                category_id = excluded.category_id,
                name = excluded.name,
                price = excluded.price, 
                badge_text = excluded.badge_text, 
                is_recommended = excluded.is_recommended, 
-               sort_order = excluded.sort_order
+               sort_order = excluded.sort_order,
+               item_type = excluded.item_type
              WHERE menu_items.tenant_id = excluded.tenant_id`
-          ).bind(itemId, tenantId, catId, itemName, price, badgeText, isRec, itemSortOrder++)
+          ).bind(itemId, tenantId, catId, itemName, price, badgeText, isRec, itemSortOrder++, itemType)
         );
+
+        // If modifier groups are provided for this item, persist them
+        if (modifierGroups !== null) {
+          statements.push(
+            env.DB.prepare("DELETE FROM item_modifier_links WHERE tenant_id = ? AND item_id = ?").bind(tenantId, itemId)
+          );
+          let linkOrder = 0;
+          for (const grp of modifierGroups) {
+            linkOrder++;
+            const grpId = grp.id || `mg_${tenantId}_${Date.now()}_${linkOrder}`;
+            const grpName = grp.name || grp.title || '';
+            const selectionType = grp.selectionType || grp.selection_type || 'single';
+            const isReq = (grp.isRequired || grp.is_required) ? 1 : 0;
+            const minSel = Number(grp.minSelection ?? grp.min_selection ?? (isReq ? 1 : 0));
+            const maxSel = Number(grp.maxSelection ?? grp.max_selection ?? (selectionType === 'single' ? 1 : 99));
+            const grpSort = Number(grp.sortOrder ?? grp.sort_order ?? linkOrder);
+
+            statements.push(
+              env.DB.prepare(
+                `INSERT INTO modifier_groups (id, tenant_id, name, selection_type, is_required, min_selection, max_selection, sort_order, updated_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+                 ON CONFLICT(id) DO UPDATE SET
+                   name = excluded.name,
+                   selection_type = excluded.selection_type,
+                   is_required = excluded.is_required,
+                   min_selection = excluded.min_selection,
+                   max_selection = excluded.max_selection,
+                   sort_order = excluded.sort_order,
+                   updated_at = datetime('now')`
+              ).bind(grpId, tenantId, grpName, selectionType, isReq, minSel, maxSel, grpSort)
+            );
+
+            statements.push(
+              env.DB.prepare(
+                `INSERT INTO item_modifier_links (tenant_id, item_id, group_id, sort_order)
+                 VALUES (?, ?, ?, ?)
+                 ON CONFLICT(tenant_id, item_id, group_id) DO UPDATE SET sort_order = excluded.sort_order`
+              ).bind(tenantId, itemId, grpId, linkOrder)
+            );
+
+            const options = Array.isArray(grp.options) ? grp.options : [];
+            const activeOptIds: string[] = [];
+            let optOrder = 0;
+            for (const opt of options) {
+              optOrder++;
+              const optId = opt.id || `mo_${tenantId}_${grpId}_${optOrder}`;
+              activeOptIds.push(optId);
+              const optName = opt.name || opt.title || '';
+              const optPrice = Number(opt.price || 0);
+              const optIsDef = (opt.isDefault || opt.is_default) ? 1 : 0;
+              const optSort = Number(opt.sortOrder ?? opt.sort_order ?? optOrder);
+
+              statements.push(
+                env.DB.prepare(
+                  `INSERT INTO modifier_options (id, tenant_id, group_id, name, price, is_default, sort_order, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+                   ON CONFLICT(id) DO UPDATE SET
+                     name = excluded.name,
+                     price = excluded.price,
+                     is_default = excluded.is_default,
+                     sort_order = excluded.sort_order,
+                     updated_at = datetime('now')`
+                ).bind(optId, tenantId, grpId, optName, optPrice, optIsDef, optSort)
+              );
+            }
+
+            if (activeOptIds.length > 0) {
+              const optPlaceholders = activeOptIds.map(() => '?').join(',');
+              statements.push(
+                env.DB.prepare(
+                  `DELETE FROM modifier_options WHERE tenant_id = ? AND group_id = ? AND id NOT IN (${optPlaceholders})`
+                ).bind(tenantId, grpId, ...activeOptIds)
+              );
+            } else {
+              statements.push(
+                env.DB.prepare(
+                  `DELETE FROM modifier_options WHERE tenant_id = ? AND group_id = ?`
+                ).bind(tenantId, grpId)
+              );
+            }
+          }
+        }
       }
     }
   }
@@ -575,9 +696,18 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
   if (activeCategoryIds.some(id => categoryDeletes.includes(id)) ||
       activeItemIds.some(id => itemDeletes.includes(id))) throw new Error('CONFLICTING_MENU_DELETE');
 
-  // Explicit category deletion also removes its child items. No absent row is deleted.
+  // Explicit category deletion also removes its child items and modifier links.
   for (const id of categoryDeletes) {
+    statements.push(env.DB.prepare('DELETE FROM item_modifier_links WHERE tenant_id = ? AND item_id IN (SELECT id FROM menu_items WHERE tenant_id = ? AND category_id = ?)').bind(tenantId, tenantId, id));
     statements.push(env.DB.prepare('DELETE FROM menu_items WHERE tenant_id = ? AND category_id = ?').bind(tenantId, id));
+  }
+  if (itemDeletes.length > 0) {
+    for (let i = 0; i < itemDeletes.length; i += 50) {
+      const chunk = itemDeletes.slice(i, i + 50);
+      statements.push(env.DB.prepare(
+        `DELETE FROM item_modifier_links WHERE tenant_id = ? AND item_id IN (${chunk.map(() => '?').join(',')})`
+      ).bind(tenantId, ...chunk));
+    }
   }
   for (const [table, ids] of [
     ['menu_items', itemDeletes],
@@ -591,6 +721,18 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
       ).bind(tenantId, ...chunk));
     }
   }
+
+  // Clean up any modifier groups and options that are no longer linked to any items
+  statements.push(
+    env.DB.prepare(
+      `DELETE FROM modifier_options WHERE tenant_id = ? AND group_id NOT IN (SELECT group_id FROM item_modifier_links WHERE tenant_id = ?)`
+    ).bind(tenantId, tenantId)
+  );
+  statements.push(
+    env.DB.prepare(
+      `DELETE FROM modifier_groups WHERE tenant_id = ? AND id NOT IN (SELECT group_id FROM item_modifier_links WHERE tenant_id = ?)`
+    ).bind(tenantId, tenantId)
+  );
 
   // One batch keeps the entire menu update atomic if any statement fails.
   if (statements.length > 0) {
@@ -720,4 +862,162 @@ export function formatMenuForPrompt(menuData: Menu): string {
   }
 
   return lines.join("\n");
+}
+
+/**
+ * Creates, updates, or deletes a bundle rule for a menu item.
+ * POST /api/menu/bundle-rules?tenant_id={tenantId}
+ */
+export async function updateBundleRule(request: Request, env: Env): Promise<Response> {
+  try {
+    const tenantId = getTenantId(request);
+    if (!env.DB) {
+      return json({ error: "Database not bound" }, 500);
+    }
+
+    const body: any = await request.json();
+    let parentItemId = body.parent_item_id;
+
+    // Fallback resolution if parentItemId is missing but name & category are given
+    if (!parentItemId && body.item_name && (body.category_id || body.category_slug)) {
+      const catSlug = body.category_slug || body.category_id;
+      const itemRow = await env.DB.prepare(
+        `SELECT id FROM menu_items 
+         WHERE tenant_id = ? AND name = ? 
+           AND category_id = (SELECT id FROM menu_categories WHERE tenant_id = ? AND (slug = ? OR id = ?))
+         LIMIT 1`
+      ).bind(tenantId, body.item_name, tenantId, catSlug, catSlug).first();
+
+      if (itemRow && itemRow.id) {
+        parentItemId = itemRow.id as string;
+      }
+    }
+
+    if (!parentItemId) {
+      return json({ error: "parent_item_id is required" }, 400);
+    }
+
+    const existingRule = await env.DB.prepare('SELECT schema_version FROM menu_bundle_rules WHERE tenant_id = ? AND parent_item_id = ?')
+      .bind(tenantId, parentItemId).first<{ schema_version: number }>();
+    if (existingRule && existingRule.schema_version >= 2) {
+      return json({ error: 'Edit this combo with the new combo editor', code: 'BUNDLE_EDITOR_VERSION' }, 409);
+    }
+
+    // 1. Delete / Deactivate bundle rule
+    if (body.delete === true || body.isActive === false || (body.config && Array.isArray(body.config.groups) && body.config.groups.length === 0)) {
+      await env.DB.prepare(
+        "DELETE FROM menu_bundle_rules WHERE tenant_id = ? AND parent_item_id = ?"
+      ).bind(tenantId, parentItemId).run();
+
+      const cacheKey = `tenant:${tenantId}:menu`;
+      if (env.ORDER_STATE) await env.ORDER_STATE.delete(cacheKey);
+      await invalidateBootstrapCache(tenantId, env);
+
+      return json({ success: true, deleted: true });
+    }
+
+    // 2. Validate & normalize bundle config
+    const config = body.config;
+    if (!config || !Array.isArray(config.groups) || config.groups.length === 0) {
+      return json({ error: "config.groups array is required and must not be empty" }, 400);
+    }
+
+    const normalizedGroups = config.groups.map((grp: any, gIdx: number) => {
+      const gId = grp.id || `group_${gIdx + 1}_${Date.now()}`;
+      const minQty = Math.max(1, Number(grp.minQuantity ?? 1));
+      const maxQty = Math.max(minQty, Number(grp.maxQuantity ?? minQty));
+      const allowRepeats = grp.allowRepeats !== undefined ? Boolean(grp.allowRepeats) : (grp.allowRepeat !== undefined ? Boolean(grp.allowRepeat) : true);
+
+      return {
+        id: gId,
+        label: grp.label || (grp.name ? { "zh-TW": grp.name, "vi": grp.name } : { "zh-TW": `選擇 ${minQty} 樣`, "vi": `Chọn ${minQty} món` }),
+        name: typeof grp.label === 'object' ? (grp.label['zh-TW'] || grp.label['vi'] || grp.name) : (grp.name || grp.label),
+        minQuantity: minQty,
+        maxQuantity: maxQty,
+        allowRepeat: allowRepeats,
+        allowRepeats: allowRepeats,
+        sources: Array.isArray(grp.sources) ? grp.sources : [],
+        pricing: grp.pricing || { type: "included" }
+      };
+    });
+
+    const ruleConfig = {
+      version: config.version || 1,
+      groups: normalizedGroups
+    };
+    const configJson = JSON.stringify(ruleConfig);
+    const ruleId = `rule_${tenantId}_${parentItemId}`;
+
+    await env.DB.prepare(
+      `INSERT INTO menu_bundle_rules (id, tenant_id, parent_item_id, schema_version, config_json, is_active, updated_at)
+       VALUES (?, ?, ?, 1, ?, 1, datetime('now'))
+       ON CONFLICT(tenant_id, parent_item_id) DO UPDATE SET
+         schema_version = 1,
+         config_json = excluded.config_json,
+         is_active = 1,
+         updated_at = datetime('now')`
+    ).bind(ruleId, tenantId, parentItemId, configJson).run();
+
+    // Invalidate KV & Bootstrap Cache
+    const cacheKey = `tenant:${tenantId}:menu`;
+    if (env.ORDER_STATE) await env.ORDER_STATE.delete(cacheKey);
+    await invalidateBootstrapCache(tenantId, env);
+
+    return json({ success: true, bundleRule: ruleConfig });
+  } catch (err: any) {
+    console.error("[updateBundleRule] Failed:", err);
+    return json({ error: err.message || "Internal Server Error" }, 500);
+  }
+}
+
+/** Save a product and its v2 bundle configuration in one D1 transaction. */
+export async function saveBundleProduct(request: Request, env: Env): Promise<Response> {
+  try {
+    const tenantId = getTenantId(request);
+    const tenantConfig = await env.DB.prepare('SELECT features FROM tenant_config WHERE tenant_id = ?').bind(tenantId).first<{ features: string | null }>();
+    let tenantFeatures: string[] = [];
+    try { tenantFeatures = JSON.parse(tenantConfig?.features || '[]'); } catch { tenantFeatures = []; }
+    if (Array.isArray(tenantFeatures) && tenantFeatures.includes('disable_bundle_builder_v2')) {
+      return json({ code: 'BUNDLE_EDITOR_DISABLED', error: 'Combo editor is temporarily unavailable' }, 423);
+    }
+    const body: any = await request.json();
+    const product = body.product || {};
+    const name = String(product.name || '').trim();
+    const categoryId = String(product.categoryId || '');
+    const price = Number(product.price);
+    if (!name || !Number.isFinite(price) || price < 0 || Math.abs(Math.round(price * 100) - price * 100) >= 0.000001) {
+      return json({ code: 'BUNDLE_INVALID_PRODUCT', error: 'Invalid product name or price' }, 400);
+    }
+    const category = await env.DB.prepare("SELECT id FROM menu_categories WHERE tenant_id = ? AND id = ? AND category_type = 'catalog'")
+      .bind(tenantId, categoryId).first();
+    if (!category) return json({ code: 'BUNDLE_INVALID_CATEGORY', error: 'Category not found' }, 400);
+    const catalog = await loadBundleCatalog(env, tenantId);
+    const itemId = product.id ? String(product.id) : crypto.randomUUID();
+    const existing = catalog.items.get(itemId);
+    if (product.id && !existing) return json({ code: 'BUNDLE_PRODUCT_NOT_FOUND', error: 'Product not found' }, 404);
+    if ([...catalog.items.values()].some(item => item.id !== itemId && item.category_id === categoryId && item.name === name)) {
+      return json({ code: 'BUNDLE_DUPLICATE_PRODUCT', error: 'A product with this name already exists in the category' }, 409);
+    }
+    const childItems = new Map([...catalog.items].filter(([id, item]) => !catalog.rules.has(id) && catalog.categories.get(item.category_id)?.category_type === 'catalog'));
+    let config;
+    try { config = normalizeBundleConfig(body.config, childItems, itemId); }
+    catch (error: any) { return json({ code: 'BUNDLE_INVALID_CONFIG', error: error.message }, 400); }
+    const ruleId = `rule_${tenantId}_${itemId}`;
+    await env.DB.batch([
+      env.DB.prepare(`INSERT INTO menu_items (id, tenant_id, category_id, name, price, item_type, sort_order)
+        VALUES (?, ?, ?, ?, ?, 'bundle', (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM menu_items WHERE tenant_id = ? AND category_id = ?))
+        ON CONFLICT(id) DO UPDATE SET category_id = excluded.category_id, name = excluded.name, price = excluded.price, item_type = 'bundle', updated_at = datetime('now')`)
+        .bind(itemId, tenantId, categoryId, name, price, tenantId, categoryId),
+      env.DB.prepare(`INSERT INTO menu_bundle_rules (id, tenant_id, parent_item_id, schema_version, config_json, is_active, updated_at)
+        VALUES (?, ?, ?, 2, ?, 1, datetime('now'))
+        ON CONFLICT(tenant_id, parent_item_id) DO UPDATE SET schema_version = 2, config_json = excluded.config_json, is_active = 1, updated_at = datetime('now')`)
+        .bind(ruleId, tenantId, itemId, JSON.stringify(config))
+    ]);
+    if (env.ORDER_STATE) await env.ORDER_STATE.delete(`tenant:${tenantId}:menu`);
+    await invalidateBootstrapCache(tenantId, env);
+    return json({ success: true, product: { id: itemId, categoryId, name, price }, bundleRule: config });
+  } catch (error: any) {
+    console.error('[saveBundleProduct]', error);
+    return json({ code: 'BUNDLE_SAVE_FAILED', error: 'Could not save combo' }, 500);
+  }
 }

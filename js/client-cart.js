@@ -554,7 +554,7 @@ function updateTotal() {
                         const pNum = zhNumbers[pIdx] || `第 ${pIdx + 1} 份`;
                         const bundleParts = [];
                         (p.groups || []).forEach(g => {
-                            const itemsStr = (g.items || []).map(item => `${item.name} x${item.quantity}`).join('、');
+                            const itemsStr = (g.items || []).map(item => `${item.name} x${item.quantity}${(item.modifiers || []).length ? ` (${item.modifiers.map(mod => mod.name).join('、')})` : ''}`).join('、');
                             if (itemsStr) bundleParts.push(`${g.groupName || '配菜'}：${itemsStr}`);
                         });
 
@@ -592,7 +592,7 @@ function updateTotal() {
                         if (detailStr) {
                             portionsHTML += `<div style="font-size:13px; color:#475569; margin-left:10px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
                                 <span>↳ ${pNum} ${detailStr}</span>
-                                <button type="button" onclick="openBundleBuilderModal('${catSlug}','${itemName.replace(/'/g, "\\'")}', ${pIdx})" style="border:none; background:#f1f5f9; color:#0f172a; padding:2px 8px; border-radius:6px; font-size:11.5px; font-weight:700; cursor:pointer; margin-left:8px; flex-shrink:0;">調整</button>
+                                <span><button type="button" onclick="openBundleBuilderModal('${catSlug}','${itemName.replace(/'/g, "\\'")}', ${pIdx})" style="min-height:36px; border:1px solid #cbd5e1; background:#fff; border-radius:6px; padding:4px 8px; font-size:12px; font-weight:700; cursor:pointer; margin-left:8px;">調整</button><button type="button" onclick="bundleRemovePortion('${catSlug}','${itemName.replace(/'/g, "\\'")}', ${pIdx})" style="min-height:36px; border:1px solid #cbd5e1; background:#fff; border-radius:6px; padding:4px 8px; font-size:12px; font-weight:700; cursor:pointer; margin-left:6px; color:#ef4444;">移除</button></span>
                             </div>`;
                         }
                     });
