@@ -8274,7 +8274,8 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
 .bundle-wizard-body button, .bundle-wizard-head button, .bundle-wizard-footer button { min-height:48px; padding:8px 14px; }
 .bundle-wizard-two, .bundle-wizard-add { display:flex; gap:12px; flex-wrap:wrap; }
 .bundle-wizard-two > label { flex:1; min-width:180px; }
-.bundle-wizard-add button, .bundle-wizard-group header button { border:1px solid #cbd5e1; background:#fff; border-radius:9px; font-weight:700; }
+.bundle-wizard-add button.btn-primary { border:1px solid var(--primary, #00b900); background:var(--primary, #00b900); color:#fff; border-radius:10px; font-weight:700; box-shadow:0 1px 3px rgba(0,0,0,0.08); }
+.bundle-wizard-add button:not(.btn-primary), .bundle-wizard-group header button { border:1px solid #cbd5e1; background:#fff; border-radius:9px; font-weight:700; }
 .bundle-wizard-group, .bundle-wizard-preview section { border:1px solid #cbd5e1; border-radius:12px; padding:16px; display:grid; gap:14px; }
 .bundle-wizard-group header { display:flex; justify-content:space-between; gap:12px; align-items:center; }
 .bundle-wizard-group h2 { font-size:18px; margin:0; }
