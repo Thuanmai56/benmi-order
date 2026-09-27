@@ -4,7 +4,70 @@ const comboEscape = value => String(value ?? '').replace(/[&<>"']/g, ch => ({ '&
 const comboText = key => t(key);
 const comboGroups = () => comboWizard?.config.groups || [];
 const comboDraftKey = () => `bundle_wizard:${getTenantIdFromUrl()}:${comboWizard.product.id || 'new'}`;
-const comboCatalogItems = () => (currentMenuData || []).filter(cat => cat.type === 'catalog').flatMap(cat => cat.items.filter(item => item.id && item.id !== comboWizard?.product.id && !item.bundleRule).map(item => ({ id: item.id, name: item.name, categoryId: cat.catId, categoryName: cat.title })));
+const comboCatalogItems = () => (currentMenuData || []).filter(cat => cat.type === 'catalog').flatMap(cat => (cat.items || []).filter(item => {
+  if (!item || (!item.id && !item.name)) return false;
+  if (comboWizard?.product?.id && item.id === comboWizard.product.id) return false;
+  if (!comboWizard?.product?.id && comboWizard?.product?.name && item.name === comboWizard.product.name) return false;
+  if (item.bundleRule && item.bundleRule.groups?.length > 0) return false;
+  return true;
+}).map(item => ({
+  id: item.id || item.name,
+  name: item.name,
+  categoryId: cat.catId || cat.id,
+  categoryName: cat.title,
+  rawCategoryId: cat.id,
+  databaseId: cat.databaseId
+})));
+
+// Determine whether a menu item belongs to a combo group
+function isComboItemSelected(group, item) {
+  if (!group || !item) return false;
+  const itemId = item.id;
+  const itemName = item.name;
+
+  // 1. Fixed group check
+  if (group.type === 'fixed') {
+    return Array.isArray(group.items) && group.items.some(f => f.itemId === itemId || (itemName && f.itemId === itemName));
+  }
+
+  // 2. Choice group sources check
+  if (Array.isArray(group.sources)) {
+    for (const src of group.sources) {
+      if (src.type === 'item_list' || src.type === 'items') {
+        if (Array.isArray(src.itemIds) && (src.itemIds.includes(itemId) || (itemName && src.itemIds.includes(itemName)))) {
+          return true;
+        }
+      }
+      if (src.type === 'category') {
+        const catKey = src.refId || src.categoryId;
+        if (catKey) {
+          const cat = (currentMenuData || []).find(c => c.catId === catKey || c.id === catKey || (c.databaseId && c.databaseId === catKey));
+          if (cat) {
+            if (item.categoryId === cat.catId || item.categoryId === cat.id || item.categoryId === cat.databaseId ||
+                item.rawCategoryId === cat.id || (cat.databaseId && item.databaseId === cat.databaseId)) {
+              return true;
+            }
+          } else if (item.categoryId === catKey || item.rawCategoryId === catKey) {
+            return true;
+          }
+        }
+      }
+    }
+  }
+
+  // 3. Fallback: check group.items (if choice group was loaded with items array)
+  if (Array.isArray(group.items) && group.items.some(f => f.itemId === itemId || (itemName && f.itemId === itemName))) {
+    return true;
+  }
+
+  // 4. Fallback: check group.eligibleItems if loaded from D1 bootstrap
+  if (Array.isArray(group.eligibleItems) && group.eligibleItems.some(e => e.id === itemId || (itemName && e.name === itemName) || (e.itemId && (e.itemId === itemId || e.itemId === itemName)))) {
+    return true;
+  }
+
+  return false;
+}
+
 // Keep the legacy API label fields synchronized with the single editable name.
 const comboLabel = (zh, vi) => { const name = currentLang === 'vi' ? vi : zh; return { 'zh-TW': name, vi: name }; };
 const comboGroupName = group => typeof group.label === 'string' ? group.label : (group.label?.[currentLang] || group.name || group.label?.['zh-TW'] || group.label?.vi || '');
@@ -23,13 +86,59 @@ function openBundleWizard(catIndex = activeCategoryIndex, itemIndex = null) {
   if (!currentMenuData?.[catIndex] || currentMenuData[catIndex].type !== 'catalog') return;
   const cat = currentMenuData[catIndex];
   const item = itemIndex === null ? null : cat.items[itemIndex];
-  const product = { id: item?.id || null, categoryId: cat.catId, name: item?.name || '', price: Number(item?.price || 0) };
+  const product = { id: item?.id || null, categoryId: cat.catId || cat.id, name: item?.name || '', price: Number(item?.price || 0) };
   const config = item?.bundleRule?.groups?.length ? {
     version: 2,
-    groups: item.bundleRule.groups.map(group => ({ id: group.id, type: group.type || 'choice',
-      label: comboGroupName(group),
-      minQuantity: Number(group.minQuantity || 1), maxQuantity: Number(group.maxQuantity || group.minQuantity || 1),
-      allowRepeats: Boolean(group.allowRepeats), sources: group.sources || [], items: group.items || [], surcharges: group.surcharges || {} }))
+    groups: item.bundleRule.groups.map(group => {
+      const grpType = group.type || 'choice';
+      let sources = Array.isArray(group.sources) ? JSON.parse(JSON.stringify(group.sources)) : [];
+      let items = Array.isArray(group.items) ? JSON.parse(JSON.stringify(group.items)) : [];
+      let surcharges = group.surcharges && typeof group.surcharges === 'object' ? { ...group.surcharges } : {};
+
+      // Normalize sources: If empty, populate from eligibleItems or items
+      if (sources.length === 0) {
+        if (Array.isArray(group.eligibleItems) && group.eligibleItems.length > 0) {
+          sources.push({
+            type: 'item_list',
+            itemIds: group.eligibleItems.map(it => it.id || it.itemId || it.name).filter(Boolean)
+          });
+        } else if (items.length > 0 && grpType !== 'fixed') {
+          sources.push({
+            type: 'item_list',
+            itemIds: items.map(it => it.itemId || it.id || it.name).filter(Boolean)
+          });
+        }
+      }
+
+      // Normalize any item_list sources so they match catalog items
+      sources.forEach(src => {
+        if (src.type === 'category') {
+          src.refId = src.refId || src.categoryId;
+          src.categoryId = src.categoryId || src.refId;
+        } else if (src.type === 'item_list' || src.type === 'items') {
+          src.type = 'item_list';
+          if (Array.isArray(src.itemIds)) {
+            src.itemIds = src.itemIds.map(idOrName => {
+              const found = comboCatalogItems().find(c => c.id === idOrName || c.name === idOrName);
+              return found ? found.id : idOrName;
+            });
+          }
+        }
+      });
+
+      return {
+        id: group.id || `group_${crypto.randomUUID()}`,
+        type: grpType,
+        label: comboGroupName(group),
+        name: comboGroupName(group),
+        minQuantity: Number(group.minQuantity || 1),
+        maxQuantity: Number(group.maxQuantity || group.minQuantity || 1),
+        allowRepeats: Boolean(group.allowRepeats),
+        sources,
+        items,
+        surcharges
+      };
+    })
   } : { version: 2, groups: [] };
   comboWizard = { product, config, step: 0, changed: false, returnFocus: document.activeElement };
   const saved = localStorage.getItem(comboDraftKey());
@@ -130,23 +239,56 @@ window.comboWizardRemoveGroup = comboWizardRemoveGroup;
 
 function comboWizardToggleItem(index, itemId, checked) {
   const group = comboGroups()[index];
+  if (!group) return;
+  const candidates = comboCatalogItems();
+  const targetItem = candidates.find(c => c.id === itemId || c.name === itemId);
+
   if (group.type === 'fixed') {
-    group.items = group.items.filter(item => item.itemId !== itemId);
+    group.items = (group.items || []).filter(item => item.itemId !== itemId && (!targetItem || item.itemId !== targetItem.name));
     if (checked) group.items.push({ itemId, quantity: 1, surcharge: 0 });
   } else {
+    // If the group had category sources, expand them into item_list before toggling single item
+    const catSources = (group.sources || []).filter(s => s.type === 'category');
+    if (catSources.length > 0) {
+      let itemListSrc = group.sources.find(s => s.type === 'item_list');
+      if (!itemListSrc) {
+        itemListSrc = { type: 'item_list', itemIds: [] };
+        group.sources.push(itemListSrc);
+      }
+      candidates.forEach(cand => {
+        if (isComboItemSelected(group, cand)) {
+          if (!itemListSrc.itemIds.includes(cand.id)) {
+            itemListSrc.itemIds.push(cand.id);
+          }
+        }
+      });
+      group.sources = group.sources.filter(s => s.type !== 'category');
+    }
+
     let source = group.sources.find(src => src.type === 'item_list');
     if (!source) { source = { type: 'item_list', itemIds: [] }; group.sources.push(source); }
-    source.itemIds = source.itemIds.filter(id => id !== itemId);
+    source.itemIds = source.itemIds.filter(id => id !== itemId && (!targetItem || id !== targetItem.name));
     if (checked) source.itemIds.push(itemId);
-    if (!checked) delete group.surcharges[itemId];
+    if (!checked) {
+      delete group.surcharges[itemId];
+      if (targetItem) delete group.surcharges[targetItem.name];
+    }
   }
   persistComboWizard(); renderComboWizard();
 }
 window.comboWizardToggleItem = comboWizardToggleItem;
 function comboWizardToggleCategory(index, categoryId, checked) {
   const group = comboGroups()[index];
-  group.sources = group.sources.filter(source => !(source.type === 'category' && source.refId === categoryId));
-  if (checked) group.sources.push({ type: 'category', refId: categoryId });
+  if (!group) return;
+  const targetCat = (currentMenuData || []).find(c => c.catId === categoryId || c.id === categoryId || (c.databaseId && c.databaseId === categoryId));
+  const catKeys = [categoryId];
+  if (targetCat) {
+    if (targetCat.catId) catKeys.push(targetCat.catId);
+    if (targetCat.id) catKeys.push(targetCat.id);
+    if (targetCat.databaseId) catKeys.push(targetCat.databaseId);
+  }
+  group.sources = (group.sources || []).filter(source => !(source.type === 'category' && catKeys.includes(source.refId || source.categoryId)));
+  if (checked) group.sources.push({ type: 'category', refId: categoryId, categoryId: categoryId });
   persistComboWizard(); renderComboWizard();
 }
 window.comboWizardToggleCategory = comboWizardToggleCategory;
@@ -180,19 +322,16 @@ function comboWizardError() {
   if (!p.name.trim()) return comboText('comboNeedName');
   if (!Number.isFinite(p.price) || p.price < 0) return comboText('comboNeedPrice');
   if (!comboGroups().length) return comboText('comboNeedGroup');
-  const validIds = new Set(comboCatalogItems().map(item => item.id));
+  const candidates = comboCatalogItems();
+  const validIds = new Set(candidates.map(item => item.id));
   for (let i = 0; i < comboGroups().length; i++) {
     const group = comboGroups()[i];
     if (!comboGroupName(group).trim()) return `${i + 1}: ${comboText('comboNeedGroupName')}`;
     if (group.type === 'fixed') {
       if (!group.items.length || new Set(group.items.map(item => item.itemId)).size !== group.items.length || group.items.some(item => !validIds.has(item.itemId) || !Number.isInteger(Number(item.quantity)) || Number(item.quantity) < 1 || !Number.isFinite(Number(item.surcharge)) || Number(item.surcharge) < 0)) return `${i + 1}: ${comboText('comboNeedItems')}`;
     } else {
-      const eligible = new Set();
-      for (const source of group.sources) {
-        if (source.type === 'item_list') for (const id of source.itemIds) eligible.add(id);
-        if (source.type === 'category') comboCatalogItems().filter(item => item.categoryId === source.refId).forEach(item => eligible.add(item.id));
-      }
-      if (!Number.isInteger(Number(group.minQuantity)) || Number(group.minQuantity) < 1 || eligible.size < 1 || [...eligible].some(id => !validIds.has(id)) || (!group.allowRepeats && eligible.size < group.minQuantity) || Object.values(group.surcharges).some(value => !Number.isFinite(Number(value)) || Number(value) < 0)) return `${i + 1}: ${comboText('comboNeedItems')}`;
+      const eligible = new Set(candidates.filter(item => isComboItemSelected(group, item)).map(item => item.id));
+      if (!Number.isInteger(Number(group.minQuantity)) || Number(group.minQuantity) < 1 || eligible.size < 1 || (!group.allowRepeats && eligible.size < group.minQuantity) || Object.values(group.surcharges).some(value => !Number.isFinite(Number(value)) || Number(value) < 0)) return `${i + 1}: ${comboText('comboNeedItems')}`;
     }
   }
   return '';
@@ -273,7 +412,6 @@ function renderComboWizard() {
       </div>`;
     } else {
       const groupsHtml = groups.map((group, index) => {
-        const selectedIds = group.type === 'fixed' ? group.items.map(it => it.itemId) : group.sources.filter(src => src.type === 'item_list').flatMap(src => src.itemIds || []);
         const search = comboWizard.search?.[index] || '';
         const filter = comboWizard.filters?.[index] || 'all';
         const visible = candidates.filter(item => (filter === 'all' || item.categoryId === filter) && item.name.toLowerCase().includes(search.toLowerCase()));
@@ -296,12 +434,20 @@ function renderComboWizard() {
           ${isChoice ? `<div class="bundle-wizard-two"><label>${comboText('comboQuantity')}<input type="number" min="1" value="${group.minQuantity}" onchange="comboWizardGroupField(${index},'minQuantity',this.value)"></label><label class="bundle-wizard-check"><input type="checkbox" ${group.allowRepeats ? 'checked' : ''} onchange="comboWizardGroupField(${index},'allowRepeats',this.checked)">${comboText('comboRepeat')}</label></div>` : ''}
           <div class="bundle-wizard-two"><input id="combo-search-${index}" type="search" placeholder="${comboText('comboSearch')}" value="${comboEscape(search)}" oninput="comboWizardSearch(${index},this.value)"><select aria-label="${comboText('comboFilterCategory')}" onchange="comboWizardFilter(${index},this.value)"><option value="all">${comboText('comboAllCategories')}</option>${categories.map(cat => `<option value="${comboEscape(cat.catId)}" ${filter === cat.catId ? 'selected' : ''}>${comboEscape(cat.title)}</option>`).join('')}</select></div>
           <div class="bundle-wizard-candidates">${visible.map(item => {
-            const selected = selectedIds.includes(item.id);
-            const fixed = group.items.find(f => f.itemId === item.id);
-            const extra = fixed?.surcharge ?? group.surcharges[item.id] ?? 0;
+            const selected = isComboItemSelected(group, item);
+            const fixed = (group.items || []).find(f => f.itemId === item.id || f.itemId === item.name);
+            const extra = fixed?.surcharge ?? group.surcharges[item.id] ?? (item.name ? group.surcharges[item.name] : 0) ?? 0;
             return `<div class="bundle-wizard-candidate"><label><input type="checkbox" ${selected ? 'checked' : ''} onchange="comboWizardToggleItem(${index},'${comboEscape(item.id)}',this.checked)"><span>${comboEscape(item.name)} · ${comboEscape(item.categoryName)}</span></label>${selected ? `<label>${comboText('comboSurcharge')}<input type="number" min="0" value="${extra}" onchange="comboWizardItemValue(${index},'${comboEscape(item.id)}','surcharge',this.value)"></label>${fixed ? `<label>${comboText('comboQuantity')}<input type="number" min="1" value="${fixed.quantity}" onchange="comboWizardItemValue(${index},'${comboEscape(item.id)}','quantity',this.value)"></label>` : ''}` : ''}</div>`;
           }).join('')}</div>
-          ${isChoice ? `<details><summary>${comboText('comboWholeCategory')}</summary><p>${comboText('comboWholeCategoryHelp')}</p>${categories.map(cat => `<label class="bundle-wizard-check"><input type="checkbox" ${group.sources.some(src => src.type === 'category' && src.refId === cat.catId) ? 'checked' : ''} onchange="comboWizardToggleCategory(${index},'${comboEscape(cat.catId)}',this.checked)">${comboEscape(cat.title)}</label>`).join('')}</details>` : ''}
+          ${isChoice ? `<details><summary>${comboText('comboWholeCategory')}</summary><p>${comboText('comboWholeCategoryHelp')}</p>${categories.map(cat => {
+            const catKey = cat.catId || cat.id;
+            const isCatChecked = (group.sources || []).some(src => src.type === 'category' && (
+              src.refId === cat.catId || src.categoryId === cat.catId ||
+              src.refId === cat.id || src.categoryId === cat.id ||
+              (cat.databaseId && (src.refId === cat.databaseId || src.categoryId === cat.databaseId))
+            ));
+            return `<label class="bundle-wizard-check"><input type="checkbox" ${isCatChecked ? 'checked' : ''} onchange="comboWizardToggleCategory(${index},'${comboEscape(catKey)}',this.checked)">${comboEscape(cat.title)}</label>`;
+          }).join('')}</details>` : ''}
         </section>`;
       }).join('');
 
@@ -328,7 +474,7 @@ function renderComboWizard() {
         }).join('');
         return `<section><h3>${name}</h3>${details}</section>`;
       }
-      const eligible = [...new Set(group.sources.flatMap(source => source.type === 'item_list' ? source.itemIds || [] : candidates.filter(item => item.categoryId === source.refId).map(item => item.id)))];
+      const eligible = [...new Set(candidates.filter(item => isComboItemSelected(group, item)).map(item => item.id))];
       const chosen = (comboWizard.preview[group.id] || []).filter(id => eligible.includes(id));
       comboWizard.preview[group.id] = chosen;
       if (chosen.length < Number(group.minQuantity) || chosen.length > Number(group.maxQuantity)) complete = false;
