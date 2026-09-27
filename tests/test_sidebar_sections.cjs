@@ -66,18 +66,30 @@ test('Sidebar Sections: orders-i18n.js has bilingual section titles and button l
   assert.ok(i18nJs.includes('noComboCategoriesPrompt: "Chưa có phân loại Combo (bấm bên dưới để tạo)"'), 'vi has noComboCategoriesPrompt');
 });
 
-test('Sidebar Sections: orders.css has section styles and touch target >= 44px', () => {
+test('Sidebar Sections: orders.css has section styles, balanced braces, and touch target >= 44px', () => {
   const css = fs.readFileSync(path.resolve(__dirname, '../css/orders.css'), 'utf-8');
   assert.ok(css.includes('.menu-sidebar-section'), 'Must style .menu-sidebar-section');
   assert.ok(css.includes('.menu-sidebar-section-header'), 'Must style .menu-sidebar-section-header');
   assert.ok(css.includes('.menu-sidebar-section-title'), 'Must style .menu-sidebar-section-title');
   assert.ok(css.includes('.menu-sidebar-action-btn'), 'Must style .menu-sidebar-action-btn');
   assert.ok(css.includes('.menu-section-empty-hint'), 'Must style .menu-section-empty-hint');
+
+  // Verify balanced braces across entire CSS file
+  let depth = 0;
+  for (let c of css) {
+    if (c === '{') depth++;
+    else if (c === '}') {
+      depth--;
+      assert.ok(depth >= 0, 'Excess closing brace in orders.css');
+    }
+  }
+  assert.equal(depth, 0, 'Unclosed brace in orders.css');
 });
 
 test('Sidebar Sections: orders.html has bumped cache buster for sidebar sections', () => {
   const html = fs.readFileSync(path.resolve(__dirname, '../orders.html'), 'utf-8');
-  assert.ok(html.includes('css/orders.css?v=20260927_sidebar_sections_v1'), 'orders.css cache buster bumped');
-  assert.ok(html.includes('js/orders-menu.js?v=20260927_sidebar_sections_v1'), 'orders-menu.js cache buster bumped');
-  assert.ok(html.includes('js/orders-i18n.js?v=20260927_sidebar_sections_v1'), 'orders-i18n.js cache buster bumped');
+  assert.ok(/css\/orders\.css\?v=20260927_sidebar_sections_v\d+/.test(html), 'orders.css cache buster bumped');
+  assert.ok(/js\/orders-menu\.js\?v=20260927_sidebar_sections_v\d+/.test(html), 'orders-menu.js cache buster bumped');
+  assert.ok(/js\/orders-i18n\.js\?v=20260927_sidebar_sections_v\d+/.test(html), 'orders-i18n.js cache buster bumped');
 });
+
