@@ -117,63 +117,164 @@ function initPortionDefaults(category, origName, portionIndex) {
 }
 
 // --- CUSTOMIZE POPUP (SCHEMA-DRIVEN MODIFIERS POPUP) ---
-function toggleCustomize(category, origName) {
+function openItemCustomizeModal(category, origName, targetPortionIndex) {
     if (typeof checkDesktopAuthGuard === 'function' && !checkDesktopAuthGuard()) return;
     const key = category + '_' + origName;
-    const cartObj = window.cart || cart;
-    const qty = cartObj[key];
-    if (!qty) return;
+    const cartObj = window.cart || cart || {};
+    const currentQty = cartObj[key] || 0;
+    const portionIdx = (typeof targetPortionIndex === 'number') ? targetPortionIndex : currentQty;
+    const isAddingNew = portionIdx >= currentQty;
 
     const modifiers = getItemModifiers(category, origName);
-    if (!modifiers || modifiers.length === 0) return;
+    if (!modifiers || modifiers.length === 0) {
+        if (isAddingNew && typeof updateQty === 'function') {
+            cartObj[key] = (cartObj[key] || 0) + 1;
+            const qtySpan = document.getElementById('qty-' + category + '-' + origName);
+            if (qtySpan) {
+                qtySpan.innerText = cartObj[key];
+                qtySpan.style.color = 'var(--primary)';
+            }
+            if (typeof updateTotal === 'function') updateTotal();
+        }
+        return;
+    }
 
-    const cData = window.customizeData || customizeData;
+    const cData = window.customizeData || customizeData || {};
+    window.customizeData = cData;
     if (!cData[key]) cData[key] = [];
+
+    // Draft portion data (deep clone existing or init defaults)
+    const existing = cData[key][portionIdx];
+    let draft = null;
+    if (existing) {
+        draft = JSON.parse(JSON.stringify(existing));
+    } else {
+        const defaultSingle = {};
+        modifiers.filter(m => m.selectionType === 'single').forEach(m => {
+            const defOpt = (m.options || []).find(o => o.isDefault && !o.isOutOfStock) || (m.isRequired ? ((m.options || []).find(o => !o.isOutOfStock) || m.options[0]) : null);
+            if (defOpt) defaultSingle[m.slug] = defOpt.name;
+        });
+        const defaultMulti = {};
+        modifiers.filter(m => m.selectionType === 'multiple').forEach(m => {
+            (m.options || []).filter(o => o.isDefault && !o.isOutOfStock).forEach(o => {
+                defaultMulti[o.name] = true;
+            });
+        });
+        draft = { single: defaultSingle, multiple: defaultMulti, note: '' };
+    }
+
+    // Resolve item info and price
+    const resolveFn = typeof resolveCatalogItem === 'function' ? resolveCatalogItem : (window.resolveCatalogItem || (k => ({ origName, displayName: origName, price: 0 })));
+    const itemInfo = resolveFn(key);
+    const basePrice = Number(itemInfo?.price || 0);
+
+    // Close any previous open popup
+    if (typeof closePopup === 'function') closePopup();
 
     const overlay = document.createElement('div');
     overlay.className = 'popup-overlay';
+    overlay.id = 'item-customize-overlay';
     overlay.onclick = (e) => { if (e.target === overlay) closePopup(); };
 
     const box = document.createElement('div');
     box.className = 'popup-box';
+
+    const portionLabel = isAddingNew
+        ? (currentQty > 0 ? `加點第 ${portionIdx + 1} 份` : `基本售價 $${basePrice}`)
+        : `編輯第 ${portionIdx + 1} 份`;
+
+    let portionTabsHTML = '';
+    if (currentQty > 0) {
+        portionTabsHTML = `
+            <div class="portion-tabs-row" style="display: flex; gap: 8px; overflow-x: auto; margin: 4px 0 12px 0; padding-bottom: 4px;">
+                ${Array.from({ length: currentQty }).map((_, i) => `
+                    <button type="button" class="portion-tab-btn" data-portion="${i}" 
+                            style="padding: 6px 12px; border-radius: 8px; font-size: 13px; font-weight: 700; border: 1.5px solid ${i === portionIdx ? 'var(--primary)' : '#e2e8f0'}; background: ${i === portionIdx ? '#f0fdf4' : '#fff'}; color: ${i === portionIdx ? 'var(--primary)' : '#475569'}; cursor: pointer; white-space: nowrap;">
+                        第 ${i + 1} 份
+                    </button>
+                `).join('')}
+                <button type="button" class="portion-tab-btn" data-portion="${currentQty}" 
+                        style="padding: 6px 12px; border-radius: 8px; font-size: 13px; font-weight: 700; border: 1.5px dashed ${portionIdx >= currentQty ? 'var(--primary)' : '#cbd5e1'}; background: ${portionIdx >= currentQty ? '#f0fdf4' : '#f8fafc'}; color: ${portionIdx >= currentQty ? 'var(--primary)' : '#64748b'}; cursor: pointer; white-space: nowrap;">
+                    + 加點第 ${currentQty + 1} 份
+                </button>
+            </div>
+        `;
+    }
+
+    const copyPrevBtnHTML = (portionIdx > 0 && isAddingNew && cData[key] && cData[key][portionIdx - 1]) ? `
+        <button type="button" class="btn-copy-prev-custom" style="width: 100%; border: 1px dashed #cbd5e1; background: #f8fafc; color: #475569; font-size: 13px; font-weight: 700; border-radius: 10px; padding: 8px 12px; margin-bottom: 10px; cursor: pointer;">
+            與上一份相同
+        </button>
+    ` : '';
+
     box.innerHTML = `
         <div class="popup-header">
-            <span>${origName} 客製化設定</span>
+            <div>
+                <div style="font-size: 18px; font-weight: 900; color: #0f172a;">${origName}</div>
+                <div style="font-size: 13px; font-weight: 600; color: #64748b; margin-top: 2px;">${portionLabel}</div>
+            </div>
             <div class="close-btn" onclick="closePopup()">✕</div>
+        </div>
+        ${portionTabsHTML}
+        ${copyPrevBtnHTML}
+        <div class="customize-modal-body" style="display: flex; flex-direction: column; gap: 14px; max-height: 55vh; overflow-y: auto; padding-right: 4px;">
+        </div>
+        <div class="customize-modal-footer" style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #f1f5f9;">
+            <button type="button" class="btn-send btn-customize-confirm" style="width: 100%; min-height: 48px; font-size: 16px; font-weight: 800; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                <span>${isAddingNew ? '加入購物車' : '確認修改'}</span>
+            </button>
         </div>
     `;
 
-    for (let i = 0; i < qty; i++) {
-        initPortionDefaults(category, origName, i);
+    box.querySelectorAll('.portion-tab-btn').forEach(btn => {
+        btn.onclick = () => {
+            const target = Number(btn.getAttribute('data-portion'));
+            openItemCustomizeModal(category, origName, target);
+        };
+    });
 
-        const currentPortion = cData[key][i];
-        const section = document.createElement('div');
-        section.className = 'modifier-section';
+    const copyBtn = box.querySelector('.btn-copy-prev-custom');
+    if (copyBtn) {
+        copyBtn.onclick = () => {
+            const prev = cData[key] && cData[key][portionIdx - 1];
+            if (prev) {
+                draft = JSON.parse(JSON.stringify(prev));
+                renderModalOptions();
+            }
+        };
+    }
 
-        let sectionInner = `<div style="font-weight: 900; color: var(--primary); font-size: 16px; margin-bottom: 12px;">第 ${i + 1} 份</div>`;
+    const bodyEl = box.querySelector('.customize-modal-body');
+    const confirmBtn = box.querySelector('.btn-customize-confirm');
+
+    function renderModalOptions() {
+        bodyEl.innerHTML = '';
+        const getPrice = window.getModifierPrice || (typeof getModifierPrice === 'function' ? getModifierPrice : () => 0);
 
         modifiers.forEach(mod => {
+            const section = document.createElement('div');
+            section.className = 'modifier-section';
+            section.style.marginBottom = '8px';
+
             const reqBadge = mod.isRequired ? `<span class="modifier-required-badge">必選</span>` : `<span class="modifier-optional-badge">可選</span>`;
-            sectionInner += `
-                <div class="modifier-group-title">
-                    <span>${mod.name}</span>
+            let sectionInner = `
+                <div class="modifier-group-title" style="margin-bottom: 8px;">
+                    <span style="font-size: 14px; font-weight: 800; color: #1e293b;">${mod.name}</span>
                     ${reqBadge}
                 </div>
             `;
 
-            const safeModSlug = mod.slug.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
             if (mod.selectionType === 'single') {
                 sectionInner += `<div class="modifier-pills-row">`;
-                mod.options.forEach(opt => {
+                (mod.options || []).forEach(opt => {
                     const isOos = Boolean(opt.isOutOfStock);
-                    const isSelected = (currentPortion.single && currentPortion.single[mod.slug] === opt.name);
-                    const priceText = opt.price > 0 ? ` (+$${opt.price})` : '';
+                    const isSelected = (draft.single && draft.single[mod.slug] === opt.name);
+                    const price = Number(opt.price !== undefined ? opt.price : getPrice(opt.name));
+                    const priceText = price > 0 ? ` (+$${price})` : '';
                     const oosBadge = isOos ? `<span class="modifier-oos-tag">已售完</span>` : '';
-                    const safeOptName = opt.name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-                    const safeKey = key.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
                     sectionInner += `
                         <div class="modifier-pill ${isSelected ? 'active' : ''} ${isOos ? 'disabled' : ''}" 
-                             onclick="${isOos ? '' : `selectSingleModifier('${safeKey}', ${i}, '${safeModSlug}', '${safeOptName}', this)`}">
+                             data-mod-slug="${mod.slug}" data-opt-name="${opt.name}">
                             <span>${opt.name}${priceText}</span>${oosBadge}
                         </div>
                     `;
@@ -181,15 +282,14 @@ function toggleCustomize(category, origName) {
                 sectionInner += `</div>`;
             } else if (mod.selectionType === 'multiple') {
                 sectionInner += `<div class="modifier-checkbox-grid">`;
-                mod.options.forEach(opt => {
+                (mod.options || []).forEach(opt => {
                     const isOos = Boolean(opt.isOutOfStock);
-                    const isChecked = Boolean(currentPortion.multiple && currentPortion.multiple[opt.name]);
-                    const priceText = isOos ? `<span class="modifier-oos-tag">已售完</span>` : (opt.price > 0 ? `+$${opt.price}` : '$0');
-                    const safeOptName = opt.name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-                    const safeKey = key.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                    const isChecked = Boolean(draft.multiple && draft.multiple[opt.name]);
+                    const price = Number(opt.price !== undefined ? opt.price : getPrice(opt.name));
+                    const priceText = isOos ? `<span class="modifier-oos-tag">已售完</span>` : (price > 0 ? `+$${price}` : '$0');
                     sectionInner += `
                         <div class="modifier-checkbox-chip ${isChecked ? 'active' : ''} ${isOos ? 'disabled' : ''}" 
-                             onclick="${isOos ? '' : `toggleMultipleModifier('${safeKey}', ${i}, '${safeOptName}', this)`}">
+                             data-opt-name="${opt.name}">
                             <span>${opt.name}</span>
                             <span style="font-size: 12px; opacity: 0.85;">${priceText}</span>
                         </div>
@@ -197,24 +297,100 @@ function toggleCustomize(category, origName) {
                 });
                 sectionInner += `</div>`;
             }
+
+            section.innerHTML = sectionInner;
+
+            section.querySelectorAll('.modifier-pill').forEach(pill => {
+                pill.onclick = () => {
+                    if (pill.classList.contains('disabled')) return;
+                    const modSlug = pill.getAttribute('data-mod-slug');
+                    const optName = pill.getAttribute('data-opt-name');
+                    if (!draft.single) draft.single = {};
+                    draft.single[modSlug] = optName;
+                    renderModalOptions();
+                };
+            });
+
+            section.querySelectorAll('.modifier-checkbox-chip').forEach(chip => {
+                chip.onclick = () => {
+                    if (chip.classList.contains('disabled')) return;
+                    const optName = chip.getAttribute('data-opt-name');
+                    if (!draft.multiple) draft.multiple = {};
+                    if (draft.multiple[optName]) {
+                        delete draft.multiple[optName];
+                    } else {
+                        draft.multiple[optName] = true;
+                    }
+                    renderModalOptions();
+                };
+            });
+
+            bodyEl.appendChild(section);
         });
 
-        sectionInner += `
-            <label style="font-size: 13px; font-weight: 800; color: var(--muted); display: block; margin: 14px 0 4px 0;">個別備註</label>
-            <input type="text" maxlength="50" value="${(currentPortion.note || '').replace(/"/g, '&quot;')}" placeholder="例如：不要香菜、醬料分開裝" 
-                   oninput="saveCustomNote('${key}', ${i}, this.value)">
+        // Note input
+        const noteDiv = document.createElement('div');
+        noteDiv.innerHTML = `
+            <label style="font-size: 13px; font-weight: 800; color: #475569; display: block; margin: 12px 0 6px 0;">個別備註</label>
+            <input type="text" maxlength="50" value="${(draft.note || '').replace(/"/g, '&quot;')}" placeholder="例如：不要香菜、醬料分開裝" 
+                   class="customize-note-input"
+                   style="width: 100%; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 10px 14px; font-size: 14px; color: #1e293b; background: #fff; outline: none; box-sizing: border-box;">
         `;
+        const noteInput = noteDiv.querySelector('.customize-note-input');
+        noteInput.oninput = (e) => { draft.note = e.target.value; };
+        bodyEl.appendChild(noteDiv);
 
-        section.innerHTML = sectionInner;
-        box.appendChild(section);
+        // Calculate dynamic total
+        let extra = 0;
+        if (draft.single) {
+            Object.values(draft.single).forEach(opt => { extra += getPrice(opt); });
+        }
+        if (draft.multiple) {
+            Object.keys(draft.multiple).forEach(opt => { if (draft.multiple[opt]) extra += getPrice(opt); });
+        }
+        const totalPrice = basePrice + extra;
+
+        const actionText = isAddingNew ? '加入購物車' : '確認修改';
+        confirmBtn.innerHTML = `
+            <span>${actionText}</span>
+            <span style="opacity: 0.85;">·</span>
+            <span>$${totalPrice}</span>
+        `;
     }
 
-    const okBtn = document.createElement('button');
-    okBtn.innerText = '完成設定';
-    okBtn.className = 'btn-send btn-customize-ok';
-    okBtn.style.cssText = 'width:100%; margin-top:8px;';
-    okBtn.onclick = () => { closePopup(); };
-    box.appendChild(okBtn);
+    confirmBtn.onclick = () => {
+        // Validate required single modifier groups
+        const missingReq = modifiers.find(m => m.isRequired && (!draft.single || !draft.single[m.slug]));
+        if (missingReq) {
+            if (typeof customAlert === 'function') customAlert(`請選擇「${missingReq.name}」`);
+            else alert(`請選擇「${missingReq.name}」`);
+            return;
+        }
+
+        // Save portion
+        cData[key][portionIdx] = JSON.parse(JSON.stringify(draft));
+
+        if (isAddingNew) {
+            cartObj[key] = (cartObj[key] || 0) + 1;
+        }
+
+        // Update card UI
+        const qtySpan = document.getElementById('qty-' + category + '-' + origName);
+        if (qtySpan) {
+            qtySpan.innerText = cartObj[key];
+            qtySpan.style.color = cartObj[key] > 0 ? 'var(--primary)' : 'inherit';
+        }
+
+        const btn = document.getElementById('customize-btn-' + category + '-' + origName);
+        if (btn) {
+            btn.style.display = cartObj[key] > 0 ? 'flex' : 'none';
+        }
+
+        if (typeof updateTotal === 'function') updateTotal();
+        closePopup();
+    };
+
+    renderModalOptions();
 
     overlay.appendChild(box);
     overlay._savedScrollY = window.scrollY;
@@ -227,8 +403,11 @@ function toggleCustomize(category, origName) {
     document.body.appendChild(overlay);
     currentPopup = overlay;
     window.currentPopup = overlay;
+}
 
-    updateCustomizeOkBtn(key);
+function toggleCustomize(category, origName) {
+    if (typeof checkDesktopAuthGuard === 'function' && !checkDesktopAuthGuard()) return;
+    openItemCustomizeModal(category, origName, 0);
 }
 
 function updateCustomizeOkBtn(key) {
@@ -339,6 +518,7 @@ window.renderComboDrinksInline = renderComboDrinksInline;
 window.getCategoryModifiers = getCategoryModifiers;
 window.getItemModifiers = getItemModifiers;
 window.initPortionDefaults = initPortionDefaults;
+window.openItemCustomizeModal = openItemCustomizeModal;
 window.toggleCustomize = toggleCustomize;
 window.selectSingleModifier = selectSingleModifier;
 window.toggleMultipleModifier = toggleMultipleModifier;
