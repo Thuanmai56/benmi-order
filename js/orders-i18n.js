@@ -445,6 +445,39 @@ const I18N = {
     menuEditSub: "拖曳排序 ✦ 點擊欄位直接修改",
     btnMenuRestore: "恢復預設菜單",
     btnMenuAddItem: "新增項目",
+    btnMenuCreateType: "建立設定",
+    btnMenuCreateUnified: "建立新項目",
+    btnMenuAddCustomGroup: "新增客製化分組",
+    btnCatRename: "重新命名",
+    btnCatDelete: "刪除分類",
+    createTypeModalTitle: "選擇菜單設定類型",
+    createTypeModalSub: "請選擇要新增的餐點或客製化類型",
+    createTypeStandardTitle: "單品餐點",
+    createTypeStandardDesc: "新增單品餐點，設定價格、圖片與推薦標籤，並可隨時配置專屬客製選項。",
+    createTypeModifiersTitle: "單品含客製選項",
+    createTypeModifiersDesc: "獨立單品，可配置專屬加料、甜度冰塊、辣度等多組選項。",
+    createType1Title: "特惠套餐 (組合選擇)",
+    createType1Desc: "顧客必須從指定分類中任選 N 樣餐點，支援重複與單品客製。",
+    createType3Title: "整單客製化 (全單設定)",
+    createType3Desc: "適用於整筆訂單的通用偏好設定 (餐具、整單辣度、通用備註)。",
+    btnItemModifiers: "客製選項",
+    itemModifiersModalTitle: "設定餐點客製選項",
+    itemModifiersModalSub: "為此餐點配置專屬的選項群組 (如加料、甜度冰塊、辣度)",
+    btnNewModifierGroup: "新增選項群組",
+    labelModifierGroupName: "群組名稱 (例: 辣度、加料、甜度冰塊)",
+    labelModifierSelectionType: "選擇模式",
+    optionSingleRadio: "單選 (Radio)",
+    optionMultipleCheckbox: "多選 (Checkbox)",
+    labelModifierRequired: "是否必選",
+    badgeRequired: "必填",
+    badgeOptional: "選填",
+    btnAddModifierOption: "新增選項",
+    labelOptionName: "選項名稱",
+    labelOptionPrice: "加價 (+$$)",
+    noModifierGroups: "此品項尚未設定專屬客製選項。點擊上方按鈕開始新增。",
+    btnSaveModifiers: "完成設定",
+    toggleRequiredOn: "切換為必填",
+    toggleRequiredOff: "切換為選填",
     btnMenuSave: "儲存變更",
     menuSaved: "已儲存",
     menuHelp: "編輯說明",
@@ -595,7 +628,144 @@ const I18N = {
     promptUnlinkPin: "請輸入門市管理 PIN 碼以解除綁定：",
     unlinkSuccess: "已成功解除設備綁定！即將返回門市啟用畫面。",
     unlinkWrongPin: "管理 PIN 碼錯誤，無法解除綁定。",
-    unpaired: "未綁定"
+    unpaired: "未綁定",
+    btnSetBundle: "設為組合",
+    btnEditBundle: "編輯組合",
+    bundleBadge: "組合",
+    bundleGroupUnit: "組",
+    modalBundleTitle: "設定套餐組合",
+    modalBundleSub: "設定該套餐所包含的自選群組、選菜來源與數量規則",
+    comboCreateTitle: "建立套餐", comboEditTitle: "編輯套餐", comboClose: "關閉", comboBack: "上一步", comboContinue: "下一步", comboSave: "儲存套餐",
+    comboStepsLabel: "建立套餐的步驟",
+    comboWhatTitle: "什麼是套餐？",
+    comboWhatBody: "套餐是以一個名稱與基本價格販售的多樣餐點組合。您可以固定內容、讓顧客自選，或混合兩種方式。例如：固定附一份小菜，再讓顧客選主餐與飲料。",
+    comboPriceHelp: "套餐價格＝基本價格＋餐點加價＋付費客製選項。餐點原本的單點售價不會再加上；不加價的餐點請填 0。",
+    comboSetupHelp: "先填基本資料，再設定餐點內容，最後預覽顧客選餐方式並儲存。",
+    comboPartsTitle: "這份套餐包含什麼？",
+    comboPartsHelp: "「固定包含」由您指定餐點與份數；「顧客自選」讓顧客從清單中選足指定數量。同一套餐可同時加入這兩種內容。",
+    comboTemplatesTitle: "從範例開始設定",
+    comboTemplatesHelp: "範例只會建立分組，不會自動選入餐點。套用後請從菜單勾選餐點，並調整數量與加價；也可以直接在下方自行新增內容。",
+    comboTemplateMealHelp: "建立兩個自選分組：顧客各選 1 份主餐及 1 杯飲料。",
+    comboTemplateMealExample: "例如：飯或麵 ＋ 茶或果汁",
+    comboTemplateManyHelp: "建立一個自選分組，預設選 2 樣且不可重複。數量可再調整。",
+    comboTemplateManyExample: "例如：從 5 種小菜中任選 2 種",
+    comboTemplateFixedHelp: "建立固定內容分組，由您指定餐點與份數，顧客不必重新選餐。",
+    comboTemplateFixedExample: "例如：固定 1 份飯 ＋ 1 碗湯",
+    comboUseTemplate: "使用此範例",
+    comboChangeTemplate: "查看範例／更換分組設定",
+    comboReplaceTemplate: "使用新範例會取代目前所有分組及已選餐點，名稱與基本價格會保留。要繼續嗎？",
+    comboFixedHelp: "勾選套餐固定附上的餐點，並填寫每份套餐包含的數量。顧客仍可調整餐點允許的客製選項。",
+    comboChoiceHelp: "先設定顧客需選的數量，再勾選可選餐點。加價填 0 表示已包含在套餐價格。",
+    comboStepInfo: "基本資料", comboStepParts: "套餐內容", comboStepPreview: "預覽並儲存",
+    comboStepInfoSub: "設定名稱、價格與分類",
+    comboStepPartsSub: "配置分組規則與可選餐點",
+    comboStepPreviewSub: "檢查顧客選餐並儲存",
+    comboStepCompleted: "已完成",
+    comboStepCurrent: "進行中",
+    comboStepPending: "待設定",
+    comboProductName: "套餐名稱", comboBasePrice: "套餐基本價格", comboCategory: "顯示分類",
+    comboImage: "管理圖片", comboImageAfterSave: "儲存套餐後即可新增圖片。", comboTemplateMeal: "主餐 + 飲料", comboTemplateMany: "任選 N 樣", comboTemplateFixed: "固定套餐",
+    comboFixedGroup: "固定包含", comboChoiceGroup: "顧客自選", comboRemove: "移除", comboGroupName: "分組名稱", comboQuantity: "數量", comboRepeat: "允許重複選同一餐點",
+    comboSearch: "搜尋餐點", comboFilterCategory: "篩選分類", comboAllCategories: "全部分類", comboSurcharge: "加價", comboWholeCategory: "進階：選取整個分類", comboWholeCategoryHelp: "此分類將來新增的餐點也會自動加入可選清單。",
+    comboAddChoice: "新增自選分組", comboAddFixed: "新增固定內容", comboRestoreDraft: "找到未完成的套餐草稿，是否繼續編輯？", comboLeaveDraft: "要關閉嗎？草稿會保留，下次可繼續。",
+    comboNeedName: "請填寫套餐名稱。", comboNeedPrice: "請填寫有效價格。", comboNeedGroup: "請加入至少一組內容。", comboNeedGroupName: "請填寫分組名稱。", comboNeedItems: "餐點數量不足或選擇的餐點已不存在。", comboSaveFailed: "無法儲存套餐。", comboSaved: "套餐已儲存。",
+    comboEmptyGroupsTitle: "尚未加入任何分組",
+    comboEmptyGroupsHelp: "請點擊下方按鈕新增自選分組（讓顧客挑選）或固定內容（套餐隨附）。",
+    comboIncluded: "已包含在套餐價格", comboSelect: "選擇", comboPreviewComplete: "所有分組已完成", comboPreviewIncomplete: "請選完所有分組",
+    bundleGroupListTitle: "自選分組列表",
+    btnAddBundleGroup: "新增自選分組",
+    btnRemoveBundleConfig: "解除組合 (轉為一般單點)",
+    confirmRemoveBundleConfig: "確定要解除此餐點的組合設定嗎？解除後將變回一般單點品項（原有選菜規則將被清除）。",
+    bundleDangerZoneTitle: "變更餐點類型",
+    bundleDangerZoneDesc: "此餐點目前已設定為自選組合。若要改為普通單點販售（無需自選配菜），可點擊此處解除組合設定。",
+    bundleGroupDetailTitle: "分組詳細設定",
+    bundleGroupName: "分組名稱",
+    bundleGroupNameZh: "分組名稱 (繁體中文)",
+    bundleGroupNameVi: "分組名稱 (Tiếng Việt)",
+    bundleGroupNamePlaceholder: "例如：請選擇 6 樣配菜",
+    bundleQuantityRule: "選菜數量要求",
+    bundleQuantityExact: "必須恰好選取",
+    bundleAllowRepeat: "允許重複選取相同菜色",
+    bundleAllowRepeatDesc: "客人可在該分組中重複點選同一個品項 (如：2 份甜不辣)",
+    bundleSourceType: "選菜來源 (菜品清單)",
+    bundleSourceCategory: "依全部分類 (自動包含分類內所有菜品)",
+    bundleSourceCategoryDesc: "未來若此分類新增餐點，套餐將自動同步包含",
+    bundleSourceItems: "指定個別菜品",
+    bundleSelectCategories: "勾選適用的菜品分類",
+    bundleSelectItems: "勾選適用的餐點",
+    bundleEligiblePreview: "此組預覽可選菜品總數",
+    bundleSaveSuccess: "套餐組合設定已成功儲存！",
+    bundleSaveFail: "儲存套餐組合失敗：",
+    bundleValidationEmptyGroups: "請至少新增 1 個自選分組！",
+    bundleValidationEmptyName: "分組名稱不能為空！",
+    bundleValidationEmptySources: "請為分組選擇至少一個分類或菜品來源！",
+    bundleDefaultGroupName: "任選配菜",
+    bundleItemUnit: "樣",
+    bundleSurchargeNotice: "包含於套餐內 (如需個別加價請於菜品單價中設定)",
+    btnBundleSave: "儲存設定",
+    btnBundleCancel: "關閉",
+    bundleTipTitle: "提示說明",
+    bundleTipDesc: "顧客在點餐時必須逐一完成每個分組的選擇數量，方可加入購物車。",
+    btnBundleGuide: "套餐說明與範例",
+    btnBundleSidebarGuide: "查看 Combo 說明與範例",
+    bundleGuideModalTitle: "套餐組合設定指南與實例",
+    bundleGuideModalSub: "深入了解套餐概念、3步驟設定流程與常見餐飲實例",
+    bundleGuideWhatTag: "概念",
+    bundleGuideWhatTitle: "1. 套餐組合 (Combo / Bundle) 是什麼？",
+    bundleGuideWhatDesc: "套餐組合是將多樣餐點（如：主餐 + 配菜 + 飲料）綁定在一起以固定套餐價販售的功能。顧客在手機（LINE LIFF）或店員於 POS 點餐時，需依各群組規定選滿指定數量方可加入購物車。此功能有助於提高客單價、加快出單與備料流程。",
+    bundleGuideStepsTag: "流程",
+    bundleGuideStepsTitle: "2. 套餐設定 3 步驟",
+    bundleGuideStep1Tag: "步驟 1",
+    bundleGuideStep1Title: "新增自選分組",
+    bundleGuideStep1Desc: "點擊左側「+ 新增自選分組」，設定繁中與越南語名稱（例：請選擇 1 樣主餐、請選擇 6 樣配菜）。",
+    bundleGuideStep2Tag: "步驟 2",
+    bundleGuideStep2Title: "設定數量與重複規則",
+    bundleGuideStep2Desc: "使用 [ - ] 和 [ + ] 調整顧客必須選滿的數量。若顧客可重複選相同品項（如：2 份玉米筍），請勾選「允許重複選同一品項」。",
+    bundleGuideStep3Tag: "步驟 3",
+    bundleGuideStep3Title: "指定選菜來源",
+    bundleGuideStep3Desc: "可選擇「依整個分類自動匯入」（如：所有蔬菜類或飲料類），或切換至「手動勾選特定品項」。",
+    bundleGuideExamplesTag: "範例",
+    bundleGuideExamplesTitle: "3. 常見餐飲實例 (Example Use Cases)",
+    bundleEx1Title: "🍗 鹹水雞 / 滷味 / 炸物店實例 (例：蔣姐姐鹹水雞)",
+    bundleEx1Badge: "1 組 • 6 樣菜",
+    bundleEx1Desc: "<strong>品項：</strong>套餐 A (3隻鹹水雞翅+6樣菜) - $150<br><strong>設定：</strong>建立 1 個自選分組「請選擇 6 樣配菜」，需求數量設為 6，<strong>勾選</strong>「允許重複選同一品項」。選菜來源勾選「海裡」、「時蔬」、「內臟」、「滷味」等分類。",
+    bundleEx2Title: "🥖 越式法國麵包 / 早午餐 / 輕食店實例",
+    bundleEx2Badge: "2 組 • 主餐 + 飲料",
+    bundleEx2Desc: "<strong>品項：</strong>元氣早午餐特惠套餐 - $99<br><strong>設定：</strong><br>• 分組 1：「選 1 樣主餐麵包」（數量 = 1，來源：法國麵包分類）<br>• 分組 2：「選 1 杯飲品」（數量 = 1，來源：咖啡與茶飲分類）",
+    bundleEx3Title: "🍲 火鍋 / 燒烤 / 雙人便當店實例",
+    bundleEx3Badge: "3 組 • 湯底 + 肉品 + 副餐",
+    bundleEx3Desc: "<strong>品項：</strong>雙人特選火鍋套餐 - $450<br><strong>設定：</strong><br>• 分組 1：「選 1 款湯底」（數量 = 1，來源：原味、麻辣、番茄等）<br>• 分組 2：「選 2 盤肉品」（數量 = 2，允許重複，來源：牛肉片、豬五花、雞腿肉）<br>• 分組 3：「選 2 樣副餐」（數量 = 2，來源：白飯、冬粉、王子麵）",
+    btnBundleGuideGotIt: "我知道了",
+    // Item Detail Hub Modal (#itemDetailModal)
+    btnItemSettings: "設定",
+    itemDetailTitle: "單品設定",
+    itemDetailTitleNamed: "單品設定：{name}",
+    itemCreateTitle: "新增餐點",
+    itemNameLabel: "餐點名稱",
+    itemPriceLabel: "價格 (NT$)",
+    itemNamePlaceholder: "例如：牛肉河粉、波霸奶茶",
+    btnItemCreate: "建立餐點",
+    btnItemCancel: "取消",
+    enterItemName: "請輸入餐點名稱",
+    enterItemNameFirst: "請先輸入餐點名稱",
+    itemPhotoTitle: "餐點圖片",
+    btnUploadPhoto: "上傳/更換圖片",
+    btnRemovePhoto: "移除圖片",
+    itemBadgeTitle: "標籤與推薦",
+    itemBadgePlaceholder: "例如：熱銷、主廚推薦",
+    itemRecommendedLabel: "標記為推薦餐點 (在線上菜單置頂凸顯)",
+    itemAdvancedTitle: "進階設定",
+    cardModifiersTitle: "專屬客製化選項 (Modifiers)",
+    cardModifiersEmpty: "尚未設定專屬選項",
+    cardModifiersCount: "已設定 {count} 組客製化選項",
+    cardBundleTitle: "套餐/組合設定 (Bundle)",
+    cardBundleEmpty: "一般單品 (未啟用套餐組合)",
+    cardBundleCount: "套餐組合 ({count} 個選擇組)",
+    btnDetailDone: "完成",
+    quickTagHot: "熱銷",
+    quickTagRecommend: "推薦",
+    quickTagNew: "新品",
+    quickTagSpicy: "辣"
   },
   "vi": {
     langBtn: "Tiếng Việt",
@@ -915,6 +1085,39 @@ const I18N = {
     menuEditSub: "Kéo thả để sắp xếp ✦ Nhấn vào ô để sửa trực tiếp",
     btnMenuRestore: "Khôi phục Menu gốc",
     btnMenuAddItem: "Thêm món mới",
+    btnMenuCreateType: "Tạo theo loại",
+    btnMenuCreateUnified: "Thêm mới",
+    btnMenuAddCustomGroup: "Thêm nhóm khẩu vị",
+    btnCatRename: "Đổi tên phân loại",
+    btnCatDelete: "Xóa phân loại",
+    createTypeModalTitle: "Chọn loại cấu hình thực đơn",
+    createTypeModalSub: "Chọn phương thức tạo phù hợp cho món ăn hoặc tuỳ chọn",
+    createTypeStandardTitle: "Món đơn (kèm tùy chọn)",
+    createTypeStandardDesc: "Thêm món ăn/đồ uống vào thực đơn, thiết lập giá, ảnh, nhãn và tùy chọn nâng cao.",
+    createTypeModifiersTitle: "Món kèm tùy chọn",
+    createTypeModifiersDesc: "Món lẻ có các nhóm tùy chọn riêng: topping, mức đường, đá, độ cay...",
+    createType1Title: "Combo ưu đãi (Chọn món)",
+    createType1Desc: "Bán combo gồm đủ N món từ các danh mục nguồn + tùy chọn đi kèm.",
+    createType3Title: "Tùy chọn toàn đơn",
+    createType3Desc: "Áp dụng chung cho cả đơn: dụng cụ ăn uống, mức cay toàn đơn, dặn dò...",
+    btnItemModifiers: "Tuỳ chọn món",
+    itemModifiersModalTitle: "Thiết lập tuỳ chọn cho món",
+    itemModifiersModalSub: "Cấu hình các nhóm tuỳ chọn riêng cho món này (Topping, Đường đá, Độ cay...)",
+    btnNewModifierGroup: "Thêm nhóm tuỳ chọn",
+    labelModifierGroupName: "Tên nhóm (VD: Độ cay, Topping, Mức đường đá)",
+    labelModifierSelectionType: "Kiểu chọn",
+    optionSingleRadio: "Chọn 1 (Radio)",
+    optionMultipleCheckbox: "Chọn nhiều (Checkbox)",
+    labelModifierRequired: "Bắt buộc chọn",
+    badgeRequired: "Bắt buộc",
+    badgeOptional: "Tùy chọn",
+    btnAddModifierOption: "Thêm lựa chọn",
+    labelOptionName: "Tên lựa chọn",
+    labelOptionPrice: "Phụ thu (+$$)",
+    noModifierGroups: "Món này chưa có nhóm tuỳ chọn nào. Bấm nút phía trên để tạo mới.",
+    btnSaveModifiers: "Lưu tuỳ chọn",
+    toggleRequiredOn: "Bật bắt buộc",
+    toggleRequiredOff: "Tắt bắt buộc",
     btnMenuSave: "Lưu thay đổi",
     menuSaved: "Đã lưu",
     menuHelp: "Hướng dẫn chỉnh sửa",
@@ -1189,7 +1392,144 @@ const I18N = {
     promptUnlinkPin: "Vui lòng nhập mã PIN quản lý của quán để hủy ghép đôi:",
     unlinkSuccess: "Đã hủy ghép đôi thiết bị thành công! Đang chuyển về màn hình kích hoạt.",
     unlinkWrongPin: "Mã PIN quản lý không đúng. Không thể hủy ghép đôi.",
-    unpaired: "Chưa liên kết"
+    unpaired: "Chưa liên kết",
+    btnSetBundle: "Cấu hình Combo",
+    btnEditBundle: "Sửa Combo",
+    bundleBadge: "Combo",
+    bundleGroupUnit: "nhóm",
+    modalBundleTitle: "Thiết Lập Combo Món Ăn",
+    modalBundleSub: "Cấu hình các nhóm món tự chọn, nguồn món và quy tắc số lượng cho combo này",
+    comboCreateTitle: "Tạo combo", comboEditTitle: "Sửa combo", comboClose: "Đóng", comboBack: "Quay lại", comboContinue: "Tiếp tục", comboSave: "Lưu combo",
+    comboStepsLabel: "Các bước tạo combo",
+    comboWhatTitle: "Combo là gì?",
+    comboWhatBody: "Combo là một suất gồm nhiều món, được bán dưới một tên và giá cơ bản chung. Bạn có thể chọn sẵn món, cho khách tự chọn, hoặc kết hợp cả hai. Ví dụ: có sẵn một món ăn kèm, khách chọn thêm món chính và nước.",
+    comboPriceHelp: "Giá khách trả = giá combo + phụ thu món được chọn + tùy chỉnh có phí. Giá bán lẻ của món con không cộng thêm; món đã gồm trong giá có phụ thu bằng 0.",
+    comboSetupHelp: "Điền thông tin chung → chọn món và quy tắc ở bước Thành phần → xem thử cách khách chọn rồi lưu.",
+    comboPartsTitle: "Một suất combo gồm những gì?",
+    comboPartsHelp: "“Món có sẵn” do bạn chọn món và số phần. “Nhóm tự chọn” cho khách chọn đủ số món từ danh sách bạn cho phép. Một combo có thể dùng cả hai loại.",
+    comboTemplatesTitle: "Bắt đầu từ một mẫu",
+    comboTemplatesHelp: "Mẫu chỉ tạo các nhóm ban đầu, chưa chọn món từ menu. Sau khi dùng mẫu, hãy chọn món, số lượng và phụ thu cho từng nhóm. Bạn cũng có thể tự thêm nhóm ở bên dưới.",
+    comboTemplateMealHelp: "Tạo hai nhóm tự chọn: khách chọn 1 món chính và 1 nước.",
+    comboTemplateMealExample: "Ví dụ: cơm hoặc mì + trà hoặc nước ép",
+    comboTemplateManyHelp: "Tạo một nhóm tự chọn, mặc định chọn 2 món khác nhau. Bạn có thể đổi số lượng sau.",
+    comboTemplateManyExample: "Ví dụ: chọn 2 trong 5 món ăn kèm",
+    comboTemplateFixedHelp: "Tạo nhóm món có sẵn. Bạn chọn món và số phần; khách không phải chọn lại.",
+    comboTemplateFixedExample: "Ví dụ: có sẵn 1 phần cơm + 1 phần canh",
+    comboUseTemplate: "Dùng mẫu này",
+    comboChangeTemplate: "Xem mẫu / đổi cấu trúc nhóm",
+    comboReplaceTemplate: "Dùng mẫu mới sẽ thay toàn bộ nhóm và món đang chọn. Tên và giá combo được giữ nguyên. Tiếp tục?",
+    comboFixedHelp: "Đánh dấu món luôn có trong suất và nhập số phần. Khách vẫn được chỉnh các tùy chọn mà món đó cho phép.",
+    comboChoiceHelp: "Nhập số món khách cần chọn, rồi đánh dấu các món được phép chọn. Phụ thu 0 nghĩa là đã gồm trong giá combo.",
+    comboStepInfo: "Thông tin", comboStepParts: "Thành phần", comboStepPreview: "Xem trước và lưu",
+    comboStepInfoSub: "Thiết lập tên, giá & danh mục",
+    comboStepPartsSub: "Cấu hình nhóm & món lựa chọn",
+    comboStepPreviewSub: "Kiểm tra hiển thị & lưu combo",
+    comboStepCompleted: "Hoàn thành",
+    comboStepCurrent: "Đang làm",
+    comboStepPending: "Chờ thiết lập",
+    comboProductName: "Tên combo", comboBasePrice: "Giá combo", comboCategory: "Danh mục hiển thị",
+    comboImage: "Quản lý ảnh", comboImageAfterSave: "Có thể thêm ảnh sau khi lưu combo.", comboTemplateMeal: "Món chính + nước", comboTemplateMany: "Chọn N món", comboTemplateFixed: "Combo cố định",
+    comboFixedGroup: "Món có sẵn", comboChoiceGroup: "Khách tự chọn", comboRemove: "Xóa", comboGroupName: "Tên nhóm", comboQuantity: "Số lượng", comboRepeat: "Cho chọn trùng món",
+    comboSearch: "Tìm món", comboFilterCategory: "Lọc danh mục", comboAllCategories: "Tất cả danh mục", comboSurcharge: "Phụ thu", comboWholeCategory: "Nâng cao: chọn cả danh mục", comboWholeCategoryHelp: "Món mới trong danh mục này sẽ tự được đưa vào combo.",
+    comboAddChoice: "Thêm nhóm tự chọn", comboAddFixed: "Thêm món có sẵn", comboRestoreDraft: "Có bản nháp combo chưa hoàn tất. Tiếp tục chỉnh sửa?", comboLeaveDraft: "Đóng trình tạo? Bản nháp sẽ được giữ để chỉnh tiếp.",
+    comboNeedName: "Nhập tên combo.", comboNeedPrice: "Nhập giá hợp lệ.", comboNeedGroup: "Thêm ít nhất một nhóm.", comboNeedGroupName: "Nhập tên nhóm.", comboNeedItems: "Chưa đủ món hợp lệ hoặc món đã bị xóa.", comboSaveFailed: "Không thể lưu combo.", comboSaved: "Đã lưu combo.",
+    comboEmptyGroupsTitle: "Chưa có nhóm nào trong combo",
+    comboEmptyGroupsHelp: "Chọn nút bên dưới để thêm nhóm tự chọn (cho khách chọn món) hoặc món có sẵn (luôn có trong combo).",
+    comboIncluded: "Đã gồm trong giá combo", comboSelect: "Chọn", comboPreviewComplete: "Đã hoàn thành mọi nhóm", comboPreviewIncomplete: "Hãy chọn đủ các nhóm",
+    bundleGroupListTitle: "Danh sách nhóm chọn",
+    btnAddBundleGroup: "Thêm nhóm chọn mới",
+    btnRemoveBundleConfig: "Gỡ bỏ Combo (chuyển về món thường)",
+    confirmRemoveBundleConfig: "Bạn có chắc muốn gỡ bỏ cấu hình Combo cho món này? Món sẽ trở thành món đơn bán lẻ thông thường (toàn bộ quy tắc chọn nhóm sẽ bị xóa).",
+    bundleDangerZoneTitle: "Chuyển đổi loại món",
+    bundleDangerZoneDesc: "Món này hiện đang được thiết lập là món Combo tự chọn. Nếu muốn bán như một món đơn lẻ bình thường (không yêu cầu khách chọn nhóm món), bạn có thể gỡ bỏ cấu hình combo tại đây.",
+    bundleGroupDetailTitle: "Chi tiết nhóm chọn",
+    bundleGroupName: "Tên nhóm chọn",
+    bundleGroupNameZh: "Tên nhóm (Tiếng Trung)",
+    bundleGroupNameVi: "Tên nhóm (Tiếng Việt)",
+    bundleGroupNamePlaceholder: "Ví dụ: Chọn 6 món ăn kèm",
+    bundleQuantityRule: "Số lượng món yêu cầu",
+    bundleQuantityExact: "Bắt buộc chọn đúng",
+    bundleAllowRepeat: "Cho phép chọn trùng món cùng loại",
+    bundleAllowRepeatDesc: "Khách có thể chọn nhiều phần cùng 1 món (ví dụ: 2 phần bắp ngô)",
+    bundleSourceType: "Nguồn món ăn được phép chọn",
+    bundleSourceCategory: "Theo toàn bộ danh mục (tự động gồm các món trong danh mục)",
+    bundleSourceCategoryDesc: "Món mới thêm vào danh mục sau này sẽ tự động có trong combo",
+    bundleSourceItems: "Chọn lọc từng món cụ thể",
+    bundleSelectCategories: "Chọn các danh mục áp dụng",
+    bundleSelectItems: "Chọn các món áp dụng",
+    bundleEligiblePreview: "Tổng số món khả dụng trong nhóm này",
+    bundleSaveSuccess: "Đã lưu cấu hình Combo thành công!",
+    bundleSaveFail: "Lưu cấu hình Combo thất bại: ",
+    bundleValidationEmptyGroups: "Vui lòng thêm ít nhất 1 nhóm chọn!",
+    bundleValidationEmptyName: "Tên nhóm không được để trống!",
+    bundleValidationEmptySources: "Vui lòng chọn ít nhất một danh mục hoặc món ăn làm nguồn!",
+    bundleDefaultGroupName: "Món tự chọn",
+    bundleItemUnit: "món",
+    bundleSurchargeNotice: "Đã bao gồm trong giá combo",
+    btnBundleSave: "Lưu cấu hình",
+    btnBundleCancel: "Đóng",
+    bundleTipTitle: "Mẹo thiết lập",
+    bundleTipDesc: "Khách hàng phải hoàn tất đủ số lượng món trong từng nhóm mới có thể thêm vào giỏ hàng.",
+    btnBundleGuide: "Hướng dẫn & Ví dụ Combo",
+    btnBundleSidebarGuide: "Xem Combo là gì & Ví dụ mẫu",
+    bundleGuideModalTitle: "Hướng Dẫn Thiết Lập Combo Món Ăn",
+    bundleGuideModalSub: "Tìm hiểu khái niệm Combo, cách cấu hình theo bước và các mô hình quán thực tế",
+    bundleGuideWhatTag: "Khái niệm",
+    bundleGuideWhatTitle: "1. Combo Món Ăn là gì?",
+    bundleGuideWhatDesc: "Combo (hay Set menu / Bundle) là gói gồm nhiều món thành phần được bán cùng nhau với mức giá trọn gói. Khách khi gọi món trên điện thoại (LINE LIFF) hoặc nhân viên gọi tại POS sẽ được chọn các món theo từng nhóm quy định (ví dụ: chọn món chính, chọn món ăn kèm, chọn đồ uống). Khách phải chọn đủ số lượng yêu cầu mới có thể thêm vào giỏ hàng.",
+    bundleGuideStepsTag: "Quy trình",
+    bundleGuideStepsTitle: "2. Cách Tạo Combo Trong 3 Bước",
+    bundleGuideStep1Tag: "BƯỚC 1",
+    bundleGuideStep1Title: "Thêm Nhóm Chọn",
+    bundleGuideStep1Desc: "Nhấn '+ Thêm nhóm chọn mới' ở cột trái. Nhập tên nhóm bằng tiếng Trung và tiếng Việt (VD: Chọn 1 Món chính, Chọn 6 Món ăn kèm).",
+    bundleGuideStep2Tag: "BƯỚC 2",
+    bundleGuideStep2Title: "Quy Tắc Số Lượng",
+    bundleGuideStep2Desc: "Dùng nút [ - ] và [ + ] chỉnh số lượng món khách bắt buộc phải chọn. Bật 'Cho phép chọn trùng' nếu khách được lấy nhiều suất cùng 1 món (VD: 2 phần bắp ngô).",
+    bundleGuideStep3Tag: "BƯỚC 3",
+    bundleGuideStep3Title: "Nguồn Món Tự Chọn",
+    bundleGuideStep3Desc: "Chọn 'Theo toàn bộ danh mục' (như Rau củ, Nước uống) hoặc 'Chọn lọc từng món cụ thể' để chỉ định chính xác các món được chọn trong nhóm.",
+    bundleGuideExamplesTag: "Ví dụ mẫu",
+    bundleGuideExamplesTitle: "3. Ví Dụ Cấu Hình Thực Tế (Example Use Cases)",
+    bundleEx1Title: "🍗 Mô hình Quán Gà / Đồ Ăn Vặt (VD: Gà Muối Tiêu 蔣姐姐)",
+    bundleEx1Badge: "1 Nhóm • 6 Món kèm",
+    bundleEx1Desc: "<strong>Món:</strong> 套餐 A (3隻鹹水雞翅+6樣菜) - $150<br><strong>Cấu hình:</strong> Tạo 1 nhóm chọn duy nhất: 'Chọn 6 món ăn kèm'. Cài đặt số lượng = 6, <strong>BẬT</strong> 'Cho phép chọn trùng'. Nguồn món: Chọn danh mục 'Hải sản', 'Rau củ', 'Nội tạng', 'Đồ kho'.",
+    bundleEx2Title: "🥖 Mô hình Bánh Mì / Cà Phê / Ăn Sáng",
+    bundleEx2Badge: "2 Nhóm • Món chính + Nước",
+    bundleEx2Desc: "<strong>Món:</strong> Combo Bữa Sáng Năng Lượng - $99<br><strong>Cấu hình:</strong><br>• Nhóm 1: 'Chọn 1 Bánh Mì' (Số lượng = 1, Nguồn: Toàn bộ danh mục Bánh mì)<br>• Nhóm 2: 'Chọn 1 Đồ Uống' (Số lượng = 1, Nguồn: Toàn bộ danh mục Cà phê & Trà)",
+    bundleEx3Title: "🍲 Mô hình Quán Lẩu / Nướng / Cơm Gia Đình",
+    bundleEx3Badge: "3 Nhóm • Nước lẩu + Thịt + Tinh bột",
+    bundleEx3Desc: "<strong>Món:</strong> Set Lẩu Uyên Ương 2 Người - $450<br><strong>Cấu hình:</strong><br>• Nhóm 1: 'Chọn 1 Vị Nước Lẩu' (Số lượng = 1, Nguồn: Lẩu Thái, Lẩu Nấm, Lẩu Kim chi)<br>• Nhóm 2: 'Chọn 2 Đĩa Thịt' (Số lượng = 2, Cho phép chọn trùng: BẬT, Nguồn: Ba chỉ bò, Đùi gà, Bắp hoa)<br>• Nhóm 3: 'Chọn 2 Món Ăn Kèm / Tinh Bột' (Số lượng = 2, Nguồn: Mì tôm, Miến dong, Rau tổng hợp)",
+    btnBundleGuideGotIt: "Đã hiểu",
+    // Item Detail Hub Modal (#itemDetailModal)
+    btnItemSettings: "Cài đặt",
+    itemDetailTitle: "Thiết lập món",
+    itemDetailTitleNamed: "Thiết lập món: {name}",
+    itemCreateTitle: "Thêm món mới",
+    itemNameLabel: "Tên món ăn / đồ uống",
+    itemPriceLabel: "Giá bán (NT$)",
+    itemNamePlaceholder: "Ví dụ: Phở bò đặc biệt, Trà sữa trân châu",
+    btnItemCreate: "Tạo món",
+    btnItemCancel: "Hủy",
+    enterItemName: "Vui lòng nhập tên món",
+    enterItemNameFirst: "Vui lòng nhập tên món trước",
+    itemPhotoTitle: "Ảnh minh họa món",
+    btnUploadPhoto: "Tải ảnh lên / Thay đổi",
+    btnRemovePhoto: "Xóa ảnh",
+    itemBadgeTitle: "Nhãn hiển thị & Đề xuất",
+    itemBadgePlaceholder: "Ví dụ: Bán chạy, Đặc sản",
+    itemRecommendedLabel: "Đánh dấu là món nổi bật (Khuyên dùng)",
+    itemAdvancedTitle: "Thiết lập nâng cao",
+    cardModifiersTitle: "Tuỳ chọn riêng cho món (Modifiers)",
+    cardModifiersEmpty: "Chưa thiết lập tuỳ chọn riêng",
+    cardModifiersCount: "Đang áp dụng {count} nhóm tuỳ chọn",
+    cardBundleTitle: "Cấu hình Combo / Suất ăn (Bundle)",
+    cardBundleEmpty: "Món tiêu chuẩn (Không phải combo)",
+    cardBundleCount: "Combo {count} nhóm lựa chọn",
+    btnDetailDone: "Hoàn tất",
+    quickTagHot: "Bán chạy",
+    quickTagRecommend: "Khuyên dùng",
+    quickTagNew: "Món mới",
+    quickTagSpicy: "Cay"
   }
 };
 
@@ -1748,11 +2088,21 @@ function applyLanguageToDOM() {
   if (btnAddCatTop) btnAddCatTop.innerText = dict.btnAddCategory;
   const btnCatDel = document.getElementById("btn-category-delete");
   if (btnCatDel) {
-    btnCatDel.innerHTML = `${(typeof POS_SVG !== 'undefined' && POS_SVG.trash) || ''} <span>${dict.btnCategoryDelete}</span>`;
+    if (btnCatDel.classList.contains("cat-title-action-btn")) {
+      btnCatDel.setAttribute("title", dict.btnCatDelete || dict.btnCategoryDelete || "刪除分類");
+      btnCatDel.setAttribute("aria-label", dict.btnCatDelete || dict.btnCategoryDelete || "刪除分類");
+    } else {
+      btnCatDel.innerHTML = `${(typeof POS_SVG !== 'undefined' && POS_SVG.trash) || ''} <span>${dict.btnCategoryDelete}</span>`;
+    }
   }
   const btnCatRen = document.getElementById("btn-category-rename");
   if (btnCatRen) {
-    btnCatRen.innerHTML = `${(typeof POS_SVG !== 'undefined' && POS_SVG.edit) || ''} <span>${dict.btnCategoryRename}</span>`;
+    if (btnCatRen.classList.contains("cat-title-action-btn")) {
+      btnCatRen.setAttribute("title", dict.btnCatRename || dict.btnCategoryRename || "重新命名");
+      btnCatRen.setAttribute("aria-label", dict.btnCatRename || dict.btnCategoryRename || "重新命名");
+    } else {
+      btnCatRen.innerHTML = `${(typeof POS_SVG !== 'undefined' && POS_SVG.edit) || ''} <span>${dict.btnCategoryRename}</span>`;
+    }
   }
   const addCatModT = document.getElementById("i18n-add-cat-modal-title");
   if (addCatModT) addCatModT.innerText = dict.addCategoryModalTitle;
@@ -1789,8 +2139,56 @@ function applyLanguageToDOM() {
   const menuEdS = document.getElementById("i18n-menu-edit-sub");
   if (menuEdS) menuEdS.innerText = dict.menuEditSub;
   const btnMenuAdd = document.getElementById("btn-menu-add-item");
-  if (btnMenuAdd) btnMenuAdd.innerText = dict.btnMenuAddItem;
+  const btnMenuAddText = document.getElementById("i18n-btn-add-item-text");
+  if (btnMenuAddText) btnMenuAddText.innerText = dict.btnMenuAddItem;
+  else if (btnMenuAdd) btnMenuAdd.innerText = dict.btnMenuAddItem;
+  const btnCreateUnifiedText = document.getElementById("i18n-btn-create-unified-text");
+  if (btnCreateUnifiedText) {
+    const isFlavor = typeof currentMenuData !== 'undefined' && currentMenuData && typeof activeCategoryIndex !== 'undefined' && activeCategoryIndex >= 0 && (currentMenuData[activeCategoryIndex].type === 'order_customization' || currentMenuData[activeCategoryIndex].id === 'sec-flavor');
+    btnCreateUnifiedText.innerText = isFlavor ? (dict.btnMenuAddCustomGroup || "新增客製化分組") : (dict.btnMenuCreateUnified || "建立新項目");
+  }
+  const btnCatRename = document.getElementById("btn-category-rename");
+  if (btnCatRename) {
+    if (typeof btnCatRename.setAttribute === "function") {
+      btnCatRename.setAttribute("title", dict.btnCatRename || dict.btnCategoryRename || "重新命名");
+      btnCatRename.setAttribute("aria-label", dict.btnCatRename || dict.btnCategoryRename || "重新命名");
+    } else {
+      btnCatRename.title = dict.btnCatRename || dict.btnCategoryRename || "重新命名";
+    }
+  }
+  const btnCatDelete = document.getElementById("btn-category-delete");
+  if (btnCatDelete) {
+    if (typeof btnCatDelete.setAttribute === "function") {
+      btnCatDelete.setAttribute("title", dict.btnCatDelete || dict.btnCategoryDelete || "刪除分類");
+      btnCatDelete.setAttribute("aria-label", dict.btnCatDelete || dict.btnCategoryDelete || "刪除分類");
+    } else {
+      btnCatDelete.title = dict.btnCatDelete || dict.btnCategoryDelete || "刪除分類";
+    }
+  }
+  const btnMenuCreateType = document.getElementById("i18n-btn-create-type-text");
+  if (btnMenuCreateType) btnMenuCreateType.innerText = dict.btnMenuCreateType;
+  const createTypeT = document.getElementById("i18n-create-type-title");
+  if (createTypeT) createTypeT.innerText = dict.createTypeModalTitle;
+  const createTypeS = document.getElementById("i18n-create-type-sub");
+  if (createTypeS) createTypeS.innerText = dict.createTypeModalSub;
+  const tStdTitle = document.getElementById("i18n-type-std-title");
+  if (tStdTitle) tStdTitle.innerText = dict.createTypeStandardTitle;
+  const tStdDesc = document.getElementById("i18n-type-std-desc");
+  if (tStdDesc) tStdDesc.innerText = dict.createTypeStandardDesc;
+  const tModTitle = document.getElementById("i18n-type-mod-title");
+  if (tModTitle) tModTitle.innerText = dict.createTypeModifiersTitle;
+  const tModDesc = document.getElementById("i18n-type-mod-desc");
+  if (tModDesc) tModDesc.innerText = dict.createTypeModifiersDesc;
+  const t1Title = document.getElementById("i18n-type-1-title");
+  if (t1Title) t1Title.innerText = dict.createType1Title;
+  const t1Desc = document.getElementById("i18n-type-1-desc");
+  if (t1Desc) t1Desc.innerText = dict.createType1Desc;
+  const t3Title = document.getElementById("i18n-type-3-title");
+  if (t3Title) t3Title.innerText = dict.createType3Title;
+  const t3Desc = document.getElementById("i18n-type-3-desc");
+  if (t3Desc) t3Desc.innerText = dict.createType3Desc;
   if (typeof updateMenuSaveState === "function") updateMenuSaveState();
+  if (typeof renderComboWizard === "function" && document.getElementById('bundle-wizard')?.style.display === 'flex') renderComboWizard();
   const menuHelp = document.getElementById("menu-help-toggle");
   if (menuHelp) menuHelp.setAttribute("aria-label", dict.menuHelp);
   const menuPrompt = document.getElementById("i18n-menu-select-prompt");
@@ -1960,7 +2358,7 @@ function applyLanguageToDOM() {
   });
   const printerSaveStatus = document.getElementById('printer-save-status');
   document.querySelectorAll('.i18n-printer-feed-before-cut').forEach(el => { el.textContent = dict.printerFeedBeforeCut || el.textContent; });
-  if (printerSaveStatus) printerSaveStatus.textContent = dict[printerSaveStatus.dataset.state === 'error' ? 'printerSaveFailed' : printerSaveStatus.dataset.state === 'saved' ? 'printerSavedLocally' : 'printerAutoSaveHint'];
+  if (printerSaveStatus) printerSaveStatus.textContent = dict[printerSaveStatus.dataset?.state === 'error' ? 'printerSaveFailed' : printerSaveStatus.dataset?.state === 'saved' ? 'printerSavedLocally' : 'printerAutoSaveHint'];
   const gHwTest = document.getElementById("i18n-printer-guide-hw-test");
   if (gHwTest) gHwTest.innerText = dict.printerGuideHwTest;
   const btnPGuide = document.getElementById("i18n-btn-printer-guide");
@@ -2119,4 +2517,118 @@ function applyLanguageToDOM() {
   if (actInpP) actInpP.placeholder = dict.activationPinPlaceholder;
   const btnActTxt = document.getElementById("i18n-btn-submit-activation-text");
   if (btnActTxt) btnActTxt.innerText = dict.btnSubmitActivation;
+
+  // Bundle Editor Modal DOM mappings
+  const bndlModT = document.getElementById("i18n-bundle-modal-title");
+  if (bndlModT) bndlModT.innerText = dict.modalBundleTitle;
+  const bndlModS = document.getElementById("i18n-bundle-modal-sub");
+  if (bndlModS) bndlModS.innerText = dict.modalBundleSub;
+  const bndlGrpT = document.getElementById("i18n-bundle-groups-title");
+  if (bndlGrpT) bndlGrpT.innerText = dict.bundleGroupListTitle;
+  const btnAddBndlG = document.getElementById("i18n-btn-add-bundle-group");
+  if (btnAddBndlG) btnAddBndlG.innerText = dict.btnAddBundleGroup;
+  const btnDelBndlC = document.getElementById("i18n-btn-delete-bundle-config");
+  if (btnDelBndlC) btnDelBndlC.innerText = dict.btnRemoveBundleConfig;
+  const btnBndlCancel = document.getElementById("i18n-btn-bundle-cancel");
+  if (btnBndlCancel) btnBndlCancel.innerText = dict.btnBundleCancel;
+  const btnBndlSave = document.getElementById("i18n-btn-bundle-save");
+  if (btnBndlSave) btnBndlSave.innerText = dict.btnBundleSave;
+  const bndlTipT = document.getElementById("i18n-bundle-tip-title");
+  if (bndlTipT) bndlTipT.innerText = dict.bundleTipTitle;
+  const bndlTipD = document.getElementById("i18n-bundle-tip-desc");
+  if (bndlTipD) bndlTipD.innerText = dict.bundleTipDesc;
+  const bndlDangerT = document.getElementById("i18n-bundle-danger-title");
+  if (bndlDangerT) bndlDangerT.innerText = dict.bundleDangerZoneTitle;
+  const bndlDangerD = document.getElementById("i18n-bundle-danger-desc");
+  if (bndlDangerD) bndlDangerD.innerText = dict.bundleDangerZoneDesc;
+  const bndlGrdB = document.getElementById("i18n-btn-bundle-guide");
+  if (bndlGrdB) bndlGrdB.innerText = dict.btnBundleGuide;
+  const bndlSbG = document.getElementById("i18n-btn-bundle-sidebar-guide");
+  if (bndlSbG) bndlSbG.innerText = dict.btnBundleSidebarGuide;
+  const bndlGMTitle = document.getElementById("i18n-bundle-guide-modal-title");
+  if (bndlGMTitle) bndlGMTitle.innerText = dict.bundleGuideModalTitle;
+  const bndlGMSub = document.getElementById("i18n-bundle-guide-modal-sub");
+  if (bndlGMSub) bndlGMSub.innerText = dict.bundleGuideModalSub;
+  const bndlGWhatTag = document.getElementById("i18n-bundle-guide-what-tag");
+  if (bndlGWhatTag) bndlGWhatTag.innerText = dict.bundleGuideWhatTag;
+  const bndlGWhatT = document.getElementById("i18n-bundle-guide-what-title");
+  if (bndlGWhatT) bndlGWhatT.innerText = dict.bundleGuideWhatTitle;
+  const bndlGWhatD = document.getElementById("i18n-bundle-guide-what-desc");
+  if (bndlGWhatD) bndlGWhatD.innerHTML = dict.bundleGuideWhatDesc;
+  const bndlGStepsTag = document.getElementById("i18n-bundle-guide-steps-tag");
+  if (bndlGStepsTag) bndlGStepsTag.innerText = dict.bundleGuideStepsTag;
+  const bndlGStepsT = document.getElementById("i18n-bundle-guide-steps-title");
+  if (bndlGStepsT) bndlGStepsT.innerText = dict.bundleGuideStepsTitle;
+  const bndlGS1Tag = document.getElementById("i18n-bundle-guide-step1-tag");
+  if (bndlGS1Tag) bndlGS1Tag.innerText = dict.bundleGuideStep1Tag;
+  const bndlGS1T = document.getElementById("i18n-bundle-guide-step1-title");
+  if (bndlGS1T) bndlGS1T.innerText = dict.bundleGuideStep1Title;
+  const bndlGS1D = document.getElementById("i18n-bundle-guide-step1-desc");
+  if (bndlGS1D) bndlGS1D.innerHTML = dict.bundleGuideStep1Desc;
+  const bndlGS2Tag = document.getElementById("i18n-bundle-guide-step2-tag");
+  if (bndlGS2Tag) bndlGS2Tag.innerText = dict.bundleGuideStep2Tag;
+  const bndlGS2T = document.getElementById("i18n-bundle-guide-step2-title");
+  if (bndlGS2T) bndlGS2T.innerText = dict.bundleGuideStep2Title;
+  const bndlGS2D = document.getElementById("i18n-bundle-guide-step2-desc");
+  if (bndlGS2D) bndlGS2D.innerHTML = dict.bundleGuideStep2Desc;
+  const bndlGS3Tag = document.getElementById("i18n-bundle-guide-step3-tag");
+  if (bndlGS3Tag) bndlGS3Tag.innerText = dict.bundleGuideStep3Tag;
+  const bndlGS3T = document.getElementById("i18n-bundle-guide-step3-title");
+  if (bndlGS3T) bndlGS3T.innerText = dict.bundleGuideStep3Title;
+  const bndlGS3D = document.getElementById("i18n-bundle-guide-step3-desc");
+  if (bndlGS3D) bndlGS3D.innerHTML = dict.bundleGuideStep3Desc;
+  const bndlGExTag = document.getElementById("i18n-bundle-guide-examples-tag");
+  if (bndlGExTag) bndlGExTag.innerText = dict.bundleGuideExamplesTag;
+  const bndlGExT = document.getElementById("i18n-bundle-guide-examples-title");
+  if (bndlGExT) bndlGExT.innerText = dict.bundleGuideExamplesTitle;
+  const bndlEx1T = document.getElementById("i18n-bundle-ex1-title");
+  if (bndlEx1T) bndlEx1T.innerText = dict.bundleEx1Title;
+  const bndlEx1B = document.getElementById("i18n-bundle-ex1-badge");
+  if (bndlEx1B) bndlEx1B.innerText = dict.bundleEx1Badge;
+  const bndlEx1D = document.getElementById("i18n-bundle-ex1-desc");
+  if (bndlEx1D) bndlEx1D.innerHTML = dict.bundleEx1Desc;
+  const bndlEx2T = document.getElementById("i18n-bundle-ex2-title");
+  if (bndlEx2T) bndlEx2T.innerText = dict.bundleEx2Title;
+  const bndlEx2B = document.getElementById("i18n-bundle-ex2-badge");
+  if (bndlEx2B) bndlEx2B.innerText = dict.bundleEx2Badge;
+  const bndlEx2D = document.getElementById("i18n-bundle-ex2-desc");
+  if (bndlEx2D) bndlEx2D.innerHTML = dict.bundleEx2Desc;
+  const bndlEx3T = document.getElementById("i18n-bundle-ex3-title");
+  if (bndlEx3T) bndlEx3T.innerText = dict.bundleEx3Title;
+  const bndlEx3B = document.getElementById("i18n-bundle-ex3-badge");
+  if (bndlEx3B) bndlEx3B.innerText = dict.bundleEx3Badge;
+  const bndlEx3D = document.getElementById("i18n-bundle-ex3-desc");
+  if (bndlEx3D) bndlEx3D.innerHTML = dict.bundleEx3Desc;
+  const btnBndlGGotIt = document.getElementById("i18n-btn-bundle-guide-gotit");
+  if (btnBndlGGotIt) btnBndlGGotIt.innerText = dict.btnBundleGuideGotIt;
+
+  // Item Detail Hub Modal DOM mappings
+  const itemDetailTitle = document.getElementById("item-detail-modal-title");
+  if (itemDetailTitle && (typeof itemDetailTitle.getAttribute !== "function" || !itemDetailTitle.getAttribute("data-custom-title"))) itemDetailTitle.innerText = dict.itemDetailTitle;
+  const itemNameLabel = document.getElementById("i18n-item-name-label");
+  if (itemNameLabel) itemNameLabel.innerHTML = `${dict.itemNameLabel} <span style="color: #dc2626;">*</span>`;
+  const itemPriceLabel = document.getElementById("i18n-item-price-label");
+  if (itemPriceLabel) itemPriceLabel.innerText = dict.itemPriceLabel;
+  const itemNameInput = document.getElementById("item-detail-name-input");
+  if (itemNameInput && typeof itemNameInput.setAttribute === "function") itemNameInput.setAttribute("placeholder", dict.itemNamePlaceholder);
+  const itemBadgeTitle = document.getElementById("i18n-item-badge-title");
+  if (itemBadgeTitle) itemBadgeTitle.innerText = dict.itemBadgeTitle;
+  const itemBadgeInput = document.getElementById("item-detail-badge-input");
+  if (itemBadgeInput && typeof itemBadgeInput.setAttribute === "function") itemBadgeInput.setAttribute("placeholder", dict.itemBadgePlaceholder);
+  const itemRecLabel = document.getElementById("i18n-item-recommended-label");
+  if (itemRecLabel) itemRecLabel.innerText = dict.itemRecommendedLabel;
+  const itemAdvTitle = document.getElementById("i18n-item-advanced-title");
+  if (itemAdvTitle) itemAdvTitle.innerText = dict.itemAdvancedTitle;
+  const cardModTitle = document.getElementById("i18n-card-mod-title");
+  if (cardModTitle) cardModTitle.innerText = dict.cardModifiersTitle;
+  const cardBundleTitle = document.getElementById("i18n-card-bundle-title");
+  if (cardBundleTitle) cardBundleTitle.innerText = dict.cardBundleTitle;
+  const btnItemPhotoUpload = document.getElementById("i18n-btn-item-photo-upload");
+  if (btnItemPhotoUpload) btnItemPhotoUpload.innerText = dict.btnUploadPhoto;
+  const btnItemPhotoRemove = document.getElementById("i18n-btn-item-photo-remove");
+  if (btnItemPhotoRemove) btnItemPhotoRemove.innerText = dict.btnRemovePhoto;
+  const btnItemDetailCancel = document.getElementById("btn-item-detail-cancel");
+  if (btnItemDetailCancel) btnItemDetailCancel.innerText = dict.btnItemCancel;
+  const btnItemDetailDone = document.getElementById("btn-item-detail-done");
+  if (btnItemDetailDone && (typeof btnItemDetailDone.getAttribute !== "function" || !btnItemDetailDone.getAttribute("data-custom-text"))) btnItemDetailDone.innerText = dict.btnDetailDone;
 }

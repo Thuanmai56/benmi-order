@@ -2498,3 +2498,83 @@ input[type="checkbox"] {
     gap: 8px;
     line-height: 1.4;
 }
+/* Combo builder: group navigation and per-child customization. */
+.bundle-v2-step-nav { display:flex; gap:8px; overflow-x:auto; padding:10px 16px; border-bottom:1px solid #e2e8f0; }
+.bundle-v2-nav, .bundle-v2-copy { min-height:44px; padding:8px 14px; border:1px solid #cbd5e1; border-radius:10px; background:#fff; color:#334155; font-weight:700; white-space:nowrap; }
+.bundle-v2-nav.active { border-color:#059669; background:#ecfdf5; color:#065f46; }
+.bundle-v2-copy { margin:8px 16px; }
+.bundle-v2-badge-fixed {
+  font-size: 12px;
+  font-weight: 700;
+  color: #047857;
+  background: #d1fae5;
+  padding: 4px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.bundle-v2-detail {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed #e2e8f0;
+}
+.bundle-v2-mod-labels {
+  font-size: 13px;
+  font-weight: 600;
+  color: #059669;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bundle-v2-mod-pending {
+  font-size: 12px;
+  font-weight: 700;
+  color: #e11d48;
+  background: #ffe4e6;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+.bundle-v2-mod-btn {
+  min-height: 32px;
+  max-height: 32px;
+  padding: 4px 12px;
+  border: 1px solid #10b981;
+  border-radius: 8px;
+  background: #ecfdf5;
+  color: #047857;
+  font-size: 13px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.bundle-v2-mod-btn:hover {
+  background: #d1fae5;
+}
+.bundle-v2-mod-btn:active {
+  transform: scale(0.95);
+}
+.bundle-v2-mod-panel button {
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+  color: #0f172a;
+  font-weight: 700;
+}
+.bundle-v2-empty { padding:18px; color:#64748b; }
+.bundle-v2-mod-overlay { position:absolute; inset:0; background:#fff; z-index:3; overflow:auto; }
+.bundle-v2-mod-panel { padding:16px; display:grid; gap:14px; }
+.bundle-v2-mod-group { border:1px solid #cbd5e1; border-radius:12px; padding:12px; }
+.bundle-v2-mod-option { display:flex; gap:10px; align-items:center; min-height:48px; }
+.bundle-v2-mod-option input { width:22px; height:22px; }
+.bundle-card-structure { margin-top:4px; font-size:13px; line-height:1.4; color:#475569; }
+.bundle-card-unavailable { color:#b91c1c; font-size:13px; font-weight:700; margin-top:5px; }
