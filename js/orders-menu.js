@@ -9,6 +9,9 @@ let isMenuDirty = false;
 let savedMenuSnapshot = null;
 let isMenuSaving = false;
 let isMenuLoadedCompletely = false;
+let isCustomGroupCreatorOpen = false;
+let newCustomGroupType = 'radio';
+let newCustomGroupRequired = false;
 
 function getBenmiDefaultCategories() {
   return [
@@ -517,6 +520,7 @@ function renderMenuCategories() {
       if (index !== activeCategoryIndex && !confirmLeaveMenu()) return;
       if (index === activeCategoryIndex && isMenuDirty) syncMenuDataFromDOM();
       isCategoryManagerOpen = false;
+      isCustomGroupCreatorOpen = false;
       activeCategoryIndex = index;
       renderMenuCategories();
       renderMenuCategoryEditor(index);
@@ -575,7 +579,7 @@ function renderMenuCategoryEditor(index) {
       const customLabel = t("btnMenuAddCustomGroup") || "新增客製化分組";
       if (createBtnText) createBtnText.innerText = customLabel.replace(/^\+\s*/, '');
       else createBtn.innerText = customLabel;
-      createBtn.onclick = () => addCustomizationGroup(index);
+      createBtn.onclick = () => openNewCustomGroupCreator(index);
     }
     renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), cat, index);
     return;
@@ -834,9 +838,9 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
       card.innerHTML = `
         <div class="cust-group-header">
           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-            <span class="cust-group-title">${escapeHtml(grp.title)}</span>
-            <button type="button" class="menu-item-btn btn-ghost" style="padding: 3px 6px; font-size: 12px; border: 1px solid #cbd5e1; display:inline-flex; align-items:center; justify-content:center;"
-              onclick="renameCustomizationGroup(${cIdx}, ${gIdx})" title="${t("btnCategoryRename")}">${(typeof POS_SVG !== 'undefined' && POS_SVG.edit) || ''}</button>
+            <span class="cust-group-title" id="cust-group-title-${gIdx}">${escapeHtml(grp.title)}</span>
+            <button type="button" class="menu-item-btn btn-ghost" id="cust-group-rename-btn-${gIdx}" style="padding: 3px 6px; font-size: 12px; border: 1px solid #cbd5e1; display:inline-flex; align-items:center; justify-content:center;"
+              onclick="startRenameCustomizationGroup(${cIdx}, ${gIdx})" title="${t("btnCategoryRename")}">${(typeof POS_SVG !== 'undefined' && POS_SVG.edit) || ''}</button>
             <button type="button" style="cursor: pointer; border: none; background: transparent; padding: 0;"
               onclick="toggleCustomizationGroupType(${cIdx}, ${gIdx})" title="${grp.type === 'checkbox' ? t('toggleGroupTypeSingle') : t('toggleGroupTypeMultiple')}">
               ${typeBadge}
@@ -866,59 +870,259 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
     });
   }
 
-  // Always show button to add new customization group (Tầng 1)
-  const addGroupBtn = document.createElement("button");
-  addGroupBtn.type = "button";
-  addGroupBtn.className = "cat-mgr-add-btn";
-  addGroupBtn.style.marginTop = "16px";
-  addGroupBtn.style.background = "#f8fafc";
-  addGroupBtn.style.border = "2px dashed #94a3b8";
-  addGroupBtn.innerHTML = `<span>${formatPlusBtnText(t("btnAddCustomGroup"), "新增客製化分組")}</span>`;
-  addGroupBtn.onclick = () => addCustomizationGroup(cIdx);
-  container.appendChild(addGroupBtn);
+  if (isCustomGroupCreatorOpen) {
+    const newCard = document.createElement("div");
+    newCard.className = "cust-new-group-card";
+    newCard.id = "cust-new-group-card";
+    newCard.style.cssText = "background: #ffffff; border: 2px solid var(--primary, #2563eb); border-radius: 14px; padding: 18px; margin-top: 16px; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.08);";
+
+    const quickChips = currentLang === 'vi'
+      ? ["✦ Dụng cụ ăn uống", "✦ Mức cay toàn đơn", "✦ Ghi chú dặn dò", "✦ Chọn nước sốt"]
+      : ["✦ 免洗餐具", "✦ 整單辣度", "✦ 店家備註", "✦ 醬料選擇"];
+
+    const chipsHtml = quickChips.map(chip => `
+      <span class="quick-tag-chip" onclick="applyNewGroupQuickChip('${escapeHtml(chip)}')" style="cursor: pointer;">${escapeHtml(chip)}</span>
+    `).join('');
+
+    const titleText = t("newGroupCardTitle") || (currentLang === 'vi' ? 'Tạo nhóm tùy chọn mới' : '新增客製化分組');
+    const placeholderText = t("newGroupInputPlaceholder") || (currentLang === 'vi' ? '✦ Nhập tên nhóm (ví dụ: Chọn nước sốt, Dụng cụ ăn uống...)' : '✦ 輸入分組名稱（例：✦ 醬料選擇、✦ 加料選項）');
+
+    newCard.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <div style="font-size: 16px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary, #2563eb);"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+          <span>${titleText}</span>
+        </div>
+        <button type="button" class="btn btn-ghost" onclick="cancelNewCustomizationGroup(${cIdx})" style="padding: 4px 8px; font-size: 14px; min-height: 36px;">✕</button>
+      </div>
+
+      <div style="margin-bottom: 12px;">
+        <input type="text" id="cust-new-group-title-input" class="menu-item-name-input"
+          placeholder="${placeholderText}"
+          style="width: 100%; font-size: 15px; font-weight: 700; padding: 12px 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; background: #f8fafc;"
+          onkeydown="if(event.key === 'Enter') saveNewCustomizationGroup(${cIdx}); if(event.key === 'Escape') cancelNewCustomizationGroup(${cIdx});">
+      </div>
+
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; align-items: center;">
+        <span style="font-size: 12.5px; color: #64748b; font-weight: 700;">${currentLang === 'vi' ? 'Gợi ý nhanh:' : '快捷標籤：'}</span>
+        ${chipsHtml}
+      </div>
+
+      <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; padding: 12px; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <span style="font-size: 13px; font-weight: 700; color: #334155;">${currentLang === 'vi' ? 'Kiểu chọn:' : '選擇模式：'}</span>
+          <button type="button" id="btn-new-grp-type-radio" class="btn" style="min-height: 40px; padding: 0 12px; font-size: 13px; font-weight: 700; border-radius: 8px; ${newCustomGroupType === 'radio' ? 'background: #eff6ff; color: #2563eb; border: 1.5px solid #93c5fd;' : 'background: #ffffff; color: #64748b; border: 1px solid #cbd5e1;'}" onclick="setNewGroupType('radio', ${cIdx})">
+            ${currentLang === 'vi' ? 'Chọn 1 (Đơn tuyển)' : '單選 (僅選一項)'}
+          </button>
+          <button type="button" id="btn-new-grp-type-checkbox" class="btn" style="min-height: 40px; padding: 0 12px; font-size: 13px; font-weight: 700; border-radius: 8px; ${newCustomGroupType === 'checkbox' ? 'background: #eff6ff; color: #2563eb; border: 1.5px solid #93c5fd;' : 'background: #ffffff; color: #64748b; border: 1px solid #cbd5e1;'}" onclick="setNewGroupType('checkbox', ${cIdx})">
+            ${currentLang === 'vi' ? 'Chọn nhiều (Đa tuyển)' : '多選 (可選多項)'}
+          </button>
+        </div>
+
+        <div style="height: 20px; width: 1px; background: #cbd5e1; margin: 0 4px;"></div>
+
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <span style="font-size: 13px; font-weight: 700; color: #334155;">${currentLang === 'vi' ? 'Quy định:' : '必選設定：'}</span>
+          <button type="button" id="btn-new-grp-required" class="btn" style="min-height: 40px; padding: 0 12px; font-size: 13px; font-weight: 700; border-radius: 8px; ${newCustomGroupRequired ? 'background: #fee2e2; color: #b91c1c; border: 1.5px solid #fca5a5;' : 'background: #ffffff; color: #64748b; border: 1px solid #cbd5e1;'}" onclick="toggleNewGroupRequired(${cIdx})">
+            ${newCustomGroupRequired ? (t('badgeRequired') || (currentLang === 'vi' ? 'Bắt buộc chọn' : '必選項目')) : (t('badgeOptional') || (currentLang === 'vi' ? 'Không bắt buộc' : '選填項目'))}
+          </button>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn btn-ghost" onclick="cancelNewCustomizationGroup(${cIdx})" style="min-height: 48px; padding: 0 20px; font-weight: 700; border-radius: 10px;">
+          ${t("btnItemCancel") || (currentLang === 'vi' ? 'Hủy' : '取消')}
+        </button>
+        <button type="button" class="btn btn-primary" onclick="saveNewCustomizationGroup(${cIdx})" style="min-height: 48px; padding: 0 24px; font-weight: 800; border-radius: 10px; font-size: 14px;">
+          ${t("btnSaveGroup") || (currentLang === 'vi' ? 'Lưu nhóm' : '儲存分組')}
+        </button>
+      </div>
+    `;
+    container.appendChild(newCard);
+  } else {
+    // Show dashed button to open creator
+    const addGroupBtn = document.createElement("button");
+    addGroupBtn.type = "button";
+    addGroupBtn.className = "cat-mgr-add-btn";
+    addGroupBtn.style.marginTop = "16px";
+    addGroupBtn.style.background = "#f8fafc";
+    addGroupBtn.style.border = "2px dashed #94a3b8";
+    addGroupBtn.innerHTML = `<span>${formatPlusBtnText(t("btnAddCustomGroup"), "新增客製化分組")}</span>`;
+    addGroupBtn.onclick = () => openNewCustomGroupCreator(cIdx);
+    container.appendChild(addGroupBtn);
+  }
 }
 
-function addCustomizationGroup(cIdx) {
+function openNewCustomGroupCreator(cIdx) {
   syncMenuDataFromDOM();
-  const groupTitle = prompt(t("promptAddCustomGroup"));
-  if (groupTitle !== null) {
-    const trimmed = groupTitle.trim();
-    if (!trimmed) return;
-    const cat = currentMenuData[cIdx];
-    if (cat) {
-      if (!Array.isArray(cat.groups)) cat.groups = [];
-      const tenantId = getTenantIdFromUrl();
-      const newKey = `group_${Date.now().toString(36)}`;
-      const newId = `custom_${tenantId}_${newKey}`;
-      cat.groups.push({
-        id: newId,
-        key: newKey,
-        title: trimmed,
-        type: 'radio',
-        sortOrder: cat.groups.length,
-        options: []
-      });
-      markMenuDirty();
-      renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), cat, cIdx);
-      renderMenuCategories();
+  isCustomGroupCreatorOpen = true;
+  newCustomGroupType = 'radio';
+  newCustomGroupRequired = false;
+  const cat = currentMenuData[cIdx];
+  renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), cat, cIdx);
+  setTimeout(() => {
+    const card = document.getElementById("cust-new-group-card");
+    const inp = document.getElementById("cust-new-group-title-input");
+    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (inp) inp.focus();
+  }, 50);
+}
+window.openNewCustomGroupCreator = openNewCustomGroupCreator;
+
+function cancelNewCustomizationGroup(cIdx) {
+  isCustomGroupCreatorOpen = false;
+  const cat = currentMenuData[cIdx];
+  renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), cat, cIdx);
+}
+window.cancelNewCustomizationGroup = cancelNewCustomizationGroup;
+
+function setNewGroupType(type, cIdx) {
+  newCustomGroupType = type;
+  const radioBtn = document.getElementById("btn-new-grp-type-radio");
+  const checkBtn = document.getElementById("btn-new-grp-type-checkbox");
+  if (radioBtn && checkBtn) {
+    if (type === 'radio') {
+      radioBtn.style.background = "#eff6ff";
+      radioBtn.style.color = "#2563eb";
+      radioBtn.style.border = "1.5px solid #93c5fd";
+      checkBtn.style.background = "#ffffff";
+      checkBtn.style.color = "#64748b";
+      checkBtn.style.border = "1px solid #cbd5e1";
+    } else {
+      checkBtn.style.background = "#eff6ff";
+      checkBtn.style.color = "#2563eb";
+      checkBtn.style.border = "1.5px solid #93c5fd";
+      radioBtn.style.background = "#ffffff";
+      radioBtn.style.color = "#64748b";
+      radioBtn.style.border = "1px solid #cbd5e1";
     }
   }
 }
+window.setNewGroupType = setNewGroupType;
+
+function toggleNewGroupRequired(cIdx) {
+  newCustomGroupRequired = !newCustomGroupRequired;
+  const reqBtn = document.getElementById("btn-new-grp-required");
+  if (reqBtn) {
+    if (newCustomGroupRequired) {
+      reqBtn.style.background = "#fee2e2";
+      reqBtn.style.color = "#b91c1c";
+      reqBtn.style.border = "1.5px solid #fca5a5";
+      reqBtn.innerText = t("badgeRequired") || (currentLang === 'vi' ? 'Bắt buộc chọn' : '必選項目');
+    } else {
+      reqBtn.style.background = "#ffffff";
+      reqBtn.style.color = "#64748b";
+      reqBtn.style.border = "1px solid #cbd5e1";
+      reqBtn.innerText = t("badgeOptional") || (currentLang === 'vi' ? 'Không bắt buộc' : '選填項目');
+    }
+  }
+}
+window.toggleNewGroupRequired = toggleNewGroupRequired;
+
+function applyNewGroupQuickChip(text) {
+  const inp = document.getElementById("cust-new-group-title-input");
+  if (inp) {
+    inp.value = text;
+    inp.style.borderColor = "#cbd5e1";
+    inp.focus();
+  }
+}
+window.applyNewGroupQuickChip = applyNewGroupQuickChip;
+
+function saveNewCustomizationGroup(cIdx) {
+  syncMenuDataFromDOM();
+  const inp = document.getElementById("cust-new-group-title-input");
+  if (!inp) return;
+  const trimmed = inp.value.trim();
+  if (!trimmed) {
+    inp.style.borderColor = "#ef4444";
+    inp.focus();
+    return;
+  }
+  const cat = currentMenuData[cIdx];
+  if (cat) {
+    if (!Array.isArray(cat.groups)) cat.groups = [];
+    const tenantId = getTenantIdFromUrl();
+    const newKey = `group_${Date.now().toString(36)}`;
+    const newId = `custom_${tenantId}_${newKey}`;
+    cat.groups.push({
+      id: newId,
+      key: newKey,
+      title: trimmed,
+      type: newCustomGroupType,
+      isRequired: newCustomGroupRequired,
+      sortOrder: cat.groups.length,
+      options: []
+    });
+    isCustomGroupCreatorOpen = false;
+    markMenuDirty();
+    renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), cat, cIdx);
+    renderMenuCategories();
+
+    const newGroupIndex = cat.groups.length - 1;
+    setTimeout(() => {
+      const el = document.querySelector(`[data-cust-group-index="${newGroupIndex}"]`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 50);
+  }
+}
+window.saveNewCustomizationGroup = saveNewCustomizationGroup;
+
+function addCustomizationGroup(cIdx) {
+  openNewCustomGroupCreator(cIdx);
+}
 window.addCustomizationGroup = addCustomizationGroup;
 
-function renameCustomizationGroup(cIdx, gIdx) {
-  syncMenuDataFromDOM();
+function startRenameCustomizationGroup(cIdx, gIdx) {
+  const titleEl = document.getElementById(`cust-group-title-${gIdx}`);
+  const renameBtn = document.getElementById(`cust-group-rename-btn-${gIdx}`);
+  if (!titleEl) return;
+  if (renameBtn) renameBtn.style.display = "none";
+  const currentTitle = currentMenuData[cIdx]?.groups?.[gIdx]?.title || '';
+
+  titleEl.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 6px;" onclick="event.stopPropagation()">
+      <input type="text" id="cust-group-rename-input-${gIdx}" value="${escapeHtml(currentTitle)}"
+        style="min-width: 160px; max-width: 240px; font-weight: 800; font-size: 15px; padding: 6px 10px; border: 1.5px solid var(--primary, #2563eb); border-radius: 8px; background: #fff;"
+        onkeydown="if(event.key === 'Enter') saveRenameCustomizationGroup(${cIdx}, ${gIdx}); if(event.key === 'Escape') cancelRenameCustomizationGroup(${cIdx}, ${gIdx});">
+      <button type="button" class="btn btn-primary" onclick="saveRenameCustomizationGroup(${cIdx}, ${gIdx})" style="min-height: 34px; padding: 0 10px; font-size: 13px; font-weight: 700; border-radius: 6px;">✓</button>
+      <button type="button" class="btn btn-ghost" onclick="cancelRenameCustomizationGroup(${cIdx}, ${gIdx})" style="min-height: 34px; padding: 0 8px; font-size: 13px; border-radius: 6px;">✕</button>
+    </div>
+  `;
+  const inp = document.getElementById(`cust-group-rename-input-${gIdx}`);
+  if (inp) {
+    inp.focus();
+    inp.select();
+  }
+}
+window.startRenameCustomizationGroup = startRenameCustomizationGroup;
+
+function saveRenameCustomizationGroup(cIdx, gIdx) {
+  const inp = document.getElementById(`cust-group-rename-input-${gIdx}`);
+  if (!inp) return;
+  const trimmed = inp.value.trim();
+  if (!trimmed) {
+    inp.style.borderColor = "#ef4444";
+    inp.focus();
+    return;
+  }
   const grp = currentMenuData[cIdx]?.groups?.[gIdx];
-  if (!grp) return;
-  const newTitle = prompt(t("promptRenameCustomGroup"), grp.title);
-  if (newTitle !== null) {
-    const trimmed = newTitle.trim();
-    if (!trimmed) return;
+  if (grp) {
     grp.title = trimmed;
     markMenuDirty();
     renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), currentMenuData[cIdx], cIdx);
     renderMenuCategories();
   }
+}
+window.saveRenameCustomizationGroup = saveRenameCustomizationGroup;
+
+function cancelRenameCustomizationGroup(cIdx, gIdx) {
+  renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), currentMenuData[cIdx], cIdx);
+}
+window.cancelRenameCustomizationGroup = cancelRenameCustomizationGroup;
+
+function renameCustomizationGroup(cIdx, gIdx) {
+  startRenameCustomizationGroup(cIdx, gIdx);
 }
 window.renameCustomizationGroup = renameCustomizationGroup;
 
@@ -2468,7 +2672,7 @@ function handleMenuCreateClick() {
   if (activeCategoryIndex >= 0 && currentMenuData && currentMenuData[activeCategoryIndex]) {
     const cat = currentMenuData[activeCategoryIndex];
     if (cat.type === 'order_customization' || cat.id === 'sec-flavor') {
-      addCustomizationGroup(activeCategoryIndex);
+      openNewCustomGroupCreator(activeCategoryIndex);
       return;
     }
   }
@@ -2498,9 +2702,17 @@ function handleSelectCreateType(type) {
     const flavorIdx = currentMenuData ? currentMenuData.findIndex(c => c.type === 'order_customization' || c.id === 'sec-flavor') : -1;
     if (flavorIdx >= 0) {
       activeCategoryIndex = flavorIdx;
+      isCustomGroupCreatorOpen = true;
+      newCustomGroupType = 'radio';
+      newCustomGroupRequired = false;
       renderMenuCategories();
       renderMenuCategoryEditor(flavorIdx);
-      addCustomizationGroup(flavorIdx);
+      setTimeout(() => {
+        const card = document.getElementById("cust-new-group-card");
+        const inp = document.getElementById("cust-new-group-title-input");
+        if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (inp) inp.focus();
+      }, 50);
     }
   }
 }

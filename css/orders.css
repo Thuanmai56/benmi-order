@@ -7002,6 +7002,15 @@ select.form-input {
   box-shadow: 0 1px 3px rgba(0,0,0,0.03);
 }
 
+.cust-new-group-card {
+  background: #ffffff;
+  border: 2px solid var(--primary, #2563eb);
+  border-radius: 14px;
+  padding: 18px;
+  margin-top: 16px;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.08);
+}
+
 .cust-group-header {
   display: flex;
   align-items: center;
