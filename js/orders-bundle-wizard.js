@@ -82,7 +82,7 @@ function persistComboWizard() {
 
 function openBundleWizard(catIndex = activeCategoryIndex, itemIndex = null) {
   if (window.currentTenantFeatures?.includes('disable_bundle_builder_v2')) return;
-  if (isMenuDirty && !confirmLeaveMenu()) return;
+  if (typeof syncMenuDataFromDOM === 'function') syncMenuDataFromDOM();
   if (!currentMenuData?.[catIndex] || currentMenuData[catIndex].type !== 'catalog') return;
   const cat = currentMenuData[catIndex];
   const item = itemIndex === null ? null : cat.items[itemIndex];
@@ -141,10 +141,10 @@ function openBundleWizard(catIndex = activeCategoryIndex, itemIndex = null) {
     })
   } : { version: 2, groups: [] };
   comboWizard = { product, config, step: 0, changed: false, returnFocus: document.activeElement };
-  const saved = localStorage.getItem(comboDraftKey());
-  if (saved && confirm(comboText('comboRestoreDraft'))) {
-    try { const parsed = JSON.parse(saved); comboWizard.product = parsed.product; comboWizard.config = parsed.config; comboWizard.step = parsed.step || 0; comboWizard.changed = true; } catch { localStorage.removeItem(comboDraftKey()); }
-  }
+  try {
+    const draftKey = comboDraftKey();
+    localStorage.removeItem(draftKey);
+  } catch (e) {}
   comboGroups().forEach(group => comboSetGroupName(group, comboGroupName(group)));
   document.body.classList.add('bundle-wizard-open');
   document.getElementById('bundle-wizard').style.display = 'flex';
@@ -155,7 +155,10 @@ window.openBundleWizard = openBundleWizard;
 
 function closeBundleWizard() {
   if (!comboWizard) return;
-  if (comboWizard.changed && !confirm(comboText('comboLeaveDraft'))) return;
+  try {
+    const draftKey = comboDraftKey();
+    localStorage.removeItem(draftKey);
+  } catch (e) {}
   dismissComboWizard();
 }
 window.closeBundleWizard = closeBundleWizard;
