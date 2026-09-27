@@ -122,6 +122,7 @@ async function loadMenuData() {
         categories.push({
           id: cat.slug,
           databaseId: cat.id,
+          catId: cat.id || cat.slug,
           title: cat.name,
           shortName: cat.shortName || cat.name,
           type: 'catalog',
@@ -129,12 +130,15 @@ async function loadMenuData() {
           appliedModifiers: cat.appliedModifiers || (cat.allowCustomization === false ? [] : ['*']),
           sortOrder: Number(cat.sortOrder !== undefined ? cat.sortOrder : (cat.sort_order !== undefined ? cat.sort_order : (cIdx + 1))),
           items: cat.items.map(it => ({
-            id: it.id,
+            id: it.id || null,
             name: it.name,
             price: it.price,
             isOos: it.isOutOfStock,
             badgeText: it.badgeText || (it.badge || ''),
             isRecommended: it.isRecommended || false,
+            bundleRule: it.bundleRule || null,
+            itemType: it.itemType || 'standard',
+            modifierGroups: Array.isArray(it.modifierGroups) ? it.modifierGroups : [],
             originalName: it.name
           }))
         });
@@ -175,6 +179,7 @@ async function loadMenuData() {
               key: cust.key || `custom_${gIdx}`,
               title: cust.title || cust.name || '',
               type: cust.type || 'radio',
+              isRequired: Boolean(cust.isRequired),
               sortOrder: cust.sortOrder !== undefined ? cust.sortOrder : gIdx,
               options: (cust.options || []).map(opt => ({
                 id: opt.id || opt.name,
@@ -275,12 +280,12 @@ function closeCategoriesManager() {
     if (bodyEl) bodyEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;" id="i18n-menu-select-prompt">${t("menuSelectPrompt")}</div>`;
     const renameBtn = document.getElementById("btn-category-rename");
     const deleteBtn = document.getElementById("btn-category-delete");
-    const addItemBtn = document.getElementById("btn-menu-add-item");
+    const createBtn = document.getElementById("btn-menu-create-unified");
     const addCatTopBtn = document.getElementById("btn-menu-add-cat-top");
     const closeBtn = document.getElementById("btn-menu-manage-close");
     if (renameBtn) renameBtn.style.display = "none";
     if (deleteBtn) deleteBtn.style.display = "none";
-    if (addItemBtn) addItemBtn.style.display = "none";
+    if (createBtn) createBtn.style.display = "none";
     if (addCatTopBtn) addCatTopBtn.style.display = "none";
     if (closeBtn) closeBtn.style.display = "none";
   }
@@ -324,13 +329,13 @@ function renderCategoriesManagerView() {
   // Toggle header action buttons
   const renameBtn = document.getElementById("btn-category-rename");
   const deleteBtn = document.getElementById("btn-category-delete");
-  const addItemBtn = document.getElementById("btn-menu-add-item");
+  const createBtn = document.getElementById("btn-menu-create-unified");
   const addCatTopBtn = document.getElementById("btn-menu-add-cat-top");
   const closeBtn = document.getElementById("btn-menu-manage-close");
 
   if (renameBtn) renameBtn.style.display = "none";
   if (deleteBtn) deleteBtn.style.display = "none";
-  if (addItemBtn) addItemBtn.style.display = "none";
+  if (createBtn) createBtn.style.display = "none";
   if (addCatTopBtn) addCatTopBtn.style.display = "inline-flex";
   if (closeBtn) closeBtn.style.display = "inline-flex";
 
@@ -533,19 +538,20 @@ function renderMenuCategoryEditor(index) {
   isCategoryManagerOpen = false;
   const renameBtn = document.getElementById("btn-category-rename");
   const deleteBtn = document.getElementById("btn-category-delete");
-  const addItemBtn = document.getElementById("btn-menu-add-item");
+  const createBtn = document.getElementById("btn-menu-create-unified");
+  const createBtnText = document.getElementById("i18n-btn-create-unified-text");
   const addCatTopBtn = document.getElementById("btn-menu-add-cat-top");
   const closeBtn = document.getElementById("btn-menu-manage-close");
   const subEl = document.getElementById("i18n-menu-edit-sub");
 
   if (addCatTopBtn) addCatTopBtn.style.display = "none";
   if (closeBtn) closeBtn.style.display = "none";
-  if (addItemBtn) addItemBtn.style.display = "inline-flex";
   if (subEl) subEl.innerText = t("menuEditSub");
 
   if (!currentMenuData || !currentMenuData[index]) {
     if (renameBtn) renameBtn.style.display = "none";
     if (deleteBtn) deleteBtn.style.display = "none";
+    if (createBtn) createBtn.style.display = "none";
     return;
   }
 
@@ -557,18 +563,23 @@ function renderMenuCategoryEditor(index) {
       deleteBtn.style.display = "inline-flex";
       deleteBtn.onclick = () => deleteCategoryAtIndex(index);
     }
-    if (addItemBtn) {
-      addItemBtn.style.display = "inline-flex";
-      addItemBtn.innerText = formatPlusBtnText(t("btnAddCustomGroup"), "新增客製化分組");
-      addItemBtn.onclick = () => addCustomizationGroup(index);
+    if (createBtn) {
+      createBtn.style.display = "inline-flex";
+      const customLabel = t("btnMenuAddCustomGroup") || "新增客製化分組";
+      if (createBtnText) createBtnText.innerText = customLabel.replace(/^\+\s*/, '');
+      else createBtn.innerText = customLabel;
+      createBtn.onclick = () => addCustomizationGroup(index);
     }
     renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), cat, index);
     return;
   }
 
-  if (addItemBtn) {
-    addItemBtn.innerText = formatPlusBtnText(t("btnMenuAddItem"), "新增項目");
-    addItemBtn.onclick = () => addNewMenuItem();
+  if (createBtn) {
+    createBtn.style.display = "inline-flex";
+    const unifiedLabel = t("btnMenuCreateUnified") || "建立新項目";
+    if (createBtnText) createBtnText.innerText = unifiedLabel.replace(/^\+\s*/, '');
+    else createBtn.innerText = unifiedLabel;
+    createBtn.onclick = () => handleMenuCreateClick();
   }
 
   if (renameBtn) renameBtn.style.display = "inline-flex";
@@ -670,9 +681,20 @@ function renderMenuCategoryEditor(index) {
     const oosText = item.isOos ? t("stockStatusOutOfStock") : t("stockStatusInStock");
 
     const gripSvg = (typeof POS_SVG !== "undefined" && POS_SVG.grip) || "⋮⋮";
-    const tagSvg = (typeof POS_SVG !== "undefined" && POS_SVG.tag) || "";
-    const imageSvg = (typeof POS_SVG !== "undefined" && POS_SVG.image) || "";
     const trashSvg = (typeof POS_SVG !== "undefined" && POS_SVG.trash) || "";
+    const settingsSvg = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`;
+
+    const hasBundle = Boolean(item.bundleRule && Array.isArray(item.bundleRule.groups) && item.bundleRule.groups.length > 0);
+    const isBundleDisabled = window.currentTenantFeatures?.includes('disable_bundle_builder_v2');
+
+    if (cat.type === 'catalog' && hasBundle && !isBundleDisabled) {
+      row.classList.add("is-bundle-row");
+      const bundleCount = item.bundleRule.groups.length;
+      const bundleTooltip = currentLang === 'vi'
+        ? `${t("bundleBadge")} (${bundleCount} ${t("bundleGroupUnit")})`
+        : `${t("bundleBadge")} (${bundleCount}${t("bundleGroupUnit")})`;
+      row.setAttribute("title", bundleTooltip);
+    }
 
     row.innerHTML = `
       <div class="menu-item-main-fields">
@@ -684,11 +706,6 @@ function renderMenuCategoryEditor(index) {
           <input type="number" class="menu-item-price-input" value="${item.price !== null && item.price !== undefined ? item.price : ''}" data-cidx="${index}" data-iidx="${iIdx}" oninput="markMenuDirty()"
             placeholder="${t("priceHiddenPlaceholder")}">
         </label>
-        <label class="menu-item-badge-label" title="${t('menuItemBadgePlaceholder')}">
-          <span class="badge-icon">${tagSvg}</span>
-          <input type="text" class="menu-item-badge-input" value="${escapeHtml(item.badgeText || '')}" data-badge-cidx="${index}" data-badge-iidx="${iIdx}" oninput="markMenuDirty()"
-            placeholder="${t('menuItemBadgePlaceholder')}">
-        </label>
       </div>
       <div class="menu-item-actions">
         <button type="button" class="menu-item-status-pill ${item.isOos ? 'oos' : 'in-stock'}"
@@ -696,17 +713,25 @@ function renderMenuCategoryEditor(index) {
           <span class="status-dot"></span>
           <span class="status-text">${oosText}</span>
         </button>
-        <button type="button" class="btn btn-ghost menu-item-action-btn" onclick="openImageModal('${cat.id}', '${escapeHtml(item.name)}')">
-          ${imageSvg}<span>${t("btnItemImage")}</span>
+        <button type="button" class="menu-item-settings-btn" onclick="openItemDetailModal(${index}, ${iIdx})" title="${t('btnItemSettings')}">
+          ${settingsSvg}<span>${t("btnItemSettings")}</span>
         </button>
-        <button type="button" class="btn btn-ghost menu-item-action-btn btn-danger-ghost" onclick="removeMenuItemAt(${index}, ${iIdx})">
-          ${trashSvg}<span>${t("btnItemDelete")}</span>
+        <button type="button" class="menu-item-delete-btn" onclick="removeMenuItemAt(${index}, ${iIdx})" title="${t('btnItemDelete')}">
+          ${trashSvg}
         </button>
       </div>
     `;
     itemsContainer.appendChild(row);
   });
   container.appendChild(itemsContainer);
+
+  const addItemBtn = document.createElement("button");
+  addItemBtn.type = "button";
+  addItemBtn.className = "cat-mgr-add-btn";
+  addItemBtn.style.marginTop = "12px";
+  addItemBtn.onclick = () => openCreateItemModal(index);
+  addItemBtn.innerHTML = `<span>+ ${t("btnItemCreate") || (currentLang === 'vi' ? 'Thêm món mới' : '新增餐點')}</span>`;
+  container.appendChild(addItemBtn);
 }
 
 function renderOrderCustomizationEditor(container, cat, cIdx) {
@@ -743,6 +768,10 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
       const typeBadge = grp.type === 'checkbox'
         ? `<span style="font-size: var(--pos-text-meta); padding: 3px 8px; background: #e0e7ff; color: #4338ca; border-radius: 6px; font-weight: 800;">${currentLang === 'vi' ? 'Chọn nhiều' : '多選'}</span>`
         : `<span style="font-size: var(--pos-text-meta); padding: 3px 8px; background: #ecfdf5; color: #047857; border-radius: 6px; font-weight: 800;">${currentLang === 'vi' ? 'Chọn 1' : '單選'}</span>`;
+
+      const requiredBadge = grp.isRequired
+        ? `<span style="font-size: 11.5px; padding: 3px 8px; background: #fee2e2; color: #b91c1c; border-radius: 6px; font-weight: 800; border: 1px solid #fca5a5;">${t("badgeRequired")}</span>`
+        : `<span style="font-size: 11.5px; padding: 3px 8px; background: #f1f5f9; color: #64748b; border-radius: 6px; font-weight: 700; border: 1px solid #e2e8f0;">${t("badgeOptional")}</span>`;
 
       const optionsCount = (grp.options || []).length;
 
@@ -804,6 +833,10 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
             <button type="button" style="cursor: pointer; border: none; background: transparent; padding: 0;"
               onclick="toggleCustomizationGroupType(${cIdx}, ${gIdx})" title="${grp.type === 'checkbox' ? t('toggleGroupTypeSingle') : t('toggleGroupTypeMultiple')}">
               ${typeBadge}
+            </button>
+            <button type="button" style="cursor: pointer; border: none; background: transparent; padding: 0;"
+              onclick="toggleCustomizationGroupRequired(${cIdx}, ${gIdx})" title="${grp.isRequired ? t('toggleRequiredOff') : t('toggleRequiredOn')}">
+              ${requiredBadge}
             </button>
           </div>
           <div style="display: flex; align-items: center; gap: 8px; margin-left: auto;">
@@ -891,6 +924,16 @@ function toggleCustomizationGroupType(cIdx, gIdx) {
   renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), currentMenuData[cIdx], cIdx);
 }
 window.toggleCustomizationGroupType = toggleCustomizationGroupType;
+
+function toggleCustomizationGroupRequired(cIdx, gIdx) {
+  syncMenuDataFromDOM();
+  const grp = currentMenuData[cIdx]?.groups?.[gIdx];
+  if (!grp) return;
+  grp.isRequired = !grp.isRequired;
+  markMenuDirty();
+  renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), currentMenuData[cIdx], cIdx);
+}
+window.toggleCustomizationGroupRequired = toggleCustomizationGroupRequired;
 
 function removeCustomizationGroup(cIdx, gIdx) {
   const grp = currentMenuData[cIdx]?.groups?.[gIdx];
@@ -989,19 +1032,7 @@ function removeMenuItemAt(cIdx, iIdx) {
 }
 
 function addNewMenuItem() {
-  if (activeCategoryIndex < 0 || !currentMenuData) return;
-  syncMenuDataFromDOM();
-  const cat = currentMenuData[activeCategoryIndex];
-  if (cat && (cat.type === 'order_customization' || cat.id === 'sec-flavor')) {
-    addCustomizationGroup(activeCategoryIndex);
-    return;
-  }
-  if (cat && Array.isArray(cat.items)) {
-    cat.items.unshift({ name: t("newItemPlaceholder"), price: 0, badgeText: "" });
-  }
-  markMenuDirty();
-  renderMenuCategoryEditor(activeCategoryIndex);
-  renderMenuCategories();
+  handleSelectCreateType('standard_item');
 }
 
 function syncMenuDataFromDOM() {
@@ -1063,6 +1094,7 @@ function serializeMenuData(categories) {
           key: grp.key,
           title: grp.title,
           type: grp.type || 'radio',
+          isRequired: Boolean(grp.isRequired),
           sortOrder: grp.sortOrder !== undefined ? grp.sortOrder : (gIdx + 1),
           options: (grp.options || []).map(opt => ({
             id: opt.id || opt.name,
@@ -1093,7 +1125,9 @@ function serializeMenuData(categories) {
           id: item.id,
           price: item.price,
           badge_text: item.badgeText || null,
-          is_recommended: (item.badgeText && item.badgeText.includes('推薦')) || item.isRecommended ? 1 : 0
+          is_recommended: (item.badgeText && item.badgeText.includes('推薦')) || item.isRecommended ? 1 : 0,
+          item_type: item.itemType || (item.bundleRule && item.bundleRule.groups && item.bundleRule.groups.length > 0 ? 'bundle' : 'standard'),
+          modifier_groups: Array.isArray(item.modifierGroups) ? item.modifierGroups : []
         };
       }
     });
@@ -1752,3 +1786,1442 @@ document.addEventListener('toggle', event => {
   text.style.left = Math.max(12, Math.min(anchor.left, window.innerWidth - text.offsetWidth - 12)) + 'px';
   text.style.top = Math.max(12, Math.min(anchor.bottom, window.innerHeight - text.offsetHeight - 12)) + 'px';
 }, true);
+
+// ==========================================================================
+// POS Menu Bundle / Combo Editor Controller
+// ==========================================================================
+
+let bundleEditingTarget = null; // { catIndex, itemIndex, item }
+let bundleDraftRule = null; // { version: 1, groups: [...] }
+let bundleActiveGroupIndex = 0;
+let bundleSourceTab = 'category'; // 'category' | 'items'
+
+async function openBundleEditorModal(catIdx, itemIdx) {
+  if (isMenuDirty) syncMenuDataFromDOM();
+  if (!currentMenuData || !currentMenuData[catIdx] || !currentMenuData[catIdx].items[itemIdx]) return;
+
+  const targetItem = currentMenuData[catIdx].items[itemIdx];
+  if (!targetItem.name || targetItem.name.trim() === '') {
+    alert(t("bundleValidationEmptyName") || "請先填寫菜單項目名稱");
+    return;
+  }
+
+  // If item is freshly added and hasn't been saved to D1 yet, prompt to save
+  if (isMenuDirty && !targetItem.id) {
+    const shouldSave = confirm(currentLang === 'vi' 
+      ? "Món mới cần được lưu vào hệ thống trước khi thiết lập Combo. Bạn có muốn lưu thực đơn ngay bây giờ không?" 
+      : "新建立的菜單項目需先儲存至資料庫方可設定組合，是否立即儲存？");
+    if (shouldSave) {
+      await saveMenuData(true);
+    } else {
+      return;
+    }
+  }
+
+  bundleEditingTarget = {
+    catIndex: catIdx,
+    itemIndex: itemIdx,
+    item: currentMenuData[catIdx].items[itemIdx]
+  };
+
+  if (targetItem.bundleRule && Array.isArray(targetItem.bundleRule.groups) && targetItem.bundleRule.groups.length > 0) {
+    bundleDraftRule = JSON.parse(JSON.stringify(targetItem.bundleRule));
+    // Ensure group properties
+    bundleDraftRule.groups.forEach((grp, idx) => {
+      grp.id = grp.id || `group_${idx + 1}_${Date.now()}`;
+      if (!grp.label || typeof grp.label !== 'object') {
+        grp.label = {
+          "zh-TW": grp.name || `自選分組 #${idx + 1}`,
+          "vi": grp.name || `Nhóm chọn #${idx + 1}`
+        };
+      }
+      grp.minQuantity = Math.max(1, Number(grp.minQuantity || 1));
+      grp.maxQuantity = Math.max(grp.minQuantity, Number(grp.maxQuantity || grp.minQuantity));
+      grp.allowRepeats = grp.allowRepeats !== undefined ? Boolean(grp.allowRepeats) : (grp.allowRepeat !== undefined ? Boolean(grp.allowRepeat) : true);
+      grp.sources = Array.isArray(grp.sources) ? grp.sources : [];
+    });
+  } else {
+    // Default initial bundle structure with 1 group
+    bundleDraftRule = {
+      version: 1,
+      groups: [
+        {
+          id: `group_1_${Date.now()}`,
+          label: {
+            "zh-TW": "請選擇 1 樣餐點",
+            "vi": "Chọn 1 món"
+          },
+          name: "請選擇 1 樣餐點",
+          minQuantity: 1,
+          maxQuantity: 1,
+          allowRepeats: false,
+          sources: []
+        }
+      ]
+    };
+  }
+
+  bundleActiveGroupIndex = 0;
+  bundleSourceTab = 'category';
+
+  // Set modal header details
+  const nameEl = document.getElementById("bundle-modal-item-name");
+  if (nameEl) nameEl.textContent = targetItem.name;
+  const priceEl = document.getElementById("bundle-modal-item-price");
+  if (priceEl) priceEl.textContent = `$${targetItem.price !== null && targetItem.price !== undefined ? targetItem.price : 0}`;
+
+  // Show/hide remove combo button & danger zone card
+  const removeBtn = document.getElementById("btn-bundle-remove-config");
+  const dangerZoneCard = document.getElementById("bundle-danger-zone-card");
+  const isExistingCombo = Boolean(targetItem.bundleRule && targetItem.bundleRule.groups?.length > 0);
+  if (removeBtn) {
+    removeBtn.style.display = isExistingCombo ? "inline-flex" : "none";
+  }
+  if (dangerZoneCard) {
+    dangerZoneCard.style.display = isExistingCombo ? "flex" : "none";
+  }
+
+  const modal = document.getElementById("modal-bundle-editor");
+  if (modal) modal.style.display = "flex";
+
+  renderBundleEditorSidebar();
+  renderBundleGroupConfigPanel();
+}
+window.openBundleEditorModal = openBundleEditorModal;
+
+function closeBundleEditorModal() {
+  const modal = document.getElementById("modal-bundle-editor");
+  if (modal) modal.style.display = "none";
+  bundleEditingTarget = null;
+  bundleDraftRule = null;
+  bundleActiveGroupIndex = 0;
+}
+window.closeBundleEditorModal = closeBundleEditorModal;
+
+function syncBundleCurrentGroupFromDOM() {
+  if (!bundleDraftRule || !bundleDraftRule.groups[bundleActiveGroupIndex]) return;
+  const grp = bundleDraftRule.groups[bundleActiveGroupIndex];
+  const zhInp = document.getElementById("bundle-group-name-zh");
+  const viInp = document.getElementById("bundle-group-name-vi");
+  if (zhInp) grp.label["zh-TW"] = zhInp.value;
+  if (viInp) grp.label["vi"] = viInp.value;
+  grp.name = grp.label["zh-TW"] || grp.label["vi"] || grp.name;
+}
+
+function renderBundleEditorSidebar() {
+  const listEl = document.getElementById("bundle-groups-list");
+  const badgeEl = document.getElementById("bundle-group-count-badge");
+  if (!listEl || !bundleDraftRule) return;
+
+  if (badgeEl) badgeEl.textContent = String(bundleDraftRule.groups.length);
+  listEl.innerHTML = "";
+
+  bundleDraftRule.groups.forEach((grp, gIdx) => {
+    const isActive = gIdx === bundleActiveGroupIndex;
+    const grpName = (grp.label && (grp.label[currentLang] || grp.label['zh-TW'] || grp.label['vi'])) || grp.name || `${t("bundleBadge")} #${gIdx + 1}`;
+    const qty = grp.minQuantity || 1;
+    const repeatText = grp.allowRepeats ? (currentLang === 'vi' ? 'Được chọn lặp lại' : '可重複選') : (currentLang === 'vi' ? 'Không lặp lại' : '不可重複');
+    const ruleSummary = currentLang === 'vi'
+      ? `Bắt buộc ${qty} ${t("bundleItemUnit")} • ${repeatText}`
+      : `必須選取 ${qty} ${t("bundleItemUnit")} • ${repeatText}`;
+
+    const card = document.createElement("div");
+    card.className = `bundle-group-card ${isActive ? 'active' : ''}`;
+    card.onclick = () => selectBundleGroup(gIdx);
+
+    let deleteBtnHtml = '';
+    if (bundleDraftRule.groups.length > 1) {
+      deleteBtnHtml = `
+        <button type="button" class="bundle-group-card-delete" onclick="deleteBundleGroup(${gIdx}, event)" title="${t('btnItemDelete')}">
+          ${POS_SVG.trash}
+        </button>
+      `;
+    }
+
+    card.innerHTML = `
+      <div class="bundle-group-card-header">
+        <span class="bundle-group-card-title">${escapeHtml(grpName)}</span>
+        <span class="bundle-group-card-badge">#${gIdx + 1}</span>
+      </div>
+      <div class="bundle-group-card-rule">
+        <span>${ruleSummary}</span>
+      </div>
+      ${deleteBtnHtml}
+    `;
+    listEl.appendChild(card);
+  });
+}
+
+function selectBundleGroup(groupIdx) {
+  syncBundleCurrentGroupFromDOM();
+  bundleActiveGroupIndex = groupIdx;
+  renderBundleEditorSidebar();
+  renderBundleGroupConfigPanel();
+}
+window.selectBundleGroup = selectBundleGroup;
+
+function addBundleGroup() {
+  syncBundleCurrentGroupFromDOM();
+  const newIdx = bundleDraftRule.groups.length + 1;
+  bundleDraftRule.groups.push({
+    id: `group_${newIdx}_${Date.now()}`,
+    label: {
+      "zh-TW": `請選擇 1 樣餐點 (組 ${newIdx})`,
+      "vi": `Chọn 1 món (Nhóm ${newIdx})`
+    },
+    name: `請選擇 1 樣餐點 (組 ${newIdx})`,
+    minQuantity: 1,
+    maxQuantity: 1,
+    allowRepeats: false,
+    sources: []
+  });
+  bundleActiveGroupIndex = bundleDraftRule.groups.length - 1;
+  renderBundleEditorSidebar();
+  renderBundleGroupConfigPanel();
+}
+window.addBundleGroup = addBundleGroup;
+
+function deleteBundleGroup(groupIdx, event) {
+  if (event) event.stopPropagation();
+  if (bundleDraftRule.groups.length <= 1) {
+    alert(t("bundleValidationEmptyGroups"));
+    return;
+  }
+  const confirmMsg = currentLang === 'vi' ? "Bạn có chắc muốn xóa nhóm chọn này?" : "確定要刪除此分組嗎？";
+  if (!confirm(confirmMsg)) return;
+
+  bundleDraftRule.groups.splice(groupIdx, 1);
+  if (bundleActiveGroupIndex >= bundleDraftRule.groups.length) {
+    bundleActiveGroupIndex = bundleDraftRule.groups.length - 1;
+  }
+  renderBundleEditorSidebar();
+  renderBundleGroupConfigPanel();
+}
+window.deleteBundleGroup = deleteBundleGroup;
+
+function updateBundleGroupName(val) {
+  if (!bundleDraftRule || !bundleDraftRule.groups[bundleActiveGroupIndex]) return;
+  const grp = bundleDraftRule.groups[bundleActiveGroupIndex];
+  grp.name = val;
+  if (!grp.label || typeof grp.label !== 'object') {
+    grp.label = {};
+  }
+  grp.label["zh-TW"] = val;
+  grp.label["vi"] = val;
+
+  // Update card title live
+  const cards = document.querySelectorAll("#bundle-groups-list .bundle-group-card");
+  if (cards[bundleActiveGroupIndex]) {
+    const titleEl = cards[bundleActiveGroupIndex].querySelector(".bundle-group-card-title");
+    const displayVal = val || `${t("bundleBadge")} #${bundleActiveGroupIndex + 1}`;
+    if (titleEl) titleEl.textContent = displayVal;
+  }
+}
+window.updateBundleGroupName = updateBundleGroupName;
+
+function updateBundleGroupLabel(lang, val) {
+  updateBundleGroupName(val);
+}
+window.updateBundleGroupLabel = updateBundleGroupLabel;
+
+function stepBundleQty(delta) {
+  if (!bundleDraftRule || !bundleDraftRule.groups[bundleActiveGroupIndex]) return;
+  const grp = bundleDraftRule.groups[bundleActiveGroupIndex];
+  const newQty = Math.max(1, (grp.minQuantity || 1) + delta);
+  grp.minQuantity = newQty;
+  grp.maxQuantity = newQty;
+
+  const valEl = document.getElementById("bundle-stepper-val");
+  if (valEl) valEl.textContent = String(newQty);
+  renderBundleEditorSidebar();
+}
+window.stepBundleQty = stepBundleQty;
+
+function toggleBundleRepeat(isChecked) {
+  if (!bundleDraftRule || !bundleDraftRule.groups[bundleActiveGroupIndex]) return;
+  bundleDraftRule.groups[bundleActiveGroupIndex].allowRepeats = isChecked;
+  const lbl = document.getElementById("bundle-repeat-label");
+  if (lbl) lbl.classList.toggle("checked", isChecked);
+  renderBundleEditorSidebar();
+}
+window.toggleBundleRepeat = toggleBundleRepeat;
+
+function switchBundleSourceTab(tab) {
+  bundleSourceTab = tab;
+  renderBundleSourcesSection();
+}
+window.switchBundleSourceTab = switchBundleSourceTab;
+
+function toggleBundleSourceCategory(catId, isChecked) {
+  if (!bundleDraftRule || !bundleDraftRule.groups[bundleActiveGroupIndex]) return;
+  const grp = bundleDraftRule.groups[bundleActiveGroupIndex];
+  if (isChecked) {
+    if (!grp.sources.some(s => s.type === 'category' && (s.categoryId === catId || s.refId === catId))) {
+      grp.sources.push({ type: 'category', categoryId: catId, refId: catId });
+    }
+  } else {
+    grp.sources = grp.sources.filter(s => !(s.type === 'category' && (s.categoryId === catId || s.refId === catId)));
+  }
+  renderBundleSourcesSection();
+  renderBundleEligiblePreview();
+}
+window.toggleBundleSourceCategory = toggleBundleSourceCategory;
+
+function toggleBundleSourceItem(itemId, isChecked) {
+  if (!bundleDraftRule || !bundleDraftRule.groups[bundleActiveGroupIndex]) return;
+  const grp = bundleDraftRule.groups[bundleActiveGroupIndex];
+  let itemListSrc = grp.sources.find(s => s.type === 'item_list');
+  if (!itemListSrc) {
+    itemListSrc = { type: 'item_list', itemIds: [] };
+    grp.sources.push(itemListSrc);
+  }
+  if (isChecked) {
+    if (!itemListSrc.itemIds.includes(itemId)) itemListSrc.itemIds.push(itemId);
+  } else {
+    itemListSrc.itemIds = itemListSrc.itemIds.filter(id => id !== itemId);
+  }
+  if (itemListSrc.itemIds.length === 0) {
+    grp.sources = grp.sources.filter(s => s !== itemListSrc);
+  }
+  renderBundleSourcesSection();
+  renderBundleEligiblePreview();
+}
+window.toggleBundleSourceItem = toggleBundleSourceItem;
+
+function computeEligibleItemsCount(grp) {
+  if (!grp || !Array.isArray(grp.sources) || grp.sources.length === 0 || !currentMenuData) return 0;
+  const itemSet = new Set();
+  currentMenuData.forEach(cat => {
+    if (cat.type !== 'catalog' || !Array.isArray(cat.items)) return;
+    const catMatches = grp.sources.some(s => s.type === 'category' && (s.categoryId === cat.catId || s.refId === cat.catId || s.categoryId === cat.id || s.refId === cat.id));
+    if (catMatches) {
+      cat.items.forEach(it => {
+        if (it.name) itemSet.add(it.id || it.name);
+      });
+    } else {
+      const itemSrc = grp.sources.find(s => s.type === 'item_list');
+      if (itemSrc && Array.isArray(itemSrc.itemIds)) {
+        cat.items.forEach(it => {
+          if (itemSrc.itemIds.includes(it.id) || itemSrc.itemIds.includes(it.name)) {
+            itemSet.add(it.id || it.name);
+          }
+        });
+      }
+    }
+  });
+  return itemSet.size;
+}
+
+function renderBundleEligiblePreview() {
+  const previewEl = document.getElementById("bundle-eligible-count");
+  if (!previewEl || !bundleDraftRule || !bundleDraftRule.groups[bundleActiveGroupIndex]) return;
+  const grp = bundleDraftRule.groups[bundleActiveGroupIndex];
+  const count = computeEligibleItemsCount(grp);
+  previewEl.textContent = String(count);
+}
+
+function renderBundleSourcesSection() {
+  const container = document.getElementById("bundle-sources-container");
+  if (!container || !bundleDraftRule || !bundleDraftRule.groups[bundleActiveGroupIndex]) return;
+  const grp = bundleDraftRule.groups[bundleActiveGroupIndex];
+
+  const catTabActive = bundleSourceTab === 'category';
+  const itemTabActive = bundleSourceTab === 'items';
+
+  let sourcesHtml = `
+    <div class="bundle-source-type-segmented">
+      <button type="button" class="bundle-source-type-pill ${catTabActive ? 'active' : ''}" onclick="switchBundleSourceTab('category')">
+        ${POS_SVG.folder}<span>${t("bundleSourceCategory")}</span>
+      </button>
+      <button type="button" class="bundle-source-type-pill ${itemTabActive ? 'active' : ''}" onclick="switchBundleSourceTab('items')">
+        ${POS_SVG.tag}<span>${t("bundleSourceItems")}</span>
+      </button>
+    </div>
+  `;
+
+  if (catTabActive) {
+    sourcesHtml += `<div class="bundle-sources-grid" style="margin-top: 10px;">`;
+    (currentMenuData || []).forEach(cat => {
+      if (cat.type !== 'catalog') return;
+      const catKey = cat.catId || cat.id;
+      const isSelected = grp.sources.some(s => s.type === 'category' && (s.categoryId === catKey || s.refId === catKey || s.categoryId === cat.id));
+      const itemCount = (cat.items && cat.items.length) || 0;
+      sourcesHtml += `
+        <label class="bundle-source-chip ${isSelected ? 'selected' : ''}">
+          <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleBundleSourceCategory('${escapeHtml(catKey)}', this.checked)">
+          <span class="bundle-source-chip-name">${escapeHtml(cat.title)}</span>
+          <span class="bundle-source-chip-count">${itemCount} ${t("bundleItemUnit")}</span>
+        </label>
+      `;
+    });
+    sourcesHtml += `</div>`;
+  } else {
+    // Individual Items selector
+    sourcesHtml += `<div class="bundle-sources-grid" style="margin-top: 10px; max-height: 260px;">`;
+    let itemListSrc = grp.sources.find(s => s.type === 'item_list');
+    const selectedItemIds = itemListSrc && Array.isArray(itemListSrc.itemIds) ? itemListSrc.itemIds : [];
+
+    (currentMenuData || []).forEach(cat => {
+      if (cat.type !== 'catalog' || !cat.items || cat.items.length === 0) return;
+      cat.items.forEach(it => {
+        const itemKey = it.id || it.name;
+        const isSelected = selectedItemIds.includes(itemKey);
+        sourcesHtml += `
+          <label class="bundle-source-chip ${isSelected ? 'selected' : ''}" title="${escapeHtml(cat.title)} - ${escapeHtml(it.name)}">
+            <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleBundleSourceItem('${escapeHtml(itemKey)}', this.checked)">
+            <span class="bundle-source-chip-name">${escapeHtml(it.name)}</span>
+            <span class="bundle-source-chip-count">$${it.price || 0}</span>
+          </label>
+        `;
+      });
+    });
+    sourcesHtml += `</div>`;
+  }
+
+  container.innerHTML = sourcesHtml;
+}
+
+function renderBundleGroupConfigPanel() {
+  const panel = document.getElementById("bundle-group-config-panel");
+  if (!panel) return;
+
+  if (!bundleDraftRule || !bundleDraftRule.groups || !bundleDraftRule.groups[bundleActiveGroupIndex]) {
+    panel.innerHTML = `<div style="text-align:center; padding: 40px; color:#94a3b8;">${t("bundleValidationEmptyGroups")}</div>`;
+    return;
+  }
+
+  const grp = bundleDraftRule.groups[bundleActiveGroupIndex];
+  const grpName = grp.name || (grp.label && (grp.label[currentLang] || grp.label['zh-TW'] || grp.label['vi'])) || '';
+  const qty = grp.minQuantity || 1;
+  const isRepeat = Boolean(grp.allowRepeats);
+  const eligibleCount = computeEligibleItemsCount(grp);
+
+  panel.innerHTML = `
+    <!-- Section 1: Group Name -->
+    <div class="bundle-config-section">
+      <div class="bundle-config-section-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+        <span id="i18n-bundle-section-name">${t("bundleGroupDetailTitle")}</span>
+      </div>
+      <div class="bundle-group-name-inputs">
+        <div class="bundle-field-group">
+          <label class="bundle-field-label" id="i18n-bundle-name-lbl">${t("bundleGroupName")}</label>
+          <input type="text" class="bundle-input-text" id="bundle-group-name" value="${escapeHtml(grpName)}"
+            placeholder="${t("bundleGroupNamePlaceholder")}" oninput="updateBundleGroupName(this.value)">
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 2: Quantity Rule & Repeat -->
+    <div class="bundle-config-section">
+      <div class="bundle-config-section-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="m9 12 2 2 4-4"/>
+        </svg>
+        <span id="i18n-bundle-section-rule">${t("bundleQuantityRule")}</span>
+      </div>
+      <div class="bundle-quantity-stepper-row">
+        <div class="bundle-stepper-control">
+          <button type="button" class="bundle-stepper-btn" onclick="stepBundleQty(-1)" aria-label="Decrease">-</button>
+          <span class="bundle-stepper-value" id="bundle-stepper-val">${qty}</span>
+          <button type="button" class="bundle-stepper-btn" onclick="stepBundleQty(1)" aria-label="Increase">+</button>
+        </div>
+        <label class="bundle-checkbox-label ${isRepeat ? 'checked' : ''}" id="bundle-repeat-label">
+          <input type="checkbox" class="bundle-checkbox-input" ${isRepeat ? 'checked' : ''} onchange="toggleBundleRepeat(this.checked)">
+          <div class="bundle-checkbox-text">
+            <span class="bundle-checkbox-title">${t("bundleAllowRepeat")}</span>
+            <span class="bundle-checkbox-desc">${t("bundleAllowRepeatDesc")}</span>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Section 3: Sources Selector -->
+    <div class="bundle-config-section">
+      <div class="bundle-config-section-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.9a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/>
+          <path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/>
+          <path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>
+        </svg>
+        <span id="i18n-bundle-section-source">${t("bundleSourceType")}</span>
+      </div>
+      <div id="bundle-sources-container"></div>
+    </div>
+
+    <!-- Section 4: Live Eligible Items Preview -->
+    <div class="bundle-config-section" style="margin-top: auto; padding-top: 10px; border-top: 1px dashed #e2e8f0;">
+      <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: #475569;">
+        <span>${t("bundleEligiblePreview")}:</span>
+        <strong style="font-size: 16px; color: #4338ca;"><span id="bundle-eligible-count">${eligibleCount}</span> ${t("bundleItemUnit")}</strong>
+      </div>
+    </div>
+  `;
+
+  renderBundleSourcesSection();
+}
+
+async function saveBundleConfig() {
+  if (!bundleEditingTarget || !bundleDraftRule) return;
+  syncBundleCurrentGroupFromDOM();
+
+  if (!bundleDraftRule.groups || bundleDraftRule.groups.length === 0) {
+    alert(t("bundleValidationEmptyGroups"));
+    return;
+  }
+
+  for (let i = 0; i < bundleDraftRule.groups.length; i++) {
+    const grp = bundleDraftRule.groups[i];
+    const zh = grp.label && grp.label["zh-TW"];
+    const vi = grp.label && grp.label["vi"];
+    if ((!zh || zh.trim() === '') && (!vi || vi.trim() === '') && (!grp.name || grp.name.trim() === '')) {
+      alert(`${t("bundleValidationEmptyName")} (#${i + 1})`);
+      selectBundleGroup(i);
+      return;
+    }
+    if (!grp.sources || grp.sources.length === 0) {
+      alert(`${t("bundleValidationEmptySources")} (#${i + 1})`);
+      selectBundleGroup(i);
+      return;
+    }
+  }
+
+  const btnSave = document.getElementById("btn-bundle-modal-save");
+  if (btnSave) {
+    btnSave.disabled = true;
+    btnSave.textContent = t("menuSaving");
+  }
+
+  try {
+    const tenantId = getTenantIdFromUrl();
+    const cat = currentMenuData[bundleEditingTarget.catIndex];
+    const payload = {
+      parent_item_id: bundleEditingTarget.item.id || null,
+      item_name: bundleEditingTarget.item.name,
+      category_id: cat.catId || null,
+      category_slug: cat.id,
+      config: {
+        version: 1,
+        groups: bundleDraftRule.groups
+      }
+    };
+
+    const res = await fetch(`${WORKER_BASE}/api/menu/bundle-rules?tenant_id=${tenantId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    const resData = await res.json();
+    if (!res.ok || resData.error) {
+      throw new Error(resData.error || res.statusText);
+    }
+
+    bundleEditingTarget.item.bundleRule = resData.bundleRule || bundleDraftRule;
+    alert(t("bundleSaveSuccess"));
+    const catIdx = bundleEditingTarget.catIndex;
+    closeBundleEditorModal();
+    renderMenuCategoryEditor(catIdx);
+  } catch (err) {
+    alert(t("bundleSaveFail") + (err.message || err));
+  } finally {
+    if (btnSave) {
+      btnSave.disabled = false;
+      btnSave.innerHTML = `
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+          <polyline points="17 21 17 13 7 13 7 21"/>
+          <polyline points="7 3 7 8 15 8"/>
+        </svg>
+        <span id="i18n-btn-bundle-save">${t("btnBundleSave")}</span>
+      `;
+    }
+  }
+}
+window.saveBundleConfig = saveBundleConfig;
+
+async function clearBundleConfig() {
+  if (!bundleEditingTarget) return;
+  if (!confirm(t("confirmRemoveBundleConfig"))) return;
+
+  const btnDel = document.getElementById("btn-bundle-remove-config");
+  if (btnDel) btnDel.disabled = true;
+
+  try {
+    const tenantId = getTenantIdFromUrl();
+    const cat = currentMenuData[bundleEditingTarget.catIndex];
+    const payload = {
+      parent_item_id: bundleEditingTarget.item.id || null,
+      item_name: bundleEditingTarget.item.name,
+      category_id: cat.catId || null,
+      category_slug: cat.id,
+      delete: true
+    };
+
+    const res = await fetch(`${WORKER_BASE}/api/menu/bundle-rules?tenant_id=${tenantId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    const resData = await res.json();
+    if (!res.ok || resData.error) {
+      throw new Error(resData.error || res.statusText);
+    }
+
+    bundleEditingTarget.item.bundleRule = null;
+    const catIdx = bundleEditingTarget.catIndex;
+    closeBundleEditorModal();
+    renderMenuCategoryEditor(catIdx);
+  } catch (err) {
+    alert(t("bundleSaveFail") + (err.message || err));
+  } finally {
+    if (btnDel) btnDel.disabled = false;
+  }
+}
+window.clearBundleConfig = clearBundleConfig;
+
+// ==========================================
+// Unified Creation & Item Modifiers Editor
+// ==========================================
+
+function openCreationTypeModal() {
+  const modal = document.getElementById("creationTypeModal");
+  if (modal) modal.style.display = "flex";
+}
+window.openCreationTypeModal = openCreationTypeModal;
+
+function closeCreationTypeModal() {
+  const modal = document.getElementById("creationTypeModal");
+  if (modal) modal.style.display = "none";
+}
+window.closeCreationTypeModal = closeCreationTypeModal;
+
+function handleMenuCreateClick() {
+  if (activeCategoryIndex >= 0 && currentMenuData && currentMenuData[activeCategoryIndex]) {
+    const cat = currentMenuData[activeCategoryIndex];
+    if (cat.type === 'order_customization' || cat.id === 'sec-flavor') {
+      addCustomizationGroup(activeCategoryIndex);
+      return;
+    }
+  }
+  openCreationTypeModal();
+}
+window.handleMenuCreateClick = handleMenuCreateClick;
+
+function handleSelectCreateType(type) {
+  closeCreationTypeModal();
+  let targetCatIdx = activeCategoryIndex;
+  if (!currentMenuData || targetCatIdx < 0 || currentMenuData[targetCatIdx].type !== 'catalog') {
+    targetCatIdx = currentMenuData ? currentMenuData.findIndex(c => c.type === 'catalog') : -1;
+  }
+
+  if (type === 'standard_item' || type === 'item_with_options') {
+    if (targetCatIdx >= 0) {
+      activeCategoryIndex = targetCatIdx;
+      renderMenuCategories();
+      renderMenuCategoryEditor(targetCatIdx);
+      openCreateItemModal(targetCatIdx);
+    }
+  } else if (type === 'bundle') {
+    if (typeof openBundleWizard === 'function') {
+      openBundleWizard();
+    }
+  } else if (type === 'global_customization') {
+    const flavorIdx = currentMenuData ? currentMenuData.findIndex(c => c.type === 'order_customization' || c.id === 'sec-flavor') : -1;
+    if (flavorIdx >= 0) {
+      activeCategoryIndex = flavorIdx;
+      renderMenuCategories();
+      renderMenuCategoryEditor(flavorIdx);
+      addCustomizationGroup(flavorIdx);
+    }
+  }
+}
+window.handleSelectCreateType = handleSelectCreateType;
+
+let currentItemModifiersCidx = null;
+let currentItemModifiersIidx = null;
+let tempItemModifierGroups = [];
+
+function openItemModifiersModal(cIdx, iIdx) {
+  syncMenuDataFromDOM();
+  if (!currentMenuData || !currentMenuData[cIdx] || !currentMenuData[cIdx].items || !currentMenuData[cIdx].items[iIdx]) return;
+  currentItemModifiersCidx = cIdx;
+  currentItemModifiersIidx = iIdx;
+  const item = currentMenuData[cIdx].items[iIdx];
+  tempItemModifierGroups = JSON.parse(JSON.stringify(item.modifierGroups || []));
+
+  const modal = document.getElementById("itemModifiersModal");
+  const titleEl = document.getElementById("item-modifiers-modal-title");
+  if (titleEl) {
+    const itemName = item.name ? item.name.trim() : (t("newItemPlaceholder") || "Món mới");
+    titleEl.innerText = `${t("itemModifiersModalTitle")} - ${itemName}`;
+  }
+  const subEl = document.getElementById("item-modifiers-modal-sub");
+  if (subEl) subEl.innerText = t("itemModifiersModalSub");
+
+  renderItemModifiersEditor();
+  if (modal) modal.style.display = "flex";
+}
+window.openItemModifiersModal = openItemModifiersModal;
+
+function closeItemModifiersModal() {
+  const modal = document.getElementById("itemModifiersModal");
+  if (modal) modal.style.display = "none";
+  const returnState = window._hubModalReturnState;
+  currentItemModifiersCidx = null;
+  currentItemModifiersIidx = null;
+  tempItemModifierGroups = [];
+  if (returnState) {
+    window._hubModalReturnState = null;
+    openItemDetailModal(returnState.catIdx, returnState.itemIdx);
+  }
+}
+window.closeItemModifiersModal = closeItemModifiersModal;
+
+function syncItemModifiersFromDOM() {
+  const container = document.getElementById("item-modifiers-modal-body");
+  if (!container) return;
+  const groupCards = container.querySelectorAll(".mod-group-card");
+  groupCards.forEach((card, gIdx) => {
+    if (!tempItemModifierGroups[gIdx]) return;
+    const nameInput = card.querySelector(".mod-group-name-input");
+    if (nameInput) tempItemModifierGroups[gIdx].name = nameInput.value.trim();
+    const selTypeSelect = card.querySelector(".mod-group-type-select");
+    if (selTypeSelect) tempItemModifierGroups[gIdx].selectionType = selTypeSelect.value;
+    const reqCheckbox = card.querySelector(".mod-group-req-checkbox");
+    if (reqCheckbox) tempItemModifierGroups[gIdx].isRequired = reqCheckbox.checked;
+
+    const optRows = card.querySelectorAll(".mod-option-row");
+    optRows.forEach((row, oIdx) => {
+      if (!tempItemModifierGroups[gIdx].options || !tempItemModifierGroups[gIdx].options[oIdx]) return;
+      const optNameInput = row.querySelector(".mod-opt-name-input");
+      if (optNameInput) tempItemModifierGroups[gIdx].options[oIdx].name = optNameInput.value.trim();
+      const optPriceInput = row.querySelector(".mod-opt-price-input");
+      if (optPriceInput) tempItemModifierGroups[gIdx].options[oIdx].price = Number(optPriceInput.value) || 0;
+      const optDefCheckbox = row.querySelector(".mod-opt-def-checkbox");
+      if (optDefCheckbox) tempItemModifierGroups[gIdx].options[oIdx].isDefault = optDefCheckbox.checked;
+    });
+  });
+}
+
+function renderItemModifiersEditor() {
+  const container = document.getElementById("item-modifiers-modal-body");
+  if (!container) return;
+  container.innerHTML = "";
+
+  if (tempItemModifierGroups.length === 0) {
+    const empty = document.createElement("div");
+    empty.style.textAlign = "center";
+    empty.style.padding = "32px 16px";
+    empty.style.color = "#94a3b8";
+    empty.style.fontSize = "14px";
+    empty.innerText = t("noModifierGroups") || "此品項尚未設定專屬客製選項。點擊上方按鈕開始新增。";
+    container.appendChild(empty);
+    return;
+  }
+
+  tempItemModifierGroups.forEach((grp, gIdx) => {
+    const card = document.createElement("div");
+    card.className = "mod-group-card";
+    card.setAttribute("data-group-index", gIdx);
+
+    const isSingle = grp.selectionType === 'single';
+    const isReq = Boolean(grp.isRequired);
+
+    let optionsHtml = '';
+    (grp.options || []).forEach((opt, oIdx) => {
+      optionsHtml += `
+        <div class="mod-option-row" data-opt-index="${oIdx}">
+          <input type="text" class="mod-opt-name-input" value="${escapeHtml(opt.name || '')}" placeholder="${t('labelOptionName') || '選項名稱'}" style="flex: 2; min-height: 40px; padding: 6px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13.5px;" oninput="syncItemModifiersFromDOM()">
+          <label style="display: flex; align-items: center; gap: 4px; font-size: 13px; color: #475569; font-weight: 700; white-space: nowrap;">
+            <span>+$</span>
+            <input type="number" class="mod-opt-price-input" value="${opt.price || 0}" placeholder="0" style="width: 70px; min-height: 40px; padding: 6px 8px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13.5px;" oninput="syncItemModifiersFromDOM()">
+          </label>
+          <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: #64748b; font-weight: 600; cursor: pointer; user-select: none;">
+            <input type="checkbox" class="mod-opt-def-checkbox" ${opt.isDefault ? 'checked' : ''} style="width: 16px; height: 16px; accent-color: #2563eb;" onchange="if (this.checked && '${grp.selectionType}' === 'single') { this.closest('.mod-options-container').querySelectorAll('.mod-opt-def-checkbox').forEach(cb => { if (cb !== this) cb.checked = false; }); } syncItemModifiersFromDOM();">
+            <span>${currentLang === 'vi' ? 'Mặc định' : '預設'}</span>
+          </label>
+          <button type="button" class="btn btn-ghost btn-danger-ghost" onclick="removeItemModifierOption(${gIdx}, ${oIdx})" style="min-width: 36px; height: 36px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px;" title="${t('btnItemDelete')}">
+            ${(typeof POS_SVG !== 'undefined' && POS_SVG.trash) || '✕'}
+          </button>
+        </div>
+      `;
+    });
+
+    card.innerHTML = `
+      <div class="mod-group-header">
+        <input type="text" class="mod-group-name-input" value="${escapeHtml(grp.name || '')}" placeholder="${t('labelModifierGroupName') || '群組名稱 (例: 辣度、加料)'}" style="flex: 2; min-width: 160px; min-height: 44px; padding: 8px 12px; font-size: 14.5px; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 8px;" oninput="syncItemModifiersFromDOM()">
+        <select class="mod-group-type-select" style="min-height: 44px; padding: 6px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13.5px; font-weight: 600; background: #f8fafc;" onchange="syncItemModifiersFromDOM()">
+          <option value="single" ${isSingle ? 'selected' : ''}>${t('optionSingleRadio') || '單選 (Radio)'}</option>
+          <option value="multiple" ${!isSingle ? 'selected' : ''}>${t('optionMultipleCheckbox') || '多選 (Checkbox)'}</option>
+        </select>
+        <label style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; min-height: 44px; background: ${isReq ? '#fef2f2' : '#f8fafc'}; border: 1.5px solid ${isReq ? '#fca5a5' : '#cbd5e1'}; border-radius: 8px; cursor: pointer; user-select: none;">
+          <input type="checkbox" class="mod-group-req-checkbox" ${isReq ? 'checked' : ''} style="width: 18px; height: 18px; accent-color: #ef4444;" onchange="syncItemModifiersFromDOM(); this.closest('label').style.background = this.checked ? '#fef2f2' : '#f8fafc'; this.closest('label').style.borderColor = this.checked ? '#fca5a5' : '#cbd5e1';">
+          <span style="font-size: 13px; font-weight: 700; color: ${isReq ? '#b91c1c' : '#475569'};">${t('labelModifierRequired') || '必選'}</span>
+        </label>
+        <button type="button" class="btn btn-ghost btn-danger-ghost" onclick="removeItemModifierGroup(${gIdx})" style="min-width: 44px; height: 44px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; margin-left: auto;" title="${t('btnItemDelete')}">
+          ${(typeof POS_SVG !== 'undefined' && POS_SVG.trash) || '✕'}
+        </button>
+      </div>
+      <div class="mod-options-container" style="display: flex; flex-direction: column; gap: 6px; margin-top: 4px; padding-left: 8px; border-left: 2px solid #e2e8f0;">
+        ${optionsHtml}
+        <button type="button" class="btn btn-ghost" onclick="addItemModifierOption(${gIdx})" style="margin-top: 6px; align-self: flex-start; min-height: 38px; padding: 0 14px; font-size: 12.5px; font-weight: 700; color: #16a34a; background: #f0fdf4; border: 1.5px dashed #86efac; border-radius: 8px;">
+          + ${t('btnAddModifierOption') || '新增選項'}
+        </button>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function addItemModifierGroup() {
+  syncItemModifiersFromDOM();
+  tempItemModifierGroups.push({
+    id: `mg_${Date.now()}_${tempItemModifierGroups.length + 1}`,
+    name: "",
+    selectionType: "single",
+    isRequired: false,
+    minSelection: 0,
+    maxSelection: 1,
+    options: [
+      { id: `mo_${Date.now()}_1`, name: "", price: 0, isDefault: false }
+    ]
+  });
+  renderItemModifiersEditor();
+}
+window.addItemModifierGroup = addItemModifierGroup;
+
+function removeItemModifierGroup(gIdx) {
+  syncItemModifiersFromDOM();
+  tempItemModifierGroups.splice(gIdx, 1);
+  renderItemModifiersEditor();
+}
+window.removeItemModifierGroup = removeItemModifierGroup;
+
+function addItemModifierOption(gIdx) {
+  syncItemModifiersFromDOM();
+  if (!tempItemModifierGroups[gIdx]) return;
+  if (!Array.isArray(tempItemModifierGroups[gIdx].options)) {
+    tempItemModifierGroups[gIdx].options = [];
+  }
+  tempItemModifierGroups[gIdx].options.push({
+    id: `mo_${Date.now()}_${tempItemModifierGroups[gIdx].options.length + 1}`,
+    name: "",
+    price: 0,
+    isDefault: false
+  });
+  renderItemModifiersEditor();
+}
+window.addItemModifierOption = addItemModifierOption;
+
+function removeItemModifierOption(gIdx, oIdx) {
+  syncItemModifiersFromDOM();
+  if (!tempItemModifierGroups[gIdx] || !tempItemModifierGroups[gIdx].options) return;
+  tempItemModifierGroups[gIdx].options.splice(oIdx, 1);
+  renderItemModifiersEditor();
+}
+window.removeItemModifierOption = removeItemModifierOption;
+
+function saveItemModifiersModal() {
+  syncItemModifiersFromDOM();
+  const cleanGroups = tempItemModifierGroups.filter(grp => {
+    return grp.name && grp.name.trim() !== "";
+  }).map(grp => {
+    const cleanOpts = (grp.options || []).filter(opt => opt.name && opt.name.trim() !== "");
+    let seenDefault = false;
+    cleanOpts.forEach(opt => {
+      if (grp.selectionType === 'single') {
+        if (opt.isDefault) {
+          if (seenDefault) opt.isDefault = false;
+          else seenDefault = true;
+        }
+      }
+    });
+    return {
+      id: grp.id || `mg_${Date.now()}`,
+      name: grp.name.trim(),
+      selectionType: grp.selectionType || 'single',
+      isRequired: Boolean(grp.isRequired),
+      minSelection: grp.isRequired ? 1 : 0,
+      maxSelection: grp.selectionType === 'single' ? 1 : 99,
+      options: cleanOpts
+    };
+  });
+
+  if (currentItemModifiersCidx !== null && currentItemModifiersIidx !== null) {
+    const item = currentMenuData[currentItemModifiersCidx]?.items?.[currentItemModifiersIidx];
+    if (item) {
+      item.modifierGroups = cleanGroups;
+      item.itemType = (item.bundleRule && item.bundleRule.groups && item.bundleRule.groups.length > 0) ? 'bundle' : 'standard';
+      markMenuDirty();
+      renderMenuCategoryEditor(currentItemModifiersCidx);
+    }
+  }
+  closeItemModifiersModal();
+}
+window.saveItemModifiersModal = saveItemModifiersModal;
+
+// ==========================================================================
+// Item Detail Hub Modal (#itemDetailModal) Controller
+// ==========================================================================
+let activeItemDetailCatIdx = null;
+let activeItemDetailItemIdx = null;
+let currentDetailImageKey = null;
+let isItemDetailCreateMode = false;
+
+async function checkItemDetailImage(categoryId, itemName) {
+  const previewEl = document.getElementById("item-detail-img-preview");
+  const placeholderEl = document.getElementById("item-detail-img-placeholder");
+  const deleteBtn = document.getElementById("btn-item-detail-delete-img");
+  const statusEl = document.getElementById("item-detail-img-status");
+
+  if (!previewEl || !placeholderEl || !statusEl) return;
+  statusEl.innerText = t("imageChecking");
+  previewEl.style.display = "none";
+  placeholderEl.style.display = "flex";
+  if (deleteBtn) deleteBtn.style.display = "none";
+
+  const key = `${categoryId}_${itemName}`;
+  const tenantId = getTenantIdFromUrl();
+
+  try {
+    let list = window._tenantImageList;
+    if (!list) {
+      const res = await fetch(`${WORKER_BASE}/api/image_list?tenant_id=${tenantId}&_t=${Date.now()}`);
+      if (res.ok) {
+        const arr = await res.json();
+        list = new Set(arr);
+        window._tenantImageList = list;
+      }
+    }
+    const hasImg = list && (list.has(key) || list.has(itemName));
+    if (hasImg) {
+      const resolvedName = list.has(key) ? key : itemName;
+      previewEl.src = `${WORKER_BASE}/api/image?tenant_id=${tenantId}&name=${encodeURIComponent(resolvedName)}&_t=${Date.now()}`;
+      previewEl.style.display = "block";
+      placeholderEl.style.display = "none";
+      if (deleteBtn) deleteBtn.style.display = "inline-flex";
+      statusEl.innerText = t("imageHasImage");
+    } else {
+      statusEl.innerText = t("imageNoImage");
+    }
+  } catch (e) {
+    statusEl.innerText = t("imageLoadFail");
+  }
+}
+
+function triggerItemDetailPhotoUpload() {
+  const nameInput = document.getElementById("item-detail-name-input");
+  const nameVal = nameInput ? nameInput.value.trim() : "";
+  if (!nameVal && (isItemDetailCreateMode || activeItemDetailItemIdx === null)) {
+    alert(t("enterItemNameFirst") || (currentLang === 'vi' ? "Vui lòng nhập tên món trước khi tải ảnh lên" : "請先輸入餐點名稱再上傳圖片"));
+    if (nameInput) nameInput.focus();
+    return;
+  }
+  const cat = currentMenuData[activeItemDetailCatIdx];
+  if (cat && nameVal) {
+    currentDetailImageKey = `${cat.id}_${nameVal}`;
+  }
+  const fileInput = document.getElementById("item-detail-file-input");
+  if (fileInput) fileInput.click();
+}
+window.triggerItemDetailPhotoUpload = triggerItemDetailPhotoUpload;
+
+function handleItemDetailImageSelect(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  const nameInput = document.getElementById("item-detail-name-input");
+  const nameVal = (nameInput ? nameInput.value.trim() : "") || (currentMenuData[activeItemDetailCatIdx]?.items?.[activeItemDetailItemIdx]?.name || "").trim();
+  const cat = currentMenuData[activeItemDetailCatIdx];
+  if (!nameVal || !cat) {
+    event.target.value = "";
+    return;
+  }
+  currentDetailImageKey = `${cat.id}_${nameVal}`;
+
+  const statusEl = document.getElementById("item-detail-img-status");
+  if (statusEl) statusEl.innerText = t("imageUploading");
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = async function() {
+      const MAX_WIDTH = 800;
+      const MAX_HEIGHT = 800;
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height) {
+        if (width > MAX_WIDTH) {
+          height *= MAX_WIDTH / width;
+          width = MAX_WIDTH;
+        }
+      } else {
+        if (height > MAX_HEIGHT) {
+          width *= MAX_HEIGHT / height;
+          height = MAX_HEIGHT;
+        }
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, width, height);
+
+      const dataUri = canvas.toDataURL("image/webp", 0.82);
+
+      try {
+        const tenantId = getTenantIdFromUrl();
+        const res = await fetch(`${WORKER_BASE}/api/image?tenant_id=${tenantId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: currentDetailImageKey, dataUri })
+        });
+        if (!res.ok) throw new Error("Upload failed");
+
+        const previewEl = document.getElementById("item-detail-img-preview");
+        const placeholderEl = document.getElementById("item-detail-img-placeholder");
+        const deleteBtn = document.getElementById("btn-item-detail-delete-img");
+
+        if (previewEl) {
+          previewEl.src = dataUri;
+          previewEl.style.display = "block";
+        }
+        if (placeholderEl) placeholderEl.style.display = "none";
+        if (deleteBtn) deleteBtn.style.display = "inline-flex";
+        if (statusEl) statusEl.innerText = t("imageUploadSuccess");
+
+        if (window._tenantImageList) window._tenantImageList.add(currentDetailImageKey);
+      } catch (err) {
+        alert(t("imageUploadFail") + (err.message || ""));
+        if (statusEl) statusEl.innerText = t("imageLoadFail");
+      }
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  event.target.value = "";
+}
+window.handleItemDetailImageSelect = handleItemDetailImageSelect;
+
+async function deleteItemDetailPhoto() {
+  if (!currentDetailImageKey) return;
+  if (!confirm(t("confirmDeleteImage"))) return;
+
+  const statusEl = document.getElementById("item-detail-img-status");
+  const previewEl = document.getElementById("item-detail-img-preview");
+  const placeholderEl = document.getElementById("item-detail-img-placeholder");
+  const deleteBtn = document.getElementById("btn-item-detail-delete-img");
+
+  if (statusEl) statusEl.innerText = t("imageDeleting");
+  try {
+    const tenantId = getTenantIdFromUrl();
+    const res = await fetch(`${WORKER_BASE}/api/image?tenant_id=${tenantId}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: currentDetailImageKey })
+    });
+    if (!res.ok) throw new Error("Delete failed");
+
+    if (previewEl) {
+      previewEl.src = "";
+      previewEl.style.display = "none";
+    }
+    if (placeholderEl) placeholderEl.style.display = "flex";
+    if (deleteBtn) deleteBtn.style.display = "none";
+    if (statusEl) statusEl.innerText = t("imageNoImage");
+
+    if (window._tenantImageList) window._tenantImageList.delete(currentDetailImageKey);
+  } catch (err) {
+    alert(t("imageDeleteFail") + (err.message || ""));
+    if (statusEl) statusEl.innerText = t("imageLoadFail");
+  }
+}
+window.deleteItemDetailPhoto = deleteItemDetailPhoto;
+
+function renderQuickTags(currentVal) {
+  const container = document.getElementById("item-detail-quick-tags");
+  if (!container) return;
+  container.innerHTML = "";
+
+  const tags = [
+    { key: "quickTagHot", text: t("quickTagHot") },
+    { key: "quickTagRecommend", text: t("quickTagRecommend") },
+    { key: "quickTagNew", text: t("quickTagNew") },
+    { key: "quickTagSpicy", text: t("quickTagSpicy") }
+  ];
+
+  tags.forEach(tg => {
+    const chip = document.createElement("span");
+    chip.className = `quick-tag-chip ${currentVal === tg.text ? 'active' : ''}`;
+    chip.innerText = tg.text;
+    chip.onclick = () => handleQuickTagClick(tg.text);
+    container.appendChild(chip);
+  });
+}
+
+function handleQuickTagClick(tagText) {
+  const badgeInput = document.getElementById("item-detail-badge-input");
+  const recCheckbox = document.getElementById("item-detail-recommended-checkbox");
+  if (!badgeInput) return;
+
+  const currentVal = badgeInput.value.trim();
+  const recTag = t("quickTagRecommend");
+
+  if (currentVal === tagText) {
+    badgeInput.value = "";
+    if (tagText === recTag && recCheckbox) recCheckbox.checked = false;
+  } else {
+    badgeInput.value = tagText;
+    if (tagText === recTag && recCheckbox) recCheckbox.checked = true;
+  }
+  renderQuickTags(badgeInput.value.trim());
+}
+window.handleQuickTagClick = handleQuickTagClick;
+
+function autoCommitItemDetailFields() {
+  if (activeItemDetailCatIdx === null || activeItemDetailItemIdx === null) return;
+  const item = currentMenuData[activeItemDetailCatIdx]?.items?.[activeItemDetailItemIdx];
+  if (!item) return;
+
+  const nameInput = document.getElementById("item-detail-name-input");
+  const priceInput = document.getElementById("item-detail-price-input");
+  const badgeInput = document.getElementById("item-detail-badge-input");
+  const recCheckbox = document.getElementById("item-detail-recommended-checkbox");
+
+  if (nameInput && nameInput.value.trim()) item.name = nameInput.value.trim();
+  if (priceInput && priceInput.value !== "") {
+    const p = parseFloat(priceInput.value);
+    if (!isNaN(p)) item.price = p;
+  }
+  if (badgeInput) item.badgeText = badgeInput.value.trim();
+  if (recCheckbox) item.isRecommended = recCheckbox.checked;
+  markMenuDirty();
+}
+
+function openCreateItemModal(cIdx) {
+  syncMenuDataFromDOM();
+  if (!currentMenuData || !currentMenuData[cIdx]) return;
+
+  isItemDetailCreateMode = true;
+  activeItemDetailCatIdx = cIdx;
+  activeItemDetailItemIdx = null;
+  currentDetailImageKey = null;
+
+  const cat = currentMenuData[cIdx];
+  const modal = document.getElementById("itemDetailModal");
+  const titleEl = document.getElementById("item-detail-modal-title");
+  if (titleEl) {
+    titleEl.innerText = `${t("itemCreateTitle") || (currentLang === 'vi' ? "Thêm món mới" : "新增餐點")} (${cat.title})`;
+    titleEl.setAttribute("data-custom-title", "1");
+  }
+
+  // Name & Price inputs
+  const nameInput = document.getElementById("item-detail-name-input");
+  if (nameInput) {
+    nameInput.value = "";
+    nameInput.oninput = () => {
+      const val = nameInput.value.trim();
+      const photoNameEl = document.getElementById("item-detail-photo-item-name");
+      if (photoNameEl) photoNameEl.innerText = val || "";
+    };
+  }
+  const priceInput = document.getElementById("item-detail-price-input");
+  if (priceInput) priceInput.value = "";
+
+  // Photo
+  const photoNameEl = document.getElementById("item-detail-photo-item-name");
+  if (photoNameEl) photoNameEl.innerText = "";
+  const previewEl = document.getElementById("item-detail-img-preview");
+  const placeholderEl = document.getElementById("item-detail-img-placeholder");
+  const deleteBtn = document.getElementById("btn-item-detail-delete-img");
+  const statusEl = document.getElementById("item-detail-img-status");
+
+  if (previewEl) {
+    previewEl.src = "";
+    previewEl.style.display = "none";
+  }
+  if (placeholderEl) placeholderEl.style.display = "flex";
+  if (deleteBtn) deleteBtn.style.display = "none";
+  if (statusEl) statusEl.innerText = t("imageNoImage");
+
+  // Badge & Recommended
+  const badgeInput = document.getElementById("item-detail-badge-input");
+  if (badgeInput) {
+    badgeInput.value = "";
+    renderQuickTags("");
+    badgeInput.oninput = () => renderQuickTags(badgeInput.value.trim());
+  }
+  const recCheckbox = document.getElementById("item-detail-recommended-checkbox");
+  if (recCheckbox) recCheckbox.checked = false;
+
+  // Advanced Section
+  const advSection = document.getElementById("item-detail-advanced-section");
+  if (cat.type !== 'catalog') {
+    if (advSection) advSection.style.display = "none";
+  } else {
+    if (advSection) advSection.style.display = "block";
+    const modSumEl = document.getElementById("item-detail-mod-summary");
+    if (modSumEl) modSumEl.innerText = t("cardModifiersEmpty");
+
+    const bundleCard = document.getElementById("item-detail-bundle-card");
+    const isBundleDisabled = window.currentTenantFeatures?.includes('disable_bundle_builder_v2');
+    if (isBundleDisabled) {
+      if (bundleCard) bundleCard.style.display = "none";
+    } else {
+      if (bundleCard) bundleCard.style.display = "flex";
+      const bndlSumEl = document.getElementById("item-detail-bundle-summary");
+      if (bndlSumEl) bndlSumEl.innerText = t("cardBundleEmpty");
+    }
+  }
+
+  // Buttons
+  const cancelBtn = document.getElementById("btn-item-detail-cancel");
+  if (cancelBtn) cancelBtn.innerText = t("btnItemCancel") || (currentLang === 'vi' ? "Hủy" : "取消");
+
+  const doneBtn = document.getElementById("btn-item-detail-done");
+  if (doneBtn) {
+    doneBtn.innerText = t("btnItemCreate") || (currentLang === 'vi' ? "Tạo món" : "建立餐點");
+    doneBtn.setAttribute("data-custom-text", "1");
+  }
+
+  if (modal) modal.style.display = "flex";
+  setTimeout(() => {
+    if (nameInput) nameInput.focus();
+  }, 80);
+}
+window.openCreateItemModal = openCreateItemModal;
+
+function openItemDetailModal(cIdx, iIdx) {
+  syncMenuDataFromDOM();
+  if (!currentMenuData || !currentMenuData[cIdx] || !currentMenuData[cIdx].items || !currentMenuData[cIdx].items[iIdx]) return;
+
+  isItemDetailCreateMode = false;
+  activeItemDetailCatIdx = cIdx;
+  activeItemDetailItemIdx = iIdx;
+
+  const cat = currentMenuData[cIdx];
+  const item = cat.items[iIdx];
+
+  const modal = document.getElementById("itemDetailModal");
+  const titleEl = document.getElementById("item-detail-modal-title");
+  if (titleEl) {
+    const itemName = item.name ? item.name.trim() : (t("newItemPlaceholder") || "Món mới");
+    titleEl.innerText = `${t("itemDetailTitle")} - ${itemName}`;
+    titleEl.setAttribute("data-custom-title", "1");
+  }
+
+  // Name & Price inputs
+  const nameInput = document.getElementById("item-detail-name-input");
+  if (nameInput) {
+    nameInput.value = item.name || "";
+    nameInput.oninput = () => {
+      const val = nameInput.value.trim();
+      const photoNameEl = document.getElementById("item-detail-photo-item-name");
+      if (photoNameEl) photoNameEl.innerText = val || "";
+    };
+  }
+  const priceInput = document.getElementById("item-detail-price-input");
+  if (priceInput) {
+    priceInput.value = (item.price !== null && item.price !== undefined) ? item.price : "";
+  }
+
+  // Photo
+  const photoNameEl = document.getElementById("item-detail-photo-item-name");
+  if (photoNameEl) photoNameEl.innerText = item.name || "";
+  currentDetailImageKey = `${cat.id}_${item.name}`;
+  checkItemDetailImage(cat.id, item.name);
+
+  // Badge & Recommended
+  const badgeInput = document.getElementById("item-detail-badge-input");
+  if (badgeInput) {
+    badgeInput.value = item.badgeText || "";
+    renderQuickTags(item.badgeText || "");
+    badgeInput.oninput = () => renderQuickTags(badgeInput.value.trim());
+  }
+  const recCheckbox = document.getElementById("item-detail-recommended-checkbox");
+  if (recCheckbox) {
+    recCheckbox.checked = Boolean(item.isRecommended || (item.badgeText && item.badgeText.includes(t("quickTagRecommend"))));
+  }
+
+  // Advanced Section
+  const advSection = document.getElementById("item-detail-advanced-section");
+  if (cat.type !== 'catalog') {
+    if (advSection) advSection.style.display = "none";
+  } else {
+    if (advSection) advSection.style.display = "block";
+
+    // Modifiers Summary
+    const modCount = (item.modifierGroups || []).length;
+    const modSumEl = document.getElementById("item-detail-mod-summary");
+    if (modSumEl) {
+      modSumEl.innerText = modCount > 0 ? t("cardModifiersCount", { count: modCount }) : t("cardModifiersEmpty");
+    }
+
+    // Bundle Summary
+    const bundleCard = document.getElementById("item-detail-bundle-card");
+    const isBundleDisabled = window.currentTenantFeatures?.includes('disable_bundle_builder_v2');
+    if (isBundleDisabled) {
+      if (bundleCard) bundleCard.style.display = "none";
+    } else {
+      if (bundleCard) bundleCard.style.display = "flex";
+      const bundleCount = (item.bundleRule && Array.isArray(item.bundleRule.groups)) ? item.bundleRule.groups.length : 0;
+      const bndlSumEl = document.getElementById("item-detail-bundle-summary");
+      if (bndlSumEl) {
+        bndlSumEl.innerText = bundleCount > 0 ? t("cardBundleCount", { count: bundleCount }) : t("cardBundleEmpty");
+      }
+    }
+  }
+
+  // Buttons
+  const cancelBtn = document.getElementById("btn-item-detail-cancel");
+  if (cancelBtn) cancelBtn.innerText = t("btnItemCancel") || (currentLang === 'vi' ? "Hủy" : "取消");
+
+  const doneBtn = document.getElementById("btn-item-detail-done");
+  if (doneBtn) {
+    doneBtn.innerText = t("btnDetailDone") || (currentLang === 'vi' ? "Hoàn tất" : "完成");
+    doneBtn.removeAttribute("data-custom-text");
+  }
+
+  if (modal) modal.style.display = "flex";
+}
+window.openItemDetailModal = openItemDetailModal;
+
+function closeItemDetailModal() {
+  const modal = document.getElementById("itemDetailModal");
+  if (modal) modal.style.display = "none";
+  isItemDetailCreateMode = false;
+  activeItemDetailCatIdx = null;
+  activeItemDetailItemIdx = null;
+  currentDetailImageKey = null;
+}
+window.closeItemDetailModal = closeItemDetailModal;
+
+function saveItemDetailModal() {
+  if (activeItemDetailCatIdx === null) {
+    closeItemDetailModal();
+    return;
+  }
+  const cat = currentMenuData[activeItemDetailCatIdx];
+  if (!cat) {
+    closeItemDetailModal();
+    return;
+  }
+
+  const nameInput = document.getElementById("item-detail-name-input");
+  const priceInput = document.getElementById("item-detail-price-input");
+  const badgeInput = document.getElementById("item-detail-badge-input");
+  const recCheckbox = document.getElementById("item-detail-recommended-checkbox");
+
+  const nameVal = nameInput ? nameInput.value.trim() : "";
+  const priceVal = priceInput && priceInput.value !== "" ? parseFloat(priceInput.value) : 0;
+  const badgeVal = badgeInput ? badgeInput.value.trim() : "";
+  const recVal = recCheckbox ? recCheckbox.checked : false;
+
+  if (!nameVal) {
+    alert(t("enterItemName") || (currentLang === 'vi' ? "Vui lòng nhập tên món" : "請輸入餐點名稱"));
+    if (nameInput) nameInput.focus();
+    return;
+  }
+
+  if (isItemDetailCreateMode || activeItemDetailItemIdx === null) {
+    const newItem = {
+      name: nameVal,
+      price: isNaN(priceVal) ? 0 : priceVal,
+      badgeText: badgeVal,
+      isRecommended: recVal,
+      isOos: false,
+      bundleRule: null,
+      itemType: "standard",
+      modifierGroups: []
+    };
+    cat.items.push(newItem);
+    markMenuDirty();
+    renderMenuCategoryEditor(activeItemDetailCatIdx);
+    renderMenuCategories();
+  } else {
+    const item = cat.items[activeItemDetailItemIdx];
+    if (item) {
+      item.name = nameVal;
+      item.price = isNaN(priceVal) ? 0 : priceVal;
+      item.badgeText = badgeVal;
+      item.isRecommended = recVal;
+      markMenuDirty();
+      renderMenuCategoryEditor(activeItemDetailCatIdx);
+      renderMenuCategories();
+    }
+  }
+
+  closeItemDetailModal();
+}
+window.saveItemDetailModal = saveItemDetailModal;
+
+function transitionToSubEditor(type) {
+  if (activeItemDetailCatIdx === null) return;
+  const cat = currentMenuData[activeItemDetailCatIdx];
+  if (!cat) return;
+
+  const nameInput = document.getElementById("item-detail-name-input");
+  const priceInput = document.getElementById("item-detail-price-input");
+  const badgeInput = document.getElementById("item-detail-badge-input");
+  const recCheckbox = document.getElementById("item-detail-recommended-checkbox");
+
+  const nameVal = nameInput ? nameInput.value.trim() : "";
+  const priceVal = priceInput && priceInput.value !== "" ? parseFloat(priceInput.value) : 0;
+  const badgeVal = badgeInput ? badgeInput.value.trim() : "";
+  const recVal = recCheckbox ? recCheckbox.checked : false;
+
+  if (isItemDetailCreateMode || activeItemDetailItemIdx === null) {
+    if (!nameVal) {
+      alert(t("enterItemNameFirst") || (currentLang === 'vi' ? "Vui lòng nhập tên món trước khi thiết lập nâng cao" : "請先輸入餐點名稱再進行進階設定"));
+      if (nameInput) nameInput.focus();
+      return;
+    }
+    const newItem = {
+      name: nameVal,
+      price: isNaN(priceVal) ? 0 : priceVal,
+      badgeText: badgeVal,
+      isRecommended: recVal,
+      isOos: false,
+      bundleRule: null,
+      itemType: "standard",
+      modifierGroups: []
+    };
+    cat.items.push(newItem);
+    activeItemDetailItemIdx = cat.items.length - 1;
+    isItemDetailCreateMode = false;
+    markMenuDirty();
+    renderMenuCategoryEditor(activeItemDetailCatIdx);
+    renderMenuCategories();
+  } else {
+    autoCommitItemDetailFields();
+  }
+
+  const item = cat.items[activeItemDetailItemIdx];
+  if (!item) return;
+
+  window._hubModalReturnState = {
+    catId: cat.id,
+    itemName: item.name,
+    catIdx: activeItemDetailCatIdx,
+    itemIdx: activeItemDetailItemIdx
+  };
+
+  const modal = document.getElementById("itemDetailModal");
+  if (modal) modal.style.display = "none";
+
+  if (type === 'modifiers') {
+    openItemModifiersModal(activeItemDetailCatIdx, activeItemDetailItemIdx);
+  } else if (type === 'bundle') {
+    openBundleWizard(activeItemDetailCatIdx, activeItemDetailItemIdx);
+  }
+}
+window.transitionToSubEditor = transitionToSubEditor;
+
