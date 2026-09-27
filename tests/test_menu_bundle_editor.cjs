@@ -18,6 +18,7 @@ console.log("=== Running Menu Bundle Editor Test Suite ===");
 const i18nCode = fs.readFileSync(path.join(__dirname, '../js/orders-i18n.js'), 'utf8');
 const coreCode = fs.readFileSync(path.join(__dirname, '../js/orders-core.js'), 'utf8');
 const menuCode = fs.readFileSync(path.join(__dirname, '../js/orders-menu.js'), 'utf8');
+const wizardCode = fs.readFileSync(path.join(__dirname, '../js/orders-bundle-wizard.js'), 'utf8');
 
 // Mock browser environment
 const mockElements = new Map();
@@ -50,7 +51,9 @@ function createMockElement(id) {
     querySelectorAll(sel) { return []; },
     addEventListener() {},
     setAttribute() {},
-    getAttribute() { return null; }
+    getAttribute() { return null; },
+    focus() {},
+    blur() {}
   };
   mockElements.set(id, el);
   return el;
@@ -58,9 +61,11 @@ function createMockElement(id) {
 
 const windowMock = {
   location: { search: '?tenant=quanthuyhang', hostname: 'localhost' },
-  localStorage: { getItem: () => 'zh-TW', setItem: () => {} },
+  localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} },
   addEventListener: () => {},
   document: {
+    body: createMockElement('body'),
+    activeElement: null,
     getElementById: (id) => mockElements.get(id) || createMockElement(id),
     querySelectorAll: () => [],
     querySelector: () => null,
@@ -99,6 +104,7 @@ const context = vm.createContext(windowMock);
 vm.runInContext(i18nCode, context);
 vm.runInContext(coreCode, context);
 vm.runInContext(menuCode, context);
+vm.runInContext(wizardCode, context);
 
 // Test 1: I18N bundle keys in both zh-TW and vi
 console.log("1. Testing I18N coverage for bundle keys...");
@@ -258,8 +264,75 @@ assert.strictEqual(newDraftRule.groups[0].minQuantity, 1);
 assert.strictEqual(newDraftRule.groups[0].allowRepeats, false);
 console.log("✓ Regular item successfully initializes with standard 1-group template.");
 
-// Test 5: Verify modal HTML and CSS
-console.log("5. Testing HTML & CSS integration...");
+// Test 5: Verify auto-ticking of existing combos in openBundleWizard and openBundleEditorModal
+console.log("5. Testing auto-ticking and selection resolution on existing combos...");
+
+// 5.1 Test openBundleWizard on configured combo (item_combo_1: grp_1 with cat_mains, grp_2 with cat_sides)
+vm.runInContext(`openBundleWizard(0, 0);`, context);
+const wizardConfig = vm.runInContext(`comboWizard.config`, context);
+assert.strictEqual(wizardConfig.groups.length, 2, "Wizard config should load 2 groups");
+
+// Group 1: Whole category 'cat_mains'
+const main1Selected = vm.runInContext(`isComboItemSelected(comboWizard.config.groups[0], { id: 'main_1', name: '越式麵包', categoryId: 'cat_mains_uuid' })`, context);
+const main2Selected = vm.runInContext(`isComboItemSelected(comboWizard.config.groups[0], { id: 'main_2', name: '越式河粉', categoryId: 'cat_mains_uuid' })`, context);
+const side1NotSelectedInGrp1 = vm.runInContext(`isComboItemSelected(comboWizard.config.groups[0], { id: 'side_1', name: '花椰菜', categoryId: 'cat_sides_uuid' })`, context);
+
+assert.strictEqual(main1Selected, true, "main_1 should be automatically ticked via category source");
+assert.strictEqual(main2Selected, true, "main_2 should be automatically ticked via category source");
+assert.strictEqual(side1NotSelectedInGrp1, false, "side_1 should NOT be ticked in group 1");
+
+// Group 2: Whole category 'cat_sides'
+const side1SelectedInGrp2 = vm.runInContext(`isComboItemSelected(comboWizard.config.groups[1], { id: 'side_1', name: '花椰菜', categoryId: 'cat_sides_uuid' })`, context);
+const main1NotSelectedInGrp2 = vm.runInContext(`isComboItemSelected(comboWizard.config.groups[1], { id: 'main_1', name: '越式麵包', categoryId: 'cat_mains_uuid' })`, context);
+
+assert.strictEqual(side1SelectedInGrp2, true, "side_1 should be automatically ticked in group 2");
+assert.strictEqual(main1NotSelectedInGrp2, false, "main_1 should NOT be ticked in group 2");
+
+// 5.2 Test legacy combo loaded from D1 bootstrap with items array or eligibleItems but empty sources
+const legacyComboScript = `
+  currentMenuData[0].items.push({
+    id: 'item_legacy_combo',
+    name: '經典舊版組合',
+    price: 150,
+    isOos: false,
+    bundleRule: {
+      version: 1,
+      groups: [
+        {
+          id: 'grp_legacy_1',
+          name: '自選配菜',
+          type: 'choice',
+          minQuantity: 1,
+          maxQuantity: 1,
+          sources: [], // sources was empty in older rule
+          items: [{ itemId: 'side_3', quantity: 1, surcharge: 0 }],
+          eligibleItems: [{ id: 'side_3', name: '四季豆', price: 30 }]
+        }
+      ]
+    }
+  });
+`;
+vm.runInContext(legacyComboScript, context);
+const legacyItemIdx = vm.runInContext(`currentMenuData[0].items.length - 1`, context);
+
+// Open wizard on legacy combo
+vm.runInContext(`openBundleWizard(0, ${legacyItemIdx});`, context);
+const legacyWizardConfig = vm.runInContext(`comboWizard.config`, context);
+assert.strictEqual(legacyWizardConfig.groups[0].sources.length, 1, "Sources should be auto-populated from eligibleItems/items");
+const legacyItemTicked = vm.runInContext(`isComboItemSelected(comboWizard.config.groups[0], { id: 'side_3', name: '四季豆', categoryId: 'cat_sides_uuid' })`, context);
+assert.strictEqual(legacyItemTicked, true, "Legacy combo previously chosen item side_3 must be automatically ticked");
+
+// Open editor modal on legacy combo
+vm.runInContext(`openBundleEditorModal(0, ${legacyItemIdx});`, context);
+const legacyDraftGrp = vm.runInContext(`bundleDraftRule.groups[0]`, context);
+assert.strictEqual(legacyDraftGrp.sources.length, 1, "openBundleEditorModal should auto-populate sources for legacy combo");
+const legacyTab = vm.runInContext(`bundleSourceTab`, context);
+assert.strictEqual(legacyTab, 'items', "bundleSourceTab should smart-switch to 'items' tab when item sources exist");
+
+console.log("✓ Existing combo items automatically ticked, legacy rules normalized, and smart tab selection verified.");
+
+// Test 6: Verify modal HTML and CSS
+console.log("6. Testing HTML & CSS integration...");
 const htmlContent = fs.readFileSync(path.join(__dirname, '../orders.html'), 'utf8');
 const cssContent = fs.readFileSync(path.join(__dirname, '../css/orders.css'), 'utf8');
 
@@ -272,7 +345,8 @@ assert.ok(cssContent.includes('.bundle-stepper-btn'), "orders.css must contain .
 assert.ok(htmlContent.includes('id="bundleGuideModal"'), "orders.html must contain #bundleGuideModal");
 assert.ok(htmlContent.includes('id="btn-open-bundle-guide"'), "orders.html must contain #btn-open-bundle-guide");
 assert.ok(/orders\.css\?v=\w+/.test(htmlContent), "orders.css cache buster bumped");
-assert.ok(/orders-menu\.js\?v=\w+/.test(htmlContent), "orders-menu.js cache buster bumped");
+assert.ok(/orders-menu\.js\?v=20260927_bundle_edit_v1/.test(htmlContent), "orders-menu.js cache buster bumped");
+assert.ok(/orders-bundle-wizard\.js\?v=20260927_bundle_edit_v1/.test(htmlContent), "orders-bundle-wizard.js cache buster bumped");
 console.log("✓ Modal markup, CSS classes, Danger Zone, Guide Modal, and cache-busting verified.");
 
 console.log("\n====================================================");
