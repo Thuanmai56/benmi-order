@@ -10,7 +10,8 @@
     "test": "node scripts/check-frontend.js && node --test scripts/test-explore-routing.mjs && node --test scripts/test-client-modular.mjs && node --test scripts/test-line-tenant-redirect.mjs && node --test scripts/test-line-text-normalization.mjs && node --test scripts/test-order-domain-routing.mjs && node --experimental-sqlite --test scripts/test-order-domain-api.cjs",
     "test:order-identity": "node tests/test_order_identity.cjs",
     "test:pos-display": "node tests/test_pos_display.cjs",
-    "test:menu-safety": "node --experimental-sqlite --test scripts/test-menu-safety.cjs"
+    "test:menu-safety": "node --experimental-sqlite --test scripts/test-menu-safety.cjs",
+    "test:menu-regression": "node --experimental-sqlite --test tests/test_menu_compatibility_regression.cjs"
   },
   "keywords": [
     "pos",

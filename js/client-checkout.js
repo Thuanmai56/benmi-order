@@ -1065,7 +1065,7 @@ function buildStructuredCartItems() {
                         for (let s in c.single) {
                             const val = c.single[s];
                             if (val && val !== '不辣' && val !== '不需要') {
-                                const addP = getPrice(val);
+                                const addP = getPrice(val, s, key);
                                 itemModifiersTotal += addP;
                                 options.push({ group: s, choice: `${portionPrefix}${val}`, price: addP });
                             }
@@ -1074,7 +1074,7 @@ function buildStructuredCartItems() {
                     if (c.multiple) {
                         for (let t in c.multiple) {
                             if (c.multiple[t]) {
-                                const addP = getPrice(t);
+                                const addP = getPrice(t, null, key);
                                 itemModifiersTotal += addP;
                                 options.push({ group: '客製化', choice: `${portionPrefix}${t}`, price: addP });
                             }
@@ -1604,6 +1604,45 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                 }
             }
             return;
+        }
+
+        // Bước kiểm tra tuỳ chọn bắt buộc/min/max theo B2
+        const valFn = window.validateModifierDraft || (typeof validateModifierDraft === 'function' ? validateModifierDraft : null);
+        const getModsFn = window.getEffectiveItemModifierGroups || (typeof getEffectiveItemModifierGroups === 'function' ? getEffectiveItemModifierGroups : null);
+        if (valFn && getModsFn) {
+            for (let key in cart) {
+                const qty = cart[key];
+                if (qty > 0) {
+                    const itemMods = getModsFn(key);
+                    if (Array.isArray(itemMods) && itemMods.length > 0) {
+                        const itemCust = (customizeData && customizeData[key]) ? customizeData[key] : [];
+                        for (let pIdx = 0; pIdx < qty; pIdx++) {
+                            const draft = itemCust[pIdx] || null;
+                            const valRes = valFn(itemMods, draft);
+                            if (!valRes.valid) {
+                                clearTimeout(timeoutId);
+                                isSubmitting = false;
+                                setAllSubmitButtonsState(false, '確認下單', { cursor: 'pointer', opacity: '1' });
+
+                                const resolveFn = typeof resolveCatalogItem === 'function' ? resolveCatalogItem : (window.resolveCatalogItem || (k => ({ origName: k, displayName: k })));
+                                const itemInfo = resolveFn(key);
+                                const itemName = itemInfo?.displayName || itemInfo?.origName || key;
+                                const portionMsg = qty > 1 ? `（第 ${pIdx + 1} 份）` : '';
+                                const alertMsg = `【${itemName}】${portionMsg}：${valRes.message}`;
+
+                                if (typeof customAlert === 'function') customAlert(alertMsg);
+                                else alert(alertMsg);
+
+                                // Mở đúng modal và đúng portion cần sửa
+                                if (typeof openItemCustomizeModal === 'function') {
+                                    openItemCustomizeModal(itemInfo?.catSlug || itemInfo?.category, itemInfo?.origName, pIdx);
+                                }
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         setAllSubmitButtonsState(true, '處理中...', { cursor: 'not-allowed', opacity: '0.7' });
