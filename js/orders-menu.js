@@ -1839,6 +1839,21 @@ async function openBundleEditorModal(catIdx, itemIdx) {
       grp.maxQuantity = Math.max(grp.minQuantity, Number(grp.maxQuantity || grp.minQuantity));
       grp.allowRepeats = grp.allowRepeats !== undefined ? Boolean(grp.allowRepeats) : (grp.allowRepeat !== undefined ? Boolean(grp.allowRepeat) : true);
       grp.sources = Array.isArray(grp.sources) ? grp.sources : [];
+
+      // Auto-populate sources if missing from eligibleItems or items
+      if (grp.sources.length === 0) {
+        if (Array.isArray(grp.eligibleItems) && grp.eligibleItems.length > 0) {
+          grp.sources.push({
+            type: 'item_list',
+            itemIds: grp.eligibleItems.map(it => it.id || it.itemId || it.name).filter(Boolean)
+          });
+        } else if (Array.isArray(grp.items) && grp.items.length > 0) {
+          grp.sources.push({
+            type: 'item_list',
+            itemIds: grp.items.map(it => it.itemId || it.id || it.name).filter(Boolean)
+          });
+        }
+      }
     });
   } else {
     // Default initial bundle structure with 1 group
@@ -1862,7 +1877,14 @@ async function openBundleEditorModal(catIdx, itemIdx) {
   }
 
   bundleActiveGroupIndex = 0;
-  bundleSourceTab = 'category';
+  const firstGrp = bundleDraftRule?.groups?.[0];
+  if (firstGrp && firstGrp.sources && firstGrp.sources.some(s => s.type === 'category')) {
+    bundleSourceTab = 'category';
+  } else if (firstGrp && firstGrp.sources && firstGrp.sources.some(s => s.type === 'item_list' || s.type === 'items')) {
+    bundleSourceTab = 'items';
+  } else {
+    bundleSourceTab = 'category';
+  }
 
   // Set modal header details
   const nameEl = document.getElementById("bundle-modal-item-name");
@@ -1955,6 +1977,12 @@ function renderBundleEditorSidebar() {
 function selectBundleGroup(groupIdx) {
   syncBundleCurrentGroupFromDOM();
   bundleActiveGroupIndex = groupIdx;
+  const grp = bundleDraftRule?.groups?.[bundleActiveGroupIndex];
+  if (grp && grp.sources && grp.sources.some(s => s.type === 'category')) {
+    bundleSourceTab = 'category';
+  } else if (grp && grp.sources && grp.sources.some(s => s.type === 'item_list' || s.type === 'items')) {
+    bundleSourceTab = 'items';
+  }
   renderBundleEditorSidebar();
   renderBundleGroupConfigPanel();
 }
@@ -2055,12 +2083,19 @@ window.switchBundleSourceTab = switchBundleSourceTab;
 function toggleBundleSourceCategory(catId, isChecked) {
   if (!bundleDraftRule || !bundleDraftRule.groups[bundleActiveGroupIndex]) return;
   const grp = bundleDraftRule.groups[bundleActiveGroupIndex];
+  const targetCat = (currentMenuData || []).find(c => c.catId === catId || c.id === catId || (c.databaseId && c.databaseId === catId));
+  const catKeys = [catId];
+  if (targetCat) {
+    if (targetCat.catId) catKeys.push(targetCat.catId);
+    if (targetCat.id) catKeys.push(targetCat.id);
+    if (targetCat.databaseId) catKeys.push(targetCat.databaseId);
+  }
   if (isChecked) {
-    if (!grp.sources.some(s => s.type === 'category' && (s.categoryId === catId || s.refId === catId))) {
+    if (!grp.sources.some(s => s.type === 'category' && catKeys.includes(s.categoryId || s.refId))) {
       grp.sources.push({ type: 'category', categoryId: catId, refId: catId });
     }
   } else {
-    grp.sources = grp.sources.filter(s => !(s.type === 'category' && (s.categoryId === catId || s.refId === catId)));
+    grp.sources = grp.sources.filter(s => !(s.type === 'category' && catKeys.includes(s.categoryId || s.refId)));
   }
   renderBundleSourcesSection();
   renderBundleEligiblePreview();
@@ -2079,6 +2114,12 @@ function toggleBundleSourceItem(itemId, isChecked) {
     if (!itemListSrc.itemIds.includes(itemId)) itemListSrc.itemIds.push(itemId);
   } else {
     itemListSrc.itemIds = itemListSrc.itemIds.filter(id => id !== itemId);
+    if (Array.isArray(grp.items)) {
+      grp.items = grp.items.filter(f => f.itemId !== itemId);
+    }
+    if (Array.isArray(grp.eligibleItems)) {
+      grp.eligibleItems = grp.eligibleItems.filter(e => e.id !== itemId && e.name !== itemId);
+    }
   }
   if (itemListSrc.itemIds.length === 0) {
     grp.sources = grp.sources.filter(s => s !== itemListSrc);
@@ -2089,24 +2130,29 @@ function toggleBundleSourceItem(itemId, isChecked) {
 window.toggleBundleSourceItem = toggleBundleSourceItem;
 
 function computeEligibleItemsCount(grp) {
-  if (!grp || !Array.isArray(grp.sources) || grp.sources.length === 0 || !currentMenuData) return 0;
+  if (!grp || !currentMenuData) return 0;
   const itemSet = new Set();
   currentMenuData.forEach(cat => {
     if (cat.type !== 'catalog' || !Array.isArray(cat.items)) return;
-    const catMatches = grp.sources.some(s => s.type === 'category' && (s.categoryId === cat.catId || s.refId === cat.catId || s.categoryId === cat.id || s.refId === cat.id));
+    const catMatches = (grp.sources || []).some(s => s.type === 'category' && (
+      s.categoryId === cat.catId || s.refId === cat.catId ||
+      s.categoryId === cat.id || s.refId === cat.id ||
+      (cat.databaseId && (s.categoryId === cat.databaseId || s.refId === cat.databaseId))
+    ));
     if (catMatches) {
       cat.items.forEach(it => {
         if (it.name) itemSet.add(it.id || it.name);
       });
     } else {
-      const itemSrc = grp.sources.find(s => s.type === 'item_list');
-      if (itemSrc && Array.isArray(itemSrc.itemIds)) {
-        cat.items.forEach(it => {
-          if (itemSrc.itemIds.includes(it.id) || itemSrc.itemIds.includes(it.name)) {
-            itemSet.add(it.id || it.name);
-          }
-        });
-      }
+      const itemSources = (grp.sources || []).filter(s => s.type === 'item_list' || s.type === 'items');
+      const itemIds = itemSources.flatMap(s => Array.isArray(s.itemIds) ? s.itemIds : []);
+      cat.items.forEach(it => {
+        if (itemIds.includes(it.id) || (it.name && itemIds.includes(it.name)) ||
+            (Array.isArray(grp.items) && grp.items.some(f => f.itemId === it.id || f.itemId === it.name)) ||
+            (Array.isArray(grp.eligibleItems) && grp.eligibleItems.some(e => e.id === it.id || (e.name && e.name === it.name)))) {
+          itemSet.add(it.id || it.name);
+        }
+      });
     }
   });
   return itemSet.size;
@@ -2144,7 +2190,11 @@ function renderBundleSourcesSection() {
     (currentMenuData || []).forEach(cat => {
       if (cat.type !== 'catalog') return;
       const catKey = cat.catId || cat.id;
-      const isSelected = grp.sources.some(s => s.type === 'category' && (s.categoryId === catKey || s.refId === catKey || s.categoryId === cat.id));
+      const isSelected = (grp.sources || []).some(s => s.type === 'category' && (
+        s.categoryId === cat.catId || s.refId === cat.catId ||
+        s.categoryId === cat.id || s.refId === cat.id ||
+        (cat.databaseId && (s.categoryId === cat.databaseId || s.refId === cat.databaseId))
+      ));
       const itemCount = (cat.items && cat.items.length) || 0;
       sourcesHtml += `
         <label class="bundle-source-chip ${isSelected ? 'selected' : ''}">
@@ -2158,14 +2208,17 @@ function renderBundleSourcesSection() {
   } else {
     // Individual Items selector
     sourcesHtml += `<div class="bundle-sources-grid" style="margin-top: 10px; max-height: 260px;">`;
-    let itemListSrc = grp.sources.find(s => s.type === 'item_list');
-    const selectedItemIds = itemListSrc && Array.isArray(itemListSrc.itemIds) ? itemListSrc.itemIds : [];
+    let itemSources = (grp.sources || []).filter(s => s.type === 'item_list' || s.type === 'items');
+    const selectedItemIds = itemSources.flatMap(s => Array.isArray(s.itemIds) ? s.itemIds : []);
 
     (currentMenuData || []).forEach(cat => {
       if (cat.type !== 'catalog' || !cat.items || cat.items.length === 0) return;
       cat.items.forEach(it => {
         const itemKey = it.id || it.name;
-        const isSelected = selectedItemIds.includes(itemKey);
+        const isSelected = selectedItemIds.includes(it.id) ||
+                           (it.name && selectedItemIds.includes(it.name)) ||
+                           (Array.isArray(grp.items) && grp.items.some(f => f.itemId === it.id || f.itemId === it.name)) ||
+                           (Array.isArray(grp.eligibleItems) && grp.eligibleItems.some(e => e.id === it.id || (e.name && e.name === it.name)));
         sourcesHtml += `
           <label class="bundle-source-chip ${isSelected ? 'selected' : ''}" title="${escapeHtml(cat.title)} - ${escapeHtml(it.name)}">
             <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleBundleSourceItem('${escapeHtml(itemKey)}', this.checked)">
