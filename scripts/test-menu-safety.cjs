@@ -8,12 +8,14 @@ const source = fs.readFileSync('benmi-worker-official/src/modules/menu.ts', 'utf
 const compiled = ts.transpileModule(source.slice(source.indexOf('function validateMenuUpdate'), source.indexOf('export async function updateMenu')), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
 const backend = vm.createContext({});
 vm.runInContext(compiled, backend);
+const migration0061Sql = fs.readFileSync('benmi-worker-official/migrations/0061_unified_bundle_and_customization_schema.sql', 'utf8');
 function fixture() {
   const db = new DatabaseSync(':memory:');
   db.exec(`PRAGMA foreign_keys=ON;
     CREATE TABLE menu_categories(id TEXT PRIMARY KEY, tenant_id TEXT, slug TEXT, name TEXT, short_name TEXT, category_type TEXT, allow_customization INTEGER, applied_modifiers TEXT, sort_order INTEGER, UNIQUE(tenant_id,slug));
     CREATE TABLE menu_items(id TEXT PRIMARY KEY, tenant_id TEXT, category_id TEXT REFERENCES menu_categories(id) ON DELETE RESTRICT, name TEXT, price REAL, badge_text TEXT, is_recommended INTEGER, sort_order INTEGER);
     CREATE TABLE menu_customizations(id TEXT PRIMARY KEY, tenant_id TEXT, key TEXT, title TEXT, type TEXT, sort_order INTEGER, options_json TEXT, updated_at TEXT, UNIQUE(tenant_id,key));`);
+  db.exec(migration0061Sql);
   for (const tenant of ['a', 'b']) {
     db.prepare('INSERT INTO menu_categories(id,tenant_id,slug,category_type) VALUES(?,?,?,?)').run(`${tenant}_food`,tenant,'food','catalog');
     db.prepare('INSERT INTO menu_categories(id,tenant_id,slug,category_type) VALUES(?,?,?,?)').run(`${tenant}_custom`,tenant,'sec-flavor','order_customization');
@@ -24,7 +26,12 @@ function fixture() {
     prepare(sql) { return { bind(...args) { return { sql, args, async all() { return { results: db.prepare(sql).all(...args) }; } }; } }; },
     async batch(statements) { db.exec('BEGIN'); try { for (const {sql,args} of statements) db.prepare(sql).run(...args); db.exec('COMMIT'); } catch(e) { db.exec('ROLLBACK'); throw e; } }
   };
-  return {db, save: data => backend.syncMenuToD1('a',data,{DB:adapter}), dump: () => JSON.stringify(['menu_categories','menu_items','menu_customizations'].map(table => db.prepare(`SELECT * FROM ${table} ORDER BY id`).all()))};
+  return {
+    db,
+    save: data => backend.syncMenuToD1('a',data,{DB:adapter}),
+    dump: () => JSON.stringify(['menu_categories','menu_items','menu_customizations','modifier_groups','modifier_options','item_modifier_links'].map(table => db.prepare(`SELECT * FROM ${table} ORDER BY ${table === 'item_modifier_links' ? 'tenant_id, item_id, group_id' : 'id'}`).all())),
+    dumpTenant: (t) => JSON.stringify(['menu_categories','menu_items','menu_customizations','modifier_groups','modifier_options','item_modifier_links'].map(table => db.prepare(`SELECT * FROM ${table} WHERE tenant_id = ? ORDER BY ${table === 'item_modifier_links' ? 'tenant_id, item_id, group_id' : 'id'}`).all(t)))
+  };
 }
 test('price-only update and empty payload preserve omitted rows and customization category', async () => {
   const f=fixture(); await f.save({food:{One:{id:'a_one',price:20}}}); await f.save({});
@@ -117,3 +124,332 @@ test('explicit item removal preserves its category and other tenant',async()=>{
   assert.equal(f.db.prepare('SELECT count(*) n FROM menu_items').get().n,1);
   assert.ok(f.db.prepare('SELECT id FROM menu_categories WHERE id=?').get('a_food'));
 });
+
+// ============================================================================
+// T1: Ownership & Atomic Menu Write Tests
+// ============================================================================
+
+test('T1: Tenant A sending Tenant B modifier group ID is rejected and B is untouched', async () => {
+  const f = fixture();
+  f.db.prepare('INSERT INTO modifier_groups(id,tenant_id,name) VALUES(?,?,?)').run('mg_b_sec', 'b', 'Secret B');
+  f.db.prepare('INSERT INTO modifier_options(id,tenant_id,group_id,name,price) VALUES(?,?,?,?,?)').run('mo_b_sec', 'b', 'mg_b_sec', 'Opt B', 10);
+  const beforeB = f.dumpTenant('b');
+
+  await assert.rejects(
+    f.save({ food: { One: { id: 'a_one', price: 10, modifier_groups: [{ id: 'mg_b_sec', name: 'Hijacked' }] } } }),
+    /FORBIDDEN_MODIFIER_GROUP_ID/
+  );
+  assert.equal(f.dumpTenant('b'), beforeB);
+});
+
+test('T1: Tenant A sending Tenant B modifier option ID is rejected and B is untouched', async () => {
+  const f = fixture();
+  f.db.prepare('INSERT INTO modifier_groups(id,tenant_id,name) VALUES(?,?,?)').run('mg_b_sec', 'b', 'Secret B');
+  f.db.prepare('INSERT INTO modifier_options(id,tenant_id,group_id,name,price) VALUES(?,?,?,?,?)').run('mo_b_sec', 'b', 'mg_b_sec', 'Opt B', 10);
+  const beforeB = f.dumpTenant('b');
+
+  await assert.rejects(
+    f.save({ food: { One: { id: 'a_one', price: 10, modifier_groups: [{ id: 'mg_a_new', name: 'Group A', options: [{ id: 'mo_b_sec', name: 'Hijacked Opt' }] }] } } }),
+    /FORBIDDEN_MODIFIER_OPTION_ID/
+  );
+  assert.equal(f.dumpTenant('b'), beforeB);
+});
+
+test('T1: Option belonging to tenant but wrong group is rejected', async () => {
+  const f = fixture();
+  f.db.prepare('INSERT INTO modifier_groups(id,tenant_id,name) VALUES(?,?,?)').run('mg_a_1', 'a', 'Group 1');
+  f.db.prepare('INSERT INTO modifier_groups(id,tenant_id,name) VALUES(?,?,?)').run('mg_a_2', 'a', 'Group 2');
+  f.db.prepare('INSERT INTO modifier_options(id,tenant_id,group_id,name,price) VALUES(?,?,?,?,?)').run('mo_a_opt1', 'a', 'mg_a_1', 'Option 1', 5);
+
+  await assert.rejects(
+    f.save({ food: { One: { id: 'a_one', price: 10, modifier_groups: [{ id: 'mg_a_2', name: 'Group 2', options: [{ id: 'mo_a_opt1', name: 'Option 1' }] }] } } }),
+    /INVALID_MODIFIER_OPTION_GROUP/
+  );
+});
+
+test('T1: Duplicate option ID within group and conflicting group configs in payload are rejected', async () => {
+  const f = fixture();
+  // Duplicate option ID inside same group
+  await assert.rejects(
+    f.save({ food: { One: { id: 'a_one', price: 10, modifier_groups: [{ name: 'G1', options: [{ id: 'mo_dup', name: 'O1' }, { id: 'mo_dup', name: 'O2' }] }] } } }),
+    /DUPLICATE_MODIFIER_OPTION_ID/
+  );
+  // Conflicting group config for same group ID
+  await assert.rejects(
+    f.save({ food: {
+      One: { id: 'a_one', price: 10, modifier_groups: [{ id: 'mg_conflict', name: 'Config A', selection_type: 'single' }] },
+      Two: { price: 20, modifier_groups: [{ id: 'mg_conflict', name: 'Config B', selection_type: 'multiple' }] }
+    } }),
+    /CONFLICTING_MODIFIER_GROUP_CONFIG/
+  );
+});
+
+test('T1: Omitted modifier_groups preserves links while [] explicitly removes them', async () => {
+  const f = fixture();
+  // First save: add a group
+  await f.save({ food: { One: { id: 'a_one', price: 10, modifier_groups: [{ id: 'mg_a_keep', name: 'Keep Me', options: [{ id: 'mo_a_keep', name: 'Opt 1', price: 5 }] }] } } });
+  assert.equal(f.db.prepare('SELECT count(*) n FROM item_modifier_links WHERE tenant_id=?').get('a').n, 1);
+  assert.equal(f.db.prepare('SELECT count(*) n FROM modifier_groups WHERE tenant_id=?').get('a').n, 1);
+
+  // Second save: omit modifier_groups (e.g. price update only)
+  await f.save({ food: { One: { id: 'a_one', price: 25 } } });
+  assert.equal(f.db.prepare('SELECT price FROM menu_items WHERE id=?').get('a_one').price, 25);
+  assert.equal(f.db.prepare('SELECT count(*) n FROM item_modifier_links WHERE tenant_id=?').get('a').n, 1);
+  assert.equal(f.db.prepare('SELECT count(*) n FROM modifier_groups WHERE tenant_id=?').get('a').n, 1);
+
+  // Third save: explicit [] clears the link and cleans up the orphaned group
+  await f.save({ food: { One: { id: 'a_one', price: 25, modifier_groups: [] } } });
+  assert.equal(f.db.prepare('SELECT count(*) n FROM item_modifier_links WHERE tenant_id=?').get('a').n, 0);
+  assert.equal(f.db.prepare('SELECT count(*) n FROM modifier_groups WHERE tenant_id=?').get('a').n, 0);
+});
+
+test('T1: Options in two distinct groups with identical name are stored with respective prices', async () => {
+  const f = fixture();
+  await f.save({
+    food: {
+      One: {
+        id: 'a_one',
+        price: 50,
+        modifier_groups: [
+          { id: 'mg_g1', name: 'Group 1', options: [{ id: 'mo_opt_g1', name: 'Thêm', price: 15 }] },
+          { id: 'mg_g2', name: 'Group 2', options: [{ id: 'mo_opt_g2', name: 'Thêm', price: 25 }] }
+        ]
+      }
+    }
+  });
+  const opt1 = f.db.prepare('SELECT price FROM modifier_options WHERE id=?').get('mo_opt_g1');
+  const opt2 = f.db.prepare('SELECT price FROM modifier_options WHERE id=?').get('mo_opt_g2');
+  assert.equal(opt1.price, 15);
+  assert.equal(opt2.price, 25);
+});
+
+test('T1: Database error during modifier persistence rolls back the entire batch atomically', async () => {
+  const f = fixture();
+  const before = f.dump();
+  f.db.exec("CREATE TRIGGER reject_mod BEFORE INSERT ON modifier_groups BEGIN SELECT RAISE(ABORT,'simulated modifier failure'); END;");
+  await assert.rejects(
+    f.save({ food: { One: { id: 'a_one', price: 99, modifier_groups: [{ name: 'Failing Group' }] } } })
+  );
+  assert.equal(f.dump(), before);
+});
+
+// ============================================================================
+// T2: Bootstrap Completeness, Cache & Draft Preservation Tests
+// ============================================================================
+
+test('T2: POS dirty draft is preserved when menu reload fails', async () => {
+  const e = editor();
+  // Simulate an initialized editor with dirty draft edits
+  e.run(`
+    isMenuLoadedCompletely = true;
+    currentMenuData = [{ id: 'food', databaseId: 'a_food', items: [{ id: 'a_one', name: 'One', price: 50 }] }];
+    clearMenuDirty();
+    currentMenuData[0].items[0].price = 99;
+    markMenuDirty();
+  `);
+  assert.equal(e.run('isMenuDirty'), true);
+  assert.equal(e.run('currentMenuData[0].items[0].price'), 99);
+
+  // Background reload fails (e.g. network outage or incomplete menu from server)
+  e.context.fetch = async () => ({ ok: false, status: 500 });
+  await e.run('loadMenuData()');
+
+  // Assert: draft is NOT wiped out, dirty state is kept, but save is blocked
+  assert.notEqual(e.run('currentMenuData'), null);
+  assert.equal(e.run('currentMenuData[0].items[0].price'), 99);
+  assert.equal(e.run('isMenuDirty'), true);
+  assert.equal(e.run('isMenuLoadedCompletely'), false);
+
+  // Attempting to save while incomplete must be blocked
+  await e.run('saveMenuData(true)');
+  assert.equal(e.alerts.length, 1);
+  assert.equal(e.alerts[0], 'menuIncompleteReload');
+});
+
+test('T2: Item with undefined modifierGroups does not serialize modifier_groups: []', () => {
+  const e = editor();
+  e.run(`
+    currentMenuData = [{
+      id: 'food',
+      items: [
+        { id: 'a_one', name: 'Untouched Modifiers', price: 10 },
+        { id: 'a_two', name: 'Explicitly Cleared', price: 20, modifierGroups: [] },
+        { id: 'a_three', name: 'Explicitly Has Modifiers', price: 30, modifierGroups: [{ id: 'mg_1', name: 'G1' }] }
+      ]
+    }];
+  `);
+  const serialized = e.run('serializeMenuData(currentMenuData)');
+  const item1 = serialized.food['Untouched Modifiers'];
+  const item2 = serialized.food['Explicitly Cleared'];
+  const item3 = serialized.food['Explicitly Has Modifiers'];
+
+  // Untouched item MUST NOT have modifier_groups field
+  assert.equal(Object.prototype.hasOwnProperty.call(item1, 'modifier_groups'), false);
+  // Explicitly cleared item MUST have modifier_groups: []
+  assert.deepEqual(JSON.parse(JSON.stringify(item2.modifier_groups)), []);
+  // Explicitly configured item MUST have modifier_groups array
+  assert.deepEqual(JSON.parse(JSON.stringify(item3.modifier_groups)), [{ id: 'mg_1', name: 'G1' }]);
+});
+
+test('T2: Incomplete bootstrap (menuComplete=false) blocks saving and notifies user', async () => {
+  const e = editor();
+  e.context.fetch = async () => ({
+    ok: true,
+    json: async () => ({
+      menuComplete: false,
+      catalog: [{ id: 'c1', slug: 'food', name: 'Food', items: [] }],
+      modifiers: []
+    })
+  });
+  await e.run('loadMenuData()');
+  assert.equal(e.run('isMenuLoadedCompletely'), false);
+  assert.equal(e.run('currentMenuData'), null);
+
+  await e.run('saveMenuData(true)');
+  assert.equal(e.alerts.length, 1);
+  assert.equal(e.alerts[0], 'menuIncompleteReload');
+});
+
+test('T2: Complete bootstrap (menuComplete=true) enables saving and preserves modifierGroups', async () => {
+  const e = editor();
+  e.context.fetch = async () => ({
+    ok: true,
+    json: async () => ({
+      bootstrapVersion: 2,
+      menuComplete: true,
+      catalog: [{
+        id: 'c1',
+        slug: 'food',
+        name: 'Food',
+        items: [{
+          id: 'i1',
+          name: 'Burger',
+          price: 100,
+          modifierGroups: [{ id: 'mg_spice', name: 'Spiciness' }]
+        }]
+      }],
+      modifiers: []
+    })
+  });
+  await e.run('loadMenuData()');
+  assert.equal(e.run('isMenuLoadedCompletely'), true);
+  assert.notEqual(e.run('currentMenuData'), null);
+  assert.equal(e.run('currentMenuData[0].items[0].name'), 'Burger');
+  assert.deepEqual(e.run('currentMenuData[0].items[0].modifierGroups'), [{ id: 'mg_spice', name: 'Spiciness' }]);
+});
+
+test('T4: POS preserves minSelection and maxSelection when renaming multiple group without resetting to 1/99', async () => {
+  const e = editor();
+  e.run(`
+    isMenuLoadedCompletely = true;
+    currentMenuData = [{
+      id: 'food',
+      slug: 'food',
+      name: 'Food',
+      items: [{
+        id: 'i1',
+        name: 'Burger',
+        price: 100,
+        modifierGroups: [{
+          id: 'mg_multi',
+          name: 'Toppings',
+          selectionType: 'multiple',
+          isRequired: true,
+          minSelection: 2,
+          maxSelection: 4,
+          options: [{ id: 'opt_1', name: 'Cheese', price: 10, isDefault: false }]
+        }]
+      }]
+    }];
+    openItemModifiersModal(0, 0);
+    tempItemModifierGroups[0].name = "Extra Toppings";
+    saveItemModifiersModal();
+  `);
+
+  const updatedGroup = e.run('currentMenuData[0].items[0].modifierGroups[0]');
+  assert.equal(updatedGroup.name, 'Extra Toppings');
+  assert.equal(updatedGroup.minSelection, 2, 'minSelection must be preserved as 2, not reset to 1');
+  assert.equal(updatedGroup.maxSelection, 4, 'maxSelection must be preserved as 4, not reset to 99');
+  assert.equal(updatedGroup.isRequired, true);
+});
+
+test('T4: validateModifierDraft enforces bounds: allows valid multiple selection, blocks under min, blocks over max', () => {
+  const domSandbox = vm.createContext({
+    window: {},
+    document: {
+      createElement: () => ({ style: {}, classList: { add: () => {}, remove: () => {} }, appendChild: () => {} }),
+      body: { style: {}, appendChild: () => {} }
+    }
+  });
+  domSandbox.window.window = domSandbox.window;
+  const custJs = fs.readFileSync('js/client-customizations.js', 'utf8');
+  vm.runInContext(custJs, domSandbox);
+
+  const validateFn = domSandbox.window.validateModifierDraft;
+  assert.equal(typeof validateFn, 'function');
+
+  const testGroup = {
+    id: 'grp_sides',
+    slug: 'sides',
+    name: 'Sides',
+    selectionType: 'multiple',
+    isRequired: true,
+    minSelection: 2,
+    maxSelection: 3,
+    options: [
+      { id: 'opt_1', name: 'Fries', price: 15, isOutOfStock: false },
+      { id: 'opt_2', name: 'Salad', price: 15, isOutOfStock: false },
+      { id: 'opt_3', name: 'Soup', price: 20, isOutOfStock: false },
+      { id: 'opt_4', name: 'Pie', price: 25, isOutOfStock: false }
+    ]
+  };
+
+  // Case 1: 0 selected (under min=2) -> Invalid
+  const res0 = validateFn([testGroup], { single: {}, multiple: {}, note: '' });
+  assert.equal(res0.valid, false);
+  assert.equal(res0.reason, 'UNDER_MIN');
+
+  // Case 2: 1 selected (under min=2) -> Invalid
+  const res1 = validateFn([testGroup], { single: {}, multiple: { 'Fries': true }, note: '' });
+  assert.equal(res1.valid, false);
+  assert.equal(res1.reason, 'UNDER_MIN');
+
+  // Case 3: 2 selected (satisfies min=2, max=3) -> Valid!
+  const res2 = validateFn([testGroup], { single: {}, multiple: { 'Fries': true, 'Salad': true }, note: '' });
+  assert.equal(res2.valid, true);
+
+  // Case 4: 4 selected (exceeds max=3) -> Invalid
+  const res4 = validateFn([testGroup], { single: {}, multiple: { 'Fries': true, 'Salad': true, 'Soup': true, 'Pie': true }, note: '' });
+  assert.equal(res4.valid, false);
+  assert.equal(res4.reason, 'EXCEEDED_MAX');
+});
+
+test('T4: POS I18N dictionary has all required modifier keys in both vi and zh-TW', () => {
+  const i18nJs = fs.readFileSync('js/orders-i18n.js', 'utf8');
+  const sandbox = vm.createContext({
+    window: {},
+    document: { addEventListener: () => {} }
+  });
+  sandbox.window.window = sandbox.window;
+  vm.runInContext(i18nJs, sandbox);
+
+  const I18N = sandbox.window.I18N;
+  assert.ok(I18N['zh-TW']);
+  assert.ok(I18N['vi']);
+
+  const requiredKeys = [
+    'labelMinSelection',
+    'labelMaxSelection',
+    'labelMultipleBoundsHint',
+    'labelItemCustomizationNotice',
+    'labelModifierDefault'
+  ];
+
+  requiredKeys.forEach(k => {
+    assert.ok(I18N['zh-TW'][k], `zh-TW missing key: ${k}`);
+    assert.ok(I18N['vi'][k], `vi missing key: ${k}`);
+  });
+});
+
+
+

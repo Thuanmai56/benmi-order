@@ -100,6 +100,45 @@ export async function validateBundleOrderItems(env: Env, tenantId: string, rawIt
   catch { return { valid: false, code: 'BUNDLE_CONFIG_UNAVAILABLE', error: '無法讀取套餐設定，請稍後再試' }; }
   const modifiersResult = await env.DB.prepare('SELECT c.id AS group_id, c.slug AS group_slug, i.id AS option_id, i.name, i.price, i.out_of_stock_until, c.is_required, c.min_selection, c.max_selection FROM menu_categories c JOIN menu_items i ON i.category_id = c.id AND i.tenant_id = c.tenant_id WHERE c.tenant_id = ? AND c.category_type = ?').bind(tenantId, 'modifier').all<any>();
   const options = new Map((modifiersResult.results || []).map((row: any) => [row.option_id, row]));
+
+  let itemModifiersResult: any = { results: [] };
+  try {
+    itemModifiersResult = await env.DB.prepare(
+      `SELECT l.item_id, g.id AS group_id, g.name AS group_name, g.selection_type,
+              COALESCE(g.is_required, 0) AS is_required,
+              COALESCE(g.min_selection, 0) AS min_selection,
+              COALESCE(g.max_selection, 1) AS max_selection,
+              o.id AS option_id, o.name AS option_name, COALESCE(o.price, 0) AS price,
+              o.out_of_stock_until
+       FROM item_modifier_links l
+       JOIN modifier_groups g ON g.id = l.group_id AND g.tenant_id = l.tenant_id
+       LEFT JOIN modifier_options o ON o.group_id = g.id AND o.tenant_id = g.tenant_id
+       WHERE l.tenant_id = ?`
+    ).bind(tenantId).all<any>();
+  } catch (err) {
+    // Graceful fallback if table does not exist
+  }
+  const itemOptionsByItem = new Map<string, Map<string, any>>();
+  const itemGroupsByItem = new Map<string, Map<string, any>>();
+  for (const row of (itemModifiersResult.results || [])) {
+    if (!row.item_id || !row.option_id) continue;
+    if (!itemOptionsByItem.has(row.item_id)) {
+      itemOptionsByItem.set(row.item_id, new Map());
+      itemGroupsByItem.set(row.item_id, new Map());
+    }
+    itemOptionsByItem.get(row.item_id)!.set(row.option_id, row);
+    if (!itemGroupsByItem.get(row.item_id)!.has(row.group_id)) {
+      itemGroupsByItem.get(row.item_id)!.set(row.group_id, {
+        group_id: row.group_id,
+        group_name: row.group_name,
+        selection_type: row.selection_type,
+        is_required: Boolean(row.is_required),
+        min_selection: Number(row.min_selection || 0),
+        max_selection: Number(row.max_selection || 1),
+      });
+    }
+  }
+
   for (let itemIndex = 0; itemIndex < rawItems.length; itemIndex++) {
     const orderItem = rawItems[itemIndex];
     const parentId = orderItem.itemId || orderItem.item_id || '';
@@ -166,31 +205,91 @@ export async function validateBundleOrderItems(env: Env, tenantId: string, rawIt
           catch { applied = String(category?.applied_modifiers || '').split(',').map((value: string) => value.trim()).filter(Boolean); }
           if (!Array.isArray(applied)) applied = [];
           const mods = Array.isArray(selected.modifiers) ? selected.modifiers : [];
-          if (mods.length && (!category?.allow_customization || !applied.length)) return fail('BUNDLE_MODIFIER_NOT_ALLOWED', portionIndex, groupRule.id, undefined, childId);
-          const countByGroup = new Map<string, number>();
+
+          const itemOpts = itemOptionsByItem.get(childId);
+          const hasItemMods = Boolean(itemOpts && itemOpts.size > 0);
+          const hasCatMods = Boolean(category?.allow_customization && applied.length > 0);
+
+          if (mods.length && !hasCatMods && !hasItemMods) return fail('BUNDLE_MODIFIER_NOT_ALLOWED', portionIndex, groupRule.id, undefined, childId);
+
+          const countByCatGroup = new Map<string, number>();
+          const countByItemGroup = new Map<string, number>();
           const seenOptions = new Set<string>();
           for (const mod of mods) {
+            const itemOpt = itemOpts?.get(mod.optionId);
+            if (itemOpt && itemOpt.group_id === mod.groupId) {
+              if (seenOptions.has(itemOpt.option_id) || (itemOpt.out_of_stock_until && new Date(itemOpt.out_of_stock_until).getTime() > Date.now())) {
+                return fail('BUNDLE_MODIFIER_NOT_ALLOWED', portionIndex, groupRule.id, undefined, childId);
+              }
+              seenOptions.add(itemOpt.option_id);
+              countByItemGroup.set(itemOpt.group_id, (countByItemGroup.get(itemOpt.group_id) || 0) + 1);
+              mod.name = itemOpt.option_name || mod.name;
+              mod.price = Number(itemOpt.price || 0);
+              surchargeTotal += Number(itemOpt.price || 0) * Number(selected.quantity);
+              continue;
+            }
+
             const option = options.get(mod.optionId);
-            if (!option || option.group_id !== mod.groupId || seenOptions.has(option.option_id) || (option.out_of_stock_until && new Date(option.out_of_stock_until).getTime() > Date.now()) || (!applied.includes('*') && !applied.includes(option.group_id) && !applied.includes(option.group_slug))) return fail('BUNDLE_MODIFIER_NOT_ALLOWED', portionIndex, groupRule.id, undefined, childId);
-            seenOptions.add(option.option_id);
-            countByGroup.set(option.group_id, (countByGroup.get(option.group_id) || 0) + 1);
-            mod.name = option.name;
-            mod.price = Number(option.price);
-            surchargeTotal += Number(option.price) * Number(selected.quantity);
+            if (option && option.group_id === mod.groupId && (applied.includes('*') || applied.includes(option.group_id) || applied.includes(option.group_slug))) {
+              if (seenOptions.has(option.option_id) || (option.out_of_stock_until && new Date(option.out_of_stock_until).getTime() > Date.now())) {
+                return fail('BUNDLE_MODIFIER_NOT_ALLOWED', portionIndex, groupRule.id, undefined, childId);
+              }
+              seenOptions.add(option.option_id);
+              countByCatGroup.set(option.group_id, (countByCatGroup.get(option.group_id) || 0) + 1);
+              mod.name = option.name;
+              mod.price = Number(option.price || 0);
+              surchargeTotal += Number(option.price || 0) * Number(selected.quantity);
+              continue;
+            }
+
+            return fail('BUNDLE_MODIFIER_NOT_ALLOWED', portionIndex, groupRule.id, undefined, childId);
           }
+
           if (Number(rule.version || 1) >= 2) {
-            const allowedGroups = new Map<string, any>();
-            for (const option of options.values()) if (applied.includes('*') || applied.includes(option.group_id) || applied.includes(option.group_slug)) allowedGroups.set(option.group_id, option);
-            for (const [modId, config] of allowedGroups) {
-              const count = countByGroup.get(modId) || 0;
-              if (count < Number(config.min_selection || (config.is_required ? 1 : 0)) || (config.max_selection && count > Number(config.max_selection))) return fail('BUNDLE_MODIFIER_REQUIRED', portionIndex, groupRule.id, undefined, childId);
+            if (hasCatMods) {
+              const allowedGroups = new Map<string, any>();
+              for (const option of options.values()) {
+                if (applied.includes('*') || applied.includes(option.group_id) || applied.includes(option.group_slug)) {
+                  allowedGroups.set(option.group_id, option);
+                }
+              }
+              for (const [modId, config] of allowedGroups) {
+                const count = countByCatGroup.get(modId) || 0;
+                const minReq = Number(config.min_selection ?? (config.is_required ? 1 : 0));
+                const maxReq = config.max_selection ? Number(config.max_selection) : undefined;
+                if (count < minReq || (maxReq !== undefined && count > maxReq)) {
+                  return fail('BUNDLE_MODIFIER_REQUIRED', portionIndex, groupRule.id, undefined, childId);
+                }
+              }
+            }
+
+            if (hasItemMods) {
+              const itemGroups = itemGroupsByItem.get(childId);
+              if (itemGroups) {
+                for (const [modId, config] of itemGroups) {
+                  const count = countByItemGroup.get(modId) || 0;
+                  const minReq = Number(config.min_selection ?? (config.is_required ? 1 : 0));
+                  const maxReq = config.max_selection ? Number(config.max_selection) : undefined;
+                  if (count < minReq || (maxReq !== undefined && count > maxReq)) {
+                    return fail('BUNDLE_MODIFIER_REQUIRED', portionIndex, groupRule.id, undefined, childId);
+                  }
+                }
+              }
             }
           }
         }
         if (groupRule.type === 'fixed' && [...fixed.values()].some(remaining => remaining !== 0)) return fail('BUNDLE_FIXED_ITEMS_CHANGED', portionIndex, groupRule.id);
       }
     }
-    const expectedSubtotal = Math.round((Number(parent.price) * qty + surchargeTotal) * 100) / 100;
+    let parentOpts: any[] = [];
+    const rawParentOpts = orderItem.options || orderItem.selected_options;
+    if (Array.isArray(rawParentOpts)) {
+      parentOpts = rawParentOpts;
+    } else if (typeof rawParentOpts === 'string') {
+      try { parentOpts = JSON.parse(rawParentOpts); } catch {}
+    }
+    const parentOptionsExtra = (Array.isArray(parentOpts) ? parentOpts : []).reduce((sum: number, opt: any) => sum + (Number(opt.price || 0) * (Number(opt.quantity || 1))), 0) * qty;
+    const expectedSubtotal = Math.round((Number(parent.price) * qty + surchargeTotal + parentOptionsExtra) * 100) / 100;
     if (!Number.isFinite(Number(orderItem.subtotal)) || Math.abs(Number(orderItem.subtotal) - expectedSubtotal) > 0.001) return fail('BUNDLE_PRICE_CHANGED', undefined, undefined, expectedSubtotal);
     orderItem.name = parent.name;
     orderItem.price = Number(parent.price);

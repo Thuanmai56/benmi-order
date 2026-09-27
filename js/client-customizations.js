@@ -8,6 +8,111 @@ var customizeData = window.customizeData;
 var comboDrinkData = window.comboDrinkData;
 var currentPopup = window.currentPopup;
 
+// --- MODIFIER SELECTION VALIDATOR (B2 Standard) ---
+function validateModifierDraft(modifiers, draft) {
+    if (!Array.isArray(modifiers) || modifiers.length === 0) {
+        return { valid: true };
+    }
+    if (!draft) {
+        return { valid: false, message: '請完成客製選項設定' };
+    }
+
+    for (const mod of modifiers) {
+        const effectiveMin = Math.max(mod.isRequired ? 1 : 0, Number(mod.minSelection || 0));
+        const effectiveMax = mod.selectionType === 'single' ? 1 : Number(mod.maxSelection || 0);
+
+        // Collect selected options for this group
+        const selectedOpts = [];
+
+        // 1. Check C1 structured selections if present
+        if (draft.selectedByGroup && typeof draft.selectedByGroup === 'object') {
+            const groupSelections = draft.selectedByGroup[mod.id] ||
+                                    draft.selectedByGroup[mod.slug] ||
+                                    draft.selectedByGroup[`item:${mod.id}`] ||
+                                    draft.selectedByGroup[`category:${mod.slug}`] ||
+                                    [];
+            if (Array.isArray(groupSelections)) {
+                groupSelections.forEach(sel => {
+                    const match = (mod.options || []).find(o => o.id === sel || o.name === sel);
+                    if (match && !match.isOutOfStock) selectedOpts.push(match);
+                });
+            }
+        }
+
+        // 2. Check single selections
+        if (selectedOpts.length === 0 && mod.selectionType === 'single' && draft.single) {
+            const selNameOrId = draft.single[mod.slug] || draft.single[mod.id];
+            if (selNameOrId) {
+                const match = (mod.options || []).find(o => o.name === selNameOrId || o.id === selNameOrId);
+                if (match && !match.isOutOfStock) {
+                    selectedOpts.push(match);
+                }
+            }
+        }
+
+        // 3. Check multiple selections
+        if (selectedOpts.length === 0 && mod.selectionType === 'multiple' && draft.multiple) {
+            if (Array.isArray(draft.multiple[mod.slug])) {
+                draft.multiple[mod.slug].forEach(sel => {
+                    const match = (mod.options || []).find(o => o.name === sel || o.id === sel);
+                    if (match && !match.isOutOfStock) selectedOpts.push(match);
+                });
+            } else if (Array.isArray(draft.multiple[mod.id])) {
+                draft.multiple[mod.id].forEach(sel => {
+                    const match = (mod.options || []).find(o => o.name === sel || o.id === sel);
+                    if (match && !match.isOutOfStock) selectedOpts.push(match);
+                });
+            } else if (typeof draft.multiple === 'object') {
+                (mod.options || []).forEach(opt => {
+                    if ((draft.multiple[opt.name] || draft.multiple[opt.id]) && !opt.isOutOfStock) {
+                        selectedOpts.push(opt);
+                    }
+                });
+            }
+        }
+
+        const count = selectedOpts.length;
+
+        // Check if all options in a required group are out of stock
+        const availableOptions = (mod.options || []).filter(o => !o.isOutOfStock);
+        if (effectiveMin > 0 && availableOptions.length === 0) {
+            return {
+                valid: false,
+                group: mod,
+                message: `「${mod.name}」選項已全數售完，暫時無法點選`,
+                reason: 'ALL_OOS'
+            };
+        }
+
+        // Check min selection
+        if (count < effectiveMin) {
+            const msg = (effectiveMin === 1)
+                ? `請選擇「${mod.name}」`
+                : `「${mod.name}」至少需選擇 ${effectiveMin} 項`;
+            return {
+                valid: false,
+                group: mod,
+                message: msg,
+                reason: 'UNDER_MIN',
+                missingCount: effectiveMin - count
+            };
+        }
+
+        // Check max selection
+        if (effectiveMax > 0 && count > effectiveMax) {
+            return {
+                valid: false,
+                group: mod,
+                message: `「${mod.name}」最多只能選擇 ${effectiveMax} 項`,
+                reason: 'EXCEEDED_MAX'
+            };
+        }
+    }
+
+    return { valid: true };
+}
+window.validateModifierDraft = validateModifierDraft;
+
 // --- COMBO DRINKS (OPTIONAL INLINE DRINK SELECTOR) ---
 function renderComboDrinksInline(origName, qty) {
     const containerId = 'combo-container-combo-' + origName;
@@ -66,6 +171,9 @@ function getCategoryModifiers(catSlug) {
 }
 
 function getItemModifiers(catSlug, itemName) {
+    if (typeof getEffectiveItemModifierGroups === 'function') {
+        return getEffectiveItemModifierGroups(`${catSlug}_${itemName}`, catSlug);
+    }
     const bData = window.bootstrapData || bootstrapData;
     const catObj = bData?.catalog?.find(c => c.slug === catSlug);
     const itemObj = catObj?.items?.find(it => it.name === itemName);
@@ -151,13 +259,19 @@ function openItemCustomizeModal(category, origName, targetPortionIndex) {
     } else {
         const defaultSingle = {};
         modifiers.filter(m => m.selectionType === 'single').forEach(m => {
-            const defOpt = (m.options || []).find(o => o.isDefault && !o.isOutOfStock) || (m.isRequired ? ((m.options || []).find(o => !o.isOutOfStock) || m.options[0]) : null);
+            const defOpt = (m.options || []).find(o => o.isDefault && !o.isOutOfStock) 
+                || (m.isRequired ? (m.options || []).find(o => !o.isOutOfStock) : null);
             if (defOpt) defaultSingle[m.slug] = defOpt.name;
         });
         const defaultMulti = {};
         modifiers.filter(m => m.selectionType === 'multiple').forEach(m => {
+            const maxAllowed = Number(m.maxSelection || 0) || 999;
+            let selectedInGroup = 0;
             (m.options || []).filter(o => o.isDefault && !o.isOutOfStock).forEach(o => {
-                defaultMulti[o.name] = true;
+                if (selectedInGroup < maxAllowed) {
+                    defaultMulti[o.name] = true;
+                    selectedInGroup++;
+                }
             });
         });
         draft = { single: defaultSingle, multiple: defaultMulti, note: '' };
@@ -256,7 +370,20 @@ function openItemCustomizeModal(category, origName, targetPortionIndex) {
             section.className = 'modifier-section';
             section.style.marginBottom = '8px';
 
-            const reqBadge = mod.isRequired ? `<span class="modifier-required-badge">必選</span>` : `<span class="modifier-optional-badge">可選</span>`;
+            const effectiveMin = Math.max(mod.isRequired ? 1 : 0, Number(mod.minSelection || 0));
+            const effectiveMax = mod.selectionType === 'single' ? 1 : Number(mod.maxSelection || 0);
+
+            let reqBadge = '';
+            if (effectiveMin > 0) {
+                reqBadge = effectiveMin === 1 
+                    ? `<span class="modifier-required-badge">必選</span>` 
+                    : `<span class="modifier-required-badge">必選 (至少 ${effectiveMin} 項)</span>`;
+            } else {
+                reqBadge = effectiveMax > 0 
+                    ? `<span class="modifier-optional-badge">可選 (最多 ${effectiveMax} 項)</span>` 
+                    : `<span class="modifier-optional-badge">可選</span>`;
+            }
+
             let sectionInner = `
                 <div class="modifier-group-title" style="margin-bottom: 8px;">
                     <span style="font-size: 14px; font-weight: 800; color: #1e293b;">${mod.name}</span>
@@ -284,7 +411,16 @@ function openItemCustomizeModal(category, origName, targetPortionIndex) {
                 sectionInner += `<div class="modifier-checkbox-grid">`;
                 (mod.options || []).forEach(opt => {
                     const isOos = Boolean(opt.isOutOfStock);
-                    const isChecked = Boolean(draft.multiple && draft.multiple[opt.name]);
+                    let isChecked = false;
+                    if (draft.multiple) {
+                        if (Array.isArray(draft.multiple[mod.slug])) {
+                            isChecked = draft.multiple[mod.slug].includes(opt.name) || draft.multiple[mod.slug].includes(opt.id);
+                        } else if (Array.isArray(draft.multiple[mod.id])) {
+                            isChecked = draft.multiple[mod.id].includes(opt.name) || draft.multiple[mod.id].includes(opt.id);
+                        } else if (typeof draft.multiple === 'object') {
+                            isChecked = Boolean(draft.multiple[opt.name] || draft.multiple[opt.id]);
+                        }
+                    }
                     const price = Number(opt.price !== undefined ? opt.price : getPrice(opt.name));
                     const priceText = isOos ? `<span class="modifier-oos-tag">已售完</span>` : (price > 0 ? `+$${price}` : '$0');
                     sectionInner += `
@@ -306,7 +442,13 @@ function openItemCustomizeModal(category, origName, targetPortionIndex) {
                     const modSlug = pill.getAttribute('data-mod-slug');
                     const optName = pill.getAttribute('data-opt-name');
                     if (!draft.single) draft.single = {};
-                    draft.single[modSlug] = optName;
+                    const isReq = Boolean(mod.isRequired || Number(mod.minSelection || 0) > 0);
+                    // Optional single can be toggled/deselected
+                    if (!isReq && draft.single[modSlug] === optName) {
+                        delete draft.single[modSlug];
+                    } else {
+                        draft.single[modSlug] = optName;
+                    }
                     renderModalOptions();
                 };
             });
@@ -316,10 +458,45 @@ function openItemCustomizeModal(category, origName, targetPortionIndex) {
                     if (chip.classList.contains('disabled')) return;
                     const optName = chip.getAttribute('data-opt-name');
                     if (!draft.multiple) draft.multiple = {};
-                    if (draft.multiple[optName]) {
-                        delete draft.multiple[optName];
+
+                    // Handle array vs map format in multiple
+                    let isCurrentlySelected = false;
+                    if (Array.isArray(draft.multiple[mod.slug])) {
+                        isCurrentlySelected = draft.multiple[mod.slug].includes(optName);
                     } else {
-                        draft.multiple[optName] = true;
+                        isCurrentlySelected = Boolean(draft.multiple[optName]);
+                    }
+
+                    if (isCurrentlySelected) {
+                        if (Array.isArray(draft.multiple[mod.slug])) {
+                            draft.multiple[mod.slug] = draft.multiple[mod.slug].filter(x => x !== optName);
+                        } else {
+                            delete draft.multiple[optName];
+                        }
+                    } else {
+                        // Check maxSelection before adding
+                        const max = Number(mod.maxSelection || 0);
+                        if (max > 0) {
+                            let currentCount = 0;
+                            (mod.options || []).forEach(o => {
+                                if (Array.isArray(draft.multiple[mod.slug])) {
+                                    if (draft.multiple[mod.slug].includes(o.name) || draft.multiple[mod.slug].includes(o.id)) currentCount++;
+                                } else if (draft.multiple[o.name] || draft.multiple[o.id]) {
+                                    currentCount++;
+                                }
+                            });
+                            if (currentCount >= max) {
+                                const limitMsg = `「${mod.name}」最多只能選擇 ${max} 項`;
+                                if (typeof customAlert === 'function') customAlert(limitMsg);
+                                else alert(limitMsg);
+                                return;
+                            }
+                        }
+                        if (Array.isArray(draft.multiple[mod.slug])) {
+                            draft.multiple[mod.slug].push(optName);
+                        } else {
+                            draft.multiple[optName] = true;
+                        }
                     }
                     renderModalOptions();
                 };
@@ -346,7 +523,13 @@ function openItemCustomizeModal(category, origName, targetPortionIndex) {
             Object.values(draft.single).forEach(opt => { extra += getPrice(opt); });
         }
         if (draft.multiple) {
-            Object.keys(draft.multiple).forEach(opt => { if (draft.multiple[opt]) extra += getPrice(opt); });
+            Object.keys(draft.multiple).forEach(opt => {
+                if (Array.isArray(draft.multiple[opt])) {
+                    draft.multiple[opt].forEach(subOpt => { extra += getPrice(subOpt); });
+                } else if (draft.multiple[opt]) {
+                    extra += getPrice(opt);
+                }
+            });
         }
         const totalPrice = basePrice + extra;
 
@@ -359,11 +542,11 @@ function openItemCustomizeModal(category, origName, targetPortionIndex) {
     }
 
     confirmBtn.onclick = () => {
-        // Validate required single modifier groups
-        const missingReq = modifiers.find(m => m.isRequired && (!draft.single || !draft.single[m.slug]));
-        if (missingReq) {
-            if (typeof customAlert === 'function') customAlert(`請選擇「${missingReq.name}」`);
-            else alert(`請選擇「${missingReq.name}」`);
+        // Validate required/min/max modifier groups
+        const valRes = validateModifierDraft(modifiers, draft);
+        if (!valRes.valid) {
+            if (typeof customAlert === 'function') customAlert(valRes.message);
+            else alert(valRes.message);
             return;
         }
 
@@ -422,17 +605,21 @@ function updateCustomizeOkBtn(key) {
     if (Array.isArray(portions)) {
         portions.forEach(p => {
             if (p) {
-                if (p.single) {
-                    Object.values(p.single).forEach(optName => {
-                        extra += getPrice(optName);
-                    });
-                }
-                if (p.multiple) {
-                    Object.keys(p.multiple).forEach(optName => {
-                        if (p.multiple[optName]) {
+                if (typeof calculatePortionExtra === 'function') {
+                    extra += calculatePortionExtra(key, p);
+                } else {
+                    if (p.single) {
+                        Object.values(p.single).forEach(optName => {
                             extra += getPrice(optName);
-                        }
-                    });
+                        });
+                    }
+                    if (p.multiple) {
+                        Object.keys(p.multiple).forEach(optName => {
+                            if (p.multiple[optName]) {
+                                extra += getPrice(optName);
+                            }
+                        });
+                    }
                 }
             }
         });

@@ -110,26 +110,263 @@ function buildModifierPriceMap(bData) {
             });
         });
     }
+    // Also index item-level modifier groups across all catalog categories
+    if (data?.catalog && Array.isArray(data.catalog)) {
+        data.catalog.forEach(cat => {
+            const items = Array.isArray(cat.items) ? cat.items : [cat];
+            items.forEach(it => {
+                const groups = it.modifierGroups || it.modifier_groups;
+                if (Array.isArray(groups)) {
+                    groups.forEach(grp => {
+                        (grp.options || []).forEach(opt => {
+                            const p = Number(opt.price) || 0;
+                            if (opt.name) {
+                                const name = String(opt.name).trim();
+                                if (map[name] === undefined) map[name] = p;
+                                if (name.startsWith('加')) {
+                                    const stripped = name.substring(1).trim();
+                                    if (map[stripped] === undefined) map[stripped] = p;
+                                } else {
+                                    const added = '加' + name;
+                                    if (map[added] === undefined) map[added] = p;
+                                }
+                            }
+                            if (opt.id && map[opt.id] === undefined) {
+                                map[opt.id] = p;
+                            }
+                        });
+                    });
+                }
+            });
+        });
+    }
     window.modPriceMap = map;
     return map;
 }
 
-function getModifierPrice(optName) {
-    if (!optName) return 0;
+function getEffectiveItemModifierGroups(itemOrKey, catSlugOrNull) {
+    const bData = window.bootstrapData || (typeof bootstrapData !== 'undefined' ? bootstrapData : null);
+    let targetItem = null;
+    let targetCatSlug = catSlugOrNull || '';
+
+    if (itemOrKey && typeof itemOrKey === 'object') {
+        targetItem = itemOrKey;
+        if (!targetCatSlug && targetItem.categoryId && bData?.catalog) {
+            const c = bData.catalog.find(cat => cat.id === targetItem.categoryId);
+            if (c) targetCatSlug = c.slug;
+        }
+    } else if (typeof itemOrKey === 'string') {
+        const parseFn = typeof parseCartKey === 'function' ? parseCartKey : (window.parseCartKey || (k => {
+            const parts = k.split('_');
+            return { catSlug: parts[0] || '', origName: parts.slice(1).join('_') || k };
+        }));
+        const { catSlug, origName } = parseFn(itemOrKey);
+        targetCatSlug = targetCatSlug || catSlug;
+        if (bData?.catalog) {
+            for (const cat of bData.catalog) {
+                if (!targetCatSlug || cat.slug === targetCatSlug) {
+                    const found = (cat.items || []).find(it => it.name === origName || it.id === origName || it.id === itemOrKey);
+                    if (found) {
+                        targetItem = found;
+                        targetCatSlug = cat.slug;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    const itemMods = [];
+    if (targetItem) {
+        const groups = targetItem.modifierGroups || targetItem.modifier_groups;
+        if (Array.isArray(groups) && groups.length > 0) {
+            groups.forEach((mg, idx) => {
+                itemMods.push({
+                    id: mg.id || `mg_item_${idx}`,
+                    slug: mg.id || `mg_item_${idx}`,
+                    name: mg.name,
+                    source: 'item',
+                    selectionType: mg.selectionType || mg.selection_type || 'single',
+                    isRequired: Boolean(mg.isRequired || mg.is_required),
+                    minSelection: mg.minSelection ?? mg.min_selection,
+                    maxSelection: mg.maxSelection ?? mg.max_selection,
+                    options: (mg.options || []).map(opt => ({
+                        id: opt.id,
+                        name: opt.name,
+                        price: Number(opt.price || 0),
+                        isDefault: Boolean(opt.isDefault || opt.is_default),
+                        isOutOfStock: Boolean(opt.isOutOfStock || opt.is_out_of_stock)
+                    }))
+                });
+            });
+        }
+    }
+
+    // Category modifiers
+    const catMods = [];
+    if (targetCatSlug && bData?.catalog) {
+        const catObj = bData.catalog.find(c => c.slug === targetCatSlug);
+        if (catObj && catObj.allowCustomization !== false) {
+            let applied = catObj.appliedModifiers;
+            if (applied === undefined) applied = ['*'];
+            else if (typeof applied === 'string') {
+                try { applied = JSON.parse(applied); } catch { applied = applied.split(',').map(s => s.trim()).filter(Boolean); }
+            }
+            if (Array.isArray(applied) && applied.length > 0) {
+                const allMods = bData.modifiers || [];
+                const matched = applied.includes('*') ? allMods : allMods.filter(m => applied.includes(m.slug) || applied.includes(m.id));
+                matched.forEach(m => {
+                    catMods.push({
+                        id: m.id || m.slug,
+                        slug: m.slug || m.id,
+                        name: m.name,
+                        source: 'category',
+                        selectionType: m.selectionType || 'single',
+                        isRequired: Boolean(m.isRequired),
+                        minSelection: m.minSelection,
+                        maxSelection: m.maxSelection,
+                        options: (m.options || []).map(opt => ({
+                            id: opt.id,
+                            name: opt.name,
+                            price: Number(opt.price || 0),
+                            isDefault: Boolean(opt.isDefault),
+                            isOutOfStock: Boolean(opt.isOutOfStock)
+                        }))
+                    });
+                });
+            }
+        }
+    }
+
+    return [...itemMods, ...catMods];
+}
+
+function calculatePortionExtra(itemOrKey, portion) {
+    if (!portion) return 0;
+    const effectiveGroups = getEffectiveItemModifierGroups(itemOrKey);
+    let extra = 0;
+
+    if (portion.selectedByGroup && typeof portion.selectedByGroup === 'object') {
+        for (const [groupKey, optIds] of Object.entries(portion.selectedByGroup)) {
+            if (!Array.isArray(optIds)) continue;
+            const targetGroup = effectiveGroups.find(g =>
+                g.id === groupKey ||
+                g.slug === groupKey ||
+                `item:${g.id}` === groupKey ||
+                `category:${g.id}` === groupKey ||
+                `category:${g.slug}` === groupKey
+            );
+            for (const optId of optIds) {
+                let p = 0;
+                if (targetGroup?.options) {
+                    const opt = targetGroup.options.find(o => o.id === optId || o.name === optId);
+                    if (opt) p = Number(opt.price || 0);
+                }
+                if (!p) p = getModifierPrice(optId, targetGroup);
+                extra += p;
+            }
+        }
+        return extra;
+    }
+
+    // Legacy portion.single & portion.multiple
+    if (portion.single && typeof portion.single === 'object') {
+        for (const [modSlug, optName] of Object.entries(portion.single)) {
+            if (!optName) continue;
+            const targetGroup = effectiveGroups.find(g => g.slug === modSlug || g.id === modSlug || g.name === modSlug);
+            let p = 0;
+            if (targetGroup?.options) {
+                const opt = targetGroup.options.find(o => o.name === optName || o.id === optName);
+                if (opt) p = Number(opt.price || 0);
+            }
+            if (!p) p = getModifierPrice(optName, targetGroup);
+            extra += p;
+        }
+    }
+
+    if (portion.multiple && typeof portion.multiple === 'object') {
+        for (const [optName, isSelected] of Object.entries(portion.multiple)) {
+            if (!isSelected) continue;
+            let p = 0;
+            for (const grp of effectiveGroups) {
+                const opt = (grp.options || []).find(o => o.name === optName || o.id === optName);
+                if (opt) { p = Number(opt.price || 0); break; }
+            }
+            if (!p) p = getModifierPrice(optName);
+            extra += p;
+        }
+    }
+
+    return extra;
+}
+
+function getModifierPrice(optIdOrName, contextItemOrGroup) {
+    if (!optIdOrName) return 0;
+    const cleanKey = String(optIdOrName).trim();
+
+    if (contextItemOrGroup) {
+        if (Array.isArray(contextItemOrGroup.options)) {
+            const found = contextItemOrGroup.options.find(o => o.id === cleanKey || o.name === cleanKey);
+            if (found && typeof found.price === 'number') return found.price;
+        }
+        if (typeof getEffectiveItemModifierGroups === 'function') {
+            const groups = getEffectiveItemModifierGroups(contextItemOrGroup);
+            for (const grp of groups) {
+                if (Array.isArray(grp.options)) {
+                    const found = grp.options.find(o => o.id === cleanKey || o.name === cleanKey);
+                    if (found && typeof found.price === 'number') return found.price;
+                }
+            }
+        }
+    }
+
     if (!window.modPriceMap || Object.keys(window.modPriceMap).length === 0) {
         buildModifierPriceMap(window.bootstrapData || (typeof bootstrapData !== 'undefined' ? bootstrapData : null));
     }
-    const cleanName = String(optName).trim();
-    if (window.modPriceMap && window.modPriceMap[cleanName] !== undefined) {
-        return window.modPriceMap[cleanName];
+    if (window.modPriceMap && window.modPriceMap[cleanKey] !== undefined) {
+        return window.modPriceMap[cleanKey];
     }
-    if (cleanName.startsWith('加')) {
-        const stripped = cleanName.substring(1).trim();
+
+    // Dynamic catalog & modifiers search
+    const bData = window.bootstrapData || (typeof bootstrapData !== 'undefined' ? bootstrapData : null);
+    if (bData?.catalog) {
+        for (const cat of bData.catalog) {
+            const items = Array.isArray(cat.items) ? cat.items : [cat];
+            for (const it of items) {
+                const groups = it.modifierGroups || it.modifier_groups;
+                if (Array.isArray(groups)) {
+                    for (const grp of groups) {
+                        if (Array.isArray(grp.options)) {
+                            const found = grp.options.find(o => o.id === cleanKey || o.name === cleanKey);
+                            if (found && typeof found.price === 'number') {
+                                if (window.modPriceMap) window.modPriceMap[cleanKey] = found.price;
+                                return found.price;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if (bData?.modifiers) {
+        for (const mod of bData.modifiers) {
+            if (Array.isArray(mod.options)) {
+                const found = mod.options.find(o => o.id === cleanKey || o.name === cleanKey);
+                if (found && typeof found.price === 'number') {
+                    if (window.modPriceMap) window.modPriceMap[cleanKey] = found.price;
+                    return found.price;
+                }
+            }
+        }
+    }
+
+    if (cleanKey.startsWith('加')) {
+        const stripped = cleanKey.substring(1).trim();
         if (window.modPriceMap && window.modPriceMap[stripped] !== undefined) {
             return window.modPriceMap[stripped];
         }
     } else {
-        const added = '加' + cleanName;
+        const added = '加' + cleanKey;
         if (window.modPriceMap && window.modPriceMap[added] !== undefined) {
             return window.modPriceMap[added];
         }
@@ -1108,3 +1345,5 @@ window.fetchWaitingCounter = fetchWaitingCounter;
 window.initApp = initApp;
 window.buildModifierPriceMap = buildModifierPriceMap;
 window.getModifierPrice = getModifierPrice;
+window.getEffectiveItemModifierGroups = getEffectiveItemModifierGroups;
+window.calculatePortionExtra = calculatePortionExtra;

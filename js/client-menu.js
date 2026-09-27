@@ -16,6 +16,10 @@ async function fetchMenu() {
         });
         if (res.ok) {
             const freshData = await res.json();
+            if (!freshData || freshData.menuComplete !== true) {
+                console.warn('[fetchMenu] Received incomplete menu bootstrap, preserving current state');
+                return;
+            }
             const prevDataStr = localStorage.getItem(`tenant_bootstrap_${tenantId}`);
             const freshDataStr = JSON.stringify(freshData);
             const hasChanged = (prevDataStr !== freshDataStr);
