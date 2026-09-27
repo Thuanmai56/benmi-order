@@ -1132,7 +1132,7 @@ function serializeMenuData(categories) {
           id: item.id,
           price: item.price,
           badge_text: item.badgeText || null,
-          is_recommended: (item.badgeText && item.badgeText.includes('推薦')) || item.isRecommended ? 1 : 0,
+          is_recommended: (item.badgeText && (item.badgeText.includes('推薦') || item.badgeText.toLowerCase().includes('khuyên dùng') || item.badgeText.toLowerCase().includes('recommend'))) || item.isRecommended ? 1 : 0,
           item_type: item.itemType || (item.bundleRule && item.bundleRule.groups && item.bundleRule.groups.length > 0 ? 'bundle' : 'standard')
         };
         if (Array.isArray(item.modifierGroups)) {
@@ -2974,18 +2974,13 @@ function renderQuickTags(currentVal) {
 
 function handleQuickTagClick(tagText) {
   const badgeInput = document.getElementById("item-detail-badge-input");
-  const recCheckbox = document.getElementById("item-detail-recommended-checkbox");
   if (!badgeInput) return;
 
   const currentVal = badgeInput.value.trim();
-  const recTag = t("quickTagRecommend");
-
   if (currentVal === tagText) {
     badgeInput.value = "";
-    if (tagText === recTag && recCheckbox) recCheckbox.checked = false;
   } else {
     badgeInput.value = tagText;
-    if (tagText === recTag && recCheckbox) recCheckbox.checked = true;
   }
   renderQuickTags(badgeInput.value.trim());
 }
@@ -2999,15 +2994,17 @@ function autoCommitItemDetailFields() {
   const nameInput = document.getElementById("item-detail-name-input");
   const priceInput = document.getElementById("item-detail-price-input");
   const badgeInput = document.getElementById("item-detail-badge-input");
-  const recCheckbox = document.getElementById("item-detail-recommended-checkbox");
 
   if (nameInput && nameInput.value.trim()) item.name = nameInput.value.trim();
   if (priceInput && priceInput.value !== "") {
     const p = parseFloat(priceInput.value);
     if (!isNaN(p)) item.price = p;
   }
-  if (badgeInput) item.badgeText = badgeInput.value.trim();
-  if (recCheckbox) item.isRecommended = recCheckbox.checked;
+  if (badgeInput) {
+    const bVal = badgeInput.value.trim();
+    item.badgeText = bVal;
+    item.isRecommended = Boolean(bVal && (bVal.includes('推薦') || bVal.toLowerCase().includes('khuyên dùng') || bVal.toLowerCase().includes('recommend')));
+  }
   markMenuDirty();
 }
 
@@ -3057,15 +3054,13 @@ function openCreateItemModal(cIdx) {
   if (deleteBtn) deleteBtn.style.display = "none";
   if (statusEl) statusEl.innerText = t("imageNoImage");
 
-  // Badge & Recommended
+  // Badge
   const badgeInput = document.getElementById("item-detail-badge-input");
   if (badgeInput) {
     badgeInput.value = "";
     renderQuickTags("");
     badgeInput.oninput = () => renderQuickTags(badgeInput.value.trim());
   }
-  const recCheckbox = document.getElementById("item-detail-recommended-checkbox");
-  if (recCheckbox) recCheckbox.checked = false;
 
   // Advanced Section
   const advSection = document.getElementById("item-detail-advanced-section");
@@ -3144,16 +3139,12 @@ function openItemDetailModal(cIdx, iIdx) {
   currentDetailImageKey = `${cat.id}_${item.name}`;
   checkItemDetailImage(cat.id, item.name);
 
-  // Badge & Recommended
+  // Badge
   const badgeInput = document.getElementById("item-detail-badge-input");
   if (badgeInput) {
     badgeInput.value = item.badgeText || "";
     renderQuickTags(item.badgeText || "");
     badgeInput.oninput = () => renderQuickTags(badgeInput.value.trim());
-  }
-  const recCheckbox = document.getElementById("item-detail-recommended-checkbox");
-  if (recCheckbox) {
-    recCheckbox.checked = Boolean(item.isRecommended || (item.badgeText && item.badgeText.includes(t("quickTagRecommend"))));
   }
 
   // Advanced Section
@@ -3223,12 +3214,11 @@ function saveItemDetailModal() {
   const nameInput = document.getElementById("item-detail-name-input");
   const priceInput = document.getElementById("item-detail-price-input");
   const badgeInput = document.getElementById("item-detail-badge-input");
-  const recCheckbox = document.getElementById("item-detail-recommended-checkbox");
 
   const nameVal = nameInput ? nameInput.value.trim() : "";
   const priceVal = priceInput && priceInput.value !== "" ? parseFloat(priceInput.value) : 0;
   const badgeVal = badgeInput ? badgeInput.value.trim() : "";
-  const recVal = recCheckbox ? recCheckbox.checked : false;
+  const isRec = Boolean(badgeVal && (badgeVal.includes('推薦') || badgeVal.toLowerCase().includes('khuyên dùng') || badgeVal.toLowerCase().includes('recommend')));
 
   if (!nameVal) {
     alert(t("enterItemName") || (currentLang === 'vi' ? "Vui lòng nhập tên món" : "請輸入餐點名稱"));
@@ -3241,7 +3231,7 @@ function saveItemDetailModal() {
       name: nameVal,
       price: isNaN(priceVal) ? 0 : priceVal,
       badgeText: badgeVal,
-      isRecommended: recVal,
+      isRecommended: isRec,
       isOos: false,
       bundleRule: null,
       itemType: "standard",
@@ -3257,7 +3247,7 @@ function saveItemDetailModal() {
       item.name = nameVal;
       item.price = isNaN(priceVal) ? 0 : priceVal;
       item.badgeText = badgeVal;
-      item.isRecommended = recVal;
+      item.isRecommended = isRec;
       markMenuDirty();
       renderMenuCategoryEditor(activeItemDetailCatIdx);
       renderMenuCategories();
@@ -3276,12 +3266,11 @@ function transitionToSubEditor(type) {
   const nameInput = document.getElementById("item-detail-name-input");
   const priceInput = document.getElementById("item-detail-price-input");
   const badgeInput = document.getElementById("item-detail-badge-input");
-  const recCheckbox = document.getElementById("item-detail-recommended-checkbox");
 
   const nameVal = nameInput ? nameInput.value.trim() : "";
   const priceVal = priceInput && priceInput.value !== "" ? parseFloat(priceInput.value) : 0;
   const badgeVal = badgeInput ? badgeInput.value.trim() : "";
-  const recVal = recCheckbox ? recCheckbox.checked : false;
+  const isRec = Boolean(badgeVal && (badgeVal.includes('推薦') || badgeVal.toLowerCase().includes('khuyên dùng') || badgeVal.toLowerCase().includes('recommend')));
 
   if (isItemDetailCreateMode || activeItemDetailItemIdx === null) {
     if (!nameVal) {
@@ -3293,7 +3282,7 @@ function transitionToSubEditor(type) {
       name: nameVal,
       price: isNaN(priceVal) ? 0 : priceVal,
       badgeText: badgeVal,
-      isRecommended: recVal,
+      isRecommended: isRec,
       isOos: false,
       bundleRule: null,
       itemType: "standard",
