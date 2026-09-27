@@ -749,7 +749,7 @@
                 <div style="flex: 1; padding-right: 12px; min-width: 0;">
                     <div id="bundle-modal-item-name" class="bundle-header-title">套餐名稱</div>
                     <div id="bundle-modal-group-name" class="bundle-header-subtitle">
-                        <span id="bundle-modal-prompt-text">請選擇配菜</span>
+                        <span id="bundle-modal-group-label"><span id="bundle-modal-prompt-text">請選擇配菜</span></span>
                         <span class="bundle-header-dot">·</span>
                         <span>已選 <strong id="bundle-modal-current-count">0</strong>/<span
                                 id="bundle-modal-max-count">6</span> 樣</span>
@@ -769,7 +769,10 @@
                 </button>
             </div>
 
-            <!-- Category Filter Tabs -->
+            <!-- Category Filter Tabs & Navigation -->
+            <div id="bundle-step-nav" class="bundle-v2-step-nav"></div>
+            <button type="button" id="bundle-refresh-prices" class="bundle-v2-copy" onclick="bundleRefreshPrices()" style="display:none">價格已變更，查看並套用新價格</button>
+            <button type="button" id="bundle-copy-previous" class="bundle-v2-copy" onclick="bundleCopyPrevious()" style="display:none">與上一份相同</button>
             <div id="bundle-cat-tabs" class="bundle-cat-tabs-row">
             </div>
 
@@ -780,6 +783,7 @@
                 <div id="bundle-addons-container"
                     style="display: none; margin-top: 14px; padding-top: 14px; border-top: 1.5px dashed #e2e8f0;"></div>
             </div>
+            <div id="bundle-modifier-editor" class="bundle-v2-mod-overlay" style="display:none"></div>
 
             <!-- Bottom Sticky Confirmation Bar -->
             <div class="bundle-sheet-footer">
@@ -796,6 +800,7 @@
     <script src="js/client-menu.js?v=20261002_custom_price_badge_v1"></script>
     <script src="js/client-customizations.js?v=20261002_custom_price_badge_v1"></script>
     <script src="js/client-bundle.js?v=20261002_custom_price_badge_v1"></script>
+    <script src="js/bundle-builder-v2.js?v=20261002_custom_price_badge_v1"></script>
     <script src="js/client-cart.js?v=20261002_custom_price_badge_v1"></script>
     <!-- Center Auth Card & Overlay for Desktop Guest Users -->
     <div id="desktop-center-auth-overlay" class="desktop-center-auth-overlay" style="display: none;">

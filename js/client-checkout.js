@@ -855,7 +855,7 @@ function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, ma
                 portions.forEach((p, pIdx) => {
                     const pPrefix = portions.length > 1 ? `第${pIdx + 1}份 ` : '';
                     (p.groups || []).forEach(g => {
-                        const itemsStr = (g.items || []).map(it => `${it.name} x${it.quantity}`).join('、');
+                        const itemsStr = (g.items || []).map(it => `${it.name} x${it.quantity}${(it.modifiers || []).length ? ` (${it.modifiers.map(mod => mod.name).join('、')})` : ''}`).join('、');
                         if (itemsStr) {
                             itemStr += `\n   ↳ ${pPrefix}${g.groupName || '配菜'}：${itemsStr}`;
                         }
@@ -971,7 +971,7 @@ function formatAppendItemsOnlyText() {
                 portions.forEach((p, pIdx) => {
                     const pPrefix = portions.length > 1 ? `第${pIdx + 1}份 ` : '';
                     (p.groups || []).forEach(g => {
-                        const itemsStr = (g.items || []).map(it => `${it.name} x${it.quantity}`).join('、');
+                        const itemsStr = (g.items || []).map(it => `${it.name} x${it.quantity}${(it.modifiers || []).length ? ` (${it.modifiers.map(mod => mod.name).join('、')})` : ''}`).join('、');
                         if (itemsStr) {
                             lines.push(`   ↳ ${pPrefix}${g.groupName || '配菜'}：${itemsStr}`);
                         }
@@ -1054,6 +1054,7 @@ function buildStructuredCartItems() {
 
             let itemModifiersTotal = 0;
             const options = [];
+            let itemModifiersExtra = 0;
             const cust = customizeData[key];
             const getPrice = window.getModifierPrice || (typeof getModifierPrice === 'function' ? getModifierPrice : () => 0);
             if (cust && Array.isArray(cust)) {
@@ -1118,15 +1119,17 @@ function buildStructuredCartItems() {
 
             // Universal Bundle Selections attachment
             let bundleSelections = null;
+            let bundleExtra = 0;
             if (typeof window !== 'undefined' && window.bundleCartData && window.bundleCartData[key]) {
                 const portions = window.bundleCartData[key].slice(0, qty);
+                bundleExtra = portions.reduce((sum, portion) => sum + (window.bundlePortionExtra ? window.bundlePortionExtra(portion) : 0), 0);
                 bundleSelections = {
                     bundleRuleId: itemInfo?.bundleRule?.id || undefined,
                     portions: portions
                 };
             }
 
-            const lineSubtotal = (basePrice * qty) + itemModifiersTotal;
+            const lineSubtotal = (basePrice * qty) + bundleExtra + itemModifiersTotal;
 
             items.push({
                 itemId: itemId,
@@ -1230,6 +1233,59 @@ async function submitOrder() {
     const hasItem = Object.values(cart || {}).some(q => q > 0);
     if (!hasItem) return customAlert('請先選擇餐點品項加入購物車');
     if (!hasAvailableCartItems()) return customAlert('購物車內餐點已全數售完，請重新挑選其他餐點');
+
+    // Validate Required Global Customizations (Type 3)
+    if (typeof bootstrapData !== 'undefined' && bootstrapData && Array.isArray(bootstrapData.customizations)) {
+        for (const group of bootstrapData.customizations) {
+            if (group.isRequired) {
+                const checked = document.querySelectorAll(`input[name="opt-${group.key}"]:checked`);
+                if (!checked || checked.length === 0) {
+                    const panel = document.querySelector(`.custom-group[data-group-key="${group.key}"]`) || document.querySelector(`input[name="opt-${group.key}"]`)?.closest('.custom-panel');
+                    if (panel) {
+                        panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        panel.classList.add('attention-pulse');
+                        setTimeout(() => panel.classList.remove('attention-pulse'), 1500);
+                    }
+                    const groupTitle = group.title || group.name || '客製選項';
+                    return customAlert(`請選擇【${groupTitle}】（此項為必填）`);
+                }
+            }
+        }
+    }
+
+    // Validate Required Item Modifiers (Type 2)
+    if (typeof getItemModifiers === 'function' && typeof bootstrapData !== 'undefined' && bootstrapData) {
+        for (const [key, q] of Object.entries(cart || {})) {
+            if (q <= 0) continue;
+            const sepIdx = key.indexOf('_');
+            if (sepIdx < 0) continue;
+            const catSlug = key.slice(0, sepIdx);
+            const itemName = key.slice(sepIdx + 1);
+            const itemMods = getItemModifiers(catSlug, itemName);
+            const reqMods = itemMods.filter(m => m.isRequired);
+            if (reqMods.length > 0) {
+                const itemPortions = (typeof customizeData !== 'undefined' && customizeData && customizeData[key]) ? customizeData[key] : [];
+                for (let i = 0; i < q; i++) {
+                    const portion = itemPortions[i];
+                    for (const reqM of reqMods) {
+                        let hasSelection = false;
+                        if (reqM.selectionType === 'multiple') {
+                            const reqOptNames = (reqM.options || []).map(o => o.name);
+                            hasSelection = reqOptNames.some(name => portion?.multiple && portion.multiple[name]);
+                        } else {
+                            hasSelection = Boolean(portion?.single && portion.single[reqM.slug]);
+                        }
+                        if (!hasSelection) {
+                            if (typeof toggleCustomize === 'function') {
+                                toggleCustomize(catSlug, itemName);
+                            }
+                            return customAlert(`請為【${itemName}】第 ${i + 1} 份選擇【${reqM.name}】（此項為必選）`);
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     // Minimum spend excludes order-wide add-on charges themselves.
     updateTotal();
@@ -1726,7 +1782,10 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                         );
                     }
                 }
-                throw new Error(errData.error || `API returned status ${res.status}`);
+                const serverError = new Error(errData.error || `API returned status ${res.status}`);
+                serverError.serverRejected = true;
+                serverError.details = errData;
+                throw serverError;
             }
 
             const appendResult = await res.json();
@@ -1751,6 +1810,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
             cart = {};
             customizeData = {};
             comboDrinkData = {};
+            window.bundleCartData = {};
             try {
                 sessionStorage.removeItem('benmi_append_parent');
                 sessionStorage.removeItem('benmi_append_display');
@@ -1984,7 +2044,10 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                     );
                 }
             }
-            throw new Error(errData.error || `API returned status ${res.status}`);
+            const serverError = new Error(errData.error || `API returned status ${res.status}`);
+            serverError.serverRejected = true;
+            serverError.details = errData;
+            throw serverError;
         }
 
         const resData = await res.json().catch(() => ({}));
@@ -2015,6 +2078,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
         cart = {};
         customizeData = {};
         comboDrinkData = {};
+        window.bundleCartData = {};
         if (typeof updateTotal === 'function') updateTotal();
 
         const orderSuccessMsg = isDesktop && userId && userId.startsWith('U')
@@ -2037,6 +2101,30 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
 
     } catch (err) {
         clearTimeout(timeoutId);
+        if (err.serverRejected) {
+            const details = err.details || {};
+            if (String(details.code || '').startsWith('BUNDLE_')) {
+                try {
+                    const fresh = await fetch(`${WORKER_BASE}/api/tenant/bootstrap?tenant_id=${encodeURIComponent(getTenantIdFromUrl())}&_t=${Date.now()}`);
+                    if (fresh.ok) bootstrapData = await fresh.json();
+                } catch (refreshError) { console.warn('[Bundle] Refresh failed', refreshError); }
+                const affected = buildStructuredCartItems()[Number(details.itemIndex || 0)];
+                const key = affected && Object.keys(cart).find(candidate => resolveCatalogItem(candidate)?.itemId === affected.itemId);
+                const location = key ? parseCartKey(key) : null;
+                const safeMessage = String(details.error || '套餐內容已變更，請重新確認').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+                const expected = details.expectedTotal ?? details.expectedSubtotal;
+                customAlert(`${safeMessage}${expected !== undefined ? `<br>更新後金額：$${Number(expected)}` : ''}`, () => {
+                    if (location) {
+                        openBundleBuilderModal(location.catSlug, location.origName, Number(details.portionIndex || 0));
+                        if (details.groupId && typeof window.bundleFocusGroup === 'function') window.bundleFocusGroup(details.groupId);
+                    }
+                });
+            } else {
+                const safeMessage = String(err.message || '訂單送出失敗').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+                customAlert(safeMessage);
+            }
+            return;
+        }
         console.warn("Primary API flow failed, falling back to LINE message flow:", err);
 
         try {
@@ -2070,6 +2158,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                 cart = {};
                 customizeData = {};
                 comboDrinkData = {};
+                window.bundleCartData = {};
                 try {
                     sessionStorage.removeItem('benmi_append_parent');
                     sessionStorage.removeItem('benmi_append_display');

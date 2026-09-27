@@ -151,21 +151,29 @@ HTML_FILES.forEach(htmlFile => {
       documentElement: { style: { setProperty: () => {} } },
       getElementById: (id) => ({
         id,
-        classList: { toggle: () => {}, add: () => {}, remove: () => {} },
+        classList: { toggle: () => {}, add: () => {}, remove: () => {}, contains: () => false },
         style: {},
         innerHTML: "",
         innerText: "",
+        textContent: "",
+        dataset: {},
+        setAttribute: () => {},
         appendChild: () => {},
         getElementsByClassName: () => [],
+        querySelector: () => ({ innerText: "", innerHTML: "", textContent: "", classList: { contains: () => false } }),
+        querySelectorAll: () => [],
         addEventListener: () => {},
         removeEventListener: () => {}
       }),
       querySelectorAll: () => [],
       querySelector: () => ({
-        classList: { toggle: () => {}, add: () => {}, remove: () => {} },
+        classList: { toggle: () => {}, add: () => {}, remove: () => {}, contains: () => false },
         style: {},
         innerHTML: "",
         innerText: "",
+        textContent: "",
+        dataset: {},
+        setAttribute: () => {},
         addEventListener: () => {},
         removeEventListener: () => {}
       }),
@@ -244,6 +252,15 @@ HTML_FILES.forEach(htmlFile => {
 
   if (vmExecutionPassed) {
     console.log(`  ${COLORS.green}✓ All scripts in ${htmlFile} loaded and initialized with 0 runtime errors.${COLORS.reset}`);
+    if (typeof vmContext.applyLanguageToDOM === "function") {
+      try {
+        vmContext.applyLanguageToDOM();
+        console.log(`  ${COLORS.green}✓ applyLanguageToDOM() executed with 0 runtime errors in ${htmlFile}.${COLORS.reset}`);
+      } catch (err) {
+        hasErrors = true;
+        console.error(`  ${COLORS.red}✗ applyLanguageToDOM() crashed in '${htmlFile}':${COLORS.reset}`, err);
+      }
+    }
   }
 });
 
