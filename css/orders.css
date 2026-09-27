@@ -4251,6 +4251,100 @@ html.is-web-platform .store-activation-modal:not(.force-show) {
     border-right: none !important;
     border-bottom: 1px solid #e2e8f0 !important;
   }
+.menu-sidebar-section {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.menu-sidebar-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 14px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease;
+  min-height: 44px;
+  box-sizing: border-box;
+}
+
+.menu-sidebar-section-header:hover {
+  background: #f1f5f9;
+}
+
+.menu-sidebar-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.menu-sidebar-section-count {
+  font-size: 11px;
+  font-weight: 700;
+  background: #e2e8f0;
+  color: #475569;
+  padding: 2px 7px;
+  border-radius: 10px;
+}
+
+.menu-sidebar-section-chevron {
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  transition: transform 0.2s ease;
+}
+
+.menu-sidebar-section-chevron.collapsed {
+  transform: rotate(-90deg);
+}
+
+.menu-sidebar-section-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.menu-sidebar-section-body.collapsed {
+  display: none;
+}
+
+.menu-sidebar-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 8px 12px 12px 12px;
+  padding: 8px 12px;
+  background: #ffffff;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #2563eb;
+  cursor: pointer;
+  min-height: 44px;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.menu-sidebar-action-btn:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+}
+
+.menu-section-empty-hint {
+  padding: 12px 14px;
+  font-size: 12px;
+  color: #94a3b8;
+  font-style: italic;
+  line-height: 1.4;
+  text-align: center;
 }
 
 .menu-cat-item {

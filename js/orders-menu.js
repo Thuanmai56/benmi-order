@@ -487,58 +487,254 @@ function renderCategoriesManagerView() {
   container.appendChild(mgrContainer);
 }
 
+const collapsedMenuSections = {
+  catalog: false,
+  combo: false,
+  custom: false
+};
+
+function toggleMenuSectionCollapse(sectionKey) {
+  if (collapsedMenuSections.hasOwnProperty(sectionKey)) {
+    collapsedMenuSections[sectionKey] = !collapsedMenuSections[sectionKey];
+    renderMenuCategories();
+  }
+}
+window.toggleMenuSectionCollapse = toggleMenuSectionCollapse;
+
+function isComboCategory(cat) {
+  if (!cat) return false;
+  if (cat.type !== 'catalog') return false;
+  const slug = (cat.slug || '').toLowerCase();
+  const title = (cat.title || '').toLowerCase();
+  if (slug === 'combo' || slug === 'bundle' || slug.includes('combo') || slug.includes('bundle')) return true;
+  if (title.includes('combo') || title.includes('set') || title.includes('套餐')) return true;
+  if (Array.isArray(cat.items) && cat.items.length > 0 && cat.items.every(it => it.itemType === 'bundle' || (it.bundleRule && it.bundleRule.groups?.length > 0))) {
+    return true;
+  }
+  return false;
+}
+window.isComboCategory = isComboCategory;
+
+function isCustomizationCategory(cat) {
+  if (!cat) return false;
+  return cat.type === 'order_customization' || cat.id === 'sec-flavor' || cat.slug === 'sec-flavor' || cat.type === 'modifier';
+}
+window.isCustomizationCategory = isCustomizationCategory;
+
+function handleCreateComboFromSidebar() {
+  if (!confirmLeaveMenu()) return;
+  if (!currentMenuData) currentMenuData = [];
+  syncMenuDataFromDOM();
+
+  let comboCatIdx = currentMenuData.findIndex(c => isComboCategory(c));
+  if (comboCatIdx < 0) {
+    const comboCat = {
+      id: `${(window.currentTenantId || 'cat')}_combo_${Date.now()}`,
+      title: currentLang === 'vi' ? 'Combo & Set ưu đãi' : '特惠套餐',
+      shortName: currentLang === 'vi' ? 'Combo' : '套餐',
+      slug: 'combo',
+      type: 'catalog',
+      allowCustomization: false,
+      appliedModifiers: [],
+      items: []
+    };
+    currentMenuData.push(comboCat);
+    markMenuDirty();
+    comboCatIdx = currentMenuData.length - 1;
+  }
+
+  isCategoryManagerOpen = false;
+  isCustomGroupCreatorOpen = false;
+  activeCategoryIndex = comboCatIdx;
+  renderMenuCategories();
+  renderMenuCategoryEditor(comboCatIdx);
+  if (typeof openBundleWizard === 'function') {
+    openBundleWizard(comboCatIdx);
+  }
+}
+window.handleCreateComboFromSidebar = handleCreateComboFromSidebar;
+
+function handleCreateCustomFromSidebar() {
+  if (!confirmLeaveMenu()) return;
+  if (!currentMenuData) currentMenuData = [];
+  syncMenuDataFromDOM();
+
+  let flavorIdx = currentMenuData.findIndex(c => c.type === 'order_customization' || c.id === 'sec-flavor');
+  if (flavorIdx < 0) {
+    const newCat = {
+      id: 'sec-flavor',
+      title: currentLang === 'vi' ? 'Tùy chọn khẩu vị & biến thể' : '口味與客製化選擇',
+      shortName: currentLang === 'vi' ? 'Khẩu vị' : '口味選擇',
+      type: 'order_customization',
+      allowCustomization: false,
+      appliedModifiers: [],
+      groups: [],
+      items: []
+    };
+    currentMenuData.push(newCat);
+    flavorIdx = currentMenuData.length - 1;
+    markMenuDirty();
+  }
+
+  isCategoryManagerOpen = false;
+  isCustomGroupCreatorOpen = true;
+  newCustomGroupType = 'radio';
+  newCustomGroupRequired = false;
+  activeCategoryIndex = flavorIdx;
+  renderMenuCategories();
+  renderMenuCategoryEditor(flavorIdx);
+  openNewCustomGroupCreator(flavorIdx);
+}
+window.handleCreateCustomFromSidebar = handleCreateCustomFromSidebar;
+
 function renderMenuCategories() {
   const container = document.getElementById("menu-categories");
   if (!container) return;
   container.innerHTML = "";
   if (!currentMenuData) return;
 
-  currentMenuData.forEach((cat, index) => {
-    const div = document.createElement("div");
-    div.className = `menu-cat-item ${activeCategoryIndex === index && !isCategoryManagerOpen ? 'active' : ''}`;
+  const plusIcon = (typeof POS_SVG !== "undefined" && POS_SVG.plus) || `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
 
-    const isSystemCustomization = cat.type === 'order_customization' || cat.id === 'sec-flavor';
-    const badge = cat.type === 'modifier'
-      ? `<span style="font-size: 11px; padding: 2px 6px; background: #e0e7ff; color: #4338ca; border-radius: 4px; font-weight: 700; margin-right: 6px;">${t("modifierPrefix")}</span>`
-      : isSystemCustomization
-      ? `<span style="font-size: 11px; padding: 2px 6px; background: #fef3c7; color: #92400e; border-radius: 4px; font-weight: 700; margin-right: 6px;">${currentLang === 'vi' ? 'Khẩu vị' : '客製化'}</span>`
-      : '';
+  // Partition categories with their original index
+  const catalogList = [];
+  const comboList = [];
+  const customList = [];
 
-    const itemCount = isSystemCustomization
-      ? (cat.groups ? cat.groups.reduce((acc, g) => acc + (g.options ? g.options.length : 0), 0) : 0)
-      : cat.items.length;
-
-    div.innerHTML = `
-      <div style="display:flex; align-items:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;">
-        ${badge}
-        <span class="menu-cat-title">${escapeHtml(cat.title)}</span>
-      </div>
-      <span class="menu-cat-count">${itemCount} ${t("menuItemUnit")}</span>
-    `;
-
-    div.onclick = () => {
-      if (index !== activeCategoryIndex && !confirmLeaveMenu()) return;
-      if (index === activeCategoryIndex && isMenuDirty) syncMenuDataFromDOM();
-      isCategoryManagerOpen = false;
-      isCustomGroupCreatorOpen = false;
-      activeCategoryIndex = index;
-      renderMenuCategories();
-      renderMenuCategoryEditor(index);
-    };
-    container.appendChild(div);
+  currentMenuData.forEach((cat, originalIndex) => {
+    if (isCustomizationCategory(cat)) {
+      customList.push({ cat, originalIndex });
+    } else if (isComboCategory(cat)) {
+      comboList.push({ cat, originalIndex });
+    } else {
+      catalogList.push({ cat, originalIndex });
+    }
   });
 
-  // Bottom Add Category Button in Left Panel
-  const bottomDiv = document.createElement("div");
-  bottomDiv.style.padding = "12px 14px";
-  const plusIcon = (typeof POS_SVG !== "undefined" && POS_SVG.plus) || "";
-  bottomDiv.innerHTML = `
-    <button type="button" class="btn btn-ghost btn-block menu-cat-add-bottom" onclick="openAddCategoryModal()">
-      ${plusIcon}<span>${t("btnMenuAddCategory")}</span>
-    </button>
-  `;
-  container.appendChild(bottomDiv);
+  const sections = [
+    {
+      key: 'catalog',
+      title: t("menuSectionCatalogTitle"),
+      icon: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>`,
+      items: catalogList,
+      emptyPrompt: null,
+      actionBtnText: t("btnAddCatalogCategory"),
+      actionBtnHandler: () => openAddCategoryModal('catalog')
+    },
+    {
+      key: 'combo',
+      title: t("menuSectionComboTitle"),
+      icon: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>`,
+      items: comboList,
+      emptyPrompt: t("noComboCategoriesPrompt"),
+      actionBtnText: t("btnCreateComboWizard"),
+      actionBtnHandler: () => handleCreateComboFromSidebar()
+    },
+    {
+      key: 'custom',
+      title: t("menuSectionCustomTitle"),
+      icon: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>`,
+      items: customList,
+      emptyPrompt: null,
+      actionBtnText: t("btnCreateCustomGroup"),
+      actionBtnHandler: () => handleCreateCustomFromSidebar()
+    }
+  ];
+
+  sections.forEach(sec => {
+    const isCollapsed = Boolean(collapsedMenuSections[sec.key]);
+
+    const sectionEl = document.createElement("div");
+    sectionEl.className = "menu-sidebar-section";
+
+    // Section Header
+    const headerEl = document.createElement("div");
+    headerEl.className = "menu-sidebar-section-header";
+    headerEl.setAttribute("role", "button");
+    headerEl.setAttribute("aria-expanded", !isCollapsed);
+    headerEl.setAttribute("tabindex", "0");
+    headerEl.onclick = () => toggleMenuSectionCollapse(sec.key);
+    headerEl.onkeydown = (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        toggleMenuSectionCollapse(sec.key);
+      }
+    };
+
+    headerEl.innerHTML = `
+      <div class="menu-sidebar-section-title">
+        ${sec.icon}
+        <span>${escapeHtml(sec.title)}</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span class="menu-sidebar-section-count">${sec.items.length}</span>
+        <span class="menu-sidebar-section-chevron ${isCollapsed ? 'collapsed' : ''}" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </span>
+      </div>
+    `;
+    sectionEl.appendChild(headerEl);
+
+    // Section Body
+    const bodyEl = document.createElement("div");
+    bodyEl.className = `menu-sidebar-section-body ${isCollapsed ? 'collapsed' : ''}`;
+
+    if (sec.items.length === 0 && sec.emptyPrompt) {
+      const emptyEl = document.createElement("div");
+      emptyEl.className = "menu-section-empty-hint";
+      emptyEl.innerText = sec.emptyPrompt;
+      bodyEl.appendChild(emptyEl);
+    } else {
+      sec.items.forEach(({ cat, originalIndex }) => {
+        const div = document.createElement("div");
+        div.className = `menu-cat-item ${activeCategoryIndex === originalIndex && !isCategoryManagerOpen ? 'active' : ''}`;
+
+        const isSystemCustomization = cat.type === 'order_customization' || cat.id === 'sec-flavor';
+        const badge = cat.type === 'modifier'
+          ? `<span style="font-size: 11px; padding: 2px 6px; background: #e0e7ff; color: #4338ca; border-radius: 4px; font-weight: 700; margin-right: 6px;">${t("modifierPrefix")}</span>`
+          : isSystemCustomization
+          ? `<span style="font-size: 11px; padding: 2px 6px; background: #fef3c7; color: #92400e; border-radius: 4px; font-weight: 700; margin-right: 6px;">${currentLang === 'vi' ? 'Khẩu vị' : '客製化'}</span>`
+          : isComboCategory(cat)
+          ? `<span style="font-size: 11px; padding: 2px 6px; background: #fef2f2; color: #b91c1c; border-radius: 4px; font-weight: 700; margin-right: 6px;">Combo</span>`
+          : '';
+
+        const itemCount = isSystemCustomization
+          ? (cat.groups ? cat.groups.reduce((acc, g) => acc + (g.options ? g.options.length : 0), 0) : 0)
+          : (Array.isArray(cat.items) ? cat.items.length : 0);
+
+        div.innerHTML = `
+          <div style="display:flex; align-items:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;">
+            ${badge}
+            <span class="menu-cat-title">${escapeHtml(cat.title)}</span>
+          </div>
+          <span class="menu-cat-count">${itemCount} ${t("menuItemUnit")}</span>
+        `;
+
+        div.onclick = () => {
+          if (originalIndex !== activeCategoryIndex && !confirmLeaveMenu()) return;
+          if (originalIndex === activeCategoryIndex && isMenuDirty) syncMenuDataFromDOM();
+          isCategoryManagerOpen = false;
+          isCustomGroupCreatorOpen = false;
+          activeCategoryIndex = originalIndex;
+          renderMenuCategories();
+          renderMenuCategoryEditor(originalIndex);
+        };
+        bodyEl.appendChild(div);
+      });
+    }
+
+    // Section Action Button
+    const actionBtn = document.createElement("button");
+    actionBtn.type = "button";
+    actionBtn.className = "menu-sidebar-action-btn";
+    actionBtn.innerHTML = `${plusIcon}<span>${escapeHtml(sec.actionBtnText)}</span>`;
+    actionBtn.onclick = sec.actionBtnHandler;
+    bodyEl.appendChild(actionBtn);
+
+    sectionEl.appendChild(bodyEl);
+    container.appendChild(sectionEl);
+  });
 }
+
 
 function getStoreModifiersList() {
   if (!currentMenuData) return [];
@@ -567,8 +763,10 @@ function renderMenuCategoryEditor(index) {
   }
 
   const cat = currentMenuData[index];
+  const isCustom = isCustomizationCategory(cat);
+  const isCombo = isComboCategory(cat);
 
-  if (cat.type === 'order_customization' || cat.id === 'sec-flavor') {
+  if (isCustom) {
     if (renameBtn) renameBtn.style.display = "none";
     if (deleteBtn) {
       deleteBtn.style.display = "inline-flex";
@@ -576,7 +774,7 @@ function renderMenuCategoryEditor(index) {
     }
     if (createBtn) {
       createBtn.style.display = "inline-flex";
-      const customLabel = t("btnMenuAddCustomGroup") || "新增客製化分組";
+      const customLabel = t("btnMenuAddCustomGroup") || (currentLang === 'vi' ? 'Thêm nhóm tùy chọn' : '新增客製化分組');
       if (createBtnText) createBtnText.innerText = customLabel.replace(/^\+\s*/, '');
       else createBtn.innerText = customLabel;
       createBtn.onclick = () => openNewCustomGroupCreator(index);
@@ -587,10 +785,12 @@ function renderMenuCategoryEditor(index) {
 
   if (createBtn) {
     createBtn.style.display = "inline-flex";
-    const unifiedLabel = t("btnMenuCreateUnified") || "建立新項目";
-    if (createBtnText) createBtnText.innerText = unifiedLabel.replace(/^\+\s*/, '');
-    else createBtn.innerText = unifiedLabel;
-    createBtn.onclick = () => handleMenuCreateClick();
+    const actionLabel = isCombo
+      ? (t("btnCreateComboWizard") || (currentLang === 'vi' ? 'Tạo Combo mới' : '建立特惠套餐'))
+      : (t("btnMenuAddItem") || (currentLang === 'vi' ? 'Thêm món mới' : '新增餐點'));
+    if (createBtnText) createBtnText.innerText = actionLabel.replace(/^\+\s*/, '');
+    else createBtn.innerText = actionLabel;
+    createBtn.onclick = isCombo ? () => openBundleWizard(index) : () => openCreateItemModal(index);
   }
 
   if (renameBtn) renameBtn.style.display = "inline-flex";
@@ -740,8 +940,13 @@ function renderMenuCategoryEditor(index) {
   addItemBtn.type = "button";
   addItemBtn.className = "cat-mgr-add-btn";
   addItemBtn.style.marginTop = "12px";
-  addItemBtn.onclick = () => openCreateItemModal(index);
-  addItemBtn.innerHTML = `<span>+ ${t("btnItemCreate") || (currentLang === 'vi' ? 'Thêm món mới' : '新增餐點')}</span>`;
+  if (isCombo) {
+    addItemBtn.onclick = () => openBundleWizard(index);
+    addItemBtn.innerHTML = `<span>+ ${t("btnCreateComboWizard") || (currentLang === 'vi' ? 'Tạo Combo mới' : '建立特惠套餐')}</span>`;
+  } else {
+    addItemBtn.onclick = () => openCreateItemModal(index);
+    addItemBtn.innerHTML = `<span>+ ${t("btnItemCreate") || (currentLang === 'vi' ? 'Thêm món mới' : '新增餐點')}</span>`;
+  }
   container.appendChild(addItemBtn);
 }
 
@@ -1449,12 +1654,17 @@ function selectAllCategoryModifiers(catIndex, selectAll) {
 }
 
 // --- Category Management ---
-function openAddCategoryModal() {
+function openAddCategoryModal(defaultType = "catalog") {
   if (!confirmLeaveMenu()) return;
   const inp = document.getElementById("add-cat-input-name");
   if (inp) inp.value = "";
   const typeSelect = document.getElementById("add-cat-select-type");
-  if (typeSelect) typeSelect.value = "catalog";
+  if (typeSelect) {
+    typeSelect.value = defaultType;
+    if (typeof onAddCategoryTypeChange === 'function') {
+      onAddCategoryTypeChange();
+    }
+  }
 
   const modContainer = document.getElementById("add-cat-modifiers-list");
   const storeMods = getStoreModifiersList();
@@ -2671,10 +2881,18 @@ window.closeCreationTypeModal = closeCreationTypeModal;
 function handleMenuCreateClick() {
   if (activeCategoryIndex >= 0 && currentMenuData && currentMenuData[activeCategoryIndex]) {
     const cat = currentMenuData[activeCategoryIndex];
-    if (cat.type === 'order_customization' || cat.id === 'sec-flavor') {
+    if (isCustomizationCategory(cat)) {
       openNewCustomGroupCreator(activeCategoryIndex);
       return;
     }
+    if (isComboCategory(cat)) {
+      if (typeof openBundleWizard === 'function') {
+        openBundleWizard(activeCategoryIndex);
+        return;
+      }
+    }
+    openCreateItemModal(activeCategoryIndex);
+    return;
   }
   openCreationTypeModal();
 }
