@@ -27,6 +27,7 @@ export interface BootstrapBundleGroup {
     categoryId?: string;
     allowCustomization?: boolean;
     appliedModifiers?: string[];
+    modifierGroups?: any[];
   }>;
 }
 
@@ -35,7 +36,12 @@ export interface BootstrapBundleRule {
   groups: BootstrapBundleGroup[];
 }
 
+export const BOOTSTRAP_VERSION = 2;
+
 export interface BootstrapResponse {
+  bootstrapVersion: number;
+  menuComplete: boolean;
+  customizationCategoryId?: string | null;
   tenant: {
     id: string;
     brandName: string;
@@ -359,10 +365,17 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
     if (!noCache && env.ORDER_STATE) {
       const cached = await env.ORDER_STATE.get(cacheKey);
       if (cached) {
-        return json(JSON.parse(cached), 200, {
-          "X-Cache": "HIT",
-          "Cache-Control": "no-cache, must-revalidate"
-        });
+        try {
+          const parsed = JSON.parse(cached);
+          if (parsed && parsed.bootstrapVersion === BOOTSTRAP_VERSION && parsed.menuComplete === true) {
+            return json(parsed, 200, {
+              "X-Cache": "HIT",
+              "Cache-Control": "no-cache, must-revalidate"
+            });
+          }
+        } catch {
+          // ignore corrupted or legacy cache, fallback to fresh D1 query
+        }
       }
     }
   } catch (e) {
@@ -432,7 +445,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
              ORDER BY sort_order ASC`
           ).bind(tenantId)
         ]);
-        if ([catsRes, itemsRes, customRes].some(result => !result.success || !Array.isArray(result.results))) {
+        if ([catsRes, itemsRes, customRes].some(result => !result || !result.success || !Array.isArray(result.results))) {
           throw new Error('Incomplete menu query');
         }
         categories = (catsRes.results as any[]) || [];
@@ -453,10 +466,14 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
                WHERE tenant_id = ? AND is_active = 1`
             ).bind(tenantId)
           ]);
+          if (!bRes || !bRes.success || !Array.isArray(bRes.results) || !rRes || !rRes.success || !Array.isArray(rRes.results)) {
+            throw new Error('Incomplete bundle or custom rules query');
+          }
           bundleRulesRows = (bRes.results as any[]) || [];
           customRulesRows = (rRes.results as any[]) || [];
         } catch (subRulesErr) {
-          console.warn(`[Bootstrap] menu_bundle_rules or option_rules query warning for ${tenantId}:`, subRulesErr);
+          menuComplete = false;
+          console.warn(`[Bootstrap] menu_bundle_rules or option_rules query failure for ${tenantId}:`, subRulesErr);
         }
 
         try {
@@ -473,13 +490,20 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
              WHERE l.tenant_id = ?
              ORDER BY l.sort_order ASC, g.sort_order ASC, o.sort_order ASC`
           ).bind(tenantId).all<any>();
+          if (!modRes || !modRes.success || !Array.isArray(modRes.results)) {
+            throw new Error('Incomplete item modifiers query');
+          }
           itemModifierRows = (modRes.results as any[]) || [];
         } catch (modErr) {
-          // Table may not exist yet or no rows
+          menuComplete = false;
+          console.warn(`[Bootstrap] item modifiers query failure for ${tenantId}:`, modErr);
         }
       } catch (dbErr) {
+        menuComplete = false;
         console.error(`[Bootstrap] D1 Query error for ${tenantId}:`, dbErr);
       }
+    } else {
+      menuComplete = false;
     }
 
     const now = new Date();
@@ -532,12 +556,47 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
       }
     }
 
+    // Build Item Modifier Groups Map before resolving bundle rules so eligible child items get modifier groups
+    const itemModifierGroupsMap = new Map<string, any[]>();
+    for (const row of itemModifierRows) {
+      if (!itemModifierGroupsMap.has(row.item_id)) {
+        itemModifierGroupsMap.set(row.item_id, []);
+      }
+      const groupList = itemModifierGroupsMap.get(row.item_id)!;
+      let grp = groupList.find((g: any) => g.id === row.group_id);
+      if (!grp) {
+        grp = {
+          id: row.group_id,
+          name: row.group_name,
+          selectionType: row.selection_type || 'single',
+          isRequired: Boolean(row.is_required),
+          minSelection: Number(row.min_selection ?? 0),
+          maxSelection: Number(row.max_selection ?? 1),
+          options: []
+        };
+        groupList.push(grp);
+      }
+      if (row.option_id) {
+        const isOptOos = Boolean(row.option_out_of_stock_until && new Date(row.option_out_of_stock_until) > now);
+        grp.options.push({
+          id: row.option_id,
+          name: row.option_name,
+          price: Number(row.option_price || 0),
+          isDefault: Boolean(row.is_default),
+          isOutOfStock: isOptOos
+        });
+      }
+    }
+
     // Resolve bundle rules and populate eligibleItems
     const bundleRulesByItemId = new Map<string, BootstrapBundleRule>();
     for (const row of bundleRulesRows) {
       try {
         const parsed = typeof row.config_json === 'string' ? JSON.parse(row.config_json) : row.config_json;
-        if (!parsed || !Array.isArray(parsed.groups)) continue;
+        if (!parsed || !Array.isArray(parsed.groups)) {
+          menuComplete = false;
+          continue;
+        }
 
         const resolvedGroups: BootstrapBundleGroup[] = parsed.groups.map((group: any) => {
           const eligibleItems: any[] = [];
@@ -552,10 +611,18 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
               try { appliedModifiers = JSON.parse(cat.applied_modifiers || '[]'); }
               catch { appliedModifiers = String(cat.applied_modifiers || '').split(',').map((s: string) => s.trim()).filter(Boolean); }
             }
-            eligibleItems.push({ id: it.id, name: it.name, price: it.price,
+            const modGroups = itemModifierGroupsMap.get(it.id) || [];
+            eligibleItems.push({
+              id: it.id,
+              name: it.name,
+              price: it.price,
               surcharge: Number(group.type === 'fixed' ? (group.items || []).find((x: any) => x.itemId === it.id)?.surcharge || 0 : group.surcharges?.[it.id] || 0),
               isOutOfStock: Boolean(it.out_of_stock_until && new Date(it.out_of_stock_until) > now),
-              categoryId: it.category_id, allowCustomization: appliedModifiers.length > 0, appliedModifiers });
+              categoryId: it.category_id,
+              allowCustomization: appliedModifiers.length > 0 || modGroups.length > 0,
+              appliedModifiers,
+              modifierGroups: modGroups.length > 0 ? modGroups : undefined
+            });
           };
 
           if (group.type === 'fixed') {
@@ -602,6 +669,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
           groups: resolvedGroups
         });
       } catch (e) {
+        menuComplete = false;
         console.error(`[Bootstrap] Failed to parse bundle rule for ${row.parent_item_id}:`, e);
       }
     }
@@ -620,37 +688,6 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
     }
 
     // 4. Organize Items by Category
-    const itemModifierGroupsMap = new Map<string, any[]>();
-    for (const row of itemModifierRows) {
-      if (!itemModifierGroupsMap.has(row.item_id)) {
-        itemModifierGroupsMap.set(row.item_id, []);
-      }
-      const groupList = itemModifierGroupsMap.get(row.item_id)!;
-      let grp = groupList.find((g: any) => g.id === row.group_id);
-      if (!grp) {
-        grp = {
-          id: row.group_id,
-          name: row.group_name,
-          selectionType: row.selection_type || 'single',
-          isRequired: Boolean(row.is_required),
-          minSelection: Number(row.min_selection ?? 0),
-          maxSelection: Number(row.max_selection ?? 1),
-          options: []
-        };
-        groupList.push(grp);
-      }
-      if (row.option_id) {
-        const isOptOos = Boolean(row.option_out_of_stock_until && new Date(row.option_out_of_stock_until) > now);
-        grp.options.push({
-          id: row.option_id,
-          name: row.option_name,
-          price: Number(row.option_price || 0),
-          isDefault: Boolean(row.is_default),
-          isOutOfStock: isOptOos
-        });
-      }
-    }
-
     const itemsByCatId = new Map<string, any[]>();
     for (const item of items) {
       if (!itemsByCatId.has(item.category_id)) {
@@ -774,7 +811,8 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
       });
     }
 
-    const payload: BootstrapResponse & { menuComplete: boolean; customizationCategoryId: string | null } = {
+    const payload: BootstrapResponse = {
+      bootstrapVersion: BOOTSTRAP_VERSION,
       menuComplete,
       customizationCategoryId,
       tenant: {

@@ -93,15 +93,54 @@ assert(searchNames.includes('冰檸檬紅茶'), 'Must include bundle item 3');
 console.log('✓ formatItemsToText and extractAllOrderSearchNames passed with bundle_snapshot_json');
 
 // -------------------------------------------------------------
-// 2. Test buildOrderFlexMessage in line.ts
+// 2. Test buildOrderFlexMessage in line templates (output verification)
 // -------------------------------------------------------------
-console.log('\n2. Testing line.ts buildOrderFlexMessage...');
+console.log('\n2. Testing line/templates/order-receipt.ts buildOrderFlexMessage output...');
+const ts = require('../benmi-worker-official/node_modules/typescript');
 const lineTsPath = path.join(__dirname, '../benmi-worker-official/src/modules/line.ts');
 const lineTsContent = fs.readFileSync(lineTsPath, 'utf8');
+assert(lineTsContent.includes('buildOrderFlexMessage'), 'line.ts must export buildOrderFlexMessage');
 
-assert(lineTsContent.includes('bundlePortions = bData.portions'), 'line.ts should parse bundlePortions');
-assert(lineTsContent.includes('backgroundColor: "#F8FAFC"'), 'line.ts should render nested box with slate background');
-console.log('✓ line.ts verified statically for structured bundle display in LINE Flex message');
+const orderReceiptTsPath = path.join(__dirname, '../benmi-worker-official/src/modules/line/templates/order-receipt.ts');
+const orderReceiptTsContent = fs.readFileSync(orderReceiptTsPath, 'utf8');
+
+const compiledReceipt = ts.transpileModule(orderReceiptTsContent, {
+  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
+}).outputText;
+
+const receiptModule = { exports: {} };
+const receiptContext = vm.createContext({
+  console,
+  require: () => ({}),
+  module: receiptModule,
+  exports: receiptModule.exports
+});
+vm.runInContext(compiledReceipt, receiptContext);
+const { buildOrderFlexMessage } = receiptModule.exports;
+assert(typeof buildOrderFlexMessage === 'function', 'buildOrderFlexMessage must be a function');
+
+const sampleOrder = {
+  id: 'ORD-001',
+  orderNumber: 'A01',
+  dailySeq: 'A01',
+  totalAmount: 350,
+  finalAmount: 350,
+  customerName: 'Test Customer',
+  customerPhone: '0912345678',
+  diningOption: 'takeaway',
+  pickupTime: '12:00',
+  items: sampleItemsWithSnapshot
+};
+
+const flexOutput = buildOrderFlexMessage(sampleOrder, { brandColor: '#059669' }, sampleItemsWithSnapshot);
+const flexJson = JSON.stringify(flexOutput);
+
+assert(flexJson.includes('#F8FAFC'), 'Flex message must render nested bundle box with #F8FAFC slate background');
+assert(flexJson.includes('脆皮薯條'), 'Flex message must contain bundle item 脆皮薯條');
+assert(flexJson.includes('+$10'), 'Flex message must contain surcharge +$10');
+assert(flexJson.includes('冰檸檬紅茶'), 'Flex message must contain drink item 冰檸檬紅茶');
+assert(flexJson.includes('+$5'), 'Flex message must contain drink surcharge +$5');
+console.log('✓ buildOrderFlexMessage actual output verified for structured bundle display in LINE Flex message');
 
 // -------------------------------------------------------------
 // 3. Test POS UI Rendering (orders-live.js, orders-core.js, printer-service.js)

@@ -469,6 +469,11 @@ const I18N = {
     optionSingleRadio: "單選 (Radio)",
     optionMultipleCheckbox: "多選 (Checkbox)",
     labelModifierRequired: "是否必選",
+    labelMinSelection: "最少選取",
+    labelMaxSelection: "最多選取",
+    labelMultipleBoundsHint: "(0 = 不限)",
+    labelItemCustomizationNotice: "此為品項專屬客製化，將與所屬分類繼承選項累加合併（不會被覆蓋）",
+    labelModifierDefault: "預設",
     badgeRequired: "必填",
     badgeOptional: "選填",
     btnAddModifierOption: "新增選項",
@@ -1109,6 +1114,11 @@ const I18N = {
     optionSingleRadio: "Chọn 1 (Radio)",
     optionMultipleCheckbox: "Chọn nhiều (Checkbox)",
     labelModifierRequired: "Bắt buộc chọn",
+    labelMinSelection: "Tối thiểu",
+    labelMaxSelection: "Tối đa",
+    labelMultipleBoundsHint: "(0 = không giới hạn)",
+    labelItemCustomizationNotice: "Tùy chọn riêng của món sẽ cộng dồn cùng tùy chọn kế thừa từ danh mục (không bị ghi đè)",
+    labelModifierDefault: "Mặc định",
     badgeRequired: "Bắt buộc",
     badgeOptional: "Tùy chọn",
     btnAddModifierOption: "Thêm lựa chọn",
@@ -2632,3 +2642,5 @@ function applyLanguageToDOM() {
   const btnItemDetailDone = document.getElementById("btn-item-detail-done");
   if (btnItemDetailDone && (typeof btnItemDetailDone.getAttribute !== "function" || !btnItemDetailDone.getAttribute("data-custom-text"))) btnItemDetailDone.innerText = dict.btnDetailDone;
 }
+
+window.I18N = I18N;
