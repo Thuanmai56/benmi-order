@@ -381,8 +381,10 @@ function renderComboWizard() {
         </div>
         ${groups.length ? `
           <div style="display:flex; gap:8px; flex-shrink:0;">
-            <button type="button" class="btn btn-primary" onclick="comboWizardAddGroup('choice')" style="font-weight:700; font-size:13px; min-height:40px; padding:6px 14px; border-radius:8px;">+ ${comboText('comboAddChoice')}</button>
-            <button type="button" class="btn btn-secondary" onclick="comboWizardAddGroup('fixed')" style="font-weight:700; font-size:13px; min-height:40px; padding:6px 14px; border-radius:8px;">+ ${comboText('comboAddFixed')}</button>
+            <button type="button" class="btn btn-primary" onclick="comboWizardAddGroup('choice')" style="font-weight:700; font-size:13px; min-height:44px; padding:8px 16px; border-radius:8px; background:var(--primary, #00b900); color:#ffffff; border:1px solid var(--primary, #00b900); display:inline-flex; align-items:center; gap:6px;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <span>${comboText('comboAddChoice')}</span>
+            </button>
           </div>
         ` : ''}
       </div>
@@ -402,11 +404,9 @@ function renderComboWizard() {
         <div style="font-size:16px; font-weight:700; color:#1e293b;">${comboText('comboEmptyGroupsTitle')}</div>
         <div style="font-size:13.5px; color:#64748b; max-width:440px; line-height:1.5;">${comboText('comboEmptyGroupsHelp')}</div>
         <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-top:4px;">
-          <button type="button" class="btn btn-primary" onclick="comboWizardAddGroup('choice')" style="min-height:48px; padding:10px 22px; font-weight:700; border-radius:10px; font-size:14.5px;">
-            + ${comboText('comboAddChoice')}
-          </button>
-          <button type="button" class="btn btn-secondary" onclick="comboWizardAddGroup('fixed')" style="min-height:48px; padding:10px 22px; font-weight:700; border-radius:10px; font-size:14.5px;">
-            + ${comboText('comboAddFixed')}
+          <button type="button" class="btn btn-primary" onclick="comboWizardAddGroup('choice')" style="min-height:48px; padding:10px 22px; font-weight:700; border-radius:10px; font-size:14.5px; background:var(--primary, #00b900); color:#ffffff; border:1px solid var(--primary, #00b900); display:inline-flex; align-items:center; gap:8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span>${comboText('comboAddChoice')}</span>
           </button>
         </div>
       </div>`;
@@ -451,9 +451,11 @@ function renderComboWizard() {
         </section>`;
       }).join('');
 
-      contentHtml = groupsHtml + `<div class="bundle-wizard-add">
-        <button type="button" class="btn btn-primary" onclick="comboWizardAddGroup('choice')">+ ${comboText('comboAddChoice')}</button>
-        <button type="button" class="btn btn-secondary" onclick="comboWizardAddGroup('fixed')">+ ${comboText('comboAddFixed')}</button>
+      contentHtml = groupsHtml + `<div class="bundle-wizard-add" style="margin-top:16px;">
+        <button type="button" class="btn btn-primary" onclick="comboWizardAddGroup('choice')" style="min-height:48px; padding:10px 22px; font-weight:700; border-radius:10px; font-size:14.5px; background:var(--primary, #00b900); color:#ffffff; border:1px solid var(--primary, #00b900); display:inline-flex; align-items:center; gap:8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          <span>${comboText('comboAddChoice')}</span>
+        </button>
       </div>`;
     }
 
