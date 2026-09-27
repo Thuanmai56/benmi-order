@@ -451,6 +451,14 @@ const I18N = {
     newGroupCardTitle: "新增客製化分組",
     newGroupInputPlaceholder: "✦ 輸入分組名稱（例：✦ 醬料選擇、✦ 加料選項）",
     btnSaveGroup: "儲存分組",
+    menuSectionCatalogTitle: "單品菜單",
+    menuSectionComboTitle: "特惠套餐",
+    menuSectionCustomTitle: "口味與客製化",
+    btnAddCatalogCategory: "新增餐點分類",
+    btnAddComboCategory: "新增套餐分類",
+    btnCreateComboWizard: "建立特惠套餐",
+    btnCreateCustomGroup: "新增客製化分組",
+    noComboCategoriesPrompt: "尚無套餐分類 (點擊下方立即建立)",
     btnCatRename: "重新命名",
     btnCatDelete: "刪除分類",
     createTypeModalTitle: "選擇菜單設定類型",
@@ -1099,6 +1107,14 @@ const I18N = {
     newGroupCardTitle: "Tạo nhóm tùy chọn mới",
     newGroupInputPlaceholder: "✦ Nhập tên nhóm (ví dụ: Chọn nước sốt, Dụng cụ ăn uống...)",
     btnSaveGroup: "Lưu nhóm",
+    menuSectionCatalogTitle: "Thực đơn món lẻ",
+    menuSectionComboTitle: "Combo & Set ưu đãi",
+    menuSectionCustomTitle: "Khẩu vị & Tùy chọn",
+    btnAddCatalogCategory: "Thêm phân loại món",
+    btnAddComboCategory: "Thêm phân loại Combo",
+    btnCreateComboWizard: "Tạo Combo mới",
+    btnCreateCustomGroup: "Thêm nhóm tùy chọn",
+    noComboCategoriesPrompt: "Chưa có phân loại Combo (bấm bên dưới để tạo)",
     btnCatRename: "Đổi tên phân loại",
     btnCatDelete: "Xóa phân loại",
     createTypeModalTitle: "Chọn loại cấu hình thực đơn",
@@ -2160,8 +2176,14 @@ function applyLanguageToDOM() {
   else if (btnMenuAdd) btnMenuAdd.innerText = dict.btnMenuAddItem;
   const btnCreateUnifiedText = document.getElementById("i18n-btn-create-unified-text");
   if (btnCreateUnifiedText) {
-    const isFlavor = typeof currentMenuData !== 'undefined' && currentMenuData && typeof activeCategoryIndex !== 'undefined' && activeCategoryIndex >= 0 && (currentMenuData[activeCategoryIndex].type === 'order_customization' || currentMenuData[activeCategoryIndex].id === 'sec-flavor');
-    btnCreateUnifiedText.innerText = isFlavor ? (dict.btnMenuAddCustomGroup || "新增客製化分組") : (dict.btnMenuCreateUnified || "建立新項目");
+    const curCat = (typeof currentMenuData !== 'undefined' && currentMenuData && typeof activeCategoryIndex !== 'undefined' && activeCategoryIndex >= 0) ? currentMenuData[activeCategoryIndex] : null;
+    const isFlavor = curCat && (typeof isCustomizationCategory === 'function' ? isCustomizationCategory(curCat) : (curCat.type === 'order_customization' || curCat.id === 'sec-flavor'));
+    const isCombo = curCat && (typeof isComboCategory === 'function' && isComboCategory(curCat));
+    btnCreateUnifiedText.innerText = isFlavor
+      ? (dict.btnMenuAddCustomGroup || "新增客製化分組")
+      : isCombo
+      ? (dict.btnCreateComboWizard || "建立特惠套餐")
+      : (dict.btnMenuAddItem || "新增餐點");
   }
   const btnCatRename = document.getElementById("btn-category-rename");
   if (btnCatRename) {
