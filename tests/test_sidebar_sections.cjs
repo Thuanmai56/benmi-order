@@ -1,0 +1,83 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+
+test('Sidebar Sections: orders-menu.js defines accordion sections and classification helpers', () => {
+  const code = fs.readFileSync(path.resolve(__dirname, '../js/orders-menu.js'), 'utf-8');
+  assert.ok(code.includes('collapsedMenuSections'), 'Must define collapsedMenuSections');
+  assert.ok(code.includes('toggleMenuSectionCollapse'), 'Must define toggleMenuSectionCollapse');
+  assert.ok(code.includes('isComboCategory'), 'Must define isComboCategory');
+  assert.ok(code.includes('isCustomizationCategory'), 'Must define isCustomizationCategory');
+  assert.ok(code.includes('handleCreateComboFromSidebar'), 'Must define handleCreateComboFromSidebar');
+  assert.ok(code.includes('handleCreateCustomFromSidebar'), 'Must define handleCreateCustomFromSidebar');
+  assert.ok(code.includes('menu-sidebar-section'), 'Must render menu-sidebar-section in DOM');
+  assert.ok(code.includes('menu-sidebar-action-btn'), 'Must render menu-sidebar-action-btn in DOM');
+});
+
+test('Sidebar Sections: Classification logic partitions categories accurately', () => {
+  const sandbox = {
+    window: {},
+    currentTenantFeatures: [],
+    POS_SVG: {}
+  };
+  vm.createContext(sandbox);
+
+  const menuJs = fs.readFileSync(path.resolve(__dirname, '../js/orders-menu.js'), 'utf-8');
+  // Load helpers
+  vm.runInContext(`
+    let currentMenuData = [];
+    ${menuJs.slice(menuJs.indexOf('const collapsedMenuSections'), menuJs.indexOf('function renderMenuCategories'))}
+  `, sandbox);
+
+  // Test combo category classification
+  assert.equal(sandbox.isComboCategory({ type: 'catalog', slug: 'combo', title: 'Combo' }), true);
+  assert.equal(sandbox.isComboCategory({ type: 'catalog', slug: 'set-meal', title: '特惠套餐' }), true);
+  assert.equal(sandbox.isComboCategory({ type: 'catalog', slug: 'drinks', title: 'Đồ uống' }), false);
+
+  // Test customization category classification
+  assert.equal(sandbox.isCustomizationCategory({ type: 'order_customization', id: 'sec-flavor' }), true);
+  assert.equal(sandbox.isCustomizationCategory({ type: 'modifier', id: 'mod-ice' }), true);
+  assert.equal(sandbox.isCustomizationCategory({ type: 'catalog', slug: 'food' }), false);
+});
+
+test('Sidebar Sections: orders-i18n.js has bilingual section titles and button labels', () => {
+  const i18nJs = fs.readFileSync(path.resolve(__dirname, '../js/orders-i18n.js'), 'utf-8');
+  assert.ok(i18nJs.includes('menuSectionCatalogTitle: "單品菜單"'), 'zh-TW has menuSectionCatalogTitle');
+  assert.ok(i18nJs.includes('menuSectionCatalogTitle: "Thực đơn món lẻ"'), 'vi has menuSectionCatalogTitle');
+
+  assert.ok(i18nJs.includes('menuSectionComboTitle: "特惠套餐"'), 'zh-TW has menuSectionComboTitle');
+  assert.ok(i18nJs.includes('menuSectionComboTitle: "Combo & Set ưu đãi"'), 'vi has menuSectionComboTitle');
+
+  assert.ok(i18nJs.includes('menuSectionCustomTitle: "口味與客製化"'), 'zh-TW has menuSectionCustomTitle');
+  assert.ok(i18nJs.includes('menuSectionCustomTitle: "Khẩu vị & Tùy chọn"'), 'vi has menuSectionCustomTitle');
+
+  assert.ok(i18nJs.includes('btnAddCatalogCategory: "新增餐點分類"'), 'zh-TW has btnAddCatalogCategory');
+  assert.ok(i18nJs.includes('btnAddCatalogCategory: "Thêm phân loại món"'), 'vi has btnAddCatalogCategory');
+
+  assert.ok(i18nJs.includes('btnCreateComboWizard: "建立特惠套餐"'), 'zh-TW has btnCreateComboWizard');
+  assert.ok(i18nJs.includes('btnCreateComboWizard: "Tạo Combo mới"'), 'vi has btnCreateComboWizard');
+
+  assert.ok(i18nJs.includes('btnCreateCustomGroup: "新增客製化分組"'), 'zh-TW has btnCreateCustomGroup');
+  assert.ok(i18nJs.includes('btnCreateCustomGroup: "Thêm nhóm tùy chọn"'), 'vi has btnCreateCustomGroup');
+
+  assert.ok(i18nJs.includes('noComboCategoriesPrompt: "尚無套餐分類 (點擊下方立即建立)"'), 'zh-TW has noComboCategoriesPrompt');
+  assert.ok(i18nJs.includes('noComboCategoriesPrompt: "Chưa có phân loại Combo (bấm bên dưới để tạo)"'), 'vi has noComboCategoriesPrompt');
+});
+
+test('Sidebar Sections: orders.css has section styles and touch target >= 44px', () => {
+  const css = fs.readFileSync(path.resolve(__dirname, '../css/orders.css'), 'utf-8');
+  assert.ok(css.includes('.menu-sidebar-section'), 'Must style .menu-sidebar-section');
+  assert.ok(css.includes('.menu-sidebar-section-header'), 'Must style .menu-sidebar-section-header');
+  assert.ok(css.includes('.menu-sidebar-section-title'), 'Must style .menu-sidebar-section-title');
+  assert.ok(css.includes('.menu-sidebar-action-btn'), 'Must style .menu-sidebar-action-btn');
+  assert.ok(css.includes('.menu-section-empty-hint'), 'Must style .menu-section-empty-hint');
+});
+
+test('Sidebar Sections: orders.html has bumped cache buster for sidebar sections', () => {
+  const html = fs.readFileSync(path.resolve(__dirname, '../orders.html'), 'utf-8');
+  assert.ok(html.includes('css/orders.css?v=20260927_sidebar_sections_v1'), 'orders.css cache buster bumped');
+  assert.ok(html.includes('js/orders-menu.js?v=20260927_sidebar_sections_v1'), 'orders-menu.js cache buster bumped');
+  assert.ok(html.includes('js/orders-i18n.js?v=20260927_sidebar_sections_v1'), 'orders-i18n.js cache buster bumped');
+});
