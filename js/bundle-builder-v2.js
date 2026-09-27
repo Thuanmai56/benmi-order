@@ -6,7 +6,17 @@
   const groupName = group => group.name || group.label?.['zh-TW'] || group.label?.vi || '搭配';
   const minOf = group => Number(group.minQuantity ?? group.minSelections ?? group.requiredCount ?? 1);
   const maxOf = group => Number(group.maxQuantity ?? group.maxSelections ?? group.requiredCount ?? minOf(group));
-  const optionsFor = item => (bootstrapData?.modifiers || []).filter(mod => item.appliedModifiers?.includes('*') || item.appliedModifiers?.includes(mod.id) || item.appliedModifiers?.includes(mod.slug));
+  const optionsFor = item => {
+    if (!item) return [];
+    if (typeof window.getEffectiveItemModifierGroups === 'function') {
+      return window.getEffectiveItemModifierGroups(item);
+    }
+    const itemMods = item.modifierGroups || item.modifier_groups || [];
+    const catMods = (bootstrapData?.modifiers || []).filter(mod => 
+      item.appliedModifiers?.includes('*') || item.appliedModifiers?.includes(mod.id) || item.appliedModifiers?.includes(mod.slug)
+    );
+    return [...itemMods, ...catMods];
+  };
   const optionPrice = option => Number(option?.price || 0);
   const itemExtra = item => Number(item.surcharge || 0) + (item.modifiers || []).reduce((sum, mod) => sum + Number(mod.price || 0), 0);
 
@@ -368,18 +378,28 @@
   };
   window.bundleSetModifier = function(groupId, optionId, checked) {
     const item = draft?.editingItem;
-    const mod = bootstrapData?.modifiers?.find(candidate => candidate.id === groupId);
+    const group = draft?.rule?.groups?.[draft?.groupIndex];
+    const source = group?.eligibleItems?.find(it => it.id === item?.itemId);
+    const availableMods = source ? optionsFor(source) : (bootstrapData?.modifiers || []);
+    const mod = availableMods.find(candidate => candidate.id === groupId) || bootstrapData?.modifiers?.find(candidate => candidate.id === groupId);
     const option = mod?.options?.find(candidate => candidate.id === optionId);
     if (!item || !option || option.isOutOfStock) return;
     item.modifiers = item.modifiers.filter(choice => choice.groupId !== groupId || (mod.selectionType === 'multiple' && choice.optionId !== optionId));
     if (checked) {
       const count = item.modifiers.filter(choice => choice.groupId === groupId).length;
       if (mod.selectionType === 'multiple' && mod.maxSelection && count >= Number(mod.maxSelection)) {
-        customAlert(`最多選擇 ${mod.maxSelection} 項`);
+        if (typeof customAlert === 'function') customAlert(`最多選擇 ${mod.maxSelection} 項`);
+        else alert(`最多選擇 ${mod.maxSelection} 項`);
         window.bundleEditModifiers(draft.selections[draft.rule.groups[draft.groupIndex].id].indexOf(item));
         return;
       }
-      item.modifiers.push({ groupId, optionId, name: option.name, price: optionPrice(option) });
+      item.modifiers.push({
+        groupId,
+        optionId,
+        name: option.name,
+        price: optionPrice(option),
+        source: mod.isItemSpecific ? 'item' : 'category'
+      });
     }
   };
   window.bundleCloseModifiers = function() { document.getElementById('bundle-modifier-editor').style.display = 'none'; if (draft) draft.editingItem = null; render(); };

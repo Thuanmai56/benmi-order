@@ -182,7 +182,7 @@ export async function getMenu(request: Request, env: Env): Promise<Response> {
 // POST /api/menu/stock-status
 export async function updateStockStatus(request: Request, env: Env): Promise<Response> {
   try {
-    const { category_slug, name, status, duration, until_date, customization_key } = (await request.json()) as any;
+    const { category_slug, name, status, duration, until_date, customization_key, option_id, optionId, group_id, groupId } = (await request.json()) as any;
 
     if (!category_slug || !name || !status) {
       return json({ error: "Missing category_slug, name, or status" }, 400);
@@ -213,14 +213,28 @@ export async function updateStockStatus(request: Request, env: Env): Promise<Res
 
     // Helper to update stock status in modifier_options
     async function updateModifierOptionStock(): Promise<boolean> {
-      const optionRows = await env.DB.prepare(
-        "SELECT id, group_id FROM modifier_options WHERE tenant_id = ? AND (name = ? OR id = ?)"
-      ).bind(tenantId, name, name).all<any>();
+      const optTargetId = option_id || optionId;
+      const grpTargetId = group_id || groupId;
+      let query = "SELECT id, group_id FROM modifier_options WHERE tenant_id = ?";
+      const params: any[] = [tenantId];
+      if (optTargetId) {
+        query += " AND id = ?";
+        params.push(optTargetId);
+      } else if (grpTargetId) {
+        query += " AND group_id = ? AND (name = ? OR id = ?)";
+        params.push(grpTargetId, name, name);
+      } else {
+        query += " AND (name = ? OR id = ?)";
+        params.push(name, name);
+      }
+      const optionRows = await env.DB.prepare(query).bind(...params).all<any>();
       if (!optionRows.results || optionRows.results.length === 0) return false;
 
+      const targetIds = optionRows.results.map((r: any) => r.id as string);
+      const idPlaceholders = targetIds.map(() => '?').join(',');
       await env.DB.prepare(
-        "UPDATE modifier_options SET out_of_stock_until = ?, updated_at = datetime('now') WHERE tenant_id = ? AND (name = ? OR id = ?)"
-      ).bind(outOfStockUntil, tenantId, name, name).run();
+        `UPDATE modifier_options SET out_of_stock_until = ?, updated_at = datetime('now') WHERE tenant_id = ? AND id IN (${idPlaceholders})`
+      ).bind(outOfStockUntil, tenantId, ...targetIds).run();
 
       const cacheKey = `tenant:${tenantId}:menu`;
       if (env.ORDER_STATE) await env.ORDER_STATE.delete(cacheKey);
@@ -323,6 +337,14 @@ export async function updateStockStatus(request: Request, env: Env): Promise<Res
   }
 }
 
+// Helper to generate secure tenant-scoped IDs for modifier groups and options
+function generateUniqueModifierId(prefix: string, tenantId: string): string {
+  const randomPart = (typeof crypto !== 'undefined' && crypto.randomUUID)
+    ? crypto.randomUUID().replace(/-/g, '').slice(0, 12)
+    : `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+  return `${prefix}_${tenantId}_${randomPart}`;
+}
+
 // Missing fields are never deletion instructions. Validate the complete request
 // before constructing a batch so malformed customization data cannot erase rows.
 function validateMenuUpdate(data: any): void {
@@ -363,6 +385,11 @@ function validateMenuUpdate(data: any): void {
       }
     }
   }
+
+  // Registry to catch conflicting definitions for the same modifier group or option ID in the payload
+  const payloadGroupConfigs = new Map<string, string>();
+  const payloadOptionConfigs = new Map<string, string>();
+
   for (const [key, category] of Object.entries(data) as [string, any][]) {
     if (key === '__delete' || key === '__customizations') continue;
     if (key.startsWith('_') || !record(category)) throw new Error('INVALID_MENU_CATEGORY');
@@ -371,6 +398,90 @@ function validateMenuUpdate(data: any): void {
       const price = record(item) ? item.price : item;
       if (!text(name) || typeof price !== 'number' || !Number.isFinite(price) || price < 0 ||
           (record(item) && item.id !== undefined && !text(item.id))) throw new Error('INVALID_MENU_ITEM');
+
+      if (record(item)) {
+        const rawModGroups = item.modifier_groups ?? item.modifierGroups;
+        if (rawModGroups !== undefined && rawModGroups !== null) {
+          if (!Array.isArray(rawModGroups)) throw new Error('INVALID_MODIFIER_GROUPS');
+          for (const grp of rawModGroups) {
+            if (!record(grp)) throw new Error('INVALID_MODIFIER_GROUP');
+            const grpId = grp.id !== undefined ? String(grp.id).trim() : undefined;
+            if (grp.id !== undefined && !text(grp.id)) throw new Error('INVALID_MODIFIER_GROUP_ID');
+
+            const grpName = grp.name ?? grp.title;
+            if (grpName !== undefined && !text(grpName)) throw new Error('INVALID_MODIFIER_GROUP_NAME');
+
+            const selType = grp.selectionType ?? grp.selection_type;
+            if (selType !== undefined && !['single', 'multiple'].includes(selType)) {
+              throw new Error('INVALID_MODIFIER_GROUP_SELECTION_TYPE');
+            }
+
+            const minSel = grp.minSelection ?? grp.min_selection;
+            const maxSel = grp.maxSelection ?? grp.max_selection;
+            if (minSel !== undefined && (typeof minSel !== 'number' || !Number.isFinite(minSel) || minSel < 0)) {
+              throw new Error('INVALID_MODIFIER_GROUP_BOUNDS');
+            }
+            if (maxSel !== undefined && (typeof maxSel !== 'number' || !Number.isFinite(maxSel) || maxSel < 0)) {
+              throw new Error('INVALID_MODIFIER_GROUP_BOUNDS');
+            }
+            if (minSel !== undefined && maxSel !== undefined && maxSel > 0 && minSel > maxSel) {
+              throw new Error('INVALID_MODIFIER_GROUP_BOUNDS');
+            }
+            if (selType === 'single' && maxSel !== undefined && maxSel > 1) {
+              throw new Error('INVALID_MODIFIER_GROUP_BOUNDS');
+            }
+
+            const options = grp.options;
+            if (options !== undefined) {
+              if (!Array.isArray(options)) throw new Error('INVALID_MODIFIER_OPTIONS');
+              const seenOptIds = new Set<string>();
+              for (const opt of options) {
+                if (!record(opt)) throw new Error('INVALID_MODIFIER_OPTION');
+                const optName = opt.name ?? opt.title;
+                if (!text(optName)) throw new Error('INVALID_MODIFIER_OPTION_NAME');
+
+                const optPrice = opt.price ?? opt.surcharge;
+                if (optPrice !== undefined && (typeof optPrice !== 'number' || !Number.isFinite(optPrice))) {
+                  throw new Error('INVALID_MODIFIER_OPTION_PRICE');
+                }
+
+                if (opt.id !== undefined) {
+                  if (!text(opt.id)) throw new Error('INVALID_MODIFIER_OPTION_ID');
+                  const optId = String(opt.id).trim();
+                  if (seenOptIds.has(optId)) {
+                    throw new Error('DUPLICATE_MODIFIER_OPTION_ID');
+                  }
+                  seenOptIds.add(optId);
+
+                  const optCanonical = JSON.stringify({
+                    groupId: grpId || '',
+                    name: optName.trim(),
+                    price: Number(optPrice ?? 0)
+                  });
+                  if (payloadOptionConfigs.has(optId) && payloadOptionConfigs.get(optId) !== optCanonical) {
+                    throw new Error('CONFLICTING_MODIFIER_OPTION_CONFIG');
+                  }
+                  payloadOptionConfigs.set(optId, optCanonical);
+                }
+              }
+            }
+
+            if (grpId) {
+              const grpCanonical = JSON.stringify({
+                name: (grpName || '').trim(),
+                selection_type: selType || 'single',
+                is_required: Boolean(grp.isRequired ?? grp.is_required),
+                min_selection: Number(minSel ?? (Boolean(grp.isRequired ?? grp.is_required) ? 1 : 0)),
+                max_selection: Number(maxSel ?? (selType === 'single' ? 1 : 99))
+              });
+              if (payloadGroupConfigs.has(grpId) && payloadGroupConfigs.get(grpId) !== grpCanonical) {
+                throw new Error('CONFLICTING_MODIFIER_GROUP_CONFIG');
+              }
+              payloadGroupConfigs.set(grpId, grpCanonical);
+            }
+          }
+        }
+      }
     }
   }
 }
@@ -392,6 +503,69 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
   const customIdMap = new Map((existingCustomizations || []).map(row => [row.key as string, row.id as string]));
   const ownedItemIds = new Set((existingItems || []).map(row => row.id as string));
   const ownedCustomIds = new Set((existingCustomizations || []).map(row => row.id as string));
+
+  // Collect all modifier group and option IDs from payload for cross-tenant pre-flight verification
+  const incomingGroupIds = new Set<string>();
+  const incomingOptionMap = new Map<string, { groupId: string; name: string }>();
+
+  for (const [slug, category] of Object.entries(menuData) as [string, any][]) {
+    if (slug === '__delete' || slug === '__customizations') continue;
+    if (!category || typeof category !== 'object') continue;
+    for (const [name, item] of Object.entries(category) as [string, any][]) {
+      if (name.startsWith('_')) continue;
+      const modGroups = item?.modifier_groups ?? item?.modifierGroups;
+      if (Array.isArray(modGroups)) {
+        for (const grp of modGroups) {
+          if (!grp) continue;
+          if (grp.id) incomingGroupIds.add(String(grp.id));
+          const options = Array.isArray(grp.options) ? grp.options : [];
+          for (const opt of options) {
+            if (opt && opt.id) {
+              incomingOptionMap.set(String(opt.id), { groupId: grp.id ? String(grp.id) : '', name: opt.name || opt.title || '' });
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Pre-flight check: Reject foreign modifier groups belonging to other tenants
+  if (incomingGroupIds.size > 0) {
+    const grpList = Array.from(incomingGroupIds);
+    for (let i = 0; i < grpList.length; i += 50) {
+      const chunk = grpList.slice(i, i + 50);
+      const placeholders = chunk.map(() => '?').join(',');
+      const { results } = await env.DB.prepare(
+        `SELECT id, tenant_id FROM modifier_groups WHERE id IN (${placeholders})`
+      ).bind(...chunk).all<any>();
+      for (const row of (results || [])) {
+        if (row.tenant_id !== tenantId) {
+          throw new Error('FORBIDDEN_MODIFIER_GROUP_ID');
+        }
+      }
+    }
+  }
+
+  // Pre-flight check: Reject foreign modifier options or options belonging to a different group
+  if (incomingOptionMap.size > 0) {
+    const optList = Array.from(incomingOptionMap.keys());
+    for (let i = 0; i < optList.length; i += 50) {
+      const chunk = optList.slice(i, i + 50);
+      const placeholders = chunk.map(() => '?').join(',');
+      const { results } = await env.DB.prepare(
+        `SELECT id, tenant_id, group_id FROM modifier_options WHERE id IN (${placeholders})`
+      ).bind(...chunk).all<any>();
+      for (const row of (results || [])) {
+        if (row.tenant_id !== tenantId) {
+          throw new Error('FORBIDDEN_MODIFIER_OPTION_ID');
+        }
+        const incoming = incomingOptionMap.get(row.id);
+        if (incoming && incoming.groupId && incoming.groupId !== row.group_id) {
+          throw new Error('INVALID_MODIFIER_OPTION_GROUP');
+        }
+      }
+    }
+  }
 
   const catIdMap = new Map<string, string>();
   const catNameMap = new Map<string, string>();
@@ -416,6 +590,7 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
   }
 
   const statements: any[] = [];
+  const processedGroupIds = new Set<string>();
   const defaultCategoryNamesZh: Record<string, string> = {
     main: "招牌炸蛋蔥餅",
     spicy: "加辣選項",
@@ -616,7 +791,7 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
           let linkOrder = 0;
           for (const grp of modifierGroups) {
             linkOrder++;
-            const grpId = grp.id || `mg_${tenantId}_${Date.now()}_${linkOrder}`;
+            const grpId = grp.id || generateUniqueModifierId('mg', tenantId);
             const grpName = grp.name || grp.title || '';
             const selectionType = grp.selectionType || grp.selection_type || 'single';
             const isReq = (grp.isRequired || grp.is_required) ? 1 : 0;
@@ -624,20 +799,67 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
             const maxSel = Number(grp.maxSelection ?? grp.max_selection ?? (selectionType === 'single' ? 1 : 99));
             const grpSort = Number(grp.sortOrder ?? grp.sort_order ?? linkOrder);
 
-            statements.push(
-              env.DB.prepare(
-                `INSERT INTO modifier_groups (id, tenant_id, name, selection_type, is_required, min_selection, max_selection, sort_order, updated_at)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-                 ON CONFLICT(id) DO UPDATE SET
-                   name = excluded.name,
-                   selection_type = excluded.selection_type,
-                   is_required = excluded.is_required,
-                   min_selection = excluded.min_selection,
-                   max_selection = excluded.max_selection,
-                   sort_order = excluded.sort_order,
-                   updated_at = datetime('now')`
-              ).bind(grpId, tenantId, grpName, selectionType, isReq, minSel, maxSel, grpSort)
-            );
+            if (!processedGroupIds.has(grpId)) {
+              processedGroupIds.add(grpId);
+
+              statements.push(
+                env.DB.prepare(
+                  `INSERT INTO modifier_groups (id, tenant_id, name, selection_type, is_required, min_selection, max_selection, sort_order, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+                   ON CONFLICT(id) DO UPDATE SET
+                     name = excluded.name,
+                     selection_type = excluded.selection_type,
+                     is_required = excluded.is_required,
+                     min_selection = excluded.min_selection,
+                     max_selection = excluded.max_selection,
+                     sort_order = excluded.sort_order,
+                     updated_at = datetime('now')
+                   WHERE modifier_groups.tenant_id = excluded.tenant_id`
+                ).bind(grpId, tenantId, grpName, selectionType, isReq, minSel, maxSel, grpSort)
+              );
+
+              const options = Array.isArray(grp.options) ? grp.options : [];
+              const activeOptIds: string[] = [];
+              let optOrder = 0;
+              for (const opt of options) {
+                optOrder++;
+                const optId = opt.id || generateUniqueModifierId('mo', tenantId);
+                activeOptIds.push(optId);
+                const optName = opt.name || opt.title || '';
+                const optPrice = Number(opt.price || 0);
+                const optIsDef = (opt.isDefault || opt.is_default) ? 1 : 0;
+                const optSort = Number(opt.sortOrder ?? opt.sort_order ?? optOrder);
+
+                statements.push(
+                  env.DB.prepare(
+                    `INSERT INTO modifier_options (id, tenant_id, group_id, name, price, is_default, sort_order, updated_at)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+                     ON CONFLICT(id) DO UPDATE SET
+                       name = excluded.name,
+                       price = excluded.price,
+                       is_default = excluded.is_default,
+                       sort_order = excluded.sort_order,
+                       updated_at = datetime('now')
+                     WHERE modifier_options.tenant_id = excluded.tenant_id`
+                  ).bind(optId, tenantId, grpId, optName, optPrice, optIsDef, optSort)
+                );
+              }
+
+              if (activeOptIds.length > 0) {
+                const optPlaceholders = activeOptIds.map(() => '?').join(',');
+                statements.push(
+                  env.DB.prepare(
+                    `DELETE FROM modifier_options WHERE tenant_id = ? AND group_id = ? AND id NOT IN (${optPlaceholders})`
+                  ).bind(tenantId, grpId, ...activeOptIds)
+                );
+              } else {
+                statements.push(
+                  env.DB.prepare(
+                    `DELETE FROM modifier_options WHERE tenant_id = ? AND group_id = ?`
+                  ).bind(tenantId, grpId)
+                );
+              }
+            }
 
             statements.push(
               env.DB.prepare(
@@ -646,47 +868,6 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
                  ON CONFLICT(tenant_id, item_id, group_id) DO UPDATE SET sort_order = excluded.sort_order`
               ).bind(tenantId, itemId, grpId, linkOrder)
             );
-
-            const options = Array.isArray(grp.options) ? grp.options : [];
-            const activeOptIds: string[] = [];
-            let optOrder = 0;
-            for (const opt of options) {
-              optOrder++;
-              const optId = opt.id || `mo_${tenantId}_${grpId}_${optOrder}`;
-              activeOptIds.push(optId);
-              const optName = opt.name || opt.title || '';
-              const optPrice = Number(opt.price || 0);
-              const optIsDef = (opt.isDefault || opt.is_default) ? 1 : 0;
-              const optSort = Number(opt.sortOrder ?? opt.sort_order ?? optOrder);
-
-              statements.push(
-                env.DB.prepare(
-                  `INSERT INTO modifier_options (id, tenant_id, group_id, name, price, is_default, sort_order, updated_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
-                   ON CONFLICT(id) DO UPDATE SET
-                     name = excluded.name,
-                     price = excluded.price,
-                     is_default = excluded.is_default,
-                     sort_order = excluded.sort_order,
-                     updated_at = datetime('now')`
-                ).bind(optId, tenantId, grpId, optName, optPrice, optIsDef, optSort)
-              );
-            }
-
-            if (activeOptIds.length > 0) {
-              const optPlaceholders = activeOptIds.map(() => '?').join(',');
-              statements.push(
-                env.DB.prepare(
-                  `DELETE FROM modifier_options WHERE tenant_id = ? AND group_id = ? AND id NOT IN (${optPlaceholders})`
-                ).bind(tenantId, grpId, ...activeOptIds)
-              );
-            } else {
-              statements.push(
-                env.DB.prepare(
-                  `DELETE FROM modifier_options WHERE tenant_id = ? AND group_id = ?`
-                ).bind(tenantId, grpId)
-              );
-            }
           }
         }
       }
@@ -1006,7 +1187,8 @@ export async function saveBundleProduct(request: Request, env: Env): Promise<Res
     await env.DB.batch([
       env.DB.prepare(`INSERT INTO menu_items (id, tenant_id, category_id, name, price, item_type, sort_order)
         VALUES (?, ?, ?, ?, ?, 'bundle', (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM menu_items WHERE tenant_id = ? AND category_id = ?))
-        ON CONFLICT(id) DO UPDATE SET category_id = excluded.category_id, name = excluded.name, price = excluded.price, item_type = 'bundle', updated_at = datetime('now')`)
+        ON CONFLICT(id) DO UPDATE SET category_id = excluded.category_id, name = excluded.name, price = excluded.price, item_type = 'bundle', updated_at = datetime('now')
+        WHERE menu_items.tenant_id = excluded.tenant_id`)
         .bind(itemId, tenantId, categoryId, name, price, tenantId, categoryId),
       env.DB.prepare(`INSERT INTO menu_bundle_rules (id, tenant_id, parent_item_id, schema_version, config_json, is_active, updated_at)
         VALUES (?, ?, ?, 2, ?, 1, datetime('now'))
