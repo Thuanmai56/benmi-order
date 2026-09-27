@@ -4344,6 +4344,18 @@ html.is-web-platform .store-activation-modal:not(.force-show) {
   border-color: #93c5fd;
 }
 
+.menu-sidebar-action-btn.menu-sidebar-action-combo-btn {
+  margin-top: 0;
+  color: #b91c1c;
+  border-color: #fecaca;
+  background: #ffffff;
+}
+
+.menu-sidebar-action-btn.menu-sidebar-action-combo-btn:hover {
+  background: #fef2f2;
+  border-color: #f87171;
+}
+
 .menu-section-empty-hint {
   padding: 12px 14px;
   font-size: 12px;
