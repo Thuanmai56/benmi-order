@@ -10,20 +10,8 @@ window.bundleCartData = window.bundleCartData || {};
 var currentBundleModalContext = null;
 var activeBundleCatTab = 'all';
 
-function getModifierPrice(optName) {
-    if (!optName) return 0;
-    const bData = window.bootstrapData || bootstrapData;
-    if (!bData?.modifiers) return 0;
-    for (const mod of bData.modifiers) {
-        if (mod.options) {
-            const found = mod.options.find(o => o.name === optName);
-            if (found && typeof found.price === 'number') {
-                return found.price;
-            }
-        }
-    }
-    return 0;
-}
+// Note: getModifierPrice is authoritatively implemented in client-core.js
+
 
 function openBundleBuilderModal(catSlug, origName, portionIndex) {
     const key = catSlug + '_' + origName;

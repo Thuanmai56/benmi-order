@@ -64,17 +64,21 @@ function calculateCurrentFoodSubtotal() {
             if (Array.isArray(portions)) {
                 portions.slice(0, qty).forEach(p => {
                     if (p) {
-                        if (p.single) {
-                            Object.values(p.single).forEach(optName => {
-                                subtotal += getPrice(optName);
-                            });
-                        }
-                        if (p.multiple) {
-                            Object.keys(p.multiple).forEach(optName => {
-                                if (p.multiple[optName]) {
+                        if (typeof calculatePortionExtra === 'function') {
+                            subtotal += calculatePortionExtra(key, p);
+                        } else {
+                            if (p.single) {
+                                Object.values(p.single).forEach(optName => {
                                     subtotal += getPrice(optName);
-                                }
-                            });
+                                });
+                            }
+                            if (p.multiple) {
+                                Object.keys(p.multiple).forEach(optName => {
+                                    if (p.multiple[optName]) {
+                                        subtotal += getPrice(optName);
+                                    }
+                                });
+                            }
                         }
                     }
                 });
