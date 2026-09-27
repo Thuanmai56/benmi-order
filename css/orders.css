@@ -4251,8 +4251,14 @@ html.is-web-platform .store-activation-modal:not(.force-show) {
     border-right: none !important;
     border-bottom: 1px solid #e2e8f0 !important;
   }
+}
+
 .menu-sidebar-section {
   border-bottom: 1px solid #f1f5f9;
+}
+
+.menu-sidebar-section:first-child .menu-sidebar-section-header {
+  border-top: none;
 }
 
 .menu-sidebar-section-header {
