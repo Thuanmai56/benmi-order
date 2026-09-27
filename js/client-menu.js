@@ -385,7 +385,7 @@ function createDynamicItemCard(catSlug, item) {
         div.style.pointerEvents = 'none';
     }
 
-    const badgeText = item.badge || item.badgeText || (item.isRecommended ? '推薦' : '');
+    const badgeText = (item.badgeText || item.badge || '').trim();
     const badgeHTML = badgeText ? `<span class="badge">${badgeText}</span>` : '';
     const limitBadgeHTML = (item.maxPerOrder && item.maxPerOrder > 0) ? `<span class="badge badge-limit" style="background:#fffbeb; color:#b45309; border:1px solid #fde68a;">限購${item.maxPerOrder}份</span>` : '';
 

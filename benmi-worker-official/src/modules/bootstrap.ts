@@ -698,7 +698,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
       }
       const isOos = Boolean(item.out_of_stock_until && new Date(item.out_of_stock_until) > now);
       const isRec = Boolean(item.is_recommended);
-      const badge = item.badge_text ? item.badge_text : (isRec ? '👍 推薦' : null);
+      const badge = (item.badge_text && item.badge_text.trim()) ? item.badge_text.trim() : null;
 
       const hasImage = imageList.includes(item.name) ||
                        imageList.some(k => k.endsWith(`_${item.name}`) || (k.includes('_') && k.split('_').slice(1).join('_') === item.name));
@@ -714,7 +714,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
         imageUrl: imageUrl,
         isOutOfStock: isOos,
         isRecommended: isRec,
-        badgeText: item.badge_text || null,
+        badgeText: badge,
         badge: badge,
         bundleRule: bundleRule,
         maxPerOrder: item.max_per_order !== null && item.max_per_order !== undefined && item.max_per_order > 0 ? Number(item.max_per_order) : null,
