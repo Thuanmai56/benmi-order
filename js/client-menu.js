@@ -332,6 +332,41 @@ function toggleFlavorSubOptions() {
     });
 }
 
+function handleItemCardClick(catSlug, itemName, event) {
+    if (event) {
+        if (event.target.closest('.item-img') || event.target.closest('.qty-control') || event.target.closest('.btn-qty')) {
+            return;
+        }
+    }
+    const key = `${catSlug}_${itemName}`;
+    if (typeof isItemOutOfStock === 'function' && isItemOutOfStock(key)) return;
+    if (typeof checkDesktopAuthGuard === 'function' && !checkDesktopAuthGuard()) return;
+
+    const resolveFn = typeof resolveCatalogItem === 'function' ? resolveCatalogItem : (window.resolveCatalogItem || (k => ({ origName: itemName, displayName: itemName })));
+    const itemInfo = resolveFn(key);
+    const bundleRule = itemInfo?.bundleRule || (itemInfo?.targetItem && itemInfo.targetItem.bundleRule);
+
+    const getItemModsFn = typeof getItemModifiers === 'function' ? getItemModifiers : (window.getItemModifiers || (typeof getCategoryModifiers === 'function' ? getCategoryModifiers : (window.getCategoryModifiers || (() => []))));
+    const itemModifiers = getItemModsFn(catSlug, itemName);
+    const hasModifiers = Array.isArray(itemModifiers) && itemModifiers.length > 0;
+
+    const cartObj = window.cart || cart || {};
+    const currentQty = cartObj[key] || 0;
+
+    if (bundleRule) {
+        if (typeof openBundleBuilderModal === 'function') {
+            openBundleBuilderModal(catSlug, itemName, currentQty > 0 ? 0 : 0);
+        }
+    } else if (hasModifiers) {
+        const openCustFn = typeof openItemCustomizeModal === 'function' ? openItemCustomizeModal : window.openItemCustomizeModal;
+        if (typeof openCustFn === 'function') {
+            openCustFn(catSlug, itemName, currentQty > 0 ? 0 : 0);
+        }
+    } else {
+        updateQty(catSlug, itemName, 1);
+    }
+}
+
 function createDynamicItemCard(catSlug, item) {
     const div = document.createElement('div');
     div.className = 'card';
@@ -372,7 +407,7 @@ function createDynamicItemCard(catSlug, item) {
         : (bundleGroupLabel ? `調整${bundleGroupLabel}` : '調整套餐配菜');
 
     const customizeBtnHTML = `
-        <button class="customize-btn" id="customize-btn-${catSlug}-${item.name}" onclick="toggleCustomize('${safeCatSlug}','${safeItemName}')" style="pointer-events: auto; display: ${(!isOos && qty > 0 && hasModifiers && !hasBundleRule) ? 'flex' : 'none'}; align-items: center; justify-content: center; gap: 5px;">
+        <button class="customize-btn" id="customize-btn-${catSlug}-${item.name}" onclick="openItemCustomizeModal('${safeCatSlug}','${safeItemName}', 0)" style="pointer-events: auto; display: ${(!isOos && qty > 0 && hasModifiers && !hasBundleRule) ? 'flex' : 'none'}; align-items: center; justify-content: center; gap: 5px;">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
             <span>客製化（加料 / 辣度 / 備註）</span>
         </button>
@@ -386,7 +421,7 @@ function createDynamicItemCard(catSlug, item) {
     `;
 
     div.innerHTML = `
-        <div class="card-main" style="${isOos ? 'pointer-events: none;' : ''}">
+        <div class="card-main" onclick="handleItemCardClick('${safeCatSlug}','${safeItemName}',event)" style="${isOos ? 'pointer-events: none;' : 'cursor: pointer;'}">
             ${imgHTML}
             <div class="card-info">
                 <div>
@@ -417,9 +452,9 @@ function getDynamicItemFooterHTML(catSlug, itemName, price, isOos) {
     ` : `
         <div class="card-price">$${price}</div>
         <div class="qty-control">
-            <button class="btn-qty" onclick="updateQty('${safeCatSlug}','${safeItemName}',-1)">-</button>
+            <button class="btn-qty" onclick="event.stopPropagation(); updateQty('${safeCatSlug}','${safeItemName}',-1)">-</button>
             <span class="qty-text" id="qty-${catSlug}-${itemName}" style="${qty > 0 ? 'color: var(--primary);' : ''}">${qty}</span>
-            <button class="btn-qty" onclick="updateQty('${safeCatSlug}','${safeItemName}',1)">+</button>
+            <button class="btn-qty" onclick="event.stopPropagation(); updateQty('${safeCatSlug}','${safeItemName}',1)">+</button>
         </div>
     `;
 }
@@ -540,6 +575,7 @@ window.renderDynamicCatalog = renderDynamicCatalog;
 window.renderCustomizationsPanel = renderCustomizationsPanel;
 window.handleCustomizationChange = handleCustomizationChange;
 window.toggleFlavorSubOptions = toggleFlavorSubOptions;
+window.handleItemCardClick = handleItemCardClick;
 window.createDynamicItemCard = createDynamicItemCard;
 window.getDynamicItemFooterHTML = getDynamicItemFooterHTML;
 window.updateDynamicStockAndPrices = updateDynamicStockAndPrices;

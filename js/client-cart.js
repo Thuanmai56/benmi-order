@@ -79,6 +79,10 @@ function calculateCurrentFoodSubtotal() {
                     }
                 });
             }
+
+            if (itemInfo?.bundleRule && window.bundleCartData && window.bundleCartData[key] && window.bundlePortionExtra) {
+                subtotal += window.bundleCartData[key].slice(0, qty).reduce((sum, portion) => sum + (window.bundlePortionExtra(portion) || 0), 0);
+            }
         }
     }
     return subtotal;
@@ -232,6 +236,10 @@ function updateQty(category, origName, change) {
     const bundleRule = itemInfo?.bundleRule || (itemInfo?.targetItem && itemInfo.targetItem.bundleRule);
     const cartObj = window.cart || cart;
 
+    const getItemModsFn = typeof getItemModifiers === 'function' ? getItemModifiers : (window.getItemModifiers || (typeof getCategoryModifiers === 'function' ? getCategoryModifiers : (window.getCategoryModifiers || (() => []))));
+    const itemModifiers = getItemModsFn(category, origName);
+    const hasModifiers = Array.isArray(itemModifiers) && itemModifiers.length > 0;
+
     // Intercept bundle item increment: open builder modal instead of direct cart increment
     if (bundleRule && change > 0) {
         const currentQty = cartObj[key] || 0;
@@ -239,6 +247,16 @@ function updateQty(category, origName, change) {
             openBundleBuilderModal(category, origName, currentQty);
         }
         return;
+    }
+
+    // Intercept customize item increment: open customize modal instead of direct cart increment
+    if (!bundleRule && hasModifiers && change > 0) {
+        const currentQty = cartObj[key] || 0;
+        const openCustFn = typeof openItemCustomizeModal === 'function' ? openItemCustomizeModal : window.openItemCustomizeModal;
+        if (typeof openCustFn === 'function') {
+            openCustFn(category, origName, currentQty);
+            return;
+        }
     }
 
     // Decrement bundle item: remove the last portion selection
@@ -249,6 +267,17 @@ function updateQty(category, origName, change) {
                 delete window.bundleCartData[key];
             }
         }
+        const cData = window.customizeData || customizeData;
+        if (cData && cData[key] && cData[key].length > 0) {
+            cData[key].pop();
+            if (cData[key].length === 0) {
+                delete cData[key];
+            }
+        }
+    }
+
+    // Decrement non-bundle item with modifiers: remove the last portion customization
+    if (!bundleRule && hasModifiers && change < 0) {
         const cData = window.customizeData || customizeData;
         if (cData && cData[key] && cData[key].length > 0) {
             cData[key].pop();
@@ -269,9 +298,6 @@ function updateQty(category, origName, change) {
 
     const btn = document.getElementById('customize-btn-' + category + '-' + origName);
     if (btn) {
-        const getModsFn = typeof getCategoryModifiers === 'function' ? getCategoryModifiers : (window.getCategoryModifiers || (() => []));
-        const catModifiers = getModsFn(category);
-        const hasModifiers = catModifiers.length > 0;
         btn.style.display = (cartObj[key] > 0 && hasModifiers && !bundleRule) ? 'flex' : 'none';
     }
 
@@ -507,10 +533,21 @@ function updateTotal() {
 
                     if (!it.itemInfo?.bundleRule && parts.length > 0) {
                         const zhIdx = zhNumbers[i] || `第 ${i + 1} 份`;
-                        portionsHTML += `<div style="font-size:13px; color:#6b7280; margin-left:10px; margin-bottom:6px;">↳ ${zhIdx}: ${parts.join(', ')}</div>`;
+                        const safeCat = String(catSlug).replace(/'/g, "\\'");
+                        const safeName = String(itemName).replace(/'/g, "\\'");
+                        portionsHTML += `<div style="font-size:13px; color:#6b7280; margin-left:10px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
+                            <span>↳ ${zhIdx}: ${parts.join(', ')}</span>
+                            <span><button type="button" onclick="openItemCustomizeModal('${safeCat}','${safeName}', ${i})" style="min-height:32px; border:1px solid #cbd5e1; background:#fff; border-radius:6px; padding:2px 8px; font-size:12px; font-weight:700; cursor:pointer; margin-left:8px;">調整</button></span>
+                        </div>`;
                     }
                 });
             }
+
+            let bundleExtra = 0;
+            if (it.itemInfo?.bundleRule && window.bundleCartData && window.bundleCartData[key] && window.bundlePortionExtra) {
+                bundleExtra = window.bundleCartData[key].slice(0, qty).reduce((sum, portion) => sum + (window.bundlePortionExtra(portion) || 0), 0);
+            }
+            if (!isOutOfStock) itemModifiersTotal += bundleExtra;
 
             let lineTotal = (qty * price) + itemModifiersTotal;
 

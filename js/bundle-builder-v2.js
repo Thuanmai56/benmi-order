@@ -165,6 +165,76 @@
     }
     const copy = document.getElementById('bundle-copy-previous');
     copy.style.display = draft.portionIndex > 0 && mode === 'new' ? 'block' : 'none';
+
+    const addonsContainer = document.getElementById('bundle-addons-container');
+    if (addonsContainer) {
+      if (draft.catModifiers && draft.catModifiers.length > 0) {
+        addonsContainer.style.display = 'block';
+        let addonsHTML = `
+          <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+            <span>自訂餐點選項 / 加料 / 口味</span>
+          </div>
+        `;
+        const getPrice = window.getModifierPrice || (typeof getModifierPrice === 'function' ? getModifierPrice : () => 0);
+        draft.catModifiers.forEach(mod => {
+          const isSingle = mod.selectionType === 'single';
+          const reqBadge = mod.isRequired ? '<span class="modifier-req-badge" style="color:#ef4444; font-size:12px; font-weight:800; margin-left:4px;">*必選</span>' : '';
+          addonsHTML += `
+            <div class="bundle-addon-group" style="margin-bottom: 12px;">
+              <div style="font-size: 13px; font-weight: 700; color: #475569; margin-bottom: 6px;">${esc(mod.name)}${reqBadge}</div>
+          `;
+          if (isSingle) {
+            addonsHTML += `<div class="modifier-pills-row" style="margin-bottom: 4px;">`;
+            (mod.options || []).forEach(opt => {
+              const isOos = Boolean(opt.isOutOfStock);
+              const isSelected = draft.addonSelections?.single?.[mod.slug] === opt.name;
+              const price = Number(opt.price !== undefined ? opt.price : getPrice(opt.name));
+              const priceText = price > 0 ? ` (+$${price})` : '';
+              const oosBadge = isOos ? `<span class="modifier-oos-tag">已售完</span>` : '';
+              addonsHTML += `
+                <div class="modifier-pill ${isSelected ? 'active' : ''} ${isOos ? 'disabled' : ''}" 
+                     onclick="${isOos ? '' : `bundleSelectAddonSingle('${esc(mod.slug)}', '${esc(opt.name)}')`}">
+                  <span>${esc(opt.name)}${priceText}</span>${oosBadge}
+                </div>
+              `;
+            });
+            addonsHTML += `</div>`;
+          } else {
+            addonsHTML += `<div class="modifier-checkbox-grid" style="margin-bottom: 4px;">`;
+            (mod.options || []).forEach(opt => {
+              const isOos = Boolean(opt.isOutOfStock);
+              const isChecked = Boolean(draft.addonSelections?.multiple?.[opt.name]);
+              const price = Number(opt.price !== undefined ? opt.price : getPrice(opt.name));
+              const priceText = isOos ? `<span class="modifier-oos-tag">已售完</span>` : (price > 0 ? `+$${price}` : '$0');
+              addonsHTML += `
+                <div class="modifier-checkbox-chip ${isChecked ? 'active' : ''} ${isOos ? 'disabled' : ''}" 
+                     onclick="${isOos ? '' : `bundleToggleAddonMultiple('${esc(opt.name)}')`}">
+                  <span>${esc(opt.name)}</span>
+                  <span style="font-size: 12px; opacity: 0.85;">${priceText}</span>
+                </div>
+              `;
+            });
+            addonsHTML += `</div>`;
+          }
+          addonsHTML += `</div>`;
+        });
+
+        // Addon individual note
+        addonsHTML += `
+          <div style="margin-top: 8px;">
+            <label style="font-size: 13px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">個別備註</label>
+            <input type="text" maxlength="50" value="${esc(draft.addonSelections?.note || '')}" placeholder="例如：不要香菜、少醬" 
+                   oninput="bundleUpdateAddonNote(this.value)"
+                   style="width: 100%; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 8px 12px; font-size: 13.5px; color: #1e293b; background: #fff; outline: none; box-sizing: border-box;">
+          </div>
+        `;
+        addonsContainer.innerHTML = addonsHTML;
+      } else {
+        addonsContainer.style.display = 'none';
+        addonsContainer.innerHTML = '';
+      }
+    }
   }
 
   window.openBundleBuilderModal = function(catSlug, origName, portionIndex) {
@@ -189,7 +259,33 @@
       } else selections[group.id] = previous;
     }
     const firstMissing = rule.groups.findIndex(group => !validGroup(group, selections[group.id]));
-    draft = { key, catSlug, origName, itemInfo, rule, selections, portionIndex: targetIndex, groupIndex: Math.max(0, firstMissing), category: 'all', mode: existing ? 'edit' : 'new' };
+
+    // Check item/category modifiers for this combo
+    const getItemModsFn = typeof getItemModifiers === 'function' ? getItemModifiers : (window.getItemModifiers || (typeof getCategoryModifiers === 'function' ? getCategoryModifiers : (window.getCategoryModifiers || (() => []))));
+    const catModifiers = getItemModsFn(catSlug, origName);
+    let addonSelections = null;
+    if (catModifiers && catModifiers.length > 0) {
+      const cData = window.customizeData || customizeData || {};
+      const priorAddons = cData?.[key]?.[targetIndex];
+      if (priorAddons) {
+        addonSelections = JSON.parse(JSON.stringify(priorAddons));
+      } else {
+        const defaultSingle = {};
+        catModifiers.filter(m => m.selectionType === 'single').forEach(m => {
+          const defOpt = (m.options || []).find(o => o.isDefault && !o.isOutOfStock) || (m.isRequired ? ((m.options || []).find(o => !o.isOutOfStock) || m.options[0]) : null);
+          if (defOpt) defaultSingle[m.slug] = defOpt.name;
+        });
+        const defaultMulti = {};
+        catModifiers.filter(m => m.selectionType === 'multiple').forEach(m => {
+          (m.options || []).filter(o => o.isDefault && !o.isOutOfStock).forEach(o => {
+            defaultMulti[o.name] = true;
+          });
+        });
+        addonSelections = { single: defaultSingle, multiple: defaultMulti, note: '' };
+      }
+    }
+
+    draft = { key, catSlug, origName, itemInfo, rule, selections, catModifiers, addonSelections, portionIndex: targetIndex, groupIndex: Math.max(0, firstMissing), category: 'all', mode: existing ? 'edit' : 'new' };
     document.getElementById('bundle-modal-item-name').textContent = `${itemInfo.displayName || origName}${targetIndex ? ` · 第 ${targetIndex + 1} 份` : ''}`;
     document.getElementById('bundle-builder-modal').style.display = 'flex';
     render();
@@ -287,6 +383,29 @@
     }
   };
   window.bundleCloseModifiers = function() { document.getElementById('bundle-modifier-editor').style.display = 'none'; if (draft) draft.editingItem = null; render(); };
+  window.bundleSelectAddonSingle = function(modSlug, optName) {
+    if (!draft) return;
+    if (!draft.addonSelections) draft.addonSelections = { single: {}, multiple: {}, note: '' };
+    if (!draft.addonSelections.single) draft.addonSelections.single = {};
+    draft.addonSelections.single[modSlug] = optName;
+    render();
+  };
+  window.bundleToggleAddonMultiple = function(optName) {
+    if (!draft) return;
+    if (!draft.addonSelections) draft.addonSelections = { single: {}, multiple: {}, note: '' };
+    if (!draft.addonSelections.multiple) draft.addonSelections.multiple = {};
+    if (draft.addonSelections.multiple[optName]) {
+      delete draft.addonSelections.multiple[optName];
+    } else {
+      draft.addonSelections.multiple[optName] = true;
+    }
+    render();
+  };
+  window.bundleUpdateAddonNote = function(val) {
+    if (!draft) return;
+    if (!draft.addonSelections) draft.addonSelections = { single: {}, multiple: {}, note: '' };
+    draft.addonSelections.note = String(val || '').slice(0, 50);
+  };
   window.bundleCopyPrevious = function() {
     if (!draft || draft.portionIndex < 1) return;
     const previous = window.bundleCartData?.[draft.key]?.[draft.portionIndex - 1];
@@ -294,6 +413,12 @@
     for (const group of draft.rule.groups) {
       const saved = previous.groups.find(candidate => candidate.groupId === group.id);
       if (saved) draft.selections[group.id] = structuredClone(saved.items).flatMap(item => Array.from({ length: Number(item.quantity || 1) }, () => ({ ...item, quantity: 1 })));
+    }
+    if (draft.catModifiers && draft.catModifiers.length > 0) {
+      const prevCustom = window.customizeData?.[draft.key]?.[draft.portionIndex - 1];
+      if (prevCustom) {
+        draft.addonSelections = JSON.parse(JSON.stringify(prevCustom));
+      }
     }
     render();
   };
@@ -307,12 +432,29 @@
   };
   window.confirmBundleSelection = function() {
     if (!draft || !draft.rule.groups.every(group => validGroup(group, draft.selections[group.id]))) return;
+
+    if (draft.catModifiers && draft.catModifiers.length > 0) {
+      const missingReq = draft.catModifiers.find(m => m.isRequired && (!draft.addonSelections?.single || !draft.addonSelections.single[m.slug]));
+      if (missingReq) {
+        if (typeof customAlert === 'function') customAlert(`請選擇「${missingReq.name}」`);
+        else alert(`請選擇「${missingReq.name}」`);
+        return;
+      }
+    }
+
     const { key, catSlug, origName, portionIndex, rule, selections } = draft;
     const portion = { portionIndex, groups: rule.groups.map(group => ({ groupId: group.id, groupName: groupName(group),
       items: selections[group.id].map(item => ({ ...item, price: 0 })) })) };
     window.bundleCartData = window.bundleCartData || {};
     window.bundleCartData[key] = window.bundleCartData[key] || [];
     window.bundleCartData[key][portionIndex] = portion;
+
+    if (draft.catModifiers && draft.catModifiers.length > 0) {
+      window.customizeData = window.customizeData || {};
+      window.customizeData[key] = window.customizeData[key] || [];
+      window.customizeData[key][portionIndex] = JSON.parse(JSON.stringify(draft.addonSelections || { single: {}, multiple: {}, note: '' }));
+    }
+
     cart[key] = Math.max(Number(cart[key] || 0), portionIndex + 1);
     const qty = document.getElementById('qty-' + catSlug + '-' + origName);
     if (qty) qty.textContent = String(cart[key]);
@@ -325,9 +467,15 @@
     const key = catSlug + '_' + origName;
     window.bundleCartData?.[key]?.splice(index, 1);
     if (window.bundleCartData?.[key]) window.bundleCartData[key].forEach((portion, pIndex) => { portion.portionIndex = pIndex; });
+    if (window.customizeData?.[key]) {
+      window.customizeData[key].splice(index, 1);
+      if (window.customizeData[key].length === 0) delete window.customizeData[key];
+    }
     cart[key] = Math.max(0, Number(cart[key] || 0) - 1);
     const qty = document.getElementById('qty-' + catSlug + '-' + origName);
     if (qty) qty.textContent = String(cart[key]);
+    const edit = document.getElementById('bundle-edit-btn-' + catSlug + '-' + origName);
+    if (edit) edit.style.display = cart[key] > 0 ? 'flex' : 'none';
     updateTotal();
   };
   window.bundlePortionExtra = portion => (portion?.groups || []).reduce((sum, group) => sum + (group.items || []).reduce((amount, item) => amount + itemExtra(item) * Number(item.quantity || 1), 0), 0);
