@@ -87,15 +87,10 @@ function renderDynamicCatalog() {
     const bData = window.bootstrapData || bootstrapData;
     if (!bData || !bData.catalog) return;
 
-    const hasCustomizations = (Array.isArray(bData.customizations) && bData.customizations.length > 0);
     const catalogSections = bData.catalog.map(cat => ({ type: 'catalog', sortOrder: cat.sortOrder || 0, category: cat }));
-    if (hasCustomizations) {
-        catalogSections.push({
-            type: 'customizations',
-            // Older tenants have no saved position yet; retain the existing top placement.
-            sortOrder: bData.customizationSortOrder ?? 0
-        });
-    }
+    (bData.customizations || []).filter(group => !group.scope || group.scope === 'order').forEach((group, index) => {
+        catalogSections.push({ type: 'customizations', group, sectionId: `sec-order-option-${index}`, sortOrder: group.sortOrder ?? 0 });
+    });
     catalogSections.sort((a, b) => a.sortOrder - b.sortOrder);
 
     // 1. Navigation Tabs
@@ -105,8 +100,7 @@ function renderDynamicCatalog() {
     catalogSections.forEach((section, idx) => {
         const isActive = idx === 0;
         if (section.type === 'customizations') {
-            const customNavTitle = bData.customizationShortName || '客製化';
-            navHTML += `<div class="nav-btn ${isActive ? 'active' : ''}" onclick="scrollToSec('sec-flavor')">${escapeHtml(customNavTitle)}</div>`;
+            navHTML += `<div class="nav-btn ${isActive ? 'active' : ''}" onclick="scrollToSec('${section.sectionId}')">${escapeHtml(section.group.title)}</div>`;
             return;
         }
         const cat = section.category;
@@ -125,8 +119,8 @@ function renderDynamicCatalog() {
         const sec = document.createElement('div');
         sec.className = 'section-container';
         if (section.type === 'customizations') {
-            sec.id = 'sec-flavor';
-            renderCustomizationsPanel(sec, bData.customizations || []);
+            sec.id = section.sectionId;
+            renderCustomizationsPanel(sec, [section.group]);
         } else {
             const cat = section.category;
             sec.id = `sec-${cat.slug}`;
