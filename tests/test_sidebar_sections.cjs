@@ -71,6 +71,10 @@ test('Sidebar Sections: orders.css has section styles, balanced braces, and touc
   assert.ok(css.includes('.menu-sidebar-section-title'), 'Must style .menu-sidebar-section-title');
   assert.ok(css.includes('.menu-sidebar-action-btn'), 'Must style .menu-sidebar-action-btn');
   assert.ok(css.includes('.menu-section-empty-hint'), 'Must style .menu-section-empty-hint');
+  assert.ok(css.includes('.menu-sidebar-segmented-toggle'), 'Must style .menu-sidebar-segmented-toggle');
+  assert.ok(css.includes('.menu-seg-btn'), 'Must style .menu-seg-btn');
+  assert.ok(css.includes('.menu-option-card'), 'Must style .menu-option-card');
+  assert.ok(css.includes('.menu-add-option-group-btn'), 'Must style .menu-add-option-group-btn');
 
   // Verify balanced braces across entire CSS file
   let depth = 0;
@@ -84,10 +88,29 @@ test('Sidebar Sections: orders.css has section styles, balanced braces, and touc
   assert.equal(depth, 0, 'Unclosed brace in orders.css');
 });
 
-test('Sidebar Sections: orders.html has bumped cache buster for sidebar sections', () => {
+test('Sidebar Toggle: orders-menu.js defines menuSidebarTab and setMenuSidebarTab', () => {
+  const code = fs.readFileSync(path.resolve(__dirname, '../js/orders-menu.js'), 'utf-8');
+  assert.ok(code.includes('menuSidebarTab'), 'Must define menuSidebarTab');
+  assert.ok(code.includes('setMenuSidebarTab'), 'Must define setMenuSidebarTab');
+  assert.ok(code.includes('menu-option-card'), 'Must render menu-option-card in options mode');
+  assert.ok(code.includes('menu-add-option-group-btn'), 'Must render menu-add-option-group-btn');
+});
+
+test('Sidebar Toggle: orders-i18n.js has bilingual labels for products and options tabs', () => {
+  const i18nJs = fs.readFileSync(path.resolve(__dirname, '../js/orders-i18n.js'), 'utf-8');
+  assert.ok(i18nJs.includes('segProducts: "餐點"'), 'zh-TW has segProducts');
+  assert.ok(i18nJs.includes('segProducts: "Món ăn"'), 'vi has segProducts');
+  assert.ok(i18nJs.includes('segOptions: "客製選項"'), 'zh-TW has segOptions');
+  assert.ok(i18nJs.includes('segOptions: "Tùy chọn"'), 'vi has segOptions');
+  assert.ok(i18nJs.includes('btnAddOptionGroupTop: "新增客製化分組"'), 'zh-TW has btnAddOptionGroupTop');
+  assert.ok(i18nJs.includes('btnAddOptionGroupTop: "Thêm nhóm tùy chọn"'), 'vi has btnAddOptionGroupTop');
+});
+
+test('Sidebar Sections: orders.html has bumped cache buster for sidebar sections and toggle', () => {
   const html = fs.readFileSync(path.resolve(__dirname, '../orders.html'), 'utf-8');
-  assert.ok(/css\/orders\.css\?v=20260927_sidebar_sections_v\d+/.test(html), 'orders.css cache buster bumped');
-  assert.ok(/js\/orders-menu\.js\?v=20260927_sidebar_sections_v\d+/.test(html), 'orders-menu.js cache buster bumped');
-  assert.ok(/js\/orders-i18n\.js\?v=20260927_sidebar_sections_v\d+/.test(html), 'orders-i18n.js cache buster bumped');
+  assert.ok(/css\/orders\.css\?v=20260928_toggle_products_options_v\d+/.test(html), 'orders.css cache buster bumped');
+  assert.ok(/js\/orders-menu\.js\?v=20260928_toggle_products_options_v\d+/.test(html), 'orders-menu.js cache buster bumped');
+  assert.ok(/js\/orders-i18n\.js\?v=20260928_toggle_products_options_v\d+/.test(html), 'orders-i18n.js cache buster bumped');
+  assert.ok(html.includes('menu-sidebar-segmented-toggle'), 'orders.html contains segmented toggle pill');
 });
 

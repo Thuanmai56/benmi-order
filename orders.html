@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title id="pos-page-title">Blab POS</title>
   <base href="/" />
-  <link rel="stylesheet" href="css/orders.css?v=20260927_sidebar_sections_v3" />
+  <link rel="stylesheet" href="css/orders.css?v=20260928_toggle_products_options_v1" />
     <script>
       (function () {
         document.documentElement.style.setProperty('--primary', '#00b900');
@@ -1220,7 +1220,15 @@
       <div class="split menu-split">
         <div class="panel menu-sidebar-panel">
           <div class="panel-header menu-sidebar-header">
-            <div>
+            <div class="menu-sidebar-segmented-toggle" role="tablist" aria-label="Menu navigation mode">
+              <button type="button" class="menu-seg-btn active" id="btn-seg-products" role="tab" aria-selected="true" onclick="setMenuSidebarTab('products')">
+                <span id="i18n-seg-products">Món ăn</span>
+              </button>
+              <button type="button" class="menu-seg-btn" id="btn-seg-options" role="tab" aria-selected="false" onclick="setMenuSidebarTab('options')">
+                <span id="i18n-seg-options">Tùy chọn</span>
+              </button>
+            </div>
+            <div id="menu-sidebar-products-actions">
               <button type="button" class="btn btn-ghost menu-manage-cats-btn" id="btn-menu-manage-cats" onclick="openCategoriesManager()">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" x2="20" y1="21" y2="21"></line><line x1="4" x2="20" y1="14" y2="14"></line><line x1="4" x2="20" y1="7" y2="7"></line><circle cx="8" cy="7" r="2"></circle><circle cx="16" cy="14" r="2"></circle><circle cx="12" cy="21" r="2"></circle></svg>
                 <span id="i18n-btn-manage-cats-text">管理分類</span>
@@ -2511,7 +2519,7 @@
   </section>
 
   <!-- Benmi POS Modular Architecture Scripts -->
-  <script src="js/orders-i18n.js?v=20260927_sidebar_sections_v3"></script>
+  <script src="js/orders-i18n.js?v=20260928_toggle_products_options_v1"></script>
   <script src="js/orders-core.js?v=20260927_rebase_v1"></script>
   <script src="js/orders-audio.js?v=20260927_rebase_v1"></script>
   <script src="js/printer-service.js?v=20260927_rebase_v1"></script>
@@ -2520,7 +2528,7 @@
   <script src="js/orders-history.js?v=20260927_rebase_v1"></script>
   <script src="js/orders-reports.js?v=20260927_rebase_v1"></script>
   <script src="js/orders-settings.js?v=20260927_rebase_v1"></script>
-  <script src="js/orders-menu.js?v=20260927_sidebar_sections_v3"></script>
+  <script src="js/orders-menu.js?v=20260928_toggle_products_options_v1"></script>
   <script src="js/orders-bundle-wizard.js?v=20260927_no_confirm_alert_v1"></script>
 
   <!-- POS Bootstrap & Initialization -->
