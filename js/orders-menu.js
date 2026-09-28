@@ -1229,10 +1229,11 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
         `;
       });
 
+      const repeatsEditorTitle = cat.groups.length === 1 && String(grp.title || '').trim() === String(cat.title || '').trim();
       card.innerHTML = `
         <div class="cust-group-header">
           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-            <span class="cust-group-title" id="cust-group-title-${gIdx}">${escapeHtml(grp.title)}</span>
+            <span class="cust-group-title" id="cust-group-title-${gIdx}"${repeatsEditorTitle ? ' hidden' : ''}>${escapeHtml(grp.title)}</span>
             <button type="button" class="menu-item-btn btn-ghost" id="cust-group-rename-btn-${gIdx}" style="padding: 3px 6px; font-size: var(--pos-text-meta); border: 1px solid #cbd5e1; display:inline-flex; align-items:center; justify-content:center;"
               onclick="startRenameCustomizationGroup(${cIdx}, ${gIdx})" title="${t("btnCategoryRename")}">${(typeof POS_SVG !== 'undefined' && POS_SVG.edit) || ''}</button>
             <button type="button" style="cursor: pointer; border: none; background: transparent; padding: 0;"
@@ -1630,6 +1631,7 @@ function startRenameCustomizationGroup(cIdx, gIdx) {
   const titleEl = document.getElementById(`cust-group-title-${gIdx}`);
   const renameBtn = document.getElementById(`cust-group-rename-btn-${gIdx}`);
   if (!titleEl) return;
+  titleEl.hidden = false;
   if (renameBtn) renameBtn.style.display = "none";
   const currentTitle = currentMenuData[cIdx]?.groups?.[gIdx]?.title || '';
 
