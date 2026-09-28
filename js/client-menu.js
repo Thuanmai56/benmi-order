@@ -85,9 +85,19 @@ function renderDynamicCatalog() {
     if (!bData || !bData.catalog) return;
 
     const catalogSections = bData.catalog.map(cat => ({ type: 'catalog', sortOrder: cat.sortOrder || 0, category: cat }));
-    (bData.customizations || []).filter(group => !group.scope || group.scope === 'order').forEach((group, index) => {
-        catalogSections.push({ type: 'customizations', group, sectionId: `sec-order-option-${index}`, sortOrder: group.sortOrder ?? 0 });
-    });
+    const globalCustomizationGroups = (bData.customizations || [])
+        .filter(group => !group.scope || group.scope === 'order')
+        .sort((a, b) => (Number(a.sortOrder) || 0) - (Number(b.sortOrder) || 0));
+    if (globalCustomizationGroups.length > 0) {
+        catalogSections.push({
+            type: 'customizations',
+            groups: globalCustomizationGroups,
+            sectionId: 'sec-order-option',
+            title: bData.customizationTitle || '口味與客製化選擇',
+            shortName: bData.customizationShortName || '口味選擇',
+            sortOrder: bData.customizationSortOrder ?? 0
+        });
+    }
     catalogSections.sort((a, b) => a.sortOrder - b.sortOrder);
 
     // 1. Navigation Tabs
@@ -97,7 +107,7 @@ function renderDynamicCatalog() {
     catalogSections.forEach((section, idx) => {
         const isActive = idx === 0;
         if (section.type === 'customizations') {
-            navHTML += `<div class="nav-btn ${isActive ? 'active' : ''}" onclick="scrollToSec('${section.sectionId}')">${escapeHtml(section.group.title)}</div>`;
+            navHTML += `<div class="nav-btn ${isActive ? 'active' : ''}" onclick="scrollToSec('${section.sectionId}')">${escapeHtml(section.shortName)}</div>`;
             return;
         }
         const cat = section.category;
@@ -117,7 +127,7 @@ function renderDynamicCatalog() {
         sec.className = 'section-container';
         if (section.type === 'customizations') {
             sec.id = section.sectionId;
-            renderCustomizationsPanel(sec, [section.group]);
+            renderCustomizationsPanel(sec, section.groups, section.title);
         } else {
             const cat = section.category;
             sec.id = `sec-${cat.slug}`;
@@ -148,10 +158,10 @@ function renderDynamicCatalog() {
     }
 }
 
-function renderCustomizationsPanel(container, list) {
+function renderCustomizationsPanel(container, list, sectionTitle = '口味與客製化選擇') {
     if (!container || !list || list.length === 0) return;
 
-    let html = `<div class="section-title">口味與客製化選擇</div>
+    let html = `<div class="section-title">${escapeHtml(sectionTitle)}</div>
     <div class="custom-panel-wrapper">
     <div class="custom-panel">`;
 
