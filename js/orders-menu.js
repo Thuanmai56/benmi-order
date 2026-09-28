@@ -336,9 +336,12 @@ async function loadMenuData() {
 
 let draggedCategoryIndex = null;
 let isCategoryManagerOpen = false;
+let categoryBeforeDisplayOrder = -1;
 
 function openCategoriesManager() {
-  if (!confirmLeaveMenu()) return;
+  if (!isMenuLoadedCompletely || !currentMenuData) return;
+  syncMenuDataFromDOM();
+  categoryBeforeDisplayOrder = activeCategoryIndex;
   isCategoryManagerOpen = true;
   activeCategoryIndex = -1;
   renderMenuCategories();
@@ -346,9 +349,8 @@ function openCategoriesManager() {
 }
 
 function closeCategoriesManager() {
-  if (!confirmLeaveMenu()) return;
   isCategoryManagerOpen = false;
-  activeCategoryIndex = (currentMenuData && currentMenuData.length > 0) ? 0 : -1;
+  activeCategoryIndex = currentMenuData?.[categoryBeforeDisplayOrder] ? categoryBeforeDisplayOrder : (currentMenuData || []).findIndex(cat => menuSidebarTab === 'products' ? !isCustomizationCategory(cat) : isCustomizationCategory(cat));
   renderMenuCategories();
   if (activeCategoryIndex >= 0) {
     renderMenuCategoryEditor(activeCategoryIndex);
@@ -401,156 +403,71 @@ function formatPlusBtnText(text, fallback) {
   return raw.startsWith('+') ? raw : `+ ${raw}`;
 }
 
+function getMenuDisplayEntries() {
+  const entries = [];
+  (currentMenuData || []).forEach(cat => {
+    if (!isCustomizationCategory(cat)) entries.push({ model: cat, title: cat.title, kind: 'categoryTypeCatalogBadge' });
+    else (cat.groups || []).filter(group => group.scope === 'order').forEach(group => {
+      entries.push({ model: group, title: group.title, kind: 'scopeOrder' });
+    });
+  });
+  return entries.sort((a, b) => (Number(a.model.sortOrder) || 0) - (Number(b.model.sortOrder) || 0));
+}
+
 function renderCategoriesManagerView() {
-  const titleEl = document.getElementById("menu-editor-title");
-  if (titleEl) titleEl.innerText = t("manageCategoriesTitle");
-  const subEl = document.getElementById("i18n-menu-edit-sub");
-  if (subEl) subEl.innerText = t("manageCategoriesSub");
-
-  // Toggle header action buttons
-  const renameBtn = document.getElementById("btn-category-rename");
-  const deleteBtn = document.getElementById("btn-category-delete");
-  const createBtn = document.getElementById("btn-menu-create-unified");
-  const addCatTopBtn = document.getElementById("btn-menu-add-cat-top");
-  const closeBtn = document.getElementById("btn-menu-manage-close");
-
-  if (renameBtn) renameBtn.style.display = "none";
-  if (deleteBtn) deleteBtn.style.display = "none";
-  if (createBtn) createBtn.style.display = "none";
-  if (addCatTopBtn) addCatTopBtn.style.display = "inline-flex";
-  if (closeBtn) closeBtn.style.display = "inline-flex";
-
-  const container = document.getElementById("menu-editor-body");
-  if (!container) return;
-  container.innerHTML = "";
-
-  const mgrContainer = document.createElement("div");
-  mgrContainer.className = "cat-mgr-container";
-
-  const catalogCategories = (currentMenuData || []).filter(c => !isCustomizationCategory(c));
-
-  if (catalogCategories.length === 0) {
-    mgrContainer.innerHTML = `<div style="text-align:center; padding: 30px; color:#94a3b8;">${t("noCategoriesPrompt") || "尚無任何分類"}</div>`;
-  } else {
-    const cardsList = document.createElement("div");
-    cardsList.className = "cat-mgr-cards-list";
-
-    cardsList.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      if (e.dataTransfer) {
-        e.dataTransfer.dropEffect = "move";
-      }
-      const draggingCard = cardsList.querySelector(".cat-mgr-card.dragging");
-      if (!draggingCard) return;
-      const afterElement = getDragAfterElement(cardsList, e.clientY, '.cat-mgr-card');
-      if (afterElement == null) {
-        cardsList.appendChild(draggingCard);
-      } else {
-        cardsList.insertBefore(draggingCard, afterElement);
-      }
-      updateCategoryCardIndexes(cardsList);
+  document.getElementById('menu-editor-title').textContent = t('manageCategoriesTitle');
+  document.getElementById('i18n-menu-edit-sub').textContent = t('manageCategoriesSub');
+  ['btn-category-rename', 'btn-category-delete', 'btn-menu-create-unified', 'btn-menu-add-cat-top'].forEach(id => {
+    document.getElementById(id).style.display = 'none';
+  });
+  document.getElementById('btn-menu-manage-close').style.display = 'inline-flex';
+  const container = document.getElementById('menu-editor-body');
+  container.innerHTML = '';
+  const panel = document.createElement('div');
+  panel.className = 'cust-group-card menu-display-order';
+  const description = document.createElement('p');
+  description.textContent = t('manageCategoriesSub');
+  panel.appendChild(description);
+  const entries = getMenuDisplayEntries();
+  let dragged = null;
+  const commit = ordered => {
+    ordered.forEach((entry, index) => { entry.model.sortOrder = index + 1; });
+    markMenuDirty();
+    renderCategoriesManagerView();
+  };
+  entries.forEach((entry, index) => {
+    const row = document.createElement('div');
+    row.className = 'menu-display-order-row';
+    row.draggable = true;
+    row.innerHTML = `<span aria-hidden="true">${typeof POS_SVG !== 'undefined' ? POS_SVG.grip || '' : ''}</span><span class="menu-display-order-name"><strong>${escapeHtml(entry.title)}</strong><small>${t(entry.kind)}</small></span>`;
+    [-1, 1].forEach(direction => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'btn btn-ghost';
+      button.disabled = index + direction < 0 || index + direction >= entries.length;
+      button.setAttribute('aria-label', t(direction < 0 ? 'moveDisplayUp' : 'moveDisplayDown') + ': ' + entry.title);
+      button.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="${direction < 0 ? 'm6 15 6-6 6 6' : 'm6 9 6 6 6-6'}"/></svg>`;
+      button.onclick = () => {
+        const ordered = [...entries];
+        [ordered[index], ordered[index + direction]] = [ordered[index + direction], ordered[index]];
+        commit(ordered);
+        container.querySelectorAll('.menu-display-order-row')[index + direction]?.querySelector('button:not(:disabled)')?.focus();
+      };
+      row.appendChild(button);
     });
-
-    cardsList.addEventListener("dragenter", (e) => {
-      e.preventDefault();
-    });
-
-    cardsList.addEventListener("drop", (e) => {
-      e.preventDefault();
-    });
-
-    catalogCategories.forEach((cat, idx) => {
-      const origIdx = currentMenuData.indexOf(cat);
-      const card = document.createElement("div");
-      card.className = "cat-mgr-card";
-      card.draggable = true;
-      card.setAttribute("data-cat-id", cat.id);
-
-      card.addEventListener("dragstart", (e) => {
-        if (e.dataTransfer) {
-          e.dataTransfer.effectAllowed = "move";
-          e.dataTransfer.setData("text/plain", cat.id);
-        }
-        draggedCategoryIndex = idx;
-        setTimeout(() => card.classList.add("dragging"), 0);
-      });
-
-      card.addEventListener("dragend", async () => {
-        card.classList.remove("dragging");
-        draggedCategoryIndex = null;
-
-        // Extract new order from DOM
-        const newOrderIds = [...cardsList.querySelectorAll('.cat-mgr-card')].map(c => c.getAttribute('data-cat-id'));
-        const catMap = new Map(catalogCategories.map(c => [c.id, c]));
-        const reordered = newOrderIds.map(id => catMap.get(id)).filter(Boolean);
-        const nonCatalog = currentMenuData.filter(c => isCustomizationCategory(c));
-
-        let changed = false;
-        if (reordered.length !== catalogCategories.length) {
-          changed = true;
-        } else {
-          for (let i = 0; i < reordered.length; i++) {
-            if (reordered[i].id !== catalogCategories[i].id) {
-              changed = true;
-              break;
-            }
-          }
-        }
-
-        if (changed) {
-          reordered.forEach((category, order) => {
-            category.sortOrder = order + 1;
-          });
-          currentMenuData = [...reordered, ...nonCatalog];
-          markMenuDirty();
-          renderMenuCategories();
-          await saveMenuData(true);
-        }
-        renderCategoriesManagerView();
-      });
-
-      const isCombo = isComboCategory(cat);
-      const badge = isCombo
-        ? `<span style="font-size: 11.5px; padding: 3px 8px; background: #fef2f2; color: #b91c1c; border-radius: 6px; font-weight: 800;">Combo</span>`
-        : `<span style="font-size: 11.5px; padding: 3px 8px; background: #ecfdf5; color: #047857; border-radius: 6px; font-weight: 800;">${t("categoryTypeCatalogBadge") || "餐點"}</span>`;
-
-      const itemCount = Array.isArray(cat.items) ? cat.items.length : 0;
-
-      const actionsHtml = `
-        <button type="button" class="btn btn-ghost" style="border: 1px solid #cbd5e1; background:#fff; padding: 6px 12px; font-size: 13px; font-weight: 700; border-radius: 8px; display:inline-flex; align-items:center; gap:4px;" onclick="promptRenameCategoryAtIndex(${origIdx})">${(typeof POS_SVG !== 'undefined' && POS_SVG.edit) || ''} <span>${t("btnCategoryRename")}</span></button>
-        <button type="button" class="btn btn-ghost" style="border: 1px solid #fee2e2; background:#fff5f5; color:var(--brand-red); padding: 6px 12px; font-size: 13px; font-weight: 700; border-radius: 8px; display:inline-flex; align-items:center; gap:4px;" onclick="deleteCategoryAtIndex(${origIdx})">${(typeof POS_SVG !== 'undefined' && POS_SVG.trash) || ''} <span>${t("btnCategoryDelete")}</span></button>
-      `;
-      const gripSvg = (typeof POS_SVG !== "undefined" && POS_SVG.grip) || "";
-
-      card.innerHTML = `
-        <div class="cat-mgr-drag-handle" title="Kéo rê để đổi thứ tự / 拖曳排序">${gripSvg}</div>
-        <div class="cat-mgr-index">#${idx + 1}</div>
-        <div class="cat-mgr-info">
-          ${badge}
-          <span class="cat-mgr-name">${escapeHtml(cat.title)}${cat.shortName && cat.shortName !== cat.title ? ` <span style="font-size: 11.5px; color: #64748b; font-weight: normal;">(${escapeHtml(cat.shortName)})</span>` : ''}</span>
-          <span class="cat-mgr-count">${itemCount} ${t("menuItemUnit")}</span>
-        </div>
-        <div class="cat-mgr-actions" onclick="event.stopPropagation()">
-          ${actionsHtml}
-        </div>
-      `;
-
-      cardsList.appendChild(card);
-    });
-
-    mgrContainer.appendChild(cardsList);
-  }
-
-  // Add category button at the bottom of the list
-  const bottomAddBtn = document.createElement("button");
-  bottomAddBtn.type = "button";
-  bottomAddBtn.className = "cat-mgr-add-btn";
-  const plusSvg = (typeof POS_SVG !== "undefined" && POS_SVG.plus) || "";
-  bottomAddBtn.innerHTML = `${plusSvg}<span>${t("btnAddCategoryBottom")}</span>`;
-  bottomAddBtn.onclick = () => openAddCategoryModal();
-  mgrContainer.appendChild(bottomAddBtn);
-
-  container.appendChild(mgrContainer);
+    row.ondragstart = event => { dragged = index; event.dataTransfer.setData('text/plain', String(index)); row.classList.add('dragging'); };
+    row.ondragend = () => { dragged = null; row.classList.remove('dragging'); };
+    row.ondragover = event => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; };
+    row.ondrop = event => {
+      event.preventDefault();
+      if (dragged === null || dragged === index) return;
+      const ordered = [...entries];
+      ordered.splice(index, 0, ordered.splice(dragged, 1)[0]);
+      commit(ordered);
+    };
+    panel.appendChild(row);
+  });
+  container.appendChild(panel);
 }
 
 const collapsedMenuSections = {
@@ -736,7 +653,7 @@ function renderMenuCategories() {
   }
   const prodActions = document.getElementById("menu-sidebar-products-actions");
   if (prodActions) {
-    prodActions.style.display = menuSidebarTab === 'products' ? 'block' : 'none';
+    prodActions.style.display = 'block';
   }
 
   if (!currentMenuData) return;
