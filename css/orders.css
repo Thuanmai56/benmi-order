@@ -4049,10 +4049,54 @@ html.is-web-platform .store-activation-modal:not(.force-show) {
 .menu-sidebar-header {
   background: #ffffff !important;
   border-bottom: 1px solid #e2e8f0 !important;
-  padding: 16px !important;
+  padding: 14px 14px 12px 14px !important;
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.menu-sidebar-segmented-toggle {
+  display: flex;
+  background: #f1f5f9;
+  border-radius: 9999px;
+  padding: 3px;
+  gap: 3px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.menu-seg-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 13.5px;
+  font-weight: 700;
+  padding: 8px 12px;
+  min-height: 42px;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+  box-sizing: border-box;
+}
+
+.menu-seg-btn:hover {
+  color: #0f172a;
+}
+
+.menu-seg-btn.active {
+  background: #ffffff;
+  color: #0f172a;
+  font-weight: 800;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+#menu-sidebar-products-actions {
+  width: 100%;
 }
 
 .menu-manage-cats-btn {
@@ -4354,6 +4398,131 @@ html.is-web-platform .store-activation-modal:not(.force-show) {
 .menu-sidebar-action-btn.menu-sidebar-action-combo-btn:hover {
   background: #fef2f2;
   border-color: #f87171;
+}
+
+.menu-add-option-group-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: calc(100% - 24px);
+  margin: 14px 12px 14px 12px;
+  padding: 10px 14px;
+  background: #ffffff;
+  border: 1.5px solid #fecdd3;
+  border-radius: 12px;
+  color: #e11d48;
+  font-size: 13.5px;
+  font-weight: 800;
+  min-height: 46px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.menu-add-option-group-btn:hover {
+  background: #fff1f2;
+  border-color: #fb7185;
+}
+
+.menu-add-option-group-btn svg {
+  stroke: #e11d48;
+}
+
+.menu-option-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: calc(100% - 24px);
+  margin: 0 12px 10px 12px;
+  padding: 12px 14px;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-height: 52px;
+  box-sizing: border-box;
+  user-select: none;
+}
+
+.menu-option-card:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.menu-option-card.active {
+  border-color: #e11d48;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(225, 29, 72, 0.08);
+}
+
+.menu-option-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.menu-option-card-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.15s ease;
+}
+
+.menu-option-card.active .menu-option-card-title {
+  color: #e11d48;
+}
+
+.menu-option-card-subtitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  transition: color 0.15s ease;
+}
+
+.menu-option-card.active .menu-option-card-subtitle {
+  color: #e11d48;
+  opacity: 0.9;
+}
+
+.menu-option-card-chevron {
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-left: 8px;
+  transition: all 0.15s ease;
+}
+
+.menu-option-card.active .menu-option-card-chevron {
+  color: #e11d48;
+  transform: translateX(2px);
+}
+
+@keyframes custGroupPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.35);
+    border-color: #e11d48;
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(225, 29, 72, 0.18);
+    border-color: #e11d48;
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(225, 29, 72, 0);
+  }
+}
+
+.cust-group-focus-pulse {
+  animation: custGroupPulse 1.2s ease-out;
+  border-color: #e11d48 !important;
 }
 
 .menu-section-empty-hint {
