@@ -1,3 +1,4 @@
+import { getModifierLibrary } from './modules/modifier-library';
 import { Env } from './types/env';
 import { corsHeaders, json } from './utils/http';
 import { handleLineWebhook } from './modules/line';
@@ -70,6 +71,7 @@ export default {
       if (request.method === "GET" && path === "/api/reports/items-analytics") return getItemAnalyticsReport(request, env);
       if (request.method === "GET" && path === "/api/config") return getConfig(request, env, tenantCtx);
       if (request.method === "POST" && path === "/api/config") return updateConfig(request, env, tenantCtx);
+      if (request.method === "GET" && path === "/api/menu/modifier-library") return getModifierLibrary(request, env);
       if (request.method === "GET" && path === "/api/menu") return getMenu(request, env);
       if (request.method === "POST" && path === "/api/menu") return updateMenu(request, env);
       if (request.method === "POST" && path === "/api/menu/stock-status") return updateStockStatus(request, env);
