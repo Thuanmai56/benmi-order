@@ -755,32 +755,27 @@ function renderMenuCategories() {
     });
 
     const listEl = document.createElement("div");
-    listEl.className = "menu-sidebar-section menu-sidebar-product-list";
+    listEl.className = "menu-sidebar-section";
 
     const actionCatalog = document.createElement("button");
     actionCatalog.type = "button";
-    actionCatalog.className = "menu-add-option-group-btn menu-sidebar-add-category-btn";
+    actionCatalog.className = "menu-add-option-group-btn";
     actionCatalog.innerHTML = `${plusIcon}<span>${escapeHtml(t("btnAddCatalogCategory"))}</span>`;
     actionCatalog.onclick = () => openAddCategoryModal('catalog');
     listEl.appendChild(actionCatalog);
 
     catalogList.forEach(({ cat, originalIndex }) => {
       const div = document.createElement("div");
-      div.className = `menu-cat-item ${activeCategoryIndex === originalIndex && !isCategoryManagerOpen ? 'active' : ''}`;
-
-      const isCombo = isComboCategory(cat);
-      const badge = isCombo
-        ? `<span style="font-size: 11px; padding: 2px 6px; background: #fef2f2; color: #b91c1c; border-radius: 4px; font-weight: 700; margin-right: 6px;">Combo</span>`
-        : '';
-
+      div.className = `menu-option-card ${activeCategoryIndex === originalIndex && !isCategoryManagerOpen ? 'active' : ''}`;
       const itemCount = Array.isArray(cat.items) ? cat.items.length : 0;
-
       div.innerHTML = `
-        <div style="display:flex; align-items:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;">
-          ${badge}
-          <span class="menu-cat-title">${escapeHtml(cat.title)}</span>
+        <div class="menu-option-card-content">
+          <div class="menu-option-card-title">${escapeHtml(cat.title)}</div>
+          <div class="menu-option-card-subtitle">${itemCount} ${t("menuItemUnit")}</div>
         </div>
-        <span class="menu-cat-count">${itemCount} ${t("menuItemUnit")}</span>
+        <div class="menu-option-card-chevron" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
       `;
 
       div.onclick = () => {
@@ -982,13 +977,21 @@ function renderMenuCategoryEditor(index) {
   const container = document.getElementById("menu-editor-body");
   if (!container) return;
   container.innerHTML = "";
+  const banner = document.createElement("div");
+  banner.className = "cust-header-banner";
+  banner.innerHTML = `<div class="cust-title">${t("catalogManageTitle")}</div><div class="cust-desc">${t("catalogManageDesc")}</div>`;
+  container.appendChild(banner);
+  const catalogCard = document.createElement("div");
+  catalogCard.className = "cust-group-card";
+  catalogCard.innerHTML = `<div class="cust-group-header"><span class="cust-group-title">${escapeHtml(cat.title)}</span><span class="menu-option-card-subtitle">${cat.items.length} ${t("menuItemUnit")}</span></div>`;
+  container.appendChild(catalogCard);
 
   if (cat.type === 'catalog') {
     const storeModifiers = getStoreModifiersList();
     const appliedMods = cat.appliedModifiers || (cat.allowCustomization === false ? [] : ['*']);
 
     const toggleDiv = document.createElement("div");
-    toggleDiv.className = "category-customization-box";
+    toggleDiv.className = "cust-scope-panel scope-category-panel";
 
     
     let modifiersHtml = '';
@@ -1023,20 +1026,20 @@ function renderMenuCategoryEditor(index) {
       </div>
       ${modifiersHtml}
     `;
-    container.appendChild(toggleDiv);
+    catalogCard.appendChild(toggleDiv);
   }
 
   const itemsContainer = document.createElement("div");
-  itemsContainer.className = "menu-items-list";
+  itemsContainer.className = "cust-options-list";
   itemsContainer.style.display = "flex";
   itemsContainer.style.flexDirection = "column";
-  itemsContainer.style.gap = "8px";
+  itemsContainer.style.gap = "10px";
 
   itemsContainer.addEventListener("dragover", (e) => {
     e.preventDefault();
-    const draggingRow = itemsContainer.querySelector(".menu-item-row.dragging");
+    const draggingRow = itemsContainer.querySelector(".menu-catalog-row.dragging");
     if (!draggingRow) return;
-    const afterElement = getDragAfterElement(itemsContainer, e.clientY, '.menu-item-row');
+    const afterElement = getDragAfterElement(itemsContainer, e.clientY, '.menu-catalog-row');
     if (afterElement == null) {
       itemsContainer.appendChild(draggingRow);
     } else {
@@ -1046,7 +1049,7 @@ function renderMenuCategoryEditor(index) {
 
   cat.items.forEach((item, iIdx) => {
     const row = document.createElement("div");
-    row.className = "menu-item-row";
+    row.className = "cust-option-block menu-catalog-row";
     row.draggable = true;
     row.setAttribute("data-item-index", iIdx);
 
@@ -1059,7 +1062,7 @@ function renderMenuCategoryEditor(index) {
       row.classList.remove("dragging");
       syncMenuDataFromDOM();
       const currentItems = currentMenuData[index].items;
-      const newOrderIndices = [...itemsContainer.querySelectorAll('.menu-item-row')].map(r => parseInt(r.getAttribute('data-item-index'), 10));
+      const newOrderIndices = [...itemsContainer.querySelectorAll('.menu-catalog-row')].map(r => parseInt(r.getAttribute('data-item-index'), 10));
       const reordered = newOrderIndices.map(idx => currentItems[idx]).filter(Boolean);
       currentMenuData[index].items = reordered;
       markMenuDirty();
@@ -1088,7 +1091,7 @@ function renderMenuCategoryEditor(index) {
     }
 
     row.innerHTML = `
-      <div class="menu-item-main-fields">
+      <div class="cust-option-row">
         <div class="menu-item-drag" title="Kéo để đổi thứ tự">${gripSvg}</div>
         <input type="text" class="menu-item-name-input" value="${escapeHtml(item.name)}" data-name-cidx="${index}" data-name-iidx="${iIdx}" oninput="markMenuDirty()"
           placeholder="${t("newItemPlaceholder")}">
@@ -1097,33 +1100,34 @@ function renderMenuCategoryEditor(index) {
           <input type="number" class="menu-item-price-input" value="${item.price !== null && item.price !== undefined ? item.price : ''}" data-cidx="${index}" data-iidx="${iIdx}" oninput="markMenuDirty()"
             placeholder="${t("priceHiddenPlaceholder")}">
         </label>
-      </div>
       <div class="menu-item-actions">
-        <button type="button" class="menu-item-status-pill ${item.isOos ? 'oos' : 'in-stock'}"
+        <button type="button" class="menu-item-btn" style="background: ${oosBg}; color: ${oosColor}; border: 1px solid ${oosBorder}; display: inline-flex; align-items: center; gap: 5px;"
           onclick="openStockModal(${index}, ${iIdx})" title="${oosText}">
-          <span class="status-dot"></span>
+          <span style="width:7px;height:7px;border-radius:50%;background:currentColor;"></span>
           <span class="status-text">${oosText}</span>
         </button>
-        <button type="button" class="menu-item-settings-btn" onclick="openItemDetailModal(${index}, ${iIdx})" title="${t('btnItemSettings')}">
-          ${settingsSvg}<span>${t("btnItemSettings")}</span>
+
+        <button type="button" class="menu-item-btn btn-ghost" style="border:1px solid #fee2e2;background:#fff5f5;color:var(--brand-red);display:inline-flex;align-items:center;gap:4px;" onclick="removeMenuItemAt(${index}, ${iIdx})" title="${t('btnItemDelete')}">
+          ${trashSvg}<span>${t("btnItemDelete")}</span>
         </button>
-        <button type="button" class="menu-item-delete-btn" onclick="removeMenuItemAt(${index}, ${iIdx})" title="${t('btnItemDelete')}">
-          ${trashSvg}
-        </button>
+      </div>
+      </div>
+      <div class="cust-sub-options-container">
+        <button type="button" class="cust-add-sub-chip-btn" onclick="openItemDetailModal(${index}, ${iIdx})">${settingsSvg}<span>${t("btnItemSettings")}</span></button>
       </div>
     `;
     itemsContainer.appendChild(row);
   });
-  container.appendChild(itemsContainer);
+  catalogCard.appendChild(itemsContainer);
 
   if (!isCombo) {
   const addItemBtn = document.createElement("button");
   addItemBtn.type = "button";
   addItemBtn.className = "cat-mgr-add-btn";
-  addItemBtn.style.marginTop = "12px";
+  addItemBtn.style.marginTop = "10px";
   addItemBtn.onclick = () => openCreateItemModal(index);
   addItemBtn.innerHTML = `<span>+ ${t("btnItemCreate") || (currentLang === 'vi' ? 'Thêm món mới' : '新增餐點')}</span>`;
-  container.appendChild(addItemBtn);
+  catalogCard.appendChild(addItemBtn);
   }
 }
 
