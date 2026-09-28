@@ -9275,3 +9275,19 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
 .menu-option-section .menu-option-card { text-align: left; font-family: inherit; }
 .menu-option-section-heading:focus-visible,
 .menu-option-section .menu-option-card:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+
+.menu-combo-badge {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 5px 10px;
+  border: 1px solid #ddd6fe;
+  border-radius: 6px;
+  background: #ede9fe;
+  color: #6d28d9;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.4;
+  vertical-align: middle;
+}
+.menu-combo-badge-modal { margin-left: 10px; }
