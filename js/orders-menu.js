@@ -15,6 +15,7 @@ let newCustomGroupRequired = false;
 let newCustomGroupScope = 'order';
 let newCustomGroupAppliedCategories = [];
 let currentLibraryOptionGroups = [];
+let menuModifierLibrary = [];
 
 function getBenmiDefaultCategories() {
   return [
@@ -118,6 +119,12 @@ async function loadMenuData() {
         (data.customizations !== undefined && !Array.isArray(data.customizations))) {
       throw new Error('Incomplete menu');
     }
+
+    const libraryResponse = await fetch(`${WORKER_BASE}/api/menu/modifier-library?tenant_id=${encodeURIComponent(tenantId)}&_t=${Date.now()}`);
+    if (!libraryResponse.ok) throw new Error('Failed to load modifier library');
+    const libraryData = await libraryResponse.json();
+    if (libraryData.complete !== true || !Array.isArray(libraryData.groups)) throw new Error('Incomplete modifier library');
+    menuModifierLibrary = libraryData.groups;
 
     const categories = [];
     // The editor uses category slugs; bootstrap relationships use database IDs.
@@ -749,6 +756,27 @@ function renderMenuCategories() {
       }
     });
 
+    // Canonical item groups have no legacy customization category. Keep their
+    // stored IDs and use the existing item editor instead of inventing categories.
+    const representedIds = new Set(optionCards.flatMap(card => {
+      const group = currentMenuData[card.catIndex]?.groups?.[card.groupIndex];
+      return group?.id ? [String(group.id), `mg_${group.id}`] : [];
+    }));
+    const canonicalGroups = new Map(menuModifierLibrary.filter(group => group.source === 'canonical').map(group => [String(group.id), group]));
+    currentMenuData.forEach((cat, catIndex) => {
+      if (isCustomizationCategory(cat)) return;
+      (cat.items || []).forEach((item, itemIndex) => {
+        (item.modifierGroups || []).forEach((group, groupIndex) => {
+          if (representedIds.has(String(group.id))) return;
+          representedIds.add(String(group.id));
+          const metadata = canonicalGroups.get(String(group.id));
+          optionCards.push({ catIndex, itemIndex, groupIndex, canonical: true,
+            scope: metadata?.scope === 'order' ? 'order' : 'item',
+            title: group.name, count: (group.options || []).length });
+        });
+      });
+    });
+
     ['order', 'item'].forEach(scope => {
       const cards = optionCards.filter(card => card.scope === scope);
       const section = document.createElement('details');
@@ -785,6 +813,11 @@ function renderMenuCategories() {
           if (activeCategoryIndex === card.catIndex && isMenuDirty) syncMenuDataFromDOM();
           isCategoryManagerOpen = false;
           isCustomGroupCreatorOpen = false;
+          if (card.canonical) {
+            openItemModifiersModal(card.catIndex, card.itemIndex);
+            document.querySelectorAll('#item-modifiers-modal-body .mod-group-card')[card.groupIndex]?.scrollIntoView({ block: 'nearest' });
+            return;
+          }
           activeCategoryIndex = card.catIndex;
           activeOptionGroupIndex = card.groupIndex;
           renderMenuCategories();
@@ -1978,7 +2011,9 @@ function serializeMenuData(categories) {
             options: (group.options || []).map(option => ({ id: option.id, name: option.name, price: option.price || 0, isDefault: false }))
           });
         });
-        serializedItem.modifier_groups = linkedGroups;
+        if (Array.isArray(item.modifierGroups) || linkedGroups.length > 0) {
+          serializedItem.modifier_groups = linkedGroups;
+        }
         output[cat.id][item.name.trim()] = serializedItem;
       }
     });
@@ -3666,6 +3701,7 @@ function saveItemModifiersModal() {
       : Math.max(1, parseInt(grp.maxSelection, 10) || 99);
 
     return {
+      ...grp,
       id: grp.id || `mg_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       name: grp.name.trim(),
       selectionType: grp.selectionType || 'single',
@@ -3680,6 +3716,13 @@ function saveItemModifiersModal() {
     const item = currentMenuData[currentItemModifiersCidx]?.items?.[currentItemModifiersIidx];
     if (item) {
       item.modifierGroups = cleanGroups;
+      // A shared group ID denotes the same definition on every linked item.
+      const updatedGroups = new Map(cleanGroups.map(group => [group.id, group]));
+      (currentMenuData || []).forEach(category => (category.items || []).forEach(otherItem => {
+        if (otherItem === item || !Array.isArray(otherItem.modifierGroups)) return;
+        otherItem.modifierGroups = otherItem.modifierGroups.map(group =>
+          updatedGroups.has(group.id) ? JSON.parse(JSON.stringify(updatedGroups.get(group.id))) : group);
+      }));
       item.itemType = (item.bundleRule && item.bundleRule.groups && item.bundleRule.groups.length > 0) ? 'bundle' : 'standard';
       markMenuDirty();
       renderMenuCategoryEditor(currentItemModifiersCidx);
