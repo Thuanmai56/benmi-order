@@ -25,3 +25,7 @@ dist/
 
 .dev.vars*
 !.dev.vars.example
+
+# Database backups
+backup_*.sql
+*.backup.sql
