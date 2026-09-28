@@ -505,6 +505,7 @@ window.isCustomizationCategory = isCustomizationCategory;
 
 let menuSidebarTab = 'products';
 let activeOptionGroupIndex = null;
+const menuOptionSectionsOpen = { order: true, item: true };
 
 function setMenuSidebarTab(tab) {
   if (tab !== 'products' && tab !== 'options') tab = 'products';
@@ -724,102 +725,69 @@ function renderMenuCategories() {
     addGroupBtn.onclick = () => handleCreateCustomFromSidebar();
     optionsContainer.appendChild(addGroupBtn);
 
-    // Keep global customization groups together as one editor entry. The
-    // editor itself still renders and edits each child group independently.
     const optionCards = [];
-
-    // 1. Groups from order_customization / sec-flavor
-    currentMenuData.forEach((cat, originalIndex) => {
-      if (cat.type === 'order_customization' || cat.id === 'sec-flavor' || cat.slug === 'sec-flavor') {
-        if (Array.isArray(cat.groups) && cat.groups.length > 0) {
-          const groups = cat.groups.filter(grp => !grp.scope || grp.scope === 'order');
-          const optionCount = groups.reduce((total, grp) => total + (Array.isArray(grp.options) ? grp.options.length : 0), 0);
-          if (groups.length > 0) optionCards.push({
-            type: 'global_customizations',
-            catIndex: originalIndex,
-            groupIndex: null,
-            title: cat.title || (currentLang === 'vi' ? 'Tùy chọn khẩu vị & biến thể' : '口味與客製化選擇'),
-            count: optionCount
-          });
-        }
+    currentMenuData.forEach((cat, catIndex) => {
+      if (!isCustomizationCategory(cat)) return;
+      if (Array.isArray(cat.groups) && cat.groups.length) {
+        cat.groups.forEach((group, groupIndex) => optionCards.push({
+          catIndex, groupIndex,
+          scope: (group.scope || (cat.type === 'modifier' ? 'item' : 'order')) === 'order' ? 'order' : 'item',
+          title: group.title || cat.title,
+          count: (group.options || []).length
+        }));
+      } else if (cat.type === 'modifier') {
+        optionCards.push({ catIndex, groupIndex: 0, scope: 'item', title: cat.title, count: (cat.items || []).length });
       }
     });
 
-    // 2. Modifier categories (cat.type === 'modifier')
-    currentMenuData.forEach((cat, originalIndex) => {
-      if (cat.type === 'modifier') {
-        const optCount = Array.isArray(cat.items) ? cat.items.length : (Array.isArray(cat.groups?.[0]?.options) ? cat.groups[0].options.length : 0);
-        optionCards.push({
-          type: 'modifier_category',
-          catIndex: originalIndex,
-          groupIndex: 0,
-          title: cat.title,
-          count: optCount
-        });
+    ['order', 'item'].forEach(scope => {
+      const cards = optionCards.filter(card => card.scope === scope);
+      const section = document.createElement('details');
+      section.className = 'menu-option-section';
+      section.open = menuOptionSectionsOpen[scope];
+      section.ontoggle = () => { menuOptionSectionsOpen[scope] = section.open; };
+      const heading = document.createElement('summary');
+      heading.className = 'menu-option-section-heading';
+      heading.innerHTML = `<span>${escapeHtml(t(scope === 'order' ? 'optionSectionOrder' : 'optionSectionItem'))}</span>
+        <span class="menu-option-section-count">${cards.length}</span>
+        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
+      section.appendChild(heading);
+      if (!cards.length) {
+        const empty = document.createElement('p');
+        empty.className = 'menu-section-empty-hint';
+        empty.textContent = t('optionSectionEmpty');
+        section.appendChild(empty);
       }
-    });
-
-    if (optionCards.length === 0) {
-      const emptyDiv = document.createElement("div");
-      emptyDiv.className = "menu-section-empty-hint";
-      emptyDiv.innerText = t("noOptionGroupsPrompt") || (currentLang === 'vi' ? 'Chưa có nhóm tùy chọn nào (nhấn bên trên để tạo)' : '尚無客製化分組 (點擊上方按鈕立即建立)');
-      optionsContainer.appendChild(emptyDiv);
-    } else {
-      const unitText = t("optionsCountUnit") || (currentLang === 'vi' ? 'lựa chọn' : '項選擇');
-
-      optionCards.forEach(card => {
-        const isCardActive = (card.type === 'global_customizations' && activeCategoryIndex === card.catIndex) ||
-                             (card.type === 'modifier_category' && activeCategoryIndex === card.catIndex);
-
-        const cardEl = document.createElement("div");
-        cardEl.className = `menu-option-card ${isCardActive ? 'active' : ''}`;
-
-        cardEl.innerHTML = `
-          <div class="menu-option-card-content">
-            <div class="menu-option-card-title">${escapeHtml(card.title)}</div>
-            <div class="menu-option-card-subtitle">${card.count} ${escapeHtml(unitText)}</div>
-          </div>
-          <div class="menu-option-card-chevron" aria-hidden="true">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-          </div>
-        `;
-
+      cards.forEach(card => {
+        const isActive = activeCategoryIndex === card.catIndex &&
+          (activeOptionGroupIndex === card.groupIndex || (activeOptionGroupIndex === null && card.groupIndex === 0));
+        const cardEl = document.createElement('button');
+        cardEl.type = 'button';
+        cardEl.className = `menu-option-card ${isActive ? 'active' : ''}`;
+        if (isActive) cardEl.setAttribute('aria-current', 'true');
+        cardEl.innerHTML = `<span class="menu-option-card-content">
+          <span class="menu-option-card-title">${escapeHtml(card.title)}</span>
+          <span class="menu-option-card-subtitle">${card.count} ${escapeHtml(t('optionsCountUnit'))}</span>
+        </span><span class="menu-option-card-chevron" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </span>`;
         cardEl.onclick = () => {
           if (activeCategoryIndex !== card.catIndex && !confirmLeaveMenu()) return;
           if (activeCategoryIndex === card.catIndex && isMenuDirty) syncMenuDataFromDOM();
-
           isCategoryManagerOpen = false;
           isCustomGroupCreatorOpen = false;
           activeCategoryIndex = card.catIndex;
-
-          if (card.type === 'global_customizations') {
-            activeOptionGroupIndex = null;
-            renderMenuCategories();
-            renderMenuCategoryEditor(card.catIndex);
-          } else if (card.type === 'modifier_category') {
-            activeOptionGroupIndex = card.groupIndex;
-            renderMenuCategories();
-            renderMenuCategoryEditor(card.catIndex);
-
-            // Smooth scroll & pulse animation on the selected group card in editor
-            setTimeout(() => {
-              const targetCard = document.querySelector(`.cust-group-card[data-cust-group-index="${card.groupIndex || 0}"]`);
-              if (targetCard) {
-                targetCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                targetCard.classList.add('cust-group-focus-pulse');
-                setTimeout(() => targetCard.classList.remove('cust-group-focus-pulse'), 1500);
-              }
-            }, 50);
-          } else {
-            activeOptionGroupIndex = null;
-            renderMenuCategories();
-            renderMenuCategoryEditor(card.catIndex);
-          }
+          activeOptionGroupIndex = card.groupIndex;
+          renderMenuCategories();
+          renderMenuCategoryEditor(card.catIndex);
+          document.querySelector('.menu-sidebar-options-list .menu-option-card.active')?.focus({ preventScroll: true });
+          const target = document.querySelector(`.cust-group-card[data-cust-group-index="${card.groupIndex}"]`);
+          if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
         };
-
-        optionsContainer.appendChild(cardEl);
+        section.appendChild(cardEl);
       });
-    }
+      optionsContainer.appendChild(section);
+    });
 
     container.appendChild(optionsContainer);
   }
