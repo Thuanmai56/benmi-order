@@ -9044,6 +9044,11 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
   margin-top: 8px;
 }
 
+.cust-cat-item-select { display: flex; flex-direction: column; gap: 6px; }
+.cust-item-chip-list { display: flex; flex-wrap: wrap; gap: 6px; padding-left: 12px; }
+.cust-item-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 5px 10px; border: 1px solid #dbe3ee; border-radius: 8px; background: #fff; color: #475569; font-size: 12.5px; font-weight: 650; cursor: pointer; }
+.cust-item-chip input { width: 16px; height: 16px; accent-color: #2563eb; }
+
 .cust-cat-chip {
   min-height: 44px;
   padding: 6px 14px;
@@ -9160,5 +9165,4 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
 .mod-lib-option-row:hover {
   background: #f1f5f9;
 }
-
 
