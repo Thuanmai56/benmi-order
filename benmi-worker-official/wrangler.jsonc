@@ -35,7 +35,10 @@
   ],
   "vars": {
     "LIFF_ID": "2009560906-c5taZfiY",
-    "LIFF_URL": "https://liff.line.me/2009560906-c5taZfiY"
+    "LIFF_URL": "https://liff.line.me/2009560906-c5taZfiY",
+    "LINE_RUNTIME_ENABLED": "false",
+    "LINE_RUNTIME_TENANTS": "[]",
+    "LINE_RUNTIME_ENVIRONMENT": "production"
   },
   "secrets_store_secrets": [
     {
@@ -65,7 +68,10 @@
       "account_id": "525bb177ae7306325d13269246769f50",
       "vars": {
         "LIFF_ID": "2009555608-DMioljsI",
-        "LIFF_URL": "https://liff.line.me/2009555608-DMioljsI"
+        "LIFF_URL": "https://liff.line.me/2009555608-DMioljsI",
+        "LINE_RUNTIME_ENABLED": "false",
+        "LINE_RUNTIME_TENANTS": "[]",
+        "LINE_RUNTIME_ENVIRONMENT": "staging"
       },
       "secrets_store_secrets": [
         {
@@ -103,7 +109,10 @@
       "account_id": "525bb177ae7306325d13269246769f50",
       "vars": {
         "LIFF_ID": "2011224566-kLLdMjkq",
-        "LIFF_URL": "https://liff.line.me/2011224566-kLLdMjkq"
+        "LIFF_URL": "https://liff.line.me/2011224566-kLLdMjkq",
+        "LINE_RUNTIME_ENABLED": "false",
+        "LINE_RUNTIME_TENANTS": "[]",
+        "LINE_RUNTIME_ENVIRONMENT": "dev"
       },
       "secrets_store_secrets": [
         {

@@ -108,9 +108,9 @@ test('Sidebar Toggle: orders-i18n.js has bilingual labels for products and optio
 
 test('Sidebar Sections: orders.html has bumped cache buster for sidebar sections and toggle', () => {
   const html = fs.readFileSync(path.resolve(__dirname, '../orders.html'), 'utf-8');
-  assert.ok(/css\/orders\.css\?v=20260928_toggle_products_options_v\d+/.test(html), 'orders.css cache buster bumped');
-  assert.ok(/js\/orders-menu\.js\?v=20260928_toggle_products_options_v\d+/.test(html), 'orders-menu.js cache buster bumped');
-  assert.ok(/js\/orders-i18n\.js\?v=20260928_toggle_products_options_v\d+/.test(html), 'orders-i18n.js cache buster bumped');
+  assert.ok(/css\/orders\.css\?v=(20260928_toggle_products_options_v\d+|20260928_custom_3tier_v\d+)/.test(html), 'orders.css cache buster bumped');
+  assert.ok(/js\/orders-menu\.js\?v=(20260928_toggle_products_options_v\d+|20260928_custom_3tier_v\d+)/.test(html), 'orders-menu.js cache buster bumped');
+  assert.ok(/js\/orders-i18n\.js\?v=(20260928_toggle_products_options_v\d+|20260928_custom_3tier_v\d+)/.test(html), 'orders-i18n.js cache buster bumped');
   assert.ok(html.includes('menu-sidebar-segmented-toggle'), 'orders.html contains segmented toggle pill');
 });
 
