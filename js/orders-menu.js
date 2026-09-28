@@ -120,6 +120,15 @@ async function loadMenuData() {
     }
 
     const categories = [];
+    // The editor uses category slugs; bootstrap relationships use database IDs.
+    const categoryEditorIds = new Map();
+    (data.catalog || []).forEach(cat => {
+      if (cat.id) categoryEditorIds.set(String(cat.id), cat.slug);
+      if (cat.slug) categoryEditorIds.set(String(cat.slug), cat.slug);
+    });
+    const normalizeAppliedCategories = ids => [...new Set(ids
+      .map(id => categoryEditorIds.get(String(id)))
+      .filter(Boolean))];
     if (data.catalog) {
       data.catalog.forEach((cat, cIdx) => {
         if (cat.slug === 'sec-flavor' || cat.slug === 'flavor' || cat.categoryType === 'order_customization' || cat.category_type === 'order_customization') {
@@ -166,7 +175,7 @@ async function loadMenuData() {
           const linkedCatIds = [];
           if (Array.isArray(data.categoryModifierLinks)) {
             data.categoryModifierLinks.forEach(link => {
-              if (link.groupId === mod.id || link.groupId === mod.slug) {
+              if (link.groupId === mod.id || link.groupId === mod.slug || link.groupId === `mg_${mod.id}`) {
                 linkedCatIds.push(link.categoryId);
               }
             });
@@ -176,7 +185,7 @@ async function loadMenuData() {
               if (Array.isArray(c.appliedModifiers) && (c.appliedModifiers.includes('*') || c.appliedModifiers.includes(mod.id) || c.appliedModifiers.includes(mod.slug))) {
                 if (!linkedCatIds.includes(c.id)) linkedCatIds.push(c.id);
               }
-              if (Array.isArray(c.modifierGroups) && c.modifierGroups.some(g => g.id === mod.id || g.id === mod.slug)) {
+              if (Array.isArray(c.modifierGroups) && c.modifierGroups.some(g => g.id === mod.id || g.id === mod.slug || g.id === `mg_${mod.id}`)) {
                 if (!linkedCatIds.includes(c.id)) linkedCatIds.push(c.id);
               }
             });
@@ -197,7 +206,7 @@ async function loadMenuData() {
               type: mod.selectionType === 'single' ? 'radio' : 'checkbox',
               isRequired: Boolean(mod.isRequired),
               scope: modScope,
-              appliedCategories: linkedCatIds,
+              appliedCategories: normalizeAppliedCategories(linkedCatIds),
               sortOrder: 0,
               options: modOptions
             }],
@@ -241,7 +250,7 @@ async function loadMenuData() {
                 type: cust.type || 'radio',
                 isRequired: Boolean(cust.isRequired),
                 scope: resolvedScope,
-                appliedCategories: linkedCatIds,
+                appliedCategories: normalizeAppliedCategories(linkedCatIds),
                 sortOrder: cust.sortOrder !== undefined ? cust.sortOrder : gIdx,
                 options: (cust.options || []).map(opt => ({
                   id: opt.id || opt.name,
