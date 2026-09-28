@@ -8,6 +8,7 @@ export interface TenantContext {
   // LINE Integration
   lineChannelToken: string;
   lineChannelSecret: string | null;
+  lineRuntime?: { connectionId: string; environment: string; revision: number; botUserId: string };
   liffId: string;
   liffUrl: string;
   // AI Integration

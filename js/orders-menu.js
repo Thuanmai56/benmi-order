@@ -12,6 +12,9 @@ let isMenuLoadedCompletely = false;
 let isCustomGroupCreatorOpen = false;
 let newCustomGroupType = 'radio';
 let newCustomGroupRequired = false;
+let newCustomGroupScope = 'order';
+let newCustomGroupAppliedCategories = [];
+let currentLibraryOptionGroups = [];
 
 function getBenmiDefaultCategories() {
   return [
@@ -177,22 +180,45 @@ async function loadMenuData() {
     if (hasCustomizations || hasCustomInCatalog) {
       if (!categories.some(c => c.type === 'order_customization' || c.id === 'sec-flavor')) {
         const customGroups = hasCustomizations
-          ? data.customizations.map((cust, gIdx) => ({
-              id: cust.id || `custom_${tenantId}_${cust.key || gIdx}`,
-              key: cust.key || `custom_${gIdx}`,
-              title: cust.title || cust.name || '',
-              type: cust.type || 'radio',
-              isRequired: Boolean(cust.isRequired),
-              sortOrder: cust.sortOrder !== undefined ? cust.sortOrder : gIdx,
-              options: (cust.options || []).map(opt => ({
-                id: opt.id || opt.name,
-                name: opt.name || opt.title || '',
-                price: opt.price !== undefined ? opt.price : (opt.surcharge !== undefined ? opt.surcharge : 0),
-                isOos: Boolean(opt.isOutOfStock || opt.is_out_of_stock),
-                sub_options: Array.isArray(opt.sub_options) ? [...opt.sub_options] : (Array.isArray(opt.subOptions) ? [...opt.subOptions] : []),
-                originalName: opt.name || opt.title || ''
-              }))
-            }))
+          ? data.customizations.map((cust, gIdx) => {
+              const custId = cust.id || `custom_${tenantId}_${cust.key || gIdx}`;
+              const modGid = `mg_${custId}`;
+              const linkedCatIds = [];
+              if (Array.isArray(data.categoryModifierLinks)) {
+                data.categoryModifierLinks.forEach(link => {
+                  if (link.groupId === custId || link.groupId === modGid || link.groupId === cust.key) {
+                    linkedCatIds.push(link.categoryId);
+                  }
+                });
+              }
+              if (Array.isArray(data.catalog)) {
+                data.catalog.forEach(c => {
+                  if (Array.isArray(c.modifierGroups) && c.modifierGroups.some(g => g.id === custId || g.id === modGid || g.id === cust.key)) {
+                    if (!linkedCatIds.includes(c.id)) linkedCatIds.push(c.id);
+                  }
+                });
+              }
+              const resolvedScope = cust.scope || (linkedCatIds.length > 0 ? 'category' : 'order');
+
+              return {
+                id: custId,
+                key: cust.key || `custom_${gIdx}`,
+                title: cust.title || cust.name || '',
+                type: cust.type || 'radio',
+                isRequired: Boolean(cust.isRequired),
+                scope: resolvedScope,
+                appliedCategories: linkedCatIds,
+                sortOrder: cust.sortOrder !== undefined ? cust.sortOrder : gIdx,
+                options: (cust.options || []).map(opt => ({
+                  id: opt.id || opt.name,
+                  name: opt.name || opt.title || '',
+                  price: opt.price !== undefined ? opt.price : (opt.surcharge !== undefined ? opt.surcharge : 0),
+                  isOos: Boolean(opt.isOutOfStock || opt.is_out_of_stock),
+                  sub_options: Array.isArray(opt.sub_options) ? [...opt.sub_options] : (Array.isArray(opt.subOptions) ? [...opt.subOptions] : []),
+                  originalName: opt.name || opt.title || ''
+                }))
+              };
+            })
           : [];
 
         categories.push({
@@ -363,7 +389,9 @@ function renderCategoriesManagerView() {
   const mgrContainer = document.createElement("div");
   mgrContainer.className = "cat-mgr-container";
 
-  if (!currentMenuData || currentMenuData.length === 0) {
+  const catalogCategories = (currentMenuData || []).filter(c => !isCustomizationCategory(c));
+
+  if (catalogCategories.length === 0) {
     mgrContainer.innerHTML = `<div style="text-align:center; padding: 30px; color:#94a3b8;">${t("noCategoriesPrompt") || "尚無任何分類"}</div>`;
   } else {
     const cardsList = document.createElement("div");
@@ -393,7 +421,8 @@ function renderCategoriesManagerView() {
       e.preventDefault();
     });
 
-    currentMenuData.forEach((cat, idx) => {
+    catalogCategories.forEach((cat, idx) => {
+      const origIdx = currentMenuData.indexOf(cat);
       const card = document.createElement("div");
       card.className = "cat-mgr-card";
       card.draggable = true;
@@ -414,15 +443,16 @@ function renderCategoriesManagerView() {
 
         // Extract new order from DOM
         const newOrderIds = [...cardsList.querySelectorAll('.cat-mgr-card')].map(c => c.getAttribute('data-cat-id'));
-        const catMap = new Map(currentMenuData.map(c => [c.id, c]));
+        const catMap = new Map(catalogCategories.map(c => [c.id, c]));
         const reordered = newOrderIds.map(id => catMap.get(id)).filter(Boolean);
+        const nonCatalog = currentMenuData.filter(c => isCustomizationCategory(c));
 
         let changed = false;
-        if (reordered.length !== currentMenuData.length) {
+        if (reordered.length !== catalogCategories.length) {
           changed = true;
         } else {
           for (let i = 0; i < reordered.length; i++) {
-            if (reordered[i].id !== currentMenuData[i].id) {
+            if (reordered[i].id !== catalogCategories[i].id) {
               changed = true;
               break;
             }
@@ -430,10 +460,10 @@ function renderCategoriesManagerView() {
         }
 
         if (changed) {
-          currentMenuData = reordered;
-          currentMenuData.forEach((category, order) => {
+          reordered.forEach((category, order) => {
             category.sortOrder = order + 1;
           });
+          currentMenuData = [...reordered, ...nonCatalog];
           markMenuDirty();
           renderMenuCategories();
           await saveMenuData(true);
@@ -441,26 +471,17 @@ function renderCategoriesManagerView() {
         renderCategoriesManagerView();
       });
 
-      const isSystemCustomization = cat.type === 'order_customization' || cat.id === 'sec-flavor';
-      const badge = cat.type === 'modifier'
-        ? `<span style="font-size: var(--pos-text-meta); padding: 3px 8px; background: #e0e7ff; color: #4338ca; border-radius: 6px; font-weight: 800;">${t("modifierPrefix")}</span>`
-        : isSystemCustomization
-        ? `<span style="font-size: var(--pos-text-meta); padding: 3px 8px; background: #fef3c7; color: #92400e; border-radius: 6px; font-weight: 800;">${currentLang === 'vi' ? 'Khẩu vị' : '客製化'}</span>`
+      const isCombo = isComboCategory(cat);
+      const badge = isCombo
+        ? `<span style="font-size: var(--pos-text-meta); padding: 3px 8px; background: #fef2f2; color: #b91c1c; border-radius: 6px; font-weight: 800;">Combo</span>`
         : `<span style="font-size: var(--pos-text-meta); padding: 3px 8px; background: #ecfdf5; color: #047857; border-radius: 6px; font-weight: 800;">${t("categoryTypeCatalogBadge") || "餐點"}</span>`;
 
-      const itemCount = isSystemCustomization
-        ? (cat.groups ? cat.groups.reduce((acc, g) => acc + (g.options ? g.options.length : 0), 0) : 0)
-        : cat.items.length;
+      const itemCount = Array.isArray(cat.items) ? cat.items.length : 0;
 
-      const actionsHtml = isSystemCustomization
-        ? `
-          <span style="font-size: var(--pos-text-meta); color: #64748b; font-weight: 600; padding-right: 6px;">${t("customizationPositionHint")}</span>
-          <button type="button" class="btn btn-ghost" style="border: 1px solid #fee2e2; background:#fff5f5; color:var(--brand-red); padding: 6px 12px; font-size: var(--pos-text-meta); font-weight: 700; border-radius: 8px; display:inline-flex; align-items:center; gap:4px;" onclick="deleteCategoryAtIndex(${idx})">${(typeof POS_SVG !== 'undefined' && POS_SVG.trash) || ''} <span>${t("btnCategoryDelete")}</span></button>
-        `
-        : `
-          <button type="button" class="btn btn-ghost" style="border: 1px solid #cbd5e1; background:#fff; padding: 6px 12px; font-size: var(--pos-text-meta); font-weight: 700; border-radius: 8px; display:inline-flex; align-items:center; gap:4px;" onclick="promptRenameCategoryAtIndex(${idx})">${(typeof POS_SVG !== 'undefined' && POS_SVG.edit) || ''} <span>${t("btnCategoryRename")}</span></button>
-          <button type="button" class="btn btn-ghost" style="border: 1px solid #fee2e2; background:#fff5f5; color:var(--brand-red); padding: 6px 12px; font-size: var(--pos-text-meta); font-weight: 700; border-radius: 8px; display:inline-flex; align-items:center; gap:4px;" onclick="deleteCategoryAtIndex(${idx})">${(typeof POS_SVG !== 'undefined' && POS_SVG.trash) || ''} <span>${t("btnCategoryDelete")}</span></button>
-        `;
+      const actionsHtml = `
+        <button type="button" class="btn btn-ghost" style="border: 1px solid #cbd5e1; background:#fff; padding: 6px 12px; font-size: var(--pos-text-meta); font-weight: 700; border-radius: 8px; display:inline-flex; align-items:center; gap:4px;" onclick="promptRenameCategoryAtIndex(${origIdx})">${(typeof POS_SVG !== 'undefined' && POS_SVG.edit) || ''} <span>${t("btnCategoryRename")}</span></button>
+        <button type="button" class="btn btn-ghost" style="border: 1px solid #fee2e2; background:#fff5f5; color:var(--brand-red); padding: 6px 12px; font-size: var(--pos-text-meta); font-weight: 700; border-radius: 8px; display:inline-flex; align-items:center; gap:4px;" onclick="deleteCategoryAtIndex(${origIdx})">${(typeof POS_SVG !== 'undefined' && POS_SVG.trash) || ''} <span>${t("btnCategoryDelete")}</span></button>
+      `;
       const gripSvg = (typeof POS_SVG !== "undefined" && POS_SVG.grip) || "";
 
       card.innerHTML = `
@@ -1087,6 +1108,8 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
   `;
   container.appendChild(banner);
 
+  const catalogCategories = (currentMenuData || []).filter(c => !isCustomizationCategory(c));
+
   if (!cat.groups || cat.groups.length === 0) {
     const emptyDiv = document.createElement("div");
     emptyDiv.style.textAlign = "center";
@@ -1107,6 +1130,78 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
       const requiredBadge = grp.isRequired
         ? `<span style="font-size: 11.5px; padding: 3px 8px; background: #fee2e2; color: #b91c1c; border-radius: 6px; font-weight: 800; border: 1px solid #fca5a5;">${t("badgeRequired")}</span>`
         : `<span style="font-size: 11.5px; padding: 3px 8px; background: #f1f5f9; color: #64748b; border-radius: 6px; font-weight: 700; border: 1px solid #e2e8f0;">${t("badgeOptional")}</span>`;
+
+      const grpScope = grp.scope || (Array.isArray(grp.appliedCategories) && grp.appliedCategories.length > 0 ? 'category' : 'order');
+      if (!grp.scope) grp.scope = grpScope;
+      if (!Array.isArray(grp.appliedCategories)) grp.appliedCategories = [];
+
+      const scopeButtonsHtml = `
+        <div class="cust-scope-selector-wrap">
+          <button type="button" class="cust-scope-btn ${grpScope === 'order' ? 'active scope-order' : ''}" onclick="setCustomizationGroupScope(${cIdx}, ${gIdx}, 'order')">
+            <span>${t("scopeOrder") || (currentLang === 'vi' ? 'Toàn đơn' : '整單適用')}</span>
+          </button>
+          <button type="button" class="cust-scope-btn ${grpScope === 'category' ? 'active scope-category' : ''}" onclick="setCustomizationGroupScope(${cIdx}, ${gIdx}, 'category')">
+            <span>${t("scopeCategory") || (currentLang === 'vi' ? 'Theo phân loại' : '分類套用')}</span>
+          </button>
+          <button type="button" class="cust-scope-btn ${grpScope === 'item' ? 'active scope-item' : ''}" onclick="setCustomizationGroupScope(${cIdx}, ${gIdx}, 'item')">
+            <span>${t("scopeItem") || (currentLang === 'vi' ? 'Theo món' : '單品適用')}</span>
+          </button>
+        </div>
+      `;
+
+      let scopePanelHtml = '';
+      if (grpScope === 'order') {
+        scopePanelHtml = `
+          <div class="cust-scope-panel scope-order-panel">
+            <div class="cust-scope-panel-header">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              <span>${t("scopeOrderDesc") || "適用於整筆訂單結帳時的選項（如餐具、全單辣度）"}</span>
+            </div>
+          </div>
+        `;
+      } else if (grpScope === 'category') {
+        const catChipsHtml = catalogCategories.map(catItem => {
+          const isChecked = grp.appliedCategories.includes(catItem.id);
+          const count = Array.isArray(catItem.items) ? catItem.items.length : 0;
+          return `
+            <label class="cust-cat-chip ${isChecked ? 'active' : ''}">
+              <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleGroupAppliedCategory(${cIdx}, ${gIdx}, '${escapeHtml(catItem.id)}')">
+              <span>${escapeHtml(catItem.title)}</span>
+              <span class="cust-cat-chip-count">(${count})</span>
+            </label>
+          `;
+        }).join('');
+
+        const appliedCats = catalogCategories.filter(c => grp.appliedCategories.includes(c.id));
+        const totalItemsApplied = appliedCats.reduce((sum, c) => sum + (Array.isArray(c.items) ? c.items.length : 0), 0);
+        const summaryTpl = t("appliedSummary") || "已套用至 {catCount} 個分類 (共 {itemCount} 項餐點)";
+        const summaryText = summaryTpl.replace('{catCount}', appliedCats.length).replace('{itemCount}', totalItemsApplied);
+
+        scopePanelHtml = `
+          <div class="cust-scope-panel scope-category-panel">
+            <div class="cust-scope-panel-header">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+              <span>${t("scopeCategoryDesc") || "所選分類下的所有餐點將自動繼承此客製化選項"}</span>
+            </div>
+            <div class="cust-cat-chips-list">
+              ${catChipsHtml || `<span style="color:#94a3b8; font-size:12.5px;">${t("noCategoriesPrompt") || "無分類"}</span>`}
+            </div>
+            <div class="cust-scope-summary">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              <span>${summaryText}</span>
+            </div>
+          </div>
+        `;
+      } else {
+        scopePanelHtml = `
+          <div class="cust-scope-panel scope-item-panel">
+            <div class="cust-scope-panel-header">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+              <span>${t("scopeItemDesc") || "僅在手動加入個別品項或套餐時適用"}</span>
+            </div>
+          </div>
+        `;
+      }
 
       const optionsCount = (grp.options || []).length;
 
@@ -1182,6 +1277,8 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
             </button>
           </div>
         </div>
+        ${scopeButtonsHtml}
+        ${scopePanelHtml}
         <div class="cust-options-list">
           ${optionsHtml}
         </div>
@@ -1211,6 +1308,60 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
     const titleText = t("newGroupCardTitle") || (currentLang === 'vi' ? 'Tạo nhóm tùy chọn mới' : '新增客製化分組');
     const placeholderText = t("newGroupInputPlaceholder") || (currentLang === 'vi' ? '✦ Nhập tên nhóm (ví dụ: Chọn nước sốt, Dụng cụ ăn uống...)' : '✦ 輸入分組名稱（例：✦ 醬料選擇、✦ 加料選項）');
 
+    const creatorScopeHtml = `
+      <div style="margin-bottom: 14px;">
+        <label style="display:block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px;">
+          ${currentLang === 'vi' ? 'Phạm vi áp dụng (3 cấp độ):' : '套用範圍（三級架構）：'}
+        </label>
+        <div class="cust-scope-selector-wrap" style="margin-top: 0; margin-bottom: 8px;">
+          <button type="button" class="cust-scope-btn ${newCustomGroupScope === 'order' ? 'active scope-order' : ''}" onclick="setNewCustomGroupScope('order', ${cIdx})">
+            <span>${t("scopeOrder") || (currentLang === 'vi' ? 'Toàn đơn' : '整單適用')}</span>
+          </button>
+          <button type="button" class="cust-scope-btn ${newCustomGroupScope === 'category' ? 'active scope-category' : ''}" onclick="setNewCustomGroupScope('category', ${cIdx})">
+            <span>${t("scopeCategory") || (currentLang === 'vi' ? 'Theo phân loại' : '分類套用')}</span>
+          </button>
+          <button type="button" class="cust-scope-btn ${newCustomGroupScope === 'item' ? 'active scope-item' : ''}" onclick="setNewCustomGroupScope('item', ${cIdx})">
+            <span>${t("scopeItem") || (currentLang === 'vi' ? 'Theo món' : '單品適用')}</span>
+          </button>
+        </div>
+        ${newCustomGroupScope === 'category' ? `
+          <div class="cust-scope-panel scope-category-panel" style="margin-bottom: 0;">
+            <div class="cust-scope-panel-header">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+              <span>${t("scopeCategoryDesc") || "所選分類下的所有餐點將自動繼承此客製化選項"}</span>
+            </div>
+            <div class="cust-cat-chips-list">
+              ${catalogCategories.map(catItem => {
+                const isChecked = newCustomGroupAppliedCategories.includes(catItem.id);
+                const count = Array.isArray(catItem.items) ? catItem.items.length : 0;
+                return `
+                  <label class="cust-cat-chip ${isChecked ? 'active' : ''}">
+                    <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleNewGroupAppliedCategory('${escapeHtml(catItem.id)}', ${cIdx})">
+                    <span>${escapeHtml(catItem.title)}</span>
+                    <span class="cust-cat-chip-count">(${count})</span>
+                  </label>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        ` : (newCustomGroupScope === 'order' ? `
+          <div class="cust-scope-panel scope-order-panel" style="margin-bottom: 0;">
+            <div class="cust-scope-panel-header">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              <span>${t("scopeOrderDesc") || "適用於整筆訂單結帳時的選項（如餐具、全單辣度）"}</span>
+            </div>
+          </div>
+        ` : `
+          <div class="cust-scope-panel scope-item-panel" style="margin-bottom: 0;">
+            <div class="cust-scope-panel-header">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+              <span>${t("scopeItemDesc") || "僅在手動加入個別品項或套餐時適用"}</span>
+            </div>
+          </div>
+        `)}
+      </div>
+    `;
+
     newCard.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
         <div style="font-size: 16px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;">
@@ -1231,6 +1382,8 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
         <span style="font-size: 12.5px; color: #64748b; font-weight: 700;">${currentLang === 'vi' ? 'Gợi ý nhanh:' : '快捷標籤：'}</span>
         ${chipsHtml}
       </div>
+
+      ${creatorScopeHtml}
 
       <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; padding: 12px; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; align-items: center;">
         <div style="display: flex; align-items: center; gap: 6px;">
@@ -1282,6 +1435,8 @@ function openNewCustomGroupCreator(cIdx) {
   isCustomGroupCreatorOpen = true;
   newCustomGroupType = 'radio';
   newCustomGroupRequired = false;
+  newCustomGroupScope = 'order';
+  newCustomGroupAppliedCategories = [];
   const cat = currentMenuData[cIdx];
   renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), cat, cIdx);
   setTimeout(() => {
@@ -1323,6 +1478,54 @@ function setNewGroupType(type, cIdx) {
   }
 }
 window.setNewGroupType = setNewGroupType;
+
+function setNewCustomGroupScope(scope, cIdx) {
+  newCustomGroupScope = scope;
+  const cat = currentMenuData[cIdx];
+  renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), cat, cIdx);
+}
+window.setNewCustomGroupScope = setNewCustomGroupScope;
+
+function toggleNewGroupAppliedCategory(catId, cIdx) {
+  const idx = newCustomGroupAppliedCategories.indexOf(catId);
+  if (idx >= 0) {
+    newCustomGroupAppliedCategories.splice(idx, 1);
+  } else {
+    newCustomGroupAppliedCategories.push(catId);
+  }
+  const cat = currentMenuData[cIdx];
+  renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), cat, cIdx);
+}
+window.toggleNewGroupAppliedCategory = toggleNewGroupAppliedCategory;
+
+function setCustomizationGroupScope(cIdx, gIdx, scope) {
+  syncMenuDataFromDOM();
+  const grp = currentMenuData[cIdx]?.groups?.[gIdx];
+  if (!grp) return;
+  grp.scope = scope;
+  if (scope === 'category' && !Array.isArray(grp.appliedCategories)) {
+    grp.appliedCategories = [];
+  }
+  markMenuDirty();
+  renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), currentMenuData[cIdx], cIdx);
+}
+window.setCustomizationGroupScope = setCustomizationGroupScope;
+
+function toggleGroupAppliedCategory(cIdx, gIdx, catId) {
+  syncMenuDataFromDOM();
+  const grp = currentMenuData[cIdx]?.groups?.[gIdx];
+  if (!grp) return;
+  if (!Array.isArray(grp.appliedCategories)) grp.appliedCategories = [];
+  const idx = grp.appliedCategories.indexOf(catId);
+  if (idx >= 0) {
+    grp.appliedCategories.splice(idx, 1);
+  } else {
+    grp.appliedCategories.push(catId);
+  }
+  markMenuDirty();
+  renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), currentMenuData[cIdx], cIdx);
+}
+window.toggleGroupAppliedCategory = toggleGroupAppliedCategory;
 
 function toggleNewGroupRequired(cIdx) {
   newCustomGroupRequired = !newCustomGroupRequired;
@@ -1375,6 +1578,8 @@ function saveNewCustomizationGroup(cIdx) {
       title: trimmed,
       type: newCustomGroupType,
       isRequired: newCustomGroupRequired,
+      scope: newCustomGroupScope,
+      appliedCategories: newCustomGroupScope === 'category' ? [...newCustomGroupAppliedCategories] : [],
       sortOrder: cat.groups.length,
       options: []
     });
@@ -1630,6 +1835,8 @@ function serializeMenuData(categories) {
           title: grp.title,
           type: grp.type || 'radio',
           isRequired: Boolean(grp.isRequired),
+          scope: grp.scope || 'order',
+          appliedCategories: Array.isArray(grp.appliedCategories) ? grp.appliedCategories : [],
           sortOrder: grp.sortOrder !== undefined ? grp.sortOrder : (gIdx + 1),
           options: (grp.options || []).map(opt => ({
             id: opt.id || opt.name,
@@ -1680,8 +1887,8 @@ function getMenuDeletions(before, after) {
   const remainingItems = new Set(after.flatMap(cat => (cat.items || []).map(item => item.id)));
   const remainingGroups = new Set(after.flatMap(cat => (cat.groups || []).map(group => group.id)));
   return {
-    categories: before.filter(cat => !remainingCategories.has(cat.id))
-      .map(cat => cat.type === 'order_customization' ? cat.databaseId : (cat.databaseId || cat.id)).filter(Boolean),
+    categories: before.filter(cat => !isCustomizationCategory(cat) && !remainingCategories.has(cat.id))
+      .map(cat => cat.databaseId || cat.id).filter(Boolean),
     items: before.filter(cat => remainingCategories.has(cat.id)).flatMap(cat =>
       (cat.items || []).filter(item => item.id && !remainingItems.has(item.id)).map(item => item.id)),
     customizations: before.flatMap(cat =>
@@ -3131,10 +3338,60 @@ function renderItemModifiersEditor() {
   if (!container) return;
   container.innerHTML = "";
 
+  const currentCat = (currentMenuData && currentItemModifiersCidx !== null) ? currentMenuData[currentItemModifiersCidx] : null;
+
+  // 1. Inherited Category Modifiers Section
+  if (currentCat) {
+    const custCat = currentMenuData.find(c => isCustomizationCategory(c));
+    const inheritedGroups = [];
+    if (custCat && Array.isArray(custCat.groups)) {
+      custCat.groups.forEach(g => {
+        if (g.scope === 'category' && Array.isArray(g.appliedCategories) && (g.appliedCategories.includes(currentCat.id) || g.appliedCategories.includes(currentCat.databaseId) || g.appliedCategories.includes(currentCat.slug))) {
+          inheritedGroups.push(g);
+        }
+      });
+    }
+
+    if (inheritedGroups.length > 0) {
+      const inheritedBox = document.createElement("div");
+      inheritedBox.style.cssText = "background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 12px; padding: 14px; margin-bottom: 12px;";
+
+      const groupsHtml = inheritedGroups.map(grp => {
+        const optsSummary = (grp.options || []).map(o => `${escapeHtml(o.name)}${o.price ? ' (+$' + o.price + ')' : ''}`).join(', ') || (currentLang === 'vi' ? 'Chưa có lựa chọn' : '尚無選項');
+        return `
+          <div style="background: #ffffff; border: 1px solid #dcfce7; border-radius: 8px; padding: 10px 12px; margin-top: 8px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+              <span style="font-weight: 700; font-size: 14px; color: #166534;">✦ ${escapeHtml(grp.title)}</span>
+              <span style="font-size: 11.5px; padding: 2px 6px; background: #dcfce7; color: #15803d; border-radius: 4px; font-weight: 700;">
+                ${grp.type === 'checkbox' ? (currentLang === 'vi' ? 'Chọn nhiều' : '多選') : (currentLang === 'vi' ? 'Chọn 1' : '單選')} ${grp.isRequired ? (t("badgeRequired") || '必選') : ''}
+              </span>
+            </div>
+            <div style="font-size: 13px; color: #4b5563;">${optsSummary}</div>
+          </div>
+        `;
+      }).join('');
+
+      inheritedBox.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 11.5px; padding: 3px 8px; background: #dcfce7; color: #15803d; border-radius: 6px; font-weight: 800;">${t("inheritedFromCategory") || "從分類繼承"}</span>
+            <span style="font-weight: 700; font-size: 14px; color: #14532d;">${escapeHtml(currentCat.title)}</span>
+          </div>
+          <span style="font-size: 12px; color: #15803d; font-weight: 600;">${inheritedGroups.length} ${t("menuItemUnit")}</span>
+        </div>
+        <p style="margin: 4px 0 0; font-size: 12.5px; color: #166534;">
+          ${t("scopeCategoryDesc") || "所選分類下的所有餐點將自動繼承此客製化選項"}
+        </p>
+        ${groupsHtml}
+      `;
+      container.appendChild(inheritedBox);
+    }
+  }
+
   if (tempItemModifierGroups.length === 0) {
     const empty = document.createElement("div");
     empty.style.textAlign = "center";
-    empty.style.padding = "32px 16px";
+    empty.style.padding = "28px 16px";
     empty.style.color = "#94a3b8";
     empty.style.fontSize = "14px";
     empty.innerText = t("noModifierGroups") || "此品項尚未設定專屬客製選項。點擊上方按鈕開始新增。";
@@ -3319,6 +3576,162 @@ function saveItemModifiersModal() {
   closeItemModifiersModal();
 }
 window.saveItemModifiersModal = saveItemModifiersModal;
+
+function openModifierLibraryModal() {
+  syncItemModifiersFromDOM();
+  const modal = document.getElementById("modifierLibraryModal");
+  const body = document.getElementById("mod-library-modal-body");
+  if (!modal || !body) return;
+
+  const titleEl = document.getElementById("mod-library-modal-title");
+  if (titleEl) titleEl.innerText = t("libraryModalTitle") || "從現有客製化庫選取";
+  const subEl = document.getElementById("mod-library-modal-sub");
+  if (subEl) subEl.innerText = t("libraryModalSub") || "勾選要套用至此餐點的客製化群組或選項";
+  const importBtn = document.getElementById("btn-import-library-mod");
+  if (importBtn) importBtn.innerText = t("btnImportToItem") || "加入此餐點";
+
+  body.innerHTML = "";
+
+  // Collect all available customization groups from store
+  currentLibraryOptionGroups = [];
+  const custCat = (currentMenuData || []).find(c => isCustomizationCategory(c));
+  if (custCat && Array.isArray(custCat.groups)) {
+    custCat.groups.forEach(g => {
+      currentLibraryOptionGroups.push({
+        id: g.id,
+        title: g.title,
+        type: g.type,
+        isRequired: g.isRequired,
+        scope: g.scope,
+        options: (g.options || []).map(o => ({
+          id: o.id,
+          name: o.name,
+          price: o.price || 0,
+          isDefault: false
+        }))
+      });
+    });
+  }
+
+  if (currentLibraryOptionGroups.length === 0) {
+    const emptyDiv = document.createElement("div");
+    emptyDiv.style.textAlign = "center";
+    emptyDiv.style.padding = "32px 16px";
+    emptyDiv.style.color = "#94a3b8";
+    emptyDiv.innerText = t("noLibraryOptions") || "目前尚無其他客製化分組可供選取";
+    body.appendChild(emptyDiv);
+  } else {
+    currentLibraryOptionGroups.forEach((grp, gIdx) => {
+      const card = document.createElement("div");
+      card.className = "mod-lib-group-card";
+
+      const optRowsHtml = (grp.options || []).map((opt, oIdx) => {
+        const surchargeText = opt.price > 0 ? ` (+$${opt.price})` : '';
+        return `
+          <label class="mod-lib-option-row">
+            <input type="checkbox" class="mod-lib-opt-checkbox" data-lib-gidx="${gIdx}" data-lib-oidx="${oIdx}" onchange="onLibraryOptionCheckChange(${gIdx})" style="width: 18px; height: 18px; accent-color: #059669; cursor: pointer;">
+            <span style="font-weight: 600; color: #1e293b;">${escapeHtml(opt.name)}</span>
+            <span style="font-weight: 700; color: #047857; margin-left: 4px;">${surchargeText}</span>
+          </label>
+        `;
+      }).join('');
+
+      card.innerHTML = `
+        <div class="mod-lib-group-header">
+          <input type="checkbox" class="mod-lib-group-checkbox" id="lib-grp-cb-${gIdx}" data-lib-gidx="${gIdx}" onchange="toggleLibraryGroupCheck(${gIdx}, this.checked)" style="width: 20px; height: 20px; accent-color: #059669; cursor: pointer;">
+          <label for="lib-grp-cb-${gIdx}" style="display: flex; align-items: center; gap: 8px; cursor: pointer; flex: 1;">
+            <span class="mod-lib-group-title">${escapeHtml(grp.title)}</span>
+            <span class="mod-lib-group-badge" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;">
+              ${grp.type === 'checkbox' ? (currentLang === 'vi' ? 'Chọn nhiều' : '多選') : (currentLang === 'vi' ? 'Chọn 1' : '單選')}
+            </span>
+            ${grp.isRequired ? `<span class="mod-lib-group-badge" style="background: #fef2f2; color: #b91c1c; border: 1px solid #fca5a5;">${t("badgeRequired") || '必填'}</span>` : ''}
+          </label>
+          <span style="font-size: 12.5px; color: #64748b; font-weight: 600;">${grp.options.length} ${t("menuItemUnit")}</span>
+        </div>
+        <div class="mod-lib-options-list">
+          ${optRowsHtml || `<span style="color:#94a3b8; font-size:12.5px;">${t("noOptionsPrompt") || "無選項"}</span>`}
+        </div>
+      `;
+      body.appendChild(card);
+    });
+  }
+
+  modal.style.display = "flex";
+}
+window.openModifierLibraryModal = openModifierLibraryModal;
+
+function closeModifierLibraryModal() {
+  const modal = document.getElementById("modifierLibraryModal");
+  if (modal) modal.style.display = "none";
+}
+window.closeModifierLibraryModal = closeModifierLibraryModal;
+
+function toggleLibraryGroupCheck(gIdx, isChecked) {
+  const modal = document.getElementById("modifierLibraryModal");
+  if (!modal) return;
+  const optCheckboxes = modal.querySelectorAll(`.mod-lib-opt-checkbox[data-lib-gidx="${gIdx}"]`);
+  optCheckboxes.forEach(cb => {
+    cb.checked = isChecked;
+  });
+}
+window.toggleLibraryGroupCheck = toggleLibraryGroupCheck;
+
+function onLibraryOptionCheckChange(gIdx) {
+  const modal = document.getElementById("modifierLibraryModal");
+  if (!modal) return;
+  const grpCheckbox = modal.querySelector(`.mod-lib-group-checkbox[data-lib-gidx="${gIdx}"]`);
+  const optCheckboxes = [...modal.querySelectorAll(`.mod-lib-opt-checkbox[data-lib-gidx="${gIdx}"]`)];
+  if (grpCheckbox && optCheckboxes.length > 0) {
+    grpCheckbox.checked = optCheckboxes.every(cb => cb.checked);
+    grpCheckbox.indeterminate = optCheckboxes.some(cb => cb.checked) && !grpCheckbox.checked;
+  }
+}
+window.onLibraryOptionCheckChange = onLibraryOptionCheckChange;
+
+function importSelectedLibraryModifiers() {
+  const modal = document.getElementById("modifierLibraryModal");
+  if (!modal) return;
+
+  let importedCount = 0;
+  currentLibraryOptionGroups.forEach((grp, gIdx) => {
+    const checkedOpts = [];
+    const optCheckboxes = modal.querySelectorAll(`.mod-lib-opt-checkbox[data-lib-gidx="${gIdx}"]`);
+    optCheckboxes.forEach(cb => {
+      if (cb.checked) {
+        const oIdx = parseInt(cb.getAttribute("data-lib-oidx"), 10);
+        if (grp.options[oIdx]) {
+          checkedOpts.push(grp.options[oIdx]);
+        }
+      }
+    });
+
+    if (checkedOpts.length > 0) {
+      const newGroupId = `mg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+      tempItemModifierGroups.push({
+        id: newGroupId,
+        name: grp.title,
+        selectionType: grp.type === 'checkbox' ? 'multiple' : 'single',
+        isRequired: Boolean(grp.isRequired),
+        minSelection: grp.type === 'checkbox' ? 0 : 1,
+        maxSelection: grp.type === 'checkbox' ? checkedOpts.length : 1,
+        options: checkedOpts.map(opt => ({
+          id: `mo_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          name: opt.name,
+          price: opt.price || 0,
+          isDefault: false
+        }))
+      });
+      importedCount++;
+    }
+  });
+
+  if (importedCount > 0) {
+    markMenuDirty();
+    renderItemModifiersEditor();
+  }
+  closeModifierLibraryModal();
+}
+window.importSelectedLibraryModifiers = importSelectedLibraryModifiers;
 
 // ==========================================================================
 // Item Detail Hub Modal (#itemDetailModal) Controller

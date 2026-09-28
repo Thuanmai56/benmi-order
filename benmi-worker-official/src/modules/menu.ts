@@ -641,6 +641,9 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
         if (customDeletes.includes(custId)) throw new Error('CONFLICTING_MENU_DELETE');
         activeCustomIds.push(custId);
 
+        const custScope = cust.scope || 'order';
+        const modGroupId = cust.id ? String(cust.id) : `mg_${custId}`;
+
         statements.push(
           env.DB.prepare(
             `INSERT INTO menu_customizations (id, tenant_id, key, title, type, is_required, sort_order, options_json, updated_at)
@@ -655,31 +658,80 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
              WHERE menu_customizations.tenant_id = excluded.tenant_id`
           ).bind(custId, tenantId, custKey, custTitle, custType, custIsRequired, custSort, optionsJson)
         );
-      }
 
-      if (activeCustomIds.length > 0) {
-        // Persist a lightweight category record so this panel participates in the
-        // same ordering mechanism as every other catalog section.
-        const customCategoryId = catIdMap.get(customizationData?.id) || catIdMap.get('sec-flavor') || `${tenantId}_sec-flavor`;
-        const customCategoryName = customizationData?.title || '口味與客製化選擇';
-        const customCategoryShortName = customizationData?.shortName || customCategoryName;
-        const customCategorySortOrder = Number(customizationData?.sortOrder ?? currentSortOrder);
-        activeCategoryIds.push(customCategoryId);
+        // Sync with modifier_groups table with scope support
+        const selectionType = custType === 'checkbox' ? 'multiple' : 'single';
+        const minSel = custIsRequired ? 1 : 0;
+        const maxSel = selectionType === 'single' ? 1 : 99;
+        processedGroupIds.add(modGroupId);
+
         statements.push(
           env.DB.prepare(
-            `INSERT INTO menu_categories (id, tenant_id, name, short_name, slug, category_type, allow_customization, applied_modifiers, sort_order)
-             VALUES (?, ?, ?, ?, 'sec-flavor', 'order_customization', 0, '[]', ?)
+            `INSERT INTO modifier_groups (id, tenant_id, name, selection_type, is_required, min_selection, max_selection, sort_order, scope, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
              ON CONFLICT(id) DO UPDATE SET
                name = excluded.name,
-               short_name = excluded.short_name,
-               slug = excluded.slug,
-               category_type = excluded.category_type,
-               allow_customization = excluded.allow_customization,
-               applied_modifiers = excluded.applied_modifiers,
-               sort_order = excluded.sort_order
-             WHERE menu_categories.tenant_id = excluded.tenant_id`
-          ).bind(customCategoryId, tenantId, customCategoryName, customCategoryShortName, customCategorySortOrder)
+               selection_type = excluded.selection_type,
+               is_required = excluded.is_required,
+               min_selection = excluded.min_selection,
+               max_selection = excluded.max_selection,
+               sort_order = excluded.sort_order,
+               scope = excluded.scope,
+               updated_at = datetime('now')
+             WHERE modifier_groups.tenant_id = excluded.tenant_id`
+          ).bind(modGroupId, tenantId, custTitle, selectionType, custIsRequired, minSel, maxSel, custSort, custScope)
         );
+
+        // Sync modifier options
+        const activeOptIds: string[] = [];
+        for (let oIdx = 0; oIdx < optionsList.length; oIdx++) {
+          const opt = optionsList[oIdx];
+          const optId = opt.id ? String(opt.id) : `mo_${modGroupId}_${oIdx}`;
+          activeOptIds.push(optId);
+          const optName = opt.name || opt.title || '';
+          const optPrice = Number(opt.price || opt.surcharge || 0);
+          statements.push(
+            env.DB.prepare(
+              `INSERT INTO modifier_options (id, tenant_id, group_id, name, price, is_default, sort_order, updated_at)
+               VALUES (?, ?, ?, ?, ?, 0, ?, datetime('now'))
+               ON CONFLICT(id) DO UPDATE SET
+                 name = excluded.name,
+                 price = excluded.price,
+                 sort_order = excluded.sort_order,
+                 updated_at = datetime('now')
+               WHERE modifier_options.tenant_id = excluded.tenant_id`
+            ).bind(optId, tenantId, modGroupId, optName, optPrice, oIdx)
+          );
+        }
+
+        // Delete unmanaged modifier options for this group
+        if (activeOptIds.length > 0) {
+          const optPlaceholders = activeOptIds.map(() => '?').join(',');
+          statements.push(
+            env.DB.prepare(
+              `DELETE FROM modifier_options WHERE tenant_id = ? AND group_id = ? AND id NOT IN (${optPlaceholders})`
+            ).bind(tenantId, modGroupId, ...activeOptIds)
+          );
+        }
+
+        // Synchronize category_modifier_links if category-level soft inheritance
+        statements.push(
+          env.DB.prepare(`DELETE FROM category_modifier_links WHERE tenant_id = ? AND group_id = ?`).bind(tenantId, modGroupId)
+        );
+        if (custScope === 'category' && Array.isArray(cust.appliedCategories) && cust.appliedCategories.length > 0) {
+          let linkSort = 0;
+          for (const appliedTarget of cust.appliedCategories) {
+            linkSort++;
+            const resolvedCatId = catIdMap.get(appliedTarget) || appliedTarget;
+            statements.push(
+              env.DB.prepare(
+                `INSERT INTO category_modifier_links (tenant_id, category_id, group_id, sort_order)
+                 VALUES (?, ?, ?, ?)
+                 ON CONFLICT(tenant_id, category_id, group_id) DO UPDATE SET sort_order = excluded.sort_order`
+              ).bind(tenantId, resolvedCatId, modGroupId, linkSort)
+            );
+          }
+        }
       }
       continue;
     }
@@ -903,16 +955,28 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
     }
   }
 
-  // Clean up any modifier groups and options that are no longer linked to any items
+  // Clean up any modifier groups and options that are no longer linked to any items OR categories OR order-scope
   statements.push(
     env.DB.prepare(
-      `DELETE FROM modifier_options WHERE tenant_id = ? AND group_id NOT IN (SELECT group_id FROM item_modifier_links WHERE tenant_id = ?)`
-    ).bind(tenantId, tenantId)
+      `DELETE FROM modifier_options WHERE tenant_id = ? AND group_id NOT IN (
+        SELECT group_id FROM item_modifier_links WHERE tenant_id = ?
+        UNION
+        SELECT group_id FROM category_modifier_links WHERE tenant_id = ?
+        UNION
+        SELECT id FROM modifier_groups WHERE tenant_id = ? AND scope = 'order'
+      )`
+    ).bind(tenantId, tenantId, tenantId, tenantId)
   );
   statements.push(
     env.DB.prepare(
-      `DELETE FROM modifier_groups WHERE tenant_id = ? AND id NOT IN (SELECT group_id FROM item_modifier_links WHERE tenant_id = ?)`
-    ).bind(tenantId, tenantId)
+      `DELETE FROM modifier_groups WHERE tenant_id = ? AND id NOT IN (
+        SELECT group_id FROM item_modifier_links WHERE tenant_id = ?
+        UNION
+        SELECT group_id FROM category_modifier_links WHERE tenant_id = ?
+        UNION
+        SELECT id FROM modifier_groups WHERE tenant_id = ? AND scope = 'order'
+      )`
+    ).bind(tenantId, tenantId, tenantId, tenantId)
   );
 
   // One batch keeps the entire menu update atomic if any statement fails.
