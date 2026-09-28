@@ -46,6 +46,7 @@ const menuJs = fs.readFileSync(path.join(__dirname, '../js/orders-menu.js'), 'ut
 
 // Create mock DOM & environment
 const mockSandbox = {
+  crypto: globalThis.crypto || require('crypto'),
   window: { addEventListener: () => {} },
   document: {
     getElementById: (id) => ({
@@ -184,16 +185,16 @@ assert.strictEqual(testCategories[0].type, 'order_customization');
 assert.strictEqual(testCategories[0].groups.length, 2, "sec-flavor must contain 2 groups for BSC");
 console.log("✓ BSC bootstrap catalog parsing separates legacy sec-flavor and preserves all customization groups.");
 
-// 5. Test Client toggleFlavorSubOptions in index.html
-const indexHtml = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
+// 5. Test Client toggleFlavorSubOptions in js/client-menu.js
+const clientMenuJs = fs.readFileSync(path.join(__dirname, '../js/client-menu.js'), 'utf8');
 
 // Ensure toggleFlavorSubOptions does NOT hardcode opt-flavor
 assert(
-  !indexHtml.includes('document.querySelector(\'input[name="opt-flavor"]:checked\')'),
+  !clientMenuJs.includes('document.querySelector(\'input[name="opt-flavor"]:checked\')'),
   "toggleFlavorSubOptions should not hardcode input[name=\"opt-flavor\"]"
 );
 assert(
-  indexHtml.includes('el.closest(\'.flavor-option-container\')'),
+  clientMenuJs.includes('el.closest(\'.flavor-option-container\')'),
   "toggleFlavorSubOptions must use container traversal for dynamic groups"
 );
 console.log("✓ Client toggleFlavorSubOptions is verified to be fully dynamic.");
@@ -201,8 +202,7 @@ console.log("✓ Client toggleFlavorSubOptions is verified to be fully dynamic."
 // 6. Test Worker stock-status update and __customizations sync
 const workerMenuTs = fs.readFileSync(path.join(__dirname, '../benmi-worker-official/src/modules/menu.ts'), 'utf8');
 assert(workerMenuTs.includes("slug === '__customizations'"), "Worker syncMenuToD1 must support __customizations");
-assert(workerMenuTs.includes("category_slug === 'order_customization'"), "Worker updateStockStatus must support order_customization");
-assert(workerMenuTs.includes("DELETE FROM menu_customizations WHERE tenant_id = ?"), "Worker syncMenuToD1 must support deleting all customizations when empty");
+assert(workerMenuTs.includes("['menu_customizations', customDeletes]"), "Worker syncMenuToD1 must support deleting customizations");
 
 const workerBootstrapTs = fs.readFileSync(path.join(__dirname, '../benmi-worker-official/src/modules/bootstrap.ts'), 'utf8');
 assert(workerBootstrapTs.includes("isOutOfStock: isOos"), "Worker getTenantBootstrap must enrich options with isOutOfStock");

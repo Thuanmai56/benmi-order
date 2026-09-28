@@ -71,6 +71,21 @@ export interface BootstrapResponse {
     shortName?: string | null;
     allowCustomization: boolean;
     appliedModifiers: string[];
+    modifierGroups?: Array<{
+      id: string;
+      name: string;
+      selectionType: 'single' | 'multiple';
+      isRequired: boolean;
+      minSelection: number;
+      maxSelection: number;
+      options: Array<{
+        id: string;
+        name: string;
+        price: number;
+        isDefault: boolean;
+        isOutOfStock: boolean;
+      }>;
+    }>;
     pricingRules?: any | null;
     sortOrder: number;
     items: Array<{
@@ -140,6 +155,11 @@ export interface BootstrapResponse {
   }>;
   /** Position of the store-wide customization panel among catalog sections. */
   customizationSortOrder?: number;
+  categoryModifierLinks?: Array<{
+    categoryId: string;
+    groupId: string;
+    sortOrder: number;
+  }>;
   translations?: Record<string, string>;
   recommended?: string[];
 }
@@ -409,6 +429,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
     let bundleRulesRows: any[] = [];
     let customRulesRows: any[] = [];
     let itemModifierRows: any[] = [];
+    let categoryModifierRows: any[] = [];
 
     if (env.DB) {
       try {
@@ -477,26 +498,44 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
         }
 
         try {
-          const modRes = await env.DB.prepare(
-            `SELECT l.item_id, g.id AS group_id, g.name AS group_name, g.selection_type,
-                    COALESCE(g.is_required, 0) AS is_required,
-                    COALESCE(g.min_selection, 0) AS min_selection,
-                    COALESCE(g.max_selection, 1) AS max_selection,
-                    o.id AS option_id, o.name AS option_name, COALESCE(o.price, 0) AS option_price,
-                    COALESCE(o.is_default, 0) AS is_default, o.out_of_stock_until AS option_out_of_stock_until
-             FROM item_modifier_links l
-             JOIN modifier_groups g ON g.id = l.group_id AND g.tenant_id = l.tenant_id
-             LEFT JOIN modifier_options o ON o.group_id = g.id AND o.tenant_id = g.tenant_id
-             WHERE l.tenant_id = ?
-             ORDER BY l.sort_order ASC, g.sort_order ASC, o.sort_order ASC`
-          ).bind(tenantId).all<any>();
+          const [modRes, catModRes] = await env.DB.batch([
+            env.DB.prepare(
+              `SELECT l.item_id, g.id AS group_id, g.name AS group_name, g.selection_type,
+                      COALESCE(g.is_required, 0) AS is_required,
+                      COALESCE(g.min_selection, 0) AS min_selection,
+                      COALESCE(g.max_selection, 1) AS max_selection,
+                      COALESCE(g.scope, 'item') AS scope,
+                      o.id AS option_id, o.name AS option_name, COALESCE(o.price, 0) AS option_price,
+                      COALESCE(o.is_default, 0) AS is_default, o.out_of_stock_until AS option_out_of_stock_until
+               FROM item_modifier_links l
+               JOIN modifier_groups g ON g.id = l.group_id AND g.tenant_id = l.tenant_id
+               LEFT JOIN modifier_options o ON o.group_id = g.id AND o.tenant_id = g.tenant_id
+               WHERE l.tenant_id = ?
+               ORDER BY l.sort_order ASC, g.sort_order ASC, o.sort_order ASC`
+            ).bind(tenantId),
+            env.DB.prepare(
+              `SELECT l.category_id, g.id AS group_id, g.name AS group_name, g.selection_type,
+                      COALESCE(g.is_required, 0) AS is_required,
+                      COALESCE(g.min_selection, 0) AS min_selection,
+                      COALESCE(g.max_selection, 1) AS max_selection,
+                      COALESCE(g.scope, 'category') AS scope,
+                      o.id AS option_id, o.name AS option_name, COALESCE(o.price, 0) AS option_price,
+                      COALESCE(o.is_default, 0) AS is_default, o.out_of_stock_until AS option_out_of_stock_until
+               FROM category_modifier_links l
+               JOIN modifier_groups g ON g.id = l.group_id AND g.tenant_id = l.tenant_id
+               LEFT JOIN modifier_options o ON o.group_id = g.id AND o.tenant_id = g.tenant_id
+               WHERE l.tenant_id = ?
+               ORDER BY l.sort_order ASC, g.sort_order ASC, o.sort_order ASC`
+            ).bind(tenantId)
+          ]);
           if (!modRes || !modRes.success || !Array.isArray(modRes.results)) {
             throw new Error('Incomplete item modifiers query');
           }
           itemModifierRows = (modRes.results as any[]) || [];
+          categoryModifierRows = (catModRes && catModRes.success && Array.isArray(catModRes.results)) ? (catModRes.results as any[]) : [];
         } catch (modErr) {
           menuComplete = false;
-          console.warn(`[Bootstrap] item modifiers query failure for ${tenantId}:`, modErr);
+          console.warn(`[Bootstrap] item/category modifiers query failure for ${tenantId}:`, modErr);
         }
       } catch (dbErr) {
         menuComplete = false;
@@ -588,6 +627,39 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
       }
     }
 
+    // Build Category Modifier Groups Map for Category-Level soft inheritance (Tier 3)
+    const categoryModifierGroupsMap = new Map<string, any[]>();
+    for (const row of categoryModifierRows) {
+      if (!categoryModifierGroupsMap.has(row.category_id)) {
+        categoryModifierGroupsMap.set(row.category_id, []);
+      }
+      const groupList = categoryModifierGroupsMap.get(row.category_id)!;
+      let grp = groupList.find((g: any) => g.id === row.group_id);
+      if (!grp) {
+        grp = {
+          id: row.group_id,
+          name: row.group_name,
+          selectionType: row.selection_type || 'single',
+          isRequired: Boolean(row.is_required),
+          minSelection: Number(row.min_selection ?? 0),
+          maxSelection: Number(row.max_selection ?? 1),
+          scope: row.scope || 'category',
+          options: []
+        };
+        groupList.push(grp);
+      }
+      if (row.option_id) {
+        const isOptOos = Boolean(row.option_out_of_stock_until && new Date(row.option_out_of_stock_until) > now);
+        grp.options.push({
+          id: row.option_id,
+          name: row.option_name,
+          price: Number(row.option_price || 0),
+          isDefault: Boolean(row.is_default),
+          isOutOfStock: isOptOos
+        });
+      }
+    }
+
     // Resolve bundle rules and populate eligibleItems
     const bundleRulesByItemId = new Map<string, BootstrapBundleRule>();
     for (const row of bundleRulesRows) {
@@ -611,7 +683,13 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
               try { appliedModifiers = JSON.parse(cat.applied_modifiers || '[]'); }
               catch { appliedModifiers = String(cat.applied_modifiers || '').split(',').map((s: string) => s.trim()).filter(Boolean); }
             }
-            const modGroups = itemModifierGroupsMap.get(it.id) || [];
+            const itItemMods = itemModifierGroupsMap.get(it.id) || [];
+            const itCatMods = categoryModifierGroupsMap.get(it.category_id) || [];
+            const itExistingGids = new Set(itItemMods.map((g: any) => g.id));
+            const modGroups = [
+              ...itItemMods,
+              ...itCatMods.filter((g: any) => !itExistingGids.has(g.id))
+            ];
             eligibleItems.push({
               id: it.id,
               name: it.name,
@@ -701,7 +779,13 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
                        imageList.some(k => k.endsWith(`_${item.name}`) || (k.includes('_') && k.split('_').slice(1).join('_') === item.name));
       const imageUrl = hasImage ? `/api/image?tenant_id=${tenantId}&name=${encodeURIComponent(item.name)}` : null;
       const bundleRule = bundleRulesByItemId.get(item.id) || null;
-      const modGroups = itemModifierGroupsMap.get(item.id) || [];
+      const itemModGroups = itemModifierGroupsMap.get(item.id) || [];
+      const catModGroups = categoryModifierGroupsMap.get(item.category_id) || [];
+      const existingGids = new Set(itemModGroups.map((g: any) => g.id));
+      const modGroups = [
+        ...itemModGroups,
+        ...catModGroups.filter((g: any) => !existingGids.has(g.id))
+      ];
 
       itemsByCatId.get(item.category_id)!.push({
         id: item.id,
@@ -785,6 +869,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
           shortName: cat.short_name || null,
           allowCustomization: Boolean(cat.allow_customization ?? 1) && appliedModifiers.length > 0,
           appliedModifiers: appliedModifiers,
+          modifierGroups: categoryModifierGroupsMap.get(cat.id) || [],
           pricingRules: pricingRules,
           sortOrder: cat.sort_order || 0,
           items: catItems
@@ -841,6 +926,9 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
       modifiers,
       customizations: customizations.length > 0 ? customizations : undefined,
       customizationSortOrder,
+      categoryModifierLinks: Array.from(categoryModifierGroupsMap.entries()).flatMap(([catId, groups]) =>
+        groups.map((g, idx) => ({ categoryId: catId, groupId: g.id, sortOrder: idx }))
+      ),
       translations: tenantId === 'benmi' ? BENMI_TRANSLATIONS : undefined,
       recommended: items.filter(it => it.is_recommended || it.badge_text).map(it => it.name)
     };
