@@ -407,9 +407,9 @@ function getMenuDisplayEntries() {
   const entries = [];
   (currentMenuData || []).forEach(cat => {
     if (!isCustomizationCategory(cat)) entries.push({ model: cat, title: cat.title, kind: 'categoryTypeCatalogBadge' });
-    else (cat.groups || []).filter(group => group.scope === 'order').forEach(group => {
-      entries.push({ model: group, title: group.title, kind: 'scopeOrder' });
-    });
+    else if ((cat.groups || []).some(group => !group.scope || group.scope === 'order')) {
+      entries.push({ model: cat, title: cat.title, kind: 'scopeOrder' });
+    }
   });
   return entries.sort((a, b) => (Number(a.model.sortOrder) || 0) - (Number(b.model.sortOrder) || 0));
 }
@@ -724,22 +724,22 @@ function renderMenuCategories() {
     addGroupBtn.onclick = () => handleCreateCustomFromSidebar();
     optionsContainer.appendChild(addGroupBtn);
 
-    // Extract all option groups from flavor categories and modifiers
+    // Keep global customization groups together as one editor entry. The
+    // editor itself still renders and edits each child group independently.
     const optionCards = [];
 
     // 1. Groups from order_customization / sec-flavor
     currentMenuData.forEach((cat, originalIndex) => {
       if (cat.type === 'order_customization' || cat.id === 'sec-flavor' || cat.slug === 'sec-flavor') {
         if (Array.isArray(cat.groups) && cat.groups.length > 0) {
-          cat.groups.forEach((grp, gIdx) => {
-            const optCount = Array.isArray(grp.options) ? grp.options.length : 0;
-            optionCards.push({
-              type: 'flavor_group',
-              catIndex: originalIndex,
-              groupIndex: gIdx,
-              title: grp.title || (currentLang === 'vi' ? 'Nhóm tùy chọn' : '客製化分組'),
-              count: optCount
-            });
+          const groups = cat.groups.filter(grp => !grp.scope || grp.scope === 'order');
+          const optionCount = groups.reduce((total, grp) => total + (Array.isArray(grp.options) ? grp.options.length : 0), 0);
+          if (groups.length > 0) optionCards.push({
+            type: 'global_customizations',
+            catIndex: originalIndex,
+            groupIndex: null,
+            title: cat.title || (currentLang === 'vi' ? 'Tùy chọn khẩu vị & biến thể' : '口味與客製化選擇'),
+            count: optionCount
           });
         }
       }
@@ -768,7 +768,7 @@ function renderMenuCategories() {
       const unitText = t("optionsCountUnit") || (currentLang === 'vi' ? 'lựa chọn' : '項選擇');
 
       optionCards.forEach(card => {
-        const isCardActive = (card.type === 'flavor_group' && activeCategoryIndex === card.catIndex && (activeOptionGroupIndex === card.groupIndex || (activeOptionGroupIndex === null && card.groupIndex === 0))) ||
+        const isCardActive = (card.type === 'global_customizations' && activeCategoryIndex === card.catIndex) ||
                              (card.type === 'modifier_category' && activeCategoryIndex === card.catIndex);
 
         const cardEl = document.createElement("div");
@@ -792,7 +792,11 @@ function renderMenuCategories() {
           isCustomGroupCreatorOpen = false;
           activeCategoryIndex = card.catIndex;
 
-          if (card.type === 'flavor_group' || card.type === 'modifier_category') {
+          if (card.type === 'global_customizations') {
+            activeOptionGroupIndex = null;
+            renderMenuCategories();
+            renderMenuCategoryEditor(card.catIndex);
+          } else if (card.type === 'modifier_category') {
             activeOptionGroupIndex = card.groupIndex;
             renderMenuCategories();
             renderMenuCategoryEditor(card.catIndex);
