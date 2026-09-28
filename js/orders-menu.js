@@ -222,10 +222,17 @@ async function loadMenuData() {
     }
 
     clearMenuDirty();
-    activeCategoryIndex = currentMenuData.length > 0 ? 0 : -1;
+    if (menuSidebarTab === 'products') {
+      const firstCatalog = currentMenuData.findIndex(c => !isCustomizationCategory(c));
+      activeCategoryIndex = firstCatalog >= 0 ? firstCatalog : (currentMenuData.length > 0 ? 0 : -1);
+    } else {
+      let flavorIdx = currentMenuData.findIndex(c => c.type === 'order_customization' || c.id === 'sec-flavor' || c.slug === 'sec-flavor');
+      if (flavorIdx < 0) flavorIdx = currentMenuData.findIndex(c => isCustomizationCategory(c));
+      activeCategoryIndex = flavorIdx >= 0 ? flavorIdx : (currentMenuData.length > 0 ? 0 : -1);
+    }
     renderMenuCategories();
     if (activeCategoryIndex >= 0) {
-      renderMenuCategoryEditor(0);
+      renderMenuCategoryEditor(activeCategoryIndex);
     } else {
       if (bodyEl) bodyEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;" id="i18n-menu-select-prompt">${t("menuSelectPrompt")}</div>`;
       const titleEl = document.getElementById("menu-editor-title");
@@ -520,11 +527,72 @@ function isCustomizationCategory(cat) {
 }
 window.isCustomizationCategory = isCustomizationCategory;
 
+let menuSidebarTab = 'products';
+let activeOptionGroupIndex = null;
+
+function setMenuSidebarTab(tab) {
+  if (tab !== 'products' && tab !== 'options') tab = 'products';
+  if (!confirmLeaveMenu()) return;
+  if (isMenuDirty) syncMenuDataFromDOM();
+  menuSidebarTab = tab;
+
+  // Update toggle buttons in DOM
+  const btnProducts = document.getElementById("btn-seg-products");
+  const btnOptions = document.getElementById("btn-seg-options");
+  if (btnProducts) {
+    btnProducts.classList.toggle("active", tab === 'products');
+    btnProducts.setAttribute("aria-selected", tab === 'products');
+  }
+  if (btnOptions) {
+    btnOptions.classList.toggle("active", tab === 'options');
+    btnOptions.setAttribute("aria-selected", tab === 'options');
+  }
+
+  // Show/hide manage cats button in header
+  const prodActions = document.getElementById("menu-sidebar-products-actions");
+  if (prodActions) {
+    prodActions.style.display = tab === 'products' ? 'block' : 'none';
+  }
+
+  isCategoryManagerOpen = false;
+  isCustomGroupCreatorOpen = false;
+
+  if (currentMenuData && currentMenuData.length > 0) {
+    if (tab === 'products') {
+      const activeCat = currentMenuData[activeCategoryIndex];
+      if (!activeCat || isCustomizationCategory(activeCat)) {
+        const firstCatalogIdx = currentMenuData.findIndex(c => !isCustomizationCategory(c));
+        if (firstCatalogIdx >= 0) activeCategoryIndex = firstCatalogIdx;
+      }
+    } else {
+      // options tab
+      const activeCat = currentMenuData[activeCategoryIndex];
+      if (!activeCat || !isCustomizationCategory(activeCat)) {
+        let flavorIdx = currentMenuData.findIndex(c => c.type === 'order_customization' || c.id === 'sec-flavor' || c.slug === 'sec-flavor');
+        if (flavorIdx < 0) {
+          flavorIdx = currentMenuData.findIndex(c => isCustomizationCategory(c));
+        }
+        if (flavorIdx >= 0) {
+          activeCategoryIndex = flavorIdx;
+          activeOptionGroupIndex = 0;
+        }
+      }
+    }
+  }
+
+  renderMenuCategories();
+  if (activeCategoryIndex >= 0) {
+    renderMenuCategoryEditor(activeCategoryIndex);
+  }
+}
+window.setMenuSidebarTab = setMenuSidebarTab;
+
 function handleCreateComboFromSidebar() {
   if (!confirmLeaveMenu()) return;
   if (!currentMenuData) currentMenuData = [];
   syncMenuDataFromDOM();
 
+  menuSidebarTab = 'products';
   let comboCatIdx = currentMenuData.findIndex(c => isComboCategory(c));
   if (comboCatIdx < 0) {
     const comboCat = {
@@ -558,6 +626,7 @@ function handleCreateCustomFromSidebar() {
   if (!currentMenuData) currentMenuData = [];
   syncMenuDataFromDOM();
 
+  menuSidebarTab = 'options';
   let flavorIdx = currentMenuData.findIndex(c => c.type === 'order_customization' || c.id === 'sec-flavor');
   if (flavorIdx < 0) {
     const newCat = {
@@ -590,155 +659,199 @@ function renderMenuCategories() {
   const container = document.getElementById("menu-categories");
   if (!container) return;
   container.innerHTML = "";
+
+  // Synchronize segmented toggle buttons & products actions
+  const btnProducts = document.getElementById("btn-seg-products");
+  const btnOptions = document.getElementById("btn-seg-options");
+  if (btnProducts) {
+    btnProducts.classList.toggle("active", menuSidebarTab === 'products');
+    btnProducts.setAttribute("aria-selected", menuSidebarTab === 'products');
+  }
+  if (btnOptions) {
+    btnOptions.classList.toggle("active", menuSidebarTab === 'options');
+    btnOptions.setAttribute("aria-selected", menuSidebarTab === 'options');
+  }
+  const prodActions = document.getElementById("menu-sidebar-products-actions");
+  if (prodActions) {
+    prodActions.style.display = menuSidebarTab === 'products' ? 'block' : 'none';
+  }
+
   if (!currentMenuData) return;
 
   const plusIcon = (typeof POS_SVG !== "undefined" && POS_SVG.plus) || `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
 
-  // Partition categories with their original index
-  const catalogList = [];
-  const customList = [];
-
-  currentMenuData.forEach((cat, originalIndex) => {
-    if (isCustomizationCategory(cat)) {
-      customList.push({ cat, originalIndex });
-    } else {
-      catalogList.push({ cat, originalIndex });
-    }
-  });
-
-  const sections = [
-    {
-      key: 'catalog',
-      title: t("menuSectionCatalogTitle"),
-      icon: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>`,
-      items: catalogList,
-      emptyPrompt: null,
-      actions: [
-        {
-          text: t("btnAddCatalogCategory"),
-          handler: () => openAddCategoryModal('catalog'),
-          className: "menu-sidebar-action-btn"
-        },
-        {
-          text: t("btnCreateComboWizard"),
-          handler: () => handleCreateComboFromSidebar(),
-          className: "menu-sidebar-action-btn menu-sidebar-action-combo-btn"
-        }
-      ]
-    },
-    {
-      key: 'custom',
-      title: t("menuSectionCustomTitle"),
-      icon: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>`,
-      items: customList,
-      emptyPrompt: null,
-      actions: [
-        {
-          text: t("btnCreateCustomGroup"),
-          handler: () => handleCreateCustomFromSidebar(),
-          className: "menu-sidebar-action-btn"
-        }
-      ]
-    }
-  ];
-
-  sections.forEach(sec => {
-    const isCollapsed = Boolean(collapsedMenuSections[sec.key]);
-
-    const sectionEl = document.createElement("div");
-    sectionEl.className = "menu-sidebar-section";
-
-    // Section Header
-    const headerEl = document.createElement("div");
-    headerEl.className = "menu-sidebar-section-header";
-    headerEl.setAttribute("role", "button");
-    headerEl.setAttribute("aria-expanded", !isCollapsed);
-    headerEl.setAttribute("tabindex", "0");
-    headerEl.onclick = () => toggleMenuSectionCollapse(sec.key);
-    headerEl.onkeydown = (e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        toggleMenuSectionCollapse(sec.key);
+  if (menuSidebarTab === 'products') {
+    // -------------------------------------------------------------
+    // PRODUCTS MODE: List of catalog items, combos & category actions
+    // -------------------------------------------------------------
+    const catalogList = [];
+    currentMenuData.forEach((cat, originalIndex) => {
+      if (!isCustomizationCategory(cat)) {
+        catalogList.push({ cat, originalIndex });
       }
-    };
+    });
 
-    headerEl.innerHTML = `
-      <div class="menu-sidebar-section-title">
-        ${sec.icon}
-        <span>${escapeHtml(sec.title)}</span>
-      </div>
-      <div style="display:flex; align-items:center; gap:8px;">
-        <span class="menu-sidebar-section-count">${sec.items.length}</span>
-        <span class="menu-sidebar-section-chevron ${isCollapsed ? 'collapsed' : ''}" aria-hidden="true">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-        </span>
-      </div>
-    `;
-    sectionEl.appendChild(headerEl);
+    const listEl = document.createElement("div");
+    listEl.className = "menu-sidebar-section menu-sidebar-product-list";
 
-    // Section Body
-    const bodyEl = document.createElement("div");
-    bodyEl.className = `menu-sidebar-section-body ${isCollapsed ? 'collapsed' : ''}`;
+    catalogList.forEach(({ cat, originalIndex }) => {
+      const div = document.createElement("div");
+      div.className = `menu-cat-item ${activeCategoryIndex === originalIndex && !isCategoryManagerOpen ? 'active' : ''}`;
 
-    if (sec.items.length === 0 && sec.emptyPrompt) {
-      const emptyEl = document.createElement("div");
-      emptyEl.className = "menu-section-empty-hint";
-      emptyEl.innerText = sec.emptyPrompt;
-      bodyEl.appendChild(emptyEl);
+      const isCombo = isComboCategory(cat);
+      const badge = isCombo
+        ? `<span style="font-size: 11px; padding: 2px 6px; background: #fef2f2; color: #b91c1c; border-radius: 4px; font-weight: 700; margin-right: 6px;">Combo</span>`
+        : '';
+
+      const itemCount = Array.isArray(cat.items) ? cat.items.length : 0;
+
+      div.innerHTML = `
+        <div style="display:flex; align-items:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;">
+          ${badge}
+          <span class="menu-cat-title">${escapeHtml(cat.title)}</span>
+        </div>
+        <span class="menu-cat-count">${itemCount} ${t("menuItemUnit")}</span>
+      `;
+
+      div.onclick = () => {
+        if (originalIndex !== activeCategoryIndex && !confirmLeaveMenu()) return;
+        if (originalIndex === activeCategoryIndex && isMenuDirty) syncMenuDataFromDOM();
+        isCategoryManagerOpen = false;
+        isCustomGroupCreatorOpen = false;
+        activeCategoryIndex = originalIndex;
+        renderMenuCategories();
+        renderMenuCategoryEditor(originalIndex);
+      };
+      listEl.appendChild(div);
+    });
+
+    // Bottom Action Buttons
+    const actionCatalog = document.createElement("button");
+    actionCatalog.type = "button";
+    actionCatalog.className = "menu-sidebar-action-btn";
+    actionCatalog.innerHTML = `${plusIcon}<span>${escapeHtml(t("btnAddCatalogCategory"))}</span>`;
+    actionCatalog.onclick = () => openAddCategoryModal('catalog');
+    listEl.appendChild(actionCatalog);
+
+    const actionCombo = document.createElement("button");
+    actionCombo.type = "button";
+    actionCombo.className = "menu-sidebar-action-btn menu-sidebar-action-combo-btn";
+    actionCombo.innerHTML = `${plusIcon}<span>${escapeHtml(t("btnCreateComboWizard"))}</span>`;
+    actionCombo.onclick = () => handleCreateComboFromSidebar();
+    listEl.appendChild(actionCombo);
+
+    container.appendChild(listEl);
+
+  } else {
+    // -------------------------------------------------------------
+    // OPTIONS MODE: Foodpanda-style Option Groups list & Add Button
+    // -------------------------------------------------------------
+    const optionsContainer = document.createElement("div");
+    optionsContainer.className = "menu-sidebar-section menu-sidebar-options-list";
+
+    // Top Action: + Add option group
+    const addGroupBtn = document.createElement("button");
+    addGroupBtn.type = "button";
+    addGroupBtn.className = "menu-add-option-group-btn";
+    addGroupBtn.innerHTML = `${plusIcon}<span>${escapeHtml(t("btnAddOptionGroupTop") || t("btnCreateCustomGroup"))}</span>`;
+    addGroupBtn.onclick = () => handleCreateCustomFromSidebar();
+    optionsContainer.appendChild(addGroupBtn);
+
+    // Extract all option groups from flavor categories and modifiers
+    const optionCards = [];
+
+    // 1. Groups from order_customization / sec-flavor
+    currentMenuData.forEach((cat, originalIndex) => {
+      if (cat.type === 'order_customization' || cat.id === 'sec-flavor' || cat.slug === 'sec-flavor') {
+        if (Array.isArray(cat.groups) && cat.groups.length > 0) {
+          cat.groups.forEach((grp, gIdx) => {
+            const optCount = Array.isArray(grp.options) ? grp.options.length : 0;
+            optionCards.push({
+              type: 'flavor_group',
+              catIndex: originalIndex,
+              groupIndex: gIdx,
+              title: grp.title || (currentLang === 'vi' ? 'Nhóm tùy chọn' : '客製化分組'),
+              count: optCount
+            });
+          });
+        }
+      }
+    });
+
+    // 2. Modifier categories (cat.type === 'modifier')
+    currentMenuData.forEach((cat, originalIndex) => {
+      if (cat.type === 'modifier') {
+        const optCount = Array.isArray(cat.items) ? cat.items.length : 0;
+        optionCards.push({
+          type: 'modifier_category',
+          catIndex: originalIndex,
+          groupIndex: null,
+          title: cat.title,
+          count: optCount
+        });
+      }
+    });
+
+    if (optionCards.length === 0) {
+      const emptyDiv = document.createElement("div");
+      emptyDiv.className = "menu-section-empty-hint";
+      emptyDiv.innerText = t("noOptionGroupsPrompt") || (currentLang === 'vi' ? 'Chưa có nhóm tùy chọn nào (nhấn bên trên để tạo)' : '尚無客製化分組 (點擊上方按鈕立即建立)');
+      optionsContainer.appendChild(emptyDiv);
     } else {
-      sec.items.forEach(({ cat, originalIndex }) => {
-        const div = document.createElement("div");
-        div.className = `menu-cat-item ${activeCategoryIndex === originalIndex && !isCategoryManagerOpen ? 'active' : ''}`;
+      const unitText = t("optionsCountUnit") || (currentLang === 'vi' ? 'lựa chọn' : '項選擇');
 
-        const isSystemCustomization = cat.type === 'order_customization' || cat.id === 'sec-flavor';
-        const badge = cat.type === 'modifier'
-          ? `<span style="font-size: 11px; padding: 2px 6px; background: #e0e7ff; color: #4338ca; border-radius: 4px; font-weight: 700; margin-right: 6px;">${t("modifierPrefix")}</span>`
-          : isSystemCustomization
-          ? `<span style="font-size: 11px; padding: 2px 6px; background: #fef3c7; color: #92400e; border-radius: 4px; font-weight: 700; margin-right: 6px;">${currentLang === 'vi' ? 'Khẩu vị' : '客製化'}</span>`
-          : isComboCategory(cat)
-          ? `<span style="font-size: 11px; padding: 2px 6px; background: #fef2f2; color: #b91c1c; border-radius: 4px; font-weight: 700; margin-right: 6px;">Combo</span>`
-          : '';
+      optionCards.forEach(card => {
+        const isCardActive = (card.type === 'flavor_group' && activeCategoryIndex === card.catIndex && (activeOptionGroupIndex === card.groupIndex || (activeOptionGroupIndex === null && card.groupIndex === 0))) ||
+                             (card.type === 'modifier_category' && activeCategoryIndex === card.catIndex);
 
-        const itemCount = isSystemCustomization
-          ? (cat.groups ? cat.groups.reduce((acc, g) => acc + (g.options ? g.options.length : 0), 0) : 0)
-          : (Array.isArray(cat.items) ? cat.items.length : 0);
+        const cardEl = document.createElement("div");
+        cardEl.className = `menu-option-card ${isCardActive ? 'active' : ''}`;
 
-        div.innerHTML = `
-          <div style="display:flex; align-items:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;">
-            ${badge}
-            <span class="menu-cat-title">${escapeHtml(cat.title)}</span>
+        cardEl.innerHTML = `
+          <div class="menu-option-card-content">
+            <div class="menu-option-card-title">${escapeHtml(card.title)}</div>
+            <div class="menu-option-card-subtitle">${card.count} ${escapeHtml(unitText)}</div>
           </div>
-          <span class="menu-cat-count">${itemCount} ${t("menuItemUnit")}</span>
+          <div class="menu-option-card-chevron" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </div>
         `;
 
-        div.onclick = () => {
-          if (originalIndex !== activeCategoryIndex && !confirmLeaveMenu()) return;
-          if (originalIndex === activeCategoryIndex && isMenuDirty) syncMenuDataFromDOM();
+        cardEl.onclick = () => {
+          if (activeCategoryIndex !== card.catIndex && !confirmLeaveMenu()) return;
+          if (activeCategoryIndex === card.catIndex && isMenuDirty) syncMenuDataFromDOM();
+
           isCategoryManagerOpen = false;
           isCustomGroupCreatorOpen = false;
-          activeCategoryIndex = originalIndex;
-          renderMenuCategories();
-          renderMenuCategoryEditor(originalIndex);
+          activeCategoryIndex = card.catIndex;
+
+          if (card.type === 'flavor_group') {
+            activeOptionGroupIndex = card.groupIndex;
+            renderMenuCategories();
+            renderMenuCategoryEditor(card.catIndex);
+
+            // Smooth scroll & pulse animation on the selected group card in editor
+            setTimeout(() => {
+              const targetCard = document.querySelector(`.cust-group-card[data-cust-group-index="${card.groupIndex}"]`);
+              if (targetCard) {
+                targetCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                targetCard.classList.add('cust-group-focus-pulse');
+                setTimeout(() => targetCard.classList.remove('cust-group-focus-pulse'), 1500);
+              }
+            }, 50);
+          } else {
+            activeOptionGroupIndex = null;
+            renderMenuCategories();
+            renderMenuCategoryEditor(card.catIndex);
+          }
         };
-        bodyEl.appendChild(div);
+
+        optionsContainer.appendChild(cardEl);
       });
     }
 
-    // Section Action Buttons
-    if (Array.isArray(sec.actions)) {
-      sec.actions.forEach(action => {
-        const actionBtn = document.createElement("button");
-        actionBtn.type = "button";
-        actionBtn.className = action.className || "menu-sidebar-action-btn";
-        actionBtn.innerHTML = `${plusIcon}<span>${escapeHtml(action.text)}</span>`;
-        actionBtn.onclick = action.handler;
-        bodyEl.appendChild(actionBtn);
-      });
-    }
-
-    sectionEl.appendChild(bodyEl);
-    container.appendChild(sectionEl);
-  });
+    container.appendChild(optionsContainer);
+  }
 }
 
 
