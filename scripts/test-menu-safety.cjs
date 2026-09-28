@@ -115,7 +115,7 @@ test('customization-only data can be saved then its new section explicitly delet
   assert.equal(f.db.prepare('SELECT id FROM menu_customizations WHERE id=?').get('custom_a_flavor'),undefined);
 });
 test('successful empty complete bootstrap permits creating a menu',async()=>{
-  const e=editor(); e.context.fetch=async()=>({ok:true,json:async()=>({menuComplete:true,catalog:[],modifiers:[]})});
+  const e=editor(); e.context.fetch=async()=>({ok:true,json:async()=>({menuComplete:true,catalog:[],modifiers:[],complete:true,groups:[]})});
   await e.run('loadMenuData()'); assert.equal(e.run('isMenuLoadedCompletely'),true); assert.equal(e.run('currentMenuData.length'),0);
 });
 test('updating one customization group preserves omitted groups',async()=>{
@@ -320,6 +320,7 @@ test('T2: Complete bootstrap (menuComplete=true) enables saving and preserves mo
     ok: true,
     json: async () => ({
       bootstrapVersion: 2,
+      complete: true, groups: [],
       menuComplete: true,
       catalog: [{
         id: 'c1',
