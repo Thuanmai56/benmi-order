@@ -136,6 +136,7 @@ export interface BootstrapResponse {
     }>;
   }>;
   customizations?: Array<{
+    scope?: string;
     id: string;
     key: string;
     title: string;
@@ -460,7 +461,11 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
           ).bind(tenantId),
           env.DB.prepare(
             `SELECT id, key, title, type, sort_order, options_json,
-                    COALESCE(is_required, 0) AS is_required
+                    COALESCE(is_required, 0) AS is_required,
+                    COALESCE((SELECT g.scope FROM modifier_groups g
+                      WHERE g.tenant_id = menu_customizations.tenant_id
+                        AND (g.id = menu_customizations.id OR g.id = 'mg_' || menu_customizations.id)
+                      ORDER BY g.id LIMIT 1), 'order') AS scope
              FROM menu_customizations
              WHERE tenant_id = ?
              ORDER BY sort_order ASC`
@@ -583,6 +588,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
         customizations.push({
           id: c.id,
           key: c.key,
+          scope: c.scope || 'order',
           title: c.title,
           type: c.type || 'radio',
           isRequired: Boolean(c.is_required),
