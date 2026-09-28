@@ -9075,9 +9075,38 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
   margin-top: 8px;
 }
 
-.cust-cat-item-select { display: flex; flex-direction: column; gap: 6px; }
-.cust-item-chip-list { display: flex; flex-wrap: wrap; gap: 6px; padding-left: 12px; }
-.cust-item-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 5px 10px; border: 1px solid #dbe3ee; border-radius: 8px; background: #fff; color: #475569; font-size: 12.5px; font-weight: 650; cursor: pointer; }
+.cust-cat-item-select {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #fff;
+  margin-bottom: 6px;
+}
+.cust-cat-item-select > .cust-cat-chip {
+  min-height: 48px;
+  margin: 0;
+  border: 0;
+  border-bottom: 1px solid #e2e8f0;
+  border-radius: 0;
+  background: #f1f5f9;
+  font-weight: 750;
+  padding: 12px 16px;
+}
+.cust-cat-item-select > .cust-cat-chip.active { background: #ecfdf5; border-bottom-color: #a7f3d0; }
+.cust-cat-item-select > .cust-cat-chip > input { flex-shrink: 0; }
+.cust-cat-item-select > .cust-cat-chip > span { overflow-wrap: anywhere; }
+.cust-cat-item-select .cust-cat-chip-count { margin-left: auto; flex-shrink: 0; }
+.cust-item-chip-list { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px 16px; }
+.cust-item-chip { display: inline-flex; align-items: center; gap: 8px; min-height: 48px; box-sizing: border-box; max-width: 100%; padding: 8px 12px; border: 1px solid #dbe3ee; border-radius: 8px; background: #fff; color: #475569; font-size: 12.5px; font-weight: 650; cursor: pointer; }
+.cust-item-chip span { overflow-wrap: anywhere; min-width: 0; }
+.cust-item-chip input { flex-shrink: 0; }
+.cust-item-chip:has(input:checked) { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; }
+.cust-item-chip:focus-within, .cust-cat-item-select > .cust-cat-chip:focus-within { outline: 2px solid #2563eb; outline-offset: -2px; }
 .cust-item-chip input { width: 16px; height: 16px; accent-color: #2563eb; }
 
 .cust-cat-chip {
