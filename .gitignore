@@ -32,3 +32,6 @@ scratch/
 scripts/latest_printed_receipt.png
 artifacts/release-baseline/
 
+# Database backups
+backup_*.sql
+*.backup.sql
