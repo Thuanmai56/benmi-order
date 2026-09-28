@@ -9196,3 +9196,17 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
 .mod-lib-option-row:hover {
   background: #f1f5f9;
 }
+
+/* Shared option and catalog editor touch controls. */
+.cust-option-row .menu-item-btn,
+.cust-sub-options-container .cust-add-sub-chip-btn {
+  min-height: 48px;
+  min-width: 48px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.menu-catalog-row.dragging { opacity: .65; border-style: dashed; }
