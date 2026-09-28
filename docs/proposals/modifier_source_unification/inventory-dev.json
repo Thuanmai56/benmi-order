@@ -1,0 +1,401 @@
+{
+  "environment": "dev",
+  "readOnly": true,
+  "summary": {
+    "canonicalGroups": 17,
+    "legacyWithoutCanonical": 8,
+    "legacyModifierCategories": 16,
+    "multipleCanonicalCandidates": 0,
+    "itemBindings": 1
+  },
+  "mappingCandidates": [
+    {
+      "tenantId": "bsc",
+      "canonicalId": "bsc_addons",
+      "name": "✦ 加價配料 (選加)",
+      "status": "canonical_with_legacy_candidate",
+      "optionsCount": 2,
+      "itemLinks": 0,
+      "categoryLinks": 0,
+      "requiresFieldParityCheck": true
+    },
+    {
+      "tenantId": "bsc",
+      "canonicalId": "bsc_flavor",
+      "name": "✦ 口味選擇",
+      "status": "canonical_with_legacy_candidate",
+      "optionsCount": 5,
+      "itemLinks": 0,
+      "categoryLinks": 0,
+      "requiresFieldParityCheck": true
+    },
+    {
+      "tenantId": "bsc",
+      "canonicalId": "bsc_ingredients",
+      "name": "✦ 配料調整",
+      "status": "canonical_with_legacy_candidate",
+      "optionsCount": 3,
+      "itemLinks": 0,
+      "categoryLinks": 0,
+      "requiresFieldParityCheck": true
+    },
+    {
+      "tenantId": "bsc",
+      "canonicalId": "bsc_salt",
+      "name": "✦ 鹹度調整",
+      "status": "canonical_with_legacy_candidate",
+      "optionsCount": 3,
+      "itemLinks": 0,
+      "categoryLinks": 0,
+      "requiresFieldParityCheck": true
+    },
+    {
+      "tenantId": "bsc",
+      "canonicalId": "bsc_spicy",
+      "name": "✦ 辣度選擇 (朝天椒)",
+      "status": "canonical_with_legacy_candidate",
+      "optionsCount": 6,
+      "itemLinks": 0,
+      "categoryLinks": 0,
+      "requiresFieldParityCheck": true
+    },
+    {
+      "tenantId": "jiangjiejie",
+      "canonicalId": "custom_jiangjiejie_group_mtzvqwy1",
+      "name": "孩子分袋調味",
+      "status": "canonical_with_legacy_candidate",
+      "optionsCount": 3,
+      "itemLinks": 0,
+      "categoryLinks": 0,
+      "requiresFieldParityCheck": true
+    },
+    {
+      "tenantId": "jiangjiejie",
+      "canonicalId": "custom_mod_jj_chicken_prep",
+      "name": "雞肉",
+      "status": "canonical_with_legacy_candidate",
+      "optionsCount": 2,
+      "itemLinks": 0,
+      "categoryLinks": 0,
+      "requiresFieldParityCheck": true
+    },
+    {
+      "tenantId": "jiangjiejie",
+      "canonicalId": "custom_mod_jj_chili",
+      "name": "辣椒",
+      "status": "canonical_with_legacy_candidate",
+      "optionsCount": 6,
+      "itemLinks": 0,
+      "categoryLinks": 0,
+      "requiresFieldParityCheck": true
+    },
+    {
+      "tenantId": "jiangjiejie",
+      "canonicalId": "custom_mod_jj_garlic",
+      "name": "蒜泥",
+      "status": "canonical_with_legacy_candidate",
+      "optionsCount": 3,
+      "itemLinks": 0,
+      "categoryLinks": 0,
+      "requiresFieldParityCheck": true
+    },
+    {
+      "tenantId": "jiangjiejie",
+      "canonicalId": "custom_mod_jj_lemon_juice",
+      "name": "特調檸檬汁（加檸檬汁需滿150元）",
+      "status": "canonical_with_legacy_candidate",
+      "optionsCount": 4,
+      "itemLinks": 0,
+      "categoryLinks": 0,
+      "requiresFieldParityCheck": true
+    },
+    {
+      "tenantId": "jiangjiejie",
+      "canonicalId": "custom_mod_jj_ma",
+      "name": "椒麻",
+      "status": "canonical_with_legacy_candidate",
+      "optionsCount": 5,
+      "itemLinks": 0,
+      "categoryLinks": 0,
+      "requiresFieldParityCheck": true
+    },
+    {
+      "tenantId": "jiangjiejie",
+      "canonicalId": "custom_mod_jj_onion",
+      "name": "洋蔥（加洋蔥需滿100元，多加20元）",
+      "status": "canonical_with_legacy_candidate",
+      "optionsCount": 3,
+      "itemLinks": 0,
+      "categoryLinks": 0,
+      "requiresFieldParityCheck": true
+    },
+    {
+      "tenantId": "jiangjiejie",
+      "canonicalId": "custom_mod_jj_pepper",
+      "name": "胡椒粉",
+      "status": "canonical_with_legacy_candidate",
+      "optionsCount": 5,
+      "itemLinks": 0,
+      "categoryLinks": 0,
+      "requiresFieldParityCheck": true
+    },
+    {
+      "tenantId": "jiangjiejie",
+      "canonicalId": "custom_mod_jj_scallion",
+      "name": "蔥",
+      "status": "canonical_with_legacy_candidate",
+      "optionsCount": 1,
+      "itemLinks": 0,
+      "categoryLinks": 0,
+      "requiresFieldParityCheck": true
+    },
+    {
+      "tenantId": "jiangjiejie",
+      "canonicalId": "custom_mod_jj_sesame_oil",
+      "name": "香油",
+      "status": "canonical_with_legacy_candidate",
+      "optionsCount": 0,
+      "itemLinks": 0,
+      "categoryLinks": 0,
+      "requiresFieldParityCheck": true
+    },
+    {
+      "tenantId": "jiangjiejie",
+      "canonicalId": "custom_mod_jj_veg_soup",
+      "name": "蔬菜湯",
+      "status": "canonical_with_legacy_candidate",
+      "optionsCount": 2,
+      "itemLinks": 0,
+      "categoryLinks": 0,
+      "requiresFieldParityCheck": true
+    },
+    {
+      "tenantId": "jiangjiejie",
+      "canonicalId": "mg_1790486239369_1",
+      "name": "Size",
+      "status": "canonical_only",
+      "optionsCount": 2,
+      "itemLinks": 1,
+      "categoryLinks": 0,
+      "requiresFieldParityCheck": false
+    },
+    {
+      "tenantId": "blab_demo",
+      "source": "menu_customizations",
+      "sourceId": "demo_flavor",
+      "name": "✦ 口味選擇",
+      "status": "requires_backfill",
+      "proposedCanonicalId": "demo_flavor"
+    },
+    {
+      "tenantId": "blab_demo",
+      "source": "menu_customizations",
+      "sourceId": "demo_salt",
+      "name": "✦ 鹹度調整",
+      "status": "requires_backfill",
+      "proposedCanonicalId": "demo_salt"
+    },
+    {
+      "tenantId": "blab_demo",
+      "source": "menu_customizations",
+      "sourceId": "demo_spicy",
+      "name": "✦ 辣度選擇 (朝天椒)",
+      "status": "requires_backfill",
+      "proposedCanonicalId": "demo_spicy"
+    },
+    {
+      "tenantId": "blab_demo",
+      "source": "menu_customizations",
+      "sourceId": "demo_ingredients",
+      "name": "✦ 配料調整",
+      "status": "requires_backfill",
+      "proposedCanonicalId": "demo_ingredients"
+    },
+    {
+      "tenantId": "blab_demo",
+      "source": "menu_customizations",
+      "sourceId": "demo_addons",
+      "name": "✦ 加價配料 (選加)",
+      "status": "requires_backfill",
+      "proposedCanonicalId": "demo_addons"
+    },
+    {
+      "tenantId": "dapinglin",
+      "source": "menu_customizations",
+      "sourceId": "hjh_custom_sauce",
+      "name": "✦ 醬汁選擇",
+      "status": "requires_backfill",
+      "proposedCanonicalId": "hjh_custom_sauce"
+    },
+    {
+      "tenantId": "dapinglin",
+      "source": "menu_customizations",
+      "sourceId": "hjh_custom_spicy",
+      "name": "✦ 辣度選擇",
+      "status": "requires_backfill",
+      "proposedCanonicalId": "hjh_custom_spicy"
+    },
+    {
+      "tenantId": "dapinglin",
+      "source": "menu_customizations",
+      "sourceId": "hjh_custom_seasoning",
+      "name": "✦ 配料調整",
+      "status": "requires_backfill",
+      "proposedCanonicalId": "hjh_custom_seasoning"
+    },
+    {
+      "tenantId": "benmi",
+      "source": "menu_categories",
+      "sourceId": "cat_topping",
+      "name": "加料選項",
+      "optionsCount": 6,
+      "status": "requires_explicit_mapping",
+      "proposedCanonicalId": null
+    },
+    {
+      "tenantId": "zhadantongxue",
+      "source": "menu_categories",
+      "sourceId": "cat_zd_spicy",
+      "name": "加辣選項",
+      "optionsCount": 2,
+      "status": "requires_explicit_mapping",
+      "proposedCanonicalId": null
+    },
+    {
+      "tenantId": "zhadantongxue",
+      "source": "menu_categories",
+      "sourceId": "cat_zd_egg",
+      "name": "雞蛋選項",
+      "optionsCount": 2,
+      "status": "requires_explicit_mapping",
+      "proposedCanonicalId": null
+    },
+    {
+      "tenantId": "zhadantongxue",
+      "source": "menu_categories",
+      "sourceId": "cat_zd_lettuce",
+      "name": "生菜選項",
+      "optionsCount": 2,
+      "status": "requires_explicit_mapping",
+      "proposedCanonicalId": null
+    },
+    {
+      "tenantId": "zhadantongxue",
+      "source": "menu_categories",
+      "sourceId": "cat_zd_topping",
+      "name": "加料選項",
+      "optionsCount": 8,
+      "status": "requires_explicit_mapping",
+      "proposedCanonicalId": null
+    },
+    {
+      "tenantId": "weiweibao",
+      "source": "menu_categories",
+      "sourceId": "cat_wwb_custom_general",
+      "name": "客製化 (Tùy chọn chung)",
+      "optionsCount": 8,
+      "status": "requires_explicit_mapping",
+      "proposedCanonicalId": null
+    },
+    {
+      "tenantId": "weiweibao",
+      "source": "menu_categories",
+      "sourceId": "cat_wwb_custom_noodle",
+      "name": "客製化 - 干米線專用 (Tùy chọn bún)",
+      "optionsCount": 1,
+      "status": "requires_explicit_mapping",
+      "proposedCanonicalId": null
+    },
+    {
+      "tenantId": "weiweibao",
+      "source": "menu_categories",
+      "sourceId": "cat_wwb_combo_drink",
+      "name": "套餐加購飲料 (Mua kèm bánh mì - Đồng giá 50元)",
+      "optionsCount": 3,
+      "status": "requires_explicit_mapping",
+      "proposedCanonicalId": null
+    },
+    {
+      "tenantId": "xiaolan",
+      "source": "menu_categories",
+      "sourceId": "cat_xx_spicy",
+      "name": "辣度選擇",
+      "optionsCount": 5,
+      "status": "requires_explicit_mapping",
+      "proposedCanonicalId": null
+    },
+    {
+      "tenantId": "xiaolan",
+      "source": "menu_categories",
+      "sourceId": "cat_xx_custom",
+      "name": "客製選項 (不加配料)",
+      "optionsCount": 5,
+      "status": "requires_explicit_mapping",
+      "proposedCanonicalId": null
+    },
+    {
+      "tenantId": "xiaolan",
+      "source": "menu_categories",
+      "sourceId": "cat_xx_topping",
+      "name": "加料選項",
+      "optionsCount": 1,
+      "status": "requires_explicit_mapping",
+      "proposedCanonicalId": null
+    },
+    {
+      "tenantId": "thuyngason",
+      "source": "menu_categories",
+      "sourceId": "cat_tns_spicy",
+      "name": "辣度選擇 (Độ cay)",
+      "optionsCount": 4,
+      "status": "requires_explicit_mapping",
+      "proposedCanonicalId": null
+    },
+    {
+      "tenantId": "thuyngason",
+      "source": "menu_categories",
+      "sourceId": "cat_tns_custom",
+      "name": "客製選項 (Tùy chọn bỏ nguyên liệu)",
+      "optionsCount": 4,
+      "status": "requires_explicit_mapping",
+      "proposedCanonicalId": null
+    },
+    {
+      "tenantId": "thuyngason",
+      "source": "menu_categories",
+      "sourceId": "cat_tns_topping",
+      "name": "加料選項 (Thêm đồ)",
+      "optionsCount": 1,
+      "status": "requires_explicit_mapping",
+      "proposedCanonicalId": null
+    },
+    {
+      "tenantId": "haoshiguoshao",
+      "source": "menu_categories",
+      "sourceId": "mod_hs_noodle_type",
+      "name": "麵體選擇 (必選1項)",
+      "optionsCount": 5,
+      "status": "requires_explicit_mapping",
+      "proposedCanonicalId": null
+    },
+    {
+      "tenantId": "haoshiguoshao",
+      "source": "menu_categories",
+      "sourceId": "mod_hs_guoshao_addons",
+      "name": "加料加價購 (可複選)",
+      "optionsCount": 6,
+      "status": "requires_explicit_mapping",
+      "proposedCanonicalId": null
+    }
+  ],
+  "duplicateCandidates": [],
+  "itemBindings": [
+    {
+      "tenant_id": "jiangjiejie",
+      "item_id": "jj_combo_a1",
+      "item_name": "套餐 A (3隻鹹水雞翅+6樣菜)",
+      "group_id": "mg_1790486239369_1",
+      "group_name": "Size"
+    }
+  ]
+}
