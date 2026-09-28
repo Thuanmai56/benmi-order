@@ -15,7 +15,7 @@ export function buildModifierLibrary(bootstrap: any, groups: any[], options: any
     const canonical = matches[0];
     if (canonical) represented.add(canonical.id);
     const canonicalId = canonical?.id || null;
-    library.push({ ...group, source, sourceId: group.id, canonicalId,
+    library.push({ ...group, minSelection: canonical?.min_selection, maxSelection: canonical?.max_selection, source, sourceId: group.id, canonicalId,
       itemIds: itemLinks.filter(l => l.group_id === canonicalId).map(l => l.item_id),
       categoryIds: categoryLinks.filter(l => l.group_id === canonicalId).map(l => l.category_id)
     });

@@ -251,6 +251,8 @@ async function loadMenuData() {
               const resolvedScope = cust.scope || (linkedCatIds.length > 0 ? 'category' : 'order');
 
               return {
+                minSelection: menuModifierLibrary.find(group => group.sourceId === cust.id)?.minSelection,
+                maxSelection: menuModifierLibrary.find(group => group.sourceId === cust.id)?.maxSelection,
                 id: custId,
                 key: cust.key || `custom_${gIdx}`,
                 title: cust.title || cust.name || '',
@@ -260,6 +262,7 @@ async function loadMenuData() {
                 appliedCategories: normalizeAppliedCategories(linkedCatIds),
                 sortOrder: cust.sortOrder !== undefined ? cust.sortOrder : gIdx,
                 options: (cust.options || []).map(opt => ({
+                  ...opt,
                   id: opt.id || opt.name,
                   name: opt.name || opt.title || '',
                   price: opt.price !== undefined ? opt.price : (opt.surcharge !== undefined ? opt.surcharge : 0),
@@ -284,6 +287,40 @@ async function loadMenuData() {
           items: []
         });
       }
+    }
+
+    // Adapt canonical groups to the same editor model as legacy customizations.
+    const canonicalGroups = menuModifierLibrary.filter(group => group.source === 'canonical');
+    if (canonicalGroups.length) {
+      let section = categories.find(cat => cat.type === 'order_customization');
+      if (!section) {
+        section = { id: 'sec-flavor', type: 'order_customization', title: isLangVi ? 'Tùy chọn khẩu vị & biến thể' : '口味與客製化選擇', groups: [], items: [], sortOrder: 0 };
+        categories.push(section);
+      }
+      canonicalGroups.forEach(group => {
+        if (!section.groups.some(g => String(g.id) === String(group.id) || g.key === `canonical_${group.id}`)) {
+          section.groups.push({
+            ...group,
+            key: `canonical_${group.id}`,
+            title: group.name,
+            type: group.selectionType === 'multiple' ? 'checkbox' : 'radio',
+            isRequired: Boolean(group.isRequired),
+            scope: group.scope || ((group.categoryIds?.length || group.itemIds?.length) ? 'category' : 'order'),
+            appliedCategories: normalizeAppliedCategories(group.categoryIds || []),
+            appliedItems: [...(group.itemIds || [])],
+            sortOrder: group.sortOrder || 0,
+            options: (group.options || []).map(option => ({
+              ...option,
+              id: option.id || option.name,
+              name: option.name,
+              price: option.price !== undefined ? option.price : 0,
+              isOos: Boolean(option.isOutOfStock || option.is_out_of_stock),
+              sub_options: Array.isArray(option.sub_options) ? [...option.sub_options] : [],
+              originalName: option.name
+            }))
+          });
+        }
+      });
     }
 
     // The customization panel is a real sortable section. Keep its saved
@@ -756,27 +793,6 @@ function renderMenuCategories() {
       }
     });
 
-    // Canonical item groups have no legacy customization category. Keep their
-    // stored IDs and use the existing item editor instead of inventing categories.
-    const representedIds = new Set(optionCards.flatMap(card => {
-      const group = currentMenuData[card.catIndex]?.groups?.[card.groupIndex];
-      return group?.id ? [String(group.id), `mg_${group.id}`] : [];
-    }));
-    const canonicalGroups = new Map(menuModifierLibrary.filter(group => group.source === 'canonical').map(group => [String(group.id), group]));
-    currentMenuData.forEach((cat, catIndex) => {
-      if (isCustomizationCategory(cat)) return;
-      (cat.items || []).forEach((item, itemIndex) => {
-        (item.modifierGroups || []).forEach((group, groupIndex) => {
-          if (representedIds.has(String(group.id))) return;
-          representedIds.add(String(group.id));
-          const metadata = canonicalGroups.get(String(group.id));
-          optionCards.push({ catIndex, itemIndex, groupIndex, canonical: true,
-            scope: metadata?.scope === 'order' ? 'order' : 'item',
-            title: group.name, count: (group.options || []).length });
-        });
-      });
-    });
-
     ['order', 'item'].forEach(scope => {
       const cards = optionCards.filter(card => card.scope === scope);
       const section = document.createElement('details');
@@ -813,11 +829,6 @@ function renderMenuCategories() {
           if (activeCategoryIndex === card.catIndex && isMenuDirty) syncMenuDataFromDOM();
           isCategoryManagerOpen = false;
           isCustomGroupCreatorOpen = false;
-          if (card.canonical) {
-            openItemModifiersModal(card.catIndex, card.itemIndex);
-            document.querySelectorAll('#item-modifiers-modal-body .mod-group-card')[card.groupIndex]?.scrollIntoView({ block: 'nearest' });
-            return;
-          }
           activeCategoryIndex = card.catIndex;
           activeOptionGroupIndex = card.groupIndex;
           renderMenuCategories();
@@ -1097,7 +1108,8 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
   const titleEl = document.getElementById("menu-editor-title");
   if (titleEl) {
     const totalOptions = cat.groups ? cat.groups.reduce((acc, g) => acc + (g.options ? g.options.length : 0), 0) : 0;
-    titleEl.innerText = `${cat.title} ${t("menuItemTotalCount", { count: totalOptions })}`;
+    const selectedGroup = activeOptionGroupIndex !== null ? cat.groups?.[activeOptionGroupIndex] : null;
+    titleEl.innerText = `${selectedGroup?.title || cat.title} ${t("menuItemTotalCount", { count: selectedGroup ? selectedGroup.options.length : totalOptions })}`;
   }
 
   const banner = document.createElement("div");
@@ -1119,6 +1131,7 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
     container.appendChild(emptyDiv);
   } else {
     cat.groups.forEach((grp, gIdx) => {
+      if (activeOptionGroupIndex !== null && cat.groups[activeOptionGroupIndex] && gIdx !== activeOptionGroupIndex) return;
       const card = document.createElement("div");
       card.className = "cust-group-card";
       card.setAttribute("data-cust-group-index", gIdx);
@@ -1271,7 +1284,7 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
         `;
       });
 
-      const repeatsEditorTitle = cat.groups.length === 1 && String(grp.title || '').trim() === String(cat.title || '').trim();
+      const repeatsEditorTitle = (cat.groups.length === 1 && String(grp.title || '').trim() === String(cat.title || '').trim());
       card.innerHTML = `
         <div class="cust-group-header">
           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
@@ -1756,7 +1769,11 @@ function removeCustomizationGroup(cIdx, gIdx) {
       deleteCategoryAtIndex(cIdx);
       return;
     }
+    currentMenuData.forEach(category => (category.items || []).forEach(item => {
+      if (Array.isArray(item.modifierGroups)) item.modifierGroups = item.modifierGroups.filter(link => link.id !== grp.id && link.id !== `mg_${grp.id}`);
+    }));
     currentMenuData[cIdx].groups.splice(gIdx, 1);
+    activeOptionGroupIndex = null;
     markMenuDirty();
     renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), currentMenuData[cIdx], cIdx);
     renderMenuCategories();
@@ -1935,6 +1952,8 @@ function serializeMenuData(categories) {
         groups: (cat.groups || []).map((grp, gIdx) => ({
           id: grp.id,
           key: grp.key,
+          minSelection: grp.minSelection,
+          maxSelection: grp.maxSelection,
           title: grp.title,
           type: grp.type || 'radio',
           isRequired: Boolean(grp.isRequired),
@@ -1943,6 +1962,7 @@ function serializeMenuData(categories) {
           appliedItems: Array.isArray(grp.appliedItems) ? grp.appliedItems : [],
           sortOrder: grp.sortOrder !== undefined ? grp.sortOrder : (gIdx + 1),
           options: (grp.options || []).map(opt => ({
+            ...opt,
             id: opt.id || opt.name,
             name: opt.name,
             surcharge: opt.price || 0,
@@ -2000,15 +2020,17 @@ function serializeMenuData(categories) {
         sharedGroups.forEach(({ customCat, group }) => {
           const itemKey = String(item.id || `${cat.id}:${item.name}`);
           if (!(group.appliedItems || []).includes(itemKey)) return;
-          const linkedGroupId = customCat.type === 'order_customization' || customCat.id === 'sec-flavor' ? `mg_${group.id}` : group.id;
+          const linkedGroupId = group.id;
           if (linkedGroups.some(link => String(link.id || link.groupId || link.group_id) === String(linkedGroupId))) return;
           linkedGroups.push({
             id: linkedGroupId,
             name: group.title,
             selectionType: group.type === 'checkbox' ? 'multiple' : 'single',
             isRequired: Boolean(group.isRequired),
+            minSelection: group.minSelection,
+            maxSelection: group.maxSelection,
             sortOrder: group.sortOrder || 0,
-            options: (group.options || []).map(option => ({ id: option.id, name: option.name, price: option.price || 0, isDefault: false }))
+            options: (group.options || []).map(option => ({ ...option, id: option.id, name: option.name, price: option.price || 0, isDefault: Boolean(option.isDefault) }))
           });
         });
         if (Array.isArray(item.modifierGroups) || linkedGroups.length > 0) {
