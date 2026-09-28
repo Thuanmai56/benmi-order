@@ -28,7 +28,7 @@ test('Inline Custom Group Creator: orders.css has .cust-new-group-card defined',
 
 test('Inline Custom Group Creator: orders.html has bumped cache busters', () => {
   const html = fs.readFileSync(path.resolve(__dirname, '../orders.html'), 'utf-8');
-  assert.ok(/css\/orders\.css\?v=(20260927_inline_custom_group_v\d+|20260927_sidebar_sections_v\d+|20260928_toggle_products_options_v\d+)/.test(html), 'orders.css cache buster must be bumped');
-  assert.ok(/js\/orders-menu\.js\?v=(20260927_inline_custom_group_v\d+|20260927_sidebar_sections_v\d+|20260928_toggle_products_options_v\d+)/.test(html), 'orders-menu.js cache buster must be bumped');
-  assert.ok(/js\/orders-i18n\.js\?v=(20260927_inline_custom_group_v\d+|20260927_sidebar_sections_v\d+|20260928_toggle_products_options_v\d+)/.test(html), 'orders-i18n.js cache buster must be bumped');
+  assert.ok(/css\/orders\.css\?v=(20260927_inline_custom_group_v\d+|20260927_sidebar_sections_v\d+|20260928_toggle_products_options_v\d+|20260928_tree_customizations_v\d+)/.test(html), 'orders.css cache buster must be bumped');
+  assert.ok(/js\/orders-menu\.js\?v=(20260927_inline_custom_group_v\d+|20260927_sidebar_sections_v\d+|20260928_toggle_products_options_v\d+|20260928_tree_customizations_v\d+)/.test(html), 'orders-menu.js cache buster must be bumped');
+  assert.ok(/js\/orders-i18n\.js\?v=(20260927_inline_custom_group_v\d+|20260927_sidebar_sections_v\d+|20260928_toggle_products_options_v\d+|20260928_tree_customizations_v\d+)/.test(html), 'orders-i18n.js cache buster must be bumped');
 });
