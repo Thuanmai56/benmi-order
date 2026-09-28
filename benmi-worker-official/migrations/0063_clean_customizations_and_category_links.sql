@@ -14,5 +14,9 @@ CREATE INDEX IF NOT EXISTS idx_cat_mod_links ON category_modifier_links(tenant_i
 -- 2. Add scope column to modifier_groups (order | category | item)
 ALTER TABLE modifier_groups ADD COLUMN scope TEXT DEFAULT 'item';
 
--- 3. Clean phantom sec-flavor / order_customization records from menu_categories
+-- 3. Clean phantom items and phantom sec-flavor / order_customization records
+DELETE FROM menu_items WHERE category_id IN (
+    SELECT id FROM menu_categories WHERE slug = 'sec-flavor' OR category_type = 'order_customization'
+);
+
 DELETE FROM menu_categories WHERE slug = 'sec-flavor' OR category_type = 'order_customization';
