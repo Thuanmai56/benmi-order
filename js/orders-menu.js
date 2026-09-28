@@ -153,6 +153,36 @@ async function loadMenuData() {
     if (data.modifiers) {
       data.modifiers.forEach((mod, mIdx) => {
         if (!categories.some(c => c.id === mod.slug)) {
+          const modOptions = (mod.options || []).map(opt => ({
+            id: opt.id,
+            name: opt.name,
+            price: opt.price !== undefined ? opt.price : 0,
+            isOos: Boolean(opt.isOutOfStock || opt.is_out_of_stock),
+            badgeText: opt.badgeText || (opt.badge || ''),
+            isRecommended: opt.isRecommended || false,
+            originalName: opt.name
+          }));
+
+          const linkedCatIds = [];
+          if (Array.isArray(data.categoryModifierLinks)) {
+            data.categoryModifierLinks.forEach(link => {
+              if (link.groupId === mod.id || link.groupId === mod.slug) {
+                linkedCatIds.push(link.categoryId);
+              }
+            });
+          }
+          if (Array.isArray(data.catalog)) {
+            data.catalog.forEach(c => {
+              if (Array.isArray(c.appliedModifiers) && (c.appliedModifiers.includes('*') || c.appliedModifiers.includes(mod.id) || c.appliedModifiers.includes(mod.slug))) {
+                if (!linkedCatIds.includes(c.id)) linkedCatIds.push(c.id);
+              }
+              if (Array.isArray(c.modifierGroups) && c.modifierGroups.some(g => g.id === mod.id || g.id === mod.slug)) {
+                if (!linkedCatIds.includes(c.id)) linkedCatIds.push(c.id);
+              }
+            });
+          }
+          const modScope = mod.scope || (linkedCatIds.length > 0 ? 'category' : 'item');
+
           categories.push({
             id: mod.slug,
             databaseId: mod.id,
@@ -160,15 +190,18 @@ async function loadMenuData() {
             shortName: mod.shortName || mod.name,
             type: 'modifier',
             sortOrder: Number(mod.sortOrder !== undefined ? mod.sortOrder : (mod.sort_order !== undefined ? mod.sort_order : (100 + mIdx))),
-            items: mod.options.map(opt => ({
-              id: opt.id,
-              name: opt.name,
-              price: opt.price,
-              isOos: opt.isOutOfStock,
-              badgeText: opt.badgeText || (opt.badge || ''),
-              isRecommended: opt.isRecommended || false,
-              originalName: opt.name
-            }))
+            groups: [{
+              id: mod.id || mod.slug,
+              key: mod.slug,
+              title: mod.name,
+              type: mod.selectionType === 'single' ? 'radio' : 'checkbox',
+              isRequired: Boolean(mod.isRequired),
+              scope: modScope,
+              appliedCategories: linkedCatIds,
+              sortOrder: 0,
+              options: modOptions
+            }],
+            items: modOptions
           });
         }
       });
@@ -176,6 +209,7 @@ async function loadMenuData() {
 
     const hasCustomizations = (Array.isArray(data.customizations) && data.customizations.length > 0);
     const hasCustomInCatalog = (data.catalog && data.catalog.some(c => c.slug === 'sec-flavor' || c.categoryType === 'order_customization' || c.category_type === 'order_customization'));
+    const isLangVi = (typeof currentLang !== 'undefined' && currentLang === 'vi');
 
     if (hasCustomizations || hasCustomInCatalog) {
       if (!categories.some(c => c.type === 'order_customization' || c.id === 'sec-flavor')) {
@@ -224,8 +258,8 @@ async function loadMenuData() {
         categories.push({
           id: 'sec-flavor',
           databaseId: data.customizationCategoryId || null,
-          title: currentLang === 'vi' ? 'Tùy chọn khẩu vị & biến thể' : '口味與客製化選擇',
-          shortName: currentLang === 'vi' ? 'Khẩu vị' : '口味選擇',
+          title: isLangVi ? 'Tùy chọn khẩu vị & biến thể' : '口味與客製化選擇',
+          shortName: isLangVi ? 'Khẩu vị' : '口味選擇',
           type: 'order_customization',
           allowCustomization: false,
           appliedModifiers: [],
@@ -253,6 +287,10 @@ async function loadMenuData() {
       activeCategoryIndex = firstCatalog >= 0 ? firstCatalog : (currentMenuData.length > 0 ? 0 : -1);
     } else {
       let flavorIdx = currentMenuData.findIndex(c => c.type === 'order_customization' || c.id === 'sec-flavor' || c.slug === 'sec-flavor');
+      if (flavorIdx >= 0 && (!currentMenuData[flavorIdx].groups || currentMenuData[flavorIdx].groups.length === 0)) {
+        const modIdx = currentMenuData.findIndex(c => c.type === 'modifier');
+        if (modIdx >= 0) flavorIdx = modIdx;
+      }
       if (flavorIdx < 0) flavorIdx = currentMenuData.findIndex(c => isCustomizationCategory(c));
       activeCategoryIndex = flavorIdx >= 0 ? flavorIdx : (currentMenuData.length > 0 ? 0 : -1);
     }
@@ -590,6 +628,10 @@ function setMenuSidebarTab(tab) {
       const activeCat = currentMenuData[activeCategoryIndex];
       if (!activeCat || !isCustomizationCategory(activeCat)) {
         let flavorIdx = currentMenuData.findIndex(c => c.type === 'order_customization' || c.id === 'sec-flavor' || c.slug === 'sec-flavor');
+        if (flavorIdx >= 0 && (!currentMenuData[flavorIdx].groups || currentMenuData[flavorIdx].groups.length === 0)) {
+          const modIdx = currentMenuData.findIndex(c => c.type === 'modifier');
+          if (modIdx >= 0) flavorIdx = modIdx;
+        }
         if (flavorIdx < 0) {
           flavorIdx = currentMenuData.findIndex(c => isCustomizationCategory(c));
         }
@@ -802,11 +844,11 @@ function renderMenuCategories() {
     // 2. Modifier categories (cat.type === 'modifier')
     currentMenuData.forEach((cat, originalIndex) => {
       if (cat.type === 'modifier') {
-        const optCount = Array.isArray(cat.items) ? cat.items.length : 0;
+        const optCount = Array.isArray(cat.items) ? cat.items.length : (Array.isArray(cat.groups?.[0]?.options) ? cat.groups[0].options.length : 0);
         optionCards.push({
           type: 'modifier_category',
           catIndex: originalIndex,
-          groupIndex: null,
+          groupIndex: 0,
           title: cat.title,
           count: optCount
         });
@@ -846,14 +888,14 @@ function renderMenuCategories() {
           isCustomGroupCreatorOpen = false;
           activeCategoryIndex = card.catIndex;
 
-          if (card.type === 'flavor_group') {
+          if (card.type === 'flavor_group' || card.type === 'modifier_category') {
             activeOptionGroupIndex = card.groupIndex;
             renderMenuCategories();
             renderMenuCategoryEditor(card.catIndex);
 
             // Smooth scroll & pulse animation on the selected group card in editor
             setTimeout(() => {
-              const targetCard = document.querySelector(`.cust-group-card[data-cust-group-index="${card.groupIndex}"]`);
+              const targetCard = document.querySelector(`.cust-group-card[data-cust-group-index="${card.groupIndex || 0}"]`);
               if (targetCard) {
                 targetCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 targetCard.classList.add('cust-group-focus-pulse');
@@ -913,11 +955,15 @@ function renderMenuCategoryEditor(index) {
       deleteBtn.onclick = () => deleteCategoryAtIndex(index);
     }
     if (createBtn) {
-      createBtn.style.display = "inline-flex";
-      const customLabel = t("btnMenuAddCustomGroup") || (currentLang === 'vi' ? 'Thêm nhóm tùy chọn' : '新增客製化分組');
-      if (createBtnText) createBtnText.innerText = customLabel.replace(/^\+\s*/, '');
-      else createBtn.innerText = customLabel;
-      createBtn.onclick = () => openNewCustomGroupCreator(index);
+      if (cat.type === 'modifier') {
+        createBtn.style.display = "none";
+      } else {
+        createBtn.style.display = "inline-flex";
+        const customLabel = t("btnMenuAddCustomGroup") || (currentLang === 'vi' ? 'Thêm nhóm tùy chọn' : '新增客製化分組');
+        if (createBtnText) createBtnText.innerText = customLabel.replace(/^\+\s*/, '');
+        else createBtn.innerText = customLabel;
+        createBtn.onclick = () => openNewCustomGroupCreator(index);
+      }
     }
     renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), cat, index);
     return;
@@ -1093,6 +1139,34 @@ function renderMenuCategoryEditor(index) {
 function renderOrderCustomizationEditor(container, cat, cIdx) {
   if (!container) return;
   container.innerHTML = "";
+
+  if (cat.type === 'modifier' && (!cat.groups || cat.groups.length === 0)) {
+    const linkedCatIds = [];
+    const catalogCats = (currentMenuData || []).filter(c => !isCustomizationCategory(c));
+    catalogCats.forEach(c => {
+      if (Array.isArray(c.appliedModifiers) && (c.appliedModifiers.includes('*') || c.appliedModifiers.includes(cat.id) || c.appliedModifiers.includes(cat.databaseId))) {
+        linkedCatIds.push(c.id);
+      }
+    });
+    cat.groups = [{
+      id: cat.databaseId || cat.id,
+      key: cat.id,
+      title: cat.title,
+      type: 'checkbox',
+      isRequired: false,
+      scope: linkedCatIds.length > 0 ? 'category' : 'item',
+      appliedCategories: linkedCatIds,
+      sortOrder: 0,
+      options: (cat.items || []).map(it => ({
+        id: it.id || it.name,
+        name: it.name,
+        price: it.price !== null && it.price !== undefined ? it.price : 0,
+        isOos: Boolean(it.isOos),
+        sub_options: [],
+        originalName: it.name
+      }))
+    }];
+  }
 
   const titleEl = document.getElementById("menu-editor-title");
   if (titleEl) {
@@ -1416,7 +1490,7 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
       </div>
     `;
     container.appendChild(newCard);
-  } else {
+  } else if (cat.type !== 'modifier') {
     // Show dashed button to open creator
     const addGroupBtn = document.createElement("button");
     addGroupBtn.type = "button";
@@ -1500,11 +1574,22 @@ window.toggleNewGroupAppliedCategory = toggleNewGroupAppliedCategory;
 
 function setCustomizationGroupScope(cIdx, gIdx, scope) {
   syncMenuDataFromDOM();
-  const grp = currentMenuData[cIdx]?.groups?.[gIdx];
+  const cat = currentMenuData[cIdx];
+  const grp = cat?.groups?.[gIdx];
   if (!grp) return;
   grp.scope = scope;
-  if (scope === 'category' && !Array.isArray(grp.appliedCategories)) {
+  if (scope === 'category') {
+    if (!Array.isArray(grp.appliedCategories)) grp.appliedCategories = [];
+  } else if (scope === 'item') {
     grp.appliedCategories = [];
+    if (cat.type === 'modifier') {
+      const modIdentifier = cat.id || cat.databaseId;
+      currentMenuData.forEach(c => {
+        if (!isCustomizationCategory(c) && Array.isArray(c.appliedModifiers)) {
+          c.appliedModifiers = c.appliedModifiers.filter(m => m !== '*' && m !== modIdentifier && m !== cat.id && m !== cat.databaseId);
+        }
+      });
+    }
   }
   markMenuDirty();
   renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), currentMenuData[cIdx], cIdx);
@@ -1513,14 +1598,29 @@ window.setCustomizationGroupScope = setCustomizationGroupScope;
 
 function toggleGroupAppliedCategory(cIdx, gIdx, catId) {
   syncMenuDataFromDOM();
-  const grp = currentMenuData[cIdx]?.groups?.[gIdx];
+  const cat = currentMenuData[cIdx];
+  const grp = cat?.groups?.[gIdx];
   if (!grp) return;
   if (!Array.isArray(grp.appliedCategories)) grp.appliedCategories = [];
   const idx = grp.appliedCategories.indexOf(catId);
+  const targetCatalogCat = currentMenuData.find(c => c.id === catId || c.databaseId === catId);
+  const modIdentifier = cat.id || cat.databaseId;
+
   if (idx >= 0) {
     grp.appliedCategories.splice(idx, 1);
+    if (cat.type === 'modifier' && targetCatalogCat) {
+      if (!Array.isArray(targetCatalogCat.appliedModifiers)) targetCatalogCat.appliedModifiers = [];
+      targetCatalogCat.appliedModifiers = targetCatalogCat.appliedModifiers.filter(m => m !== '*' && m !== modIdentifier && m !== cat.id && m !== cat.databaseId);
+    }
   } else {
     grp.appliedCategories.push(catId);
+    if (cat.type === 'modifier' && targetCatalogCat) {
+      if (!Array.isArray(targetCatalogCat.appliedModifiers)) targetCatalogCat.appliedModifiers = [];
+      if (!targetCatalogCat.appliedModifiers.includes(modIdentifier)) {
+        targetCatalogCat.appliedModifiers.push(modIdentifier);
+      }
+      targetCatalogCat.allowCustomization = true;
+    }
   }
   markMenuDirty();
   renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), currentMenuData[cIdx], cIdx);
@@ -1638,6 +1738,10 @@ function saveRenameCustomizationGroup(cIdx, gIdx) {
   const grp = currentMenuData[cIdx]?.groups?.[gIdx];
   if (grp) {
     grp.title = trimmed;
+    if (currentMenuData[cIdx].type === 'modifier') {
+      currentMenuData[cIdx].title = trimmed;
+      currentMenuData[cIdx].shortName = trimmed;
+    }
     markMenuDirty();
     renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), currentMenuData[cIdx], cIdx);
     renderMenuCategories();
@@ -1680,6 +1784,10 @@ function removeCustomizationGroup(cIdx, gIdx) {
   if (!grp) return;
   if (confirm(t("confirmDeleteCustomGroup"))) {
     syncMenuDataFromDOM();
+    if (currentMenuData[cIdx].type === 'modifier') {
+      deleteCategoryAtIndex(cIdx);
+      return;
+    }
     currentMenuData[cIdx].groups.splice(gIdx, 1);
     markMenuDirty();
     renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), currentMenuData[cIdx], cIdx);
@@ -1733,6 +1841,18 @@ function addCustomizationOption(cIdx, gIdx) {
       sub_options: [],
       originalName: defaultName
     });
+    if (currentMenuData[cIdx].type === 'modifier') {
+      if (!Array.isArray(currentMenuData[cIdx].items)) currentMenuData[cIdx].items = [];
+      currentMenuData[cIdx].items.push({
+        id: newId,
+        name: defaultName,
+        price: 0,
+        isOos: false,
+        badgeText: '',
+        isRecommended: false,
+        originalName: defaultName
+      });
+    }
     markMenuDirty();
     renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), currentMenuData[cIdx], cIdx);
     renderMenuCategories();
@@ -1754,6 +1874,9 @@ function removeCustomizationOption(cIdx, gIdx, oIdx) {
   if (confirm(t("confirmDeleteItem"))) {
     syncMenuDataFromDOM();
     group.options.splice(oIdx, 1);
+    if (currentMenuData[cIdx].type === 'modifier' && Array.isArray(currentMenuData[cIdx].items)) {
+      currentMenuData[cIdx].items.splice(oIdx, 1);
+    }
     markMenuDirty();
     renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), currentMenuData[cIdx], cIdx);
     renderMenuCategories();
@@ -1805,6 +1928,12 @@ function syncMenuDataFromDOM() {
     const oIdx = parseInt(inp.getAttribute("data-cust-oidx"), 10);
     if (currentMenuData[cIdx]?.groups?.[gIdx]?.options?.[oIdx]) {
       currentMenuData[cIdx].groups[gIdx].options[oIdx].name = inp.value.trim();
+      if (currentMenuData[cIdx].type === 'modifier') {
+        if (!currentMenuData[cIdx].items) currentMenuData[cIdx].items = [];
+        if (currentMenuData[cIdx].items[oIdx]) {
+          currentMenuData[cIdx].items[oIdx].name = inp.value.trim();
+        }
+      }
     }
   });
   document.querySelectorAll("#menu-editor-body input[data-cust-price-cidx]").forEach(inp => {
@@ -1814,6 +1943,12 @@ function syncMenuDataFromDOM() {
     const val = inp.value.trim() === "" ? 0 : parseInt(inp.value, 10) || 0;
     if (currentMenuData[cIdx]?.groups?.[gIdx]?.options?.[oIdx]) {
       currentMenuData[cIdx].groups[gIdx].options[oIdx].price = val;
+      if (currentMenuData[cIdx].type === 'modifier') {
+        if (!currentMenuData[cIdx].items) currentMenuData[cIdx].items = [];
+        if (currentMenuData[cIdx].items[oIdx]) {
+          currentMenuData[cIdx].items[oIdx].price = val;
+        }
+      }
     }
   });
 }
@@ -2476,8 +2611,9 @@ async function saveStockStatus() {
     const group = currentMenuData[currentStockCidx]?.groups?.[currentStockGidx];
     targetItem = group?.options?.[currentStockOidx];
     if (!targetItem) return;
+    const cat = currentMenuData[currentStockCidx];
     body = {
-      category_slug: 'order_customization',
+      category_slug: (cat.type === 'modifier' ? cat.id : 'order_customization'),
       customization_key: group.key || group.id,
       name: targetItem.originalName || targetItem.name,
       status: status,
@@ -2510,6 +2646,11 @@ async function saveStockStatus() {
 
     // Update local state
     targetItem.isOos = (status === "out_of_stock");
+    if (isCustom && currentMenuData[targetCidx]?.type === 'modifier') {
+      if (currentMenuData[targetCidx].items?.[currentStockOidx]) {
+        currentMenuData[targetCidx].items[currentStockOidx].isOos = (status === "out_of_stock");
+      }
+    }
 
     const targetCidx = currentStockCidx;
     closeStockModal();
