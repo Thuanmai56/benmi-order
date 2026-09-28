@@ -373,6 +373,11 @@ function validateMenuUpdate(data: any): void {
           (group.type !== undefined && !['radio', 'checkbox'].includes(group.type))) {
         throw new Error('INVALID_CUSTOMIZATION_GROUP');
       }
+      if ((group.minSelection !== undefined && (!Number.isInteger(group.minSelection) || group.minSelection < 0)) ||
+          (group.maxSelection !== undefined && (!Number.isInteger(group.maxSelection) || group.maxSelection < 1)) ||
+          (group.minSelection !== undefined && group.maxSelection !== undefined && group.minSelection > group.maxSelection)) {
+        throw new Error('INVALID_MODIFIER_GROUP_BOUNDS');
+      }
       keys.add(group.key);
       if (group.id) ids.add(group.id);
       for (const option of group.options) {
@@ -503,6 +508,8 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
   const customIdMap = new Map((existingCustomizations || []).map(row => [row.key as string, row.id as string]));
   const ownedItemIds = new Set((existingItems || []).map(row => row.id as string));
   const ownedCustomIds = new Set((existingCustomizations || []).map(row => row.id as string));
+  const { results: existingGroups } = await env.DB.prepare('SELECT id FROM modifier_groups WHERE tenant_id = ?').bind(tenantId).all();
+  const ownedGroupIds = new Set((existingGroups || []).map(row => row.id as string));
 
   // Collect all modifier group and option IDs from payload for cross-tenant pre-flight verification
   const incomingGroupIds = new Set<string>();
@@ -526,6 +533,15 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
           }
         }
       }
+    }
+  }
+
+  const customSection = menuData.__customizations;
+  const customGroups = Array.isArray(customSection) ? customSection : (customSection?.groups || customSection?.list || []);
+  for (const group of customGroups) {
+    if (group.id) incomingGroupIds.add(String(group.id));
+    for (const option of group.options || []) {
+      if (option.id) incomingOptionMap.set(String(option.id), { groupId: String(group.id || ''), name: option.name || '' });
     }
   }
 
@@ -611,7 +627,7 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
   });
   const itemDeletes: string[] = deletions.items || [];
   const customDeletes: string[] = deletions.customizations || [];
-  if (itemDeletes.some(id => !ownedItemIds.has(id)) || customDeletes.some(id => !ownedCustomIds.has(id))) {
+  if (itemDeletes.some(id => !ownedItemIds.has(id)) || customDeletes.some(id => !ownedCustomIds.has(id) && !ownedGroupIds.has(id))) {
     throw new Error('UNKNOWN_MENU_DELETE_ID');
   }
   const activeCategoryIds: string[] = [];
@@ -635,7 +651,7 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
         const optionsList = Array.isArray(cust.options) ? cust.options : [];
         const optionsJson = JSON.stringify(optionsList);
         const custId = cust.id || customIdMap.get(custKey) || `custom_${tenantId}_${custKey}`;
-        if (cust.id && !ownedCustomIds.has(cust.id) && !cust.id.startsWith(`custom_${tenantId}_`)) {
+        if (cust.id && !ownedCustomIds.has(cust.id) && !ownedGroupIds.has(cust.id) && !cust.id.startsWith(`custom_${tenantId}_`)) {
           throw new Error('INVALID_CUSTOMIZATION_ID');
         }
         if (customDeletes.includes(custId)) throw new Error('CONFLICTING_MENU_DELETE');
@@ -661,8 +677,8 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
 
         // Sync with modifier_groups table with scope support
         const selectionType = custType === 'checkbox' ? 'multiple' : 'single';
-        const minSel = custIsRequired ? 1 : 0;
-        const maxSel = selectionType === 'single' ? 1 : 99;
+        const minSel = Number(cust.minSelection ?? (custIsRequired ? 1 : 0));
+        const maxSel = Number(cust.maxSelection ?? (selectionType === 'single' ? 1 : 99));
         processedGroupIds.add(modGroupId);
 
         statements.push(
@@ -693,14 +709,15 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
           statements.push(
             env.DB.prepare(
               `INSERT INTO modifier_options (id, tenant_id, group_id, name, price, is_default, sort_order, updated_at)
-               VALUES (?, ?, ?, ?, ?, 0, ?, datetime('now'))
+               VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
                ON CONFLICT(id) DO UPDATE SET
                  name = excluded.name,
                  price = excluded.price,
+                 is_default = excluded.is_default,
                  sort_order = excluded.sort_order,
                  updated_at = datetime('now')
                WHERE modifier_options.tenant_id = excluded.tenant_id`
-            ).bind(optId, tenantId, modGroupId, optName, optPrice, oIdx)
+            ).bind(optId, tenantId, modGroupId, optName, optPrice, (opt.isDefault || opt.is_default) ? 1 : 0, oIdx)
           );
         }
 
@@ -712,6 +729,10 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
               `DELETE FROM modifier_options WHERE tenant_id = ? AND group_id = ? AND id NOT IN (${optPlaceholders})`
             ).bind(tenantId, modGroupId, ...activeOptIds)
           );
+        }
+
+        if (activeOptIds.length === 0) {
+          statements.push(env.DB.prepare('DELETE FROM modifier_options WHERE tenant_id = ? AND group_id = ?').bind(tenantId, modGroupId));
         }
 
         // Synchronize category_modifier_links if category-level soft inheritance
@@ -955,7 +976,16 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
     }
   }
 
-  // Clean up any modifier groups and options that are no longer linked to any items OR categories OR order-scope
+  for (const id of customDeletes) {
+    for (const groupId of [id, `mg_${id}`]) {
+      statements.push(env.DB.prepare('DELETE FROM item_modifier_links WHERE tenant_id = ? AND group_id = ?').bind(tenantId, groupId));
+      statements.push(env.DB.prepare('DELETE FROM category_modifier_links WHERE tenant_id = ? AND group_id = ?').bind(tenantId, groupId));
+      statements.push(env.DB.prepare('DELETE FROM modifier_options WHERE tenant_id = ? AND group_id = ?').bind(tenantId, groupId));
+      statements.push(env.DB.prepare('DELETE FROM modifier_groups WHERE tenant_id = ? AND id = ?').bind(tenantId, groupId));
+    }
+  }
+
+  // Clean up any modifier groups and options that are no longer linked to any items OR categories OR order-scope OR customizations
   statements.push(
     env.DB.prepare(
       `DELETE FROM modifier_options WHERE tenant_id = ? AND group_id NOT IN (
@@ -964,8 +994,12 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
         SELECT group_id FROM category_modifier_links WHERE tenant_id = ?
         UNION
         SELECT id FROM modifier_groups WHERE tenant_id = ? AND scope = 'order'
+        UNION
+        SELECT id FROM menu_customizations WHERE tenant_id = ?
+        UNION
+        SELECT 'mg_' || id FROM menu_customizations WHERE tenant_id = ?
       )`
-    ).bind(tenantId, tenantId, tenantId, tenantId)
+    ).bind(tenantId, tenantId, tenantId, tenantId, tenantId, tenantId)
   );
   statements.push(
     env.DB.prepare(
@@ -975,8 +1009,12 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
         SELECT group_id FROM category_modifier_links WHERE tenant_id = ?
         UNION
         SELECT id FROM modifier_groups WHERE tenant_id = ? AND scope = 'order'
+        UNION
+        SELECT id FROM menu_customizations WHERE tenant_id = ?
+        UNION
+        SELECT 'mg_' || id FROM menu_customizations WHERE tenant_id = ?
       )`
-    ).bind(tenantId, tenantId, tenantId, tenantId)
+    ).bind(tenantId, tenantId, tenantId, tenantId, tenantId, tenantId)
   );
 
   // One batch keeps the entire menu update atomic if any statement fails.
