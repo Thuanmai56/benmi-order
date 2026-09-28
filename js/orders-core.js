@@ -960,22 +960,39 @@ function toggleSidebar(forceState) {
   if (!sidebar) return;
   const isExpanded = forceState !== undefined ? forceState : !sidebar.classList.contains("expanded");
   sidebar.classList.toggle("expanded", isExpanded);
+  updateSidebarToggleIcon(isExpanded);
   try {
     localStorage.setItem("pos_sidebar_expanded", isExpanded ? "1" : "0");
   } catch (e) {}
 }
 
+function updateSidebarToggleIcon(isExpanded) {
+  const button = document.getElementById("sidebar-toggle-btn");
+  if (!button) return;
+  const icon = button.querySelector(".sidebar-toggle-icon");
+  if (icon) {
+    icon.innerHTML = isExpanded
+      ? '<polyline points="15 18 9 12 15 6"></polyline>'
+      : '<line x1="4" x2="20" y1="12" y2="12"></line><line x1="4" x2="20" y1="6" y2="6"></line><line x1="4" x2="20" y1="18" y2="18"></line>';
+  }
+  const isVietnamese = typeof currentLang !== "undefined" && currentLang === "vi";
+  const label = isExpanded
+    ? (isVietnamese ? "Thu gọn thanh bên" : "收合側邊欄")
+    : (isVietnamese ? "Mở rộng thanh bên" : "展開側邊欄");
+  button.setAttribute("aria-label", label);
+  button.title = label;
+}
+
 function initSidebarState() {
   const sidebar = document.getElementById("app-sidebar");
   if (!sidebar) return;
+  let isExpanded = false;
   try {
     const saved = localStorage.getItem("pos_sidebar_expanded");
-    if (saved === "1") {
-      sidebar.classList.add("expanded");
-    } else {
-      sidebar.classList.remove("expanded");
-    }
+    isExpanded = saved === "1";
+    sidebar.classList.toggle("expanded", isExpanded);
   } catch (e) {}
+  updateSidebarToggleIcon(isExpanded);
 }
 
 function updateSidebarActive(tabName) {
