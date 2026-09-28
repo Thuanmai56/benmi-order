@@ -12,6 +12,24 @@ let isMenuLoadedCompletely = false;
 let isCustomGroupCreatorOpen = false;
 let newCustomGroupType = 'radio';
 let newCustomGroupRequired = false;
+let newCustomGroupScope = 'item'; // 'item' (cho món/combo) | 'global' (toàn đơn)
+
+function isCustomizationGroupGlobal(grp) {
+  if (!grp) return false;
+  if (typeof grp.isGlobal === 'boolean') {
+    return grp.isGlobal;
+  }
+  const title = (grp.title || grp.name || '').toLowerCase();
+  const key = (grp.key || grp.id || '').toLowerCase();
+  if (title.includes('tableware') || title.includes('餐具') || title.includes('dụng cụ') ||
+      title.includes('整單') || title.includes('toàn đơn') || title.includes('order spice') ||
+      title.includes('備註') || title.includes('ghi chú') || title.includes('dặn dò') ||
+      key.includes('tableware') || key.includes('spicy') || key.includes('note')) {
+    return true;
+  }
+  return false;
+}
+window.isCustomizationGroupGlobal = isCustomizationGroupGlobal;
 
 function getBenmiDefaultCategories() {
   return [
@@ -766,12 +784,14 @@ function renderMenuCategories() {
         if (Array.isArray(cat.groups) && cat.groups.length > 0) {
           cat.groups.forEach((grp, gIdx) => {
             const optCount = Array.isArray(grp.options) ? grp.options.length : 0;
+            const isGlobal = isCustomizationGroupGlobal(grp);
             optionCards.push({
               type: 'flavor_group',
               catIndex: originalIndex,
               groupIndex: gIdx,
               title: grp.title || (currentLang === 'vi' ? 'Nhóm tùy chọn' : '客製化分組'),
-              count: optCount
+              count: optCount,
+              isGlobal: isGlobal
             });
           });
         }
@@ -787,7 +807,8 @@ function renderMenuCategories() {
           catIndex: originalIndex,
           groupIndex: null,
           title: cat.title,
-          count: optCount
+          count: optCount,
+          isGlobal: false
         });
       }
     });
@@ -810,7 +831,10 @@ function renderMenuCategories() {
         cardEl.innerHTML = `
           <div class="menu-option-card-content">
             <div class="menu-option-card-title">${escapeHtml(card.title)}</div>
-            <div class="menu-option-card-subtitle">${card.count} ${escapeHtml(unitText)}</div>
+            <div class="menu-option-card-subtitle">
+              <span>${card.count} ${escapeHtml(unitText)}</span>
+              <span class="menu-option-scope-pill ${card.isGlobal ? 'scope-global' : 'scope-item'}">${card.isGlobal ? (t('badgeScopeGlobal') || 'Toàn đơn') : (t('badgeScopeItem') || 'Cho món')}</span>
+            </div>
           </div>
           <div class="menu-option-card-chevron" aria-hidden="true">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
@@ -1043,6 +1067,10 @@ function renderMenuCategoryEditor(index) {
           <span class="status-dot"></span>
           <span class="status-text">${oosText}</span>
         </button>
+        <button type="button" class="menu-item-mod-chip ${item.modifierGroups && item.modifierGroups.length > 0 ? '' : 'empty'}"
+          onclick="openItemModifiersModal(${index}, ${iIdx})" title="${t('btnItemModifiersModalOpen')}">
+          <span>${item.modifierGroups && item.modifierGroups.length > 0 ? `⚙️ ${t("btnItemModifiersCount", { count: item.modifierGroups.length })}` : `+ ${t('btnItemModifiersModalOpen')}`}</span>
+        </button>
         <button type="button" class="menu-item-settings-btn" onclick="openItemDetailModal(${index}, ${iIdx})" title="${t('btnItemSettings')}">
           ${settingsSvg}<span>${t("btnItemSettings")}</span>
         </button>
@@ -1165,6 +1193,10 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
             <span class="cust-group-title" id="cust-group-title-${gIdx}">${escapeHtml(grp.title)}</span>
             <button type="button" class="menu-item-btn btn-ghost" id="cust-group-rename-btn-${gIdx}" style="padding: 3px 6px; font-size: var(--pos-text-meta); border: 1px solid #cbd5e1; display:inline-flex; align-items:center; justify-content:center;"
               onclick="startRenameCustomizationGroup(${cIdx}, ${gIdx})" title="${t("btnCategoryRename")}">${(typeof POS_SVG !== 'undefined' && POS_SVG.edit) || ''}</button>
+            <button type="button" class="cust-scope-badge ${isCustomizationGroupGlobal(grp) ? 'scope-global' : 'scope-item'}"
+              onclick="toggleCustomizationGroupScope(${cIdx}, ${gIdx})" title="${isCustomizationGroupGlobal(grp) ? t('toggleScopeToItem') : t('toggleScopeToGlobal')}">
+              <span>${isCustomizationGroupGlobal(grp) ? `🌐 ${t('scopeGlobalBadge') || 'Toàn cục'}` : `🍽️ ${t('scopeItemBadge') || 'Cho món'}`}</span>
+            </button>
             <button type="button" style="cursor: pointer; border: none; background: transparent; padding: 0;"
               onclick="toggleCustomizationGroupType(${cIdx}, ${gIdx})" title="${grp.type === 'checkbox' ? t('toggleGroupTypeSingle') : t('toggleGroupTypeMultiple')}">
               ${typeBadge}
@@ -1234,6 +1266,18 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
 
       <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; padding: 12px; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; align-items: center;">
         <div style="display: flex; align-items: center; gap: 6px;">
+          <span style="font-size: 13px; font-weight: 700; color: #334155;">${t('scopeLabel') || (currentLang === 'vi' ? 'Phạm vi:' : '適用範圍：')}</span>
+          <button type="button" id="btn-new-grp-scope-item" class="btn" style="min-height: 40px; padding: 0 12px; font-size: 13px; font-weight: 700; border-radius: 8px; ${newCustomGroupScope === 'item' ? 'background: #e0f2fe; color: #0369a1; border: 1.5px solid #7dd3fc;' : 'background: #ffffff; color: #64748b; border: 1px solid #cbd5e1;'}" onclick="setNewGroupScope('item', ${cIdx})">
+            🍽️ ${t('scopeItemBadge') || (currentLang === 'vi' ? 'Cho món & combo' : '餐點選項')}
+          </button>
+          <button type="button" id="btn-new-grp-scope-global" class="btn" style="min-height: 40px; padding: 0 12px; font-size: 13px; font-weight: 700; border-radius: 8px; ${newCustomGroupScope === 'global' ? 'background: #fef3c7; color: #92400e; border: 1.5px solid #fcd34d;' : 'background: #ffffff; color: #64748b; border: 1px solid #cbd5e1;'}" onclick="setNewGroupScope('global', ${cIdx})">
+            🌐 ${t('scopeGlobalBadge') || (currentLang === 'vi' ? 'Toàn đơn (Toàn cục)' : '全單通用')}
+          </button>
+        </div>
+
+        <div style="height: 20px; width: 1px; background: #cbd5e1; margin: 0 4px;"></div>
+
+        <div style="display: flex; align-items: center; gap: 6px;">
           <span style="font-size: 13px; font-weight: 700; color: #334155;">${currentLang === 'vi' ? 'Kiểu chọn:' : '選擇模式：'}</span>
           <button type="button" id="btn-new-grp-type-radio" class="btn" style="min-height: 40px; padding: 0 12px; font-size: 13px; font-weight: 700; border-radius: 8px; ${newCustomGroupType === 'radio' ? 'background: #eff6ff; color: #2563eb; border: 1.5px solid #93c5fd;' : 'background: #ffffff; color: #64748b; border: 1px solid #cbd5e1;'}" onclick="setNewGroupType('radio', ${cIdx})">
             ${currentLang === 'vi' ? 'Chọn 1 (Đơn tuyển)' : '單選 (僅選一項)'}
@@ -1277,11 +1321,24 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
   }
 }
 
+function toggleCustomizationGroupScope(cIdx, gIdx) {
+  syncMenuDataFromDOM();
+  const grp = currentMenuData[cIdx]?.groups?.[gIdx];
+  if (!grp) return;
+  const currentGlobal = isCustomizationGroupGlobal(grp);
+  grp.isGlobal = !currentGlobal;
+  markMenuDirty();
+  renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), currentMenuData[cIdx], cIdx);
+  renderMenuCategories();
+}
+window.toggleCustomizationGroupScope = toggleCustomizationGroupScope;
+
 function openNewCustomGroupCreator(cIdx) {
   syncMenuDataFromDOM();
   isCustomGroupCreatorOpen = true;
   newCustomGroupType = 'radio';
   newCustomGroupRequired = false;
+  newCustomGroupScope = 'item';
   const cat = currentMenuData[cIdx];
   renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), cat, cIdx);
   setTimeout(() => {
@@ -1299,6 +1356,30 @@ function cancelNewCustomizationGroup(cIdx) {
   renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), cat, cIdx);
 }
 window.cancelNewCustomizationGroup = cancelNewCustomizationGroup;
+
+function setNewGroupScope(scope, cIdx) {
+  newCustomGroupScope = scope;
+  const itemBtn = document.getElementById("btn-new-grp-scope-item");
+  const globalBtn = document.getElementById("btn-new-grp-scope-global");
+  if (itemBtn && globalBtn) {
+    if (scope === 'item') {
+      itemBtn.style.background = "#e0f2fe";
+      itemBtn.style.color = "#0369a1";
+      itemBtn.style.border = "1.5px solid #7dd3fc";
+      globalBtn.style.background = "#ffffff";
+      globalBtn.style.color = "#64748b";
+      globalBtn.style.border = "1px solid #cbd5e1";
+    } else {
+      globalBtn.style.background = "#fef3c7";
+      globalBtn.style.color = "#92400e";
+      globalBtn.style.border = "1.5px solid #fcd34d";
+      itemBtn.style.background = "#ffffff";
+      itemBtn.style.color = "#64748b";
+      itemBtn.style.border = "1px solid #cbd5e1";
+    }
+  }
+}
+window.setNewGroupScope = setNewGroupScope;
 
 function setNewGroupType(type, cIdx) {
   newCustomGroupType = type;
@@ -1350,6 +1431,13 @@ function applyNewGroupQuickChip(text) {
     inp.style.borderColor = "#cbd5e1";
     inp.focus();
   }
+  const lower = (text || '').toLowerCase();
+  if (lower.includes('dụng cụ') || lower.includes('toàn đơn') || lower.includes('dặn dò') ||
+      lower.includes('餐具') || lower.includes('整單') || lower.includes('備註')) {
+    setNewGroupScope('global');
+  } else {
+    setNewGroupScope('item');
+  }
 }
 window.applyNewGroupQuickChip = applyNewGroupQuickChip;
 
@@ -1375,6 +1463,7 @@ function saveNewCustomizationGroup(cIdx) {
       title: trimmed,
       type: newCustomGroupType,
       isRequired: newCustomGroupRequired,
+      isGlobal: (newCustomGroupScope === 'global'),
       sortOrder: cat.groups.length,
       options: []
     });
@@ -3058,6 +3147,64 @@ window.handleSelectCreateType = handleSelectCreateType;
 let currentItemModifiersCidx = null;
 let currentItemModifiersIidx = null;
 let tempItemModifierGroups = [];
+let treeSelectedState = {}; // groupId -> Set of selected option IDs
+let treeGroupCollapsedState = {}; // groupId -> boolean (true = collapsed)
+
+function getAvailableOptionGroupsForItems() {
+  if (!currentMenuData || !Array.isArray(currentMenuData)) return [];
+  const list = [];
+
+  // 1. Groups from order_customization / sec-flavor where NOT global
+  currentMenuData.forEach((cat, cIdx) => {
+    if (cat.type === 'order_customization' || cat.id === 'sec-flavor' || cat.slug === 'sec-flavor') {
+      if (Array.isArray(cat.groups)) {
+        cat.groups.forEach((grp, gIdx) => {
+          if (!isCustomizationGroupGlobal(grp)) {
+            const rawOpts = Array.isArray(grp.options) ? grp.options : [];
+            list.push({
+              source: 'custom_group',
+              catIndex: cIdx,
+              groupIndex: gIdx,
+              id: grp.id || `custom_group_${gIdx}`,
+              title: grp.title || (currentLang === 'vi' ? 'Nhóm tùy chọn' : '客製化分組'),
+              type: grp.type === 'checkbox' ? 'multiple' : 'single',
+              isRequired: Boolean(grp.isRequired),
+              options: rawOpts.map((opt, oIdx) => ({
+                id: opt.id || `opt_${grp.id || gIdx}_${oIdx}`,
+                name: opt.name || '',
+                price: Number(opt.price) || 0
+              }))
+            });
+          }
+        });
+      }
+    }
+  });
+
+  // 2. Modifier categories (cat.type === 'modifier')
+  currentMenuData.forEach((cat, cIdx) => {
+    if (cat.type === 'modifier') {
+      const rawItems = Array.isArray(cat.items) ? cat.items : (Array.isArray(cat.options) ? cat.options : []);
+      list.push({
+        source: 'modifier_category',
+        catIndex: cIdx,
+        groupIndex: null,
+        id: cat.id || `mod_cat_${cIdx}`,
+        title: cat.title,
+        type: 'multiple',
+        isRequired: false,
+        options: rawItems.map((it, iIdx) => ({
+          id: it.id || `mod_item_${cat.id || cIdx}_${iIdx}`,
+          name: it.name || it.title || '',
+          price: Number(it.price) || 0
+        }))
+      });
+    }
+  });
+
+  return list;
+}
+window.getAvailableOptionGroupsForItems = getAvailableOptionGroupsForItems;
 
 function openItemModifiersModal(cIdx, iIdx) {
   syncMenuDataFromDOM();
@@ -3065,7 +3212,41 @@ function openItemModifiersModal(cIdx, iIdx) {
   currentItemModifiersCidx = cIdx;
   currentItemModifiersIidx = iIdx;
   const item = currentMenuData[cIdx].items[iIdx];
-  tempItemModifierGroups = JSON.parse(JSON.stringify(item.modifierGroups || []));
+
+  const availableGroups = getAvailableOptionGroupsForItems();
+  treeSelectedState = {};
+  treeGroupCollapsedState = {};
+
+  const existingModGroups = Array.isArray(item.modifierGroups) ? JSON.parse(JSON.stringify(item.modifierGroups)) : [];
+  const matchedGroupIndices = new Set();
+
+  availableGroups.forEach(libGrp => {
+    treeSelectedState[libGrp.id] = new Set();
+    const matchedIdx = existingModGroups.findIndex(mg => {
+      if (mg.sourceGroupId && mg.sourceGroupId === libGrp.id) return true;
+      if (mg.name && libGrp.title && mg.name.trim().toLowerCase() === libGrp.title.trim().toLowerCase()) return true;
+      return false;
+    });
+
+    if (matchedIdx !== -1) {
+      matchedGroupIndices.add(matchedIdx);
+      const matchedMg = existingModGroups[matchedIdx];
+      const mgOpts = Array.isArray(matchedMg.options) ? matchedMg.options : [];
+      libGrp.options.forEach(libOpt => {
+        const isOptSelected = mgOpts.some(mo => {
+          if (mo.id && libOpt.id && mo.id === libOpt.id) return true;
+          if (mo.name && libOpt.name && mo.name.trim().toLowerCase() === libOpt.name.trim().toLowerCase()) return true;
+          return false;
+        });
+        if (isOptSelected) {
+          treeSelectedState[libGrp.id].add(libOpt.id);
+        }
+      });
+    }
+  });
+
+  // Keep any non-library modifier groups as bespoke in tempItemModifierGroups
+  tempItemModifierGroups = existingModGroups.filter((_, idx) => !matchedGroupIndices.has(idx));
 
   const modal = document.getElementById("itemModifiersModal");
   const titleEl = document.getElementById("item-modifiers-modal-title");
@@ -3075,6 +3256,13 @@ function openItemModifiersModal(cIdx, iIdx) {
   }
   const subEl = document.getElementById("item-modifiers-modal-sub");
   if (subEl) subEl.innerText = t("itemModifiersModalSub");
+
+  const addBtn = document.getElementById("btn-add-item-modifier-group");
+  if (addBtn) addBtn.innerText = `+ ${t("btnAddModifierGroup") || (currentLang === 'vi' ? 'Thêm nhóm tùy chọn riêng' : '新增自訂分組')}`;
+  const cancelBtn = document.getElementById("btn-item-modifiers-cancel");
+  if (cancelBtn) cancelBtn.innerText = t("btnItemCancel") || (currentLang === 'vi' ? 'Hủy' : '取消');
+  const saveBtn = document.getElementById("btn-item-modifiers-save");
+  if (saveBtn) saveBtn.innerText = t("btnSaveModifiers") || (currentLang === 'vi' ? 'Lưu tùy chọn' : '完成設定');
 
   renderItemModifiersEditor();
   if (modal) modal.style.display = "flex";
@@ -3088,12 +3276,120 @@ function closeItemModifiersModal() {
   currentItemModifiersCidx = null;
   currentItemModifiersIidx = null;
   tempItemModifierGroups = [];
+  treeSelectedState = {};
+  treeGroupCollapsedState = {};
   if (returnState) {
     window._hubModalReturnState = null;
     openItemDetailModal(returnState.catIdx, returnState.itemIdx);
   }
 }
 window.closeItemModifiersModal = closeItemModifiersModal;
+
+function handleTreeGroupCheckboxChange(groupId, isChecked) {
+  const availableGroups = getAvailableOptionGroupsForItems();
+  const libGrp = availableGroups.find(g => g.id === groupId);
+  if (!libGrp) return;
+
+  if (!treeSelectedState[groupId]) treeSelectedState[groupId] = new Set();
+
+  if (isChecked) {
+    libGrp.options.forEach(opt => treeSelectedState[groupId].add(opt.id));
+  } else {
+    treeSelectedState[groupId].clear();
+  }
+
+  updateTreeGroupDOM(groupId, libGrp);
+}
+window.handleTreeGroupCheckboxChange = handleTreeGroupCheckboxChange;
+
+function handleTreeOptionCheckboxChange(groupId, optId, isChecked) {
+  const availableGroups = getAvailableOptionGroupsForItems();
+  const libGrp = availableGroups.find(g => g.id === groupId);
+  if (!libGrp) return;
+
+  if (!treeSelectedState[groupId]) treeSelectedState[groupId] = new Set();
+
+  if (isChecked) {
+    treeSelectedState[groupId].add(optId);
+  } else {
+    treeSelectedState[groupId].delete(optId);
+  }
+
+  updateTreeGroupDOM(groupId, libGrp);
+}
+window.handleTreeOptionCheckboxChange = handleTreeOptionCheckboxChange;
+
+function handleTreeRowClick(groupId, optId) {
+  if (!treeSelectedState[groupId]) treeSelectedState[groupId] = new Set();
+  const currentlyChecked = treeSelectedState[groupId].has(optId);
+  handleTreeOptionCheckboxChange(groupId, optId, !currentlyChecked);
+}
+window.handleTreeRowClick = handleTreeRowClick;
+
+function updateTreeGroupDOM(groupId, libGrp) {
+  const selCount = treeSelectedState[groupId] ? treeSelectedState[groupId].size : 0;
+  const totalCount = libGrp.options.length;
+  const isAllChecked = (totalCount > 0 && selCount === totalCount);
+  const isIndeterminate = (selCount > 0 && selCount < totalCount);
+
+  // Update group checkbox
+  const grpCb = document.querySelector(`.mod-tree-checkbox[data-tree-group-id="${groupId}"]`);
+  if (grpCb) {
+    grpCb.checked = isAllChecked;
+    grpCb.indeterminate = isIndeterminate;
+  }
+
+  // Update counter pill
+  const counterEl = document.getElementById(`tree-counter-${groupId}`);
+  if (counterEl) {
+    counterEl.innerText = t("labelTreeSelectedCount", { selected: selCount, total: totalCount });
+  }
+
+  // Update card border class
+  const cardEl = document.getElementById(`tree-group-card-${groupId}`);
+  if (cardEl) {
+    if (selCount > 0) cardEl.classList.add('has-selection');
+    else cardEl.classList.remove('has-selection');
+  }
+
+  // Update element checkboxes & row styles
+  libGrp.options.forEach(opt => {
+    const isSelected = treeSelectedState[groupId] ? treeSelectedState[groupId].has(opt.id) : false;
+    const rowEl = document.getElementById(`tree-row-${groupId}-${opt.id}`);
+    if (rowEl) {
+      if (isSelected) rowEl.classList.add('selected');
+      else rowEl.classList.remove('selected');
+      const optCb = rowEl.querySelector('input[type="checkbox"]');
+      if (optCb) optCb.checked = isSelected;
+    }
+  });
+}
+
+function toggleTreeGroupCollapse(groupId) {
+  treeGroupCollapsedState[groupId] = !treeGroupCollapsedState[groupId];
+  const isCollapsed = Boolean(treeGroupCollapsedState[groupId]);
+  const elList = document.getElementById(`tree-elements-${groupId}`);
+  if (elList) elList.style.display = isCollapsed ? 'none' : '';
+  const card = document.getElementById(`tree-group-card-${groupId}`);
+  const btn = card?.querySelector('.mod-tree-expand-btn svg');
+  if (btn) {
+    btn.style.transform = isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)';
+  }
+}
+window.toggleTreeGroupCollapse = toggleTreeGroupCollapse;
+
+function toggleTreeExpandAll(expand) {
+  const availableGroups = getAvailableOptionGroupsForItems();
+  availableGroups.forEach(grp => {
+    treeGroupCollapsedState[grp.id] = !expand;
+    const elList = document.getElementById(`tree-elements-${grp.id}`);
+    if (elList) elList.style.display = expand ? '' : 'none';
+    const card = document.getElementById(`tree-group-card-${grp.id}`);
+    const btn = card?.querySelector('.mod-tree-expand-btn svg');
+    if (btn) btn.style.transform = expand ? 'rotate(0deg)' : 'rotate(-90deg)';
+  });
+}
+window.toggleTreeExpandAll = toggleTreeExpandAll;
 
 function syncItemModifiersFromDOM() {
   const container = document.getElementById("item-modifiers-modal-body");
@@ -3131,96 +3427,213 @@ function renderItemModifiersEditor() {
   if (!container) return;
   container.innerHTML = "";
 
-  if (tempItemModifierGroups.length === 0) {
-    const empty = document.createElement("div");
-    empty.style.textAlign = "center";
-    empty.style.padding = "32px 16px";
-    empty.style.color = "#94a3b8";
-    empty.style.fontSize = "14px";
-    empty.innerText = t("noModifierGroups") || "此品項尚未設定專屬客製選項。點擊上方按鈕開始新增。";
-    container.appendChild(empty);
-    return;
-  }
+  const availableGroups = getAvailableOptionGroupsForItems();
 
-  // Notice banner: Explaining item-specific modifiers combine additively with category modifiers
+  // 1. Notice banner
   const noticeBanner = document.createElement("div");
-  noticeBanner.style.cssText = "background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 10px; padding: 10px 14px; font-size: 13px; color: #1e40af; font-weight: 600; display: flex; align-items: center; gap: 8px; margin-bottom: 4px;";
+  noticeBanner.style.cssText = "background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 10px; padding: 10px 14px; font-size: 13px; color: #1e40af; font-weight: 600; display: flex; align-items: center; gap: 8px;";
   noticeBanner.innerHTML = `
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
     <span>${escapeHtml(t("labelItemCustomizationNotice") || "此為品項專屬客製化，將與所屬分類繼承選項累加合併（不會被覆蓋）")}</span>
   `;
   container.appendChild(noticeBanner);
 
-  tempItemModifierGroups.forEach((grp, gIdx) => {
-    const card = document.createElement("div");
-    card.className = "mod-group-card";
-    card.setAttribute("data-group-index", gIdx);
+  // 2. Section 1: Thư viện tùy chọn chung (Tree Checkbox Selector)
+  const treeSection = document.createElement("div");
+  treeSection.className = "mod-tree-library-section";
 
-    const isSingle = grp.selectionType === 'single';
-    const isReq = Boolean(grp.isRequired);
+  const treeHeader = document.createElement("div");
+  treeHeader.className = "mod-tree-library-header";
+  treeHeader.innerHTML = `
+    <div>
+      <div class="mod-tree-library-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary, #2563eb);"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+        <span>${escapeHtml(t("labelTreeOptionLibrary") || 'Thư viện tùy chọn chung (Tích chọn cho món này)')}</span>
+      </div>
+      <div class="mod-tree-library-desc">${escapeHtml(t("labelTreeOptionLibraryDesc") || 'Có thể tích cả nhóm hoặc từng lựa chọn bên trong. Tích vào tên nhóm để chọn/bỏ chọn tất cả')}</div>
+    </div>
+    <div class="mod-tree-header-actions">
+      <button type="button" class="btn btn-ghost" onclick="toggleTreeExpandAll(true)" style="padding: 4px 10px; font-size: 12px; font-weight: 700; min-height: 34px; background: #fff; border: 1px solid #cbd5e1; border-radius: 6px;">
+        ${escapeHtml(t("labelExpandAll") || 'Mở tất cả')}
+      </button>
+      <button type="button" class="btn btn-ghost" onclick="toggleTreeExpandAll(false)" style="padding: 4px 10px; font-size: 12px; font-weight: 700; min-height: 34px; background: #fff; border: 1px solid #cbd5e1; border-radius: 6px;">
+        ${escapeHtml(t("labelCollapseAll") || 'Thu gọn')}
+      </button>
+    </div>
+  `;
+  treeSection.appendChild(treeHeader);
 
-    let optionsHtml = '';
-    (grp.options || []).forEach((opt, oIdx) => {
-      optionsHtml += `
-        <div class="mod-option-row" data-opt-index="${oIdx}">
-          <input type="text" class="mod-opt-name-input" value="${escapeHtml(opt.name || '')}" placeholder="${escapeHtml(t('labelOptionName') || '選項名稱')}" style="flex: 2; min-height: 48px; padding: 8px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 14px;" oninput="syncItemModifiersFromDOM()">
-          <label style="display: flex; align-items: center; gap: 4px; font-size: 13px; color: #475569; font-weight: 700; white-space: nowrap; min-height: 48px;">
-            <span>+$</span>
-            <input type="number" class="mod-opt-price-input" value="${opt.price || 0}" placeholder="0" style="width: 75px; min-height: 48px; padding: 6px 8px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 14px;" oninput="syncItemModifiersFromDOM()">
+  if (availableGroups.length === 0) {
+    const emptyHint = document.createElement("div");
+    emptyHint.style.cssText = "padding: 16px; text-align: center; color: #94a3b8; font-size: 13.5px; background: #ffffff; border-radius: 10px; border: 1px dashed #cbd5e1;";
+    emptyHint.innerText = t("labelNoTreeOptionGroups") || "Chưa có nhóm tùy chọn dùng chung nào cho món. Bạn có thể tạo nhóm trong tab Tùy chọn hoặc thêm tùy chọn riêng bên dưới.";
+    treeSection.appendChild(emptyHint);
+  } else {
+    const groupsContainer = document.createElement("div");
+    groupsContainer.className = "mod-tree-groups-container";
+
+    availableGroups.forEach(libGrp => {
+      const card = document.createElement("div");
+      const selCount = treeSelectedState[libGrp.id] ? treeSelectedState[libGrp.id].size : 0;
+      const totalCount = libGrp.options.length;
+      const isAllChecked = (totalCount > 0 && selCount === totalCount);
+      const isIndeterminate = (selCount > 0 && selCount < totalCount);
+      const isCollapsed = Boolean(treeGroupCollapsedState[libGrp.id]);
+      const isSingle = (libGrp.type === 'single');
+      const isReq = Boolean(libGrp.isRequired);
+
+      card.className = `mod-tree-group-card ${selCount > 0 ? 'has-selection' : ''}`;
+      card.id = `tree-group-card-${libGrp.id}`;
+
+      let optionsRowsHtml = '';
+      libGrp.options.forEach(opt => {
+        const isOptChecked = treeSelectedState[libGrp.id] ? treeSelectedState[libGrp.id].has(opt.id) : false;
+        optionsRowsHtml += `
+          <div class="mod-tree-element-row ${isOptChecked ? 'selected' : ''}" id="tree-row-${escapeHtml(libGrp.id)}-${escapeHtml(opt.id)}" onclick="handleTreeRowClick('${escapeHtml(libGrp.id)}', '${escapeHtml(opt.id)}')">
+            <label class="mod-tree-element-label" onclick="event.stopPropagation()">
+              <input type="checkbox" class="mod-tree-checkbox"
+                data-group-id="${escapeHtml(libGrp.id)}"
+                data-opt-id="${escapeHtml(opt.id)}"
+                ${isOptChecked ? 'checked' : ''}
+                onchange="handleTreeOptionCheckboxChange('${escapeHtml(libGrp.id)}', '${escapeHtml(opt.id)}', this.checked)">
+              <span class="mod-tree-element-name">${escapeHtml(opt.name)}</span>
+            </label>
+            ${opt.price ? `<span class="mod-tree-element-price">+$${opt.price}</span>` : `<span style="font-size: 12px; color: #94a3b8; font-weight: 600;">+$0</span>`}
+          </div>
+        `;
+      });
+
+      card.innerHTML = `
+        <div class="mod-tree-group-header" onclick="toggleTreeGroupCollapse('${escapeHtml(libGrp.id)}')">
+          <label class="mod-tree-group-label" onclick="event.stopPropagation()">
+            <input type="checkbox" class="mod-tree-checkbox"
+              data-tree-group-id="${escapeHtml(libGrp.id)}"
+              ${isAllChecked ? 'checked' : ''}
+              onchange="handleTreeGroupCheckboxChange('${escapeHtml(libGrp.id)}', this.checked)">
+            <span class="mod-tree-group-title">${escapeHtml(libGrp.title)}</span>
+            <span class="mod-tree-group-badge" style="${isSingle ? 'background:#ecfdf5;color:#047857;' : 'background:#e0e7ff;color:#4338ca;'}">
+              ${isSingle ? (currentLang === 'vi' ? 'Chọn 1' : '單選') : (currentLang === 'vi' ? 'Chọn nhiều' : '多選')}
+            </span>
+            ${isReq ? `<span class="mod-tree-group-badge" style="background:#fee2e2;color:#b91c1c;">${t("badgeRequired")}</span>` : ''}
           </label>
-          <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #64748b; font-weight: 600; cursor: pointer; user-select: none; min-height: 48px; padding: 0 8px;">
-            <input type="checkbox" class="mod-opt-def-checkbox" ${opt.isDefault ? 'checked' : ''} style="width: 20px; height: 20px; accent-color: #2563eb;" onchange="if (this.checked && '${grp.selectionType}' === 'single') { this.closest('.mod-options-container').querySelectorAll('.mod-opt-def-checkbox').forEach(cb => { if (cb !== this) cb.checked = false; }); } syncItemModifiersFromDOM();">
-            <span>${escapeHtml(t('labelModifierDefault') || (currentLang === 'vi' ? 'Mặc định' : '預設'))}</span>
+          <div class="mod-tree-group-meta">
+            <span class="mod-tree-counter-pill" id="tree-counter-${escapeHtml(libGrp.id)}">
+              ${t("labelTreeSelectedCount", { selected: selCount, total: totalCount })}
+            </span>
+            <button type="button" class="mod-tree-expand-btn" onclick="event.stopPropagation(); toggleTreeGroupCollapse('${escapeHtml(libGrp.id)}')" title="${isCollapsed ? (t('labelExpandAll') || 'Mở') : (t('labelCollapseAll') || 'Thu gọn')}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="transform: ${isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)'}; transition: transform 0.2s;"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+          </div>
+        </div>
+        <div class="mod-tree-elements-list" id="tree-elements-${escapeHtml(libGrp.id)}" style="${isCollapsed ? 'display: none;' : ''}">
+          ${optionsRowsHtml}
+        </div>
+      `;
+
+      groupsContainer.appendChild(card);
+    });
+
+    treeSection.appendChild(groupsContainer);
+  }
+  container.appendChild(treeSection);
+
+  // Set indeterminate state on group checkboxes in DOM
+  availableGroups.forEach(libGrp => {
+    const cb = container.querySelector(`.mod-tree-checkbox[data-tree-group-id="${libGrp.id}"]`);
+    if (cb) {
+      const selCount = treeSelectedState[libGrp.id] ? treeSelectedState[libGrp.id].size : 0;
+      const totalCount = libGrp.options.length;
+      cb.indeterminate = (selCount > 0 && selCount < totalCount);
+    }
+  });
+
+  // 3. Section 2: Tùy chọn riêng biệt (Bespoke manual groups for this item)
+  if (tempItemModifierGroups.length > 0) {
+    const bespokeSection = document.createElement("div");
+    bespokeSection.style.cssText = "display: flex; flex-direction: column; gap: 10px; margin-top: 12px;";
+
+    const bespokeHeader = document.createElement("div");
+    bespokeHeader.innerHTML = `
+      <div style="font-size: 15px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color: #64748b;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span>${escapeHtml(t("labelBespokeModifiersSection") || 'Tùy chọn riêng biệt (Tự tạo riêng cho món này)')}</span>
+      </div>
+      <div style="font-size: 12.5px; color: #64748b; margin-top: 2px;">${escapeHtml(t("labelBespokeModifiersDesc") || 'Dành cho các tùy chọn đặc thù của riêng món này, không dùng chung với các món khác')}</div>
+    `;
+    bespokeSection.appendChild(bespokeHeader);
+
+    tempItemModifierGroups.forEach((grp, gIdx) => {
+      const card = document.createElement("div");
+      card.className = "mod-group-card";
+      card.setAttribute("data-group-index", gIdx);
+
+      const isSingle = grp.selectionType === 'single';
+      const isReq = Boolean(grp.isRequired);
+
+      let optionsHtml = '';
+      (grp.options || []).forEach((opt, oIdx) => {
+        optionsHtml += `
+          <div class="mod-option-row" data-opt-index="${oIdx}">
+            <input type="text" class="mod-opt-name-input" value="${escapeHtml(opt.name || '')}" placeholder="${escapeHtml(t('labelOptionName') || '選項名稱')}" style="flex: 2; min-height: 48px; padding: 8px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 14px;" oninput="syncItemModifiersFromDOM()">
+            <label style="display: flex; align-items: center; gap: 4px; font-size: 13px; color: #475569; font-weight: 700; white-space: nowrap; min-height: 48px;">
+              <span>+$</span>
+              <input type="number" class="mod-opt-price-input" value="${opt.price || 0}" placeholder="0" style="width: 75px; min-height: 48px; padding: 6px 8px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 14px;" oninput="syncItemModifiersFromDOM()">
+            </label>
+            <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #64748b; font-weight: 600; cursor: pointer; user-select: none; min-height: 48px; padding: 0 8px;">
+              <input type="checkbox" class="mod-opt-def-checkbox" ${opt.isDefault ? 'checked' : ''} style="width: 20px; height: 20px; accent-color: #2563eb;" onchange="if (this.checked && '${grp.selectionType}' === 'single') { this.closest('.mod-options-container').querySelectorAll('.mod-opt-def-checkbox').forEach(cb => { if (cb !== this) cb.checked = false; }); } syncItemModifiersFromDOM();">
+              <span>${escapeHtml(t('labelModifierDefault') || (currentLang === 'vi' ? 'Mặc định' : '預設'))}</span>
+            </label>
+            <button type="button" class="btn btn-ghost btn-danger-ghost" onclick="removeItemModifierOption(${gIdx}, ${oIdx})" style="min-width: 48px; min-height: 48px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px;" title="${escapeHtml(t('btnItemDelete') || 'Xóa')}">
+              ${(typeof POS_SVG !== 'undefined' && POS_SVG.trash) || '✕'}
+            </button>
+          </div>
+        `;
+      });
+
+      let boundsHtml = '';
+      if (!isSingle) {
+        boundsHtml = `
+          <div class="mod-group-bounds-row" style="display: flex; align-items: center; gap: 12px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e2e8f0; flex-wrap: wrap;">
+            <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: #475569; min-height: 48px;">
+              <span>${escapeHtml(t('labelMinSelection') || 'Tối thiểu')}:</span>
+              <input type="number" min="0" class="mod-group-min-input" value="${grp.minSelection ?? (isReq ? 1 : 0)}" style="width: 70px; min-height: 48px; padding: 6px 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 14px;" oninput="syncItemModifiersFromDOM()">
+            </label>
+            <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: #475569; min-height: 48px;">
+              <span>${escapeHtml(t('labelMaxSelection') || 'Tối đa')}:</span>
+              <input type="number" min="1" class="mod-group-max-input" value="${grp.maxSelection ?? 99}" style="width: 70px; min-height: 48px; padding: 6px 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 14px;" oninput="syncItemModifiersFromDOM()">
+            </label>
+            <span style="font-size: 12px; color: #64748b;">${escapeHtml(t('labelMultipleBoundsHint') || '(0 = không giới hạn)')}</span>
+          </div>
+        `;
+      }
+
+      card.innerHTML = `
+        <div class="mod-group-header">
+          <input type="text" class="mod-group-name-input" value="${escapeHtml(grp.name || '')}" placeholder="${escapeHtml(t('labelModifierGroupName') || '群組名稱 (例: 辣度、加料)')}" style="flex: 2; min-width: 160px; min-height: 48px; padding: 8px 12px; font-size: 14.5px; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 8px;" oninput="syncItemModifiersFromDOM()">
+          <select class="mod-group-type-select" style="min-height: 48px; padding: 6px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13.5px; font-weight: 600; background: #f8fafc;" onchange="syncItemModifiersFromDOM(); renderItemModifiersEditor();">
+            <option value="single" ${isSingle ? 'selected' : ''}>${escapeHtml(t('optionSingleRadio') || '單選 (Radio)')}</option>
+            <option value="multiple" ${!isSingle ? 'selected' : ''}>${escapeHtml(t('optionMultipleCheckbox') || '多選 (Checkbox)')}</option>
+          </select>
+          <label style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; min-height: 48px; background: ${isReq ? '#fef2f2' : '#f8fafc'}; border: 1.5px solid ${isReq ? '#fca5a5' : '#cbd5e1'}; border-radius: 8px; cursor: pointer; user-select: none;">
+            <input type="checkbox" class="mod-group-req-checkbox" ${isReq ? 'checked' : ''} style="width: 20px; height: 20px; accent-color: #ef4444;" onchange="syncItemModifiersFromDOM(); this.closest('label').style.background = this.checked ? '#fef2f2' : '#f8fafc'; this.closest('label').style.borderColor = this.checked ? '#fca5a5' : '#cbd5e1';">
+            <span style="font-size: 13px; font-weight: 700; color: ${isReq ? '#b91c1c' : '#475569'};">${escapeHtml(t('labelModifierRequired') || '必選')}</span>
           </label>
-          <button type="button" class="btn btn-ghost btn-danger-ghost" onclick="removeItemModifierOption(${gIdx}, ${oIdx})" style="min-width: 48px; min-height: 48px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px;" title="${escapeHtml(t('btnItemDelete') || 'Xóa')}">
+          <button type="button" class="btn btn-ghost btn-danger-ghost" onclick="removeItemModifierGroup(${gIdx})" style="min-width: 48px; min-height: 48px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; margin-left: auto;" title="${escapeHtml(t('btnItemDelete') || 'Xóa')}">
             ${(typeof POS_SVG !== 'undefined' && POS_SVG.trash) || '✕'}
           </button>
         </div>
-      `;
-    });
-
-    let boundsHtml = '';
-    if (!isSingle) {
-      boundsHtml = `
-        <div class="mod-group-bounds-row" style="display: flex; align-items: center; gap: 12px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e2e8f0; flex-wrap: wrap;">
-          <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: #475569; min-height: 48px;">
-            <span>${escapeHtml(t('labelMinSelection') || 'Tối thiểu')}:</span>
-            <input type="number" min="0" class="mod-group-min-input" value="${grp.minSelection ?? (isReq ? 1 : 0)}" style="width: 70px; min-height: 48px; padding: 6px 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 14px;" oninput="syncItemModifiersFromDOM()">
-          </label>
-          <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: #475569; min-height: 48px;">
-            <span>${escapeHtml(t('labelMaxSelection') || 'Tối đa')}:</span>
-            <input type="number" min="1" class="mod-group-max-input" value="${grp.maxSelection ?? 99}" style="width: 70px; min-height: 48px; padding: 6px 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 14px;" oninput="syncItemModifiersFromDOM()">
-          </label>
-          <span style="font-size: 12px; color: #64748b;">${escapeHtml(t('labelMultipleBoundsHint') || '(0 = không giới hạn)')}</span>
+        ${boundsHtml}
+        <div class="mod-options-container" style="display: flex; flex-direction: column; gap: 6px; margin-top: 4px; padding-left: 8px; border-left: 2px solid #e2e8f0;">
+          ${optionsHtml}
+          <button type="button" class="btn btn-ghost" onclick="addItemModifierOption(${gIdx})" style="margin-top: 6px; align-self: flex-start; min-height: 48px; padding: 0 16px; font-size: 13px; font-weight: 700; color: #16a34a; background: #f0fdf4; border: 1.5px dashed #86efac; border-radius: 8px;">
+            + ${escapeHtml(t('btnAddModifierOption') || '新增選項')}
+          </button>
         </div>
       `;
-    }
-
-    card.innerHTML = `
-      <div class="mod-group-header">
-        <input type="text" class="mod-group-name-input" value="${escapeHtml(grp.name || '')}" placeholder="${escapeHtml(t('labelModifierGroupName') || '群組名稱 (例: 辣度、加料)')}" style="flex: 2; min-width: 160px; min-height: 48px; padding: 8px 12px; font-size: 14.5px; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 8px;" oninput="syncItemModifiersFromDOM()">
-        <select class="mod-group-type-select" style="min-height: 48px; padding: 6px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13.5px; font-weight: 600; background: #f8fafc;" onchange="syncItemModifiersFromDOM(); renderItemModifiersEditor();">
-          <option value="single" ${isSingle ? 'selected' : ''}>${escapeHtml(t('optionSingleRadio') || '單選 (Radio)')}</option>
-          <option value="multiple" ${!isSingle ? 'selected' : ''}>${escapeHtml(t('optionMultipleCheckbox') || '多選 (Checkbox)')}</option>
-        </select>
-        <label style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; min-height: 48px; background: ${isReq ? '#fef2f2' : '#f8fafc'}; border: 1.5px solid ${isReq ? '#fca5a5' : '#cbd5e1'}; border-radius: 8px; cursor: pointer; user-select: none;">
-          <input type="checkbox" class="mod-group-req-checkbox" ${isReq ? 'checked' : ''} style="width: 20px; height: 20px; accent-color: #ef4444;" onchange="syncItemModifiersFromDOM(); this.closest('label').style.background = this.checked ? '#fef2f2' : '#f8fafc'; this.closest('label').style.borderColor = this.checked ? '#fca5a5' : '#cbd5e1';">
-          <span style="font-size: 13px; font-weight: 700; color: ${isReq ? '#b91c1c' : '#475569'};">${escapeHtml(t('labelModifierRequired') || '必選')}</span>
-        </label>
-        <button type="button" class="btn btn-ghost btn-danger-ghost" onclick="removeItemModifierGroup(${gIdx})" style="min-width: 48px; min-height: 48px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; margin-left: auto;" title="${escapeHtml(t('btnItemDelete') || 'Xóa')}">
-          ${(typeof POS_SVG !== 'undefined' && POS_SVG.trash) || '✕'}
-        </button>
-      </div>
-      ${boundsHtml}
-      <div class="mod-options-container" style="display: flex; flex-direction: column; gap: 6px; margin-top: 4px; padding-left: 8px; border-left: 2px solid #e2e8f0;">
-        ${optionsHtml}
-        <button type="button" class="btn btn-ghost" onclick="addItemModifierOption(${gIdx})" style="margin-top: 6px; align-self: flex-start; min-height: 48px; padding: 0 16px; font-size: 13px; font-weight: 700; color: #16a34a; background: #f0fdf4; border: 1.5px dashed #86efac; border-radius: 8px;">
-          + ${escapeHtml(t('btnAddModifierOption') || '新增選項')}
-        </button>
-      </div>
-    `;
-    container.appendChild(card);
-  });
+      bespokeSection.appendChild(card);
+    });
+    container.appendChild(bespokeSection);
+  }
 }
 
 function addItemModifierGroup() {
@@ -3273,7 +3686,39 @@ window.removeItemModifierOption = removeItemModifierOption;
 
 function saveItemModifiersModal() {
   syncItemModifiersFromDOM();
-  const cleanGroups = tempItemModifierGroups.filter(grp => {
+
+  const compiledTreeGroups = [];
+  const availableGroups = getAvailableOptionGroupsForItems();
+
+  // 1. Compile selected groups from the Tree
+  availableGroups.forEach(libGrp => {
+    const selectedIds = treeSelectedState[libGrp.id];
+    if (selectedIds && selectedIds.size > 0) {
+      const selectedOptions = libGrp.options.filter(opt => selectedIds.has(opt.id));
+      if (selectedOptions.length > 0) {
+        const isSingle = (libGrp.type === 'single');
+        const isReq = Boolean(libGrp.isRequired);
+        compiledTreeGroups.push({
+          id: `mg_${libGrp.id}`,
+          sourceGroupId: libGrp.id,
+          name: libGrp.title,
+          selectionType: libGrp.type || 'single',
+          isRequired: isReq,
+          minSelection: isSingle ? (isReq ? 1 : 0) : (isReq ? 1 : 0),
+          maxSelection: isSingle ? 1 : 99,
+          options: selectedOptions.map(opt => ({
+            id: opt.id,
+            name: opt.name,
+            price: Number(opt.price) || 0,
+            isDefault: false
+          }))
+        });
+      }
+    }
+  });
+
+  // 2. Compile clean bespoke groups from tempItemModifierGroups
+  const cleanBespokeGroups = tempItemModifierGroups.filter(grp => {
     return grp.name && grp.name.trim() !== "";
   }).map(grp => {
     const cleanOpts = (grp.options || []).filter(opt => opt.name && opt.name.trim() !== "");
@@ -3307,10 +3752,12 @@ function saveItemModifiersModal() {
     };
   });
 
+  const finalModifierGroups = [...compiledTreeGroups, ...cleanBespokeGroups];
+
   if (currentItemModifiersCidx !== null && currentItemModifiersIidx !== null) {
     const item = currentMenuData[currentItemModifiersCidx]?.items?.[currentItemModifiersIidx];
     if (item) {
-      item.modifierGroups = cleanGroups;
+      item.modifierGroups = finalModifierGroups;
       item.itemType = (item.bundleRule && item.bundleRule.groups && item.bundleRule.groups.length > 0) ? 'bundle' : 'standard';
       markMenuDirty();
       renderMenuCategoryEditor(currentItemModifiersCidx);
