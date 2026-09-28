@@ -468,6 +468,11 @@ const I18N = {
     menuSectionCatalogTitle: "單品與特惠套餐",
     menuSectionComboTitle: "特惠套餐",
     menuSectionCustomTitle: "口味與客製化",
+    segProducts: "餐點",
+    segOptions: "客製選項",
+    btnAddOptionGroupTop: "新增客製化分組",
+    optionsCountUnit: "項選擇",
+    noOptionGroupsPrompt: "尚無客製化分組 (點擊上方按鈕立即建立)",
     btnAddCatalogCategory: "新增餐點分類",
     btnAddComboCategory: "新增套餐分類",
     btnCreateComboWizard: "建立特惠套餐",
@@ -1138,6 +1143,11 @@ const I18N = {
     menuSectionCatalogTitle: "Thực đơn món & Combo",
     menuSectionComboTitle: "Combo & Set ưu đãi",
     menuSectionCustomTitle: "Khẩu vị & Tùy chọn",
+    segProducts: "Món ăn",
+    segOptions: "Tùy chọn",
+    btnAddOptionGroupTop: "Thêm nhóm tùy chọn",
+    optionsCountUnit: "lựa chọn",
+    noOptionGroupsPrompt: "Chưa có nhóm tùy chọn nào (nhấn bên trên để tạo)",
     btnAddCatalogCategory: "Thêm phân loại món",
     btnAddComboCategory: "Thêm phân loại Combo",
     btnCreateComboWizard: "Tạo Combo mới",
@@ -2144,6 +2154,11 @@ function applyLanguageToDOM() {
   if (btnDeleteLogo) btnDeleteLogo.innerText = dict.btnDeleteLogo;
 
   // Menu Editor
+  const segProducts = document.getElementById("i18n-seg-products");
+  if (segProducts) segProducts.innerText = dict.segProducts || "餐點";
+  const segOptions = document.getElementById("i18n-seg-options");
+  if (segOptions) segOptions.innerText = dict.segOptions || "客製選項";
+
   const menuCatT = document.getElementById("i18n-menu-cat-title");
   if (menuCatT) menuCatT.innerText = dict.menuCatTitle;
   const menuCatS = document.getElementById("i18n-menu-cat-sub");
