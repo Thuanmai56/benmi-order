@@ -9,6 +9,7 @@ const compiled = ts.transpileModule(source.slice(source.indexOf('function valida
 const backend = vm.createContext({});
 vm.runInContext(compiled, backend);
 const migration0061Sql = fs.readFileSync('benmi-worker-official/migrations/0061_unified_bundle_and_customization_schema.sql', 'utf8');
+const migration0063Sql = fs.readFileSync('benmi-worker-official/migrations/0063_clean_customizations_and_category_links.sql', 'utf8');
 function fixture() {
   const db = new DatabaseSync(':memory:');
   db.exec(`PRAGMA foreign_keys=ON;
@@ -16,6 +17,7 @@ function fixture() {
     CREATE TABLE menu_items(id TEXT PRIMARY KEY, tenant_id TEXT, category_id TEXT REFERENCES menu_categories(id) ON DELETE RESTRICT, name TEXT, price REAL, badge_text TEXT, is_recommended INTEGER, sort_order INTEGER);
     CREATE TABLE menu_customizations(id TEXT PRIMARY KEY, tenant_id TEXT, key TEXT, title TEXT, type TEXT, sort_order INTEGER, options_json TEXT, updated_at TEXT, UNIQUE(tenant_id,key));`);
   db.exec(migration0061Sql);
+  db.exec(migration0063Sql);
   for (const tenant of ['a', 'b']) {
     db.prepare('INSERT INTO menu_categories(id,tenant_id,slug,category_type) VALUES(?,?,?,?)').run(`${tenant}_food`,tenant,'food','catalog');
     db.prepare('INSERT INTO menu_categories(id,tenant_id,slug,category_type) VALUES(?,?,?,?)').run(`${tenant}_custom`,tenant,'sec-flavor','order_customization');
@@ -107,8 +109,10 @@ test('customization-only data can be saved then its new section explicitly delet
   const e=editor(); e.run(`currentMenuData=[{id:'sec-flavor',databaseId:null,type:'order_customization',groups:[{id:'custom_a_flavor',key:'flavor',options:[{name:'Normal',price:0}]}]}]`);
   const payload=JSON.parse(JSON.stringify(e.run('serializeMenuData(currentMenuData)'))); await f.save(payload);
   const deletions=JSON.parse(JSON.stringify(e.run('getMenuDeletions(currentMenuData,[])')));
-  assert.deepEqual(deletions.categories,['a_sec-flavor']); await f.save({__delete:deletions});
-  assert.equal(f.db.prepare('SELECT id FROM menu_categories WHERE id=?').get('a_sec-flavor'),undefined);
+  assert.deepEqual(deletions.categories,[]);
+  assert.deepEqual(deletions.customizations,['custom_a_flavor']);
+  await f.save({__delete:deletions});
+  assert.equal(f.db.prepare('SELECT id FROM menu_customizations WHERE id=?').get('custom_a_flavor'),undefined);
 });
 test('successful empty complete bootstrap permits creating a menu',async()=>{
   const e=editor(); e.context.fetch=async()=>({ok:true,json:async()=>({menuComplete:true,catalog:[],modifiers:[]})});

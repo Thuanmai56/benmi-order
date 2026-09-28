@@ -1,6 +1,7 @@
 import { Env } from '../types/env';
 import { TenantContext } from '../types/tenant';
 import { resolveSecret } from '../utils/secrets';
+import { applyLineProjection, LineRuntimeError, readLineProjection } from './line-runtime';
 
 const TENANT_CACHE_TTL = 300; // 5 minutes
 
@@ -14,9 +15,11 @@ export async function resolveTenantContext(
   env: Env
 ): Promise<TenantContext | null> {
   const cacheKey = `tenant:${tenantId}:config_cache`;
+  const lineProjection = await readLineProjection(env, tenantId);
+  if (lineProjection && !lineProjection.is_active) return null;
 
   // 1. Check KV Cache
-  if (env.ORDER_STATE) {
+  if (env.ORDER_STATE && !lineProjection) {
     try {
       const cached = await env.ORDER_STATE.get(cacheKey);
       if (cached) {
@@ -99,7 +102,7 @@ export async function resolveTenantContext(
         };
 
         // Cache in KV
-        if (env.ORDER_STATE) {
+        if (env.ORDER_STATE && !lineProjection) {
           try {
             await env.ORDER_STATE.put(cacheKey, JSON.stringify(ctx), {
               expirationTtl: TENANT_CACHE_TTL
@@ -109,12 +112,15 @@ export async function resolveTenantContext(
           }
         }
 
-        return ctx;
+        return lineProjection ? applyLineProjection(env, ctx, lineProjection) : ctx;
       }
     } catch (e) {
+      if (lineProjection) throw new LineRuntimeError('LINE_RUNTIME_UNAVAILABLE');
       console.error(`[Tenant] D1 lookup error for tenant ${tenantId}:`, e);
     }
   }
+
+  if (lineProjection) throw new LineRuntimeError('LINE_RUNTIME_UNAVAILABLE');
 
   // 3. Fallback for "benmi" tenant using env variables (Backward compatibility before migration run)
   if (tenantId === 'benmi') {
