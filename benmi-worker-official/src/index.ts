@@ -8,6 +8,7 @@ import { getMenu, updateMenu, updateStockStatus, updateBundleRule, saveBundlePro
 import { handleAuth, handleAuthChange, handleCreateTempLink, handleVerifyTempLink } from './modules/auth';
 import { getImageList, getImage, updateImage, deleteImage } from './modules/image';
 import { resolveTenantContext } from './modules/tenant';
+import { handleLineWebhookProbe, LineRuntimeError } from './modules/line-runtime';
 import { handleAdminRoute } from './modules/admin';
 import { getTenantBootstrap } from './modules/bootstrap';
 import { getItemAnalyticsReport } from './modules/reports';
@@ -37,6 +38,8 @@ export default {
       if (webhookTenant && await tenantIsDeleted(env.DB, webhookTenant[1])) return json({ error: 'TENANT_DELETED' }, 410, { 'Cache-Control': 'no-store' });
       // 2. LINE Webhook Routes
       if (request.method === "POST") {
+        const probeMatch = path.match(/^\/webhook\/([a-zA-Z0-9_-]+)\/verify\/([a-f0-9-]{36})$/);
+        if (probeMatch) return handleLineWebhookProbe(request, env, probeMatch[1], probeMatch[2]);
         // Legacy Webhook Path (/webhook or /) -> Fallback to "benmi" tenant
         if (path === "/webhook" || path === "/") {
           const tenantCtx = await resolveTenantContext("benmi", env);
@@ -104,6 +107,7 @@ export default {
 
       return new Response("Not Found", { status: 404, headers: corsHeaders() });
     } catch (err: any) {
+      if (err instanceof LineRuntimeError) return json({ error: err.code }, err.status);
       console.error("[Fatal API Error]", err);
       return json({ error: err.message || "Internal Server Error", stack: err.stack }, 500);
     }
