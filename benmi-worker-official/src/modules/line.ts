@@ -4,6 +4,7 @@ import { TenantContext, resolveTenantOrderPrefix, generateStandardOrderId } from
 import { Order, DiningOption, OrderItemInput } from '../types/index';
 import { corsHeaders } from '../utils/http';
 import { resolveSecret } from '../utils/secrets';
+import { LineRuntimeError, readVerifiedLineWebhook } from './line-runtime';
 import { getNextDailyOrderSeq, saveOrder, getPendingMap, getOrderQueueAhead, getUserLatestActiveOrder } from './orders';
 import { callAI, FewShotExample } from '../integrations/groq';
 import { syncToGoogleSheets } from '../integrations/googleSheets';
@@ -451,7 +452,13 @@ export async function handleLineWebhook(
   ctx: ExecutionContext,
   tenantCtx?: TenantContext | null
 ): Promise<Response> {
-  const body: any = await request.json().catch(() => ({}));
+  let body: any;
+  try { body = await readVerifiedLineWebhook(request, env, tenantCtx); }
+  catch (error) {
+    const code = error instanceof LineRuntimeError ? error.code : 'LINE_WEBHOOK_UNAVAILABLE';
+    const status = error instanceof LineRuntimeError ? error.status : 503;
+    return Response.json({ error: code }, { status });
+  }
   const events = Array.isArray(body.events) ? body.events : [];
   const tenantId = tenantCtx?.tenantId || getTenantId(request);
   const brandName = tenantCtx?.brandName || tenantId;
