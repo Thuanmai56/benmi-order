@@ -9255,6 +9255,32 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
 .menu-display-order-row button:disabled { opacity: .3; cursor: default; }
 .menu-display-order-row.dragging { opacity: .5; }
 
+/* Scope sections in the option sidebar. */
+.menu-option-section { margin: 0 0 10px; }
+.menu-option-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 10px 14px;
+  margin: 0 12px 8px;
+  box-sizing: border-box;
+  border-radius: 10px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+.menu-option-section-heading::-webkit-details-marker { display: none; }
+.menu-option-section-heading > span:first-child { flex: 1; }
+.menu-option-section-count { color: #64748b; font-size: 12px; }
+.menu-option-section[open] > summary svg { transform: rotate(90deg); }
+.menu-option-section .menu-option-card { text-align: left; font-family: inherit; }
+.menu-option-section-heading:focus-visible,
+.menu-option-section .menu-option-card:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+
 
 
 /* Station tabs are enabled by the measured width and the chosen text size. */
