@@ -976,12 +976,11 @@ function renderMenuCategoryEditor(index) {
     const trashSvg = (typeof POS_SVG !== "undefined" && POS_SVG.trash) || "";
     const settingsSvg = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`;
 
-    const hasBundle = Boolean(item.bundleRule && Array.isArray(item.bundleRule.groups) && item.bundleRule.groups.length > 0);
-    const isBundleDisabled = window.currentTenantFeatures?.includes('disable_bundle_builder_v2');
+    const hasBundle = item.itemType === 'bundle' || Boolean(item.bundleRule && Array.isArray(item.bundleRule.groups) && item.bundleRule.groups.length > 0);
 
-    if (cat.type === 'catalog' && hasBundle && !isBundleDisabled) {
+    if (cat.type === 'catalog' && hasBundle) {
       row.classList.add("is-bundle-row");
-      const bundleCount = item.bundleRule.groups.length;
+      const bundleCount = item.bundleRule?.groups?.length || 0;
       const bundleTooltip = currentLang === 'vi'
         ? `${t("bundleBadge")} (${bundleCount} ${t("bundleGroupUnit")})`
         : `${t("bundleBadge")} (${bundleCount}${t("bundleGroupUnit")})`;
@@ -1011,6 +1010,7 @@ function renderMenuCategoryEditor(index) {
       </div>
       </div>
       <div class="cust-sub-options-container">
+        ${hasBundle ? `<span class="menu-combo-badge">${escapeHtml(t('bundleBadge'))}</span>` : ''}
         <button type="button" class="cust-add-sub-chip-btn" onclick="openItemDetailModal(${index}, ${iIdx})">${settingsSvg}<span>${t("btnItemSettings")}</span></button>
       </div>
     `;
@@ -4189,6 +4189,12 @@ function openItemDetailModal(cIdx, iIdx) {
   if (titleEl) {
     const itemName = item.name ? item.name.trim() : (t("newItemPlaceholder") || "Món mới");
     titleEl.innerText = `${t("itemDetailTitle")} - ${itemName}`;
+    if (item.itemType === 'bundle' || item.bundleRule?.groups?.length > 0) {
+      const comboBadge = document.createElement('span');
+      comboBadge.className = 'menu-combo-badge menu-combo-badge-modal';
+      comboBadge.textContent = t('bundleBadge');
+      titleEl.appendChild(comboBadge);
+    }
     titleEl.setAttribute("data-custom-title", "1");
   }
 
