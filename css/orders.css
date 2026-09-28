@@ -4570,18 +4570,21 @@ html.is-web-platform .store-activation-modal:not(.force-show) {
 }
 
 .menu-cat-item {
-  padding: 14px 16px;
-  border-bottom: 1px solid #f1f5f9;
+  width: calc(100% - 24px);
+  margin: 0 12px 8px;
+  padding: 12px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
   cursor: pointer;
   font-weight: 700;
   font-size: var(--pos-text-body);
   background: #ffffff;
-  border-left: 4px solid transparent;
+  border-left: 1.5px solid #e2e8f0;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
-  min-height: 48px;
+  min-height: 56px;
   transition: all 0.15s ease;
   user-select: none;
   box-sizing: border-box;
@@ -4589,13 +4592,25 @@ html.is-web-platform .store-activation-modal:not(.force-show) {
 
 .menu-cat-item:hover {
   background: #f8fafc;
+  border-color: #cbd5e1;
 }
 
 .menu-cat-item.active {
-  background: #f1f5f9;
-  border-left-color: var(--primary);
+  background: #fff1f2;
+  border-color: #fda4af;
   color: #0f172a;
   font-weight: 800;
+  box-shadow: 0 2px 8px rgba(225, 29, 72, 0.08);
+}
+
+.menu-sidebar-product-list {
+  border-bottom: 0;
+  padding: 8px 0 12px;
+}
+
+.menu-sidebar-add-category-btn {
+  margin-top: 8px;
+  margin-bottom: 12px;
 }
 
 .cat-type-badge {
