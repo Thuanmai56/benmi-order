@@ -757,6 +757,13 @@ function renderMenuCategories() {
     const listEl = document.createElement("div");
     listEl.className = "menu-sidebar-section menu-sidebar-product-list";
 
+    const actionCatalog = document.createElement("button");
+    actionCatalog.type = "button";
+    actionCatalog.className = "menu-add-option-group-btn menu-sidebar-add-category-btn";
+    actionCatalog.innerHTML = `${plusIcon}<span>${escapeHtml(t("btnAddCatalogCategory"))}</span>`;
+    actionCatalog.onclick = () => openAddCategoryModal('catalog');
+    listEl.appendChild(actionCatalog);
+
     catalogList.forEach(({ cat, originalIndex }) => {
       const div = document.createElement("div");
       div.className = `menu-cat-item ${activeCategoryIndex === originalIndex && !isCategoryManagerOpen ? 'active' : ''}`;
@@ -787,14 +794,6 @@ function renderMenuCategories() {
       };
       listEl.appendChild(div);
     });
-
-    // Bottom Action Buttons
-    const actionCatalog = document.createElement("button");
-    actionCatalog.type = "button";
-    actionCatalog.className = "menu-sidebar-action-btn";
-    actionCatalog.innerHTML = `${plusIcon}<span>${escapeHtml(t("btnAddCatalogCategory"))}</span>`;
-    actionCatalog.onclick = () => openAddCategoryModal('catalog');
-    listEl.appendChild(actionCatalog);
 
     container.appendChild(listEl);
 
