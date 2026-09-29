@@ -9098,6 +9098,9 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
   padding: 12px 16px;
 }
 .cust-cat-item-select > .cust-cat-chip.active { background: #ecfdf5; border-bottom-color: #a7f3d0; }
+.cust-cat-item-select.has-partial-selection { border-color: #93c5fd; box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.12); }
+.cust-cat-item-select > .cust-cat-chip.partial { background: #eff6ff; border-bottom-color: #bfdbfe; color: #1d4ed8; }
+.cust-cat-item-select > .cust-cat-chip.partial input { accent-color: #2563eb; }
 .cust-cat-item-select > .cust-cat-chip > input { flex-shrink: 0; }
 .cust-cat-item-select > .cust-cat-chip > span { overflow-wrap: anywhere; }
 .cust-cat-item-select .cust-cat-chip-count { margin-left: auto; flex-shrink: 0; }
