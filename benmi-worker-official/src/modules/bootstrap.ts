@@ -806,6 +806,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
         bundleRule: bundleRule,
         itemType: item.item_type || 'standard',
         modifierGroups: modGroups.length > 0 ? modGroups : undefined,
+        outOfStockUntil: item.out_of_stock_until || null,
         sortOrder: item.sort_order || 0
       });
     }
@@ -843,7 +844,8 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
             name: opt.name,
             price: opt.price,
             isDefault: idx === 0 && Boolean(cat.is_required),
-            isOutOfStock: opt.isOutOfStock
+            isOutOfStock: opt.isOutOfStock,
+            outOfStockUntil: opt.outOfStockUntil || null
           }))
         });
       } else {

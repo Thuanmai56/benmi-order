@@ -201,10 +201,11 @@ test('T1: Omitted modifier_groups preserves links while [] explicitly removes th
   assert.equal(f.db.prepare('SELECT count(*) n FROM item_modifier_links WHERE tenant_id=?').get('a').n, 1);
   assert.equal(f.db.prepare('SELECT count(*) n FROM modifier_groups WHERE tenant_id=?').get('a').n, 1);
 
-  // Third save: explicit [] clears the link and cleans up the orphaned group
+  // Third save: explicit [] clears the link but keeps the group available in the library.
   await f.save({ food: { One: { id: 'a_one', price: 25, modifier_groups: [] } } });
   assert.equal(f.db.prepare('SELECT count(*) n FROM item_modifier_links WHERE tenant_id=?').get('a').n, 0);
-  assert.equal(f.db.prepare('SELECT count(*) n FROM modifier_groups WHERE tenant_id=?').get('a').n, 0);
+  assert.equal(f.db.prepare('SELECT count(*) n FROM modifier_groups WHERE tenant_id=?').get('a').n, 1);
+  assert.equal(f.db.prepare('SELECT count(*) n FROM modifier_options WHERE tenant_id=?').get('a').n, 1);
 });
 
 test('T1: Options in two distinct groups with identical name are stored with respective prices', async () => {
@@ -312,6 +313,14 @@ test('T2: Incomplete bootstrap (menuComplete=false) blocks saving and notifies u
   await e.run('saveMenuData(true)');
   assert.equal(e.alerts.length, 1);
   assert.equal(e.alerts[0], 'menuIncompleteReload');
+});
+
+test('T5: POS surfaces a machine-readable menu validation code from HTTP 400', async () => {
+  const e = editor();
+  e.run(`isMenuLoadedCompletely = true; currentMenuData = [{id:'food',items:[{id:'a_one',name:'One',price:10}]}]; clearMenuDirty();`);
+  e.context.fetch = async () => ({ ok:false, status:400, json:async()=>({code:'CONFLICTING_MODIFIER_OPTION_CONFIG'}) });
+  await e.run('saveMenuData(true)');
+  assert.equal(e.alerts.at(-1), 'menuSaveFailAPI returned 400 (CONFLICTING_MODIFIER_OPTION_CONFIG)');
 });
 
 test('T2: Complete bootstrap (menuComplete=true) enables saving and preserves modifierGroups', async () => {
@@ -456,5 +465,138 @@ test('T4: POS I18N dictionary has all required modifier keys in both vi and zh-T
   });
 });
 
+test('T5: legacy customization can be assigned to a newly created item and survive a round trip', async () => {
+  const f = fixture();
+  const e = editor();
+  e.run(`currentMenuData = [
+    { id:'sec-flavor', type:'order_customization', title:'Customizations', groups:[{
+      id:'custom_a_flavor', key:'flavor', title:'Flavor', type:'radio', scope:'item',
+      appliedCategories:[], appliedItems:['food:New item'],
+      options:[{id:'Normal',name:'Normal',price:0,isDefault:true,isOos:false}]
+    }] },
+    { id:'food', type:'catalog', title:'Food', items:[{name:'New item',price:20}] }
+  ];`);
+  const payload = JSON.parse(JSON.stringify(e.run('serializeMenuData(currentMenuData)')));
+  await f.save(payload);
+  const itemId = payload.food['New item'].id;
+  assert.ok(itemId.startsWith('a_item_'));
+  assert.equal(f.db.prepare('SELECT group_id FROM item_modifier_links WHERE tenant_id=? AND item_id=?').get('a', itemId).group_id, 'custom_a_flavor');
+  assert.equal(f.db.prepare('SELECT is_default FROM modifier_options WHERE tenant_id=? AND id=?').get('a', 'Normal').is_default, 1);
+});
 
+test('T5: canonical modifier can be assigned to a newly created item without changing stable IDs', async () => {
+  const f = fixture();
+  f.db.prepare('INSERT INTO modifier_groups(id,tenant_id,name,selection_type,min_selection,max_selection,scope) VALUES(?,?,?,?,?,?,?)')
+    .run('mg_a_size', 'a', 'Size', 'single', 0, 1, 'item');
+  f.db.prepare('INSERT INTO modifier_options(id,tenant_id,group_id,name,price,is_default,sort_order) VALUES(?,?,?,?,?,?,?)')
+    .run('mo_a_small', 'a', 'mg_a_size', 'Small', 0, 1, 1);
+  const e = editor();
+  e.run(`currentMenuData = [
+    { id:'sec-flavor', type:'order_customization', title:'Customizations', groups:[{
+      id:'mg_a_size', source:'canonical', sourceId:'mg_a_size', canonicalId:'mg_a_size', key:'canonical_mg_a_size', title:'Size', type:'radio', scope:'item',
+      minSelection:0, maxSelection:1, appliedCategories:[], appliedItems:['food:New item'],
+      options:[{id:'mo_a_small',name:'Small',price:0,isDefault:true,isOos:false}]
+    }] },
+    { id:'food', type:'catalog', title:'Food', items:[{name:'New item',price:20}] }
+  ];`);
+  const payload = JSON.parse(JSON.stringify(e.run('serializeMenuData(currentMenuData)')));
+  await f.save(payload);
+  const itemId = payload.food['New item'].id;
+  assert.ok(itemId.startsWith('a_item_'));
+  assert.equal(f.db.prepare('SELECT group_id FROM item_modifier_links WHERE tenant_id=? AND item_id=?').get('a', itemId).group_id, 'mg_a_size');
+  assert.equal(f.db.prepare('SELECT count(*) n FROM modifier_groups WHERE tenant_id=? AND id=?').get('a', 'mg_a_size').n, 1);
+  assert.equal(f.db.prepare('SELECT is_default FROM modifier_options WHERE tenant_id=? AND id=?').get('a', 'mo_a_small').is_default, 1);
+  assert.equal(f.db.prepare('SELECT count(*) n FROM menu_customizations WHERE tenant_id=?').get('a').n, 2, 'canonical groups must not create additional legacy rows');
+});
 
+test('T5: item assignments load checked for legacy groups and pre-resolve IDs before serialization', async () => {
+  const e = editor();
+  e.context.fetch = async url => url.includes('modifier-library')
+    ? ({ ok: true, json: async () => ({ complete: true, groups: [{
+        id:'custom_a_flavor', source:'customization', sourceId:'custom_a_flavor', canonicalId:'mg_a_flavor', itemIds:['a_one'], categoryIds:[]
+      }] }) })
+    : ({ ok: true, json: async () => ({
+        menuComplete:true, catalog:[{ id:'a_food', slug:'food', name:'Food', items:[{ id:'a_one', name:'One', price:10 }] }],
+        modifiers:[], customizations:[{ id:'custom_a_flavor', key:'flavor', title:'Flavor', type:'radio', options:[{ id:'Normal', name:'Normal', price:0 }] }]
+      }) });
+  await e.run('loadMenuData()');
+  const loaded = e.run("currentMenuData.find(c => c.id === 'sec-flavor').groups[0]");
+  assert.deepEqual(Array.from(loaded.appliedItems), ['a_one']);
+  e.run("currentMenuData[1].items.push({name:'New item', price:20}); currentMenuData[0].groups[0].appliedItems.push('food:New item');");
+  const payload = JSON.parse(JSON.stringify(e.run('serializeMenuData(currentMenuData)')));
+  const newItemId = payload.food['New item'].id;
+  assert.ok(newItemId.startsWith('a_item_'));
+  assert.deepEqual(payload.__customizations.groups[0].appliedItems, ['a_one', newItemId]);
+  assert.equal(payload.food['New item'].modifier_groups[0].id, 'mg_a_flavor');
+});
+
+test('T5: category header reports mixed selection when only some category items are assigned', () => {
+  const e = editor();
+  const partial = e.run(`getModifierCategorySelectionState(
+    { appliedCategories: [], appliedItems: ['item_1'] },
+    { id: 'food', items: [{ id: 'item_1' }, { id: 'item_2' }] }
+  )`);
+  assert.equal(partial.checked, false);
+  assert.equal(partial.indeterminate, true);
+
+  const input = { indeterminate: false, getAttribute: () => 'mixed' };
+  e.context.testCategoryCheckbox = input;
+  e.run(`syncCategoryCheckboxIndeterminateState({ querySelectorAll: () => [testCategoryCheckbox] })`);
+  assert.equal(input.indeterminate, true);
+});
+
+test('T5: legacy modifier category can be assigned to a new item and represented by a tenant group', async () => {
+  const f = fixture();
+  f.db.prepare('INSERT INTO menu_categories(id,tenant_id,slug,name,category_type,allow_customization,applied_modifiers) VALUES(?,?,?,?,?,?,?)')
+    .run('a_topping', 'a', 'topping', 'Topping', 'modifier', 0, '[]');
+  f.db.prepare('INSERT INTO menu_items(id,tenant_id,category_id,name,price) VALUES(?,?,?,?,?)')
+    .run('a_topping_egg', 'a', 'a_topping', 'Egg', 10);
+  const e = editor();
+  e.run(`currentMenuData = [
+    { id:'topping', databaseId:'a_topping', type:'modifier', title:'Topping', items:[{id:'a_topping_egg',name:'Egg',price:10}], groups:[{
+      id:'a_topping', key:'topping', title:'Topping', type:'checkbox', scope:'item', appliedCategories:[], appliedItems:['food:New item'],
+      source:'modifier_category', sourceId:'a_topping', options:[{id:'a_topping_egg',name:'Egg',price:10,isDefault:false,isOos:false}]
+    }] },
+    { id:'food', type:'catalog', title:'Food', items:[{name:'New item',price:20}] }
+  ];`);
+  const payload = JSON.parse(JSON.stringify(e.run('serializeMenuData(currentMenuData)')));
+  await f.save(payload);
+  const itemId = payload.food['New item'].id;
+  assert.equal(f.db.prepare('SELECT group_id FROM item_modifier_links WHERE tenant_id=? AND item_id=?').get('a', itemId).group_id, 'a_topping');
+  assert.equal(f.db.prepare('SELECT name FROM modifier_options WHERE tenant_id=? AND group_id=?').get('a', 'a_topping').name, 'Egg');
+  assert.equal(f.db.prepare('SELECT count(*) n FROM menu_items WHERE tenant_id=? AND category_id=?').get('a', 'a_topping').n, 1);
+});
+
+test('T5: alias identity keeps the legacy record ID and canonical link ID, and repeated saves are idempotent', async () => {
+  const f = fixture();
+  f.db.prepare('INSERT INTO modifier_groups(id,tenant_id,name,selection_type,min_selection,max_selection,scope) VALUES(?,?,?,?,?,?,?)')
+    .run('mg_a_flavor', 'a', 'Flavor', 'single', 0, 1, 'item');
+  f.db.prepare('INSERT INTO modifier_options(id,tenant_id,group_id,name,price,is_default,sort_order) VALUES(?,?,?,?,?,?,?)')
+    .run('mo_a_normal', 'a', 'mg_a_flavor', 'Normal', 0, 1, 0);
+  const e = editor();
+  e.run(`currentMenuData = [
+    {id:'sec-flavor',type:'order_customization',title:'Options',groups:[{
+      id:'custom_a_flavor',key:'flavor',title:'Flavor',type:'radio',scope:'item',source:'customization',sourceId:'custom_a_flavor',canonicalId:'mg_a_flavor',
+      minSelection:0,maxSelection:1,appliedCategories:[],appliedItems:['food:New item'],options:[{id:'mo_a_normal',name:'Normal',price:0,isDefault:true}]
+    }]},
+    {id:'food',type:'catalog',title:'Food',items:[{name:'New item',price:20}]}
+  ];`);
+  const payload = JSON.parse(JSON.stringify(e.run('serializeMenuData(currentMenuData)')));
+  await f.save(payload);
+  await f.save(payload);
+  const itemId = payload.food['New item'].id;
+  assert.ok(f.db.prepare('SELECT id FROM menu_customizations WHERE tenant_id=? AND id=?').get('a', 'custom_a_flavor'));
+  assert.equal(f.db.prepare('SELECT count(*) n FROM menu_customizations WHERE tenant_id=?').get('a').n, 2);
+  assert.equal(f.db.prepare('SELECT group_id FROM item_modifier_links WHERE tenant_id=? AND item_id=?').get('a', itemId).group_id, 'mg_a_flavor');
+  assert.equal(f.db.prepare('SELECT count(*) n FROM modifier_options WHERE tenant_id=? AND group_id=?').get('a', 'mg_a_flavor').n, 1);
+  assert.equal(f.db.prepare('SELECT is_default FROM modifier_options WHERE tenant_id=? AND id=?').get('a', 'mo_a_normal').is_default, 1);
+});
+
+test('T5: an unassigned canonical group remains in the library after an unrelated menu save', async () => {
+  const f = fixture();
+  f.db.prepare('INSERT INTO modifier_groups(id,tenant_id,name,scope) VALUES(?,?,?,?)').run('mg_a_unused', 'a', 'Unused', 'item');
+  f.db.prepare('INSERT INTO modifier_options(id,tenant_id,group_id,name,price) VALUES(?,?,?,?,?)').run('mo_a_unused', 'a', 'mg_a_unused', 'Choice', 0);
+  await f.save({ food: { One: { id: 'a_one', price: 11 } } });
+  assert.equal(f.db.prepare('SELECT count(*) n FROM modifier_groups WHERE tenant_id=? AND id=?').get('a', 'mg_a_unused').n, 1);
+  assert.equal(f.db.prepare('SELECT count(*) n FROM modifier_options WHERE tenant_id=? AND group_id=?').get('a', 'mg_a_unused').n, 1);
+});
