@@ -369,6 +369,8 @@ function validateMenuUpdate(data: any): void {
     for (const group of groups) {
       if (!record(group) || !text(group.key) || keys.has(group.key) ||
           (group.id !== undefined && (!text(group.id) || ids.has(group.id))) ||
+          (group.sourceId !== undefined && !text(group.sourceId)) ||
+          (group.canonicalId !== undefined && !text(group.canonicalId)) ||
           !Array.isArray(group.options) ||
           (group.type !== undefined && !['radio', 'checkbox'].includes(group.type))) {
         throw new Error('INVALID_CUSTOMIZATION_GROUP');
@@ -394,6 +396,47 @@ function validateMenuUpdate(data: any): void {
   // Registry to catch conflicting definitions for the same modifier group or option ID in the payload
   const payloadGroupConfigs = new Map<string, string>();
   const payloadOptionConfigs = new Map<string, string>();
+  const registerModifierDefinition = (group: any, stableGroupId: string): void => {
+    const isRequired = Boolean(group.isRequired ?? group.is_required);
+    const selectionType = group.selectionType ?? group.selection_type ?? (group.type === 'checkbox' ? 'multiple' : 'single');
+    const minSelection = group.minSelection ?? group.min_selection;
+    const maxSelection = group.maxSelection ?? group.max_selection;
+    const groupConfig = JSON.stringify({
+      name: String(group.name ?? group.title ?? '').trim(),
+      selection_type: selectionType,
+      is_required: isRequired,
+      min_selection: Number(minSelection ?? (isRequired ? 1 : 0)),
+      max_selection: Number(maxSelection ?? (selectionType === 'single' ? 1 : 99))
+    });
+    if (payloadGroupConfigs.has(stableGroupId) && payloadGroupConfigs.get(stableGroupId) !== groupConfig) {
+      throw new Error('CONFLICTING_MODIFIER_GROUP_CONFIG');
+    }
+    payloadGroupConfigs.set(stableGroupId, groupConfig);
+
+    for (const option of Array.isArray(group.options) ? group.options : []) {
+      if (!option?.id) continue;
+      const optionPrice = Number(option.price ?? option.surcharge ?? 0);
+      const optionConfig = JSON.stringify({
+        groupId: stableGroupId,
+        name: String(option.name ?? option.title ?? '').trim(),
+        price: optionPrice,
+        isDefault: Boolean(option.isDefault ?? option.is_default),
+        isOutOfStock: Boolean(option.isOos ?? option.isOutOfStock ?? option.is_out_of_stock),
+        subOptions: option.sub_options ?? option.subOptions ?? []
+      });
+      if (payloadOptionConfigs.has(String(option.id)) && payloadOptionConfigs.get(String(option.id)) !== optionConfig) {
+        throw new Error('CONFLICTING_MODIFIER_OPTION_CONFIG');
+      }
+      payloadOptionConfigs.set(String(option.id), optionConfig);
+    }
+  };
+
+  const customSection = data.__customizations;
+  const customGroups = Array.isArray(customSection) ? customSection : record(customSection) ? (customSection.groups ?? customSection.list ?? []) : [];
+  for (const group of customGroups) {
+    const stableGroupId = String(group.canonicalId || group.id || '');
+    if (stableGroupId) registerModifierDefinition(group, stableGroupId);
+  }
 
   for (const [key, category] of Object.entries(data) as [string, any][]) {
     if (key === '__delete' || key === '__customizations') continue;
@@ -458,31 +501,24 @@ function validateMenuUpdate(data: any): void {
                   }
                   seenOptIds.add(optId);
 
-                  const optCanonical = JSON.stringify({
-                    groupId: grpId || '',
-                    name: optName.trim(),
-                    price: Number(optPrice ?? 0)
-                  });
-                  if (payloadOptionConfigs.has(optId) && payloadOptionConfigs.get(optId) !== optCanonical) {
-                    throw new Error('CONFLICTING_MODIFIER_OPTION_CONFIG');
-                  }
-                  payloadOptionConfigs.set(optId, optCanonical);
+              const optCanonical = JSON.stringify({
+                groupId: grpId || '',
+                name: optName.trim(),
+                price: Number(optPrice ?? 0),
+                isDefault: Boolean(opt.isDefault ?? opt.is_default),
+                isOutOfStock: Boolean(opt.isOos ?? opt.isOutOfStock ?? opt.is_out_of_stock),
+                subOptions: opt.sub_options ?? opt.subOptions ?? []
+              });
+              if (payloadOptionConfigs.has(optId) && payloadOptionConfigs.get(optId) !== optCanonical) {
+                throw new Error('CONFLICTING_MODIFIER_OPTION_CONFIG');
+              }
+              payloadOptionConfigs.set(optId, optCanonical);
                 }
               }
             }
 
             if (grpId) {
-              const grpCanonical = JSON.stringify({
-                name: (grpName || '').trim(),
-                selection_type: selType || 'single',
-                is_required: Boolean(grp.isRequired ?? grp.is_required),
-                min_selection: Number(minSel ?? (Boolean(grp.isRequired ?? grp.is_required) ? 1 : 0)),
-                max_selection: Number(maxSel ?? (selType === 'single' ? 1 : 99))
-              });
-              if (payloadGroupConfigs.has(grpId) && payloadGroupConfigs.get(grpId) !== grpCanonical) {
-                throw new Error('CONFLICTING_MODIFIER_GROUP_CONFIG');
-              }
-              payloadGroupConfigs.set(grpId, grpCanonical);
+              registerModifierDefinition(grp, grpId);
             }
           }
         }
@@ -522,15 +558,17 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
       if (name.startsWith('_')) continue;
       const modGroups = item?.modifier_groups ?? item?.modifierGroups;
       if (Array.isArray(modGroups)) {
-        for (const grp of modGroups) {
-          if (!grp) continue;
-          if (grp.id) incomingGroupIds.add(String(grp.id));
-          const options = Array.isArray(grp.options) ? grp.options : [];
-          for (const opt of options) {
-            if (opt && opt.id) {
-              incomingOptionMap.set(String(opt.id), { groupId: grp.id ? String(grp.id) : '', name: opt.name || opt.title || '' });
+          for (const grp of modGroups) {
+            if (!grp) continue;
+            if (grp.id) incomingGroupIds.add(String(grp.id));
+            if (grp.canonicalId) incomingGroupIds.add(String(grp.canonicalId));
+            const stableGroupId = String(grp.canonicalId || grp.id || '');
+            const options = Array.isArray(grp.options) ? grp.options : [];
+            for (const opt of options) {
+              if (opt && opt.id) {
+              incomingOptionMap.set(String(opt.id), { groupId: stableGroupId, name: opt.name || opt.title || '' });
+              }
             }
-          }
         }
       }
     }
@@ -540,8 +578,10 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
   const customGroups = Array.isArray(customSection) ? customSection : (customSection?.groups || customSection?.list || []);
   for (const group of customGroups) {
     if (group.id) incomingGroupIds.add(String(group.id));
+    if (group.canonicalId) incomingGroupIds.add(String(group.canonicalId));
+    const stableGroupId = String(group.canonicalId || group.id || '');
     for (const option of group.options || []) {
-      if (option.id) incomingOptionMap.set(String(option.id), { groupId: String(group.id || ''), name: option.name || '' });
+      if (option.id) incomingOptionMap.set(String(option.id), { groupId: stableGroupId, name: option.name || '' });
     }
   }
 
@@ -650,30 +690,38 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
         const custIsRequired = (cust.isRequired || cust.is_required) ? 1 : 0;
         const optionsList = Array.isArray(cust.options) ? cust.options : [];
         const optionsJson = JSON.stringify(optionsList);
-        const custId = cust.id || customIdMap.get(custKey) || `custom_${tenantId}_${custKey}`;
-        if (cust.id && !ownedCustomIds.has(cust.id) && !ownedGroupIds.has(cust.id) && !cust.id.startsWith(`custom_${tenantId}_`)) {
+        const custId = cust.sourceId || cust.id || customIdMap.get(custKey) || `custom_${tenantId}_${custKey}`;
+        if (!ownedCustomIds.has(custId) && !ownedGroupIds.has(custId) && !custId.startsWith(`custom_${tenantId}_`)) {
           throw new Error('INVALID_CUSTOMIZATION_ID');
         }
         if (customDeletes.includes(custId)) throw new Error('CONFLICTING_MENU_DELETE');
         activeCustomIds.push(custId);
 
         const custScope = cust.scope || 'order';
-        const modGroupId = cust.id ? String(cust.id) : `mg_${custId}`;
+        const modGroupId = String(cust.canonicalId || (cust.sourceId ? (cust.id || cust.sourceId) : (cust.id || `mg_${custId}`)));
+        if (!ownedGroupIds.has(modGroupId) && !ownedCustomIds.has(modGroupId) && !modGroupId.startsWith(`custom_${tenantId}_`)) {
+          throw new Error('INVALID_MODIFIER_GROUP_ID');
+        }
 
-        statements.push(
-          env.DB.prepare(
-            `INSERT INTO menu_customizations (id, tenant_id, key, title, type, is_required, sort_order, options_json, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-             ON CONFLICT(id) DO UPDATE SET
-               title = excluded.title,
-               type = excluded.type,
-               is_required = excluded.is_required,
-               sort_order = excluded.sort_order,
-               options_json = excluded.options_json,
-               updated_at = datetime('now')
-             WHERE menu_customizations.tenant_id = excluded.tenant_id`
-          ).bind(custId, tenantId, custKey, custTitle, custType, custIsRequired, custSort, optionsJson)
-        );
+        // Canonical library entries are edited in this common editor, but must
+        // not acquire a synthetic legacy menu_customizations row. Legacy-backed
+        // groups keep the dual-write adapter until legacy reads are retired.
+        if (cust.source !== 'canonical' && !(cust.source === 'modifier_category' && !ownedCustomIds.has(custId))) {
+          statements.push(
+            env.DB.prepare(
+              `INSERT INTO menu_customizations (id, tenant_id, key, title, type, is_required, sort_order, options_json, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+               ON CONFLICT(id) DO UPDATE SET
+                 title = excluded.title,
+                 type = excluded.type,
+                 is_required = excluded.is_required,
+                 sort_order = excluded.sort_order,
+                 options_json = excluded.options_json,
+                 updated_at = datetime('now')
+               WHERE menu_customizations.tenant_id = excluded.tenant_id`
+            ).bind(custId, tenantId, custKey, custTitle, custType, custIsRequired, custSort, optionsJson)
+          );
+        }
 
         // Sync with modifier_groups table with scope support
         const selectionType = custType === 'checkbox' ? 'multiple' : 'single';
@@ -706,18 +754,20 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
           activeOptIds.push(optId);
           const optName = opt.name || opt.title || '';
           const optPrice = Number(opt.price || opt.surcharge || 0);
+          const outOfStockUntil = opt.outOfStockUntil ?? opt.out_of_stock_until ?? null;
           statements.push(
             env.DB.prepare(
-              `INSERT INTO modifier_options (id, tenant_id, group_id, name, price, is_default, sort_order, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+              `INSERT INTO modifier_options (id, tenant_id, group_id, name, price, is_default, sort_order, out_of_stock_until, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
                ON CONFLICT(id) DO UPDATE SET
                  name = excluded.name,
                  price = excluded.price,
                  is_default = excluded.is_default,
                  sort_order = excluded.sort_order,
+                 out_of_stock_until = COALESCE(excluded.out_of_stock_until, modifier_options.out_of_stock_until),
                  updated_at = datetime('now')
                WHERE modifier_options.tenant_id = excluded.tenant_id`
-            ).bind(optId, tenantId, modGroupId, optName, optPrice, (opt.isDefault || opt.is_default) ? 1 : 0, oIdx)
+            ).bind(optId, tenantId, modGroupId, optName, optPrice, (opt.isDefault || opt.is_default) ? 1 : 0, oIdx, outOfStockUntil)
           );
         }
 
@@ -902,19 +952,21 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
                 const optPrice = Number(opt.price || 0);
                 const optIsDef = (opt.isDefault || opt.is_default) ? 1 : 0;
                 const optSort = Number(opt.sortOrder ?? opt.sort_order ?? optOrder);
+                const outOfStockUntil = opt.outOfStockUntil ?? opt.out_of_stock_until ?? null;
 
                 statements.push(
                   env.DB.prepare(
-                    `INSERT INTO modifier_options (id, tenant_id, group_id, name, price, is_default, sort_order, updated_at)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+                    `INSERT INTO modifier_options (id, tenant_id, group_id, name, price, is_default, sort_order, out_of_stock_until, updated_at)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
                      ON CONFLICT(id) DO UPDATE SET
                        name = excluded.name,
                        price = excluded.price,
                        is_default = excluded.is_default,
                        sort_order = excluded.sort_order,
+                       out_of_stock_until = COALESCE(excluded.out_of_stock_until, modifier_options.out_of_stock_until),
                        updated_at = datetime('now')
                      WHERE modifier_options.tenant_id = excluded.tenant_id`
-                  ).bind(optId, tenantId, grpId, optName, optPrice, optIsDef, optSort)
+                  ).bind(optId, tenantId, grpId, optName, optPrice, optIsDef, optSort, outOfStockUntil)
                 );
               }
 
@@ -977,7 +1029,8 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
   }
 
   for (const id of customDeletes) {
-    for (const groupId of [id, `mg_${id}`]) {
+    const groupIds = new Set([id, id.startsWith('mg_') ? id.slice(3) : `mg_${id}`]);
+    for (const groupId of groupIds) {
       statements.push(env.DB.prepare('DELETE FROM item_modifier_links WHERE tenant_id = ? AND group_id = ?').bind(tenantId, groupId));
       statements.push(env.DB.prepare('DELETE FROM category_modifier_links WHERE tenant_id = ? AND group_id = ?').bind(tenantId, groupId));
       statements.push(env.DB.prepare('DELETE FROM modifier_options WHERE tenant_id = ? AND group_id = ?').bind(tenantId, groupId));
@@ -985,38 +1038,8 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
     }
   }
 
-  // Clean up any modifier groups and options that are no longer linked to any items OR categories OR order-scope OR customizations
-  statements.push(
-    env.DB.prepare(
-      `DELETE FROM modifier_options WHERE tenant_id = ? AND group_id NOT IN (
-        SELECT group_id FROM item_modifier_links WHERE tenant_id = ?
-        UNION
-        SELECT group_id FROM category_modifier_links WHERE tenant_id = ?
-        UNION
-        SELECT id FROM modifier_groups WHERE tenant_id = ? AND scope = 'order'
-        UNION
-        SELECT id FROM menu_customizations WHERE tenant_id = ?
-        UNION
-        SELECT 'mg_' || id FROM menu_customizations WHERE tenant_id = ?
-      )`
-    ).bind(tenantId, tenantId, tenantId, tenantId, tenantId, tenantId)
-  );
-  statements.push(
-    env.DB.prepare(
-      `DELETE FROM modifier_groups WHERE tenant_id = ? AND id NOT IN (
-        SELECT group_id FROM item_modifier_links WHERE tenant_id = ?
-        UNION
-        SELECT group_id FROM category_modifier_links WHERE tenant_id = ?
-        UNION
-        SELECT id FROM modifier_groups WHERE tenant_id = ? AND scope = 'order'
-        UNION
-        SELECT id FROM menu_customizations WHERE tenant_id = ?
-        UNION
-        SELECT 'mg_' || id FROM menu_customizations WHERE tenant_id = ?
-      )`
-    ).bind(tenantId, tenantId, tenantId, tenantId, tenantId, tenantId)
-  );
-
+  // Unlinked library groups are still editable definitions. Only an explicit
+  // __delete.customizations request may remove a group and its links/options.
   // One batch keeps the entire menu update atomic if any statement fails.
   if (statements.length > 0) {
     await env.DB.batch(statements);
@@ -1039,7 +1062,8 @@ export async function updateMenu(request: Request, env: Env): Promise<Response> 
     return json({ success: true });
   } catch (e: any) {
     console.error("Update menu failed:", e);
-    return json({ error: e.message || "Invalid data" }, 400);
+    const code = typeof e?.message === 'string' && e.message ? e.message : 'INVALID_MENU_PAYLOAD';
+    return json({ code, error: code }, 400);
   }
 }
 

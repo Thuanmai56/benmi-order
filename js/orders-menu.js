@@ -169,11 +169,15 @@ async function loadMenuData() {
     if (data.modifiers) {
       data.modifiers.forEach((mod, mIdx) => {
         if (!categories.some(c => c.id === mod.slug)) {
+          const libraryGroup = menuModifierLibrary.find(group =>
+            group.source === 'modifier_category' && String(group.sourceId) === String(mod.id)
+          );
           const modOptions = (mod.options || []).map(opt => ({
             id: opt.id,
             name: opt.name,
             price: opt.price !== undefined ? opt.price : 0,
             isOos: Boolean(opt.isOutOfStock || opt.is_out_of_stock),
+            outOfStockUntil: opt.outOfStockUntil || opt.out_of_stock_until || null,
             badgeText: opt.badgeText || (opt.badge || ''),
             isRecommended: opt.isRecommended || false,
             originalName: opt.name
@@ -197,7 +201,7 @@ async function loadMenuData() {
               }
             });
           }
-          const modScope = mod.scope || (linkedCatIds.length > 0 ? 'category' : 'item');
+          const modScope = libraryGroup?.scope || mod.scope || (linkedCatIds.length > 0 ? 'category' : 'item');
 
           categories.push({
             id: mod.slug,
@@ -207,13 +211,17 @@ async function loadMenuData() {
             type: 'modifier',
             sortOrder: Number(mod.sortOrder !== undefined ? mod.sortOrder : (mod.sort_order !== undefined ? mod.sort_order : (100 + mIdx))),
             groups: [{
-              id: mod.id || mod.slug,
+              id: libraryGroup?.canonicalId || mod.id || mod.slug,
               key: mod.slug,
               title: mod.name,
               type: mod.selectionType === 'single' ? 'radio' : 'checkbox',
               isRequired: Boolean(mod.isRequired),
               scope: modScope,
-              appliedCategories: normalizeAppliedCategories(linkedCatIds),
+              appliedCategories: normalizeAppliedCategories(libraryGroup?.categoryIds?.length ? libraryGroup.categoryIds : linkedCatIds),
+              appliedItems: Array.isArray(libraryGroup?.itemIds) ? [...libraryGroup.itemIds] : [],
+              source: 'modifier_category',
+              sourceId: mod.id || mod.slug,
+              canonicalId: libraryGroup?.canonicalId || null,
               sortOrder: 0,
               options: modOptions
             }],
@@ -233,6 +241,9 @@ async function loadMenuData() {
           ? data.customizations.map((cust, gIdx) => {
               const custId = cust.id || `custom_${tenantId}_${cust.key || gIdx}`;
               const modGid = `mg_${custId}`;
+              const libraryGroup = menuModifierLibrary.find(group =>
+                group.source === 'customization' && String(group.sourceId) === String(cust.id)
+              ) || menuModifierLibrary.find(group => String(group.id) === String(custId));
               const linkedCatIds = [];
               if (Array.isArray(data.categoryModifierLinks)) {
                 data.categoryModifierLinks.forEach(link => {
@@ -260,6 +271,10 @@ async function loadMenuData() {
                 isRequired: Boolean(cust.isRequired),
                 scope: resolvedScope,
                 appliedCategories: normalizeAppliedCategories(linkedCatIds),
+                appliedItems: Array.isArray(libraryGroup?.itemIds) ? [...libraryGroup.itemIds] : [],
+                source: 'customization',
+                sourceId: cust.id || custId,
+                canonicalId: libraryGroup?.canonicalId || null,
                 sortOrder: cust.sortOrder !== undefined ? cust.sortOrder : gIdx,
                 options: (cust.options || []).map(opt => ({
                   ...opt,
@@ -1073,6 +1088,23 @@ function renderMenuCategoryEditor(index) {
   }
 }
 
+function getModifierCategorySelectionState(group, category) {
+  const itemIds = (category.items || []).map(item => String(item.id || `${category.id}:${item.name}`));
+  const selectedCount = itemIds.filter(id => (group.appliedItems || []).includes(id)).length;
+  const categorySelected = (group.appliedCategories || []).includes(category.id);
+  const checked = categorySelected || (itemIds.length > 0 && selectedCount === itemIds.length);
+  return {
+    checked,
+    indeterminate: !categorySelected && selectedCount > 0 && selectedCount < itemIds.length
+  };
+}
+
+function syncCategoryCheckboxIndeterminateState(container) {
+  container.querySelectorAll('input[data-category-checkbox="true"]').forEach(input => {
+    input.indeterminate = input.getAttribute('aria-checked') === 'mixed';
+  });
+}
+
 function renderOrderCustomizationEditor(container, cat, cIdx) {
   if (!container) return;
   container.innerHTML = "";
@@ -1181,13 +1213,14 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
         `;
       } else if (grpScope !== 'order') {
         const catChipsHtml = catalogCategories.map((catItem, menuCatIdx) => {
-          const catItemIds = (catItem.items || []).map(item => String(item.id || `${catItem.id}:${item.name}`));
-          const isChecked = grp.appliedCategories.includes(catItem.id) || (catItemIds.length > 0 && catItemIds.every(id => grp.appliedItems.includes(id)));
+          const selection = getModifierCategorySelectionState(grp, catItem);
+          const isChecked = selection.checked;
+          const isIndeterminate = selection.indeterminate;
           const count = catItemIds.length;
           return `
-            <div class="cust-cat-item-select">
-              <label class="cust-cat-chip ${isChecked ? 'active' : ''}">
-                <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleGroupAppliedCategory(${cIdx}, ${gIdx}, '${escapeHtml(catItem.id)}', this.checked)">
+            <div class="cust-cat-item-select ${isIndeterminate ? 'has-partial-selection' : ''}">
+              <label class="cust-cat-chip ${isChecked ? 'active' : ''} ${isIndeterminate ? 'partial' : ''}">
+                <input data-category-checkbox="true" type="checkbox" aria-checked="${isIndeterminate ? 'mixed' : String(isChecked)}" ${isChecked ? 'checked' : ''} onchange="toggleGroupAppliedCategory(${cIdx}, ${gIdx}, '${escapeHtml(catItem.id)}', this.checked)">
                 <span>${escapeHtml(catItem.title)}</span>
                 <span class="cust-cat-chip-count">(${count})</span>
               </label>
@@ -1317,6 +1350,10 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
           <span>${formatPlusBtnText(t("btnAddCustomOption"), "新增選項")}</span>
         </button>
       `;
+
+      // `indeterminate` is a DOM property (not an HTML attribute), so restore
+      // the mixed state after rendering each category header.
+      syncCategoryCheckboxIndeterminateState(card);
 
       container.appendChild(card);
     });
@@ -1940,6 +1977,31 @@ function syncMenuDataFromDOM() {
 
 function serializeMenuData(categories) {
   const output = {};
+  // Resolve every new item ID before serializing group assignments. This keeps
+  // appliedItems and item_modifier_links on the same stable IDs regardless of
+  // whether the customization section comes before or after its menu section.
+  const temporaryItemIds = new Map();
+  categories.forEach(cat => {
+    if (isCustomizationCategory(cat)) return;
+    const names = new Set();
+    (cat.items || []).forEach(item => {
+      const name = String(item.name || '').trim();
+      if (!name || item.price === null || item.price === undefined) return;
+      if (names.has(name)) throw new Error(t('menuDuplicateItem'));
+      names.add(name);
+      if (!item.id) {
+        item.id = `${getTenantIdFromUrl()}_item_${crypto.randomUUID()}`;
+        temporaryItemIds.set(`${cat.id}:${item.name}`, String(item.id));
+        temporaryItemIds.set(`${cat.id}:${name}`, String(item.id));
+      }
+    });
+  });
+  categories.filter(isCustomizationCategory).forEach(cat => (cat.groups || []).forEach(group => {
+    if (Array.isArray(group.appliedItems)) {
+      group.appliedItems = [...new Set(group.appliedItems.map(id => temporaryItemIds.get(String(id)) || String(id)))];
+    }
+  }));
+
   categories.forEach((cat, cIdx) => {
     const currentOrder = cat.sortOrder !== undefined ? cat.sortOrder : (cIdx + 1);
     if (cat.type === 'order_customization' || cat.id === 'sec-flavor') {
@@ -1951,6 +2013,9 @@ function serializeMenuData(categories) {
         sortOrder: currentOrder,
         groups: (cat.groups || []).map((grp, gIdx) => ({
           id: grp.id,
+          source: grp.source || undefined,
+          sourceId: grp.sourceId || undefined,
+          canonicalId: grp.canonicalId || undefined,
           key: grp.key,
           minSelection: grp.minSelection,
           maxSelection: grp.maxSelection,
@@ -1984,19 +2049,8 @@ function serializeMenuData(categories) {
       __sort_order: currentOrder
     };
     cat.items.forEach(item => {
-      if (item.name && item.name.trim() !== "" && item.price !== null) {
-        if (Object.prototype.hasOwnProperty.call(output[cat.id], item.name.trim())) throw new Error(t('menuDuplicateItem'));
-        if (!item.id) {
-          const temporaryItemKey = `${cat.id}:${item.name}`;
-          item.id = `${getTenantIdFromUrl()}_item_${crypto.randomUUID()}`;
-          (currentMenuData || []).filter(c => isCustomizationCategory(c)).forEach(customCat => {
-            (customCat.groups || []).forEach(group => {
-              if (Array.isArray(group.appliedItems)) {
-                group.appliedItems = group.appliedItems.map(id => id === temporaryItemKey ? String(item.id) : id);
-              }
-            });
-          });
-        }
+        if (item.name && item.name.trim() !== "" && item.price !== null) {
+          if (Object.prototype.hasOwnProperty.call(output[cat.id], item.name.trim())) throw new Error(t('menuDuplicateItem'));
         const serializedItem = {
           id: item.id,
           price: item.price,
@@ -2010,9 +2064,9 @@ function serializeMenuData(categories) {
             sharedGroups.push({ customCat, group });
           });
         });
-        const sharedGroupIds = new Set(sharedGroups.flatMap(({ customCat, group }) => [
-          String(group.id),
-          (customCat.type === 'order_customization' || customCat.id === 'sec-flavor') ? `mg_${group.id}` : String(group.id)
+        const sharedGroupIds = new Set(sharedGroups.flatMap(({ group }) => [
+          String(group.id), String(group.canonicalId || ''),
+          group.id && String(group.id).startsWith('mg_') ? String(group.id).slice(3) : `mg_${group.id}`
         ]));
         const linkedGroups = (Array.isArray(item.modifierGroups) ? item.modifierGroups : []).filter(link =>
           !sharedGroupIds.has(String(link.id || link.groupId || link.group_id))
@@ -2020,7 +2074,7 @@ function serializeMenuData(categories) {
         sharedGroups.forEach(({ customCat, group }) => {
           const itemKey = String(item.id || `${cat.id}:${item.name}`);
           if (!(group.appliedItems || []).includes(itemKey)) return;
-          const linkedGroupId = group.id;
+          const linkedGroupId = group.canonicalId || group.id;
           if (linkedGroups.some(link => String(link.id || link.groupId || link.group_id) === String(linkedGroupId))) return;
           linkedGroups.push({
             id: linkedGroupId,
@@ -2084,7 +2138,11 @@ async function saveMenuData(skipConfirm = false) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(output)
     });
-    if (!res.ok) throw new Error("API returned " + res.status);
+    if (!res.ok) {
+      const details = await res.json().catch(() => null);
+      const code = details?.code || details?.error || '';
+      throw new Error(`API returned ${res.status}${code ? ` (${code})` : ''}`);
+    }
     clearMenuDirty();
     try {
       const tid = getTenantIdFromUrl();
