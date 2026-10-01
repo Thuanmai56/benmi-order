@@ -223,7 +223,7 @@ export async function validateBundleOrderItems(env: Env, tenantId: string, rawIt
         for (const selected of selectedGroup.items) {
           const childId = selected.itemId || selected.item_id;
           const child = catalog.items.get(childId);
-          if (!child || catalog.categories.get(child.category_id)?.category_type !== 'catalog' || childId === parentId || catalog.rules.has(childId) || !positiveInt(selected.quantity)) return fail('BUNDLE_INVALID_CHILD', portionIndex, groupRule.id, undefined, childId);
+          if (!child || childId === parentId || catalog.rules.has(childId) || !positiveInt(selected.quantity)) return fail('BUNDLE_INVALID_CHILD', portionIndex, groupRule.id, undefined, childId);
           if (child.out_of_stock_until && new Date(child.out_of_stock_until).getTime() > Date.now()) return fail('BUNDLE_CHILD_OUT_OF_STOCK', portionIndex, groupRule.id, undefined, childId);
           if (groupRule.type === 'fixed') {
             if (!fixed.has(childId)) return fail('BUNDLE_INVALID_CHILD', portionIndex, groupRule.id, undefined, childId);
