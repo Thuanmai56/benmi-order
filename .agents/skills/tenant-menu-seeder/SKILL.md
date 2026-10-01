@@ -106,7 +106,8 @@ INSERT INTO tenant_config (
     tenant_id, brand_name, brand_color, store_address, operating_hours,
     delivery_policy, default_password, locale, allow_scheduled_pickup,
     allow_dine_in, store_status, liff_id, liff_url, order_prefix,
-    features, cuisine_type, is_marketplace_visible, is_active, latitude, longitude
+    features, cuisine_type, is_marketplace_visible, is_active, latitude, longitude,
+    groq_model, openrouter_model
 ) VALUES (
     '<tenant_id>',
     '<brand_name>',
@@ -127,7 +128,9 @@ INSERT INTO tenant_config (
     1,
     1,
     <latitude>,
-    <longitude>
+    <longitude>,
+    'openai/gpt-oss-20b',
+    'google/gemma-4-26b-a4b-it:free'
 )
 ON CONFLICT(tenant_id) DO UPDATE SET
     brand_name = excluded.brand_name,
@@ -145,7 +148,9 @@ ON CONFLICT(tenant_id) DO UPDATE SET
     is_marketplace_visible = excluded.is_marketplace_visible,
     is_active = excluded.is_active,
     latitude = excluded.latitude,
-    longitude = excluded.longitude;
+    longitude = excluded.longitude,
+    groq_model = excluded.groq_model,
+    openrouter_model = excluded.openrouter_model;
 
 -- 3. Categories (Catalog & Modifiers)
 INSERT INTO menu_categories (
