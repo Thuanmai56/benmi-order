@@ -1,0 +1,6278 @@
+{
+  "meta": {
+    "generated_at": "2026-10-01T11:53:43.987Z",
+    "database_name": "blab-db-production",
+    "is_remote": true,
+    "env": "production"
+  },
+  "schema": {
+    "admin_menu_seed_receipts": {
+      "sql": "CREATE TABLE admin_menu_seed_receipts (\n  request_id TEXT PRIMARY KEY,\n  tenant_id TEXT NOT NULL UNIQUE,\n  approved_revision INTEGER NOT NULL CHECK (approved_revision > 0),\n  menu_hash TEXT NOT NULL,\n  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE\n)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "request_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "approved_revision",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "menu_hash",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "created_at",
+          "type": "DATETIME",
+          "notnull": 1,
+          "dflt_value": "CURRENT_TIMESTAMP",
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "tenants",
+          "from": "tenant_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "CASCADE",
+          "match": "NONE"
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "idx_admin_menu_seed_receipts_tenant",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 1,
+          "name": "sqlite_autoindex_admin_menu_seed_receipts_2",
+          "unique": 1,
+          "origin": "u",
+          "partial": 0
+        },
+        {
+          "seq": 2,
+          "name": "sqlite_autoindex_admin_menu_seed_receipts_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ]
+    },
+    "category_modifier_links": {
+      "sql": "CREATE TABLE category_modifier_links (\n    tenant_id TEXT NOT NULL,\n    category_id TEXT NOT NULL REFERENCES menu_categories(id) ON DELETE CASCADE,\n    group_id TEXT NOT NULL REFERENCES modifier_groups(id) ON DELETE CASCADE,\n    sort_order INTEGER NOT NULL DEFAULT 0,\n    PRIMARY KEY (tenant_id, category_id, group_id)\n)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "category_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "group_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 3
+        },
+        {
+          "cid": 3,
+          "name": "sort_order",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "modifier_groups",
+          "from": "group_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "CASCADE",
+          "match": "NONE"
+        },
+        {
+          "id": 1,
+          "seq": 0,
+          "table": "menu_categories",
+          "from": "category_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "CASCADE",
+          "match": "NONE"
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "idx_cat_mod_links",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 1,
+          "name": "sqlite_autoindex_category_modifier_links_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ]
+    },
+    "d1_migrations": {
+      "sql": "CREATE TABLE d1_migrations(\n\t\tid         INTEGER PRIMARY KEY AUTOINCREMENT,\n\t\tname       TEXT UNIQUE,\n\t\tapplied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL\n)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "name",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "applied_at",
+          "type": "TIMESTAMP",
+          "notnull": 1,
+          "dflt_value": "CURRENT_TIMESTAMP",
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_d1_migrations_1",
+          "unique": 1,
+          "origin": "u",
+          "partial": 0
+        }
+      ]
+    },
+    "daily_order_counters": {
+      "sql": "CREATE TABLE daily_order_counters (\n    tenant_id TEXT NOT NULL,\n    order_date TEXT NOT NULL, \n    dining_option TEXT NOT NULL, \n    last_seq INTEGER NOT NULL DEFAULT 0,\n    PRIMARY KEY (tenant_id, order_date, dining_option)\n)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "order_date",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "dining_option",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 3
+        },
+        {
+          "cid": 3,
+          "name": "last_seq",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_daily_order_counters_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ]
+    },
+    "item_modifier_links": {
+      "sql": "CREATE TABLE item_modifier_links (\n    tenant_id TEXT NOT NULL,\n    item_id TEXT NOT NULL REFERENCES menu_items(id) ON DELETE CASCADE,\n    group_id TEXT NOT NULL REFERENCES modifier_groups(id) ON DELETE CASCADE,\n    sort_order INTEGER NOT NULL DEFAULT 0,\n    PRIMARY KEY (tenant_id, item_id, group_id)\n)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "item_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "group_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 3
+        },
+        {
+          "cid": 3,
+          "name": "sort_order",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "modifier_groups",
+          "from": "group_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "CASCADE",
+          "match": "NONE"
+        },
+        {
+          "id": 1,
+          "seq": 0,
+          "table": "menu_items",
+          "from": "item_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "CASCADE",
+          "match": "NONE"
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "idx_item_mod_links",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 1,
+          "name": "sqlite_autoindex_item_modifier_links_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ]
+    },
+    "menu_bundle_rules": {
+      "sql": "CREATE TABLE menu_bundle_rules (\n    id TEXT PRIMARY KEY,\n    tenant_id TEXT NOT NULL,\n    parent_item_id TEXT NOT NULL,\n    schema_version INTEGER NOT NULL DEFAULT 1,\n    config_json TEXT NOT NULL,\n    is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),\n    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,\n    FOREIGN KEY (parent_item_id) REFERENCES menu_items(id) ON DELETE CASCADE,\n    UNIQUE (tenant_id, parent_item_id)\n)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "parent_item_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "schema_version",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "1",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "config_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "is_active",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "1",
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "created_at",
+          "type": "DATETIME",
+          "notnull": 1,
+          "dflt_value": "CURRENT_TIMESTAMP",
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notnull": 1,
+          "dflt_value": "CURRENT_TIMESTAMP",
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "menu_items",
+          "from": "parent_item_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "CASCADE",
+          "match": "NONE"
+        },
+        {
+          "id": 1,
+          "seq": 0,
+          "table": "tenants",
+          "from": "tenant_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "CASCADE",
+          "match": "NONE"
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "idx_menu_bundle_rules_lookup",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 1,
+          "name": "sqlite_autoindex_menu_bundle_rules_2",
+          "unique": 1,
+          "origin": "u",
+          "partial": 0
+        },
+        {
+          "seq": 2,
+          "name": "sqlite_autoindex_menu_bundle_rules_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ]
+    },
+    "menu_categories": {
+      "sql": "CREATE TABLE menu_categories (\n    id TEXT PRIMARY KEY,\n    tenant_id TEXT NOT NULL,\n    name TEXT NOT NULL,\n    slug TEXT NOT NULL, \n    sort_order INTEGER DEFAULT 0,\n    created_at DATETIME DEFAULT CURRENT_TIMESTAMP, category_type TEXT DEFAULT 'catalog', selection_type TEXT DEFAULT 'single', is_required INTEGER DEFAULT 0, min_selection INTEGER DEFAULT 0, max_selection INTEGER DEFAULT 1, allow_customization INTEGER DEFAULT 1, applied_modifiers TEXT DEFAULT NULL, short_name TEXT, pricing_rules TEXT,\n    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,\n    UNIQUE(tenant_id, slug)\n)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "slug",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "sort_order",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "created_at",
+          "type": "DATETIME",
+          "notnull": 0,
+          "dflt_value": "CURRENT_TIMESTAMP",
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "category_type",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": "'catalog'",
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "selection_type",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": "'single'",
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "is_required",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "min_selection",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 10,
+          "name": "max_selection",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": "1",
+          "pk": 0
+        },
+        {
+          "cid": 11,
+          "name": "allow_customization",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": "1",
+          "pk": 0
+        },
+        {
+          "cid": 12,
+          "name": "applied_modifiers",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": "NULL",
+          "pk": 0
+        },
+        {
+          "cid": 13,
+          "name": "short_name",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 14,
+          "name": "pricing_rules",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "tenants",
+          "from": "tenant_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "CASCADE",
+          "match": "NONE"
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "idx_menu_categories_tenant_sort",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 1,
+          "name": "idx_menu_categories_tenant",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 2,
+          "name": "sqlite_autoindex_menu_categories_2",
+          "unique": 1,
+          "origin": "u",
+          "partial": 0
+        },
+        {
+          "seq": 3,
+          "name": "sqlite_autoindex_menu_categories_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ]
+    },
+    "menu_customization_option_rules": {
+      "sql": "CREATE TABLE menu_customization_option_rules (\n    id TEXT PRIMARY KEY,\n    tenant_id TEXT NOT NULL,\n    customization_key TEXT NOT NULL,\n    option_id TEXT NOT NULL,\n    rule_type TEXT NOT NULL DEFAULT 'min_order_subtotal',\n    min_order_subtotal REAL NOT NULL CHECK (min_order_subtotal >= 0),\n    threshold_basis TEXT NOT NULL DEFAULT 'merchandise_subtotal_after_pricing',\n    error_message TEXT,\n    is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),\n    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    UNIQUE (tenant_id, customization_key, option_id, rule_type)\n)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "customization_key",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "option_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "rule_type",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'min_order_subtotal'",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "min_order_subtotal",
+          "type": "REAL",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "threshold_basis",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'merchandise_subtotal_after_pricing'",
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "error_message",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "is_active",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "1",
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "created_at",
+          "type": "DATETIME",
+          "notnull": 1,
+          "dflt_value": "CURRENT_TIMESTAMP",
+          "pk": 0
+        },
+        {
+          "cid": 10,
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notnull": 1,
+          "dflt_value": "CURRENT_TIMESTAMP",
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "idx_customization_option_rules_lookup",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 1,
+          "name": "sqlite_autoindex_menu_customization_option_rules_2",
+          "unique": 1,
+          "origin": "u",
+          "partial": 0
+        },
+        {
+          "seq": 2,
+          "name": "sqlite_autoindex_menu_customization_option_rules_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ]
+    },
+    "menu_customizations": {
+      "sql": "CREATE TABLE menu_customizations (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, key TEXT NOT NULL, title TEXT NOT NULL, type TEXT NOT NULL, sort_order INTEGER NOT NULL, options_json TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, is_required INTEGER DEFAULT 0)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "key",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "title",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "type",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "sort_order",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "options_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "created_at",
+          "type": "DATETIME",
+          "notnull": 0,
+          "dflt_value": "CURRENT_TIMESTAMP",
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notnull": 0,
+          "dflt_value": "CURRENT_TIMESTAMP",
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "is_required",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": "0",
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "idx_menu_customizations_tenant",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 1,
+          "name": "sqlite_autoindex_menu_customizations_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ]
+    },
+    "menu_items": {
+      "sql": "CREATE TABLE menu_items (\n    id TEXT PRIMARY KEY,\n    tenant_id TEXT NOT NULL,\n    category_id TEXT NOT NULL,\n    name TEXT NOT NULL,\n    price REAL NOT NULL CHECK(price >= 0),\n    description TEXT,\n    out_of_stock_until DATETIME, \n    sort_order INTEGER DEFAULT 0,\n    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,\n    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, badge_text TEXT DEFAULT NULL, is_recommended INTEGER DEFAULT 0, item_type TEXT DEFAULT 'standard', max_per_order INTEGER DEFAULT NULL,\n    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,\n    FOREIGN KEY (category_id) REFERENCES menu_categories(id) ON DELETE RESTRICT\n)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "category_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "price",
+          "type": "REAL",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "description",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "out_of_stock_until",
+          "type": "DATETIME",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "sort_order",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "created_at",
+          "type": "DATETIME",
+          "notnull": 0,
+          "dflt_value": "CURRENT_TIMESTAMP",
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notnull": 0,
+          "dflt_value": "CURRENT_TIMESTAMP",
+          "pk": 0
+        },
+        {
+          "cid": 10,
+          "name": "badge_text",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": "NULL",
+          "pk": 0
+        },
+        {
+          "cid": 11,
+          "name": "is_recommended",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 12,
+          "name": "item_type",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": "'standard'",
+          "pk": 0
+        },
+        {
+          "cid": 13,
+          "name": "max_per_order",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": "NULL",
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "menu_categories",
+          "from": "category_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "RESTRICT",
+          "match": "NONE"
+        },
+        {
+          "id": 1,
+          "seq": 0,
+          "table": "tenants",
+          "from": "tenant_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "CASCADE",
+          "match": "NONE"
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "idx_menu_items_tenant_cat_name",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 1,
+          "name": "idx_menu_items_tenant_sort",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 2,
+          "name": "idx_menu_items_out_of_stock",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 3,
+          "name": "idx_menu_items_tenant",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 4,
+          "name": "sqlite_autoindex_menu_items_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ]
+    },
+    "modifier_groups": {
+      "sql": "CREATE TABLE modifier_groups (\n    id TEXT PRIMARY KEY,\n    tenant_id TEXT NOT NULL,\n    name TEXT NOT NULL,\n    selection_type TEXT NOT NULL DEFAULT 'single', \n    is_required INTEGER NOT NULL DEFAULT 0,        \n    min_selection INTEGER NOT NULL DEFAULT 0,\n    max_selection INTEGER NOT NULL DEFAULT 1,\n    sort_order INTEGER NOT NULL DEFAULT 0,\n    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,\n    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP\n, scope TEXT DEFAULT 'item')",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "selection_type",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'single'",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "is_required",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "min_selection",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "max_selection",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "1",
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "sort_order",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "created_at",
+          "type": "DATETIME",
+          "notnull": 0,
+          "dflt_value": "CURRENT_TIMESTAMP",
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notnull": 0,
+          "dflt_value": "CURRENT_TIMESTAMP",
+          "pk": 0
+        },
+        {
+          "cid": 10,
+          "name": "scope",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": "'item'",
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "idx_mod_groups_tenant",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 1,
+          "name": "sqlite_autoindex_modifier_groups_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ]
+    },
+    "modifier_options": {
+      "sql": "CREATE TABLE modifier_options (\n    id TEXT PRIMARY KEY,\n    tenant_id TEXT NOT NULL,\n    group_id TEXT NOT NULL REFERENCES modifier_groups(id) ON DELETE CASCADE,\n    name TEXT NOT NULL,\n    price INTEGER NOT NULL DEFAULT 0,              \n    is_default INTEGER NOT NULL DEFAULT 0,\n    sort_order INTEGER NOT NULL DEFAULT 0,\n    out_of_stock_until DATETIME DEFAULT NULL,\n    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,\n    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP\n)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "group_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "price",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "is_default",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "sort_order",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "out_of_stock_until",
+          "type": "DATETIME",
+          "notnull": 0,
+          "dflt_value": "NULL",
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "created_at",
+          "type": "DATETIME",
+          "notnull": 0,
+          "dflt_value": "CURRENT_TIMESTAMP",
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notnull": 0,
+          "dflt_value": "CURRENT_TIMESTAMP",
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "modifier_groups",
+          "from": "group_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "CASCADE",
+          "match": "NONE"
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "idx_mod_options_group",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 1,
+          "name": "sqlite_autoindex_modifier_options_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ]
+    },
+    "order_items": {
+      "sql": "CREATE TABLE order_items (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    tenant_id TEXT NOT NULL,\n    order_key TEXT NOT NULL,\n    round_number INTEGER NOT NULL DEFAULT 1,\n    item_id TEXT,                          \n    item_name TEXT NOT NULL,               \n    category_name TEXT,                    \n    quantity INTEGER NOT NULL DEFAULT 1,   \n    unit_price REAL NOT NULL DEFAULT 0,    \n    subtotal REAL NOT NULL DEFAULT 0,      \n    selected_options TEXT,                 \n    notes TEXT,                            \n    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, bundle_snapshot_json TEXT DEFAULT NULL,\n    FOREIGN KEY (order_key) REFERENCES orders(key) ON DELETE CASCADE\n)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "order_key",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "round_number",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "1",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "item_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "item_name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "category_name",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "quantity",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "1",
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "unit_price",
+          "type": "REAL",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "subtotal",
+          "type": "REAL",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 10,
+          "name": "selected_options",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 11,
+          "name": "notes",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 12,
+          "name": "created_at",
+          "type": "DATETIME",
+          "notnull": 1,
+          "dflt_value": "CURRENT_TIMESTAMP",
+          "pk": 0
+        },
+        {
+          "cid": 13,
+          "name": "bundle_snapshot_json",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": "NULL",
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "orders",
+          "from": "order_key",
+          "to": "key",
+          "on_update": "NO ACTION",
+          "on_delete": "CASCADE",
+          "match": "NONE"
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "idx_order_items_tenant_item",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 1,
+          "name": "idx_order_items_order_key",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 2,
+          "name": "idx_order_items_tenant_created",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        }
+      ]
+    },
+    "orders": {
+      "sql": "CREATE TABLE orders (\n    key TEXT PRIMARY KEY,\n    tenant_id TEXT NOT NULL,\n    user_id TEXT,\n    customer_name TEXT NOT NULL,\n    pickup_time TEXT NOT NULL,\n    status TEXT NOT NULL DEFAULT 'NEW',\n    total_amount REAL NOT NULL CHECK(total_amount >= 0),\n    order_content TEXT NOT NULL, \n    reason TEXT DEFAULT '',\n    note TEXT DEFAULT '',\n    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,\n    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, dining_option TEXT NOT NULL DEFAULT 'takeaway', table_number TEXT DEFAULT NULL, round_count INTEGER DEFAULT 1, last_appended_at TEXT DEFAULT NULL, uuid TEXT DEFAULT NULL, order_id TEXT, legacy_key TEXT, display_key TEXT NOT NULL DEFAULT '', business_date TEXT NOT NULL DEFAULT '', is_modified INTEGER NOT NULL DEFAULT 0, table_id TEXT DEFAULT NULL REFERENCES restaurant_tables(id), source TEXT NOT NULL DEFAULT 'legacy', revision INTEGER NOT NULL DEFAULT 0,\n    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE\n)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "key",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "user_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "customer_name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "pickup_time",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "status",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'NEW'",
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "total_amount",
+          "type": "REAL",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "order_content",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "reason",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "note",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 10,
+          "name": "created_at",
+          "type": "DATETIME",
+          "notnull": 0,
+          "dflt_value": "CURRENT_TIMESTAMP",
+          "pk": 0
+        },
+        {
+          "cid": 11,
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notnull": 0,
+          "dflt_value": "CURRENT_TIMESTAMP",
+          "pk": 0
+        },
+        {
+          "cid": 12,
+          "name": "dining_option",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'takeaway'",
+          "pk": 0
+        },
+        {
+          "cid": 13,
+          "name": "table_number",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": "NULL",
+          "pk": 0
+        },
+        {
+          "cid": 14,
+          "name": "round_count",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": "1",
+          "pk": 0
+        },
+        {
+          "cid": 15,
+          "name": "last_appended_at",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": "NULL",
+          "pk": 0
+        },
+        {
+          "cid": 16,
+          "name": "uuid",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": "NULL",
+          "pk": 0
+        },
+        {
+          "cid": 17,
+          "name": "order_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 18,
+          "name": "legacy_key",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 19,
+          "name": "display_key",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 20,
+          "name": "business_date",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 21,
+          "name": "is_modified",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 22,
+          "name": "table_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": "NULL",
+          "pk": 0
+        },
+        {
+          "cid": 23,
+          "name": "source",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'legacy'",
+          "pk": 0
+        },
+        {
+          "cid": 24,
+          "name": "revision",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "tenants",
+          "from": "tenant_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "CASCADE",
+          "match": "NONE"
+        },
+        {
+          "id": 1,
+          "seq": 0,
+          "table": "restaurant_tables",
+          "from": "table_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "NO ACTION",
+          "match": "NONE"
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "idx_orders_active_staff_table",
+          "unique": 1,
+          "origin": "c",
+          "partial": 1
+        },
+        {
+          "seq": 1,
+          "name": "idx_orders_tenant_request_uuid",
+          "unique": 1,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 2,
+          "name": "idx_orders_tenant_business_display",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 3,
+          "name": "idx_orders_order_id",
+          "unique": 1,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 4,
+          "name": "idx_orders_tenant_date_key",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 5,
+          "name": "idx_orders_tenant_table_status",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 6,
+          "name": "idx_orders_tenant_dining",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 7,
+          "name": "idx_orders_tenant_updated",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 8,
+          "name": "idx_orders_user",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 9,
+          "name": "idx_orders_tenant_status",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 10,
+          "name": "idx_orders_tenant_created",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 11,
+          "name": "sqlite_autoindex_orders_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ]
+    },
+    "pending_actions": {
+      "sql": "CREATE TABLE pending_actions (\n    tenant_id TEXT NOT NULL,\n    user_id TEXT NOT NULL,\n    order_key TEXT NOT NULL,\n    action_type TEXT NOT NULL,      \n    question_text TEXT NOT NULL,    \n    reason TEXT,                    \n    note TEXT,                      \n    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,\n    PRIMARY KEY (tenant_id, user_id, order_key),\n    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE\n)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "user_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "order_key",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 3
+        },
+        {
+          "cid": 3,
+          "name": "action_type",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "question_text",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "reason",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "note",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "created_at",
+          "type": "DATETIME",
+          "notnull": 0,
+          "dflt_value": "CURRENT_TIMESTAMP",
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "tenants",
+          "from": "tenant_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "CASCADE",
+          "match": "NONE"
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "idx_pending_actions_tenant_user",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 1,
+          "name": "sqlite_autoindex_pending_actions_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ]
+    },
+    "restaurant_tables": {
+      "sql": "CREATE TABLE restaurant_tables (\n    id TEXT PRIMARY KEY,\n    tenant_id TEXT NOT NULL,\n    label TEXT NOT NULL,\n    sort_order INTEGER NOT NULL DEFAULT 0,\n    is_active INTEGER NOT NULL DEFAULT 1,\n    created_at TEXT NOT NULL DEFAULT (datetime('now')),\n    updated_at TEXT NOT NULL DEFAULT (datetime('now')),\n    FOREIGN KEY (tenant_id) REFERENCES tenant_config(tenant_id) ON DELETE CASCADE\n)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "label",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "sort_order",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "is_active",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "1",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "datetime('now')",
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "datetime('now')",
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "tenant_config",
+          "from": "tenant_id",
+          "to": "tenant_id",
+          "on_update": "NO ACTION",
+          "on_delete": "CASCADE",
+          "match": "NONE"
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "idx_restaurant_tables_tenant_active",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 1,
+          "name": "idx_restaurant_tables_tenant_label",
+          "unique": 1,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 2,
+          "name": "sqlite_autoindex_restaurant_tables_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ]
+    },
+    "staff_order_requests": {
+      "sql": "CREATE TABLE staff_order_requests (\n    tenant_id TEXT NOT NULL,\n    request_id TEXT NOT NULL,\n    request_hash TEXT NOT NULL,\n    order_key TEXT NOT NULL,\n    round_number INTEGER NOT NULL,\n    response_json TEXT NOT NULL,\n    created_at TEXT NOT NULL DEFAULT (datetime('now')),\n    PRIMARY KEY (tenant_id, request_id)\n)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "request_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "request_hash",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "order_key",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "round_number",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "response_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "datetime('now')",
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "idx_staff_order_requests_order",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 1,
+          "name": "sqlite_autoindex_staff_order_requests_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ]
+    },
+    "staff_sessions": {
+      "sql": "CREATE TABLE staff_sessions (\n    token_hash TEXT PRIMARY KEY,\n    tenant_id TEXT NOT NULL,\n    expires_at TEXT NOT NULL,\n    revoked_at TEXT DEFAULT NULL,\n    created_at TEXT NOT NULL DEFAULT (datetime('now'))\n)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "token_hash",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "expires_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "revoked_at",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": "NULL",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "datetime('now')",
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "idx_staff_sessions_tenant",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 1,
+          "name": "sqlite_autoindex_staff_sessions_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ]
+    },
+    "tenant_config": {
+      "sql": "CREATE TABLE tenant_config (\n    tenant_id TEXT PRIMARY KEY,\n    \n    line_channel_token TEXT,          \n    line_channel_secret TEXT,         \n    liff_id TEXT,\n    liff_url TEXT,\n    \n    groq_api_key TEXT,\n    groq_model TEXT DEFAULT 'llama-3.1-8b-instant',\n    openrouter_api_key TEXT,\n    openrouter_model TEXT DEFAULT 'google/gemini-2.5-flash:free',\n    \n    brand_name TEXT NOT NULL,         \n    brand_color TEXT DEFAULT '#00b900',\n    store_address TEXT,\n    \n    operating_hours TEXT,             \n    delivery_policy TEXT,             \n    quick_replies TEXT,               \n    flex_template TEXT,               \n    default_password TEXT DEFAULT '12345678',\n    locale TEXT DEFAULT 'zh-TW',      \n    \n    google_sheets_url TEXT,\n    \n    is_active INTEGER DEFAULT 1,\n    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,\n    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, allow_scheduled_pickup INTEGER DEFAULT 1, store_status TEXT DEFAULT 'open', logo_url TEXT, announcement TEXT DEFAULT NULL, allow_dine_in INTEGER DEFAULT 1, features TEXT DEFAULT '[]', order_prefix TEXT DEFAULT NULL, latitude REAL, longitude REAL, cuisine_type TEXT DEFAULT 'vietnamese', is_marketplace_visible INTEGER DEFAULT 1, ai_order_redirect_enabled INTEGER NOT NULL DEFAULT 1, staff_ordering_enabled INTEGER NOT NULL DEFAULT 0,\n    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE\n)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "line_channel_token",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "line_channel_secret",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "liff_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "liff_url",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "groq_api_key",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "groq_model",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": "'llama-3.1-8b-instant'",
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "openrouter_api_key",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "openrouter_model",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": "'google/gemini-2.5-flash:free'",
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "brand_name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 10,
+          "name": "brand_color",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": "'#00b900'",
+          "pk": 0
+        },
+        {
+          "cid": 11,
+          "name": "store_address",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 12,
+          "name": "operating_hours",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 13,
+          "name": "delivery_policy",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 14,
+          "name": "quick_replies",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 15,
+          "name": "flex_template",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 16,
+          "name": "default_password",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": "'12345678'",
+          "pk": 0
+        },
+        {
+          "cid": 17,
+          "name": "locale",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": "'zh-TW'",
+          "pk": 0
+        },
+        {
+          "cid": 18,
+          "name": "google_sheets_url",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 19,
+          "name": "is_active",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": "1",
+          "pk": 0
+        },
+        {
+          "cid": 20,
+          "name": "created_at",
+          "type": "DATETIME",
+          "notnull": 0,
+          "dflt_value": "CURRENT_TIMESTAMP",
+          "pk": 0
+        },
+        {
+          "cid": 21,
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notnull": 0,
+          "dflt_value": "CURRENT_TIMESTAMP",
+          "pk": 0
+        },
+        {
+          "cid": 22,
+          "name": "allow_scheduled_pickup",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": "1",
+          "pk": 0
+        },
+        {
+          "cid": 23,
+          "name": "store_status",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": "'open'",
+          "pk": 0
+        },
+        {
+          "cid": 24,
+          "name": "logo_url",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 25,
+          "name": "announcement",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": "NULL",
+          "pk": 0
+        },
+        {
+          "cid": 26,
+          "name": "allow_dine_in",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": "1",
+          "pk": 0
+        },
+        {
+          "cid": 27,
+          "name": "features",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": "'[]'",
+          "pk": 0
+        },
+        {
+          "cid": 28,
+          "name": "order_prefix",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": "NULL",
+          "pk": 0
+        },
+        {
+          "cid": 29,
+          "name": "latitude",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 30,
+          "name": "longitude",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 31,
+          "name": "cuisine_type",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": "'vietnamese'",
+          "pk": 0
+        },
+        {
+          "cid": 32,
+          "name": "is_marketplace_visible",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": "1",
+          "pk": 0
+        },
+        {
+          "cid": 33,
+          "name": "ai_order_redirect_enabled",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "1",
+          "pk": 0
+        },
+        {
+          "cid": 34,
+          "name": "staff_ordering_enabled",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "tenants",
+          "from": "tenant_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "CASCADE",
+          "match": "NONE"
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "idx_tenant_config_order_prefix_unique",
+          "unique": 1,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 1,
+          "name": "idx_tenant_marketplace",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 2,
+          "name": "idx_tenant_config_active",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 3,
+          "name": "sqlite_autoindex_tenant_config_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ]
+    },
+    "tenant_line_runtime": {
+      "sql": "CREATE TABLE tenant_line_runtime (\n  tenant_id TEXT PRIMARY KEY REFERENCES tenants(id) ON DELETE CASCADE,\n  environment TEXT NOT NULL,\n  connection_id TEXT NOT NULL,\n  revision INTEGER NOT NULL CHECK (revision > 0),\n  operation_id TEXT NOT NULL,\n  bot_user_id TEXT NOT NULL,\n  messaging_channel_id TEXT,\n  token_encrypted_value TEXT NOT NULL,\n  token_key_version TEXT NOT NULL,\n  secret_encrypted_value TEXT NOT NULL,\n  secret_key_version TEXT NOT NULL,\n  liff_id TEXT,\n  liff_url TEXT,\n  applied_at TEXT NOT NULL,\n  webhook_verified_at TEXT,\n  webhook_verified_revision INTEGER,\n  UNIQUE(environment, bot_user_id)\n)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "environment",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "connection_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "revision",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "operation_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "bot_user_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "messaging_channel_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "token_encrypted_value",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "token_key_version",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "secret_encrypted_value",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 10,
+          "name": "secret_key_version",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 11,
+          "name": "liff_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 12,
+          "name": "liff_url",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 13,
+          "name": "applied_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 14,
+          "name": "webhook_verified_at",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 15,
+          "name": "webhook_verified_revision",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "tenants",
+          "from": "tenant_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "CASCADE",
+          "match": "NONE"
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_tenant_line_runtime_2",
+          "unique": 1,
+          "origin": "u",
+          "partial": 0
+        },
+        {
+          "seq": 1,
+          "name": "sqlite_autoindex_tenant_line_runtime_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ]
+    },
+    "tenant_line_webhook_probes": {
+      "sql": "CREATE TABLE tenant_line_webhook_probes (\n  id TEXT PRIMARY KEY,\n  tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,\n  environment TEXT NOT NULL,\n  connection_id TEXT NOT NULL,\n  revision INTEGER NOT NULL CHECK (revision > 0),\n  bot_user_id TEXT NOT NULL,\n  secret_encrypted_value TEXT NOT NULL,\n  secret_key_version TEXT NOT NULL,\n  expires_at TEXT NOT NULL,\n  verified_at TEXT\n)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "tenant_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "environment",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "connection_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "revision",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "bot_user_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "secret_encrypted_value",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "secret_key_version",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "expires_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "verified_at",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "tenants",
+          "from": "tenant_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "CASCADE",
+          "match": "NONE"
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "tenant_line_webhook_probes_expiry",
+          "unique": 0,
+          "origin": "c",
+          "partial": 0
+        },
+        {
+          "seq": 1,
+          "name": "sqlite_autoindex_tenant_line_webhook_probes_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ]
+    },
+    "tenants": {
+      "sql": "CREATE TABLE tenants (\n    id TEXT PRIMARY KEY,\n    name TEXT NOT NULL,\n    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,\n    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP\n, line_channel_token_secret TEXT, liff_id TEXT, liff_url TEXT, store_display_name TEXT, timezone TEXT DEFAULT 'Asia/Taipei', message_templates TEXT)",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "created_at",
+          "type": "DATETIME",
+          "notnull": 0,
+          "dflt_value": "CURRENT_TIMESTAMP",
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "updated_at",
+          "type": "DATETIME",
+          "notnull": 0,
+          "dflt_value": "CURRENT_TIMESTAMP",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "line_channel_token_secret",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "liff_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "liff_url",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "store_display_name",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "timezone",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": "'Asia/Taipei'",
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "message_templates",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "foreign_keys": [],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_tenants_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ]
+    }
+  },
+  "migrations": [
+    {
+      "id": 1,
+      "name": "0001_initialize_menu_tables.sql",
+      "applied_at": "2026-07-18 06:53:50"
+    },
+    {
+      "id": 2,
+      "name": "0002_seed_initial_menu.sql",
+      "applied_at": "2026-07-18 06:53:50"
+    },
+    {
+      "id": 3,
+      "name": "0003_create_pending_actions.sql",
+      "applied_at": "2026-07-18 06:53:50"
+    },
+    {
+      "id": 4,
+      "name": "0004_add_tenant_id_to_pending_actions.sql",
+      "applied_at": "2026-07-18 06:53:50"
+    },
+    {
+      "id": 5,
+      "name": "0005_create_orders_table.sql",
+      "applied_at": "2026-07-21 14:52:25"
+    },
+    {
+      "id": 6,
+      "name": "0006_add_performance_indexes.sql",
+      "applied_at": "2026-07-30 09:38:55"
+    },
+    {
+      "id": 7,
+      "name": "0006_create_tenant_config.sql",
+      "applied_at": "2026-08-02 04:28:37"
+    },
+    {
+      "id": 8,
+      "name": "0007_add_performance_indexes.sql",
+      "applied_at": "2026-08-18 12:25:04"
+    },
+    {
+      "id": 9,
+      "name": "0008_add_allow_scheduled_pickup_to_tenant_config.sql",
+      "applied_at": "2026-08-20 07:10:05"
+    },
+    {
+      "id": 10,
+      "name": "0009_add_store_status_to_tenant_config.sql",
+      "applied_at": "2026-08-20 07:10:05"
+    },
+    {
+      "id": 11,
+      "name": "0010_seed_zhadan_tenants.sql",
+      "applied_at": "2026-08-20 07:10:27"
+    },
+    {
+      "id": 12,
+      "name": "0011_enhance_menu_categories_for_modifiers.sql",
+      "applied_at": "2026-08-20 07:10:27"
+    },
+    {
+      "id": 13,
+      "name": "0012_set_default_liff_id_for_tenants.sql",
+      "applied_at": "2026-08-20 07:10:27"
+    },
+    {
+      "id": 14,
+      "name": "0013_add_logo_url_to_tenant_config.sql",
+      "applied_at": "2026-08-20 07:10:27"
+    },
+    {
+      "id": 15,
+      "name": "0013_merge_zhadan_snack_into_main.sql",
+      "applied_at": "2026-08-20 07:10:27"
+    },
+    {
+      "id": 16,
+      "name": "0014_update_zhadan_address.sql",
+      "applied_at": "2026-08-20 07:10:27"
+    },
+    {
+      "id": 17,
+      "name": "0015_fix_zhadan_brand_name.sql",
+      "applied_at": "2026-08-20 07:10:27"
+    },
+    {
+      "id": 18,
+      "name": "0016_add_badge_and_recommended_to_menu_items.sql",
+      "applied_at": "2026-08-20 07:10:28"
+    },
+    {
+      "id": 19,
+      "name": "0017_fix_zhadan_category_names.sql",
+      "applied_at": "2026-08-20 07:10:28"
+    },
+    {
+      "id": 20,
+      "name": "0018_seed_jidangaodashu_menu.sql",
+      "applied_at": "2026-08-20 07:54:01"
+    },
+    {
+      "id": 21,
+      "name": "0019_update_zhadan_line_credentials.sql",
+      "applied_at": "2026-08-20 10:50:35"
+    },
+    {
+      "id": 22,
+      "name": "0019_unify_all_tenant_brand_colors.sql",
+      "applied_at": "2026-08-22 09:11:09"
+    },
+    {
+      "id": 23,
+      "name": "0020_update_zhadan_store_address.sql",
+      "applied_at": "2026-08-22 09:11:09"
+    },
+    {
+      "id": 24,
+      "name": "0021_add_zhadan_drinks_category.sql",
+      "applied_at": "2026-08-22 09:11:10"
+    },
+    {
+      "id": 25,
+      "name": "0022_update_jidangaodashu_line_credentials.sql",
+      "applied_at": "2026-08-22 09:11:10"
+    },
+    {
+      "id": 26,
+      "name": "0023_add_announcement_to_tenant_config.sql",
+      "applied_at": "2026-08-22 09:11:10"
+    },
+    {
+      "id": 27,
+      "name": "0024_add_dining_options.sql",
+      "applied_at": "2026-08-23 04:01:36"
+    },
+    {
+      "id": 28,
+      "name": "0025_add_tenant_features.sql",
+      "applied_at": "2026-08-23 04:01:36"
+    },
+    {
+      "id": 29,
+      "name": "0026_add_order_prefix.sql",
+      "applied_at": "2026-08-23 04:01:36"
+    },
+    {
+      "id": 30,
+      "name": "0027_add_table_number.sql",
+      "applied_at": "2026-08-23 04:01:36"
+    },
+    {
+      "id": 31,
+      "name": "0028_add_append_rounds.sql",
+      "applied_at": "2026-08-23 04:01:37"
+    },
+    {
+      "id": 32,
+      "name": "0029_add_category_customization.sql",
+      "applied_at": "2026-08-23 04:01:37"
+    },
+    {
+      "id": 33,
+      "name": "0030_sync_zhadan_menu_from_production.sql",
+      "applied_at": "2026-08-23 04:01:37"
+    },
+    {
+      "id": 34,
+      "name": "0031_add_category_applied_modifiers.sql",
+      "applied_at": "2026-08-23 04:01:37"
+    },
+    {
+      "id": 35,
+      "name": "0032_create_order_items.sql",
+      "applied_at": "2026-08-23 15:11:22"
+    },
+    {
+      "id": 36,
+      "name": "0033_set_benmi_production_features.sql",
+      "applied_at": "2026-08-23 15:11:22"
+    },
+    {
+      "id": 37,
+      "name": "0034_seed_weiweibao_menu.sql",
+      "applied_at": "2026-08-23 15:22:10"
+    },
+    {
+      "id": 38,
+      "name": "0035_update_weiweibao_line_credentials.sql",
+      "applied_at": "2026-08-23 15:24:21"
+    },
+    {
+      "id": 39,
+      "name": "0036_enable_weiweibao_dine_in.sql",
+      "applied_at": "2026-08-24 02:28:14"
+    },
+    {
+      "id": 40,
+      "name": "0037_seed_bsc_menu.sql",
+      "applied_at": "2026-08-24 21:09:17"
+    },
+    {
+      "id": 41,
+      "name": "0038_seed_52kaoroufan_menu.sql",
+      "applied_at": "2026-08-24 21:09:18"
+    },
+    {
+      "id": 42,
+      "name": "0039_sync_benmi_menu_to_dev.sql",
+      "applied_at": "2026-08-26 15:38:16"
+    },
+    {
+      "id": 43,
+      "name": "0040_fix_bsc_menu_and_categories.sql",
+      "applied_at": "2026-08-26 15:38:16"
+    },
+    {
+      "id": 44,
+      "name": "0041_seed_xiaolan_menu.sql",
+      "applied_at": "2026-08-27 15:27:39"
+    },
+    {
+      "id": 45,
+      "name": "0042_update_xiaolan_item_names_and_subtitles.sql",
+      "applied_at": "2026-08-27 15:39:44"
+    },
+    {
+      "id": 46,
+      "name": "0043_add_pricing_rules_to_menu_categories.sql",
+      "applied_at": "2026-08-29 06:45:04"
+    },
+    {
+      "id": 47,
+      "name": "0044_seed_thuyngason_menu.sql",
+      "applied_at": "2026-08-29 12:04:27"
+    },
+    {
+      "id": 48,
+      "name": "0045_seed_blab_demo_tenant_and_orders.sql",
+      "applied_at": "2026-08-29 12:25:59"
+    },
+    {
+      "id": 49,
+      "name": "0046_add_order_uuid_and_daily_counter.sql",
+      "applied_at": "2026-08-30 14:44:29"
+    },
+    {
+      "id": 50,
+      "name": "0047_add_coordinates_to_tenant_config.sql",
+      "applied_at": "2026-09-01 16:30:33"
+    },
+    {
+      "id": 51,
+      "name": "0048_seed_quanthuyhang_menu.sql",
+      "applied_at": "2026-09-07 15:10:38"
+    },
+    {
+      "id": 52,
+      "name": "0048_seed_jiangjiejie_menu.sql",
+      "applied_at": "2026-09-10 02:47:22"
+    },
+    {
+      "id": 53,
+      "name": "0049_jiangjiejie_order_customizations.sql",
+      "applied_at": "2026-09-10 12:18:34"
+    },
+    {
+      "id": 54,
+      "name": "0048_seed_haojihui_menu.sql",
+      "applied_at": "2026-09-11 08:30:40"
+    },
+    {
+      "id": 55,
+      "name": "0049_create_universal_bundle_and_threshold_rules.sql",
+      "applied_at": "2026-09-12 03:47:11"
+    },
+    {
+      "id": 56,
+      "name": "0050_update_order_prefixes_for_j_tenants.sql",
+      "applied_at": "2026-09-12 07:38:40"
+    },
+    {
+      "id": 57,
+      "name": "0051_make_order_prefix_unique.sql",
+      "applied_at": "2026-09-12 11:54:50"
+    },
+    {
+      "id": 58,
+      "name": "0052_rename_tenant_haojihui_to_dapinglin.sql",
+      "applied_at": "2026-09-12 13:38:56"
+    },
+    {
+      "id": 59,
+      "name": "0053_seed_dapinglin_bundle_rules.sql",
+      "applied_at": "2026-09-12 13:56:19"
+    },
+    {
+      "id": 60,
+      "name": "0054_add_ai_order_redirect_enabled.sql",
+      "applied_at": "2026-09-14 07:46:21"
+    },
+    {
+      "id": 61,
+      "name": "0055_expand_order_identity.sql",
+      "applied_at": "2026-09-14 08:38:44"
+    },
+    {
+      "id": 62,
+      "name": "0056_add_order_modified_tracking.sql",
+      "applied_at": "2026-09-19 15:23:50"
+    },
+    {
+      "id": 63,
+      "name": "0057_create_staff_ordering_and_tables.sql",
+      "applied_at": "2026-09-20 04:27:38"
+    },
+    {
+      "id": 64,
+      "name": "0058_seed_haoshiguoshao_menu.sql",
+      "applied_at": "2026-09-20 04:27:38"
+    },
+    {
+      "id": 65,
+      "name": "0059_seed_haoshiguoshao_bundle_rules.sql",
+      "applied_at": "2026-09-20 08:33:50"
+    },
+    {
+      "id": 66,
+      "name": "0060_add_admin_menu_seed_receipts.sql",
+      "applied_at": "2026-09-28 05:43:58"
+    },
+    {
+      "id": 67,
+      "name": "0061_unified_bundle_and_customization_schema.sql",
+      "applied_at": "2026-09-28 05:43:59"
+    },
+    {
+      "id": 68,
+      "name": "0062_tenant_line_runtime.sql",
+      "applied_at": "2026-09-28 05:43:59"
+    },
+    {
+      "id": 69,
+      "name": "0063_clean_customizations_and_category_links.sql",
+      "applied_at": "2026-09-28 05:43:59"
+    },
+    {
+      "id": 71,
+      "name": "0061_add_max_per_order_to_menu_items.sql",
+      "applied_at": "2026-10-01 11:52:03"
+    }
+  ],
+  "tenants": [
+    {
+      "id": "52kaoroufan",
+      "name": "52越南烤肉飯",
+      "store_display_name": null,
+      "brand_name": "52越南烤肉飯",
+      "is_active": 1,
+      "store_status": "open",
+      "allow_dine_in": 0
+    },
+    {
+      "id": "benmi",
+      "name": "Benmi Order",
+      "store_display_name": "Benmi",
+      "brand_name": "Benmi 越式法國麵包",
+      "is_active": 1,
+      "store_status": "open",
+      "allow_dine_in": 0
+    },
+    {
+      "id": "blab_demo",
+      "name": "BLAB Demo - 干城鹹水雞",
+      "store_display_name": null,
+      "brand_name": "BLAB Demo - 干城鹹水雞",
+      "is_active": 1,
+      "store_status": "open",
+      "allow_dine_in": 1
+    },
+    {
+      "id": "bsc",
+      "name": "干城鹹水雞",
+      "store_display_name": "干城鹹水雞",
+      "brand_name": "干城鹹水雞",
+      "is_active": 1,
+      "store_status": "paused",
+      "allow_dine_in": 0
+    },
+    {
+      "id": "dapinglin",
+      "name": "好雞匯 蔬鮮輕食",
+      "store_display_name": null,
+      "brand_name": "好雞匯 蔬鮮輕食",
+      "is_active": 1,
+      "store_status": "paused",
+      "allow_dine_in": 0
+    },
+    {
+      "id": "haoshiguoshao",
+      "name": "好食鍋燒",
+      "store_display_name": null,
+      "brand_name": "好食鍋燒",
+      "is_active": 1,
+      "store_status": "open",
+      "allow_dine_in": 1
+    },
+    {
+      "id": "jiangjiejie",
+      "name": "蔣姐姐鹹水雞",
+      "store_display_name": null,
+      "brand_name": "蔣姐姐鹹水雞",
+      "is_active": 1,
+      "store_status": "paused",
+      "allow_dine_in": 0
+    },
+    {
+      "id": "jidangaodashu",
+      "name": "雞蛋糕大叔",
+      "store_display_name": null,
+      "brand_name": "雞蛋糕大叔",
+      "is_active": 1,
+      "store_status": "open",
+      "allow_dine_in": 1
+    },
+    {
+      "id": "miyansuo",
+      "name": "米研所 Rice Bakery",
+      "store_display_name": null,
+      "brand_name": "米研所 Rice Bakery",
+      "is_active": 1,
+      "store_status": "open",
+      "allow_dine_in": 0
+    },
+    {
+      "id": "quanthuyhang",
+      "name": "翠姮 THUY HANG 越南小吃",
+      "store_display_name": null,
+      "brand_name": "翠姬 THUY HANG 越南小吃",
+      "is_active": 1,
+      "store_status": "open",
+      "allow_dine_in": 0
+    },
+    {
+      "id": "thuyngason",
+      "name": "Bánh mì Thủy Nga Sơn - 越式沙威瑪",
+      "store_display_name": null,
+      "brand_name": "Bánh mì Thủy Nga Sơn - 越式沙威瑪",
+      "is_active": 1,
+      "store_status": "open",
+      "allow_dine_in": 0
+    },
+    {
+      "id": "weiweibao",
+      "name": "微為飽小吃",
+      "store_display_name": null,
+      "brand_name": "微為飽小吃",
+      "is_active": 1,
+      "store_status": "open",
+      "allow_dine_in": 1
+    },
+    {
+      "id": "xiaolan",
+      "name": "小嫻越式法國麵包",
+      "store_display_name": null,
+      "brand_name": "小嫻越式法國麵包",
+      "is_active": 1,
+      "store_status": "open",
+      "allow_dine_in": 0
+    },
+    {
+      "id": "zhadantongxue",
+      "name": "炸蛋同學",
+      "store_display_name": null,
+      "brand_name": "炸蛋同學",
+      "is_active": 1,
+      "store_status": "open",
+      "allow_dine_in": 1
+    }
+  ],
+  "tables_summary": {
+    "menu_categories": {
+      "total": 82,
+      "by_tenant": [
+        {
+          "tenant_id": "52kaoroufan",
+          "count": 1
+        },
+        {
+          "tenant_id": "benmi",
+          "count": 6
+        },
+        {
+          "tenant_id": "blab_demo",
+          "count": 6
+        },
+        {
+          "tenant_id": "bsc",
+          "count": 6
+        },
+        {
+          "tenant_id": "dapinglin",
+          "count": 10
+        },
+        {
+          "tenant_id": "haoshiguoshao",
+          "count": 7
+        },
+        {
+          "tenant_id": "jiangjiejie",
+          "count": 8
+        },
+        {
+          "tenant_id": "jidangaodashu",
+          "count": 1
+        },
+        {
+          "tenant_id": "miyansuo",
+          "count": 4
+        },
+        {
+          "tenant_id": "quanthuyhang",
+          "count": 7
+        },
+        {
+          "tenant_id": "thuyngason",
+          "count": 4
+        },
+        {
+          "tenant_id": "weiweibao",
+          "count": 8
+        },
+        {
+          "tenant_id": "xiaolan",
+          "count": 6
+        },
+        {
+          "tenant_id": "zhadantongxue",
+          "count": 8
+        }
+      ]
+    },
+    "menu_items": {
+      "total": 527,
+      "by_tenant": [
+        {
+          "tenant_id": "52kaoroufan",
+          "count": 9
+        },
+        {
+          "tenant_id": "benmi",
+          "count": 42
+        },
+        {
+          "tenant_id": "blab_demo",
+          "count": 40
+        },
+        {
+          "tenant_id": "bsc",
+          "count": 51
+        },
+        {
+          "tenant_id": "dapinglin",
+          "count": 72
+        },
+        {
+          "tenant_id": "haoshiguoshao",
+          "count": 62
+        },
+        {
+          "tenant_id": "jiangjiejie",
+          "count": 76
+        },
+        {
+          "tenant_id": "jidangaodashu",
+          "count": 6
+        },
+        {
+          "tenant_id": "miyansuo",
+          "count": 11
+        },
+        {
+          "tenant_id": "quanthuyhang",
+          "count": 53
+        },
+        {
+          "tenant_id": "thuyngason",
+          "count": 15
+        },
+        {
+          "tenant_id": "weiweibao",
+          "count": 28
+        },
+        {
+          "tenant_id": "xiaolan",
+          "count": 23
+        },
+        {
+          "tenant_id": "zhadantongxue",
+          "count": 39
+        }
+      ]
+    },
+    "menu_customizations": {
+      "total": 26,
+      "by_tenant": [
+        {
+          "tenant_id": "blab_demo",
+          "count": 6
+        },
+        {
+          "tenant_id": "bsc",
+          "count": 5
+        },
+        {
+          "tenant_id": "dapinglin",
+          "count": 3
+        },
+        {
+          "tenant_id": "jiangjiejie",
+          "count": 11
+        },
+        {
+          "tenant_id": "miyansuo",
+          "count": 1
+        }
+      ]
+    },
+    "menu_customization_option_rules": {
+      "total": 5,
+      "by_tenant": [
+        {
+          "tenant_id": "jiangjiejie",
+          "count": 5
+        }
+      ]
+    },
+    "modifier_groups": {
+      "total": 0,
+      "by_tenant": []
+    },
+    "modifier_options": {
+      "total": 0,
+      "by_tenant": []
+    },
+    "category_modifier_links": {
+      "total": 0,
+      "by_tenant": []
+    },
+    "item_modifier_links": {
+      "total": 0,
+      "by_tenant": []
+    },
+    "tenant_config": {
+      "total": 14,
+      "by_tenant": [
+        {
+          "tenant_id": "52kaoroufan",
+          "count": 1
+        },
+        {
+          "tenant_id": "benmi",
+          "count": 1
+        },
+        {
+          "tenant_id": "blab_demo",
+          "count": 1
+        },
+        {
+          "tenant_id": "bsc",
+          "count": 1
+        },
+        {
+          "tenant_id": "dapinglin",
+          "count": 1
+        },
+        {
+          "tenant_id": "haoshiguoshao",
+          "count": 1
+        },
+        {
+          "tenant_id": "jiangjiejie",
+          "count": 1
+        },
+        {
+          "tenant_id": "jidangaodashu",
+          "count": 1
+        },
+        {
+          "tenant_id": "miyansuo",
+          "count": 1
+        },
+        {
+          "tenant_id": "quanthuyhang",
+          "count": 1
+        },
+        {
+          "tenant_id": "thuyngason",
+          "count": 1
+        },
+        {
+          "tenant_id": "weiweibao",
+          "count": 1
+        },
+        {
+          "tenant_id": "xiaolan",
+          "count": 1
+        },
+        {
+          "tenant_id": "zhadantongxue",
+          "count": 1
+        }
+      ]
+    },
+    "tenants": {
+      "total": 14,
+      "by_tenant": []
+    },
+    "d1_migrations": {
+      "total": 70,
+      "by_tenant": []
+    }
+  },
+  "legacy_sources": {
+    "menu_customizations": [
+      {
+        "id": "demo_flavor",
+        "tenant_id": "blab_demo",
+        "key": "flavor",
+        "title": "✦ 口味選擇",
+        "type": "radio",
+        "sort_order": 0,
+        "is_required": 0,
+        "options_json": "[{\"id\":\"特調胡椒\",\"name\":\"特調胡椒\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"泰式酸辣\",\"name\":\"泰式酸辣\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"清爽檸檬\",\"name\":\"清爽檸檬\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[\"不加香油\",\"不加鹽巴\"]},{\"id\":\"檸檬香菜\",\"name\":\"檸檬香菜\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[\"不加香油\",\"不加鹽巴\"]},{\"id\":\"原味客製\",\"name\":\"原味客製\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[\"不加香油\",\"不加胡椒\",\"不加胡椒加鹽巴\"]}]",
+        "parsed_options": [
+          {
+            "id": "特調胡椒",
+            "name": "特調胡椒",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "泰式酸辣",
+            "name": "泰式酸辣",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "清爽檸檬",
+            "name": "清爽檸檬",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": [
+              "不加香油",
+              "不加鹽巴"
+            ]
+          },
+          {
+            "id": "檸檬香菜",
+            "name": "檸檬香菜",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": [
+              "不加香油",
+              "不加鹽巴"
+            ]
+          },
+          {
+            "id": "原味客製",
+            "name": "原味客製",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": [
+              "不加香油",
+              "不加胡椒",
+              "不加胡椒加鹽巴"
+            ]
+          }
+        ],
+        "options_count": 5
+      },
+      {
+        "id": "demo_salt",
+        "tenant_id": "blab_demo",
+        "key": "salt",
+        "title": "✦ 鹹度調整",
+        "type": "radio",
+        "sort_order": 1,
+        "is_required": 0,
+        "options_json": "[{\"id\":\"正常\",\"name\":\"正常\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"調味重\",\"name\":\"調味重\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"調味清淡\",\"name\":\"調味清淡\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]}]",
+        "parsed_options": [
+          {
+            "id": "正常",
+            "name": "正常",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "調味重",
+            "name": "調味重",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "調味清淡",
+            "name": "調味清淡",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          }
+        ],
+        "options_count": 3
+      },
+      {
+        "id": "demo_spicy",
+        "tenant_id": "blab_demo",
+        "key": "spicy",
+        "title": "✦ 辣度選擇 (朝天椒)",
+        "type": "radio",
+        "sort_order": 2,
+        "is_required": 0,
+        "options_json": "[{\"id\":\"不辣\",\"name\":\"不辣\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"微辣\",\"name\":\"微辣\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"小辣\",\"name\":\"小辣\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"中辣\",\"name\":\"中辣\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"大辣\",\"name\":\"大辣\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"辣椒放餐盒角落\",\"name\":\"辣椒放餐盒角落\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]}]",
+        "parsed_options": [
+          {
+            "id": "不辣",
+            "name": "不辣",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "微辣",
+            "name": "微辣",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "小辣",
+            "name": "小辣",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "中辣",
+            "name": "中辣",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "大辣",
+            "name": "大辣",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "辣椒放餐盒角落",
+            "name": "辣椒放餐盒角落",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          }
+        ],
+        "options_count": 6
+      },
+      {
+        "id": "demo_ingredients",
+        "tenant_id": "blab_demo",
+        "key": "ingredients",
+        "title": "✦ 配料調整",
+        "type": "checkbox",
+        "sort_order": 3,
+        "is_required": 0,
+        "options_json": "[{\"id\":\"不加蔥花\",\"name\":\"不加蔥花\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"不加蒜頭\",\"name\":\"不加蒜頭\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"不加洋蔥\",\"name\":\"不加洋蔥\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]}]",
+        "parsed_options": [
+          {
+            "id": "不加蔥花",
+            "name": "不加蔥花",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "不加蒜頭",
+            "name": "不加蒜頭",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "不加洋蔥",
+            "name": "不加洋蔥",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          }
+        ],
+        "options_count": 3
+      },
+      {
+        "id": "demo_addons",
+        "tenant_id": "blab_demo",
+        "key": "addons",
+        "title": "✦ 加價配料 (選加)",
+        "type": "checkbox",
+        "sort_order": 4,
+        "is_required": 0,
+        "options_json": "[{\"id\":\"加香菜\",\"name\":\"加香菜\",\"surcharge\":15,\"price\":15,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"加檸檬汁\",\"name\":\"加檸檬汁\",\"surcharge\":20,\"price\":20,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"opt_mud2n1yv\",\"name\":\"helloo\",\"surcharge\":20,\"price\":20,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]}]",
+        "parsed_options": [
+          {
+            "id": "加香菜",
+            "name": "加香菜",
+            "surcharge": 15,
+            "price": 15,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "加檸檬汁",
+            "name": "加檸檬汁",
+            "surcharge": 20,
+            "price": 20,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "opt_mud2n1yv",
+            "name": "helloo",
+            "surcharge": 20,
+            "price": 20,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          }
+        ],
+        "options_count": 3
+      },
+      {
+        "id": "custom_blab_demo_group_mud2onv1",
+        "tenant_id": "blab_demo",
+        "key": "group_mud2onv1",
+        "title": "test",
+        "type": "radio",
+        "sort_order": 5,
+        "is_required": 0,
+        "options_json": "[{\"id\":\"opt_mud2oz2b\",\"name\":\"新項目\",\"surcharge\":10,\"price\":10,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]}]",
+        "parsed_options": [
+          {
+            "id": "opt_mud2oz2b",
+            "name": "新項目",
+            "surcharge": 10,
+            "price": 10,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          }
+        ],
+        "options_count": 1
+      },
+      {
+        "id": "bsc_flavor",
+        "tenant_id": "bsc",
+        "key": "flavor",
+        "title": "✦ 口味選擇",
+        "type": "radio",
+        "sort_order": 0,
+        "is_required": 0,
+        "options_json": "[{\"name\":\"特調胡椒\"},{\"name\":\"泰式酸辣\"},{\"name\":\"清爽檸檬\",\"sub_options\":[\"不加香油\",\"不加鹽巴\"]},{\"name\":\"檸檬香菜（ 香菜缺貨中，請選檸檬口味）\",\"sub_options\":[\"不加香油\",\"不加鹽巴\"]},{\"name\":\"原味客製\",\"sub_options\":[\"不加香油\",\"不加胡椒\",\"不加胡椒加鹽巴\"]}]",
+        "parsed_options": [
+          {
+            "name": "特調胡椒"
+          },
+          {
+            "name": "泰式酸辣"
+          },
+          {
+            "name": "清爽檸檬",
+            "sub_options": [
+              "不加香油",
+              "不加鹽巴"
+            ]
+          },
+          {
+            "name": "檸檬香菜（ 香菜缺貨中，請選檸檬口味）",
+            "sub_options": [
+              "不加香油",
+              "不加鹽巴"
+            ]
+          },
+          {
+            "name": "原味客製",
+            "sub_options": [
+              "不加香油",
+              "不加胡椒",
+              "不加胡椒加鹽巴"
+            ]
+          }
+        ],
+        "options_count": 5
+      },
+      {
+        "id": "bsc_salt",
+        "tenant_id": "bsc",
+        "key": "salt",
+        "title": "✦ 鹹度調整",
+        "type": "radio",
+        "sort_order": 1,
+        "is_required": 0,
+        "options_json": "[{\"name\":\"正常\"},{\"name\":\"調味重\"},{\"name\":\"調味清淡\"}]",
+        "parsed_options": [
+          {
+            "name": "正常"
+          },
+          {
+            "name": "調味重"
+          },
+          {
+            "name": "調味清淡"
+          }
+        ],
+        "options_count": 3
+      },
+      {
+        "id": "bsc_spicy",
+        "tenant_id": "bsc",
+        "key": "spicy",
+        "title": "✦ 辣度選擇 (朝天椒)",
+        "type": "radio",
+        "sort_order": 2,
+        "is_required": 0,
+        "options_json": "[{\"name\":\"不辣\"},{\"name\":\"微辣\"},{\"name\":\"小辣\"},{\"name\":\"中辣\"},{\"name\":\"大辣\"},{\"name\":\"辣椒放餐盒角落\"}]",
+        "parsed_options": [
+          {
+            "name": "不辣"
+          },
+          {
+            "name": "微辣"
+          },
+          {
+            "name": "小辣"
+          },
+          {
+            "name": "中辣"
+          },
+          {
+            "name": "大辣"
+          },
+          {
+            "name": "辣椒放餐盒角落"
+          }
+        ],
+        "options_count": 6
+      },
+      {
+        "id": "bsc_ingredients",
+        "tenant_id": "bsc",
+        "key": "ingredients",
+        "title": "✦ 配料調整",
+        "type": "checkbox",
+        "sort_order": 3,
+        "is_required": 0,
+        "options_json": "[{\"name\":\"不加蔥花\"},{\"name\":\"不加蒜頭\"},{\"name\":\"不加洋蔥\"}]",
+        "parsed_options": [
+          {
+            "name": "不加蔥花"
+          },
+          {
+            "name": "不加蒜頭"
+          },
+          {
+            "name": "不加洋蔥"
+          }
+        ],
+        "options_count": 3
+      },
+      {
+        "id": "bsc_addons",
+        "tenant_id": "bsc",
+        "key": "addons",
+        "title": "✦ 加價配料 (選加)",
+        "type": "checkbox",
+        "sort_order": 4,
+        "is_required": 0,
+        "options_json": "[{\"name\":\"加香菜\",\"price\":15,\"is_out_of_stock\":true},{\"name\":\"加檸檬汁\",\"price\":20,\"is_out_of_stock\":true}]",
+        "parsed_options": [
+          {
+            "name": "加香菜",
+            "price": 15,
+            "is_out_of_stock": true
+          },
+          {
+            "name": "加檸檬汁",
+            "price": 20,
+            "is_out_of_stock": true
+          }
+        ],
+        "options_count": 2
+      },
+      {
+        "id": "hjh_custom_sauce",
+        "tenant_id": "dapinglin",
+        "key": "sauce",
+        "title": "✦ 醬汁選擇",
+        "type": "radio",
+        "sort_order": 0,
+        "is_required": 0,
+        "options_json": "[{\"name\":\"經典醬汁 (含蔥、蒜、胡椒、香油)\"},{\"name\":\"清爽和風 (含蔥、香油、和風醬)\"}]",
+        "parsed_options": [
+          {
+            "name": "經典醬汁 (含蔥、蒜、胡椒、香油)"
+          },
+          {
+            "name": "清爽和風 (含蔥、香油、和風醬)"
+          }
+        ],
+        "options_count": 2
+      },
+      {
+        "id": "hjh_custom_spicy",
+        "tenant_id": "dapinglin",
+        "key": "spicy",
+        "title": "✦ 辣度選擇",
+        "type": "radio",
+        "sort_order": 1,
+        "is_required": 0,
+        "options_json": "[{\"name\":\"不辣\"},{\"name\":\"微辣\"},{\"name\":\"小辣\"},{\"name\":\"中辣\"},{\"name\":\"大辣\"}]",
+        "parsed_options": [
+          {
+            "name": "不辣"
+          },
+          {
+            "name": "微辣"
+          },
+          {
+            "name": "小辣"
+          },
+          {
+            "name": "中辣"
+          },
+          {
+            "name": "大辣"
+          }
+        ],
+        "options_count": 5
+      },
+      {
+        "id": "hjh_custom_seasoning",
+        "tenant_id": "dapinglin",
+        "key": "seasoning",
+        "title": "✦ 配料調整",
+        "type": "checkbox",
+        "sort_order": 2,
+        "is_required": 0,
+        "options_json": "[{\"name\":\"不加蔥\"},{\"name\":\"不加蒜\"},{\"name\":\"不加胡椒\"},{\"name\":\"不加香油\"}]",
+        "parsed_options": [
+          {
+            "name": "不加蔥"
+          },
+          {
+            "name": "不加蒜"
+          },
+          {
+            "name": "不加胡椒"
+          },
+          {
+            "name": "不加香油"
+          }
+        ],
+        "options_count": 4
+      },
+      {
+        "id": "custom_mod_jj_pepper",
+        "tenant_id": "jiangjiejie",
+        "key": "pepper-level",
+        "title": "胡椒粉",
+        "type": "radio",
+        "sort_order": 0,
+        "is_required": 0,
+        "options_json": "[{\"id\":\"不要\",\"name\":\"正常\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"一滴滴 (撒半次)\",\"name\":\"一滴滴 (撒半次)\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"微鹹 (撒一次)\",\"name\":\"微鹹 (撒一次)\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"清淡 (撒兩次)\",\"name\":\"清淡 (撒兩次)\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"正常\",\"name\":\"重鹹\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"重鹹\",\"name\":\"不要\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]}]",
+        "parsed_options": [
+          {
+            "id": "不要",
+            "name": "正常",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "一滴滴 (撒半次)",
+            "name": "一滴滴 (撒半次)",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "微鹹 (撒一次)",
+            "name": "微鹹 (撒一次)",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "清淡 (撒兩次)",
+            "name": "清淡 (撒兩次)",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "正常",
+            "name": "重鹹",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "重鹹",
+            "name": "不要",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          }
+        ],
+        "options_count": 6
+      },
+      {
+        "id": "custom_mod_jj_chili",
+        "tenant_id": "jiangjiejie",
+        "key": "chili-level",
+        "title": "辣椒（朝天椒）",
+        "type": "radio",
+        "sort_order": 1,
+        "is_required": 0,
+        "options_json": "[{\"id\":\"包辣\",\"name\":\"不要\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"微\",\"name\":\"微\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"小\",\"name\":\"小\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"中\",\"name\":\"中\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"大\",\"name\":\"大\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"opt_mtzdw2ov\",\"name\":\"包辣\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]}]",
+        "parsed_options": [
+          {
+            "id": "包辣",
+            "name": "不要",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "微",
+            "name": "微",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "小",
+            "name": "小",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "中",
+            "name": "中",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "大",
+            "name": "大",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "opt_mtzdw2ov",
+            "name": "包辣",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          }
+        ],
+        "options_count": 6
+      },
+      {
+        "id": "custom_mod_jj_ma",
+        "tenant_id": "jiangjiejie",
+        "key": "szechuan-pepper",
+        "title": "椒麻（青花椒）",
+        "type": "radio",
+        "sort_order": 2,
+        "is_required": 0,
+        "options_json": "[{\"id\":\"微麻\",\"name\":\"不要\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"小麻\",\"name\":\"微麻\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"中麻\",\"name\":\"小麻\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"大麻\",\"name\":\"中麻\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"opt_mtzdx5n7\",\"name\":\"大麻\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]}]",
+        "parsed_options": [
+          {
+            "id": "微麻",
+            "name": "不要",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "小麻",
+            "name": "微麻",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "中麻",
+            "name": "小麻",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "大麻",
+            "name": "中麻",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "opt_mtzdx5n7",
+            "name": "大麻",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          }
+        ],
+        "options_count": 5
+      },
+      {
+        "id": "custom_mod_jj_onion",
+        "tenant_id": "jiangjiejie",
+        "key": "onion-pref",
+        "title": "洋蔥",
+        "type": "radio",
+        "sort_order": 3,
+        "is_required": 0,
+        "options_json": "[{\"id\":\"onion_none\",\"name\":\"不要\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"onion_regular\",\"name\":\"要\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"onion_extra\",\"name\":\"多\",\"surcharge\":20,\"price\":20,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]}]",
+        "parsed_options": [
+          {
+            "id": "onion_none",
+            "name": "不要",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "onion_regular",
+            "name": "要",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "onion_extra",
+            "name": "多",
+            "surcharge": 20,
+            "price": 20,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          }
+        ],
+        "options_count": 3
+      },
+      {
+        "id": "custom_mod_jj_garlic",
+        "tenant_id": "jiangjiejie",
+        "key": "garlic-pref",
+        "title": "蒜泥",
+        "type": "radio",
+        "sort_order": 4,
+        "is_required": 0,
+        "options_json": "[{\"id\":\"不要\",\"name\":\"不要\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"要\",\"name\":\"要\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"多\",\"name\":\"多\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"opt_mtzvx551\",\"name\":\"少\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]}]",
+        "parsed_options": [
+          {
+            "id": "不要",
+            "name": "不要",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "要",
+            "name": "要",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "多",
+            "name": "多",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "opt_mtzvx551",
+            "name": "少",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          }
+        ],
+        "options_count": 4
+      },
+      {
+        "id": "custom_mod_jj_scallion",
+        "tenant_id": "jiangjiejie",
+        "key": "scallion-pref",
+        "title": "蔥",
+        "type": "radio",
+        "sort_order": 5,
+        "is_required": 0,
+        "options_json": "[{\"id\":\"不要\",\"name\":\"不要\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"要\",\"name\":\"要\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"opt_mtzvx96q\",\"name\":\"少\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]}]",
+        "parsed_options": [
+          {
+            "id": "不要",
+            "name": "不要",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "要",
+            "name": "要",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "opt_mtzvx96q",
+            "name": "少",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          }
+        ],
+        "options_count": 3
+      },
+      {
+        "id": "custom_mod_jj_sesame_oil",
+        "tenant_id": "jiangjiejie",
+        "key": "sesame-oil",
+        "title": "芝麻香油",
+        "type": "radio",
+        "sort_order": 6,
+        "is_required": 0,
+        "options_json": "[{\"id\":\"不要\",\"name\":\"正常\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"小\",\"name\":\"少\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"正常\",\"name\":\"多\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"多\",\"name\":\"不要\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]}]",
+        "parsed_options": [
+          {
+            "id": "不要",
+            "name": "正常",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "小",
+            "name": "少",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "正常",
+            "name": "多",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "多",
+            "name": "不要",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          }
+        ],
+        "options_count": 4
+      },
+      {
+        "id": "custom_mod_jj_veg_soup",
+        "tenant_id": "jiangjiejie",
+        "key": "vegetable-broth",
+        "title": "蔬菜湯",
+        "type": "radio",
+        "sort_order": 7,
+        "is_required": 0,
+        "options_json": "[{\"id\":\"極少\",\"name\":\"正常\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"少\",\"name\":\"極少\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"正常\",\"name\":\"少\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"多\",\"name\":\"多\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]}]",
+        "parsed_options": [
+          {
+            "id": "極少",
+            "name": "正常",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "少",
+            "name": "極少",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "正常",
+            "name": "少",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "多",
+            "name": "多",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          }
+        ],
+        "options_count": 4
+      },
+      {
+        "id": "custom_mod_jj_chicken_prep",
+        "tenant_id": "jiangjiejie",
+        "key": "chicken-preparation",
+        "title": "雞肉",
+        "type": "radio",
+        "sort_order": 8,
+        "is_required": 0,
+        "options_json": "[{\"id\":\"去骨\",\"name\":\"去骨\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[\"去皮\"]},{\"id\":\"不去骨\",\"name\":\"不去骨\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[\"去皮\"]}]",
+        "parsed_options": [
+          {
+            "id": "去骨",
+            "name": "去骨",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": [
+              "去皮"
+            ]
+          },
+          {
+            "id": "不去骨",
+            "name": "不去骨",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": [
+              "去皮"
+            ]
+          }
+        ],
+        "options_count": 2
+      },
+      {
+        "id": "custom_mod_jj_lemon_juice",
+        "tenant_id": "jiangjiejie",
+        "key": "special-lemon-juice",
+        "title": "特調檸檬汁",
+        "type": "radio",
+        "sort_order": 9,
+        "is_required": 0,
+        "options_json": "[{\"id\":\"lemon_none\",\"name\":\"不要\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"lemon_all\",\"name\":\"全部\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[\"少\",\"正常\",\"多\"]},{\"id\":\"lemon_half\",\"name\":\"各半(會分兩袋裝)\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[\"少\",\"正常\",\"多\"]},{\"id\":\"lemon_taste\",\"name\":\"試吃(抓一些裝一小袋)\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[\"少\",\"正常\",\"多\"]}]",
+        "parsed_options": [
+          {
+            "id": "lemon_none",
+            "name": "不要",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "lemon_all",
+            "name": "全部",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": [
+              "少",
+              "正常",
+              "多"
+            ]
+          },
+          {
+            "id": "lemon_half",
+            "name": "各半(會分兩袋裝)",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": [
+              "少",
+              "正常",
+              "多"
+            ]
+          },
+          {
+            "id": "lemon_taste",
+            "name": "試吃(抓一些裝一小袋)",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": [
+              "少",
+              "正常",
+              "多"
+            ]
+          }
+        ],
+        "options_count": 4
+      },
+      {
+        "id": "custom_jiangjiejie_group_mtzvqwy1",
+        "tenant_id": "jiangjiejie",
+        "key": "group_mtzvqwy1",
+        "title": "孩子分袋調味",
+        "type": "radio",
+        "sort_order": 10,
+        "is_required": 0,
+        "options_json": "[{\"id\":\"opt_mtzvqzgv\",\"name\":\"不需要\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"opt_mtzvr7pv\",\"name\":\"一半一半（只需選需要的）\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[\"胡椒\",\"蒜泥\",\"蔥\",\"洋蔥\",\"香油\"]},{\"id\":\"opt_mtzvrt0s\",\"name\":\"三分之一\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[\"胡椒\",\"蒜泥\",\"蔥\",\"洋蔥\",\"香油\"]}]",
+        "parsed_options": [
+          {
+            "id": "opt_mtzvqzgv",
+            "name": "不需要",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
+          },
+          {
+            "id": "opt_mtzvr7pv",
+            "name": "一半一半（只需選需要的）",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": [
+              "胡椒",
+              "蒜泥",
+              "蔥",
+              "洋蔥",
+              "香油"
+            ]
+          },
+          {
+            "id": "opt_mtzvrt0s",
+            "name": "三分之一",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": [
+              "胡椒",
+              "蒜泥",
+              "蔥",
+              "洋蔥",
+              "香油"
+            ]
+          }
+        ],
+        "options_count": 3
+      },
+      {
+        "id": "custom_mys_bag",
+        "tenant_id": "miyansuo",
+        "key": "bag",
+        "title": "✦ 響應環保 / 提袋加購",
+        "type": "radio",
+        "sort_order": 0,
+        "is_required": 0,
+        "options_json": "[{\"id\":\"bag_none\",\"name\":\"不需要提袋\",\"price\":0,\"is_default\":true},{\"id\":\"bag_buy\",\"name\":\"購買提袋\",\"price\":1,\"is_default\":false}]",
+        "parsed_options": [
+          {
+            "id": "bag_none",
+            "name": "不需要提袋",
+            "price": 0,
+            "is_default": true
+          },
+          {
+            "id": "bag_buy",
+            "name": "購買提袋",
+            "price": 1,
+            "is_default": false
+          }
+        ],
+        "options_count": 2
+      }
+    ],
+    "menu_customization_option_rules": [
+      {
+        "id": "rule_jj_onion_extra",
+        "tenant_id": "jiangjiejie",
+        "customization_key": "onion-pref",
+        "option_id": "onion_extra",
+        "rule_type": "min_order_subtotal",
+        "min_order_subtotal": 100,
+        "threshold_basis": "merchandise_subtotal_after_pricing",
+        "error_message": "洋蔥「多」需消費滿 $100 元方可選擇",
+        "is_active": 1
+      },
+      {
+        "id": "rule_jj_onion_regular",
+        "tenant_id": "jiangjiejie",
+        "customization_key": "onion-pref",
+        "option_id": "onion_regular",
+        "rule_type": "min_order_subtotal",
+        "min_order_subtotal": 100,
+        "threshold_basis": "merchandise_subtotal_after_pricing",
+        "error_message": "洋蔥「要」需消費滿 $100 元方可選擇",
+        "is_active": 1
+      },
+      {
+        "id": "rule_jj_lemon_all",
+        "tenant_id": "jiangjiejie",
+        "customization_key": "special-lemon-juice",
+        "option_id": "lemon_all",
+        "rule_type": "min_order_subtotal",
+        "min_order_subtotal": 150,
+        "threshold_basis": "merchandise_subtotal_after_pricing",
+        "error_message": "特調檸檬汁「全部」需消費滿 $150 元方可選擇",
+        "is_active": 1
+      },
+      {
+        "id": "rule_jj_lemon_half",
+        "tenant_id": "jiangjiejie",
+        "customization_key": "special-lemon-juice",
+        "option_id": "lemon_half",
+        "rule_type": "min_order_subtotal",
+        "min_order_subtotal": 150,
+        "threshold_basis": "merchandise_subtotal_after_pricing",
+        "error_message": "特調檸檬汁「各半」需消費滿 $150 元方可選擇",
+        "is_active": 1
+      },
+      {
+        "id": "rule_jj_lemon_taste",
+        "tenant_id": "jiangjiejie",
+        "customization_key": "special-lemon-juice",
+        "option_id": "lemon_taste",
+        "rule_type": "min_order_subtotal",
+        "min_order_subtotal": 150,
+        "threshold_basis": "merchandise_subtotal_after_pricing",
+        "error_message": "特調檸檬汁「試吃」需消費滿 $150 元方可選擇",
+        "is_active": 1
+      }
+    ],
+    "modifier_categories": [
+      {
+        "id": "benmi_spicy",
+        "tenant_id": "benmi",
+        "name": "辣度 (Độ cay)",
+        "slug": "spicy",
+        "short_name": "辣度 (Độ cay)",
+        "category_type": "modifier",
+        "is_required": 0,
+        "selection_type": "single",
+        "min_selection": 0,
+        "max_selection": 1,
+        "sort_order": 5,
+        "allow_customization": 1,
+        "applied_modifiers": "[\"*\"]",
+        "items_count": 4,
+        "items": [
+          {
+            "id": "benmi_spicy_不辣",
+            "tenant_id": "benmi",
+            "category_id": "benmi_spicy",
+            "name": "不辣",
+            "price": 0,
+            "sort_order": 1,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "benmi_spicy_微辣",
+            "tenant_id": "benmi",
+            "category_id": "benmi_spicy",
+            "name": "微辣",
+            "price": 0,
+            "sort_order": 2,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "benmi_spicy_中辣",
+            "tenant_id": "benmi",
+            "category_id": "benmi_spicy",
+            "name": "中辣",
+            "price": 0,
+            "sort_order": 3,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "benmi_spicy_大辣",
+            "tenant_id": "benmi",
+            "category_id": "benmi_spicy",
+            "name": "大辣",
+            "price": 0,
+            "sort_order": 4,
+            "out_of_stock_until": null,
+            "description": null
+          }
+        ]
+      },
+      {
+        "id": "cat_topping",
+        "tenant_id": "benmi",
+        "name": "加料選項",
+        "slug": "topping",
+        "short_name": "加料選項",
+        "category_type": "modifier",
+        "is_required": 0,
+        "selection_type": "single",
+        "min_selection": 0,
+        "max_selection": 1,
+        "sort_order": 6,
+        "allow_customization": 1,
+        "applied_modifiers": "[\"*\"]",
+        "items_count": 6,
+        "items": [
+          {
+            "id": "benmi_topping_加菜",
+            "tenant_id": "benmi",
+            "category_id": "cat_topping",
+            "name": "加菜",
+            "price": 15,
+            "sort_order": 1,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "benmi_topping_加起司",
+            "tenant_id": "benmi",
+            "category_id": "cat_topping",
+            "name": "加起司",
+            "price": 15,
+            "sort_order": 2,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "benmi_topping_加火腿",
+            "tenant_id": "benmi",
+            "category_id": "cat_topping",
+            "name": "加火腿",
+            "price": 20,
+            "sort_order": 3,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "benmi_topping_加燒肉",
+            "tenant_id": "benmi",
+            "category_id": "cat_topping",
+            "name": "加燒肉",
+            "price": 20,
+            "sort_order": 4,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "benmi_topping_加烤肉",
+            "tenant_id": "benmi",
+            "category_id": "cat_topping",
+            "name": "加烤肉",
+            "price": 25,
+            "sort_order": 5,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "benmi_topping_加雞肉",
+            "tenant_id": "benmi",
+            "category_id": "cat_topping",
+            "name": "加雞肉",
+            "price": 25,
+            "sort_order": 6,
+            "out_of_stock_until": null,
+            "description": null
+          }
+        ]
+      },
+      {
+        "id": "blab_demo_cat-mtfz94iw",
+        "tenant_id": "blab_demo",
+        "name": "加辣",
+        "slug": "cat-mtfz94iw",
+        "short_name": "加辣",
+        "category_type": "modifier",
+        "is_required": 0,
+        "selection_type": "single",
+        "min_selection": 0,
+        "max_selection": 1,
+        "sort_order": 7,
+        "allow_customization": 1,
+        "applied_modifiers": "[\"*\"]",
+        "items_count": 4,
+        "items": [
+          {
+            "id": "blab_demo_cat-mtfz94iw_大辣",
+            "tenant_id": "blab_demo",
+            "category_id": "blab_demo_cat-mtfz94iw",
+            "name": "大辣",
+            "price": 0,
+            "sort_order": 1,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "blab_demo_cat-mtfz94iw_中辣",
+            "tenant_id": "blab_demo",
+            "category_id": "blab_demo_cat-mtfz94iw",
+            "name": "中辣",
+            "price": 0,
+            "sort_order": 2,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "blab_demo_cat-mtfz94iw_小辣",
+            "tenant_id": "blab_demo",
+            "category_id": "blab_demo_cat-mtfz94iw",
+            "name": "小辣",
+            "price": 0,
+            "sort_order": 3,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "blab_demo_cat-mtfz94iw_不辣",
+            "tenant_id": "blab_demo",
+            "category_id": "blab_demo_cat-mtfz94iw",
+            "name": "不辣",
+            "price": 0,
+            "sort_order": 4,
+            "out_of_stock_until": null,
+            "description": null
+          }
+        ]
+      },
+      {
+        "id": "mod_hs_noodle_type",
+        "tenant_id": "haoshiguoshao",
+        "name": "麵體選擇 (必選1項)",
+        "slug": "noodle-type",
+        "short_name": "麵體選擇 (必選1項)",
+        "category_type": "modifier",
+        "is_required": 1,
+        "selection_type": "single",
+        "min_selection": 1,
+        "max_selection": 1,
+        "sort_order": 10,
+        "allow_customization": 1,
+        "applied_modifiers": "[\"*\"]",
+        "items_count": 5,
+        "items": [
+          {
+            "id": "hs_mod_nd_01",
+            "tenant_id": "haoshiguoshao",
+            "category_id": "mod_hs_noodle_type",
+            "name": "意麵",
+            "price": 0,
+            "sort_order": 1,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "hs_mod_nd_02",
+            "tenant_id": "haoshiguoshao",
+            "category_id": "mod_hs_noodle_type",
+            "name": "冬粉",
+            "price": 0,
+            "sort_order": 2,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "hs_mod_nd_03",
+            "tenant_id": "haoshiguoshao",
+            "category_id": "mod_hs_noodle_type",
+            "name": "烏龍",
+            "price": 0,
+            "sort_order": 3,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "hs_mod_nd_04",
+            "tenant_id": "haoshiguoshao",
+            "category_id": "mod_hs_noodle_type",
+            "name": "泡飯",
+            "price": 0,
+            "sort_order": 4,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "hs_mod_nd_05",
+            "tenant_id": "haoshiguoshao",
+            "category_id": "mod_hs_noodle_type",
+            "name": "油麵",
+            "price": 0,
+            "sort_order": 5,
+            "out_of_stock_until": null,
+            "description": null
+          }
+        ]
+      },
+      {
+        "id": "mod_hs_guoshao_addons",
+        "tenant_id": "haoshiguoshao",
+        "name": "加料加價購 (可複選)",
+        "slug": "guoshao-addons",
+        "short_name": "加料加價購 (可複選)",
+        "category_type": "modifier",
+        "is_required": 0,
+        "selection_type": "multiple",
+        "min_selection": 0,
+        "max_selection": 6,
+        "sort_order": 11,
+        "allow_customization": 1,
+        "applied_modifiers": "[\"*\"]",
+        "items_count": 6,
+        "items": [
+          {
+            "id": "hs_mod_ad_01",
+            "tenant_id": "haoshiguoshao",
+            "category_id": "mod_hs_guoshao_addons",
+            "name": "加麻辣",
+            "price": 10,
+            "sort_order": 1,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "hs_mod_ad_02",
+            "tenant_id": "haoshiguoshao",
+            "category_id": "mod_hs_guoshao_addons",
+            "name": "加肉",
+            "price": 40,
+            "sort_order": 2,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "hs_mod_ad_03",
+            "tenant_id": "haoshiguoshao",
+            "category_id": "mod_hs_guoshao_addons",
+            "name": "加好蝦",
+            "price": 40,
+            "sort_order": 3,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "hs_mod_ad_04",
+            "tenant_id": "haoshiguoshao",
+            "category_id": "mod_hs_guoshao_addons",
+            "name": "加麵",
+            "price": 20,
+            "sort_order": 4,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "haoshiguoshao_guoshao-addons_加火鍋料",
+            "tenant_id": "haoshiguoshao",
+            "category_id": "mod_hs_guoshao_addons",
+            "name": "加火鍋料",
+            "price": 30,
+            "sort_order": 5,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "haoshiguoshao_guoshao-addons_加起士",
+            "tenant_id": "haoshiguoshao",
+            "category_id": "mod_hs_guoshao_addons",
+            "name": "加起士",
+            "price": 15,
+            "sort_order": 6,
+            "out_of_stock_until": null,
+            "description": null
+          }
+        ]
+      },
+      {
+        "id": "jiangjiejie_sec-flavor",
+        "tenant_id": "jiangjiejie",
+        "name": "口味與客製化選擇",
+        "slug": "sec-flavor",
+        "short_name": "口味選擇",
+        "category_type": "order_customization",
+        "is_required": 0,
+        "selection_type": "single",
+        "min_selection": 0,
+        "max_selection": 1,
+        "sort_order": 8,
+        "allow_customization": 0,
+        "applied_modifiers": "[]",
+        "items_count": 0,
+        "items": []
+      },
+      {
+        "id": "cat_mys_sec_flavor",
+        "tenant_id": "miyansuo",
+        "name": "加購服務 / 響應環保",
+        "slug": "sec-flavor",
+        "short_name": "提袋加購",
+        "category_type": "order_customization",
+        "is_required": 0,
+        "selection_type": "single",
+        "min_selection": 0,
+        "max_selection": 1,
+        "sort_order": 0,
+        "allow_customization": 0,
+        "applied_modifiers": "[]",
+        "items_count": 0,
+        "items": []
+      },
+      {
+        "id": "cat_tns_spicy",
+        "tenant_id": "thuyngason",
+        "name": "辣度選擇 (Độ cay)",
+        "slug": "spiciness",
+        "short_name": "辣度",
+        "category_type": "modifier",
+        "is_required": 1,
+        "selection_type": "single",
+        "min_selection": 1,
+        "max_selection": 1,
+        "sort_order": 2,
+        "allow_customization": 0,
+        "applied_modifiers": "[]",
+        "items_count": 4,
+        "items": [
+          {
+            "id": "opt_tns_sp_01",
+            "tenant_id": "thuyngason",
+            "category_id": "cat_tns_spicy",
+            "name": "大辣 (Cay nhiều)",
+            "price": 0,
+            "sort_order": 1,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "opt_tns_sp_02",
+            "tenant_id": "thuyngason",
+            "category_id": "cat_tns_spicy",
+            "name": "中辣 (Cay vừa)",
+            "price": 0,
+            "sort_order": 2,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "opt_tns_sp_03",
+            "tenant_id": "thuyngason",
+            "category_id": "cat_tns_spicy",
+            "name": "小辣 (Cay ít)",
+            "price": 0,
+            "sort_order": 3,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "opt_tns_sp_04",
+            "tenant_id": "thuyngason",
+            "category_id": "cat_tns_spicy",
+            "name": "不辣 (Không cay)",
+            "price": 0,
+            "sort_order": 4,
+            "out_of_stock_until": null,
+            "description": null
+          }
+        ]
+      },
+      {
+        "id": "cat_tns_custom",
+        "tenant_id": "thuyngason",
+        "name": "客製選項 (Tùy chọn bỏ nguyên liệu)",
+        "slug": "customization",
+        "short_name": "客製",
+        "category_type": "modifier",
+        "is_required": 0,
+        "selection_type": "multiple",
+        "min_selection": 0,
+        "max_selection": 10,
+        "sort_order": 3,
+        "allow_customization": 0,
+        "applied_modifiers": "[]",
+        "items_count": 4,
+        "items": [
+          {
+            "id": "opt_tns_cs_01",
+            "tenant_id": "thuyngason",
+            "category_id": "cat_tns_custom",
+            "name": "不加香菜 (Không ngò)",
+            "price": 0,
+            "sort_order": 1,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "opt_tns_cs_02",
+            "tenant_id": "thuyngason",
+            "category_id": "cat_tns_custom",
+            "name": "不加小黃瓜 (Không dưa leo)",
+            "price": 0,
+            "sort_order": 2,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "opt_tns_cs_03",
+            "tenant_id": "thuyngason",
+            "category_id": "cat_tns_custom",
+            "name": "不加醃蘿蔔 (Không dưa chua)",
+            "price": 0,
+            "sort_order": 3,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "opt_tns_cs_04",
+            "tenant_id": "thuyngason",
+            "category_id": "cat_tns_custom",
+            "name": "不要菜 (Không ăn rau)",
+            "price": 0,
+            "sort_order": 4,
+            "out_of_stock_until": null,
+            "description": null
+          }
+        ]
+      },
+      {
+        "id": "cat_tns_topping",
+        "tenant_id": "thuyngason",
+        "name": "加料選項 (Thêm đồ)",
+        "slug": "toppings",
+        "short_name": "加料",
+        "category_type": "modifier",
+        "is_required": 0,
+        "selection_type": "multiple",
+        "min_selection": 0,
+        "max_selection": 10,
+        "sort_order": 4,
+        "allow_customization": 0,
+        "applied_modifiers": "[]",
+        "items_count": 1,
+        "items": [
+          {
+            "id": "opt_tns_tp_01",
+            "tenant_id": "thuyngason",
+            "category_id": "cat_tns_topping",
+            "name": "加蛋 (Thêm trứng)",
+            "price": 15,
+            "sort_order": 1,
+            "out_of_stock_until": null,
+            "description": null
+          }
+        ]
+      },
+      {
+        "id": "cat_wwb_custom_general",
+        "tenant_id": "weiweibao",
+        "name": "客製化 (Tùy chọn chung)",
+        "slug": "customizations-general",
+        "short_name": null,
+        "category_type": "modifier",
+        "is_required": 0,
+        "selection_type": "multiple",
+        "min_selection": 0,
+        "max_selection": 10,
+        "sort_order": 6,
+        "allow_customization": 0,
+        "applied_modifiers": null,
+        "items_count": 8,
+        "items": [
+          {
+            "id": "wwb_cg_01",
+            "tenant_id": "weiweibao",
+            "category_id": "cat_wwb_custom_general",
+            "name": "加辣 (Có ớt)",
+            "price": 0,
+            "sort_order": 1,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "wwb_cg_02",
+            "tenant_id": "weiweibao",
+            "category_id": "cat_wwb_custom_general",
+            "name": "不加辣 (Không ớt)",
+            "price": 0,
+            "sort_order": 2,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "wwb_cg_03",
+            "tenant_id": "weiweibao",
+            "category_id": "cat_wwb_custom_general",
+            "name": "不加香菜 (Không ngò rí)",
+            "price": 0,
+            "sort_order": 3,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "wwb_cg_04",
+            "tenant_id": "weiweibao",
+            "category_id": "cat_wwb_custom_general",
+            "name": "不加豬肝醬 (Không pate)",
+            "price": 0,
+            "sort_order": 4,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "wwb_cg_05",
+            "tenant_id": "weiweibao",
+            "category_id": "cat_wwb_custom_general",
+            "name": "不加黃瓜 (Không dưa leo)",
+            "price": 0,
+            "sort_order": 5,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "wwb_cg_06",
+            "tenant_id": "weiweibao",
+            "category_id": "cat_wwb_custom_general",
+            "name": "不加大陸妹 (Không xà lách)",
+            "price": 0,
+            "sort_order": 6,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "wwb_cg_07",
+            "tenant_id": "weiweibao",
+            "category_id": "cat_wwb_custom_general",
+            "name": "不加醃蘿蔔 (Không dưa chua)",
+            "price": 0,
+            "sort_order": 7,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "wwb_cg_08",
+            "tenant_id": "weiweibao",
+            "category_id": "cat_wwb_custom_general",
+            "name": "不加火腿 (Không chả)",
+            "price": 0,
+            "sort_order": 8,
+            "out_of_stock_until": null,
+            "description": null
+          }
+        ]
+      },
+      {
+        "id": "cat_wwb_custom_noodle",
+        "tenant_id": "weiweibao",
+        "name": "客製化 - 干米線專用 (Tùy chọn bún)",
+        "slug": "customizations-noodle",
+        "short_name": null,
+        "category_type": "modifier",
+        "is_required": 0,
+        "selection_type": "multiple",
+        "min_selection": 0,
+        "max_selection": 1,
+        "sort_order": 7,
+        "allow_customization": 0,
+        "applied_modifiers": null,
+        "items_count": 1,
+        "items": [
+          {
+            "id": "wwb_cn_01",
+            "tenant_id": "weiweibao",
+            "category_id": "cat_wwb_custom_noodle",
+            "name": "不加花生 (Không đậu phộng)",
+            "price": 0,
+            "sort_order": 1,
+            "out_of_stock_until": null,
+            "description": null
+          }
+        ]
+      },
+      {
+        "id": "cat_wwb_combo_drink",
+        "tenant_id": "weiweibao",
+        "name": "套餐加購飲料 (Mua kèm bánh mì - Đồng giá 50元)",
+        "slug": "combo-drink-discount",
+        "short_name": null,
+        "category_type": "modifier",
+        "is_required": 0,
+        "selection_type": "combo_drink",
+        "min_selection": 0,
+        "max_selection": 1,
+        "sort_order": 8,
+        "allow_customization": 0,
+        "applied_modifiers": null,
+        "items_count": 3,
+        "items": [
+          {
+            "id": "wwb_cd_01",
+            "tenant_id": "weiweibao",
+            "category_id": "cat_wwb_combo_drink",
+            "name": "加購 泰式紅奶茶 (Trà sữa thái)",
+            "price": 50,
+            "sort_order": 1,
+            "out_of_stock_until": null,
+            "description": "搭配麵包享加購價 50元"
+          },
+          {
+            "id": "wwb_cd_02",
+            "tenant_id": "weiweibao",
+            "category_id": "cat_wwb_combo_drink",
+            "name": "加購 越南拿鐵 (Cafe sữa)",
+            "price": 50,
+            "sort_order": 2,
+            "out_of_stock_until": null,
+            "description": "搭配麵包享加購價 50元"
+          },
+          {
+            "id": "wwb_cd_03",
+            "tenant_id": "weiweibao",
+            "category_id": "cat_wwb_combo_drink",
+            "name": "加購 越南黑咖啡 (Cafe đá)",
+            "price": 50,
+            "sort_order": 3,
+            "out_of_stock_until": null,
+            "description": "搭配麵包享加購價 50元"
+          }
+        ]
+      },
+      {
+        "id": "cat_xx_spicy",
+        "tenant_id": "xiaolan",
+        "name": "辣度選擇",
+        "slug": "spiciness",
+        "short_name": "辣度",
+        "category_type": "modifier",
+        "is_required": 1,
+        "selection_type": "single",
+        "min_selection": 1,
+        "max_selection": 1,
+        "sort_order": 4,
+        "allow_customization": 0,
+        "applied_modifiers": "[]",
+        "items_count": 5,
+        "items": [
+          {
+            "id": "opt_xx_sp_01",
+            "tenant_id": "xiaolan",
+            "category_id": "cat_xx_spicy",
+            "name": "大辣",
+            "price": 0,
+            "sort_order": 1,
+            "out_of_stock_until": null,
+            "description": "Cay nhiều"
+          },
+          {
+            "id": "opt_xx_sp_02",
+            "tenant_id": "xiaolan",
+            "category_id": "cat_xx_spicy",
+            "name": "中辣",
+            "price": 0,
+            "sort_order": 2,
+            "out_of_stock_until": null,
+            "description": "Cay vừa"
+          },
+          {
+            "id": "opt_xx_sp_03",
+            "tenant_id": "xiaolan",
+            "category_id": "cat_xx_spicy",
+            "name": "小辣",
+            "price": 0,
+            "sort_order": 3,
+            "out_of_stock_until": null,
+            "description": "Cay ít"
+          },
+          {
+            "id": "opt_xx_sp_04",
+            "tenant_id": "xiaolan",
+            "category_id": "cat_xx_spicy",
+            "name": "微辣辣椒醬",
+            "price": 0,
+            "sort_order": 4,
+            "out_of_stock_until": null,
+            "description": "Tương ớt"
+          },
+          {
+            "id": "opt_xx_sp_05",
+            "tenant_id": "xiaolan",
+            "category_id": "cat_xx_spicy",
+            "name": "不辣",
+            "price": 0,
+            "sort_order": 5,
+            "out_of_stock_until": null,
+            "description": "Không cay"
+          }
+        ]
+      },
+      {
+        "id": "cat_xx_custom",
+        "tenant_id": "xiaolan",
+        "name": "客製選項 (不加配料)",
+        "slug": "customization",
+        "short_name": "客製選項",
+        "category_type": "modifier",
+        "is_required": 0,
+        "selection_type": "multiple",
+        "min_selection": 0,
+        "max_selection": 10,
+        "sort_order": 5,
+        "allow_customization": 0,
+        "applied_modifiers": "[]",
+        "items_count": 5,
+        "items": [
+          {
+            "id": "opt_xx_cs_01",
+            "tenant_id": "xiaolan",
+            "category_id": "cat_xx_custom",
+            "name": "不加香菜",
+            "price": 0,
+            "sort_order": 1,
+            "out_of_stock_until": null,
+            "description": "Không ngò"
+          },
+          {
+            "id": "opt_xx_cs_02",
+            "tenant_id": "xiaolan",
+            "category_id": "cat_xx_custom",
+            "name": "不加豬肝醬",
+            "price": 0,
+            "sort_order": 2,
+            "out_of_stock_until": null,
+            "description": "Không patê"
+          },
+          {
+            "id": "opt_xx_cs_03",
+            "tenant_id": "xiaolan",
+            "category_id": "cat_xx_custom",
+            "name": "不加奶油",
+            "price": 0,
+            "sort_order": 3,
+            "out_of_stock_until": null,
+            "description": "Không bơ"
+          },
+          {
+            "id": "opt_xx_cs_04",
+            "tenant_id": "xiaolan",
+            "category_id": "cat_xx_custom",
+            "name": "不加泡菜",
+            "price": 0,
+            "sort_order": 4,
+            "out_of_stock_until": null,
+            "description": "Không dưa chua"
+          },
+          {
+            "id": "opt_xx_cs_05",
+            "tenant_id": "xiaolan",
+            "category_id": "cat_xx_custom",
+            "name": "不加小黃瓜",
+            "price": 0,
+            "sort_order": 5,
+            "out_of_stock_until": null,
+            "description": "Không dưa leo"
+          }
+        ]
+      },
+      {
+        "id": "cat_xx_topping",
+        "tenant_id": "xiaolan",
+        "name": "加料選項",
+        "slug": "toppings",
+        "short_name": "加料",
+        "category_type": "modifier",
+        "is_required": 0,
+        "selection_type": "multiple",
+        "min_selection": 0,
+        "max_selection": 10,
+        "sort_order": 6,
+        "allow_customization": 0,
+        "applied_modifiers": "[]",
+        "items_count": 1,
+        "items": [
+          {
+            "id": "opt_xx_tp_01",
+            "tenant_id": "xiaolan",
+            "category_id": "cat_xx_topping",
+            "name": "加蛋",
+            "price": 15,
+            "sort_order": 1,
+            "out_of_stock_until": null,
+            "description": "Thêm trứng"
+          }
+        ]
+      },
+      {
+        "id": "cat_zd_spicy",
+        "tenant_id": "zhadantongxue",
+        "name": "加辣選項",
+        "slug": "spicy",
+        "short_name": "加辣選項",
+        "category_type": "modifier",
+        "is_required": 1,
+        "selection_type": "single",
+        "min_selection": 1,
+        "max_selection": 1,
+        "sort_order": 5,
+        "allow_customization": 1,
+        "applied_modifiers": "[\"*\"]",
+        "items_count": 2,
+        "items": [
+          {
+            "id": "zd_opt_spicy_1",
+            "tenant_id": "zhadantongxue",
+            "category_id": "cat_zd_spicy",
+            "name": "加辣 Add Spice",
+            "price": 0,
+            "sort_order": 1,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "zd_opt_spicy_2",
+            "tenant_id": "zhadantongxue",
+            "category_id": "cat_zd_spicy",
+            "name": "不加辣 Non-Spicy",
+            "price": 0,
+            "sort_order": 2,
+            "out_of_stock_until": null,
+            "description": null
+          }
+        ]
+      },
+      {
+        "id": "cat_zd_egg",
+        "tenant_id": "zhadantongxue",
+        "name": "雞蛋選項",
+        "slug": "egg",
+        "short_name": "雞蛋選項",
+        "category_type": "modifier",
+        "is_required": 1,
+        "selection_type": "single",
+        "min_selection": 1,
+        "max_selection": 1,
+        "sort_order": 6,
+        "allow_customization": 1,
+        "applied_modifiers": "[\"*\"]",
+        "items_count": 2,
+        "items": [
+          {
+            "id": "zd_opt_egg_1",
+            "tenant_id": "zhadantongxue",
+            "category_id": "cat_zd_egg",
+            "name": "流心蛋 Runny Yolk Egg",
+            "price": 0,
+            "sort_order": 1,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "zd_opt_egg_2",
+            "tenant_id": "zhadantongxue",
+            "category_id": "cat_zd_egg",
+            "name": "熟蛋 Over Egg",
+            "price": 0,
+            "sort_order": 2,
+            "out_of_stock_until": null,
+            "description": null
+          }
+        ]
+      },
+      {
+        "id": "cat_zd_lettuce",
+        "tenant_id": "zhadantongxue",
+        "name": "生菜選項",
+        "slug": "lettuce",
+        "short_name": "生菜選項",
+        "category_type": "modifier",
+        "is_required": 1,
+        "selection_type": "single",
+        "min_selection": 1,
+        "max_selection": 1,
+        "sort_order": 7,
+        "allow_customization": 1,
+        "applied_modifiers": "[\"*\"]",
+        "items_count": 2,
+        "items": [
+          {
+            "id": "zd_opt_lettuce_1",
+            "tenant_id": "zhadantongxue",
+            "category_id": "cat_zd_lettuce",
+            "name": "加生菜",
+            "price": 0,
+            "sort_order": 1,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "zd_opt_lettuce_2",
+            "tenant_id": "zhadantongxue",
+            "category_id": "cat_zd_lettuce",
+            "name": "不加生菜",
+            "price": 0,
+            "sort_order": 2,
+            "out_of_stock_until": null,
+            "description": null
+          }
+        ]
+      },
+      {
+        "id": "cat_zd_topping",
+        "tenant_id": "zhadantongxue",
+        "name": "加料選項",
+        "slug": "topping",
+        "short_name": "加料選項",
+        "category_type": "modifier",
+        "is_required": 0,
+        "selection_type": "multiple",
+        "min_selection": 0,
+        "max_selection": 10,
+        "sort_order": 8,
+        "allow_customization": 1,
+        "applied_modifiers": "[\"*\"]",
+        "items_count": 9,
+        "items": [
+          {
+            "id": "zhadantongxue_topping_一根雞薯",
+            "tenant_id": "zhadantongxue",
+            "category_id": "cat_zd_topping",
+            "name": "一根雞薯",
+            "price": 10,
+            "sort_order": 1,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "zd_top_01",
+            "tenant_id": "zhadantongxue",
+            "category_id": "cat_zd_topping",
+            "name": "一片起司",
+            "price": 10,
+            "sort_order": 2,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "zd_top_02",
+            "tenant_id": "zhadantongxue",
+            "category_id": "cat_zd_topping",
+            "name": "一支熱狗",
+            "price": 10,
+            "sort_order": 3,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "zd_top_03",
+            "tenant_id": "zhadantongxue",
+            "category_id": "cat_zd_topping",
+            "name": "雞蛋",
+            "price": 15,
+            "sort_order": 4,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "zd_top_04",
+            "tenant_id": "zhadantongxue",
+            "category_id": "cat_zd_topping",
+            "name": "培根",
+            "price": 15,
+            "sort_order": 5,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "zd_top_05",
+            "tenant_id": "zhadantongxue",
+            "category_id": "cat_zd_topping",
+            "name": "泡菜",
+            "price": 15,
+            "sort_order": 6,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "zd_top_06",
+            "tenant_id": "zhadantongxue",
+            "category_id": "cat_zd_topping",
+            "name": "豬排",
+            "price": 25,
+            "sort_order": 7,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "zd_top_07",
+            "tenant_id": "zhadantongxue",
+            "category_id": "cat_zd_topping",
+            "name": "雞腿肉卷",
+            "price": 35,
+            "sort_order": 8,
+            "out_of_stock_until": null,
+            "description": null
+          },
+          {
+            "id": "zd_top_08",
+            "tenant_id": "zhadantongxue",
+            "category_id": "cat_zd_topping",
+            "name": "台灣香腸",
+            "price": 50,
+            "sort_order": 9,
+            "out_of_stock_until": null,
+            "description": null
+          }
+        ]
+      }
+    ],
+    "modifier_category_items": [],
+    "applied_modifiers_analysis": [
+      {
+        "tenant_id": "52kaoroufan",
+        "category_id": "cat_52_main",
+        "category_name": "主餐 (Món chính)",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "benmi",
+        "category_id": "cat_large",
+        "category_name": "🍔 大麵包",
+        "allow_customization": 1,
+        "raw_applied_modifiers": "[\"*\"]",
+        "parsed_applied": [
+          "*"
+        ],
+        "effective_scope": "specific"
+      },
+      {
+        "tenant_id": "benmi",
+        "category_id": "cat_small",
+        "category_name": "🥖 小麵包",
+        "allow_customization": 1,
+        "raw_applied_modifiers": "[\"*\"]",
+        "parsed_applied": [
+          "*"
+        ],
+        "effective_scope": "specific"
+      },
+      {
+        "tenant_id": "benmi",
+        "category_id": "cat_combo",
+        "category_name": "🎁 特惠套餐 (含飲料)",
+        "allow_customization": 1,
+        "raw_applied_modifiers": "[\"*\"]",
+        "parsed_applied": [
+          "*"
+        ],
+        "effective_scope": "specific"
+      },
+      {
+        "tenant_id": "benmi",
+        "category_id": "cat_drinks",
+        "category_name": "🥤 單點飲料",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "blab_demo",
+        "category_id": "cat_demo_meat",
+        "category_name": "肉類",
+        "allow_customization": 1,
+        "raw_applied_modifiers": "[\"*\"]",
+        "parsed_applied": [
+          "*"
+        ],
+        "effective_scope": "specific"
+      },
+      {
+        "tenant_id": "blab_demo",
+        "category_id": "cat_demo_side50",
+        "category_name": "精選小菜 $50/份",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "blab_demo",
+        "category_id": "cat_demo_side30",
+        "category_name": "特色小菜 $30/份",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "blab_demo",
+        "category_id": "cat_demo_side25",
+        "category_name": "經典小菜 $25/份",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "blab_demo",
+        "category_id": "cat_demo_veggie",
+        "category_name": "蔬菜/配菜 1份$35 / 3份$100",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "bsc",
+        "category_id": "bsc_cat_meat",
+        "category_name": "肉類",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "bsc",
+        "category_id": "bsc_cat_side50",
+        "category_name": "精選小菜 $50/份",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "bsc",
+        "category_id": "bsc_cat_side30",
+        "category_name": "特色小菜 $30/份",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "bsc",
+        "category_id": "bsc_cat_side25",
+        "category_name": "經典小菜 $25/份",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "bsc",
+        "category_id": "bsc_veggie",
+        "category_name": "蔬菜/配菜 1份$35 / 3份$100",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "bsc",
+        "category_id": "bsc_cat-mtccfg6x",
+        "category_name": "其他",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "dapinglin",
+        "category_id": "cat_hjh_combos_veggie",
+        "category_name": "🥗 菜菜餐",
+        "allow_customization": 1,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "specific"
+      },
+      {
+        "tenant_id": "dapinglin",
+        "category_id": "cat_hjh_combos_single_meat",
+        "category_name": "🍗 一種肉肉吃得巧",
+        "allow_customization": 1,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "specific"
+      },
+      {
+        "tenant_id": "dapinglin",
+        "category_id": "cat_hjh_combos_double_meat",
+        "category_name": "🥩 兩種肉肉好滿足",
+        "allow_customization": 1,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "specific"
+      },
+      {
+        "tenant_id": "dapinglin",
+        "category_id": "cat_hjh_combos_large_meat",
+        "category_name": "🍖 大份肉肉好過癮",
+        "allow_customization": 1,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "specific"
+      },
+      {
+        "tenant_id": "dapinglin",
+        "category_id": "cat_hjh_combos_sharing",
+        "category_name": "👨‍👩‍👧 多人分享餐",
+        "allow_customization": 1,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "specific"
+      },
+      {
+        "tenant_id": "dapinglin",
+        "category_id": "cat_hjh_meat",
+        "category_name": "🥓 肉品單點",
+        "allow_customization": 1,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "specific"
+      },
+      {
+        "tenant_id": "dapinglin",
+        "category_id": "cat_hjh_veggie",
+        "category_name": "🥦 新鮮蔬菜類 (一律 $30)",
+        "allow_customization": 1,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "specific"
+      },
+      {
+        "tenant_id": "dapinglin",
+        "category_id": "cat_hjh_braised",
+        "category_name": "🥘 特色滷味類 (一律 $30)",
+        "allow_customization": 1,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "specific"
+      },
+      {
+        "tenant_id": "dapinglin",
+        "category_id": "cat_hjh_offal",
+        "category_name": "🍢 內臟類 (一律 $30)",
+        "allow_customization": 1,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "specific"
+      },
+      {
+        "tenant_id": "dapinglin",
+        "category_id": "cat_hjh_signature",
+        "category_name": "⭐ 獨家招牌菜 (一律 $30)",
+        "allow_customization": 1,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "specific"
+      },
+      {
+        "tenant_id": "haoshiguoshao",
+        "category_id": "cat_hs_guoshao",
+        "category_name": "鍋燒麵系列",
+        "allow_customization": 1,
+        "raw_applied_modifiers": "[\"mod_hs_guoshao_addons\"]",
+        "parsed_applied": [
+          "mod_hs_guoshao_addons"
+        ],
+        "effective_scope": "specific"
+      },
+      {
+        "tenant_id": "haoshiguoshao",
+        "category_id": "cat_hs_fried_noodles",
+        "category_name": "炒泡麵系列",
+        "allow_customization": 1,
+        "raw_applied_modifiers": "[\"guoshao-addons\"]",
+        "parsed_applied": [
+          "guoshao-addons"
+        ],
+        "effective_scope": "specific"
+      },
+      {
+        "tenant_id": "haoshiguoshao",
+        "category_id": "cat_hs_soups",
+        "category_name": "精選湯類",
+        "allow_customization": 1,
+        "raw_applied_modifiers": "[\"guoshao-addons\"]",
+        "parsed_applied": [
+          "guoshao-addons"
+        ],
+        "effective_scope": "specific"
+      },
+      {
+        "tenant_id": "haoshiguoshao",
+        "category_id": "cat_hs_drinks",
+        "category_name": "清涼冰飲",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "haoshiguoshao",
+        "category_id": "cat_hs_snacks",
+        "category_name": "點心炸物",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "jiangjiejie",
+        "category_id": "cat_jj_combo",
+        "category_name": "套餐",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "jiangjiejie",
+        "category_id": "cat_jj_chicken",
+        "category_name": "雞肉",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "jiangjiejie",
+        "category_id": "cat_jj_seafood",
+        "category_name": "海裡 (一律 $20)",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "jiangjiejie",
+        "category_id": "cat_jj_veggies",
+        "category_name": "時蔬 (一律 $20)",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "jiangjiejie",
+        "category_id": "cat_jj_offal",
+        "category_name": "內臟 (一律 $20)",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "jiangjiejie",
+        "category_id": "cat_jj_braised",
+        "category_name": "滷味 (一律 $20)",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "jiangjiejie",
+        "category_id": "cat_jj_others",
+        "category_name": "其他 (一律 $20)",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "jidangaodashu",
+        "category_id": "cat_jdgs_main",
+        "category_name": "造型雞蛋糕",
+        "allow_customization": 1,
+        "raw_applied_modifiers": null,
+        "parsed_applied": null,
+        "effective_scope": "wildcard_all"
+      },
+      {
+        "tenant_id": "miyansuo",
+        "category_id": "cat_mys_egg_cake_small",
+        "category_name": "雞蛋糕 (小份 5入)",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "miyansuo",
+        "category_id": "cat_mys_sharing_box",
+        "category_name": "經典分享盒 (大份 10入)",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "miyansuo",
+        "category_id": "cat_mys_flavors",
+        "category_name": "口味選擇 (任選2種)",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "quanthuyhang",
+        "category_id": "cat_th_soup_noodles",
+        "category_name": "湯麵類 (Các món nước)",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "quanthuyhang",
+        "category_id": "cat_th_porridge",
+        "category_name": "粥品 (Cháo)",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "quanthuyhang",
+        "category_id": "cat_th_soup",
+        "category_name": "湯類 (Canh)",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "quanthuyhang",
+        "category_id": "cat_th_dry_noodles",
+        "category_name": "炒河粉 / 涼拌類 (Hủ tiếu xào & Bún khô)",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "quanthuyhang",
+        "category_id": "cat_th_rice",
+        "category_name": "飯類 (Cơm)",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "quanthuyhang",
+        "category_id": "cat_th_appetizers",
+        "category_name": "小菜 / 涼拌 (Món ăn kèm)",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "quanthuyhang",
+        "category_id": "cat_th_drinks",
+        "category_name": "飲料 (Đồ uống)",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "thuyngason",
+        "category_id": "cat_tns_main",
+        "category_name": "招牌餐點 (沙威瑪 / 漢堡 / 烤麵包)",
+        "allow_customization": 1,
+        "raw_applied_modifiers": "[\"cat_tns_spicy\", \"cat_tns_custom\", \"cat_tns_topping\"]",
+        "parsed_applied": [
+          "cat_tns_spicy",
+          "cat_tns_custom",
+          "cat_tns_topping"
+        ],
+        "effective_scope": "specific"
+      },
+      {
+        "tenant_id": "weiweibao",
+        "category_id": "cat_wwb_bread",
+        "category_name": "麵包 (bánh mì các loại)",
+        "allow_customization": 1,
+        "raw_applied_modifiers": "[\"customizations-general\",\"combo-drink-discount\"]",
+        "parsed_applied": [
+          "customizations-general",
+          "combo-drink-discount"
+        ],
+        "effective_scope": "specific"
+      },
+      {
+        "tenant_id": "weiweibao",
+        "category_id": "cat_wwb_noodle",
+        "category_name": "干米線 (bún khô)",
+        "allow_customization": 1,
+        "raw_applied_modifiers": "[\"customizations-general\",\"customizations-noodle\"]",
+        "parsed_applied": [
+          "customizations-general",
+          "customizations-noodle"
+        ],
+        "effective_scope": "specific"
+      },
+      {
+        "tenant_id": "weiweibao",
+        "category_id": "cat_wwb_pork",
+        "category_name": "脆皮豬肉 (thịt heo quay)",
+        "allow_customization": 1,
+        "raw_applied_modifiers": "[\"customizations-general\"]",
+        "parsed_applied": [
+          "customizations-general"
+        ],
+        "effective_scope": "specific"
+      },
+      {
+        "tenant_id": "weiweibao",
+        "category_id": "cat_wwb_single",
+        "category_name": "單點 (A La Carte)",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "weiweibao",
+        "category_id": "cat_wwb_drink",
+        "category_name": "飲料 (nước)",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "xiaolan",
+        "category_id": "cat_xx_banhmi",
+        "category_name": "越式麵包",
+        "allow_customization": 1,
+        "raw_applied_modifiers": "[\"cat_xx_spicy\", \"cat_xx_custom\", \"cat_xx_topping\"]",
+        "parsed_applied": [
+          "cat_xx_spicy",
+          "cat_xx_custom",
+          "cat_xx_topping"
+        ],
+        "effective_scope": "specific"
+      },
+      {
+        "tenant_id": "xiaolan",
+        "category_id": "cat_xx_noodle",
+        "category_name": "涼拌 / 粉捲",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "xiaolan",
+        "category_id": "cat_xx_drink",
+        "category_name": "飲料",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "zhadantongxue",
+        "category_id": "cat_zd_main",
+        "category_name": "招牌炸蛋蔥餅",
+        "allow_customization": 1,
+        "raw_applied_modifiers": "[\"spicy\",\"lettuce\",\"topping\"]",
+        "parsed_applied": [
+          "spicy",
+          "lettuce",
+          "topping"
+        ],
+        "effective_scope": "specific"
+      },
+      {
+        "tenant_id": "zhadantongxue",
+        "category_id": "zhadantongxue_cat-mt5goqbz",
+        "category_name": "月亮蝦餅",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "zhadantongxue",
+        "category_id": "cat_zd_drinks",
+        "category_name": "豆漿 薏仁漿 純喫茶",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      },
+      {
+        "tenant_id": "zhadantongxue",
+        "category_id": "zhadantongxue_cat_mt46veog",
+        "category_name": "小料單賣",
+        "allow_customization": 0,
+        "raw_applied_modifiers": "[]",
+        "parsed_applied": [],
+        "effective_scope": "none"
+      }
+    ]
+  },
+  "canonical_current": {
+    "modifier_groups": [],
+    "modifier_options": [],
+    "category_modifier_links": [],
+    "item_modifier_links": []
+  },
+  "validation": {
+    "invalid_json": [],
+    "orphan_records": [],
+    "id_collisions": [],
+    "numeric_types": {
+      "menu_items_price": [
+        {
+          "type_name": "real",
+          "count": 527
+        }
+      ],
+      "modifier_options_price": []
+    }
+  }
+}
