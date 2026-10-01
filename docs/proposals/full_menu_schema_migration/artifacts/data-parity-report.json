@@ -1,0 +1,56 @@
+{
+  "meta": {
+    "verified_at": "2026-10-01T11:59:12.200Z",
+    "target_db": "/Users/duccao/Documents/benmi-order/docs/proposals/full_menu_schema_migration/artifacts/latest_isolated_target.db",
+    "source_snapshot_run_id": "snap_2026-10-01T11-56-30-635Z"
+  },
+  "foreign_keys_valid": true,
+  "source_tables_unchanged": {
+    "menu_categories": {
+      "expected_count": 82,
+      "current_count": 82,
+      "intact": true
+    },
+    "menu_items": {
+      "expected_count": 527,
+      "current_count": 527,
+      "intact": true
+    },
+    "menu_customizations": {
+      "expected_count": 26,
+      "current_count": 26,
+      "intact": true
+    },
+    "menu_customization_option_rules": {
+      "expected_count": 5,
+      "current_count": 5,
+      "intact": true
+    }
+  },
+  "groups_parity": {
+    "expected": 46,
+    "matched": 46,
+    "mismatched": []
+  },
+  "options_parity": {
+    "expected": 169,
+    "matched": 169,
+    "mismatched": []
+  },
+  "category_links_parity": {
+    "expected": 24,
+    "matched": 24,
+    "mismatched": []
+  },
+  "sub_options_verified": {
+    "total_options_with_sub": 13,
+    "matched": 13,
+    "mismatched": []
+  },
+  "rules_verified": {
+    "total_options_with_rules": 5,
+    "matched": 5,
+    "mismatched": []
+  },
+  "discrepancies_count": 0
+}
