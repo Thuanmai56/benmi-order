@@ -73,6 +73,7 @@ export interface BootstrapResponse {
       badgeText?: string | null;
       badge?: string | null;
       bundleRule?: BootstrapBundleRule | null;
+      maxPerOrder?: number | null;
       sortOrder: number;
     }>;
   }>;
@@ -112,6 +113,8 @@ export interface BootstrapResponse {
   }>;
   /** Position of the store-wide customization panel among catalog sections. */
   customizationSortOrder?: number;
+  customizationTitle?: string | null;
+  customizationShortName?: string | null;
   translations?: Record<string, string>;
   recommended?: string[];
 }
@@ -395,7 +398,8 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
           env.DB.prepare(
             `SELECT id, category_id, name, price, description, out_of_stock_until, sort_order,
                     COALESCE(badge_text, '') AS badge_text,
-                    COALESCE(is_recommended, 0) AS is_recommended
+                    COALESCE(is_recommended, 0) AS is_recommended,
+                    max_per_order
              FROM menu_items 
              WHERE tenant_id = ? 
              ORDER BY sort_order ASC`
@@ -600,6 +604,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
         badgeText: item.badge_text || null,
         badge: badge,
         bundleRule: bundleRule,
+        maxPerOrder: item.max_per_order !== null && item.max_per_order !== undefined && item.max_per_order > 0 ? Number(item.max_per_order) : null,
         sortOrder: item.sort_order || 0
       });
     }
@@ -609,11 +614,15 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
     const modifiers: BootstrapResponse['modifiers'] = [];
     let customizationSortOrder: number | undefined;
     let customizationCategoryId: string | null = null;
+    let customizationTitle: string | null = null;
+    let customizationShortName: string | null = null;
 
     for (const cat of categories) {
       if (cat.slug === 'sec-flavor' || cat.slug === 'flavor' || cat.category_type === 'order_customization') {
         customizationSortOrder = cat.sort_order || 0;
         customizationCategoryId = cat.id;
+        customizationTitle = cat.name || null;
+        customizationShortName = cat.short_name || null;
         continue;
       }
       const catType = cat.category_type || (cat.slug === 'topping' ? 'modifier' : 'catalog');
@@ -724,6 +733,8 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
       modifiers,
       customizations: customizations.length > 0 ? customizations : undefined,
       customizationSortOrder,
+      customizationTitle,
+      customizationShortName,
       translations: tenantId === 'benmi' ? BENMI_TRANSLATIONS : undefined,
       recommended: items.filter(it => it.is_recommended || it.badge_text).map(it => it.name)
     };

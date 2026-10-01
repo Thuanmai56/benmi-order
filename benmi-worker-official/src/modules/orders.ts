@@ -234,6 +234,57 @@ export async function validateOrderBundles(
   return { valid: true };
 }
 
+export async function validateItemLimits(
+  env: Env,
+  tenantId: string,
+  rawItems: OrderItemInput[]
+): Promise<{ valid: boolean; error?: string; code?: string }> {
+  if (!env.DB || !Array.isArray(rawItems) || rawItems.length === 0) return { valid: true };
+
+  try {
+    const limitedItemsRes = await env.DB.prepare(
+      `SELECT id, name, max_per_order 
+       FROM menu_items 
+       WHERE tenant_id = ? AND max_per_order IS NOT NULL AND max_per_order > 0`
+    ).bind(tenantId).all<{ id: string; name: string; max_per_order: number }>();
+
+    const limitedItems = limitedItemsRes.results || [];
+    if (limitedItems.length === 0) return { valid: true };
+
+    const limitById = new Map<string, { name: string; maxPerOrder: number }>();
+    const limitByName = new Map<string, { id: string; maxPerOrder: number }>();
+    for (const it of limitedItems) {
+      limitById.set(it.id, { name: it.name, maxPerOrder: Number(it.max_per_order) });
+      limitByName.set(it.name, { id: it.id, maxPerOrder: Number(it.max_per_order) });
+    }
+
+    const orderQtyByName = new Map<string, number>();
+
+    for (const item of rawItems) {
+      const itemId = item.itemId || item.item_id || "";
+      const itemName = item.name || item.itemName || "";
+      const qty = Number(item.quantity) || 1;
+
+      const matchedLimit = (itemId ? limitById.get(itemId) : undefined) || limitByName.get(itemName);
+      if (matchedLimit) {
+        const currentQty = (orderQtyByName.get(matchedLimit.name) || 0) + qty;
+        orderQtyByName.set(matchedLimit.name, currentQty);
+        if (currentQty > matchedLimit.maxPerOrder) {
+          return {
+            valid: false,
+            error: `餐點【${matchedLimit.name}】每單限購 ${matchedLimit.maxPerOrder} 份，您目前選購了 ${currentQty} 份`,
+            code: "ITEM_LIMIT_EXCEEDED"
+          };
+        }
+      }
+    }
+  } catch (err) {
+    console.warn(`[validateItemLimits] Error checking item limits for ${tenantId}:`, err);
+  }
+
+  return { valid: true };
+}
+
 export async function validateThresholdCustomizations(
   env: Env,
   tenantId: string,
@@ -409,6 +460,12 @@ export async function createOrder(
       minSubtotal: thresholdCheck.minSubtotal,
       currentSubtotal: thresholdCheck.currentSubtotal
     }, 400);
+  }
+
+  // 1.3 Validate Max Quantity Per Order (Item Limits)
+  const itemLimitCheck = await validateItemLimits(env, tenantId, rawItems);
+  if (!itemLimitCheck.valid) {
+    return json({ error: itemLimitCheck.error, code: itemLimitCheck.code }, 400);
   }
 
   // 1.1 Nếu client chủ động truyền parent_order_key thì chuyển sang xử lý append

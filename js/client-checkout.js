@@ -1241,6 +1241,20 @@ async function submitOrder() {
         return customAlert(`${unavailableOption.getAttribute('data-group-title')}：餐點金額需滿 ${unavailableOption.getAttribute('data-min-order-amount')} 元，請調整餐點或選項。`);
     }
 
+    // Verify item-level purchase limits (maxPerOrder)
+    const cartObj = window.cart || cart || {};
+    const resolveFn = typeof resolveCatalogItem === 'function' ? resolveCatalogItem : (window.resolveCatalogItem || (k => ({ origName: k, displayName: k })));
+    for (const [key, qty] of Object.entries(cartObj)) {
+        if (qty > 0) {
+            const itemInfo = resolveFn(key);
+            const targetItem = itemInfo?.targetItem || itemInfo;
+            const maxPerOrder = targetItem?.maxPerOrder || targetItem?.max_per_order;
+            if (maxPerOrder && qty > maxPerOrder) {
+                return customAlert(`【${targetItem.name || itemInfo?.displayName || key}】每單限購 ${maxPerOrder} 份，目前已選擇 ${qty} 份，請調整數量後再下單。`);
+            }
+        }
+    }
+
     // In Edit Order Mode, direct execution for order modification
     if (window.isEditOrderMode) {
         if (!hasAvailableCartItems()) {

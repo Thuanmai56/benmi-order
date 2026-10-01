@@ -98,7 +98,8 @@ function renderDynamicCatalog() {
     catalogSections.forEach((section, idx) => {
         const isActive = idx === 0;
         if (section.type === 'customizations') {
-            navHTML += `<div class="nav-btn ${isActive ? 'active' : ''}" onclick="scrollToSec('sec-flavor')">口味選擇</div>`;
+            const customNavTitle = bData.customizationShortName || '客製化';
+            navHTML += `<div class="nav-btn ${isActive ? 'active' : ''}" onclick="scrollToSec('sec-flavor')">${escapeHtml(customNavTitle)}</div>`;
             return;
         }
         const cat = section.category;
@@ -152,7 +153,9 @@ function renderDynamicCatalog() {
 function renderCustomizationsPanel(container, list) {
     if (!container || !list || list.length === 0) return;
 
-    let html = `<div class="section-title">口味與客製化選擇</div>
+    const bData = window.bootstrapData || (typeof bootstrapData !== 'undefined' ? bootstrapData : {});
+    const panelTitle = bData.customizationTitle || '客製化';
+    let html = `<div class="section-title">${escapeHtml(panelTitle)}</div>
     <div class="custom-panel-wrapper">
     <div class="custom-panel">`;
 
@@ -345,6 +348,7 @@ function createDynamicItemCard(catSlug, item) {
 
     const badgeText = item.badge || item.badgeText || (item.isRecommended ? '推薦' : '');
     const badgeHTML = badgeText ? `<span class="badge">${badgeText}</span>` : '';
+    const limitBadgeHTML = (item.maxPerOrder && item.maxPerOrder > 0) ? `<span class="badge badge-limit" style="background:#fffbeb; color:#b45309; border:1px solid #fde68a;">限購${item.maxPerOrder}份</span>` : '';
 
     const workerBase = window.WORKER_BASE || "";
     const imgHTML = item.imageUrl
@@ -390,7 +394,7 @@ function createDynamicItemCard(catSlug, item) {
             ${imgHTML}
             <div class="card-info">
                 <div>
-                    <div class="card-title">${item.name} ${badgeHTML}</div>
+                    <div class="card-title">${item.name} ${badgeHTML} ${limitBadgeHTML}</div>
                     ${transHTML}
                 </div>
                 <div class="card-footer">

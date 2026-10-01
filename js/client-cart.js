@@ -229,8 +229,22 @@ function updateQty(category, origName, change) {
             return;
         }
     }
-    const bundleRule = itemInfo?.bundleRule || (itemInfo?.targetItem && itemInfo.targetItem.bundleRule);
+    const targetItem = itemInfo?.targetItem || itemInfo;
+    const maxPerOrder = targetItem?.maxPerOrder || targetItem?.max_per_order;
     const cartObj = window.cart || cart;
+    const currentQty = cartObj[key] || 0;
+
+    if (change > 0 && maxPerOrder && currentQty >= maxPerOrder) {
+        const limitMsg = `【${targetItem.name || origName}】每單限購 ${maxPerOrder} 份`;
+        if (typeof customAlert === 'function') {
+            customAlert(limitMsg);
+        } else {
+            alert(limitMsg);
+        }
+        return;
+    }
+
+    const bundleRule = itemInfo?.bundleRule || (itemInfo?.targetItem && itemInfo.targetItem.bundleRule);
 
     // Intercept bundle item increment: open builder modal instead of direct cart increment
     if (bundleRule && change > 0) {
