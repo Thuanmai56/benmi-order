@@ -81,4 +81,41 @@ Trạng thái: Đang thực hiện T01
    - Cấu hình KV Cache (`ORDER_STATE`): Sạch sẽ, sẵn sàng bootstrap cache mới khi truy cập menu.
    - Static Check (`npm run check`): **PASSED 100%**.
 
+---
+
+## Tiến độ chuyển đổi từng Cụm Menu sang Schema Mới
+
+### Cụm 1: Món cơ bản & Tùy chọn cấp Món / Danh mục (`scope = 'category' | 'item'`)
+- **Trạng thái**: **HOÀN THÀNH 100% & ĐÃ DEPLOY DEV (2026-10-02)**.
+- **Backend**:
+  - `bootstrap.ts`: Loại bỏ hoàn toàn tổng hợp hardcode `benmi_spicy`, đọc trực tiếp `modifier_groups` từ `category_modifier_links` và `item_modifier_links`.
+  - Phân bổ `modifierGroups` vào cả cấp `catalog` và cấp `item`.
+- **Frontend**:
+  - `client-core.js`, `client-customizations.js`, `bundle-builder-v2.js`: Đọc trực tiếp `cat.modifierGroups` và `item.modifierGroups`.
+  - Bump cache-buster `?v=20261002_cluster1_modifiers_v1` trong `index.html`.
+- **Kiểm thử**:
+  - Viết suite `tests/test_cluster1_category_item_modifiers.cjs` (6 tests: 6/6 PASS).
+  - Deploy worker dev & purge KV cache `tenant:benmi:bootstrap`.
+  - Chạy E2E Live Audit đối chiếu 32/32 món giữa Dev và Prod: Khớp chính xác 100% (0 mismatches).
+
+### Cụm 2: Combo / Bundle Đa Lựa Chọn & Phụ Thu (`menu_bundle_rules`)
+- **Trạng thái**: **HOÀN THÀNH 100% (2026-10-02)**.
+- **Backend**:
+  - `bundle-rules.ts`:
+    - Sửa cú pháp SQL strict mode `COALESCE(category_type, "catalog")` -> `'catalog'`.
+    - Thêm batch query `category_modifier_links` và `modifier_groups` cho các món con trong combo.
+    - Ánh xạ tùy biến món con theo thứ tự: (1) `item_modifier_links` -> (2) `category_modifier_links` -> (3) legacy fallback.
+    - Cộng dồn chính xác phụ thu của món con (`extra`) và phụ thu của tùy chọn món con (`catOpt.price`, `itemOpt.price`) vào `surchargeTotal`.
+    - Kiểm tra nghiêm ngặt `min_selection`, `max_selection`, `is_required`, `out_of_stock_until` của món con theo schema mới.
+- **Frontend**:
+  - `bundle-builder-v2.js`:
+    - `optionsFor(source)` đọc modifier groups từ `window.getEffectiveItemModifierGroups(source)` và `cat.modifierGroups` (Schema Mới).
+    - `bundleEditModifiers`: Render dialog tùy biến món con đầy đủ single/multiple options từ Schema Mới.
+    - Lưu snapshot `bundleSelections.portions` và tính `bundleExtra` khớp 100% với backend validator.
+- **Kiểm thử TDD**:
+  - Tạo suite `tests/test_cluster2_combo_bundle_rules.cjs` (4 test cases + 3 edge-case tests: kiểm tra giá giả mạo `BUNDLE_PRICE_CHANGED`, thiếu tùy biến bắt buộc `BUNDLE_MODIFIER_REQUIRED`, tùy chọn hết hàng `BUNDLE_MODIFIER_NOT_ALLOWED`).
+  - Toàn bộ 4/4 test cases PASSED.
+  - Toàn bộ regression và static checks (`npm test`, `npm run test:cluster1`, `npm run test:cluster2`, `npm run test:menu-regression`, `npm run test:menu-safety`, `node scripts/check-frontend.js`) đều **PASSED 100%**.
+
+
 
