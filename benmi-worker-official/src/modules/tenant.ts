@@ -69,9 +69,9 @@ export async function resolveTenantContext(
           liffId: row.liff_id || (tenantId === 'benmi' ? (env.LIFF_ID || '') : ''),
           liffUrl: row.liff_url || (tenantId === 'benmi' ? (env.LIFF_URL || '') : ''),
           groqApiKey: row.groq_api_key || null,
-          groqModel: row.groq_model || 'openai/gpt-oss-120b',
+          groqModel: row.groq_model || 'openai/gpt-oss-20b',
           openrouterApiKey: row.openrouter_api_key || null,
-          openrouterModel: row.openrouter_model || 'google/gemini-2.5-flash:free',
+          openrouterModel: row.openrouter_model || 'google/gemma-4-26b-a4b-it:free',
           aiOrderRedirectEnabled: row.ai_order_redirect_enabled === undefined || row.ai_order_redirect_enabled === null
             ? true
             : Boolean(row.ai_order_redirect_enabled),
@@ -131,9 +131,9 @@ export async function resolveTenantContext(
       liffId: globalLiffId,
       liffUrl: globalLiffUrl,
       groqApiKey: globalGroqKey,
-      groqModel: env.GROQ_MODEL || 'openai/gpt-oss-120b',
+      groqModel: env.GROQ_MODEL || 'openai/gpt-oss-20b',
       openrouterApiKey: globalOpenRouterKey,
-      openrouterModel: env.OPENROUTER_MODEL || 'google/gemini-2.5-flash:free',
+      openrouterModel: env.OPENROUTER_MODEL || 'google/gemma-4-26b-a4b-it:free',
       aiOrderRedirectEnabled: true,
       brandName: 'Benmi 越式法國麵包',
       brandColor: '#00b900',

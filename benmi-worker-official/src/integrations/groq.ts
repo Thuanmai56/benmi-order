@@ -113,11 +113,11 @@ export async function callAI(
 
     // Determine Groq API Key & Model
     const groqKey = tenantCtx?.groqApiKey || (await resolveSecret(env.GROQ_API_KEY)) || null;
-    const groqModel = tenantCtx?.groqModel || env.GROQ_MODEL || "openai/gpt-oss-120b";
+    const groqModel = tenantCtx?.groqModel || env.GROQ_MODEL || "openai/gpt-oss-20b";
 
     // Determine OpenRouter API Key & Model
     const openrouterKey = tenantCtx?.openrouterApiKey || (await resolveSecret(env.OPENROUTER_API_KEY)) || null;
-    const openrouterModel = tenantCtx?.openrouterModel || env.OPENROUTER_MODEL || "google/gemini-2.5-flash:free";
+    const openrouterModel = tenantCtx?.openrouterModel || env.OPENROUTER_MODEL || "google/gemma-4-26b-a4b-it:free";
 
     // 1. Thử gọi Groq
     if (groqKey) {
