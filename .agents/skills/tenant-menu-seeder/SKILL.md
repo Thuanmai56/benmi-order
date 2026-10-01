@@ -76,89 +76,142 @@ Example order-wide group:
 
 ## 2. Step-by-Step Execution Workflow
 
-### Step 1: Migration Number Discovery
-1. Check existing files in `benmi-worker-official/migrations/`.
-2. Find the highest number (e.g. `0017`) and increment by 1 (e.g. `0018_seed_<tenant_id>_menu.sql`).
+### Step 1: File Location & Naming
+1. Tenant seed files are stored in `benmi-worker-official/seeds/tenants/`.
+2. Name the file after the tenant ID: `seeds/tenants/<tenant_id>.sql` (e.g. `seeds/tenants/miyansuo.sql`).
+3. **Do NOT put tenant menu seeds into `migrations/`**. The `migrations/` directory is strictly reserved for platform-wide Schema DDL changes.
 
-### Step 2: SQL Migration Generation
-For existing tenants, add a new migration rather than rewriting an applied seed. Use `INSERT ... ON CONFLICT(id) DO UPDATE` with explicit fields rather than REPLACE (which deletes/reinserts rows).
+### Step 2: Idempotent SQL Seed Generation
+Use `INSERT ... ON CONFLICT DO UPDATE` so the seed file can be executed repeatedly without errors or duplicating rows.
 
-For order-wide groups, upsert `menu_customizations (id, tenant_id, key, title, type, sort_order, options_json)` using the existing schema from migration 0037. When converting modifiers, copy their current options before deleting only the converted items/categories, remove converted references from `applied_modifiers`, and preserve unrelated categories/options. Scope every data change to the target tenant. Do not reseed the entire menu merely to move flavor groups.
+For order-wide groups, upsert `menu_customizations (id, tenant_id, key, title, type, sort_order, options_json)`. Scope every data change to the target tenant.
 
-Write the SQL migration file under `benmi-worker-official/migrations/`:
+Write the SQL seed file under `benmi-worker-official/seeds/tenants/<tenant_id>.sql`:
 
 ```sql
--- Migration: 00XX_seed_<tenant_id>_menu.sql
--- Description: Seed initial menu and tenant config for tenant '<tenant_id>'
+-- ==============================================================================
+-- Tenant Seed: <tenant_id> (<brand_name>)
+-- Description: Initial menu, categories, bundle rules, and store configuration
+-- Execution:
+--   echo "y" | npx wrangler d1 execute <database_name> --remote [--env dev|test] --file=seeds/tenants/<tenant_id>.sql
+-- ==============================================================================
 
 -- 1. Tenants Table
-INSERT OR IGNORE INTO tenants (id, name) 
-VALUES ('<tenant_id>', '<brand_name>');
+INSERT INTO tenants (id, name) 
+VALUES ('<tenant_id>', '<brand_name>')
+ON CONFLICT(id) DO UPDATE SET name = excluded.name;
 
 -- 2. Tenant Config Table
-INSERT OR REPLACE INTO tenant_config (
+INSERT INTO tenant_config (
     tenant_id, brand_name, brand_color, store_address, operating_hours,
     delivery_policy, default_password, locale, allow_scheduled_pickup,
-    store_status, liff_id, liff_url, is_active
+    allow_dine_in, store_status, liff_id, liff_url, order_prefix,
+    features, cuisine_type, is_marketplace_visible, is_active, latitude, longitude
 ) VALUES (
     '<tenant_id>',
     '<brand_name>',
     '<brand_color>',
     '<store_address>',
-    '<operating_hours>',
+    '<operating_hours_json>',
     '<delivery_policy>',
     '12345678',
     '<locale>',
     <1 or 0>,
+    0,
     'open',
     '2009560906-c5taZfiY',
     'https://liff.line.me/2009560906-c5taZfiY',
-    1
-);
+    '<unique_prefix>',
+    '["reports", "flex_notifications"]',
+    'taiwanese',
+    1,
+    1,
+    <latitude>,
+    <longitude>
+)
+ON CONFLICT(tenant_id) DO UPDATE SET
+    brand_name = excluded.brand_name,
+    brand_color = excluded.brand_color,
+    store_address = excluded.store_address,
+    operating_hours = excluded.operating_hours,
+    delivery_policy = excluded.delivery_policy,
+    locale = excluded.locale,
+    allow_scheduled_pickup = excluded.allow_scheduled_pickup,
+    allow_dine_in = excluded.allow_dine_in,
+    store_status = excluded.store_status,
+    order_prefix = excluded.order_prefix,
+    features = excluded.features,
+    cuisine_type = excluded.cuisine_type,
+    is_marketplace_visible = excluded.is_marketplace_visible,
+    is_active = excluded.is_active,
+    latitude = excluded.latitude,
+    longitude = excluded.longitude;
 
 -- 3. Categories (Catalog & Modifiers)
-INSERT OR REPLACE INTO menu_categories (
-    id, tenant_id, name, slug, category_type, selection_type,
-    is_required, min_selection, max_selection, sort_order
+INSERT INTO menu_categories (
+    id, tenant_id, name, short_name, slug, category_type, selection_type,
+    is_required, min_selection, max_selection, sort_order,
+    allow_customization, applied_modifiers
 ) VALUES
-('cat_<tenant>_main', '<tenant_id>', '...', 'main', 'catalog', 'single', 0, 0, 1, 1),
-('cat_<tenant>_topping', '<tenant_id>', '...', 'topping', 'modifier', 'multiple', 0, 0, 10, 2);
+('cat_<tenant>_main', '<tenant_id>', '...', '...', 'main', 'catalog', 'single', 0, 0, 1, 1, 1, '["cat_<tenant>_topping"]'),
+('cat_<tenant>_topping', '<tenant_id>', '...', '...', 'topping', 'modifier', 'multiple', 0, 0, 10, 2, 0, '[]')
+ON CONFLICT(id) DO UPDATE SET
+    tenant_id = excluded.tenant_id,
+    name = excluded.name,
+    short_name = excluded.short_name,
+    slug = excluded.slug,
+    category_type = excluded.category_type,
+    selection_type = excluded.selection_type,
+    is_required = excluded.is_required,
+    min_selection = excluded.min_selection,
+    max_selection = excluded.max_selection,
+    sort_order = excluded.sort_order,
+    allow_customization = excluded.allow_customization,
+    applied_modifiers = excluded.applied_modifiers;
 
 -- 4. Menu Items
-INSERT OR REPLACE INTO menu_items (
+INSERT INTO menu_items (
     id, tenant_id, category_id, name, price, description, badge_text, is_recommended, sort_order
 ) VALUES
-('<tenant>_item_01', '<tenant_id>', 'cat_<tenant>_main', '...', 50, '...', '👍 推薦', 1, 1),
-('<tenant>_top_01', '<tenant_id>', 'cat_<tenant>_topping', '...', 10, NULL, NULL, 0, 1);
+('<tenant>_item_01', '<tenant_id>', 'cat_<tenant>_main', '...', 50, '...', '招牌推薦', 1, 1),
+('<tenant>_top_01', '<tenant_id>', 'cat_<tenant>_topping', '...', 10, NULL, NULL, 0, 1)
+ON CONFLICT(id) DO UPDATE SET
+    tenant_id = excluded.tenant_id,
+    category_id = excluded.category_id,
+    name = excluded.name,
+    price = excluded.price,
+    description = excluded.description,
+    badge_text = excluded.badge_text,
+    is_recommended = excluded.is_recommended,
+    sort_order = excluded.sort_order;
 
 -- 5. Bundle Rules Table (Mandatory Starch / Base / Combos)
--- Required when an item cannot be prepared without picking 1 or N items from a base category
-INSERT OR REPLACE INTO menu_bundle_rules (
-    id, tenant_id, item_id, name, group_id, group_name,
-    min_selections, max_selections, selection_type, rule_json
-) VALUES
-(
+-- Required when an item cannot be prepared without picking 1 or N items from a base pool
+INSERT INTO menu_bundle_rules (id, tenant_id, parent_item_id, schema_version, config_json)
+VALUES (
     'rule_<tenant>_<item_id>_base',
     '<tenant_id>',
     '<tenant>_item_01',
-    '麵體',
-    'noodle-type',
-    '麵體',
     1,
-    1,
-    'fixed',
-    '{"version":1,"groups":[{"id":"noodle-type","name":"麵體","label":{"zh-TW":"請選擇 1 樣麵體","vi":"Chọn 1 loại mì"},"minQuantity":1,"maxQuantity":1,"allowRepeats":false,"sources":[{"type":"category","categoryId":"cat_<tenant>_noodle_type"}]}]}'
-);
+    '{"version":1,"groups":[{"id":"base-choice","name":"選擇搭配","label":{"zh-TW":"請選擇 1 樣搭配","vi":"Chọn 1 món kết hợp"},"minQuantity":1,"maxQuantity":1,"allowRepeat":false,"sources":[{"type":"category","categoryId":"cat_<tenant>_pool"}],"pricing":{"type":"included"}}]}'
+)
+ON CONFLICT(tenant_id, parent_item_id) DO UPDATE SET
+    schema_version = excluded.schema_version,
+    config_json = excluded.config_json,
+    is_active = excluded.is_active;
 ```
 
-### Step 3: Apply Migration to D1
-Run wrangler migration command for Staging and/or Production:
+### Step 3: Execute Seed on D1
+Run `wrangler d1 execute` for the target environment(s):
 ```bash
+# Dev:
+echo "y" | npx wrangler d1 execute blab-db-dev --remote --env dev --file=seeds/tenants/<tenant_id>.sql
+
 # Staging:
-CI=true CLOUDFLARE_ACCOUNT_ID=525bb177ae7306325d13269246769f50 npx wrangler d1 migrations apply blab-db-test --remote --env test
+echo "y" | npx wrangler d1 execute blab-db-test --remote --env test --file=seeds/tenants/<tenant_id>.sql
 
 # Production:
-CI=true CLOUDFLARE_ACCOUNT_ID=525bb177ae7306325d13269246769f50 npx wrangler d1 migrations apply blab-db-production --remote
+echo "y" | npx wrangler d1 execute blab-db-production --remote --file=seeds/tenants/<tenant_id>.sql
 ```
 
 ### Step 4: Clear KV Cache
