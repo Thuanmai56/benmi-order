@@ -117,5 +117,40 @@ Trạng thái: Đang thực hiện T01
   - Toàn bộ 4/4 test cases PASSED.
   - Toàn bộ regression và static checks (`npm test`, `npm run test:cluster1`, `npm run test:cluster2`, `npm run test:menu-regression`, `npm run test:menu-safety`, `node scripts/check-frontend.js`) đều **PASSED 100%**.
 
-
+### Cụm 3, 4, 5: Chuyển đổi Toàn diện sang Canonical Schema (Final Cutover Sprint)
+- **Trạng thái**: **HOÀN THÀNH 100% & ĐÃ DEPLOY DEV (2026-10-02)**.
+- **Phạm vi hoàn tất**:
+  - **Cụm 3 (Tùy chọn cấp Đơn Hàng & Ngưỡng giá trị)**: Tùy biến cấp đơn hàng (`scope = 'order'`) và quy tắc điều kiện (`eligibility_rules_json`, `min_order_subtotal`) chuyển đổi 100% sang canonical schema.
+  - **Cụm 4 (Sub-options lồng nhau)**: Tùy biến phân cấp 2 tầng (`sub_options_json`) hỗ trợ lựa chọn phụ thu phân cấp mượt mà từ menu client đến POS và lưu vết vào CSDL D1.
+  - **Cụm 5 (POS Menu Hub Single-source Cutover)**: Cắt bỏ hoàn toàn dual-write vào `menu_customizations`, POS Menu Hub ghi trực tiếp 100% vào `modifier_groups` và `modifier_options`.
+- **Backend**:
+  - `bootstrap.ts`:
+    - Graceful Cutover: Ưu tiên nạp từ `modifier_groups (scope = 'order')` kèm `sub_options_json` và `eligibility_rules_json`.
+    - Phân giải danh sách `customizations` array từ schema mới cho menu client.
+  - `orders.ts`:
+    - `validateThresholdCustomizations`: Kiểm tra ngưỡng `min_order_subtotal` trực tiếp từ `modifier_options.eligibility_rules_json`.
+    - `createOrder`: Đọc các tùy chọn bắt buộc từ `modifier_groups (scope = 'order')`.
+    - `formatItemsToText`: Tự động nhận diện và định dạng phân cấp `Option Cha (Sub-option Con) (+$(base + sub))`.
+  - `menu.ts`:
+    - Loại bỏ lệnh ghi kép `INSERT INTO menu_customizations`. Mọi thao tác lưu tùy biến chỉ ghi vào `modifier_groups` và `modifier_options`.
+    - Hỗ trợ lưu trữ `sub_options_json` và `eligibility_rules_json`.
+  - `types/index.ts`:
+    - Bổ sung `groupId`, `optionId`, `subOption: { id, name, price }` vào interface `OrderItemOption`.
+- **Frontend**:
+  - `client-customizations.js`:
+    - Hiển thị badge ngưỡng đơn hàng `(滿 $X 可選)` nếu có `minOrderSubtotal`.
+    - Render Inline Sub-chip Selector mượt mà ngay dưới option cha khi được chọn, tự chọn default sub-option và reset khi bỏ chọn.
+    - Cộng dồn chính xác phụ thu của sub-option vào tổng tiền món.
+  - `client-checkout.js`:
+    - Đóng gói cấu trúc `subOption: { id, name, price }` vào payload gửi lên backend khi submit đơn hàng.
+  - `client-core.js`:
+    - Bảo vệ an toàn `typeof URLSearchParams !== 'undefined'` trong hàm `isDesktopOutsideLiff`.
+  - `index.html`:
+    - Bump cache-buster: `?v=20261002_cluster3_4_5_cutover_v1`.
+- **Kiểm thử & Triển khai**:
+  - Tạo suite `tests/test_cluster3_4_5_full_schema_cutover.cjs` (5/5 PASS).
+  - Toàn bộ test suites vượt qua: `npm test` (10/10 PASS), `npm run test:cluster1` (6/6 PASS), `npm run test:cluster2` (4/4 PASS), `npm run test:cluster3-5` (5/5 PASS), `npm run test:menu-regression` (3/3 PASS), `npm run test:menu-safety` (38/38 PASS), `npm run check` (0 scope collisions, 0 errors).
+  - Deploy worker dev thành công: `platform-worker-dev.thuanmnc.workers.dev` (Version ID: `9bd33e16-ea41-44de-8ae0-6574e33bdcfc`).
+  - Purge KV bootstrap cache (`tenant:benmi:bootstrap`, `tenant:haoshiguoshao:bootstrap`).
+  - Tạo đơn live kiểm thử thành công trên Dev: Đơn `HS1002-T002` (tenant `haoshiguoshao`), D1 DB lưu đầy đủ `subOption` metadata và `order_content` hiển thị chuẩn `意麵 (加蛋) (+$40)`.
 

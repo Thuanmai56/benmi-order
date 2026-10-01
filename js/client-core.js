@@ -1016,10 +1016,14 @@ function ensureLiffReady() {
 window.ensureLiffReady = ensureLiffReady;
 
 function isDesktopOutsideLiff() {
-    const sp = new URLSearchParams(window.location.search);
-    if (sp.has('skip_liff') || sp.has('guest') || sp.has('bypass_liff')) {
-        return false;
-    }
+    try {
+        if (typeof window !== 'undefined' && window.location && typeof URLSearchParams !== 'undefined') {
+            const sp = new URLSearchParams(window.location.search);
+            if (sp.has('skip_liff') || sp.has('guest') || sp.has('bypass_liff')) {
+                return false;
+            }
+        }
+    } catch (e) {}
 
     if (!isLiffInitialized || typeof liff === 'undefined' || typeof liff.isInClient !== 'function') {
         const ua = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
