@@ -110,9 +110,31 @@ function buildModifierPriceMap(bData) {
             });
         });
     }
-    // Also index item-level modifier groups across all catalog categories
+    // Also index category and item-level modifier groups across all catalog categories
     if (data?.catalog && Array.isArray(data.catalog)) {
         data.catalog.forEach(cat => {
+            const catGroups = cat.modifierGroups || cat.modifier_groups;
+            if (Array.isArray(catGroups)) {
+                catGroups.forEach(grp => {
+                    (grp.options || []).forEach(opt => {
+                        const p = Number(opt.price) || 0;
+                        if (opt.name) {
+                            const name = String(opt.name).trim();
+                            if (map[name] === undefined) map[name] = p;
+                            if (name.startsWith('加')) {
+                                const stripped = name.substring(1).trim();
+                                if (map[stripped] === undefined) map[stripped] = p;
+                            } else {
+                                const added = '加' + name;
+                                if (map[added] === undefined) map[added] = p;
+                            }
+                        }
+                        if (opt.id && map[opt.id] === undefined) {
+                            map[opt.id] = p;
+                        }
+                    });
+                });
+            }
             const items = Array.isArray(cat.items) ? cat.items : [cat];
             items.forEach(it => {
                 const groups = it.modifierGroups || it.modifier_groups;
@@ -207,33 +229,60 @@ function getEffectiveItemModifierGroups(itemOrKey, catSlugOrNull) {
     if (targetCatSlug && bData?.catalog) {
         const catObj = bData.catalog.find(c => c.slug === targetCatSlug);
         if (catObj && catObj.allowCustomization !== false) {
-            let applied = catObj.appliedModifiers;
-            if (applied === undefined) applied = ['*'];
-            else if (typeof applied === 'string') {
-                try { applied = JSON.parse(applied); } catch { applied = applied.split(',').map(s => s.trim()).filter(Boolean); }
-            }
-            if (Array.isArray(applied) && applied.length > 0) {
-                const allMods = bData.modifiers || [];
-                const matched = applied.includes('*') ? allMods : allMods.filter(m => applied.includes(m.slug) || applied.includes(m.id));
-                matched.forEach(m => {
-                    catMods.push({
-                        id: m.id || m.slug,
-                        slug: m.slug || m.id,
-                        name: m.name,
-                        source: 'category',
-                        selectionType: m.selectionType || 'single',
-                        isRequired: Boolean(m.isRequired),
-                        minSelection: m.minSelection,
-                        maxSelection: m.maxSelection,
-                        options: (m.options || []).map(opt => ({
-                            id: opt.id,
-                            name: opt.name,
-                            price: Number(opt.price || 0),
-                            isDefault: Boolean(opt.isDefault),
-                            isOutOfStock: Boolean(opt.isOutOfStock)
-                        }))
-                    });
+            // New schema: check catObj.modifierGroups first
+            if (Array.isArray(catObj.modifierGroups) && catObj.modifierGroups.length > 0) {
+                const existingGids = new Set(itemMods.map(m => m.id));
+                catObj.modifierGroups.forEach((mg, idx) => {
+                    const gid = mg.id || `mg_cat_${idx}`;
+                    if (!existingGids.has(gid)) {
+                        catMods.push({
+                            id: gid,
+                            slug: gid,
+                            name: mg.name,
+                            source: 'category',
+                            selectionType: mg.selectionType || mg.selection_type || 'single',
+                            isRequired: Boolean(mg.isRequired || mg.is_required),
+                            minSelection: mg.minSelection ?? mg.min_selection,
+                            maxSelection: mg.maxSelection ?? mg.max_selection,
+                            options: (mg.options || []).map(opt => ({
+                                id: opt.id,
+                                name: opt.name,
+                                price: Number(opt.price || 0),
+                                isDefault: Boolean(opt.isDefault || opt.is_default),
+                                isOutOfStock: Boolean(opt.isOutOfStock || opt.is_out_of_stock)
+                            }))
+                        });
+                    }
                 });
+            } else {
+                let applied = catObj.appliedModifiers;
+                if (applied === undefined) applied = ['*'];
+                else if (typeof applied === 'string') {
+                    try { applied = JSON.parse(applied); } catch { applied = applied.split(',').map(s => s.trim()).filter(Boolean); }
+                }
+                if (Array.isArray(applied) && applied.length > 0) {
+                    const allMods = bData.modifiers || [];
+                    const matched = applied.includes('*') ? allMods : allMods.filter(m => applied.includes(m.slug) || applied.includes(m.id));
+                    matched.forEach(m => {
+                        catMods.push({
+                            id: m.id || m.slug,
+                            slug: m.slug || m.id,
+                            name: m.name,
+                            source: 'category',
+                            selectionType: m.selectionType || 'single',
+                            isRequired: Boolean(m.isRequired),
+                            minSelection: m.minSelection,
+                            maxSelection: m.maxSelection,
+                            options: (m.options || []).map(opt => ({
+                                id: opt.id,
+                                name: opt.name,
+                                price: Number(opt.price || 0),
+                                isDefault: Boolean(opt.isDefault),
+                                isOutOfStock: Boolean(opt.isOutOfStock)
+                            }))
+                        });
+                    });
+                }
             }
         }
     }
@@ -331,6 +380,18 @@ function getModifierPrice(optIdOrName, contextItemOrGroup) {
     const bData = window.bootstrapData || (typeof bootstrapData !== 'undefined' ? bootstrapData : null);
     if (bData?.catalog) {
         for (const cat of bData.catalog) {
+            const catGroups = cat.modifierGroups || cat.modifier_groups;
+            if (Array.isArray(catGroups)) {
+                for (const grp of catGroups) {
+                    if (Array.isArray(grp.options)) {
+                        const found = grp.options.find(o => o.id === cleanKey || o.name === cleanKey);
+                        if (found && typeof found.price === 'number') {
+                            if (window.modPriceMap) window.modPriceMap[cleanKey] = found.price;
+                            return found.price;
+                        }
+                    }
+                }
+            }
             const items = Array.isArray(cat.items) ? cat.items : [cat];
             for (const it of items) {
                 const groups = it.modifierGroups || it.modifier_groups;

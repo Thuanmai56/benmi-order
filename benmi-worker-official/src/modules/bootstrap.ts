@@ -878,38 +878,22 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
           }
         }
 
+        const catModGroups = categoryModifierGroupsMap.get(cat.id) || [];
+        const isCustomizationAllowed = Boolean(cat.allow_customization ?? 1) && (appliedModifiers.length > 0 || catModGroups.length > 0);
+
         catalog.push({
           id: cat.id,
           slug: cat.slug,
           name: cat.name,
           shortName: cat.short_name || null,
-          allowCustomization: Boolean(cat.allow_customization ?? 1) && appliedModifiers.length > 0,
+          allowCustomization: isCustomizationAllowed,
           appliedModifiers: appliedModifiers,
-          modifierGroups: categoryModifierGroupsMap.get(cat.id) || [],
+          modifierGroups: catModGroups,
           pricingRules: pricingRules,
           sortOrder: cat.sort_order || 0,
           items: catItems
         });
       }
-    }
-
-    // Synthesize Default Spicy modifier for Benmi if not present in DB
-    if (tenantId === 'benmi' && !modifiers.some(m => m.slug === 'spicy')) {
-      modifiers.unshift({
-        id: 'benmi_spicy',
-        slug: 'spicy',
-        name: '辣度 (Độ cay)',
-        selectionType: 'single',
-        isRequired: false,
-        minSelection: 0,
-        maxSelection: 1,
-        options: [
-          { id: 'spicy_0', name: '不辣', price: 0, isDefault: true, isOutOfStock: false },
-          { id: 'spicy_1', name: '微辣', price: 0, isDefault: false, isOutOfStock: false },
-          { id: 'spicy_2', name: '中辣', price: 0, isDefault: false, isOutOfStock: false },
-          { id: 'spicy_3', name: '大辣', price: 0, isDefault: false, isOutOfStock: false }
-        ]
-      });
     }
 
     const payload: BootstrapResponse = {
