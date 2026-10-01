@@ -1,0 +1,64 @@
+{
+  "run_id": "snap_2026-10-01T11-56-30-635Z",
+  "timestamp": "2026-10-01T11:56:30.640Z",
+  "source_database": "blab-db-production",
+  "is_remote": true,
+  "tables": {
+    "tenants": {
+      "row_count": 14,
+      "sha256": "10ca369878b605a1e8425e1a24f51f02e1bd7768ec3dae70194e1e8e691edbb5",
+      "file": "tenants.json"
+    },
+    "tenant_config": {
+      "row_count": 14,
+      "sha256": "748b3216eb8f2f70f8846c38f0145263fdd44fc008ad83cb950b77df0cc5b53e",
+      "file": "tenant_config.json"
+    },
+    "menu_categories": {
+      "row_count": 82,
+      "sha256": "b7cc9d72bc213f2d2831ea0f6ae3da16b767eba399a6d2b87f42797fbdb0b90d",
+      "file": "menu_categories.json"
+    },
+    "menu_items": {
+      "row_count": 527,
+      "sha256": "e4702cf4fd8ee791c670e0e7bf76bfb88925d7a860bd2f62d1dbabfaa42a220a",
+      "file": "menu_items.json"
+    },
+    "menu_customizations": {
+      "row_count": 26,
+      "sha256": "e9674e9898f16246970bfe77dcd2807957436f3271881d8c7751ed6f292d2f16",
+      "file": "menu_customizations.json"
+    },
+    "menu_customization_option_rules": {
+      "row_count": 5,
+      "sha256": "6618663406a1d36a1e5c4efcb8a8284eb29e079f4dc43e44fa958dfafdef20db",
+      "file": "menu_customization_option_rules.json"
+    },
+    "modifier_groups": {
+      "row_count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "file": "modifier_groups.json"
+    },
+    "modifier_options": {
+      "row_count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "file": "modifier_options.json"
+    },
+    "category_modifier_links": {
+      "row_count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "file": "category_modifier_links.json"
+    },
+    "item_modifier_links": {
+      "row_count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "file": "item_modifier_links.json"
+    },
+    "d1_migrations": {
+      "row_count": 70,
+      "sha256": "f94b10a96d479f03deb742d0233d428425410137736152acfdddd211b6bba025",
+      "file": "d1_migrations.json"
+    }
+  },
+  "overall_sha256": "648ec114a2f5ea00b58c946ea5ea79fbe54b856c57b574c25aef608733a93ac6"
+}
