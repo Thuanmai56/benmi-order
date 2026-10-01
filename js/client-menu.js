@@ -168,12 +168,12 @@ function renderCustomizationsPanel(container, list) {
             const title = match[1].trim();
             const subtitle = match[2].trim();
             return `<div class="choice-content">
-                <span class="choice-title">${escapeHtml(title)}${priceLabelHtml}</span>
+                <span class="choice-title"><span class="choice-name">${escapeHtml(title)}</span>${priceLabelHtml}</span>
                 <span class="choice-subtitle">${escapeHtml(subtitle)}</span>
             </div>`;
         }
         return `<div class="choice-content">
-            <span class="choice-title">${escapeHtml(raw)}${priceLabelHtml}</span>
+            <span class="choice-title"><span class="choice-name">${escapeHtml(raw)}</span>${priceLabelHtml}</span>
         </div>`;
     }
 
@@ -198,7 +198,7 @@ function renderCustomizationsPanel(container, list) {
             const firstAvailableIdx = (group.options || []).findIndex(o => !Boolean(typeof o === 'object' && o && (o.is_out_of_stock || o.isOutOfStock || o.out_of_stock)));
             const explicitDefaults = (group.options || []).some(o => o && typeof o === 'object' && o.is_default !== undefined);
             const isChecked = (group.type === 'radio' && !isOos && (explicitDefaults ? opt.is_default === true : optIdx === firstAvailableIdx)) ? 'checked' : '';
-            const priceLabel = optPrice > 0 ? ` (+<span style="color:#059669; font-weight:800; white-space:nowrap;">$${optPrice}</span>)` : '';
+            const priceLabel = optPrice > 0 ? `<span class="choice-price-badge">+$${optPrice}</span>` : '';
             const oosBadge = isOos ? ` <span class="oos-badge" style="color:#dc2626; font-size:12px; font-weight:900; text-decoration:none;">(已售完)</span>` : '';
 
             const minSubtotal = (typeof opt === 'object' && opt && (opt.minOrderSubtotal || opt.min_order_amount)) ? Number(opt.minOrderSubtotal || opt.min_order_amount) : 0;
