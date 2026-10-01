@@ -10,6 +10,7 @@ const backend = vm.createContext({});
 vm.runInContext(compiled, backend);
 const migration0061Sql = fs.readFileSync('benmi-worker-official/migrations/0061_unified_bundle_and_customization_schema.sql', 'utf8');
 const migration0063Sql = fs.readFileSync('benmi-worker-official/migrations/0063_clean_customizations_and_category_links.sql', 'utf8');
+const migration0064Sql = fs.readFileSync('benmi-worker-official/migrations/0064_add_modifier_migration_metadata.sql', 'utf8');
 function fixture() {
   const db = new DatabaseSync(':memory:');
   db.exec(`PRAGMA foreign_keys=ON;
@@ -18,6 +19,7 @@ function fixture() {
     CREATE TABLE menu_customizations(id TEXT PRIMARY KEY, tenant_id TEXT, key TEXT, title TEXT, type TEXT, sort_order INTEGER, options_json TEXT, updated_at TEXT, UNIQUE(tenant_id,key));`);
   db.exec(migration0061Sql);
   db.exec(migration0063Sql);
+  db.exec(migration0064Sql);
   for (const tenant of ['a', 'b']) {
     db.prepare('INSERT INTO menu_categories(id,tenant_id,slug,category_type) VALUES(?,?,?,?)').run(`${tenant}_food`,tenant,'food','catalog');
     db.prepare('INSERT INTO menu_categories(id,tenant_id,slug,category_type) VALUES(?,?,?,?)').run(`${tenant}_custom`,tenant,'sec-flavor','order_customization');
