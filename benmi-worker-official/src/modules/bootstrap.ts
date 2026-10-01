@@ -133,6 +133,8 @@ export interface BootstrapResponse {
       price: number;
       isDefault: boolean;
       isOutOfStock: boolean;
+      subOptions?: any[];
+      eligibilityRules?: any[];
     }>;
   }>;
   customizations?: Array<{
@@ -147,11 +149,16 @@ export interface BootstrapResponse {
       id?: string;
       name: string;
       price?: number;
+      isDefault?: boolean;
+      isOutOfStock?: boolean;
+      is_out_of_stock?: boolean;
       min_order_amount?: number;
       minOrderSubtotal?: number;
       thresholdBasis?: string;
       ruleErrorMessage?: string;
-      sub_options?: string[];
+      sub_options?: any[];
+      subOptions?: any[];
+      eligibilityRules?: any[];
     }>;
   }>;
   /** Position of the store-wide customization panel among catalog sections. */
@@ -429,6 +436,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
     let categories: any[] = [];
     let items: any[] = [];
     let rawCustomizations: any[] = [];
+    let orderModifierRows: any[] = [];
     let bundleRulesRows: any[] = [];
     let customRulesRows: any[] = [];
     let itemModifierRows: any[] = [];
@@ -436,7 +444,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
 
     if (env.DB) {
       try {
-        const [catsRes, itemsRes, customRes] = await env.DB.batch([
+        const [catsRes, itemsRes, customRes, orderModRes] = await env.DB.batch([
           env.DB.prepare(
             `SELECT id, name, short_name, slug, 
                     COALESCE(category_type, 'catalog') AS category_type, 
@@ -472,6 +480,22 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
              FROM menu_customizations
              WHERE tenant_id = ?
              ORDER BY sort_order ASC`
+          ).bind(tenantId),
+          env.DB.prepare(
+            `SELECT g.id AS group_id, g.name AS group_name, g.selection_type,
+                    COALESCE(g.is_required, 0) AS is_required,
+                    COALESCE(g.min_selection, 0) AS min_selection,
+                    COALESCE(g.max_selection, 1) AS max_selection,
+                    COALESCE(g.sort_order, 0) AS sort_order,
+                    COALESCE(g.scope, 'order') AS scope,
+                    o.id AS option_id, o.name AS option_name, COALESCE(o.price, 0) AS option_price,
+                    COALESCE(o.is_default, 0) AS is_default, o.out_of_stock_until AS option_out_of_stock_until,
+                    COALESCE(o.sub_options_json, '[]') AS sub_options_json,
+                    COALESCE(o.eligibility_rules_json, '[]') AS eligibility_rules_json
+             FROM modifier_groups g
+             LEFT JOIN modifier_options o ON o.group_id = g.id AND o.tenant_id = g.tenant_id
+             WHERE g.tenant_id = ? AND g.scope = 'order'
+             ORDER BY g.sort_order ASC, o.sort_order ASC`
           ).bind(tenantId)
         ]);
         if ([catsRes, itemsRes, customRes].some(result => !result || !result.success || !Array.isArray(result.results))) {
@@ -480,6 +504,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
         categories = (catsRes.results as any[]) || [];
         items = (itemsRes.results as any[]) || [];
         rawCustomizations = (customRes.results as any[]) || [];
+        orderModifierRows = (orderModRes && orderModRes.success && Array.isArray(orderModRes.results)) ? (orderModRes.results as any[]) : [];
         menuComplete = true;
 
         try {
@@ -514,7 +539,9 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
                       COALESCE(g.max_selection, 1) AS max_selection,
                       COALESCE(g.scope, 'item') AS scope,
                       o.id AS option_id, o.name AS option_name, COALESCE(o.price, 0) AS option_price,
-                      COALESCE(o.is_default, 0) AS is_default, o.out_of_stock_until AS option_out_of_stock_until
+                      COALESCE(o.is_default, 0) AS is_default, o.out_of_stock_until AS option_out_of_stock_until,
+                      COALESCE(o.sub_options_json, '[]') AS sub_options_json,
+                      COALESCE(o.eligibility_rules_json, '[]') AS eligibility_rules_json
                FROM item_modifier_links l
                JOIN modifier_groups g ON g.id = l.group_id AND g.tenant_id = l.tenant_id
                LEFT JOIN modifier_options o ON o.group_id = g.id AND o.tenant_id = g.tenant_id
@@ -528,7 +555,9 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
                       COALESCE(g.max_selection, 1) AS max_selection,
                       COALESCE(g.scope, 'category') AS scope,
                       o.id AS option_id, o.name AS option_name, COALESCE(o.price, 0) AS option_price,
-                      COALESCE(o.is_default, 0) AS is_default, o.out_of_stock_until AS option_out_of_stock_until
+                      COALESCE(o.is_default, 0) AS is_default, o.out_of_stock_until AS option_out_of_stock_until,
+                      COALESCE(o.sub_options_json, '[]') AS sub_options_json,
+                      COALESCE(o.eligibility_rules_json, '[]') AS eligibility_rules_json
                FROM category_modifier_links l
                JOIN modifier_groups g ON g.id = l.group_id AND g.tenant_id = l.tenant_id
                LEFT JOIN modifier_options o ON o.group_id = g.id AND o.tenant_id = g.tenant_id
@@ -562,45 +591,95 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
     }
 
     const customizations: BootstrapResponse['customizations'] = [];
-    for (const c of rawCustomizations) {
-      try {
-        const opts = typeof c.options_json === 'string' ? JSON.parse(c.options_json) : c.options_json;
-        if (!Array.isArray(opts)) throw new Error('Invalid customization options');
-        const enrichedOpts = opts.map((opt: any) => {
-          const optId = opt.id || opt.name;
-          const rule = customRulesMap.get(`${c.key}::${optId}`) || customRulesMap.get(`${c.key}::${opt.name}`);
-          const minSubtotal = rule ? rule.min_order_subtotal : (opt.min_order_amount || 0);
-          const isOos = Boolean(
-            opt.is_out_of_stock ||
-            opt.isOutOfStock ||
-            (opt.out_of_stock_until && new Date(opt.out_of_stock_until) > now)
-          );
 
-          return {
-            ...opt,
-            id: optId,
+    if (orderModifierRows.length > 0) {
+      // Primary: Pure Canonical New Schema for order-level customizations
+      const orderGroupsMap = new Map<string, any>();
+      for (const row of orderModifierRows) {
+        if (!orderGroupsMap.has(row.group_id)) {
+          orderGroupsMap.set(row.group_id, {
+            id: row.group_id,
+            key: row.group_id,
+            scope: 'order',
+            title: row.group_name,
+            type: row.selection_type === 'multiple' ? 'checkbox' : 'radio',
+            isRequired: Boolean(row.is_required),
+            sortOrder: Number(row.sort_order || 0),
+            options: []
+          });
+        }
+        if (row.option_id) {
+          const isOos = Boolean(
+            row.option_out_of_stock_until && new Date(row.option_out_of_stock_until) > now
+          );
+          let subOptions: any[] = [];
+          try { subOptions = JSON.parse(row.sub_options_json || '[]'); } catch { subOptions = []; }
+          let eligibilityRules: any[] = [];
+          try { eligibilityRules = JSON.parse(row.eligibility_rules_json || '[]'); } catch { eligibilityRules = []; }
+
+          const minRule = eligibilityRules.find((r: any) => r.rule_type === 'min_order_subtotal' && Number(r.min_order_subtotal) > 0);
+          const minSubtotal = minRule ? Number(minRule.min_order_subtotal) : undefined;
+
+          orderGroupsMap.get(row.group_id)!.options.push({
+            id: row.option_id,
+            name: row.option_name,
+            price: Number(row.option_price || 0),
+            isDefault: Boolean(row.is_default),
             isOutOfStock: isOos,
             is_out_of_stock: isOos,
-            minOrderSubtotal: minSubtotal > 0 ? minSubtotal : undefined,
-            min_order_amount: minSubtotal > 0 ? minSubtotal : (opt.min_order_amount || undefined),
-            thresholdBasis: rule?.threshold_basis,
-            ruleErrorMessage: rule?.error_message
-          };
-        });
+            minOrderSubtotal: minSubtotal,
+            min_order_amount: minSubtotal,
+            thresholdBasis: minRule?.threshold_basis,
+            ruleErrorMessage: minRule?.error_message,
+            subOptions: subOptions.length > 0 ? subOptions : undefined,
+            sub_options: subOptions.length > 0 ? subOptions : undefined,
+            eligibilityRules: eligibilityRules.length > 0 ? eligibilityRules : undefined
+          });
+        }
+      }
+      customizations.push(...Array.from(orderGroupsMap.values()));
+    } else {
+      // Legacy Fallback for unmigrated tenant environments
+      for (const c of rawCustomizations) {
+        try {
+          const opts = typeof c.options_json === 'string' ? JSON.parse(c.options_json) : c.options_json;
+          if (!Array.isArray(opts)) throw new Error('Invalid customization options');
+          const enrichedOpts = opts.map((opt: any) => {
+            const optId = opt.id || opt.name;
+            const rule = customRulesMap.get(`${c.key}::${optId}`) || customRulesMap.get(`${c.key}::${opt.name}`);
+            const minSubtotal = rule ? rule.min_order_subtotal : (opt.min_order_amount || 0);
+            const isOos = Boolean(
+              opt.is_out_of_stock ||
+              opt.isOutOfStock ||
+              (opt.out_of_stock_until && new Date(opt.out_of_stock_until) > now)
+            );
 
-        customizations.push({
-          id: c.id,
-          key: c.key,
-          scope: c.scope || 'order',
-          title: c.title,
-          type: c.type || 'radio',
-          isRequired: Boolean(c.is_required),
-          sortOrder: c.sort_order || 0,
-          options: enrichedOpts
-        });
-      } catch (e) {
-        menuComplete = false;
-        console.error(`[Bootstrap] Failed to parse options_json for ${c.id}:`, e);
+            return {
+              ...opt,
+              id: optId,
+              isOutOfStock: isOos,
+              is_out_of_stock: isOos,
+              minOrderSubtotal: minSubtotal > 0 ? minSubtotal : undefined,
+              min_order_amount: minSubtotal > 0 ? minSubtotal : (opt.min_order_amount || undefined),
+              thresholdBasis: rule?.threshold_basis,
+              ruleErrorMessage: rule?.error_message
+            };
+          });
+
+          customizations.push({
+            id: c.id,
+            key: c.key,
+            scope: c.scope || 'order',
+            title: c.title,
+            type: c.type || 'radio',
+            isRequired: Boolean(c.is_required),
+            sortOrder: c.sort_order || 0,
+            options: enrichedOpts
+          });
+        } catch (e) {
+          menuComplete = false;
+          console.error(`[Bootstrap] Failed to parse options_json for ${c.id}:`, e);
+        }
       }
     }
 
@@ -626,12 +705,22 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
       }
       if (row.option_id) {
         const isOptOos = Boolean(row.option_out_of_stock_until && new Date(row.option_out_of_stock_until) > now);
+        let subOptions: any[] = [];
+        try { subOptions = JSON.parse(row.sub_options_json || '[]'); } catch { subOptions = []; }
+        let eligibilityRules: any[] = [];
+        try { eligibilityRules = JSON.parse(row.eligibility_rules_json || '[]'); } catch { eligibilityRules = []; }
+        const minRule = eligibilityRules.find((r: any) => r.rule_type === 'min_order_subtotal' && Number(r.min_order_subtotal) > 0);
+
         grp.options.push({
           id: row.option_id,
           name: row.option_name,
           price: Number(row.option_price || 0),
           isDefault: Boolean(row.is_default),
-          isOutOfStock: isOptOos
+          isOutOfStock: isOptOos,
+          subOptions: subOptions.length > 0 ? subOptions : undefined,
+          eligibilityRules: eligibilityRules.length > 0 ? eligibilityRules : undefined,
+          minOrderSubtotal: minRule ? Number(minRule.min_order_subtotal) : undefined,
+          ruleErrorMessage: minRule?.error_message
         });
       }
     }
@@ -659,12 +748,22 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
       }
       if (row.option_id) {
         const isOptOos = Boolean(row.option_out_of_stock_until && new Date(row.option_out_of_stock_until) > now);
+        let subOptions: any[] = [];
+        try { subOptions = JSON.parse(row.sub_options_json || '[]'); } catch { subOptions = []; }
+        let eligibilityRules: any[] = [];
+        try { eligibilityRules = JSON.parse(row.eligibility_rules_json || '[]'); } catch { eligibilityRules = []; }
+        const minRule = eligibilityRules.find((r: any) => r.rule_type === 'min_order_subtotal' && Number(r.min_order_subtotal) > 0);
+
         grp.options.push({
           id: row.option_id,
           name: row.option_name,
           price: Number(row.option_price || 0),
           isDefault: Boolean(row.is_default),
-          isOutOfStock: isOptOos
+          isOutOfStock: isOptOos,
+          subOptions: subOptions.length > 0 ? subOptions : undefined,
+          eligibilityRules: eligibilityRules.length > 0 ? eligibilityRules : undefined,
+          minOrderSubtotal: minRule ? Number(minRule.min_order_subtotal) : undefined,
+          ruleErrorMessage: minRule?.error_message
         });
       }
     }

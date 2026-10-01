@@ -703,27 +703,7 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
           throw new Error('INVALID_MODIFIER_GROUP_ID');
         }
 
-        // Canonical library entries are edited in this common editor, but must
-        // not acquire a synthetic legacy menu_customizations row. Legacy-backed
-        // groups keep the dual-write adapter until legacy reads are retired.
-        if (cust.source !== 'canonical' && !(cust.source === 'modifier_category' && !ownedCustomIds.has(custId))) {
-          statements.push(
-            env.DB.prepare(
-              `INSERT INTO menu_customizations (id, tenant_id, key, title, type, is_required, sort_order, options_json, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-               ON CONFLICT(id) DO UPDATE SET
-                 title = excluded.title,
-                 type = excluded.type,
-                 is_required = excluded.is_required,
-                 sort_order = excluded.sort_order,
-                 options_json = excluded.options_json,
-                 updated_at = datetime('now')
-               WHERE menu_customizations.tenant_id = excluded.tenant_id`
-            ).bind(custId, tenantId, custKey, custTitle, custType, custIsRequired, custSort, optionsJson)
-          );
-        }
-
-        // Sync with modifier_groups table with scope support
+        // Sync with modifier_groups table with scope support (Pure Canonical New Schema)
         const selectionType = custType === 'checkbox' ? 'multiple' : 'single';
         const minSel = Number(cust.minSelection ?? (custIsRequired ? 1 : 0));
         const maxSel = Number(cust.maxSelection ?? (selectionType === 'single' ? 1 : 99));
@@ -755,19 +735,23 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
           const optName = opt.name || opt.title || '';
           const optPrice = Number(opt.price || opt.surcharge || 0);
           const outOfStockUntil = opt.outOfStockUntil ?? opt.out_of_stock_until ?? null;
+          const subOptionsJson = JSON.stringify(opt.subOptions || opt.sub_options || opt.sub_options_json || []);
+          const eligibilityRulesJson = JSON.stringify(opt.eligibilityRules || opt.eligibility_rules || opt.eligibility_rules_json || []);
           statements.push(
             env.DB.prepare(
-              `INSERT INTO modifier_options (id, tenant_id, group_id, name, price, is_default, sort_order, out_of_stock_until, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+              `INSERT INTO modifier_options (id, tenant_id, group_id, name, price, is_default, sort_order, out_of_stock_until, sub_options_json, eligibility_rules_json, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
                ON CONFLICT(id) DO UPDATE SET
                  name = excluded.name,
                  price = excluded.price,
                  is_default = excluded.is_default,
                  sort_order = excluded.sort_order,
                  out_of_stock_until = COALESCE(excluded.out_of_stock_until, modifier_options.out_of_stock_until),
+                 sub_options_json = excluded.sub_options_json,
+                 eligibility_rules_json = excluded.eligibility_rules_json,
                  updated_at = datetime('now')
                WHERE modifier_options.tenant_id = excluded.tenant_id`
-            ).bind(optId, tenantId, modGroupId, optName, optPrice, (opt.isDefault || opt.is_default) ? 1 : 0, oIdx, outOfStockUntil)
+            ).bind(optId, tenantId, modGroupId, optName, optPrice, (opt.isDefault || opt.is_default) ? 1 : 0, oIdx, outOfStockUntil, subOptionsJson, eligibilityRulesJson)
           );
         }
 

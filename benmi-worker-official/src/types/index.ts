@@ -76,9 +76,19 @@ export interface Menu {
 
 export interface OrderItemOption {
   group?: string;
+  groupId?: string;
+  group_id?: string;
+  id?: string;
+  optionId?: string;
+  option_id?: string;
   choice?: string;
   name?: string;
   price?: number;
+  subOption?: {
+    id?: string;
+    name?: string;
+    price?: number;
+  };
 }
 
 export interface OrderBundleItemSelection {
