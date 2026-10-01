@@ -70,7 +70,7 @@ export async function loadBundleCatalog(env: Env, tenantId: string) {
   const [itemsResult, rulesResult, categoriesResult] = await env.DB.batch([
     env.DB.prepare('SELECT id, category_id, name, price, out_of_stock_until FROM menu_items WHERE tenant_id = ?').bind(tenantId),
     env.DB.prepare('SELECT parent_item_id, config_json FROM menu_bundle_rules WHERE tenant_id = ? AND is_active = 1').bind(tenantId),
-    env.DB.prepare('SELECT id, slug, COALESCE(category_type, "catalog") AS category_type, COALESCE(allow_customization, 1) AS allow_customization, COALESCE(applied_modifiers, "") AS applied_modifiers FROM menu_categories WHERE tenant_id = ?').bind(tenantId)
+    env.DB.prepare("SELECT id, slug, COALESCE(category_type, 'catalog') AS category_type, COALESCE(allow_customization, 1) AS allow_customization, COALESCE(applied_modifiers, '') AS applied_modifiers FROM menu_categories WHERE tenant_id = ?").bind(tenantId)
   ]);
   const rules = new Map<string, any>();
   for (const row of rulesResult.results as any[]) {
@@ -102,21 +102,38 @@ export async function validateBundleOrderItems(env: Env, tenantId: string, rawIt
   const options = new Map((modifiersResult.results || []).map((row: any) => [row.option_id, row]));
 
   let itemModifiersResult: any = { results: [] };
+  let catModifiersResult: any = { results: [] };
   try {
-    itemModifiersResult = await env.DB.prepare(
-      `SELECT l.item_id, g.id AS group_id, g.name AS group_name, g.selection_type,
-              COALESCE(g.is_required, 0) AS is_required,
-              COALESCE(g.min_selection, 0) AS min_selection,
-              COALESCE(g.max_selection, 1) AS max_selection,
-              o.id AS option_id, o.name AS option_name, COALESCE(o.price, 0) AS price,
-              o.out_of_stock_until
-       FROM item_modifier_links l
-       JOIN modifier_groups g ON g.id = l.group_id AND g.tenant_id = l.tenant_id
-       LEFT JOIN modifier_options o ON o.group_id = g.id AND o.tenant_id = g.tenant_id
-       WHERE l.tenant_id = ?`
-    ).bind(tenantId).all<any>();
+    const [itemRes, catRes] = await env.DB.batch([
+      env.DB.prepare(
+        `SELECT l.item_id, g.id AS group_id, g.name AS group_name, g.selection_type,
+                COALESCE(g.is_required, 0) AS is_required,
+                COALESCE(g.min_selection, 0) AS min_selection,
+                COALESCE(g.max_selection, 1) AS max_selection,
+                o.id AS option_id, o.name AS option_name, COALESCE(o.price, 0) AS price,
+                o.out_of_stock_until
+         FROM item_modifier_links l
+         JOIN modifier_groups g ON g.id = l.group_id AND g.tenant_id = l.tenant_id
+         LEFT JOIN modifier_options o ON o.group_id = g.id AND o.tenant_id = g.tenant_id
+         WHERE l.tenant_id = ?`
+      ).bind(tenantId),
+      env.DB.prepare(
+        `SELECT l.category_id, g.id AS group_id, g.name AS group_name, g.selection_type,
+                COALESCE(g.is_required, 0) AS is_required,
+                COALESCE(g.min_selection, 0) AS min_selection,
+                COALESCE(g.max_selection, 1) AS max_selection,
+                o.id AS option_id, o.name AS option_name, COALESCE(o.price, 0) AS price,
+                o.out_of_stock_until
+         FROM category_modifier_links l
+         JOIN modifier_groups g ON g.id = l.group_id AND g.tenant_id = l.tenant_id
+         LEFT JOIN modifier_options o ON o.group_id = g.id AND o.tenant_id = g.tenant_id
+         WHERE l.tenant_id = ?`
+      ).bind(tenantId)
+    ]);
+    itemModifiersResult = itemRes || { results: [] };
+    catModifiersResult = catRes || { results: [] };
   } catch (err) {
-    // Graceful fallback if table does not exist
+    // Graceful fallback if tables do not exist
   }
   const itemOptionsByItem = new Map<string, Map<string, any>>();
   const itemGroupsByItem = new Map<string, Map<string, any>>();
@@ -129,6 +146,27 @@ export async function validateBundleOrderItems(env: Env, tenantId: string, rawIt
     itemOptionsByItem.get(row.item_id)!.set(row.option_id, row);
     if (!itemGroupsByItem.get(row.item_id)!.has(row.group_id)) {
       itemGroupsByItem.get(row.item_id)!.set(row.group_id, {
+        group_id: row.group_id,
+        group_name: row.group_name,
+        selection_type: row.selection_type,
+        is_required: Boolean(row.is_required),
+        min_selection: Number(row.min_selection || 0),
+        max_selection: Number(row.max_selection || 1),
+      });
+    }
+  }
+
+  const catOptionsByCat = new Map<string, Map<string, any>>();
+  const catGroupsByCat = new Map<string, Map<string, any>>();
+  for (const row of (catModifiersResult.results || [])) {
+    if (!row.category_id || !row.option_id) continue;
+    if (!catOptionsByCat.has(row.category_id)) {
+      catOptionsByCat.set(row.category_id, new Map());
+      catGroupsByCat.set(row.category_id, new Map());
+    }
+    catOptionsByCat.get(row.category_id)!.set(row.option_id, row);
+    if (!catGroupsByCat.get(row.category_id)!.has(row.group_id)) {
+      catGroupsByCat.get(row.category_id)!.set(row.group_id, {
         group_id: row.group_id,
         group_name: row.group_name,
         selection_type: row.selection_type,
@@ -207,8 +245,9 @@ export async function validateBundleOrderItems(env: Env, tenantId: string, rawIt
           const mods = Array.isArray(selected.modifiers) ? selected.modifiers : [];
 
           const itemOpts = itemOptionsByItem.get(childId);
+          const catOpts = catOptionsByCat.get(child.category_id);
           const hasItemMods = Boolean(itemOpts && itemOpts.size > 0);
-          const hasCatMods = Boolean(category?.allow_customization && applied.length > 0);
+          const hasCatMods = Boolean(category?.allow_customization && (Boolean(catOpts && catOpts.size > 0) || applied.length > 0));
 
           if (mods.length && !hasCatMods && !hasItemMods) return fail('BUNDLE_MODIFIER_NOT_ALLOWED', portionIndex, groupRule.id, undefined, childId);
 
@@ -229,6 +268,19 @@ export async function validateBundleOrderItems(env: Env, tenantId: string, rawIt
               continue;
             }
 
+            const catOpt = catOpts?.get(mod.optionId);
+            if (catOpt && catOpt.group_id === mod.groupId) {
+              if (seenOptions.has(catOpt.option_id) || (catOpt.out_of_stock_until && new Date(catOpt.out_of_stock_until).getTime() > Date.now())) {
+                return fail('BUNDLE_MODIFIER_NOT_ALLOWED', portionIndex, groupRule.id, undefined, childId);
+              }
+              seenOptions.add(catOpt.option_id);
+              countByCatGroup.set(catOpt.group_id, (countByCatGroup.get(catOpt.group_id) || 0) + 1);
+              mod.name = catOpt.option_name || mod.name;
+              mod.price = Number(catOpt.price || 0);
+              surchargeTotal += Number(catOpt.price || 0) * Number(selected.quantity);
+              continue;
+            }
+
             const option = options.get(mod.optionId);
             if (option && option.group_id === mod.groupId && (applied.includes('*') || applied.includes(option.group_id) || applied.includes(option.group_slug))) {
               if (seenOptions.has(option.option_id) || (option.out_of_stock_until && new Date(option.out_of_stock_until).getTime() > Date.now())) {
@@ -246,7 +298,17 @@ export async function validateBundleOrderItems(env: Env, tenantId: string, rawIt
           }
 
           if (Number(rule.version || 1) >= 2) {
-            if (hasCatMods) {
+            const catGroups = catGroupsByCat.get(child.category_id);
+            if (catGroups && catGroups.size > 0) {
+              for (const [modId, config] of catGroups) {
+                const count = countByCatGroup.get(modId) || 0;
+                const minReq = Number(config.min_selection ?? (config.is_required ? 1 : 0));
+                const maxReq = config.max_selection ? Number(config.max_selection) : undefined;
+                if (count < minReq || (maxReq !== undefined && count > maxReq)) {
+                  return fail('BUNDLE_MODIFIER_REQUIRED', portionIndex, groupRule.id, undefined, childId);
+                }
+              }
+            } else if (hasCatMods) {
               const allowedGroups = new Map<string, any>();
               for (const option of options.values()) {
                 if (applied.includes('*') || applied.includes(option.group_id) || applied.includes(option.group_slug)) {
