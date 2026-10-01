@@ -12,10 +12,20 @@
       return window.getEffectiveItemModifierGroups(item);
     }
     const itemMods = item.modifierGroups || item.modifier_groups || [];
-    const catMods = (bootstrapData?.modifiers || []).filter(mod => 
-      item.appliedModifiers?.includes('*') || item.appliedModifiers?.includes(mod.id) || item.appliedModifiers?.includes(mod.slug)
-    );
-    return [...itemMods, ...catMods];
+    let catMods = [];
+    if (item.categoryId && Array.isArray(bootstrapData?.catalog)) {
+      const cat = bootstrapData.catalog.find(c => c.id === item.categoryId);
+      if (cat && Array.isArray(cat.modifierGroups) && cat.modifierGroups.length > 0) {
+        catMods = cat.modifierGroups;
+      }
+    }
+    if (!catMods.length) {
+      catMods = (bootstrapData?.modifiers || []).filter(mod => 
+        item.appliedModifiers?.includes('*') || item.appliedModifiers?.includes(mod.id) || item.appliedModifiers?.includes(mod.slug)
+      );
+    }
+    const existingGids = new Set(itemMods.map(m => m.id));
+    return [...itemMods, ...catMods.filter(m => !existingGids.has(m.id))];
   };
   const optionPrice = option => Number(option?.price || 0);
   const itemExtra = item => Number(item.surcharge || 0) + (item.modifiers || []).reduce((sum, mod) => sum + Number(mod.price || 0), 0);
