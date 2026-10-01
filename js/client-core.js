@@ -1005,6 +1005,11 @@ function ensureLiffReady() {
 window.ensureLiffReady = ensureLiffReady;
 
 function isDesktopOutsideLiff() {
+    const sp = new URLSearchParams(window.location.search);
+    if (sp.has('skip_liff') || sp.has('guest') || sp.has('bypass_liff')) {
+        return false;
+    }
+
     if (!isLiffInitialized || typeof liff === 'undefined' || typeof liff.isInClient !== 'function') {
         const ua = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
         const isLine = /Line\//i.test(ua);
