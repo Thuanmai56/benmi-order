@@ -163,6 +163,27 @@ function getCategoryModifiers(catSlug) {
     const catObj = bData?.catalog?.find(c => c.slug === catSlug);
     if (!catObj) return [];
     if (catObj.allowCustomization === false) return [];
+    // New schema: read catObj.modifierGroups directly
+    if (Array.isArray(catObj.modifierGroups) && catObj.modifierGroups.length > 0) {
+        return catObj.modifierGroups.map((mg, idx) => ({
+            id: mg.id || `mg_cat_${idx}`,
+            slug: mg.id || `mg_cat_${idx}`,
+            name: mg.name,
+            source: 'category',
+            selectionType: mg.selectionType || mg.selection_type || 'single',
+            isRequired: Boolean(mg.isRequired || mg.is_required),
+            minSelection: mg.minSelection ?? mg.min_selection,
+            maxSelection: mg.maxSelection ?? mg.max_selection,
+            options: (mg.options || []).map(opt => ({
+                id: opt.id,
+                name: opt.name,
+                price: Number(opt.price || 0),
+                isDefault: Boolean(opt.isDefault || opt.is_default),
+                isOutOfStock: Boolean(opt.isOutOfStock || opt.is_out_of_stock)
+            }))
+        }));
+    }
+
     const applied = catObj.appliedModifiers || ['*'];
     if (applied.length === 0) return [];
     const allMods = bData?.modifiers || [];
