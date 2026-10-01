@@ -1,0 +1,24 @@
+{
+  "run_id": "apply_1790855923344",
+  "started_at": "2026-10-01T11:58:43.344Z",
+  "completed_at": "2026-10-01T11:58:43.405Z",
+  "target_database": "/Users/duccao/Documents/benmi-order/docs/proposals/full_menu_schema_migration/artifacts/latest_isolated_target.db",
+  "tenants_processed": [
+    "blab_demo",
+    "jiangjiejie",
+    "dapinglin",
+    "bsc",
+    "miyansuo",
+    "benmi",
+    "zhadantongxue",
+    "weiweibao",
+    "xiaolan",
+    "thuyngason",
+    "haoshiguoshao"
+  ],
+  "tenants_failed": [],
+  "total_inserted_groups": 46,
+  "total_inserted_options": 169,
+  "total_inserted_links": 24,
+  "status": "COMPLETED_SUCCESS"
+}
