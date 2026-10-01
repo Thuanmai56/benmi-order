@@ -1,0 +1,352 @@
+[
+  {
+    "id": 1,
+    "name": "0001_initialize_menu_tables.sql",
+    "applied_at": "2026-07-18 06:53:50"
+  },
+  {
+    "id": 2,
+    "name": "0002_seed_initial_menu.sql",
+    "applied_at": "2026-07-18 06:53:50"
+  },
+  {
+    "id": 3,
+    "name": "0003_create_pending_actions.sql",
+    "applied_at": "2026-07-18 06:53:50"
+  },
+  {
+    "id": 4,
+    "name": "0004_add_tenant_id_to_pending_actions.sql",
+    "applied_at": "2026-07-18 06:53:50"
+  },
+  {
+    "id": 5,
+    "name": "0005_create_orders_table.sql",
+    "applied_at": "2026-07-21 14:52:25"
+  },
+  {
+    "id": 6,
+    "name": "0006_add_performance_indexes.sql",
+    "applied_at": "2026-07-30 09:38:55"
+  },
+  {
+    "id": 7,
+    "name": "0006_create_tenant_config.sql",
+    "applied_at": "2026-08-02 04:28:37"
+  },
+  {
+    "id": 8,
+    "name": "0007_add_performance_indexes.sql",
+    "applied_at": "2026-08-18 12:25:04"
+  },
+  {
+    "id": 9,
+    "name": "0008_add_allow_scheduled_pickup_to_tenant_config.sql",
+    "applied_at": "2026-08-20 07:10:05"
+  },
+  {
+    "id": 10,
+    "name": "0009_add_store_status_to_tenant_config.sql",
+    "applied_at": "2026-08-20 07:10:05"
+  },
+  {
+    "id": 11,
+    "name": "0010_seed_zhadan_tenants.sql",
+    "applied_at": "2026-08-20 07:10:27"
+  },
+  {
+    "id": 12,
+    "name": "0011_enhance_menu_categories_for_modifiers.sql",
+    "applied_at": "2026-08-20 07:10:27"
+  },
+  {
+    "id": 13,
+    "name": "0012_set_default_liff_id_for_tenants.sql",
+    "applied_at": "2026-08-20 07:10:27"
+  },
+  {
+    "id": 14,
+    "name": "0013_add_logo_url_to_tenant_config.sql",
+    "applied_at": "2026-08-20 07:10:27"
+  },
+  {
+    "id": 15,
+    "name": "0013_merge_zhadan_snack_into_main.sql",
+    "applied_at": "2026-08-20 07:10:27"
+  },
+  {
+    "id": 16,
+    "name": "0014_update_zhadan_address.sql",
+    "applied_at": "2026-08-20 07:10:27"
+  },
+  {
+    "id": 17,
+    "name": "0015_fix_zhadan_brand_name.sql",
+    "applied_at": "2026-08-20 07:10:27"
+  },
+  {
+    "id": 18,
+    "name": "0016_add_badge_and_recommended_to_menu_items.sql",
+    "applied_at": "2026-08-20 07:10:28"
+  },
+  {
+    "id": 19,
+    "name": "0017_fix_zhadan_category_names.sql",
+    "applied_at": "2026-08-20 07:10:28"
+  },
+  {
+    "id": 20,
+    "name": "0018_seed_jidangaodashu_menu.sql",
+    "applied_at": "2026-08-20 07:54:01"
+  },
+  {
+    "id": 21,
+    "name": "0019_update_zhadan_line_credentials.sql",
+    "applied_at": "2026-08-20 10:50:35"
+  },
+  {
+    "id": 22,
+    "name": "0019_unify_all_tenant_brand_colors.sql",
+    "applied_at": "2026-08-22 09:11:09"
+  },
+  {
+    "id": 23,
+    "name": "0020_update_zhadan_store_address.sql",
+    "applied_at": "2026-08-22 09:11:09"
+  },
+  {
+    "id": 24,
+    "name": "0021_add_zhadan_drinks_category.sql",
+    "applied_at": "2026-08-22 09:11:10"
+  },
+  {
+    "id": 25,
+    "name": "0022_update_jidangaodashu_line_credentials.sql",
+    "applied_at": "2026-08-22 09:11:10"
+  },
+  {
+    "id": 26,
+    "name": "0023_add_announcement_to_tenant_config.sql",
+    "applied_at": "2026-08-22 09:11:10"
+  },
+  {
+    "id": 27,
+    "name": "0024_add_dining_options.sql",
+    "applied_at": "2026-08-23 04:01:36"
+  },
+  {
+    "id": 28,
+    "name": "0025_add_tenant_features.sql",
+    "applied_at": "2026-08-23 04:01:36"
+  },
+  {
+    "id": 29,
+    "name": "0026_add_order_prefix.sql",
+    "applied_at": "2026-08-23 04:01:36"
+  },
+  {
+    "id": 30,
+    "name": "0027_add_table_number.sql",
+    "applied_at": "2026-08-23 04:01:36"
+  },
+  {
+    "id": 31,
+    "name": "0028_add_append_rounds.sql",
+    "applied_at": "2026-08-23 04:01:37"
+  },
+  {
+    "id": 32,
+    "name": "0029_add_category_customization.sql",
+    "applied_at": "2026-08-23 04:01:37"
+  },
+  {
+    "id": 33,
+    "name": "0030_sync_zhadan_menu_from_production.sql",
+    "applied_at": "2026-08-23 04:01:37"
+  },
+  {
+    "id": 34,
+    "name": "0031_add_category_applied_modifiers.sql",
+    "applied_at": "2026-08-23 04:01:37"
+  },
+  {
+    "id": 35,
+    "name": "0032_create_order_items.sql",
+    "applied_at": "2026-08-23 15:11:22"
+  },
+  {
+    "id": 36,
+    "name": "0033_set_benmi_production_features.sql",
+    "applied_at": "2026-08-23 15:11:22"
+  },
+  {
+    "id": 37,
+    "name": "0034_seed_weiweibao_menu.sql",
+    "applied_at": "2026-08-23 15:22:10"
+  },
+  {
+    "id": 38,
+    "name": "0035_update_weiweibao_line_credentials.sql",
+    "applied_at": "2026-08-23 15:24:21"
+  },
+  {
+    "id": 39,
+    "name": "0036_enable_weiweibao_dine_in.sql",
+    "applied_at": "2026-08-24 02:28:14"
+  },
+  {
+    "id": 40,
+    "name": "0037_seed_bsc_menu.sql",
+    "applied_at": "2026-08-24 21:09:17"
+  },
+  {
+    "id": 41,
+    "name": "0038_seed_52kaoroufan_menu.sql",
+    "applied_at": "2026-08-24 21:09:18"
+  },
+  {
+    "id": 42,
+    "name": "0039_sync_benmi_menu_to_dev.sql",
+    "applied_at": "2026-08-26 15:38:16"
+  },
+  {
+    "id": 43,
+    "name": "0040_fix_bsc_menu_and_categories.sql",
+    "applied_at": "2026-08-26 15:38:16"
+  },
+  {
+    "id": 44,
+    "name": "0041_seed_xiaolan_menu.sql",
+    "applied_at": "2026-08-27 15:27:39"
+  },
+  {
+    "id": 45,
+    "name": "0042_update_xiaolan_item_names_and_subtitles.sql",
+    "applied_at": "2026-08-27 15:39:44"
+  },
+  {
+    "id": 46,
+    "name": "0043_add_pricing_rules_to_menu_categories.sql",
+    "applied_at": "2026-08-29 06:45:04"
+  },
+  {
+    "id": 47,
+    "name": "0044_seed_thuyngason_menu.sql",
+    "applied_at": "2026-08-29 12:04:27"
+  },
+  {
+    "id": 48,
+    "name": "0045_seed_blab_demo_tenant_and_orders.sql",
+    "applied_at": "2026-08-29 12:25:59"
+  },
+  {
+    "id": 49,
+    "name": "0046_add_order_uuid_and_daily_counter.sql",
+    "applied_at": "2026-08-30 14:44:29"
+  },
+  {
+    "id": 50,
+    "name": "0047_add_coordinates_to_tenant_config.sql",
+    "applied_at": "2026-09-01 16:30:33"
+  },
+  {
+    "id": 51,
+    "name": "0048_seed_quanthuyhang_menu.sql",
+    "applied_at": "2026-09-07 15:10:38"
+  },
+  {
+    "id": 52,
+    "name": "0048_seed_jiangjiejie_menu.sql",
+    "applied_at": "2026-09-10 02:47:22"
+  },
+  {
+    "id": 53,
+    "name": "0049_jiangjiejie_order_customizations.sql",
+    "applied_at": "2026-09-10 12:18:34"
+  },
+  {
+    "id": 54,
+    "name": "0048_seed_haojihui_menu.sql",
+    "applied_at": "2026-09-11 08:30:40"
+  },
+  {
+    "id": 55,
+    "name": "0049_create_universal_bundle_and_threshold_rules.sql",
+    "applied_at": "2026-09-12 03:47:11"
+  },
+  {
+    "id": 56,
+    "name": "0050_update_order_prefixes_for_j_tenants.sql",
+    "applied_at": "2026-09-12 07:38:40"
+  },
+  {
+    "id": 57,
+    "name": "0051_make_order_prefix_unique.sql",
+    "applied_at": "2026-09-12 11:54:50"
+  },
+  {
+    "id": 58,
+    "name": "0052_rename_tenant_haojihui_to_dapinglin.sql",
+    "applied_at": "2026-09-12 13:38:56"
+  },
+  {
+    "id": 59,
+    "name": "0053_seed_dapinglin_bundle_rules.sql",
+    "applied_at": "2026-09-12 13:56:19"
+  },
+  {
+    "id": 60,
+    "name": "0054_add_ai_order_redirect_enabled.sql",
+    "applied_at": "2026-09-14 07:46:21"
+  },
+  {
+    "id": 61,
+    "name": "0055_expand_order_identity.sql",
+    "applied_at": "2026-09-14 08:38:44"
+  },
+  {
+    "id": 62,
+    "name": "0056_add_order_modified_tracking.sql",
+    "applied_at": "2026-09-19 15:23:50"
+  },
+  {
+    "id": 63,
+    "name": "0057_create_staff_ordering_and_tables.sql",
+    "applied_at": "2026-09-20 04:27:38"
+  },
+  {
+    "id": 64,
+    "name": "0058_seed_haoshiguoshao_menu.sql",
+    "applied_at": "2026-09-20 04:27:38"
+  },
+  {
+    "id": 65,
+    "name": "0059_seed_haoshiguoshao_bundle_rules.sql",
+    "applied_at": "2026-09-20 08:33:50"
+  },
+  {
+    "id": 66,
+    "name": "0060_add_admin_menu_seed_receipts.sql",
+    "applied_at": "2026-09-28 05:43:58"
+  },
+  {
+    "id": 67,
+    "name": "0061_unified_bundle_and_customization_schema.sql",
+    "applied_at": "2026-09-28 05:43:59"
+  },
+  {
+    "id": 68,
+    "name": "0062_tenant_line_runtime.sql",
+    "applied_at": "2026-09-28 05:43:59"
+  },
+  {
+    "id": 69,
+    "name": "0063_clean_customizations_and_category_links.sql",
+    "applied_at": "2026-09-28 05:43:59"
+  },
+  {
+    "id": 71,
+    "name": "0061_add_max_per_order_to_menu_items.sql",
+    "applied_at": "2026-10-01 11:52:03"
+  }
+]
