@@ -1065,18 +1065,46 @@ function buildStructuredCartItems() {
                         for (let s in c.single) {
                             const val = c.single[s];
                             if (val && val !== '不辣' && val !== '不需要') {
-                                const addP = getPrice(val, s, key);
+                                let addP = getPrice(val, s, key);
+                                const sub = c.subOptions && c.subOptions[val];
+                                let choiceLabel = `${portionPrefix}${val}`;
+                                let subPayload = undefined;
+                                if (sub) {
+                                    choiceLabel += ` (${sub.name})`;
+                                    const subP = Number(sub.price || 0);
+                                    addP += subP;
+                                    subPayload = { id: sub.id, name: sub.name, price: subP };
+                                }
                                 itemModifiersTotal += addP;
-                                options.push({ group: s, choice: `${portionPrefix}${val}`, price: addP });
+                                options.push({ 
+                                    group: s, 
+                                    choice: choiceLabel, 
+                                    price: addP,
+                                    subOption: subPayload
+                                });
                             }
                         }
                     }
                     if (c.multiple) {
                         for (let t in c.multiple) {
                             if (c.multiple[t]) {
-                                const addP = getPrice(t, null, key);
+                                let addP = getPrice(t, null, key);
+                                const sub = c.subOptions && c.subOptions[t];
+                                let choiceLabel = `${portionPrefix}${t}`;
+                                let subPayload = undefined;
+                                if (sub) {
+                                    choiceLabel += ` (${sub.name})`;
+                                    const subP = Number(sub.price || 0);
+                                    addP += subP;
+                                    subPayload = { id: sub.id, name: sub.name, price: subP };
+                                }
                                 itemModifiersTotal += addP;
-                                options.push({ group: '客製化', choice: `${portionPrefix}${t}`, price: addP });
+                                options.push({ 
+                                    group: '客製化', 
+                                    choice: choiceLabel, 
+                                    price: addP,
+                                    subOption: subPayload
+                                });
                             }
                         }
                     }

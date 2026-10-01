@@ -65,8 +65,12 @@ export function formatItemsToText(items: OrderItemInput[]): string {
     const options: any[] = Array.isArray(rawOptions) ? rawOptions : (typeof rawOptions === 'string' ? JSON.parse(rawOptions || '[]') : []);
     if (options.length > 0) {
       const optLines = options.map((opt: any) => {
-        const choice = opt.choice || opt.name || (typeof opt === 'string' ? opt : "");
-        const priceExtra = opt.price && Number(opt.price) > 0 ? ` (+$${opt.price})` : "";
+        let choice = opt.choice || opt.name || (typeof opt === 'string' ? opt : "");
+        if (opt.subOption?.name && !choice.includes(`(${opt.subOption.name})`)) {
+          choice += ` (${opt.subOption.name})`;
+        }
+        const optPrice = Number(opt.price || 0) + Number(opt.subOption?.price || 0);
+        const priceExtra = optPrice > 0 ? ` (+$${optPrice})` : "";
         return `  - ${choice}${priceExtra}`;
       }).join("\n");
       line += `\n${optLines}`;
@@ -175,9 +179,86 @@ export async function validateThresholdCustomizations(
   rawItems: OrderItemInput[],
   customizations: any[]
 ): Promise<{ valid: boolean; error?: string; code?: string; minSubtotal?: number; currentSubtotal?: number }> {
-  if (!env.DB || !Array.isArray(customizations) || customizations.length === 0) return { valid: true };
+  if (!env.DB || (!Array.isArray(customizations) && !rawItems.some(it => Array.isArray(it.options) || Array.isArray(it.selected_options)))) return { valid: true };
 
   try {
+    const foodMerchandiseSubtotal = rawItems.reduce((sum, it) => sum + (Number(it.price || it.unit_price || 0) * Number(it.quantity || 1)), 0);
+
+    // 1. Primary: Load rules directly from modifier_options (Pure Schema Mới)
+    let hasCheckedNewSchema = false;
+    try {
+      const optRulesRes = await env.DB.prepare(
+        `SELECT o.id AS option_id, o.name AS option_name, o.group_id, o.eligibility_rules_json, g.name AS group_name
+         FROM modifier_options o
+         JOIN modifier_groups g ON g.id = o.group_id AND g.tenant_id = o.tenant_id
+         WHERE o.tenant_id = ? AND o.eligibility_rules_json IS NOT NULL AND o.eligibility_rules_json != '[]'`
+      ).bind(tenantId).all<{
+        option_id: string;
+        option_name: string;
+        group_id: string;
+        eligibility_rules_json: string;
+        group_name: string;
+      }>();
+
+      if (optRulesRes && Array.isArray(optRulesRes.results) && optRulesRes.results.length > 0) {
+        hasCheckedNewSchema = true;
+        for (const row of optRulesRes.results) {
+          let rules: any[] = [];
+          try { rules = JSON.parse(row.eligibility_rules_json || '[]'); } catch { rules = []; }
+
+          for (const rule of rules) {
+            const minSubtotal = Number(rule.min_order_subtotal || 0);
+            if (minSubtotal <= 0 || foodMerchandiseSubtotal >= minSubtotal) continue;
+
+            // Check if user selected this option in order-level customizations
+            let matched = false;
+            for (const c of (customizations || [])) {
+              const userOptId = c.optionId || c.option_id || c.id || '';
+              const userVal = String(c.value || '').trim();
+              if (userOptId === row.option_id || (c.key === row.group_id && userVal.includes(row.option_name))) {
+                matched = true;
+                break;
+              }
+            }
+
+            // Check if user selected this option in item-level options
+            if (!matched) {
+              for (const it of rawItems) {
+                const itemOpts = it.options || it.selected_options || [];
+                if (Array.isArray(itemOpts)) {
+                  for (const opt of itemOpts) {
+                    const optId = opt.optionId || opt.option_id || opt.id || '';
+                    const optName = String(opt.choice || opt.name || '').trim();
+                    if (optId === row.option_id || (opt.groupId === row.group_id && optName === row.option_name)) {
+                      matched = true;
+                      break;
+                    }
+                  }
+                }
+                if (matched) break;
+              }
+            }
+
+            if (matched) {
+              const defaultMsg = `客製化「${row.option_name}」需全單消費滿 $${minSubtotal} 元方可選擇（目前金額 $${foodMerchandiseSubtotal} 元，還差 $${minSubtotal - foodMerchandiseSubtotal} 元）`;
+              return {
+                valid: false,
+                error: rule.error_message || defaultMsg,
+                code: 'MIN_ORDER_SUBTOTAL_NOT_MET',
+                minSubtotal,
+                currentSubtotal: foodMerchandiseSubtotal
+              };
+            }
+          }
+        }
+      }
+    } catch (newSchemaErr) {
+      // Table modifier_options not ready, fallback below
+    }
+
+    if (hasCheckedNewSchema) return { valid: true };
+
+    // 2. Legacy Fallback (for unmigrated environments)
     const rulesRes = await env.DB.prepare(
       `SELECT customization_key, option_id, rule_type, min_order_subtotal, threshold_basis, error_message
        FROM menu_customization_option_rules
@@ -192,8 +273,6 @@ export async function validateThresholdCustomizations(
     }>();
 
     if (!rulesRes.results || rulesRes.results.length === 0) return { valid: true };
-
-    const foodMerchandiseSubtotal = rawItems.reduce((sum, it) => sum + (Number(it.price || it.unit_price || 0) * Number(it.quantity || 1)), 0);
 
     const custDefRes = await env.DB.prepare(
       `SELECT key, options_json FROM menu_customizations WHERE tenant_id = ?`
@@ -350,12 +429,27 @@ export async function createOrder(
   // 1.3 Validate Required Global Customizations (Type 3)
   if (env.DB) {
     try {
-      const reqCustRes = await env.DB.prepare(
-        `SELECT key, title FROM menu_customizations WHERE tenant_id = ? AND is_required = 1`
-      ).bind(tenantId).all<{ key: string; title: string }>();
+      let reqCustRows: Array<{ key: string; title: string }> = [];
+      try {
+        const reqGroupsRes = await env.DB.prepare(
+          `SELECT id AS key, name AS title FROM modifier_groups WHERE tenant_id = ? AND scope = 'order' AND is_required = 1`
+        ).bind(tenantId).all<{ key: string; title: string }>();
+        if (reqGroupsRes && Array.isArray(reqGroupsRes.results) && reqGroupsRes.results.length > 0) {
+          reqCustRows = reqGroupsRes.results;
+        }
+      } catch (modGrpErr) {
+        // Table or column might not exist on older DBs
+      }
 
-      for (const req of (reqCustRes.results || [])) {
-        const userChoice = clientCustomizations.find((c: any) => c.key === req.key);
+      if (reqCustRows.length === 0) {
+        const reqCustRes = await env.DB.prepare(
+          `SELECT key, title FROM menu_customizations WHERE tenant_id = ? AND is_required = 1`
+        ).bind(tenantId).all<{ key: string; title: string }>();
+        reqCustRows = reqCustRes?.results || [];
+      }
+
+      for (const req of reqCustRows) {
+        const userChoice = clientCustomizations.find((c: any) => c.key === req.key || c.id === req.key || c.groupId === req.key);
         const hasValue = userChoice && (
           (typeof userChoice.value === 'string' && userChoice.value.trim() !== '') ||
           (Array.isArray(userChoice.value) && userChoice.value.length > 0) ||

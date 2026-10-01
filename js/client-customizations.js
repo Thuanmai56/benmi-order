@@ -277,12 +277,20 @@ function openItemCustomizeModal(category, origName, targetPortionIndex) {
     let draft = null;
     if (existing) {
         draft = JSON.parse(JSON.stringify(existing));
+        if (!draft.subOptions) draft.subOptions = {};
     } else {
         const defaultSingle = {};
+        const defaultSubOpts = {};
         modifiers.filter(m => m.selectionType === 'single').forEach(m => {
             const defOpt = (m.options || []).find(o => o.isDefault && !o.isOutOfStock) 
                 || (m.isRequired ? (m.options || []).find(o => !o.isOutOfStock) : null);
-            if (defOpt) defaultSingle[m.slug] = defOpt.name;
+            if (defOpt) {
+                defaultSingle[m.slug] = defOpt.name;
+                const subs = defOpt.subOptions || defOpt.sub_options || [];
+                if (subs.length > 0) {
+                    defaultSubOpts[defOpt.name] = subs.find(s => s.isDefault || s.is_default) || subs[0];
+                }
+            }
         });
         const defaultMulti = {};
         modifiers.filter(m => m.selectionType === 'multiple').forEach(m => {
@@ -291,11 +299,15 @@ function openItemCustomizeModal(category, origName, targetPortionIndex) {
             (m.options || []).filter(o => o.isDefault && !o.isOutOfStock).forEach(o => {
                 if (selectedInGroup < maxAllowed) {
                     defaultMulti[o.name] = true;
+                    const subs = o.subOptions || o.sub_options || [];
+                    if (subs.length > 0) {
+                        defaultSubOpts[o.name] = subs.find(s => s.isDefault || s.is_default) || subs[0];
+                    }
                     selectedInGroup++;
                 }
             });
         });
-        draft = { single: defaultSingle, multiple: defaultMulti, note: '' };
+        draft = { single: defaultSingle, multiple: defaultMulti, subOptions: defaultSubOpts, note: '' };
     }
 
     // Resolve item info and price
@@ -420,14 +432,45 @@ function openItemCustomizeModal(category, origName, targetPortionIndex) {
                     const price = Number(opt.price !== undefined ? opt.price : getPrice(opt.name));
                     const priceText = price > 0 ? ` (+$${price})` : '';
                     const oosBadge = isOos ? `<span class="modifier-oos-tag">已售完</span>` : '';
+                    const minSpend = Number(opt.minOrderSubtotal || opt.min_order_amount || 0);
+                    const minSpendBadge = minSpend > 0 ? `<span style="font-size: 10px; color: #ea580c; background: #fff7ed; border: 1px solid #fed7aa; padding: 1px 4px; border-radius: 4px; margin-left: 4px;">滿$${minSpend}可選</span>` : '';
                     sectionInner += `
                         <div class="modifier-pill ${isSelected ? 'active' : ''} ${isOos ? 'disabled' : ''}" 
                              data-mod-slug="${mod.slug}" data-opt-name="${opt.name}">
-                            <span>${opt.name}${priceText}</span>${oosBadge}
+                            <span>${opt.name}${priceText}</span>${oosBadge}${minSpendBadge}
                         </div>
                     `;
                 });
                 sectionInner += `</div>`;
+
+                // Render Sub-options for selected single option if available
+                (mod.options || []).forEach(opt => {
+                    const isSelected = (draft.single && draft.single[mod.slug] === opt.name);
+                    const subList = opt.subOptions || opt.sub_options || [];
+                    if (isSelected && Array.isArray(subList) && subList.length > 0) {
+                        if (!draft.subOptions) draft.subOptions = {};
+                        if (!draft.subOptions[opt.name]) {
+                            draft.subOptions[opt.name] = subList.find(s => s.isDefault || s.is_default) || subList[0];
+                        }
+                        const activeSubId = String(draft.subOptions[opt.name]?.id);
+                        sectionInner += `
+                            <div class="sub-options-container" style="display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; padding: 8px 12px; background: #f8fafc; border-left: 3px solid var(--primary, #0ea5e9); border-radius: 8px; width: 100%; box-sizing: border-box;">
+                                <div style="font-size: 11px; font-weight: 700; color: #64748b; width: 100%; margin-bottom: 2px;">↳ ${opt.name} - 規格 / 配料:</div>
+                                ${subList.map(sub => {
+                                    const isSubActive = String(sub.id) === activeSubId;
+                                    const subP = Number(sub.price || 0);
+                                    const subPText = subP > 0 ? ` (+$${subP})` : '';
+                                    return `
+                                        <button type="button" class="sub-option-chip" data-parent-opt="${opt.name}" data-sub-id="${sub.id}"
+                                                style="padding: 4px 10px; font-size: 12px; border-radius: 6px; border: 1.5px solid ${isSubActive ? 'var(--primary, #0ea5e9)' : '#cbd5e1'}; background: ${isSubActive ? 'rgba(14, 165, 233, 0.1)' : '#fff'}; color: ${isSubActive ? 'var(--primary, #0ea5e9)' : '#334155'}; font-weight: ${isSubActive ? '700' : '500'}; cursor: pointer;">
+                                            ${sub.name}${subPText}
+                                        </button>
+                                    `;
+                                }).join('')}
+                            </div>
+                        `;
+                    }
+                });
             } else if (mod.selectionType === 'multiple') {
                 sectionInner += `<div class="modifier-checkbox-grid">`;
                 (mod.options || []).forEach(opt => {
@@ -444,15 +487,55 @@ function openItemCustomizeModal(category, origName, targetPortionIndex) {
                     }
                     const price = Number(opt.price !== undefined ? opt.price : getPrice(opt.name));
                     const priceText = isOos ? `<span class="modifier-oos-tag">已售完</span>` : (price > 0 ? `+$${price}` : '$0');
+                    const minSpend = Number(opt.minOrderSubtotal || opt.min_order_amount || 0);
+                    const minSpendBadge = minSpend > 0 ? `<span style="font-size: 10px; color: #ea580c; background: #fff7ed; border: 1px solid #fed7aa; padding: 1px 4px; border-radius: 4px; margin-left: 4px;">滿$${minSpend}可選</span>` : '';
                     sectionInner += `
                         <div class="modifier-checkbox-chip ${isChecked ? 'active' : ''} ${isOos ? 'disabled' : ''}" 
                              data-opt-name="${opt.name}">
-                            <span>${opt.name}</span>
+                            <span>${opt.name}${minSpendBadge}</span>
                             <span style="font-size: 12px; opacity: 0.85;">${priceText}</span>
                         </div>
                     `;
                 });
                 sectionInner += `</div>`;
+
+                // Render Sub-options for selected multiple options if available
+                (mod.options || []).forEach(opt => {
+                    let isChecked = false;
+                    if (draft.multiple) {
+                        if (Array.isArray(draft.multiple[mod.slug])) {
+                            isChecked = draft.multiple[mod.slug].includes(opt.name) || draft.multiple[mod.slug].includes(opt.id);
+                        } else if (Array.isArray(draft.multiple[mod.id])) {
+                            isChecked = draft.multiple[mod.id].includes(opt.name) || draft.multiple[mod.id].includes(opt.id);
+                        } else if (typeof draft.multiple === 'object') {
+                            isChecked = Boolean(draft.multiple[opt.name] || draft.multiple[opt.id]);
+                        }
+                    }
+                    const subList = opt.subOptions || opt.sub_options || [];
+                    if (isChecked && Array.isArray(subList) && subList.length > 0) {
+                        if (!draft.subOptions) draft.subOptions = {};
+                        if (!draft.subOptions[opt.name]) {
+                            draft.subOptions[opt.name] = subList.find(s => s.isDefault || s.is_default) || subList[0];
+                        }
+                        const activeSubId = String(draft.subOptions[opt.name]?.id);
+                        sectionInner += `
+                            <div class="sub-options-container" style="display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; padding: 8px 12px; background: #f8fafc; border-left: 3px solid var(--primary, #0ea5e9); border-radius: 8px; width: 100%; box-sizing: border-box;">
+                                <div style="font-size: 11px; font-weight: 700; color: #64748b; width: 100%; margin-bottom: 2px;">↳ ${opt.name} - 規格 / 配料:</div>
+                                ${subList.map(sub => {
+                                    const isSubActive = String(sub.id) === activeSubId;
+                                    const subP = Number(sub.price || 0);
+                                    const subPText = subP > 0 ? ` (+$${subP})` : '';
+                                    return `
+                                        <button type="button" class="sub-option-chip" data-parent-opt="${opt.name}" data-sub-id="${sub.id}"
+                                                style="padding: 4px 10px; font-size: 12px; border-radius: 6px; border: 1.5px solid ${isSubActive ? 'var(--primary, #0ea5e9)' : '#cbd5e1'}; background: ${isSubActive ? 'rgba(14, 165, 233, 0.1)' : '#fff'}; color: ${isSubActive ? 'var(--primary, #0ea5e9)' : '#334155'}; font-weight: ${isSubActive ? '700' : '500'}; cursor: pointer;">
+                                            ${sub.name}${subPText}
+                                        </button>
+                                    `;
+                                }).join('')}
+                            </div>
+                        `;
+                    }
+                });
             }
 
             section.innerHTML = sectionInner;
@@ -464,9 +547,14 @@ function openItemCustomizeModal(category, origName, targetPortionIndex) {
                     const optName = pill.getAttribute('data-opt-name');
                     if (!draft.single) draft.single = {};
                     const isReq = Boolean(mod.isRequired || Number(mod.minSelection || 0) > 0);
+                    const prevOpt = draft.single[modSlug];
+                    if (prevOpt && prevOpt !== optName && draft.subOptions) {
+                        delete draft.subOptions[prevOpt];
+                    }
                     // Optional single can be toggled/deselected
                     if (!isReq && draft.single[modSlug] === optName) {
                         delete draft.single[modSlug];
+                        if (draft.subOptions) delete draft.subOptions[optName];
                     } else {
                         draft.single[modSlug] = optName;
                     }
@@ -489,6 +577,7 @@ function openItemCustomizeModal(category, origName, targetPortionIndex) {
                     }
 
                     if (isCurrentlySelected) {
+                        if (draft.subOptions) delete draft.subOptions[optName];
                         if (Array.isArray(draft.multiple[mod.slug])) {
                             draft.multiple[mod.slug] = draft.multiple[mod.slug].filter(x => x !== optName);
                         } else {
@@ -523,6 +612,25 @@ function openItemCustomizeModal(category, origName, targetPortionIndex) {
                 };
             });
 
+            // Bind Sub-options click handler
+            section.querySelectorAll('.sub-option-chip').forEach(btn => {
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    const parentOptName = btn.getAttribute('data-parent-opt');
+                    const subId = btn.getAttribute('data-sub-id');
+                    const parentOpt = (mod.options || []).find(o => o.name === parentOptName);
+                    if (parentOpt) {
+                        const subList = parentOpt.subOptions || parentOpt.sub_options || [];
+                        const sub = subList.find(s => String(s.id) === String(subId));
+                        if (sub) {
+                            if (!draft.subOptions) draft.subOptions = {};
+                            draft.subOptions[parentOptName] = sub;
+                            renderModalOptions();
+                        }
+                    }
+                };
+            });
+
             bodyEl.appendChild(section);
         });
 
@@ -541,14 +649,27 @@ function openItemCustomizeModal(category, origName, targetPortionIndex) {
         // Calculate dynamic total
         let extra = 0;
         if (draft.single) {
-            Object.values(draft.single).forEach(opt => { extra += getPrice(opt); });
+            Object.values(draft.single).forEach(opt => { 
+                extra += getPrice(opt); 
+                if (draft.subOptions && draft.subOptions[opt]) {
+                    extra += Number(draft.subOptions[opt].price || 0);
+                }
+            });
         }
         if (draft.multiple) {
             Object.keys(draft.multiple).forEach(opt => {
                 if (Array.isArray(draft.multiple[opt])) {
-                    draft.multiple[opt].forEach(subOpt => { extra += getPrice(subOpt); });
+                    draft.multiple[opt].forEach(subOpt => { 
+                        extra += getPrice(subOpt); 
+                        if (draft.subOptions && draft.subOptions[subOpt]) {
+                            extra += Number(draft.subOptions[subOpt].price || 0);
+                        }
+                    });
                 } else if (draft.multiple[opt]) {
                     extra += getPrice(opt);
+                    if (draft.subOptions && draft.subOptions[opt]) {
+                        extra += Number(draft.subOptions[opt].price || 0);
+                    }
                 }
             });
         }
