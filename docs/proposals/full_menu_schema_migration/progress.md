@@ -161,3 +161,22 @@ Trạng thái: Đang thực hiện T01
   - Xóa 2 bản ghi phantom khỏi `blab-db-dev`: `mg_cat_jiangjiejie_jiangjiejie_sec-flavor` và `mg_cat_miyansuo_cat_mys_sec_flavor`.
   - Purge KV cache cho `tenant:jiangjiejie:bootstrap` và `tenant:miyansuo:bootstrap`.
   - Kiểm thử trực tiếp API: Bootstrap `jiangjiejie` trả về đúng 11 nhóm tùy chọn thật, `miyansuo` trả về đúng 1 nhóm thật, biến mất hoàn toàn nhóm rác 0 lựa chọn.
+
+### Màn Hình Cài Đặt Thực Đơn Toàn Màn Hình & Bước Tùy Chọn Combo (2026-10-03)
+- **1. UI Toàn Màn Hình Tablet-First Cho Thiết Lập Thực Đơn POS**:
+  - Chuyển đổi popup modal `itemDetailModal` (Chi tiết món) thành giao diện `.order-detail-fullpage` toàn màn hình chuẩn iPad/Tablet POS tương tự `modal-bundle-editor`.
+  - Bố cục 2 cột Master-Detail (`.item-detail-grid-body`):
+    - Cột Trái: Thông tin cơ bản (Tên món, Giá bán, Ảnh đại diện trực quan, Nhãn nổi bật nhanh).
+    - Cột Phải: Cài đặt nâng cao với 2 Thẻ Action Card lớn (`item-detail-action-card-lg`): Thẻ Tùy chọn riêng (`modifiers`) và Thẻ Combo (`bundle`).
+  - Chuyển đổi modal `itemModifiersModal` (Gán tùy chọn món từ Thư viện) thành `.order-detail-fullpage` dạng lưới thẻ card responsive to rõ, touch target ≥ 48px.
+  - Luồng điều hướng Stacked Flow: Menu -> Chi tiết món -> Tùy chọn / Combo, nút quay lại trở về đúng màn hình trước mà không mất dữ liệu tạm thời.
+- **2. Tùy Chọn Suất Combo Trên Trang Đặt Món Khách (`index.html`)**:
+  - Sửa `js/client-menu.js`: Nhận diện cả `item.modifierGroups` khi render thẻ món combo trên thực đơn, cập nhật đúng nhãn nút `調整搭配 / 加料`.
+  - Nâng cấp `js/bundle-builder-v2.js`:
+    - Tích hợp Tùy chọn suất combo thành **1 Bước / Tab riêng trong thanh điều hướng** (`bundle-step-nav`): `[ Món 1 (✓) ] [ Món 2 (✓) ] [ Tùy chọn suất (✓) ]`.
+    - Khi ở tab tùy chọn suất, hiển thị giao diện tùy chọn to rõ, ẩn danh sách món chọn thành phần để tránh bị trôi tuột khỏi màn hình trên LINE LIFF.
+    - Nút xác nhận `bundle-confirm-btn` chỉ bật sáng `ready` khi cả món thành phần và tùy chọn bắt buộc của combo đã hoàn thành; nếu thiếu tùy chọn bắt buộc sẽ thông báo và tự động chuyển sang tab tùy chọn.
+- **3. Cache-Busting & Kiểm Thử**:
+  - Bump version: `orders.html` (`?v=20261003_menu_fullscreen_v1`), `index.html` (`?v=20261003_combo_addons_step_v1`).
+  - 100% test suites vượt qua: `npm test`, `npm run test:cluster1`, `npm run test:cluster2`, `npm run test:cluster3-5`, `npm run test:menu-safety`, `npm run test:order-identity`.
+
