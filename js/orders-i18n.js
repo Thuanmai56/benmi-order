@@ -2816,10 +2816,20 @@ function applyLanguageToDOM() {
   if (btnItemPhotoUpload) btnItemPhotoUpload.innerText = dict.btnUploadPhoto;
   const btnItemPhotoRemove = document.getElementById("i18n-btn-item-photo-remove");
   if (btnItemPhotoRemove) btnItemPhotoRemove.innerText = dict.btnRemovePhoto;
-  const btnItemDetailCancel = document.getElementById("btn-item-detail-cancel");
-  if (btnItemDetailCancel) btnItemDetailCancel.innerText = dict.btnItemCancel;
-  const btnItemDetailDone = document.getElementById("btn-item-detail-done");
-  if (btnItemDetailDone && (typeof btnItemDetailDone.getAttribute !== "function" || !btnItemDetailDone.getAttribute("data-custom-text"))) btnItemDetailDone.innerText = dict.btnDetailDone;
+  const spanCancel = document.getElementById("i18n-btn-item-detail-cancel");
+  if (spanCancel) spanCancel.innerText = dict.btnItemCancel;
+  else {
+    const btnItemDetailCancel = document.getElementById("btn-item-detail-cancel");
+    if (btnItemDetailCancel) btnItemDetailCancel.innerText = dict.btnItemCancel;
+  }
+  const spanDone = document.getElementById("i18n-btn-item-detail-done");
+  if (spanDone) spanDone.innerText = dict.btnDetailDone;
+  else {
+    const btnItemDetailDone = document.getElementById("btn-item-detail-done");
+    if (btnItemDetailDone && (typeof btnItemDetailDone.getAttribute !== "function" || !btnItemDetailDone.getAttribute("data-custom-text"))) btnItemDetailDone.innerText = dict.btnDetailDone;
+  }
+  const spanModSave = document.getElementById("i18n-btn-item-mod-save");
+  if (spanModSave) spanModSave.innerText = dict.btnItemModSave || dict.btnSave || "完成設定";
 }
 
 window.I18N = I18N;
