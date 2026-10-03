@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Benmi POS & Menu - Sổ Tay Kịch Bản Test Tay (Manual Test Suite)</title>
+  <style>
+    :root {
+      --bg-page: #f8fafc;
+      --bg-card: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border-color: #e2e8f0;
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --primary-light: #eef2ff;
+      --success: #10b981;
+      --success-light: #ecfdf5;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --danger-light: #fee2e2;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      line-height: 1.5;
+      padding: 24px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .header {
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      padding: 28px 32px;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .badge-env {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .header-title {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-top: 4px;
+    }
+
+    .header-desc {
+      color: var(--text-muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .quick-links {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+
+    .btn-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: var(--bg-page);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-main);
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .btn-link:hover {
+      background: #ffffff;
+      border-color: var(--primary);
+      color: var(--primary);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .btn-link.primary {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+    }
+
+    .btn-link.primary:hover {
+      background: var(--primary-hover);
+    }
+
+    /* Progress Tracker */
+    .progress-bar-container {
+      background: #f1f5f9;
+      height: 10px;
+      border-radius: 9999px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+
+    .progress-bar {
+      background: linear-gradient(90deg, #4f46e5, #10b981);
+      height: 100%;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    .progress-stats {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    /* Filter Controls */
+    .controls-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .filter-tabs {
+      display: flex;
+      gap: 8px;
+      background: #e2e8f0;
+      padding: 4px;
+      border-radius: var(--radius-md);
+    }
+
+    .filter-btn {
+      border: none;
+      background: transparent;
+      padding: 6px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all 0.2s;
+    }
+
+    .filter-btn.active {
+      background: #ffffff;
+      color: var(--text-main);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .btn-reset {
+      border: 1px solid var(--border-color);
+      background: var(--bg-card);
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-reset:hover {
+      color: var(--danger);
+      border-color: #fca5a5;
+    }
+
+    /* Category Section */
+    .test-section {
+      margin-bottom: 24px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .section-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      background: #e2e8f0;
+      color: #475569;
+    }
+
+    /* Test Case Card */
+    .test-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      margin-bottom: 12px;
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .test-card:hover {
+      border-color: #cbd5e1;
+      box-shadow: var(--shadow-md);
+    }
+
+    .test-card.is-completed {
+      border-color: #a7f3d0;
+      background: #fcfdfd;
+    }
+
+    .test-card.is-completed .test-title {
+      color: #065f46;
+    }
+
+    .test-header {
+      padding: 16px 20px;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .custom-checkbox {
+      width: 22px;
+      height: 22px;
+      border: 2px solid #cbd5e1;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2px;
+      flex-shrink: 0;
+      background: #ffffff;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .test-card.is-completed .custom-checkbox {
+      background: var(--success);
+      border-color: var(--success);
+      color: #ffffff;
+    }
+
+    .test-header-content {
+      flex: 1;
+    }
+
+    .test-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+      flex-wrap: wrap;
+    }
+
+    .test-id {
+      font-size: 11.5px;
+      font-weight: 800;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .test-tag {
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    .tag-client { background: #eff6ff; color: #1e40af; }
+    .tag-pos { background: #fdf2f8; color: #9d174d; }
+    .tag-modifier { background: #fef3c7; color: #92400e; }
+    .tag-combo { background: #f3e8ff; color: #6b21a8; }
+
+    .test-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .test-body {
+      padding: 0 20px 18px 56px;
+      font-size: 13.5px;
+      color: #334155;
+    }
+
+    .item-highlight {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: var(--radius-sm);
+      padding: 8px 12px;
+      margin: 8px 0 12px 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+    }
+
+    .item-highlight strong {
+      color: var(--primary);
+    }
+
+    .steps-list, .expect-list {
+      margin-left: 18px;
+      margin-top: 6px;
+      margin-bottom: 12px;
+    }
+
+    .steps-list li, .expect-list li {
+      margin-bottom: 6px;
+    }
+
+    .expect-title {
+      font-weight: 700;
+      color: #065f46;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .expect-list {
+      list-style-type: none;
+      margin-left: 0;
+    }
+
+    .expect-list li {
+      position: relative;
+      padding-left: 22px;
+    }
+
+    .expect-list li::before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      top: 0;
+      color: var(--success);
+      font-weight: 800;
+    }
+
+    /* Menu Snapshot Table */
+    .menu-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-top: 12px;
+      background: #ffffff;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+    }
+
+    .menu-table th, .menu-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border-color);
+      text-align: left;
+    }
+
+    .menu-table th {
+      background: #f8fafc;
+      color: var(--text-muted);
+      font-weight: 700;
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+
+    .price-col {
+      font-weight: 700;
+      color: var(--text-main);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-top">
+        <div>
+          <span class="badge-env">
+            <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
+            Môi trường kiểm thử: DEV
+          </span>
+          <h1 class="header-title">Benmi POS & Menu - Sổ Tay Kịch Bản Test Tay</h1>
+        </div>
+        <div class="quick-links">
+          <a href="https://platform-worker-dev.thuanmnc.workers.dev/benmi" target="_blank" class="btn-link primary">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            Mở Menu Khách Hàng
+          </a>
+          <a href="https://platform-worker-dev.thuanmnc.workers.dev/benmi/orders" target="_blank" class="btn-link">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            Mở Bảng Quản Lý POS
+          </a>
+        </div>
+      </div>
+      <p class="header-desc">
+        Bộ kịch bản kiểm thử thủ công này được xây dựng bám sát theo toàn bộ danh mục thực tế của quán <strong>Benmi</strong> (Bánh mì lớn, Bánh mì nhỏ, Combo, Đồ uống lẻ, Tùy chọn Độ cay & Topping). Trạng thái test được tự động lưu vào trình duyệt của bạn.
+      </p>
+
+      <!-- Progress -->
+      <div>
+        <div class="progress-bar-container">
+          <div class="progress-bar" id="progressBar"></div>
+        </div>
+        <div class="progress-stats">
+          <span id="progressText">0 / 0 kịch bản hoàn thành (0%)</span>
+          <span>Hệ thống lưu tiến độ tự động</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Controls -->
+    <div class="controls-bar">
+      <div class="filter-tabs">
+        <button type="button" class="filter-btn active" onclick="setFilter('all')">Tất cả</button>
+        <button type="button" class="filter-btn" onclick="setFilter('client')">Khách hàng (Menu)</button>
+        <button type="button" class="filter-btn" onclick="setFilter('pos')">Bảng Quản Lý (POS)</button>
+      </div>
+      <button type="button" class="btn-reset" onclick="resetProgress()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+        Đặt lại tiến độ
+      </button>
+    </div>
+
+    <!-- Snapshot Reference Card -->
+    <section class="test-section">
+      <div class="section-header">
+        <h2 class="section-title">📌 Dữ Liệu Thực Đơn Thực Tế Dùng Để Test</h2>
+      </div>
+      <div class="test-card" style="padding: 16px 20px;">
+        <table class="menu-table">
+          <thead>
+            <tr>
+              <th>Phân loại / Danh mục</th>
+              <th>Món test tiêu biểu</th>
+              <th>Đơn giá</th>
+              <th>Tùy chọn áp dụng</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>🥤 單點飲料 (Đồ uống lẻ)</strong></td>
+              <td>越南咖啡 (Cà phê sữa), 紅茶 (Hồng trà), 豆漿 (Sữa đậu nành)</td>
+              <td class="price-col">37 ~ 48 NT$</td>
+              <td><em>Không có tùy chọn (allowCustomization = false)</em></td>
+            </tr>
+            <tr>
+              <td><strong>🍔 大麵包 (Bánh mì lớn)</strong></td>
+              <td>烤肉 (Thịt nướng), 雙層烤肉 (Thịt nướng phô mai), 綜合 (Thập cẩm)</td>
+              <td class="price-col">105 ~ 130 NT$</td>
+              <td><strong>辣度 (Độ cay)</strong> (Chọn 1) & <strong>加料 (Topping)</strong> (Chọn nhiều +15 ~ 25 NT$)</td>
+            </tr>
+            <tr>
+              <td><strong>🥖 小麵包 (Bánh mì nhỏ)</strong></td>
+              <td>燒肉 (Thịt nguội), 雞肉 (Thịt gà), 清爽蔬食 (Chay rau củ)</td>
+              <td class="price-col">56 ~ 79 NT$</td>
+              <td><strong>辣度 (Độ cay)</strong> & <strong>加料 (Topping)</strong></td>
+            </tr>
+            <tr>
+              <td><strong>🎁 特惠套餐 (Combo kèm nước)</strong></td>
+              <td>Set 4 大烤肉+飲料, Set 5 大雙層烤肉+飲料</td>
+              <td class="price-col">128 ~ 135 NT$</td>
+              <td>Bánh mì chính + Chọn 1 đồ uống kèm theo + Tùy chọn cay / topping</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECTION 1: CLIENT MENU -->
+    <section class="test-section" data-group="client">
+      <div class="section-header">
+        <h2 class="section-title">Nhóm 1: Kiểm Thử Menu Khách Hàng (LINE LIFF / Mobile Web)</h2>
+        <span class="section-badge">Client View</span>
+      </div>
+
+      <!-- Case 1.1 -->
+      <div class="test-card" id="card-tc-1-1" data-tc="tc-1-1">
+        <div class="test-header" onclick="toggleTest('tc-1-1')">
+          <div class="custom-checkbox" id="cb-tc-1-1"></div>
+          <div class="test-header-content">
+            <div class="test-meta">
+              <span class="test-id">TC 1.1</span>
+              <span class="test-tag tag-client">Client</span>
+              <span class="test-tag tag-modifier">Món không tùy chọn</span>
+            </div>
+            <div class="test-title">Đặt Đồ Uống Đơn Lẻ (Món không có tùy chọn)</div>
+          </div>
+        </div>
+        <div class="test-body">
+          <div class="item-highlight">
+            Món thử nghiệm: <strong>越南咖啡 (Cà phê sữa - 48 NT$)</strong> hoặc <strong>紅茶 (Hồng trà - 37 NT$)</strong>
+          </div>
+          <p><strong>Các bước thực hiện:</strong></p>
+          <ol class="steps-list">
+            <li>Cuộn đến danh mục <strong>"🥤 單點飲料"</strong>.</li>
+            <li>Bấm trực tiếp vào nút dấu <strong>`+`</strong> trên thẻ món <code>越南咖啡</code>.</li>
+          </ol>
+          <div class="expect-title">Kết quả kỳ vọng:</div>
+          <ul class="expect-list">
+            <li>Món lập tức được thêm thẳng vào giỏ hàng (+1) ngay lập tức.</li>
+            <li>Tuyệt đối <strong>không</strong> bật bất kỳ modal popup nào làm gián đoạn luồng đặt món.</li>
+            <li>Dưới thẻ món <strong>không</strong> xuất hiện nút "Tùy biến" <code>[⚙ 客製化]</code>.</li>
+            <li>Thanh tổng tiền cố định dưới đáy màn hình hiển thị: <code>1 món • 48 NT$</code>.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 1.2 -->
+      <div class="test-card" id="card-tc-1-2" data-tc="tc-1-2">
+        <div class="test-header" onclick="toggleTest('tc-1-2')">
+          <div class="custom-checkbox" id="cb-tc-1-2"></div>
+          <div class="test-header-content">
+            <div class="test-meta">
+              <span class="test-id">TC 1.2</span>
+              <span class="test-tag tag-client">Client</span>
+              <span class="test-tag tag-modifier">Tùy chọn tự chọn</span>
+            </div>
+            <div class="test-title">Đặt Bánh Mì - Khi Tùy Chọn Là Tự Chọn (Optional)</div>
+          </div>
+        </div>
+        <div class="test-body">
+          <div class="item-highlight">
+            Món thử nghiệm: <strong>烤肉 (Bánh mì thịt nướng lớn - 105 NT$)</strong>
+          </div>
+          <p><strong>Các bước thực hiện:</strong></p>
+          <ol class="steps-list">
+            <li>Bấm nút <strong>`+`</strong> trên món <code>烤肉</code>: Món phải được thêm ngay vào giỏ mà không bật popup.</li>
+            <li>Dưới thẻ món xuất hiện nút <strong>`[⚙ 客製化 / Tùy biến]`</strong>.</li>
+            <li>Bấm vào nút <strong>`[⚙ 客製化]`</strong>: Modal tùy biến mở ra.</li>
+            <li>Chấm chọn <strong>`微辣` (Cay nhẹ)</strong> và tick <strong>`加起司` (Thêm phô mai +15 NT$)</strong>.</li>
+            <li>Bấm <strong>"Xác nhận"</strong>.</li>
+          </ol>
+          <div class="expect-title">Kết quả kỳ vọng:</div>
+          <ul class="expect-list">
+            <li>Bấm `+` ban đầu tăng thẳng vào giỏ nhanh chóng, không bị cản trở.</li>
+            <li>Sau khi tùy biến, giỏ hàng cập nhật đúng phụ thu: <code>120 NT$</code> (105 + 15).</li>
+            <li>Mở giỏ hàng kiểm tra hiển thị rõ dòng tùy chọn: <em>微辣, 加起司 (+15)</em>.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 1.3 -->
+      <div class="test-card" id="card-tc-1-3" data-tc="tc-1-3">
+        <div class="test-header" onclick="toggleTest('tc-1-3')">
+          <div class="custom-checkbox" id="cb-tc-1-3"></div>
+          <div class="test-header-content">
+            <div class="test-meta">
+              <span class="test-id">TC 1.3</span>
+              <span class="test-tag tag-client">Client</span>
+              <span class="test-tag tag-modifier">Tùy chọn bắt buộc</span>
+            </div>
+            <div class="test-title">Đặt Bánh Mì - Khi Có Nhóm Bắt Buộc (Required)</div>
+          </div>
+        </div>
+        <div class="test-body">
+          <div class="item-highlight">
+            Điều kiện: Đã dùng POS bật nhóm <strong>辣度 (Độ cay)</strong> thành <strong>`● Bắt buộc`</strong>. Món test: <strong>雙層烤肉 (115 NT$)</strong>
+          </div>
+          <p><strong>Các bước thực hiện:</strong></p>
+          <ol class="steps-list">
+            <li>Bấm nút <strong>`+`</strong> hoặc bấm vào thẻ món <code>雙層烤肉</code>.</li>
+            <li>Quan sát modal tùy biến tự động mở ra.</li>
+            <li>Thử bấm nút "Xác nhận" khi chưa tick chọn mức cay nào.</li>
+            <li>Chọn mức cay <strong>`中辣` (Cay vừa)</strong> rồi bấm "Xác nhận".</li>
+          </ol>
+          <div class="expect-title">Kết quả kỳ vọng:</div>
+          <ul class="expect-list">
+            <li>Hệ thống <strong>tự động mở modal tùy biến</strong> ngay khi bấm, chặn không cho thêm trực tiếp vào giỏ.</li>
+            <li>Nhóm <strong>辣度</strong> hiển thị nhãn đỏ <code>● 必填 / Bắt buộc</code>, không tự động chọn sẵn giá trị đầu tiên.</li>
+            <li>Khi chưa chọn: Nút xác nhận bị mờ / vô hiệu hóa kèm thông báo nhắc chọn.</li>
+            <li>Chọn xong mức cay: Nút xác nhận sáng lên -> Bấm xác nhận món mới vào giỏ hàng.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 1.4 -->
+      <div class="test-card" id="card-tc-1-4" data-tc="tc-1-4">
+        <div class="test-header" onclick="toggleTest('tc-1-4')">
+          <div class="custom-checkbox" id="cb-tc-1-4"></div>
+          <div class="test-header-content">
+            <div class="test-meta">
+              <span class="test-id">TC 1.4</span>
+              <span class="test-tag tag-client">Client</span>
+              <span class="test-tag tag-combo">Combo / Bundle</span>
+            </div>
+            <div class="test-title">Đặt Combo Trọn Gói (Set Menu Kèm Đồ Uống)</div>
+          </div>
+        </div>
+        <div class="test-body">
+          <div class="item-highlight">
+            Món thử nghiệm: <strong>Set 4 大烤肉+飲料 (Combo Bánh mì thịt nướng lớn + Nước - 128 NT$)</strong>
+          </div>
+          <p><strong>Các bước thực hiện:</strong></p>
+          <ol class="steps-list">
+            <li>Bấm chọn món <code>Set 4 大烤肉+飲料</code> trong danh mục "🎁 特惠套餐".</li>
+            <li>Modal Combo Builder mở ra: Chọn đồ uống đi kèm là <strong>`豆漿` (Sữa đậu nành)</strong>.</li>
+            <li>Quan sát luồng chuyển tiếp của giao diện sau khi chọn xong đồ uống.</li>
+            <li>Bấm nút hoàn tất combo.</li>
+          </ol>
+          <div class="expect-title">Kết quả kỳ vọng:</div>
+          <ul class="expect-list">
+            <li>Sau khi chọn xong đồ uống, hệ thống <strong>tự động chuyển tab sang Addons / Tùy chọn thêm</strong>.</li>
+            <li>Nếu món con có tùy chọn bắt buộc, bảng chọn tùy biến tự động mở ra để khách chọn.</li>
+            <li>Bấm xác nhận: Combo vào giỏ hàng với thông tin đầy đủ: <code>Set 4 (Đồ uống: 豆漿)</code>.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 1.5 -->
+      <div class="test-card" id="card-tc-1-5" data-tc="tc-1-5">
+        <div class="test-header" onclick="toggleTest('tc-1-5')">
+          <div class="custom-checkbox" id="cb-tc-1-5"></div>
+          <div class="test-header-content">
+            <div class="test-meta">
+              <span class="test-id">TC 1.5</span>
+              <span class="test-tag tag-client">Client</span>
+              <span class="test-tag tag-modifier">Thanh toán</span>
+            </div>
+            <div class="test-title">Kiểm Tra Giỏ Hàng & Gửi Đơn Hàng (Checkout Flow)</div>
+          </div>
+        </div>
+        <div class="test-body">
+          <p><strong>Các bước thực hiện:</strong></p>
+          <ol class="steps-list">
+            <li>Mở khay giỏ hàng ở đáy màn hình.</li>
+            <li>Thử tăng giảm số lượng (+ / -) và kiểm tra tính toán tổng tiền khớp từng món và phụ thu topping.</li>
+            <li>Chọn hình thức: <strong>Tại quán (Dine-in)</strong> -> Nhập số bàn: <code>Bàn 05</code>.</li>
+            <li>Nhập Tên khách: <code>Anh Minh</code>, SĐT: <code>0912345678</code>, Ghi chú: <code>Ít đường</code>.</li>
+            <li>Bấm nút <strong>"Gửi đơn hàng"</strong>.</li>
+          </ol>
+          <div class="expect-title">Kết quả kỳ vọng:</div>
+          <ul class="expect-list">
+            <li>Màn hình chuyển sang trạng thái "Đặt hàng thành công" kèm mã đơn hàng rõ ràng.</li>
+            <li>Giỏ hàng được làm trống để chuẩn bị cho lượt đặt tiếp theo.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: POS DASHBOARD -->
+    <section class="test-section" data-group="pos">
+      <div class="section-header">
+        <h2 class="section-title">Nhóm 2: Kiểm Thử Bảng Quản Lý POS (`orders.html`)</h2>
+        <span class="section-badge">Tablet POS View</span>
+      </div>
+
+      <!-- Case 2.1 -->
+      <div class="test-card" id="card-tc-2-1" data-tc="tc-2-1">
+        <div class="test-header" onclick="toggleTest('tc-2-1')">
+          <div class="custom-checkbox" id="cb-tc-2-1"></div>
+          <div class="test-header-content">
+            <div class="test-meta">
+              <span class="test-id">TC 2.1</span>
+              <span class="test-tag tag-pos">POS</span>
+              <span class="test-tag tag-modifier">Đơn thời gian thực</span>
+            </div>
+            <div class="test-title">Đồng Bộ & Nhận Đơn Hàng Thời Gian Thực (Real-time Sync)</div>
+          </div>
+        </div>
+        <div class="test-body">
+          <p><strong>Mục tiêu:</strong> Đảm bảo đơn hàng gửi từ TC 1.5 hiển thị tức thì trên màn hình thu ngân POS.</p>
+          <div class="expect-title">Kết quả kỳ vọng trên POS:</div>
+          <ul class="expect-list">
+            <li>Chuông báo âm thanh đơn mới reo lên ngay khi khách gửi đơn.</li>
+            <li>Thẻ đơn hàng xuất hiện ở cột "Chờ xử lý / Đơn mới" với thông tin chính xác: Tên khách <code>Anh Minh</code>, <code>Bàn 05</code>, chi tiết từng món ăn kèm topping/nước uống combo.</li>
+            <li>Bấm "Xác nhận nhận đơn" -> Thẻ đơn chuyển sang trạng thái "Đang chuẩn bị".</li>
+            <li>Bấm "Hoàn thành" -> Thẻ đơn chuyển sang trạng thái xong.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 2.2 -->
+      <div class="test-card" id="card-tc-2-2" data-tc="tc-2-2">
+        <div class="test-header" onclick="toggleTest('tc-2-2')">
+          <div class="custom-checkbox" id="cb-tc-2-2"></div>
+          <div class="test-header-content">
+            <div class="test-meta">
+              <span class="test-id">TC 2.2</span>
+              <span class="test-tag tag-pos">POS</span>
+              <span class="test-tag tag-modifier">Thư viện tùy chọn</span>
+            </div>
+            <div class="test-title">Bật / Tắt Bắt Buộc Trực Tiếp Trong Thư Viện Tùy Chọn</div>
+          </div>
+        </div>
+        <div class="test-body">
+          <p><strong>Các bước thực hiện:</strong></p>
+          <ol class="steps-list">
+            <li>Trên POS, mở modal <strong>Quản lý thực đơn</strong> -> Chọn tab <strong>"Tùy chọn" (客製庫)</strong>.</li>
+            <li>Tìm nhóm <strong>`辣度 (Độ cay)`</strong>.</li>
+            <li>Bấm chuột/chạm tay trực tiếp vào nút chip <strong>`○ 選填 / Tùy chọn`</strong> (màu xám).</li>
+            <li>Bấm nút <strong>"Lưu thay đổi" (儲存變更)</strong> màu cam ở góc trên.</li>
+          </ol>
+          <div class="expect-title">Kết quả kỳ vọng:</div>
+          <ul class="expect-list">
+            <li>Chip lập tức đổi sang <strong>`● 必填 / Bắt buộc`</strong> (màu đỏ) với animation mượt mà.</li>
+            <li>Nút "Lưu thay đổi" sáng đèn báo có dữ liệu chưa lưu.</li>
+            <li>Sau khi Lưu, quay lại Menu khách hàng (F5) -> Nhóm Độ cay trên các món Bánh mì đã trở thành Bắt buộc.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 2.3 -->
+      <div class="test-card" id="card-tc-2-3" data-tc="tc-2-3">
+        <div class="test-header" onclick="toggleTest('tc-2-3')">
+          <div class="custom-checkbox" id="cb-tc-2-3"></div>
+          <div class="test-header-content">
+            <div class="test-meta">
+              <span class="test-id">TC 2.3</span>
+              <span class="test-tag tag-pos">POS</span>
+              <span class="test-tag tag-modifier">Màn hình gán món</span>
+            </div>
+            <div class="test-title">Đổi Bắt Buộc Ngay Trong Màn Hình Gán Tùy Chọn Cho Món</div>
+          </div>
+        </div>
+        <div class="test-body">
+          <p><strong>Các bước thực hiện:</strong></p>
+          <ol class="steps-list">
+            <li>Trên POS, chọn danh mục <strong>"🍔 大麵包"</strong> -> Tìm món <code>清爽蔬食 (Chay)</code>.</li>
+            <li>Bấm nút màu tím <strong>"Tùy biến"</strong> của món đó.</li>
+            <li>Modal danh sách nhóm dạng card hiện ra: Bấm trực tiếp vào chip <strong>`● Bắt buộc`</strong> / <strong>`○ Tùy chọn`</strong> trên card.</li>
+          </ol>
+          <div class="expect-title">Kết quả kỳ vọng:</div>
+          <ul class="expect-list">
+            <li>Chip đổi trạng thái ngay lập tức trên giao diện.</li>
+            <li><strong>Ô checkbox chọn gán món KHÔNG bị nhảy/bỏ tick</strong> (click badge độc lập với card).</li>
+            <li>Bấm "Lưu tùy chọn" -> Thay đổi được lưu và đồng bộ toàn hệ thống.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 2.4 -->
+      <div class="test-card" id="card-tc-2-4" data-tc="tc-2-4">
+        <div class="test-header" onclick="toggleTest('tc-2-4')">
+          <div class="custom-checkbox" id="cb-tc-2-4"></div>
+          <div class="test-header-content">
+            <div class="test-meta">
+              <span class="test-id">TC 2.4</span>
+              <span class="test-tag tag-pos">POS</span>
+              <span class="test-tag tag-modifier">Hết hàng (OOS)</span>
+            </div>
+            <div class="test-title">Bật / Tắt Hết Hàng (Out-of-Stock) Cho Món & Topping</div>
+          </div>
+        </div>
+        <div class="test-body">
+          <p><strong>Các bước thực hiện:</strong></p>
+          <ol class="steps-list">
+            <li><strong>Thử nghiệm món ăn:</strong> Tìm món <code>豆漿 (Sữa đậu nành)</code> -> Gạt công tắc "Hết hàng" (已售完) -> Bấm Lưu menu.</li>
+            <li>Qua menu khách hàng F5: Kiểm tra món <code>豆漿</code> bị làm mờ, không bấm chọn được.</li>
+            <li><strong>Thử nghiệm topping:</strong> Vào Thư viện -> Nhóm `加料選項` -> Tắt tùy chọn <code>加起司 (Thêm phô mai)</code> -> Bấm Lưu.</li>
+            <li>Qua menu khách hàng: Mở tùy biến Bánh mì -> Tùy chọn `加起司` bị gạch mờ, không cho tick chọn.</li>
+          </ol>
+          <div class="expect-title">Kết quả kỳ vọng:</div>
+          <ul class="expect-list">
+            <li>Món và Topping hết hàng phản ánh chính xác tức thì trên menu khách hàng, ngăn chặn khách đặt phải món quán đang hết nguyên liệu.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Case 2.5 -->
+      <div class="test-card" id="card-tc-2-5" data-tc="tc-2-5">
+        <div class="test-header" onclick="toggleTest('tc-2-5')">
+          <div class="custom-checkbox" id="cb-tc-2-5"></div>
+          <div class="test-header-content">
+            <div class="test-meta">
+              <span class="test-id">TC 2.5</span>
+              <span class="test-tag tag-pos">POS</span>
+              <span class="test-tag tag-modifier">Đa ngôn ngữ I18N</span>
+            </div>
+            <div class="test-title">Chuyển Đổi Đa Ngôn Ngữ (Tiếng Việt ↔ 繁體中文)</div>
+          </div>
+        </div>
+        <div class="test-body">
+          <p><strong>Các bước thực hiện:</strong></p>
+          <ol class="steps-list">
+            <li>Bấm nút chuyển đổi ngôn ngữ ở góc trên giao diện POS (<strong>VI</strong> ↔ <strong>ZH</strong>).</li>
+            <li>Quan sát toàn bộ bảng quản lý, thẻ đơn hàng, modal cài đặt menu và các chip badge.</li>
+          </ol>
+          <div class="expect-title">Kết quả kỳ vọng:</div>
+          <ul class="expect-list">
+            <li>Tất cả các thành phần dịch chuyển chuẩn xác 100%: <code>● Bắt buộc</code> ↔ <code>● 必填</code>, <code>○ Tùy chọn</code> ↔ <code>○ 選填</code>, <code>Chọn 1</code> ↔ <code>單選</code>, <code>Chọn nhiều</code> ↔ <code>多選</code>.</li>
+            <li>Không xuất hiện chữ <code>undefined</code> hoặc câu chữ bị pha trộn tiếng Việt/Trung.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "benmi_manual_test_suite_v1";
+
+    function getCompletedTests() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        return saved ? JSON.parse(saved) : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveCompletedTests(tests) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(tests));
+      } catch (e) {}
+    }
+
+    function toggleTest(tcId) {
+      const completed = getCompletedTests();
+      const idx = completed.indexOf(tcId);
+      if (idx >= 0) {
+        completed.splice(idx, 1);
+      } else {
+        completed.push(tcId);
+      }
+      saveCompletedTests(completed);
+      updateUI();
+    }
+
+    function resetProgress() {
+      if (confirm("Bạn có chắc chắn muốn xóa toàn bộ tiến độ test tay và làm lại từ đầu không?")) {
+        localStorage.removeItem(STORAGE_KEY);
+        updateUI();
+      }
+    }
+
+    function updateUI() {
+      const completed = getCompletedTests();
+      const allCards = document.querySelectorAll(".test-card[data-tc]");
+      const total = allCards.length;
+      let count = 0;
+
+      allCards.forEach(card => {
+        const tcId = card.getAttribute("data-tc");
+        const cb = document.getElementById("cb-" + tcId);
+        if (completed.includes(tcId)) {
+          card.classList.add("is-completed");
+          if (cb) cb.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>`;
+          count++;
+        } else {
+          card.classList.remove("is-completed");
+          if (cb) cb.innerHTML = "";
+        }
+      });
+
+      const percent = total > 0 ? Math.round((count / total) * 100) : 0;
+      const bar = document.getElementById("progressBar");
+      const text = document.getElementById("progressText");
+      if (bar) bar.style.width = percent + "%";
+      if (text) text.innerText = `${count} / ${total} kịch bản hoàn thành (${percent}%)`;
+    }
+
+    function setFilter(type) {
+      document.querySelectorAll(".filter-btn").forEach(btn => btn.classList.remove("active"));
+      event.target.classList.add("active");
+
+      document.querySelectorAll(".test-section[data-group]").forEach(sec => {
+        const group = sec.getAttribute("data-group");
+        if (type === "all" || group === type) {
+          sec.style.display = "block";
+        } else {
+          sec.style.display = "none";
+        }
+      });
+    }
+
+    // Init on load
+    document.addEventListener("DOMContentLoaded", () => {
+      updateUI();
+    });
+  </script>
+</body>
+</html>
