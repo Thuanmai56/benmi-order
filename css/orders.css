@@ -9579,18 +9579,333 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
   margin-top: 4px;
 }
 
-/* Modifiers Library Full-Page Body */
+/* Modifiers Library Full-Page Body & Layout */
 .item-modifiers-fullpage-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 10px 0 36px;
+  width: 100%;
+}
+
+/* Modifiers Toolbar / Summary bar */
+.item-modifiers-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 18px;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  flex-wrap: wrap;
+}
+
+.item-modifiers-toolbar-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.item-modifiers-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  background: #f8fafc;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+}
+
+.item-modifiers-badge.active-badge {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+.item-modifiers-badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #3b82f6;
+  flex-shrink: 0;
+}
+
+.item-modifiers-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.item-modifiers-quick-btn {
+  height: 38px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 8px;
+  border: 1.5px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.item-modifiers-quick-btn:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.item-modifiers-quick-btn:active {
+  transform: scale(0.98);
+}
+
+.item-modifiers-search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.item-modifiers-search-input {
+  height: 38px;
+  border-radius: 8px;
+  border: 1.5px solid #cbd5e1;
+  padding: 0 12px 0 34px;
+  font-size: 13px;
+  background: #ffffff;
+  color: #0f172a;
+  outline: none;
+  width: 200px;
+  transition: all 0.18s ease;
+}
+
+.item-modifiers-search-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  width: 240px;
+}
+
+.item-modifiers-search-icon {
+  position: absolute;
+  left: 10px;
+  color: #94a3b8;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Modifiers Card Grid */
+.item-modifiers-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-  gap: 16px;
-  padding: 8px 0;
+  gap: 14px;
   align-items: stretch;
 }
 
 @media (max-width: 640px) {
-  .item-modifiers-fullpage-body {
+  .item-modifiers-grid {
     grid-template-columns: 1fr;
   }
+  .item-modifiers-search-input {
+    width: 100%;
+  }
+  .item-modifiers-search-input:focus {
+    width: 100%;
+  }
 }
+
+/* Modifiers Library Group Card */
+.mod-lib-group-card {
+  position: relative;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 16px 18px;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.mod-lib-group-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+  transform: translateY(-1px);
+}
+
+.mod-lib-group-card.is-selected {
+  background: #f8faff;
+  border-color: #2563eb;
+  border-width: 2px;
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.09);
+}
+
+.mod-lib-group-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.mod-lib-checkbox-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.mod-lib-checkbox-wrapper input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  accent-color: #2563eb;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.mod-lib-group-title-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.mod-lib-group-title-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mod-lib-group-name {
+  font-weight: 700;
+  font-size: 15.5px;
+  color: #0f172a;
+  margin: 0;
+  transition: color 0.15s ease;
+  word-break: break-word;
+  line-height: 1.35;
+}
+
+.mod-lib-group-card.is-selected .mod-lib-group-name {
+  color: #1d4ed8;
+}
+
+.mod-lib-group-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.mod-badge-type {
+  font-size: 11.5px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-weight: 700;
+  letter-spacing: 0.1px;
+}
+
+.mod-badge-single {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.mod-badge-multiple {
+  background: #f5f3ff;
+  color: #6d28d9;
+  border: 1px solid #ddd6fe;
+}
+
+.mod-badge-required {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  font-size: 11.5px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+.mod-badge-count {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+/* Modifiers Options Pills Wrap */
+.mod-options-pills-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-left: 38px;
+}
+
+@media (max-width: 640px) {
+  .mod-options-pills-wrap {
+    padding-left: 0;
+  }
+}
+
+.mod-option-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3.5px 9px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: #334155;
+  line-height: 1.3;
+  transition: all 0.15s ease;
+}
+
+.mod-lib-group-card.is-selected .mod-option-pill {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+
+.mod-option-pill-price {
+  font-size: 12px;
+  font-weight: 700;
+  color: #16a34a;
+}
+
+.mod-option-pill-more {
+  background: #f8fafc;
+  color: #64748b;
+  font-weight: 600;
+  border-style: dashed;
+}
+
+.mod-options-empty-text {
+  font-size: 12.5px;
+  color: #94a3b8;
+  font-style: italic;
+  padding-left: 38px;
+}
+
+@media (max-width: 640px) {
+  .mod-options-empty-text {
+    padding-left: 0;
+  }
+}
+
 
