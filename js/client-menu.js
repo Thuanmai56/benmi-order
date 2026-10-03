@@ -358,6 +358,7 @@ function handleItemCardClick(catSlug, itemName, event) {
     const getItemModsFn = typeof getItemModifiers === 'function' ? getItemModifiers : (window.getItemModifiers || (typeof getCategoryModifiers === 'function' ? getCategoryModifiers : (window.getCategoryModifiers || (() => []))));
     const itemModifiers = getItemModsFn(catSlug, itemName);
     const hasModifiers = Array.isArray(itemModifiers) && itemModifiers.length > 0;
+    const hasRequiredModifiers = hasModifiers && itemModifiers.some(m => m.isRequired || Number(m.minSelection || 0) > 0);
 
     const cartObj = window.cart || cart || {};
     const currentQty = cartObj[key] || 0;
@@ -366,7 +367,7 @@ function handleItemCardClick(catSlug, itemName, event) {
         if (typeof openBundleBuilderModal === 'function') {
             openBundleBuilderModal(catSlug, itemName, currentQty > 0 ? 0 : 0);
         }
-    } else if (hasModifiers) {
+    } else if (hasRequiredModifiers) {
         const openCustFn = typeof openItemCustomizeModal === 'function' ? openItemCustomizeModal : window.openItemCustomizeModal;
         if (typeof openCustFn === 'function') {
             openCustFn(catSlug, itemName, currentQty > 0 ? 0 : 0);
