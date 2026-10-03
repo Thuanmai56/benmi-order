@@ -1812,6 +1812,22 @@ function toggleCustomizationGroupRequired(cIdx, gIdx) {
   const grp = currentMenuData[cIdx]?.groups?.[gIdx];
   if (!grp) return;
   grp.isRequired = !grp.isRequired;
+
+  const grpId = String(grp.id || '');
+  const canonId = String(grp.canonicalId || '');
+  currentMenuData.forEach(cat => {
+    (cat.items || []).forEach(item => {
+      if (Array.isArray(item.modifierGroups)) {
+        item.modifierGroups.forEach(link => {
+          const lid = String(link.id || link.groupId || link.group_id || '');
+          if (lid === grpId || lid === canonId || `mg_${lid}` === grpId || lid === `mg_${grpId}`) {
+            link.isRequired = grp.isRequired;
+          }
+        });
+      }
+    });
+  });
+
   markMenuDirty();
   renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), currentMenuData[cIdx], cIdx);
 }
