@@ -214,6 +214,7 @@ const I18N = {
     soldoutClear: "取消全選",
     btnSendSuggest: "傳送建議",
     btnCancel: "取消",
+    btnConfirm: "確認",
     alertInputTime: "請輸入建議的新取餐時間 (例: 11:30)！",
     alertSelectSoldout: "請至少選擇一項已售完的品項！",
     // Reject Modal
@@ -499,6 +500,10 @@ const I18N = {
     itemModifiersModalTitle: "設定餐點客製選項",
     itemModifiersModalSub: "為此餐點配置專屬的選項群組 (如加料、甜度冰塊、辣度)",
     btnNewModifierGroup: "新增選項群組",
+    btnAddItemModGroup: "+ 新增選項群組",
+    btnOpenModLibrary: "+ 從客製化庫選取",
+    btnItemModSave: "完成設定",
+    btnImportLibraryMod: "加入此餐點",
     labelModifierGroupName: "群組名稱 (例: 辣度、加料、甜度冰塊)",
     labelModifierSelectionType: "選擇模式",
     optionSingleRadio: "單選 (Radio)",
@@ -1036,6 +1041,7 @@ const I18N = {
     soldoutClear: "Bỏ chọn tất cả",
     btnSendSuggest: "Gửi đề xuất",
     btnCancel: "Hủy",
+    btnConfirm: "Xác nhận",
     alertInputTime: "Vui lòng nhập giờ đề xuất mới (Ví dụ: 11:30)!",
     alertSelectSoldout: "Vui lòng chọn ít nhất một món đã hết hàng!",
     // Reject Modal
@@ -1197,6 +1203,10 @@ const I18N = {
     itemModifiersModalTitle: "Thiết lập tuỳ chọn cho món",
     itemModifiersModalSub: "Cấu hình các nhóm tuỳ chọn riêng cho món này (Topping, Đường đá, Độ cay...)",
     btnNewModifierGroup: "Thêm nhóm tuỳ chọn",
+    btnAddItemModGroup: "+ Thêm nhóm tùy chọn",
+    btnOpenModLibrary: "+ Chọn từ thư viện có sẵn",
+    btnItemModSave: "Hoàn tất thiết lập",
+    btnImportLibraryMod: "Thêm vào món này",
     labelModifierGroupName: "Tên nhóm (VD: Độ cay, Topping, Mức đường đá)",
     labelModifierSelectionType: "Kiểu chọn",
     optionSingleRadio: "Chọn 1 (Radio)",
@@ -1689,10 +1699,24 @@ function setLanguage(lang) {
   applyLanguageToDOM();
   if (typeof updatePrintActionAvailability === "function") updatePrintActionAvailability();
   if (typeof renderAll === "function") renderAll();
-  if (typeof activeTab !== "undefined" && activeTab === "settings") {
-    if (typeof renderOperatingHours === "function") renderOperatingHours();
-    if (typeof renderScheduledPickupSetting === "function") renderScheduledPickupSetting();
-    if (typeof renderDineInSetting === "function") renderDineInSetting();
+  if (typeof activeTab !== "undefined") {
+    if (activeTab === "settings") {
+      if (typeof renderOperatingHours === "function") renderOperatingHours();
+      if (typeof renderScheduledPickupSetting === "function") renderScheduledPickupSetting();
+      if (typeof renderDineInSetting === "function") renderDineInSetting();
+    } else if (activeTab === "menu") {
+      if (typeof renderMenuCategories === "function") renderMenuCategories();
+      if (typeof renderMenuCategoryEditor === "function" && typeof activeCategoryIndex !== "undefined" && activeCategoryIndex >= 0) {
+        renderMenuCategoryEditor(activeCategoryIndex);
+      }
+      if (typeof updateMenuSaveState === "function") updateMenuSaveState();
+      if (typeof renderItemModifiersEditor === "function" && document.getElementById("itemModifiersModal")?.style.display === "flex") {
+        renderItemModifiersEditor();
+      }
+      if (typeof renderBundleGroupConfigPanel === "function" && document.getElementById("modal-bundle-editor")?.style.display !== "none") {
+        renderBundleGroupConfigPanel();
+      }
+    }
   }
 }
 
@@ -2325,6 +2349,33 @@ function applyLanguageToDOM() {
   if (t3Title) t3Title.innerText = dict.createType3Title;
   const t3Desc = document.getElementById("i18n-type-3-desc");
   if (t3Desc) t3Desc.innerText = dict.createType3Desc;
+  const btnCreationTypeClose = document.getElementById("btn-creation-type-close");
+  if (btnCreationTypeClose) btnCreationTypeClose.innerText = dict.btnClose || "關閉";
+
+  // Item Modifiers Modal
+  const itemModT = document.getElementById("item-modifiers-modal-title");
+  if (itemModT) itemModT.innerText = dict.itemModifiersModalTitle;
+  const itemModS = document.getElementById("item-modifiers-modal-sub");
+  if (itemModS) itemModS.innerText = dict.itemModifiersModalSub;
+  const btnAddItemModG = document.getElementById("btn-add-item-mod-group");
+  if (btnAddItemModG) btnAddItemModG.innerText = dict.btnAddItemModGroup || dict.btnNewModifierGroup;
+  const btnOpenModLib = document.getElementById("btn-open-mod-library");
+  if (btnOpenModLib) btnOpenModLib.innerText = dict.btnOpenModLibrary || dict.btnAddFromLibrary;
+  const btnItemModCan = document.getElementById("btn-item-mod-cancel");
+  if (btnItemModCan) btnItemModCan.innerText = dict.btnCancel;
+  const btnItemModSv = document.getElementById("btn-item-mod-save");
+  if (btnItemModSv) btnItemModSv.innerText = dict.btnItemModSave || dict.btnSaveModifiers;
+
+  // Modifier Library Modal
+  const modLibT = document.getElementById("mod-library-modal-title");
+  if (modLibT) modLibT.innerText = dict.libraryModalTitle;
+  const modLibS = document.getElementById("mod-library-modal-sub");
+  if (modLibS) modLibS.innerText = dict.libraryModalSub;
+  const btnModLibCan = document.getElementById("btn-mod-library-cancel");
+  if (btnModLibCan) btnModLibCan.innerText = dict.btnCancel;
+  const btnImportLibMod = document.getElementById("btn-import-library-mod");
+  if (btnImportLibMod) btnImportLibMod.innerText = dict.btnImportLibraryMod || dict.btnImportToItem;
+
   if (typeof updateMenuSaveState === "function") updateMenuSaveState();
   if (typeof renderComboWizard === "function" && document.getElementById('bundle-wizard')?.style.display === 'flex') renderComboWizard();
   const menuHelp = document.getElementById("menu-help-toggle");
