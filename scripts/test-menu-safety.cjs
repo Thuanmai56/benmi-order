@@ -647,3 +647,70 @@ test('T5: cross-group duplicate option names are disambiguated and save without 
   assert.equal(garlicOpts[1].price, 0);
 });
 
+test('T5: customization group with category scope and empty options renders editor and accepts new options without catItemIds error', () => {
+  const e = editor();
+  e.context.currentLang = 'vi';
+  e.context.escapeHtml = (s) => s || '';
+  e.context.document.createElement = (tag) => ({
+    tagName: tag,
+    style: {},
+    classList: { add() {}, remove() {}, toggle() {} },
+    setAttribute(k, v) { this[k] = v; },
+    getAttribute(k) { return this[k]; },
+    appendChild(child) { (this.children = this.children || []).push(child); },
+    querySelectorAll() { return []; },
+    addEventListener() {}
+  });
+  e.run(`
+    currentMenuData = [
+      {
+        id: 'sec-flavor',
+        type: 'order_customization',
+        title: 'Flavor',
+        groups: [{
+          id: 'custom_a_notes',
+          key: 'group_notes',
+          title: 'Ghi chú dặn dò',
+          type: 'radio',
+          isRequired: false,
+          scope: 'category',
+          appliedCategories: ['food'],
+          options: []
+        }]
+      },
+      {
+        id: 'food',
+        type: 'catalog',
+        title: 'Món ăn',
+        items: [{ id: 'item_1', name: 'Phở bò', price: 50 }]
+      }
+    ];
+    activeCategoryIndex = 0;
+    activeOptionGroupIndex = 0;
+  `);
+
+  // Render customization editor with DOM mocks
+  const appendedElements = [];
+  const fakeContainer = {
+    innerHTML: '',
+    appendChild: (el) => appendedElements.push(el)
+  };
+  e.context.fakeContainer = fakeContainer;
+  // Should NOT throw ReferenceError: catItemIds is not defined
+  e.run('renderOrderCustomizationEditor(fakeContainer, currentMenuData[0], 0)');
+
+  // Verify group card is created and rendered
+  assert.ok(appendedElements.length >= 2, 'Banner and group card must be appended');
+  const card = appendedElements.find(el => el.className === 'cust-group-card');
+  assert.ok(card, 'Group card must be rendered in DOM');
+  assert.ok(card.innerHTML.includes('cust-empty-options-hint'), 'Empty options hint should be displayed');
+  assert.ok(card.innerHTML.includes('cat-mgr-add-btn'), 'Add option button must be present in card');
+
+  // Now call addCustomizationOption
+  e.run('addCustomizationOption(0, 0)');
+  const group = e.run('currentMenuData[0].groups[0]');
+  assert.equal(group.options.length, 1);
+  assert.ok(group.options[0].id.startsWith('opt_custom_a_notes_'));
+});
+
+

@@ -903,33 +903,14 @@ function renderMenuCategoryEditor(index) {
       deleteBtn.onclick = () => deleteCategoryAtIndex(index);
     }
     if (createBtn) {
-      if (cat.type === 'modifier') {
-        createBtn.style.display = "none";
-      } else {
-        createBtn.style.display = "inline-flex";
-        const customLabel = t("btnMenuAddCustomGroup") || (currentLang === 'vi' ? 'Thêm nhóm tùy chọn' : '新增客製化分組');
-        if (createBtnText) createBtnText.innerText = customLabel.replace(/^\+\s*/, '');
-        else createBtn.innerText = customLabel;
-        createBtn.onclick = () => openNewCustomGroupCreator(index);
-      }
+      createBtn.style.display = "none";
     }
     renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), cat, index);
     return;
   }
 
   if (createBtn) {
-    createBtn.style.display = "inline-flex";
-    if (isCombo) {
-      const comboLabel = t("btnCreateComboWizard") || (currentLang === 'vi' ? 'Tạo Combo mới' : '建立特惠套餐');
-      if (createBtnText) createBtnText.innerText = comboLabel.replace(/^\+\s*/, '');
-      else createBtn.innerText = comboLabel;
-      createBtn.onclick = () => openCreateItemModal(index);
-    } else {
-      const actionLabel = t("btnMenuAddItem") || (currentLang === 'vi' ? 'Thêm món mới' : '新增餐點');
-      if (createBtnText) createBtnText.innerText = actionLabel.replace(/^\+\s*/, '');
-      else createBtn.innerText = actionLabel;
-      createBtn.onclick = () => openCreateItemModal(index);
-    }
+    createBtn.style.display = "none";
   }
 
   if (renameBtn) renameBtn.style.display = "inline-flex";
@@ -1223,7 +1204,7 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
           const selection = getModifierCategorySelectionState(grp, catItem);
           const isChecked = selection.checked;
           const isIndeterminate = selection.indeterminate;
-          const count = catItemIds.length;
+          const count = Array.isArray(catItem.items) ? catItem.items.length : 0;
           return `
             <div class="cust-cat-item-select ${isIndeterminate ? 'has-partial-selection' : ''}">
               <label class="cust-cat-chip ${isChecked ? 'active' : ''} ${isIndeterminate ? 'partial' : ''}">
@@ -1276,7 +1257,15 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
       const optionsCount = (grp.options || []).length;
 
       let optionsHtml = '';
-      (grp.options || []).forEach((opt, oIdx) => {
+      if (optionsCount === 0) {
+        optionsHtml = `
+          <div class="cust-empty-options-hint" style="text-align: center; padding: 24px 16px; background: #f8fafc; border-radius: 10px; border: 1.5px dashed #cbd5e1; margin-bottom: 12px; color: #64748b;">
+            <div style="font-size: 13.5px; font-weight: 700; margin-bottom: 4px;">${currentLang === 'vi' ? 'Nhóm này chưa có lựa chọn nào' : '此分組尚無任何選項'}</div>
+            <div style="font-size: 12px; color: #94a3b8;">${currentLang === 'vi' ? 'Bấm nút "Thêm lựa chọn" bên dưới để bắt đầu' : '點擊下方「新增選項」按鈕開始建立第一個選項'}</div>
+          </div>
+        `;
+      } else {
+        (grp.options || []).forEach((opt, oIdx) => {
         const oosBg = opt.isOos ? '#fee2e2' : '#d1fae5';
         const oosColor = opt.isOos ? '#b91c1c' : '#065f46';
         const oosBorder = opt.isOos ? '#fca5a5' : '#6ee7b7';
@@ -1323,6 +1312,7 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
           </div>
         `;
       });
+      }
 
       const repeatsEditorTitle = (cat.groups.length === 1 && String(grp.title || '').trim() === String(cat.title || '').trim());
       card.innerHTML = `
@@ -1708,11 +1698,12 @@ function saveNewCustomizationGroup(cIdx) {
       options: []
     });
     isCustomGroupCreatorOpen = false;
+    const newGroupIndex = cat.groups.length - 1;
+    activeOptionGroupIndex = newGroupIndex;
     markMenuDirty();
     renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), cat, cIdx);
     renderMenuCategories();
 
-    const newGroupIndex = cat.groups.length - 1;
     setTimeout(() => {
       const el = document.querySelector(`[data-cust-group-index="${newGroupIndex}"]`);
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
