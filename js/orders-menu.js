@@ -3541,36 +3541,38 @@ function closeItemModifiersModal() {
 }
 window.closeItemModifiersModal = closeItemModifiersModal;
 
-function syncItemModifiersFromDOM() {
-  const container = document.getElementById("item-modifiers-modal-body");
-  if (!container) return;
-  const groupCards = container.querySelectorAll(".mod-group-card");
-  groupCards.forEach((card, gIdx) => {
-    if (!tempItemModifierGroups[gIdx]) return;
-    const nameInput = card.querySelector(".mod-group-name-input");
-    if (nameInput) tempItemModifierGroups[gIdx].name = nameInput.value.trim();
-    const selTypeSelect = card.querySelector(".mod-group-type-select");
-    if (selTypeSelect) tempItemModifierGroups[gIdx].selectionType = selTypeSelect.value;
-    const reqCheckbox = card.querySelector(".mod-group-req-checkbox");
-    if (reqCheckbox) tempItemModifierGroups[gIdx].isRequired = reqCheckbox.checked;
+function syncItemModifiersFromDOM() {}
+window.syncItemModifiersFromDOM = syncItemModifiersFromDOM;
 
-    const minInput = card.querySelector(".mod-group-min-input");
-    if (minInput) tempItemModifierGroups[gIdx].minSelection = Math.max(0, parseInt(minInput.value, 10) || 0);
-    const maxInput = card.querySelector(".mod-group-max-input");
-    if (maxInput) tempItemModifierGroups[gIdx].maxSelection = Math.max(1, parseInt(maxInput.value, 10) || 1);
-
-    const optRows = card.querySelectorAll(".mod-option-row");
-    optRows.forEach((row, oIdx) => {
-      if (!tempItemModifierGroups[gIdx].options || !tempItemModifierGroups[gIdx].options[oIdx]) return;
-      const optNameInput = row.querySelector(".mod-opt-name-input");
-      if (optNameInput) tempItemModifierGroups[gIdx].options[oIdx].name = optNameInput.value.trim();
-      const optPriceInput = row.querySelector(".mod-opt-price-input");
-      if (optPriceInput) tempItemModifierGroups[gIdx].options[oIdx].price = Number(optPriceInput.value) || 0;
-      const optDefCheckbox = row.querySelector(".mod-opt-def-checkbox");
-      if (optDefCheckbox) tempItemModifierGroups[gIdx].options[oIdx].isDefault = optDefCheckbox.checked;
-    });
-  });
+function goToCustomizationTabFromItemModal() {
+  closeItemModifiersModal();
+  closeItemDetailModal();
+  setMenuSidebarTab('options');
+  if (typeof handleCreateCustomFromSidebar === 'function') {
+    setTimeout(() => {
+      handleCreateCustomFromSidebar();
+    }, 50);
+  }
 }
+window.goToCustomizationTabFromItemModal = goToCustomizationTabFromItemModal;
+
+function toggleItemModifierCardSelection(gIdx, forcedChecked) {
+  const cb = document.getElementById(`item-mod-grp-cb-${gIdx}`);
+  if (!cb) return;
+  if (forcedChecked !== undefined) {
+    cb.checked = forcedChecked;
+  } else {
+    cb.checked = !cb.checked;
+  }
+  const card = cb.closest(".mod-lib-group-card");
+  if (card) {
+    card.style.borderColor = cb.checked ? '#3b82f6' : '#e2e8f0';
+    card.style.background = cb.checked ? '#f8faff' : '#ffffff';
+    const label = card.querySelector("label");
+    if (label) label.style.color = cb.checked ? '#1d4ed8' : '#0f172a';
+  }
+}
+window.toggleItemModifierCardSelection = toggleItemModifierCardSelection;
 
 function renderItemModifiersEditor() {
   const container = document.getElementById("item-modifiers-modal-body");
@@ -3579,9 +3581,9 @@ function renderItemModifiersEditor() {
 
   const currentCat = (currentMenuData && currentItemModifiersCidx !== null) ? currentMenuData[currentItemModifiersCidx] : null;
 
-  // 1. Inherited Category Modifiers Section
+  // 1. Inherited Category Modifiers Section (Read-only banner)
   if (currentCat) {
-    const custCat = currentMenuData.find(c => isCustomizationCategory(c));
+    const custCat = (currentMenuData || []).find(c => isCustomizationCategory(c));
     const inheritedGroups = [];
     if (custCat && Array.isArray(custCat.groups)) {
       custCat.groups.forEach(g => {
@@ -3593,16 +3595,16 @@ function renderItemModifiersEditor() {
 
     if (inheritedGroups.length > 0) {
       const inheritedBox = document.createElement("div");
-      inheritedBox.style.cssText = "background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 12px; padding: 14px; margin-bottom: 12px;";
+      inheritedBox.style.cssText = "background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 12px; padding: 14px; margin-bottom: 8px;";
 
       const groupsHtml = inheritedGroups.map(grp => {
         const optsSummary = (grp.options || []).map(o => `${escapeHtml(o.name)}${o.price ? ' (+$' + o.price + ')' : ''}`).join(', ') || (currentLang === 'vi' ? 'Chưa có lựa chọn' : '尚無選項');
         return `
           <div style="background: #ffffff; border: 1px solid #dcfce7; border-radius: 8px; padding: 10px 12px; margin-top: 8px;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
-              <span style="font-weight: 700; font-size: 14px; color: #166534;">✦ ${escapeHtml(grp.title)}</span>
+              <span style="font-weight: 700; font-size: 14px; color: #166534;">✦ ${escapeHtml(grp.title || grp.name)}</span>
               <span style="font-size: 11.5px; padding: 2px 6px; background: #dcfce7; color: #15803d; border-radius: 4px; font-weight: 700;">
-                ${grp.type === 'checkbox' ? (currentLang === 'vi' ? 'Chọn nhiều' : '多選') : (currentLang === 'vi' ? 'Chọn 1' : '單選')} ${grp.isRequired ? (t("badgeRequired") || '必選') : ''}
+                ${grp.type === 'checkbox' ? (currentLang === 'vi' ? 'Chọn nhiều' : '多選') : (currentLang === 'vi' ? 'Chọn 1' : '單選')} ${grp.isRequired ? (t("badgeRequired") || '必填') : ''}
               </span>
             </div>
             <div style="font-size: 13px; color: #4b5563;">${optsSummary}</div>
@@ -3619,7 +3621,7 @@ function renderItemModifiersEditor() {
           <span style="font-size: 12px; color: #15803d; font-weight: 600;">${inheritedGroups.length} ${t("menuItemUnit")}</span>
         </div>
         <p style="margin: 4px 0 0; font-size: 12.5px; color: #166534;">
-          ${t("scopeCategoryDesc") || "所選分類下的所有餐點將自動繼承此客製化選項"}
+          ${t("inheritedFromCategoryNotice") || "（已自動套用至此分類所有餐點）"}
         </p>
         ${groupsHtml}
       `;
@@ -3627,284 +3629,202 @@ function renderItemModifiersEditor() {
     }
   }
 
-  if (tempItemModifierGroups.length === 0) {
-    const empty = document.createElement("div");
-    empty.style.textAlign = "center";
-    empty.style.padding = "28px 16px";
-    empty.style.color = "#94a3b8";
-    empty.style.fontSize = "14px";
-    empty.innerText = t("noModifierGroups") || "此品項尚未設定專屬客製選項。點擊上方按鈕開始新增。";
-    container.appendChild(empty);
+  // 2. Collect Available Library Groups
+  const custCat = (currentMenuData || []).find(c => isCustomizationCategory(c));
+  const libraryGroups = [];
+  if (custCat && Array.isArray(custCat.groups)) {
+    custCat.groups.forEach(g => {
+      if (g.scope !== 'order') {
+        libraryGroups.push(g);
+      }
+    });
+  }
+
+  // Also include any group already in tempItemModifierGroups if not in libraryGroups
+  (tempItemModifierGroups || []).forEach(existingGrp => {
+    const exists = libraryGroups.some(g => String(g.id) === String(existingGrp.id) || String(g.canonicalId) === String(existingGrp.id));
+    if (!exists) {
+      libraryGroups.push({
+        id: existingGrp.id,
+        title: existingGrp.name || existingGrp.title,
+        type: existingGrp.selectionType === 'multiple' ? 'checkbox' : 'radio',
+        isRequired: existingGrp.isRequired,
+        minSelection: existingGrp.minSelection,
+        maxSelection: existingGrp.maxSelection,
+        options: existingGrp.options || []
+      });
+    }
+  });
+
+  if (libraryGroups.length === 0) {
+    const emptyBox = document.createElement("div");
+    emptyBox.style.cssText = "text-align: center; padding: 40px 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: #f8fafc; border-radius: 12px; border: 1.5px dashed #cbd5e1;";
+    emptyBox.innerHTML = `
+      <div style="width: 52px; height: 52px; border-radius: 50%; background: #eff6ff; display: flex; align-items: center; justify-content: center; color: #2563eb;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+      </div>
+      <div style="font-weight: 700; font-size: 15px; color: #1e293b;">${escapeHtml(t("noLibraryModifierGroups") || "目前客製化庫尚無可選的群組")}</div>
+      <div style="font-size: 13px; color: #64748b; max-width: 380px;">${escapeHtml(t("noLibraryModifierGroupsSub") || "請前往客製化庫建立群組後，再為餐點勾選套用。")}</div>
+      <button type="button" class="btn btn-primary" onclick="goToCustomizationTabFromItemModal()" style="margin-top: 8px; min-height: 48px; padding: 0 20px; font-weight: 700;">
+        ${escapeHtml(t("btnManageCustomLibrary") || "+ 前往客製化庫管理")}
+      </button>
+    `;
+    container.appendChild(emptyBox);
     return;
   }
 
-  // Notice banner: Explaining item-specific modifiers combine additively with category modifiers
-  const noticeBanner = document.createElement("div");
-  noticeBanner.style.cssText = "background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 10px; padding: 10px 14px; font-size: 13px; color: #1e40af; font-weight: 600; display: flex; align-items: center; gap: 8px; margin-bottom: 4px;";
-  noticeBanner.innerHTML = `
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-    <span>${escapeHtml(t("labelItemCustomizationNotice") || "此為品項專屬客製化，將與所屬分類繼承選項累加合併（不會被覆蓋）")}</span>
-  `;
-  container.appendChild(noticeBanner);
+  // Helper set of currently selected group IDs for this item
+  const selectedIds = new Set();
+  (tempItemModifierGroups || []).forEach(g => {
+    const rawId = String(g.id || g.groupId || g.group_id || '');
+    selectedIds.add(rawId);
+    if (rawId.startsWith('mg_')) selectedIds.add(rawId.slice(3));
+    else selectedIds.add(`mg_${rawId}`);
+  });
 
-  tempItemModifierGroups.forEach((grp, gIdx) => {
+  const headerNotice = document.createElement("div");
+  headerNotice.style.cssText = "font-size: 13px; color: #64748b; font-weight: 600; margin-bottom: 2px;";
+  headerNotice.innerText = currentLang === 'vi' 
+    ? `Chọn các nhóm tùy chọn áp dụng cho món (${libraryGroups.length} nhóm có sẵn):` 
+    : `請勾選要套用至此餐點的客製化群組（共 ${libraryGroups.length} 組可用）：`;
+  container.appendChild(headerNotice);
+
+  libraryGroups.forEach((grp, gIdx) => {
+    const grpId = String(grp.id || '');
+    const isSelected = selectedIds.has(grpId) || selectedIds.has(`mg_${grpId}`) || (grpId.startsWith('mg_') && selectedIds.has(grpId.slice(3)));
+    const isSingle = (grp.type !== 'checkbox' && grp.selectionType !== 'multiple');
+
     const card = document.createElement("div");
-    card.className = "mod-group-card";
-    card.setAttribute("data-group-index", gIdx);
+    card.className = "mod-lib-group-card";
+    card.style.cssText = `border: 1.5px solid ${isSelected ? '#3b82f6' : '#e2e8f0'}; background: ${isSelected ? '#f8faff' : '#ffffff'}; border-radius: 12px; padding: 14px 16px; cursor: pointer; transition: all 0.15s ease; user-select: none;`;
 
-    const isSingle = grp.selectionType === 'single';
-    const isReq = Boolean(grp.isRequired);
-
-    let optionsHtml = '';
-    (grp.options || []).forEach((opt, oIdx) => {
-      optionsHtml += `
-        <div class="mod-option-row" data-opt-index="${oIdx}">
-          <input type="text" class="mod-opt-name-input" value="${escapeHtml(opt.name || '')}" placeholder="${escapeHtml(t('labelOptionName') || '選項名稱')}" style="flex: 2; min-height: 48px; padding: 8px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 14px;" oninput="syncItemModifiersFromDOM()">
-          <label style="display: flex; align-items: center; gap: 4px; font-size: 13px; color: #475569; font-weight: 700; white-space: nowrap; min-height: 48px;">
-            <span>+$</span>
-            <input type="number" class="mod-opt-price-input" value="${opt.price || 0}" placeholder="0" style="width: 75px; min-height: 48px; padding: 6px 8px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 14px;" oninput="syncItemModifiersFromDOM()">
-          </label>
-          <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #64748b; font-weight: 600; cursor: pointer; user-select: none; min-height: 48px; padding: 0 8px;">
-            <input type="checkbox" class="mod-opt-def-checkbox" ${opt.isDefault ? 'checked' : ''} style="width: 20px; height: 20px; accent-color: #2563eb;" onchange="if (this.checked && '${grp.selectionType}' === 'single') { this.closest('.mod-options-container').querySelectorAll('.mod-opt-def-checkbox').forEach(cb => { if (cb !== this) cb.checked = false; }); } syncItemModifiersFromDOM();">
-            <span>${escapeHtml(t('labelModifierDefault') || (currentLang === 'vi' ? 'Mặc định' : '預設'))}</span>
-          </label>
-          <button type="button" class="btn btn-ghost btn-danger-ghost" onclick="removeItemModifierOption(${gIdx}, ${oIdx})" style="min-width: 48px; min-height: 48px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px;" title="${escapeHtml(t('btnItemDelete') || 'Xóa')}">
-            ${(typeof POS_SVG !== 'undefined' && POS_SVG.trash) || '✕'}
-          </button>
-        </div>
-      `;
-    });
-
-    let boundsHtml = '';
-    if (!isSingle) {
-      boundsHtml = `
-        <div class="mod-group-bounds-row" style="display: flex; align-items: center; gap: 12px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e2e8f0; flex-wrap: wrap;">
-          <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: #475569; min-height: 48px;">
-            <span>${escapeHtml(t('labelMinSelection') || 'Tối thiểu')}:</span>
-            <input type="number" min="0" class="mod-group-min-input" value="${grp.minSelection ?? (isReq ? 1 : 0)}" style="width: 70px; min-height: 48px; padding: 6px 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 14px;" oninput="syncItemModifiersFromDOM()">
-          </label>
-          <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: #475569; min-height: 48px;">
-            <span>${escapeHtml(t('labelMaxSelection') || 'Tối đa')}:</span>
-            <input type="number" min="1" class="mod-group-max-input" value="${grp.maxSelection ?? 99}" style="width: 70px; min-height: 48px; padding: 6px 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 14px;" oninput="syncItemModifiersFromDOM()">
-          </label>
-          <span style="font-size: 12px; color: #64748b;">${escapeHtml(t('labelMultipleBoundsHint') || '(0 = không giới hạn)')}</span>
-        </div>
-      `;
-    }
+    const optListText = (grp.options || []).map(o => {
+      const priceText = o.price > 0 ? ` (+$${o.price})` : '';
+      return `${escapeHtml(o.name)}${priceText}`;
+    }).join(', ') || (currentLang === 'vi' ? 'Chưa có lựa chọn' : '無選項');
 
     card.innerHTML = `
-      <div class="mod-group-header">
-        <input type="text" class="mod-group-name-input" value="${escapeHtml(grp.name || '')}" placeholder="${escapeHtml(t('labelModifierGroupName') || '群組名稱 (例: 辣度、加料)')}" style="flex: 2; min-width: 160px; min-height: 48px; padding: 8px 12px; font-size: 14.5px; font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 8px;" oninput="syncItemModifiersFromDOM()">
-        <select class="mod-group-type-select" style="min-height: 48px; padding: 6px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13.5px; font-weight: 600; background: #f8fafc;" onchange="syncItemModifiersFromDOM(); renderItemModifiersEditor();">
-          <option value="single" ${isSingle ? 'selected' : ''}>${escapeHtml(t('optionSingleRadio') || '單選 (Radio)')}</option>
-          <option value="multiple" ${!isSingle ? 'selected' : ''}>${escapeHtml(t('optionMultipleCheckbox') || '多選 (Checkbox)')}</option>
-        </select>
-        <label style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; min-height: 48px; background: ${isReq ? '#fef2f2' : '#f8fafc'}; border: 1.5px solid ${isReq ? '#fca5a5' : '#cbd5e1'}; border-radius: 8px; cursor: pointer; user-select: none;">
-          <input type="checkbox" class="mod-group-req-checkbox" ${isReq ? 'checked' : ''} style="width: 20px; height: 20px; accent-color: #ef4444;" onchange="syncItemModifiersFromDOM(); this.closest('label').style.background = this.checked ? '#fef2f2' : '#f8fafc'; this.closest('label').style.borderColor = this.checked ? '#fca5a5' : '#cbd5e1';">
-          <span style="font-size: 13px; font-weight: 700; color: ${isReq ? '#b91c1c' : '#475569'};">${escapeHtml(t('labelModifierRequired') || '必選')}</span>
-        </label>
-        <button type="button" class="btn btn-ghost btn-danger-ghost" onclick="removeItemModifierGroup(${gIdx})" style="min-width: 48px; min-height: 48px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; margin-left: auto;" title="${escapeHtml(t('btnItemDelete') || 'Xóa')}">
-          ${(typeof POS_SVG !== 'undefined' && POS_SVG.trash) || '✕'}
-        </button>
-      </div>
-      ${boundsHtml}
-      <div class="mod-options-container" style="display: flex; flex-direction: column; gap: 6px; margin-top: 4px; padding-left: 8px; border-left: 2px solid #e2e8f0;">
-        ${optionsHtml}
-        <button type="button" class="btn btn-ghost" onclick="addItemModifierOption(${gIdx})" style="margin-top: 6px; align-self: flex-start; min-height: 48px; padding: 0 16px; font-size: 13px; font-weight: 700; color: #16a34a; background: #f0fdf4; border: 1.5px dashed #86efac; border-radius: 8px;">
-          + ${escapeHtml(t('btnAddModifierOption') || '新增選項')}
-        </button>
+      <div style="display: flex; align-items: flex-start; gap: 12px;">
+        <input type="checkbox" class="item-mod-group-checkbox" id="item-mod-grp-cb-${gIdx}" data-group-id="${escapeHtml(grpId)}" ${isSelected ? 'checked' : ''} style="width: 24px; height: 24px; accent-color: #2563eb; cursor: pointer; margin-top: 2px; flex-shrink: 0;" onclick="event.stopPropagation(); toggleItemModifierCardSelection(${gIdx}, this.checked)">
+        <div style="flex: 1;" onclick="toggleItemModifierCardSelection(${gIdx})">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+            <label for="item-mod-grp-cb-${gIdx}" style="font-weight: 800; font-size: 15px; color: ${isSelected ? '#1d4ed8' : '#0f172a'}; cursor: pointer; margin: 0;">
+              ${escapeHtml(grp.title || grp.name)}
+            </label>
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <span style="font-size: 11.5px; padding: 2px 7px; background: #ecfdf5; color: #047857; border-radius: 6px; font-weight: 700; border: 1px solid #a7f3d0;">
+                ${isSingle ? (currentLang === 'vi' ? 'Chọn 1' : '單選') : (currentLang === 'vi' ? 'Chọn nhiều' : '多選')}
+              </span>
+              ${grp.isRequired ? `<span style="font-size: 11.5px; padding: 2px 7px; background: #fee2e2; color: #b91c1c; border-radius: 6px; font-weight: 700; border: 1px solid #fca5a5;">${t("badgeRequired") || '必填'}</span>` : ''}
+              <span style="font-size: 12px; color: #64748b; font-weight: 600;">${(grp.options || []).length} ${t("menuItemUnit")}</span>
+            </div>
+          </div>
+          <div style="font-size: 13px; color: #475569; margin-top: 6px; line-height: 1.4;">
+            ${optListText}
+          </div>
+        </div>
       </div>
     `;
+
     container.appendChild(card);
   });
 }
 
-function addItemModifierGroup() {
-  syncItemModifiersFromDOM();
-  tempItemModifierGroups.push({
-    id: `mg_${Date.now()}_${tempItemModifierGroups.length + 1}`,
-    name: "",
-    selectionType: "single",
-    isRequired: false,
-    minSelection: 0,
-    maxSelection: 1,
-    options: [
-      { id: `mo_${Date.now()}_1`, name: "", price: 0, isDefault: false }
-    ]
-  });
-  renderItemModifiersEditor();
-}
+function addItemModifierGroup() {}
 window.addItemModifierGroup = addItemModifierGroup;
-
-function removeItemModifierGroup(gIdx) {
-  syncItemModifiersFromDOM();
-  tempItemModifierGroups.splice(gIdx, 1);
-  renderItemModifiersEditor();
-}
+function removeItemModifierGroup() {}
 window.removeItemModifierGroup = removeItemModifierGroup;
-
-function addItemModifierOption(gIdx) {
-  syncItemModifiersFromDOM();
-  if (!tempItemModifierGroups[gIdx]) return;
-  if (!Array.isArray(tempItemModifierGroups[gIdx].options)) {
-    tempItemModifierGroups[gIdx].options = [];
-  }
-  tempItemModifierGroups[gIdx].options.push({
-    id: `mo_${Date.now()}_${tempItemModifierGroups[gIdx].options.length + 1}`,
-    name: "",
-    price: 0,
-    isDefault: false
-  });
-  renderItemModifiersEditor();
-}
+function addItemModifierOption() {}
 window.addItemModifierOption = addItemModifierOption;
-
-function removeItemModifierOption(gIdx, oIdx) {
-  syncItemModifiersFromDOM();
-  if (!tempItemModifierGroups[gIdx] || !tempItemModifierGroups[gIdx].options) return;
-  tempItemModifierGroups[gIdx].options.splice(oIdx, 1);
-  renderItemModifiersEditor();
-}
+function removeItemModifierOption() {}
 window.removeItemModifierOption = removeItemModifierOption;
 
 function saveItemModifiersModal() {
-  syncItemModifiersFromDOM();
-  const cleanGroups = tempItemModifierGroups.filter(grp => {
-    return grp.name && grp.name.trim() !== "";
-  }).map(grp => {
-    const cleanOpts = (grp.options || []).filter(opt => opt.name && opt.name.trim() !== "");
-    let seenDefault = false;
-    cleanOpts.forEach(opt => {
-      if (grp.selectionType === 'single') {
-        if (opt.isDefault) {
-          if (seenDefault) opt.isDefault = false;
-          else seenDefault = true;
-        }
+  const container = document.getElementById("item-modifiers-modal-body");
+  const checkboxes = container ? container.querySelectorAll(".item-mod-group-checkbox") : [];
+
+  if (checkboxes.length > 0) {
+    const checkedGroupIds = new Set();
+    checkboxes.forEach(cb => {
+      if (cb.checked) {
+        checkedGroupIds.add(cb.getAttribute("data-group-id"));
       }
     });
 
-    const isSingle = (grp.selectionType === 'single');
-    const isReq = Boolean(grp.isRequired);
-    const minSelection = isSingle 
-      ? (isReq ? 1 : 0) 
-      : Math.max(0, parseInt(grp.minSelection, 10) || (isReq ? 1 : 0));
-    const maxSelection = isSingle 
-      ? 1 
-      : Math.max(1, parseInt(grp.maxSelection, 10) || 99);
+    const custCat = (currentMenuData || []).find(c => isCustomizationCategory(c));
+    const allGroupsPool = [];
+    if (custCat && Array.isArray(custCat.groups)) {
+      allGroupsPool.push(...custCat.groups);
+    }
+    (tempItemModifierGroups || []).forEach(existing => {
+      if (!allGroupsPool.some(g => String(g.id) === String(existing.id))) {
+        allGroupsPool.push(existing);
+      }
+    });
 
-    return {
-      ...grp,
-      id: grp.id || `mg_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-      name: grp.name.trim(),
-      selectionType: grp.selectionType || 'single',
-      isRequired: isSingle ? isReq : (isReq || minSelection > 0),
-      minSelection: minSelection,
-      maxSelection: maxSelection >= minSelection ? maxSelection : minSelection,
-      options: cleanOpts
-    };
-  });
+    const cleanGroups = [];
+    allGroupsPool.forEach(grp => {
+      const gid = String(grp.id || '');
+      if (checkedGroupIds.has(gid)) {
+        cleanGroups.push({
+          id: grp.id || `mg_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          name: (grp.title || grp.name || '').trim(),
+          selectionType: (grp.type === 'checkbox' || grp.selectionType === 'multiple') ? 'multiple' : 'single',
+          isRequired: Boolean(grp.isRequired),
+          minSelection: grp.minSelection ?? ((grp.type === 'checkbox' || grp.selectionType === 'multiple') ? 0 : (grp.isRequired ? 1 : 0)),
+          maxSelection: grp.maxSelection ?? ((grp.type === 'checkbox' || grp.selectionType === 'multiple') ? 99 : 1),
+          options: (grp.options || []).map(opt => ({
+            id: opt.id,
+            name: opt.name,
+            price: Number(opt.price) || 0,
+            isDefault: Boolean(opt.isDefault)
+          }))
+        });
+      }
+    });
+
+    tempItemModifierGroups = cleanGroups;
+
+    // Bi-directional sync with custCat.groups appliedItems
+    if (currentItemModifiersCidx !== null && currentItemModifiersIidx !== null && currentMenuData) {
+      const cat = currentMenuData[currentItemModifiersCidx];
+      const item = cat?.items?.[currentItemModifiersIidx];
+      if (cat && item && custCat && Array.isArray(custCat.groups)) {
+        const itemKey = String(item.id || `${cat.id}:${item.name}`);
+        custCat.groups.forEach(grp => {
+          if (!Array.isArray(grp.appliedItems)) grp.appliedItems = [];
+          const gid = String(grp.id || '');
+          if (checkedGroupIds.has(gid)) {
+            if (!grp.appliedItems.includes(itemKey)) grp.appliedItems.push(itemKey);
+          } else {
+            grp.appliedItems = grp.appliedItems.filter(k => k !== itemKey);
+          }
+        });
+      }
+    }
+  } else {
+    // Fallback mode for unit tests or programmatic execution
+    tempItemModifierGroups = tempItemModifierGroups.filter(grp => grp.name && grp.name.trim() !== "");
+  }
 
   if (currentItemModifiersCidx !== null && currentItemModifiersIidx !== null) {
     const item = currentMenuData[currentItemModifiersCidx]?.items?.[currentItemModifiersIidx];
     if (item) {
-      item.modifierGroups = cleanGroups;
-      // A shared group ID denotes the same definition on every linked item.
-      const updatedGroups = new Map(cleanGroups.map(group => [group.id, group]));
-      (currentMenuData || []).forEach(category => (category.items || []).forEach(otherItem => {
-        if (otherItem === item || !Array.isArray(otherItem.modifierGroups)) return;
-        otherItem.modifierGroups = otherItem.modifierGroups.map(group =>
-          updatedGroups.has(group.id) ? JSON.parse(JSON.stringify(updatedGroups.get(group.id))) : group);
-      }));
+      item.modifierGroups = tempItemModifierGroups;
       item.itemType = (item.bundleRule && item.bundleRule.groups && item.bundleRule.groups.length > 0) ? 'bundle' : 'standard';
       markMenuDirty();
       renderMenuCategoryEditor(currentItemModifiersCidx);
     }
   }
+
   closeItemModifiersModal();
 }
 window.saveItemModifiersModal = saveItemModifiersModal;
 
 function openModifierLibraryModal() {
-  syncItemModifiersFromDOM();
-  const modal = document.getElementById("modifierLibraryModal");
-  const body = document.getElementById("mod-library-modal-body");
-  if (!modal || !body) return;
-  modal.style.zIndex = "2200";
-
-  const titleEl = document.getElementById("mod-library-modal-title");
-  if (titleEl) titleEl.innerText = t("libraryModalTitle") || "從現有客製化庫選取";
-  const subEl = document.getElementById("mod-library-modal-sub");
-  if (subEl) subEl.innerText = t("libraryModalSub") || "勾選要套用至此餐點的客製化群組或選項";
-  const importBtn = document.getElementById("btn-import-library-mod");
-  if (importBtn) importBtn.innerText = t("btnImportToItem") || "加入此餐點";
-
-  body.innerHTML = "";
-
-  // Collect all available customization groups from store
-  currentLibraryOptionGroups = [];
-  const custCat = (currentMenuData || []).find(c => isCustomizationCategory(c));
-  if (custCat && Array.isArray(custCat.groups)) {
-    custCat.groups.forEach(g => {
-      currentLibraryOptionGroups.push({
-        id: g.id,
-        title: g.title,
-        type: g.type,
-        isRequired: g.isRequired,
-        scope: g.scope,
-        options: (g.options || []).map(o => ({
-          id: o.id,
-          name: o.name,
-          price: o.price || 0,
-          isDefault: false
-        }))
-      });
-    });
+  if (currentItemModifiersCidx !== null && currentItemModifiersIidx !== null) {
+    openItemModifiersModal(currentItemModifiersCidx, currentItemModifiersIidx);
   }
-
-  if (currentLibraryOptionGroups.length === 0) {
-    const emptyDiv = document.createElement("div");
-    emptyDiv.style.textAlign = "center";
-    emptyDiv.style.padding = "32px 16px";
-    emptyDiv.style.color = "#94a3b8";
-    emptyDiv.innerText = t("noLibraryOptions") || "目前尚無其他客製化分組可供選取";
-    body.appendChild(emptyDiv);
-  } else {
-    currentLibraryOptionGroups.forEach((grp, gIdx) => {
-      const card = document.createElement("div");
-      card.className = "mod-lib-group-card";
-
-      const optRowsHtml = (grp.options || []).map((opt, oIdx) => {
-        const surchargeText = opt.price > 0 ? ` (+$${opt.price})` : '';
-        return `
-          <label class="mod-lib-option-row">
-            <input type="checkbox" class="mod-lib-opt-checkbox" data-lib-gidx="${gIdx}" data-lib-oidx="${oIdx}" onchange="onLibraryOptionCheckChange(${gIdx})" style="width: 18px; height: 18px; accent-color: #059669; cursor: pointer;">
-            <span style="font-weight: 600; color: #1e293b;">${escapeHtml(opt.name)}</span>
-            <span style="font-weight: 700; color: #047857; margin-left: 4px;">${surchargeText}</span>
-          </label>
-        `;
-      }).join('');
-
-      card.innerHTML = `
-        <div class="mod-lib-group-header">
-          <input type="checkbox" class="mod-lib-group-checkbox" id="lib-grp-cb-${gIdx}" data-lib-gidx="${gIdx}" onchange="toggleLibraryGroupCheck(${gIdx}, this.checked)" style="width: 20px; height: 20px; accent-color: #059669; cursor: pointer;">
-          <label for="lib-grp-cb-${gIdx}" style="display: flex; align-items: center; gap: 8px; cursor: pointer; flex: 1;">
-            <span class="mod-lib-group-title">${escapeHtml(grp.title)}</span>
-            <span class="mod-lib-group-badge" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;">
-              ${grp.type === 'checkbox' ? (currentLang === 'vi' ? 'Chọn nhiều' : '多選') : (currentLang === 'vi' ? 'Chọn 1' : '單選')}
-            </span>
-            ${grp.isRequired ? `<span class="mod-lib-group-badge" style="background: #fef2f2; color: #b91c1c; border: 1px solid #fca5a5;">${t("badgeRequired") || '必填'}</span>` : ''}
-          </label>
-          <span style="font-size: 12.5px; color: #64748b; font-weight: 600;">${grp.options.length} ${t("menuItemUnit")}</span>
-        </div>
-        <div class="mod-lib-options-list">
-          ${optRowsHtml || `<span style="color:#94a3b8; font-size:12.5px;">${t("noOptionsPrompt") || "無選項"}</span>`}
-        </div>
-      `;
-      body.appendChild(card);
-    });
-  }
-
-  modal.style.display = "flex";
 }
 window.openModifierLibraryModal = openModifierLibraryModal;
 
@@ -3913,73 +3833,6 @@ function closeModifierLibraryModal() {
   if (modal) modal.style.display = "none";
 }
 window.closeModifierLibraryModal = closeModifierLibraryModal;
-
-function toggleLibraryGroupCheck(gIdx, isChecked) {
-  const modal = document.getElementById("modifierLibraryModal");
-  if (!modal) return;
-  const optCheckboxes = modal.querySelectorAll(`.mod-lib-opt-checkbox[data-lib-gidx="${gIdx}"]`);
-  optCheckboxes.forEach(cb => {
-    cb.checked = isChecked;
-  });
-}
-window.toggleLibraryGroupCheck = toggleLibraryGroupCheck;
-
-function onLibraryOptionCheckChange(gIdx) {
-  const modal = document.getElementById("modifierLibraryModal");
-  if (!modal) return;
-  const grpCheckbox = modal.querySelector(`.mod-lib-group-checkbox[data-lib-gidx="${gIdx}"]`);
-  const optCheckboxes = [...modal.querySelectorAll(`.mod-lib-opt-checkbox[data-lib-gidx="${gIdx}"]`)];
-  if (grpCheckbox && optCheckboxes.length > 0) {
-    grpCheckbox.checked = optCheckboxes.every(cb => cb.checked);
-    grpCheckbox.indeterminate = optCheckboxes.some(cb => cb.checked) && !grpCheckbox.checked;
-  }
-}
-window.onLibraryOptionCheckChange = onLibraryOptionCheckChange;
-
-function importSelectedLibraryModifiers() {
-  const modal = document.getElementById("modifierLibraryModal");
-  if (!modal) return;
-
-  let importedCount = 0;
-  currentLibraryOptionGroups.forEach((grp, gIdx) => {
-    const checkedOpts = [];
-    const optCheckboxes = modal.querySelectorAll(`.mod-lib-opt-checkbox[data-lib-gidx="${gIdx}"]`);
-    optCheckboxes.forEach(cb => {
-      if (cb.checked) {
-        const oIdx = parseInt(cb.getAttribute("data-lib-oidx"), 10);
-        if (grp.options[oIdx]) {
-          checkedOpts.push(grp.options[oIdx]);
-        }
-      }
-    });
-
-    if (checkedOpts.length > 0) {
-      const newGroupId = `mg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-      tempItemModifierGroups.push({
-        id: newGroupId,
-        name: grp.title,
-        selectionType: grp.type === 'checkbox' ? 'multiple' : 'single',
-        isRequired: Boolean(grp.isRequired),
-        minSelection: grp.type === 'checkbox' ? 0 : 1,
-        maxSelection: grp.type === 'checkbox' ? checkedOpts.length : 1,
-        options: checkedOpts.map(opt => ({
-          id: `mo_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-          name: opt.name,
-          price: opt.price || 0,
-          isDefault: false
-        }))
-      });
-      importedCount++;
-    }
-  });
-
-  if (importedCount > 0) {
-    markMenuDirty();
-    renderItemModifiersEditor();
-  }
-  closeModifierLibraryModal();
-}
-window.importSelectedLibraryModifiers = importSelectedLibraryModifiers;
 
 // ==========================================================================
 // Item Detail Hub Modal (#itemDetailModal) Controller
