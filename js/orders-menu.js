@@ -1488,7 +1488,7 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
       </div>
     `;
     container.appendChild(newCard);
-  } else if (cat.type !== 'modifier') {
+  } else if (cat.type !== 'modifier' && activeOptionGroupIndex === null) {
     // Show dashed button to open creator
     const addGroupBtn = document.createElement("button");
     addGroupBtn.type = "button";
