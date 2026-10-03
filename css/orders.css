@@ -9168,25 +9168,34 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
   gap: 6px;
 }
 
-/* Customization Scope Collapsible Section */
+/* Customization Scope & Category Collapsible Section */
 .cust-scope-collapsible-section {
   margin-top: 20px;
   border-top: 1px solid #e2e8f0;
   padding-top: 14px;
 }
 
-.cust-scope-collapsible-summary {
+.cust-scope-collapsible-summary,
+.cust-cat-collapsible-summary {
   display: flex;
   align-items: center;
   justify-content: space-between;
   cursor: pointer;
+  list-style: none;
+  user-select: none;
+  transition: all 0.15s ease;
+}
+
+.cust-cat-collapsible-summary {
+  min-height: 40px;
+  gap: 10px;
+}
+
+.cust-scope-collapsible-summary {
   padding: 10px 14px;
   border-radius: 10px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  list-style: none;
-  user-select: none;
-  transition: all 0.15s ease;
 }
 
 .cust-scope-collapsible-summary:hover {
@@ -9194,12 +9203,34 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
   border-color: #cbd5e1;
 }
 
-.cust-scope-collapsible-summary::-webkit-details-marker {
+.cust-scope-collapsible-summary::-webkit-details-marker,
+.cust-cat-collapsible-summary::-webkit-details-marker {
   display: none;
 }
 
-.cust-scope-collapsible-section[open] .cust-scope-chevron {
+.cust-scope-collapsible-section[open] .cust-scope-chevron,
+.cust-cat-collapsible[open] .cust-scope-chevron {
   transform: rotate(180deg);
+}
+
+.cust-cat-collapsible-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #15803d;
+  background: rgba(22, 163, 74, 0.08);
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(22, 163, 74, 0.2);
+  min-height: 34px;
+  transition: all 0.15s ease;
+}
+
+.cust-cat-collapsible-summary:hover .cust-cat-collapsible-btn {
+  background: rgba(22, 163, 74, 0.16);
+  border-color: rgba(22, 163, 74, 0.35);
 }
 
 .cust-scope-summary-pill {
