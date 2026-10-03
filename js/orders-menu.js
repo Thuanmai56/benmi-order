@@ -1190,6 +1190,7 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
       `;
 
       let scopePanelHtml = '';
+      let summaryText = '';
       if (grpScope === 'order') {
         scopePanelHtml = `
           <div class="cust-scope-panel scope-order-panel">
@@ -1315,6 +1316,12 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
       }
 
       const repeatsEditorTitle = (cat.groups.length === 1 && String(grp.title || '').trim() === String(cat.title || '').trim());
+      const groupKey = grp.id || `grp_${gIdx}`;
+      const isScopeOpen = Boolean(window.isCustomScopeSectionOpen?.[groupKey]);
+      const scopeSummaryLabel = grpScope === 'order'
+        ? (t("scopeOrder") || (currentLang === 'vi' ? 'Toàn đơn' : '整單適用'))
+        : summaryText;
+
       card.innerHTML = `
         <div class="cust-group-header">
           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
@@ -1338,14 +1345,36 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
             </button>
           </div>
         </div>
-        ${scopeButtonsHtml}
-        ${scopePanelHtml}
-        <div class="cust-options-list">
+
+        <!-- 1. PRIMARY FOCUS: OPTIONS LIST & ADD BUTTON -->
+        <div class="cust-options-list" style="margin-top: 14px;">
           ${optionsHtml}
         </div>
         <button type="button" class="cat-mgr-add-btn" style="margin-top: 10px;" onclick="addCustomizationOption(${cIdx}, ${gIdx})">
           <span>${formatPlusBtnText(t("btnAddCustomOption"), "新增選項")}</span>
         </button>
+
+        <!-- 2. COLLAPSIBLE CATEGORY / SCOPE ASSIGNMENT -->
+        <details class="cust-scope-collapsible-section" ${isScopeOpen ? 'open' : ''} ontoggle="window.isCustomScopeSectionOpen = window.isCustomScopeSectionOpen || {}; window.isCustomScopeSectionOpen['${escapeHtml(groupKey)}'] = this.open;">
+          <summary class="cust-scope-collapsible-summary">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color: #64748b;">
+                <rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect>
+              </svg>
+              <span style="font-weight: 700; color: #334155; font-size: 13px;">${t("scopeSettingsTitle") || (currentLang === 'vi' ? 'Thiết lập danh mục áp dụng' : '設定套用分類與範圍')}</span>
+              <span class="cust-scope-summary-pill">
+                ${escapeHtml(scopeSummaryLabel)}
+              </span>
+            </div>
+            <svg class="cust-scope-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </summary>
+          <div class="cust-scope-collapsible-body" style="padding-top: 12px;">
+            ${scopeButtonsHtml}
+            ${scopePanelHtml}
+          </div>
+        </details>
       `;
 
       // `indeterminate` is a DOM property (not an HTML attribute), so restore
