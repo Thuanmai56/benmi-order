@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generated_at": "2026-10-01T11:57:29.124Z",
+    "generated_at": "2026-10-03T05:05:55.122Z",
     "source_snapshot_hash": "3a347308f604cee38e6d12e490eba90350858e13f5362957d6ee664ceb6500ea"
   },
   "groups": [
@@ -882,46 +882,6 @@
         "sort_order": 11,
         "scope": "category",
         "source_metadata_json": "{\"source_table\":\"menu_categories\",\"source_id\":\"mod_hs_guoshao_addons\",\"slug\":\"guoshao-addons\",\"short_name\":\"加料加價購 (可複選)\",\"category_type\":\"modifier\",\"original_selection_type\":\"multiple\"}"
-      }
-    },
-    {
-      "tenant_id": "jiangjiejie",
-      "source_kind": "menu_categories.modifier",
-      "source_id": "jiangjiejie_sec-flavor",
-      "source_slug": "sec-flavor",
-      "target_table": "modifier_groups",
-      "target_id": "mg_cat_jiangjiejie_jiangjiejie_sec-flavor",
-      "data": {
-        "id": "mg_cat_jiangjiejie_jiangjiejie_sec-flavor",
-        "tenant_id": "jiangjiejie",
-        "name": "口味與客製化選擇",
-        "selection_type": "single",
-        "is_required": 0,
-        "min_selection": 0,
-        "max_selection": 1,
-        "sort_order": 8,
-        "scope": "order",
-        "source_metadata_json": "{\"source_table\":\"menu_categories\",\"source_id\":\"jiangjiejie_sec-flavor\",\"slug\":\"sec-flavor\",\"short_name\":\"口味選擇\",\"category_type\":\"order_customization\",\"original_selection_type\":\"single\"}"
-      }
-    },
-    {
-      "tenant_id": "miyansuo",
-      "source_kind": "menu_categories.modifier",
-      "source_id": "cat_mys_sec_flavor",
-      "source_slug": "sec-flavor",
-      "target_table": "modifier_groups",
-      "target_id": "mg_cat_miyansuo_cat_mys_sec_flavor",
-      "data": {
-        "id": "mg_cat_miyansuo_cat_mys_sec_flavor",
-        "tenant_id": "miyansuo",
-        "name": "加購服務 / 響應環保",
-        "selection_type": "single",
-        "is_required": 0,
-        "min_selection": 0,
-        "max_selection": 1,
-        "sort_order": 0,
-        "scope": "order",
-        "source_metadata_json": "{\"source_table\":\"menu_categories\",\"source_id\":\"cat_mys_sec_flavor\",\"slug\":\"sec-flavor\",\"short_name\":\"提袋加購\",\"category_type\":\"order_customization\",\"original_selection_type\":\"single\"}"
       }
     }
   ],
