@@ -154,3 +154,10 @@ Trạng thái: Đang thực hiện T01
   - Purge KV bootstrap cache (`tenant:benmi:bootstrap`, `tenant:haoshiguoshao:bootstrap`).
   - Tạo đơn live kiểm thử thành công trên Dev: Đơn `HS1002-T002` (tenant `haoshiguoshao`), D1 DB lưu đầy đủ `subOption` metadata và `order_content` hiển thị chuẩn `意麵 (加蛋) (+$40)`.
 
+### Dọn dẹp Nhóm Phantom `sec-flavor` (2026-10-03)
+- **Vấn đề phát hiện**: Quán `jiangjiejie` bị dư nhóm `口味與客製化選擇` (0 lựa chọn) và `miyansuo` bị dư nhóm `加購服務 / 響應環保` (0 lựa chọn) trong phần Tùy chọn POS do `mapping.mjs` quét nhầm container ảo `category_type = 'order_customization'` trong `menu_categories`.
+- **Khắc phục**:
+  - Cập nhật [mapping.mjs](file:///Users/duccao/Documents/benmi-order/scripts/menu-data-copy/mapping.mjs): Loại trừ `category_type === 'order_customization'` và `slug === 'sec-flavor'`, đưa số lượng nhóm chuẩn hóa về đúng 44 nhóm thật.
+  - Xóa 2 bản ghi phantom khỏi `blab-db-dev`: `mg_cat_jiangjiejie_jiangjiejie_sec-flavor` và `mg_cat_miyansuo_cat_mys_sec_flavor`.
+  - Purge KV cache cho `tenant:jiangjiejie:bootstrap` và `tenant:miyansuo:bootstrap`.
+  - Kiểm thử trực tiếp API: Bootstrap `jiangjiejie` trả về đúng 11 nhóm tùy chọn thật, `miyansuo` trả về đúng 1 nhóm thật, biến mất hoàn toàn nhóm rác 0 lựa chọn.
