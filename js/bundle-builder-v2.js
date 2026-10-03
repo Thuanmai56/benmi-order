@@ -61,138 +61,70 @@
 
   function render() {
     if (!draft) return;
-    const { rule, groupIndex, selections, key, mode } = draft;
-    const group = rule.groups[groupIndex];
-    const items = selections[group.id] || [];
+    const { rule, selections, key, mode } = draft;
+    const groupIndex = draft.groupIndex ?? 0;
+    const isAddonsTab = draft.currentTab === 'addons';
+    const hasAddons = Boolean(draft.catModifiers && draft.catModifiers.length > 0);
+    const missingAddon = hasAddons ? draft.catModifiers.find(m => m.isRequired && (!draft.addonSelections?.single || !draft.addonSelections.single[m.slug])) : null;
+    const isAddonsValid = !missingAddon;
+    const allGroupsComplete = rule.groups.every(candidate => validGroup(candidate, selections[candidate.id]));
+
+    // Navigation Step Tabs
     const nav = document.getElementById('bundle-step-nav');
     if (nav) {
-      if (rule.groups.length > 1) {
+      const totalSteps = rule.groups.length + (hasAddons ? 1 : 0);
+      if (totalSteps > 1) {
         if (nav.style) nav.style.display = 'flex';
-        nav.innerHTML = rule.groups.map((candidate, index) => `<button type="button" class="bundle-v2-nav ${index === groupIndex ? 'active' : ''}" onclick="bundleChooseGroup(${index})">${validGroup(candidate, selections[candidate.id]) ? '✓ ' : ''}${esc(groupName(candidate))}</button>`).join('');
+        const groupButtons = rule.groups.map((candidate, index) => {
+          const isActive = !isAddonsTab && index === groupIndex;
+          const isDone = validGroup(candidate, selections[candidate.id]);
+          return `<button type="button" class="bundle-v2-nav ${isActive ? 'active' : ''}" onclick="bundleChooseGroup(${index})">${isDone ? '✓ ' : ''}${esc(groupName(candidate))}</button>`;
+        }).join('');
+        const addonButton = hasAddons ? `<button type="button" class="bundle-v2-nav ${isAddonsTab ? 'active' : ''}" onclick="bundleChooseAddonsTab()">${isAddonsValid ? '✓ ' : ''}自訂選項</button>` : '';
+        nav.innerHTML = groupButtons + addonButton;
       } else {
         if (nav.style) nav.style.display = 'none';
         nav.innerHTML = '';
       }
     }
+
     const stale = rule.groups.some(candidate => (selections[candidate.id] || []).some(item => {
       const current = candidate.eligibleItems?.find(source => source.id === item.itemId);
       return current && Number(current.surcharge || 0) !== Number(item.surcharge || 0);
     }));
     document.getElementById('bundle-refresh-prices').style.display = stale ? 'block' : 'none';
-    const cleanGroupLabel = (group.name || '').replace(/^請選擇\s*(\d+\s*樣)?/g, '').trim() || '配菜';
-    document.getElementById('bundle-modal-group-label').textContent = `請選擇 ${maxOf(group)} 樣${cleanGroupLabel}`;
-    document.getElementById('bundle-modal-current-count').textContent = String(items.length);
-    document.getElementById('bundle-modal-max-count').textContent = String(maxOf(group));
-    const fillPct = maxOf(group) > 0 ? Math.min(100, Math.round((items.length / maxOf(group)) * 100)) : 0;
-    document.getElementById('bundle-progress-fill').style.width = `${fillPct}%`;
-    document.getElementById('bundle-quota-badge').style.display = validGroup(group, items) ? 'inline-flex' : 'none';
 
-    const cats = new Map([['all', '全部']]);
-    (group.eligibleItems || []).forEach(item => {
-      const cat = bootstrapData?.catalog?.find(candidate => candidate.id === item.categoryId);
-      if (cat) cats.set(cat.id, cat.name || cat.shortName);
-    });
-    document.getElementById('bundle-cat-tabs').innerHTML = group.type === 'fixed' ? '' : [...cats].map(([id, label]) => `<button type="button" class="bundle-cat-tab-btn ${draft.category === id ? 'active' : ''}" onclick="bundleFilterCategory('${esc(id)}')">${esc(label)}</button>`).join('');
+    const catTabs = document.getElementById('bundle-cat-tabs');
     const list = document.getElementById('bundle-items-list');
-    const display = group.type === 'fixed' ? items.map((item, index) => ({ item, index, source: (group.eligibleItems || []).find(it => it.id === item.itemId) }))
-      : (group.eligibleItems || []).filter(it => draft.category === 'all' || it.categoryId === draft.category).map(source => ({ source }));
-    const listed = display.map(entry => {
-      const source = entry.source;
-      if (!source) return '';
-      const selected = group.type === 'fixed' ? [entry.item] : items.filter(item => item.itemId === source.id);
-      const soldOut = Boolean(source.isOutOfStock);
-      const count = selected.length;
-      const canAdd = !soldOut && group.type !== 'fixed' && (maxOf(group) === 1 ? count === 0 : (items.length < maxOf(group) && (group.allowRepeats || count === 0)));
-      const addAction = maxOf(group) === 1 && group.type !== 'fixed' ? `bundleSelectSingle('${esc(source.id)}')` : `bundleAddItem('${esc(source.id)}')`;
-      const settings = selected.map((item, localIndex) => {
-        const actualIndex = group.type === 'fixed' ? entry.index : items.indexOf(item);
-        const mods = optionsFor(source);
-        if (!mods.length) return '';
-        const labels = (item.modifiers || []).map(mod => esc(mod.name)).join('、');
-        const hasRequired = mods.some(mod => mod.isRequired || Number(mod.minSelection || 0) > 0);
-        const isComplete = mods.every(mod => {
-          const c = (item.modifiers || []).filter(choice => choice.groupId === mod.id).length;
-          return c >= Number(mod.minSelection || (mod.isRequired ? 1 : 0));
-        });
-        const statusLabel = labels ? `<span class="bundle-v2-mod-labels">${labels}</span>`
-          : (hasRequired ? '<span class="bundle-v2-mod-pending">需選擇客製化</span>' : '<span class="bundle-v2-mod-labels">可自選客製化</span>');
-        return `<div class="bundle-v2-detail" onclick="event.stopPropagation()">
-          ${statusLabel}
-          <button type="button" class="bundle-v2-mod-btn ${!isComplete && hasRequired ? 'pulse' : ''}" onclick="bundleEditModifiers(${actualIndex})">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px; vertical-align:-1px;"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>客製化${selected.length > 1 ? ` (${localIndex + 1})` : ''}
-          </button>
-        </div>`;
-      }).filter(Boolean).join('');
-      const extra = Number(source.surcharge || 0);
-      const cleanName = (source.name || '').replace(/^(\d+|[A-Za-z])\.\s*/, '');
-      const safeName = esc(cleanName);
-      const priceLabel = extra > 0 ? ` (+<span style="color:#059669; font-weight:800;">$${extra}</span>)` : '';
-      const oosBadge = soldOut ? '<span class="oos-badge" style="color:#dc2626; font-size:12px; font-weight:800; margin-left:6px;">(已售完)</span>' : '';
-      const disabledPlus = !canAdd;
-
-      if (group.type === 'fixed') {
-        return `<div class="bundle-item-card selected">
-          <div class="bundle-item-info">
-            <span class="bundle-item-title">${safeName}</span>${priceLabel}
-          </div>
-          <span class="bundle-v2-badge-fixed">已包含</span>
-        </div>${settings}`;
-      }
-
-      if (count === 0) {
-        return `<div class="bundle-item-card ${soldOut ? 'sold-out' : ''}" ${canAdd ? `onclick="${addAction}" style="cursor:pointer;"` : ''} style="${soldOut ? 'opacity: 0.5; pointer-events: none;' : ''}">
-          <div class="bundle-item-info">
-            <span class="bundle-item-title">${safeName}</span>${priceLabel}${oosBadge}
-          </div>
-          <div class="bundle-stepper" onclick="event.stopPropagation()">
-            <button type="button" class="bundle-btn-add ${disabledPlus ? 'disabled' : ''}" onclick="${addAction}" ${disabledPlus ? 'disabled' : ''} aria-label="Add ${safeName}">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            </button>
-          </div>
-        </div>`;
-      }
-
-      return `<div class="bundle-item-card selected ${soldOut ? 'sold-out' : ''}" style="${soldOut ? 'opacity: 0.5; pointer-events: none;' : ''}">
-        <div class="bundle-item-info">
-          <span class="bundle-item-title">${safeName}</span>${priceLabel}${oosBadge}
-        </div>
-        <div class="bundle-stepper" onclick="event.stopPropagation()">
-          <button type="button" class="bundle-btn-minus" onclick="bundleRemoveLastItemOf('${esc(source.id)}')" aria-label="Decrease">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-          </button>
-          <span class="bundle-qty-val">${count}</span>
-          <button type="button" class="bundle-btn-plus ${disabledPlus ? 'disabled' : ''}" onclick="${addAction}" ${disabledPlus ? 'disabled' : ''} aria-label="Increase">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-          </button>
-        </div>
-      </div>${settings}`;
-    }).join('');
-    const orphaned = group.type === 'fixed' ? '' : items.map((item, index) => ({ item, index })).filter(({ item }) => !(group.eligibleItems || []).some(source => source.id === item.itemId)).map(({ item, index }) =>
-      `<div class="bundle-item-card sold-out"><div class="bundle-item-info"><span class="bundle-item-title">${esc(item.name || item.itemId)}</span><span style="color:#dc2626; font-size:12px; margin-left:8px;">已無法選擇，請移除</span></div><button type="button" class="bundle-btn-minus" onclick="bundleRemoveItem(${index})">✕</button></div>`).join('');
-    list.innerHTML = listed + orphaned || '<p class="bundle-v2-empty">目前沒有可選餐點</p>';
-
-    const remain = Math.max(0, minOf(group) - items.length);
-    const complete = rule.groups.every(candidate => validGroup(candidate, selections[candidate.id]));
-    const btn = document.getElementById('bundle-confirm-btn');
-    if (!complete) {
-      btn.disabled = true;
-      btn.className = 'bundle-confirm-btn pending';
-      btn.innerHTML = `還需選擇 ${remain} 樣${cleanGroupLabel} <span style="font-size: 13px; font-weight: 600; opacity: 0.85; margin-left: 4px;">(已選 ${items.length}/${maxOf(group)})</span>`;
-    } else {
-      btn.disabled = false;
-      btn.className = 'bundle-confirm-btn ready';
-      btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><polyline points="20 6 9 17 4 12"></polyline></svg>確認${cleanGroupLabel} <span style="font-size: 13px; font-weight: 600; opacity: 0.9; margin-left: 4px;">(已選 ${items.length} 樣)</span>`;
-    }
-    const copy = document.getElementById('bundle-copy-previous');
-    copy.style.display = draft.portionIndex > 0 && mode === 'new' ? 'block' : 'none';
-
     const addonsContainer = document.getElementById('bundle-addons-container');
-    if (addonsContainer) {
-      if (draft.catModifiers && draft.catModifiers.length > 0) {
+    const quotaBadge = document.getElementById('bundle-quota-badge');
+
+    if (isAddonsTab) {
+      // --- ADDONS STEP VIEW ---
+      document.getElementById('bundle-modal-group-label').textContent = '自訂餐點選項與加料';
+      document.getElementById('bundle-modal-current-count').textContent = isAddonsValid ? '1' : '0';
+      document.getElementById('bundle-modal-max-count').textContent = '1';
+      document.getElementById('bundle-progress-fill').style.width = isAddonsValid ? '100%' : '50%';
+      quotaBadge.style.display = 'inline-flex';
+      quotaBadge.textContent = isAddonsValid ? '已完成' : '待選擇';
+      quotaBadge.style.background = isAddonsValid ? '#10b981' : '#f59e0b';
+
+      if (catTabs) {
+        catTabs.style.display = 'none';
+        catTabs.innerHTML = '';
+      }
+      if (list) {
+        list.style.display = 'none';
+        list.innerHTML = '';
+      }
+
+      if (addonsContainer) {
         addonsContainer.style.display = 'block';
+        addonsContainer.style.borderTop = 'none';
+        addonsContainer.style.paddingTop = '6px';
         let addonsHTML = `
-          <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+          <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
             <span>自訂餐點選項 / 加料 / 口味</span>
           </div>
         `;
@@ -201,11 +133,11 @@
           const isSingle = mod.selectionType === 'single';
           const reqBadge = mod.isRequired ? '<span class="modifier-req-badge" style="color:#ef4444; font-size:12px; font-weight:800; margin-left:4px;">*必選</span>' : '';
           addonsHTML += `
-            <div class="bundle-addon-group" style="margin-bottom: 12px;">
-              <div style="font-size: 13px; font-weight: 700; color: #475569; margin-bottom: 6px;">${esc(mod.name)}${reqBadge}</div>
+            <div class="bundle-addon-group" style="margin-bottom: 16px; background: #f8fafc; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0;">
+              <div style="font-size: 13.5px; font-weight: 800; color: #334155; margin-bottom: 8px;">${esc(mod.name)}${reqBadge}</div>
           `;
           if (isSingle) {
-            addonsHTML += `<div class="modifier-pills-row" style="margin-bottom: 4px;">`;
+            addonsHTML += `<div class="modifier-pills-row" style="margin-bottom: 4px; display: flex; flex-wrap: wrap; gap: 8px;">`;
             (mod.options || []).forEach(opt => {
               const isOos = Boolean(opt.isOutOfStock);
               const isSelected = draft.addonSelections?.single?.[mod.slug] === opt.name;
@@ -214,6 +146,7 @@
               const oosBadge = isOos ? `<span class="modifier-oos-tag">已售完</span>` : '';
               addonsHTML += `
                 <div class="modifier-pill ${isSelected ? 'active' : ''} ${isOos ? 'disabled' : ''}" 
+                     style="min-height: 44px; padding: 8px 16px; border-radius: 10px; display: inline-flex; align-items: center; cursor: pointer;"
                      onclick="${isOos ? '' : `bundleSelectAddonSingle('${esc(mod.slug)}', '${esc(opt.name)}')`}">
                   <span>${esc(opt.name)}${priceText}</span>${oosBadge}
                 </div>
@@ -221,7 +154,7 @@
             });
             addonsHTML += `</div>`;
           } else {
-            addonsHTML += `<div class="modifier-checkbox-grid" style="margin-bottom: 4px;">`;
+            addonsHTML += `<div class="modifier-checkbox-grid" style="margin-bottom: 4px; display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px;">`;
             (mod.options || []).forEach(opt => {
               const isOos = Boolean(opt.isOutOfStock);
               const isChecked = Boolean(draft.addonSelections?.multiple?.[opt.name]);
@@ -229,9 +162,10 @@
               const priceText = isOos ? `<span class="modifier-oos-tag">已售完</span>` : (price > 0 ? `+$${price}` : '$0');
               addonsHTML += `
                 <div class="modifier-checkbox-chip ${isChecked ? 'active' : ''} ${isOos ? 'disabled' : ''}" 
+                     style="min-height: 44px; padding: 8px 12px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;"
                      onclick="${isOos ? '' : `bundleToggleAddonMultiple('${esc(opt.name)}')`}">
                   <span>${esc(opt.name)}</span>
-                  <span style="font-size: 12px; opacity: 0.85;">${priceText}</span>
+                  <span style="font-size: 12px; opacity: 0.85; font-weight: 700;">${priceText}</span>
                 </div>
               `;
             });
@@ -242,19 +176,150 @@
 
         // Addon individual note
         addonsHTML += `
-          <div style="margin-top: 8px;">
-            <label style="font-size: 13px; font-weight: 700; color: #475569; display: block; margin-bottom: 4px;">個別備註</label>
+          <div style="margin-top: 12px; background: #f8fafc; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0;">
+            <label style="font-size: 13.5px; font-weight: 800; color: #334155; display: block; margin-bottom: 6px;">個別備註</label>
             <input type="text" maxlength="50" value="${esc(draft.addonSelections?.note || '')}" placeholder="例如：不要香菜、少醬" 
                    oninput="bundleUpdateAddonNote(this.value)"
-                   style="width: 100%; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 8px 12px; font-size: 13.5px; color: #1e293b; background: #fff; outline: none; box-sizing: border-box;">
+                   style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 10px 14px; font-size: 14px; color: #1e293b; background: #fff; outline: none; box-sizing: border-box; min-height: 44px;">
           </div>
         `;
         addonsContainer.innerHTML = addonsHTML;
-      } else {
+      }
+    } else {
+      // --- REGULAR GROUP STEP VIEW ---
+      const group = rule.groups[groupIndex] || rule.groups[0];
+      const items = selections[group.id] || [];
+      const cleanGroupLabel = (group.name || '').replace(/^請選擇\s*(\d+\s*樣)?/g, '').trim() || '配菜';
+      document.getElementById('bundle-modal-group-label').textContent = `請選擇 ${maxOf(group)} 樣${cleanGroupLabel}`;
+      document.getElementById('bundle-modal-current-count').textContent = String(items.length);
+      document.getElementById('bundle-modal-max-count').textContent = String(maxOf(group));
+      const fillPct = maxOf(group) > 0 ? Math.min(100, Math.round((items.length / maxOf(group)) * 100)) : 0;
+      document.getElementById('bundle-progress-fill').style.width = `${fillPct}%`;
+      quotaBadge.style.display = validGroup(group, items) ? 'inline-flex' : 'none';
+      quotaBadge.textContent = '已選滿';
+      quotaBadge.style.background = '#10b981';
+
+      if (addonsContainer) {
         addonsContainer.style.display = 'none';
         addonsContainer.innerHTML = '';
       }
+
+      if (catTabs) {
+        catTabs.style.display = group.type === 'fixed' ? 'none' : 'flex';
+        const cats = new Map([['all', '全部']]);
+        (group.eligibleItems || []).forEach(item => {
+          const cat = bootstrapData?.catalog?.find(candidate => candidate.id === item.categoryId);
+          if (cat) cats.set(cat.id, cat.name || cat.shortName);
+        });
+        catTabs.innerHTML = group.type === 'fixed' ? '' : [...cats].map(([id, label]) => `<button type="button" class="bundle-cat-tab-btn ${draft.category === id ? 'active' : ''}" onclick="bundleFilterCategory('${esc(id)}')">${esc(label)}</button>`).join('');
+      }
+
+      if (list) {
+        list.style.display = 'flex';
+        const display = group.type === 'fixed' ? items.map((item, index) => ({ item, index, source: (group.eligibleItems || []).find(it => it.id === item.itemId) }))
+          : (group.eligibleItems || []).filter(it => draft.category === 'all' || it.categoryId === draft.category).map(source => ({ source }));
+        const listed = display.map(entry => {
+          const source = entry.source;
+          if (!source) return '';
+          const selected = group.type === 'fixed' ? [entry.item] : items.filter(item => item.itemId === source.id);
+          const soldOut = Boolean(source.isOutOfStock);
+          const count = selected.length;
+          const canAdd = !soldOut && group.type !== 'fixed' && (maxOf(group) === 1 ? count === 0 : (items.length < maxOf(group) && (group.allowRepeats || count === 0)));
+          const addAction = maxOf(group) === 1 && group.type !== 'fixed' ? `bundleSelectSingle('${esc(source.id)}')` : `bundleAddItem('${esc(source.id)}')`;
+          const settings = selected.map((item, localIndex) => {
+            const actualIndex = group.type === 'fixed' ? entry.index : items.indexOf(item);
+            const mods = optionsFor(source);
+            if (!mods.length) return '';
+            const labels = (item.modifiers || []).map(mod => esc(mod.name)).join('、');
+            const hasRequired = mods.some(mod => mod.isRequired || Number(mod.minSelection || 0) > 0);
+            const isComplete = mods.every(mod => {
+              const c = (item.modifiers || []).filter(choice => choice.groupId === mod.id).length;
+              return c >= Number(mod.minSelection || (mod.isRequired ? 1 : 0));
+            });
+            const statusLabel = labels ? `<span class="bundle-v2-mod-labels">${labels}</span>`
+              : (hasRequired ? '<span class="bundle-v2-mod-pending">需選擇客製化</span>' : '<span class="bundle-v2-mod-labels">可自選客製化</span>');
+            return `<div class="bundle-v2-detail" onclick="event.stopPropagation()">
+              ${statusLabel}
+              <button type="button" class="bundle-v2-mod-btn ${!isComplete && hasRequired ? 'pulse' : ''}" onclick="bundleEditModifiers(${actualIndex})">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px; vertical-align:-1px;"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>客製化${selected.length > 1 ? ` (${localIndex + 1})` : ''}
+              </button>
+            </div>`;
+          }).filter(Boolean).join('');
+          const extra = Number(source.surcharge || 0);
+          const cleanName = (source.name || '').replace(/^(\d+|[A-Za-z])\.\s*/, '');
+          const safeName = esc(cleanName);
+          const priceLabel = extra > 0 ? ` (+<span style="color:#059669; font-weight:800;">$${extra}</span>)` : '';
+          const oosBadge = soldOut ? '<span class="oos-badge" style="color:#dc2626; font-size:12px; font-weight:800; margin-left:6px;">(已售完)</span>' : '';
+          const disabledPlus = !canAdd;
+
+          if (group.type === 'fixed') {
+            return `<div class="bundle-item-card selected">
+              <div class="bundle-item-info">
+                <span class="bundle-item-title">${safeName}</span>${priceLabel}
+              </div>
+              <span class="bundle-v2-badge-fixed">已包含</span>
+            </div>${settings}`;
+          }
+
+          if (count === 0) {
+            return `<div class="bundle-item-card ${soldOut ? 'sold-out' : ''}" ${canAdd ? `onclick="${addAction}" style="cursor:pointer;"` : ''} style="${soldOut ? 'opacity: 0.5; pointer-events: none;' : ''}">
+              <div class="bundle-item-info">
+                <span class="bundle-item-title">${safeName}</span>${priceLabel}${oosBadge}
+              </div>
+              <div class="bundle-stepper" onclick="event.stopPropagation()">
+                <button type="button" class="bundle-btn-add ${disabledPlus ? 'disabled' : ''}" onclick="${addAction}" ${disabledPlus ? 'disabled' : ''} aria-label="Add ${safeName}">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                </button>
+              </div>
+            </div>`;
+          }
+
+          return `<div class="bundle-item-card selected ${soldOut ? 'sold-out' : ''}" style="${soldOut ? 'opacity: 0.5; pointer-events: none;' : ''}">
+            <div class="bundle-item-info">
+              <span class="bundle-item-title">${safeName}</span>${priceLabel}${oosBadge}
+            </div>
+            <div class="bundle-stepper" onclick="event.stopPropagation()">
+              <button type="button" class="bundle-btn-minus" onclick="bundleRemoveLastItemOf('${esc(source.id)}')" aria-label="Decrease">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              </button>
+              <span class="bundle-qty-val">${count}</span>
+              <button type="button" class="bundle-btn-plus ${disabledPlus ? 'disabled' : ''}" onclick="${addAction}" ${disabledPlus ? 'disabled' : ''} aria-label="Increase">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              </button>
+            </div>
+          </div>${settings}`;
+        }).join('');
+        const orphaned = group.type === 'fixed' ? '' : items.map((item, index) => ({ item, index })).filter(({ item }) => !(group.eligibleItems || []).some(source => source.id === item.itemId)).map(({ item, index }) =>
+          `<div class="bundle-item-card sold-out"><div class="bundle-item-info"><span class="bundle-item-title">${esc(item.name || item.itemId)}</span><span style="color:#dc2626; font-size:12px; margin-left:8px;">已無法選擇，請移除</span></div><button type="button" class="bundle-btn-minus" onclick="bundleRemoveItem(${index})">✕</button></div>`).join('');
+        list.innerHTML = listed + orphaned || '<p class="bundle-v2-empty">目前沒有可選餐點</p>';
+      }
     }
+
+    // Confirmation Button State
+    const btn = document.getElementById('bundle-confirm-btn');
+    if (!allGroupsComplete) {
+      const missingIdx = rule.groups.findIndex(candidate => !validGroup(candidate, selections[candidate.id]));
+      const targetGroup = rule.groups[missingIdx] || rule.groups[0];
+      const targetRemain = Math.max(0, minOf(targetGroup) - (selections[targetGroup.id]?.length || 0));
+      const targetLabel = (targetGroup.name || '').replace(/^請選擇\s*(\d+\s*樣)?/g, '').trim() || '配菜';
+      btn.disabled = false;
+      btn.className = 'bundle-confirm-btn pending';
+      btn.innerHTML = `還需選擇 ${targetRemain} 樣${targetLabel} <span style="font-size: 13px; font-weight: 600; opacity: 0.85; margin-left: 4px;">(未完成)</span>`;
+      btn.onclick = () => bundleChooseGroup(missingIdx >= 0 ? missingIdx : 0);
+    } else if (!isAddonsValid) {
+      btn.disabled = false;
+      btn.className = 'bundle-confirm-btn pending';
+      btn.innerHTML = `請選擇「${esc(missingAddon.name)}」 <span style="font-size: 13px; font-weight: 600; opacity: 0.85; margin-left: 4px;">(套餐選項)</span>`;
+      btn.onclick = () => bundleChooseAddonsTab();
+    } else {
+      btn.disabled = false;
+      btn.className = 'bundle-confirm-btn ready';
+      btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><polyline points="20 6 9 17 4 12"></polyline></svg>確認套餐組合 <span style="font-size: 13px; font-weight: 600; opacity: 0.9; margin-left: 4px;">(全部完成)</span>`;
+      btn.onclick = () => confirmBundleSelection();
+    }
+
+    const copy = document.getElementById('bundle-copy-previous');
+    if (copy) copy.style.display = draft.portionIndex > 0 && mode === 'new' ? 'block' : 'none';
   }
 
   window.openBundleBuilderModal = function(catSlug, origName, portionIndex) {
@@ -305,7 +370,9 @@
       }
     }
 
-    draft = { key, catSlug, origName, itemInfo, rule, selections, catModifiers, addonSelections, portionIndex: targetIndex, groupIndex: Math.max(0, firstMissing), category: 'all', mode: existing ? 'edit' : 'new' };
+    const hasAddons = Boolean(catModifiers && catModifiers.length > 0);
+    const initialTab = (firstMissing < 0 && hasAddons) ? 'addons' : 'group';
+    draft = { key, catSlug, origName, itemInfo, rule, selections, catModifiers, addonSelections, portionIndex: targetIndex, groupIndex: Math.max(0, firstMissing), currentTab: initialTab, category: 'all', mode: existing ? 'edit' : 'new' };
     document.getElementById('bundle-modal-item-name').textContent = `${itemInfo.displayName || origName}${targetIndex ? ` · 第 ${targetIndex + 1} 份` : ''}`;
     document.getElementById('bundle-builder-modal').style.display = 'flex';
     render();
@@ -329,7 +396,8 @@
     return true;
   };
   window.closeBundleBuilderModal = function() { document.getElementById('bundle-builder-modal').style.display = 'none'; draft = null; };
-  window.bundleChooseGroup = function(index) { if (!draft) return; draft.groupIndex = index; draft.category = 'all'; render(); };
+  window.bundleChooseGroup = function(index) { if (!draft) return; draft.currentTab = 'group'; draft.groupIndex = index; draft.category = 'all'; render(); };
+  window.bundleChooseAddonsTab = function() { if (!draft) return; draft.currentTab = 'addons'; render(); };
   window.bundleFocusGroup = function(groupId) { if (!draft) return; const index = draft.rule.groups.findIndex(group => group.id === groupId); if (index >= 0) window.bundleChooseGroup(index); };
   window.bundleFilterCategory = function(category) { if (!draft) return; draft.category = category; render(); };
   window.bundleSelectSingle = function(itemId) {
@@ -341,7 +409,11 @@
     draft.selections[group.id] = [{ itemId, name: source.name, quantity: 1, surcharge: Number(source.surcharge || 0), modifiers: [] }];
     if (wasIncomplete && validGroup(group, draft.selections[group.id])) {
       const next = draft.rule.groups.findIndex(candidate => !validGroup(candidate, draft.selections[candidate.id]));
-      if (next >= 0) draft.groupIndex = next;
+      if (next >= 0) {
+        draft.groupIndex = next;
+      } else if (draft.catModifiers && draft.catModifiers.length > 0) {
+        draft.currentTab = 'addons';
+      }
     }
     render();
   };
@@ -466,6 +538,8 @@
     if (draft.catModifiers && draft.catModifiers.length > 0) {
       const missingReq = draft.catModifiers.find(m => m.isRequired && (!draft.addonSelections?.single || !draft.addonSelections.single[m.slug]));
       if (missingReq) {
+        draft.currentTab = 'addons';
+        render();
         if (typeof customAlert === 'function') customAlert(`請選擇「${missingReq.name}」`);
         else alert(`請選擇「${missingReq.name}」`);
         return;
