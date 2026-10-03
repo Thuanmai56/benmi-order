@@ -1160,9 +1160,12 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
         ? `<span style="font-size: 11.5px; padding: 3px 8px; background: #e0e7ff; color: #4338ca; border-radius: 6px; font-weight: 800;">${currentLang === 'vi' ? 'Chọn nhiều' : '多選'}</span>`
         : `<span style="font-size: 11.5px; padding: 3px 8px; background: #ecfdf5; color: #047857; border-radius: 6px; font-weight: 800;">${currentLang === 'vi' ? 'Chọn 1' : '單選'}</span>`;
 
-      const requiredBadge = grp.isRequired
-        ? `<span style="font-size: 11.5px; padding: 3px 8px; background: #fee2e2; color: #b91c1c; border-radius: 6px; font-weight: 800; border: 1px solid #fca5a5;">${t("badgeRequired")}</span>`
-        : `<span style="font-size: 11.5px; padding: 3px 8px; background: #f1f5f9; color: #64748b; border-radius: 6px; font-weight: 700; border: 1px solid #e2e8f0;">${t("badgeOptional")}</span>`;
+      const requiredBadge = `
+        <span class="mod-badge-interactive ${grp.isRequired ? 'is-required' : 'is-optional'}">
+          <span class="mod-badge-dot"></span>
+          <span>${grp.isRequired ? t("badgeRequired") : t("badgeOptional")}</span>
+        </span>
+      `;
 
       const grpScope = grp.scope || (Array.isArray(grp.appliedCategories) && grp.appliedCategories.length > 0 ? 'category' : 'order');
       if (!grp.scope) grp.scope = grpScope;
@@ -3711,6 +3714,55 @@ function toggleItemModifierCardSelection(gIdx, forcedChecked) {
 }
 window.toggleItemModifierCardSelection = toggleItemModifierCardSelection;
 
+function toggleItemModifierGroupRequired(gIdx) {
+  const container = document.getElementById("item-modifiers-cards-grid");
+  if (!container) return;
+  const cards = container.querySelectorAll(".mod-lib-group-card");
+  const card = cards[gIdx];
+  if (!card) return;
+
+  const cb = document.getElementById(`item-mod-grp-cb-${gIdx}`);
+  const grpId = cb ? cb.getAttribute("data-group-id") : null;
+  if (!grpId) return;
+
+  let foundGroup = null;
+  (currentMenuData || []).filter(c => isCustomizationCategory(c)).forEach(custCat => {
+    (custCat.groups || []).forEach(g => {
+      const gid = String(g.id || '');
+      const canonId = String(g.canonicalId || '');
+      if (gid === grpId || canonId === grpId || `mg_${gid}` === grpId || gid === `mg_${grpId}`) {
+        g.isRequired = !g.isRequired;
+        foundGroup = g;
+      }
+    });
+  });
+
+  if (Array.isArray(tempItemModifierGroups)) {
+    tempItemModifierGroups.forEach(existing => {
+      const eid = String(existing.id || '');
+      const canonId = String(existing.canonicalId || '');
+      if (eid === grpId || canonId === grpId || `mg_${eid}` === grpId || eid === `mg_${grpId}`) {
+        existing.isRequired = foundGroup ? foundGroup.isRequired : !existing.isRequired;
+        if (!foundGroup) foundGroup = existing;
+      }
+    });
+  }
+
+  const reqBtn = document.getElementById(`item-mod-req-btn-${gIdx}`);
+  if (reqBtn && foundGroup) {
+    const isNowReq = Boolean(foundGroup.isRequired);
+    reqBtn.className = `mod-badge-interactive ${isNowReq ? 'is-required' : 'is-optional'}`;
+    reqBtn.title = isNowReq ? (t('toggleRequiredOff') || 'Bấm để đổi thành Tự chọn') : (t('toggleRequiredOn') || 'Bấm để đổi thành Bắt buộc');
+    reqBtn.innerHTML = `
+      <span class="mod-badge-dot"></span>
+      <span>${isNowReq ? (t("badgeRequired") || 'Bắt buộc') : (t("badgeOptional") || 'Tùy chọn')}</span>
+    `;
+  }
+
+  markMenuDirty();
+}
+window.toggleItemModifierGroupRequired = toggleItemModifierGroupRequired;
+
 function renderItemModifiersEditor() {
   const container = document.getElementById("item-modifiers-modal-body");
   if (!container) return;
@@ -3937,7 +3989,13 @@ function renderItemModifiersEditor() {
               <span class="mod-badge-type ${isSingle ? 'mod-badge-single' : 'mod-badge-multiple'}">
                 ${isSingle ? (t("selectionTypeSingle") || (currentLang === 'vi' ? 'Chọn 1' : '單選')) : (t("selectionTypeMultiple") || (currentLang === 'vi' ? 'Chọn nhiều' : '多選'))}
               </span>
-              ${grp.isRequired ? `<span class="mod-badge-required">${t("badgeRequired") || '必填'}</span>` : ''}
+              <button type="button" class="mod-badge-interactive ${grp.isRequired ? 'is-required' : 'is-optional'}" 
+                      id="item-mod-req-btn-${gIdx}"
+                      onclick="event.stopPropagation(); toggleItemModifierGroupRequired(${gIdx})"
+                      title="${grp.isRequired ? (t('toggleRequiredOff') || 'Bấm để đổi thành Tự chọn') : (t('toggleRequiredOn') || 'Bấm để đổi thành Bắt buộc')}">
+                <span class="mod-badge-dot"></span>
+                <span>${grp.isRequired ? (t("badgeRequired") || 'Bắt buộc') : (t("badgeOptional") || 'Tùy chọn')}</span>
+              </button>
               <span class="mod-badge-count">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align: -1px; margin-right: 2px;"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
                 ${opts.length} ${optUnit}
