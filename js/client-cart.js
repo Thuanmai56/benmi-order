@@ -257,6 +257,7 @@ function updateQty(category, origName, change) {
     const getItemModsFn = typeof getItemModifiers === 'function' ? getItemModifiers : (window.getItemModifiers || (typeof getCategoryModifiers === 'function' ? getCategoryModifiers : (window.getCategoryModifiers || (() => []))));
     const itemModifiers = getItemModsFn(category, origName);
     const hasModifiers = Array.isArray(itemModifiers) && itemModifiers.length > 0;
+    const hasRequiredModifiers = hasModifiers && itemModifiers.some(m => m.isRequired || Number(m.minSelection || 0) > 0);
 
     // Intercept bundle item increment: open builder modal instead of direct cart increment
     if (bundleRule && change > 0) {
@@ -267,13 +268,35 @@ function updateQty(category, origName, change) {
         return;
     }
 
-    // Intercept customize item increment: open customize modal instead of direct cart increment
-    if (!bundleRule && hasModifiers && change > 0) {
+    // Intercept customize item increment: ONLY open modal automatically if item has REQUIRED modifiers
+    if (!bundleRule && hasRequiredModifiers && change > 0) {
         const currentQty = cartObj[key] || 0;
         const openCustFn = typeof openItemCustomizeModal === 'function' ? openItemCustomizeModal : window.openItemCustomizeModal;
         if (typeof openCustFn === 'function') {
             openCustFn(category, origName, currentQty);
             return;
+        }
+    }
+
+    // If adding a portion for an item with optional-only modifiers, initialize its customization entry
+    if (!bundleRule && hasModifiers && !hasRequiredModifiers && change > 0) {
+        const cData = window.customizeData || customizeData;
+        if (cData) {
+            if (!cData[key]) cData[key] = [];
+            const defaultSingle = {};
+            const defaultMulti = {};
+            itemModifiers.forEach(m => {
+                const groupKey = m.slug || m.id;
+                if (m.selectionType === 'single') {
+                    const def = (m.options || []).find(o => o.isDefault && !o.isOutOfStock);
+                    if (def) defaultSingle[groupKey] = def.name;
+                } else if (m.selectionType === 'multiple') {
+                    (m.options || []).filter(o => o.isDefault && !o.isOutOfStock).forEach(o => {
+                        defaultMulti[o.name] = true;
+                    });
+                }
+            });
+            cData[key].push({ single: defaultSingle, multiple: defaultMulti, subOptions: {}, note: '' });
         }
     }
 
