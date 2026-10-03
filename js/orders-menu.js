@@ -754,9 +754,13 @@ function renderMenuCategories() {
       const div = document.createElement("div");
       div.className = `menu-option-card ${activeCategoryIndex === originalIndex && !isCategoryManagerOpen ? 'active' : ''}`;
       const itemCount = Array.isArray(cat.items) ? cat.items.length : 0;
+      const isCombo = isComboCategory(cat);
+      const comboBadgeHtml = isCombo 
+        ? `<span class="cat-type-badge cat-type-combo" style="display:inline-block; font-size:11px; font-weight:800; padding:2px 6px; border-radius:4px; background:#eff6ff; color:#2563eb; margin-left:6px; vertical-align:middle;">Combo</span>`
+        : '';
       div.innerHTML = `
         <div class="menu-option-card-content">
-          <div class="menu-option-card-title">${escapeHtml(cat.title)}</div>
+          <div class="menu-option-card-title">${escapeHtml(cat.title)}${comboBadgeHtml}</div>
           <div class="menu-option-card-subtitle">${itemCount} ${t("menuItemUnit")}</div>
         </div>
         <div class="menu-option-card-chevron" aria-hidden="true">
@@ -914,14 +918,17 @@ function renderMenuCategoryEditor(index) {
   }
 
   if (createBtn) {
-    if (isCombo) {
-      createBtn.style.display = "none";
-    } else {
     createBtn.style.display = "inline-flex";
-    const actionLabel = t("btnMenuAddItem") || (currentLang === 'vi' ? 'Thêm món mới' : '新增餐點');
-    if (createBtnText) createBtnText.innerText = actionLabel.replace(/^\+\s*/, '');
-    else createBtn.innerText = actionLabel;
-    createBtn.onclick = () => openCreateItemModal(index);
+    if (isCombo) {
+      const comboLabel = t("btnCreateComboWizard") || (currentLang === 'vi' ? 'Tạo Combo mới' : '建立特惠套餐');
+      if (createBtnText) createBtnText.innerText = comboLabel.replace(/^\+\s*/, '');
+      else createBtn.innerText = comboLabel;
+      createBtn.onclick = () => openCreateItemModal(index);
+    } else {
+      const actionLabel = t("btnMenuAddItem") || (currentLang === 'vi' ? 'Thêm món mới' : '新增餐點');
+      if (createBtnText) createBtnText.innerText = actionLabel.replace(/^\+\s*/, '');
+      else createBtn.innerText = actionLabel;
+      createBtn.onclick = () => openCreateItemModal(index);
     }
   }
 
@@ -2891,9 +2898,14 @@ window.openBundleEditorModal = openBundleEditorModal;
 function closeBundleEditorModal() {
   const modal = document.getElementById("modal-bundle-editor");
   if (modal) modal.style.display = "none";
+  const returnState = window._hubModalReturnState;
   bundleEditingTarget = null;
   bundleDraftRule = null;
   bundleActiveGroupIndex = 0;
+  if (returnState) {
+    window._hubModalReturnState = null;
+    openItemDetailModal(returnState.catIdx, returnState.itemIdx);
+  }
 }
 window.closeBundleEditorModal = closeBundleEditorModal;
 
@@ -3817,6 +3829,7 @@ function openModifierLibraryModal() {
   const modal = document.getElementById("modifierLibraryModal");
   const body = document.getElementById("mod-library-modal-body");
   if (!modal || !body) return;
+  modal.style.zIndex = "2200";
 
   const titleEl = document.getElementById("mod-library-modal-title");
   if (titleEl) titleEl.innerText = t("libraryModalTitle") || "從現有客製化庫選取";
@@ -4517,7 +4530,7 @@ function transitionToSubEditor(type) {
   if (type === 'modifiers') {
     openItemModifiersModal(activeItemDetailCatIdx, activeItemDetailItemIdx);
   } else if (type === 'bundle') {
-    openBundleWizard(activeItemDetailCatIdx, activeItemDetailItemIdx);
+    openBundleEditorModal(activeItemDetailCatIdx, activeItemDetailItemIdx);
   }
 }
 window.transitionToSubEditor = transitionToSubEditor;
