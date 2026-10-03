@@ -181,8 +181,10 @@ export function buildMappings(snapshotData) {
   }
 
   // 2. Map modifier menu_categories -> modifier_groups
+  // NOTE: Exclude phantom UI containers (category_type === 'order_customization' or slug === 'sec-flavor')
+  // because order-level customizations are already mapped exclusively from menu_customizations above.
   const modifierCategories = menu_categories.filter(cat => 
-    cat.category_type === 'modifier' || cat.category_type === 'order_customization'
+    cat.category_type === 'modifier' && cat.slug !== 'sec-flavor'
   );
 
   const modCatToGroupIdMap = new Map(); // key: `${cat.tenant_id}::${cat.id}` or slug -> targetGroupId
