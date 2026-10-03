@@ -484,7 +484,11 @@ const I18N = {
     createType3Desc: "適用於整筆訂單的通用偏好設定 (餐具、整單辣度、通用備註)。",
     btnItemModifiers: "客製選項",
     itemModifiersModalTitle: "設定餐點客製選項",
-    itemModifiersModalSub: "為此餐點配置專屬的選項群組 (如加料、甜度冰塊、辣度)",
+    itemModifiersModalSub: "勾選要套用至此餐點的客製化群組",
+    btnManageCustomLibrary: "+ 前往客製化庫管理",
+    inheritedFromCategoryNotice: "✦ 從所屬分類繼承（已自動套用至此分類所有餐點）",
+    noLibraryModifierGroups: "目前客製化庫尚無可選的群組",
+    noLibraryModifierGroupsSub: "請前往客製化庫建立群組後，再為餐點勾選套用。",
     btnNewModifierGroup: "新增選項群組",
     btnAddItemModGroup: "+ 新增選項群組",
     btnOpenModLibrary: "+ 從客製化庫選取",
@@ -1173,7 +1177,11 @@ const I18N = {
     createType3Desc: "Áp dụng chung cho cả đơn: dụng cụ ăn uống, mức cay toàn đơn, dặn dò...",
     btnItemModifiers: "Tuỳ chọn món",
     itemModifiersModalTitle: "Thiết lập tuỳ chọn cho món",
-    itemModifiersModalSub: "Cấu hình các nhóm tuỳ chọn riêng cho món này (Topping, Đường đá, Độ cay...)",
+    itemModifiersModalSub: "Chọn các nhóm tuỳ chọn từ Thư viện để áp dụng cho món này",
+    btnManageCustomLibrary: "+ Quản lý Thư viện Tùy chọn",
+    inheritedFromCategoryNotice: "✦ Kế thừa từ Danh mục (Đã tự động áp dụng cho mọi món trong danh mục)",
+    noLibraryModifierGroups: "Hiện tại Thư viện tùy biến chưa có nhóm tùy chọn nào",
+    noLibraryModifierGroupsSub: "Vui lòng vào Quản lý Tùy chọn để tạo nhóm trước khi gán cho món.",
     btnNewModifierGroup: "Thêm nhóm tuỳ chọn",
     btnAddItemModGroup: "+ Thêm nhóm tùy chọn",
     btnOpenModLibrary: "+ Chọn từ thư viện có sẵn",
@@ -2313,29 +2321,17 @@ function applyLanguageToDOM() {
   const btnCreationTypeClose = document.getElementById("btn-creation-type-close");
   if (btnCreationTypeClose) btnCreationTypeClose.innerText = dict.btnClose || "關閉";
 
-  // Item Modifiers Modal
+  // Item Modifiers Modal (Unified Library Assignment)
   const itemModT = document.getElementById("item-modifiers-modal-title");
   if (itemModT) itemModT.innerText = dict.itemModifiersModalTitle;
   const itemModS = document.getElementById("item-modifiers-modal-sub");
   if (itemModS) itemModS.innerText = dict.itemModifiersModalSub;
-  const btnAddItemModG = document.getElementById("btn-add-item-mod-group");
-  if (btnAddItemModG) btnAddItemModG.innerText = dict.btnAddItemModGroup || dict.btnNewModifierGroup;
-  const btnOpenModLib = document.getElementById("btn-open-mod-library");
-  if (btnOpenModLib) btnOpenModLib.innerText = dict.btnOpenModLibrary || dict.btnAddFromLibrary;
+  const btnGotoCustom = document.getElementById("btn-goto-customizations");
+  if (btnGotoCustom) btnGotoCustom.innerText = dict.btnManageCustomLibrary || "+ 前往客製化庫管理";
   const btnItemModCan = document.getElementById("btn-item-mod-cancel");
   if (btnItemModCan) btnItemModCan.innerText = dict.btnCancel;
   const btnItemModSv = document.getElementById("btn-item-mod-save");
   if (btnItemModSv) btnItemModSv.innerText = dict.btnItemModSave || dict.btnSaveModifiers;
-
-  // Modifier Library Modal
-  const modLibT = document.getElementById("mod-library-modal-title");
-  if (modLibT) modLibT.innerText = dict.libraryModalTitle;
-  const modLibS = document.getElementById("mod-library-modal-sub");
-  if (modLibS) modLibS.innerText = dict.libraryModalSub;
-  const btnModLibCan = document.getElementById("btn-mod-library-cancel");
-  if (btnModLibCan) btnModLibCan.innerText = dict.btnCancel;
-  const btnImportLibMod = document.getElementById("btn-import-library-mod");
-  if (btnImportLibMod) btnImportLibMod.innerText = dict.btnImportLibraryMod || dict.btnImportToItem;
 
   if (typeof updateMenuSaveState === "function") updateMenuSaveState();
   if (typeof renderComboWizard === "function" && document.getElementById('bundle-wizard')?.style.display === 'flex') renderComboWizard();
