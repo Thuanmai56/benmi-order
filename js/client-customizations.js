@@ -282,8 +282,7 @@ function openItemCustomizeModal(category, origName, targetPortionIndex) {
         const defaultSingle = {};
         const defaultSubOpts = {};
         modifiers.filter(m => m.selectionType === 'single').forEach(m => {
-            const defOpt = (m.options || []).find(o => o.isDefault && !o.isOutOfStock) 
-                || (m.isRequired ? (m.options || []).find(o => !o.isOutOfStock) : null);
+            const defOpt = (m.options || []).find(o => o.isDefault && !o.isOutOfStock);
             if (defOpt) {
                 defaultSingle[m.slug] = defOpt.name;
                 const subs = defOpt.subOptions || defOpt.sub_options || [];
@@ -676,11 +675,24 @@ function openItemCustomizeModal(category, origName, targetPortionIndex) {
         const totalPrice = basePrice + extra;
 
         const actionText = isAddingNew ? '加入購物車' : '確認修改';
-        confirmBtn.innerHTML = `
-            <span>${actionText}</span>
-            <span style="opacity: 0.85;">·</span>
-            <span>$${totalPrice}</span>
-        `;
+        const valRes = validateModifierDraft(modifiers, draft);
+        if (!valRes.valid) {
+            confirmBtn.style.opacity = '0.75';
+            confirmBtn.style.background = '#64748b';
+            confirmBtn.innerHTML = `
+                <span>${valRes.message || actionText}</span>
+                <span style="opacity: 0.85;">·</span>
+                <span>$${totalPrice}</span>
+            `;
+        } else {
+            confirmBtn.style.opacity = '1';
+            confirmBtn.style.background = 'var(--primary)';
+            confirmBtn.innerHTML = `
+                <span>${actionText}</span>
+                <span style="opacity: 0.85;">·</span>
+                <span>$${totalPrice}</span>
+            `;
+        }
     }
 
     confirmBtn.onclick = () => {

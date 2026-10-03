@@ -357,7 +357,7 @@
       } else {
         const defaultSingle = {};
         catModifiers.filter(m => m.selectionType === 'single').forEach(m => {
-          const defOpt = (m.options || []).find(o => o.isDefault && !o.isOutOfStock) || (m.isRequired ? ((m.options || []).find(o => !o.isOutOfStock) || m.options[0]) : null);
+          const defOpt = (m.options || []).find(o => o.isDefault && !o.isOutOfStock);
           if (defOpt) defaultSingle[m.slug] = defOpt.name;
         });
         const defaultMulti = {};
@@ -371,7 +371,8 @@
     }
 
     const hasAddons = Boolean(catModifiers && catModifiers.length > 0);
-    const initialTab = (firstMissing < 0 && hasAddons) ? 'addons' : 'group';
+    const allGroupsDone = rule.groups.every(g => validGroup(g, selections[g.id]));
+    const initialTab = (allGroupsDone && hasAddons) ? 'addons' : 'group';
     draft = { key, catSlug, origName, itemInfo, rule, selections, catModifiers, addonSelections, portionIndex: targetIndex, groupIndex: Math.max(0, firstMissing), currentTab: initialTab, category: 'all', mode: existing ? 'edit' : 'new' };
     document.getElementById('bundle-modal-item-name').textContent = `${itemInfo.displayName || origName}${targetIndex ? ` · 第 ${targetIndex + 1} 份` : ''}`;
     document.getElementById('bundle-builder-modal').style.display = 'flex';
@@ -407,6 +408,15 @@
     if (!source || source.isOutOfStock) return;
     const wasIncomplete = !validGroup(group, draft.selections[group.id]);
     draft.selections[group.id] = [{ itemId, name: source.name, quantity: 1, surcharge: Number(source.surcharge || 0), modifiers: [] }];
+
+    const childMods = optionsFor(source);
+    const hasRequiredChildMods = childMods.some(mod => mod.isRequired || Number(mod.minSelection || 0) > 0);
+    if (hasRequiredChildMods) {
+      render();
+      window.bundleEditModifiers(0);
+      return;
+    }
+
     if (wasIncomplete && validGroup(group, draft.selections[group.id])) {
       const next = draft.rule.groups.findIndex(candidate => !validGroup(candidate, draft.selections[candidate.id]));
       if (next >= 0) {
@@ -423,7 +433,25 @@
     const list = draft.selections[group.id];
     const source = group.eligibleItems.find(item => item.id === itemId);
     if (!source || source.isOutOfStock || list.length >= maxOf(group) || (!group.allowRepeats && list.some(item => item.itemId === itemId))) return;
-    list.push({ itemId, name: source.name, quantity: 1, surcharge: Number(source.surcharge || 0), modifiers: [] });
+    const newItem = { itemId, name: source.name, quantity: 1, surcharge: Number(source.surcharge || 0), modifiers: [] };
+    list.push(newItem);
+
+    const childMods = optionsFor(source);
+    const hasRequiredChildMods = childMods.some(mod => mod.isRequired || Number(mod.minSelection || 0) > 0);
+    if (hasRequiredChildMods) {
+      render();
+      window.bundleEditModifiers(list.length - 1);
+      return;
+    }
+
+    if (validGroup(group, list)) {
+      const next = draft.rule.groups.findIndex(candidate => !validGroup(candidate, draft.selections[candidate.id]));
+      if (next >= 0) {
+        draft.groupIndex = next;
+      } else if (draft.catModifiers && draft.catModifiers.length > 0) {
+        draft.currentTab = 'addons';
+      }
+    }
     render();
   };
   window.bundleRemoveItem = function(index) { if (!draft) return; draft.selections[draft.rule.groups[draft.groupIndex].id].splice(index, 1); render(); };
@@ -484,7 +512,22 @@
       });
     }
   };
-  window.bundleCloseModifiers = function() { document.getElementById('bundle-modifier-editor').style.display = 'none'; if (draft) draft.editingItem = null; render(); };
+  window.bundleCloseModifiers = function() {
+    document.getElementById('bundle-modifier-editor').style.display = 'none';
+    if (draft) {
+      draft.editingItem = null;
+      const group = draft.rule.groups[draft.groupIndex];
+      if (group && validGroup(group, draft.selections[group.id])) {
+        const next = draft.rule.groups.findIndex(candidate => !validGroup(candidate, draft.selections[candidate.id]));
+        if (next >= 0) {
+          draft.groupIndex = next;
+        } else if (draft.catModifiers && draft.catModifiers.length > 0) {
+          draft.currentTab = 'addons';
+        }
+      }
+    }
+    render();
+  };
   window.bundleSelectAddonSingle = function(modSlug, optName) {
     if (!draft) return;
     if (!draft.addonSelections) draft.addonSelections = { single: {}, multiple: {}, note: '' };
