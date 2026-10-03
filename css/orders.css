@@ -9202,6 +9202,51 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
   gap: 6px;
 }
 
+/* Customization Scope Collapsible Section */
+.cust-scope-collapsible-section {
+  margin-top: 20px;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 14px;
+}
+
+.cust-scope-collapsible-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  list-style: none;
+  user-select: none;
+  transition: all 0.15s ease;
+}
+
+.cust-scope-collapsible-summary:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.cust-scope-collapsible-summary::-webkit-details-marker {
+  display: none;
+}
+
+.cust-scope-collapsible-section[open] .cust-scope-chevron {
+  transform: rotate(180deg);
+}
+
+.cust-scope-summary-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #e2e8f0;
+  color: #475569;
+}
+
 /* Modifiers Library Modal */
 .mod-lib-group-card {
   background: #ffffff;
