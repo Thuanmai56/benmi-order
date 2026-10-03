@@ -1229,19 +1229,31 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
         const summaryTpl = t("appliedSummary") || "已套用至 {catCount} 個分類 (共 {itemCount} 項餐點)";
         const summaryText = summaryTpl.replace('{catCount}', appliedCats.length).replace('{itemCount}', totalItemsApplied);
 
+        const groupKey = grp.id || `grp_${gIdx}`;
+        const isCatChipsOpen = Boolean(window.isCustomScopeSectionOpen?.[groupKey]);
+
         scopePanelHtml = `
-          <div class="cust-scope-panel scope-category-panel">
-            <div class="cust-scope-panel-header">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-              <span>${t("scopeCategoryDesc") || "所選分類下的所有餐點將自動繼承此客製化選項"}</span>
-            </div>
-            <div class="cust-cat-chips-list">
-              ${catChipsHtml || `<span style="color:#94a3b8; font-size:12.5px;">${t("noCategoriesPrompt") || "無分類"}</span>`}
-            </div>
-            <div class="cust-scope-summary">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-              <span>${summaryText}</span>
-            </div>
+          <div class="cust-scope-panel scope-category-panel" style="padding: 10px 14px;">
+            <details class="cust-cat-collapsible" ${isCatChipsOpen ? 'open' : ''} ontoggle="window.isCustomScopeSectionOpen = window.isCustomScopeSectionOpen || {}; window.isCustomScopeSectionOpen['${escapeHtml(groupKey)}'] = this.open;">
+              <summary class="cust-cat-collapsible-summary" style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; list-style: none; user-select: none;">
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                  <span style="font-weight: 700; font-size: 13px;">${t("scopeCategoryDesc") || "所選分類下的所有餐點將自動繼承此客製化選項"}</span>
+                  <span class="cust-scope-summary-pill" style="font-size: 11.5px; font-weight: 700; padding: 2px 8px; border-radius: 6px; background: #dcfce7; color: #166534; border: 1px solid #bbf7d0;">
+                    ${summaryText}
+                  </span>
+                </div>
+                <div class="cust-cat-collapsible-btn">
+                  <span>${t("btnSelectCategories") || (currentLang === 'vi' ? 'Chọn phân loại' : '選擇分類')}</span>
+                  <svg class="cust-scope-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.2s ease;">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </div>
+              </summary>
+              <div class="cust-cat-chips-list" style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed #86efac;">
+                ${catChipsHtml || `<span style="color:#94a3b8; font-size:12.5px;">${t("noCategoriesPrompt") || "無分類"}</span>`}
+              </div>
+            </details>
           </div>
         `;
       } else {
@@ -1316,11 +1328,6 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
       }
 
       const repeatsEditorTitle = (cat.groups.length === 1 && String(grp.title || '').trim() === String(cat.title || '').trim());
-      const groupKey = grp.id || `grp_${gIdx}`;
-      const isScopeOpen = Boolean(window.isCustomScopeSectionOpen?.[groupKey]);
-      const scopeSummaryLabel = grpScope === 'order'
-        ? (t("scopeOrder") || (currentLang === 'vi' ? 'Toàn đơn' : '整單適用'))
-        : summaryText;
 
       card.innerHTML = `
         <div class="cust-group-header">
@@ -1346,35 +1353,15 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
           </div>
         </div>
 
-        <!-- 1. PRIMARY FOCUS: OPTIONS LIST & ADD BUTTON -->
-        <div class="cust-options-list" style="margin-top: 14px;">
+        ${scopeButtonsHtml}
+        ${scopePanelHtml}
+
+        <div class="cust-options-list">
           ${optionsHtml}
         </div>
         <button type="button" class="cat-mgr-add-btn" style="margin-top: 10px;" onclick="addCustomizationOption(${cIdx}, ${gIdx})">
           <span>${formatPlusBtnText(t("btnAddCustomOption"), "新增選項")}</span>
         </button>
-
-        <!-- 2. COLLAPSIBLE CATEGORY / SCOPE ASSIGNMENT -->
-        <details class="cust-scope-collapsible-section" ${isScopeOpen ? 'open' : ''} ontoggle="window.isCustomScopeSectionOpen = window.isCustomScopeSectionOpen || {}; window.isCustomScopeSectionOpen['${escapeHtml(groupKey)}'] = this.open;">
-          <summary class="cust-scope-collapsible-summary">
-            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color: #64748b;">
-                <rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect>
-              </svg>
-              <span style="font-weight: 700; color: #334155; font-size: 13px;">${t("scopeSettingsTitle") || (currentLang === 'vi' ? 'Thiết lập danh mục áp dụng' : '設定套用分類與範圍')}</span>
-              <span class="cust-scope-summary-pill">
-                ${escapeHtml(scopeSummaryLabel)}
-              </span>
-            </div>
-            <svg class="cust-scope-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
-          </summary>
-          <div class="cust-scope-collapsible-body" style="padding-top: 12px;">
-            ${scopeButtonsHtml}
-            ${scopePanelHtml}
-          </div>
-        </details>
       `;
 
       // `indeterminate` is a DOM property (not an HTML attribute), so restore
@@ -1597,6 +1584,9 @@ function setCustomizationGroupScope(cIdx, gIdx, scope) {
   grp.scope = scope;
   if (scope === 'category') {
     if (!Array.isArray(grp.appliedCategories)) grp.appliedCategories = [];
+    const groupKey = grp.id || `grp_${gIdx}`;
+    window.isCustomScopeSectionOpen = window.isCustomScopeSectionOpen || {};
+    window.isCustomScopeSectionOpen[groupKey] = true;
   } else if (scope === 'item') {
     grp.appliedCategories = [];
     if (cat.type === 'modifier') {
