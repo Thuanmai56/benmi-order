@@ -1,8 +1,8 @@
 # Bảng Quy chiếu Mapping Dữ liệu (Field Mapping Specification)
 
-- **Thời điểm sinh**: 2026-10-01T11:57:29.129Z
+- **Thời điểm sinh**: 2026-10-03T05:05:55.128Z
 - **Snapshot Run ID**: `snap_2026-10-01T11-56-30-635Z`
-- **Tổng số Groups map**: 46 nhóm
+- **Tổng số Groups map**: 44 nhóm
 - **Tổng số Options map**: 169 lựa chọn
 - **Tổng số Category Links map**: 24 liên kết
 - **Tổng số Conflicts / Unresolved**: 0
@@ -57,8 +57,6 @@
 | `menu_categories.modifier` | `blab_demo_cat-mtfz94iw` | `mg_cat_blab_demo_blab_demo_cat-mtfz94iw` | 加辣 | `single` | `category` |
 | `menu_categories.modifier` | `mod_hs_noodle_type` | `mg_cat_haoshiguoshao_mod_hs_noodle_type` | 麵體選擇 (必選1項) | `single` | `category` |
 | `menu_categories.modifier` | `mod_hs_guoshao_addons` | `mg_cat_haoshiguoshao_mod_hs_guoshao_addons` | 加料加價購 (可複選) | `multiple` | `category` |
-| `menu_categories.modifier` | `jiangjiejie_sec-flavor` | `mg_cat_jiangjiejie_jiangjiejie_sec-flavor` | 口味與客製化選擇 | `single` | `order` |
-| `menu_categories.modifier` | `cat_mys_sec_flavor` | `mg_cat_miyansuo_cat_mys_sec_flavor` | 加購服務 / 響應環保 | `single` | `order` |
 
 ---
 
