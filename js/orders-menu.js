@@ -1860,7 +1860,8 @@ function addCustomizationOption(cIdx, gIdx) {
   const group = currentMenuData[cIdx]?.groups?.[gIdx];
   if (group) {
     if (!Array.isArray(group.options)) group.options = [];
-    const newId = `opt_${Date.now().toString(36)}`;
+    const stableGid = group.canonicalId || group.id || `${cIdx}_${gIdx}`;
+    const newId = `opt_${stableGid}_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 7)}`;
     const defaultName = t("newItemPlaceholder") || "新選項";
     group.options.push({
       id: newId,
@@ -1885,13 +1886,15 @@ function addCustomizationOption(cIdx, gIdx) {
     markMenuDirty();
     renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), currentMenuData[cIdx], cIdx);
     renderMenuCategories();
-    setTimeout(() => {
-      const newInp = document.querySelector(`input[data-cust-name-cidx="${cIdx}"][data-cust-gidx="${gIdx}"][data-cust-oidx="${group.options.length - 1}"]`);
-      if (newInp) {
-        newInp.focus();
-        newInp.select();
-      }
-    }, 50);
+    if (typeof setTimeout !== 'undefined') {
+      setTimeout(() => {
+        const newInp = document.querySelector(`input[data-cust-name-cidx="${cIdx}"][data-cust-gidx="${gIdx}"][data-cust-oidx="${group.options.length - 1}"]`);
+        if (newInp) {
+          newInp.focus();
+          newInp.select();
+        }
+      }, 50);
+    }
   }
 }
 window.addCustomizationOption = addCustomizationOption;
@@ -2009,6 +2012,23 @@ function serializeMenuData(categories) {
     }
   }));
 
+  const assignedOptionOwners = new Map();
+  // Pass 1: Resolve unique option IDs for all groups across all customization categories to prevent cross-group ID collisions
+  categories.filter(isCustomizationCategory).forEach(cat => {
+    (cat.groups || []).forEach(grp => {
+      const stableGid = String(grp.canonicalId || grp.id || '');
+      (grp.options || []).forEach((opt, oIdx) => {
+        const rawId = String(opt.id || opt.name || `opt_${oIdx}`).trim();
+        let uniqueOptId = rawId;
+        if (assignedOptionOwners.has(uniqueOptId) && assignedOptionOwners.get(uniqueOptId) !== stableGid) {
+          uniqueOptId = `mo_${stableGid}_${rawId}`;
+        }
+        assignedOptionOwners.set(uniqueOptId, stableGid);
+        opt.id = uniqueOptId;
+      });
+    });
+  });
+
   categories.forEach((cat, cIdx) => {
     const currentOrder = cat.sortOrder !== undefined ? cat.sortOrder : (cIdx + 1);
     if (cat.type === 'order_customization' || cat.id === 'sec-flavor') {
@@ -2033,16 +2053,26 @@ function serializeMenuData(categories) {
           appliedCategories: Array.isArray(grp.appliedCategories) ? grp.appliedCategories : [],
           appliedItems: Array.isArray(grp.appliedItems) ? grp.appliedItems : [],
           sortOrder: grp.sortOrder !== undefined ? grp.sortOrder : (gIdx + 1),
-          options: (grp.options || []).map(opt => ({
-            ...opt,
-            id: opt.id || opt.name,
-            name: opt.name,
-            surcharge: opt.price || 0,
-            price: opt.price || 0,
-            is_out_of_stock: Boolean(opt.isOos),
-            isOutOfStock: Boolean(opt.isOos),
-            sub_options: Array.isArray(opt.sub_options) ? opt.sub_options : []
-          }))
+          options: (grp.options || []).map(opt => {
+            const optPrice = Number(opt.price ?? opt.surcharge ?? 0);
+            const optIsDefault = Boolean(opt.isDefault ?? opt.is_default);
+            const optIsOos = Boolean(opt.isOos ?? opt.isOutOfStock ?? opt.is_out_of_stock);
+            const optSubOptions = Array.isArray(opt.sub_options) ? opt.sub_options : (Array.isArray(opt.subOptions) ? opt.subOptions : []);
+            return {
+              ...opt,
+              id: opt.id || opt.name,
+              name: opt.name,
+              surcharge: optPrice,
+              price: optPrice,
+              isDefault: optIsDefault,
+              is_default: optIsDefault,
+              is_out_of_stock: optIsOos,
+              isOutOfStock: optIsOos,
+              isOos: optIsOos,
+              sub_options: optSubOptions,
+              subOptions: optSubOptions
+            };
+          })
         }))
       };
       return;
@@ -2091,8 +2121,51 @@ function serializeMenuData(categories) {
             minSelection: group.minSelection,
             maxSelection: group.maxSelection,
             sortOrder: group.sortOrder || 0,
-            options: (group.options || []).map(option => ({ ...option, id: option.id, name: option.name, price: option.price || 0, isDefault: Boolean(option.isDefault) }))
+            options: (group.options || []).map(option => {
+              const optPrice = Number(option.price ?? option.surcharge ?? 0);
+              const optIsDefault = Boolean(option.isDefault ?? option.is_default);
+              const optIsOos = Boolean(option.isOos ?? option.isOutOfStock ?? option.is_out_of_stock);
+              const optSubOptions = Array.isArray(option.sub_options) ? option.sub_options : (Array.isArray(option.subOptions) ? option.subOptions : []);
+              return {
+                ...option,
+                id: option.id || option.name,
+                name: option.name,
+                price: optPrice,
+                surcharge: optPrice,
+                isDefault: optIsDefault,
+                is_default: optIsDefault,
+                isOutOfStock: optIsOos,
+                is_out_of_stock: optIsOos,
+                isOos: optIsOos,
+                subOptions: optSubOptions,
+                sub_options: optSubOptions
+              };
+            })
           });
+        });
+        linkedGroups.forEach(grp => {
+          if (Array.isArray(grp.options)) {
+            grp.options = grp.options.map(option => {
+              const optPrice = Number(option.price ?? option.surcharge ?? 0);
+              const optIsDefault = Boolean(option.isDefault ?? option.is_default);
+              const optIsOos = Boolean(option.isOos ?? option.isOutOfStock ?? option.is_out_of_stock);
+              const optSubOptions = Array.isArray(option.sub_options) ? option.sub_options : (Array.isArray(option.subOptions) ? option.subOptions : []);
+              return {
+                ...option,
+                id: option.id || option.name,
+                name: option.name,
+                price: optPrice,
+                surcharge: optPrice,
+                isDefault: optIsDefault,
+                is_default: optIsDefault,
+                isOutOfStock: optIsOos,
+                is_out_of_stock: optIsOos,
+                isOos: optIsOos,
+                subOptions: optSubOptions,
+                sub_options: optSubOptions
+              };
+            });
+          }
         });
         if (Array.isArray(item.modifierGroups) || linkedGroups.length > 0) {
           serializedItem.modifier_groups = linkedGroups;
@@ -3630,15 +3703,16 @@ function renderItemModifiersEditor() {
   }
 
   // 2. Collect Available Library Groups
-  const custCat = (currentMenuData || []).find(c => isCustomizationCategory(c));
   const libraryGroups = [];
-  if (custCat && Array.isArray(custCat.groups)) {
-    custCat.groups.forEach(g => {
+  (currentMenuData || []).filter(c => isCustomizationCategory(c)).forEach(custCat => {
+    (custCat.groups || []).forEach(g => {
       if (g.scope !== 'order') {
-        libraryGroups.push(g);
+        if (!libraryGroups.some(item => String(item.id) === String(g.id) || (g.canonicalId && String(item.canonicalId) === String(g.canonicalId)))) {
+          libraryGroups.push(g);
+        }
       }
     });
-  }
+  });
 
   // Also include any group already in tempItemModifierGroups if not in libraryGroups
   (tempItemModifierGroups || []).forEach(existingGrp => {
@@ -3751,13 +3825,12 @@ function saveItemModifiersModal() {
       }
     });
 
-    const custCat = (currentMenuData || []).find(c => isCustomizationCategory(c));
     const allGroupsPool = [];
-    if (custCat && Array.isArray(custCat.groups)) {
-      allGroupsPool.push(...custCat.groups);
-    }
+    (currentMenuData || []).filter(c => isCustomizationCategory(c)).forEach(c => {
+      if (Array.isArray(c.groups)) allGroupsPool.push(...c.groups);
+    });
     (tempItemModifierGroups || []).forEach(existing => {
-      if (!allGroupsPool.some(g => String(g.id) === String(existing.id))) {
+      if (!allGroupsPool.some(g => String(g.id) === String(existing.id) || (existing.canonicalId && String(g.canonicalId) === String(existing.canonicalId)))) {
         allGroupsPool.push(existing);
       }
     });
@@ -3765,9 +3838,11 @@ function saveItemModifiersModal() {
     const cleanGroups = [];
     allGroupsPool.forEach(grp => {
       const gid = String(grp.id || '');
-      if (checkedGroupIds.has(gid)) {
+      const canonId = String(grp.canonicalId || '');
+      if (checkedGroupIds.has(gid) || (canonId && checkedGroupIds.has(canonId))) {
+        const targetId = grp.canonicalId || grp.id || `mg_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
         cleanGroups.push({
-          id: grp.id || `mg_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          id: targetId,
           name: (grp.title || grp.name || '').trim(),
           selectionType: (grp.type === 'checkbox' || grp.selectionType === 'multiple') ? 'multiple' : 'single',
           isRequired: Boolean(grp.isRequired),
@@ -3776,8 +3851,15 @@ function saveItemModifiersModal() {
           options: (grp.options || []).map(opt => ({
             id: opt.id,
             name: opt.name,
-            price: Number(opt.price) || 0,
-            isDefault: Boolean(opt.isDefault)
+            price: Number(opt.price || opt.surcharge || 0),
+            surcharge: Number(opt.price || opt.surcharge || 0),
+            isDefault: Boolean(opt.isDefault ?? opt.is_default),
+            is_default: Boolean(opt.isDefault ?? opt.is_default),
+            isOutOfStock: Boolean(opt.isOos ?? opt.isOutOfStock ?? opt.is_out_of_stock),
+            is_out_of_stock: Boolean(opt.isOos ?? opt.isOutOfStock ?? opt.is_out_of_stock),
+            isOos: Boolean(opt.isOos ?? opt.isOutOfStock ?? opt.is_out_of_stock),
+            subOptions: Array.isArray(opt.sub_options) ? opt.sub_options : (Array.isArray(opt.subOptions) ? opt.subOptions : []),
+            sub_options: Array.isArray(opt.sub_options) ? opt.sub_options : (Array.isArray(opt.subOptions) ? opt.subOptions : [])
           }))
         });
       }
@@ -3785,20 +3867,23 @@ function saveItemModifiersModal() {
 
     tempItemModifierGroups = cleanGroups;
 
-    // Bi-directional sync with custCat.groups appliedItems
+    // Bi-directional sync with all customization categories groups appliedItems
     if (currentItemModifiersCidx !== null && currentItemModifiersIidx !== null && currentMenuData) {
       const cat = currentMenuData[currentItemModifiersCidx];
       const item = cat?.items?.[currentItemModifiersIidx];
-      if (cat && item && custCat && Array.isArray(custCat.groups)) {
+      if (cat && item) {
         const itemKey = String(item.id || `${cat.id}:${item.name}`);
-        custCat.groups.forEach(grp => {
-          if (!Array.isArray(grp.appliedItems)) grp.appliedItems = [];
-          const gid = String(grp.id || '');
-          if (checkedGroupIds.has(gid)) {
-            if (!grp.appliedItems.includes(itemKey)) grp.appliedItems.push(itemKey);
-          } else {
-            grp.appliedItems = grp.appliedItems.filter(k => k !== itemKey);
-          }
+        (currentMenuData || []).filter(c => isCustomizationCategory(c)).forEach(custCategory => {
+          (custCategory.groups || []).forEach(grp => {
+            if (!Array.isArray(grp.appliedItems)) grp.appliedItems = [];
+            const gid = String(grp.id || '');
+            const canonId = String(grp.canonicalId || '');
+            if (checkedGroupIds.has(gid) || (canonId && checkedGroupIds.has(canonId))) {
+              if (!grp.appliedItems.includes(itemKey)) grp.appliedItems.push(itemKey);
+            } else {
+              grp.appliedItems = grp.appliedItems.filter(k => k !== itemKey);
+            }
+          });
         });
       }
     }
