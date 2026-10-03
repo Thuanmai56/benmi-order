@@ -428,6 +428,135 @@
       font-weight: 700;
       color: var(--text-main);
     }
+
+    /* QA Context & KPI Cards */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 16px 20px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .stat-label {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .stat-value {
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--primary);
+      line-height: 1.2;
+    }
+
+    .stat-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .context-box {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 22px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .context-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .context-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 14px;
+      margin-top: 14px;
+      margin-bottom: 14px;
+    }
+
+    .comp-col {
+      padding: 14px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .comp-col.before {
+      background: #fff5f5;
+      border: 1px solid #fed7d7;
+      color: #991b1b;
+    }
+
+    .comp-col.after {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      color: #166534;
+    }
+
+    .comp-title {
+      font-weight: 800;
+      font-size: 12.5px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .qa-rule-box {
+      background: #f8fafc;
+      border-left: 4px solid var(--primary);
+      padding: 12px 16px;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      margin-top: 12px;
+      font-size: 13px;
+      color: #334155;
+    }
+
+    .qa-matrix-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+      margin-top: 12px;
+    }
+
+    .qa-matrix-table th, .qa-matrix-table td {
+      padding: 10px 14px;
+      border: 1px solid #e2e8f0;
+      text-align: left;
+    }
+
+    .qa-matrix-table th {
+      background: #f8fafc;
+      color: #475569;
+      font-weight: 700;
+    }
   </style>
 </head>
 <body>
@@ -483,45 +612,228 @@
       </button>
     </div>
 
-    <!-- Snapshot Reference Card -->
+    <!-- SECTION 0: QA CONTEXT & MENU INSIGHTS -->
     <section class="test-section">
       <div class="section-header">
-        <h2 class="section-title">📌 Dữ Liệu Thực Đơn Thực Tế Dùng Để Test</h2>
+        <h2 class="section-title">📊 Thống Kê Thực Đơn Thực Tế & Bối Cảnh Nghiệp Vụ Cho QA</h2>
+        <span class="section-badge" style="background: #e0e7ff; color: #3730a3;">QA Briefing</span>
       </div>
-      <div class="test-card" style="padding: 16px 20px;">
+
+      <!-- KPI Statistics Grid -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-label">Tổng số món ăn</span>
+          <span class="stat-value">32 món</span>
+          <span class="stat-desc">14 Bánh mì, 13 Combo trọn gói, 5 Đồ uống lẻ</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Danh mục kinh doanh</span>
+          <span class="stat-value">4 nhóm</span>
+          <span class="stat-desc">Đồ uống đơn lẻ, Bánh mì lớn, Bánh mì nhỏ, Combo</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Nhóm tùy chọn gốc</span>
+          <span class="stat-value">2 nhóm</span>
+          <span class="stat-desc">🌶️ Độ cay (Đơn chọn) • 🧀 Topping (Đa chọn 6 loại)</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Kịch bản kiểm thử</span>
+          <span class="stat-value">10 cases</span>
+          <span class="stat-desc">5 Kịch bản Khách hàng (Menu) + 5 Kịch bản Quầy (POS)</span>
+        </div>
+      </div>
+
+      <!-- Design Context & Business Objective -->
+      <div class="context-box">
+        <div class="context-header">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="color: var(--primary);"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <h3 class="context-title">1. Bối Cảnh Nghiệp Vụ & Mục Tiêu Thiết Kế Lần Này (Dành Cho QA)</h3>
+        </div>
+        <p style="font-size: 13.5px; color: #475569; line-height: 1.6;">
+          Trong mô hình nhà hàng F&B thức ăn nhanh (như chuỗi Bánh mì Benmi), việc phân biệt rõ giữa <strong>Tùy chọn Tự chọn (Optional)</strong> và <strong>Tùy chọn Bắt buộc (Required)</strong> mang tính sống còn đối với tốc độ gọi món và độ chính xác của căn bếp:
+        </p>
+
+        <div class="comparison-grid">
+          <div class="comp-col before">
+            <div class="comp-title">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+              Trước Đây (Vấn đề / Bất cập)
+            </div>
+            • Mọi món có tùy biến đều bật popup hỏi khách, khiến thao tác mua 1 ổ bánh mì cơ bản cũng phải bấm xác nhận 2-3 bước gây phiền hà.<br>
+            • Hệ thống tự động chọn mặc định lựa chọn đầu tiên (như tự chọn Không cay) dù quán chưa cấu hình, dễ dẫn đến việc làm sai ý khách.<br>
+            • Trên POS không có nút đổi nhanh Bắt buộc / Tự chọn, thu ngân khó kiểm soát tính chất nhóm tùy biến.
+          </div>
+          <div class="comp-col after">
+            <div class="comp-title">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              Sau Cải Tiến (Hành vi chuẩn cần nghiệm thu)
+            </div>
+            • <strong>Thêm cực nhanh (Quick-Add)</strong>: Món chỉ có tùy chọn Tự chọn bấm <code>+</code> là vào giỏ ngay, hiện nút tùy biến bên dưới nếu khách muốn thêm topping.<br>
+            • <strong>Bắt buộc chuẩn xác</strong>: Món có tùy chọn Bắt buộc thì tự động mở popup, khóa nút Xác nhận nếu chưa chọn đủ, không tự ý chọn bừa.<br>
+            • <strong>Kiểm soát tại POS</strong>: Hiển thị rõ chip <code>● Bắt buộc</code> (đỏ) vs <code>○ Tùy chọn</code> (xám), bấm đổi trực tiếp 1 chạm ở cả Thư viện và khi gán món.
+          </div>
+        </div>
+
+        <div class="qa-rule-box">
+          <strong>💡 3 Quy tắc vàng QA cần ghi nhớ khi test:</strong>
+          <ul style="margin-left: 18px; margin-top: 6px; line-height: 1.6;">
+            <li><strong>Quy tắc 1 (Món Optional)</strong>: Bấm dấu <code>+</code> KHÔNG ĐƯỢC bật popup. Phải tăng thẳng vào giỏ và hiện nút <code>[⚙ 客製化 / Tùy biến]</code>.</li>
+            <li><strong>Quy tắc 2 (Món Required)</strong>: Bấm dấu <code>+</code> BẮT BUỘC phải mở popup. Nút "Xác nhận" phải bị khóa cho đến khi khách tự tay chọn đủ.</li>
+            <li><strong>Quy tắc 3 (Đồng bộ POS)</strong>: Khi bấm đổi chip Bắt buộc trên POS, trạng thái phải đồng bộ lập tức sang Menu khách hàng mà không cần cài đặt lại từng món.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Menu Breakdown Table -->
+      <div class="context-box">
+        <div class="context-header">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="color: var(--primary);"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          <h3 class="context-title">2. Thống Kê Cơ Cấu Thực Đơn Thực Tế Quán Benmi (Menu Breakdown)</h3>
+        </div>
+        <p style="font-size: 13px; color: #64748b; margin-bottom: 8px;">
+          Bảng phân tích toàn bộ 32 món ăn và cấu hình tùy biến thực tế trên hệ thống đang phục vụ khách:
+        </p>
         <table class="menu-table">
           <thead>
             <tr>
-              <th>Phân loại / Danh mục</th>
-              <th>Món test tiêu biểu</th>
-              <th>Đơn giá</th>
-              <th>Tùy chọn áp dụng</th>
+              <th>Danh mục (Category)</th>
+              <th>Số lượng món</th>
+              <th>Khung giá</th>
+              <th>Cấu hình Tùy biến (Modifiers)</th>
+              <th>Đặc thù nghiệp vụ cần lưu ý</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td><strong>🥤 單點飲料 (Đồ uống lẻ)</strong></td>
-              <td>越南咖啡 (Cà phê sữa), 紅茶 (Hồng trà), 豆漿 (Sữa đậu nành)</td>
+              <td><strong>🥤 單點飲料<br><small style="color:#64748b;">Đồ uống lẻ</small></strong></td>
+              <td><strong>5 món</strong><br><small>Cà phê, Đậu nành, Hồng trà, Coca, Sprite</small></td>
               <td class="price-col">37 ~ 48 NT$</td>
-              <td><em>Không có tùy chọn (allowCustomization = false)</em></td>
+              <td><span style="color:#94a3b8; font-weight:600;">Không tùy biến</span><br><code>allowCustomization = false</code></td>
+              <td>Món đơn thuần. Bấm `+` là vào giỏ ngay, không có nút tùy biến dưới thẻ món.</td>
             </tr>
             <tr>
-              <td><strong>🍔 大麵包 (Bánh mì lớn)</strong></td>
-              <td>烤肉 (Thịt nướng), 雙層烤肉 (Thịt nướng phô mai), 綜合 (Thập cẩm)</td>
-              <td class="price-col">105 ~ 130 NT$</td>
-              <td><strong>辣度 (Độ cay)</strong> (Chọn 1) & <strong>加料 (Topping)</strong> (Chọn nhiều +15 ~ 25 NT$)</td>
+              <td><strong>🍔 大麵包<br><small style="color:#64748b;">Bánh mì lớn</small></strong></td>
+              <td><strong>7 món</strong><br><small>Thịt nướng, Phô mai, Thập cẩm, Gà, Nguội, Chả, Chay</small></td>
+              <td class="price-col">80 ~ 130 NT$</td>
+              <td>
+                • <strong>辣度 (Độ cay)</strong>: Chọn 1 (4 mức, 0 NT$)<br>
+                • <strong>加料 (Topping)</strong>: Chọn nhiều (+15 ~ 25 NT$)
+              </td>
+              <td>Dùng để test chuyển đổi linh hoạt giữa Optional và Required (khi thử nghiệm đổi tính chất trên POS).</td>
             </tr>
             <tr>
-              <td><strong>🥖 小麵包 (Bánh mì nhỏ)</strong></td>
-              <td>燒肉 (Thịt nguội), 雞肉 (Thịt gà), 清爽蔬食 (Chay rau củ)</td>
+              <td><strong>🥖 小麵包<br><small style="color:#64748b;">Bánh mì nhỏ</small></strong></td>
+              <td><strong>7 món</strong><br><small>Thịt nguội, Chả, Gà, Nướng, Phô mai, Thập cẩm, Chay</small></td>
               <td class="price-col">56 ~ 79 NT$</td>
-              <td><strong>辣度 (Độ cay)</strong> & <strong>加料 (Topping)</strong></td>
+              <td>
+                • <strong>辣度 (Độ cay)</strong>: Chọn 1<br>
+                • <strong>加料 (Topping)</strong>: Chọn nhiều
+              </td>
+              <td>Tương tự Bánh mì lớn, dùng chung thư viện tùy chọn.</td>
             </tr>
             <tr>
-              <td><strong>🎁 特惠套餐 (Combo kèm nước)</strong></td>
-              <td>Set 4 大烤肉+飲料, Set 5 大雙層烤肉+飲料</td>
-              <td class="price-col">128 ~ 135 NT$</td>
-              <td>Bánh mì chính + Chọn 1 đồ uống kèm theo + Tùy chọn cay / topping</td>
+              <td><strong>🎁 特惠套餐<br><small style="color:#64748b;">Combo kèm nước</small></strong></td>
+              <td><strong>13 combo</strong><br><small>Set 1 đến Set 11, Combo Chay lớn/nhỏ</small></td>
+              <td class="price-col">77 ~ 142 NT$</td>
+              <td>
+                • <strong>Món nước đi kèm</strong>: Bắt buộc chọn 1<br>
+                • <strong>Tùy chọn Bánh mì</strong>: Độ cay / Topping
+              </td>
+              <td>Combo trọn gói. Chọn xong nước uống phải tự động chuyển sang tab Addons và mở tùy biến nếu món con có bắt buộc.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- QA Test Coverage Matrix -->
+      <div class="context-box">
+        <div class="context-header">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="color: var(--primary);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <h3 class="context-title">3. Ma Trận Phủ Kịch Bản Kiểm Thử (QA Test Coverage Matrix)</h3>
+        </div>
+        <p style="font-size: 13px; color: #64748b; margin-bottom: 8px;">
+          Bảng ánh xạ 10 ca kiểm thử với phạm vi kiểm thử tương ứng trên toàn hệ thống:
+        </p>
+        <table class="qa-matrix-table">
+          <thead>
+            <tr>
+              <th style="width: 80px;">Mã Case</th>
+              <th style="width: 140px;">Phân hệ</th>
+              <th>Mục tiêu kiểm thử</th>
+              <th>Món dữ liệu thực tế</th>
+              <th style="width: 130px;">Hành vi chính</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>TC 1.1</strong></td>
+              <td><span class="test-tag tag-client">Client Menu</span></td>
+              <td>Đặt món không có tùy chọn</td>
+              <td>越南咖啡 (Cà phê sữa), 紅茶 (Hồng trà)</td>
+              <td>Tăng giỏ ngay (+1), không popup</td>
+            </tr>
+            <tr>
+              <td><strong>TC 1.2</strong></td>
+              <td><span class="test-tag tag-client">Client Menu</span></td>
+              <td>Đặt món có tùy chọn Tự chọn (Optional)</td>
+              <td>烤肉 (Bánh mì thịt nướng lớn)</td>
+              <td>Thêm ngay (+1), hiện nút `[⚙ 客製化]`</td>
+            </tr>
+            <tr>
+              <td><strong>TC 1.3</strong></td>
+              <td><span class="test-tag tag-client">Client Menu</span></td>
+              <td>Đặt món có tùy chọn Bắt buộc (Required)</td>
+              <td>雙層烤肉 (Bánh mì thịt nướng phô mai)</td>
+              <td>Tự động bật popup, khóa xác nhận</td>
+            </tr>
+            <tr>
+              <td><strong>TC 1.4</strong></td>
+              <td><span class="test-tag tag-client">Client Menu</span></td>
+              <td>Đặt Combo trọn gói kèm đồ uống</td>
+              <td>Set 4 大烤肉+飲料 (Set nướng + nước)</td>
+              <td>Tự chuyển tab Addons, mở tùy biến con</td>
+            </tr>
+            <tr>
+              <td><strong>TC 1.5</strong></td>
+              <td><span class="test-tag tag-client">Client Menu</span></td>
+              <td>Kiểm tra Giỏ hàng & Chốt chặn Checkout Guard</td>
+              <td>Toàn bộ giỏ hàng</td>
+              <td>Chặn gửi đơn nếu thiếu tùy chọn bắt buộc</td>
+            </tr>
+            <tr>
+              <td><strong>TC 2.1</strong></td>
+              <td><span class="test-tag tag-pos">Tablet POS</span></td>
+              <td>Nhận đơn hàng thời gian thực & Âm báo</td>
+              <td>Đơn đặt từ TC 1.5</td>
+              <td>Chuông reo, thẻ đơn nhấp nháy tức thì</td>
+            </tr>
+            <tr>
+              <td><strong>TC 2.2</strong></td>
+              <td><span class="test-tag tag-pos">Tablet POS</span></td>
+              <td>Bật/Tắt Bắt buộc trong Thư viện tùy chọn</td>
+              <td>Nhóm 辣度 (Độ cay)</td>
+              <td>Bấm chip đỏ/xám 1 chạm, lưu menu</td>
+            </tr>
+            <tr>
+              <td><strong>TC 2.3</strong></td>
+              <td><span class="test-tag tag-pos">Tablet POS</span></td>
+              <td>Đổi Bắt buộc ngay trong màn hình gán món</td>
+              <td>Món 清爽蔬食 (Chay rau củ)</td>
+              <td>Bấm chip đổi ngay, không nhảy checkbox</td>
+            </tr>
+            <tr>
+              <td><strong>TC 2.4</strong></td>
+              <td><span class="test-tag tag-pos">Tablet POS</span></td>
+              <td>Bật/Tắt Hết hàng (OOS) Món & Topping</td>
+              <td>Món 豆漿 (Đậu nành) & Topping 加起司</td>
+              <td>Khóa mờ trên Menu khách hàng tức thì</td>
+            </tr>
+            <tr>
+              <td><strong>TC 2.5</strong></td>
+              <td><span class="test-tag tag-pos">Tablet POS</span></td>
+              <td>Chuyển đổi đa ngôn ngữ (VI ↔ ZH)</td>
+              <td>Toàn bộ giao diện POS & Chip badge</td>
+              <td>Chuyển ngữ 100%, không bị undefined</td>
             </tr>
           </tbody>
         </table>
