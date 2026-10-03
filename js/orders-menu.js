@@ -3639,6 +3639,60 @@ function goToCustomizationTabFromItemModal() {
 }
 window.goToCustomizationTabFromItemModal = goToCustomizationTabFromItemModal;
 
+function updateItemModifiersToolbarCounts() {
+  const container = document.getElementById("item-modifiers-modal-body");
+  if (!container) return;
+  const checkboxes = container.querySelectorAll(".item-mod-group-checkbox");
+  let selectedCount = 0;
+  checkboxes.forEach(cb => {
+    if (cb.checked) selectedCount++;
+  });
+  const countBadge = document.getElementById("item-mod-selected-count-badge");
+  if (countBadge) {
+    const textTpl = t("appliedGroupCountBadge") || (currentLang === 'vi' ? 'Đã chọn: {count} nhóm' : '已套用：{count} 組');
+    countBadge.innerHTML = `<span class="item-modifiers-badge-dot"></span>${escapeHtml(textTpl.replace('{count}', selectedCount))}`;
+    if (selectedCount > 0) {
+      countBadge.classList.add("active-badge");
+    } else {
+      countBadge.classList.remove("active-badge");
+    }
+  }
+}
+window.updateItemModifiersToolbarCounts = updateItemModifiersToolbarCounts;
+
+function selectAllItemModifiers(select) {
+  const container = document.getElementById("item-modifiers-modal-body");
+  if (!container) return;
+  const checkboxes = container.querySelectorAll(".item-mod-group-checkbox");
+  checkboxes.forEach((cb) => {
+    const card = cb.closest(".mod-lib-group-card");
+    if (card && card.style.display !== 'none') {
+      cb.checked = select;
+      card.classList.toggle("is-selected", select);
+      card.style.borderColor = select ? '#2563eb' : '#e2e8f0';
+      card.style.background = select ? '#f8faff' : '#ffffff';
+    }
+  });
+  updateItemModifiersToolbarCounts();
+}
+window.selectAllItemModifiers = selectAllItemModifiers;
+
+function filterItemModifierCards(searchTerm) {
+  const grid = document.getElementById("item-modifiers-cards-grid");
+  if (!grid) return;
+  const cards = grid.querySelectorAll(".mod-lib-group-card");
+  const term = (searchTerm || '').toLowerCase().trim();
+  cards.forEach(card => {
+    const searchTarget = (card.getAttribute("data-group-search") || '').toLowerCase();
+    if (!term || searchTarget.includes(term)) {
+      card.style.display = "";
+    } else {
+      card.style.display = "none";
+    }
+  });
+}
+window.filterItemModifierCards = filterItemModifierCards;
+
 function toggleItemModifierCardSelection(gIdx, forcedChecked) {
   const cb = document.getElementById(`item-mod-grp-cb-${gIdx}`);
   if (!cb) return;
@@ -3649,11 +3703,11 @@ function toggleItemModifierCardSelection(gIdx, forcedChecked) {
   }
   const card = cb.closest(".mod-lib-group-card");
   if (card) {
-    card.style.borderColor = cb.checked ? '#3b82f6' : '#e2e8f0';
+    card.classList.toggle("is-selected", cb.checked);
+    card.style.borderColor = cb.checked ? '#2563eb' : '#e2e8f0';
     card.style.background = cb.checked ? '#f8faff' : '#ffffff';
-    const label = card.querySelector("label");
-    if (label) label.style.color = cb.checked ? '#1d4ed8' : '#0f172a';
   }
+  updateItemModifiersToolbarCounts();
 }
 window.toggleItemModifierCardSelection = toggleItemModifierCardSelection;
 
@@ -3664,7 +3718,7 @@ function renderItemModifiersEditor() {
 
   const currentCat = (currentMenuData && currentItemModifiersCidx !== null) ? currentMenuData[currentItemModifiersCidx] : null;
 
-  // 1. Inherited Category Modifiers Section (Read-only banner)
+  // 1. Inherited Category Modifiers Section (Read-only banner, full width)
   if (currentCat) {
     const custCat = (currentMenuData || []).find(c => isCustomizationCategory(c));
     const inheritedGroups = [];
@@ -3678,7 +3732,7 @@ function renderItemModifiersEditor() {
 
     if (inheritedGroups.length > 0) {
       const inheritedBox = document.createElement("div");
-      inheritedBox.style.cssText = "background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 12px; padding: 14px; margin-bottom: 8px;";
+      inheritedBox.style.cssText = "background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 12px; padding: 14px 16px; margin-bottom: 2px;";
 
       const groupsHtml = inheritedGroups.map(grp => {
         const optsSummary = (grp.options || []).map(o => `${escapeHtml(o.name)}${o.price ? ' (+$' + o.price + ')' : ''}`).join(', ') || (currentLang === 'vi' ? 'Chưa có lựa chọn' : '尚無選項');
@@ -3687,7 +3741,7 @@ function renderItemModifiersEditor() {
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
               <span style="font-weight: 700; font-size: 14px; color: #166534;">✦ ${escapeHtml(grp.title || grp.name)}</span>
               <span style="font-size: 11.5px; padding: 2px 6px; background: #dcfce7; color: #15803d; border-radius: 4px; font-weight: 700;">
-                ${grp.type === 'checkbox' ? (currentLang === 'vi' ? 'Chọn nhiều' : '多選') : (currentLang === 'vi' ? 'Chọn 1' : '單選')} ${grp.isRequired ? (t("badgeRequired") || '必填') : ''}
+                ${grp.type === 'checkbox' ? (t("selectionTypeMultiple") || (currentLang === 'vi' ? 'Chọn nhiều' : '多選')) : (t("selectionTypeSingle") || (currentLang === 'vi' ? 'Chọn 1' : '單選'))} ${grp.isRequired ? (t("badgeRequired") || '必填') : ''}
               </span>
             </div>
             <div style="font-size: 13px; color: #4b5563;">${optsSummary}</div>
@@ -3701,7 +3755,7 @@ function renderItemModifiersEditor() {
             <span style="font-size: 11.5px; padding: 3px 8px; background: #dcfce7; color: #15803d; border-radius: 6px; font-weight: 800;">${t("inheritedFromCategory") || "從分類繼承"}</span>
             <span style="font-weight: 700; font-size: 14px; color: #14532d;">${escapeHtml(currentCat.title)}</span>
           </div>
-          <span style="font-size: 12px; color: #15803d; font-weight: 600;">${inheritedGroups.length} ${t("menuItemUnit")}</span>
+          <span style="font-size: 12px; color: #15803d; font-weight: 600;">${inheritedGroups.length} ${t("modifierGroupUnit") || (currentLang === 'vi' ? 'nhóm' : '組')}</span>
         </div>
         <p style="margin: 4px 0 0; font-size: 12.5px; color: #166534;">
           ${t("inheritedFromCategoryNotice") || "（已自動套用至此分類所有餐點）"}
@@ -3742,7 +3796,7 @@ function renderItemModifiersEditor() {
 
   if (libraryGroups.length === 0) {
     const emptyBox = document.createElement("div");
-    emptyBox.style.cssText = "text-align: center; padding: 40px 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: #f8fafc; border-radius: 12px; border: 1.5px dashed #cbd5e1;";
+    emptyBox.style.cssText = "text-align: center; padding: 48px 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: #f8fafc; border-radius: 12px; border: 1.5px dashed #cbd5e1;";
     emptyBox.innerHTML = `
       <div style="width: 52px; height: 52px; border-radius: 50%; background: #eff6ff; display: flex; align-items: center; justify-content: center; color: #2563eb;">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
@@ -3766,12 +3820,63 @@ function renderItemModifiersEditor() {
     else selectedIds.add(`mg_${rawId}`);
   });
 
-  const headerNotice = document.createElement("div");
-  headerNotice.style.cssText = "font-size: 13px; color: #64748b; font-weight: 600; margin-bottom: 2px;";
-  headerNotice.innerText = currentLang === 'vi' 
-    ? `Chọn các nhóm tùy chọn áp dụng cho món (${libraryGroups.length} nhóm có sẵn):` 
-    : `請勾選要套用至此餐點的客製化群組（共 ${libraryGroups.length} 組可用）：`;
-  container.appendChild(headerNotice);
+  let initialSelectedCount = 0;
+  libraryGroups.forEach(grp => {
+    const grpId = String(grp.id || '');
+    if (selectedIds.has(grpId) || selectedIds.has(`mg_${grpId}`) || (grpId.startsWith('mg_') && selectedIds.has(grpId.slice(3)))) {
+      initialSelectedCount++;
+    }
+  });
+
+  // 3. Toolbar / Status Summary Bar
+  const toolbar = document.createElement("div");
+  toolbar.className = "item-modifiers-toolbar";
+  const libTotalText = (t("libraryGroupAvailableBadge") || (currentLang === 'vi' ? "Thư viện tùy chọn ({total} nhóm)" : "客製化庫（共 {total} 組）")).replace("{total}", libraryGroups.length);
+  const appliedText = (t("appliedGroupCountBadge") || (currentLang === 'vi' ? "Đã chọn: {count} nhóm" : "已套用：{count} 組")).replace("{count}", initialSelectedCount);
+
+  toolbar.innerHTML = `
+    <div class="item-modifiers-toolbar-info">
+      <span class="item-modifiers-badge">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+          <polyline points="2 17 12 22 22 17"></polyline>
+          <polyline points="2 12 12 17 22 12"></polyline>
+        </svg>
+        ${escapeHtml(libTotalText)}
+      </span>
+      <span class="item-modifiers-badge ${initialSelectedCount > 0 ? 'active-badge' : ''}" id="item-mod-selected-count-badge">
+        <span class="item-modifiers-badge-dot"></span>
+        ${escapeHtml(appliedText)}
+      </span>
+    </div>
+    <div class="item-modifiers-toolbar-actions">
+      ${libraryGroups.length >= 4 ? `
+        <div class="item-modifiers-search-box">
+          <span class="item-modifiers-search-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </span>
+          <input type="text" class="item-modifiers-search-input" placeholder="${escapeHtml(t('searchModifierGroupsPlaceholder') || (currentLang === 'vi' ? 'Tìm kiếm nhóm tùy chọn...' : '搜尋客製化群組...'))}" oninput="filterItemModifierCards(this.value)">
+        </div>
+      ` : ''}
+      <button type="button" class="item-modifiers-quick-btn" onclick="selectAllItemModifiers(true)" title="${escapeHtml(t('btnSelectAll') || 'Chọn tất cả')}">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        ${escapeHtml(t("btnSelectAll") || (currentLang === 'vi' ? 'Chọn tất cả' : '全選'))}
+      </button>
+      <button type="button" class="item-modifiers-quick-btn" onclick="selectAllItemModifiers(false)" title="${escapeHtml(t('btnUnselectAll') || 'Bỏ chọn tất cả')}">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        ${escapeHtml(t("btnUnselectAll") || (currentLang === 'vi' ? 'Bỏ chọn' : '取消全選'))}
+      </button>
+    </div>
+  `;
+  container.appendChild(toolbar);
+
+  // 4. Grid Container for Modifier Group Cards
+  const grid = document.createElement("div");
+  grid.className = "item-modifiers-grid";
+  grid.id = "item-modifiers-cards-grid";
 
   libraryGroups.forEach((grp, gIdx) => {
     const grpId = String(grp.id || '');
@@ -3779,39 +3884,75 @@ function renderItemModifiersEditor() {
     const isSingle = (grp.type !== 'checkbox' && grp.selectionType !== 'multiple');
 
     const card = document.createElement("div");
-    card.className = "mod-lib-group-card";
-    card.style.cssText = `border: 1.5px solid ${isSelected ? '#3b82f6' : '#e2e8f0'}; background: ${isSelected ? '#f8faff' : '#ffffff'}; border-radius: 12px; padding: 14px 16px; cursor: pointer; transition: all 0.15s ease; user-select: none;`;
+    card.className = `mod-lib-group-card ${isSelected ? 'is-selected' : ''}`;
+    card.setAttribute("data-group-search", `${grp.title || grp.name || ''} ${(grp.options || []).map(o => o.name).join(' ')}`);
+    card.style.borderColor = isSelected ? '#2563eb' : '#e2e8f0';
+    card.style.background = isSelected ? '#f8faff' : '#ffffff';
+    card.onclick = (e) => {
+      if (e.target && e.target.type === 'checkbox') return;
+      toggleItemModifierCardSelection(gIdx);
+    };
 
-    const optListText = (grp.options || []).map(o => {
-      const priceText = o.price > 0 ? ` (+$${o.price})` : '';
-      return `${escapeHtml(o.name)}${priceText}`;
-    }).join(', ') || (currentLang === 'vi' ? 'Chưa có lựa chọn' : '無選項');
+    // Render options pills
+    const opts = grp.options || [];
+    const maxPreview = 8;
+    const previewOpts = opts.slice(0, maxPreview);
+    const remainingCount = opts.length - maxPreview;
+
+    let optionsHtml = '';
+    if (opts.length === 0) {
+      optionsHtml = `<div class="mod-options-empty-text">${escapeHtml(t("noOptionsInGroup") || (currentLang === 'vi' ? 'Chưa có lựa chọn' : '尚未建立選項'))}</div>`;
+    } else {
+      const pillsHtml = previewOpts.map(o => {
+        const price = Number(o.price || o.surcharge || 0);
+        const priceTag = price > 0 ? `<span class="mod-option-pill-price">+${price}</span>` : '';
+        return `
+          <span class="mod-option-pill">
+            <span class="mod-option-name">${escapeHtml(o.name || '')}</span>
+            ${priceTag}
+          </span>
+        `;
+      }).join('');
+
+      const morePill = remainingCount > 0 
+        ? `<span class="mod-option-pill mod-option-pill-more">${(t("moreOptionsCount") || (currentLang === 'vi' ? '+{count} lựa chọn khác' : '+{count} 項選項')).replace('{count}', remainingCount)}</span>` 
+        : '';
+
+      optionsHtml = `<div class="mod-options-pills-wrap">${pillsHtml}${morePill}</div>`;
+    }
+
+    const optUnit = t("modifierOptionCountUnit") || (currentLang === 'vi' ? 'lựa chọn' : '項選項');
 
     card.innerHTML = `
-      <div style="display: flex; align-items: flex-start; gap: 12px;">
-        <input type="checkbox" class="item-mod-group-checkbox" id="item-mod-grp-cb-${gIdx}" data-group-id="${escapeHtml(grpId)}" ${isSelected ? 'checked' : ''} style="width: 24px; height: 24px; accent-color: #2563eb; cursor: pointer; margin-top: 2px; flex-shrink: 0;" onclick="event.stopPropagation(); toggleItemModifierCardSelection(${gIdx}, this.checked)">
-        <div style="flex: 1;" onclick="toggleItemModifierCardSelection(${gIdx})">
-          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
-            <label for="item-mod-grp-cb-${gIdx}" style="font-weight: 800; font-size: 15px; color: ${isSelected ? '#1d4ed8' : '#0f172a'}; cursor: pointer; margin: 0;">
+      <div class="mod-lib-group-header">
+        <div class="mod-lib-checkbox-wrapper">
+          <input type="checkbox" class="item-mod-group-checkbox" id="item-mod-grp-cb-${gIdx}" data-group-id="${escapeHtml(grpId)}" ${isSelected ? 'checked' : ''} style="width: 22px; height: 22px; accent-color: #2563eb; cursor: pointer; border-radius: 6px;" onclick="event.stopPropagation(); toggleItemModifierCardSelection(${gIdx}, this.checked)">
+        </div>
+        <div class="mod-lib-group-title-col">
+          <div class="mod-lib-group-title-top">
+            <label for="item-mod-grp-cb-${gIdx}" class="mod-lib-group-name" style="cursor: pointer;">
               ${escapeHtml(grp.title || grp.name)}
             </label>
-            <div style="display: flex; gap: 6px; align-items: center;">
-              <span style="font-size: 11.5px; padding: 2px 7px; background: #ecfdf5; color: #047857; border-radius: 6px; font-weight: 700; border: 1px solid #a7f3d0;">
-                ${isSingle ? (currentLang === 'vi' ? 'Chọn 1' : '單選') : (currentLang === 'vi' ? 'Chọn nhiều' : '多選')}
+            <div class="mod-lib-group-badges">
+              <span class="mod-badge-type ${isSingle ? 'mod-badge-single' : 'mod-badge-multiple'}">
+                ${isSingle ? (t("selectionTypeSingle") || (currentLang === 'vi' ? 'Chọn 1' : '單選')) : (t("selectionTypeMultiple") || (currentLang === 'vi' ? 'Chọn nhiều' : '多選'))}
               </span>
-              ${grp.isRequired ? `<span style="font-size: 11.5px; padding: 2px 7px; background: #fee2e2; color: #b91c1c; border-radius: 6px; font-weight: 700; border: 1px solid #fca5a5;">${t("badgeRequired") || '必填'}</span>` : ''}
-              <span style="font-size: 12px; color: #64748b; font-weight: 600;">${(grp.options || []).length} ${t("menuItemUnit")}</span>
+              ${grp.isRequired ? `<span class="mod-badge-required">${t("badgeRequired") || '必填'}</span>` : ''}
+              <span class="mod-badge-count">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align: -1px; margin-right: 2px;"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                ${opts.length} ${optUnit}
+              </span>
             </div>
-          </div>
-          <div style="font-size: 13px; color: #475569; margin-top: 6px; line-height: 1.4;">
-            ${optListText}
           </div>
         </div>
       </div>
+      ${optionsHtml}
     `;
 
-    container.appendChild(card);
+    grid.appendChild(card);
   });
+
+  container.appendChild(grid);
 }
 
 function addItemModifierGroup() {}
