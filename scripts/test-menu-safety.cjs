@@ -602,3 +602,48 @@ test('T5: an unassigned canonical group remains in the library after an unrelate
   assert.equal(f.db.prepare('SELECT count(*) n FROM modifier_groups WHERE tenant_id=? AND id=?').get('a', 'mg_a_unused').n, 1);
   assert.equal(f.db.prepare('SELECT count(*) n FROM modifier_options WHERE tenant_id=? AND group_id=?').get('a', 'mg_a_unused').n, 1);
 });
+
+test('T5: cross-group duplicate option names are disambiguated and save without CONFLICTING_MODIFIER_OPTION_CONFIG', async () => {
+  const f = fixture();
+  const e = editor();
+  e.context.fetch = async (url) => {
+    if (url.includes('modifier-library')) {
+      return { ok: true, json: async () => ({ complete: true, groups: [] }) };
+    }
+    return {
+      ok: true,
+      json: async () => ({
+        menuComplete: true,
+        catalog: [{ id: 'a_food', slug: 'food', name: 'Food', items: [{ id: 'a_one', name: 'One', price: 10 }] }],
+        modifiers: [],
+        customizations: [
+          { id: 'custom_a_onion', key: 'onion-pref', title: '洋蔥', type: 'radio', options: [{ name: '不要', price: 0 }, { name: '多', price: 20 }] },
+          { id: 'custom_a_garlic', key: 'garlic-pref', title: '蒜泥', type: 'radio', options: [{ name: '不要', price: 0 }, { name: '多', price: 0 }] }
+        ]
+      })
+    };
+  };
+
+  await e.run('loadMenuData()');
+  e.run('renderOrderCustomizationEditor=()=>{};');
+  // User adds a new option to garlic group
+  e.run('addCustomizationOption(0, 1)');
+
+  const payload = JSON.parse(JSON.stringify(e.run('serializeMenuData(currentMenuData)')));
+  // Verify backend accepts it without throwing CONFLICTING_MODIFIER_OPTION_CONFIG
+  await f.save(payload);
+
+  const onionOpts = f.db.prepare('SELECT name, price FROM modifier_options WHERE tenant_id=? AND group_id=? ORDER BY sort_order').all('a', 'custom_a_onion');
+  const garlicOpts = f.db.prepare('SELECT name, price FROM modifier_options WHERE tenant_id=? AND group_id=? ORDER BY sort_order').all('a', 'custom_a_garlic');
+
+  assert.equal(onionOpts.length, 2);
+  assert.equal(onionOpts[0].name, '不要');
+  assert.equal(onionOpts[1].name, '多');
+  assert.equal(onionOpts[1].price, 20);
+
+  assert.equal(garlicOpts.length, 3);
+  assert.equal(garlicOpts[0].name, '不要');
+  assert.equal(garlicOpts[1].name, '多');
+  assert.equal(garlicOpts[1].price, 0);
+});
+
