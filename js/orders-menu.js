@@ -4179,8 +4179,12 @@ function openCreateItemModal(cIdx) {
   const modal = document.getElementById("itemDetailModal");
   const titleEl = document.getElementById("item-detail-modal-title");
   if (titleEl) {
-    titleEl.innerText = `${t("itemCreateTitle") || (currentLang === 'vi' ? "Thêm món mới" : "新增餐點")} (${cat.title})`;
+    titleEl.innerText = `${t("itemCreateTitle") || (currentLang === 'vi' ? "Thêm món mới" : "新增餐點")}`;
     titleEl.setAttribute("data-custom-title", "1");
+  }
+  const catNameEl = document.getElementById("item-detail-topbar-cat-name");
+  if (catNameEl && cat) {
+    catNameEl.innerText = cat.title || cat.name || cat.shortName || "";
   }
 
   // Name & Price inputs
@@ -4280,6 +4284,10 @@ function openItemDetailModal(cIdx, iIdx) {
       titleEl.appendChild(comboBadge);
     }
     titleEl.setAttribute("data-custom-title", "1");
+  }
+  const catNameEl = document.getElementById("item-detail-topbar-cat-name");
+  if (catNameEl && cat) {
+    catNameEl.innerText = cat.title || cat.name || cat.shortName || "";
   }
 
   // Name & Price inputs

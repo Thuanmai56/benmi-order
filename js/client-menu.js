@@ -407,8 +407,9 @@ function createDynamicItemCard(catSlug, item) {
     const cartObj = window.cart || cart || {};
     const qty = cartObj[`${catSlug}_${item.name}`] || 0;
     const footerHTML = getDynamicItemFooterHTML(catSlug, item.name, item.price, isOos);
-    const catModifiers = typeof getCategoryModifiers === 'function' ? getCategoryModifiers(catSlug) : [];
-    const hasModifiers = catModifiers.length > 0;
+    const getItemModsFn = typeof getItemModifiers === 'function' ? getItemModifiers : (window.getItemModifiers || (typeof getCategoryModifiers === 'function' ? getCategoryModifiers : (window.getCategoryModifiers || (() => []))));
+    const itemModifiers = getItemModsFn(catSlug, item.name);
+    const hasModifiers = Array.isArray(itemModifiers) && itemModifiers.length > 0;
     const hasBundleRule = Boolean(item.bundleRule);
     const bundleGroupLabel = (item.bundleRule?.groups?.[0]?.name || '').replace(/^請選擇\s*(\d+\s*樣)?/g, '').trim();
     const hasCombinedModifiers = hasBundleRule && hasModifiers;
@@ -486,20 +487,28 @@ function updateDynamicStockAndPrices() {
                 footer.innerHTML = getDynamicItemFooterHTML(cat.slug, item.name, item.price, item.isOutOfStock);
             }
 
+            const getItemModsFn = typeof getItemModifiers === 'function' ? getItemModifiers : (window.getItemModifiers || (typeof getCategoryModifiers === 'function' ? getCategoryModifiers : (window.getCategoryModifiers || (() => []))));
+            const itemModifiers = getItemModsFn(cat.slug, item.name);
+            const hasModifiers = Array.isArray(itemModifiers) && itemModifiers.length > 0;
+            const hasBundleRule = Boolean(item.bundleRule);
+
             const custBtn = card.querySelector('.customize-btn');
             if (custBtn) {
                 const qty = cartObj[`${cat.slug}_${item.name}`] || 0;
-                const catModifiers = typeof getCategoryModifiers === 'function' ? getCategoryModifiers(cat.slug) : [];
-                const hasModifiers = catModifiers.length > 0;
-                const hasBundleRule = Boolean(item.bundleRule);
                 custBtn.style.display = (!item.isOutOfStock && qty > 0 && hasModifiers && !hasBundleRule) ? 'flex' : 'none';
             }
 
             const bundleEditBtn = card.querySelector('.bundle-edit-btn');
             if (bundleEditBtn) {
                 const qty = cartObj[`${cat.slug}_${item.name}`] || 0;
-                const hasBundleRule = Boolean(item.bundleRule);
                 bundleEditBtn.style.display = (!item.isOutOfStock && qty > 0 && hasBundleRule) ? 'flex' : 'none';
+                const bundleGroupLabel = (item.bundleRule?.groups?.[0]?.name || '').replace(/^請選擇\s*(\d+\s*樣)?/g, '').trim();
+                const hasCombinedModifiers = hasBundleRule && hasModifiers;
+                const bundleBtnText = hasCombinedModifiers 
+                    ? (bundleGroupLabel ? `調整${bundleGroupLabel} / 加料` : '調整搭配 / 加料')
+                    : (bundleGroupLabel ? `調整${bundleGroupLabel}` : '調整套餐配菜');
+                const span = bundleEditBtn.querySelector('span');
+                if (span) span.textContent = bundleBtnText;
             }
         });
     });
