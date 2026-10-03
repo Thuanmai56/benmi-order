@@ -2090,7 +2090,7 @@
         </div>
       </div>
       <div class="modal-actions" style="margin-top: 14px; border-top: 1px solid #f1f5f9; padding-top: 12px; display: flex; justify-content: flex-end;">
-        <button type="button" class="btn btn-ghost" onclick="closeCreationTypeModal()" style="min-height: 48px; padding: 0 20px;">關閉</button>
+        <button type="button" class="btn btn-ghost" id="btn-creation-type-close" onclick="closeCreationTypeModal()" style="min-height: 48px; padding: 0 20px;">關閉</button>
       </div>
     </div>
   </div>
@@ -2110,7 +2110,7 @@
       </div>
       <div class="modal-actions" style="margin-top: 14px; border-top: 1px solid #e2e8f0; padding-top: 12px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-          <button type="button" class="btn btn-ghost" onclick="addItemModifierGroup()" style="min-height: 48px; padding: 0 16px; font-weight: 700; color: #2563eb; background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 10px;">
+          <button type="button" class="btn btn-ghost" id="btn-add-item-mod-group" onclick="addItemModifierGroup()" style="min-height: 48px; padding: 0 16px; font-weight: 700; color: #2563eb; background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 10px;">
             + 新增選項群組
           </button>
           <button type="button" class="btn btn-ghost" onclick="openModifierLibraryModal()" id="btn-open-mod-library" style="min-height: 48px; padding: 0 16px; font-weight: 700; color: #047857; background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 10px;">
@@ -2118,8 +2118,8 @@
           </button>
         </div>
         <div style="display: flex; gap: 8px;">
-          <button type="button" class="btn btn-ghost" onclick="closeItemModifiersModal()" style="min-height: 48px; padding: 0 20px;">取消</button>
-          <button type="button" class="btn btn-primary" onclick="saveItemModifiersModal()" style="min-height: 48px; padding: 0 24px; font-weight: 800;">完成設定</button>
+          <button type="button" class="btn btn-ghost" id="btn-item-mod-cancel" onclick="closeItemModifiersModal()" style="min-height: 48px; padding: 0 20px;">取消</button>
+          <button type="button" class="btn btn-primary" id="btn-item-mod-save" onclick="saveItemModifiersModal()" style="min-height: 48px; padding: 0 24px; font-weight: 800;">完成設定</button>
         </div>
       </div>
     </div>
@@ -2139,7 +2139,7 @@
         <!-- Dynamic Library Options rendered by JS -->
       </div>
       <div class="modal-actions" style="margin-top: 14px; border-top: 1px solid #e2e8f0; padding-top: 12px; display: flex; justify-content: flex-end; gap: 10px; align-items: center; flex-shrink: 0;">
-        <button type="button" class="btn btn-ghost" onclick="closeModifierLibraryModal()" style="min-height: 48px; padding: 0 20px;">取消</button>
+        <button type="button" class="btn btn-ghost" id="btn-mod-library-cancel" onclick="closeModifierLibraryModal()" style="min-height: 48px; padding: 0 20px;">取消</button>
         <button type="button" class="btn btn-primary" onclick="importSelectedLibraryModifiers()" style="min-height: 48px; padding: 0 24px; font-weight: 800;" id="btn-import-library-mod">加入此餐點</button>
       </div>
     </div>
@@ -2533,7 +2533,7 @@
   </section>
 
   <!-- Benmi POS Modular Architecture Scripts -->
-  <script src="js/orders-i18n.js?v=20260928_option_sidebar_scopes_v1"></script>
+  <script src="js/orders-i18n.js?v=20261003_menu_i18n_v1"></script>
   <script src="js/orders-core.js?v=20260928_sidebar_controls_v1"></script>
   <script src="js/orders-audio.js?v=20260927_rebase_v1"></script>
   <script src="js/printer-service.js?v=20260927_rebase_v1"></script>
@@ -2542,7 +2542,7 @@
   <script src="js/orders-history.js?v=20260927_rebase_v1"></script>
   <script src="js/orders-reports.js?v=20260927_rebase_v1"></script>
   <script src="js/orders-settings.js?v=20260927_rebase_v1"></script>
-  <script src="js/orders-menu.js?v=20260929_unified_modifier_roundtrip_v2"></script>
+  <script src="js/orders-menu.js?v=20261003_menu_i18n_v1"></script>
   <script src="js/orders-bundle-wizard.js?v=20260927_no_confirm_alert_v1"></script>
 
   <!-- POS Bootstrap & Initialization -->
