@@ -693,6 +693,8 @@ function switchTab(tab) {
   if (viewSettings) viewSettings.style.display = tab === "settings" ? "block" : "none";
   if (viewMenu) viewMenu.style.display = tab === "menu" ? "block" : "none";
 
+  if (typeof syncLiveMobileView === "function") syncLiveMobileView();
+
   if (tab === "live") {
     renderAll();
   } else if (tab === "history") {
@@ -863,6 +865,10 @@ function renderAll() {
   if (cLeft) cLeft.innerText = String(leftOrders.length);
   const cRight = document.getElementById("count-right");
   if (cRight) cRight.innerText = String(rightOrders.length);
+  const mobileLeft = document.getElementById("live-mobile-count-pending");
+  if (mobileLeft) mobileLeft.innerText = String(leftOrders.length);
+  const mobileRight = document.getElementById("live-mobile-count-ready");
+  if (mobileRight) mobileRight.innerText = String(rightOrders.length);
 
   const sidebarLiveBadge = document.getElementById("sidebar-live-count");
   if (sidebarLiveBadge) {
@@ -880,8 +886,11 @@ function renderAll() {
   }
 
   if (activeTab === "live") {
+    const preserveMobileScroll = typeof isLiveMobilePortrait === "function" && isLiveMobilePortrait();
+    if (preserveMobileScroll) captureLiveScrollPositions();
     if (typeof renderListLeft === "function") renderListLeft(leftOrders);
     if (typeof renderListRight === "function") renderListRight(rightOrders);
+    if (preserveMobileScroll) restoreLiveScrollPositions();
   } else if (activeTab === "history") {
     if (typeof lastHistoryOrders !== "undefined" && Array.isArray(lastHistoryOrders) && lastHistoryOrders.length > 0) {
       const existingKeys = new Set(lastHistoryOrders.map(o => o.key));

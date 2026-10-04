@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title id="pos-page-title">Blab POS</title>
   <base href="/" />
-  <link rel="stylesheet" href="css/orders.css?v=20260926_item_note_v1" />
+  <link rel="stylesheet" href="css/orders.css?v=20261004_live_mobile_v1" />
     <script>
       (function () {
         document.documentElement.style.setProperty('--primary', '#00b900');
@@ -300,8 +300,19 @@
         </div>
       </div>
 
+      <div class="live-mobile-tabs" id="live-mobile-tabs" role="tablist" aria-label="訂單狀態" hidden>
+        <button type="button" class="live-mobile-tab active" id="live-mobile-tab-pending" role="tab" aria-controls="live-panel-pending" aria-selected="true" tabindex="0" onclick="setLiveMobileStation('pending')">
+          <span id="i18n-live-mobile-pending">待處理</span>
+          <span class="live-mobile-count" id="live-mobile-count-pending">0</span>
+        </button>
+        <button type="button" class="live-mobile-tab" id="live-mobile-tab-ready" role="tab" aria-controls="live-panel-ready" aria-selected="false" tabindex="-1" onclick="setLiveMobileStation('ready')">
+          <span id="i18n-live-mobile-ready">待取餐</span>
+          <span class="live-mobile-count" id="live-mobile-count-ready">0</span>
+        </button>
+      </div>
+
       <div class="split live-split">
-        <div class="live-panel">
+        <div class="live-panel" id="live-panel-pending">
           <div class="live-panel-header">
             <div class="panel-header-title-group">
               <span class="panel-title" id="i18n-left-title">待處理</span>
@@ -313,7 +324,7 @@
           </div>
         </div>
 
-        <div class="live-panel">
+        <div class="live-panel" id="live-panel-ready">
           <div class="live-panel-header">
             <div class="panel-header-title-group">
               <span class="panel-title" id="i18n-right-title">待取餐</span>
@@ -2058,11 +2069,11 @@
   </div>
 
   <!-- Benmi POS Modular Architecture Scripts -->
-  <script src="js/orders-i18n.js?v=20260923_menu_p0"></script>
-  <script src="js/orders-core.js?v=20260919_sold_out_v7"></script>
+  <script src="js/orders-i18n.js?v=20261004_live_mobile_v1"></script>
+  <script src="js/orders-core.js?v=20261004_live_mobile_v1"></script>
   <script src="js/orders-audio.js?v=20260919_sold_out_v7"></script>
   <script src="js/printer-service.js?v=20260926_item_note_v1"></script>
-  <script src="js/orders-live.js?v=20260926_item_note_v1"></script>
+  <script src="js/orders-live.js?v=20261004_live_mobile_v1"></script>
   <script src="js/orders-modals.js?v=20260924_return_context_v1"></script>
   <script src="js/orders-history.js?v=20260919_sold_out_v7"></script>
   <script src="js/orders-reports.js?v=20260919_sold_out_v7"></script>
@@ -2077,6 +2088,9 @@
       }
       if (typeof updateSidebarActive === "function") {
         updateSidebarActive(typeof activeTab !== "undefined" ? activeTab : "live");
+      }
+      if (typeof initLiveMobileView === "function") {
+        initLiveMobileView();
       }
       applyLanguageToDOM();
       if (typeof loadPOSPrinterSettings === "function") {

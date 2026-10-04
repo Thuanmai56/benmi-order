@@ -53,6 +53,7 @@ const I18N = {
     panelLeftTitle: "待處理",
     panelLeftSub: "近 → 遠 (依取餐時間)",
     panelRightTitle: "待取餐",
+    liveMobileTabsLabel: "訂單狀態",
     panelRightSub: "製作中與等待取餐",
     loading: "載入中...",
     empty: "無訂單",
@@ -647,6 +648,7 @@ const I18N = {
     panelLeftTitle: "Chờ xử lý",
     panelLeftSub: "Gần → xa (theo giờ lấy)",
     panelRightTitle: "Chờ lấy món",
+    liveMobileTabsLabel: "Trạng thái đơn hàng",
     panelRightSub: "Đang làm & Chờ khách lấy",
     loading: "Đang tải...",
     empty: "Chưa có đơn",
@@ -1350,6 +1352,13 @@ function applyLanguageToDOM() {
   if (rightTitle) rightTitle.innerText = dict.panelRightTitle;
   const rightSub = document.getElementById("i18n-right-sub");
   if (rightSub) rightSub.innerText = dict.panelRightSub;
+
+  const mobilePendingTitle = document.getElementById("i18n-live-mobile-pending");
+  if (mobilePendingTitle) mobilePendingTitle.innerText = dict.panelLeftTitle;
+  const mobileReadyTitle = document.getElementById("i18n-live-mobile-ready");
+  if (mobileReadyTitle) mobileReadyTitle.innerText = dict.panelRightTitle;
+  const mobileLiveTabs = document.getElementById("live-mobile-tabs");
+  if (mobileLiveTabs) mobileLiveTabs.setAttribute("aria-label", dict.liveMobileTabsLabel);
 
   const fAll = document.getElementById("i18n-filter-all");
   if (fAll) fAll.innerText = dict.filterAll || "全部";

@@ -4,6 +4,131 @@
 
 let currentDiningFilter = "all"; // 'all' | 'takeaway' | 'dine_in'
 
+// Separate from the main POS tab: both queues keep receiving live updates.
+const LIVE_MOBILE_QUERY = "(max-width: 600px) and (orientation: portrait)";
+const LIVE_MOBILE_LIST_IDS = { pending: "list-left", ready: "list-right" };
+const liveMobileScrollPositions = { pending: 0, ready: 0 };
+let liveMobileStation = "pending";
+let liveMobileMedia = null;
+let liveMobileMode = false;
+
+function isLiveMobilePortrait() {
+  return !!(liveMobileMedia && liveMobileMedia.matches);
+}
+
+function captureLiveScrollPositions() {
+  if (!liveMobileMode || !isLiveMobilePortrait()) return;
+  Object.entries(LIVE_MOBILE_LIST_IDS).forEach(([station, id]) => {
+    const list = document.getElementById(id);
+    // Hidden queues report zero; their saved position must survive re-renders.
+    if (list && list.clientHeight > 0) liveMobileScrollPositions[station] = list.scrollTop;
+  });
+}
+
+function restoreLiveScrollPositions() {
+  if (!isLiveMobilePortrait()) return;
+  Object.entries(LIVE_MOBILE_LIST_IDS).forEach(([station, id]) => {
+    const list = document.getElementById(id);
+    if (list && list.clientHeight > 0) list.scrollTop = liveMobileScrollPositions[station];
+  });
+}
+
+function resetLiveScrollPositions() {
+  Object.entries(LIVE_MOBILE_LIST_IDS).forEach(([station, id]) => {
+    liveMobileScrollPositions[station] = 0;
+    const list = document.getElementById(id);
+    if (list) list.scrollTop = 0;
+  });
+}
+
+function syncLiveMobileView() {
+  const mobile = isLiveMobilePortrait();
+  const view = document.getElementById("view-live");
+  const tabs = document.getElementById("live-mobile-tabs");
+  if (!view || !tabs) return;
+
+  // The main switchTab uses inline display:block. Override it only in mobile Live.
+  view.classList.toggle("live-mobile-visible", mobile && activeTab === "live");
+  const focusWasOnTabs = tabs.contains(document.activeElement);
+  tabs.hidden = !mobile;
+
+  Object.keys(LIVE_MOBILE_LIST_IDS).forEach(station => {
+    const selected = station === liveMobileStation;
+    const tab = document.getElementById(`live-mobile-tab-${station}`);
+    const panel = document.getElementById(`live-panel-${station}`);
+    if (!tab || !panel) return;
+    const focusWillBeHidden = mobile && !selected && panel.contains(document.activeElement);
+    tab.classList.toggle("active", selected);
+    tab.setAttribute("aria-selected", String(selected));
+    tab.tabIndex = selected ? 0 : -1;
+    panel.hidden = mobile && !selected;
+    panel.inert = mobile && !selected;
+    if (mobile) {
+      panel.setAttribute("role", "tabpanel");
+      panel.setAttribute("aria-labelledby", tab.id);
+      panel.tabIndex = 0;
+    } else {
+      panel.removeAttribute("role");
+      panel.removeAttribute("aria-labelledby");
+      panel.removeAttribute("tabindex");
+    }
+    if (focusWillBeHidden) document.getElementById(`live-mobile-tab-${liveMobileStation}`).focus({ preventScroll: true });
+    if (!mobile && focusWasOnTabs && selected && activeTab === "live") {
+      panel.tabIndex = -1;
+      panel.focus({ preventScroll: true });
+      panel.removeAttribute("tabindex");
+    }
+  });
+  restoreLiveScrollPositions();
+  liveMobileMode = mobile;
+}
+
+function setLiveMobileStation(station) {
+  if (!isLiveMobilePortrait() || !Object.prototype.hasOwnProperty.call(LIVE_MOBILE_LIST_IDS, station)) return;
+  captureLiveScrollPositions();
+  liveMobileStation = station;
+  syncLiveMobileView();
+}
+
+function initLiveMobileView() {
+  if (liveMobileMedia || typeof window.matchMedia !== "function") return;
+  liveMobileMedia = window.matchMedia(LIVE_MOBILE_QUERY);
+  if (typeof liveMobileMedia.addEventListener === "function") {
+    liveMobileMedia.addEventListener("change", syncLiveMobileView);
+  } else {
+    liveMobileMedia.addListener(syncLiveMobileView);
+  }
+
+  Object.entries(LIVE_MOBILE_LIST_IDS).forEach(([station, id]) => {
+    const list = document.getElementById(id);
+    if (list) list.addEventListener("scroll", () => {
+      // Ignore resize-generated scroll events while the responsive mode changes.
+      if (liveMobileMode && isLiveMobilePortrait() && station === liveMobileStation && list.clientHeight > 0) {
+        liveMobileScrollPositions[station] = list.scrollTop;
+      }
+    }, { passive: true });
+  });
+
+  const tabs = document.getElementById("live-mobile-tabs");
+  if (tabs) tabs.addEventListener("keydown", event => {
+    const stations = Object.keys(LIVE_MOBILE_LIST_IDS);
+    let station;
+    if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+      station = stations[1 - stations.indexOf(liveMobileStation)];
+    } else if (event.key === "Home") {
+      station = stations[0];
+    } else if (event.key === "End") {
+      station = stations[stations.length - 1];
+    } else {
+      return;
+    }
+    event.preventDefault();
+    setLiveMobileStation(station);
+    document.getElementById(`live-mobile-tab-${station}`).focus({ preventScroll: true });
+  });
+  syncLiveMobileView();
+}
+
 function isOrderDineIn(order) {
   if (!order) return false;
   return order.diningOption === "dine_in" ||
@@ -42,6 +167,7 @@ function formatLiveOrderTimeDisplay(order) {
 }
 
 function setDiningFilter(filter) {
+  if (filter !== currentDiningFilter && isLiveMobilePortrait()) resetLiveScrollPositions();
   currentDiningFilter = filter;
   const filterAllBtn = document.getElementById("filter-btn-all");
   const filterTakeawayBtn = document.getElementById("filter-btn-takeaway");
