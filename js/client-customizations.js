@@ -8,6 +8,74 @@ var customizeData = window.customizeData;
 var comboDrinkData = window.comboDrinkData;
 var currentPopup = window.currentPopup;
 
+// --- UNIQUE MODIFIER OPTION IDENTITY & SCOPING HELPERS ---
+function getUniqueModifierOptionId(mod, opt, optIdx) {
+    if (!opt) return '';
+    if (opt.id) return String(opt.id);
+    const groupKey = (mod && (mod.id || mod.slug)) ? (mod.id || mod.slug) : 'grp';
+    const optName = opt.name || 'opt';
+    const idx = (typeof optIdx === 'number' && optIdx >= 0) ? optIdx : 0;
+    return `${groupKey}:${optName}:${idx}`;
+}
+window.getUniqueModifierOptionId = getUniqueModifierOptionId;
+
+function isOptionSelectedInSingle(draft, mod, opt, optIdx) {
+    if (!draft || !draft.single) return false;
+    const optId = getUniqueModifierOptionId(mod, opt, optIdx);
+    const selVal = draft.single[mod.slug] || draft.single[mod.id];
+    if (!selVal) return false;
+
+    // 1. Direct ID match
+    if (selVal === optId || (opt.id && selVal === opt.id)) return true;
+
+    // 2. Check draft.selectedDetails
+    if (draft.selectedDetails && draft.selectedDetails[optId]) return true;
+
+    // 3. Fallback for legacy state where selVal is plain name:
+    // Match only the first option in mod.options with this name to avoid selecting multiple siblings
+    if (selVal === opt.name) {
+        const firstMatchingIdx = (mod.options || []).findIndex(o => o.name === selVal);
+        return firstMatchingIdx === optIdx;
+    }
+    return false;
+}
+window.isOptionSelectedInSingle = isOptionSelectedInSingle;
+
+function isOptionSelectedInMultiple(draft, mod, opt, optIdx) {
+    if (!draft || !draft.multiple) return false;
+    const optId = getUniqueModifierOptionId(mod, opt, optIdx);
+    const modKey = mod.slug || mod.id;
+
+    // 1. Scoped group map: draft.multiple[modKey][optId]
+    if (draft.multiple[modKey] && typeof draft.multiple[modKey] === 'object' && !Array.isArray(draft.multiple[modKey])) {
+        if (draft.multiple[modKey][optId] || (opt.id && draft.multiple[modKey][opt.id])) return true;
+    }
+
+    // 2. Array in group: draft.multiple[modKey] = [optId, ...]
+    if (Array.isArray(draft.multiple[modKey])) {
+        if (draft.multiple[modKey].includes(optId) || (opt.id && draft.multiple[modKey].includes(opt.id))) return true;
+        if (draft.multiple[modKey].includes(opt.name)) {
+            const firstIdx = (mod.options || []).findIndex(o => o.name === opt.name);
+            if (firstIdx === optIdx) return true;
+        }
+    }
+
+    // 3. Direct optId in draft.multiple
+    if (draft.multiple[optId] || (opt.id && draft.multiple[opt.id])) return true;
+
+    // 4. Check selectedDetails
+    if (draft.selectedDetails && draft.selectedDetails[optId]) return true;
+
+    // 5. Legacy flat map fallback: draft.multiple[opt.name] === true
+    if (draft.multiple[opt.name] && !draft.selectedDetails) {
+        const firstIdx = (mod.options || []).findIndex(o => o.name === opt.name);
+        if (firstIdx === optIdx) return true;
+    }
+
+    return false;
+}
+window.isOptionSelectedInMultiple = isOptionSelectedInMultiple;
+
 // --- MODIFIER SELECTION VALIDATOR (B2 Standard) ---
 function validateModifierDraft(modifiers, draft) {
     if (!Array.isArray(modifiers) || modifiers.length === 0) {
@@ -33,42 +101,42 @@ function validateModifierDraft(modifiers, draft) {
                                     [];
             if (Array.isArray(groupSelections)) {
                 groupSelections.forEach(sel => {
-                    const match = (mod.options || []).find(o => o.id === sel || o.name === sel);
+                    const match = (mod.options || []).find((o, idx) => {
+                        const optId = getUniqueModifierOptionId(mod, o, idx);
+                        return optId === sel || o.id === sel || o.name === sel;
+                    });
                     if (match && !match.isOutOfStock) selectedOpts.push(match);
                 });
             }
         }
 
-        // 2. Check single selections
-        if (selectedOpts.length === 0 && mod.selectionType === 'single' && draft.single) {
-            const selNameOrId = draft.single[mod.slug] || draft.single[mod.id];
-            if (selNameOrId) {
-                const match = (mod.options || []).find(o => o.name === selNameOrId || o.id === selNameOrId);
-                if (match && !match.isOutOfStock) {
-                    selectedOpts.push(match);
+        // 2. Check draft.selectedDetails if present
+        if (selectedOpts.length === 0 && draft.selectedDetails && typeof draft.selectedDetails === 'object') {
+            (mod.options || []).forEach((opt, optIdx) => {
+                const optId = getUniqueModifierOptionId(mod, opt, optIdx);
+                const detail = draft.selectedDetails[optId];
+                if (detail && !opt.isOutOfStock) {
+                    selectedOpts.push(opt);
                 }
-            }
+            });
         }
 
-        // 3. Check multiple selections
+        // 3. Check single selections
+        if (selectedOpts.length === 0 && mod.selectionType === 'single' && draft.single) {
+            (mod.options || []).forEach((opt, optIdx) => {
+                if (isOptionSelectedInSingle(draft, mod, opt, optIdx) && !opt.isOutOfStock) {
+                    selectedOpts.push(opt);
+                }
+            });
+        }
+
+        // 4. Check multiple selections
         if (selectedOpts.length === 0 && mod.selectionType === 'multiple' && draft.multiple) {
-            if (Array.isArray(draft.multiple[mod.slug])) {
-                draft.multiple[mod.slug].forEach(sel => {
-                    const match = (mod.options || []).find(o => o.name === sel || o.id === sel);
-                    if (match && !match.isOutOfStock) selectedOpts.push(match);
-                });
-            } else if (Array.isArray(draft.multiple[mod.id])) {
-                draft.multiple[mod.id].forEach(sel => {
-                    const match = (mod.options || []).find(o => o.name === sel || o.id === sel);
-                    if (match && !match.isOutOfStock) selectedOpts.push(match);
-                });
-            } else if (typeof draft.multiple === 'object') {
-                (mod.options || []).forEach(opt => {
-                    if ((draft.multiple[opt.name] || draft.multiple[opt.id]) && !opt.isOutOfStock) {
-                        selectedOpts.push(opt);
-                    }
-                });
-            }
+            (mod.options || []).forEach((opt, optIdx) => {
+                if (isOptionSelectedInMultiple(draft, mod, opt, optIdx) && !opt.isOutOfStock) {
+                    selectedOpts.push(opt);
+                }
+            });
         }
 
         const count = selectedOpts.length;
@@ -230,17 +298,57 @@ function initPortionDefaults(category, origName, portionIndex) {
     if (!cData[key][portionIndex]) {
         const modifiers = getItemModifiers(category, origName);
         const defaultSingle = {};
+        const defaultMulti = {};
+        const defaultSubOpts = {};
+        const selectedDetails = {};
+        const getPrice = window.getModifierPrice || (typeof getModifierPrice === 'function' ? getModifierPrice : () => 0);
+
         modifiers.filter(m => m.selectionType === 'single').forEach(m => {
             const defOpt = (m.options || []).find(o => o.isDefault && !o.isOutOfStock) || (m.isRequired ? ((m.options || []).find(o => !o.isOutOfStock) || m.options[0]) : null);
-            if (defOpt) defaultSingle[m.slug] = defOpt.name;
+            if (defOpt) {
+                const optIdx = (m.options || []).indexOf(defOpt);
+                const optId = getUniqueModifierOptionId(m, defOpt, optIdx);
+                defaultSingle[m.slug] = defOpt.name;
+                selectedDetails[optId] = {
+                    id: optId,
+                    name: defOpt.name,
+                    price: Number(defOpt.price !== undefined ? defOpt.price : getPrice(defOpt.name)),
+                    groupId: m.id || m.slug,
+                    groupName: m.name
+                };
+                const subs = defOpt.subOptions || defOpt.sub_options || [];
+                if (subs.length > 0) {
+                    const defSub = subs.find(s => s.isDefault || s.is_default) || subs[0];
+                    defaultSubOpts[optId] = defSub;
+                    defaultSubOpts[defOpt.name] = defSub;
+                    selectedDetails[optId].subOption = defSub;
+                }
+            }
         });
-        const defaultMulti = {};
         modifiers.filter(m => m.selectionType === 'multiple').forEach(m => {
-            (m.options || []).filter(o => o.isDefault && !o.isOutOfStock).forEach(o => {
-                defaultMulti[o.name] = true;
+            (m.options || []).forEach((o, optIdx) => {
+                if (o.isDefault && !o.isOutOfStock) {
+                    const optId = getUniqueModifierOptionId(m, o, optIdx);
+                    defaultMulti[o.name] = true;
+                    defaultMulti[optId] = true;
+                    selectedDetails[optId] = {
+                        id: optId,
+                        name: o.name,
+                        price: Number(o.price !== undefined ? o.price : getPrice(o.name)),
+                        groupId: m.id || m.slug,
+                        groupName: m.name
+                    };
+                    const subs = o.subOptions || o.sub_options || [];
+                    if (subs.length > 0) {
+                        const defSub = subs.find(s => s.isDefault || s.is_default) || subs[0];
+                        defaultSubOpts[optId] = defSub;
+                        defaultSubOpts[o.name] = defSub;
+                        selectedDetails[optId].subOption = defSub;
+                    }
+                }
             });
         });
-        cData[key][portionIndex] = { single: defaultSingle, multiple: defaultMulti, note: '' };
+        cData[key][portionIndex] = { single: defaultSingle, multiple: defaultMulti, subOptions: defaultSubOpts, selectedDetails, note: '' };
     }
     return cData[key][portionIndex];
 }
@@ -278,35 +386,62 @@ function openItemCustomizeModal(category, origName, targetPortionIndex) {
     if (existing) {
         draft = JSON.parse(JSON.stringify(existing));
         if (!draft.subOptions) draft.subOptions = {};
+        if (!draft.selectedDetails) draft.selectedDetails = {};
     } else {
         const defaultSingle = {};
         const defaultSubOpts = {};
+        const defaultMulti = {};
+        const defaultDetails = {};
+        const getPrice = window.getModifierPrice || (typeof getModifierPrice === 'function' ? getModifierPrice : () => 0);
+
         modifiers.filter(m => m.selectionType === 'single').forEach(m => {
             const defOpt = (m.options || []).find(o => o.isDefault && !o.isOutOfStock);
             if (defOpt) {
-                defaultSingle[m.slug] = defOpt.name;
+                const optIdx = (m.options || []).indexOf(defOpt);
+                const optId = getUniqueModifierOptionId(m, defOpt, optIdx);
+                defaultSingle[m.slug] = optId;
+                defaultDetails[optId] = {
+                    id: optId,
+                    name: defOpt.name,
+                    price: Number(defOpt.price !== undefined ? defOpt.price : getPrice(defOpt.name)),
+                    groupId: m.id || m.slug,
+                    groupName: m.name
+                };
                 const subs = defOpt.subOptions || defOpt.sub_options || [];
                 if (subs.length > 0) {
-                    defaultSubOpts[defOpt.name] = subs.find(s => s.isDefault || s.is_default) || subs[0];
+                    const defSub = subs.find(s => s.isDefault || s.is_default) || subs[0];
+                    defaultSubOpts[optId] = defSub;
+                    defaultSubOpts[defOpt.name] = defSub;
+                    defaultDetails[optId].subOption = defSub;
                 }
             }
         });
-        const defaultMulti = {};
         modifiers.filter(m => m.selectionType === 'multiple').forEach(m => {
             const maxAllowed = Number(m.maxSelection || 0) || 999;
             let selectedInGroup = 0;
-            (m.options || []).filter(o => o.isDefault && !o.isOutOfStock).forEach(o => {
-                if (selectedInGroup < maxAllowed) {
-                    defaultMulti[o.name] = true;
+            (m.options || []).forEach((o, optIdx) => {
+                if (o.isDefault && !o.isOutOfStock && selectedInGroup < maxAllowed) {
+                    const optId = getUniqueModifierOptionId(m, o, optIdx);
+                    defaultMulti[optId] = true;
+                    defaultDetails[optId] = {
+                        id: optId,
+                        name: o.name,
+                        price: Number(o.price !== undefined ? o.price : getPrice(o.name)),
+                        groupId: m.id || m.slug,
+                        groupName: m.name
+                    };
                     const subs = o.subOptions || o.sub_options || [];
                     if (subs.length > 0) {
-                        defaultSubOpts[o.name] = subs.find(s => s.isDefault || s.is_default) || subs[0];
+                        const defSub = subs.find(s => s.isDefault || s.is_default) || subs[0];
+                        defaultSubOpts[optId] = defSub;
+                        defaultSubOpts[o.name] = defSub;
+                        defaultDetails[optId].subOption = defSub;
                     }
                     selectedInGroup++;
                 }
             });
         });
-        draft = { single: defaultSingle, multiple: defaultMulti, subOptions: defaultSubOpts, note: '' };
+        draft = { single: defaultSingle, multiple: defaultMulti, subOptions: defaultSubOpts, selectedDetails: defaultDetails, note: '' };
     }
 
     // Resolve item info and price
@@ -425,9 +560,10 @@ function openItemCustomizeModal(category, origName, targetPortionIndex) {
 
             if (mod.selectionType === 'single') {
                 sectionInner += `<div class="modifier-pills-row">`;
-                (mod.options || []).forEach(opt => {
+                (mod.options || []).forEach((opt, optIdx) => {
                     const isOos = Boolean(opt.isOutOfStock);
-                    const isSelected = (draft.single && draft.single[mod.slug] === opt.name);
+                    const optId = getUniqueModifierOptionId(mod, opt, optIdx);
+                    const isSelected = isOptionSelectedInSingle(draft, mod, opt, optIdx);
                     const price = Number(opt.price !== undefined ? opt.price : getPrice(opt.name));
                     const priceText = price > 0 ? ` (+$${price})` : '';
                     const oosBadge = isOos ? `<span class="modifier-oos-tag">已售完</span>` : '';
@@ -435,7 +571,7 @@ function openItemCustomizeModal(category, origName, targetPortionIndex) {
                     const minSpendBadge = minSpend > 0 ? `<span style="font-size: 10px; color: #ea580c; background: #fff7ed; border: 1px solid #fed7aa; padding: 1px 4px; border-radius: 4px; margin-left: 4px;">滿$${minSpend}可選</span>` : '';
                     sectionInner += `
                         <div class="modifier-pill ${isSelected ? 'active' : ''} ${isOos ? 'disabled' : ''}" 
-                             data-mod-slug="${mod.slug}" data-opt-name="${opt.name}">
+                             data-mod-slug="${mod.slug}" data-mod-id="${mod.id || mod.slug}" data-opt-id="${optId}" data-opt-name="${opt.name}" data-opt-idx="${optIdx}">
                             <span>${opt.name}${priceText}</span>${oosBadge}${minSpendBadge}
                         </div>
                     `;
@@ -443,15 +579,19 @@ function openItemCustomizeModal(category, origName, targetPortionIndex) {
                 sectionInner += `</div>`;
 
                 // Render Sub-options for selected single option if available
-                (mod.options || []).forEach(opt => {
-                    const isSelected = (draft.single && draft.single[mod.slug] === opt.name);
+                (mod.options || []).forEach((opt, optIdx) => {
+                    const optId = getUniqueModifierOptionId(mod, opt, optIdx);
+                    const isSelected = isOptionSelectedInSingle(draft, mod, opt, optIdx);
                     const subList = opt.subOptions || opt.sub_options || [];
                     if (isSelected && Array.isArray(subList) && subList.length > 0) {
                         if (!draft.subOptions) draft.subOptions = {};
-                        if (!draft.subOptions[opt.name]) {
-                            draft.subOptions[opt.name] = subList.find(s => s.isDefault || s.is_default) || subList[0];
+                        if (!draft.subOptions[optId] && !draft.subOptions[opt.name]) {
+                            const defSub = subList.find(s => s.isDefault || s.is_default) || subList[0];
+                            draft.subOptions[optId] = defSub;
+                            draft.subOptions[opt.name] = defSub;
                         }
-                        const activeSubId = String(draft.subOptions[opt.name]?.id);
+                        const currentSub = draft.subOptions[optId] || draft.subOptions[opt.name];
+                        const activeSubId = String(currentSub?.id);
                         sectionInner += `
                             <div class="sub-options-container" style="display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; padding: 8px 12px; background: #f8fafc; border-left: 3px solid var(--primary, #0ea5e9); border-radius: 8px; width: 100%; box-sizing: border-box;">
                                 <div style="font-size: 11px; font-weight: 700; color: #64748b; width: 100%; margin-bottom: 2px;">↳ ${opt.name} - 規格 / 配料:</div>
@@ -460,7 +600,7 @@ function openItemCustomizeModal(category, origName, targetPortionIndex) {
                                     const subP = Number(sub.price || 0);
                                     const subPText = subP > 0 ? ` (+$${subP})` : '';
                                     return `
-                                        <button type="button" class="sub-option-chip" data-parent-opt="${opt.name}" data-sub-id="${sub.id}"
+                                        <button type="button" class="sub-option-chip" data-parent-opt-id="${optId}" data-parent-opt="${opt.name}" data-sub-id="${sub.id}"
                                                 style="padding: 4px 10px; font-size: 12px; border-radius: 6px; border: 1.5px solid ${isSubActive ? 'var(--primary, #0ea5e9)' : '#cbd5e1'}; background: ${isSubActive ? 'rgba(14, 165, 233, 0.1)' : '#fff'}; color: ${isSubActive ? 'var(--primary, #0ea5e9)' : '#334155'}; font-weight: ${isSubActive ? '700' : '500'}; cursor: pointer;">
                                             ${sub.name}${subPText}
                                         </button>
@@ -472,25 +612,17 @@ function openItemCustomizeModal(category, origName, targetPortionIndex) {
                 });
             } else if (mod.selectionType === 'multiple') {
                 sectionInner += `<div class="modifier-checkbox-grid">`;
-                (mod.options || []).forEach(opt => {
+                (mod.options || []).forEach((opt, optIdx) => {
                     const isOos = Boolean(opt.isOutOfStock);
-                    let isChecked = false;
-                    if (draft.multiple) {
-                        if (Array.isArray(draft.multiple[mod.slug])) {
-                            isChecked = draft.multiple[mod.slug].includes(opt.name) || draft.multiple[mod.slug].includes(opt.id);
-                        } else if (Array.isArray(draft.multiple[mod.id])) {
-                            isChecked = draft.multiple[mod.id].includes(opt.name) || draft.multiple[mod.id].includes(opt.id);
-                        } else if (typeof draft.multiple === 'object') {
-                            isChecked = Boolean(draft.multiple[opt.name] || draft.multiple[opt.id]);
-                        }
-                    }
+                    const optId = getUniqueModifierOptionId(mod, opt, optIdx);
+                    const isChecked = isOptionSelectedInMultiple(draft, mod, opt, optIdx);
                     const price = Number(opt.price !== undefined ? opt.price : getPrice(opt.name));
                     const priceText = isOos ? `<span class="modifier-oos-tag">已售完</span>` : (price > 0 ? `+$${price}` : '$0');
                     const minSpend = Number(opt.minOrderSubtotal || opt.min_order_amount || 0);
                     const minSpendBadge = minSpend > 0 ? `<span style="font-size: 10px; color: #ea580c; background: #fff7ed; border: 1px solid #fed7aa; padding: 1px 4px; border-radius: 4px; margin-left: 4px;">滿$${minSpend}可選</span>` : '';
                     sectionInner += `
                         <div class="modifier-checkbox-chip ${isChecked ? 'active' : ''} ${isOos ? 'disabled' : ''}" 
-                             data-opt-name="${opt.name}">
+                             data-mod-slug="${mod.slug}" data-mod-id="${mod.id || mod.slug}" data-opt-id="${optId}" data-opt-name="${opt.name}" data-opt-idx="${optIdx}">
                             <span>${opt.name}${minSpendBadge}</span>
                             <span style="font-size: 12px; opacity: 0.85;">${priceText}</span>
                         </div>
@@ -499,24 +631,19 @@ function openItemCustomizeModal(category, origName, targetPortionIndex) {
                 sectionInner += `</div>`;
 
                 // Render Sub-options for selected multiple options if available
-                (mod.options || []).forEach(opt => {
-                    let isChecked = false;
-                    if (draft.multiple) {
-                        if (Array.isArray(draft.multiple[mod.slug])) {
-                            isChecked = draft.multiple[mod.slug].includes(opt.name) || draft.multiple[mod.slug].includes(opt.id);
-                        } else if (Array.isArray(draft.multiple[mod.id])) {
-                            isChecked = draft.multiple[mod.id].includes(opt.name) || draft.multiple[mod.id].includes(opt.id);
-                        } else if (typeof draft.multiple === 'object') {
-                            isChecked = Boolean(draft.multiple[opt.name] || draft.multiple[opt.id]);
-                        }
-                    }
+                (mod.options || []).forEach((opt, optIdx) => {
+                    const optId = getUniqueModifierOptionId(mod, opt, optIdx);
+                    const isChecked = isOptionSelectedInMultiple(draft, mod, opt, optIdx);
                     const subList = opt.subOptions || opt.sub_options || [];
                     if (isChecked && Array.isArray(subList) && subList.length > 0) {
                         if (!draft.subOptions) draft.subOptions = {};
-                        if (!draft.subOptions[opt.name]) {
-                            draft.subOptions[opt.name] = subList.find(s => s.isDefault || s.is_default) || subList[0];
+                        if (!draft.subOptions[optId] && !draft.subOptions[opt.name]) {
+                            const defSub = subList.find(s => s.isDefault || s.is_default) || subList[0];
+                            draft.subOptions[optId] = defSub;
+                            draft.subOptions[opt.name] = defSub;
                         }
-                        const activeSubId = String(draft.subOptions[opt.name]?.id);
+                        const currentSub = draft.subOptions[optId] || draft.subOptions[opt.name];
+                        const activeSubId = String(currentSub?.id);
                         sectionInner += `
                             <div class="sub-options-container" style="display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; padding: 8px 12px; background: #f8fafc; border-left: 3px solid var(--primary, #0ea5e9); border-radius: 8px; width: 100%; box-sizing: border-box;">
                                 <div style="font-size: 11px; font-weight: 700; color: #64748b; width: 100%; margin-bottom: 2px;">↳ ${opt.name} - 規格 / 配料:</div>
@@ -525,7 +652,7 @@ function openItemCustomizeModal(category, origName, targetPortionIndex) {
                                     const subP = Number(sub.price || 0);
                                     const subPText = subP > 0 ? ` (+$${subP})` : '';
                                     return `
-                                        <button type="button" class="sub-option-chip" data-parent-opt="${opt.name}" data-sub-id="${sub.id}"
+                                        <button type="button" class="sub-option-chip" data-parent-opt-id="${optId}" data-parent-opt="${opt.name}" data-sub-id="${sub.id}"
                                                 style="padding: 4px 10px; font-size: 12px; border-radius: 6px; border: 1.5px solid ${isSubActive ? 'var(--primary, #0ea5e9)' : '#cbd5e1'}; background: ${isSubActive ? 'rgba(14, 165, 233, 0.1)' : '#fff'}; color: ${isSubActive ? 'var(--primary, #0ea5e9)' : '#334155'}; font-weight: ${isSubActive ? '700' : '500'}; cursor: pointer;">
                                             ${sub.name}${subPText}
                                         </button>
@@ -543,19 +670,53 @@ function openItemCustomizeModal(category, origName, targetPortionIndex) {
                 pill.onclick = () => {
                     if (pill.classList.contains('disabled')) return;
                     const modSlug = pill.getAttribute('data-mod-slug');
+                    const modId = pill.getAttribute('data-mod-id') || modSlug;
+                    const optId = pill.getAttribute('data-opt-id');
                     const optName = pill.getAttribute('data-opt-name');
+                    const optIdx = Number(pill.getAttribute('data-opt-idx') || 0);
+                    const opt = (mod.options || [])[optIdx] || (mod.options || []).find(o => o.name === optName);
+
                     if (!draft.single) draft.single = {};
+                    if (!draft.selectedDetails) draft.selectedDetails = {};
+
                     const isReq = Boolean(mod.isRequired || Number(mod.minSelection || 0) > 0);
-                    const prevOpt = draft.single[modSlug];
-                    if (prevOpt && prevOpt !== optName && draft.subOptions) {
-                        delete draft.subOptions[prevOpt];
-                    }
+                    const wasSelected = isOptionSelectedInSingle(draft, mod, opt, optIdx);
+
+                    // Remove previous selection for this modifier group from selectedDetails & subOptions
+                    (mod.options || []).forEach((o, idx) => {
+                        const oId = getUniqueModifierOptionId(mod, o, idx);
+                        delete draft.selectedDetails[oId];
+                        if (draft.subOptions) {
+                            delete draft.subOptions[oId];
+                            delete draft.subOptions[o.name];
+                        }
+                    });
+
                     // Optional single can be toggled/deselected
-                    if (!isReq && draft.single[modSlug] === optName) {
+                    if (!isReq && wasSelected) {
                         delete draft.single[modSlug];
-                        if (draft.subOptions) delete draft.subOptions[optName];
+                        delete draft.single[modId];
                     } else {
-                        draft.single[modSlug] = optName;
+                        draft.single[modSlug] = optId;
+                        if (modId !== modSlug) draft.single[modId] = optId;
+
+                        const optPrice = Number(opt?.price !== undefined ? opt.price : getPrice(optName));
+                        draft.selectedDetails[optId] = {
+                            id: optId,
+                            name: optName,
+                            price: optPrice,
+                            groupId: modId,
+                            groupName: mod.name
+                        };
+
+                        const subs = opt?.subOptions || opt?.sub_options || [];
+                        if (subs.length > 0) {
+                            const defSub = subs.find(s => s.isDefault || s.is_default) || subs[0];
+                            if (!draft.subOptions) draft.subOptions = {};
+                            draft.subOptions[optId] = defSub;
+                            draft.subOptions[optName] = defSub;
+                            draft.selectedDetails[optId].subOption = defSub;
+                        }
                     }
                     renderModalOptions();
                 };
@@ -564,35 +725,39 @@ function openItemCustomizeModal(category, origName, targetPortionIndex) {
             section.querySelectorAll('.modifier-checkbox-chip').forEach(chip => {
                 chip.onclick = () => {
                     if (chip.classList.contains('disabled')) return;
+                    const modSlug = chip.getAttribute('data-mod-slug');
+                    const modId = chip.getAttribute('data-mod-id') || modSlug;
+                    const optId = chip.getAttribute('data-opt-id');
                     const optName = chip.getAttribute('data-opt-name');
-                    if (!draft.multiple) draft.multiple = {};
+                    const optIdx = Number(chip.getAttribute('data-opt-idx') || 0);
+                    const opt = (mod.options || [])[optIdx] || (mod.options || []).find(o => o.name === optName);
 
-                    // Handle array vs map format in multiple
-                    let isCurrentlySelected = false;
-                    if (Array.isArray(draft.multiple[mod.slug])) {
-                        isCurrentlySelected = draft.multiple[mod.slug].includes(optName);
-                    } else {
-                        isCurrentlySelected = Boolean(draft.multiple[optName]);
-                    }
+                    if (!draft.multiple) draft.multiple = {};
+                    if (!draft.selectedDetails) draft.selectedDetails = {};
+
+                    const isCurrentlySelected = isOptionSelectedInMultiple(draft, mod, opt, optIdx);
 
                     if (isCurrentlySelected) {
-                        if (draft.subOptions) delete draft.subOptions[optName];
-                        if (Array.isArray(draft.multiple[mod.slug])) {
-                            draft.multiple[mod.slug] = draft.multiple[mod.slug].filter(x => x !== optName);
-                        } else {
-                            delete draft.multiple[optName];
+                        if (draft.subOptions) {
+                            delete draft.subOptions[optId];
+                            delete draft.subOptions[optName];
+                        }
+                        delete draft.selectedDetails[optId];
+                        delete draft.multiple[optId];
+                        delete draft.multiple[optName];
+                        if (Array.isArray(draft.multiple[modSlug])) {
+                            draft.multiple[modSlug] = draft.multiple[modSlug].filter(x => x !== optId && x !== optName);
+                        }
+                        if (Array.isArray(draft.multiple[modId])) {
+                            draft.multiple[modId] = draft.multiple[modId].filter(x => x !== optId && x !== optName);
                         }
                     } else {
                         // Check maxSelection before adding
                         const max = Number(mod.maxSelection || 0);
                         if (max > 0) {
                             let currentCount = 0;
-                            (mod.options || []).forEach(o => {
-                                if (Array.isArray(draft.multiple[mod.slug])) {
-                                    if (draft.multiple[mod.slug].includes(o.name) || draft.multiple[mod.slug].includes(o.id)) currentCount++;
-                                } else if (draft.multiple[o.name] || draft.multiple[o.id]) {
-                                    currentCount++;
-                                }
+                            (mod.options || []).forEach((o, idx) => {
+                                if (isOptionSelectedInMultiple(draft, mod, o, idx)) currentCount++;
                             });
                             if (currentCount >= max) {
                                 const limitMsg = `「${mod.name}」最多只能選擇 ${max} 項`;
@@ -601,10 +766,22 @@ function openItemCustomizeModal(category, origName, targetPortionIndex) {
                                 return;
                             }
                         }
-                        if (Array.isArray(draft.multiple[mod.slug])) {
-                            draft.multiple[mod.slug].push(optName);
-                        } else {
-                            draft.multiple[optName] = true;
+                        draft.multiple[optId] = true;
+                        const optPrice = Number(opt?.price !== undefined ? opt.price : getPrice(optName));
+                        draft.selectedDetails[optId] = {
+                            id: optId,
+                            name: optName,
+                            price: optPrice,
+                            groupId: modId,
+                            groupName: mod.name
+                        };
+                        const subs = opt?.subOptions || opt?.sub_options || [];
+                        if (subs.length > 0) {
+                            const defSub = subs.find(s => s.isDefault || s.is_default) || subs[0];
+                            if (!draft.subOptions) draft.subOptions = {};
+                            draft.subOptions[optId] = defSub;
+                            draft.subOptions[optName] = defSub;
+                            draft.selectedDetails[optId].subOption = defSub;
                         }
                     }
                     renderModalOptions();
@@ -615,15 +792,28 @@ function openItemCustomizeModal(category, origName, targetPortionIndex) {
             section.querySelectorAll('.sub-option-chip').forEach(btn => {
                 btn.onclick = (e) => {
                     e.stopPropagation();
+                    const parentOptId = btn.getAttribute('data-parent-opt-id');
                     const parentOptName = btn.getAttribute('data-parent-opt');
                     const subId = btn.getAttribute('data-sub-id');
-                    const parentOpt = (mod.options || []).find(o => o.name === parentOptName);
+                    let parentOpt = null;
+                    for (let i = 0; i < (mod.options || []).length; i++) {
+                        const o = mod.options[i];
+                        const uId = getUniqueModifierOptionId(mod, o, i);
+                        if (uId === parentOptId || o.name === parentOptName) {
+                            parentOpt = o;
+                            break;
+                        }
+                    }
                     if (parentOpt) {
                         const subList = parentOpt.subOptions || parentOpt.sub_options || [];
                         const sub = subList.find(s => String(s.id) === String(subId));
                         if (sub) {
                             if (!draft.subOptions) draft.subOptions = {};
-                            draft.subOptions[parentOptName] = sub;
+                            if (parentOptId) draft.subOptions[parentOptId] = sub;
+                            if (parentOptName) draft.subOptions[parentOptName] = sub;
+                            if (draft.selectedDetails && parentOptId && draft.selectedDetails[parentOptId]) {
+                                draft.selectedDetails[parentOptId].subOption = sub;
+                            }
                             renderModalOptions();
                         }
                     }
@@ -647,30 +837,44 @@ function openItemCustomizeModal(category, origName, targetPortionIndex) {
 
         // Calculate dynamic total
         let extra = 0;
-        if (draft.single) {
-            Object.values(draft.single).forEach(opt => { 
-                extra += getPrice(opt); 
-                if (draft.subOptions && draft.subOptions[opt]) {
-                    extra += Number(draft.subOptions[opt].price || 0);
+        if (draft.selectedDetails && Object.keys(draft.selectedDetails).length > 0) {
+            for (const detail of Object.values(draft.selectedDetails)) {
+                if (!detail) continue;
+                extra += Number(detail.price || 0);
+                if (detail.subOption && detail.subOption.price) {
+                    extra += Number(detail.subOption.price || 0);
                 }
-            });
-        }
-        if (draft.multiple) {
-            Object.keys(draft.multiple).forEach(opt => {
-                if (Array.isArray(draft.multiple[opt])) {
-                    draft.multiple[opt].forEach(subOpt => { 
-                        extra += getPrice(subOpt); 
-                        if (draft.subOptions && draft.subOptions[subOpt]) {
-                            extra += Number(draft.subOptions[subOpt].price || 0);
+            }
+        } else {
+            if (typeof calculatePortionExtra === 'function') {
+                extra = calculatePortionExtra(key, draft);
+            } else {
+                if (draft.single) {
+                    Object.values(draft.single).forEach(opt => { 
+                        extra += getPrice(opt); 
+                        if (draft.subOptions && draft.subOptions[opt]) {
+                            extra += Number(draft.subOptions[opt].price || 0);
                         }
                     });
-                } else if (draft.multiple[opt]) {
-                    extra += getPrice(opt);
-                    if (draft.subOptions && draft.subOptions[opt]) {
-                        extra += Number(draft.subOptions[opt].price || 0);
-                    }
                 }
-            });
+                if (draft.multiple) {
+                    Object.keys(draft.multiple).forEach(opt => {
+                        if (Array.isArray(draft.multiple[opt])) {
+                            draft.multiple[opt].forEach(subOpt => { 
+                                extra += getPrice(subOpt); 
+                                if (draft.subOptions && draft.subOptions[subOpt]) {
+                                    extra += Number(draft.subOptions[subOpt].price || 0);
+                                }
+                            });
+                        } else if (draft.multiple[opt]) {
+                            extra += getPrice(opt);
+                            if (draft.subOptions && draft.subOptions[opt]) {
+                                extra += Number(draft.subOptions[opt].price || 0);
+                            }
+                        }
+                    });
+                }
+            }
         }
         const totalPrice = basePrice + extra;
 
@@ -865,3 +1069,6 @@ window.selectSingleModifier = selectSingleModifier;
 window.toggleMultipleModifier = toggleMultipleModifier;
 window.saveCustomNote = saveCustomNote;
 window.closePopup = closePopup;
+window.getUniqueModifierOptionId = getUniqueModifierOptionId;
+window.isOptionSelectedInSingle = isOptionSelectedInSingle;
+window.isOptionSelectedInMultiple = isOptionSelectedInMultiple;
