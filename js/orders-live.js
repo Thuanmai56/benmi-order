@@ -45,12 +45,18 @@ function syncLiveMobileView() {
   const mobile = isLiveMobilePortrait();
   const view = document.getElementById("view-live");
   const tabs = document.getElementById("live-mobile-tabs");
+  const split = view ? view.querySelector(".live-split") : null;
   if (!view || !tabs) return;
 
   // The main switchTab uses inline display:block. Override it only in mobile Live.
   view.classList.toggle("live-mobile-visible", mobile && activeTab === "live");
   const focusWasOnTabs = tabs.contains(document.activeElement);
   tabs.hidden = !mobile;
+
+  if (split) {
+    split.classList.toggle("station-ready", mobile && liveMobileStation === "ready");
+    split.classList.toggle("station-pending", !mobile || liveMobileStation === "pending");
+  }
 
   Object.keys(LIVE_MOBILE_LIST_IDS).forEach(station => {
     const selected = station === liveMobileStation;
@@ -83,9 +89,20 @@ function syncLiveMobileView() {
   liveMobileMode = mobile;
 }
 
+let liveMobileAnimationTimer = null;
+
 function setLiveMobileStation(station) {
   if (!isLiveMobilePortrait() || !Object.prototype.hasOwnProperty.call(LIVE_MOBILE_LIST_IDS, station)) return;
+  if (liveMobileStation === station) return;
   captureLiveScrollPositions();
+  const split = document.querySelector("#view-live .live-split");
+  if (split) {
+    split.classList.add("is-animating");
+    clearTimeout(liveMobileAnimationTimer);
+    liveMobileAnimationTimer = setTimeout(() => {
+      if (split) split.classList.remove("is-animating");
+    }, 320);
+  }
   liveMobileStation = station;
   syncLiveMobileView();
 }
@@ -98,7 +115,19 @@ function initLiveMobileSwipe() {
   let suppressedClickTarget = null;
   let suppressClickUntil = 0;
 
+  function getSplit() {
+    return view.querySelector(".live-split");
+  }
+
   function clearGesture() {
+    const split = getSplit();
+    if (split) {
+      split.classList.remove("is-swiping");
+      const p = document.getElementById("live-panel-pending");
+      const r = document.getElementById("live-panel-ready");
+      if (p) p.style.transform = "";
+      if (r) r.style.transform = "";
+    }
     if (touchTarget) {
       touchTarget.removeEventListener("touchmove", onTouchMove);
       touchTarget.removeEventListener("touchend", onTouchEnd);
@@ -137,15 +166,34 @@ function initLiveMobileSwipe() {
     }
     const touch = event.touches[0];
     if (touch.identifier !== gesture.id) return;
-    const dx = Math.abs(touch.clientX - gesture.x);
-    const dy = Math.abs(touch.clientY - gesture.y);
+    const diffX = touch.clientX - gesture.x;
+    const diffY = touch.clientY - gesture.y;
+    const dx = Math.abs(diffX);
+    const dy = Math.abs(diffY);
     if (dy > 12 && dy >= dx) {
       clearGesture();
       return;
     }
-    if (dx >= 48 && dx >= dy * 1.5) {
+    if (dx >= 16 && dx >= dy * 1.5) {
       gesture.horizontal = true;
       if (event.cancelable) event.preventDefault();
+
+      const split = getSplit();
+      const p = document.getElementById("live-panel-pending");
+      const r = document.getElementById("live-panel-ready");
+      if (split && p && r) {
+        split.classList.add("is-swiping", "is-animating");
+        const panelWidth = p.clientWidth || split.clientWidth || window.innerWidth;
+        if (gesture.station === "pending") {
+          const offset = diffX < 0 ? diffX : diffX * 0.25;
+          p.style.transform = `translate3d(${offset}px, 0, 0)`;
+          r.style.transform = `translate3d(${panelWidth + offset}px, 0, 0)`;
+        } else if (gesture.station === "ready") {
+          const offset = diffX > 0 ? diffX : diffX * 0.25;
+          p.style.transform = `translate3d(${-panelWidth + offset}px, 0, 0)`;
+          r.style.transform = `translate3d(${offset}px, 0, 0)`;
+        }
+      }
     }
   }
 
@@ -164,9 +212,21 @@ function initLiveMobileSwipe() {
       suppressClickUntil = Date.now() + 400;
       if (event.cancelable) event.preventDefault();
     }
-    if (!horizontal || Date.now() - completed.startedAt > 800 || !isLiveMobilePortrait() || activeTab !== "live" || liveMobileStation !== completed.station) return;
+    if (!horizontal || Date.now() - completed.startedAt > 800 || !isLiveMobilePortrait() || activeTab !== "live" || liveMobileStation !== completed.station) {
+      const split = getSplit();
+      if (split) {
+        split.classList.add("is-animating");
+        clearTimeout(liveMobileAnimationTimer);
+        liveMobileAnimationTimer = setTimeout(() => {
+          if (split) split.classList.remove("is-animating");
+        }, 320);
+      }
+      return;
+    }
     const nextStation = dx < 0 ? "ready" : "pending";
-    if (nextStation !== liveMobileStation) setLiveMobileStation(nextStation);
+    if (nextStation !== liveMobileStation) {
+      setLiveMobileStation(nextStation);
+    }
   }
 
   view.addEventListener("click", event => {
