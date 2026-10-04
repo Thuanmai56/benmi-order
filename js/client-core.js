@@ -295,6 +295,27 @@ function calculatePortionExtra(itemOrKey, portion) {
     const effectiveGroups = getEffectiveItemModifierGroups(itemOrKey);
     let extra = 0;
 
+    // 1. Direct evaluation from selectedDetails if available
+    if (portion.selectedDetails && typeof portion.selectedDetails === 'object' && Object.keys(portion.selectedDetails).length > 0) {
+        for (const detail of Object.values(portion.selectedDetails)) {
+            if (!detail) continue;
+            extra += Number(detail.price || 0);
+            if (detail.subOption && detail.subOption.price) {
+                extra += Number(detail.subOption.price || 0);
+            }
+        }
+        if (portion.subOptions && typeof portion.subOptions === 'object') {
+            for (const [optKey, sub] of Object.entries(portion.subOptions)) {
+                const alreadyCounted = Object.values(portion.selectedDetails).some(d => d && (d.id === optKey || d.name === optKey) && d.subOption);
+                if (!alreadyCounted && sub && sub.price) {
+                    extra += Number(sub.price || 0);
+                }
+            }
+        }
+        return extra;
+    }
+
+    // 2. Structured selectedByGroup
     if (portion.selectedByGroup && typeof portion.selectedByGroup === 'object') {
         for (const [groupKey, optIds] of Object.entries(portion.selectedByGroup)) {
             if (!Array.isArray(optIds)) continue;
@@ -308,7 +329,10 @@ function calculatePortionExtra(itemOrKey, portion) {
             for (const optId of optIds) {
                 let p = 0;
                 if (targetGroup?.options) {
-                    const opt = targetGroup.options.find(o => o.id === optId || o.name === optId);
+                    const opt = targetGroup.options.find((o, idx) => {
+                        const uId = (typeof getUniqueModifierOptionId === 'function') ? getUniqueModifierOptionId(targetGroup, o, idx) : (o.id || o.name);
+                        return uId === optId || o.id === optId || o.name === optId;
+                    });
                     if (opt) p = Number(opt.price || 0);
                 }
                 if (!p) p = getModifierPrice(optId, targetGroup);
@@ -318,31 +342,63 @@ function calculatePortionExtra(itemOrKey, portion) {
         return extra;
     }
 
-    // Legacy portion.single & portion.multiple
+    // 3. Legacy portion.single & portion.multiple
     if (portion.single && typeof portion.single === 'object') {
-        for (const [modSlug, optName] of Object.entries(portion.single)) {
-            if (!optName) continue;
+        for (const [modSlug, optNameOrId] of Object.entries(portion.single)) {
+            if (!optNameOrId) continue;
             const targetGroup = effectiveGroups.find(g => g.slug === modSlug || g.id === modSlug || g.name === modSlug);
             let p = 0;
             if (targetGroup?.options) {
-                const opt = targetGroup.options.find(o => o.name === optName || o.id === optName);
+                const opt = targetGroup.options.find((o, idx) => {
+                    const uId = (typeof getUniqueModifierOptionId === 'function') ? getUniqueModifierOptionId(targetGroup, o, idx) : (o.id || o.name);
+                    return uId === optNameOrId || o.id === optNameOrId || o.name === optNameOrId;
+                });
                 if (opt) p = Number(opt.price || 0);
             }
-            if (!p) p = getModifierPrice(optName, targetGroup);
+            if (!p) p = getModifierPrice(optNameOrId, targetGroup);
             extra += p;
         }
     }
 
     if (portion.multiple && typeof portion.multiple === 'object') {
-        for (const [optName, isSelected] of Object.entries(portion.multiple)) {
+        for (const [optKey, isSelected] of Object.entries(portion.multiple)) {
             if (!isSelected) continue;
+            if (typeof isSelected === 'object') {
+                const targetGroup = effectiveGroups.find(g => g.slug === optKey || g.id === optKey);
+                for (const [subOptId, subIsSel] of Object.entries(isSelected)) {
+                    if (!subIsSel) continue;
+                    let p = 0;
+                    if (targetGroup?.options) {
+                        const opt = targetGroup.options.find((o, idx) => {
+                            const uId = (typeof getUniqueModifierOptionId === 'function') ? getUniqueModifierOptionId(targetGroup, o, idx) : (o.id || o.name);
+                            return uId === subOptId || o.id === subOptId || o.name === subOptId;
+                        });
+                        if (opt) p = Number(opt.price || 0);
+                    }
+                    if (!p) p = getModifierPrice(subOptId, targetGroup);
+                    extra += p;
+                }
+                continue;
+            }
+
             let p = 0;
             for (const grp of effectiveGroups) {
-                const opt = (grp.options || []).find(o => o.name === optName || o.id === optName);
+                const opt = (grp.options || []).find((o, idx) => {
+                    const uId = (typeof getUniqueModifierOptionId === 'function') ? getUniqueModifierOptionId(grp, o, idx) : (o.id || o.name);
+                    return uId === optKey || o.id === optKey || o.name === optKey;
+                });
                 if (opt) { p = Number(opt.price || 0); break; }
             }
-            if (!p) p = getModifierPrice(optName);
+            if (!p) p = getModifierPrice(optKey);
             extra += p;
+        }
+    }
+
+    if (portion.subOptions && typeof portion.subOptions === 'object') {
+        for (const sub of Object.values(portion.subOptions)) {
+            if (sub && sub.price) {
+                extra += Number(sub.price || 0);
+            }
         }
     }
 
