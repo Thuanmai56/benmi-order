@@ -409,6 +409,7 @@ let categoryBeforeDisplayOrder = -1;
 function openCategoriesManager() {
   if (!isMenuLoadedCompletely || !currentMenuData) return;
   syncMenuDataFromDOM();
+  menuSidebarTab = 'products';
   categoryBeforeDisplayOrder = activeCategoryIndex;
   isCategoryManagerOpen = true;
   activeCategoryIndex = -1;
@@ -722,7 +723,11 @@ function renderMenuCategories() {
   }
   const prodActions = document.getElementById("menu-sidebar-products-actions");
   if (prodActions) {
-    prodActions.style.display = 'block';
+    prodActions.style.display = menuSidebarTab === 'products' ? 'block' : 'none';
+  }
+  const btnManageCats = document.getElementById("btn-menu-manage-cats");
+  if (btnManageCats) {
+    btnManageCats.classList.toggle("active", Boolean(isCategoryManagerOpen));
   }
 
   if (!currentMenuData) return;
