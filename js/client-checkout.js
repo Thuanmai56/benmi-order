@@ -875,27 +875,49 @@ function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, ma
                 customizeData[key].slice(0, cart[key]).forEach((c, i) => {
                     const parts = [];
                     const getPrice = window.getModifierPrice || (typeof getModifierPrice === 'function' ? getModifierPrice : () => 0);
-                    if (c.single) {
-                        for (let s in c.single) {
-                            const val = c.single[s];
+                    if (c.selectedDetails && typeof c.selectedDetails === 'object' && Object.keys(c.selectedDetails).length > 0) {
+                        for (const detail of Object.values(c.selectedDetails)) {
+                            if (!detail) continue;
+                            const val = detail.name || detail.id;
                             if (val && val !== '不辣' && val !== '不需要') {
-                                const addP = getPrice(val);
+                                let addP = Number(detail.price || 0);
+                                const sub = detail.subOption || (c.subOptions && (c.subOptions[detail.id] || c.subOptions[detail.name]));
+                                let subText = '';
+                                if (sub) {
+                                    const subP = Number(sub.price || 0);
+                                    addP += subP;
+                                    subText = ` (${sub.name})`;
+                                }
                                 if (addP > 0) {
-                                    parts.push(`${val} (+$${addP})`);
+                                    parts.push(`${val}${subText} (+$${addP})`);
                                 } else {
-                                    parts.push(val);
+                                    parts.push(`${val}${subText}`);
                                 }
                             }
                         }
-                    }
-                    if (c.multiple) {
-                        for (let t in c.multiple) {
-                            if (c.multiple[t]) {
-                                const addP = getPrice(t);
-                                if (addP > 0) {
-                                    parts.push(`${t} (+$${addP})`);
-                                } else {
-                                    parts.push(t);
+                    } else {
+                        if (c.single) {
+                            for (let s in c.single) {
+                                const val = c.single[s];
+                                if (val && val !== '不辣' && val !== '不需要') {
+                                    const addP = getPrice(val);
+                                    if (addP > 0) {
+                                        parts.push(`${val} (+$${addP})`);
+                                    } else {
+                                        parts.push(val);
+                                    }
+                                }
+                            }
+                        }
+                        if (c.multiple) {
+                            for (let t in c.multiple) {
+                                if (c.multiple[t]) {
+                                    const addP = getPrice(t);
+                                    if (addP > 0) {
+                                        parts.push(`${t} (+$${addP})`);
+                                    } else {
+                                        parts.push(t);
+                                    }
                                 }
                             }
                         }
@@ -991,27 +1013,49 @@ function formatAppendItemsOnlyText() {
                 customizeData[key].slice(0, cart[key]).forEach((c, i) => {
                     const parts = [];
                     const getPrice = window.getModifierPrice || (typeof getModifierPrice === 'function' ? getModifierPrice : () => 0);
-                    if (c.single) {
-                        for (let s in c.single) {
-                            const val = c.single[s];
+                    if (c.selectedDetails && typeof c.selectedDetails === 'object' && Object.keys(c.selectedDetails).length > 0) {
+                        for (const detail of Object.values(c.selectedDetails)) {
+                            if (!detail) continue;
+                            const val = detail.name || detail.id;
                             if (val && val !== '不辣' && val !== '不需要') {
-                                const addP = getPrice(val);
+                                let addP = Number(detail.price || 0);
+                                const sub = detail.subOption || (c.subOptions && (c.subOptions[detail.id] || c.subOptions[detail.name]));
+                                let subText = '';
+                                if (sub) {
+                                    const subP = Number(sub.price || 0);
+                                    addP += subP;
+                                    subText = ` (${sub.name})`;
+                                }
                                 if (addP > 0) {
-                                    parts.push(`${val} (+$${addP})`);
+                                    parts.push(`${val}${subText} (+$${addP})`);
                                 } else {
-                                    parts.push(val);
+                                    parts.push(`${val}${subText}`);
                                 }
                             }
                         }
-                    }
-                    if (c.multiple) {
-                        for (let t in c.multiple) {
-                            if (c.multiple[t]) {
-                                const addP = getPrice(t);
-                                if (addP > 0) {
-                                    parts.push(`${t} (+$${addP})`);
-                                } else {
-                                    parts.push(t);
+                    } else {
+                        if (c.single) {
+                            for (let s in c.single) {
+                                const val = c.single[s];
+                                if (val && val !== '不辣' && val !== '不需要') {
+                                    const addP = getPrice(val);
+                                    if (addP > 0) {
+                                        parts.push(`${val} (+$${addP})`);
+                                    } else {
+                                        parts.push(val);
+                                    }
+                                }
+                            }
+                        }
+                        if (c.multiple) {
+                            for (let t in c.multiple) {
+                                if (c.multiple[t]) {
+                                    const addP = getPrice(t);
+                                    if (addP > 0) {
+                                        parts.push(`${t} (+$${addP})`);
+                                    } else {
+                                        parts.push(t);
+                                    }
                                 }
                             }
                         }
@@ -1061,12 +1105,13 @@ function buildStructuredCartItems() {
                 cust.slice(0, qty).forEach((c, idx) => {
                     if (!c) return;
                     const portionPrefix = qty > 1 ? `第${idx + 1}份: ` : '';
-                    if (c.single) {
-                        for (let s in c.single) {
-                            const val = c.single[s];
+                    if (c.selectedDetails && typeof c.selectedDetails === 'object' && Object.keys(c.selectedDetails).length > 0) {
+                        for (const detail of Object.values(c.selectedDetails)) {
+                            if (!detail) continue;
+                            const val = detail.name || detail.id;
                             if (val && val !== '不辣' && val !== '不需要') {
-                                let addP = getPrice(val, s, key);
-                                const sub = c.subOptions && c.subOptions[val];
+                                let addP = Number(detail.price || 0);
+                                const sub = detail.subOption || (c.subOptions && (c.subOptions[detail.id] || c.subOptions[detail.name]));
                                 let choiceLabel = `${portionPrefix}${val}`;
                                 let subPayload = undefined;
                                 if (sub) {
@@ -1076,35 +1121,60 @@ function buildStructuredCartItems() {
                                     subPayload = { id: sub.id, name: sub.name, price: subP };
                                 }
                                 itemModifiersTotal += addP;
-                                options.push({ 
-                                    group: s, 
-                                    choice: choiceLabel, 
+                                options.push({
+                                    group: detail.groupName || detail.groupId || '客製化',
+                                    choice: choiceLabel,
                                     price: addP,
                                     subOption: subPayload
                                 });
                             }
                         }
-                    }
-                    if (c.multiple) {
-                        for (let t in c.multiple) {
-                            if (c.multiple[t]) {
-                                let addP = getPrice(t, null, key);
-                                const sub = c.subOptions && c.subOptions[t];
-                                let choiceLabel = `${portionPrefix}${t}`;
-                                let subPayload = undefined;
-                                if (sub) {
-                                    choiceLabel += ` (${sub.name})`;
-                                    const subP = Number(sub.price || 0);
-                                    addP += subP;
-                                    subPayload = { id: sub.id, name: sub.name, price: subP };
+                    } else {
+                        if (c.single) {
+                            for (let s in c.single) {
+                                const val = c.single[s];
+                                if (val && val !== '不辣' && val !== '不需要') {
+                                    let addP = getPrice(val, s, key);
+                                    const sub = c.subOptions && c.subOptions[val];
+                                    let choiceLabel = `${portionPrefix}${val}`;
+                                    let subPayload = undefined;
+                                    if (sub) {
+                                        choiceLabel += ` (${sub.name})`;
+                                        const subP = Number(sub.price || 0);
+                                        addP += subP;
+                                        subPayload = { id: sub.id, name: sub.name, price: subP };
+                                    }
+                                    itemModifiersTotal += addP;
+                                    options.push({ 
+                                        group: s, 
+                                        choice: choiceLabel, 
+                                        price: addP,
+                                        subOption: subPayload
+                                    });
                                 }
-                                itemModifiersTotal += addP;
-                                options.push({ 
-                                    group: '客製化', 
-                                    choice: choiceLabel, 
-                                    price: addP,
-                                    subOption: subPayload
-                                });
+                            }
+                        }
+                        if (c.multiple) {
+                            for (let t in c.multiple) {
+                                if (c.multiple[t]) {
+                                    let addP = getPrice(t, null, key);
+                                    const sub = c.subOptions && c.subOptions[t];
+                                    let choiceLabel = `${portionPrefix}${t}`;
+                                    let subPayload = undefined;
+                                    if (sub) {
+                                        choiceLabel += ` (${sub.name})`;
+                                        const subP = Number(sub.price || 0);
+                                        addP += subP;
+                                        subPayload = { id: sub.id, name: sub.name, price: subP };
+                                    }
+                                    itemModifiersTotal += addP;
+                                    options.push({ 
+                                        group: '客製化', 
+                                        choice: choiceLabel, 
+                                        price: addP,
+                                        subOption: subPayload
+                                    });
+                                }
                             }
                         }
                     }
@@ -1299,9 +1369,15 @@ async function submitOrder() {
                         let hasSelection = false;
                         if (reqM.selectionType === 'multiple') {
                             const reqOptNames = (reqM.options || []).map(o => o.name);
-                            hasSelection = reqOptNames.some(name => portion?.multiple && portion.multiple[name]);
+                            const reqOptIds = (reqM.options || []).map((o, idx) => (typeof getUniqueModifierOptionId === 'function') ? getUniqueModifierOptionId(reqM, o, idx) : (o.id || o.name));
+                            hasSelection = reqOptNames.some(name => portion?.multiple && portion.multiple[name]) ||
+                                           reqOptIds.some(id => portion?.multiple && portion.multiple[id]) ||
+                                           Boolean(portion?.multiple?.[reqM.slug]) ||
+                                           Boolean(portion?.multiple?.[reqM.id]) ||
+                                           (portion?.selectedDetails && Object.values(portion.selectedDetails).some(d => d.groupId === reqM.id || d.groupId === reqM.slug));
                         } else {
-                            hasSelection = Boolean(portion?.single && portion.single[reqM.slug]);
+                            hasSelection = Boolean(portion?.single && (portion.single[reqM.slug] || portion.single[reqM.id])) ||
+                                           (portion?.selectedDetails && Object.values(portion.selectedDetails).some(d => d.groupId === reqM.id || d.groupId === reqM.slug));
                         }
                         if (!hasSelection) {
                             if (typeof toggleCustomize === 'function') {

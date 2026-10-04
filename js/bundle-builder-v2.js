@@ -138,16 +138,19 @@
           `;
           if (isSingle) {
             addonsHTML += `<div class="modifier-pills-row" style="margin-bottom: 4px; display: flex; flex-wrap: wrap; gap: 8px;">`;
-            (mod.options || []).forEach(opt => {
+            (mod.options || []).forEach((opt, optIdx) => {
               const isOos = Boolean(opt.isOutOfStock);
-              const isSelected = draft.addonSelections?.single?.[mod.slug] === opt.name;
+              const optId = (typeof getUniqueModifierOptionId === 'function') ? getUniqueModifierOptionId(mod, opt, optIdx) : (opt.id || `${mod.id || mod.slug}:${opt.name}:${optIdx}`);
+              const isSelected = (draft.addonSelections?.single?.[mod.slug] === optId) ||
+                                 (draft.addonSelections?.single?.[mod.slug] === opt.name) ||
+                                 Boolean(draft.addonSelections?.selectedDetails?.[optId]);
               const price = Number(opt.price !== undefined ? opt.price : getPrice(opt.name));
               const priceText = price > 0 ? ` (+$${price})` : '';
               const oosBadge = isOos ? `<span class="modifier-oos-tag">已售完</span>` : '';
               addonsHTML += `
                 <div class="modifier-pill ${isSelected ? 'active' : ''} ${isOos ? 'disabled' : ''}" 
                      style="min-height: 44px; padding: 8px 16px; border-radius: 10px; display: inline-flex; align-items: center; cursor: pointer;"
-                     onclick="${isOos ? '' : `bundleSelectAddonSingle('${esc(mod.slug)}', '${esc(opt.name)}')`}">
+                     onclick="${isOos ? '' : `bundleSelectAddonSingle('${esc(mod.slug)}', '${esc(optId)}', '${esc(opt.name)}')`}">
                   <span>${esc(opt.name)}${priceText}</span>${oosBadge}
                 </div>
               `;
@@ -155,15 +158,16 @@
             addonsHTML += `</div>`;
           } else {
             addonsHTML += `<div class="modifier-checkbox-grid" style="margin-bottom: 4px; display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px;">`;
-            (mod.options || []).forEach(opt => {
+            (mod.options || []).forEach((opt, optIdx) => {
               const isOos = Boolean(opt.isOutOfStock);
-              const isChecked = Boolean(draft.addonSelections?.multiple?.[opt.name]);
+              const optId = (typeof getUniqueModifierOptionId === 'function') ? getUniqueModifierOptionId(mod, opt, optIdx) : (opt.id || `${mod.id || mod.slug}:${opt.name}:${optIdx}`);
+              const isChecked = Boolean(draft.addonSelections?.multiple?.[optId] || draft.addonSelections?.multiple?.[opt.name] || draft.addonSelections?.selectedDetails?.[optId]);
               const price = Number(opt.price !== undefined ? opt.price : getPrice(opt.name));
               const priceText = isOos ? `<span class="modifier-oos-tag">已售完</span>` : (price > 0 ? `+$${price}` : '$0');
               addonsHTML += `
                 <div class="modifier-checkbox-chip ${isChecked ? 'active' : ''} ${isOos ? 'disabled' : ''}" 
                      style="min-height: 44px; padding: 8px 12px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;"
-                     onclick="${isOos ? '' : `bundleToggleAddonMultiple('${esc(opt.name)}')`}">
+                     onclick="${isOos ? '' : `bundleToggleAddonMultiple('${esc(optId)}', '${esc(opt.name)}')`}">
                   <span>${esc(opt.name)}</span>
                   <span style="font-size: 12px; opacity: 0.85; font-weight: 700;">${priceText}</span>
                 </div>
@@ -528,21 +532,47 @@
     }
     render();
   };
-  window.bundleSelectAddonSingle = function(modSlug, optName) {
+  window.bundleSelectAddonSingle = function(modSlug, optId, optName) {
     if (!draft) return;
-    if (!draft.addonSelections) draft.addonSelections = { single: {}, multiple: {}, note: '' };
+    if (!draft.addonSelections) draft.addonSelections = { single: {}, multiple: {}, note: '', selectedDetails: {} };
     if (!draft.addonSelections.single) draft.addonSelections.single = {};
-    draft.addonSelections.single[modSlug] = optName;
+    if (!draft.addonSelections.selectedDetails) draft.addonSelections.selectedDetails = {};
+    const effectiveOptId = optId || optName;
+    const effectiveOptName = optName || optId;
+    draft.addonSelections.single[modSlug] = effectiveOptId;
+    for (const k of Object.keys(draft.addonSelections.selectedDetails)) {
+      if (draft.addonSelections.selectedDetails[k]?.groupId === modSlug) {
+        delete draft.addonSelections.selectedDetails[k];
+      }
+    }
+    const getPrice = window.getModifierPrice || (() => 0);
+    draft.addonSelections.selectedDetails[effectiveOptId] = {
+      id: effectiveOptId,
+      name: effectiveOptName,
+      price: getPrice(effectiveOptName),
+      groupId: modSlug
+    };
     render();
   };
-  window.bundleToggleAddonMultiple = function(optName) {
+  window.bundleToggleAddonMultiple = function(optId, optName) {
     if (!draft) return;
-    if (!draft.addonSelections) draft.addonSelections = { single: {}, multiple: {}, note: '' };
+    if (!draft.addonSelections) draft.addonSelections = { single: {}, multiple: {}, note: '', selectedDetails: {} };
     if (!draft.addonSelections.multiple) draft.addonSelections.multiple = {};
-    if (draft.addonSelections.multiple[optName]) {
-      delete draft.addonSelections.multiple[optName];
+    if (!draft.addonSelections.selectedDetails) draft.addonSelections.selectedDetails = {};
+    const key = optId || optName;
+    const effectiveName = optName || optId;
+    if (draft.addonSelections.multiple[key] || draft.addonSelections.selectedDetails[key]) {
+      delete draft.addonSelections.multiple[key];
+      if (optName) delete draft.addonSelections.multiple[optName];
+      delete draft.addonSelections.selectedDetails[key];
     } else {
-      draft.addonSelections.multiple[optName] = true;
+      draft.addonSelections.multiple[key] = true;
+      const getPrice = window.getModifierPrice || (() => 0);
+      draft.addonSelections.selectedDetails[key] = {
+        id: key,
+        name: effectiveName,
+        price: getPrice(effectiveName)
+      };
     }
     render();
   };
