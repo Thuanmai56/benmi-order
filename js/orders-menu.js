@@ -38,19 +38,76 @@ function updateMenuSaveState() {
   else btn.textContent = text;
 }
 
-function markMenuDirty() {
-  isMenuDirty = true;
+function canonicalMenuSnapshot(data) {
+  if (!data) return '';
+  function clean(val) {
+    if (val === null || val === undefined) return null;
+    if (typeof val === 'string') return val.trim();
+    if (typeof val === 'number') return isNaN(val) ? 0 : val;
+    if (typeof val === 'boolean') return val;
+    if (Array.isArray(val)) {
+      return val.map(clean);
+    }
+    if (typeof val === 'object') {
+      const sortedKeys = Object.keys(val).sort();
+      const res = {};
+      for (const k of sortedKeys) {
+        if (k.startsWith('_')) continue;
+        const v = val[k];
+        if ((k === 'modifierGroups' || k === 'appliedItems' || k === 'appliedCategories' || k === 'sub_options') && (v === undefined || v === null || (Array.isArray(v) && v.length === 0))) {
+          res[k] = [];
+          continue;
+        }
+        if (k === 'badgeText') {
+          res[k] = v ? String(v).trim() : '';
+          continue;
+        }
+        if (k === 'bundleRule' && (!v || !v.groups || v.groups.length === 0)) {
+          res[k] = null;
+          continue;
+        }
+        res[k] = clean(v);
+      }
+      return res;
+    }
+    return val;
+  }
+  return JSON.stringify(clean(data));
+}
+window.canonicalMenuSnapshot = canonicalMenuSnapshot;
+
+function checkMenuDirty() {
+  if (isMenuSaving) return isMenuDirty;
+  if (!isMenuLoadedCompletely || !savedMenuSnapshot || !currentMenuData) {
+    updateMenuSaveState();
+    return isMenuDirty;
+  }
+  syncMenuDataFromDOM();
+  const currentSnap = canonicalMenuSnapshot(currentMenuData);
+  isMenuDirty = currentSnap !== savedMenuSnapshot;
   updateMenuSaveState();
+  return isMenuDirty;
+}
+window.checkMenuDirty = checkMenuDirty;
+
+function markMenuDirty() {
+  if (savedMenuSnapshot && isMenuLoadedCompletely && currentMenuData) {
+    checkMenuDirty();
+  } else {
+    isMenuDirty = true;
+    updateMenuSaveState();
+  }
 }
 
 function clearMenuDirty() {
   isMenuDirty = false;
-  savedMenuSnapshot = JSON.stringify(currentMenuData);
+  savedMenuSnapshot = canonicalMenuSnapshot(currentMenuData);
   updateMenuSaveState();
 }
 
 function confirmLeaveMenu() {
   if (isMenuSaving) return false;
+  checkMenuDirty();
   if (!isMenuDirty) return true;
   if (!confirm(t("menuDiscardConfirm"))) return false;
   currentMenuData = savedMenuSnapshot ? JSON.parse(savedMenuSnapshot) : null;
@@ -66,17 +123,47 @@ function confirmLeaveMenu() {
 }
 window.confirmLeaveMenu = confirmLeaveMenu;
 
-// All help disclosures, including dynamically rendered category help.
+// All help disclosures, including dynamically rendered category help and modal backdrop dismissals.
 document.addEventListener('click', event => {
   document.querySelectorAll('.menu-help[open]').forEach(help => {
     if (!help.contains(event.target)) help.open = false;
   });
+  const itemDetailModalEl = document.getElementById("itemDetailModal");
+  if (itemDetailModalEl && event.target === itemDetailModalEl) {
+    closeItemDetailModal();
+  }
+  const itemModModalEl = document.getElementById("itemModifiersModal");
+  if (itemModModalEl && event.target === itemModModalEl) {
+    closeItemModifiersModal();
+  }
+  const bundleModalEl = document.getElementById("modal-bundle-editor");
+  if (bundleModalEl && event.target === bundleModalEl) {
+    closeBundleEditorModal();
+  }
 });
 document.addEventListener('keydown', event => {
-  if (event.key === 'Escape') document.querySelectorAll('.menu-help[open]').forEach(help => { help.open = false; });
+  if (event.key === 'Escape') {
+    document.querySelectorAll('.menu-help[open]').forEach(help => { help.open = false; });
+    const itemDetail = document.getElementById("itemDetailModal");
+    if (itemDetail && itemDetail.style.display !== "none") {
+      closeItemDetailModal();
+      return;
+    }
+    const itemMods = document.getElementById("itemModifiersModal");
+    if (itemMods && itemMods.style.display !== "none") {
+      closeItemModifiersModal();
+      return;
+    }
+    const bundleEditor = document.getElementById("modal-bundle-editor");
+    if (bundleEditor && bundleEditor.style.display !== "none") {
+      closeBundleEditorModal();
+      return;
+    }
+  }
 });
 
 window.addEventListener("beforeunload", event => {
+  checkMenuDirty();
   if (!isMenuDirty && !isMenuSaving) return;
   event.preventDefault();
   event.returnValue = "";
@@ -2542,8 +2629,7 @@ async function deleteCategoryAtIndex(idx) {
     }
   }
   currentMenuData.splice(idx, 1);
-  isMenuDirty = JSON.stringify(currentMenuData) !== savedMenuSnapshot;
-  updateMenuSaveState();
+  checkMenuDirty();
   renderMenuCategories();
 
   if (isCategoryManagerOpen) {
@@ -3009,6 +3095,7 @@ function closeBundleEditorModal() {
   bundleEditingTarget = null;
   bundleDraftRule = null;
   bundleActiveGroupIndex = 0;
+  checkMenuDirty();
   if (returnState) {
     window._hubModalReturnState = null;
     openItemDetailModal(returnState.catIdx, returnState.itemIdx);
@@ -3471,6 +3558,17 @@ async function saveBundleConfig() {
     }
 
     bundleEditingTarget.item.bundleRule = resData.bundleRule || bundleDraftRule;
+    if (savedMenuSnapshot) {
+      try {
+        const snapData = JSON.parse(savedMenuSnapshot);
+        if (snapData[bundleEditingTarget.catIndex]?.items?.[bundleEditingTarget.itemIndex]) {
+          snapData[bundleEditingTarget.catIndex].items[bundleEditingTarget.itemIndex].bundleRule = bundleEditingTarget.item.bundleRule;
+          savedMenuSnapshot = canonicalMenuSnapshot(snapData);
+        }
+      } catch (e) {
+        console.error("Failed to sync bundleRule to savedMenuSnapshot", e);
+      }
+    }
     alert(t("bundleSaveSuccess"));
     const catIdx = bundleEditingTarget.catIndex;
     closeBundleEditorModal();
@@ -3523,6 +3621,17 @@ async function clearBundleConfig() {
     }
 
     bundleEditingTarget.item.bundleRule = null;
+    if (savedMenuSnapshot) {
+      try {
+        const snapData = JSON.parse(savedMenuSnapshot);
+        if (snapData[bundleEditingTarget.catIndex]?.items?.[bundleEditingTarget.itemIndex]) {
+          snapData[bundleEditingTarget.catIndex].items[bundleEditingTarget.itemIndex].bundleRule = null;
+          savedMenuSnapshot = canonicalMenuSnapshot(snapData);
+        }
+      } catch (e) {
+        console.error("Failed to sync bundleRule to savedMenuSnapshot", e);
+      }
+    }
     const catIdx = bundleEditingTarget.catIndex;
     closeBundleEditorModal();
     renderMenuCategoryEditor(catIdx);
@@ -3611,6 +3720,8 @@ window.handleSelectCreateType = handleSelectCreateType;
 let currentItemModifiersCidx = null;
 let currentItemModifiersIidx = null;
 let tempItemModifierGroups = [];
+let itemModifiersSnapshotBeforeEdit = null;
+let itemCustomizationCategoriesSnapshotBeforeEdit = null;
 
 function openItemModifiersModal(cIdx, iIdx) {
   syncMenuDataFromDOM();
@@ -3619,6 +3730,12 @@ function openItemModifiersModal(cIdx, iIdx) {
   currentItemModifiersIidx = iIdx;
   const item = currentMenuData[cIdx].items[iIdx];
   tempItemModifierGroups = JSON.parse(JSON.stringify(item.modifierGroups || []));
+
+  // Snapshot for rollback on cancel
+  itemModifiersSnapshotBeforeEdit = JSON.parse(JSON.stringify(item.modifierGroups || []));
+  itemCustomizationCategoriesSnapshotBeforeEdit = JSON.parse(JSON.stringify(
+    (currentMenuData || []).filter(c => isCustomizationCategory(c))
+  ));
 
   const modal = document.getElementById("itemModifiersModal");
   const titleEl = document.getElementById("item-modifiers-modal-title");
@@ -3637,10 +3754,32 @@ window.openItemModifiersModal = openItemModifiersModal;
 function closeItemModifiersModal() {
   const modal = document.getElementById("itemModifiersModal");
   if (modal) modal.style.display = "none";
+
+  // Rollback on Cancel if we did not save
+  if (currentItemModifiersCidx !== null && currentItemModifiersIidx !== null && itemModifiersSnapshotBeforeEdit) {
+    const item = currentMenuData?.[currentItemModifiersCidx]?.items?.[currentItemModifiersIidx];
+    if (item) {
+      item.modifierGroups = JSON.parse(JSON.stringify(itemModifiersSnapshotBeforeEdit));
+    }
+  }
+  if (itemCustomizationCategoriesSnapshotBeforeEdit && currentMenuData) {
+    const savedCust = itemCustomizationCategoriesSnapshotBeforeEdit;
+    savedCust.forEach(savedCat => {
+      const liveCat = currentMenuData.find(c => c.id === savedCat.id || c.databaseId === savedCat.databaseId);
+      if (liveCat) {
+        liveCat.groups = JSON.parse(JSON.stringify(savedCat.groups || []));
+      }
+    });
+  }
+
   const returnState = window._hubModalReturnState;
   currentItemModifiersCidx = null;
   currentItemModifiersIidx = null;
   tempItemModifierGroups = [];
+  itemModifiersSnapshotBeforeEdit = null;
+  itemCustomizationCategoriesSnapshotBeforeEdit = null;
+  checkMenuDirty();
+
   if (returnState) {
     window._hubModalReturnState = null;
     openItemDetailModal(returnState.catIdx, returnState.itemIdx);
@@ -4127,7 +4266,9 @@ function saveItemModifiersModal() {
     if (item) {
       item.modifierGroups = tempItemModifierGroups;
       item.itemType = (item.bundleRule && item.bundleRule.groups && item.bundleRule.groups.length > 0) ? 'bundle' : 'standard';
-      markMenuDirty();
+      itemModifiersSnapshotBeforeEdit = null;
+      itemCustomizationCategoriesSnapshotBeforeEdit = null;
+      checkMenuDirty();
       renderMenuCategoryEditor(currentItemModifiersCidx);
     }
   }
@@ -4364,6 +4505,8 @@ function handleQuickTagClick(tagText) {
 }
 window.handleQuickTagClick = handleQuickTagClick;
 
+let itemDetailSnapshotBeforeEdit = null;
+
 function autoCommitItemDetailFields() {
   if (activeItemDetailCatIdx === null || activeItemDetailItemIdx === null) return;
   const item = currentMenuData[activeItemDetailCatIdx]?.items?.[activeItemDetailItemIdx];
@@ -4383,7 +4526,7 @@ function autoCommitItemDetailFields() {
     item.badgeText = bVal;
     item.isRecommended = Boolean(bVal && (bVal.includes('推薦') || bVal.toLowerCase().includes('khuyên dùng') || bVal.toLowerCase().includes('recommend')));
   }
-  markMenuDirty();
+  checkMenuDirty();
 }
 
 function openCreateItemModal(cIdx) {
@@ -4394,6 +4537,7 @@ function openCreateItemModal(cIdx) {
   activeItemDetailCatIdx = cIdx;
   activeItemDetailItemIdx = null;
   currentDetailImageKey = null;
+  itemDetailSnapshotBeforeEdit = null;
 
   const cat = currentMenuData[cIdx];
   const modal = document.getElementById("itemDetailModal");
@@ -4491,6 +4635,7 @@ function openItemDetailModal(cIdx, iIdx) {
 
   const cat = currentMenuData[cIdx];
   const item = cat.items[iIdx];
+  itemDetailSnapshotBeforeEdit = JSON.parse(JSON.stringify(item));
 
   const modal = document.getElementById("itemDetailModal");
   const titleEl = document.getElementById("item-detail-modal-title");
@@ -4585,10 +4730,20 @@ window.openItemDetailModal = openItemDetailModal;
 function closeItemDetailModal() {
   const modal = document.getElementById("itemDetailModal");
   if (modal) modal.style.display = "none";
+
+  // Rollback on Cancel if we were editing an existing item and did not save
+  if (!isItemDetailCreateMode && activeItemDetailCatIdx !== null && activeItemDetailItemIdx !== null && itemDetailSnapshotBeforeEdit) {
+    if (currentMenuData?.[activeItemDetailCatIdx]?.items?.[activeItemDetailItemIdx]) {
+      currentMenuData[activeItemDetailCatIdx].items[activeItemDetailItemIdx] = JSON.parse(JSON.stringify(itemDetailSnapshotBeforeEdit));
+    }
+  }
+
   isItemDetailCreateMode = false;
   activeItemDetailCatIdx = null;
   activeItemDetailItemIdx = null;
   currentDetailImageKey = null;
+  itemDetailSnapshotBeforeEdit = null;
+  checkMenuDirty();
 }
 window.closeItemDetailModal = closeItemDetailModal;
 
@@ -4618,6 +4773,9 @@ function saveItemDetailModal() {
     return;
   }
 
+  const modal = document.getElementById("itemDetailModal");
+  if (modal) modal.style.display = "none";
+
   if (isItemDetailCreateMode || activeItemDetailItemIdx === null) {
     const newItem = {
       name: nameVal,
@@ -4630,8 +4788,14 @@ function saveItemDetailModal() {
       modifierGroups: []
     };
     cat.items.push(newItem);
-    markMenuDirty();
-    renderMenuCategoryEditor(activeItemDetailCatIdx);
+    const saveCatIdx = activeItemDetailCatIdx;
+    isItemDetailCreateMode = false;
+    activeItemDetailCatIdx = null;
+    activeItemDetailItemIdx = null;
+    currentDetailImageKey = null;
+    itemDetailSnapshotBeforeEdit = null;
+    checkMenuDirty();
+    renderMenuCategoryEditor(saveCatIdx);
     renderMenuCategories();
   } else {
     const item = cat.items[activeItemDetailItemIdx];
@@ -4640,13 +4804,24 @@ function saveItemDetailModal() {
       item.price = isNaN(priceVal) ? 0 : priceVal;
       item.badgeText = badgeVal;
       item.isRecommended = isRec;
-      markMenuDirty();
-      renderMenuCategoryEditor(activeItemDetailCatIdx);
+      const saveCatIdx = activeItemDetailCatIdx;
+      isItemDetailCreateMode = false;
+      activeItemDetailCatIdx = null;
+      activeItemDetailItemIdx = null;
+      currentDetailImageKey = null;
+      itemDetailSnapshotBeforeEdit = null;
+      checkMenuDirty();
+      renderMenuCategoryEditor(saveCatIdx);
       renderMenuCategories();
+    } else {
+      isItemDetailCreateMode = false;
+      activeItemDetailCatIdx = null;
+      activeItemDetailItemIdx = null;
+      currentDetailImageKey = null;
+      itemDetailSnapshotBeforeEdit = null;
+      checkMenuDirty();
     }
   }
-
-  closeItemDetailModal();
 }
 window.saveItemDetailModal = saveItemDetailModal;
 
