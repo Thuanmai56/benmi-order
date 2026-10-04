@@ -100,13 +100,43 @@ async function resize(page, viewport) {
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 }
 
+async function touchGesture(page, from, to, { cancel = false, multi = false, refresh = false } = {}) {
+  const cdp = await page.context().newCDPSession(page);
+  const points = (x, y) => [{ x, y, id: 1 }, ...(multi ? [{ x: x - 28, y, id: 2 }] : [])];
+  try {
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: points(from.x, from.y) });
+    for (let step = 1; step <= 6; step++) {
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: points(from.x + (to.x - from.x) * step / 6, from.y + (to.y - from.y) * step / 6)
+      });
+      if (refresh && step === 3) await page.evaluate(() => renderAll());
+      await page.waitForTimeout(20);
+    }
+    await cdp.send('Input.dispatchTouchEvent', { type: cancel ? 'touchCancel' : 'touchEnd', touchPoints: [] });
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  } finally {
+    await cdp.detach();
+  }
+}
+
+async function swipeQueue(page, direction, options) {
+  const info = await page.locator('.live-panel:not([hidden]) .tile-info').evaluateAll(nodes => {
+    const list = nodes[0].closest('.live-panel-body').getBoundingClientRect();
+    return nodes.map(node => node.getBoundingClientRect()).find(rect => rect.top >= list.top && rect.top + 20 < list.bottom).toJSON();
+  });
+  const left = { x: info.x + info.width * 0.25, y: info.y + 20 };
+  const right = { x: info.x + info.width * 0.75, y: info.y + 20 };
+  await touchGesture(page, direction === 'left' ? right : left, direction === 'left' ? left : right, options);
+}
+
 (async () => {
   const browser = await chromium.launch({
     executablePath: process.env.CHROME_PATH || (process.platform === 'darwin' ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' : undefined),
     headless: true
   });
   try {
-    const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true });
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await loadFixture(page);
@@ -145,6 +175,43 @@ async function resize(page, viewport) {
     await resize(page, { width: 390, height: 844 });
     await snapshot(page, 'live-mobile-vi');
 
+    await swipeQueue(page, 'left');
+    assert(await page.locator('#live-panel-ready').isVisible(), 'Swipe left selects ready queue');
+    assert(!(await page.locator('#reviewModal').isVisible()), 'Swiping a card must not open its details');
+    await swipeQueue(page, 'left');
+    assert(await page.locator('#live-panel-ready').isVisible(), 'Swiping past the last queue does not wrap');
+    await swipeQueue(page, 'right');
+    assert(await page.locator('#live-panel-pending').isVisible(), 'Swipe right selects pending queue');
+    await swipeQueue(page, 'right');
+    assert(await page.locator('#live-panel-pending').isVisible(), 'Swiping past the first queue does not wrap');
+    await swipeQueue(page, 'left', { cancel: true });
+    assert(await page.locator('#live-panel-pending').isVisible(), 'Cancelled gestures keep the current queue');
+    await swipeQueue(page, 'left', { multi: true });
+    assert(await page.locator('#live-panel-pending').isVisible(), 'Multi-touch does not switch queues');
+
+    const info = await page.locator('#list-left .tile-info').first().boundingBox();
+    const touchPoint = { x: info.x + info.width * 0.75, y: info.y + 20 };
+    await touchGesture(page, touchPoint, { x: touchPoint.x - 20, y: touchPoint.y });
+    assert(await page.locator('#live-panel-pending').isVisible(), 'Short movements do not switch queues');
+    await touchGesture(page, { x: 375, y: touchPoint.y }, { x: 200, y: touchPoint.y });
+    assert(await page.locator('#live-panel-pending').isVisible(), 'Screen-edge gestures are reserved for the browser');
+    const button = await page.locator('#list-left .tile-action-btn').first().boundingBox();
+    await touchGesture(page, { x: button.x + button.width * 0.75, y: button.y + button.height / 2 }, { x: button.x + 20, y: button.y + button.height / 2 });
+    assert(await page.locator('#live-panel-pending').isVisible(), 'Swiping on action buttons does not switch queues');
+    assert.equal(await page.evaluate(() => window.fixturePosts.length), 0, 'Gestures do not update order status');
+    await page.evaluate(() => closeModal());
+
+    await touchGesture(page, { x: touchPoint.x, y: info.y + 120 }, { x: touchPoint.x, y: info.y + 20 }, { cancel: true });
+    assert(await page.locator('#live-panel-pending').isVisible(), 'Vertical scrolling retains the queue');
+    assert(await page.locator('#list-left').evaluate(node => node.scrollTop > 0), 'Vertical touch gestures still scroll natively');
+    await scrollList(page, '#list-left', 0);
+    await touchGesture(page, { x: touchPoint.x, y: info.y + 120 }, { x: touchPoint.x - 50, y: info.y + 20 }, { cancel: true });
+    assert(await page.locator('#live-panel-pending').isVisible(), 'Vertical-dominant diagonal gestures retain the queue');
+    await scrollList(page, '#list-left', 0);
+    await swipeQueue(page, 'left', { refresh: true });
+    assert(await page.locator('#live-panel-ready').isVisible(), 'Live refresh during a swipe must not lose the gesture');
+    await page.locator('#live-mobile-tab-pending').tap();
+
     const tabPosition = await page.locator('#live-mobile-tabs').boundingBox();
     await scrollList(page, '#list-left', 500);
     assert.deepEqual(await page.locator('#live-mobile-tabs').boundingBox(), tabPosition, 'Tabs remain stationary');
@@ -159,6 +226,10 @@ async function resize(page, viewport) {
     assert.equal(await page.locator('#list-right').evaluate(node => node.scrollTop), 700, 'Polling preserves scroll');
     await page.locator('#live-mobile-tab-pending').click();
     assert.equal(await page.locator('#list-left').evaluate(node => node.scrollTop), 500, 'Hidden queue retains scroll');
+    await swipeQueue(page, 'left');
+    assert.equal(await page.locator('#list-right').evaluate(node => node.scrollTop), 700, 'Swipe retains ready queue scroll');
+    await swipeQueue(page, 'right');
+    assert.equal(await page.locator('#list-left').evaluate(node => node.scrollTop), 500, 'Swipe retains pending queue scroll');
 
     await page.locator('#live-mobile-tab-pending').focus();
     await page.keyboard.press('ArrowRight');
@@ -193,14 +264,14 @@ async function resize(page, viewport) {
     assert.equal(await page.locator('#list-left').evaluate(node => node.scrollTop), 0);
     await page.locator('#filter-btn-all').click();
     // Use actual action buttons and production status handlers; only HTTP is mocked.
-    await page.locator('#list-left .btn-action-ready').first().click();
+    await page.locator('#list-left .btn-action-ready').first().tap();
     await page.waitForFunction(() => document.getElementById('live-mobile-count-pending').innerText === '23');
     assert.equal(await page.locator('#live-mobile-count-ready').innerText(), '57');
     assert(await page.locator('#live-panel-pending').isVisible());
     await page.locator('#live-mobile-tab-ready').click();
-    await page.locator('#list-right .btn-action-pickup').first().click();
+    await page.locator('#list-right .btn-action-pickup').first().tap();
     await page.waitForFunction(() => document.getElementById('live-mobile-count-ready').innerText === '56');
-    await page.locator('#list-right .btn-action-paid').first().click();
+    await page.locator('#list-right .btn-action-paid').first().tap();
     await page.waitForFunction(() => document.getElementById('live-mobile-count-ready').innerText === '55');
     assert(await page.locator('#live-panel-ready').isVisible());
     assert.deepEqual(await page.evaluate(() => window.fixturePosts.map(post => post.status)), ['DONE', 'PICKED_UP', 'PAID']);
@@ -216,7 +287,7 @@ async function resize(page, viewport) {
       renderAll();
     });
     assert.equal(await page.locator('#list-left .btn-action-waiting:disabled').count(), 2);
-    await page.locator('#list-left .btn-action-review').click();
+    await page.locator('#list-left .btn-action-review').tap();
     assert(await page.locator('#reviewModal').isVisible(), 'Reviewing a new order still works');
     await page.evaluate(() => { closeModal(); posReturnContext = null; });
 
@@ -235,7 +306,7 @@ async function resize(page, viewport) {
     // Compare unaffected layouts with the pre-change source, including tab return.
     const baseline = await browser.newPage();
     await loadFixture(baseline, true);
-    const current = await browser.newPage();
+    const current = await browser.newPage({ hasTouch: true });
     await loadFixture(current);
     for (const viewport of [
       { width: 601, height: 900 }, { width: 600, height: 390 }, { width: 844, height: 390 },
@@ -247,13 +318,16 @@ async function resize(page, viewport) {
       assert(await current.locator('#live-panel-pending').isVisible());
       assert(await current.locator('#live-panel-ready').isVisible());
       assertSameLayout(await layout(current), await layout(baseline), `Unchanged layout at ${viewport.width}x${viewport.height}`);
+      const stationBeforeSwipe = await current.evaluate(() => liveMobileStation);
+      await swipeQueue(current, 'left');
+      assert.equal(await current.evaluate(() => liveMobileStation), stationBeforeSwipe, 'Swipe remains disabled outside portrait phones');
       for (const target of [baseline, current]) await target.evaluate(() => { switchTab('settings'); switchTab('live'); });
       assertSameLayout(await layout(current), await layout(baseline), 'Unchanged desktop layout after switching main tabs');
     }
     await resize(current, { width: 1024, height: 768 });
     await snapshot(current, 'live-tablet-zh-TW');
     assert.deepEqual(errors, [], 'No browser runtime errors');
-    console.log('PASS: mobile widths/languages, keyboard tabs, independent scrolling, timer/polling, rotation, main-tab return, filters, real status actions, details, empty queues, and unchanged wider/landscape layouts.');
+    console.log('PASS: native touch swipes, vertical scroll, gesture exclusions/cancellation, refresh during swipe, mobile widths/languages, keyboard tabs, independent scrolling, polling, rotation, main-tab return, filters, status actions, details, empty queues, and unchanged wider/landscape layouts.');
   } finally {
     await browser.close();
   }

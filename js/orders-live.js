@@ -90,6 +90,94 @@ function setLiveMobileStation(station) {
   syncLiveMobileView();
 }
 
+function initLiveMobileSwipe() {
+  const view = document.getElementById("view-live");
+  if (!view) return;
+  let gesture = null;
+  let touchTarget = null;
+  let suppressedClickTarget = null;
+  let suppressClickUntil = 0;
+
+  function clearGesture() {
+    if (touchTarget) {
+      touchTarget.removeEventListener("touchmove", onTouchMove);
+      touchTarget.removeEventListener("touchend", onTouchEnd);
+      touchTarget.removeEventListener("touchcancel", clearGesture);
+    }
+    touchTarget = null;
+    gesture = null;
+  }
+
+  view.addEventListener("touchstart", event => {
+    clearGesture();
+    suppressedClickTarget = null;
+    if (!isLiveMobilePortrait() || activeTab !== "live" || event.touches.length !== 1) return;
+    const target = event.target;
+    if (!target.closest(".live-panel-body") || target.closest('button, a, input, select, textarea, [role="button"], [contenteditable]')) return;
+    const touch = event.touches[0];
+    // Reserve screen edges for the browser/system back gesture.
+    if (touch.clientX < 24 || touch.clientX > window.innerWidth - 24) return;
+    gesture = {
+      id: touch.identifier, x: touch.clientX, y: touch.clientY,
+      startedAt: Date.now(), station: liveMobileStation,
+      target: target.closest(".tile") || target, horizontal: false
+    };
+    // Touch events retain their original target, even if polling replaces its card.
+    touchTarget = target;
+    touchTarget.addEventListener("touchmove", onTouchMove, { passive: false });
+    touchTarget.addEventListener("touchend", onTouchEnd, { passive: false });
+    touchTarget.addEventListener("touchcancel", clearGesture, { passive: true });
+  }, { passive: true });
+
+  function onTouchMove(event) {
+    if (!gesture) return;
+    if (!isLiveMobilePortrait() || activeTab !== "live" || event.touches.length !== 1) {
+      clearGesture();
+      return;
+    }
+    const touch = event.touches[0];
+    if (touch.identifier !== gesture.id) return;
+    const dx = Math.abs(touch.clientX - gesture.x);
+    const dy = Math.abs(touch.clientY - gesture.y);
+    if (dy > 12 && dy >= dx) {
+      clearGesture();
+      return;
+    }
+    if (dx >= 48 && dx >= dy * 1.5) {
+      gesture.horizontal = true;
+      if (event.cancelable) event.preventDefault();
+    }
+  }
+
+  function onTouchEnd(event) {
+    const completed = gesture;
+    clearGesture();
+    if (!completed || event.touches.length !== 0) return;
+    const touch = Array.from(event.changedTouches).find(item => item.identifier === completed.id);
+    if (!touch) return;
+    const dx = touch.clientX - completed.x;
+    const dy = touch.clientY - completed.y;
+    const horizontal = Math.abs(dx) >= 48 && Math.abs(dx) >= Math.abs(dy) * 1.5;
+    if (completed.horizontal || horizontal) {
+      // A swipe on a clickable card must not open the order after finger release.
+      suppressedClickTarget = completed.target;
+      suppressClickUntil = Date.now() + 400;
+      if (event.cancelable) event.preventDefault();
+    }
+    if (!horizontal || Date.now() - completed.startedAt > 800 || !isLiveMobilePortrait() || activeTab !== "live" || liveMobileStation !== completed.station) return;
+    const nextStation = dx < 0 ? "ready" : "pending";
+    if (nextStation !== liveMobileStation) setLiveMobileStation(nextStation);
+  }
+
+  view.addEventListener("click", event => {
+    if (event.detail !== 0 && suppressedClickTarget && Date.now() < suppressClickUntil && suppressedClickTarget.contains(event.target)) {
+      event.preventDefault();
+      event.stopPropagation();
+      suppressedClickTarget = null;
+    }
+  }, { capture: true });
+}
+
 function initLiveMobileView() {
   if (liveMobileMedia || typeof window.matchMedia !== "function") return;
   liveMobileMedia = window.matchMedia(LIVE_MOBILE_QUERY);
@@ -126,6 +214,7 @@ function initLiveMobileView() {
     setLiveMobileStation(station);
     document.getElementById(`live-mobile-tab-${station}`).focus({ preventScroll: true });
   });
+  initLiveMobileSwipe();
   syncLiveMobileView();
 }
 
