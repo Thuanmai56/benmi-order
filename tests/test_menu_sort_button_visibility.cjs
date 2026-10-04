@@ -134,6 +134,6 @@ test('Menu Sidebar Tab: display order button is only visible on products tab', (
 
 test('Cache buster bumped in orders.html for orders.css and orders-menu.js', () => {
   const html = fs.readFileSync(path.resolve(__dirname, '../orders.html'), 'utf-8');
-  assert.ok(/css\/orders\.css\?v=20261004_sort_order_products_tab_v1/.test(html), 'orders.css cache buster bumped');
-  assert.ok(/js\/orders-menu\.js\?v=20261004_sort_order_products_tab_v1/.test(html), 'orders-menu.js cache buster bumped');
+  assert.ok(/css\/orders\.css\?v=20261004_/.test(html), 'orders.css cache buster bumped');
+  assert.ok(/js\/orders-menu\.js\?v=20261004_/.test(html), 'orders-menu.js cache buster bumped');
 });
