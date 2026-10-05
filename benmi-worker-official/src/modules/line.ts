@@ -248,7 +248,7 @@ export async function replyWithLiffRedirect(
       contents: [
         {
           type: "text",
-          text: "輕鬆選餐、自訂時間",
+          text: "線上點餐、省時方便",
           weight: "bold",
           size: "lg",
           color: "#111111"
@@ -282,7 +282,7 @@ export async function replyWithLiffRedirect(
               spacing: "sm",
               contents: [
                 { type: "text", text: "•", color: brandColor, flex: 0, weight: "bold" },
-                { type: "text", text: "自由備註客製化需求與取餐時間", size: "xs", color: "#666666" }
+                { type: "text", text: "隨時隨地輕鬆完成預訂", size: "xs", color: "#666666" }
               ]
             },
             {

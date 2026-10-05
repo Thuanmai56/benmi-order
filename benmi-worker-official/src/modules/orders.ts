@@ -251,18 +251,19 @@ export async function validateItemLimits(
     const limitedItems = limitedItemsRes.results || [];
     if (limitedItems.length === 0) return { valid: true };
 
-    const limitById = new Map<string, { name: string; maxPerOrder: number }>();
-    const limitByName = new Map<string, { id: string; maxPerOrder: number }>();
+    const limitById = new Map<string, { id: string; name: string; maxPerOrder: number }>();
+    const limitByName = new Map<string, { id: string; name: string; maxPerOrder: number }>();
     for (const it of limitedItems) {
-      limitById.set(it.id, { name: it.name, maxPerOrder: Number(it.max_per_order) });
-      limitByName.set(it.name, { id: it.id, maxPerOrder: Number(it.max_per_order) });
+      const entry = { id: it.id, name: it.name, maxPerOrder: Number(it.max_per_order) };
+      limitById.set(it.id, entry);
+      limitByName.set(it.name, entry);
     }
 
     const orderQtyByName = new Map<string, number>();
 
     for (const item of rawItems) {
       const itemId = item.itemId || item.item_id || "";
-      const itemName = item.name || item.itemName || "";
+      const itemName = item.name || (item as any).itemName || "";
       const qty = Number(item.quantity) || 1;
 
       const matchedLimit = (itemId ? limitById.get(itemId) : undefined) || limitByName.get(itemName);
