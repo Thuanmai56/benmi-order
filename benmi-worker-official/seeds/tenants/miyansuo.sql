@@ -115,13 +115,13 @@ ON CONFLICT(id) DO UPDATE SET
 INSERT INTO menu_items (
     id, tenant_id, category_id, name, price, description, badge_text, is_recommended, sort_order, max_per_order
 ) VALUES
--- 5.1 雞蛋糕 (小份 5入) - Xoá chú thích AI tự chế, giới hạn 1 phần/đơn cho 2 món限量
+-- 5.1 雞蛋糕 (小份 5入) - Xoá chú thích AI tự chế
 ('mys_ec_01', 'miyansuo', 'cat_mys_egg_cake_small', '原味雞蛋糕 (5入)',         60, NULL, NULL, 0, 1, NULL),
 ('mys_ec_02', 'miyansuo', 'cat_mys_egg_cake_small', '奶酥雞蛋糕 (5入)',         65, NULL, NULL, 0, 2, NULL),
 ('mys_ec_03', 'miyansuo', 'cat_mys_egg_cake_small', '巧克力雞蛋糕 (5入)',       65, NULL, NULL, 0, 3, NULL),
 ('mys_ec_04', 'miyansuo', 'cat_mys_egg_cake_small', '牽絲起司雞蛋糕 (5入)',     70, NULL, '人氣必點', 1, 4, NULL),
-('mys_ec_05', 'miyansuo', 'cat_mys_egg_cake_small', '香草籽卡士達雞蛋糕 (5入)', 80, NULL, '限量', 0, 5, 1),
-('mys_ec_06', 'miyansuo', 'cat_mys_egg_cake_small', '開心果醬雞蛋糕 (5入)',     90, NULL, '限量', 0, 6, 1),
+('mys_ec_05', 'miyansuo', 'cat_mys_egg_cake_small', '香草籽卡士達雞蛋糕 (5入)', 80, NULL, '限量', 0, 5, NULL),
+('mys_ec_06', 'miyansuo', 'cat_mys_egg_cake_small', '開心果醬雞蛋糕 (5入)',     90, NULL, '限量', 0, 6, NULL),
 
 -- 5.2 經典分享盒 (大份 10入) - Giữ lại hướng dẫn chọn 2 vị
 ('mys_sb_01', 'miyansuo', 'cat_mys_sharing_box', '經典分享盒 (10入)', 130, '原味、奶酥、巧克力、起司，可任選兩種搭配', '經典', 1, 1, NULL),
