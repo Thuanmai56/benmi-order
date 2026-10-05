@@ -6,9 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title id="page-title">線上點餐</title>
     <link rel="preload" href="index.css?v=20261002_custom_price_badge_v1" as="style">
-    <link rel="preload" href="js/client-core.js?v=20261002_custom_price_badge_v1" as="script">
-    <link rel="preload" href="js/client-menu.js?v=20261002_custom_price_badge_v1" as="script">
+    <link rel="preload" href="js/client-core.js?v=20261005_line_tenant_redirect_v1" as="script">
+    <link rel="preload" href="js/client-menu.js?v=20261005_line_tenant_redirect_v1" as="script">
     <link rel="stylesheet" href="index.css?v=20261002_custom_price_badge_v1">
+    <style>html.tenant-resolution-failed body > :not(#tenant-resolution-error) { display: none !important; }</style>
     <script>
         // Redirect root visits on blabfood.app to /landing
         try {
@@ -23,16 +24,22 @@
         function extractTenantId() {
             try {
                 const searchParams = new URLSearchParams(window.location.search);
-                if (searchParams.has('tenant_id') && searchParams.get('tenant_id')) return searchParams.get('tenant_id');
-                if (searchParams.has('tenant') && searchParams.get('tenant')) return searchParams.get('tenant');
-
                 const liffState = searchParams.get('liff.state');
                 if (liffState) {
-                    const decoded = decodeURIComponent(liffState);
+                    let decoded = liffState;
+                    try { decoded = decodeURIComponent(liffState); } catch (e) { }
                     const queryPart = decoded.includes('?') ? decoded.split('?')[1] : decoded;
                     const stateParams = new URLSearchParams(queryPart);
                     if (stateParams.has('tenant_id') && stateParams.get('tenant_id')) return stateParams.get('tenant_id');
                     if (stateParams.has('tenant') && stateParams.get('tenant')) return stateParams.get('tenant');
+                }
+
+                const queryTenant = searchParams.get('tenant_id') || searchParams.get('tenant');
+                if (queryTenant) {
+                    // Recover LINE's malformed endpoint-query concatenation:
+                    // ?tenant_id=storeA?tenant_id=storeB
+                    const appendedTenant = queryTenant.match(/\?tenant_id=([a-zA-Z0-9_-]+)$/);
+                    return appendedTenant ? appendedTenant[1] : queryTenant;
                 }
 
                 if (window.location.hash) {
@@ -42,12 +49,30 @@
                     if (hashParams.has('tenant') && hashParams.get('tenant')) return hashParams.get('tenant');
                 }
 
-                const sessionTenant = sessionStorage.getItem('current_tenant_id');
-                if (sessionTenant) return sessionTenant;
+                const liffRedirectUri = searchParams.get('liffRedirectUri');
+                if (liffRedirectUri) {
+                    try {
+                        const redirectParams = new URL(liffRedirectUri, window.location.href).searchParams;
+                        if (redirectParams.get('tenant_id')) return redirectParams.get('tenant_id');
+                        if (redirectParams.get('tenant')) return redirectParams.get('tenant');
+                    } catch (e) { }
+                }
 
-                const localTenant = localStorage.getItem('current_tenant_id') || localStorage.getItem('benmi_last_tenant_id');
-                if (localTenant) return localTenant;
-            } catch (e) { }
+                // A LINE login callback may omit the original query string. Only the
+                // tenant saved for this login attempt can be used to recover it.
+                if (searchParams.has('code') || searchParams.has('liffClientId') || searchParams.has('liffRedirectUri')) {
+                    const pendingTenant = sessionStorage.getItem('pending_line_login_tenant_id');
+                    if (pendingTenant) return pendingTenant;
+                    window.__TENANT_RESOLUTION_FAILED = true;
+                    return null;
+                }
+            } catch (e) {
+                const params = new URLSearchParams(window.location.search);
+                if (params.has('code') || params.has('liffClientId') || params.has('liffRedirectUri')) {
+                    window.__TENANT_RESOLUTION_FAILED = true;
+                    return null;
+                }
+            }
             return "benmi";
         }
 
@@ -86,18 +111,18 @@
         (function () {
             const tenantId = extractTenantId();
             window.__INITIAL_TENANT_ID = tenantId;
+            if (window.__TENANT_RESOLUTION_FAILED) {
+                document.documentElement.classList.add('tenant-resolution-failed');
+            }
             try {
-                sessionStorage.setItem('current_tenant_id', tenantId);
-                if (tenantId && tenantId !== 'benmi') {
-                    localStorage.setItem('current_tenant_id', tenantId);
-                    localStorage.setItem('benmi_last_tenant_id', tenantId);
-                }
+                if (tenantId) sessionStorage.setItem('current_tenant_id', tenantId);
             } catch (e) { }
             try {
                 const cached = localStorage.getItem("tenant_bootstrap_" + tenantId) || localStorage.getItem("tenant_branding_" + tenantId) || localStorage.getItem("tenant_theme_" + tenantId);
                 if (cached) {
                     const t = JSON.parse(cached);
-                    const brand = t.tenant ? t.tenant.brandName : (t.brandName || "");
+                    const cachedTenant = t.tenant || t;
+                    const brand = !cachedTenant.id || cachedTenant.id === tenantId ? (cachedTenant.brandName || "") : "";
                     if (brand) document.title = brand + " 點餐";
                 } else if (tenantId === "benmi") {
                     document.title = "Benmi 點餐";
@@ -110,6 +135,10 @@
 </head>
 
 <body>
+    <div id="tenant-resolution-error" style="display: none; max-width: 420px; margin: 15vh auto; padding: 24px; text-align: center; font-family: sans-serif;">
+        <h1 style="font-size: 22px;">無法確認店家</h1>
+        <p style="line-height: 1.7;">請返回原本的店家連結，再次開啟並登入 LINE。</p>
+    </div>
     <!-- Edit Order Loading Overlay (Prevents $0 / Empty Cart FOUC) -->
     <div id="edit-order-loading-overlay" class="edit-order-loading-overlay">
         <div class="edit-order-loading-card">
@@ -230,11 +259,14 @@
                 const rawBootstrap = localStorage.getItem("tenant_bootstrap_" + tenantId);
                 if (rawBootstrap) {
                     const parsed = JSON.parse(rawBootstrap);
-                    if (parsed && parsed.tenant) theme = parsed.tenant;
+                    if (parsed?.tenant?.id === tenantId) theme = parsed.tenant;
                 }
                 if (!theme) {
                     const rawTheme = localStorage.getItem("tenant_theme_" + tenantId);
-                    if (rawTheme) theme = JSON.parse(rawTheme);
+                    if (rawTheme) {
+                        const parsedTheme = JSON.parse(rawTheme);
+                        if (!parsedTheme.id || parsedTheme.id === tenantId) theme = parsedTheme;
+                    }
                 }
             } catch (e) { }
 
@@ -792,8 +824,8 @@
     </div>
 
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-    <script src="js/client-core.js?v=20261002_custom_price_badge_v1"></script>
-    <script src="js/client-menu.js?v=20261002_custom_price_badge_v1"></script>
+    <script src="js/client-core.js?v=20261005_line_tenant_redirect_v1"></script>
+    <script src="js/client-menu.js?v=20261005_line_tenant_redirect_v1"></script>
     <script src="js/client-customizations.js?v=20261002_custom_price_badge_v1"></script>
     <script src="js/client-bundle.js?v=20261002_custom_price_badge_v1"></script>
     <script src="js/client-cart.js?v=20261002_custom_price_badge_v1"></script>
@@ -819,9 +851,14 @@
             </button>
         </div>
     </div>
-    <script src="js/client-checkout.js?v=20261002_custom_price_badge_v1"></script>
+    <script src="js/client-checkout.js?v=20261005_line_tenant_redirect_v1"></script>
     <script>
-        initApp();
+        if (window.__TENANT_RESOLUTION_FAILED) {
+            document.getElementById('page-body-content').style.display = 'none';
+            document.getElementById('tenant-resolution-error').style.display = 'block';
+        } else {
+            initApp();
+        }
     </script>
 </body>
 

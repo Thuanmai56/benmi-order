@@ -1572,22 +1572,18 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                     const storageKey = `cart_save_${tenantId}`;
                     try {
                         sessionStorage.setItem('current_tenant_id', tenantId);
-                        if (tenantId && tenantId !== 'benmi') {
-                            localStorage.setItem('current_tenant_id', tenantId);
-                            localStorage.setItem('benmi_last_tenant_id', tenantId);
-                        }
+                        sessionStorage.setItem('pending_line_login_tenant_id', tenantId);
                         localStorage.setItem(storageKey, JSON.stringify({ cart, customizeData, comboDrinkData, bundleCartData: window.bundleCartData || {} }));
                     } catch(e) {}
                     const cleanRedirectUri = (typeof window.getCleanLiffRedirectUri === 'function') ? window.getCleanLiffRedirectUri() : window.location.href;
                     try {
                         liff.login({ redirectUri: cleanRedirectUri });
                     } catch (loginErr) {
-                        console.warn('[LIFF] Checkout login with redirectUri notice:', loginErr);
-                        try {
-                            liff.login();
-                        } catch (fallbackErr) {
-                            console.error('[LIFF] Checkout fallback login error:', fallbackErr);
-                        }
+                        console.error('[LIFF] Checkout login failed:', loginErr);
+                        try { sessionStorage.removeItem('pending_line_login_tenant_id'); } catch (e) {}
+                        customAlert('LINE 登入失敗，請重試');
+                        isSubmitting = false;
+                        setAllSubmitButtonsState(false, '確認下單', { cursor: 'pointer', opacity: '1' });
                     }
                     return;
                 }
