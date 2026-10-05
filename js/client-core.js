@@ -264,6 +264,10 @@ function renderStoreOperatingHours() {
 function applyTenantTheme(tenant) {
     if (!tenant) return;
     const tenantId = getTenantIdFromUrl();
+    if (tenant.id && tenant.id !== tenantId) {
+        console.error(`[Tenant] Ignored theme for ${tenant.id} on ${tenantId}`);
+        return;
+    }
     try {
         localStorage.setItem("tenant_branding_" + tenantId, JSON.stringify(tenant));
         localStorage.setItem("tenant_theme_" + tenantId, JSON.stringify(tenant));
@@ -629,70 +633,30 @@ function ensureLiffReady() {
 
         const tenantId = getTenantIdFromUrl();
 
-        let liffId = storeConfig?.liffId || bootstrapData?.tenant?.liffId;
-        if (!liffId) {
-            try {
-                const cachedBootstrap = localStorage.getItem(`tenant_bootstrap_${tenantId}`);
-                if (cachedBootstrap) {
-                    const parsed = JSON.parse(cachedBootstrap);
-                    liffId = parsed?.tenant?.liffId;
-                }
-            } catch (e) {}
-        }
-        if (!liffId) {
-            try {
-                const cachedTheme = localStorage.getItem(`tenant_theme_${tenantId}`) || localStorage.getItem(`tenant_branding_${tenantId}`);
-                if (cachedTheme) {
-                    const parsed = JSON.parse(cachedTheme);
-                    liffId = parsed?.liffId;
-                }
-            } catch (e) {}
-        }
-
-        if (!liffId) {
-            try {
-                const sp = new URLSearchParams(window.location.search);
-                liffId = sp.get('liffClientId') || sp.get('liff_id');
-            } catch (e) {}
-        }
-
-        if (!liffId) {
-            try {
-                if (window.menuPromise) {
-                    await window.menuPromise;
-                    liffId = storeConfig?.liffId || bootstrapData?.tenant?.liffId;
-                } else if (!liffId && typeof fetchMenu === 'function') {
-                    await fetchMenu();
-                    liffId = storeConfig?.liffId || bootstrapData?.tenant?.liffId;
-                }
-            } catch (e) {
-                console.warn('[LIFF] Wait for bootstrap notice:', e);
-            }
-        }
-
-        if (!liffId && tenantId === 'benmi') {
-            liffId = isDevEnv
-                ? "2011224566-kLLdMjkq"
-                : (isStagingEnv ? "2009555608-DMioljsI" : "2009560906-c5taZfiY");
-        }
-
-        if (!liffId) {
-            console.warn(`[LIFF] No liffId found for tenant [${tenantId}]. Running in pure web mode.`);
-            liffInitPromise = null;
-            return null;
-        }
-
         try {
+            // Resolve from D1 before initializing LIFF. Cached menu/theme data can
+            // contain an old LIFF ID and start login in another store's LINE app.
+            const configResponse = await fetch(`${WORKER_BASE}/api/config?tenant_id=${encodeURIComponent(tenantId)}`, { cache: 'no-store' });
+            if (!configResponse.ok) throw new Error(`Tenant config request failed: ${configResponse.status}`);
+            const tenantConfig = await configResponse.json();
+            const liffId = tenantConfig?.liffId;
+            if (!liffId || typeof liffId !== 'string') throw new Error(`No LIFF ID configured for tenant ${tenantId}`);
+
             await liff.init({ liffId });
             isLiffInitialized = true;
             console.log(`[LIFF] Initialized successfully for tenant [${tenantId}] with ID:`, liffId);
 
-            if (window.location.search && (window.location.search.includes('code=') || window.location.search.includes('liffClientId='))) {
+            const currentParams = new URLSearchParams(window.location.search);
+            const malformedTenant = /\?tenant_id=/.test(currentParams.get('tenant_id') || '');
+            if (currentParams.has('code') || currentParams.has('liffClientId') || malformedTenant) {
                 const cleanUrl = getCleanLiffRedirectUri();
                 if (window.history && window.history.replaceState) {
                     window.history.replaceState({}, document.title, cleanUrl);
                 }
             }
+            try {
+                sessionStorage.removeItem('pending_line_login_tenant_id');
+            } catch (e) {}
         } catch (initErr) {
             console.warn('[LIFF] Init error for tenant [' + tenantId + ']:', initErr);
             isLiffInitialized = false;
@@ -747,28 +711,28 @@ function closeDesktopLoginModal() {
 }
 
 async function triggerDesktopLineLogin() {
-    await ensureLiffReady();
+    try {
+        await ensureLiffReady();
+    } catch (initErr) {
+        console.error('[LIFF] Desktop initialization failed:', initErr);
+        customAlert('LINE 登入暫時無法使用，請重試');
+        return;
+    }
     if (typeof liff !== 'undefined' && liff.login) {
         const tenantId = getTenantIdFromUrl();
         const storageKey = `cart_save_${tenantId}`;
         try {
             sessionStorage.setItem('current_tenant_id', tenantId);
-            if (tenantId && tenantId !== 'benmi') {
-                localStorage.setItem('current_tenant_id', tenantId);
-                localStorage.setItem('benmi_last_tenant_id', tenantId);
-            }
+            sessionStorage.setItem('pending_line_login_tenant_id', tenantId);
             localStorage.setItem(storageKey, JSON.stringify({ cart: window.cart, customizeData: window.customizeData, comboDrinkData: window.comboDrinkData, bundleCartData: window.bundleCartData || {} }));
         } catch(e) {}
         const cleanRedirectUri = getCleanLiffRedirectUri();
         try {
             liff.login({ redirectUri: cleanRedirectUri });
         } catch (loginErr) {
-            console.warn('[LIFF] Desktop login with redirectUri notice:', loginErr);
-            try {
-                liff.login();
-            } catch (fallbackErr) {
-                console.error('[LIFF] Desktop fallback login error:', fallbackErr);
-            }
+            console.error('[LIFF] Desktop login failed:', loginErr);
+            try { sessionStorage.removeItem('pending_line_login_tenant_id'); } catch (e) {}
+            customAlert('LINE 登入失敗，請重試');
         }
     }
 }
@@ -778,7 +742,11 @@ async function updateDesktopAuthUI() {
     const centerOverlay = document.getElementById('desktop-center-auth-overlay');
     const pageBody = document.getElementById('page-body-content');
 
-    await ensureLiffReady();
+    try {
+        await ensureLiffReady();
+    } catch (initErr) {
+        console.warn('[LIFF] Desktop initialization notice:', initErr);
+    }
 
     if (!isDesktopOutsideLiff()) {
         if (bar) bar.style.display = 'none';
@@ -982,7 +950,7 @@ async function initApp() {
         const cachedRaw = localStorage.getItem(`tenant_bootstrap_${tenantId}`);
         if (cachedRaw) {
             const parsed = JSON.parse(cachedRaw);
-            if (parsed && parsed.tenant) {
+            if (parsed?.tenant?.id === tenantId) {
                 bootstrapData = parsed;
                 window.bootstrapData = parsed;
                 if (typeof buildModifierPriceMap === 'function') {
@@ -1019,6 +987,9 @@ async function initApp() {
 
     // 3. Initialize LIFF asynchronously via Singleton Gate
     ensureLiffReady().then(() => {
+        updateDesktopAuthUI();
+    }).catch(err => {
+        console.warn('[LIFF] Background initialization notice:', err);
         updateDesktopAuthUI();
     });
 

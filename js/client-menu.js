@@ -16,6 +16,9 @@ async function fetchMenu() {
         });
         if (res.ok) {
             const freshData = await res.json();
+            if (freshData?.tenant?.id !== tenantId) {
+                throw new Error(`Bootstrap tenant mismatch for ${tenantId}`);
+            }
             const prevDataStr = localStorage.getItem(`tenant_bootstrap_${tenantId}`);
             const freshDataStr = JSON.stringify(freshData);
             const hasChanged = (prevDataStr !== freshDataStr);
