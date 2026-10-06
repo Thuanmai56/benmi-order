@@ -176,6 +176,45 @@ test('active endpoint controls login while callback cleanup stays on the current
   assert.equal(login.searchParams.has('code'), false);
 });
 
+test('new domain callback cleanup keeps the path tenant and business parameters without tenant queries', async () => {
+  for (const suffix of ['', '/']) {
+    for (const tenantQuery of ['', '&tenant_id=bsc&tenant=bsc']) {
+      const runtime = liffRuntime(`https://order.blabfood.app/bsc${suffix}?code=abc&state=xyz&mode=append&parent_order_key=order123&lang=vi${tenantQuery}`, 'blabfood', 'https://order.blabfood.app/bsc');
+      await runtime.context.ensureLiffReady();
+      assert.equal(runtime.cleaned.length, 1);
+      const cleaned = new URL(runtime.cleaned[0]);
+      assert.equal(cleaned.pathname, `/bsc${suffix}`);
+      assert.equal(cleaned.searchParams.has('tenant_id'), false);
+      assert.equal(cleaned.searchParams.has('tenant'), false);
+      assert.equal(cleaned.searchParams.has('code'), false);
+      assert.equal(cleaned.searchParams.get('mode'), 'append');
+      assert.equal(cleaned.searchParams.get('parent_order_key'), 'order123');
+      assert.equal(cleaned.searchParams.get('lang'), 'vi');
+      assert.equal(resolveTenant(cleaned.href).tenant, 'bsc');
+      assert.equal(new URL(runtime.context.getLiffLoginRedirectUri()).searchParams.has('tenant_id'), false);
+    }
+  }
+});
+
+test('legacy callback cleanup and login preserve the query tenant and edit parameters', async () => {
+  for (const pathname of ['/', '/index.html']) {
+    const endpoint = 'https://benmi-order.pages.dev/?tenant_id=bsc';
+    const runtime = liffRuntime(`https://benmi-order.pages.dev${pathname}?code=abc&state=xyz&tenant_id=bsc&mode=edit&key=order123&lang=vi`, 'legacy', endpoint);
+    await runtime.context.ensureLiffReady();
+    const cleaned = new URL(runtime.cleaned[0]);
+    assert.equal(cleaned.pathname, '/');
+    assert.equal(cleaned.searchParams.get('tenant_id'), 'bsc');
+    assert.equal(cleaned.searchParams.has('code'), false);
+    assert.equal(cleaned.searchParams.get('mode'), 'edit');
+    assert.equal(cleaned.searchParams.get('key'), 'order123');
+    assert.equal(cleaned.searchParams.get('lang'), 'vi');
+    assert.equal(resolveTenant(cleaned.href).tenant, 'bsc');
+    const login = new URL(runtime.context.getLiffLoginRedirectUri());
+    assert.equal(login.searchParams.get('tenant_id'), 'bsc');
+    assert.equal(login.searchParams.get('key'), 'order123');
+  }
+});
+
 test('normal legacy visit hands off before LIFF; a callback never changes origin', async () => {
   const normal = liffRuntime('https://order.blabfood.app/bsc?mode=edit&key=abc', 'legacy', 'https://benmi-order.pages.dev/?tenant_id=bsc');
   await normal.context.ensureLiffReady();

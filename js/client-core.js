@@ -603,7 +603,11 @@ function getCleanLiffRedirectUri() {
         }
 
         const currentTenant = (typeof getTenantIdFromUrl === 'function' ? getTenantIdFromUrl() : window.__INITIAL_TENANT_ID) || 'benmi';
-        if (currentTenant) {
+        const orderPath = url.hostname === 'order.blabfood.app' && url.pathname.match(/^\/([a-zA-Z0-9_-]+)\/?$/);
+        if (orderPath && orderPath[1] === currentTenant) {
+            url.searchParams.delete('tenant_id');
+            url.searchParams.delete('tenant');
+        } else if (currentTenant) {
             url.searchParams.set('tenant_id', currentTenant);
             url.searchParams.delete('tenant');
         }
