@@ -965,6 +965,14 @@ function renderMenuCategories() {
 
     container.appendChild(optionsContainer);
   }
+
+  // Mobile portrait: auto-center active category pill in horizontal strip
+  if (typeof container.querySelector === "function") {
+    const activePill = container.querySelector(".menu-option-card.active");
+    if (activePill && typeof activePill.scrollIntoView === "function" && container.scrollWidth > container.clientWidth) {
+      activePill.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    }
+  }
 }
 
 

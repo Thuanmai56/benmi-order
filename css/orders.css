@@ -10062,6 +10062,429 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
 .menu-combo-badge-modal { margin-left: 10px; }
 
 /* ==========================================================================
+   Mobile Portrait Responsive Menu Manager (< 680px)
+   Inspired by Mobile POS & Card-Based Food Management Layout
+   ========================================================================== */
+@media (max-width: 680px) {
+  /* 1. Layout Split Container: Bố cục dọc linh hoạt trên Mobile */
+  .menu-split {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* 2. Thanh Danh Mục Phía Trên (Sticky Top Strip) */
+  .menu-sidebar-panel {
+    flex-shrink: 0 !important;
+    border-right: none !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    background: #ffffff !important;
+    z-index: 10 !important;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+  }
+
+  .menu-sidebar-header {
+    padding: 8px 12px 4px 12px !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+    border-bottom: none !important;
+  }
+
+  .menu-sidebar-segmented-toggle {
+    max-width: 210px !important;
+    min-height: 34px !important;
+    padding: 2px !important;
+  }
+
+  .menu-sidebar-segmented-toggle .menu-seg-btn {
+    padding: 5px 10px !important;
+    font-size: 12px !important;
+  }
+
+  #menu-sidebar-products-actions .menu-manage-cats-btn {
+    padding: 5px 10px !important;
+    font-size: 11.5px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+  }
+
+  /* 3. Dải Tab Danh Mục Cuộn Ngang (Horizontal Pills Slider) */
+  .menu-categories-body {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding: 4px 12px 8px 12px !important;
+    gap: 7px !important;
+    background: #ffffff !important;
+    scrollbar-width: none !important;
+    max-height: 48px !important;
+  }
+  .menu-categories-body::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .menu-sidebar-section {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 6px !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    flex-shrink: 0 !important;
+  }
+  .menu-sidebar-section-header {
+    display: none !important;
+  }
+  .menu-sidebar-section-body {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 6px !important;
+  }
+  .menu-option-section {
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .menu-option-section-heading {
+    display: none !important;
+  }
+
+  /* Nút thêm phân loại dạng chip tròn */
+  .menu-add-option-group-btn {
+    width: auto !important;
+    flex-shrink: 0 !important;
+    margin: 0 !important;
+    padding: 6px 12px !important;
+    border-radius: 9999px !important;
+    min-height: 32px !important;
+    font-size: 11.5px !important;
+    font-weight: 700 !important;
+    border: 1.5px dashed var(--primary, #00b900) !important;
+    white-space: nowrap !important;
+    background: #f0fdf4 !important;
+    color: var(--primary-dark, #009900) !important;
+    order: 99 !important;
+  }
+  .menu-add-option-group-btn svg {
+    width: 12px !important;
+    height: 12px !important;
+  }
+
+  /* Chip danh mục dạng Pill */
+  .menu-option-card {
+    width: auto !important;
+    flex-shrink: 0 !important;
+    margin: 0 !important;
+    padding: 6px 12px !important;
+    border-radius: 9999px !important;
+    min-height: 32px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    background: #f1f5f9 !important;
+    border: 1.5px solid #e2e8f0 !important;
+    color: #475569 !important;
+    box-shadow: none !important;
+    border-left-width: 1.5px !important;
+  }
+  .menu-option-card-content {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 6px !important;
+  }
+  .menu-option-card-title {
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    color: #475569 !important;
+    line-height: 1 !important;
+  }
+  .menu-option-card-subtitle {
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    padding: 1px 6px !important;
+    border-radius: 9999px !important;
+    background: #e2e8f0 !important;
+    color: #64748b !important;
+    line-height: 1.2 !important;
+  }
+  .menu-option-card-chevron {
+    display: none !important;
+  }
+
+  /* Chip danh mục đang chọn (Active) */
+  .menu-option-card.active {
+    background: var(--primary, #00b900) !important;
+    border-color: var(--primary, #00b900) !important;
+    box-shadow: 0 2px 6px rgba(0, 185, 0, 0.25) !important;
+  }
+  .menu-option-card.active .menu-option-card-title {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+  }
+  .menu-option-card.active .menu-option-card-subtitle {
+    background: rgba(0, 0, 0, 0.2) !important;
+    color: #ffffff !important;
+  }
+
+  /* 4. Vùng Biên Tập Món (Editor Panel) */
+  .menu-editor-panel {
+    flex: 1 !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    background: #f8fafc !important;
+  }
+  .menu-editor-header {
+    padding: 8px 12px !important;
+    background: #ffffff !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    flex-shrink: 0 !important;
+  }
+  .menu-editor-title-group {
+    gap: 6px !important;
+  }
+  .menu-editor-header .panel-title {
+    font-size: 14.5px !important;
+    font-weight: 800 !important;
+  }
+  .menu-editor-body {
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding: 10px 10px 60px 10px !important;
+    background: #f8fafc !important;
+  }
+
+  /* Ẩn banner giải thích chữ dài trên Mobile */
+  .cust-header-banner {
+    display: none !important;
+  }
+
+  /* Card nhóm phân loại */
+  .cust-group-card {
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    margin-bottom: 12px !important;
+  }
+  .cust-group-header {
+    background: #ffffff !important;
+    border: 1.5px solid #e2e8f0 !important;
+    border-radius: 14px !important;
+    padding: 10px 14px !important;
+    margin-bottom: 10px !important;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+  }
+  .cust-group-title {
+    font-size: 14px !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+  }
+
+  .cust-category-modifiers-card {
+    border-radius: 14px !important;
+    padding: 10px 12px !important;
+    margin-bottom: 10px !important;
+  }
+
+  /* 5. Giao Diện Card 2 Tầng Cho Từng Món Ăn Trên Mobile */
+  .menu-items-table-header {
+    display: none !important;
+  }
+  .menu-catalog-items-container {
+    border: none !important;
+    background: transparent !important;
+    border-radius: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    overflow: visible !important;
+  }
+  .menu-item-row-card {
+    display: grid !important;
+    grid-template-columns: 20px 56px 1fr auto auto !important;
+    grid-template-rows: auto auto 1px auto !important;
+    column-gap: 8px !important;
+    row-gap: 6px !important;
+    align-items: center !important;
+    padding: 12px !important;
+    background: #ffffff !important;
+    border: 1.5px solid #e2e8f0 !important;
+    border-radius: 16px !important;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+    min-height: auto !important;
+    margin-bottom: 0 !important;
+    transition: all 0.15s ease !important;
+    position: relative !important;
+    box-sizing: border-box !important;
+  }
+  .menu-item-row-card:last-child {
+    border-radius: 16px !important;
+  }
+  .menu-item-row-card:hover {
+    border-color: #cbd5e1 !important;
+  }
+
+  /* Kéo sắp xếp vị trí */
+  .menu-item-drag-handle {
+    grid-column: 1 !important;
+    grid-row: 1 / span 2 !important;
+    align-self: center !important;
+    justify-self: center !important;
+    color: #cbd5e1 !important;
+    width: 20px !important;
+    height: 38px !important;
+  }
+
+  /* Khung ảnh món ăn bo góc (56x56) */
+  .menu-item-thumb-box {
+    grid-column: 2 !important;
+    grid-row: 1 / span 2 !important;
+    width: 56px !important;
+    height: 56px !important;
+    min-width: 56px !important;
+    min-height: 56px !important;
+    border-radius: 12px !important;
+    align-self: center !important;
+  }
+
+  /* Ô nhập tên món ăn */
+  .menu-item-name-col {
+    grid-column: 3 / -1 !important;
+    grid-row: 1 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  .menu-item-row-card .menu-item-name-input {
+    width: 100% !important;
+    height: 36px !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    color: #0f172a !important;
+    padding: 0 10px !important;
+    border-radius: 8px !important;
+    background: #ffffff !important;
+    border: 1.5px solid #e2e8f0 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Badges & Huy hiệu tùy biến món */
+  .menu-item-meta-col {
+    grid-column: 3 / -1 !important;
+    grid-row: 2 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    flex-wrap: wrap !important;
+  }
+
+  /* Đường phân cách giữa thông tin món và thanh thao tác */
+  .menu-item-row-card::before {
+    content: "" !important;
+    grid-column: 1 / -1 !important;
+    grid-row: 3 !important;
+    border-top: 1px solid #f1f5f9 !important;
+    height: 0 !important;
+    margin: 4px 0 !important;
+  }
+
+  /* Ô nhập giá bán (Hàng dưới, bên trái) */
+  .menu-item-price-wrapper {
+    grid-column: 1 / span 3 !important;
+    grid-row: 4 !important;
+    justify-self: start !important;
+    height: 34px !important;
+    padding: 0 8px !important;
+    border-radius: 8px !important;
+    background: #f8fafc !important;
+    border: 1.5px solid #e2e8f0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 3px !important;
+    margin: 0 !important;
+  }
+  .menu-item-price-wrapper .menu-item-price-input {
+    width: 56px !important;
+    font-size: 13.5px !important;
+  }
+
+  /* Nút trạng thái Còn món / Hết món (Hàng dưới, bên phải) */
+  .menu-item-stock-toggle {
+    grid-column: 4 !important;
+    grid-row: 4 !important;
+    justify-self: end !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    font-size: 11.5px !important;
+    padding: 0 10px !important;
+    border-radius: 8px !important;
+    margin: 0 !important;
+  }
+
+  /* Nút thao tác [...] (Hàng dưới, ngoài cùng bên phải) */
+  .menu-item-actions-cluster {
+    grid-column: 5 !important;
+    grid-row: 4 !important;
+    justify-self: end !important;
+    width: 34px !important;
+    min-width: 34px !important;
+    margin: 0 !important;
+  }
+  .menu-item-action-btn.btn-more {
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    min-height: 34px !important;
+    border-radius: 8px !important;
+  }
+
+  /* 6. Nút Thêm Món Vào Nhóm Nét Đứt (Dashed Button) */
+  .cat-mgr-add-btn {
+    width: 100% !important;
+    min-height: 48px !important;
+    padding: 12px 16px !important;
+    border: 2px dashed #86efac !important;
+    border-radius: 14px !important;
+    background: #f0fdf4 !important;
+    color: #15803d !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    margin-top: 10px !important;
+    transition: all 0.15s ease !important;
+    cursor: pointer !important;
+    box-sizing: border-box !important;
+  }
+  .cat-mgr-add-btn:active {
+    background: #dcfce7 !important;
+    transform: scale(0.99) !important;
+  }
+}
+
+/* ==========================================================================
    Full-Page Menu Item Detail & Modifiers Editor (Tablet-First POS Standard)
    ========================================================================== */
 #itemDetailModal.order-detail-fullpage,
