@@ -5,6 +5,7 @@ export interface Env {
 
   // Global Admin Secret
   ADMIN_API_KEY?: any;
+  ORDER_DOMAIN_ADMIN_KEY?: any;
 
   // Secrets & Env Variables (Fallback for primary/legacy tenant)
   LINE_CHANNEL_TOKEN?: any;

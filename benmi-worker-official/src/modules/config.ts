@@ -4,6 +4,7 @@ import { getTenantId } from './menu';
 import { TenantContext, tenantHasFeature } from '../types/tenant';
 import { invalidateBootstrapCache, parseOperatingHours } from './bootstrap';
 import { invalidateMarketplaceCache } from './marketplace';
+import { customerOrderConfig, OrderDomainRow } from '../utils/order-domain';
 
 export async function getConfig(
   request: Request,
@@ -21,14 +22,17 @@ export async function getConfig(
   let logoUrl: string | null = null;
   let storeAddress: string | null = null;
   let features: string[] = [];
+  let domainRow: OrderDomainRow | null = null;
 
   // 1. Read exclusively from D1 Database
   if (env.DB) {
     try {
       const row = await env.DB.prepare(
-        "SELECT operating_hours, allow_scheduled_pickup, allow_dine_in, store_status, liff_id, logo_url, store_address, announcement, features FROM tenant_config WHERE tenant_id = ?"
+        "SELECT operating_hours, allow_scheduled_pickup, allow_dine_in, store_status, liff_id, logo_url, store_address, announcement, features, customer_order_domain, legacy_liff_endpoint_url FROM tenant_config WHERE tenant_id = ? AND is_active = 1"
       ).bind(tenantId).first<any>();
 
+      if (!row) return json({ error: 'Tenant not found' }, 404, { 'Cache-Control': 'no-store' });
+      domainRow = row;
       if (row) {
         operatingHours = parseOperatingHours(row.operating_hours, tenantId);
         if (row.allow_scheduled_pickup !== undefined && row.allow_scheduled_pickup !== null) {
@@ -61,9 +65,12 @@ export async function getConfig(
         }
       }
     } catch (e) {
-      console.error(`[getConfig] D1 query failed for tenant ${tenantId}:`, e);
+      console.error('[getConfig] D1 configuration unavailable');
+      return json({ error: 'Tenant configuration unavailable' }, 503, { 'Cache-Control': 'no-store' });
     }
   }
+
+  if (!domainRow) return json({ error: 'Tenant configuration unavailable' }, 503, { 'Cache-Control': 'no-store' });
 
   if (!operatingHours) {
     operatingHours = parseOperatingHours(null, tenantId);
@@ -71,8 +78,14 @@ export async function getConfig(
 
   const finalFeatures = Array.isArray(features) && features.length > 0 ? features : (tenantCtx?.features || []);
 
+  let orderConfig;
+  try { orderConfig = customerOrderConfig(tenantId, domainRow, request.url); }
+  catch { return json({ error: 'Invalid tenant endpoint configuration' }, 503, { 'Cache-Control': 'no-store' }); }
+
   return json({
-    liffId: liffId || tenantCtx?.liffId || env.LIFF_ID || null,
+    tenantId,
+    liffId: liffId || null,
+    ...orderConfig,
     operatingHours: operatingHours,
     allowScheduledPickup: allowScheduledPickup,
     allowDineIn: allowDineIn,
@@ -81,7 +94,7 @@ export async function getConfig(
     logoUrl: logoUrl || tenantCtx?.logoUrl || null,
     storeAddress: storeAddress || tenantCtx?.storeAddress || null,
     announcement: announcement !== null ? announcement : (tenantCtx?.announcement || null)
-  });
+  }, 200, { 'Cache-Control': 'no-store' });
 }
 
 export async function updateConfig(

@@ -2,6 +2,7 @@ import { Env } from '../types/env';
 import { json } from '../utils/http';
 import { resolveSecret } from '../utils/secrets';
 import { invalidateTenantCache } from './tenant';
+import { updateOrderDomain } from './order-domain';
 
 async function verifyAdminAuth(request: Request, env: Env): Promise<boolean> {
   const adminKeyHeader = request.headers.get("X-Admin-Key");
@@ -10,6 +11,15 @@ async function verifyAdminAuth(request: Request, env: Env): Promise<boolean> {
 }
 
 export async function handleAdminRoute(request: Request, env: Env, path: string): Promise<Response> {
+  const domainMatch = path.match(/^\/api\/admin\/tenants\/([a-zA-Z0-9_-]+)\/order-domain$/);
+  if (request.method === 'PATCH' && domainMatch) {
+    // This control never accepts the legacy hardcoded admin fallback key.
+    const configuredKey = await resolveSecret(env.ORDER_DOMAIN_ADMIN_KEY) || await resolveSecret(env.ADMIN_API_KEY);
+    if (!configuredKey || request.headers.get('X-Admin-Key') !== configuredKey) {
+      return json({ error: 'Configured admin authentication required' }, 401, { 'Cache-Control': 'no-store' });
+    }
+    return updateOrderDomain(request, env, domainMatch[1]);
+  }
   if (!(await verifyAdminAuth(request, env))) {
     return json({ error: "Unauthorized: Invalid or missing X-Admin-Key header" }, 401);
   }

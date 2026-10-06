@@ -5,10 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title id="page-title">線上點餐</title>
-    <link rel="preload" href="index.css?v=20261002_custom_price_badge_v1" as="style">
-    <link rel="preload" href="js/client-core.js?v=20261005_line_tenant_redirect_v1" as="script">
-    <link rel="preload" href="js/client-menu.js?v=20261005_line_tenant_redirect_v1" as="script">
-    <link rel="stylesheet" href="index.css?v=20261002_custom_price_badge_v1">
+    <link rel="preload" href="/index.css?v=20261002_custom_price_badge_v1" as="style">
+    <link rel="preload" href="/js/client-core.js?v=20261006_order_domain_v1" as="script">
+    <link rel="preload" href="/js/client-menu.js?v=20261005_line_tenant_redirect_v1" as="script">
+    <link rel="stylesheet" href="/index.css?v=20261002_custom_price_badge_v1">
     <style>html.tenant-resolution-failed body > :not(#tenant-resolution-error) { display: none !important; }</style>
     <script>
         // Redirect root visits on blabfood.app to /landing
@@ -24,6 +24,27 @@
         function extractTenantId() {
             try {
                 const searchParams = new URLSearchParams(window.location.search);
+                const orderPath = window.location.hostname === 'order.blabfood.app' && window.location.pathname.match(/^\/([a-zA-Z0-9_-]+)\/?$/);
+                if (orderPath) {
+                    const pathTenant = orderPath[1];
+                    const candidates = [...searchParams.getAll('tenant_id'), ...searchParams.getAll('tenant')];
+                    const state = searchParams.get('liff.state');
+                    if (state) {
+                        let decoded = state;
+                        try { decoded = decodeURIComponent(state); } catch (e) { }
+                        const stateParams = new URLSearchParams(decoded.includes('?') ? decoded.slice(decoded.indexOf('?') + 1).split('#')[0] : decoded);
+                        candidates.push(...stateParams.getAll('tenant_id'), ...stateParams.getAll('tenant'));
+                        const statePath = decoded.split('?')[0].match(/^\/([a-zA-Z0-9_-]+)\/?$/);
+                        if (statePath) candidates.push(statePath[1]);
+                    }
+                    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+                    candidates.push(hashParams.get('tenant_id'), hashParams.get('tenant'));
+                    if (candidates.some(value => value && value !== pathTenant)) {
+                        window.__TENANT_RESOLUTION_FAILED = true;
+                        return null;
+                    }
+                    return pathTenant;
+                }
                 const liffState = searchParams.get('liff.state');
                 if (liffState) {
                     let decoded = liffState;
@@ -688,7 +709,7 @@
                         <a href="https://blabfood.app" target="_blank" class="powered-by-blab-link"
                             style="display: inline-flex; align-items: center; gap: 7px; text-decoration: none; padding: 7px 16px; border-radius: 999px; background: rgba(0, 0, 0, 0.03); border: 1px solid rgba(0, 0, 0, 0.06); font-size: 13.5px; color: #64748b; font-weight: 500;">
                             <span style="color: #94a3b8; font-size: 13px;">Powered by</span>
-                            <img src="blab_icon.png" alt="BLAB"
+                            <img src="/blab_icon.png" alt="BLAB"
                                 style="height: 20px; width: 20px; object-fit: contain; vertical-align: middle; mix-blend-mode: multiply;">
                             <span
                                 style="font-weight: 800; color: #1e293b; font-size: 13.5px; letter-spacing: 0.5px;">BLAB</span>
@@ -824,11 +845,11 @@
     </div>
 
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-    <script src="js/client-core.js?v=20261005_line_tenant_redirect_v1"></script>
-    <script src="js/client-menu.js?v=20261005_line_tenant_redirect_v1"></script>
-    <script src="js/client-customizations.js?v=20261002_custom_price_badge_v1"></script>
-    <script src="js/client-bundle.js?v=20261002_custom_price_badge_v1"></script>
-    <script src="js/client-cart.js?v=20261002_custom_price_badge_v1"></script>
+    <script src="/js/client-core.js?v=20261006_order_domain_v1"></script>
+    <script src="/js/client-menu.js?v=20261005_line_tenant_redirect_v1"></script>
+    <script src="/js/client-customizations.js?v=20261002_custom_price_badge_v1"></script>
+    <script src="/js/client-bundle.js?v=20261002_custom_price_badge_v1"></script>
+    <script src="/js/client-cart.js?v=20261002_custom_price_badge_v1"></script>
     <!-- Center Auth Card & Overlay for Desktop Guest Users -->
     <div id="desktop-center-auth-overlay" class="desktop-center-auth-overlay" style="display: none;">
         <div class="desktop-center-auth-backdrop" onclick="triggerDesktopLineLogin()"></div>
@@ -851,7 +872,7 @@
             </button>
         </div>
     </div>
-    <script src="js/client-checkout.js?v=20261005_line_tenant_redirect_v1"></script>
+    <script src="/js/client-checkout.js?v=20261006_order_domain_v1"></script>
     <script>
         if (window.__TENANT_RESOLUTION_FAILED) {
             document.getElementById('page-body-content').style.display = 'none';

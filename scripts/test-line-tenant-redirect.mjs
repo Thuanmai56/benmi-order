@@ -83,7 +83,7 @@ test('ordinary root visit ignores another store in local storage', () => {
 });
 
 test('desktop LINE login keeps tenant in redirect URI and does not retry without one', async () => {
-  const location = new URL('https://blabfood.app/?tenant_id=bsc');
+  const location = new URL('https://benmi-order.pages.dev/?tenant_id=bsc');
   const loginCalls = [];
   const initializedIds = [];
   const configRequests = [];
@@ -106,7 +106,7 @@ test('desktop LINE login keeps tenant in redirect URI and does not retry without
     extractTenantId: () => 'bsc',
     fetch: async (url, options) => {
       configRequests.push({ url, options });
-      return { ok: true, json: async () => ({ liffId: '2010595300-lmVTCe1A' }) };
+      return { ok: true, json: async () => ({ tenantId: 'bsc', liffId: '2010595300-lmVTCe1A', customerOrderDomain: 'legacy', liffEndpointUrl: 'https://benmi-order.pages.dev/?tenant_id=bsc' }) };
     },
     liff: {
       init: async ({ liffId }) => { initializedIds.push(liffId); },
@@ -136,4 +136,60 @@ test('desktop LINE login keeps tenant in redirect URI and does not retry without
   context.fetch = async () => { throw new Error('config unavailable'); };
   await assert.rejects(context.ensureLiffReady(), /config unavailable/);
   assert.equal(initializedIds.length, 1, 'cached LIFF ID must not initialize when fresh config fails');
+});
+
+
+test('new domain path is authoritative, with slash and conflicting state blocked', () => {
+  for (const suffix of ['', '/']) assert.equal(resolveTenant(`https://order.blabfood.app/bsc${suffix}`).tenant, 'bsc');
+  for (const query of ['tenant_id=another', 'tenant=bsc&tenant_id=another',
+    `liff.state=${encodeURIComponent('/another')}`, `liff.state=${encodeURIComponent('/?tenant_id=another')}`]) {
+    const result = resolveTenant(`https://order.blabfood.app/bsc?${query}`);
+    assert.equal(result.failed, true);
+    assert.equal(result.tenant, null);
+  }
+});
+
+function liffRuntime(url, domain, endpoint, failure = false) {
+  const current = new URL(url);
+  const initialized = [], cleaned = [], moved = [];
+  const context = { URL, URLSearchParams, console: { log() {}, warn() {}, error() {} }, addEventListener() {},
+    location: { href: current.href, hostname: current.hostname, pathname: current.pathname, search: current.search, hash: current.hash, replace: value => moved.push(value) },
+    history: { replaceState: (...args) => cleaned.push(args[2]) }, document: { title: 'Menu' },
+    sessionStorage: storage(), localStorage: storage(), extractTenantId: () => 'bsc',
+    fetch: async () => { if (failure) throw new Error('D1 unavailable'); return { ok: true, json: async () => ({ tenantId: 'bsc', liffId: '12345678-abcde', customerOrderDomain: domain, liffEndpointUrl: endpoint }) }; },
+    liff: { init: async options => { assert.equal(cleaned.length, 0, 'SDK parameters must remain until init completes'); initialized.push(options); } } };
+  context.window = context;
+  vm.runInNewContext(fs.readFileSync(path.join(root, 'js/client-core.js'), 'utf8'), context);
+  return { context, initialized, cleaned, moved };
+}
+
+test('active endpoint controls login while callback cleanup stays on the current origin', async () => {
+  const runtime = liffRuntime('https://order.blabfood.app/bsc/?code=abc&state=xyz&mode=append&parent_order_key=secret', 'blabfood', 'https://order.blabfood.app/bsc');
+  await runtime.context.ensureLiffReady();
+  assert.equal(runtime.initialized.length, 1);
+  assert.equal(new URL(runtime.cleaned[0]).origin, 'https://order.blabfood.app');
+  assert.equal(new URL(runtime.cleaned[0]).searchParams.has('code'), false);
+  const login = new URL(runtime.context.getLiffLoginRedirectUri());
+  assert.equal(login.pathname, '/bsc');
+  assert.equal(login.searchParams.get('mode'), 'append');
+  assert.equal(login.searchParams.get('parent_order_key'), 'secret');
+  assert.equal(login.searchParams.has('code'), false);
+});
+
+test('normal legacy visit hands off before LIFF; a callback never changes origin', async () => {
+  const normal = liffRuntime('https://order.blabfood.app/bsc?mode=edit&key=abc', 'legacy', 'https://benmi-order.pages.dev/?tenant_id=bsc');
+  await normal.context.ensureLiffReady();
+  assert.equal(normal.initialized.length, 0);
+  assert.equal(new URL(normal.moved[0]).searchParams.get('key'), 'abc');
+  const callback = liffRuntime('https://order.blabfood.app/bsc?code=abc', 'legacy', 'https://benmi-order.pages.dev/?tenant_id=bsc');
+  await assert.rejects(callback.context.ensureLiffReady(), /endpoint changed/);
+  assert.equal(callback.moved.length, 0);
+});
+
+test('config failure leaves callback untouched and never initializes from cached credentials', async () => {
+  const runtime = liffRuntime('https://order.blabfood.app/bsc?code=abc', 'blabfood', 'https://order.blabfood.app/bsc', true);
+  await assert.rejects(runtime.context.ensureLiffReady(), /D1 unavailable/);
+  assert.equal(runtime.initialized.length, 0);
+  assert.equal(runtime.cleaned.length, 0);
+  assert.equal(runtime.moved.length, 0);
 });

@@ -592,7 +592,10 @@ function getCleanLiffRedirectUri() {
         url.searchParams.delete('state');
         url.searchParams.delete('liffClientId');
         url.searchParams.delete('liffRedirectUri');
-        url.searchParams.delete('liff.state');
+        for (const key of [...url.searchParams.keys()]) {
+            if (key.startsWith('liff.')) url.searchParams.delete(key);
+        }
+        url.searchParams.delete('access_token');
         url.hash = '';
 
         if (url.pathname === '/index.html') {
@@ -605,9 +608,6 @@ function getCleanLiffRedirectUri() {
             url.searchParams.delete('tenant');
         }
 
-        if (url.hostname === 'blabfood.app' || url.hostname === 'www.blabfood.app') {
-            url.hostname = 'benmi-order.pages.dev';
-        }
 
         return url.toString();
     } catch (e) {
@@ -615,6 +615,30 @@ function getCleanLiffRedirectUri() {
     }
 }
 window.getCleanLiffRedirectUri = getCleanLiffRedirectUri;
+
+var activeLiffConfig = null;
+function getLiffLoginRedirectUri() {
+    if (!activeLiffConfig?.liffEndpointUrl) throw new Error('LINE endpoint configuration unavailable');
+    const target = new URL(activeLiffConfig.liffEndpointUrl);
+    const current = new URL(window.location.href);
+    const businessKeys = ['mode', 'order_key', 'key', 'parent_order_key', 'parent_display_key', 'display_key', 'table', 'table_number', 'takeaway', 'lang'];
+    const hashParams = new URLSearchParams(current.hash.replace(/^#/, ''));
+    businessKeys.forEach(key => {
+        const value = current.searchParams.get(key) ?? hashParams.get(key);
+        if (value !== null) target.searchParams.set(key, value);
+    });
+    if (activeLiffConfig.customerOrderDomain === 'legacy') target.searchParams.set('tenant_id', getTenantIdFromUrl());
+    return target.toString();
+}
+window.getLiffLoginRedirectUri = getLiffLoginRedirectUri;
+
+function isCurrentLiffEndpoint(endpoint) {
+    const target = new URL(endpoint);
+    const current = new URL(window.location.href);
+    const basePath = target.pathname.replace(/\/$/, '');
+    return current.origin === target.origin && (current.pathname === target.pathname || current.pathname === basePath || current.pathname.startsWith(basePath + '/'));
+}
+
 
 var liffInitPromise = null;
 var isLiffInitialized = false;
@@ -632,6 +656,7 @@ function ensureLiffReady() {
         }
 
         const tenantId = getTenantIdFromUrl();
+        if (!tenantId || window.__TENANT_RESOLUTION_FAILED) throw new Error('Tenant context unavailable');
 
         try {
             // Resolve from D1 before initializing LIFF. Cached menu/theme data can
@@ -639,9 +664,24 @@ function ensureLiffReady() {
             const configResponse = await fetch(`${WORKER_BASE}/api/config?tenant_id=${encodeURIComponent(tenantId)}`, { cache: 'no-store' });
             if (!configResponse.ok) throw new Error(`Tenant config request failed: ${configResponse.status}`);
             const tenantConfig = await configResponse.json();
+            if (tenantConfig.tenantId !== tenantId || !['legacy', 'blabfood'].includes(tenantConfig.customerOrderDomain) || !tenantConfig.liffEndpointUrl) {
+                throw new Error('Tenant LINE endpoint configuration unavailable');
+            }
+            const endpoint = new URL(tenantConfig.liffEndpointUrl);
+            const allowedOrigins = ['https://benmi-order.pages.dev', 'https://dev.benmi-order.pages.dev', 'https://staging.benmi-order.pages.dev', 'https://blabfood.app', 'https://www.blabfood.app', 'https://order.blabfood.app'];
+            if (!allowedOrigins.includes(endpoint.origin) || endpoint.username || endpoint.password) throw new Error('Invalid LINE endpoint');
+            activeLiffConfig = tenantConfig;
             const liffId = tenantConfig?.liffId;
             if (!liffId || typeof liffId !== 'string') throw new Error(`No LIFF ID configured for tenant ${tenantId}`);
 
+            if (!isCurrentLiffEndpoint(tenantConfig.liffEndpointUrl)) {
+                const params = new URLSearchParams(window.location.search);
+                const isCallback = [...params.keys()].some(key => key === 'code' || key === 'state' || key === 'access_token' || key.startsWith('liff.') || key === 'liffClientId' || key === 'liffRedirectUri');
+                if (isCallback) throw new Error('LINE endpoint changed; reopen the store link to sign in again');
+                window.__ORDER_DOMAIN_HANDOFF = true;
+                window.location.replace(getLiffLoginRedirectUri());
+                return null;
+            }
             await liff.init({ liffId });
             isLiffInitialized = true;
             console.log(`[LIFF] Initialized successfully for tenant [${tenantId}] with ID:`, liffId);
@@ -713,6 +753,7 @@ function closeDesktopLoginModal() {
 async function triggerDesktopLineLogin() {
     try {
         await ensureLiffReady();
+        if (window.__ORDER_DOMAIN_HANDOFF) return;
     } catch (initErr) {
         console.error('[LIFF] Desktop initialization failed:', initErr);
         customAlert('LINE 登入暫時無法使用，請重試');
@@ -726,7 +767,7 @@ async function triggerDesktopLineLogin() {
             sessionStorage.setItem('pending_line_login_tenant_id', tenantId);
             localStorage.setItem(storageKey, JSON.stringify({ cart: window.cart, customizeData: window.customizeData, comboDrinkData: window.comboDrinkData, bundleCartData: window.bundleCartData || {} }));
         } catch(e) {}
-        const cleanRedirectUri = getCleanLiffRedirectUri();
+        const cleanRedirectUri = getLiffLoginRedirectUri();
         try {
             liff.login({ redirectUri: cleanRedirectUri });
         } catch (loginErr) {

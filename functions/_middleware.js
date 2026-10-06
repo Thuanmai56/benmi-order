@@ -6,6 +6,46 @@
  */
 const EXPLORE_HOST = "explore.blabfood.app";
 const POS_HOST = "pos.blabfood.app";
+const ORDER_HOST = "order.blabfood.app";
+
+function isLineCallback(url) {
+  return [...url.searchParams.keys()].some(key => key === 'code' || key === 'state' || key === 'access_token' || key.startsWith('liff.')) ||
+    url.searchParams.has('liffClientId') || url.searchParams.has('liffRedirectUri');
+}
+
+function orderError(message, status) {
+  return new Response(message, { status, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' } });
+}
+
+async function serveCustomerOrder(context, url, tenantId) {
+  const directTenants = [...url.searchParams.getAll('tenant_id'), ...url.searchParams.getAll('tenant')];
+  if (directTenants.some(value => value !== tenantId)) return orderError('點餐連結的店家資料不一致。', 400);
+  try {
+    const response = await fetch(`https://benmi-worker-official.thuanmnc.workers.dev/api/config?tenant_id=${encodeURIComponent(tenantId)}`, {
+      cache: 'no-store', signal: AbortSignal.timeout(8000)
+    });
+    if (!response.ok) return orderError('無法讀取店家設定，請稍後重試。', response.status === 404 ? 404 : 503);
+    const config = await response.json();
+    if (config.tenantId !== tenantId || !['legacy', 'blabfood'].includes(config.customerOrderDomain)) {
+      return orderError('無法讀取店家設定，請稍後重試。', 503);
+    }
+    if (!isLineCallback(url) && (config.customerOrderDomain === 'legacy' || url.pathname === '/' || url.pathname === '/index.html')) {
+      const target = new URL(config.orderUrl);
+      if (!['https://benmi-order.pages.dev', 'https://blabfood.app', 'https://www.blabfood.app', 'https://order.blabfood.app'].includes(target.origin)) {
+        return orderError('店家點餐連結設定有誤。', 503);
+      }
+      for (const [key, value] of url.searchParams) {
+        if (key !== 'tenant' && key !== 'tenant_id') target.searchParams.set(key, value);
+      }
+      if (config.customerOrderDomain === 'legacy') target.searchParams.set('tenant_id', tenantId);
+      return new Response(null, { status: 302, headers: { Location: target.toString(), 'Cache-Control': 'no-store' } });
+    }
+    // Internal fetch keeps both primary/secondary LIFF paths and SDK parameters intact.
+    return serveInternalAsset(context, '/');
+  } catch {
+    return orderError('無法讀取店家設定，請稍後重試。', 503);
+  }
+}
 
 const RESERVED_POS_PATHS = new Set([
   "orders",
@@ -70,6 +110,16 @@ async function serveInternalAsset(context, assetPath) {
 export async function onRequest(context) {
   const url = new URL(context.request.url);
 
+  if (url.hostname === ORDER_HOST && ['GET', 'HEAD'].includes(context.request.method)) {
+    const match = url.pathname.match(/^\/([a-zA-Z0-9_-]+)\/?$/);
+    if (match && !RESERVED_POS_PATHS.has(match[1])) return serveCustomerOrder(context, url, match[1]);
+    if (url.pathname === '/' || url.pathname === '/index.html') {
+      const tenantId = url.searchParams.get('tenant_id') || url.searchParams.get('tenant');
+      if (tenantId && /^[a-zA-Z0-9_-]+$/.test(tenantId) && !RESERVED_POS_PATHS.has(tenantId)) return serveCustomerOrder(context, url, tenantId);
+      return orderError('請使用包含店家名稱的點餐連結。', 400);
+    }
+  }
+
   // 1. Explore Marketplace routing: explore.blabfood.app -> /marketplace
   if (url.hostname === EXPLORE_HOST && (url.pathname === "/" || url.pathname === "/index.html")) {
     return serveInternalAsset(context, "/marketplace");
@@ -82,4 +132,3 @@ export async function onRequest(context) {
 
   return context.next();
 }
-

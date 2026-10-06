@@ -4,10 +4,18 @@
  * ==========================================================================
  */
 
-// Menu links remain on the legacy host until the production LIFF Endpoint is
-// migrated to order.blabfood.app.
-function buildMarketplaceOrderUrl(tenantId) {
-  return "https://benmi-order.pages.dev/?tenant_id=" + encodeURIComponent(tenantId);
+// The backend publishes each tenant's active customer endpoint.
+function buildMarketplaceOrderUrl(tenantId, configuredUrl) {
+  if (configuredUrl) {
+    try {
+      var candidate = new URL(configuredUrl);
+      if (candidate.protocol === 'https:' && !candidate.username && !candidate.password) return candidate.toString();
+    } catch (e) { }
+  }
+  var api = resolveApiBase();
+  var origin = api.includes('-dev.') ? 'https://dev.benmi-order.pages.dev'
+    : (api.includes('-staging.') ? 'https://staging.benmi-order.pages.dev' : 'https://benmi-order.pages.dev');
+  return origin + '/?tenant_id=' + encodeURIComponent(tenantId);
 }
 
 // 1. SVG Iconography Repository (Lucide Icons - MIT Licensed)
@@ -678,7 +686,7 @@ var MarketplaceApp = {
           '</div>';
       }
 
-      var orderUrl = buildMarketplaceOrderUrl(t.tenantId);
+      var orderUrl = buildMarketplaceOrderUrl(t.tenantId, t.orderUrl);
 
       return [
         '<div class="store-card' + (self.activeTenantId === t.tenantId ? ' active-focus' : '') + '"',
@@ -989,7 +997,7 @@ var MarketplaceApp = {
           : '<span>' + (t.brandName.charAt(0)) + '</span>';
         var statusText = isOpen ? self.t("openNow") : (t.storeStatus === "busy" ? self.t("busy") : self.t("closed"));
         var distStr = formatDistance(t.distanceKm, self.currentLang);
-        var orderUrl = buildMarketplaceOrderUrl(t.tenantId);
+        var orderUrl = buildMarketplaceOrderUrl(t.tenantId, t.orderUrl);
 
         var popupHtml = [
           '<div class="map-popup-card">',
@@ -1160,7 +1168,7 @@ var MarketplaceApp = {
     if (tenant.allowScheduledPickup) diningBadges.push('<span class="feature-pill">' + MARKETPLACE_SVG.clock + ' ' + this.t("modalDiningScheduled") + '</span>');
     diningBadges.push('<span class="feature-pill">' + MARKETPLACE_SVG.shoppingBag + ' ' + this.t("modalDiningTakeaway") + '</span>');
 
-    var orderUrl = buildMarketplaceOrderUrl(tenant.tenantId);
+    var orderUrl = buildMarketplaceOrderUrl(tenant.tenantId, tenant.orderUrl);
 
     body.innerHTML = [
       '<div class="modal-banner" style="background: linear-gradient(135deg, ' + (tenant.brandColor || '#059669') + ' 0%, #10b981 100%);">',

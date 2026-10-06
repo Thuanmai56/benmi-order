@@ -1553,6 +1553,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
         setAllSubmitButtonsState(true, '處理中...', { cursor: 'not-allowed', opacity: '0.7' });
         if (typeof window.ensureLiffReady === 'function') {
             await window.ensureLiffReady();
+            if (window.__ORDER_DOMAIN_HANDOFF) return;
         }
 
         if (typeof liff !== 'undefined') {
@@ -1575,7 +1576,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                         sessionStorage.setItem('pending_line_login_tenant_id', tenantId);
                         localStorage.setItem(storageKey, JSON.stringify({ cart, customizeData, comboDrinkData, bundleCartData: window.bundleCartData || {} }));
                     } catch(e) {}
-                    const cleanRedirectUri = (typeof window.getCleanLiffRedirectUri === 'function') ? window.getCleanLiffRedirectUri() : window.location.href;
+                    const cleanRedirectUri = window.getLiffLoginRedirectUri();
                     try {
                         liff.login({ redirectUri: cleanRedirectUri });
                     } catch (loginErr) {

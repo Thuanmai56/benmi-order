@@ -1,3 +1,4 @@
+import { customerOrderConfig } from '../utils/order-domain';
 import { Env } from '../types/env';
 import { json } from '../utils/http';
 import { parseOperatingHours } from './bootstrap';
@@ -22,6 +23,7 @@ export interface MarketplaceTenantItem {
   categoriesSummary: string[];
   locale: string;
   liffUrl: string | null;
+  orderUrl: string;
 }
 
 const MARKETPLACE_CACHE_KEY = 'marketplace:tenants_catalog';
@@ -152,7 +154,7 @@ export async function getMarketplaceTenants(request: Request, env: Env): Promise
                COALESCE(allow_scheduled_pickup, 1) AS allow_scheduled_pickup,
                COALESCE(store_status, 'open') AS store_status, 
                COALESCE(cuisine_type, 'vietnamese') AS cuisine_type, 
-               latitude, longitude, locale, liff_url
+               latitude, longitude, locale, liff_url, customer_order_domain, legacy_liff_endpoint_url
         FROM tenant_config
         WHERE is_active = 1 AND COALESCE(is_marketplace_visible, 1) = 1
         ORDER BY rowid ASC
@@ -213,7 +215,8 @@ export async function getMarketplaceTenants(request: Request, env: Env): Promise
         allowScheduledPickup: Boolean(row.allow_scheduled_pickup),
         categoriesSummary: catMap.get(tenantId) || [],
         locale: row.locale || 'zh-TW',
-        liffUrl: row.liff_url || null
+        liffUrl: row.liff_url || null,
+        orderUrl: customerOrderConfig(row.tenant_id, row, request.url).orderUrl
       });
     }
 
