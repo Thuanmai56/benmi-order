@@ -1869,6 +1869,18 @@ function applyLanguageToDOM() {
     labelSupport.innerText = dict.sidebarSupport || "技術支援";
   }
 
+  const mobileSub = document.getElementById("sidebar-mobile-sub");
+  if (mobileSub && typeof currentStoreStatus !== "undefined") {
+    if (currentStoreStatus === 'open') mobileSub.innerText = dict.statusOpen || "營業中";
+    else if (currentStoreStatus === 'busy') mobileSub.innerText = dict.statusBusy || "忙碌中";
+    else if (currentStoreStatus === 'paused') mobileSub.innerText = dict.statusPaused || "暫停接單";
+  }
+
+  if (typeof updateSidebarToggleIcon === "function") {
+    const sidebar = document.getElementById("app-sidebar");
+    updateSidebarToggleIcon(sidebar ? sidebar.classList.contains("expanded") : false);
+  }
+
   if (typeof updatePageMainTitle === "function" && typeof activeTab !== "undefined") {
     updatePageMainTitle(activeTab);
   }

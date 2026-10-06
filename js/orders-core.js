@@ -665,6 +665,9 @@ function switchTab(tab) {
   if (tab === "reports" && isNativeAppPlatform()) {
     tab = "live";
   }
+  if (window.innerWidth <= 680 && typeof toggleSidebar === "function") {
+    toggleSidebar(false);
+  }
   activeTab = tab;
   const tabLive = document.getElementById("tab-live");
   const tabHistory = document.getElementById("tab-history");
@@ -964,31 +967,50 @@ window.closeModal = closeModal;
 
 
 // ==========================================
-// Vertical Sidebar Management (Uber Eats Tablet-First)
+// Vertical Sidebar Management (Uber Eats Tablet-First / Mobile Off-Canvas Drawer)
 // ==========================================
 function toggleSidebar(forceState) {
   const sidebar = document.getElementById("app-sidebar");
   if (!sidebar) return;
   const isExpanded = forceState !== undefined ? forceState : !sidebar.classList.contains("expanded");
   sidebar.classList.toggle("expanded", isExpanded);
+
+  // Mobile drawer backdrop synchronization
+  const backdrop = document.getElementById("sidebar-backdrop");
+  if (backdrop) {
+    backdrop.classList.toggle("active", isExpanded);
+  }
+
   updateSidebarToggleIcon(isExpanded);
-  try {
-    localStorage.setItem("pos_sidebar_expanded", isExpanded ? "1" : "0");
-  } catch (e) {}
+
+  // Tablet & Desktop: persist user preference to localStorage
+  if (window.innerWidth > 680) {
+    try {
+      localStorage.setItem("pos_sidebar_expanded", isExpanded ? "1" : "0");
+    } catch (e) {}
+  }
 }
 
 function updateSidebarToggleIcon(isExpanded) {
   const button = document.getElementById("sidebar-toggle-btn");
   if (!button) return;
   const icon = button.querySelector(".sidebar-toggle-icon");
+  const isMobile = window.innerWidth <= 680;
   if (icon) {
-    icon.innerHTML = isExpanded
-      ? '<polyline points="15 18 9 12 15 6"></polyline>'
-      : '<line x1="4" x2="20" y1="12" y2="12"></line><line x1="4" x2="20" y1="6" y2="6"></line><line x1="4" x2="20" y1="18" y2="18"></line>';
+    if (isMobile) {
+      // Mobile drawer inside header shows (X) close icon when opened
+      icon.innerHTML = isExpanded
+        ? '<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>'
+        : '<line x1="4" x2="20" y1="12" y2="12"></line><line x1="4" x2="20" y1="6" y2="6"></line><line x1="4" x2="20" y1="18" y2="18"></line>';
+    } else {
+      icon.innerHTML = isExpanded
+        ? '<polyline points="15 18 9 12 15 6"></polyline>'
+        : '<line x1="4" x2="20" y1="12" y2="12"></line><line x1="4" x2="20" y1="6" y2="6"></line><line x1="4" x2="20" y1="18" y2="18"></line>';
+    }
   }
   const isVietnamese = typeof currentLang !== "undefined" && currentLang === "vi";
   const label = isExpanded
-    ? (isVietnamese ? "Thu gọn thanh bên" : "收合側邊欄")
+    ? (isVietnamese ? (isMobile ? "Đóng menu" : "Thu gọn thanh bên") : (isMobile ? "關閉選單" : "收合側邊欄"))
     : (isVietnamese ? "Mở rộng thanh bên" : "展開側邊欄");
   button.setAttribute("aria-label", label);
   button.title = label;
@@ -998,13 +1020,72 @@ function initSidebarState() {
   const sidebar = document.getElementById("app-sidebar");
   if (!sidebar) return;
   let isExpanded = false;
-  try {
-    const saved = localStorage.getItem("pos_sidebar_expanded");
-    isExpanded = saved === "1";
-    sidebar.classList.toggle("expanded", isExpanded);
-  } catch (e) {}
+  if (window.innerWidth > 680) {
+    try {
+      const saved = localStorage.getItem("pos_sidebar_expanded");
+      isExpanded = saved === "1";
+    } catch (e) {}
+  } else {
+    // Mobile always starts collapsed / closed off-canvas
+    isExpanded = false;
+  }
+  sidebar.classList.toggle("expanded", isExpanded);
+  const backdrop = document.getElementById("sidebar-backdrop");
+  if (backdrop) backdrop.classList.remove("active");
   updateSidebarToggleIcon(isExpanded);
+  initMobileBrandInfo();
 }
+
+function initMobileBrandInfo() {
+  const bTitle = document.getElementById("brand-title");
+  const mTitle = document.getElementById("sidebar-mobile-title");
+  const mLogo = document.getElementById("sidebar-mobile-logo");
+  const bLogo = document.getElementById("brand-logo");
+
+  const brandName = (bTitle && bTitle.innerText.trim()) || "Blab POS";
+  if (mTitle) {
+    mTitle.innerText = brandName;
+  }
+  if (mLogo) {
+    if (bLogo && bLogo.src && bLogo.style.display !== "none") {
+      mLogo.innerHTML = `<img src="${bLogo.src}" alt="Logo" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">`;
+    } else {
+      const initial = brandName.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '').charAt(0) || "B";
+      mLogo.textContent = initial.toUpperCase();
+    }
+  }
+}
+
+// Window resize & accessibility handlers for mobile drawer
+window.addEventListener("resize", () => {
+  if (window.innerWidth <= 680) {
+    const backdrop = document.getElementById("sidebar-backdrop");
+    const sidebar = document.getElementById("app-sidebar");
+    if (sidebar && !backdrop?.classList.contains("active") && sidebar.classList.contains("expanded")) {
+      sidebar.classList.remove("expanded");
+      updateSidebarToggleIcon(false);
+    }
+  } else {
+    const backdrop = document.getElementById("sidebar-backdrop");
+    if (backdrop) backdrop.classList.remove("active");
+    try {
+      const saved = localStorage.getItem("pos_sidebar_expanded");
+      const isExpanded = saved === "1";
+      const sidebar = document.getElementById("app-sidebar");
+      if (sidebar) sidebar.classList.toggle("expanded", isExpanded);
+      updateSidebarToggleIcon(isExpanded);
+    } catch (e) {}
+  }
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && window.innerWidth <= 680) {
+    const sidebar = document.getElementById("app-sidebar");
+    if (sidebar && sidebar.classList.contains("expanded")) {
+      toggleSidebar(false);
+    }
+  }
+});
 
 function updateSidebarActive(tabName) {
   const navItems = document.querySelectorAll(".sidebar-nav-item");
@@ -1048,6 +1129,7 @@ window.initSmartHeaderScroll = initSmartHeaderScroll;
 
 window.toggleSidebar = toggleSidebar;
 window.initSidebarState = initSidebarState;
+window.initMobileBrandInfo = initMobileBrandInfo;
 window.updateSidebarActive = updateSidebarActive;
 window.updatePageMainTitle = updatePageMainTitle;
 

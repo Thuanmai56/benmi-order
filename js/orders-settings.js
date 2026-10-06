@@ -44,6 +44,13 @@ function renderStoreStatusUI(status) {
     else if (currentStoreStatus === 'paused') label.innerText = t('statusPaused');
   }
 
+  const mobileSub = document.getElementById("sidebar-mobile-sub");
+  if (mobileSub) {
+    if (currentStoreStatus === 'open') mobileSub.innerText = t('statusOpen');
+    else if (currentStoreStatus === 'busy') mobileSub.innerText = t('statusBusy');
+    else if (currentStoreStatus === 'paused') mobileSub.innerText = t('statusPaused');
+  }
+
   // Update options in dropdown menu
   document.querySelectorAll(".status-option").forEach(opt => {
     opt.classList.toggle("active", opt.dataset.status === currentStoreStatus);
