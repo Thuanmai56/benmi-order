@@ -199,7 +199,11 @@ async function loadMenuData() {
   if (bodyEl) bodyEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">${t("menuLoading")}</div>`;
   try {
     const tenantId = getTenantIdFromUrl();
-    const res = await fetch(`${WORKER_BASE}/api/tenant/bootstrap?tenant_id=${tenantId}&_t=${Date.now()}`);
+    const [res, libraryResponse, imageListRes] = await Promise.all([
+      fetch(`${WORKER_BASE}/api/tenant/bootstrap?tenant_id=${tenantId}&_t=${Date.now()}`),
+      fetch(`${WORKER_BASE}/api/menu/modifier-library?tenant_id=${encodeURIComponent(tenantId)}&_t=${Date.now()}`),
+      fetch(`${WORKER_BASE}/api/image_list?tenant_id=${encodeURIComponent(tenantId)}&_t=${Date.now()}`).catch(() => null)
+    ]);
     if (!res.ok) throw new Error("Failed to load bootstrap");
     const data = await res.json();
     if (data.menuComplete !== true || !Array.isArray(data.catalog) || !Array.isArray(data.modifiers) ||
@@ -207,11 +211,17 @@ async function loadMenuData() {
       throw new Error('Incomplete menu');
     }
 
-    const libraryResponse = await fetch(`${WORKER_BASE}/api/menu/modifier-library?tenant_id=${encodeURIComponent(tenantId)}&_t=${Date.now()}`);
     if (!libraryResponse.ok) throw new Error('Failed to load modifier library');
     const libraryData = await libraryResponse.json();
     if (libraryData.complete !== true || !Array.isArray(libraryData.groups)) throw new Error('Incomplete modifier library');
     menuModifierLibrary = libraryData.groups;
+
+    if (imageListRes && imageListRes.ok) {
+      try {
+        const imgArr = await imageListRes.json();
+        if (Array.isArray(imgArr)) window._tenantImageList = new Set(imgArr);
+      } catch (_) {}
+    }
 
     const categories = [];
     // The editor uses category slugs; bootstrap relationships use database IDs.
@@ -958,9 +968,52 @@ function renderMenuCategories() {
 }
 
 
+function getItemImageUrl(catId, itemName) {
+  if (!itemName) return null;
+  const list = window._tenantImageList;
+  const key = `${catId}_${itemName}`;
+  const tenantId = (typeof getTenantIdFromUrl === 'function' ? getTenantIdFromUrl() : null) || 'benmi';
+  if (list && (list.has(key) || list.has(itemName))) {
+    const resolvedName = list.has(key) ? key : itemName;
+    return `${WORKER_BASE}/api/image?tenant_id=${encodeURIComponent(tenantId)}&name=${encodeURIComponent(resolvedName)}`;
+  }
+  return null;
+}
+
+function isModifierAppliedToCategory(mod, cat) {
+  if (!mod || !cat) return false;
+  if (mod.type === 'customization' && mod.group) {
+    const applied = mod.group.appliedCategories || [];
+    return applied.includes(cat.id) || (cat.databaseId && applied.includes(cat.databaseId));
+  }
+  const appliedMods = cat.appliedModifiers || (cat.allowCustomization === false ? [] : ['*']);
+  return appliedMods.includes('*') || appliedMods.includes(mod.id) || (mod.databaseId && appliedMods.includes(mod.databaseId));
+}
+
 function getStoreModifiersList() {
   if (!currentMenuData) return [];
-  return currentMenuData.filter(c => c.type === 'modifier');
+  const list = [];
+  currentMenuData.forEach((c, cIdx) => {
+    if (c.type === 'modifier') {
+      const optCount = Array.isArray(c.items) ? c.items.length : (c.groups?.[0]?.options?.length || 0);
+      list.push({ id: c.id, databaseId: c.databaseId, title: c.title, type: 'modifier', count: optCount, categoryIndex: cIdx });
+    } else if (c.type === 'order_customization' || c.id === 'sec-flavor') {
+      (c.groups || []).forEach((g, gIdx) => {
+        const optCount = Array.isArray(g.options) ? g.options.length : 0;
+        list.push({
+          id: g.id || g.key,
+          key: g.key,
+          title: g.title || g.name || '',
+          type: 'customization',
+          group: g,
+          count: optCount,
+          categoryIndex: cIdx,
+          groupIndex: gIdx
+        });
+      });
+    }
+  });
+  return list;
 }
 
 function renderMenuCategoryEditor(index) {
@@ -1025,45 +1078,68 @@ function renderMenuCategoryEditor(index) {
 
   if (cat.type === 'catalog') {
     const storeModifiers = getStoreModifiersList();
-    const appliedMods = cat.appliedModifiers || (cat.allowCustomization === false ? [] : ['*']);
+    const appliedCount = storeModifiers.filter(mod => isModifierAppliedToCategory(mod, cat)).length;
 
-    const toggleDiv = document.createElement("div");
-    toggleDiv.className = "cust-scope-panel scope-category-panel";
+    const modCard = document.createElement("div");
+    modCard.className = "cust-category-modifiers-card";
 
-    
-    let modifiersHtml = '';
     if (storeModifiers.length === 0) {
-      modifiersHtml = `<div class="no-modifiers-hint" style="font-size: var(--pos-text-meta); color: #94a3b8; margin: 0; padding: 0; line-height: 1.3;">${t("noModifiersInStore")}</div>`;
-    } else {
-      modifiersHtml = `
-        <div style="display: flex; gap: 6px; margin-bottom: 6px;">
-          <button type="button" class="btn btn-ghost" style="padding: 4px 10px; font-size: var(--pos-text-meta); font-weight: 700; background: #fff; border: 1.5px solid #cbd5e1; border-radius: 6px; cursor: pointer;" onclick="selectAllCategoryModifiers(${index}, true)">${t("btnSelectAll")}</button>
-          <button type="button" class="btn btn-ghost" style="padding: 4px 10px; font-size: var(--pos-text-meta); font-weight: 700; background: #fff; border: 1.5px solid #cbd5e1; border-radius: 6px; color: #64748b; cursor: pointer;" onclick="selectAllCategoryModifiers(${index}, false)">${t("btnUnselectAll")}</button>
+      modCard.innerHTML = `
+        <div class="cust-modifiers-empty-state">
+          <div class="empty-state-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line>
+              <line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line>
+              <line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line>
+            </svg>
+          </div>
+          <div class="empty-state-title">${escapeHtml(t("modifiersEmptyTitle"))}</div>
+          <div class="empty-state-desc">${escapeHtml(t("modifiersEmptyDesc"))}</div>
+          <button type="button" class="empty-state-cta-btn" onclick="handleCreateCustomFromSidebar()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span>${escapeHtml(t("btnCreateModifierGroup"))}</span>
+          </button>
         </div>
-        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
       `;
-
+    } else {
+      let chipsHtml = '';
       storeModifiers.forEach(mod => {
-        const isModSelected = appliedMods.includes('*') || appliedMods.includes(mod.id);
-        const safeModId = mod.id.replace(/'/g, "\\'");
-        modifiersHtml += `
-          <label style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; min-height: 40px; background: ${isModSelected ? '#ecfdf5' : '#fff'}; border: 1.5px solid ${isModSelected ? '#10b981' : '#cbd5e1'}; border-radius: 8px; cursor: pointer; font-size: var(--pos-text-meta); font-weight: 700; color: ${isModSelected ? '#065f46' : '#475569'}; user-select: none;">
-            <input type="checkbox" ${isModSelected ? 'checked' : ''} style="width: 18px; height: 18px; accent-color: #10b981; cursor: pointer;" onchange="toggleCategoryModifierItem(${index}, '${safeModId}', this.checked)">
-            <span>${escapeHtml(mod.title)}</span>
+        const isModSelected = isModifierAppliedToCategory(mod, cat);
+        const safeModId = escapeHtml(mod.id);
+        const countText = mod.count ? ` (${mod.count})` : '';
+        chipsHtml += `
+          <label class="cust-mod-chip ${isModSelected ? 'selected' : ''}">
+            <input type="checkbox" ${isModSelected ? 'checked' : ''} onchange="toggleCategoryModifierItem(${index}, '${safeModId.replace(/'/g, "\\'")}', this.checked)">
+            <span>${escapeHtml(mod.title)}${countText}</span>
           </label>
         `;
       });
-      modifiersHtml += `</div>`;
-    }
 
-    toggleDiv.innerHTML = `
-      <div class="help-title-row" style="margin-bottom: 4px;">
-        <div style="font-weight: 800; font-size: var(--pos-text-meta); color: #1e293b;" id="i18n-applied-modifiers-title">${t("appliedModifiersTitle")}</div>
-        <details class="menu-help"><summary aria-labelledby="i18n-applied-modifiers-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v6m0 3v1"/></svg></summary><div class="menu-help-text" id="i18n-applied-modifiers-desc">${t("appliedModifiersDesc")}</div></details>
-      </div>
-      ${modifiersHtml}
-    `;
-    catalogCard.appendChild(toggleDiv);
+      modCard.innerHTML = `
+        <div class="cust-category-modifiers-header">
+          <div class="cust-category-modifiers-title-group">
+            <div class="cust-category-modifiers-title">
+              <span>${escapeHtml(t("appliedModifiersTitle"))}</span>
+              <span class="mod-count-badge">${appliedCount}/${storeModifiers.length}</span>
+            </div>
+            <div class="cust-category-modifiers-desc">${escapeHtml(t("appliedModifiersCardDesc"))}</div>
+          </div>
+          <div class="cust-category-modifiers-actions">
+            <button type="button" class="btn-select-toggle" onclick="selectAllCategoryModifiers(${index}, true)">${escapeHtml(t("btnSelectAll"))}</button>
+            <button type="button" class="btn-select-toggle" onclick="selectAllCategoryModifiers(${index}, false)">${escapeHtml(t("btnUnselectAll"))}</button>
+            <button type="button" class="btn-add-mod-cta" onclick="handleCreateCustomFromSidebar()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <span>${escapeHtml(t("btnAddOptionGroupTop"))}</span>
+            </button>
+          </div>
+        </div>
+        <div class="cust-category-modifiers-grid">
+          ${chipsHtml}
+        </div>
+      `;
+    }
+    catalogCard.appendChild(modCard);
   }
 
   const itemsContainer = document.createElement("div");
@@ -1084,9 +1160,14 @@ function renderMenuCategoryEditor(index) {
     }
   });
 
+  const cameraSvg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`;
+  const gripSvg = (typeof POS_SVG !== "undefined" && POS_SVG.grip) || `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>`;
+  const trashSvg = (typeof POS_SVG !== "undefined" && POS_SVG.trash) || `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>`;
+  const settingsSvg = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`;
+
   cat.items.forEach((item, iIdx) => {
     const row = document.createElement("div");
-    row.className = "cust-option-block menu-catalog-row";
+    row.className = "menu-item-row-card menu-catalog-row";
     row.draggable = true;
     row.setAttribute("data-item-index", iIdx);
 
@@ -1106,15 +1187,7 @@ function renderMenuCategoryEditor(index) {
       renderMenuCategoryEditor(index);
     });
 
-    const oosBg = item.isOos ? '#fee2e2' : '#d1fae5';
-    const oosColor = item.isOos ? '#b91c1c' : '#065f46';
-    const oosBorder = item.isOos ? '#fca5a5' : '#6ee7b7';
     const oosText = item.isOos ? t("stockStatusOutOfStock") : t("stockStatusInStock");
-
-    const gripSvg = (typeof POS_SVG !== "undefined" && POS_SVG.grip) || "⋮⋮";
-    const trashSvg = (typeof POS_SVG !== "undefined" && POS_SVG.trash) || "";
-    const settingsSvg = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`;
-
     const hasBundle = item.itemType === 'bundle' || Boolean(item.bundleRule && Array.isArray(item.bundleRule.groups) && item.bundleRule.groups.length > 0);
 
     if (cat.type === 'catalog' && hasBundle) {
@@ -1126,31 +1199,52 @@ function renderMenuCategoryEditor(index) {
       row.setAttribute("title", bundleTooltip);
     }
 
+    const imgUrl = getItemImageUrl(cat.id, item.name);
+    const thumbHtml = imgUrl
+      ? `<img src="${imgUrl}" alt="${escapeHtml(item.name)}" class="menu-item-thumb-img">`
+      : `<div class="menu-item-thumb-placeholder">${cameraSvg}</div>`;
+
+    const thumbTooltip = escapeHtml(t("tooltipItemPhoto") || "點擊查看或更換餐點圖片");
+
+    let badgesHtml = '';
+    if (hasBundle) {
+      badgesHtml += `<span class="menu-combo-badge">${escapeHtml(t('bundleBadge'))}</span>`;
+    }
+    if (item.badgeText && String(item.badgeText).trim() !== '') {
+      badgesHtml += `<span class="menu-item-quick-badge">${escapeHtml(String(item.badgeText).trim())}</span>`;
+    }
+    const itemModCount = Array.isArray(item.modifierGroups) ? item.modifierGroups.length : 0;
+    if (itemModCount > 0) {
+      badgesHtml += `<span class="menu-item-mod-indicator">${itemModCount} ${escapeHtml(t('itemModifiersCount'))}</span>`;
+    }
+
     row.innerHTML = `
-      <div class="cust-option-row">
-        <div class="menu-item-drag" title="Kéo để đổi thứ tự">${gripSvg}</div>
+      <div class="menu-item-drag-handle" title="Kéo để đổi thứ tự">${gripSvg}</div>
+      <div class="menu-item-thumb-box" data-item-thumb-idx="${iIdx}" onclick="openItemDetailModal(${index}, ${iIdx})" title="${thumbTooltip}">
+        ${thumbHtml}
+      </div>
+      <div class="menu-item-info-col">
         <input type="text" class="menu-item-name-input" value="${escapeHtml(item.name)}" data-name-cidx="${index}" data-name-iidx="${iIdx}" oninput="markMenuDirty()"
           placeholder="${t("newItemPlaceholder")}">
-        <label class="menu-item-price-label">
-          <span class="price-currency">$</span>
-          <input type="number" class="menu-item-price-input" value="${item.price !== null && item.price !== undefined ? item.price : ''}" data-cidx="${index}" data-iidx="${iIdx}" oninput="markMenuDirty()"
-            placeholder="${t("priceHiddenPlaceholder")}">
-        </label>
-      <div class="menu-item-actions">
-        <button type="button" class="menu-item-btn" style="background: ${oosBg}; color: ${oosColor}; border: 1px solid ${oosBorder}; display: inline-flex; align-items: center; gap: 5px;"
-          onclick="openStockModal(${index}, ${iIdx})" title="${oosText}">
-          <span style="width:7px;height:7px;border-radius:50%;background:currentColor;"></span>
-          <span class="status-text">${oosText}</span>
-        </button>
-
-        <button type="button" class="menu-item-btn btn-ghost" style="border:1px solid #fee2e2;background:#fff5f5;color:var(--brand-red);display:inline-flex;align-items:center;gap:4px;" onclick="removeMenuItemAt(${index}, ${iIdx})" title="${t('btnItemDelete')}">
-          ${trashSvg}<span>${t("btnItemDelete")}</span>
-        </button>
+        <div class="menu-item-badges-bar">${badgesHtml}</div>
       </div>
+      <div class="menu-item-price-wrapper">
+        <span class="price-currency">$</span>
+        <input type="number" class="menu-item-price-input" value="${item.price !== null && item.price !== undefined ? item.price : ''}" data-cidx="${index}" data-iidx="${iIdx}" oninput="markMenuDirty()"
+          placeholder="${t("priceHiddenPlaceholder")}">
       </div>
-      <div class="cust-sub-options-container">
-        ${hasBundle ? `<span class="menu-combo-badge">${escapeHtml(t('bundleBadge'))}</span>` : ''}
-        <button type="button" class="cust-add-sub-chip-btn" onclick="openItemDetailModal(${index}, ${iIdx})">${settingsSvg}<span>${t("btnItemSettings")}</span></button>
+      <button type="button" class="menu-item-stock-toggle ${item.isOos ? 'is-oos' : 'is-instock'}"
+        onclick="openStockModal(${index}, ${iIdx})" title="${oosText}">
+        <span class="stock-toggle-dot"></span>
+        <span>${oosText}</span>
+      </button>
+      <div class="menu-item-actions-cluster">
+        <button type="button" class="menu-item-action-btn btn-settings" onclick="openItemDetailModal(${index}, ${iIdx})" title="${t('btnItemSettings')}">
+          ${settingsSvg}<span>${t("btnItemSettings")}</span>
+        </button>
+        <button type="button" class="menu-item-action-btn btn-delete-safe" onclick="removeMenuItemAt(${index}, ${iIdx})" title="${t('btnItemDelete')}">
+          ${trashSvg}
+        </button>
       </div>
     `;
     itemsContainer.appendChild(row);
@@ -1158,13 +1252,13 @@ function renderMenuCategoryEditor(index) {
   catalogCard.appendChild(itemsContainer);
 
   if (!isCombo) {
-  const addItemBtn = document.createElement("button");
-  addItemBtn.type = "button";
-  addItemBtn.className = "cat-mgr-add-btn";
-  addItemBtn.style.marginTop = "10px";
-  addItemBtn.onclick = () => openCreateItemModal(index);
-  addItemBtn.innerHTML = `<span>+ ${t("btnItemCreate") || (currentLang === 'vi' ? 'Thêm món mới' : '新增餐點')}</span>`;
-  catalogCard.appendChild(addItemBtn);
+    const addItemBtn = document.createElement("button");
+    addItemBtn.type = "button";
+    addItemBtn.className = "cat-mgr-add-btn";
+    addItemBtn.style.marginTop = "10px";
+    addItemBtn.onclick = () => openCreateItemModal(index);
+    addItemBtn.innerHTML = `<span>+ ${t("btnItemCreate") || (currentLang === 'vi' ? 'Thêm món mới' : '新增餐點')}</span>`;
+    catalogCard.appendChild(addItemBtn);
   }
 }
 
@@ -2107,13 +2201,14 @@ function syncMenuDataFromDOM() {
 }
 
 function serializeMenuData(categories) {
+  const isCustomCat = c => Boolean(c && (c.type === 'order_customization' || c.id === 'sec-flavor' || c.slug === 'sec-flavor' || c.type === 'modifier' || (typeof isCustomizationCategory === 'function' && isCustomizationCategory(c))));
   const output = {};
   // Resolve every new item ID before serializing group assignments. This keeps
   // appliedItems and item_modifier_links on the same stable IDs regardless of
   // whether the customization section comes before or after its menu section.
   const temporaryItemIds = new Map();
   categories.forEach(cat => {
-    if (isCustomizationCategory(cat)) return;
+    if (isCustomCat(cat)) return;
     const names = new Set();
     (cat.items || []).forEach(item => {
       const name = String(item.name || '').trim();
@@ -2127,7 +2222,7 @@ function serializeMenuData(categories) {
       }
     });
   });
-  categories.filter(isCustomizationCategory).forEach(cat => (cat.groups || []).forEach(group => {
+  categories.filter(isCustomCat).forEach(cat => (cat.groups || []).forEach(group => {
     if (Array.isArray(group.appliedItems)) {
       group.appliedItems = [...new Set(group.appliedItems.map(id => temporaryItemIds.get(String(id)) || String(id)))];
     }
@@ -2135,7 +2230,7 @@ function serializeMenuData(categories) {
 
   const assignedOptionOwners = new Map();
   // Pass 1: Resolve unique option IDs for all groups across all customization categories to prevent cross-group ID collisions
-  categories.filter(isCustomizationCategory).forEach(cat => {
+  categories.filter(isCustomCat).forEach(cat => {
     (cat.groups || []).forEach(grp => {
       const stableGid = String(grp.canonicalId || grp.id || '');
       (grp.options || []).forEach((opt, oIdx) => {
@@ -2217,7 +2312,7 @@ function serializeMenuData(categories) {
           item_type: item.itemType || (item.bundleRule && item.bundleRule.groups && item.bundleRule.groups.length > 0 ? 'bundle' : 'standard')
         };
         const sharedGroups = [];
-        (currentMenuData || []).filter(c => isCustomizationCategory(c)).forEach(customCat => {
+        ((typeof currentMenuData !== 'undefined' ? currentMenuData : categories) || []).filter(c => isCustomCat(c)).forEach(customCat => {
           (customCat.groups || []).forEach(group => {
             sharedGroups.push({ customCat, group });
           });
@@ -2301,11 +2396,12 @@ function serializeMenuData(categories) {
 // Deletions are computed only against the fully loaded editor snapshot, never
 // against whatever happens to exist on the server when this request arrives.
 function getMenuDeletions(before, after) {
+  const isCustomCat = c => Boolean(c && (c.type === 'order_customization' || c.id === 'sec-flavor' || c.slug === 'sec-flavor' || c.type === 'modifier' || (typeof isCustomizationCategory === 'function' && isCustomizationCategory(c))));
   const remainingCategories = new Set(after.map(cat => cat.id));
   const remainingItems = new Set(after.flatMap(cat => (cat.items || []).map(item => item.id)));
   const remainingGroups = new Set(after.flatMap(cat => (cat.groups || []).map(group => group.id)));
   return {
-    categories: before.filter(cat => !isCustomizationCategory(cat) && !remainingCategories.has(cat.id))
+    categories: before.filter(cat => !isCustomCat(cat) && !remainingCategories.has(cat.id))
       .map(cat => cat.databaseId || cat.id).filter(Boolean),
     items: before.filter(cat => remainingCategories.has(cat.id)).flatMap(cat =>
       (cat.items || []).filter(item => item.id && !remainingItems.has(item.id)).map(item => item.id)),
@@ -2370,23 +2466,39 @@ function toggleCategoryModifierItem(catIndex, modId, isChecked) {
   if (!currentMenuData || !currentMenuData[catIndex]) return;
   syncMenuDataFromDOM();
   const cat = currentMenuData[catIndex];
-  const allMods = getStoreModifiersList().map(m => m.id);
-  
-  let currentList = [];
-  if (!cat.appliedModifiers || cat.appliedModifiers.includes('*')) {
-    currentList = [...allMods];
+  const storeMods = getStoreModifiersList();
+  const targetMod = storeMods.find(m => m.id === modId);
+
+  if (targetMod && targetMod.type === 'customization' && targetMod.group) {
+    if (!Array.isArray(targetMod.group.appliedCategories)) targetMod.group.appliedCategories = [];
+    const catIdentifier = cat.id;
+    if (isChecked) {
+      if (!targetMod.group.appliedCategories.includes(catIdentifier)) {
+        targetMod.group.appliedCategories.push(catIdentifier);
+      }
+      targetMod.group.scope = 'category';
+    } else {
+      targetMod.group.appliedCategories = targetMod.group.appliedCategories.filter(id => id !== catIdentifier && id !== cat.databaseId);
+    }
   } else {
-    currentList = [...cat.appliedModifiers];
+    const allLegacyMods = storeMods.filter(m => m.type === 'modifier').map(m => m.id);
+    let currentList = [];
+    if (!cat.appliedModifiers || cat.appliedModifiers.includes('*')) {
+      currentList = [...allLegacyMods];
+    } else {
+      currentList = [...cat.appliedModifiers];
+    }
+
+    if (isChecked) {
+      if (!currentList.includes(modId)) currentList.push(modId);
+    } else {
+      currentList = currentList.filter(id => id !== modId);
+    }
+
+    cat.appliedModifiers = (allLegacyMods.length > 0 && currentList.length === allLegacyMods.length) ? ['*'] : currentList;
+    cat.allowCustomization = currentList.length > 0;
   }
 
-  if (isChecked) {
-    if (!currentList.includes(modId)) currentList.push(modId);
-  } else {
-    currentList = currentList.filter(id => id !== modId);
-  }
-
-  cat.appliedModifiers = (allMods.length > 0 && currentList.length === allMods.length) ? ['*'] : currentList;
-  cat.allowCustomization = currentList.length > 0;
   markMenuDirty();
   renderMenuCategoryEditor(catIndex);
 }
@@ -2395,8 +2507,26 @@ function selectAllCategoryModifiers(catIndex, selectAll) {
   if (!currentMenuData || !currentMenuData[catIndex]) return;
   syncMenuDataFromDOM();
   const cat = currentMenuData[catIndex];
+  const storeMods = getStoreModifiersList();
+
   cat.appliedModifiers = selectAll ? ['*'] : [];
   cat.allowCustomization = selectAll;
+
+  storeMods.forEach(mod => {
+    if (mod.type === 'customization' && mod.group) {
+      if (!Array.isArray(mod.group.appliedCategories)) mod.group.appliedCategories = [];
+      const catIdentifier = cat.id;
+      if (selectAll) {
+        if (!mod.group.appliedCategories.includes(catIdentifier)) {
+          mod.group.appliedCategories.push(catIdentifier);
+        }
+        mod.group.scope = 'category';
+      } else {
+        mod.group.appliedCategories = mod.group.appliedCategories.filter(id => id !== catIdentifier && id !== cat.databaseId);
+      }
+    }
+  });
+
   markMenuDirty();
   renderMenuCategoryEditor(catIndex);
 }
