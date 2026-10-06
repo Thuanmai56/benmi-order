@@ -193,3 +193,12 @@ test('config failure leaves callback untouched and never initializes from cached
   assert.equal(runtime.cleaned.length, 0);
   assert.equal(runtime.moved.length, 0);
 });
+
+
+test('recorded legacy index.html endpoint accepts the canonical Pages root without a redirect loop', async () => {
+  const runtime = liffRuntime('https://benmi-order.pages.dev/?tenant_id=bsc', 'legacy', 'https://benmi-order.pages.dev/index.html?tenant_id=bsc');
+  await runtime.context.ensureLiffReady();
+  assert.equal(runtime.initialized.length, 1);
+  assert.equal(runtime.moved.length, 0);
+  assert.equal(new URL(runtime.context.getLiffLoginRedirectUri()).pathname, '/index.html');
+});

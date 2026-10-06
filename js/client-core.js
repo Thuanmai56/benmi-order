@@ -635,8 +635,11 @@ window.getLiffLoginRedirectUri = getLiffLoginRedirectUri;
 function isCurrentLiffEndpoint(endpoint) {
     const target = new URL(endpoint);
     const current = new URL(window.location.href);
-    const basePath = target.pathname.replace(/\/$/, '');
-    return current.origin === target.origin && (current.pathname === target.pathname || current.pathname === basePath || current.pathname.startsWith(basePath + '/'));
+    // Pages canonicalizes index.html to /; accept that same-origin document
+    // without repeatedly navigating back to the recorded Console endpoint.
+    const targetPath = target.pathname === '/index.html' ? '/' : target.pathname;
+    const basePath = targetPath.replace(/\/$/, '');
+    return current.origin === target.origin && (current.pathname === targetPath || current.pathname === basePath || current.pathname.startsWith(basePath + '/'));
 }
 
 

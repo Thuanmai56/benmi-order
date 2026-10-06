@@ -41,3 +41,16 @@ Captured before this rollout on 2026-10-06:
 - Admin Worker version: `4df15f91-02f6-4f5a-8336-310659b4b2db`.
 
 Restore the appropriate Worker version and Pages deployment/commit when needed. If any tenant has already migrated, restore its Console Endpoint and tenant state before removing the code that serves the new path. Leave the additive columns, order data and custom domain in place. Keep admin variables/bindings at their captured production values; the admin checkout contained unrelated uncommitted config/migration/document changes which this rollout does not publish.
+
+## Deployment verification — 2026-10-06
+
+- Applied only `0064_customer_order_domain.sql`; compared migration history before/after.
+- All 14 production tenants remain `legacy`, with original LIFF IDs, LINE deep links and activation flags unchanged. No saved old endpoint was guessed or populated into the rollback column.
+- Backend Worker version: `95ac2f15-01ad-4b87-bec7-4cccbf43c1a9`.
+- Admin Worker version: `9e0d4523-f33b-40db-b418-6ebe4ca8baa8`; captured production variables and resource bindings preserved. Existing uncommitted admin files remain outside these commits.
+- Frontend checks and 31 tests passed, backend type-check passed, admin build and 99 tests passed. Local tests cover activation, rollback, compare-and-set conflicts and cache invalidation.
+- Production read-only smoke verified all 28 tenant/slash URLs redirect to the expected old URL with business parameters, config responses are uncached, callback documents and assets are served, tenant conflicts are rejected, and POS/explore/landing remain available.
+- In a browser, the BSC menu loaded, LIFF initialized with its current ID, and the login button reached LINE Login with the old Endpoint in `redirect_uri`. No credentials were entered and no order was created.
+- No tenant was activated and no LINE Console Endpoint was modified. iOS/Android sign-in, completed browser sign-in and controlled order/append/edit verification remain part of each future tenant cutover.
+
+Frontend core cache version is `20261006_order_domain_v2`; the final compatibility update accepts the Pages canonical `/` document when the recorded old Console Endpoint uses `/index.html`, while keeping the recorded login redirect URL exact.
