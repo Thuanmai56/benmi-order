@@ -4,7 +4,9 @@
 
 const _coreHostname = window.location.hostname;
 const _coreParams = new URLSearchParams(window.location.search);
-const _forcedEnv = window.POS_BUNDLED_ENV || _coreParams.get("env") || (typeof localStorage !== "undefined" && localStorage.getItem("pos_env_override"));
+const _forcedEnv = window.POS_BUNDLED_ENV || _coreParams.get("env") || (() => {
+  try { return localStorage.getItem("pos_env_override"); } catch (e) { return null; }
+})();
 
 const _isDev = (
   _forcedEnv === "dev" ||
@@ -164,12 +166,12 @@ function getTenantIdFromUrl() {
     }
   }
 
-  if (typeof localStorage !== "undefined") {
+  try {
     const savedTenant = localStorage.getItem("pos_device_tenant_id");
     if (savedTenant && savedTenant.trim()) {
       return savedTenant.trim();
     }
-  }
+  } catch (e) {}
   // When running in a standard web browser (not native app), default to "benmi" to avoid blocking login modal
   if (typeof isNativeAppPlatform === "function" && !isNativeAppPlatform()) {
     return "benmi";
@@ -687,7 +689,7 @@ function switchTab(tab) {
   const viewSettings = document.getElementById("view-settings");
   const viewMenu = document.getElementById("view-menu");
 
-  if (viewLive) viewLive.style.display = tab === "live" ? "block" : "none";
+  if (viewLive) viewLive.style.display = tab === "live" ? "flex" : "none";
   if (viewHistory) viewHistory.style.display = tab === "history" ? "block" : "none";
   if (viewReports) viewReports.style.display = tab === "reports" ? "block" : "none";
   if (viewSettings) viewSettings.style.display = tab === "settings" ? "block" : "none";

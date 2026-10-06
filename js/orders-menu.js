@@ -421,10 +421,10 @@ function renderCategoriesManagerView() {
 
       const isSystemCustomization = cat.type === 'order_customization' || cat.id === 'sec-flavor';
       const badge = cat.type === 'modifier'
-        ? `<span style="font-size: 11.5px; padding: 3px 8px; background: #e0e7ff; color: #4338ca; border-radius: 6px; font-weight: 800;">${t("modifierPrefix")}</span>`
+        ? `<span style="font-size: var(--pos-text-meta); padding: 3px 8px; background: #e0e7ff; color: #4338ca; border-radius: 6px; font-weight: 800;">${t("modifierPrefix")}</span>`
         : isSystemCustomization
-        ? `<span style="font-size: 11.5px; padding: 3px 8px; background: #fef3c7; color: #92400e; border-radius: 6px; font-weight: 800;">${currentLang === 'vi' ? 'Khẩu vị' : '客製化'}</span>`
-        : `<span style="font-size: 11.5px; padding: 3px 8px; background: #ecfdf5; color: #047857; border-radius: 6px; font-weight: 800;">${t("categoryTypeCatalogBadge") || "餐點"}</span>`;
+        ? `<span style="font-size: var(--pos-text-meta); padding: 3px 8px; background: #fef3c7; color: #92400e; border-radius: 6px; font-weight: 800;">${currentLang === 'vi' ? 'Khẩu vị' : '客製化'}</span>`
+        : `<span style="font-size: var(--pos-text-meta); padding: 3px 8px; background: #ecfdf5; color: #047857; border-radius: 6px; font-weight: 800;">${t("categoryTypeCatalogBadge") || "餐點"}</span>`;
 
       const itemCount = isSystemCustomization
         ? (cat.groups ? cat.groups.reduce((acc, g) => acc + (g.options ? g.options.length : 0), 0) : 0)
@@ -432,12 +432,12 @@ function renderCategoriesManagerView() {
 
       const actionsHtml = isSystemCustomization
         ? `
-          <span style="font-size: 12px; color: #64748b; font-weight: 600; padding-right: 6px;">${t("customizationPositionHint")}</span>
-          <button type="button" class="btn btn-ghost" style="border: 1px solid #fee2e2; background:#fff5f5; color:var(--brand-red); padding: 6px 12px; font-size: 13px; font-weight: 700; border-radius: 8px; display:inline-flex; align-items:center; gap:4px;" onclick="deleteCategoryAtIndex(${idx})">${(typeof POS_SVG !== 'undefined' && POS_SVG.trash) || ''} <span>${t("btnCategoryDelete")}</span></button>
+          <span style="font-size: var(--pos-text-meta); color: #64748b; font-weight: 600; padding-right: 6px;">${t("customizationPositionHint")}</span>
+          <button type="button" class="btn btn-ghost" style="border: 1px solid #fee2e2; background:#fff5f5; color:var(--brand-red); padding: 6px 12px; font-size: var(--pos-text-meta); font-weight: 700; border-radius: 8px; display:inline-flex; align-items:center; gap:4px;" onclick="deleteCategoryAtIndex(${idx})">${(typeof POS_SVG !== 'undefined' && POS_SVG.trash) || ''} <span>${t("btnCategoryDelete")}</span></button>
         `
         : `
-          <button type="button" class="btn btn-ghost" style="border: 1px solid #cbd5e1; background:#fff; padding: 6px 12px; font-size: 13px; font-weight: 700; border-radius: 8px; display:inline-flex; align-items:center; gap:4px;" onclick="promptRenameCategoryAtIndex(${idx})">${(typeof POS_SVG !== 'undefined' && POS_SVG.edit) || ''} <span>${t("btnCategoryRename")}</span></button>
-          <button type="button" class="btn btn-ghost" style="border: 1px solid #fee2e2; background:#fff5f5; color:var(--brand-red); padding: 6px 12px; font-size: 13px; font-weight: 700; border-radius: 8px; display:inline-flex; align-items:center; gap:4px;" onclick="deleteCategoryAtIndex(${idx})">${(typeof POS_SVG !== 'undefined' && POS_SVG.trash) || ''} <span>${t("btnCategoryDelete")}</span></button>
+          <button type="button" class="btn btn-ghost" style="border: 1px solid #cbd5e1; background:#fff; padding: 6px 12px; font-size: var(--pos-text-meta); font-weight: 700; border-radius: 8px; display:inline-flex; align-items:center; gap:4px;" onclick="promptRenameCategoryAtIndex(${idx})">${(typeof POS_SVG !== 'undefined' && POS_SVG.edit) || ''} <span>${t("btnCategoryRename")}</span></button>
+          <button type="button" class="btn btn-ghost" style="border: 1px solid #fee2e2; background:#fff5f5; color:var(--brand-red); padding: 6px 12px; font-size: var(--pos-text-meta); font-weight: 700; border-radius: 8px; display:inline-flex; align-items:center; gap:4px;" onclick="deleteCategoryAtIndex(${idx})">${(typeof POS_SVG !== 'undefined' && POS_SVG.trash) || ''} <span>${t("btnCategoryDelete")}</span></button>
         `;
       const gripSvg = (typeof POS_SVG !== "undefined" && POS_SVG.grip) || "";
 
@@ -446,7 +446,7 @@ function renderCategoriesManagerView() {
         <div class="cat-mgr-index">#${idx + 1}</div>
         <div class="cat-mgr-info">
           ${badge}
-          <span class="cat-mgr-name">${escapeHtml(cat.title)}${cat.shortName && cat.shortName !== cat.title ? ` <span style="font-size: 11.5px; color: #64748b; font-weight: normal;">(${escapeHtml(cat.shortName)})</span>` : ''}</span>
+          <span class="cat-mgr-name">${escapeHtml(cat.title)}${cat.shortName && cat.shortName !== cat.title ? ` <span style="font-size: var(--pos-text-meta); color: #64748b; font-weight: normal;">(${escapeHtml(cat.shortName)})</span>` : ''}</span>
           <span class="cat-mgr-count">${itemCount} ${t("menuItemUnit")}</span>
         </div>
         <div class="cat-mgr-actions" onclick="event.stopPropagation()">
@@ -484,9 +484,9 @@ function renderMenuCategories() {
 
     const isSystemCustomization = cat.type === 'order_customization' || cat.id === 'sec-flavor';
     const badge = cat.type === 'modifier'
-      ? `<span style="font-size: 11px; padding: 2px 6px; background: #e0e7ff; color: #4338ca; border-radius: 4px; font-weight: 700; margin-right: 6px;">${t("modifierPrefix")}</span>`
+      ? `<span style="font-size: var(--pos-text-meta); padding: 2px 6px; background: #e0e7ff; color: #4338ca; border-radius: 4px; font-weight: 700; margin-right: 6px;">${t("modifierPrefix")}</span>`
       : isSystemCustomization
-      ? `<span style="font-size: 11px; padding: 2px 6px; background: #fef3c7; color: #92400e; border-radius: 4px; font-weight: 700; margin-right: 6px;">${currentLang === 'vi' ? 'Khẩu vị' : '客製化'}</span>`
+      ? `<span style="font-size: var(--pos-text-meta); padding: 2px 6px; background: #fef3c7; color: #92400e; border-radius: 4px; font-weight: 700; margin-right: 6px;">${currentLang === 'vi' ? 'Khẩu vị' : '客製化'}</span>`
       : '';
 
     const itemCount = isSystemCustomization
@@ -591,12 +591,12 @@ function renderMenuCategoryEditor(index) {
     
     let modifiersHtml = '';
     if (storeModifiers.length === 0) {
-      modifiersHtml = `<div class="no-modifiers-hint" style="font-size: 12px; color: #94a3b8; margin: 0; padding: 0; line-height: 1.3;">${t("noModifiersInStore")}</div>`;
+      modifiersHtml = `<div class="no-modifiers-hint" style="font-size: var(--pos-text-meta); color: #94a3b8; margin: 0; padding: 0; line-height: 1.3;">${t("noModifiersInStore")}</div>`;
     } else {
       modifiersHtml = `
         <div style="display: flex; gap: 6px; margin-bottom: 6px;">
-          <button type="button" class="btn btn-ghost" style="padding: 4px 10px; font-size: 12.5px; font-weight: 700; background: #fff; border: 1.5px solid #cbd5e1; border-radius: 6px; cursor: pointer;" onclick="selectAllCategoryModifiers(${index}, true)">${t("btnSelectAll")}</button>
-          <button type="button" class="btn btn-ghost" style="padding: 4px 10px; font-size: 12.5px; font-weight: 700; background: #fff; border: 1.5px solid #cbd5e1; border-radius: 6px; color: #64748b; cursor: pointer;" onclick="selectAllCategoryModifiers(${index}, false)">${t("btnUnselectAll")}</button>
+          <button type="button" class="btn btn-ghost" style="padding: 4px 10px; font-size: var(--pos-text-meta); font-weight: 700; background: #fff; border: 1.5px solid #cbd5e1; border-radius: 6px; cursor: pointer;" onclick="selectAllCategoryModifiers(${index}, true)">${t("btnSelectAll")}</button>
+          <button type="button" class="btn btn-ghost" style="padding: 4px 10px; font-size: var(--pos-text-meta); font-weight: 700; background: #fff; border: 1.5px solid #cbd5e1; border-radius: 6px; color: #64748b; cursor: pointer;" onclick="selectAllCategoryModifiers(${index}, false)">${t("btnUnselectAll")}</button>
         </div>
         <div style="display: flex; flex-wrap: wrap; gap: 8px;">
       `;
@@ -605,7 +605,7 @@ function renderMenuCategoryEditor(index) {
         const isModSelected = appliedMods.includes('*') || appliedMods.includes(mod.id);
         const safeModId = mod.id.replace(/'/g, "\\'");
         modifiersHtml += `
-          <label style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; min-height: 40px; background: ${isModSelected ? '#ecfdf5' : '#fff'}; border: 1.5px solid ${isModSelected ? '#10b981' : '#cbd5e1'}; border-radius: 8px; cursor: pointer; font-size: 13.5px; font-weight: 700; color: ${isModSelected ? '#065f46' : '#475569'}; user-select: none;">
+          <label style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; min-height: 40px; background: ${isModSelected ? '#ecfdf5' : '#fff'}; border: 1.5px solid ${isModSelected ? '#10b981' : '#cbd5e1'}; border-radius: 8px; cursor: pointer; font-size: var(--pos-text-meta); font-weight: 700; color: ${isModSelected ? '#065f46' : '#475569'}; user-select: none;">
             <input type="checkbox" ${isModSelected ? 'checked' : ''} style="width: 18px; height: 18px; accent-color: #10b981; cursor: pointer;" onchange="toggleCategoryModifierItem(${index}, '${safeModId}', this.checked)">
             <span>${escapeHtml(mod.title)}</span>
           </label>
@@ -616,7 +616,7 @@ function renderMenuCategoryEditor(index) {
 
     toggleDiv.innerHTML = `
       <div class="help-title-row" style="margin-bottom: 4px;">
-        <div style="font-weight: 800; font-size: 13.5px; color: #1e293b;" id="i18n-applied-modifiers-title">${t("appliedModifiersTitle")}</div>
+        <div style="font-weight: 800; font-size: var(--pos-text-meta); color: #1e293b;" id="i18n-applied-modifiers-title">${t("appliedModifiersTitle")}</div>
         <details class="menu-help"><summary aria-labelledby="i18n-applied-modifiers-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v6m0 3v1"/></svg></summary><div class="menu-help-text" id="i18n-applied-modifiers-desc">${t("appliedModifiersDesc")}</div></details>
       </div>
       ${modifiersHtml}
@@ -741,8 +741,8 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
       card.setAttribute("data-cust-group-index", gIdx);
 
       const typeBadge = grp.type === 'checkbox'
-        ? `<span style="font-size: 11.5px; padding: 3px 8px; background: #e0e7ff; color: #4338ca; border-radius: 6px; font-weight: 800;">${currentLang === 'vi' ? 'Chọn nhiều' : '多選'}</span>`
-        : `<span style="font-size: 11.5px; padding: 3px 8px; background: #ecfdf5; color: #047857; border-radius: 6px; font-weight: 800;">${currentLang === 'vi' ? 'Chọn 1' : '單選'}</span>`;
+        ? `<span style="font-size: var(--pos-text-meta); padding: 3px 8px; background: #e0e7ff; color: #4338ca; border-radius: 6px; font-weight: 800;">${currentLang === 'vi' ? 'Chọn nhiều' : '多選'}</span>`
+        : `<span style="font-size: var(--pos-text-meta); padding: 3px 8px; background: #ecfdf5; color: #047857; border-radius: 6px; font-weight: 800;">${currentLang === 'vi' ? 'Chọn 1' : '單選'}</span>`;
 
       const optionsCount = (grp.options || []).length;
 
@@ -799,7 +799,7 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
         <div class="cust-group-header">
           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
             <span class="cust-group-title">${escapeHtml(grp.title)}</span>
-            <button type="button" class="menu-item-btn btn-ghost" style="padding: 3px 6px; font-size: 12px; border: 1px solid #cbd5e1; display:inline-flex; align-items:center; justify-content:center;"
+            <button type="button" class="menu-item-btn btn-ghost" style="padding: 3px 6px; font-size: var(--pos-text-meta); border: 1px solid #cbd5e1; display:inline-flex; align-items:center; justify-content:center;"
               onclick="renameCustomizationGroup(${cIdx}, ${gIdx})" title="${t("btnCategoryRename")}">${(typeof POS_SVG !== 'undefined' && POS_SVG.edit) || ''}</button>
             <button type="button" style="cursor: pointer; border: none; background: transparent; padding: 0;"
               onclick="toggleCustomizationGroupType(${cIdx}, ${gIdx})" title="${grp.type === 'checkbox' ? t('toggleGroupTypeSingle') : t('toggleGroupTypeMultiple')}">
@@ -807,8 +807,8 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
             </button>
           </div>
           <div style="display: flex; align-items: center; gap: 8px; margin-left: auto;">
-            <span style="font-size: 13px; color: #64748b; font-weight: 600;">${optionsCount} ${t("menuItemUnit")}</span>
-            <button type="button" class="menu-item-btn btn-ghost" style="border: 1px solid #fee2e2; background: #fff5f5; color: var(--brand-red); padding: 3px 6px; font-size: 12px; display:inline-flex; align-items:center; justify-content:center;"
+            <span style="font-size: var(--pos-text-meta); color: #64748b; font-weight: 600;">${optionsCount} ${t("menuItemUnit")}</span>
+            <button type="button" class="menu-item-btn btn-ghost" style="border: 1px solid #fee2e2; background: #fff5f5; color: var(--brand-red); padding: 3px 6px; font-size: var(--pos-text-meta); display:inline-flex; align-items:center; justify-content:center;"
               onclick="removeCustomizationGroup(${cIdx}, ${gIdx})" title="${t("btnCategoryDelete")}">
               ${(typeof POS_SVG !== 'undefined' && POS_SVG.trash) || ''}
             </button>
@@ -1212,10 +1212,10 @@ function openAddCategoryModal() {
   const storeMods = getStoreModifiersList();
   if (modContainer) {
     if (storeMods.length === 0) {
-      modContainer.innerHTML = `<div style="font-size: 12px; color: #94a3b8;">${t("noModifiersInStore")}</div>`;
+      modContainer.innerHTML = `<div style="font-size: var(--pos-text-meta); color: #94a3b8;">${t("noModifiersInStore")}</div>`;
     } else {
       modContainer.innerHTML = storeMods.map(mod => `
-        <label style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; min-height: 44px; background: #fff; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; color: #334155;">
+        <label style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; min-height: 44px; background: #fff; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: var(--pos-text-meta); font-weight: 700; cursor: pointer; color: #334155;">
           <input type="checkbox" name="add-cat-mod" value="${escapeHtml(mod.id)}" checked style="width: 18px; height: 18px; accent-color: #10b981;">
           <span>${escapeHtml(mod.title)}</span>
         </label>

@@ -42,7 +42,7 @@ async function fetchReportData(range = 'today', forceRefresh = false) {
     container.innerHTML = `
       <div style="padding:48px 20px; text-align:center; color:var(--muted, #64748b);">
         <div class="spinner" style="width:32px; height:32px; border:3px solid #e2e8f0; border-top-color:var(--primary, #00b900); border-radius:50%; margin:0 auto 12px; animation:spin 0.8s linear infinite;"></div>
-        <div style="font-weight:700; font-size:15px;">${t('loading')}</div>
+        <div style="font-weight:700; font-size:var(--pos-text-body);">${t('loading')}</div>
       </div>
     `;
   }
@@ -68,8 +68,8 @@ async function fetchReportData(range = 'today', forceRefresh = false) {
     console.error("[orders-reports] Failed to fetch report data:", err);
     container.innerHTML = `
       <div style="padding:40px 20px; text-align:center; color:#ef4444;">
-        <div style="font-size:28px; margin-bottom:8px;">⚠️</div>
-        <div style="font-weight:800; font-size:16px; margin-bottom:4px;">${t('processFail')}</div>
+        <div style="font-size:var(--pos-text-total); margin-bottom:8px;">⚠️</div>
+        <div style="font-weight:800; font-size:var(--pos-text-body); margin-bottom:4px;">${t('processFail')}</div>
         <button class="btn btn-ghost" onclick="refreshReportData()" style="margin-top:12px; font-weight:700;">🔄 ${t('btnRefreshReports') || 'Thử lại'}</button>
       </div>
     `;
@@ -116,8 +116,8 @@ function renderReports(data) {
     container.innerHTML = `
       <div style="padding:60px 20px; text-align:center; color:var(--muted, #64748b);">
         <div style="font-size:36px; margin-bottom:10px;">📊</div>
-        <div style="font-weight:800; font-size:17px; color:#475569;">${t('emptyReports')}</div>
-        <div style="font-size:13.5px; margin-top:4px; color:#94a3b8;">${t('reportsSub')}</div>
+        <div style="font-weight:800; font-size:var(--pos-text-body); color:#475569;">${t('emptyReports')}</div>
+        <div style="font-size:var(--pos-text-meta); margin-top:4px; color:#94a3b8;">${t('reportsSub')}</div>
       </div>
     `;
     return;
@@ -127,9 +127,9 @@ function renderReports(data) {
   const totalSoldAll = data.totalItemsSold || 1;
 
   let html = `
-    <table style="width:100%; border-collapse:collapse; text-align:left; font-size:14.5px;">
+    <table style="width:100%; border-collapse:collapse; text-align:left; font-size:var(--pos-text-body);">
       <thead>
-        <tr style="background:#f8fafc; border-bottom:1.5px solid #e2e8f0; color:#64748b; font-weight:800; font-size:13px; text-transform:uppercase; letter-spacing:0.5px;">
+        <tr style="background:#f8fafc; border-bottom:1.5px solid #e2e8f0; color:#64748b; font-weight:800; font-size:var(--pos-text-meta); text-transform:uppercase; letter-spacing:0.5px;">
           <th style="padding:14px 16px; width:70px; text-align:center;">${t('colRank')}</th>
           <th style="padding:14px 16px; min-width:200px;">${t('colItem')}</th>
           <th style="padding:14px 16px; width:120px;">${t('colCategory')}</th>
@@ -159,7 +159,7 @@ function renderReports(data) {
         .sort((a, b) => b[1] - a[1])
         .slice(0, 4);
       optionsHtml = topOpts.map(([name, cnt]) => 
-        `<span style="display:inline-block; background:#f1f5f9; color:#334155; font-size:12px; font-weight:700; padding:2px 7px; border-radius:6px; margin:2px 4px 2px 0; border:1px solid #e2e8f0;">${escapeHtml(name)} <b style="color:var(--primary, #00b900);">x${cnt}</b></span>`
+        `<span style="display:inline-block; background:#f1f5f9; color:#334155; font-size:var(--pos-text-meta); font-weight:700; padding:2px 7px; border-radius:6px; margin:2px 4px 2px 0; border:1px solid #e2e8f0;">${escapeHtml(name)} <b style="color:var(--primary, #00b900);">x${cnt}</b></span>`
       ).join("");
     }
 
@@ -167,17 +167,17 @@ function renderReports(data) {
       <tr style="border-bottom:1px solid #f1f5f9; transition:background 0.15s ease;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
         <td style="padding:14px 16px; text-align:center;">${rankBadge}</td>
         <td style="padding:14px 16px;">
-          <div style="font-weight:900; font-size:16px; color:#0f172a;">${escapeHtml(item.itemName)}</div>
-          <div style="font-size:12px; color:#64748b; margin-top:2px;">xuất hiện trong ${item.orderAppearances} ${t('orderUnit') || 'đơn'}</div>
+          <div style="font-weight:900; font-size:var(--pos-text-body); color:#0f172a;">${escapeHtml(item.itemName)}</div>
+          <div style="font-size:var(--pos-text-meta); color:#64748b; margin-top:2px;">xuất hiện trong ${item.orderAppearances} ${t('orderUnit') || 'đơn'}</div>
         </td>
         <td style="padding:14px 16px;">
-          <span style="background:#e0e7ff; color:#4338ca; font-size:12px; font-weight:800; padding:3px 8px; border-radius:6px;">${escapeHtml(item.categoryName || 'Món')}</span>
+          <span style="background:#e0e7ff; color:#4338ca; font-size:var(--pos-text-meta); font-weight:800; padding:3px 8px; border-radius:6px;">${escapeHtml(item.categoryName || 'Món')}</span>
         </td>
         <td style="padding:14px 16px; text-align:right;">
-          <span style="font-weight:900; font-size:17px; color:#0284c7;">${item.totalQuantity.toLocaleString()}</span>
-          <span style="font-size:12px; color:#64748b; margin-left:2px;">${t('portionUnit') || '份'}</span>
+          <span style="font-weight:900; font-size:var(--pos-text-body); color:#0284c7;">${item.totalQuantity.toLocaleString()}</span>
+          <span style="font-size:var(--pos-text-meta); color:#64748b; margin-left:2px;">${t('portionUnit') || '份'}</span>
         </td>
-        <td style="padding:14px 16px; text-align:right; font-weight:900; font-size:16px; color:#16a34a;">
+        <td style="padding:14px 16px; text-align:right; font-weight:900; font-size:var(--pos-text-body); color:#16a34a;">
           $${item.totalSales.toLocaleString()}
         </td>
         <td style="padding:14px 16px;">
@@ -185,7 +185,7 @@ function renderReports(data) {
             <div style="flex:1; background:#e2e8f0; height:8px; border-radius:4px; overflow:hidden;">
               <div style="background:var(--primary, #00b900); width:${barPercent}%; height:100%; border-radius:4px;"></div>
             </div>
-            <span style="font-size:12px; font-weight:800; color:#475569; width:42px; text-align:right;">${ratioPercent}%</span>
+            <span style="font-size:var(--pos-text-meta); font-weight:800; color:#475569; width:42px; text-align:right;">${ratioPercent}%</span>
           </div>
         </td>
         <td style="padding:14px 16px;">

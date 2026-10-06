@@ -3,10 +3,11 @@
 
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title id="pos-page-title">Blab POS</title>
   <base href="/" />
-  <link rel="stylesheet" href="css/orders.css?v=20261004_live_mobile_slide_v1" />
+  <script src="js/orders-display.js?v=20261006_tablet_text_v1"></script>
+  <link rel="stylesheet" href="css/orders.css?v=20261006_tablet_text_v1" />
     <script>
       (function () {
         document.documentElement.style.setProperty('--primary', '#00b900');
@@ -17,7 +18,9 @@
           const params = new URLSearchParams(window.location.search);
           const platformParam = params.get("platform");
           const hostname = window.location.hostname || "";
-          const forcedEnv = params.get("env") || (typeof localStorage !== "undefined" && localStorage.getItem("pos_env_override"));
+          const forcedEnv = params.get("env") || (() => {
+            try { return localStorage.getItem("pos_env_override"); } catch (e) { return null; }
+          })();
 
           const isApp = (platformParam === 'app' || params.get('app') === '1') ||
             (platformParam !== 'web' && params.get('web') !== '1' && !!(
@@ -65,7 +68,9 @@
 
         const params = new URLSearchParams(window.location.search);
         const defaultTenant = (!window.IS_NATIVE_APP) ? "benmi" : "";
-        const tenantId = params.get("tenant") || params.get("tenant_id") || (typeof localStorage !== "undefined" && localStorage.getItem("pos_device_tenant_id")) || defaultTenant;
+        const tenantId = params.get("tenant") || params.get("tenant_id") || (() => {
+          try { return localStorage.getItem("pos_device_tenant_id"); } catch (e) { return null; }
+        })() || defaultTenant;
         window.__INITIAL_TENANT_ID = tenantId;
         try {
           if (tenantId) {
@@ -383,55 +388,55 @@
       <!-- Header with Time Range Selector -->
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
         <div>
-          <h2 style="font-size:22px; font-weight:900; color:var(--text, #1e293b); margin:0 0 4px;" id="i18n-reports-title">餐點銷量與營收分析</h2>
-          <p style="font-size:13.5px; color:var(--muted, #64748b); margin:0;" id="i18n-reports-sub">即時統計門市各品項銷售數據與加料偏好</p>
+          <h2 style="font-size:var(--pos-text-title); font-weight:900; color:var(--text, #1e293b); margin:0 0 4px;" id="i18n-reports-title">餐點銷量與營收分析</h2>
+          <p style="font-size:var(--pos-text-meta); color:var(--muted, #64748b); margin:0;" id="i18n-reports-sub">即時統計門市各品項銷售數據與加料偏好</p>
         </div>
 
         <div style="display:flex; align-items:center; gap:8px;">
           <div class="report-range-group" style="display:flex; background:#e2e8f0; padding:4px; border-radius:12px; gap:4px;">
-            <button type="button" class="report-range-btn active" data-range="today" onclick="selectReportRange('today')" id="i18n-range-today" style="border:none; padding:7px 14px; border-radius:8px; font-size:14px; font-weight:900; background:var(--primary, #00b900); color:#fff; cursor:pointer;">今天</button>
-            <button type="button" class="report-range-btn" data-range="7d" onclick="selectReportRange('7d')" id="i18n-range-7d" style="border:none; padding:7px 14px; border-radius:8px; font-size:14px; font-weight:600; background:transparent; color:var(--text, #1e293b); cursor:pointer;">近 7 天</button>
-            <button type="button" class="report-range-btn" data-range="30d" onclick="selectReportRange('30d')" id="i18n-range-30d" style="border:none; padding:7px 14px; border-radius:8px; font-size:14px; font-weight:600; background:transparent; color:var(--text, #1e293b); cursor:pointer;">近 30 天</button>
+            <button type="button" class="report-range-btn active" data-range="today" onclick="selectReportRange('today')" id="i18n-range-today" style="border:none; padding:7px 14px; border-radius:8px; font-size:var(--pos-text-meta); font-weight:900; background:var(--primary, #00b900); color:#fff; cursor:pointer;">今天</button>
+            <button type="button" class="report-range-btn" data-range="7d" onclick="selectReportRange('7d')" id="i18n-range-7d" style="border:none; padding:7px 14px; border-radius:8px; font-size:var(--pos-text-meta); font-weight:600; background:transparent; color:var(--text, #1e293b); cursor:pointer;">近 7 天</button>
+            <button type="button" class="report-range-btn" data-range="30d" onclick="selectReportRange('30d')" id="i18n-range-30d" style="border:none; padding:7px 14px; border-radius:8px; font-size:var(--pos-text-meta); font-weight:600; background:transparent; color:var(--text, #1e293b); cursor:pointer;">近 30 天</button>
           </div>
           <button type="button" class="btn btn-ghost" onclick="refreshReportData()" style="padding:8px 12px; border-radius:10px; border:1px solid #cbd5e1; background:#fff; cursor:pointer;" title="Refresh">
             <span>🔄</span>
           </button>
-          <button type="button" class="btn btn-ghost" style="border:1.5px solid #cbd5e1; background:#fff; color:#475569; font-weight:800; padding:7px 14px; border-radius:10px; font-size:13.5px; cursor:pointer;" onclick="openSettings()" id="i18n-btn-back-settings">← 返回設定</button>
+          <button type="button" class="btn btn-ghost" style="border:1.5px solid #cbd5e1; background:#fff; color:#475569; font-weight:800; padding:7px 14px; border-radius:10px; font-size:var(--pos-text-meta); cursor:pointer;" onclick="openSettings()" id="i18n-btn-back-settings">← 返回設定</button>
         </div>
       </div>
 
       <!-- KPI Summary Cards -->
       <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px; margin-bottom:24px;">
         <div class="kpi-card" style="background:#ffffff; border:1.5px solid #e2e8f0; border-radius:16px; padding:18px 20px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
-          <div style="font-size:13px; font-weight:800; color:#64748b; margin-bottom:6px;" id="i18n-kpi-top-item">熱銷第一名</div>
-          <div style="font-size:22px; font-weight:1000; color:#1e293b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" id="kpi-top-item-name">-</div>
-          <div style="font-size:13px; color:#10b981; font-weight:700; margin-top:4px;" id="kpi-top-item-sales">-</div>
+          <div style="font-size:var(--pos-text-meta); font-weight:800; color:#64748b; margin-bottom:6px;" id="i18n-kpi-top-item">熱銷第一名</div>
+          <div style="font-size:var(--pos-text-title); font-weight:1000; color:#1e293b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" id="kpi-top-item-name">-</div>
+          <div style="font-size:var(--pos-text-meta); color:#10b981; font-weight:700; margin-top:4px;" id="kpi-top-item-sales">-</div>
         </div>
 
         <div class="kpi-card" style="background:#ffffff; border:1.5px solid #e2e8f0; border-radius:16px; padding:18px 20px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
-          <div style="font-size:13px; font-weight:800; color:#64748b; margin-bottom:6px;" id="i18n-kpi-total-sold">總銷售份數</div>
-          <div style="font-size:26px; font-weight:1000; color:#0284c7;" id="kpi-total-sold">0</div>
-          <div style="font-size:12px; color:#94a3b8; margin-top:4px;" id="kpi-date-range">-</div>
+          <div style="font-size:var(--pos-text-meta); font-weight:800; color:#64748b; margin-bottom:6px;" id="i18n-kpi-total-sold">總銷售份數</div>
+          <div style="font-size:var(--pos-text-total); font-weight:1000; color:#0284c7;" id="kpi-total-sold">0</div>
+          <div style="font-size:var(--pos-text-meta); color:#94a3b8; margin-top:4px;" id="kpi-date-range">-</div>
         </div>
 
         <div class="kpi-card" style="background:#ffffff; border:1.5px solid #e2e8f0; border-radius:16px; padding:18px 20px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
-          <div style="font-size:13px; font-weight:800; color:#64748b; margin-bottom:6px;" id="i18n-kpi-total-revenue">餐點總營收</div>
-          <div style="font-size:26px; font-weight:1000; color:#16a34a;" id="kpi-total-revenue">$0</div>
-          <div style="font-size:12px; color:#94a3b8; margin-top:4px;" id="i18n-revenue-sub">餐點銷售總額</div>
+          <div style="font-size:var(--pos-text-meta); font-weight:800; color:#64748b; margin-bottom:6px;" id="i18n-kpi-total-revenue">餐點總營收</div>
+          <div style="font-size:var(--pos-text-total); font-weight:1000; color:#16a34a;" id="kpi-total-revenue">$0</div>
+          <div style="font-size:var(--pos-text-meta); color:#94a3b8; margin-top:4px;" id="i18n-revenue-sub">餐點銷售總額</div>
         </div>
 
         <div class="kpi-card" style="background:#ffffff; border:1.5px solid #e2e8f0; border-radius:16px; padding:18px 20px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
-          <div style="font-size:13px; font-weight:800; color:#64748b; margin-bottom:6px;" id="i18n-kpi-total-orders">成交訂單數</div>
-          <div style="font-size:26px; font-weight:1000; color:#7c3aed;" id="kpi-total-orders">0</div>
-          <div style="font-size:12px; color:#94a3b8; margin-top:4px;" id="i18n-completed-orders-sub">已完成 / 已結帳</div>
+          <div style="font-size:var(--pos-text-meta); font-weight:800; color:#64748b; margin-bottom:6px;" id="i18n-kpi-total-orders">成交訂單數</div>
+          <div style="font-size:var(--pos-text-total); font-weight:1000; color:#7c3aed;" id="kpi-total-orders">0</div>
+          <div style="font-size:var(--pos-text-meta); color:#94a3b8; margin-top:4px;" id="i18n-completed-orders-sub">已完成 / 已結帳</div>
         </div>
       </div>
 
       <!-- Item Sales Table Container -->
       <div style="background:#ffffff; border:1.5px solid #e2e8f0; border-radius:18px; overflow:hidden; box-shadow:0 2px 6px rgba(0,0,0,0.03);">
         <div style="padding:16px 20px; border-bottom:1.5px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center;">
-          <span style="font-size:16px; font-weight:900; color:#1e293b;" id="i18n-table-title">品項銷售明細排行榜</span>
-          <span style="font-size:13px; color:#64748b; font-weight:700;" id="reports-item-count">0 品項</span>
+          <span style="font-size:var(--pos-text-body); font-weight:900; color:#1e293b;" id="i18n-table-title">品項銷售明細排行榜</span>
+          <span style="font-size:var(--pos-text-meta); color:#64748b; font-weight:700;" id="reports-item-count">0 品項</span>
         </div>
 
         <div id="reports-table-container" style="overflow-x:auto;">
@@ -513,6 +518,15 @@
                 <polyline points="9 18 15 12 9 6"></polyline>
               </svg>
             </div>
+            <button type="button" class="settings-toc-item" id="toc-item-display" onclick="switchSettingTab('setting-card-display')">
+              <div class="toc-icon-box">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="2" y="3" width="20" height="14" rx="2"></rect>
+                  <path d="M8 21h8M12 17v4"></path>
+                </svg>
+              </div>
+              <span class="toc-item-label" data-pos-display-i18n="displayTitle">顯示</span>
+            </button>
             <div class="settings-toc-item" id="toc-item-dinein" onclick="switchSettingTab('setting-card-dinein')">
               <div class="toc-icon-box">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -590,8 +604,8 @@
             <!-- Store Status Setting -->
             <div class="settings-card active" id="setting-card-status">
               <div style="padding: 16px 20px; background: #f3f4f6; border-bottom: 1px solid var(--border);">
-                <div style="font-weight: 1100; font-size: 18px;" id="i18n-setting-store-status-title">門市接單狀態</div>
-                <div style="font-size: 13px; color: var(--muted); font-weight: 600; margin-top: 2px;" id="i18n-setting-store-status-sub">隨時切換一般營業、繁忙延後或暫停接單模式</div>
+                <div style="font-weight: 1100; font-size: var(--pos-text-body);" id="i18n-setting-store-status-title">門市接單狀態</div>
+                <div style="font-size: var(--pos-text-meta); color: var(--muted); font-weight: 600; margin-top: 2px;" id="i18n-setting-store-status-sub">隨時切換一般營業、繁忙延後或暫停接單模式</div>
               </div>
               <div class="store-status-options-grid" style="padding: 20px; display: flex; flex-direction: column; gap: 14px;">
                 <div class="status-select-box active" id="status-box-open" onclick="setStoreStatus('open')">
@@ -623,10 +637,10 @@
               <div
                 style="padding: 16px 20px; background: #f3f4f6; border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
                 <div>
-                  <div style="font-weight: 1100; font-size: 18px;" id="i18n-ordermode-title">點餐模式 / 取餐時間設定</div>
-                  <div style="font-size: 13px; color: var(--muted); font-weight: 600; margin-top: 2px;" id="i18n-ordermode-sub">自訂允許顧客預約時間或現場排隊即時製作 (ASAP)</div>
+                  <div style="font-weight: 1100; font-size: var(--pos-text-body);" id="i18n-ordermode-title">點餐模式 / 取餐時間設定</div>
+                  <div style="font-size: var(--pos-text-meta); color: var(--muted); font-weight: 600; margin-top: 2px;" id="i18n-ordermode-sub">自訂允許顧客預約時間或現場排隊即時製作 (ASAP)</div>
                 </div>
-                <button class="btn btn-primary" style="padding: 10px 20px; font-size: 15px; border-radius: 8px;"
+                <button class="btn btn-primary" style="padding: 10px 20px; font-size: var(--pos-text-body); border-radius: 8px;"
                   onclick="saveScheduledPickupSetting()" id="btn-save-pickup-setting">儲存設定</button>
               </div>
 
@@ -634,16 +648,16 @@
                 <label class="setting-mode-card" id="mode-card-scheduled" style="display: flex; align-items: flex-start; gap: 14px; padding: 16px; border-radius: 12px; border: 2px solid var(--border); cursor: pointer; transition: all 0.15s ease;">
                   <input type="radio" name="pickup-mode-radio" id="setting-allow-scheduled-true" value="true" onchange="onPickupModeChange(true)" style="width: 20px; height: 20px; margin-top: 3px; accent-color: var(--primary);">
                   <div>
-                    <div style="font-weight: 1100; font-size: 16px; color: #111827;" id="i18n-mode-scheduled-title">允許顧客預約取餐時間 (預設)</div>
-                    <div style="font-size: 14px; color: #4b5563; margin-top: 4px; line-height: 1.4;" id="i18n-mode-scheduled-sub">顧客可自由選擇今天或未來營業時段預約取餐。</div>
+                    <div style="font-weight: 1100; font-size: var(--pos-text-body); color: #111827;" id="i18n-mode-scheduled-title">允許顧客預約取餐時間 (預設)</div>
+                    <div style="font-size: var(--pos-text-meta); color: #4b5563; margin-top: 4px; line-height: 1.4;" id="i18n-mode-scheduled-sub">顧客可自由選擇今天或未來營業時段預約取餐。</div>
                   </div>
                 </label>
 
                 <label class="setting-mode-card" id="mode-card-asap" style="display: flex; align-items: flex-start; gap: 14px; padding: 16px; border-radius: 12px; border: 2px solid var(--border); cursor: pointer; transition: all 0.15s ease;">
                   <input type="radio" name="pickup-mode-radio" id="setting-allow-scheduled-false" value="false" onchange="onPickupModeChange(false)" style="width: 20px; height: 20px; margin-top: 3px; accent-color: var(--primary);">
                   <div>
-                    <div style="font-weight: 1100; font-size: 16px; color: #111827;" id="i18n-mode-asap-title">僅限現場排隊 / 盡快製作 (ASAP)</div>
-                    <div style="font-size: 14px; color: #4b5563; margin-top: 4px; line-height: 1.4;" id="i18n-mode-asap-sub">關閉預約時段選單，所有訂單一律為「盡快製作」。</div>
+                    <div style="font-weight: 1100; font-size: var(--pos-text-body); color: #111827;" id="i18n-mode-asap-title">僅限現場排隊 / 盡快製作 (ASAP)</div>
+                    <div style="font-size: var(--pos-text-meta); color: #4b5563; margin-top: 4px; line-height: 1.4;" id="i18n-mode-asap-sub">關閉預約時段選單，所有訂單一律為「盡快製作」。</div>
                   </div>
                 </label>
               </div>
@@ -654,10 +668,10 @@
               <div
                 style="padding: 16px 20px; background: #f3f4f6; border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
                 <div class="help-title-row">
-                  <div style="font-weight: 1100; font-size: 18px;" id="i18n-hours-title">營業時間設定</div>
+                  <div style="font-weight: 1100; font-size: var(--pos-text-body);" id="i18n-hours-title">營業時間設定</div>
                   <details class="menu-help"><summary aria-labelledby="i18n-hours-title"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v6m0 3v1"/></svg></summary><div class="menu-help-text" id="i18n-hours-sub">設定每日營業時段與公休日</div></details>
                 </div>
-                <button class="btn btn-primary" style="padding: 10px 20px; font-size: 15px; border-radius: 8px;"
+                <button class="btn btn-primary" style="padding: 10px 20px; font-size: var(--pos-text-body); border-radius: 8px;"
                   onclick="saveOperatingHours()" id="btn-save-hours">儲存設定</button>
               </div>
               <div style="padding: 20px;">
@@ -671,10 +685,10 @@
             <div class="settings-card" id="setting-card-store-info">
               <div style="padding: 16px 20px; background: #f3f4f6; border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
                 <div>
-                  <div style="font-weight: 1100; font-size: 18px;" id="i18n-setting-store-info-title">門市基本資訊</div>
-                  <div style="font-size: 13px; color: var(--muted); font-weight: 600; margin-top: 2px;" id="i18n-setting-store-info-sub">管理門市標誌 (Logo)、跑馬燈公告與門市聯絡地址</div>
+                  <div style="font-weight: 1100; font-size: var(--pos-text-body);" id="i18n-setting-store-info-title">門市基本資訊</div>
+                  <div style="font-size: var(--pos-text-meta); color: var(--muted); font-weight: 600; margin-top: 2px;" id="i18n-setting-store-info-sub">管理門市標誌 (Logo)、跑馬燈公告與門市聯絡地址</div>
                 </div>
-                <button type="button" class="btn btn-primary" style="padding: 10px 20px; font-size: 15px; border-radius: 8px; font-weight: 900;" onclick="saveAllStoreInfoSettings()" id="btn-save-all-store-info">
+                <button type="button" class="btn btn-primary" style="padding: 10px 20px; font-size: var(--pos-text-body); border-radius: 8px; font-weight: 900;" onclick="saveAllStoreInfoSettings()" id="btn-save-all-store-info">
                   儲存全部資訊
                 </button>
               </div>
@@ -685,12 +699,12 @@
                 <div style="background: #ffffff; border: 1.5px solid var(--border); border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 14px;">
                   <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
-                      <div style="font-weight: 900; font-size: 16px; color: #0f172a;" id="i18n-setting-logo-title">門市 Logo</div>
-                      <div style="font-size: 13px; color: var(--muted); margin-top: 2px;" id="i18n-setting-logo-sub">顯示於顧客點餐頁面頂部與 POS 系統</div>
+                      <div style="font-weight: 900; font-size: var(--pos-text-body); color: #0f172a;" id="i18n-setting-logo-title">門市 Logo</div>
+                      <div style="font-size: var(--pos-text-meta); color: var(--muted); margin-top: 2px;" id="i18n-setting-logo-sub">顯示於顧客點餐頁面頂部與 POS 系統</div>
                     </div>
                     <div style="display: flex; gap: 8px; align-items: center;">
-                      <button type="button" class="btn btn-ghost" style="border: 1px solid #fee2e2; background: #fff5f5; color: var(--brand-red); padding: 8px 14px; font-size: 13.5px; border-radius: 8px; display: none; font-weight: 700;" onclick="deleteStoreLogoSetting()" id="btn-delete-logo-setting">刪除 Logo</button>
-                      <button type="button" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px; border-radius: 8px; font-weight: 800;" onclick="saveStoreLogoSetting()" id="btn-save-logo-setting">儲存 Logo</button>
+                      <button type="button" class="btn btn-ghost" style="border: 1px solid #fee2e2; background: #fff5f5; color: var(--brand-red); padding: 8px 14px; font-size: var(--pos-text-meta); border-radius: 8px; display: none; font-weight: 700;" onclick="deleteStoreLogoSetting()" id="btn-delete-logo-setting">刪除 Logo</button>
+                      <button type="button" class="btn btn-primary" style="padding: 8px 16px; font-size: var(--pos-text-meta); border-radius: 8px; font-weight: 800;" onclick="saveStoreLogoSetting()" id="btn-save-logo-setting">儲存 Logo</button>
                     </div>
                   </div>
 
@@ -703,11 +717,11 @@
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 220px;">
                       <input type="file" id="setting-logo-file-input" accept="image/png, image/jpeg, image/webp" style="display: none;" onchange="handleSettingLogoSelect(event)" />
-                      <button type="button" class="btn btn-ghost" id="btn-setting-choose-logo" style="align-self: flex-start; border: 1.5px solid #cbd5e1; background: #fff; padding: 10px 18px; font-size: 14px; font-weight: 800; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;" onclick="document.getElementById('setting-logo-file-input').click()">
+                      <button type="button" class="btn btn-ghost" id="btn-setting-choose-logo" style="align-self: flex-start; border: 1.5px solid #cbd5e1; background: #fff; padding: 10px 18px; font-size: var(--pos-text-meta); font-weight: 800; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;" onclick="document.getElementById('setting-logo-file-input').click()">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
                         <span id="i18n-btn-choose-logo-text">選擇圖片</span>
                       </button>
-                      <div style="font-size: 12.5px; color: var(--muted); font-weight: 500;" id="i18n-logo-hint">
+                      <div style="font-size: var(--pos-text-meta); color: var(--muted); font-weight: 500;" id="i18n-logo-hint">
                         支援 PNG, JPG, WebP 格式（建議正方形 512x512px 以達最佳效果）
                       </div>
                     </div>
@@ -718,13 +732,13 @@
                 <div style="background: #ffffff; border: 1.5px solid var(--border); border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px;">
                   <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
-                      <div style="font-weight: 900; font-size: 16px; color: #0f172a;" id="i18n-setting-announcement-title">門市公告設定</div>
-                      <div style="font-size: 13px; color: var(--muted); margin-top: 2px;" id="i18n-setting-announcement-sub">顯示於顧客點餐頁面橫幅跑馬燈</div>
+                      <div style="font-weight: 900; font-size: var(--pos-text-body); color: #0f172a;" id="i18n-setting-announcement-title">門市公告設定</div>
+                      <div style="font-size: var(--pos-text-meta); color: var(--muted); margin-top: 2px;" id="i18n-setting-announcement-sub">顯示於顧客點餐頁面橫幅跑馬燈</div>
                     </div>
-                    <button type="button" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px; border-radius: 8px; font-weight: 800;" onclick="saveStoreAnnouncementSetting()" id="btn-save-announcement-setting">儲存公告</button>
+                    <button type="button" class="btn btn-primary" style="padding: 8px 16px; font-size: var(--pos-text-meta); border-radius: 8px; font-weight: 800;" onclick="saveStoreAnnouncementSetting()" id="btn-save-announcement-setting">儲存公告</button>
                   </div>
                   <div>
-                    <textarea id="setting-store-announcement-input" class="form-input" style="width: 100%; box-sizing: border-box; padding: 12px 14px; font-size: 15px; font-weight: 600; min-height: 80px; resize: vertical; font-family: inherit; line-height: 1.45;" placeholder="請輸入門市公告（例如：今日特餐全面 9 折 / 國定假日公休公告...）"></textarea>
+                    <textarea id="setting-store-announcement-input" class="form-input" style="width: 100%; box-sizing: border-box; padding: 12px 14px; font-size: var(--pos-text-body); font-weight: 600; min-height: 80px; resize: vertical; font-family: inherit; line-height: 1.45;" placeholder="請輸入門市公告（例如：今日特餐全面 9 折 / 國定假日公休公告...）"></textarea>
                   </div>
                 </div>
 
@@ -732,13 +746,13 @@
                 <div style="background: #ffffff; border: 1.5px solid var(--border); border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px;">
                   <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
-                      <div style="font-weight: 900; font-size: 16px; color: #0f172a;" id="i18n-setting-address-title">門市地址設定</div>
-                      <div style="font-size: 13px; color: var(--muted); margin-top: 2px;" id="i18n-setting-address-sub">顯示於顧客點餐頁面頂部導航資訊</div>
+                      <div style="font-weight: 900; font-size: var(--pos-text-body); color: #0f172a;" id="i18n-setting-address-title">門市地址設定</div>
+                      <div style="font-size: var(--pos-text-meta); color: var(--muted); margin-top: 2px;" id="i18n-setting-address-sub">顯示於顧客點餐頁面頂部導航資訊</div>
                     </div>
-                    <button type="button" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px; border-radius: 8px; font-weight: 800;" onclick="saveStoreAddressSetting()" id="btn-save-address-setting">儲存地址</button>
+                    <button type="button" class="btn btn-primary" style="padding: 8px 16px; font-size: var(--pos-text-meta); border-radius: 8px; font-weight: 800;" onclick="saveStoreAddressSetting()" id="btn-save-address-setting">儲存地址</button>
                   </div>
                   <div>
-                    <input type="text" id="setting-store-address-input" class="form-input" style="width: 100%; box-sizing: border-box; padding: 12px 14px; font-size: 15px; font-weight: 600;" placeholder="請輸入門市地址（例如：新北市土城區中央路二段135號）" />
+                    <input type="text" id="setting-store-address-input" class="form-input" style="width: 100%; box-sizing: border-box; padding: 12px 14px; font-size: var(--pos-text-body); font-weight: 600;" placeholder="請輸入門市地址（例如：新北市土城區中央路二段135號）" />
                   </div>
                 </div>
 
@@ -748,25 +762,60 @@
             <!-- Language Setting -->
             <div class="settings-card" id="setting-card-language">
               <div style="padding: 16px 20px; background: #f3f4f6; border-bottom: 1px solid var(--border);">
-                <div style="font-weight: 1100; font-size: 18px;" id="i18n-setting-lang-title">介面語言</div>
-                <div style="font-size: 13px; color: var(--muted); font-weight: 600; margin-top: 2px;" id="i18n-setting-lang-sub">設定 POS 系統的操作與顯示語言</div>
+                <div style="font-weight: 1100; font-size: var(--pos-text-body);" id="i18n-setting-lang-title">介面語言</div>
+                <div style="font-size: var(--pos-text-meta); color: var(--muted); font-weight: 600; margin-top: 2px;" id="i18n-setting-lang-sub">設定 POS 系統的操作與顯示語言</div>
               </div>
               <div style="padding: 20px; display: flex; flex-direction: column; gap: 14px;">
                 <label class="setting-mode-card" id="lang-card-zh" style="display: flex; align-items: center; gap: 14px; padding: 16px; border-radius: 12px; border: 2px solid var(--border); cursor: pointer; transition: all 0.15s ease;">
                   <input type="radio" name="pos-language-radio" id="setting-lang-zh" value="zh-TW" onchange="selectLanguage('zh-TW')" style="width: 20px; height: 20px; accent-color: var(--primary);">
                   <div>
-                    <div style="font-weight: 1100; font-size: 16px; color: #111827;">繁體中文 (Traditional Chinese)</div>
-                    <div style="font-size: 13.5px; color: #64748b; margin-top: 2px;" id="i18n-lang-zh-desc">適合台灣門市與繁體中文操作人員</div>
+                    <div style="font-weight: 1100; font-size: var(--pos-text-body); color: #111827;">繁體中文 (Traditional Chinese)</div>
+                    <div style="font-size: var(--pos-text-meta); color: #64748b; margin-top: 2px;" id="i18n-lang-zh-desc">適合台灣門市與繁體中文操作人員</div>
                   </div>
                 </label>
 
                 <label class="setting-mode-card" id="lang-card-vi" style="display: flex; align-items: center; gap: 14px; padding: 16px; border-radius: 12px; border: 2px solid var(--border); cursor: pointer; transition: all 0.15s ease;">
                   <input type="radio" name="pos-language-radio" id="setting-lang-vi" value="vi" onchange="selectLanguage('vi')" style="width: 20px; height: 20px; accent-color: var(--primary);">
                   <div>
-                    <div style="font-weight: 1100; font-size: 16px; color: #111827;">Tiếng Việt (Vietnamese)</div>
-                    <div style="font-size: 13.5px; color: #64748b; margin-top: 2px;" id="i18n-lang-vi-desc">Giao diện tiếng Việt chuẩn hóa cho nhân viên quầy và thu ngân</div>
+                    <div style="font-weight: 1100; font-size: var(--pos-text-body); color: #111827;">Tiếng Việt (Vietnamese)</div>
+                    <div style="font-size: var(--pos-text-meta); color: #64748b; margin-top: 2px;" id="i18n-lang-vi-desc">Giao diện tiếng Việt chuẩn hóa cho nhân viên quầy và thu ngân</div>
                   </div>
                 </label>
+              </div>
+            </div>
+
+            <div class="settings-card" id="setting-card-display">
+              <div>
+                <h2 class="pos-display-heading" data-pos-display-i18n="displayTextSize">文字大小</h2>
+                <p class="pos-display-description" data-pos-display-i18n="displayDeviceHint">立即套用，僅儲存在此裝置。</p>
+              </div>
+              <div class="pos-display-body">
+                <fieldset class="pos-display-options">
+                  <legend class="pos-display-label" data-pos-display-i18n="displayTextSize">文字大小</legend>
+                  <label class="pos-display-option">
+                    <input type="radio" name="pos-text-size" value="auto" onchange="selectPOSTextSize(this.value)" checked>
+                    <span><strong data-pos-display-i18n="displayAuto">自動</strong><small data-pos-display-i18n="displayAutoHint">寬螢幕使用大字，窄螢幕使用標準字。</small></span>
+                  </label>
+                  <label class="pos-display-option">
+                    <input type="radio" name="pos-text-size" value="standard" onchange="selectPOSTextSize(this.value)">
+                    <strong data-pos-display-i18n="displayStandard">標準</strong>
+                  </label>
+                  <label class="pos-display-option">
+                    <input type="radio" name="pos-text-size" value="large" onchange="selectPOSTextSize(this.value)">
+                    <strong data-pos-display-i18n="displayLarge">大</strong>
+                  </label>
+                  <label class="pos-display-option">
+                    <input type="radio" name="pos-text-size" value="extra-large" onchange="selectPOSTextSize(this.value)">
+                    <strong data-pos-display-i18n="displayExtraLarge">特大</strong>
+                  </label>
+                </fieldset>
+                <div class="pos-display-preview" role="group" aria-labelledby="pos-display-preview-label">
+                  <div class="pos-display-label" id="pos-display-preview-label" data-pos-display-i18n="displayPreview">預覽</div>
+                  <div class="pos-display-preview-title" data-pos-display-i18n="displayPreviewOrder">訂單 #001</div>
+                  <div class="pos-display-preview-item" data-pos-display-i18n="displayPreviewItem">2 × 招牌餐點</div>
+                  <div class="pos-display-preview-meta" data-pos-display-i18n="displayPreviewOptions">客製化：微辣，不加蔥</div>
+                  <div class="pos-display-preview-total"><span data-pos-display-i18n="displayPreviewTotal">總金額</span><strong>$180</strong></div>
+                </div>
               </div>
             </div>
 
@@ -775,10 +824,10 @@
               <div
                 style="padding: 16px 20px; background: #f3f4f6; border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
                 <div>
-                  <div style="font-weight: 1100; font-size: 18px;" id="i18n-setting-dinein-title">內用接單設定</div>
-                  <div style="font-size: 13px; color: var(--muted); font-weight: 600; margin-top: 2px;" id="i18n-setting-dinein-sub">自訂是否允許顧客選擇「內用」或僅接受「外帶」</div>
+                  <div style="font-weight: 1100; font-size: var(--pos-text-body);" id="i18n-setting-dinein-title">內用接單設定</div>
+                  <div style="font-size: var(--pos-text-meta); color: var(--muted); font-weight: 600; margin-top: 2px;" id="i18n-setting-dinein-sub">自訂是否允許顧客選擇「內用」或僅接受「外帶」</div>
                 </div>
-                <button class="btn btn-primary" style="padding: 10px 20px; font-size: 15px; border-radius: 8px;"
+                <button class="btn btn-primary" style="padding: 10px 20px; font-size: var(--pos-text-body); border-radius: 8px;"
                   onclick="saveDineInSetting()" id="btn-save-dinein-setting">儲存設定</button>
               </div>
 
@@ -787,16 +836,16 @@
                   <label class="setting-mode-card" id="mode-card-dinein-true" style="display: flex; align-items: flex-start; gap: 14px; padding: 16px; border-radius: 12px; border: 2px solid var(--border); cursor: pointer; transition: all 0.15s ease;">
                     <input type="radio" name="dinein-mode-radio" id="setting-allow-dinein-true" value="true" onchange="onDineInModeChange(true)" style="width: 20px; height: 20px; margin-top: 3px; accent-color: var(--primary);">
                     <div>
-                      <div style="font-weight: 1100; font-size: 16px; color: #111827;" id="i18n-mode-dinein-true-title">開啟內用與外帶 (預設)</div>
-                      <div style="font-size: 14px; color: #4b5563; margin-top: 4px; line-height: 1.4;" id="i18n-mode-dinein-true-sub">顧客可在點餐頁面自由切換「外帶」或「內用」模式。</div>
+                      <div style="font-weight: 1100; font-size: var(--pos-text-body); color: #111827;" id="i18n-mode-dinein-true-title">開啟內用與外帶 (預設)</div>
+                      <div style="font-size: var(--pos-text-meta); color: #4b5563; margin-top: 4px; line-height: 1.4;" id="i18n-mode-dinein-true-sub">顧客可在點餐頁面自由切換「外帶」或「內用」模式。</div>
                     </div>
                   </label>
 
                   <label class="setting-mode-card" id="mode-card-dinein-false" style="display: flex; align-items: flex-start; gap: 14px; padding: 16px; border-radius: 12px; border: 2px solid var(--border); cursor: pointer; transition: all 0.15s ease;">
                     <input type="radio" name="dinein-mode-radio" id="setting-allow-dinein-false" value="false" onchange="onDineInModeChange(false)" style="width: 20px; height: 20px; margin-top: 3px; accent-color: var(--primary);">
                     <div>
-                      <div style="font-weight: 1100; font-size: 16px; color: #111827;" id="i18n-mode-dinein-false-title">僅限外帶 (關閉內用)</div>
-                      <div style="font-size: 14px; color: #4b5563; margin-top: 4px; line-height: 1.4;" id="i18n-mode-dinein-false-sub">隱藏內用選項，所有訂單一律為外帶自取。</div>
+                      <div style="font-weight: 1100; font-size: var(--pos-text-body); color: #111827;" id="i18n-mode-dinein-false-title">僅限外帶 (關閉內用)</div>
+                      <div style="font-size: var(--pos-text-meta); color: #4b5563; margin-top: 4px; line-height: 1.4;" id="i18n-mode-dinein-false-sub">隱藏內用選項，所有訂單一律為外帶自取。</div>
                     </div>
                   </label>
                 </div>
@@ -808,11 +857,11 @@
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                     </div>
                     <div>
-                      <div style="font-weight: 900; font-size: 15px; color: #1e1b4b;" id="i18n-feature-locked-title">進階功能 (未啟用)</div>
-                      <div style="font-size: 13px; color: #64748b; line-height: 1.4; margin-top: 2px;" id="i18n-feature-locked-desc">此功能為 BLAB 進階模組，如需啟用「內用接單」請聯繫 BLAB 團隊升級方案。</div>
+                      <div style="font-weight: 900; font-size: var(--pos-text-body); color: #1e1b4b;" id="i18n-feature-locked-title">進階功能 (未啟用)</div>
+                      <div style="font-size: var(--pos-text-meta); color: #64748b; line-height: 1.4; margin-top: 2px;" id="i18n-feature-locked-desc">此功能為 BLAB 進階模組，如需啟用「內用接單」請聯繫 BLAB 團隊升級方案。</div>
                     </div>
                   </div>
-                  <button type="button" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px; font-weight: 800; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25); cursor: pointer; white-space: nowrap;" onclick="openBlabContactModal('upgrade')" id="i18n-btn-contact-upgrade">
+                  <button type="button" class="btn btn-primary" style="padding: 8px 16px; font-size: var(--pos-text-meta); font-weight: 800; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25); cursor: pointer; white-space: nowrap;" onclick="openBlabContactModal('upgrade')" id="i18n-btn-contact-upgrade">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                     <span id="i18n-btn-contact-upgrade-text">聯繫升級方案</span>
                   </button>
@@ -824,8 +873,8 @@
             <div class="settings-card" id="setting-card-printer">
               <div style="padding: 14px 18px; background: #ffffff; border-bottom: 1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; gap: 12px; flex-wrap: wrap;">
                 <div>
-                  <div style="font-weight: 1000; font-size: 17px; color: #0f172a;" id="i18n-setting-printer-title">出單與印表機</div>
-                  <div style="font-size: 12.5px; color: #64748b; font-weight: 600; margin-top: 2px;" id="i18n-setting-printer-sub">設定 Wi-Fi / LAN 區域網路熱感應出單機 (Port 9100) 與自動列印模式</div>
+                  <div style="font-weight: 1000; font-size: var(--pos-text-body); color: #0f172a;" id="i18n-setting-printer-title">出單與印表機</div>
+                  <div style="font-size: var(--pos-text-meta); color: #64748b; font-weight: 600; margin-top: 2px;" id="i18n-setting-printer-sub">設定 Wi-Fi / LAN 區域網路熱感應出單機 (Port 9100) 與自動列印模式</div>
                 </div>
                 <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                   <div class="settings-printer-status-pill disconnected" id="settings-printer-status-bar" style="display: none;" onclick="switchSettingTab('setting-card-printer')" title="印表機連線狀態 / Trạng thái kết nối máy in">
@@ -837,7 +886,7 @@
                     </svg>
                     <span id="settings-printer-status-text">未連線印表機</span>
                   </div>
-                  <button type="button" class="btn" onclick="openPrinterGuideModal()" id="btn-open-printer-guide" style="padding: 9px 15px; font-size: 13.5px; font-weight: 800; border-radius: 8px; display: inline-flex; align-items: center; gap: 7px; background: #ecfdf5; color: #047857; border: 1.5px solid #a7f3d0; box-shadow: 0 1px 2px rgba(16, 185, 129, 0.1); cursor: pointer; transition: all 0.15s ease;">
+                  <button type="button" class="btn" onclick="openPrinterGuideModal()" id="btn-open-printer-guide" style="padding: 9px 15px; font-size: var(--pos-text-meta); font-weight: 800; border-radius: 8px; display: inline-flex; align-items: center; gap: 7px; background: #ecfdf5; color: #047857; border: 1.5px solid #a7f3d0; box-shadow: 0 1px 2px rgba(16, 185, 129, 0.1); cursor: pointer; transition: all 0.15s ease;">
                     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
                       <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
@@ -852,22 +901,22 @@
                 <!-- Print Mode Selector (Auto-Print vs Manual-Print) -->
                 <div style="background: #f8fafc; padding: 18px 20px; border-radius: 14px; border: 1.5px solid var(--border); display: flex; flex-direction: column; gap: 12px;">
                   <div>
-                    <div style="font-weight: 1000; font-size: 17px; color: #0f172a;" id="i18n-printer-mode-title">列印出單模式</div>
-                    <div style="font-size: 13px; color: var(--muted); margin-top: 2px;" id="i18n-printer-mode-sub">選擇新訂單進來時的列印行為</div>
+                    <div style="font-weight: 1000; font-size: var(--pos-text-body); color: #0f172a;" id="i18n-printer-mode-title">列印出單模式</div>
+                    <div style="font-size: var(--pos-text-meta); color: var(--muted); margin-top: 2px;" id="i18n-printer-mode-sub">選擇新訂單進來時的列印行為</div>
                   </div>
                   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-top: 4px;">
                     <label class="setting-mode-card" id="mode-card-print-auto" style="display: flex; align-items: flex-start; gap: 14px; padding: 16px; border-radius: 12px; border: 2px solid var(--border); background: #fff; cursor: pointer; transition: all 0.15s ease;">
                       <input type="radio" name="printer-mode-radio" id="printer-mode-auto" value="auto" onchange="onPrinterModeChange('auto')" style="width: 20px; height: 20px; margin-top: 3px; accent-color: var(--primary);">
                       <div>
-                        <div style="font-weight: 1000; font-size: 15.5px; color: #111827;" id="i18n-print-mode-auto-title">自動列印模式 (Auto-print)</div>
-                        <div style="font-size: 13px; color: #4b5563; margin-top: 4px; line-height: 1.45;" id="i18n-print-mode-auto-desc">收到新訂單時，系統發出提示音並自動列印全部明細與標籤貼紙，無需觸碰螢幕。適合尖峰繁忙時段。</div>
+                        <div style="font-weight: 1000; font-size: var(--pos-text-body); color: #111827;" id="i18n-print-mode-auto-title">自動列印模式 (Auto-print)</div>
+                        <div style="font-size: var(--pos-text-meta); color: #4b5563; margin-top: 4px; line-height: 1.45;" id="i18n-print-mode-auto-desc">收到新訂單時，系統發出提示音並自動列印全部明細與標籤貼紙，無需觸碰螢幕。適合尖峰繁忙時段。</div>
                       </div>
                     </label>
                     <label class="setting-mode-card" id="mode-card-print-manual" style="display: flex; align-items: flex-start; gap: 14px; padding: 16px; border-radius: 12px; border: 2px solid var(--border); background: #fff; cursor: pointer; transition: all 0.15s ease;">
                       <input type="radio" name="printer-mode-radio" id="printer-mode-manual" value="manual" onchange="onPrinterModeChange('manual')" style="width: 20px; height: 20px; margin-top: 3px; accent-color: var(--primary);">
                       <div>
-                        <div style="font-weight: 1000; font-size: 15.5px; color: #111827;" id="i18n-print-mode-manual-title">手動列印模式 (Manual-print)</div>
-                        <div style="font-size: 13px; color: #4b5563; margin-top: 4px; line-height: 1.45;" id="i18n-print-mode-manual-desc">店員須在螢幕點選 [整單全印] 機器才會出單。適合需要先核對確認訂單的門市。</div>
+                        <div style="font-weight: 1000; font-size: var(--pos-text-body); color: #111827;" id="i18n-print-mode-manual-title">手動列印模式 (Manual-print)</div>
+                        <div style="font-size: var(--pos-text-meta); color: #4b5563; margin-top: 4px; line-height: 1.45;" id="i18n-print-mode-manual-desc">店員須在螢幕點選 [整單全印] 機器才會出單。適合需要先核對確認訂單的門市。</div>
                       </div>
                     </label>
                   </div>
@@ -883,7 +932,7 @@
                         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                           <div class="printer-station-title" id="i18n-printer-cashier-title">櫃檯印表機 (客人聯)</div>
                           <!-- Real-time Status Pill for Cashier -->
-                          <div class="settings-printer-status-pill disconnected" id="printer-cashier-status-pill" style="font-size: 12px; padding: 3px 10px; cursor: default; flex-shrink: 0;">
+                          <div class="settings-printer-status-pill disconnected" id="printer-cashier-status-pill" style="font-size: var(--pos-text-meta); padding: 3px 10px; cursor: default; flex-shrink: 0;">
                             <span class="printer-status-dot offline" id="printer-cashier-status-dot"></span>
                             <span id="printer-cashier-status-text">未連線印表機</span>
                           </div>
@@ -918,7 +967,7 @@
                     <div id="printer-cashier-network-box" class="printer-sub-box">
                       <div>
                         <label class="i18n-printer-ip-lbl printer-field-label">IP 位址 (LAN / Wi-Fi)</label>
-                        <input type="text" id="printer-cashier-ip" class="form-input" style="font-family: monospace; font-size: 14px;" placeholder="192.168.1.100">
+                        <input type="text" id="printer-cashier-ip" class="form-input" style="font-family: monospace; font-size: var(--pos-text-meta);" placeholder="192.168.1.100">
                       </div>
                       <div>
                         <label class="i18n-printer-port-lbl printer-field-label">Port</label>
@@ -939,7 +988,7 @@
                         <select id="printer-cashier-bt-device" class="form-input form-select">
                           <option value="" class="i18n-opt-bt-placeholder">-- 請選擇已配對的藍牙印表機 --</option>
                         </select>
-                        <div id="printer-cashier-bt-status" style="font-size: 12px; color: var(--muted); margin-top: 6px;"></div>
+                        <div id="printer-cashier-bt-status" style="font-size: var(--pos-text-meta); color: var(--muted); margin-top: 6px;"></div>
                       </div>
                     </div>
 
@@ -1015,7 +1064,7 @@
                         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                           <div class="printer-station-title" id="i18n-printer-kitchen-title">廚房印表機 (製作聯)</div>
                           <!-- Real-time Status Pill for Kitchen -->
-                          <div class="settings-printer-status-pill disconnected" id="printer-kitchen-status-pill" style="font-size: 12px; padding: 3px 10px; cursor: default; flex-shrink: 0;">
+                          <div class="settings-printer-status-pill disconnected" id="printer-kitchen-status-pill" style="font-size: var(--pos-text-meta); padding: 3px 10px; cursor: default; flex-shrink: 0;">
                             <span class="printer-status-dot offline" id="printer-kitchen-status-dot"></span>
                             <span id="printer-kitchen-status-text">未連線印表機</span>
                           </div>
@@ -1050,7 +1099,7 @@
                     <div id="printer-kitchen-network-box" class="printer-sub-box">
                       <div>
                         <label class="i18n-printer-ip-lbl printer-field-label">IP 位址 (LAN / Wi-Fi)</label>
-                        <input type="text" id="printer-kitchen-ip" class="form-input" style="font-family: monospace; font-size: 14px;" placeholder="192.168.1.101">
+                        <input type="text" id="printer-kitchen-ip" class="form-input" style="font-family: monospace; font-size: var(--pos-text-meta);" placeholder="192.168.1.101">
                       </div>
                       <div>
                         <label class="i18n-printer-port-lbl printer-field-label">Port</label>
@@ -1071,7 +1120,7 @@
                         <select id="printer-kitchen-bt-device" class="form-input form-select">
                           <option value="" class="i18n-opt-bt-placeholder">-- 請選擇已配對的藍牙印表機 --</option>
                         </select>
-                        <div id="printer-kitchen-bt-status" style="font-size: 12px; color: var(--muted); margin-top: 6px;"></div>
+                        <div id="printer-kitchen-bt-status" style="font-size: var(--pos-text-meta); color: var(--muted); margin-top: 6px;"></div>
                       </div>
                     </div>
 
@@ -1148,8 +1197,8 @@
             <div class="settings-card" id="setting-card-reports">
               <div style="padding: 16px 20px; background: #f3f4f6; border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
                 <div>
-                  <div style="font-weight: 1100; font-size: 18px;" id="i18n-setting-reports-title">銷量與營收報表</div>
-                  <div style="font-size: 13px; color: var(--muted); font-weight: 600; margin-top: 2px;" id="i18n-setting-reports-sub">查看門市餐點銷售統計、營收排行與加料偏好</div>
+                  <div style="font-weight: 1100; font-size: var(--pos-text-body);" id="i18n-setting-reports-title">銷量與營收報表</div>
+                  <div style="font-size: var(--pos-text-meta); color: var(--muted); font-weight: 600; margin-top: 2px;" id="i18n-setting-reports-sub">查看門市餐點銷售統計、營收排行與加料偏好</div>
                 </div>
               </div>
 
@@ -1157,10 +1206,10 @@
                 <!-- Unlocked View -->
                 <div id="setting-reports-unlocked-body" style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 16px 20px; gap: 16px; flex-wrap: wrap;">
                   <div>
-                    <div style="font-weight: 900; font-size: 16px; color: #0f172a;" id="i18n-reports-unlocked-name">即時餐點銷量與營收分析</div>
-                    <div style="font-size: 13.5px; color: #64748b; margin-top: 4px;" id="i18n-reports-unlocked-desc">依時間區間（今日、近7天、近30天）統計門市各品項銷售數量、營收總額及顧客加料分析。</div>
+                    <div style="font-weight: 900; font-size: var(--pos-text-body); color: #0f172a;" id="i18n-reports-unlocked-name">即時餐點銷量與營收分析</div>
+                    <div style="font-size: var(--pos-text-meta); color: #64748b; margin-top: 4px;" id="i18n-reports-unlocked-desc">依時間區間（今日、近7天、近30天）統計門市各品項銷售數量、營收總額及顧客加料分析。</div>
                   </div>
-                  <button type="button" class="btn btn-primary" style="padding: 10px 20px; font-size: 15px; font-weight: 800; border-radius: 8px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; white-space: nowrap;" onclick="openReportsFromSettings()">
+                  <button type="button" class="btn btn-primary" style="padding: 10px 20px; font-size: var(--pos-text-body); font-weight: 800; border-radius: 8px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; white-space: nowrap;" onclick="openReportsFromSettings()">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
                     <span id="i18n-btn-open-reports">查看銷量報表</span>
                   </button>
@@ -1173,11 +1222,11 @@
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                     </div>
                     <div>
-                      <div style="font-weight: 900; font-size: 15px; color: #1e1b4b;" id="i18n-reports-locked-title">進階功能 (未啟用)</div>
-                      <div style="font-size: 13px; color: #64748b; line-height: 1.4; margin-top: 2px;" id="i18n-reports-locked-desc">此功能為 BLAB 進階模組，如需啟用「銷量與營收報表分析」請聯繫 BLAB 團隊升級方案。</div>
+                      <div style="font-weight: 900; font-size: var(--pos-text-body); color: #1e1b4b;" id="i18n-reports-locked-title">進階功能 (未啟用)</div>
+                      <div style="font-size: var(--pos-text-meta); color: #64748b; line-height: 1.4; margin-top: 2px;" id="i18n-reports-locked-desc">此功能為 BLAB 進階模組，如需啟用「銷量與營收報表分析」請聯繫 BLAB 團隊升級方案。</div>
                     </div>
                   </div>
-                  <button type="button" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px; font-weight: 800; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25); cursor: pointer; white-space: nowrap;" onclick="openBlabContactModal('upgrade')">
+                  <button type="button" class="btn btn-primary" style="padding: 8px 16px; font-size: var(--pos-text-meta); font-weight: 800; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25); cursor: pointer; white-space: nowrap;" onclick="openBlabContactModal('upgrade')">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                     <span id="i18n-btn-contact-upgrade-rep">聯繫升級方案</span>
                   </button>
@@ -1189,20 +1238,20 @@
             <div class="settings-card" id="setting-card-store-pairing">
               <div style="padding: 16px 20px; background: #f3f4f6; border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
                 <div>
-                  <div style="font-weight: 1100; font-size: 18px;" id="i18n-setting-pairing-title">門市終端與設備綁定</div>
-                  <div style="font-size: 13px; color: var(--muted); font-weight: 600; margin-top: 2px;" id="i18n-setting-pairing-sub">管理此平板電腦與雲端門市之連線設定</div>
+                  <div style="font-weight: 1100; font-size: var(--pos-text-body);" id="i18n-setting-pairing-title">門市終端與設備綁定</div>
+                  <div style="font-size: var(--pos-text-meta); color: var(--muted); font-weight: 600; margin-top: 2px;" id="i18n-setting-pairing-sub">管理此平板電腦與雲端門市之連線設定</div>
                 </div>
               </div>
 
               <div style="padding: 20px;">
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px;">
                   <div style="background: #f8fafc; padding: 16px; border-radius: 12px; border: 1.5px solid #e2e8f0;">
-                    <div style="font-size: 13px; color: #64748b; margin-bottom: 4px;" id="i18n-pairing-tenant-label">當前綁定門市代碼</div>
-                    <div style="font-size: 18px; font-weight: 800; color: #0f172a;" id="display-pairing-tenant-id">--</div>
+                    <div style="font-size: var(--pos-text-meta); color: #64748b; margin-bottom: 4px;" id="i18n-pairing-tenant-label">當前綁定門市代碼</div>
+                    <div style="font-size: var(--pos-text-body); font-weight: 800; color: #0f172a;" id="display-pairing-tenant-id">--</div>
                   </div>
                   <div style="background: #f8fafc; padding: 16px; border-radius: 12px; border: 1.5px solid #e2e8f0;">
-                    <div style="font-size: 13px; color: #64748b; margin-bottom: 4px;" id="i18n-pairing-status-label">終端連線狀態</div>
-                    <div style="font-size: 16px; font-weight: 800; color: #10b981; display: flex; align-items: center; gap: 8px;">
+                    <div style="font-size: var(--pos-text-meta); color: #64748b; margin-bottom: 4px;" id="i18n-pairing-status-label">終端連線狀態</div>
+                    <div style="font-size: var(--pos-text-body); font-weight: 800; color: #10b981; display: flex; align-items: center; gap: 8px;">
                       <span style="width: 10px; height: 10px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
                       <span id="i18n-pairing-status-connected">已連線運作中</span>
                     </div>
@@ -1211,10 +1260,10 @@
 
                 <div style="border-top: 1px solid #f1f5f9; padding-top: 16px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
                   <div>
-                    <div style="font-size: 15px; font-weight: 700; color: #1e293b;" id="i18n-unlink-title">解除此設備綁定 / 切換門市</div>
-                    <div style="font-size: 13px; color: #64748b; margin-top: 2px;" id="i18n-unlink-desc">解除後此終端機將停止同步該門市訂單，需輸入管理 PIN 碼確認。</div>
+                    <div style="font-size: var(--pos-text-body); font-weight: 700; color: #1e293b;" id="i18n-unlink-title">解除此設備綁定 / 切換門市</div>
+                    <div style="font-size: var(--pos-text-meta); color: #64748b; margin-top: 2px;" id="i18n-unlink-desc">解除後此終端機將停止同步該門市訂單，需輸入管理 PIN 碼確認。</div>
                   </div>
-                  <button type="button" class="btn" style="min-height: 48px; padding: 0 20px; font-size: 15px; font-weight: 800; color: #ef4444; background: #fef2f2; border: 1.5px solid #fecaca; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;" onclick="promptUnlinkStoreDevice()" id="i18n-btn-unlink-store">
+                  <button type="button" class="btn" style="min-height: 48px; padding: 0 20px; font-size: var(--pos-text-body); font-weight: 800; color: #ef4444; background: #fef2f2; border: 1.5px solid #fecaca; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;" onclick="promptUnlinkStoreDevice()" id="i18n-btn-unlink-store">
                     切換門市 / 解除綁定
                   </button>
                 </div>
@@ -1498,8 +1547,8 @@
     <div class="modal-content" style="max-width: 600px;">
       <div class="modal-title" style="display: flex; justify-content: space-between; align-items: center;">
         <div>
-          <h3 id="i18n-quick-sticker-title" style="margin: 0; font-size: 20px; font-weight: 900;">補印客製標籤 (緊急貼紙)</h3>
-          <div id="i18n-quick-sticker-sub" style="font-size: 13px; color: var(--muted); margin-top: 4px;">點擊下方常見選項，立即列印 1 張獨立備註貼紙粘貼於餐點上：</div>
+          <h3 id="i18n-quick-sticker-title" style="margin: 0; font-size: var(--pos-text-body); font-weight: 900;">補印客製標籤 (緊急貼紙)</h3>
+          <div id="i18n-quick-sticker-sub" style="font-size: var(--pos-text-meta); color: var(--muted); margin-top: 4px;">點擊下方常見選項，立即列印 1 張獨立備註貼紙粘貼於餐點上：</div>
         </div>
         <div class="modal-close" onclick="closeQuickStickerModal()">✕</div>
       </div>
@@ -1511,10 +1560,10 @@
 
         <!-- Custom Text Input for Fast Typing -->
         <div style="margin-top: 18px; padding-top: 16px; border-top: 1.5px dashed #e2e8f0;">
-          <div id="i18n-quick-sticker-custom-label" style="font-size: 13px; font-weight: 800; color: #475569; margin-bottom: 8px;">或輸入自訂備註文字：</div>
+          <div id="i18n-quick-sticker-custom-label" style="font-size: var(--pos-text-meta); font-weight: 800; color: #475569; margin-bottom: 8px;">或輸入自訂備註文字：</div>
           <div style="display: flex; gap: 8px;">
-            <input type="text" id="quick-sticker-custom-input" class="form-input" style="flex: 1; font-size: 15px; font-weight: 600;" placeholder="輸入自訂備註 (例如：少冰、不要酸菜)..." onkeydown="if(event.key==='Enter') printCustomQuickSticker()">
-            <button type="button" class="btn btn-primary" id="i18n-btn-print-quick-custom" style="padding: 10px 18px; font-size: 14px; font-weight: 900; white-space: nowrap;" onclick="printCustomQuickSticker()">列印此備註</button>
+            <input type="text" id="quick-sticker-custom-input" class="form-input" style="flex: 1; font-size: var(--pos-text-body); font-weight: 600;" placeholder="輸入自訂備註 (例如：少冰、不要酸菜)..." onkeydown="if(event.key==='Enter') printCustomQuickSticker()">
+            <button type="button" class="btn btn-primary" id="i18n-btn-print-quick-custom" style="padding: 10px 18px; font-size: var(--pos-text-meta); font-weight: 900; white-space: nowrap;" onclick="printCustomQuickSticker()">列印此備註</button>
           </div>
         </div>
       </div>
@@ -1571,7 +1620,7 @@
             <div class="presets-container">
               <div class="presets-header">
                 <span id="i18n-change-quick-select">點擊快速選擇延後時間:</span>
-                <span style="font-size:12px; font-weight:700; color:var(--muted);" id="i18n-calc-sub">（以現在/原定時間計算）</span>
+                <span style="font-size:var(--pos-text-meta); font-weight:700; color:var(--muted);" id="i18n-calc-sub">（以現在/原定時間計算）</span>
               </div>
               <div class="presets-grid">
                 <button type="button" class="preset-card" data-mins="5" onclick="applyTimePreset(5)">
@@ -1606,7 +1655,7 @@
         <!-- Sold Out Flavor / Items Section -->
         <div id="change-items-div" style="display: none;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <div style="font-weight: 1000; font-size: 16px; color: #111827;" id="i18n-soldout-title">點擊選擇已售完品項:</div>
+            <div style="font-weight: 1000; font-size: var(--pos-text-body); color: #111827;" id="i18n-soldout-title">點擊選擇已售完品項:</div>
             <button type="button" class="mini-text-btn" id="btn-soldout-clear" onclick="clearSoldOutItems()">取消全選</button>
           </div>
           <div class="checkbox-grid" id="change-soldout-grid">
@@ -1681,7 +1730,7 @@
   <div class="modal" id="addCategoryModal" style="display: none;">
     <div class="modal-content" style="max-width: 440px; padding: 24px; border-radius: 16px;">
       <div class="modal-title" style="margin-bottom: 16px;">
-        <h3 style="font-size: 18px; font-weight: 800; margin: 0; color: #111827;" id="i18n-add-cat-modal-title">
+        <h3 style="font-size: var(--pos-text-body); font-weight: 800; margin: 0; color: #111827;" id="i18n-add-cat-modal-title">
           新增菜單分類
         </h3>
         <div class="modal-close" onclick="closeAddCategoryModal()">✕</div>
@@ -1689,24 +1738,24 @@
 
       <div class="modal-body">
         <div style="margin-bottom: 16px;">
-          <label style="display: block; font-size: 14px; font-weight: 700; color: #374151; margin-bottom: 6px;" id="i18n-add-cat-label-name">
+          <label style="display: block; font-size: var(--pos-text-meta); font-weight: 700; color: #374151; margin-bottom: 6px;" id="i18n-add-cat-label-name">
             分類名稱
           </label>
-          <input type="text" id="add-cat-input-name" class="input" style="width: 100%; box-sizing: border-box; padding: 10px 12px; font-size: 15px; border-radius: 8px; border: 1.5px solid var(--border);" placeholder="例: 豆漿 意仁漿, 經典主食" />
+          <input type="text" id="add-cat-input-name" class="input" style="width: 100%; box-sizing: border-box; padding: 10px 12px; font-size: var(--pos-text-body); border-radius: 8px; border: 1.5px solid var(--border);" placeholder="例: 豆漿 意仁漿, 經典主食" />
         </div>
       <div style="margin-bottom: 16px;">
-        <label style="display: block; font-size: 14px; font-weight: 700; color: #374151; margin-bottom: 6px;" id="i18n-add-cat-label-short-name">
+        <label style="display: block; font-size: var(--pos-text-meta); font-weight: 700; color: #374151; margin-bottom: 6px;" id="i18n-add-cat-label-short-name">
           導航簡稱 (選填，手機版頁籤顯示)
         </label>
-        <input type="text" id="add-cat-input-short-name" class="input" style="width: 100%; box-sizing: border-box; padding: 10px 12px; font-size: 15px; border-radius: 8px; border: 1.5px solid var(--border);" placeholder="留空則與分類名稱相同" />
+        <input type="text" id="add-cat-input-short-name" class="input" style="width: 100%; box-sizing: border-box; padding: 10px 12px; font-size: var(--pos-text-body); border-radius: 8px; border: 1.5px solid var(--border);" placeholder="留空則與分類名稱相同" />
       </div>
 
 
         <div style="margin-bottom: 16px;">
-          <label style="display: block; font-size: 14px; font-weight: 700; color: #374151; margin-bottom: 6px;" id="i18n-add-cat-label-type">
+          <label style="display: block; font-size: var(--pos-text-meta); font-weight: 700; color: #374151; margin-bottom: 6px;" id="i18n-add-cat-label-type">
             分類類型
           </label>
-          <select id="add-cat-select-type" onchange="onAddCategoryTypeChange()" style="width: 100%; box-sizing: border-box; padding: 10px 12px; font-size: 14px; font-weight: 600; border-radius: 8px; border: 1.5px solid var(--border); background: #fff;">
+          <select id="add-cat-select-type" onchange="onAddCategoryTypeChange()" style="width: 100%; box-sizing: border-box; padding: 10px 12px; font-size: var(--pos-text-meta); font-weight: 600; border-radius: 8px; border: 1.5px solid var(--border); background: #fff;">
             <option value="catalog" id="i18n-add-cat-opt-catalog">菜單品項 (主餐 / 飲料)</option>
             <option value="modifier" id="i18n-add-cat-opt-modifier">客製化選項 (加辣 / 加料 / 甜度)</option>
             <option value="order_customization" id="i18n-add-cat-opt-customization">整單口味與客製化 (例如：口味、鹹度、配料調整)</option>
@@ -1715,7 +1764,7 @@
 
         <div id="add-cat-customization-group" style="margin-bottom: 20px; background: #f8fafc; padding: 12px 14px; border-radius: 10px; border: 1.5px solid #e2e8f0;">
           <div class="help-title-row" style="margin-bottom: 8px;">
-            <div style="font-weight: 700; font-size: 13px; color: #1e293b;" id="i18n-add-cat-customization-label">
+            <div style="font-weight: 700; font-size: var(--pos-text-meta); color: #1e293b;" id="i18n-add-cat-customization-label">
               適用客製化選項 (加料 / 辣度 / 備註)
             </div>
             <details class="menu-help"><summary aria-labelledby="i18n-add-cat-customization-label"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v6m0 3v1"/></svg></summary><div class="menu-help-text" id="i18n-add-cat-customization-desc">
@@ -1770,18 +1819,18 @@
       </div>
       <div class="modal-body">
         <div style="margin-top: 10px;">
-          <label style="display: block; font-weight: 900; margin-bottom: 8px; font-size: 15px;" id="i18n-stock-label-status">狀態：</label>
+          <label style="display: block; font-weight: 900; margin-bottom: 8px; font-size: var(--pos-text-body);" id="i18n-stock-label-status">狀態：</label>
           <select id="stock-status-select"
-            style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px;"
+            style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: var(--pos-text-body);"
             onchange="handleStockStatusChange()">
             <option value="in_stock" id="stock-opt-in-stock">正常供應 (In Stock)</option>
             <option value="out_of_stock" id="stock-opt-out-stock">暫時售完 (Out of Stock)</option>
           </select>
         </div>
         <div id="oos-options-container" style="margin-top: 16px; display: none;">
-          <label style="display: block; font-weight: 900; margin-bottom: 8px; font-size: 15px;" id="i18n-stock-label-duration">售完時限：</label>
+          <label style="display: block; font-weight: 900; margin-bottom: 8px; font-size: var(--pos-text-body);" id="i18n-stock-label-duration">售完時限：</label>
           <select id="stock-duration-select"
-            style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px;"
+            style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: var(--pos-text-body);"
             onchange="handleStockDurationChange()">
             <option value="today" id="stock-opt-today">今日 (明日凌晨 4:00 自動恢復)</option>
             <option value="multiple_days" id="stock-opt-multiple-days">指定日期 (選擇恢復日期)</option>
@@ -1789,9 +1838,9 @@
           </select>
 
           <div id="oos-date-container" style="margin-top: 16px; display: none;">
-            <label style="display: block; font-weight: 900; margin-bottom: 8px; font-size: 15px;" id="i18n-stock-label-date">恢復供應日期：</label>
+            <label style="display: block; font-weight: 900; margin-bottom: 8px; font-size: var(--pos-text-body);" id="i18n-stock-label-date">恢復供應日期：</label>
             <input type="date" id="oos-until-date"
-              style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px;">
+              style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: var(--pos-text-body);">
           </div>
         </div>
       </div>
@@ -1814,8 +1863,8 @@
             </svg>
           </div>
           <div>
-            <div style="font-weight: 1000; font-size: 17px; color: #0f172a;" id="i18n-printer-guide-title">出單與印表機功能使用指南</div>
-            <div style="font-size: 13px; color: #64748b; margin-top: 2px;" id="i18n-printer-guide-sub">深入了解自動出單、單據規格與 3 段式列印操作技巧</div>
+            <div style="font-weight: 1000; font-size: var(--pos-text-body); color: #0f172a;" id="i18n-printer-guide-title">出單與印表機功能使用指南</div>
+            <div style="font-size: var(--pos-text-meta); color: #64748b; margin-top: 2px;" id="i18n-printer-guide-sub">深入了解自動出單、單據規格與 3 段式列印操作技巧</div>
           </div>
         </div>
         <div class="modal-close" onclick="closePrinterGuideModal()">✕</div>
@@ -1825,12 +1874,12 @@
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;">
           <!-- Guide Card 1: Modes -->
           <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px;">
-            <div style="font-weight: 900; font-size: 14.5px; color: #1e293b;" id="i18n-printer-guide-mode-title">1. 列印出單模式說明 (Auto vs. Manual)</div>
-            <div style="font-size: 13px; color: #475569; line-height: 1.5;">
+            <div style="font-weight: 900; font-size: var(--pos-text-body); color: #1e293b;" id="i18n-printer-guide-mode-title">1. 列印出單模式說明 (Auto vs. Manual)</div>
+            <div style="font-size: var(--pos-text-meta); color: #475569; line-height: 1.5;">
               <strong style="color: #059669;" id="i18n-printer-guide-mode-auto-title">自動列印模式 (Auto-print)</strong><br>
               <span id="i18n-printer-guide-mode-auto-desc">當客人送出訂單後，系統立即發出提示音並自動列印「1 張收銀明細」與「全部餐點貼紙」，適合尖峰繁忙時段，省去店員手動點選步驟。</span>
             </div>
-            <div style="font-size: 13px; color: #475569; line-height: 1.5; margin-top: 4px;">
+            <div style="font-size: var(--pos-text-meta); color: #475569; line-height: 1.5; margin-top: 4px;">
               <strong style="color: #3b82f6;" id="i18n-printer-guide-mode-manual-title">手動列印模式 (Manual-print)</strong><br>
               <span id="i18n-printer-guide-mode-manual-desc">收到新單時僅發出通知音，店員需點進訂單詳細頁確認餐點內容後，點選 [整單全印] 才會出單。適合需先確認庫存或客製化說明門市。</span>
             </div>
@@ -1838,20 +1887,20 @@
 
           <!-- Guide Card 2: 3-Level Print -->
           <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px;">
-            <div style="font-weight: 900; font-size: 14.5px; color: #1e293b;" id="i18n-printer-guide-levels-title">2. 訂單詳細頁 3 段式列印控制</div>
-            <div style="font-size: 13px; color: #475569; line-height: 1.5;">
+            <div style="font-weight: 900; font-size: var(--pos-text-body); color: #1e293b;" id="i18n-printer-guide-levels-title">2. 訂單詳細頁 3 段式列印控制</div>
+            <div style="font-size: var(--pos-text-meta); color: #475569; line-height: 1.5;">
               <strong style="color: #0f172a;" id="i18n-printer-guide-level-full-title">整單全印 (明細+標籤）</strong><br>
               <span id="i18n-printer-guide-level-full-desc">一鍵送出：1 張櫃檯明細 (給客人或留底) + N 張廚房貼紙 (每份餐點 1 張獨立杯貼/盒貼)。</span>
             </div>
-            <div style="font-size: 13px; color: #475569; line-height: 1.5;">
+            <div style="font-size: var(--pos-text-meta); color: #475569; line-height: 1.5;">
               <strong style="color: #0f172a;" id="i18n-printer-guide-level-bill-title">僅印收銀明細</strong><br>
               <span id="i18n-printer-guide-level-bill-desc">僅出單張收據小票，適合結帳找零、補開客人明細或退換貨核對。</span>
             </div>
-            <div style="font-size: 13px; color: #475569; line-height: 1.5;">
+            <div style="font-size: var(--pos-text-meta); color: #475569; line-height: 1.5;">
               <strong style="color: #0f172a;" id="i18n-printer-guide-level-single-title">單品貼紙列印與備餐勾選</strong><br>
               <span id="i18n-printer-guide-level-single-desc">每道餐點左側設有 [ ] 勾選方塊供廚房備餐核對；右側設有 [印單品貼紙] 鈕，遇卡紙或貼紙破損時可單獨補印該品項。</span>
             </div>
-            <div style="font-size: 13px; color: #475569; line-height: 1.5;">
+            <div style="font-size: var(--pos-text-meta); color: #475569; line-height: 1.5;">
               <strong style="color: #0f172a;" id="i18n-printer-guide-level-custom-title">補印客製/緊急貼紙</strong><br>
               <span id="i18n-printer-guide-level-custom-desc">點開可快選常見備註 (如：不要香菜、去冰、微辣) 或手動輸入特殊要求，立即印出獨立小貼紙貼在餐盒上。</span>
             </div>
@@ -1859,14 +1908,14 @@
 
           <!-- Guide Card 3: Hardware tips -->
           <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px;">
-            <div style="font-weight: 900; font-size: 14.5px; color: #1e293b;" id="i18n-printer-guide-hardware-title">3. 雙印表機 (Dual-Station) 建議設定</div>
-            <div style="font-size: 13px; color: #475569; line-height: 1.5;" id="i18n-printer-guide-hw-cashier">• 櫃檯印表機：建議使用 ESC/POS 協定熱感應小票機 (80mm 或 58mm)，連接 Wi-Fi (Port 9100) 或藍牙。</div>
-            <div style="font-size: 13px; color: #475569; line-height: 1.5;" id="i18n-printer-guide-hw-kitchen">• 廚房/吧台印表機：建議使用 TSPL 協定標籤貼紙機 (如 Aimo, Xprinter 40x30mm / 50x30mm)，模式選「單品/杯貼標籤」。</div>
-            <div style="font-size: 13px; color: #475569; line-height: 1.5;" id="i18n-printer-guide-hw-test">• 每日開班前建議點選「測試列印」確認連線通暢。</div>
+            <div style="font-weight: 900; font-size: var(--pos-text-body); color: #1e293b;" id="i18n-printer-guide-hardware-title">3. 雙印表機 (Dual-Station) 建議設定</div>
+            <div style="font-size: var(--pos-text-meta); color: #475569; line-height: 1.5;" id="i18n-printer-guide-hw-cashier">• 櫃檯印表機：建議使用 ESC/POS 協定熱感應小票機 (80mm 或 58mm)，連接 Wi-Fi (Port 9100) 或藍牙。</div>
+            <div style="font-size: var(--pos-text-meta); color: #475569; line-height: 1.5;" id="i18n-printer-guide-hw-kitchen">• 廚房/吧台印表機：建議使用 TSPL 協定標籤貼紙機 (如 Aimo, Xprinter 40x30mm / 50x30mm)，模式選「單品/杯貼標籤」。</div>
+            <div style="font-size: var(--pos-text-meta); color: #475569; line-height: 1.5;" id="i18n-printer-guide-hw-test">• 每日開班前建議點選「測試列印」確認連線通暢。</div>
           </div>
-          <section style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; color: #475569; line-height: 1.6; font-size: 14px;" aria-labelledby="printer-guide-align-Title">
+          <section style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; color: #475569; line-height: 1.6; font-size: var(--pos-text-meta);" aria-labelledby="printer-guide-align-Title">
             <h3 id="printer-guide-align-Title" style="margin: 0 0 12px; color: #1e293b;">4. 列印位置與裁切</h3>
-            <h4 id="printer-guide-align-BillHeading" style="display:inline-block; margin: 4px 0 6px; padding: 4px 10px; border-radius: 999px; background:#dbeafe; color:#1d4ed8; font-size:15px;">RECEIPT · 收據列印</h4>
+            <h4 id="printer-guide-align-BillHeading" style="display:inline-block; margin: 4px 0 6px; padding: 4px 10px; border-radius: 999px; background:#dbeafe; color:#1d4ed8; font-size:var(--pos-text-body);">RECEIPT · 收據列印</h4>
             <p id="printer-guide-align-Receipt"></p>
             <figure style="margin: 12px 0;">
               <svg viewBox="0 0 360 150" style="width: 100%; max-width: 360px;" aria-hidden="true" fill="none" stroke="#475569" stroke-width="2">
@@ -1875,7 +1924,7 @@
               </svg>
               <figcaption id="printer-guide-align-ReceiptCaption"></figcaption>
             </figure>
-            <h4 id="printer-guide-align-LabelHeading" style="display:inline-block; margin: 10px 0 6px; padding: 4px 10px; border-radius: 999px; background:#dcfce7; color:#047857; font-size:15px;">LABEL · 貼紙列印</h4>
+            <h4 id="printer-guide-align-LabelHeading" style="display:inline-block; margin: 10px 0 6px; padding: 4px 10px; border-radius: 999px; background:#dcfce7; color:#047857; font-size:var(--pos-text-body);">LABEL · 貼紙列印</h4>
             <p id="printer-guide-align-Label"></p>
             <figure style="margin: 12px 0 0;">
               <svg viewBox="0 0 360 150" style="width: 100%; max-width: 360px;" aria-hidden="true" fill="none" stroke="#475569" stroke-width="2">
@@ -1908,8 +1957,8 @@
             </svg>
           </div>
           <div>
-            <h3 style="font-size: 20px; font-weight: 1000; color: #0f172a; margin: 0; letter-spacing: -0.3px;" id="i18n-modal-blab-title">BLAB 客服與技術支援</h3>
-            <p style="font-size: 13px; color: #64748b; margin: 2px 0 0 0; font-weight: 600;" id="i18n-modal-blab-subtitle">全方位門市營運與系統諮詢服務</p>
+            <h3 style="font-size: var(--pos-text-body); font-weight: 1000; color: #0f172a; margin: 0; letter-spacing: -0.3px;" id="i18n-modal-blab-title">BLAB 客服與技術支援</h3>
+            <p style="font-size: var(--pos-text-meta); color: #64748b; margin: 2px 0 0 0; font-weight: 600;" id="i18n-modal-blab-subtitle">全方位門市營運與系統諮詢服務</p>
           </div>
         </div>
         <div class="modal-close" onclick="closeBlabContactModal()" style="width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #f1f5f9; cursor: pointer; color: #64748b; transition: all 0.15s ease;" aria-label="Close">✕</div>
@@ -1918,13 +1967,13 @@
       <!-- Modal Body -->
       <div class="modal-body" style="padding: 4px 0 14px 0; display:flex; flex-direction:column; gap: 14px;">
         <!-- Contextual Notification Banner (Dynamic per topic: history, upgrade, support) -->
-        <div id="blab-contact-context-banner" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px 16px; font-size: 14px; line-height: 1.55; color: #334155; display: flex; gap: 12px; align-items: flex-start;">
+        <div id="blab-contact-context-banner" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px 16px; font-size: var(--pos-text-meta); line-height: 1.55; color: #334155; display: flex; gap: 12px; align-items: flex-start;">
           <div id="blab-context-banner-icon" style="color: #059669; margin-top: 2px; flex-shrink: 0;">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
           </div>
           <div style="flex: 1;">
-            <div id="blab-context-banner-title" style="font-weight: 800; font-size: 14px; color: #0f172a; margin-bottom: 3px;">即時專屬支援管道</div>
-            <div id="blab-context-banner-desc" style="font-size: 13px; color: #475569; line-height: 1.5;">如需技術諮詢、連線排障或功能開通，請透過下方官方服務渠道聯繫 BLAB 專員。</div>
+            <div id="blab-context-banner-title" style="font-weight: 800; font-size: var(--pos-text-meta); color: #0f172a; margin-bottom: 3px;">即時專屬支援管道</div>
+            <div id="blab-context-banner-desc" style="font-size: var(--pos-text-meta); color: #475569; line-height: 1.5;">如需技術諮詢、連線排障或功能開通，請透過下方官方服務渠道聯繫 BLAB 專員。</div>
           </div>
         </div>
 
@@ -1940,16 +1989,16 @@
               </div>
               <div>
                 <div style="display: flex; align-items: center; gap: 8px;">
-                  <span style="font-weight: 1000; font-size: 15px; color: #0f172a;">BLAB Customer Support</span>
-                  <span style="display: inline-flex; align-items: center; gap: 4px; background: #dcfce7; color: #15803d; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px;">
+                  <span style="font-weight: 1000; font-size: var(--pos-text-body); color: #0f172a;">BLAB Customer Support</span>
+                  <span style="display: inline-flex; align-items: center; gap: 4px; background: #dcfce7; color: #15803d; font-size: var(--pos-text-meta); font-weight: 800; padding: 2px 8px; border-radius: 999px;">
                     <span style="width: 6px; height: 6px; border-radius: 50%; background: #22c55e;"></span>
                     <span id="i18n-blab-status-online">線上</span>
                   </span>
                 </div>
-                <div style="font-size: 13px; color: #15803d; font-weight: 700; margin-top: 3px;" id="i18n-blab-support-direct-sub">LINE 官方帳號 / 1對1 即時專人支援</div>
+                <div style="font-size: var(--pos-text-meta); color: #15803d; font-weight: 700; margin-top: 3px;" id="i18n-blab-support-direct-sub">LINE 官方帳號 / 1對1 即時專人支援</div>
               </div>
             </div>
-            <button class="btn btn-primary" style="padding: 10px 18px; min-height: 48px; font-size: 14px; font-weight: 900; pointer-events:none; border-radius: 10px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;">
+            <button class="btn btn-primary" style="padding: 10px 18px; min-height: 48px; font-size: var(--pos-text-meta); font-weight: 900; pointer-events:none; border-radius: 10px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
               <span id="i18n-btn-modal-blab-line">開啟 LINE</span>
             </button>
@@ -1964,18 +2013,18 @@
                 </svg>
               </div>
               <div>
-                <div style="font-weight: 1000; font-size: 15px; color: #0f172a;" id="i18n-blab-upgrade-title">功能開通與方案諮詢</div>
-                <div style="font-size: 13px; color: #64748b; margin-top: 3px; font-weight: 600;" id="i18n-blab-upgrade-sub">內用模組、營收報表分析、歷史資料調閱</div>
+                <div style="font-weight: 1000; font-size: var(--pos-text-body); color: #0f172a;" id="i18n-blab-upgrade-title">功能開通與方案諮詢</div>
+                <div style="font-size: var(--pos-text-meta); color: #64748b; margin-top: 3px; font-weight: 600;" id="i18n-blab-upgrade-sub">內用模組、營收報表分析、歷史資料調閱</div>
               </div>
             </div>
-            <button class="btn btn-ghost" style="padding: 10px 18px; min-height: 48px; font-size: 14px; font-weight: 800; pointer-events:none; border-radius: 10px; border: 1px solid #cbd5e1; white-space: nowrap;" id="i18n-btn-modal-blab-upgrade">
+            <button class="btn btn-ghost" style="padding: 10px 18px; min-height: 48px; font-size: var(--pos-text-meta); font-weight: 800; pointer-events:none; border-radius: 10px; border: 1px solid #cbd5e1; white-space: nowrap;" id="i18n-btn-modal-blab-upgrade">
               聯繫諮詢
             </button>
           </a>
         </div>
 
         <!-- Working Hours & SLA Note -->
-        <div style="display: flex; align-items: center; gap: 8px; justify-content: center; font-size: 12px; color: #64748b; font-weight: 600; padding: 4px 0;">
+        <div style="display: flex; align-items: center; gap: 8px; justify-content: center; font-size: var(--pos-text-meta); color: #64748b; font-weight: 600; padding: 4px 0;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color: #10b981;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
           <span id="i18n-blab-hours-commitment">服務時間：每日 09:00 - 22:00（標準回覆時間 &lt; 5 分鐘）</span>
         </div>
@@ -1983,7 +2032,7 @@
 
       <!-- Modal Footer -->
       <div class="modal-actions" style="margin-top: 4px; padding-top: 8px;">
-        <button class="btn btn-primary btn-block" onclick="closeBlabContactModal()" style="min-height: 48px; font-size: 15px; font-weight: 900; border-radius: 12px;" id="i18n-btn-modal-blab-close">關閉</button>
+        <button class="btn btn-primary btn-block" onclick="closeBlabContactModal()" style="min-height: 48px; font-size: var(--pos-text-body); font-weight: 900; border-radius: 12px;" id="i18n-btn-modal-blab-close">關閉</button>
       </div>
     </div>
   </div>
@@ -2069,16 +2118,16 @@
   </div>
 
   <!-- Benmi POS Modular Architecture Scripts -->
-  <script src="js/orders-i18n.js?v=20261004_live_mobile_v1"></script>
-  <script src="js/orders-core.js?v=20261004_live_mobile_v1"></script>
-  <script src="js/orders-audio.js?v=20260919_sold_out_v7"></script>
+  <script src="js/orders-i18n.js?v=20261006_tablet_text_v1"></script>
+  <script src="js/orders-core.js?v=20261006_tablet_text_v1"></script>
+  <script src="js/orders-audio.js?v=20261006_tablet_text_v1"></script>
   <script src="js/printer-service.js?v=20260926_item_note_v1"></script>
-  <script src="js/orders-live.js?v=20261004_live_mobile_slide_v1"></script>
-  <script src="js/orders-modals.js?v=20260924_return_context_v1"></script>
-  <script src="js/orders-history.js?v=20260919_sold_out_v7"></script>
-  <script src="js/orders-reports.js?v=20260919_sold_out_v7"></script>
-  <script src="js/orders-settings.js?v=20260924_store_status_v1"></script>
-  <script src="js/orders-menu.js?v=20260923_menu_p0"></script>
+  <script src="js/orders-live.js?v=20261006_tablet_text_v1"></script>
+  <script src="js/orders-modals.js?v=20261006_tablet_text_v1"></script>
+  <script src="js/orders-history.js?v=20261006_tablet_text_v1"></script>
+  <script src="js/orders-reports.js?v=20261006_tablet_text_v1"></script>
+  <script src="js/orders-settings.js?v=20261006_tablet_text_v1"></script>
+  <script src="js/orders-menu.js?v=20261006_tablet_text_v1"></script>
 
   <!-- POS Bootstrap & Initialization -->
   <script>

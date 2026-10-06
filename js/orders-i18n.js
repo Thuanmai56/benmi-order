@@ -4,6 +4,19 @@
 
 const I18N = {
   "zh-TW": {
+    displayTitle: "顯示",
+    displayTextSize: "文字大小",
+    displayDeviceHint: "立即套用，僅儲存在此裝置。",
+    displayAuto: "自動",
+    displayAutoHint: "寬螢幕使用大字，窄螢幕使用標準字。",
+    displayStandard: "標準",
+    displayLarge: "大",
+    displayExtraLarge: "特大",
+    displayPreview: "預覽",
+    displayPreviewOrder: "訂單 #001",
+    displayPreviewItem: "2 × 招牌餐點",
+    displayPreviewOptions: "客製化：微辣，不加蔥",
+    displayPreviewTotal: "總金額",
     langBtn: "Tiếng Việt",
     brandTitle: "🥖 Benmi Dashboard",
     brandSub: "即時訂單",
@@ -599,6 +612,19 @@ const I18N = {
     unpaired: "未綁定"
   },
   "vi": {
+    displayTitle: "Hiển thị",
+    displayTextSize: "Cỡ chữ",
+    displayDeviceHint: "Áp dụng ngay, chỉ lưu trên thiết bị này.",
+    displayAuto: "Tự động",
+    displayAutoHint: "Màn hình rộng dùng chữ lớn, màn hình hẹp dùng chữ tiêu chuẩn.",
+    displayStandard: "Tiêu chuẩn",
+    displayLarge: "Lớn",
+    displayExtraLarge: "Rất lớn",
+    displayPreview: "Xem trước",
+    displayPreviewOrder: "Đơn hàng #001",
+    displayPreviewItem: "2 × Món đặc trưng",
+    displayPreviewOptions: "Tùy biến: ít cay, không hành",
+    displayPreviewTotal: "Tổng tiền",
     langBtn: "Tiếng Việt",
     brandTitle: "Benmi Dashboard",
     brandSub: "Đơn hàng trực tiếp",
@@ -1195,7 +1221,8 @@ const I18N = {
   }
 };
 
-var currentLang = (typeof localStorage !== "undefined" && localStorage.getItem("benmi_lang")) || "zh-TW";
+var currentLang = "zh-TW";
+try { currentLang = localStorage.getItem("benmi_lang") || "zh-TW"; } catch (e) {}
 window.currentLang = currentLang;
 
 function t(key, params = {}) {
@@ -1230,7 +1257,7 @@ document.addEventListener("click", (e) => {
 function setLanguage(lang) {
   currentLang = lang;
   window.currentLang = lang;
-  if (typeof localStorage !== "undefined") localStorage.setItem("benmi_lang", lang);
+  try { localStorage.setItem("benmi_lang", lang); } catch (e) {}
   applyLanguageToDOM();
   if (typeof updatePrintActionAvailability === "function") updatePrintActionAvailability();
   if (typeof renderAll === "function") renderAll();
@@ -1244,6 +1271,9 @@ function setLanguage(lang) {
 function applyLanguageToDOM() {
   const dict = I18N[currentLang];
   if (!dict) return;
+  document.querySelectorAll("[data-pos-display-i18n]").forEach(node => {
+    node.textContent = dict[node.dataset.posDisplayI18n];
+  });
 
   // Topbar
   const labelMap = { "zh-TW": "繁體中文", "vi": "Tiếng Việt" };

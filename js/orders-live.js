@@ -13,7 +13,14 @@ let liveMobileMedia = null;
 let liveMobileMode = false;
 
 function isLiveMobilePortrait() {
-  return !!(liveMobileMedia && liveMobileMedia.matches);
+  const main = document.getElementById("main-layout");
+  const scale = typeof window.getPOSTextScale === "function" ? window.getPOSTextScale() : 1;
+  const panels = document.querySelectorAll("#view-live .live-split > .live-panel");
+  // Measure the actual content area, including the expanded sidebar. The active
+  // UI has two queues; use the rendered count so future stations obey this rule.
+  const requiredWidth = panels.length * 320 * scale + 48 + (panels.length - 1) * 16;
+  return !!(liveMobileMedia && liveMobileMedia.matches) ||
+    !!(main && main.clientWidth > 0 && main.clientWidth < requiredWidth);
 }
 
 function captureLiveScrollPositions() {
@@ -50,6 +57,7 @@ function syncLiveMobileView() {
 
   // The main switchTab uses inline display:block. Override it only in mobile Live.
   view.classList.toggle("live-mobile-visible", mobile && activeTab === "live");
+  view.classList.toggle("live-adaptive-stations", mobile);
   const focusWasOnTabs = tabs.contains(document.activeElement);
   tabs.hidden = !mobile;
 
@@ -275,6 +283,11 @@ function initLiveMobileView() {
     document.getElementById(`live-mobile-tab-${station}`).focus({ preventScroll: true });
   });
   initLiveMobileSwipe();
+  window.addEventListener("resize", syncLiveMobileView, { passive: true });
+  if (typeof ResizeObserver === "function") {
+    const main = document.getElementById("main-layout");
+    if (main) new ResizeObserver(syncLiveMobileView).observe(main);
+  }
   syncLiveMobileView();
 }
 

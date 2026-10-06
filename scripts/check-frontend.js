@@ -148,7 +148,7 @@ HTML_FILES.forEach(htmlFile => {
     document: {
       addEventListener: () => {},
       removeEventListener: () => {},
-      documentElement: { style: { setProperty: () => {} } },
+      documentElement: { style: { setProperty: () => {} }, setAttribute: () => {} },
       getElementById: (id) => ({
         id,
         classList: { toggle: () => {}, add: () => {}, remove: () => {} },

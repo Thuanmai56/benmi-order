@@ -2,22 +2,19 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
-const { execFileSync } = require('node:child_process');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 
 const root = path.resolve(__dirname, '..');
-const readSource = (file, baseline) => baseline
-  ? execFileSync('git', ['show', `HEAD:${file}`], { cwd: root, encoding: 'utf8' })
-  : fs.readFileSync(path.join(root, file), 'utf8');
+const readSource = file => fs.readFileSync(path.join(root, file), 'utf8');
 
-async function loadFixture(page, baseline = false) {
+async function loadFixture(page) {
   await page.route('**/*', route => route.fulfill({ body: '<html></html>', contentType: 'text/html' }));
   await page.goto('http://pos.test/?tenant=fixture');
-  const html = readSource('orders.html', baseline)
+  const html = readSource('orders.html')
     .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
     .replace(/<link\b[^>]*>/gi, '');
   await page.setContent(html);
-  await page.addStyleTag({ content: readSource('css/orders.css', baseline) });
+  await page.addStyleTag({ content: readSource('css/orders.css') });
   await page.evaluate(() => {
     window.fixtureIntervals = [];
     window.setInterval = (callback, delay) => window.fixtureIntervals.push({ callback, delay });
@@ -36,8 +33,8 @@ async function loadFixture(page, baseline = false) {
       };
     };
   });
-  for (const file of ['js/orders-i18n.js', 'js/orders-core.js', 'js/orders-live.js', 'js/orders-modals.js']) {
-    await page.addScriptTag({ content: readSource(file, baseline) });
+  for (const file of ['js/orders-display.js', 'js/orders-i18n.js', 'js/orders-core.js', 'js/orders-live.js', 'js/orders-modals.js']) {
+    await page.addScriptTag({ content: readSource(file) });
   }
   await page.evaluate(() => {
     window.currentTenantFeatures = ['dine_in'];
@@ -54,31 +51,6 @@ async function loadFixture(page, baseline = false) {
     if (typeof initLiveMobileView === 'function') initLiveMobileView();
     applyLanguageToDOM();
     renderAll();
-  });
-}
-
-async function layout(page) {
-  return page.evaluate(() => {
-    const selectors = ['#view-live', '.live-split', '.live-panel', '.tile', '.tile-info', '.tile-actions', '.tile-action-btn'];
-    return selectors.map(selector => {
-      const node = document.querySelector(selector);
-      const css = getComputedStyle(node);
-      const rect = node.getBoundingClientRect();
-      return { selector, display: css.display, columns: css.gridTemplateColumns, direction: css.flexDirection,
-        width: rect.width, height: rect.height, padding: css.padding, gap: css.gap };
-    });
-  });
-}
-
-function assertSameLayout(actual, expected, message) {
-  actual.forEach((node, index) => {
-    Object.entries(node).forEach(([property, value]) => {
-      if (typeof value === 'number') {
-        assert(Math.abs(value - expected[index][property]) < 1, `${message}: ${node.selector} ${property}`);
-      } else {
-        assert.equal(value, expected[index][property], `${message}: ${node.selector} ${property}`);
-      }
-    });
   });
 }
 
@@ -249,7 +221,7 @@ async function swipeQueue(page, direction, options) {
     const returnedList = await page.locator('#list-right').boundingBox();
     assert(returnedList.y + returnedList.height <= 844, 'Returning to Live retains bounded scrolling');
 
-    await resize(page, { width: 844, height: 390 });
+    await resize(page, { width: 1000, height: 390 });
     await page.waitForFunction(() => !document.getElementById('live-panel-pending').inert);
     assert(await page.locator('#live-panel-pending').isVisible());
     assert(await page.locator('#live-panel-ready').isVisible());
@@ -303,31 +275,30 @@ async function swipeQueue(page, direction, options) {
     assert.equal(await page.locator('#live-mobile-count-pending').innerText(), '0');
     assert.equal(await page.locator('#live-mobile-count-ready').innerText(), '0');
 
-    // Compare unaffected layouts with the pre-change source, including tab return.
-    const baseline = await browser.newPage();
-    await loadFixture(baseline, true);
+    // Wide screens show both queues only when each has space for scaled text.
     const current = await browser.newPage({ hasTouch: true });
     await loadFixture(current);
     for (const viewport of [
       { width: 601, height: 900 }, { width: 600, height: 390 }, { width: 844, height: 390 },
       { width: 768, height: 1024 }, { width: 1024, height: 768 }, { width: 1440, height: 900 }
     ]) {
-      await resize(baseline, viewport);
       await resize(current, viewport);
-      assert(!(await current.locator('#live-mobile-tabs').isVisible()));
+      const adaptive = await current.evaluate(() => isLiveMobilePortrait());
+      assert.equal(await current.locator('#live-mobile-tabs').isVisible(), adaptive);
       assert(await current.locator('#live-panel-pending').isVisible());
-      assert(await current.locator('#live-panel-ready').isVisible());
-      assertSameLayout(await layout(current), await layout(baseline), `Unchanged layout at ${viewport.width}x${viewport.height}`);
-      const stationBeforeSwipe = await current.evaluate(() => liveMobileStation);
-      await swipeQueue(current, 'left');
-      assert.equal(await current.evaluate(() => liveMobileStation), stationBeforeSwipe, 'Swipe remains disabled outside portrait phones');
-      for (const target of [baseline, current]) await target.evaluate(() => { switchTab('settings'); switchTab('live'); });
-      assertSameLayout(await layout(current), await layout(baseline), 'Unchanged desktop layout after switching main tabs');
+      assert.equal(await current.locator('#live-panel-ready').isVisible(), !adaptive);
+      if (!adaptive) {
+        const stationBeforeSwipe = await current.evaluate(() => liveMobileStation);
+        await swipeQueue(current, 'left');
+        assert.equal(await current.evaluate(() => liveMobileStation), stationBeforeSwipe, 'Wide queues do not swipe');
+      }
+      await current.evaluate(() => { switchTab('settings'); switchTab('live'); });
+      assert.equal(await current.locator('#live-panel-ready').isVisible(), !adaptive, 'Main-tab return keeps adaptive layout');
     }
     await resize(current, { width: 1024, height: 768 });
     await snapshot(current, 'live-tablet-zh-TW');
     assert.deepEqual(errors, [], 'No browser runtime errors');
-    console.log('PASS: native touch swipes, vertical scroll, gesture exclusions/cancellation, refresh during swipe, mobile widths/languages, keyboard tabs, independent scrolling, polling, rotation, main-tab return, filters, status actions, details, empty queues, and unchanged wider/landscape layouts.');
+    console.log('PASS: native touch swipes, vertical scroll, gesture exclusions/cancellation, refresh during swipe, mobile widths/languages, keyboard tabs, independent scrolling, polling, rotation, main-tab return, filters, status actions, details, empty queues, and adaptive wider/landscape layouts.');
   } finally {
     await browser.close();
   }

@@ -606,7 +606,7 @@ async function renderSoldOutItemsGrid(order = null) {
 
   grid.innerHTML = sortedItems.map(item => {
     const isInOrder = orderItemNames.has(item.name);
-    const badgeHtml = isInOrder ? `<span style="font-size: 11px; background: #fef3c7; color: #92400e; padding: 2px 6px; border-radius: 4px; font-weight: 800; margin-left: 4px;">本單</span>` : '';
+    const badgeHtml = isInOrder ? `<span style="font-size: var(--pos-text-meta); background: #fef3c7; color: #92400e; padding: 2px 6px; border-radius: 4px; font-weight: 800; margin-left: 4px;">本單</span>` : '';
     return `
       <label class="checkbox-card" style="${isInOrder ? 'border-color: #f59e0b; background: #fffdf5;' : ''}">
         <input type="checkbox" value="${escapeHtml(item.name)}" class="sold-item">
@@ -787,7 +787,8 @@ function showStoreActivationModal(force = false) {
   const errDiv = document.getElementById("activation-error-msg");
 
   if (inpTenant) {
-    const saved = (typeof localStorage !== "undefined" && localStorage.getItem("pos_device_tenant_id")) || "";
+    let saved = "";
+    try { saved = localStorage.getItem("pos_device_tenant_id") || ""; } catch (e) {}
     if (saved) {
       inpTenant.value = saved;
       if (inpPin) inpPin.focus();
@@ -979,10 +980,10 @@ function renderQuickStickerOptions() {
   groups.forEach(grp => {
     html += `
       <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 12px 14px;">
-        <div style="font-size: 13px; font-weight: 800; color: #64748b; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">${escapeHtml(grp.title)}</div>
+        <div style="font-size: var(--pos-text-meta); font-weight: 800; color: #64748b; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">${escapeHtml(grp.title)}</div>
         <div style="display: flex; flex-wrap: wrap; gap: 8px;">
           ${grp.options.map(opt => `
-            <button type="button" class="btn btn-ghost quick-sticker-chip" style="min-height: 44px; padding: 8px 14px; font-size: 15px; font-weight: 800; border-radius: 8px; background: #ffffff; border: 1.5px solid #cbd5e1; color: #1e293b; cursor: pointer; transition: all 0.15s ease;" onclick="printQuickModifierOption('${escapeHtml(opt)}')">
+            <button type="button" class="btn btn-ghost quick-sticker-chip" style="min-height: 44px; padding: 8px 14px; font-size: var(--pos-text-body); font-weight: 800; border-radius: 8px; background: #ffffff; border: 1.5px solid #cbd5e1; color: #1e293b; cursor: pointer; transition: all 0.15s ease;" onclick="printQuickModifierOption('${escapeHtml(opt)}')">
               ${escapeHtml(opt)}
             </button>
           `).join("")}
@@ -1066,4 +1067,3 @@ window.closeQuickStickerModal = closeQuickStickerModal;
 window.renderQuickStickerOptions = renderQuickStickerOptions;
 window.printQuickModifierOption = printQuickModifierOption;
 window.printCustomQuickSticker = printCustomQuickSticker;
-

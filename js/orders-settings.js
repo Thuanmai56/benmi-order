@@ -5,6 +5,7 @@
 let currentStoreStatus = 'open';
 let storeOperatingHours = null;
 let allowScheduledPickup = true;
+let allowDineIn = true;
 let currentTenantFeatures = [];
 window.currentTenantFeatures = currentTenantFeatures;
 let currentStoreLogoUrl = null;
@@ -153,7 +154,8 @@ function openSettings() {
   renderStorePairingSection();
   loadPOSPrinterSettings();
   initSettingsScrollSpy();
-  const lastTab = (typeof sessionStorage !== "undefined" && sessionStorage.getItem("last_settings_tab")) || "setting-card-status";
+  let lastTab = "setting-card-status";
+  try { lastTab = sessionStorage.getItem("last_settings_tab") || lastTab; } catch (e) {}
   switchSettingTab(lastTab);
 }
 
@@ -404,19 +406,19 @@ function renderOperatingHours() {
     shifts.forEach((shift, sIdx) => {
       shiftsHtml += `
         <div style="display:flex; gap:10px; align-items:center; margin-top:10px;">
-          <input type="time" id="sh-start-${dayIdx}-${sIdx}" value="${shift.start}" style="flex:1; padding:8px 12px; font-family:inherit; border:1.5px solid var(--border, #cbd5e1); border-radius:8px; font-size:15px; font-weight:600; outline:none;">
+          <input type="time" id="sh-start-${dayIdx}-${sIdx}" value="${shift.start}" style="flex:1; padding:8px 12px; font-family:inherit; border:1.5px solid var(--border, #cbd5e1); border-radius:8px; font-size:var(--pos-text-body); font-weight:600; outline:none;">
           <span style="font-weight:900; color:#64748b;">-</span>
-          <input type="time" id="sh-end-${dayIdx}-${sIdx}" value="${shift.end}" style="flex:1; padding:8px 12px; font-family:inherit; border:1.5px solid var(--border, #cbd5e1); border-radius:8px; font-size:15px; font-weight:600; outline:none;">
-          <button type="button" onclick="removeShift(${dayIdx}, ${sIdx})" style="background:#fee2e2; border:1px solid #fca5a5; color:#dc2626; cursor:pointer; font-size:16px; width:34px; height:34px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">✕</button>
+          <input type="time" id="sh-end-${dayIdx}-${sIdx}" value="${shift.end}" style="flex:1; padding:8px 12px; font-family:inherit; border:1.5px solid var(--border, #cbd5e1); border-radius:8px; font-size:var(--pos-text-body); font-weight:600; outline:none;">
+          <button type="button" onclick="removeShift(${dayIdx}, ${sIdx})" style="background:#fee2e2; border:1px solid #fca5a5; color:#dc2626; cursor:pointer; font-size:var(--pos-text-body); width:34px; height:34px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">✕</button>
         </div>`;
     });
     row.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center;">
-        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:16px; font-weight:800; color:#1e293b;">
+        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:var(--pos-text-body); font-weight:800; color:#1e293b;">
           <input type="checkbox" ${isOpen ? 'checked' : ''} onchange="toggleDayStatus(${dayIdx}, this.checked)" style="width:20px; height:20px; accent-color:var(--primary, #00b900);">
           <span style="color:${isOpen ? '#0f172a' : '#94a3b8'};">${dayNamesList[dayIdx]}</span>
         </label>
-        ${isOpen ? `<button type="button" onclick="addShift(${dayIdx})" style="font-size:13px; background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; padding:6px 12px; border-radius:8px; cursor:pointer; font-weight:800;">${t('btnAddShift')}</button>` : `<span style="font-size:13px; color:#ef4444; font-weight:800; background:#fef2f2; padding:4px 8px; border-radius:6px; border:1px solid #fee2e2;">${t('closedDay')}</span>`}
+        ${isOpen ? `<button type="button" onclick="addShift(${dayIdx})" style="font-size:var(--pos-text-meta); background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; padding:6px 12px; border-radius:8px; cursor:pointer; font-weight:800;">${t('btnAddShift')}</button>` : `<span style="font-size:var(--pos-text-meta); color:#ef4444; font-weight:800; background:#fef2f2; padding:4px 8px; border-radius:6px; border:1px solid #fee2e2;">${t('closedDay')}</span>`}
       </div>
       ${isOpen ? `<div id="shifts-box-${dayIdx}">${shiftsHtml}</div>` : ''}`;
     container.appendChild(row);
@@ -1235,6 +1237,7 @@ const SETTINGS_SECTIONS = [
   { id: "setting-card-hours", tocId: "toc-item-hours" },
   { id: "setting-card-store-info", tocId: "toc-item-store-info" },
   { id: "setting-card-language", tocId: "toc-item-language" },
+  { id: "setting-card-display", tocId: "toc-item-display" },
   { id: "setting-card-dinein", tocId: "toc-item-dinein" },
   { id: "setting-card-printer", tocId: "toc-item-printer" },
   { id: "setting-card-reports", tocId: "toc-item-reports" },

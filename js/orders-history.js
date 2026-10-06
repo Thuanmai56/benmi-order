@@ -300,8 +300,8 @@ function renderHistory(orders) {
         ${isToday ? `<span class="history-today-tag">${t('todayTag')}</span>` : ''}
       </div>
       <div class="history-date-right">
-        <span class="badge" style="background:#f3f4f6; color:#374151; font-weight:800; font-size:13px;">${items.length} ${t('orderUnit')}</span>
-        <span class="badge" style="background:rgba(0,185,0,0.1); color:var(--primary); font-weight:1000; font-size:14px;">$${dayTotal.toLocaleString()}</span>
+        <span class="badge" style="background:#f3f4f6; color:#374151; font-weight:800; font-size:var(--pos-text-meta);">${items.length} ${t('orderUnit')}</span>
+        <span class="badge" style="background:rgba(0,185,0,0.1); color:var(--primary); font-weight:1000; font-size:var(--pos-text-meta);">$${dayTotal.toLocaleString()}</span>
         <svg class="history-chevron ${isExpanded ? 'open' : ''}" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="6 9 12 15 18 9"></polyline>
         </svg>
@@ -346,17 +346,17 @@ function renderHistory(orders) {
       const svgReceipt = (typeof POS_SVG !== "undefined" && POS_SVG.receipt) || "";
 
       const diningBadge = isDineIn
-        ? `<span class="badge badge-dine-in" style="font-size:11px; padding:2px 6px; margin-left:4px;">${svgDineIn}${t('badgeDineIn')}${escapeHtml(tableLabel)}</span>`
-        : `<span class="badge badge-takeaway" style="font-size:11px; padding:2px 6px; margin-left:4px;">${svgTakeaway}${t('badgeTakeaway')}</span>`;
+        ? `<span class="badge badge-dine-in" style="font-size:var(--pos-text-meta); padding:2px 6px; margin-left:4px;">${svgDineIn}${t('badgeDineIn')}${escapeHtml(tableLabel)}</span>`
+        : `<span class="badge badge-takeaway" style="font-size:var(--pos-text-meta); padding:2px 6px; margin-left:4px;">${svgTakeaway}${t('badgeTakeaway')}</span>`;
 
       const roundCount = Number(order.round_count || order.roundCount) || 1;
       const appendBadge = (isDineIn && roundCount > 1)
-        ? `<span class="badge badge-append" style="font-size:11px; padding:2px 6px; border-radius:4px; font-weight:800; white-space:nowrap; flex-shrink:0;">${t('badgeAppendRound', { n: roundCount })}</span>`
+        ? `<span class="badge badge-append" style="font-size:var(--pos-text-meta); padding:2px 6px; border-radius:4px; font-weight:800; white-space:nowrap; flex-shrink:0;">${t('badgeAppendRound', { n: roundCount })}</span>`
         : "";
 
       const isModified = (order.is_modified === 1 || order.isModified === true);
       const modifiedBadge = isModified
-        ? `<span class="badge badge-modified" style="font-size:11px; padding:2px 6px; margin-left:4px;">${POS_SVG.modify || ''}${t('badgeModifiedOrder')}</span>`
+        ? `<span class="badge badge-modified" style="font-size:var(--pos-text-meta); padding:2px 6px; margin-left:4px;">${POS_SVG.modify || ''}${t('badgeModifiedOrder')}</span>`
         : "";
 
       const formattedTime = isElapsed
