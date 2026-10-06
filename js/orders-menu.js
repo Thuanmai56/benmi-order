@@ -1016,6 +1016,221 @@ function getStoreModifiersList() {
   return list;
 }
 
+// --- Category Modifiers Collapse State & Helpers ---
+window._collapsedCategoryMods = window._collapsedCategoryMods || new Set();
+
+function toggleCategoryModifiersCollapse(cIdx) {
+  const cat = currentMenuData && currentMenuData[cIdx];
+  const catKey = cat ? (cat.id || String(cIdx)) : String(cIdx);
+  if (window._collapsedCategoryMods.has(catKey)) {
+    window._collapsedCategoryMods.delete(catKey);
+  } else {
+    window._collapsedCategoryMods.add(catKey);
+  }
+  renderMenuCategoryEditor(cIdx);
+}
+window.toggleCategoryModifiersCollapse = toggleCategoryModifiersCollapse;
+
+function toggleCategoryModifierSelectAll(cIdx) {
+  const cat = currentMenuData && currentMenuData[cIdx];
+  if (!cat) return;
+  const storeModifiers = getStoreModifiersList();
+  const appliedCount = storeModifiers.filter(mod => isModifierAppliedToCategory(mod, cat)).length;
+  const selectAll = appliedCount < storeModifiers.length;
+  selectAllCategoryModifiers(cIdx, selectAll);
+}
+window.toggleCategoryModifierSelectAll = toggleCategoryModifierSelectAll;
+
+// --- Direct Drag-and-Drop & 1-Click Item Image Upload ---
+var _currentDirectUploadTarget = null;
+
+function handleItemThumbClick(cIdx, iIdx, event) {
+  if (event) event.stopPropagation();
+  const cat = currentMenuData && currentMenuData[cIdx];
+  const item = cat && cat.items && cat.items[iIdx];
+  if (!item) return;
+
+  const imgUrl = getItemImageUrl(cat.id, item.name);
+  if (imgUrl) {
+    openItemDetailModal(cIdx, iIdx);
+  } else {
+    _currentDirectUploadTarget = { cIdx, iIdx };
+    let fileInput = document.getElementById("direct-item-image-input");
+    if (!fileInput) {
+      fileInput = document.createElement("input");
+      fileInput.type = "file";
+      fileInput.id = "direct-item-image-input";
+      fileInput.accept = "image/*";
+      fileInput.style.display = "none";
+      fileInput.onchange = handleItemThumbFileSelect;
+      document.body.appendChild(fileInput);
+    }
+    fileInput.value = "";
+    fileInput.click();
+  }
+}
+window.handleItemThumbClick = handleItemThumbClick;
+
+function handleItemThumbFileSelect(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file || !_currentDirectUploadTarget) return;
+  const { cIdx, iIdx } = _currentDirectUploadTarget;
+  const thumbBox = document.querySelector(`.menu-item-thumb-box[data-item-thumb-idx="${iIdx}"]`);
+  uploadDirectItemImage(file, cIdx, iIdx, thumbBox);
+}
+window.handleItemThumbFileSelect = handleItemThumbFileSelect;
+
+function handleItemThumbDragOver(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  e.currentTarget.classList.add("drag-over");
+}
+window.handleItemThumbDragOver = handleItemThumbDragOver;
+
+function handleItemThumbDragLeave(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  e.currentTarget.classList.remove("drag-over");
+}
+window.handleItemThumbDragLeave = handleItemThumbDragLeave;
+
+function handleItemThumbDrop(e, cIdx, iIdx) {
+  e.preventDefault();
+  e.stopPropagation();
+  const thumbBox = e.currentTarget;
+  thumbBox.classList.remove("drag-over");
+  const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if (!file) return;
+  uploadDirectItemImage(file, cIdx, iIdx, thumbBox);
+}
+window.handleItemThumbDrop = handleItemThumbDrop;
+
+async function uploadDirectItemImage(file, cIdx, iIdx, thumbBoxEl) {
+  if (!file.type || !file.type.startsWith("image/")) {
+    alert(t("imageUploadFail") || "Chỉ hỗ trợ file hình ảnh!");
+    return;
+  }
+  const cat = currentMenuData && currentMenuData[cIdx];
+  const item = cat && cat.items && cat.items[iIdx];
+  if (!item) return;
+
+  const originalHtml = thumbBoxEl ? thumbBoxEl.innerHTML : "";
+  if (thumbBoxEl) {
+    thumbBoxEl.innerHTML = `<div class="thumb-loading-spin"></div>`;
+  }
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = async () => {
+      try {
+        const maxDim = 600;
+        let width = img.width;
+        let height = img.height;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUri = canvas.toDataURL("image/webp", 0.85);
+
+        const tenantId = (typeof getTenantIdFromUrl === "function" ? getTenantIdFromUrl() : null) || "benmi";
+        const imageName = `${cat.id}_${item.name}`;
+
+        const res = await fetch(`${WORKER_BASE}/api/image?tenant_id=${encodeURIComponent(tenantId)}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: imageName, dataUri })
+        });
+        if (!res.ok) throw new Error("Upload failed");
+
+        if (!window._tenantImageList) window._tenantImageList = new Set();
+        window._tenantImageList.add(imageName);
+        window._tenantImageList.add(item.name);
+
+        if (thumbBoxEl) {
+          thumbBoxEl.innerHTML = `<img src="${dataUri}" alt="${escapeHtml(item.name)}" class="menu-item-thumb-img">`;
+          thumbBoxEl.classList.add("has-image");
+        }
+        markMenuDirty();
+      } catch (err) {
+        console.error("Direct image upload failed:", err);
+        if (thumbBoxEl) thumbBoxEl.innerHTML = originalHtml;
+        alert((t("imageUploadFail") || "Tải ảnh thất bại: ") + (err.message || err));
+      }
+    };
+    img.onerror = () => {
+      if (thumbBoxEl) thumbBoxEl.innerHTML = originalHtml;
+      alert(t("imageLoadFail") || "Không thể đọc file ảnh!");
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+window.uploadDirectItemImage = uploadDirectItemImage;
+
+// --- Item Action Menu (⋯) Dropdown & Duplicate ---
+function closeAllItemActionMenus() {
+  document.querySelectorAll(".menu-item-dropdown-menu").forEach(el => el.remove());
+}
+window.closeAllItemActionMenus = closeAllItemActionMenus;
+
+if (!window._itemActionMenuListenerAttached) {
+  document.addEventListener("click", closeAllItemActionMenus);
+  window._itemActionMenuListenerAttached = true;
+}
+
+function toggleItemActionMenu(event, cIdx, iIdx) {
+  event.stopPropagation();
+  const wrapper = event.currentTarget.closest(".menu-item-more-wrapper");
+  if (!wrapper) return;
+  const existingMenu = wrapper.querySelector(".menu-item-dropdown-menu");
+  closeAllItemActionMenus();
+  if (existingMenu) return;
+
+  const copySvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+  const trashSvg = (typeof POS_SVG !== "undefined" && POS_SVG.trash) || `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
+
+  const menuEl = document.createElement("div");
+  menuEl.className = "menu-item-dropdown-menu";
+  menuEl.innerHTML = `
+    <button type="button" class="dropdown-item" onclick="event.stopPropagation(); closeAllItemActionMenus(); duplicateMenuItemAt(${cIdx}, ${iIdx})">
+      ${copySvg}
+      <span>${escapeHtml(t("btnDuplicateItem") || "Sao chép món")}</span>
+    </button>
+    <button type="button" class="dropdown-item danger" onclick="event.stopPropagation(); closeAllItemActionMenus(); removeMenuItemAt(${cIdx}, ${iIdx})">
+      ${trashSvg}
+      <span>${escapeHtml(t("btnItemDelete") || "Xóa món")}</span>
+    </button>
+  `;
+  wrapper.appendChild(menuEl);
+}
+window.toggleItemActionMenu = toggleItemActionMenu;
+
+function duplicateMenuItemAt(cIdx, iIdx) {
+  if (!currentMenuData || !currentMenuData[cIdx] || !currentMenuData[cIdx].items[iIdx]) return;
+  syncMenuDataFromDOM();
+  const original = currentMenuData[cIdx].items[iIdx];
+  const copySuffix = t("duplicateSuffix") || (currentLang === "vi" ? "Bản sao" : "副本");
+  const clone = JSON.parse(JSON.stringify(original));
+  clone.name = `${original.name} (${copySuffix})`;
+  if (clone.id) clone.id = `${original.id}_copy_${Date.now()}`;
+  currentMenuData[cIdx].items.splice(iIdx + 1, 0, clone);
+  markMenuDirty();
+  renderMenuCategoryEditor(cIdx);
+  if (typeof renderMenuCategories === "function") renderMenuCategories();
+}
+window.duplicateMenuItemAt = duplicateMenuItemAt;
+
 function renderMenuCategoryEditor(index) {
   isCategoryManagerOpen = false;
   const renameBtn = document.getElementById("btn-category-rename");
@@ -1076,12 +1291,17 @@ function renderMenuCategoryEditor(index) {
   catalogCard.innerHTML = `<div class="cust-group-header"><span class="cust-group-title">${escapeHtml(cat.title)}</span><span class="menu-option-card-subtitle">${cat.items.length} ${t("menuItemUnit")}</span></div>`;
   container.appendChild(catalogCard);
 
-  if (cat.type === 'catalog') {
-    const storeModifiers = getStoreModifiersList();
-    const appliedCount = storeModifiers.filter(mod => isModifierAppliedToCategory(mod, cat)).length;
+  const storeModifiers = cat.type === 'catalog' ? getStoreModifiersList() : [];
+  const appliedCount = cat.type === 'catalog' ? storeModifiers.filter(mod => isModifierAppliedToCategory(mod, cat)).length : 0;
 
+  if (cat.type === 'catalog') {
     const modCard = document.createElement("div");
     modCard.className = "cust-category-modifiers-card";
+    const catKey = cat.id || String(index);
+    const isCollapsed = Boolean(window._collapsedCategoryMods && window._collapsedCategoryMods.has(catKey));
+    if (isCollapsed) {
+      modCard.classList.add("is-collapsed");
+    }
 
     if (storeModifiers.length === 0) {
       modCard.innerHTML = `
@@ -1126,11 +1346,16 @@ function renderMenuCategoryEditor(index) {
             <div class="cust-category-modifiers-desc">${escapeHtml(t("appliedModifiersCardDesc"))}</div>
           </div>
           <div class="cust-category-modifiers-actions">
-            <button type="button" class="btn-select-toggle" onclick="selectAllCategoryModifiers(${index}, true)">${escapeHtml(t("btnSelectAll"))}</button>
-            <button type="button" class="btn-select-toggle" onclick="selectAllCategoryModifiers(${index}, false)">${escapeHtml(t("btnUnselectAll"))}</button>
-            <button type="button" class="btn-add-mod-cta" onclick="handleCreateCustomFromSidebar()">
+            <button type="button" class="btn-select-toggle" onclick="toggleCategoryModifierSelectAll(${index})">
+              ${appliedCount === storeModifiers.length ? escapeHtml(t("btnUnselectAll")) : escapeHtml(t("btnSelectAll"))}
+            </button>
+            <button type="button" class="btn-add-mod-cta" onclick="handleCreateCustomFromSidebar()" title="${escapeHtml(t("btnAddOptionGroupTop"))}">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
               <span>${escapeHtml(t("btnAddOptionGroupTop"))}</span>
+            </button>
+            <button type="button" class="btn-select-toggle" onclick="toggleCategoryModifiersCollapse(${index})" title="${isCollapsed ? escapeHtml(t("toggleModifiersExpand")) : escapeHtml(t("toggleModifiersCollapse"))}" style="display:inline-flex;align-items:center;gap:4px;">
+              <span>${isCollapsed ? escapeHtml(t("toggleModifiersExpand")) : escapeHtml(t("toggleModifiersCollapse"))}</span>
+              <svg class="collapse-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="transform:${isCollapsed ? 'rotate(-90deg)' : 'rotate(0)'};transition:transform 0.2s ease;"><polyline points="6 9 12 15 18 9"></polyline></svg>
             </button>
           </div>
         </div>
@@ -1142,11 +1367,21 @@ function renderMenuCategoryEditor(index) {
     catalogCard.appendChild(modCard);
   }
 
+  const tableHeader = document.createElement("div");
+  tableHeader.className = "menu-items-table-header";
+  tableHeader.innerHTML = `
+    <div class="th-col-drag"></div>
+    <div class="th-col-photo">${escapeHtml(t("colItemPhoto") || (currentLang === 'vi' ? 'Hình ảnh' : '圖片'))}</div>
+    <div class="th-col-name">${escapeHtml(t("colItemName"))}</div>
+    <div class="th-col-price">${escapeHtml(t("colPrice"))}</div>
+    <div class="th-col-mods">${escapeHtml(t("colModifiers"))}</div>
+    <div class="th-col-stock">${escapeHtml(t("colStock"))}</div>
+    <div class="th-col-actions">${escapeHtml(t("colActions"))}</div>
+  `;
+  catalogCard.appendChild(tableHeader);
+
   const itemsContainer = document.createElement("div");
-  itemsContainer.className = "cust-options-list";
-  itemsContainer.style.display = "flex";
-  itemsContainer.style.flexDirection = "column";
-  itemsContainer.style.gap = "10px";
+  itemsContainer.className = "menu-catalog-items-container";
 
   itemsContainer.addEventListener("dragover", (e) => {
     e.preventDefault();
@@ -1160,10 +1395,10 @@ function renderMenuCategoryEditor(index) {
     }
   });
 
-  const cameraSvg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`;
+  const cameraSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`;
   const gripSvg = (typeof POS_SVG !== "undefined" && POS_SVG.grip) || `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>`;
-  const trashSvg = (typeof POS_SVG !== "undefined" && POS_SVG.trash) || `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>`;
-  const settingsSvg = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`;
+  const settingsSvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`;
+  const moreDotsSvg = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/><circle cx="5" cy="12" r="1.5"/></svg>`;
 
   cat.items.forEach((item, iIdx) => {
     const row = document.createElement("div");
@@ -1204,7 +1439,7 @@ function renderMenuCategoryEditor(index) {
       ? `<img src="${imgUrl}" alt="${escapeHtml(item.name)}" class="menu-item-thumb-img">`
       : `<div class="menu-item-thumb-placeholder">${cameraSvg}</div>`;
 
-    const thumbTooltip = escapeHtml(t("tooltipItemPhoto") || "點擊查看或更換餐點圖片");
+    const thumbTooltip = escapeHtml(t("tooltipDropToUpload") || (currentLang === 'vi' ? 'Thả ảnh vào đây hoặc bấm để tải lên' : '放開以立即上傳餐點圖片'));
 
     let badgesHtml = '';
     if (hasBundle) {
@@ -1213,25 +1448,44 @@ function renderMenuCategoryEditor(index) {
     if (item.badgeText && String(item.badgeText).trim() !== '') {
       badgesHtml += `<span class="menu-item-quick-badge">${escapeHtml(String(item.badgeText).trim())}</span>`;
     }
+
     const itemModCount = Array.isArray(item.modifierGroups) ? item.modifierGroups.length : 0;
     if (itemModCount > 0) {
-      badgesHtml += `<span class="menu-item-mod-indicator">${itemModCount} ${escapeHtml(t('itemModifiersCount'))}</span>`;
+      badgesHtml += `<span class="item-mod-pill custom-mods" title="${itemModCount} ${escapeHtml(t('customItemModifiers'))}">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        <span>${itemModCount} ${escapeHtml(t('customItemModifiers'))}</span>
+      </span>`;
+    } else if (cat.type === 'catalog' && appliedCount > 0) {
+      badgesHtml += `<span class="item-mod-pill inherited-mods" title="${appliedCount} ${escapeHtml(t('inheritedCatModifiers'))}">
+        <span>${appliedCount} ${escapeHtml(t('inheritedCatModifiers'))}</span>
+      </span>`;
+    } else {
+      badgesHtml += `<span class="item-mod-pill empty-mods">
+        <span>${escapeHtml(t('noModifiersApplied'))}</span>
+      </span>`;
     }
 
     row.innerHTML = `
-      <div class="menu-item-drag-handle" title="Kéo để đổi thứ tự">${gripSvg}</div>
-      <div class="menu-item-thumb-box" data-item-thumb-idx="${iIdx}" onclick="openItemDetailModal(${index}, ${iIdx})" title="${thumbTooltip}">
+      <div class="menu-item-drag-handle" title="${currentLang === 'vi' ? 'Kéo để đổi thứ tự' : '拖曳以排序'}">${gripSvg}</div>
+      <div class="menu-item-thumb-box ${imgUrl ? 'has-image' : ''}" data-item-thumb-idx="${iIdx}"
+        onclick="handleItemThumbClick(${index}, ${iIdx}, event)"
+        ondragover="handleItemThumbDragOver(event)"
+        ondragleave="handleItemThumbDragLeave(event)"
+        ondrop="handleItemThumbDrop(event, ${index}, ${iIdx})"
+        title="${thumbTooltip}">
         ${thumbHtml}
       </div>
-      <div class="menu-item-info-col">
+      <div class="menu-item-name-col">
         <input type="text" class="menu-item-name-input" value="${escapeHtml(item.name)}" data-name-cidx="${index}" data-name-iidx="${iIdx}" oninput="markMenuDirty()"
           placeholder="${t("newItemPlaceholder")}">
-        <div class="menu-item-badges-bar">${badgesHtml}</div>
       </div>
       <div class="menu-item-price-wrapper">
         <span class="price-currency">$</span>
         <input type="number" class="menu-item-price-input" value="${item.price !== null && item.price !== undefined ? item.price : ''}" data-cidx="${index}" data-iidx="${iIdx}" oninput="markMenuDirty()"
           placeholder="${t("priceHiddenPlaceholder")}">
+      </div>
+      <div class="menu-item-meta-col">
+        ${badgesHtml}
       </div>
       <button type="button" class="menu-item-stock-toggle ${item.isOos ? 'is-oos' : 'is-instock'}"
         onclick="openStockModal(${index}, ${iIdx})" title="${oosText}">
@@ -1242,9 +1496,11 @@ function renderMenuCategoryEditor(index) {
         <button type="button" class="menu-item-action-btn btn-settings" onclick="openItemDetailModal(${index}, ${iIdx})" title="${t('btnItemSettings')}">
           ${settingsSvg}<span>${t("btnItemSettings")}</span>
         </button>
-        <button type="button" class="menu-item-action-btn btn-delete-safe" onclick="removeMenuItemAt(${index}, ${iIdx})" title="${t('btnItemDelete')}">
-          ${trashSvg}
-        </button>
+        <div class="menu-item-more-wrapper">
+          <button type="button" class="menu-item-action-btn btn-more" onclick="toggleItemActionMenu(event, ${index}, ${iIdx})" title="${t('btnMoreActions')}">
+            ${moreDotsSvg}
+          </button>
+        </div>
       </div>
     `;
     itemsContainer.appendChild(row);
@@ -1255,7 +1511,7 @@ function renderMenuCategoryEditor(index) {
     const addItemBtn = document.createElement("button");
     addItemBtn.type = "button";
     addItemBtn.className = "cat-mgr-add-btn";
-    addItemBtn.style.marginTop = "10px";
+    addItemBtn.style.marginTop = "12px";
     addItemBtn.onclick = () => openCreateItemModal(index);
     addItemBtn.innerHTML = `<span>+ ${t("btnItemCreate") || (currentLang === 'vi' ? 'Thêm món mới' : '新增餐點')}</span>`;
     catalogCard.appendChild(addItemBtn);
