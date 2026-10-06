@@ -4450,9 +4450,9 @@ html.is-web-platform .store-activation-modal:not(.force-show) {
   margin: 14px 12px 14px 12px;
   padding: 10px 14px;
   background: #ffffff;
-  border: 1.5px solid #fecdd3;
+  border: 1.5px dashed var(--primary, #00b900);
   border-radius: 12px;
-  color: #e11d48;
+  color: var(--primary-dark, #009900);
   font-size: 13.5px;
   font-weight: 800;
   min-height: 46px;
@@ -4462,12 +4462,12 @@ html.is-web-platform .store-activation-modal:not(.force-show) {
 }
 
 .menu-add-option-group-btn:hover {
-  background: #fff1f2;
-  border-color: #fb7185;
+  background: #f0fdf4;
+  border-color: var(--primary, #00b900);
 }
 
 .menu-add-option-group-btn svg {
-  stroke: #e11d48;
+  stroke: var(--primary, #00b900);
 }
 
 .menu-option-card {
@@ -4493,10 +4493,10 @@ html.is-web-platform .store-activation-modal:not(.force-show) {
 }
 
 .menu-option-card.active {
-  border: 1.5px solid #fecdd3;
-  border-left: 4.5px solid var(--brand-red, #e11d48);
-  background: #fff8f8;
-  box-shadow: 0 2px 8px rgba(225, 29, 72, 0.05);
+  border: 1.5px solid #bbf7d0;
+  border-left: 4.5px solid var(--primary, #00b900);
+  background: #f0fdf4;
+  box-shadow: 0 2px 8px rgba(0, 185, 0, 0.07);
 }
 
 .menu-option-card-content {
@@ -4530,7 +4530,7 @@ html.is-web-platform .store-activation-modal:not(.force-show) {
 }
 
 .menu-option-card.active .menu-option-card-subtitle {
-  color: #64748b;
+  color: #15803d;
   font-weight: 600;
 }
 
@@ -4545,27 +4545,27 @@ html.is-web-platform .store-activation-modal:not(.force-show) {
 }
 
 .menu-option-card.active .menu-option-card-chevron {
-  color: var(--brand-red, #e11d48);
+  color: var(--primary, #00b900);
   transform: translateX(2px);
 }
 
 @keyframes custGroupPulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.35);
-    border-color: #e11d48;
+    box-shadow: 0 0 0 0 rgba(0, 185, 0, 0.35);
+    border-color: var(--primary, #00b900);
   }
   50% {
-    box-shadow: 0 0 0 6px rgba(225, 29, 72, 0.18);
-    border-color: #e11d48;
+    box-shadow: 0 0 0 6px rgba(0, 185, 0, 0.18);
+    border-color: var(--primary, #00b900);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(225, 29, 72, 0);
+    box-shadow: 0 0 0 0 rgba(0, 185, 0, 0);
   }
 }
 
 .cust-group-focus-pulse {
   animation: custGroupPulse 1.2s ease-out;
-  border-color: #e11d48 !important;
+  border-color: var(--primary, #00b900) !important;
 }
 
 .menu-section-empty-hint {
@@ -6307,7 +6307,6 @@ select.form-input {
   background: #f0fdf4;
 }
 
-=======
 /* ==========================================================================
    3-Level Print & Kitchen Prep Checklist Styles (Tablet / iPad First >= 48px)
    ========================================================================== */
