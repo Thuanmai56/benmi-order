@@ -9381,11 +9381,11 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
 }
 .th-col-drag { width: 28px; flex-shrink: 0; }
 .th-col-photo { width: 44px; flex-shrink: 0; }
-.th-col-name { width: 220px; flex-shrink: 0; }
-.th-col-price { width: 85px; flex-shrink: 0; }
-.th-col-mods { flex: 1; min-width: 120px; }
-.th-col-stock { width: 100px; flex-shrink: 0; text-align: center; }
-.th-col-actions { width: 115px; flex-shrink: 0; text-align: right; }
+.th-col-name { flex: 1.4; min-width: 200px; }
+.th-col-price { width: 90px; min-width: 90px; flex-shrink: 0; text-align: right; }
+.th-col-mods { width: 230px; min-width: 200px; max-width: 280px; flex: 1; flex-shrink: 0; }
+.th-col-stock { width: 116px; min-width: 116px; flex-shrink: 0; text-align: center; }
+.th-col-actions { width: 142px; min-width: 142px; flex-shrink: 0; text-align: right; }
 
 .menu-catalog-items-container {
   display: flex;
@@ -9516,8 +9516,8 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
 }
 
 .menu-item-name-col {
-  width: 220px;
-  flex-shrink: 0;
+  flex: 1.4;
+  min-width: 200px;
   display: flex;
   align-items: center;
 }
@@ -9541,7 +9541,8 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
 }
 
 .menu-item-price-wrapper {
-  width: 85px;
+  width: 90px;
+  min-width: 90px;
   height: 36px;
   flex-shrink: 0;
   display: inline-flex;
@@ -9566,7 +9567,7 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
   user-select: none;
 }
 .menu-item-price-wrapper .menu-item-price-input {
-  width: 52px !important;
+  width: 56px !important;
   border: none !important;
   background: transparent !important;
   font-size: 14px !important;
@@ -9579,8 +9580,11 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
 }
 
 .menu-item-meta-col {
+  width: 230px;
+  min-width: 200px;
+  max-width: 280px;
   flex: 1;
-  min-width: 120px;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -9612,8 +9616,17 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
 }
 .item-mod-pill.empty-mods {
   color: #94a3b8;
-  font-style: italic;
-  font-size: 11.5px;
+  font-size: 11px;
+  font-weight: 500;
+  font-style: normal;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  padding: 2px 7px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
 }
 .menu-combo-badge {
   font-size: 11px;
@@ -9637,24 +9650,30 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
 }
 
 .menu-item-stock-toggle {
-  width: 100px;
+  width: 116px;
+  min-width: 116px;
   height: 36px;
   min-height: 36px;
-  padding: 0 8px;
+  padding: 0 10px;
   border-radius: 8px;
   font-weight: 700;
-  font-size: 12.5px;
+  font-size: 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: 6px;
   cursor: pointer;
   transition: all 0.15s ease;
   user-select: none;
   border: 1.5px solid transparent;
   flex-shrink: 0;
   box-sizing: border-box;
-  white-space: nowrap;
+  white-space: nowrap !important;
+}
+.menu-item-stock-toggle span {
+  white-space: nowrap !important;
+  line-height: 1 !important;
+  display: inline !important;
 }
 .menu-item-stock-toggle.is-instock {
   background: #ecfdf5;
@@ -9683,7 +9702,8 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
 }
 
 .menu-item-actions-cluster {
-  width: 115px;
+  width: 142px;
+  min-width: 142px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -9699,14 +9719,19 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
   background: #f8fafc;
   border: 1.5px solid #e2e8f0;
   color: #334155;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 700;
   display: inline-flex;
   align-items: center;
   gap: 5px;
   cursor: pointer;
   transition: all 0.15s ease;
-  white-space: nowrap;
+  white-space: nowrap !important;
+  flex-shrink: 0;
+}
+.menu-item-action-btn.btn-settings span {
+  white-space: nowrap !important;
+  line-height: 1 !important;
 }
 .menu-item-action-btn.btn-settings:hover {
   background: #f1f5f9;
@@ -9715,6 +9740,7 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
 }
 .menu-item-more-wrapper {
   position: relative;
+  flex-shrink: 0;
 }
 .menu-item-action-btn.btn-more {
   width: 36px;
@@ -9731,6 +9757,7 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
   justify-content: center;
   cursor: pointer;
   transition: all 0.15s ease;
+  flex-shrink: 0;
 }
 .menu-item-action-btn.btn-more:hover {
   background: #f1f5f9;
