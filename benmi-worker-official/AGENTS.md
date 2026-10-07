@@ -1,5 +1,7 @@
 # Cloudflare Worker Backend (`benmi-worker-official`) - AI Agent Instructions
 
+This project uses `cf` with `cloudflare.config.ts` as the source of truth. Use Node.js 24 LTS, run `npm ci`, and sign in with `npx cf auth login` (Wrangler credentials are separate). `dev`, `test`/`staging`, and `production` are selected with `--mode`. Run the npm commands below from this directory. Wrangler remains an internal bundler and a live-log tool only; do not edit the legacy `wrangler.jsonc` to configure deployments.
+
 This module contains the serverless backend for the **Benmi Multi-Tenant Order Platform**, running on Cloudflare Workers with D1 Database, Workers KV, and LINE Messaging API integration.
 
 ---
@@ -34,16 +36,16 @@ All endpoints are multi-tenant aware and extract `tenant_id` via query param `?t
 #### Common Migration Commands:
 ```bash
 # List unapplied migrations
-npx wrangler d1 migrations list blab-db-test --remote --env test
-npx wrangler d1 migrations list blab-db-production --remote
+npm run db:migrations:list:staging
+npm run db:migrations:list:production
 
 # Apply migrations
-npx wrangler d1 migrations apply blab-db-test --remote --env test
-npx wrangler d1 migrations apply blab-db-production --remote
+npm run db:migrations:apply:staging
+npm run db:migrations:apply:production
 
 # Execute single SQL file or command
-npx wrangler d1 execute blab-db-test --remote --env test --file=./migrations/00XX_name.sql
-npx wrangler d1 execute blab-db-production --remote --command="SELECT * FROM tenants;"
+node -e "require('./scripts/cloudflare-d1.cjs').executeD1File('blab-db-test', './migrations/00XX_name.sql', true, 'test')"
+npx cf d1 query 48479f91-eec7-4da2-b044-edaaf622f195 --sql "SELECT * FROM tenants;"
 ```
 
 ### C. KV Cache Invalidation
@@ -59,11 +61,12 @@ To bypass cache during debugging/testing, pass `?nocache=1` or `?_t=<timestamp>`
 
 | Action | Command |
 | :--- | :--- |
-| **Type Check** | `npx tsc --noEmit` |
-| **Local Dev** | `npx wrangler dev` |
-| **Deploy Staging** | `npx wrangler deploy --env test` |
-| **Deploy Production** | `npx wrangler deploy` |
-| **Generate Types** | `npx wrangler types` |
+| **Type Check** | `npm run check` |
+| **Build Dev / Staging / Production** | `npm run build:dev` / `npm run build:staging` / `npm run build:production` |
+| **Local Dev** | `npm run dev` |
+| **Deploy Staging** | `npm run deploy:staging` |
+| **Deploy Production** | `npm run deploy` |
+| **Generate Types** | `npm run types` |
 
 ---
 

@@ -82,7 +82,7 @@ Hệ thống sử dụng cơ chế **Tự động nhận diện môi trường (
 ```mermaid
 flowchart TD
     Start([Bắt đầu phát triển]) --> CodeDev[1. Lập trình & Kiểm thử trên nhánh dev]
-    CodeDev --> DeployDev["Deploy Worker Dev:<br>cd benmi-worker-official && npx wrangler deploy --env dev"]
+    CodeDev --> DeployDev["Deploy Worker Dev:<br>cd benmi-worker-official && npm run deploy:dev"]
     DeployDev --> PushDev["Push lên GitHub branch dev:<br>Cloudflare Pages tự deploy dev.benmi-order.pages.dev"]
     PushDev --> VerifyDev{Kiểm thử Dev OK?}
     
@@ -90,11 +90,11 @@ flowchart TD
     FixDev --> CodeDev
     
     VerifyDev -- OK, chuyển sang QA/Demo --> MergeStaging["2. Merge dev vào staging & Push:<br>git checkout staging && git merge dev && git push origin staging"]
-    MergeStaging --> DeployWorkerStaging["Deploy Worker Staging:<br>cd benmi-worker-official && npx wrangler deploy --env test"]
+    MergeStaging --> DeployWorkerStaging["Deploy Worker Staging:<br>cd benmi-worker-official && npm run deploy:staging"]
     DeployWorkerStaging --> VerifyStaging{Demo / QA Staging OK?}
     
-    VerifyStaging -- OK, sẵn sàng Release --> ApplyD1Prod["3. Apply D1 Migrations Production:<br>npx wrangler d1 migrations apply blab-db-production --remote"]
-    ApplyD1Prod --> DeployWorkerProd["4. Deploy Worker Production:<br>cd benmi-worker-official && npx wrangler deploy"]
+    VerifyStaging -- OK, sẵn sàng Release --> ApplyD1Prod["3. Apply D1 Migrations Production:<br>npm run db:migrations:apply:production"]
+    ApplyD1Prod --> DeployWorkerProd["4. Deploy Worker Production:<br>cd benmi-worker-official && npm run deploy"]
     DeployWorkerProd --> MergeMain["5. Merge staging vào main & Push:<br>git checkout main && git merge staging && git push origin main"]
     MergeMain --> PagesProd["Cloudflare Pages tự động deploy Production benmi-order.pages.dev"]
     PagesProd --> End([Hoàn thành Deploy Production])
@@ -104,14 +104,39 @@ flowchart TD
 
 ## 4. Hướng Dẫn Lệnh Deploy Chi Tiết
 
+Backend sử dụng Cloudflare `cf` CLI với `cloudflare.config.ts`. Cài Node.js **24 LTS**, sau đó chạy trong `benmi-worker-official/`:
+
+```bash
+npm ci
+npx cf auth login
+npm run check
+npm run build:dev
+npm run dev
+```
+
+`cf` có credentials riêng với Wrangler. Trong CI, đặt `CLOUDFLARE_API_TOKEN` và `CLOUDFLARE_ACCOUNT_ID`. Các npm script đã chọn đúng mode: `dev`, `test` cho staging, và `production`. `--mode staging` cũng được hỗ trợ; mode không hợp lệ sẽ báo lỗi.
+
+| Công việc | Dev | Staging | Production |
+| :--- | :--- | :--- | :--- |
+| Build | `npm run build:dev` | `npm run build:staging` | `npm run build:production` |
+| Deploy | `npm run deploy:dev` | `npm run deploy:staging` | `npm run deploy` |
+| Migration chưa apply | `npm run db:migrations:list:dev` | `npm run db:migrations:list:staging` | `npm run db:migrations:list:production` |
+| Apply migration D1 | `npm run db:migrations:apply:dev` | `npm run db:migrations:apply:staging` | `npm run db:migrations:apply:production` |
+
+D1 CLI dùng database ID và mặc định truy cập remote. `scripts/cloudflare-d1.cjs` đọc ID/account từ cấu hình `cf`, nhận SQL hoặc file qua JSON request, và được dùng bởi các script seed/copy dữ liệu. Giữ nguyên thư mục migrations và bảng `d1_migrations`.
+
+`wrangler` vẫn là dependency của bundler do `cf` gọi nội bộ. File `wrangler.jsonc` được giữ để đối chiếu cấu hình trước migration và dùng `wrangler tail` khi cần log trực tiếp; nó không điều khiển `cf dev/build/deploy`. Không chỉnh song song hai cấu hình. Build output và types được sinh trong `.cloudflare/` và không commit vào Git.
+
+Tài liệu: [cf cho người dùng Wrangler](https://developers.cloudflare.com/cf/wrangler/), [migration](https://developers.cloudflare.com/cf/wrangler/migrate/).
+
 ### A. Deploy lên STAGING:
 ```bash
 # 1. Apply migration D1 Test / Staging (nếu có migration mới):
 cd benmi-worker-official
-npx wrangler d1 migrations apply blab-db-test --remote --env test
+npm run db:migrations:apply:staging
 
 # 2. Deploy Worker Staging:
-npx wrangler deploy --env test
+npm run deploy:staging
 
 # 3. Deploy FrontEnd Staging:
 git add .
@@ -123,10 +148,10 @@ git push origin staging
 ```bash
 # 1. Apply migration D1 Production:
 cd benmi-worker-official
-npx wrangler d1 migrations apply blab-db-production --remote
+npm run db:migrations:apply:production
 
 # 2. Deploy Worker Production:
-npx wrangler deploy
+npm run deploy
 
 # 3. Merge & Deploy FrontEnd Production:
 git checkout main

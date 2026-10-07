@@ -1,4 +1,5 @@
 .wrangler/
+.cloudflare/
 
 # Local environment/secrets
 .env

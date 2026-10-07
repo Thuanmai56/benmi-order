@@ -76,6 +76,8 @@ graph TD
 | **Staging** | `staging` | `https://platform-worker-staging.thuanmnc.workers.dev` | `blab-db-test` | `2009555608-DMioljsI` |
 | **Production** | `main` | `https://benmi-worker-official.thuanmnc.workers.dev` | `blab-db-production` | `2009560906-c5taZfiY` |
 
+Backend đã migrate sang Cloudflare `cf` CLI. Cấu hình chính: `benmi-worker-official/cloudflare.config.ts`; `wrangler.config.ts` chỉ cấu hình bundler nội bộ. Dùng Node.js 24 LTS, `npm ci` và `npx cf auth login` trong thư mục backend. Các lệnh backend dưới đây chạy từ `benmi-worker-official/`. Chọn môi trường với `--mode dev`, `--mode test` (staging), hoặc `--mode production`. Không dùng `wrangler deploy` hoặc sửa `wrangler.jsonc` để thay đổi cấu hình triển khai.
+
 ### Quy trình Release (Dev -> Staging -> Production):
 1. **Kiểm thử tĩnh & Phạm vi biến Frontend (BẮT BUỘC)**:
    - Trước khi deploy frontend, **BẮT BUỘC** chạy: `npm run check` (hoặc `node scripts/check-frontend.js`).
@@ -83,13 +85,13 @@ graph TD
    - **Kiểm tra Cache-Buster**: Đảm bảo các file HTML liên quan (`orders.html`, `index.html`, `marketplace.html`) đã được bump version `?v=...` nếu có file `.css` hoặc `.js` tương ứng bị sửa đổi.
 2. **Phát triển trên Dev**:
    - Lập trình và kiểm thử trên nhánh `dev`.
-   - Apply migration: `npx wrangler d1 migrations apply blab-db-dev --remote --env dev`.
-   - Deploy backend dev: `npx wrangler deploy --env dev`.
+   - Apply migration: `npm run db:migrations:apply:dev`.
+   - Deploy backend dev: `npm run deploy:dev`.
 3. **Kiểm thử QA & Demo trên Staging**:
    - Hợp nhất `dev` vào `staging`: `git checkout staging && git merge dev && git push origin staging`.
-   - Apply migration: `npx wrangler d1 migrations apply blab-db-test --remote --env test`.
-   - Deploy backend staging: `npx wrangler deploy --env test`.
+   - Apply migration: `npm run db:migrations:apply:staging`.
+   - Deploy backend staging: `npm run deploy:staging`.
 4. **Phát hành chính thức (Production)**:
    - Hợp nhất `staging` vào `main`: `git checkout main && git merge staging && git push origin main`.
-   - Apply migration: `npx wrangler d1 migrations apply blab-db-production --remote`.
-   - Deploy backend production: `npx wrangler deploy`.
+   - Apply migration: `npm run db:migrations:apply:production`.
+   - Deploy backend production: `npm run deploy`.
