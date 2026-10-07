@@ -9540,7 +9540,7 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
 .menu-item-row-card .menu-item-name-input {
   width: 100% !important;
   height: 36px !important;
-  font-size: 13.5px !important;
+  font-size: 14.5px !important;
   font-weight: 700 !important;
   color: #0f172a !important;
   border: 1.5px solid #e2e8f0 !important;
@@ -9577,7 +9577,7 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
   box-shadow: 0 0 0 3px rgba(0, 185, 0, 0.12);
 }
 .menu-item-price-wrapper .price-currency {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   color: #64748b;
   user-select: none;
@@ -9586,7 +9586,7 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
   width: 56px !important;
   border: none !important;
   background: transparent !important;
-  font-size: 14px !important;
+  font-size: 15px !important;
   font-weight: 800 !important;
   color: #0f172a !important;
   text-align: right !important;
@@ -9606,7 +9606,7 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
   padding: 0 4px;
 }
 .item-mod-pill {
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 6px;
@@ -9629,7 +9629,7 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
 }
 .item-mod-pill.empty-mods {
   color: #94a3b8;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   font-style: normal;
   background: #f8fafc;
@@ -9642,7 +9642,7 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
   white-space: nowrap;
 }
 .menu-combo-badge {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
   padding: 2px 7px;
   border-radius: 4px;
@@ -9670,7 +9670,7 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
   padding: 0 10px;
   border-radius: 8px;
   font-weight: 700;
-  font-size: 12px;
+  font-size: 12.5px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -9775,7 +9775,7 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
 }
 .menu-item-dropdown-menu .dropdown-item {
   padding: 8px 12px;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 600;
   border-radius: 6px;
   display: flex;
@@ -10391,7 +10391,7 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
   .menu-item-row-card .menu-item-name-input {
     width: 100% !important;
     height: 36px !important;
-    font-size: 14px !important;
+    font-size: 14.5px !important;
     font-weight: 700 !important;
     color: #0f172a !important;
     padding: 0 10px !important;
@@ -10441,7 +10441,8 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
   }
   .menu-item-price-wrapper .menu-item-price-input {
     width: 56px !important;
-    font-size: 13.5px !important;
+    font-size: 14.5px !important;
+    font-weight: 800 !important;
   }
 
   /* Nút trạng thái Còn món / Hết món (Hàng dưới, bên phải) */
@@ -10965,7 +10966,7 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
   background: #fef2f2;
   color: #dc2626;
   border: 1px solid #fca5a5;
-  font-size: 11.5px;
+  font-size: 12px;
   padding: 2px 7px;
   border-radius: 6px;
   font-weight: 700;
@@ -10976,7 +10977,7 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 11.5px;
+  font-size: 12px;
   padding: 3px 9px;
   border-radius: 6px;
   font-weight: 700;
@@ -11438,7 +11439,7 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
     display: block !important;
     position: fixed !important;
     inset: 0 !important;
-    background: rgba(15, 23, 42, 0.65) !important;
+    background: rgba(15, 23, 42, 0.45) !important;
     backdrop-filter: blur(4px) !important;
     -webkit-backdrop-filter: blur(4px) !important;
     z-index: 9998 !important;
@@ -11452,7 +11453,7 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
     pointer-events: auto !important;
   }
 
-  /* Fixed Off-Canvas Sidebar */
+  /* Fixed Off-Canvas Sidebar (Pure Light Theme matching Original POS) */
   .app-sidebar {
     position: fixed !important;
     top: 0 !important;
@@ -11464,8 +11465,8 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
     max-width: 300px !important;
     min-width: 0 !important;
     z-index: 9999 !important;
-    background: #0f172a !important;
-    border-right: 1px solid #1e293b !important;
+    background: #ffffff !important;
+    border-right: 1px solid #f1f5f9 !important;
     transform: translateX(-100%) !important;
     transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s ease !important;
     box-shadow: none !important;
@@ -11479,7 +11480,7 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
 
   .app-sidebar.expanded {
     transform: translateX(0) !important;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7) !important;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
   }
 
   /* Drawer Header */
@@ -11490,8 +11491,8 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
     align-items: center !important;
     justify-content: space-between !important;
     padding: 0 16px !important;
-    border-bottom: 1px solid #1e293b !important;
-    background: #0b1120 !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+    background: #ffffff !important;
     width: 100% !important;
     box-sizing: border-box !important;
   }
@@ -11516,7 +11517,7 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3) !important;
+    box-shadow: 0 4px 10px rgba(16, 185, 129, 0.25) !important;
     flex-shrink: 0 !important;
     overflow: hidden !important;
   }
@@ -11529,9 +11530,9 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
   }
 
   .sidebar-mobile-title {
-    font-size: 14px !important;
+    font-size: 15px !important;
     font-weight: 800 !important;
-    color: #f8fafc !important;
+    color: #0f172a !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
@@ -11540,8 +11541,8 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
 
   .sidebar-mobile-sub {
     font-size: 11px !important;
-    font-weight: 600 !important;
-    color: #34d399 !important;
+    font-weight: 700 !important;
+    color: #10b981 !important;
     line-height: 1.2 !important;
     margin-top: 2px !important;
     white-space: nowrap !important;
@@ -11554,12 +11555,12 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
     height: 34px !important;
     min-width: 34px !important;
     border-radius: 50% !important;
-    background: #1e293b !important;
-    color: #94a3b8 !important;
+    background: #f1f5f9 !important;
+    color: #475569 !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    border: 1px solid #334155 !important;
+    border: 1px solid #e2e8f0 !important;
     cursor: pointer !important;
     padding: 0 !important;
     margin: 0 !important;
@@ -11568,17 +11569,17 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
   }
 
   .sidebar-toggle-btn:hover {
-    color: #ffffff !important;
-    background: #334155 !important;
+    color: #0f172a !important;
+    background: #e2e8f0 !important;
   }
 
   .sidebar-toggle-btn:active {
     transform: scale(0.92) !important;
-    background: #334155 !important;
-    color: #ffffff !important;
+    background: #cbd5e1 !important;
+    color: #0f172a !important;
   }
 
-  /* Drawer Navigation Items */
+  /* Drawer Navigation Items (Light Theme matching Original POS) */
   .sidebar-nav {
     padding: 12px 10px !important;
     gap: 6px !important;
@@ -11602,7 +11603,7 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
     gap: 12px !important;
     border-radius: 12px !important;
     background: transparent !important;
-    color: #94a3b8 !important;
+    color: #475569 !important;
     cursor: pointer !important;
     text-align: left !important;
     box-sizing: border-box !important;
@@ -11612,8 +11613,8 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
 
   .sidebar-nav-item:hover,
   button.sidebar-nav-item:hover {
-    background: #1e293b !important;
-    color: #f8fafc !important;
+    background: #f1f5f9 !important;
+    color: #0f172a !important;
   }
 
   .sidebar-nav-item:active,
@@ -11625,15 +11626,15 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
   button.sidebar-nav-item.active,
   .app-sidebar.expanded .sidebar-nav-item.active,
   .app-sidebar.expanded button.sidebar-nav-item.active {
-    background: linear-gradient(135deg, #059669 0%, #10b981 100%) !important;
+    background: #111827 !important;
     color: #ffffff !important;
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
   }
 
   .sidebar-nav-item .sidebar-label,
   .app-sidebar.expanded .sidebar-nav-item .sidebar-label {
     display: inline-block !important;
-    font-size: 13.5px !important;
+    font-size: var(--pos-text-meta, 14px) !important;
     font-weight: 700 !important;
     color: inherit !important;
     white-space: nowrap !important;
@@ -11684,10 +11685,10 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
     align-items: center !important;
     justify-content: space-between !important;
     padding: 12px 16px !important;
-    border-top: 1px solid #1e293b !important;
-    background: #0b1120 !important;
+    border-top: 1px solid #f1f5f9 !important;
+    background: #ffffff !important;
     font-size: 11px !important;
-    color: #64748b !important;
+    color: #94a3b8 !important;
     flex-shrink: 0 !important;
     width: 100% !important;
     box-sizing: border-box !important;
@@ -11702,7 +11703,7 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    color: #34d399;
+    color: #10b981;
     font-weight: 700;
     font-size: 10.5px;
   }
@@ -11711,9 +11712,9 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: #34d399;
+    background: #10b981;
     display: inline-block;
-    box-shadow: 0 0 6px rgba(52, 211, 153, 0.6);
+    box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
   }
 
   /* Free 100% Mobile Screen Width for Main Content */
