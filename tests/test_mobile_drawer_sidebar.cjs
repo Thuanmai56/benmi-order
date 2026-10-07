@@ -25,7 +25,7 @@ test('Mobile Drawer: orders.html markup contains required elements', () => {
   assert.ok(html.includes('class="mobile-nav-toggle-btn"'), 'orders.html must have class mobile-nav-toggle-btn');
 
   // Cache buster check
-  assert.ok(html.includes('orders.css?v=20261007_mobile_drawer_light_font_v2'), 'orders.css must have mobile drawer version cache buster');
+  assert.ok(html.includes('orders.css?v=20261007_mobile_sidebar_font_v3'), 'orders.css must have mobile drawer version cache buster');
   assert.ok(html.includes('orders-core.js?v=20261007_mobile_drawer_sidebar_v1'), 'orders-core.js must have mobile drawer version cache buster');
   assert.ok(html.includes('orders-i18n.js?v=20261007_mobile_drawer_sidebar_v1'), 'orders-i18n.js must have mobile drawer version cache buster');
   assert.ok(html.includes('orders-settings.js?v=20261007_mobile_drawer_sidebar_v1'), 'orders-settings.js must have mobile drawer version cache buster');
@@ -46,10 +46,11 @@ test('Mobile Drawer: orders.css has desktop hidden rules and mobile off-canvas d
   assert.ok(css.includes('transform: translateX(0) !important;'), 'Expanded sidebar must slide in translateX(0) on mobile');
   assert.ok(css.includes('.sidebar-backdrop.active'), 'Must define active backdrop rule');
   assert.ok(css.includes('.mobile-nav-toggle-btn {\n    display: inline-flex !important;'), 'Must display mobile hamburger button on mobile');
+  assert.ok(css.includes('border-radius: 0 !important;'), 'Mobile hamburger button must have no card border-radius');
 
   // Verify pure light theme for mobile sidebar drawer
   assert.ok(css.includes('/* Fixed Off-Canvas Sidebar (Pure Light Theme matching Original POS) */'), 'Sidebar must use pure light theme');
-  assert.ok(css.includes('font-size: var(--pos-text-meta, 14px) !important;'), 'Sidebar label must use pos-text-meta 14px scale');
+  assert.ok(css.includes('font-size: 15.5px !important;'), 'Sidebar label must use 15.5px balanced font size');
 
   // Verify standardized font sizes in menu item cards
   assert.ok(css.includes('.menu-item-row-card .menu-item-name-input {\n  width: 100% !important;\n  height: 36px !important;\n  font-size: 14.5px !important;'), 'Menu item name must be 14.5px');

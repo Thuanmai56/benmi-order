@@ -11399,7 +11399,7 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
   .settings-split { display: flex; }
   .pos-display-body { padding: 14px; }
 
-  /* Mobile Navigation Drawer & Hamburger Trigger */
+  /* Mobile Navigation Drawer & Hamburger Trigger (Frameless, clean flat icon button) */
   .mobile-nav-toggle-btn {
     display: inline-flex !important;
     align-items: center;
@@ -11407,27 +11407,29 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
     width: 36px;
     height: 36px;
     min-width: 36px;
-    border-radius: 10px;
-    background: #f1f5f9;
-    border: 1px solid #e2e8f0;
-    color: #1e293b;
+    border-radius: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: #0f172a !important;
     cursor: pointer;
     padding: 0;
     margin: 0;
-    transition: all 0.15s ease;
+    transition: opacity 0.15s ease, transform 0.15s ease;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
     flex-shrink: 0;
   }
 
   .mobile-nav-toggle-btn:hover {
-    background: #e2e8f0;
-    color: #0f172a;
+    background: transparent !important;
+    opacity: 0.75;
   }
 
   .mobile-nav-toggle-btn:active {
     transform: scale(0.92);
-    background: #cbd5e1;
+    background: transparent !important;
+    opacity: 0.55;
   }
 
   .main-topbar-left {
@@ -11595,12 +11597,12 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
   .app-sidebar.expanded .sidebar-nav-item,
   .app-sidebar.expanded button.sidebar-nav-item {
     width: 100% !important;
-    height: 46px !important;
-    min-height: 46px !important;
-    padding: 0 12px !important;
+    height: 50px !important;
+    min-height: 50px !important;
+    padding: 0 14px !important;
     margin: 0 !important;
     justify-content: flex-start !important;
-    gap: 12px !important;
+    gap: 14px !important;
     border-radius: 12px !important;
     background: transparent !important;
     color: #475569 !important;
@@ -11634,7 +11636,7 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
   .sidebar-nav-item .sidebar-label,
   .app-sidebar.expanded .sidebar-nav-item .sidebar-label {
     display: inline-block !important;
-    font-size: var(--pos-text-meta, 14px) !important;
+    font-size: 15.5px !important;
     font-weight: 700 !important;
     color: inherit !important;
     white-space: nowrap !important;
@@ -11646,15 +11648,15 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
   }
 
   .sidebar-nav-item .nav-item-icon {
-    width: 20px !important;
-    height: 20px !important;
+    width: 22px !important;
+    height: 22px !important;
     color: inherit !important;
     flex-shrink: 0 !important;
   }
 
   .sidebar-nav-item .nav-item-icon svg {
-    width: 20px !important;
-    height: 20px !important;
+    width: 22px !important;
+    height: 22px !important;
     stroke: currentColor !important;
   }
 
@@ -11723,5 +11725,116 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
     max-width: 100vw !important;
     margin-left: 0 !important;
     flex: 1 1 100% !important;
+  }
+
+  /* Mobile Phone Content Typography & Proportion Balance (Keeps Tablet >= 768px Large Touch Sizes, Harmonizes Phone Screens) */
+  .main-topbar {
+    height: 48px !important;
+    min-height: 48px !important;
+    flex-wrap: nowrap !important;
+    padding: 0 12px !important;
+  }
+
+  .main-topbar-left,
+  .main-topbar-right {
+    flex-wrap: nowrap !important;
+    min-width: 0 !important;
+  }
+
+  .page-main-title {
+    font-size: 17px !important;
+    font-weight: 800 !important;
+    line-height: 1.25 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  #view-live.live-adaptive-stations .tile-order-key,
+  .tile-order-key {
+    font-size: 14.5px !important;
+    font-weight: 800 !important;
+    line-height: 1.3 !important;
+    padding: 2px 6px !important;
+  }
+
+  #view-live.live-adaptive-stations .tile-customer,
+  .tile-customer {
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    line-height: 1.3 !important;
+  }
+
+  #view-live.live-adaptive-stations .tile-price,
+  .tile-price {
+    font-size: 17px !important;
+    font-weight: 800 !important;
+    line-height: 1.2 !important;
+  }
+
+  #view-live.live-adaptive-stations .tile-item-preview,
+  .tile-item-preview {
+    font-size: 13.5px !important;
+    line-height: 1.35 !important;
+  }
+
+  #view-live.live-adaptive-stations .tile-meta-row,
+  #view-live.live-adaptive-stations .tile-count-row,
+  .tile-meta-row,
+  .tile-count-row {
+    font-size: 12.5px !important;
+  }
+
+  #view-live.live-adaptive-stations .tile-badge,
+  .tile-badge {
+    font-size: 11.5px !important;
+    font-weight: 700 !important;
+    padding: 2px 6px !important;
+  }
+
+  #view-live.live-adaptive-stations .tile-action-btn,
+  .tile-action-btn {
+    min-height: 42px !important;
+    height: 42px !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    padding: 8px 12px !important;
+    border-radius: 10px !important;
+  }
+
+  #view-live.live-adaptive-stations .tile-action-btn > span,
+  .tile-action-btn > span {
+    font-size: 14px !important;
+  }
+
+  .dining-filter-btn {
+    min-height: 38px !important;
+    font-size: 13px !important;
+    padding: 6px 12px !important;
+  }
+
+  .store-status-pill {
+    min-height: 34px !important;
+    height: 34px !important;
+    font-size: 12.5px !important;
+    padding: 4px 10px !important;
+  }
+
+  .live-mobile-tab {
+    font-size: 13.5px !important;
+    font-weight: 700 !important;
+    min-height: 42px !important;
+  }
+
+  .order-detail-title,
+  .modal-title {
+    font-size: 18px !important;
+    line-height: 1.3 !important;
+  }
+
+  .total-val,
+  .order-detail-total-row.grand-total-row .total-val {
+    font-size: 20px !important;
+    font-weight: 800 !important;
   }
 }
