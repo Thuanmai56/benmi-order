@@ -25,7 +25,7 @@ test('Mobile Drawer: orders.html markup contains required elements', () => {
   assert.ok(html.includes('class="mobile-nav-toggle-btn"'), 'orders.html must have class mobile-nav-toggle-btn');
 
   // Cache buster check
-  assert.ok(html.includes('orders.css?v=20261007_mobile_sidebar_font_v3'), 'orders.css must have mobile drawer version cache buster');
+  assert.ok(html.includes('orders.css?v=20261007_mobile_hamburger_left_v4'), 'orders.css must have mobile drawer version cache buster');
   assert.ok(html.includes('orders-core.js?v=20261007_mobile_drawer_sidebar_v1'), 'orders-core.js must have mobile drawer version cache buster');
   assert.ok(html.includes('orders-i18n.js?v=20261007_mobile_drawer_sidebar_v1'), 'orders-i18n.js must have mobile drawer version cache buster');
   assert.ok(html.includes('orders-settings.js?v=20261007_mobile_drawer_sidebar_v1'), 'orders-settings.js must have mobile drawer version cache buster');

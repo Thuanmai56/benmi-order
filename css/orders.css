@@ -11415,6 +11415,7 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
     cursor: pointer;
     padding: 0;
     margin: 0;
+    margin-left: -4px !important;
     transition: opacity 0.15s ease, transform 0.15s ease;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
@@ -11732,7 +11733,7 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
     height: 48px !important;
     min-height: 48px !important;
     flex-wrap: nowrap !important;
-    padding: 0 12px !important;
+    padding: 0 12px 0 6px !important;
   }
 
   .main-topbar-left,
