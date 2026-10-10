@@ -521,6 +521,23 @@ const I18N = {
     btnItemModifiers: "客製選項",
     itemModifiersModalTitle: "設定餐點客製選項",
     itemModifiersModalSub: "勾選要套用至此餐點的客製化群組",
+    itemModAppliesTo: "套用餐點",
+    itemModDraftNote: "完成設定後，請儲存菜單以同步變更。",
+    itemModInheritedHelp: "由分類自動套用，不需再次勾選。",
+    itemModNoInherited: "此分類尚未套用選項群組。",
+    itemModDirectTitle: "此餐點的專屬選項",
+    itemModDirectHelp: "從共用選項庫勾選要套用的群組。",
+    itemModFilterLabel: "篩選選項群組",
+    itemModAllGroups: "全部群組",
+    itemModSelectedGroups: "已選群組",
+    itemModSelectVisible: "全選目前結果",
+    itemModClearVisible: "取消選取目前結果",
+    itemModSharedHelp: "必選／選填為共用群組設定，變更會影響使用此群組的餐點。",
+    itemModNoFilterResults: "沒有符合條件的群組。請調整搜尋或切換至全部群組。",
+    itemModViewOptions: "查看選項與加價",
+    itemModNoSurcharge: "不加價",
+    itemModCreateGroup: "建立選項群組",
+    itemModHubSummary: "專屬 {direct} 組 · 分類繼承 {inherited} 組",
     btnManageCustomLibrary: "+ 前往客製化庫管理",
     libraryGroupAvailableBadge: "客製化庫（共 {total} 組）",
     appliedGroupCountBadge: "已套用：{count} 組",
@@ -871,14 +888,14 @@ const I18N = {
     itemPhotoTitle: "餐點圖片",
     btnUploadPhoto: "上傳/更換圖片",
     btnRemovePhoto: "移除圖片",
-    itemBadgeTitle: "餐點標籤 (Badge)",
+    itemBadgeTitle: "餐點標籤",
     itemBadgePlaceholder: "例如：熱銷、主廚推薦",
     itemRecommendedLabel: "標記為推薦餐點 (在線上菜單置頂凸顯)",
     itemAdvancedTitle: "進階設定",
-    cardModifiersTitle: "專屬客製化選項 (Modifiers)",
+    cardModifiersTitle: "餐點專屬選項",
     cardModifiersEmpty: "尚未設定專屬選項",
     cardModifiersCount: "已設定 {count} 組客製化選項",
-    cardBundleTitle: "套餐/組合設定 (Bundle)",
+    cardBundleTitle: "套餐組合設定",
     cardBundleEmpty: "一般單品 (未啟用套餐組合)",
     cardBundleCount: "套餐組合 ({count} 個選擇組)",
     btnDetailDone: "完成",
@@ -1281,6 +1298,23 @@ const I18N = {
     btnItemModifiers: "Tuỳ chọn món",
     itemModifiersModalTitle: "Thiết lập tuỳ chọn cho món",
     itemModifiersModalSub: "Chọn các nhóm tuỳ chọn từ Thư viện để áp dụng cho món này",
+    itemModAppliesTo: "Áp dụng cho món",
+    itemModDraftNote: "Hoàn tất thiết lập, sau đó lưu thực đơn để đồng bộ thay đổi.",
+    itemModInheritedHelp: "Tự động áp dụng từ danh mục, không cần chọn lại.",
+    itemModNoInherited: "Danh mục chưa có nhóm tùy chọn áp dụng sẵn.",
+    itemModDirectTitle: "Nhóm tùy chọn riêng của món",
+    itemModDirectHelp: "Chọn nhóm từ thư viện để gán riêng cho món này.",
+    itemModFilterLabel: "Lọc nhóm tùy chọn",
+    itemModAllGroups: "Tất cả nhóm",
+    itemModSelectedGroups: "Nhóm đã chọn",
+    itemModSelectVisible: "Chọn kết quả",
+    itemModClearVisible: "Bỏ chọn kết quả",
+    itemModSharedHelp: "Bắt buộc / Tùy chọn là thiết lập của nhóm dùng chung; thay đổi sẽ ảnh hưởng các món sử dụng nhóm này.",
+    itemModNoFilterResults: "Không có nhóm phù hợp. Đổi từ khóa hoặc chuyển sang Tất cả nhóm.",
+    itemModViewOptions: "Xem lựa chọn và phụ thu",
+    itemModNoSurcharge: "Không phụ thu",
+    itemModCreateGroup: "Tạo nhóm tùy chọn",
+    itemModHubSummary: "Gán riêng {direct} nhóm · Kế thừa {inherited} nhóm",
     btnManageCustomLibrary: "+ Quản lý Thư viện Tùy chọn",
     libraryGroupAvailableBadge: "Thư viện tùy chọn ({total} nhóm)",
     appliedGroupCountBadge: "Đã chọn: {count} nhóm",
@@ -1755,14 +1789,14 @@ const I18N = {
     itemPhotoTitle: "Ảnh minh họa món",
     btnUploadPhoto: "Tải ảnh lên / Thay đổi",
     btnRemovePhoto: "Xóa ảnh",
-    itemBadgeTitle: "Nhãn hiển thị món (Badge)",
+    itemBadgeTitle: "Nhãn hiển thị món",
     itemBadgePlaceholder: "Ví dụ: Bán chạy, Đặc sản",
     itemRecommendedLabel: "Đánh dấu là món nổi bật (Khuyên dùng)",
     itemAdvancedTitle: "Thiết lập nâng cao",
-    cardModifiersTitle: "Tuỳ chọn riêng cho món (Modifiers)",
+    cardModifiersTitle: "Tuỳ chọn riêng cho món",
     cardModifiersEmpty: "Chưa thiết lập tuỳ chọn riêng",
     cardModifiersCount: "Đang áp dụng {count} nhóm tuỳ chọn",
-    cardBundleTitle: "Cấu hình Combo / Suất ăn (Bundle)",
+    cardBundleTitle: "Cấu hình combo / suất ăn",
     cardBundleEmpty: "Món tiêu chuẩn (Không phải combo)",
     cardBundleCount: "Combo {count} nhóm lựa chọn",
     btnDetailDone: "Hoàn tất",
@@ -2478,13 +2512,19 @@ function applyLanguageToDOM() {
   const btnCreationTypeClose = document.getElementById("btn-creation-type-close");
   if (btnCreationTypeClose) btnCreationTypeClose.innerText = dict.btnClose || "關閉";
 
+  document.querySelectorAll("#itemModifiersModal .item-modifiers-close-btn, #itemDetailModal .item-detail-modal-close-btn").forEach(button => {
+    const label = button.classList.contains("item-modifiers-close-btn") ? dict.btnBack : dict.btnClose;
+    button.setAttribute("aria-label", label);
+    button.setAttribute("title", `${label} (Esc)`);
+  });
+
   // Item Modifiers Modal (Unified Library Assignment)
   const itemModT = document.getElementById("item-modifiers-modal-title");
   if (itemModT) itemModT.innerText = dict.itemModifiersModalTitle;
   const itemModS = document.getElementById("item-modifiers-modal-sub");
   if (itemModS) itemModS.innerText = dict.itemModifiersModalSub;
   const btnGotoCustom = document.getElementById("btn-goto-customizations");
-  if (btnGotoCustom) btnGotoCustom.innerText = dict.btnManageCustomLibrary || "+ 前往客製化庫管理";
+  if (btnGotoCustom) btnGotoCustom.innerText = dict.itemModCreateGroup;
   const btnItemModCan = document.getElementById("btn-item-mod-cancel");
   if (btnItemModCan) btnItemModCan.innerText = dict.btnCancel;
   const btnItemModSv = document.getElementById("btn-item-mod-save");
