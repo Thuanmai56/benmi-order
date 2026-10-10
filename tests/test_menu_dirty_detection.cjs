@@ -36,6 +36,8 @@ function createDOMEnvironment() {
       getAttribute(k) { return this.attributes[k]; },
       removeAttribute(k) { delete this.attributes[k]; },
       appendChild(child) { (this.children = this.children || []).push(child); return child; },
+      querySelectorAll() { return []; },
+      querySelector() { return null; },
       children: [],
       innerHTML: '',
       innerText: '',
