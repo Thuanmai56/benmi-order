@@ -3551,7 +3551,11 @@ async function openBundleEditorModal(catIdx, itemIdx) {
   }
 
   const modal = document.getElementById("modal-bundle-editor");
-  if (modal) modal.style.display = "flex";
+  if (modal) {
+    modal.style.display = "flex";
+    const body = document.getElementById("bundle-editor-modal-body");
+    if (body) body.scrollTop = 0;
+  }
 
   renderBundleEditorSidebar();
   renderBundleGroupConfigPanel();
@@ -4221,6 +4225,8 @@ function openItemModifiersModal(cIdx, iIdx) {
   if (modal) {
     modal.style.display = "flex";
     modal.scrollTop = 0;
+    const body = document.getElementById("item-modifiers-modal-body");
+    if (body) body.scrollTop = 0;
   }
 }
 window.openItemModifiersModal = openItemModifiersModal;
@@ -4471,11 +4477,11 @@ function renderItemModifiersEditor() {
         <p class="item-mod-category-name">${escapeHtml(cat?.title || '')}</p>
         <p class="item-mod-draft-note">${escapeHtml(t('itemModDraftNote'))}</p>
       </section>
-      <section class="item-mod-inherited-section">
-        <h3>${escapeHtml(t('inheritedFromCategory'))}<span>${inherited.length}</span></h3>
+      <details class="item-mod-inherited-section">
+        <summary>${escapeHtml(t('inheritedFromCategory'))}<span>${inherited.length}</span></summary>
         <p>${escapeHtml(t('itemModInheritedHelp'))}</p>
         ${inherited.length ? inherited.map(g => `<details class="item-mod-inherited-group"><summary>${escapeHtml(g.title || g.name || '')}</summary>${optionList(g.options || [])}</details>`).join('') : `<p class="item-mod-empty-options">${escapeHtml(t('itemModNoInherited'))}</p>`}
-      </section>
+      </details>
     </aside>
     <section class="item-mod-library" aria-labelledby="item-mod-library-title">
       <div class="item-mod-library-heading"><div><h2 id="item-mod-library-title">${escapeHtml(t('itemModDirectTitle'))}</h2><p>${escapeHtml(t('itemModDirectHelp'))}</p></div><span id="item-mod-selected-count-badge" class="item-modifiers-badge"></span></div>
@@ -4969,7 +4975,11 @@ function openCreateItemModal(cIdx) {
     doneBtn.setAttribute("data-custom-text", "1");
   }
 
-  if (modal) modal.style.display = "flex";
+  if (modal) {
+    modal.style.display = "flex";
+    const body = document.getElementById("item-detail-modal-body");
+    if (body) body.scrollTop = 0;
+  }
   setTimeout(() => {
     if (nameInput) nameInput.focus();
   }, 80);
@@ -5074,7 +5084,11 @@ function openItemDetailModal(cIdx, iIdx) {
     doneBtn.removeAttribute("data-custom-text");
   }
 
-  if (modal) modal.style.display = "flex";
+  if (modal) {
+    modal.style.display = "flex";
+    const body = document.getElementById("item-detail-modal-body");
+    if (body) body.scrollTop = 0;
+  }
 }
 window.openItemDetailModal = openItemDetailModal;
 
