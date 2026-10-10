@@ -16,6 +16,59 @@ let newCustomGroupScope = 'order';
 let newCustomGroupAppliedCategories = [];
 let currentLibraryOptionGroups = [];
 let menuModifierLibrary = [];
+let menuFilterCategoryIndex = -1;
+
+function updateMenuWorkspace() {
+  const tools = document.getElementById('menu-catalog-tools');
+  const cat = currentMenuData?.[activeCategoryIndex];
+  if (tools) tools.hidden = isCategoryManagerOpen || menuSidebarTab !== 'products' || !cat || isCustomizationCategory(cat);
+}
+
+function menuItemMatchesFilters(item, query, stock) {
+  const normalize = value => String(value).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase().replace(/đ/g, 'd');
+  const text = normalize(`${item.name || ''} ${item.badgeText || ''}`);
+  const needle = normalize(String(query || '').trim());
+  return text.includes(needle) && (stock === 'available' ? !item.isOos : stock === 'unavailable' ? Boolean(item.isOos) : true);
+}
+
+function applyMenuItemFilters() {
+  const cat = currentMenuData?.[activeCategoryIndex];
+  if (!cat || isCustomizationCategory(cat) || isCategoryManagerOpen) return;
+  const query = document.getElementById('menu-item-search')?.value || '';
+  const stock = document.getElementById('menu-stock-filter')?.value || 'all';
+  const filtering = Boolean(query.trim()) || stock !== 'all';
+  let visible = 0;
+  document.querySelectorAll('#menu-editor-body .menu-catalog-row').forEach(row => {
+    const itemIndex = Number(row.getAttribute('data-item-index'));
+    const item = cat.items[itemIndex];
+    // Keep every input mounted so filtering cannot discard inline edits.
+    const nameInput = row.querySelector('.menu-item-name-input');
+    row.hidden = !item || !menuItemMatchesFilters({ ...item, name: nameInput ? nameInput.value : item.name }, query, stock);
+    row.draggable = !filtering;
+    if (!row.hidden) visible++;
+  });
+  const empty = document.getElementById('menu-filter-empty');
+  if (empty) empty.hidden = visible > 0;
+}
+
+function clearMenuItemFilters() {
+  const search = document.getElementById('menu-item-search');
+  const stock = document.getElementById('menu-stock-filter');
+  if (search) search.value = '';
+  if (stock) stock.value = 'all';
+  applyMenuItemFilters();
+}
+
+function moveMenuItem(cIdx, iIdx, direction) {
+  const items = currentMenuData?.[cIdx]?.items;
+  const target = iIdx + direction;
+  if (!items || ![-1, 1].includes(direction) || target < 0 || target >= items.length) return;
+  syncMenuDataFromDOM();
+  [items[iIdx], items[target]] = [items[target], items[iIdx]];
+  renderMenuCategoryEditor(cIdx);
+  markMenuDirty();
+  document.querySelector(`#menu-editor-body .menu-catalog-row[data-item-index="${target}"] .btn-more`)?.focus();
+}
 
 function getBenmiDefaultCategories() {
   return [
@@ -143,6 +196,7 @@ document.addEventListener('click', event => {
 });
 document.addEventListener('keydown', event => {
   if (event.key === 'Escape') {
+    closeAllItemActionMenus();
     document.querySelectorAll('.menu-help[open]').forEach(help => { help.open = false; });
     const itemDetail = document.getElementById("itemDetailModal");
     if (itemDetail && itemDetail.style.display !== "none") {
@@ -581,6 +635,8 @@ function getMenuDisplayEntries() {
 }
 
 function renderCategoriesManagerView() {
+  updateMenuWorkspace();
+  document.getElementById('menu-editor-body').classList.remove('is-catalog');
   document.getElementById('menu-editor-title').textContent = t('manageCategoriesTitle');
   document.getElementById('i18n-menu-edit-sub').textContent = t('manageCategoriesSub');
   ['btn-category-rename', 'btn-category-delete', 'btn-menu-create-unified', 'btn-menu-add-cat-top'].forEach(id => {
@@ -705,7 +761,7 @@ function setMenuSidebarTab(tab) {
       const activeCat = currentMenuData[activeCategoryIndex];
       if (!activeCat || isCustomizationCategory(activeCat)) {
         const firstCatalogIdx = currentMenuData.findIndex(c => !isCustomizationCategory(c));
-        if (firstCatalogIdx >= 0) activeCategoryIndex = firstCatalogIdx;
+        activeCategoryIndex = firstCatalogIdx;
       }
     } else {
       // options tab
@@ -722,15 +778,13 @@ function setMenuSidebarTab(tab) {
         if (flavorIdx >= 0) {
           activeCategoryIndex = flavorIdx;
           activeOptionGroupIndex = 0;
-        }
+        } else activeCategoryIndex = -1;
       }
     }
   }
 
   renderMenuCategories();
-  if (activeCategoryIndex >= 0) {
-    renderMenuCategoryEditor(activeCategoryIndex);
-  }
+  renderMenuCategoryEditor(activeCategoryIndex);
 }
 window.setMenuSidebarTab = setMenuSidebarTab;
 
@@ -803,6 +857,7 @@ function handleCreateCustomFromSidebar() {
 window.handleCreateCustomFromSidebar = handleCreateCustomFromSidebar;
 
 function renderMenuCategories() {
+  updateMenuWorkspace();
   const container = document.getElementById("menu-categories");
   if (!container) return;
   container.innerHTML = "";
@@ -853,12 +908,14 @@ function renderMenuCategories() {
     listEl.appendChild(actionCatalog);
 
     catalogList.forEach(({ cat, originalIndex }) => {
-      const div = document.createElement("div");
+      const div = document.createElement("button");
+      div.type = 'button';
       div.className = `menu-option-card ${activeCategoryIndex === originalIndex && !isCategoryManagerOpen ? 'active' : ''}`;
+      div.setAttribute('aria-pressed', activeCategoryIndex === originalIndex && !isCategoryManagerOpen ? 'true' : 'false');
       const itemCount = Array.isArray(cat.items) ? cat.items.length : 0;
       const isCombo = isComboCategory(cat);
       const comboBadgeHtml = isCombo 
-        ? `<span class="cat-type-badge cat-type-combo" style="display:inline-block; font-size:11px; font-weight:800; padding:2px 6px; border-radius:4px; background:#eff6ff; color:#2563eb; margin-left:6px; vertical-align:middle;">Combo</span>`
+        ? `<span class="cat-type-badge cat-type-combo">${escapeHtml(t('bundleBadge'))}</span>`
         : '';
       div.innerHTML = `
         <div class="menu-option-card-content">
@@ -1026,6 +1083,7 @@ function getStoreModifiersList() {
 
 // --- Category Modifiers Collapse State & Helpers ---
 window._collapsedCategoryMods = window._collapsedCategoryMods || new Set();
+window._initializedCategoryMods = window._initializedCategoryMods || new Set();
 
 function toggleCategoryModifiersCollapse(cIdx) {
   const cat = currentMenuData && currentMenuData[cIdx];
@@ -1194,6 +1252,10 @@ window.closeAllItemActionMenus = closeAllItemActionMenus;
 
 if (!window._itemActionMenuListenerAttached) {
   document.addEventListener("click", closeAllItemActionMenus);
+  document.addEventListener('scroll', event => {
+    if (event.target?.closest?.('#menu-editor-body')) closeAllItemActionMenus();
+  }, true);
+  window.addEventListener('resize', closeAllItemActionMenus);
   window._itemActionMenuListenerAttached = true;
 }
 
@@ -1220,12 +1282,22 @@ function toggleItemActionMenu(event, cIdx, iIdx) {
       ${copySvg}
       <span>${escapeHtml(t("btnDuplicateItem") || "Sao chép món")}</span>
     </button>
+    <button type="button" class="dropdown-item" ${iIdx === 0 ? 'disabled' : ''} onclick="event.stopPropagation(); closeAllItemActionMenus(); moveMenuItem(${cIdx}, ${iIdx}, -1)">${escapeHtml(t('menuMoveUp'))}</button>
+    <button type="button" class="dropdown-item" ${iIdx === currentMenuData[cIdx].items.length - 1 ? 'disabled' : ''} onclick="event.stopPropagation(); closeAllItemActionMenus(); moveMenuItem(${cIdx}, ${iIdx}, 1)">${escapeHtml(t('menuMoveDown'))}</button>
     <button type="button" class="dropdown-item danger" onclick="event.stopPropagation(); closeAllItemActionMenus(); removeMenuItemAt(${cIdx}, ${iIdx})">
       ${trashSvg}
       <span>${escapeHtml(t("btnItemDelete") || "Xóa món")}</span>
     </button>
   `;
   wrapper.appendChild(menuEl);
+  // Keep all actions reachable even on the last row of a short tablet viewport.
+  const anchor = event.currentTarget.getBoundingClientRect();
+  menuEl.style.position = 'fixed';
+  menuEl.style.maxHeight = `${Math.max(48, window.innerHeight - 24)}px`;
+  menuEl.style.overflowY = 'auto';
+  menuEl.style.right = 'auto';
+  menuEl.style.left = `${Math.max(12, Math.min(anchor.right - menuEl.offsetWidth, window.innerWidth - menuEl.offsetWidth - 12))}px`;
+  menuEl.style.top = `${Math.max(12, Math.min(anchor.bottom + 8, window.innerHeight - menuEl.offsetHeight - 12))}px`;
 }
 window.toggleItemActionMenu = toggleItemActionMenu;
 
@@ -1246,6 +1318,7 @@ window.duplicateMenuItemAt = duplicateMenuItemAt;
 
 function renderMenuCategoryEditor(index) {
   isCategoryManagerOpen = false;
+  updateMenuWorkspace();
   const renameBtn = document.getElementById("btn-category-rename");
   const deleteBtn = document.getElementById("btn-category-delete");
   const createBtn = document.getElementById("btn-menu-create-unified");
@@ -1262,6 +1335,13 @@ function renderMenuCategoryEditor(index) {
     if (renameBtn) renameBtn.style.display = "none";
     if (deleteBtn) deleteBtn.style.display = "none";
     if (createBtn) createBtn.style.display = "none";
+    const body = document.getElementById('menu-editor-body');
+    if (body) {
+      body.classList.remove('is-catalog');
+      body.textContent = t(menuSidebarTab === 'options' ? 'optionSectionEmpty' : 'menuSelectPrompt');
+    }
+    const title = document.getElementById('menu-editor-title');
+    if (title) title.textContent = t(menuSidebarTab === 'options' ? 'segOptions' : 'segProducts');
     return;
   }
 
@@ -1283,7 +1363,9 @@ function renderMenuCategoryEditor(index) {
   }
 
   if (createBtn) {
-    createBtn.style.display = "none";
+    createBtn.style.display = "inline-flex";
+    if (createBtnText) createBtnText.textContent = t(isCombo ? 'menuAddBundle' : 'menuAddItem');
+    createBtn.title = t(isCombo ? 'menuAddBundle' : 'menuAddItem');
   }
 
   if (renameBtn) renameBtn.style.display = "inline-flex";
@@ -1295,13 +1377,13 @@ function renderMenuCategoryEditor(index) {
   const container = document.getElementById("menu-editor-body");
   if (!container) return;
   container.innerHTML = "";
-  const banner = document.createElement("div");
-  banner.className = "cust-header-banner";
-  banner.innerHTML = `<div class="cust-title">${t("catalogManageTitle")}</div><div class="cust-desc">${t("catalogManageDesc")}</div>`;
-  container.appendChild(banner);
+  container.classList.add('is-catalog');
+  if (menuFilterCategoryIndex !== index) {
+    menuFilterCategoryIndex = index;
+    clearMenuItemFilters();
+  }
   const catalogCard = document.createElement("div");
-  catalogCard.className = "cust-group-card";
-  catalogCard.innerHTML = `<div class="cust-group-header"><span class="cust-group-title">${escapeHtml(cat.title)}</span><span class="menu-option-card-subtitle">${cat.items.length} ${t("menuItemUnit")}</span></div>`;
+  catalogCard.className = "cust-group-card menu-products-card";
   container.appendChild(catalogCard);
 
   const storeModifiers = cat.type === 'catalog' ? getStoreModifiersList() : [];
@@ -1311,6 +1393,10 @@ function renderMenuCategoryEditor(index) {
     const modCard = document.createElement("div");
     modCard.className = "cust-category-modifiers-card";
     const catKey = cat.id || String(index);
+    if (!window._initializedCategoryMods.has(catKey)) {
+      window._initializedCategoryMods.add(catKey);
+      window._collapsedCategoryMods.add(catKey);
+    }
     const isCollapsed = Boolean(window._collapsedCategoryMods && window._collapsedCategoryMods.has(catKey));
     if (isCollapsed) {
       modCard.classList.add("is-collapsed");
@@ -1379,19 +1465,6 @@ function renderMenuCategoryEditor(index) {
     }
     catalogCard.appendChild(modCard);
   }
-
-  const tableHeader = document.createElement("div");
-  tableHeader.className = "menu-items-table-header";
-  tableHeader.innerHTML = `
-    <div class="th-col-drag"></div>
-    <div class="th-col-photo">${escapeHtml(t("colItemPhoto") || (currentLang === 'vi' ? 'Hình ảnh' : '圖片'))}</div>
-    <div class="th-col-name">${escapeHtml(t("colItemName"))}</div>
-    <div class="th-col-price">${escapeHtml(t("colPrice"))}</div>
-    <div class="th-col-mods">${escapeHtml(t("colModifiers"))}</div>
-    <div class="th-col-stock">${escapeHtml(t("colStock"))}</div>
-    <div class="th-col-actions">${escapeHtml(t("colActions"))}</div>
-  `;
-  catalogCard.appendChild(tableHeader);
 
   const itemsContainer = document.createElement("div");
   itemsContainer.className = "menu-catalog-items-container";
@@ -1478,35 +1551,37 @@ function renderMenuCategoryEditor(index) {
     }
 
     row.innerHTML = `
-      <div class="menu-item-drag-handle" title="${currentLang === 'vi' ? 'Kéo để đổi thứ tự' : '拖曳以排序'}">${gripSvg}</div>
-      <div class="menu-item-thumb-box ${imgUrl ? 'has-image' : ''}" data-item-thumb-idx="${iIdx}"
+      <div class="menu-item-drag-handle" title="${escapeHtml(t('menuDragSort'))}" aria-hidden="true">${gripSvg}</div>
+      <button type="button" class="menu-item-thumb-box ${imgUrl ? 'has-image' : ''}" data-item-thumb-idx="${iIdx}"
         onclick="handleItemThumbClick(${index}, ${iIdx}, event)"
         ondragover="handleItemThumbDragOver(event)"
         ondragleave="handleItemThumbDragLeave(event)"
         ondrop="handleItemThumbDrop(event, ${index}, ${iIdx})"
-        title="${thumbTooltip}">
+        title="${thumbTooltip}" aria-label="${escapeHtml(t('btnItemImage') + ': ' + item.name)}">
         ${thumbHtml}
-      </div>
+      </button>
       <div class="menu-item-name-col">
         <input type="text" class="menu-item-name-input" value="${escapeHtml(item.name)}" data-name-cidx="${index}" data-name-iidx="${iIdx}" oninput="markMenuDirty()"
-          placeholder="${t("newItemPlaceholder")}">
+          placeholder="${t("newItemPlaceholder")}" aria-label="${escapeHtml(t('colItemName'))}">
       </div>
       <div class="menu-item-price-wrapper">
         <span class="price-currency">$</span>
         <input type="number" class="menu-item-price-input" value="${item.price !== null && item.price !== undefined ? item.price : ''}" data-cidx="${index}" data-iidx="${iIdx}" oninput="markMenuDirty()"
-          placeholder="${t("priceHiddenPlaceholder")}">
+          placeholder="${t("priceHiddenPlaceholder")}" aria-label="${escapeHtml(t('colPrice') + ': ' + item.name)}">
       </div>
       <div class="menu-item-meta-col">
         ${badgesHtml}
+        <button type="button" class="menu-item-options-btn" onclick="openItemModifiersModal(${index}, ${iIdx})">${escapeHtml(t('btnItemModifiers'))}</button>
+        ${hasBundle ? `<button type="button" class="menu-item-options-btn" onclick="openBundleEditorModal(${index}, ${iIdx})">${escapeHtml(t('menuBundleSettings'))}</button>` : ''}
       </div>
       <button type="button" class="menu-item-stock-toggle ${item.isOos ? 'is-oos' : 'is-instock'}"
-        onclick="openStockModal(${index}, ${iIdx})" title="${oosText}">
+        onclick="openStockModal(${index}, ${iIdx})" title="${oosText}" aria-label="${escapeHtml(item.name + ': ' + oosText)}">
         <span class="stock-toggle-dot"></span>
         <span>${oosText}</span>
       </button>
       <div class="menu-item-actions-cluster">
         <div class="menu-item-more-wrapper">
-          <button type="button" class="menu-item-action-btn btn-more" onclick="toggleItemActionMenu(event, ${index}, ${iIdx})" title="${t('btnMoreActions')}">
+          <button type="button" class="menu-item-action-btn btn-more" onclick="toggleItemActionMenu(event, ${index}, ${iIdx})" title="${t('btnMoreActions')}" aria-label="${escapeHtml(t('btnMoreActions') + ': ' + item.name)}">
             ${moreDotsSvg}
           </button>
         </div>
@@ -1515,16 +1590,12 @@ function renderMenuCategoryEditor(index) {
     itemsContainer.appendChild(row);
   });
   catalogCard.appendChild(itemsContainer);
-
-  if (!isCombo) {
-    const addItemBtn = document.createElement("button");
-    addItemBtn.type = "button";
-    addItemBtn.className = "cat-mgr-add-btn";
-    addItemBtn.style.marginTop = "12px";
-    addItemBtn.onclick = () => openCreateItemModal(index);
-    addItemBtn.innerHTML = `<span>+ ${t("btnItemCreate") || (currentLang === 'vi' ? 'Thêm món mới' : '新增餐點')}</span>`;
-    catalogCard.appendChild(addItemBtn);
-  }
+  const empty = document.createElement('div');
+  empty.id = 'menu-filter-empty';
+  empty.className = 'menu-filter-empty';
+  empty.innerHTML = cat.items.length ? `<p>${escapeHtml(t('menuNoMatchingItems'))}</p><button type="button" class="btn btn-ghost" onclick="clearMenuItemFilters()">${escapeHtml(t('menuClearFilters'))}</button>` : `<p>${escapeHtml(t('menuEmptyCategory'))}</p>`;
+  catalogCard.appendChild(empty);
+  applyMenuItemFilters();
 }
 
 function getModifierCategorySelectionState(group, category) {
@@ -1546,6 +1617,7 @@ function syncCategoryCheckboxIndeterminateState(container) {
 
 function renderOrderCustomizationEditor(container, cat, cIdx) {
   if (!container) return;
+  container.classList.remove('is-catalog');
   container.innerHTML = "";
 
   if (cat.type === 'modifier' && (!cat.groups || cat.groups.length === 0)) {

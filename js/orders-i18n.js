@@ -580,6 +580,26 @@ const I18N = {
     toggleRequiredOff: "切換為選填",
     btnMenuSave: "儲存變更",
     menuSaved: "已儲存",
+    menuWorkspaceTitle: "菜單管理",
+    menuWorkspaceSub: "管理餐點、供應狀態與客製化選項",
+    menuModeLabel: "菜單管理模式",
+    menuSearchCategory: "搜尋此分類的餐點",
+    menuStockFilter: "供應狀態",
+    menuFilterAll: "全部狀態",
+    menuFilterAvailable: "供應中",
+    menuFilterUnavailable: "售完",
+    menuNoMatchingItems: "沒有符合條件的餐點",
+    menuEmptyCategory: "此分類尚無餐點，請新增第一道餐點。",
+    menuClearFilters: "清除搜尋與篩選",
+    menuMoveUp: "上移一位",
+    menuMoveDown: "下移一位",
+    menuDragSort: "拖曳以排序",
+    menuAddBundle: "新增套餐",
+    menuAddItem: "新增餐點",
+    menuBundleSettings: "套餐設定",
+    itemDetailSub: "設定餐點名稱、價格、照片與客製化選項",
+    itemBasicTitle: "基本資料",
+    itemAdvancedDesc: "設定此餐點的客製化選項與套餐內容",
     menuHelp: "編輯說明",
     menuDiscardConfirm: "尚有未儲存的菜單變更。確定放棄變更並離開？取消可繼續編輯。",
     btnMenuDirty: "儲存變更 (尚未儲存 *)",
@@ -1320,6 +1340,26 @@ const I18N = {
     toggleRequiredOff: "Tắt bắt buộc",
     btnMenuSave: "Lưu thay đổi",
     menuSaved: "Đã lưu",
+    menuWorkspaceTitle: "Quản lý thực đơn",
+    menuWorkspaceSub: "Quản lý món ăn, trạng thái bán và các tùy chọn",
+    menuModeLabel: "Chế độ quản lý thực đơn",
+    menuSearchCategory: "Tìm món trong danh mục này",
+    menuStockFilter: "Trạng thái bán",
+    menuFilterAll: "Tất cả trạng thái",
+    menuFilterAvailable: "Còn món",
+    menuFilterUnavailable: "Hết hàng",
+    menuNoMatchingItems: "Không có món phù hợp",
+    menuEmptyCategory: "Danh mục chưa có món. Hãy thêm món đầu tiên.",
+    menuClearFilters: "Xóa tìm kiếm và bộ lọc",
+    menuMoveUp: "Đưa lên một vị trí",
+    menuMoveDown: "Đưa xuống một vị trí",
+    menuDragSort: "Kéo để đổi thứ tự",
+    menuAddBundle: "Thêm combo",
+    menuAddItem: "Thêm món",
+    menuBundleSettings: "Thiết lập combo",
+    itemDetailSub: "Chỉnh tên món, giá bán, hình ảnh và tùy chọn",
+    itemBasicTitle: "Thông tin cơ bản",
+    itemAdvancedDesc: "Thiết lập tùy chọn riêng và các thành phần của combo",
     menuHelp: "Hướng dẫn chỉnh sửa",
     menuDiscardConfirm: "Có thay đổi thực đơn chưa lưu. Bỏ thay đổi và rời đi? Chọn Hủy để tiếp tục chỉnh sửa.",
     btnMenuDirty: "Lưu thay đổi (Chưa lưu *)",
@@ -2456,6 +2496,26 @@ function applyLanguageToDOM() {
   if (menuHelp) menuHelp.setAttribute("aria-label", dict.menuHelp);
   const menuPrompt = document.getElementById("i18n-menu-select-prompt");
   if (menuPrompt) menuPrompt.innerText = dict.menuSelectPrompt;
+  [
+    ['i18n-menu-workspace-title', 'menuWorkspaceTitle'],
+    ['i18n-menu-workspace-sub', 'menuWorkspaceSub'],
+    ['i18n-menu-filter-all', 'menuFilterAll'],
+    ['i18n-menu-filter-available', 'menuFilterAvailable'],
+    ['i18n-menu-filter-unavailable', 'menuFilterUnavailable'],
+    ['item-detail-modal-sub', 'itemDetailSub'],
+    ['i18n-item-basic-title', 'itemBasicTitle'],
+    ['i18n-item-advanced-desc', 'itemAdvancedDesc']
+  ].forEach(([id, key]) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = dict[key];
+  });
+  const menuSearch = document.getElementById('menu-item-search');
+  if (menuSearch) {
+    menuSearch.placeholder = dict.menuSearchCategory;
+    menuSearch.setAttribute('aria-label', dict.menuSearchCategory);
+  }
+  document.getElementById('menu-stock-filter')?.setAttribute('aria-label', dict.menuStockFilter);
+  document.getElementById('menu-mode-tabs')?.setAttribute('aria-label', dict.menuModeLabel);
 
   // Image Modal
   const imgModT = document.getElementById("image-modal-title");
