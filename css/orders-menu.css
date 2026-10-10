@@ -352,3 +352,94 @@
   #view-menu .menu-option-section-cards { flex-direction: row; width: max-content; gap: 8px; }
   #view-menu .menu-option-section-cards .menu-option-card { min-height: 72px !important; }
 }
+
+/* Menu editors stay anchored to the right, with the catalog visible behind. */
+#itemModifiersModal.menu-editor-drawer,
+#itemDetailModal.menu-editor-drawer,
+#modal-bundle-editor.menu-editor-drawer {
+  --item-ink: #202722; --item-muted: #69716b; --item-border: #e1e5e2;
+  --item-accent: #166534; --item-soft: #f1f7f2;
+  flex-direction: row !important; justify-content: flex-end !important;
+  align-items: stretch !important; overflow: hidden !important;
+  background: rgba(20, 28, 23, .28) !important;
+  color: var(--item-ink); overscroll-behavior: contain;
+}
+#itemModifiersModal.menu-editor-drawer .item-modifiers-page-container,
+#itemDetailModal.menu-editor-drawer .item-detail-page-container,
+#modal-bundle-editor.menu-editor-drawer .bundle-editor-page-container {
+  width: min(600px, calc(100vw - 64px)) !important; max-width: none !important;
+  height: 100dvh !important; max-height: 100dvh !important; min-height: 0 !important;
+  margin: 0 !important; padding: 0 !important; overflow: hidden !important;
+  background: white !important; border-radius: 16px 0 0 16px !important;
+  box-shadow: -12px 0 40px rgba(20, 28, 23, .12) !important;
+}
+.menu-editor-drawer .order-detail-topbar {
+  position: relative !important; flex: 0 0 auto !important;
+  padding: 20px 24px !important; margin: 0 !important; background: white !important;
+  border-bottom: 1px solid var(--item-border) !important;
+}
+#itemModifiersModal .item-modifiers-topbar-left,
+#itemDetailModal .item-detail-topbar-left,
+#modal-bundle-editor .bundle-modal-topbar-left {
+  width: 100%; flex: 1 1 auto; align-items: flex-start; gap: 16px;
+}
+.menu-editor-drawer .order-detail-circle-btn { order: 2; margin-left: auto; }
+.menu-editor-drawer .order-detail-header-text { flex: 1; min-width: 0; }
+#itemDetailModal .item-detail-header-row { flex-wrap: wrap; gap: 8px; }
+#itemModifiersModal .item-modifiers-topbar,
+#itemDetailModal .item-detail-modal-topbar { padding: 20px 24px !important; margin: 0 !important; background: white !important; }
+#itemModifiersModal .item-modifiers-fullpage-body,
+#itemDetailModal .item-detail-grid-body,
+#modal-bundle-editor .bundle-editor-body {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden;
+  display: grid !important; grid-template-columns: minmax(0, 1fr) !important;
+  align-content: start; gap: 20px !important; padding: 24px !important;
+  overscroll-behavior: contain; scrollbar-gutter: stable;
+}
+#itemModifiersModal .item-mod-context { display: flex; flex-direction: column; gap: 16px; }
+#itemModifiersModal .item-mod-context-card { border: 0; padding: 0; }
+#itemModifiersModal .item-mod-eyebrow { display: none; }
+#itemModifiersModal .item-mod-category-name { margin: 4px 0 12px; }
+#itemModifiersModal .item-mod-draft-note { padding-top: 12px; }
+#itemModifiersModal .item-mod-inherited-section { padding: 0 16px; }
+#itemModifiersModal .item-mod-inherited-section > summary { font-size: 14px; color: var(--item-accent); }
+#itemModifiersModal .item-mod-inherited-section > summary span { padding: 2px 7px; background: #dfede2; border-radius: 5px; }
+#itemModifiersModal details[open] > summary::after { transform: rotate(225deg); }
+#itemModifiersModal details:not([open]) > summary::after { transform: rotate(45deg); }
+#itemModifiersModal .item-mod-library-heading { margin-bottom: 16px; }
+#itemModifiersModal .item-modifiers-toolbar { grid-template-columns: minmax(0, 1fr) !important; }
+#itemModifiersModal .item-modifiers-toolbar-actions { justify-content: flex-start; flex-wrap: wrap; }
+#itemDetailModal .item-detail-card-panel { padding: 20px !important; }
+#itemDetailModal .item-detail-photo-box { flex-wrap: wrap; }
+#itemModifiersModal .menu-editor-footer,
+#itemDetailModal .menu-editor-footer,
+#modal-bundle-editor .menu-editor-footer {
+  flex: 0 0 auto; width: auto; display: flex !important; flex-wrap: wrap;
+  justify-content: flex-end; gap: 8px; margin: 0 !important;
+  padding: 16px 24px calc(16px + env(safe-area-inset-bottom)) !important;
+  border-top: 1px solid var(--item-border); background: white;
+}
+#itemModifiersModal #btn-goto-customizations { margin-right: auto !important; }
+#modal-bundle-editor .bundle-modal-badge-icon { display: none; }
+#modal-bundle-editor .bundle-modal-header-row { flex-wrap: wrap; }
+#modal-bundle-editor .bundle-modal-title { font-size: 22px; color: var(--item-ink); overflow-wrap: anywhere; }
+#modal-bundle-editor .bundle-groups-sidebar { position: static; width: auto; max-height: none; padding: 16px; border: 1px solid var(--item-border); border-radius: 10px; background: white; }
+#modal-bundle-editor .bundle-sidebar-tip { display: none; }
+#modal-bundle-editor .bundle-editor-right-col { min-width: 0; }
+#modal-bundle-editor .bundle-group-config-panel { padding: 16px; min-width: 0; }
+#modal-bundle-editor button, #modal-bundle-editor input:not([type="checkbox"]), #modal-bundle-editor select { min-height: 48px; }
+#modal-bundle-editor .order-detail-circle-btn { width: 48px; height: 48px; flex: 0 0 48px; }
+#modal-bundle-editor .btn-primary { background: var(--item-accent); border-color: var(--item-accent); }
+#modal-bundle-editor button:focus-visible, #modal-bundle-editor input:focus-visible { outline: 2px solid var(--item-accent); outline-offset: 3px; }
+@media (max-width: 600px) {
+  #itemModifiersModal.menu-editor-drawer .item-modifiers-page-container,
+  #itemDetailModal.menu-editor-drawer .item-detail-page-container,
+  #modal-bundle-editor.menu-editor-drawer .bundle-editor-page-container { width: calc(100vw - 16px) !important; }
+  #itemModifiersModal .item-modifiers-topbar, #itemDetailModal .item-detail-modal-topbar,
+  #modal-bundle-editor .bundle-modal-topbar { padding: 16px !important; }
+  #itemModifiersModal .item-modifiers-fullpage-body, #itemDetailModal .item-detail-grid-body,
+  #modal-bundle-editor .bundle-editor-body { padding: 16px !important; }
+  #itemModifiersModal .menu-editor-footer, #itemDetailModal .menu-editor-footer,
+  #modal-bundle-editor .menu-editor-footer { padding: 12px 16px calc(12px + env(safe-area-inset-bottom)) !important; }
+  #itemModifiersModal #btn-goto-customizations { flex-basis: 100%; }
+}
