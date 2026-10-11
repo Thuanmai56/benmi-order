@@ -76,7 +76,7 @@ test('reordering items preserves identity and full configuration, and reverting 
 test('section reordering preserves rank slots and never includes per-item modifier libraries',()=>{
   const app=setup(),initial=JSON.stringify(app.data());app.context.openCategoriesManager();
   app.move('section',0,1);
-  assert.deepEqual(Array.from(app.context.getMenuDisplayEntries(),e=>e.model.id),['food','notes','drinks']);
+  assert.deepEqual(Array.from(app.context.getMenuDisplayEntries(),e=>e.model.id),['food','note','drinks']);
   assert.equal(app.data()[2].sortOrder,13);assert.equal(app.data()[1].sortOrder,0);
   app.move('section',1,-1);assert.equal(JSON.stringify(app.data()),initial);assert.equal(app.dirty(),false);
   app.context.closeCategoriesManager();app.context.openCategoriesManager();assert.equal(app.dirty(),false);
@@ -85,8 +85,27 @@ test('section reordering preserves rank slots and never includes per-item modifi
 test('tied or absent section ranks become sortable; reversing restores their exact original representation',()=>{
   const app=setup();app.data()[1].sortOrder=0;delete app.data()[3].sortOrder;app.context.clearMenuDirty();
   const original=JSON.stringify(app.data());app.context.openCategoriesManager();app.move('section',0,1);
-  assert.deepEqual(Array.from(app.context.getMenuDisplayEntries(),e=>e.model.id),['food','notes','drinks']);
+  assert.deepEqual(Array.from(app.context.getMenuDisplayEntries(),e=>e.model.id),['food','note','drinks']);
   app.move('section',1,-1);assert.equal(JSON.stringify(app.data()),original);assert.equal(app.dirty(),false);
+});
+
+test('each whole-order group has its own position between catalog sections; inherited item groups stay out',async()=>{
+  const app=setup();
+  app.data()[0].groups.push({id:'utensils',key:'utensils',title:'Dụng cụ',scope:'order',sortOrder:2,options:[]},
+    {id:'hidden',key:'hidden',title:'Theo phân loại',scope:'category',options:[]});
+  app.data()[0].groups[0].key='note';app.context.clearMenuDirty();
+  const original=JSON.stringify(app.data());app.context.openCategoriesManager();
+  assert.deepEqual(Array.from(app.context.getMenuDisplayEntries(),e=>e.model.id),['note','utensils','food','drinks']);
+  app.move('section',1,1);
+  assert.deepEqual(Array.from(app.context.getMenuDisplayEntries(),e=>e.model.id),['note','food','utensils','drinks']);
+  assert.equal(app.data()[0].sortOrder,0);assert.equal(app.data()[0].groups[1].sortOrder,2);
+  app.move('section',2,-1);assert.equal(JSON.stringify(app.data()),original);assert.equal(app.dirty(),false);
+  app.move('section',1,1);await app.context.saveMenuData(true);
+  const groups=app.posts[0].__customizations.groups;
+  assert.equal(groups.find(g=>g.id==='note').displaySortOrder,1);
+  assert.equal(groups.find(g=>g.id==='utensils').displaySortOrder,3);
+  assert.equal(groups.find(g=>g.id==='hidden').displaySortOrder,undefined);
+  assert.equal(app.posts[0].food.__sort_order,2);
 });
 
 test('desktop drag/drop uses the same ordering path as buttons and ignores cross-list drops',()=>{
@@ -95,6 +114,19 @@ test('desktop drag/drop uses the same ordering path as buttons and ignores cross
   a.ondragstart(event);app.rows('section')[0].ondrop(event);assert.equal(app.dirty(),false);
   c.ondrop(event);assert.deepEqual(Array.from(app.data()[1].items,p=>p.id),['b','c','a']);
   a.ondragend();assert.equal(app.dirty(),true);
+});
+
+test('saving establishes a new baseline so further moves and reversals retain persisted group positions',async()=>{
+  const app=setup();app.data()[0].groups[0].key='note';app.context.clearMenuDirty();app.context.openCategoriesManager();
+  app.move('section',0,1);await app.context.saveMenuData(true);
+  assert.equal(app.posts[0].__customizations.groups[0].displaySortOrder,10);
+  app.move('section',1,-1);
+  assert.equal(app.data()[0].groups[0].displaySortOrder,0);
+  assert.equal(app.dirty(),true);
+  app.move('section',0,1);assert.equal(app.data()[0].groups[0].displaySortOrder,10);assert.equal(app.dirty(),false);
+  app.move('section',1,-1);await app.context.saveMenuData(true);
+  assert.equal(app.posts[1].__customizations.groups[0].displaySortOrder,0);
+  assert.equal(app.dirty(),false);
 });
 
 test('inline edits are collected before ordering, with stale inputs removed before item indexes change',()=>{
@@ -122,6 +154,6 @@ test('ordering screen assets share the new cache buster', () => {
   const html = fs.readFileSync(path.resolve(__dirname, '../orders.html'), 'utf-8');
   for (const asset of ['css/orders-menu.css', 'js/orders-menu.js', 'js/orders-i18n.js']) {
     const escaped = asset.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    assert.match(html,new RegExp(`${escaped}\\?v=20261011_menu_order_screen_v1`));
+    assert.match(html,new RegExp(`${escaped}\\?v=20261011_global_group_order_v2`));
   }
 });

@@ -413,6 +413,7 @@ async function loadMenuData() {
                 sourceId: cust.id || custId,
                 canonicalId: libraryGroup?.canonicalId || null,
                 sortOrder: cust.sortOrder !== undefined ? cust.sortOrder : gIdx,
+                ...(Number.isSafeInteger(cust.displaySortOrder) ? { displaySortOrder: cust.displaySortOrder } : {}),
                 options: (cust.options || []).map(opt => ({
                   ...opt,
                   id: opt.id || opt.name,
@@ -552,7 +553,7 @@ function openCategoriesManager() {
   categoryBeforeDisplayOrder = activeCategoryIndex;
   displayOrderCategory = currentMenuData[activeCategoryIndex];
   if (isCustomizationCategory(displayOrderCategory)) displayOrderCategory = null;
-  displayOrderInitial = getMenuDisplayEntries().map(({ model }) => ({ model, value: model.sortOrder, hadOrder: Object.hasOwn(model, 'sortOrder') }));
+  displayOrderInitial = getMenuDisplayEntries().map(entry => ({ model: entry.model, field: entry.field, value: entry.model[entry.field], hadOrder: Object.hasOwn(entry.model, entry.field), position: entry.position }));
   isCategoryManagerOpen = true;
   activeCategoryIndex = -1;
   // Stale inline inputs must not write into newly reordered item indexes.
@@ -621,13 +622,20 @@ function formatPlusBtnText(text, fallback) {
 
 function getMenuDisplayEntries() {
   const entries = [];
+  const seenGroups = new Set();
   (currentMenuData || []).forEach(cat => {
-    if (!isCustomizationCategory(cat)) entries.push({ model: cat, title: cat.title, kind: 'categoryTypeCatalogBadge' });
-    else if ((cat.groups || []).some(group => !group.scope || group.scope === 'order')) {
-      entries.push({ model: cat, title: cat.title, kind: 'scopeOrder' });
+    if (!isCustomizationCategory(cat)) entries.push({ model: cat, title: cat.title, kind: 'categoryTypeCatalogBadge', field: 'sortOrder', position: Number(cat.sortOrder) || 0 });
+    else {
+      [...(cat.groups || [])].sort((a, b) => (Number(a.sortOrder) || 0) - (Number(b.sortOrder) || 0)).forEach(group => {
+        const scope = group.scope || (cat.type === 'modifier' ? 'item' : 'order');
+        const id = String(group.canonicalId || group.id || '');
+        if (scope !== 'order' || !id || seenGroups.has(id)) return;
+        seenGroups.add(id);
+        entries.push({ model: group, title: group.title || group.name || cat.title, kind: 'scopeOrder', isOrderGroup: true, field: 'displaySortOrder', position: Number.isSafeInteger(group.displaySortOrder) ? group.displaySortOrder : Number(cat.sortOrder) || 0 });
+      });
     }
   });
-  return entries.sort((a, b) => (Number(a.model.sortOrder) || 0) - (Number(b.model.sortOrder) || 0));
+  return entries.sort((a, b) => a.position - b.position);
 }
 
 function renderCategoriesManagerView() {
@@ -640,8 +648,8 @@ function renderCategoriesManagerView() {
   document.getElementById('btn-menu-order-back-text').textContent = t('btnBack');
   container.innerHTML = '';
   const entries = getMenuDisplayEntries();
-  if (!entries.some(entry => entry.model === displayOrderCategory && !isCustomizationCategory(entry.model))) {
-    displayOrderCategory = entries.find(entry => !isCustomizationCategory(entry.model))?.model || null;
+  if (!entries.some(entry => entry.model === displayOrderCategory && !entry.isOrderGroup)) {
+    displayOrderCategory = entries.find(entry => !entry.isOrderGroup)?.model || null;
   }
   const addPanel = (title, id) => {
     const section = document.createElement('section');
@@ -660,14 +668,14 @@ function renderCategoriesManagerView() {
   };
   const commitSections = ordered => {
     const original = ordered.length === displayOrderInitial.length && ordered.every((entry, i) => entry.model === displayOrderInitial[i].model);
-    const slots = displayOrderInitial.map(entry => Number(entry.value));
+    const slots = displayOrderInitial.map(entry => entry.position);
     const useSlots = slots.length === ordered.length && slots.every((value, i) => Number.isFinite(value) && (!i || value > slots[i-1]));
     ordered.forEach((entry, i) => {
       if (original) {
         const initial = displayOrderInitial[i];
-        if (initial.hadOrder) entry.model.sortOrder = initial.value;
-        else delete entry.model.sortOrder;
-      } else entry.model.sortOrder = useSlots ? slots[i] : i + 1;
+        if (initial.hadOrder) entry.model[entry.field] = initial.value;
+        else delete entry.model[entry.field];
+      } else entry.model[entry.field] = useSlots ? slots[i] : i + 1;
     });
   };
   const rows = (list, values, kind, commit) => {
@@ -678,7 +686,7 @@ function renderCategoriesManagerView() {
       const row = document.createElement('div'); row.className = 'menu-display-order-row'; row.draggable = true;
       row.setAttribute('data-order-kind', kind); row.setAttribute('data-order-index', index);
       const ordinal = document.createElement('span'); ordinal.className = 'menu-order-index'; ordinal.textContent = String(index+1); ordinal.setAttribute('aria-hidden','true'); row.appendChild(ordinal);
-      const label = document.createElement(kind === 'section' && !isCustomizationCategory(model) ? 'button' : 'span');
+      const label = document.createElement(kind === 'section' && !value.isOrderGroup ? 'button' : 'span');
       label.className = 'menu-display-order-name';
       label.innerHTML = `<strong>${escapeHtml(name)}</strong><small>${kind === 'section' ? escapeHtml(t(value.kind)) : '$' + escapeHtml(value.price ?? '')}</small>`;
       if (label.tagName.toLowerCase() === 'button') {
@@ -2577,6 +2585,7 @@ function serializeMenuData(categories) {
           appliedCategories: Array.isArray(grp.appliedCategories) ? grp.appliedCategories : [],
           appliedItems: Array.isArray(grp.appliedItems) ? grp.appliedItems : [],
           sortOrder: grp.sortOrder !== undefined ? grp.sortOrder : (gIdx + 1),
+          ...(Number.isSafeInteger(grp.displaySortOrder) ? { displaySortOrder: grp.displaySortOrder } : {}),
           options: (grp.options || []).map(opt => {
             const optPrice = Number(opt.price ?? opt.surcharge ?? 0);
             const optIsDefault = Boolean(opt.isDefault ?? opt.is_default);
@@ -2750,6 +2759,9 @@ async function saveMenuData(skipConfirm = false) {
     }
     if (window.UnifiedMenu?.enabled) await window.UnifiedMenu.load();
     clearMenuDirty();
+    if (isCategoryManagerOpen) {
+      displayOrderInitial = getMenuDisplayEntries().map(entry => ({ model: entry.model, field: entry.field, value: entry.model[entry.field], hadOrder: Object.hasOwn(entry.model, entry.field), position: entry.position }));
+    }
     try {
       const tid = getTenantIdFromUrl();
       localStorage.removeItem("tenant_customizations_" + tid);
