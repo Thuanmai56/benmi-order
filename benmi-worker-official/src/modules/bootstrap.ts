@@ -147,7 +147,6 @@ export interface BootstrapResponse {
     type: 'radio' | 'checkbox';
     isRequired?: boolean;
     sortOrder: number;
-    displaySortOrder?: number;
     options: Array<{
       id?: string;
       name: string;
@@ -491,7 +490,6 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
                     COALESCE(g.min_selection, 0) AS min_selection,
                     COALESCE(g.max_selection, 1) AS max_selection,
                     COALESCE(g.sort_order, 0) AS sort_order,
-                    json_extract(g.source_metadata_json, '$.displaySortOrder') AS display_sort_order,
                     COALESCE(g.scope, 'order') AS scope,
                     o.id AS option_id, o.name AS option_name, COALESCE(o.price, 0) AS option_price,
                     COALESCE(o.is_default, 0) AS is_default, o.out_of_stock_until AS option_out_of_stock_until,
@@ -610,7 +608,6 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
             type: row.selection_type === 'multiple' ? 'checkbox' : 'radio',
             isRequired: Boolean(row.is_required),
             sortOrder: Number(row.sort_order || 0),
-            ...(Number.isSafeInteger(row.display_sort_order) ? { displaySortOrder: row.display_sort_order } : {}),
             options: []
           });
         }

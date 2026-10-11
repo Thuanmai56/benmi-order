@@ -75,7 +75,7 @@ export async function loadOptionCatalog(env: Env, tenantId: string): Promise<Opt
 			labels: parse(g.labels_json, {}),
 			revision: Number(g.revision || 0),
 			metadata,
-			...(Number.isSafeInteger(metadata.displaySortOrder) ? { displaySortOrder: metadata.displaySortOrder } : {}),
+			sortOrder: Number(g.sort_order || 0),
 			options: options
 				.filter((o) => o.group_id === g.id)
 				.map((o) => ({
