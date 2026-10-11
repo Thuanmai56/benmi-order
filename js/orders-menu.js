@@ -428,7 +428,6 @@ async function loadMenuData() {
                 sourceId: cust.id || custId,
                 canonicalId: libraryGroup?.canonicalId || null,
                 sortOrder: cust.sortOrder !== undefined ? cust.sortOrder : gIdx,
-                ...(Number.isSafeInteger(cust.displaySortOrder) ? { displaySortOrder: cust.displaySortOrder } : {}),
                 options: (cust.options || []).map(opt => ({
                   ...opt,
                   id: opt.id || opt.name,
@@ -562,6 +561,18 @@ let categoryBeforeDisplayOrder = -1;
 let displayOrderCategory = null;
 let displayOrderInitial = [];
 let displayOrderInitialSnapshot = null;
+let displayOrderGroupInitial = [];
+
+function captureMenuDisplayOrder() {
+  const capture = entry => ({ ...entry, value: entry.model[entry.field], hadOrder: Object.hasOwn(entry.model, entry.field) });
+  displayOrderInitial = getMenuDisplayEntries().map(capture);
+  displayOrderGroupInitial = getMenuOrderGroups().map(model => capture({ model, field: 'sortOrder', position: Number(model.sortOrder) || 0 }));
+  try {
+    displayOrderInitialSnapshot = JSON.stringify(currentMenuData);
+  } catch (e) {
+    displayOrderInitialSnapshot = null;
+  }
+}
 
 function openCategoriesManager() {
   if (!isMenuLoadedCompletely || !currentMenuData || isMenuSaving || isCategoryManagerOpen) return;
@@ -569,12 +580,7 @@ function openCategoriesManager() {
   categoryBeforeDisplayOrder = activeCategoryIndex;
   displayOrderCategory = currentMenuData[activeCategoryIndex] || null;
   if (displayOrderCategory && displayOrderCategory.type === 'modifier') displayOrderCategory = null;
-  displayOrderInitial = getMenuDisplayEntries().map(entry => ({ model: entry.model, field: entry.field, value: entry.model[entry.field], hadOrder: Object.hasOwn(entry.model, entry.field), position: entry.position }));
-  try {
-    displayOrderInitialSnapshot = JSON.stringify(currentMenuData);
-  } catch (e) {
-    displayOrderInitialSnapshot = null;
-  }
+  captureMenuDisplayOrder();
   isCategoryManagerOpen = true;
   activeCategoryIndex = -1;
   // Stale inline inputs must not write into newly reordered item indexes.
@@ -654,37 +660,43 @@ function formatPlusBtnText(text, fallback) {
   return raw.startsWith('+') ? raw : `+ ${raw}`;
 }
 
-function getMenuDisplayEntries() {
-  const entries = [];
+function getMenuOrderGroups() {
+  const groups = [];
+  const seenGroups = new Set();
   (currentMenuData || []).forEach(cat => {
-    if (!isCustomizationCategory(cat)) {
-      entries.push({
-        model: cat,
-        title: cat.title || cat.name || '',
-        kind: 'categoryTypeCatalogBadge',
-        field: 'sortOrder',
-        position: Number(cat.sortOrder) || 0,
-        isOrderGroup: false,
-        isCustomizationSection: false,
-        itemsCount: (cat.items || []).length
-      });
-    } else if (cat.type === 'order_customization' || cat.id === 'sec-flavor' || cat.slug === 'sec-flavor') {
-      const orderGroups = (cat.groups || []).filter(g => !g.scope || g.scope === 'order');
-      const isVi = typeof isLangVi !== 'undefined' && isLangVi;
-      const defaultTitle = isVi ? (cat.title?.includes('Tùy chọn') ? cat.title : 'Tùy chọn khẩu vị') : (cat.title || '口味與客製化選擇');
-      entries.push({
-        model: cat,
-        title: defaultTitle,
-        kind: 'scopeOrder',
-        field: 'sortOrder',
-        position: Number(cat.sortOrder) || 0,
-        isOrderGroup: true,
-        isCustomizationSection: true,
-        itemsCount: orderGroups.length
+    if (isCustomizationCategory(cat)) {
+      (cat.groups || []).forEach(group => {
+        const scope = group.scope || (cat.type === 'modifier' ? 'item' : 'order');
+        const id = String(group.canonicalId || group.id || '');
+        if (scope !== 'order' || !id || seenGroups.has(id)) return;
+        seenGroups.add(id);
+        groups.push(group);
       });
     }
   });
+  return groups.sort((a, b) => (Number(a.sortOrder) || 0) - (Number(b.sortOrder) || 0));
+}
+
+function getMenuDisplayEntries() {
+  const section = getMenuOrderGroups().length ? currentMenuData.find(cat => cat.type === 'order_customization') || currentMenuData.find(cat => isCustomizationCategory(cat) && cat.groups?.some(group => group.scope === 'order')) : null;
+  const entries = (currentMenuData || []).filter(cat => cat === section || !isCustomizationCategory(cat)).map(model => ({
+    model, title: model === section ? t('menuOrderFlavorSection') : model.title,
+    kind: model === section ? 'scopeOrder' : 'categoryTypeCatalogBadge', isOrderSection: model === section,
+    field: 'sortOrder', position: Number(model.sortOrder) || 0
+  }));
   return entries.sort((a, b) => a.position - b.position);
+}
+
+function commitMenuDisplayRanks(ordered, initial) {
+  const original = ordered.length === initial.length && ordered.every((entry, i) => entry.model === initial[i].model);
+  const slots = initial.map(entry => entry.position);
+  const useSlots = slots.length === ordered.length && slots.every((value, i) => Number.isFinite(value) && (!i || value > slots[i-1]));
+  ordered.forEach((entry, i) => {
+    if (original) {
+      if (initial[i].hadOrder) entry.model[entry.field] = initial[i].value;
+      else delete entry.model[entry.field];
+    } else entry.model[entry.field] = useSlots ? slots[i] : i + 1;
+  });
 }
 
 function renderCategoriesManagerView() {
@@ -727,8 +739,9 @@ function renderCategoriesManagerView() {
   container.innerHTML = '';
   const entries = getMenuDisplayEntries();
   if (!entries.some(entry => entry.model === displayOrderCategory)) {
-    displayOrderCategory = entries.find(entry => !entry.isCustomizationSection)?.model || entries[0]?.model || null;
+    displayOrderCategory = entries.find(entry => !entry.isOrderSection)?.model || entries[0]?.model || null;
   }
+  const selected = entries.find(entry => entry.model === displayOrderCategory);
 
   const addPanel = (headerEl, id) => {
     const section = document.createElement('section');
@@ -743,7 +756,7 @@ function renderCategoriesManagerView() {
     return list;
   };
 
-  // Left Panel: Sections (Catalog Categories + Unified Whole-Order Customization Master Section)
+  // Left Panel: Sections (Catalog Categories + Unified Flavor Section)
   const leftHeader = document.createElement('div');
   leftHeader.className = 'menu-order-panel-header';
   const leftTopRow = document.createElement('div');
@@ -768,8 +781,7 @@ function renderCategoriesManagerView() {
 
   const sectionsList = addPanel(leftHeader, 'menu-order-sections-title');
 
-  // Right Panel: Items in Selected Category or Customization Groups in Master Section
-  const isSelectedCustom = displayOrderCategory && isCustomizationCategory(displayOrderCategory);
+  // Right Panel: Items in Selected Category or Groups in Flavor Section
   const targetCategoryTitle = displayOrderCategory ? (displayOrderCategory.title || displayOrderCategory.name || '') : '';
   const rightHeader = document.createElement('div');
   rightHeader.className = 'menu-order-panel-header header-right';
@@ -780,19 +792,17 @@ function renderCategoriesManagerView() {
   const rightTitle = document.createElement('h3');
   rightTitle.className = 'panel-header-title';
   rightTitle.id = 'menu-order-items-title';
-  rightTitle.textContent = isSelectedCustom
-    ? t('menuOrderCustomizationsIn', { name: targetCategoryTitle || t('wholeOrderMasterTitle') })
-    : (displayOrderCategory ? t('menuOrderItemsIn', { name: targetCategoryTitle }) : t('segProducts'));
+  rightTitle.textContent = selected?.isOrderSection
+    ? t('menuOrderGroups')
+    : (displayOrderCategory ? t('menuOrderItems', { name: targetCategoryTitle }) : t('segProducts'));
 
-  const orderGroups = isSelectedCustom
-    ? (displayOrderCategory.groups || []).filter(g => !g.scope || g.scope === 'order')
-    : [];
-  const products = isSelectedCustom ? [] : (displayOrderCategory?.items || []);
-  const rightItemsCount = isSelectedCustom ? orderGroups.length : products.length;
+  const rightItemsCount = selected?.isOrderSection
+    ? getMenuOrderGroups().length
+    : (displayOrderCategory?.items || []).length;
 
   const rightCount = document.createElement('span');
   rightCount.className = 'panel-count-badge count-badge-right';
-  rightCount.textContent = isSelectedCustom
+  rightCount.textContent = selected?.isOrderSection
     ? t('nCustomizationsVisible', { n: rightItemsCount })
     : t('nItemsVisible', { n: rightItemsCount });
 
@@ -815,24 +825,14 @@ function renderCategoriesManagerView() {
     list.appendChild(message);
   };
 
-  const commitSections = ordered => {
-    const original = ordered.length === displayOrderInitial.length && ordered.every((entry, i) => entry.model === displayOrderInitial[i].model);
-    const slots = displayOrderInitial.map(entry => entry.position);
-    const useSlots = slots.length === ordered.length && slots.every((value, i) => Number.isFinite(value) && (!i || value > slots[i-1]));
-    ordered.forEach((entry, i) => {
-      if (original) {
-        const initial = displayOrderInitial[i];
-        if (initial.hadOrder) entry.model[entry.field] = initial.value;
-        else delete entry.model[entry.field];
-      } else entry.model[entry.field] = useSlots ? slots[i] : i + 1;
-    });
-  };
+  const commitSections = ordered => commitMenuDisplayRanks(ordered, displayOrderInitial);
 
   const rows = (list, values, kind, commit) => {
     let dragged = null;
     values.forEach((value, index) => {
       const model = kind === 'section' ? value.model : value;
       const isSelected = (kind === 'section' && displayOrderCategory && model === displayOrderCategory);
+      const name = kind === 'section' ? value.title : (value.name || value.title || '');
       const row = document.createElement('div');
       row.className = 'menu-order-card menu-display-order-row' + (isSelected ? ' is-selected' : '');
       row.draggable = true;
@@ -863,7 +863,7 @@ function renderCategoriesManagerView() {
       titleRow.className = 'menu-order-card-title-row';
       const titleStrong = document.createElement('strong');
       titleStrong.className = 'menu-order-card-title';
-      titleStrong.textContent = kind === 'section' ? value.title : (isSelectedCustom ? (value.title || value.name || '') : (value.name || ''));
+      titleStrong.textContent = name;
       titleRow.appendChild(titleStrong);
 
       if (kind === 'section') {
@@ -874,8 +874,8 @@ function renderCategoriesManagerView() {
           titleRow.appendChild(activeDot);
         }
         const tag = document.createElement('span');
-        tag.className = 'menu-order-tag ' + (value.isCustomizationSection ? 'tag-order' : 'tag-catalog');
-        tag.textContent = value.isCustomizationSection ? t('badgeScopeOrder') : t('badgeFoodItem');
+        tag.className = 'menu-order-tag ' + (value.isOrderSection ? 'tag-order' : 'tag-catalog');
+        tag.textContent = value.isOrderSection ? t('badgeScopeOrder') : t('badgeFoodItem');
         titleRow.appendChild(tag);
       }
       contentEl.appendChild(titleRow);
@@ -891,8 +891,8 @@ function renderCategoriesManagerView() {
         }
         const detail = document.createElement('span');
         detail.className = 'menu-order-card-detail';
-        if (value.isCustomizationSection) {
-          detail.textContent = t('customizationOptionsCount', { n: value.itemsCount || 0 });
+        if (value.isOrderSection) {
+          detail.textContent = t('customizationOptionsCount', { n: getMenuOrderGroups().length });
         } else if (typeof isComboCategory === 'function' && isComboCategory(value.model)) {
           detail.textContent = t('badgeComboItem');
         } else if (value.itemsCount > 0) {
@@ -901,20 +901,18 @@ function renderCategoriesManagerView() {
           detail.textContent = t('badgeUncategorized');
         }
         subRow.appendChild(detail);
+      } else if (kind === 'group') {
+        const reqText = value.required ? t('requiredOptionBadge') : t('optionalOptionBadge');
+        const countText = (value.options || []).length + ' ' + t('optionsCountUnit');
+        const detail = document.createElement('span');
+        detail.className = 'menu-order-card-detail';
+        detail.textContent = `${reqText} • ${countText}`;
+        subRow.appendChild(detail);
       } else {
-        if (isSelectedCustom) {
-          const reqText = value.isRequired ? t('requiredOptionBadge') : t('optionalOptionBadge');
-          const typeText = (value.type === 'checkbox' || value.selectionType === 'multiple') ? (t('selectionTypeMultiple') || '多選') : (t('selectionTypeSingle') || '單選');
-          const detail = document.createElement('span');
-          detail.className = 'menu-order-card-detail';
-          detail.textContent = `${reqText} • ${typeText}`;
-          subRow.appendChild(detail);
-        } else {
-          const priceEl = document.createElement('span');
-          priceEl.className = 'menu-order-item-price';
-          priceEl.textContent = '$' + escapeHtml(value.price ?? '');
-          subRow.appendChild(priceEl);
-        }
+        const priceEl = document.createElement('span');
+        priceEl.className = 'menu-order-item-price';
+        priceEl.textContent = '$' + escapeHtml(value.price ?? '');
+        subRow.appendChild(priceEl);
       }
       contentEl.appendChild(subRow);
       row.appendChild(contentEl);
@@ -948,7 +946,7 @@ function renderCategoriesManagerView() {
         button.type = 'button';
         button.className = 'menu-order-move';
         button.disabled = index + direction < 0 || index + direction >= values.length;
-        button.setAttribute('aria-label', t(direction < 0 ? 'moveDisplayUp' : 'moveDisplayDown') + ': ' + (kind === 'section' ? value.title : (value.title || value.name)));
+        button.setAttribute('aria-label', t(direction < 0 ? 'moveDisplayUp' : 'moveDisplayDown') + ': ' + name);
         button.setAttribute('data-order-delta', direction);
         button.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${direction < 0 ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'}"/></svg>`;
         button.onclick = (e) => {
@@ -997,17 +995,12 @@ function renderCategoriesManagerView() {
   rows(sectionsList, entries, 'section', commitSections);
   if (!entries.length) empty(sectionsList, 'menuSelectPrompt');
 
-  if (isSelectedCustom) {
-    rows(itemsList, orderGroups, 'item', ordered => {
-      ordered.forEach((g, idx) => { g.sortOrder = idx + 1; });
-      const otherGroups = (displayOrderCategory.groups || []).filter(g => g.scope && g.scope !== 'order');
-      displayOrderCategory.groups = [...ordered, ...otherGroups];
-    });
-    if (!orderGroups.length) empty(itemsList, 'menuEmptyCategory');
+  const products = displayOrderCategory?.items || [];
+  if (selected?.isOrderSection) {
+    rows(itemsList, getMenuOrderGroups(), 'group', ordered => commitMenuDisplayRanks(ordered.map(model => ({ model, field: 'sortOrder' })), displayOrderGroupInitial));
+    if (!getMenuOrderGroups().length) empty(itemsList, 'menuEmptyCategory');
   } else {
-    rows(itemsList, products, 'item', ordered => {
-      displayOrderCategory.items.splice(0, products.length, ...ordered);
-    });
+    rows(itemsList, products, 'item', ordered => { displayOrderCategory.items.splice(0, products.length, ...ordered); });
     if (!products.length) empty(itemsList, 'menuEmptyCategory');
   }
 
@@ -2866,7 +2859,6 @@ function serializeMenuData(categories) {
           appliedCategories: Array.isArray(grp.appliedCategories) ? grp.appliedCategories : [],
           appliedItems: Array.isArray(grp.appliedItems) ? grp.appliedItems : [],
           sortOrder: grp.sortOrder !== undefined ? grp.sortOrder : (gIdx + 1),
-          ...(Number.isSafeInteger(grp.displaySortOrder) ? { displaySortOrder: grp.displaySortOrder } : {}),
           options: (grp.options || []).map(opt => {
             const optPrice = Number(opt.price ?? opt.surcharge ?? 0);
             const optIsDefault = Boolean(opt.isDefault ?? opt.is_default);
@@ -3041,12 +3033,7 @@ async function saveMenuData(skipConfirm = false) {
     if (window.UnifiedMenu?.enabled) await window.UnifiedMenu.load();
     clearMenuDirty();
     if (isCategoryManagerOpen) {
-      displayOrderInitial = getMenuDisplayEntries().map(entry => ({ model: entry.model, field: entry.field, value: entry.model[entry.field], hadOrder: Object.hasOwn(entry.model, entry.field), position: entry.position }));
-      try {
-        displayOrderInitialSnapshot = JSON.stringify(currentMenuData);
-      } catch (e) {
-        displayOrderInitialSnapshot = null;
-      }
+      captureMenuDisplayOrder();
     }
     try {
       const tid = getTenantIdFromUrl();
