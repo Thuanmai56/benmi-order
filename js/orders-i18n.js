@@ -432,7 +432,9 @@ const I18N = {
     moveDisplayUp: "上移",
     moveDisplayDown: "下移",
     manageCategoriesTitle: "顯示排序",
-    manageCategoriesSub: "拖曳或使用上下按鈕，調整餐點分類與整單選項在顧客菜單的顯示順序。完成後請儲存變更。",
+    manageCategoriesSub: "拖曳或使用上下按鈕調整顯示順序。選取分類可排序分類內的餐點，完成後請儲存變更。",
+    menuOrderSections: "分類與整筆訂單項目",
+    menuOrderItems: "{name}內的餐點",
     btnCloseManager: "關閉",
     btnAddCategory: "新增分類",
     btnMenuAddCategory: "新增分類",
@@ -485,7 +487,7 @@ const I18N = {
     catalogManageTitle: "餐點設定",
     catalogManageDesc: "編輯餐點名稱、價格、供應狀態與詳細設定。",
     menuEditorTitle: "分類項目",
-    menuEditSub: "拖曳排序 ✦ 點擊欄位直接修改",
+    menuEditSub: "點擊餐點以編輯；使用「顯示排序」調整順序。",
     btnMenuRestore: "恢復預設菜單",
     btnMenuAddItem: "新增項目",
     btnMenuCreateType: "建立設定",
@@ -1201,7 +1203,9 @@ const I18N = {
     moveDisplayUp: "Đưa lên",
     moveDisplayDown: "Đưa xuống",
     manageCategoriesTitle: "Sắp xếp hiển thị",
-    manageCategoriesSub: "Kéo thả hoặc dùng nút lên/xuống để sắp xếp phân loại món và tuỳ chọn toàn đơn trên thực đơn khách hàng. Bấm Lưu thay đổi khi hoàn tất.",
+    manageCategoriesSub: "Kéo thả hoặc dùng nút lên/xuống để đổi thứ tự hiển thị. Chọn phân loại để sắp xếp các món bên trong, rồi bấm Lưu thay đổi khi hoàn tất.",
+    menuOrderSections: "Phân loại và mục toàn đơn",
+    menuOrderItems: "Món trong {name}",
     btnCloseManager: "Đóng",
     btnAddCategory: "Thêm phân loại",
     btnMenuAddCategory: "Thêm phân loại",
@@ -1254,7 +1258,7 @@ const I18N = {
     catalogManageTitle: "Cài đặt món ăn",
     catalogManageDesc: "Điều chỉnh tên món, giá bán, trạng thái còn món và cài đặt chi tiết.",
     menuEditorTitle: "Danh sách món",
-    menuEditSub: "Kéo thả để sắp xếp ✦ Nhấn vào ô để sửa trực tiếp",
+    menuEditSub: "Nhấn vào món để chỉnh sửa; dùng Sắp xếp hiển thị để đổi thứ tự.",
     btnMenuRestore: "Khôi phục Menu gốc",
     btnMenuAddItem: "Thêm món mới",
     btnMenuCreateType: "Tạo theo loại",
@@ -2384,7 +2388,8 @@ function applyLanguageToDOM() {
 
   const btnManageCats = document.getElementById("btn-menu-manage-cats");
   if (btnManageCats) {
-    btnManageCats.innerHTML = `${(typeof POS_SVG !== 'undefined' && POS_SVG.settings) || ''} <span>${dict.btnManageCategories}</span>`;
+    const label = btnManageCats.querySelector('span');
+    if (label) label.innerText = dict.btnManageCategories;
   }
   const btnManageClose = document.getElementById("btn-menu-manage-close");
   if (btnManageClose) btnManageClose.innerText = dict.btnCloseManager;
