@@ -978,7 +978,7 @@ function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, ma
                 });
             }
 
-            if (catSlug === 'combo') {
+            if (!bootstrapData?.unifiedMenu && catSlug === 'combo') {
                 let drinks = comboDrinkData[origName] || [];
                 let drinkCounts = {};
                 drinks.slice(0, cart[key]).forEach(d => { drinkCounts[d] = (drinkCounts[d] || 0) + 1; });
@@ -1116,7 +1116,7 @@ function formatAppendItemsOnlyText() {
                 });
             }
 
-            if (catSlug === 'combo') {
+            if (!bootstrapData?.unifiedMenu && catSlug === 'combo') {
                 let drinks = comboDrinkData[origName] || [];
                 let drinkCounts = {};
                 drinks.slice(0, cart[key]).forEach(d => { drinkCounts[d] = (drinkCounts[d] || 0) + 1; });
@@ -1323,7 +1323,7 @@ function buildStructuredCartItems() {
                 }
             }
 
-            if (catSlug === 'combo' && comboDrinkData[origName]) {
+            if (!bootstrapData?.unifiedMenu && catSlug === 'combo' && comboDrinkData[origName]) {
                 const drinks = comboDrinkData[origName].slice(0, qty);
                 drinks.forEach(d => {
                     options.push({ group: '飲料', choice: d, price: 0 });
@@ -2393,18 +2393,50 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
         clearTimeout(timeoutId);
         if (err.serverRejected) {
             const details = err.details || {};
-            if (String(details.code || '').startsWith('BUNDLE_')) {
+            const code = String(details.code || '');
+            const optionError = code.startsWith('OPTION_') || code === 'PRODUCT_UNAVAILABLE' || code === 'MIN_ORDER_SUBTOTAL_NOT_MET';
+            if (code.startsWith('BUNDLE_') || optionError) {
+                const affected = buildStructuredCartItems()[Number(details.itemIndex || 0)];
+                let key = affected && Object.keys(cart).find(candidate => resolveCatalogItem(candidate)?.itemId === affected.itemId);
+                let location = key ? parseCartKey(key) : null;
                 try {
                     const fresh = await fetch(`${WORKER_BASE}/api/tenant/bootstrap?tenant_id=${encodeURIComponent(getTenantIdFromUrl())}&_t=${Date.now()}`);
-                    if (fresh.ok) bootstrapData = await fresh.json();
+                    if (fresh.ok) {
+                        bootstrapData = await fresh.json();
+                        window.bootstrapData = bootstrapData;
+                    }
                 } catch (refreshError) { console.warn('[Bundle] Refresh failed', refreshError); }
-                const affected = buildStructuredCartItems()[Number(details.itemIndex || 0)];
-                const key = affected && Object.keys(cart).find(candidate => resolveCatalogItem(candidate)?.itemId === affected.itemId);
-                const location = key ? parseCartKey(key) : null;
-                const safeMessage = String(details.error || '套餐內容已變更，請重新確認').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+                // Cart keys include names: retain selections when the same product was renamed.
+                const category = bootstrapData?.catalog?.find(cat => cat.items?.some(item => item.id === affected?.itemId));
+                const product = category?.items?.find(item => item.id === affected?.itemId);
+                const freshKey = product && `${category.slug}_${product.name}`;
+                if (key && freshKey && key !== freshKey && !cart[freshKey]) {
+                    cart[freshKey] = cart[key];
+                    delete cart[key];
+                    for (const data of [window.customizeData, window.comboDrinkData, window.bundleCartData]) {
+                        if (data && Object.prototype.hasOwnProperty.call(data, key)) {
+                            data[freshKey] = data[key];
+                            delete data[key];
+                        }
+                    }
+                    key = freshKey;
+                    location = { catSlug: category.slug, origName: product.name };
+                }
+                const vi = (typeof currentLocale !== 'undefined' ? currentLocale : document.documentElement.lang) === 'vi';
+                const message = optionError
+                    ? code === 'OPTION_PRICE_CHANGED'
+                        ? (vi ? 'Giá món đã thay đổi. Vui lòng xác nhận lại tùy chọn.' : '餐點價格已更新，請重新確認選項。')
+                        : code === 'PRODUCT_UNAVAILABLE' || code === 'OPTION_UNAVAILABLE' || code === 'OPTION_SUB_INVALID'
+                            ? (vi ? 'Một món hoặc tùy chọn đã hết hàng. Vui lòng chọn lại.' : '餐點或選項已售完，請重新選擇。')
+                            : code === 'MIN_ORDER_SUBTOTAL_NOT_MET'
+                                ? (vi ? 'Giỏ hàng chưa đạt giá trị tối thiểu cho tùy chọn này. Vui lòng chọn lại.' : '訂單金額未達此選項的最低金額，請重新選擇。')
+                                : (vi ? 'Tùy chọn của món đã thay đổi. Vui lòng xác nhận lại.' : '餐點選項已更新，請重新確認。')
+                    : details.error || '套餐內容已變更，請重新確認';
+                const safeMessage = String(message).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
                 const expected = details.expectedTotal ?? details.expectedSubtotal;
-                customAlert(`${safeMessage}${expected !== undefined ? `<br>更新後金額：$${Number(expected)}` : ''}`, () => {
-                    if (location) {
+                if (typeof updateTotal === 'function') updateTotal();
+                customAlert(`${safeMessage}${expected !== undefined ? `<br>${vi ? 'Số tiền cập nhật' : '更新後金額'}：$${Number(expected)}` : ''}`, () => {
+                    if (location && (!optionError || (product?.bundleRule && !product.isOutOfStock))) {
                         openBundleBuilderModal(location.catSlug, location.origName, Number(details.portionIndex || 0));
                         if (details.groupId && typeof window.bundleFocusGroup === 'function') window.bundleFocusGroup(details.groupId);
                     }
