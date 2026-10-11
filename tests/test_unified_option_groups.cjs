@@ -581,6 +581,11 @@ test("legacy whole-menu writes cannot remove a referenced product or bypass the 
     f.db.prepare("SELECT count(*) n FROM menu_categories").get().n,
     2,
   );
+  await exports.syncMenuToD1('a',{a_food:{Meal:{id:'a_main',price:110}}},f.env);
+  assert.equal(f.db.prepare('SELECT price FROM menu_items WHERE id=?').get('a_main').price,110);
+  assert.equal(f.db.prepare('SELECT count(*) n FROM modifier_options').get().n,2);
+  assert.equal(f.db.prepare('SELECT count(*) n FROM item_modifier_links').get().n,1);
+
 });
 test("optional legacy groups keep minimum zero after migration", async () => {
   const f = fixture();
@@ -598,4 +603,70 @@ test("optional legacy groups keep minimum zero after migration", async () => {
   );
   const c = await f.api.loadOptionCatalog(f.env, "a");
   assert.equal(c.groups[0].minSelection, 0);
+});
+test("customer editing restores legacy per-product choices alongside bundle selections", () => {
+  const vm = require("node:vm"),
+    fs = require("node:fs"),
+    sandbox = {
+      window: {},
+      document: { documentElement: { lang: "vi" } },
+      cart: {},
+    };
+  vm.createContext(sandbox);
+  vm.runInContext(
+    fs.readFileSync("js/client-option-groups.js", "utf8"),
+    sandbox,
+  );
+  const rule = {
+    groups: [
+      {
+        id: "new_drinks",
+        metadata: { legacyGroupId: "old_drinks" },
+        minSelection: 1,
+        maxSelection: 1,
+        eligibleItems: [
+          {
+            id: "new_coffee",
+            productId: "coffee",
+            name: "Coffee",
+            price: 0,
+            optionGroups: [],
+          },
+        ],
+      },
+      {
+        id: "new_spicy",
+        metadata: { slug: "spicy" },
+        minSelection: 1,
+        maxSelection: 1,
+        eligibleItems: [{ id: "no_spicy", name: "No spice", price: 0 }],
+      },
+      {
+        id: "new_topping",
+        metadata: { slug: "topping" },
+        minSelection: 0,
+        maxSelection: 3,
+        eligibleItems: [{ id: "cheese", name: "Cheese", price: 3 }],
+      },
+    ],
+  };
+  const restored = sandbox.window.UnifiedOptions.restore(
+    rule,
+    [{ groupId: "old_drinks", items: [{ itemId: "coffee", quantity: 1 }] }],
+    {
+      single: { spicy: "No spice" },
+      multiple: { Cheese: true },
+      note: "Keep note",
+    },
+  );
+  assert.deepEqual(
+    JSON.parse(
+      JSON.stringify(restored.map((g) => g.items.map((i) => i.optionId))),
+    ),
+    [["new_coffee"], ["no_spicy"], ["cheese"]],
+  );
+  assert.equal(
+    sandbox.window.UnifiedOptions.valid(rule, { groups: restored }),
+    true,
+  );
 });

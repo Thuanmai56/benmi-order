@@ -595,7 +595,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
 
     const customizations: BootstrapResponse['customizations'] = [];
 
-    if (orderModifierRows.length > 0) {
+    if (orderModifierRows.length > 0 || unifiedMenuEnabled(env)) {
       // Primary: Pure Canonical New Schema for order-level customizations
       const orderGroupsMap = new Map<string, any>();
       for (const row of orderModifierRows) {
