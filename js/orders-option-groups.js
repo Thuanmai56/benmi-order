@@ -54,6 +54,8 @@
       ugClearGroupSearch: "Xóa từ khóa tìm nhóm",
       ugNoMatchingGroups: "Không tìm thấy nhóm phù hợp",
       ugNoGroups: "Chưa có nhóm tùy chọn",
+      ugOrderSection: "Tùy chọn toàn đơn",
+      ugItemSection: "Tùy chọn theo món",
       ugGroupSurcharge: "Phụ thu",
       ugAppliesToOrder: "Áp dụng cho cả đơn hàng",
       ugAll: "Tất cả phân loại",
@@ -148,6 +150,8 @@
       ugClearGroupSearch: "清除群組搜尋",
       ugNoMatchingGroups: "找不到符合的群組",
       ugNoGroups: "尚無選項群組",
+      ugOrderSection: "整筆訂單選項",
+      ugItemSection: "餐點選項",
       ugGroupSurcharge: "加價",
       ugAppliesToOrder: "適用整筆訂單",
       ugAll: "所有分類",
@@ -213,6 +217,7 @@
     returnFocus = null;
   const normalizeSearch = (value) =>
     String(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase().replace(/đ/g, "d").trim();
+  const groupSectionsOpen = { order: true, item: true };
   const uid = (kind) =>
     `${getTenantIdFromUrl()}_${kind}_${crypto.randomUUID()}`;
   const groupById = (id) => catalog.groups.find((g) => g.id === id);
@@ -1172,6 +1177,7 @@
       if (catalogTenant !== tenantId) {
         selectedGroup = null;
         groupQuery = "";
+        groupSectionsOpen.order = groupSectionsOpen.item = true;
         catalogTenant = tenantId;
       }
     },
@@ -1229,12 +1235,22 @@
       root.classList.add("is-option-groups");
       root.innerHTML =
         `<div class="ug-group-navigation">${btn("new-group", "ugNewGroup")}<div class="ug-group-search"><input type="search" id="ug-group-search" value="${esc(groupQuery)}" placeholder="${esc(tr("ugSearchGroups"))}" aria-label="${esc(tr("ugSearchGroups"))}"><button type="button" data-action="clear-search" aria-label="${esc(tr("ugClearGroupSearch"))}" ${groupQuery ? "" : "hidden"}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div></div><div class="ug-group-list">` +
-        catalog.groups
-          .map(
-            (g) =>
-              `<button type="button" class="menu-option-card ${selectedGroup === g.id ? "active" : ""}" data-group="${esc(g.id)}" aria-pressed="${selectedGroup === g.id}" ${normalizeSearch(g.name).includes(normalizeSearch(groupQuery)) ? "" : "hidden"}><span class="menu-option-card-content"><strong>${esc(g.name)}${g.scope === "order" ? " · " + esc(tr("ugOrderGroups")) : ""}</strong><small>${options(g).length} ${esc(tr("ugOptions"))}</small></span><span aria-hidden="true">›</span></button>`,
-          )
+        ["order", "item"]
+          .map((scope) => {
+            const groups = catalog.groups.filter((g) => (g.scope === "order" ? "order" : "item") === scope);
+            return `<details class="ug-group-section" data-group-scope="${scope}" ${groupSectionsOpen[scope] ? "open" : ""}><summary class="ug-group-section-heading"><span>${esc(tr(scope === "order" ? "ugOrderSection" : "ugItemSection"))}</span><span class="ug-group-section-count">${groups.length}</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></summary><div class="ug-group-section-cards">${groups.map((g) =>
+              `<button type="button" class="menu-option-card ${selectedGroup === g.id ? "active" : ""}" data-group="${esc(g.id)}" aria-pressed="${selectedGroup === g.id}"><span class="menu-option-card-content"><strong>${esc(g.name)}</strong><small>${options(g).length} ${esc(tr("ugOptions"))}</small></span><span aria-hidden="true">›</span></button>`,
+            ).join("") || `<p class="ug-group-section-empty ug-muted">${esc(tr("ugNoGroups"))}</p>`}</div></details>`;
+          })
           .join("") + `<p class="ug-group-empty ug-muted" role="status" hidden></p></div>`;
+      root.querySelectorAll("[data-group-scope]").forEach((section) => {
+        section.querySelector("summary").onclick = (event) => {
+          event.preventDefault();
+          section.open = !section.open;
+          // Search expansion is temporary and must not replace manual state.
+          if (!normalizeSearch(groupQuery)) groupSectionsOpen[section.dataset.groupScope] = section.open;
+        };
+      });
       root.querySelector('[data-action="new-group"]').onclick = () => this.group();
       const input = root.querySelector("#ug-group-search");
       input.oninput = () => {
@@ -1270,9 +1286,14 @@
         card.hidden = !normalizeSearch(groupById(card.dataset.group)?.name || "").includes(query);
         if (!card.hidden) visible++;
       });
+      root.querySelectorAll("[data-group-scope]").forEach((section) => {
+        const hasMatches = [...section.querySelectorAll("[data-group]")].some((card) => !card.hidden);
+        section.hidden = Boolean(query) && !hasMatches;
+        section.open = query ? hasMatches : groupSectionsOpen[section.dataset.groupScope];
+      });
       const empty = root.querySelector(".ug-group-empty");
-      empty.hidden = visible > 0;
-      empty.textContent = tr(catalog.groups.length ? "ugNoMatchingGroups" : "ugNoGroups");
+      empty.hidden = !query || visible > 0;
+      empty.textContent = tr("ugNoMatchingGroups");
       root.querySelector('[data-action="clear-search"]').hidden = !groupQuery;
     },
     workspace() {

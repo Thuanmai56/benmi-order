@@ -554,14 +554,26 @@ body.ug-open { overflow: hidden; }
 .ug-group-search input::-webkit-search-cancel-button { appearance: none; }
 .ug-group-search:focus-within { outline: 2px solid #166534; outline-offset: 2px; }
 .ug-group-search button { display: grid; place-items: center; flex-shrink: 0; width: 48px; height: 48px; border: 0; border-radius: 8px; background: transparent; color: #59645e; cursor: pointer; }
-.ug-group-list { min-height: 0; overflow: auto; flex: 1; }
+.ug-group-list { min-height: 0; overflow: auto; flex: 1; padding: 3px; }
+.ug-group-section { min-width: 0; }
+.ug-group-section + .ug-group-section { margin-top: 12px; border-top: 1px solid var(--menu-line); }
+.ug-group-section-heading { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 8px 4px; color: var(--menu-ink); font-size: 14px; font-weight: 650; line-height: 1.5; cursor: pointer; list-style: none; border-radius: 6px; }
+.ug-group-section-heading::-webkit-details-marker { display: none; }
+.ug-group-section-heading > span:first-child { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.ug-group-section-count { color: var(--menu-muted); font-size: 13px; font-weight: 500; }
+.ug-group-section-heading svg { flex-shrink: 0; }
+.ug-group-section[open] > summary svg { transform: rotate(90deg); }
+.ug-group-section-heading:focus-visible { outline: 2px solid var(--menu-accent); outline-offset: 1px; }
+.ug-group-section-cards { min-width: 0; }
+.ug-group-section-empty { margin: 0; padding: 8px 4px 12px; font-size: 13px; }
 .ug-group-empty { margin: 0; padding: 12px; }
 @media(max-width: 900px) {
   #view-menu .menu-categories-body.is-option-groups { max-height: none !important; }
   .ug-group-navigation { display: flex; align-items: stretch; gap: 12px; margin-bottom: 8px; }
   #menu-categories .ug-group-navigation > button[data-action="new-group"] { flex: 0 0 170px; width: 170px; margin: 0; }
   .ug-group-search { flex: 1; min-width: 0; margin: 0; }
-  .ug-group-list { display: flex; gap: 8px; overflow-x: auto; align-items: stretch; padding: 3px; }
+  .ug-group-list { flex: none; overflow: visible; }
+  .ug-group-section-cards { display: flex; gap: 8px; overflow-x: auto; align-items: stretch; padding: 3px; }
   #view-menu .is-option-groups .menu-option-card { margin: 0 !important; }
 }
 @media(max-width: 600px) {
