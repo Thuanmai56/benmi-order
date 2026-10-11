@@ -22,6 +22,21 @@ function updateMenuWorkspace() {
   const tools = document.getElementById('menu-catalog-tools');
   const cat = currentMenuData?.[activeCategoryIndex];
   if (tools) tools.hidden = isCategoryManagerOpen || menuSidebarTab !== 'products' || !cat || isCustomizationCategory(cat);
+  const toolbar = document.getElementById('menu-workspace-toolbar');
+  if (toolbar) toolbar.hidden = !tools || tools.hidden;
+  const optionsMode = menuSidebarTab === 'options' && Boolean(window.UnifiedMenu?.enabled);
+  const body = document.getElementById('menu-editor-body');
+  body?.classList.toggle('is-option-workspace', optionsMode);
+  document.getElementById('menu-editor-panel')?.classList.toggle('is-option-panel', optionsMode);
+  const help = document.getElementById('menu-editor-help');
+  if (help) help.hidden = optionsMode;
+  document.getElementById('menu-categories')?.classList.toggle('is-option-groups', optionsMode);
+  if (!optionsMode) {
+    for (const id of ['btn-option-group-edit', 'btn-option-add']) {
+      const button = document.getElementById(id);
+      if (button) button.hidden = true;
+    }
+  }
 }
 
 function menuItemMatchesFilters(item, query, stock) {

@@ -105,11 +105,44 @@ test('touch reordering keeps item identity, inline name and price together and r
 
 test('an options tab with no groups shows an empty state instead of stale product rows', () => {
   const app = setup();
-  app.elements['menu-editor-body'] = { classList: { remove() {} }, textContent: 'Old products' };
+  app.elements['menu-editor-body'] = { classList: { remove() {}, toggle() {} }, textContent: 'Old products' };
   app.elements['menu-editor-title'] = {};
   app.context.renderMenuCategories = () => {};
   app.context.renderMenuCategoryEditor = app.renderMenuCategoryEditor;
   app.context.setMenuSidebarTab('options');
   assert.equal(vm.runInContext('activeCategoryIndex', app.context), -1);
   assert.equal(app.elements['menu-editor-body'].textContent, 'optionSectionEmpty');
+});
+
+test('switching menu modes hides the empty toolbar and restores product header controls', () => {
+  const app = setup();
+  const classes = () => {
+    const values = new Set();
+    return {
+      toggle(name, on) { if (on) values.add(name); else values.delete(name); },
+      contains(name) { return values.has(name); }
+    };
+  };
+  app.elements['menu-catalog-tools'] = {};
+  app.elements['menu-workspace-toolbar'] = {};
+  app.elements['menu-editor-body'] = { classList: classes() };
+  app.elements['menu-editor-panel'] = { classList: classes() };
+  app.elements['menu-categories'] = { classList: classes() };
+  app.elements['menu-editor-help'] = {};
+  app.elements['btn-option-group-edit'] = { hidden: false };
+  app.elements['btn-option-add'] = { hidden: false };
+  app.context.window.UnifiedMenu = { enabled: true };
+  vm.runInContext("menuSidebarTab = 'options'; updateMenuWorkspace();", app.context);
+  assert.equal(app.elements['menu-workspace-toolbar'].hidden, true);
+  assert.equal(app.elements['menu-editor-body'].classList.contains('is-option-workspace'), true);
+  assert.equal(app.elements['menu-editor-help'].hidden, true);
+  vm.runInContext("menuSidebarTab = 'products'; updateMenuWorkspace();", app.context);
+  assert.equal(app.elements['menu-workspace-toolbar'].hidden, false);
+  assert.equal(app.elements['menu-editor-body'].classList.contains('is-option-workspace'), false);
+  assert.equal(app.elements['menu-categories'].classList.contains('is-option-groups'), false);
+  assert.equal(app.elements['menu-editor-help'].hidden, false);
+  assert.equal(app.elements['btn-option-add'].hidden, true);
+  assert.equal(app.elements['btn-option-group-edit'].hidden, true);
+  vm.runInContext("isCategoryManagerOpen = true; updateMenuWorkspace();", app.context);
+  assert.equal(app.elements['menu-workspace-toolbar'].hidden, true);
 });
