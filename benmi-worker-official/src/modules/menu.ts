@@ -381,6 +381,9 @@ function validateMenuUpdate(data: any): void {
           (group.minSelection !== undefined && group.maxSelection !== undefined && group.minSelection > group.maxSelection)) {
         throw new Error('INVALID_MODIFIER_GROUP_BOUNDS');
       }
+      if (group.displaySortOrder !== undefined && (!Number.isSafeInteger(group.displaySortOrder) || group.displaySortOrder < 0)) {
+        throw new Error('INVALID_GROUP_DISPLAY_ORDER');
+      }
       keys.add(group.key);
       if (group.id) ids.add(group.id);
       for (const option of group.options) {
@@ -545,7 +548,7 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
   const customIdMap = new Map((existingCustomizations || []).map(row => [row.key as string, row.id as string]));
   const ownedItemIds = new Set((existingItems || []).map(row => row.id as string));
   const ownedCustomIds = new Set((existingCustomizations || []).map(row => row.id as string));
-  const { results: existingGroups } = await env.DB.prepare('SELECT id FROM modifier_groups WHERE tenant_id = ?').bind(tenantId).all();
+  const { results: existingGroups } = await env.DB.prepare('SELECT id,scope,source_metadata_json FROM modifier_groups WHERE tenant_id = ?').bind(tenantId).all();
   const ownedGroupIds = new Set((existingGroups || []).map(row => row.id as string));
 
   // Collect all modifier group and option IDs from payload for cross-tenant pre-flight verification
@@ -700,6 +703,16 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
         activeCustomIds.push(custId);
 
         const custScope = cust.scope || 'order';
+        if (cust.displaySortOrder !== undefined) {
+          const groupId = String(cust.canonicalId || cust.id || '');
+          const stored = existingGroups.find(group => String(group.id) === groupId);
+          if (!stored || stored.scope !== 'order' || custScope !== 'order') throw new Error('INVALID_GROUP_DISPLAY_SCOPE');
+          const metadata = JSON.parse(String(stored.source_metadata_json || '{}'));
+          if (metadata.displaySortOrder !== cust.displaySortOrder) {
+            // Only the position changes; rules, options and other metadata stay intact.
+            statements.push(env.DB.prepare(`UPDATE modifier_groups SET source_metadata_json=json_set(COALESCE(NULLIF(source_metadata_json,''),'{}'),'$.displaySortOrder',?),${unifiedMenuEnabled(env) ? 'revision=revision+1,' : ''}updated_at=datetime('now') WHERE tenant_id=? AND id=? AND scope='order'`).bind(cust.displaySortOrder, tenantId, groupId));
+          }
+        }
         if (unifiedMenuEnabled(env)) continue; // Shared groups have dedicated transactional writes.
         const modGroupId = String(cust.canonicalId || (cust.sourceId ? (cust.id || cust.sourceId) : (cust.id || `mg_${custId}`)));
         if (!ownedGroupIds.has(modGroupId) && !ownedCustomIds.has(modGroupId) && !modGroupId.startsWith(`custom_${tenantId}_`)) {

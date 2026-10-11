@@ -61,36 +61,40 @@ export async function loadOptionCatalog(env: Env, tenantId: string): Promise<Opt
 	]);
 	if (results.some((r) => !r.success)) throw new Error('MENU_UNAVAILABLE');
 	const [products, categories, groups, options, links, categoryLinks] = results.map((r) => r.results as Row[]);
-	const normalized: OptionGroup[] = groups.map((g) => ({
-		id: g.id,
-		name: g.name,
-		scope: g.scope || 'item',
-		minSelection: Math.max(Number(g.min_selection || 0), g.is_required ? 1 : 0),
-		maxSelection: Number(g.max_selection || (g.selection_type === 'single' ? 1 : 999)),
-		allowRepeats: Boolean(g.allow_repeats),
-		included: Boolean(g.included),
-		sources: parse(g.sources_json, []),
-		labels: parse(g.labels_json, {}),
-		revision: Number(g.revision || 0),
-		metadata: parse(g.source_metadata_json, {}),
-		options: options
-			.filter((o) => o.group_id === g.id)
-			.map((o) => ({
-				id: o.id,
-				name: o.name,
-				price: Number(o.price),
-				productId: o.product_id || null,
-				quantity: Number(o.included_quantity || 1),
-				isDefault: Boolean(o.is_default),
-				isOutOfStock: oos(o),
-				isLocallyOutOfStock: Boolean(o.is_out_of_stock),
-				metadata: parse(o.source_metadata_json, {}),
-				outOfStockUntil: o.out_of_stock_until || null,
-				subOptions: parse(o.sub_options_json, []),
-				eligibilityRules: parse(o.eligibility_rules_json, []),
-				description: o.description || null,
-			})),
-	}));
+	const normalized: OptionGroup[] = groups.map((g) => {
+		const metadata = parse(g.source_metadata_json, {});
+		return {
+			id: g.id,
+			name: g.name,
+			scope: g.scope || 'item',
+			minSelection: Math.max(Number(g.min_selection || 0), g.is_required ? 1 : 0),
+			maxSelection: Number(g.max_selection || (g.selection_type === 'single' ? 1 : 999)),
+			allowRepeats: Boolean(g.allow_repeats),
+			included: Boolean(g.included),
+			sources: parse(g.sources_json, []),
+			labels: parse(g.labels_json, {}),
+			revision: Number(g.revision || 0),
+			metadata,
+			...(Number.isSafeInteger(metadata.displaySortOrder) ? { displaySortOrder: metadata.displaySortOrder } : {}),
+			options: options
+				.filter((o) => o.group_id === g.id)
+				.map((o) => ({
+					id: o.id,
+					name: o.name,
+					price: Number(o.price),
+					productId: o.product_id || null,
+					quantity: Number(o.included_quantity || 1),
+					isDefault: Boolean(o.is_default),
+					isOutOfStock: oos(o),
+					isLocallyOutOfStock: Boolean(o.is_out_of_stock),
+					metadata: parse(o.source_metadata_json, {}),
+					outOfStockUntil: o.out_of_stock_until || null,
+					subOptions: parse(o.sub_options_json, []),
+					eligibilityRules: parse(o.eligibility_rules_json, []),
+					description: o.description || null,
+				})),
+		};
+	});
 	const catalog = {
 		revision: Number((results[6].results[0] as Row)?.revision || 0),
 		products,
