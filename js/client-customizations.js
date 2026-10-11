@@ -193,6 +193,7 @@ function renderComboDrinksInline(origName, qty) {
     if (!cDrinkData[origName]) cDrinkData[origName] = [];
 
     const bData = window.bootstrapData || bootstrapData;
+    if (bData?.unifiedMenu) return;
     const drinksCategory = bData?.catalog?.find(c => c.slug === 'drinks');
     const drinkItems = drinksCategory ? drinksCategory.items : [];
     if (drinkItems.length === 0) return;

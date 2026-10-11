@@ -662,7 +662,7 @@ function updateTotal() {
                     });
                 }
 
-                if (catSlug === 'combo') {
+                if (!bootstrapData?.unifiedMenu && catSlug === 'combo') {
                     let drinks = cDrinkData[itemName] || [];
                     let drinkCounts = {};
                     drinks.slice(0, qty).forEach(d => { drinkCounts[d] = (drinkCounts[d] || 0) + 1; });

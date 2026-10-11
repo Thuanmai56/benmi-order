@@ -73,7 +73,7 @@
       };
     });
   }
-  function restore(rule, saved = [], legacy = {}) {
+  function restore(rule, saved = [], legacy = {}, legacyProductChoice = "") {
     const selections = [...saved];
     for (const g of rule.groups) {
       if (
@@ -97,7 +97,8 @@
         (o) =>
           o.name === selected ||
           multiple?.includes(o.name) ||
-          legacy.multiple?.[o.name] === true,
+          legacy.multiple?.[o.name] === true ||
+          (!g.included && maximum(g) === 1 && o.productId && o.name === legacyProductChoice),
       );
       if (choices.length)
         selections.push({
@@ -410,6 +411,7 @@
           rule,
           window.bundleCartData?.[key]?.[index]?.groups,
           window.customizeData?.[key]?.[index],
+          window.comboDrinkData?.[name]?.[index],
         ),
         focus: document.activeElement,
       };
