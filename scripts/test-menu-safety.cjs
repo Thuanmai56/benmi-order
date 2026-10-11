@@ -6,7 +6,7 @@ const { DatabaseSync } = require('node:sqlite');
 const ts = require('../benmi-worker-official/node_modules/typescript');
 const source = fs.readFileSync('benmi-worker-official/src/modules/menu.ts', 'utf8');
 const compiled = ts.transpileModule(source.slice(source.indexOf('function validateMenuUpdate'), source.indexOf('export async function updateMenu')), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
-const backend = vm.createContext({});
+const backend = vm.createContext({ unifiedMenuEnabled: env => env.UNIFIED_MENU_ENABLED === 'true' });
 vm.runInContext(compiled, backend);
 const migration0061Sql = fs.readFileSync('benmi-worker-official/migrations/0061_unified_bundle_and_customization_schema.sql', 'utf8');
 const migration0063Sql = fs.readFileSync('benmi-worker-official/migrations/0063_clean_customizations_and_category_links.sql', 'utf8');
@@ -77,7 +77,7 @@ test('database error rolls back the entire batch', async () => {
   await assert.rejects(f.save({food:{One:99},__delete:{customizations:['custom_a_salt']}})); assert.equal(f.dump(),before);
 });
 function editor() {
-  const requests=[]; const alerts=[]; const body={textContent:'',appendChild(){}};
+  const requests=[]; const alerts=[]; const body={textContent:'',appendChild(){},classList:{add(){},remove(){}}};
   const context=vm.createContext({console,Date,Set,JSON,crypto:require('node:crypto').webcrypto,alert:m=>alerts.push(m),confirm:()=>true,t:k=>k,WORKER_BASE:'https://example.test',getTenantIdFromUrl:()=> 'a',
     window:{addEventListener(){}},document:{addEventListener(){},getElementById:id=>id==='menu-editor-body'?body:null,querySelectorAll:()=>[],createElement:()=>({style:{},addEventListener(){}})},
     fetch:async(url,options)=>{requests.push({url,...options});return {ok:true,json:async()=>({})}},localStorage:{removeItem(){}}});
@@ -88,7 +88,7 @@ function editor() {
 test('incomplete bootstrap cannot save or delete, no legacy fallback', async()=>{
   const e=editor(); await e.run('loadMenuData()');
   await e.run('saveMenuData(true)'); await e.run('deleteCategoryAtIndex(0)');
-  assert.equal(e.requests.length,1); assert.match(e.requests[0].url,/bootstrap/);
+  assert.equal(e.requests.length,3); assert.ok(e.requests.every(r=>!r.method)); assert.match(e.requests[0].url,/bootstrap/);
   assert.equal(e.run('isMenuLoadedCompletely'),false);
 });
 test('category delete sends one deletion-only request and preserves unsaved edits',async()=>{
@@ -692,6 +692,7 @@ test('T5: customization group with category scope and empty options renders edit
   // Render customization editor with DOM mocks
   const appendedElements = [];
   const fakeContainer = {
+    classList: { add() {}, remove() {}, toggle() {} },
     innerHTML: '',
     appendChild: (el) => appendedElements.push(el)
   };

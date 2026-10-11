@@ -35,3 +35,5 @@ artifacts/release-baseline/
 # Database backups
 backup_*.sql
 *.backup.sql
+
+.cloudflare/

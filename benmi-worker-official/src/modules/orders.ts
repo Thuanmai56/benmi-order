@@ -1,3 +1,4 @@
+import { unifiedMenuEnabled, validateUnifiedOrderItems } from './option-groups';
 import { resolveOrderKey } from './order-identity';
 import { Env } from '../types/env';
 import { Order, DiningOption, AppendOrderPayload, OrderItemInput } from '../types/index';
@@ -141,6 +142,11 @@ export async function validateOrderBundles(
   tenantId: string,
   rawItems: OrderItemInput[]
 ): Promise<BundleCheck> {
+  if (unifiedMenuEnabled(env)) {
+    const result = await validateUnifiedOrderItems(env, tenantId, rawItems);
+    if (!result.valid) return result;
+    return validateBundleOrderItems(env, tenantId, result.legacy || []);
+  }
   return validateBundleOrderItems(env, tenantId, rawItems);
 }
 

@@ -5,6 +5,7 @@ const vm = require('node:vm');
 
 const canvases = [];
 const document = {
+  addEventListener() {},
   createElement() {
     const canvas = { width: 0, height: 0, text: [], toDataURL: () => 'data:image/png;base64,test' };
     const context = new Proxy({}, { get(target, key) {
@@ -23,6 +24,7 @@ const document = {
 };
 
 const window = {
+  addEventListener() {},
   currentTenantBrandName: 'Benmi Test',
   location: { hostname: 'localhost', search: '', href: 'http://localhost/' }
 };

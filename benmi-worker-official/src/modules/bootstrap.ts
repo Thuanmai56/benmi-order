@@ -1,4 +1,5 @@
 import { tenantIsDeleted } from '../utils/tenant-lifecycle';
+import { groupOptions, loadOptionCatalog, projectOptionRule, unifiedMenuEnabled } from './option-groups';
 import { Env } from '../types/env';
 import { json } from '../utils/http';
 import { getTenantId } from './menu';
@@ -399,7 +400,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
       if (cached) {
         try {
           const parsed = JSON.parse(cached);
-          if (parsed && parsed.bootstrapVersion === BOOTSTRAP_VERSION && parsed.menuComplete === true) {
+          if (parsed && parsed.bootstrapVersion === BOOTSTRAP_VERSION && parsed.menuComplete === true && Boolean(parsed.unifiedMenu) === unifiedMenuEnabled(env)) {
             return json(parsed, 200, {
               "X-Cache": "HIT",
               "Cache-Control": "no-cache, must-revalidate"
@@ -1036,6 +1037,27 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
       recommended: items.filter(it => it.is_recommended || it.badge_text).map(it => it.name)
     };
 
+    if (unifiedMenuEnabled(env)) {
+      const options = await loadOptionCatalog(env, tenantId);
+      for (const category of catalog) for (const item of category.items) {
+        const product = options.products.find(p=>p.id===item.id);
+        (item as any).imageKey = product?.image_key;
+        if (product?.image_key !== null && product?.image_key !== undefined) item.imageUrl = product.image_key ? `/api/image?tenant_id=${encodeURIComponent(tenantId)}&name=${encodeURIComponent(product.image_key)}` : null;
+        (item as any).modifierGroups = [];
+        (item as any).unifiedOptions = true;
+        const rule = projectOptionRule(options, item.id!);
+        if (rule) {
+          (item as any).bundleRule = rule;
+          (item as any).modifierGroups = [];
+          (item as any).unifiedOptions = true;
+        }
+      }
+      for (const customization of customizations) {
+        const group=options.groups.find(g=>g.scope==='order' && g.id===customization.id);
+        if(group) customization.options=groupOptions(options,group).map(o=>({...o,is_out_of_stock:o.isOutOfStock,sub_options:o.subOptions,minOrderSubtotal:o.eligibilityRules.find(r=>r.rule_type==='min_order_subtotal')?.min_order_subtotal}));
+      }
+      (payload as any).unifiedMenu = true;
+    }
     // 6. Cache in KV Edge Cache
     if (menuComplete && env.ORDER_STATE) {
       try {

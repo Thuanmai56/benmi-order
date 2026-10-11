@@ -20,7 +20,8 @@
     "test:menu-regression": "node --experimental-sqlite --test tests/test_menu_compatibility_regression.cjs",
     "test:cluster1": "node --experimental-sqlite --test tests/test_cluster1_category_item_modifiers.cjs",
     "test:cluster2": "node --experimental-sqlite --test tests/test_cluster2_combo_bundle_rules.cjs",
-    "test:cluster3-5": "node --experimental-sqlite --test tests/test_cluster3_4_5_full_schema_cutover.cjs"
+    "test:cluster3-5": "node --experimental-sqlite --test tests/test_cluster3_4_5_full_schema_cutover.cjs",
+    "test:unified-menu": "node --test tests/test_unified_option_groups.cjs"
   },
   "keywords": [
     "pos",

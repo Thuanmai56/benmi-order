@@ -27,6 +27,7 @@ for (const mode of ['dev', 'test', 'production']) {
     for (const { binding, store_id: storeId, secret_name: secretName } of original.secrets_store_secrets) {
       expected[binding] = { type: 'secrets-store-secret', storeId, secretName };
     }
+    if (mode === 'dev') expected.UNIFIED_MENU_ENABLED = {type:'text',value:'true'};
     assert.deepEqual(worker.env, expected);
     assert.equal(worker.observability.logs.persist, original.observability.logs.persist);
     assert.equal(worker.observability.logs.invocationLogs, original.observability.logs.invocation_logs);
