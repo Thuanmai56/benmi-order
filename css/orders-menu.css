@@ -34,12 +34,9 @@
 #view-menu .menu-action-btn { min-width: 120px; min-height: 48px; padding: 10px 16px; font-weight: 650; border-radius: 10px; }
 #view-menu #btn-menu-save { background: var(--menu-accent); border-color: var(--menu-accent); color: #fff; }
 #view-menu #btn-menu-save:disabled { background: var(--menu-subtle); color: var(--menu-muted); border: 1px solid var(--menu-line); opacity: 1; }
-#view-menu .menu-workspace-toolbar { display: flex; }
 #view-menu .menu-sidebar-segmented-toggle { width: 240px; max-width: 100% !important; min-height: 54px !important; padding: 4px !important; background: var(--menu-subtle); box-sizing: border-box; }
 #view-menu .menu-seg-btn { min-height: 48px; padding: 8px 12px !important; font-size: 15px !important; color: var(--menu-muted); font-weight: 650; }
 #view-menu .menu-seg-btn.active { background: #fff; color: var(--menu-ink); box-shadow: 0 1px 4px #17201b12; }
-#view-menu .menu-catalog-tools { display: flex; align-items: center; justify-content: flex-end; gap: 12px; min-width: 0; width: 100%; }
-#view-menu #menu-stock-filter { width: 180px; min-height: 54px; padding: 8px 12px; border: 1px solid #b9c4bc; border-radius: 10px; background: #fff; font: inherit; font-size: 14px; color: var(--menu-ink); }
 #view-menu .menu-split { display: grid !important; grid-template-columns: 240px minmax(0, 1fr); gap: 24px; flex: 1; min-height: 0; height: auto !important; overflow: hidden; }
 #view-menu .menu-sidebar-panel { border: 0 !important; box-shadow: none; min-height: 0; overflow: hidden; z-index: auto !important; }
 #view-menu .menu-sidebar-header { order: 2; border: 0 !important; padding: 12px 0 0 !important; background: #fff !important; }
@@ -114,8 +111,7 @@
 #view-menu .menu-item-dropdown-menu { width: 230px; max-width: calc(100vw - 40px); }
 #view-menu .dropdown-item { min-height: 48px; font-size: 14px; }
 #view-menu .dropdown-item:disabled { opacity: .45; cursor: default; }
-#view-menu .menu-filter-empty { padding: 32px 20px; text-align: center; color: var(--menu-muted); }
-#view-menu .menu-filter-empty .btn { min-height: 48px; }
+#view-menu .menu-category-empty { padding: 32px 20px; text-align: center; color: var(--menu-muted); }
 /* Retain the existing option editors, increasing all control hit areas. */
 #view-menu .menu-editor-body button,
 #view-menu .menu-editor-body summary,
@@ -155,8 +151,6 @@
   #view-menu h2 { font-size: 21px; }
   #view-menu .menu-workspace-heading p { display: none; }
   #view-menu .menu-action-btn { min-width: 100px; padding: 8px 12px; font-size: 14px; }
-  #view-menu .menu-catalog-tools { flex-wrap: wrap; gap: 8px; }
-  #view-menu #menu-stock-filter { width: 100%; min-height: 48px; }
   #view-menu .menu-manage-cats-btn { width: 88px; }
   #view-menu .menu-editor-header { padding: 12px !important; gap: 8px; }
   #view-menu .menu-header-actions { width: auto; }
