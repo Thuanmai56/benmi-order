@@ -826,7 +826,7 @@
       if (!res.ok) throw new Error(result.error || "MENU_SAVE_FAILED");
       const kind = state.kind;
       catalog = result.catalog;
-      if (d.imageDraft) {
+      if (d.imageDraft && !remove) {
         const imageRes = await fetch(
           `${WORKER_BASE}/api/image?tenant_id=${encodeURIComponent(getTenantIdFromUrl())}`,
           {

@@ -6,7 +6,7 @@ Only `dev` enables `UNIFIED_MENU_ENABLED`. Database migrations 0065–0066 was d
 
 Validation:
 - Root `npm test` and `npm run check`; backend TypeScript, six CLI resource-identity checks and `cf build --mode dev`.
-- 61 menu safety, legacy bundle, receipt and canonical-option tests passed. These cover 3/7 subsets, category inheritance/override/restore, fixed quantities, repeats, live product references/stock, nested surcharges, cycles, foreign tenant IDs, atomic rollback and stale/concurrent writes.
+- 62 menu safety, legacy bundle, receipt and canonical-option tests passed. These cover 3/7 subsets, category inheritance/override/restore, fixed quantities, repeats, live product references/stock, nested surcharges, cycles, foreign tenant IDs, atomic rollback and stale/concurrent writes.
 - Browser fixture uses the actual new entity API against isolated SQLite data. Verified product/group saves, custom option creation, product search/category filter, cycle error retention, dirty-close continuation, retry after HTTP 503, and preserving an unrelated dirty product after a successful save.
 - Browser checked 1366×1024, 1024×768 and 768×1024; Vietnamese and Traditional Chinese drawer labels, fixed footer and independent body scrolling.
 - Customer selection of a product with surcharge 0 and a child option with surcharge 3 gave 103 on a 100 base product. The receipt-compatible snapshot contained the child label and surcharge once.
