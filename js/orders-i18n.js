@@ -599,7 +599,6 @@ const I18N = {
     toggleRequiredOff: "切換為選填",
     btnMenuSave: "儲存變更",
     menuSaved: "已儲存",
-    menuWorkspaceTitle: "菜單管理",
     menuWorkspaceSub: "管理餐點、供應狀態與客製化選項",
     menuModeLabel: "菜單管理模式",
     menuEmptyCategory: "此分類尚無餐點，請新增第一道餐點。",
@@ -1369,7 +1368,6 @@ const I18N = {
     toggleRequiredOff: "Tắt bắt buộc",
     btnMenuSave: "Lưu thay đổi",
     menuSaved: "Đã lưu",
-    menuWorkspaceTitle: "Quản lý thực đơn",
     menuWorkspaceSub: "Quản lý món ăn, trạng thái bán và các tùy chọn",
     menuModeLabel: "Chế độ quản lý thực đơn",
     menuEmptyCategory: "Danh mục chưa có món. Hãy thêm món đầu tiên.",
@@ -2527,7 +2525,6 @@ function applyLanguageToDOM() {
   const menuPrompt = document.getElementById("i18n-menu-select-prompt");
   if (menuPrompt) menuPrompt.innerText = dict.menuSelectPrompt;
   [
-    ['i18n-menu-workspace-title', 'menuWorkspaceTitle'],
     ['i18n-menu-workspace-sub', 'menuWorkspaceSub'],
     ['item-detail-modal-sub', 'itemDetailSub'],
     ['i18n-item-basic-title', 'itemBasicTitle'],
