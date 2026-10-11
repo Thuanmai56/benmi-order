@@ -3,140 +3,125 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const { Element } = require('./helpers/menu-drawer-dom.cjs');
 
-test('Menu Sidebar Tab: display order button is only visible on products tab', () => {
-  const domElements = {};
-  function createElement(id, tagName = 'div') {
-    return {
-      id,
-      tagName,
-      style: {},
-      classList: {
-        _classes: new Set(),
-        add(c) { this._classes.add(c); },
-        remove(c) { this._classes.delete(c); },
-        toggle(c, force) {
-          if (force === undefined) {
-            if (this._classes.has(c)) this._classes.delete(c);
-            else this._classes.add(c);
-          } else if (force) {
-            this._classes.add(c);
-          } else {
-            this._classes.delete(c);
-          }
-          return this._classes.has(c);
-        },
-        contains(c) { return this._classes.has(c); }
-      },
-      attributes: {},
-      addEventListener() {},
-      removeEventListener() {},
-      setAttribute(k, v) { this.attributes[k] = String(v); },
-      getAttribute(k) { return this.attributes[k]; },
-      appendChild(child) { (this.children = this.children || []).push(child); return child; },
-      children: [],
-      innerHTML: '',
-      innerText: '',
-      textContent: ''
-    };
+function setup() {
+  const doc = {createElement(tag){const el=new Element(tag,doc);el.style={};return el;}};
+  doc.body=doc.createElement('body');doc.activeElement=doc.body;
+  doc.getElementById=id=>doc.body.querySelector('#'+id);
+  doc.querySelector=selector=>doc.body.querySelector(selector);
+  doc.querySelectorAll=selector=>selector.startsWith('#menu-editor-body ')
+    ? doc.getElementById('menu-editor-body').querySelectorAll(selector.slice(18)) : doc.body.querySelectorAll(selector);
+  doc.addEventListener=()=>{};
+  for(const id of ['menu-workspace-heading','menu-standard-workspace','menu-display-order-screen','menu-editor-body','menu-order-title','menu-order-description','menu-order-panels','btn-menu-order-back-text','btn-menu-save-text','btn-menu-order-save-text']){
+    const el=doc.createElement('div');el.id=id;doc.body.appendChild(el);
   }
+  for(const id of ['btn-menu-save','btn-menu-order-save','btn-menu-manage-cats','btn-menu-order-back']){
+    const el=doc.createElement('button');el.id=id;doc.body.appendChild(el);
+  }
+  const alerts=[],posts=[],data=[
+    {id:'notes',title:'Ghi chú',type:'order_customization',sortOrder:0,groups:[{id:'note',title:'Ghi chú',scope:'order',options:[]}],items:[]},
+    {id:'food',title:'Món ăn',type:'catalog',sortOrder:10,items:[
+      {id:'a',name:'Bánh mì',price:100,isOos:true,badgeText:'Nhãn',modifierGroups:[{id:'topping',optionIds:['x']}]},
+      {id:'b',name:'Phở',price:80,isOos:false}, {id:'c',name:'Bún',price:90,isOos:false}]},
+    {id:'topping',title:'Topping',type:'modifier',sortOrder:13,groups:[{id:'topping',scope:'item',options:[]}],items:[]},
+    {id:'drinks',title:'飲料',type:'catalog',sortOrder:30,items:[]}
+  ];
+  const context={document:doc,console,addEventListener(){},escapeHtml:s=>String(s??''),
+    t:(key,args)=>key==='menuOrderItems'?'Món trong '+args.name:key,confirm:()=>true,alert:message=>alerts.push(message),
+    WORKER_BASE:'https://test.invalid',getTenantIdFromUrl:()=>'test',localStorage:{removeItem(){}},
+    fetch:async(url,request)=>{posts.push(JSON.parse(request.body));return {ok:true};}};
+  context.window=context;vm.createContext(context);
+  vm.runInContext(fs.readFileSync(path.resolve(__dirname,'../js/orders-menu.js'),'utf8'),context);
+  vm.runInContext('currentMenuData='+JSON.stringify(data)+';isMenuLoadedCompletely=true;activeCategoryIndex=1;clearMenuDirty();',context);
+  const categories=context.renderMenuCategories;
+  context.renderMenuCategories=()=>vm.runInContext('isCategoryManagerOpen',context)?categories():context.updateMenuWorkspace();
+  context.renderMenuCategoryEditor=()=>{};
+  const rows=kind=>doc.getElementById('menu-order-panels').querySelectorAll('[data-order-kind="'+kind+'"]');
+  const move=(kind,index,delta)=>rows(kind)[index].querySelector('[data-order-delta="'+delta+'"]').onclick();
+  return {context,doc,posts,alerts,rows,move,data:()=>vm.runInContext('currentMenuData',context),dirty:()=>vm.runInContext('isMenuDirty',context)};
+}
 
-  // Setup DOM elements expected by setMenuSidebarTab & renderMenuCategories
-  domElements['btn-seg-products'] = createElement('btn-seg-products', 'button');
-  domElements['btn-seg-options'] = createElement('btn-seg-options', 'button');
-  domElements['menu-sidebar-products-actions'] = createElement('menu-sidebar-products-actions', 'div');
-  domElements['btn-menu-manage-cats'] = createElement('btn-menu-manage-cats', 'button');
-  domElements['menu-categories'] = createElement('menu-categories', 'div');
-  domElements['menu-editor-title'] = createElement('menu-editor-title', 'div');
-  domElements['i18n-menu-edit-sub'] = createElement('i18n-menu-edit-sub', 'div');
-  domElements['btn-category-rename'] = createElement('btn-category-rename', 'button');
-  domElements['btn-category-delete'] = createElement('btn-category-delete', 'button');
-  domElements['btn-menu-create-unified'] = createElement('btn-menu-create-unified', 'button');
-  domElements['btn-menu-add-cat-top'] = createElement('btn-menu-add-cat-top', 'button');
-  domElements['btn-menu-manage-close'] = createElement('btn-menu-manage-close', 'button');
-  domElements['menu-editor-body'] = createElement('menu-editor-body', 'div');
-
-  const documentMock = {
-    getElementById(id) {
-      if (!domElements[id]) domElements[id] = createElement(id);
-      return domElements[id];
-    },
-    createElement(tag) {
-      return createElement(`mock-${Math.random()}`, tag);
-    },
-    querySelectorAll() { return []; },
-    addEventListener() {}
-  };
-
-  const sandbox = {
-    addEventListener() {},
-    document: documentMock,
-    confirmLeaveMenu: () => true,
-    syncMenuDataFromDOM: () => {},
-    isMenuDirty: false,
-    currentMenuData: [
-      { id: 'cat-1', title: 'Cơm tấm', type: 'catalog', sortOrder: 1, items: [] },
-      { id: 'sec-flavor', title: 'Tùy chọn', type: 'order_customization', sortOrder: 2, groups: [] }
-    ],
-    activeCategoryIndex: 0,
-    renderMenuCategoryEditor: () => {},
-    escapeHtml: (s) => String(s || ''),
-    t: (k) => k,
-    isMenuLoadedCompletely: true,
-    POS_SVG: {}
-  };
-  sandbox.window = sandbox;
-  vm.createContext(sandbox);
-
-  const menuJs = fs.readFileSync(path.resolve(__dirname, '../js/orders-menu.js'), 'utf-8');
-  vm.runInContext(menuJs, sandbox);
-  vm.runInContext(`
-    isMenuLoadedCompletely = true;
-    currentMenuData = [
-      { id: 'cat-1', title: 'Cơm tấm', type: 'catalog', sortOrder: 1, items: [] },
-      { id: 'sec-flavor', title: 'Tùy chọn', type: 'order_customization', sortOrder: 2, groups: [] }
-    ];
-  `, sandbox);
-
-  // 1. Initial / products tab
-  sandbox.setMenuSidebarTab('products');
-  assert.equal(domElements['menu-sidebar-products-actions'].style.display, 'block', 'Products actions must be visible on products tab');
-  assert.equal(domElements['btn-seg-products'].classList.contains('active'), true);
-  assert.equal(domElements['btn-seg-options'].classList.contains('active'), false);
-
-  // Re-run renderMenuCategories on products tab
-  sandbox.renderMenuCategories();
-  assert.equal(domElements['menu-sidebar-products-actions'].style.display, 'block', 'Products actions must stay visible after renderMenuCategories on products tab');
-
-  // 2. Switch to options tab
-  sandbox.setMenuSidebarTab('options');
-  assert.equal(domElements['menu-sidebar-products-actions'].style.display, 'none', 'Products actions must be HIDDEN on options tab');
-  assert.equal(domElements['btn-seg-products'].classList.contains('active'), false);
-  assert.equal(domElements['btn-seg-options'].classList.contains('active'), true);
-
-  // Re-run renderMenuCategories on options tab
-  sandbox.renderMenuCategories();
-  assert.equal(domElements['menu-sidebar-products-actions'].style.display, 'none', 'Products actions must STAY HIDDEN after renderMenuCategories on options tab');
-
-  // 3. Switch back to products tab
-  sandbox.setMenuSidebarTab('products');
-  assert.equal(domElements['menu-sidebar-products-actions'].style.display, 'block', 'Products actions must reappear when switching back to products tab');
-
-  // 4. Opening category manager aligns to products tab
-  sandbox.openCategoriesManager();
-  assert.equal(domElements['menu-sidebar-products-actions'].style.display, 'block', 'Products actions must be visible in category manager');
-  assert.equal(domElements['btn-menu-manage-cats'].classList.contains('active'), true, 'Manage cats button has active class when category manager is open');
-
-  // 5. Closing category manager
-  sandbox.closeCategoriesManager();
-  assert.equal(domElements['btn-menu-manage-cats'].classList.contains('active'), false, 'Manage cats button removes active class when closed');
+test('display-order entry is between Save and menu tabs, outside the product sidebar',()=>{
+  const html=fs.readFileSync(path.resolve(__dirname,'../orders.html'),'utf8');
+  const heading=html.slice(html.indexOf('id="menu-workspace-heading"'),html.indexOf('id="menu-standard-workspace"'));
+  assert.ok(heading.indexOf('id="btn-menu-save"')<heading.indexOf('id="btn-menu-manage-cats"'));
+  assert.ok(heading.indexOf('id="btn-menu-manage-cats"')<heading.indexOf('id="menu-mode-tabs"'));
+  assert.equal(html.match(/id="btn-menu-manage-cats"/g).length,1);
 });
 
-test('Cache buster bumped in orders.html for orders.css and orders-menu.js', () => {
+test('opening order screen is clean, hides the editor and returns to the previous mode and category',()=>{
+  const app=setup();vm.runInContext("menuSidebarTab='options'",app.context);
+  app.context.openCategoriesManager();
+  assert.equal(app.doc.getElementById('menu-standard-workspace').hidden,true);
+  assert.equal(app.doc.getElementById('menu-workspace-heading').hidden,true);
+  assert.equal(app.doc.getElementById('menu-display-order-screen').hidden,false);
+  assert.equal(app.rows('section').length,3);assert.equal(app.rows('item').length,3);
+  assert.equal(app.dirty(),false);assert.equal(app.posts.length,0);
+  app.context.closeCategoriesManager();
+  assert.equal(app.doc.getElementById('menu-display-order-screen').hidden,true);
+  assert.equal(vm.runInContext('activeCategoryIndex',app.context),1);
+  assert.equal(vm.runInContext('menuSidebarTab',app.context),'options');
+  assert.equal(app.doc.activeElement.id,'btn-menu-manage-cats');
+});
+
+test('reordering items preserves identity and full configuration, and reverting becomes clean',()=>{
+  const app=setup(),a=app.data()[1].items[0],original=JSON.stringify(a);app.context.openCategoriesManager();
+  app.move('item',0,-1);assert.equal(app.dirty(),false);
+  app.move('item',0,1);assert.equal(app.data()[1].items[1],a);assert.equal(JSON.stringify(a),original);
+  assert.equal(app.dirty(),true);assert.equal(app.doc.getElementById('btn-menu-order-save').disabled,false);
+  app.move('item',1,-1);assert.equal(app.dirty(),false);assert.equal(app.data()[1].items[0],a);
+});
+
+test('section reordering preserves rank slots and never includes per-item modifier libraries',()=>{
+  const app=setup(),initial=JSON.stringify(app.data());app.context.openCategoriesManager();
+  app.move('section',0,1);
+  assert.deepEqual(Array.from(app.context.getMenuDisplayEntries(),e=>e.model.id),['food','notes','drinks']);
+  assert.equal(app.data()[2].sortOrder,13);assert.equal(app.data()[1].sortOrder,0);
+  app.move('section',1,-1);assert.equal(JSON.stringify(app.data()),initial);assert.equal(app.dirty(),false);
+  app.context.closeCategoriesManager();app.context.openCategoriesManager();assert.equal(app.dirty(),false);
+});
+
+test('tied or absent section ranks become sortable; reversing restores their exact original representation',()=>{
+  const app=setup();app.data()[1].sortOrder=0;delete app.data()[3].sortOrder;app.context.clearMenuDirty();
+  const original=JSON.stringify(app.data());app.context.openCategoriesManager();app.move('section',0,1);
+  assert.deepEqual(Array.from(app.context.getMenuDisplayEntries(),e=>e.model.id),['food','notes','drinks']);
+  app.move('section',1,-1);assert.equal(JSON.stringify(app.data()),original);assert.equal(app.dirty(),false);
+});
+
+test('desktop drag/drop uses the same ordering path as buttons and ignores cross-list drops',()=>{
+  const app=setup();app.context.openCategoriesManager();const [a,,c]=app.rows('item');
+  const event={preventDefault(){},dataTransfer:{setData(){}}};
+  a.ondragstart(event);app.rows('section')[0].ondrop(event);assert.equal(app.dirty(),false);
+  c.ondrop(event);assert.deepEqual(Array.from(app.data()[1].items,p=>p.id),['b','c','a']);
+  a.ondragend();assert.equal(app.dirty(),true);
+});
+
+test('inline edits are collected before ordering, with stale inputs removed before item indexes change',()=>{
+  const app=setup(),body=app.doc.getElementById('menu-editor-body');
+  body.innerHTML='<input data-name-cidx="1" data-name-iidx="0" value="Bản nháp"><input data-cidx="1" data-iidx="0" value="149">';
+  app.context.openCategoriesManager();assert.equal(body.children.length,0);app.move('item',0,1);
+  assert.equal(app.data()[1].items[1].name,'Bản nháp');assert.equal(app.data()[1].items[1].price,149);
+  assert.equal(app.data()[1].items[0].name,'Phở');assert.equal(app.data()[1].items[0].price,80);
+});
+
+test('save serializes the changed item sequence and failed saves retain the order and protect in-flight navigation',async()=>{
+  const app=setup();app.context.openCategoriesManager();app.move('item',0,1);
+  let release;app.context.fetch=async(url,request)=>{app.posts.push(JSON.parse(request.body));return new Promise(resolve=>{release=resolve;});};
+  const saving=app.context.saveMenuData();assert.equal(app.doc.getElementById('menu-order-panels').inert,true);
+  const before=JSON.stringify(app.data());app.move('item',0,1);app.context.closeCategoriesManager();
+  assert.equal(JSON.stringify(app.data()),before);assert.equal(vm.runInContext('isCategoryManagerOpen',app.context),true);
+  release({ok:false,status:503,json:async()=>({error:'TEST_OFFLINE'})});await saving;
+  assert.equal(app.dirty(),true);assert.equal(app.doc.getElementById('menu-order-panels').inert,false);assert.equal(app.alerts.length,1);
+  assert.equal(app.posts[0].food['Phở'].id,'b');assert.equal(app.posts[0].food['Bánh mì'].id,'a');
+  assert.ok(Object.keys(app.posts[0].food).indexOf('Phở')<Object.keys(app.posts[0].food).indexOf('Bánh mì'));
+  app.context.fetch=async()=>({ok:true});await app.context.saveMenuData(true);assert.equal(app.dirty(),false);
+});
+
+test('ordering screen assets share the new cache buster', () => {
   const html = fs.readFileSync(path.resolve(__dirname, '../orders.html'), 'utf-8');
-  for (const asset of ['css/orders.css', 'js/orders-menu.js']) {
+  for (const asset of ['css/orders-menu.css', 'js/orders-menu.js', 'js/orders-i18n.js']) {
     const escaped = asset.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const version = html.match(new RegExp(`${escaped}\\?v=(\\d{8})_[a-zA-Z0-9_]+`));
-    assert.ok(version && version[1] >= '20261004', `${asset} cache buster is at least the feature release date`);
+    assert.match(html,new RegExp(`${escaped}\\?v=20261011_menu_order_screen_v1`));
   }
 });
