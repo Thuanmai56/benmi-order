@@ -198,6 +198,7 @@ function getEffectiveItemModifierGroups(itemOrKey, catSlugOrNull) {
         }
     }
 
+    if (targetItem?.unifiedOptions) return [];
     const itemMods = [];
     if (targetItem) {
         const groups = targetItem.modifierGroups || targetItem.modifier_groups;

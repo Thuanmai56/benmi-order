@@ -1,3 +1,4 @@
+import { groupOptions, loadOptionCatalog, validateOptionGraph, unifiedMenuEnabled } from './option-groups';
 import { Env } from '../types/env';
 import { Menu } from '../types/index';
 import { json } from '../utils/http';
@@ -645,6 +646,7 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
     itemIdMap.set(item.id as string, item.id as string);
   }
 
+  const unifiedCatalog = unifiedMenuEnabled(env) ? await loadOptionCatalog(env, tenantId) : null;
   const statements: any[] = [];
   const processedGroupIds = new Set<string>();
   const defaultCategoryNamesZh: Record<string, string> = {
@@ -698,6 +700,7 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
         activeCustomIds.push(custId);
 
         const custScope = cust.scope || 'order';
+        if (unifiedMenuEnabled(env)) continue; // Shared groups have dedicated transactional writes.
         const modGroupId = String(cust.canonicalId || (cust.sourceId ? (cust.id || cust.sourceId) : (cust.id || `mg_${custId}`)));
         if (!ownedGroupIds.has(modGroupId) && !ownedCustomIds.has(modGroupId) && !modGroupId.startsWith(`custom_${tenantId}_`)) {
           throw new Error('INVALID_MODIFIER_GROUP_ID');
@@ -873,6 +876,10 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
           itemId = `${tenantId}_${slug}_${itemName}`;
         }
         activeItemIds.push(itemId);
+        if (unifiedCatalog) {
+          const old = unifiedCatalog.products.find(p=>p.id===itemId);
+          unifiedCatalog.products = unifiedCatalog.products.filter(p=>p.id!==itemId).concat({...old,id:itemId,tenant_id:tenantId,category_id:catId,name:itemName,price});
+        }
 
         statements.push(
           env.DB.prepare(
@@ -891,7 +898,7 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
         );
 
         // If modifier groups are provided for this item, persist them
-        if (modifierGroups !== null) {
+        if (modifierGroups !== null && !unifiedMenuEnabled(env)) {
           statements.push(
             env.DB.prepare("DELETE FROM item_modifier_links WHERE tenant_id = ? AND item_id = ?").bind(tenantId, itemId)
           );
@@ -1020,6 +1027,20 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
       statements.push(env.DB.prepare('DELETE FROM modifier_options WHERE tenant_id = ? AND group_id = ?').bind(tenantId, groupId));
       statements.push(env.DB.prepare('DELETE FROM modifier_groups WHERE tenant_id = ? AND id = ?').bind(tenantId, groupId));
     }
+  }
+
+  if (unifiedCatalog) {
+    const removed = new Set([...itemDeletes,...unifiedCatalog.products.filter(p=>categoryDeletes.includes(p.category_id)).map(p=>p.id)]);
+    if (unifiedCatalog.groups.some(g=>groupOptions(unifiedCatalog,g).some(o=>o.productId && removed.has(o.productId)))) throw new Error('PRODUCT_IS_LINKED');
+    unifiedCatalog.products=unifiedCatalog.products.filter(p=>!removed.has(p.id));
+    const removedGroups=new Set(customDeletes.flatMap(id=>[id,id.startsWith('mg_')?id.slice(3):`mg_${id}`]));
+    unifiedCatalog.groups=unifiedCatalog.groups.filter(g=>!removedGroups.has(g.id));
+    unifiedCatalog.links=unifiedCatalog.links.filter(l=>!removed.has(l.itemId) && !removedGroups.has(l.groupId));
+    unifiedCatalog.categoryLinks=unifiedCatalog.categoryLinks.filter(l=>!categoryDeletes.includes(l.categoryId) && !removedGroups.has(l.groupId));
+    validateOptionGraph(unifiedCatalog);
+    const guardId=crypto.randomUUID();
+    statements.unshift(env.DB.prepare('INSERT INTO menu_write_guards (id,valid) VALUES (?, CASE WHEN COALESCE((SELECT revision FROM menu_catalog_revisions WHERE tenant_id=?),0)=? THEN 1 ELSE 0 END)').bind(guardId,tenantId,unifiedCatalog.revision || 0));
+    statements.push(env.DB.prepare('DELETE FROM menu_write_guards WHERE id=?').bind(guardId));
   }
 
   // Unlinked library groups are still editable definitions. Only an explicit
@@ -1160,6 +1181,7 @@ export function formatMenuForPrompt(menuData: Menu): string {
  * POST /api/menu/bundle-rules?tenant_id={tenantId}
  */
 export async function updateBundleRule(request: Request, env: Env): Promise<Response> {
+  if (unifiedMenuEnabled(env)) return json({ error: 'USE_OPTION_GROUPS' }, 409);
   try {
     const tenantId = getTenantId(request);
     if (!env.DB) {
@@ -1263,6 +1285,7 @@ export async function updateBundleRule(request: Request, env: Env): Promise<Resp
 
 /** Save a product and its v2 bundle configuration in one D1 transaction. */
 export async function saveBundleProduct(request: Request, env: Env): Promise<Response> {
+  if (unifiedMenuEnabled(env)) return json({ error: 'USE_OPTION_GROUPS' }, 409);
   try {
     const tenantId = getTenantId(request);
     const tenantConfig = await env.DB.prepare('SELECT features FROM tenant_config WHERE tenant_id = ?').bind(tenantId).first<{ features: string | null }>();

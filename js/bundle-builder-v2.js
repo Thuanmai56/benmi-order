@@ -331,6 +331,7 @@
     const itemInfo = resolveCatalogItem(key);
     const rule = getRule(itemInfo);
     if (!rule?.groups?.length) return;
+    if (rule.version === 3 && window.UnifiedOptions) return window.UnifiedOptions.open(catSlug, origName, portionIndex);
     rule.groups.forEach(group => { group.bundleVersion = Number(rule.version || 1); });
     const targetIndex = Number.isInteger(portionIndex) ? portionIndex : Number(cart[key] || 0);
     const existing = window.bundleCartData?.[key]?.[targetIndex];
@@ -662,6 +663,10 @@
       const item = resolveCatalogItem(key);
       const rule = getRule(item);
       if (!rule?.groups?.length) continue;
+      if (rule.version === 3 && window.UnifiedOptions) {
+        for (let i=0;i<cart[key];i++) if (!window.UnifiedOptions.valid(rule, window.bundleCartData?.[key]?.[i])) return {valid:false,error:((typeof currentLocale !== 'undefined' && currentLocale === 'vi') ? 'Vui lòng chọn đủ tùy chọn' : '請完成餐點選項'),key,portionIndex:i};
+        continue;
+      }
       const portions = window.bundleCartData?.[key] || [];
       for (let index = 0; index < cart[key]; index++) {
         const portion = portions[index];

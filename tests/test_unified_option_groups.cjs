@@ -1,0 +1,601 @@
+const { test } = require("node:test");
+const assert = require("node:assert/strict");
+const { fixture } = require("./helpers/option-groups.cjs");
+const group = (id = "a_drinks") => ({
+  id,
+  name: "Drink",
+  revision: 0,
+  minSelection: 1,
+  maxSelection: 1,
+  allowRepeats: false,
+  included: false,
+  itemIds: ["a_main"],
+  sources: [],
+  options: [
+    {
+      id: id + "_coffee",
+      name: "Coffee",
+      productId: "a_coffee",
+      price: 0,
+      quantity: 1,
+    },
+    { id: id + "_tea", name: "Tea", productId: "a_tea", price: 5, quantity: 1 },
+  ],
+});
+const product = (links) => ({
+  id: "a_main",
+  name: "Meal",
+  price: 100,
+  categoryId: "a_food",
+  revision: 0,
+  links,
+});
+async function ok(response) {
+  assert.equal(response.status, 200, await response.clone().text());
+  return response.json();
+}
+test("entity save isolates product fields, supports subsets, cache invalidation and stale rejection", async () => {
+  const f = fixture();
+  await ok(await f.save("group", group()));
+  await ok(
+    await f.save(
+      "product",
+      product([
+        {
+          groupId: "a_drinks",
+          optionIds: ["a_drinks_coffee"],
+          disabled: false,
+        },
+      ]),
+    ),
+  );
+  const c = await f.api.loadOptionCatalog(f.env, "a");
+  assert.equal(f.api.effectiveGroups(c, "a_main")[0].options.length, 1);
+  assert.equal(c.groups[0].options.length, 2);
+  assert.equal(c.products.find((p) => p.id === "a_tea").price, 50);
+  assert.equal(
+    (await f.save("product", { ...product([]), price: 999 })).status,
+    409,
+  );
+  assert.ok(f.deleted.includes("bootstrap:a"));
+});
+test("nested product surcharge 0 never adds retail; validates names, nested prices and repeats", async () => {
+  const f = fixture();
+  await ok(await f.save("group", group()));
+  await ok(
+    await f.save("group", {
+      id: "a_temp",
+      name: "Temperature",
+      revision: 0,
+      minSelection: 1,
+      maxSelection: 1,
+      itemIds: ["a_coffee"],
+      options: [{ id: "a_hot", name: "Hot", price: 3, quantity: 1 }],
+      sources: [],
+    }),
+  );
+  const c = await f.api.loadOptionCatalog(f.env, "a");
+  const selected = [
+    {
+      groupId: "a_drinks",
+      items: [
+        {
+          optionId: "a_drinks_coffee",
+          name: "Forged",
+          quantity: 1,
+          groups: [
+            { groupId: "a_temp", items: [{ optionId: "a_hot", quantity: 1 }] },
+          ],
+        },
+      ],
+    },
+  ];
+  const r = f.api.validateOptionSelection(c, "a_main", selected);
+  assert.equal(r.extra, 3);
+  assert.equal(r.groups[0].items[0].name, "Coffee");
+  assert.equal(r.groups[0].items[0].modifiers[0].price, 3);
+  assert.throws(
+    () =>
+      f.api.validateOptionSelection(c, "a_main", [
+        {
+          groupId: "a_drinks",
+          items: [{ optionId: "a_drinks_coffee", quantity: 1 }],
+        },
+      ]),
+    /REQUIRED/,
+  );
+  const order = [
+    {
+      itemId: "a_main",
+      quantity: 1,
+      subtotal: 103,
+      bundleSelections: { portions: [{ groups: selected }] },
+    },
+  ];
+  assert.equal(
+    (await f.api.validateUnifiedOrderItems(f.env, "a", order)).valid,
+    true,
+  );
+  assert.equal(order[0].bundleSelections.version, 3);
+  order[0].subtotal = 100;
+  assert.equal(
+    (await f.api.validateUnifiedOrderItems(f.env, "a", order)).code,
+    "OPTION_PRICE_CHANGED",
+  );
+});
+test("rejects direct/indirect cycles, foreign options/products and impossible subset", async () => {
+  const f = fixture();
+  await ok(await f.save("group", group()));
+  assert.equal(
+    (
+      await f.save("group", {
+        ...group("a_back"),
+        itemIds: ["a_coffee"],
+        options: [
+          { id: "a_cycle", productId: "a_main", name: "Meal", price: 0 },
+        ],
+      })
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await f.save("group", {
+        ...group("a_foreign"),
+        options: [{ id: "a_x", productId: "b_main", price: 0 }],
+      })
+    ).status,
+    400,
+  );
+  assert.equal(
+    (await f.save("product", product([{ groupId: "a_drinks", optionIds: [] }])))
+      .status,
+    400,
+  );
+  assert.equal(
+    f.db
+      .prepare("SELECT count(*) n FROM modifier_groups WHERE tenant_id=?")
+      .get("a").n,
+    1,
+  );
+});
+test("inheritance override, disable, restore; group update validates linked subset", async () => {
+  const f = fixture();
+  await ok(await f.save("group", { ...group(), itemIds: [] }));
+  f.db
+    .prepare(
+      "INSERT INTO category_modifier_links(tenant_id,category_id,group_id) VALUES (?,?,?)",
+    )
+    .run("a", "a_food", "a_drinks");
+  // A category with product refs pointing back into itself is correctly rejected.
+  const c = await f.api.loadOptionCatalog(f.env, "a");
+  assert.throws(() => f.api.validateOptionGraph(c), /CYCLE/);
+  f.db.prepare("DELETE FROM category_modifier_links").run();
+  await ok(
+    await f.save(
+      "product",
+      product([{ groupId: "a_drinks", optionIds: ["a_drinks_tea"] }]),
+    ),
+  );
+  assert.equal(
+    (
+      await f.save("group", {
+        ...group(),
+        revision: 1,
+        minSelection: 2,
+        maxSelection: 2,
+      })
+    ).status,
+    400,
+  );
+});
+test("included quantities and repeated portions use total portions, with stock propagation", async () => {
+  const f = fixture();
+  await ok(
+    await f.save("group", {
+      ...group(),
+      included: true,
+      options: [{ ...group().options[0], quantity: 2 }],
+    }),
+  );
+  let c = await f.api.loadOptionCatalog(f.env, "a");
+  const s = [
+    {
+      groupId: "a_drinks",
+      items: [{ optionId: "a_drinks_coffee", quantity: 2 }],
+    },
+  ];
+  assert.equal(f.api.validateOptionSelection(c, "a_main", s).extra, 0);
+  assert.throws(
+    () =>
+      f.api.validateOptionSelection(c, "a_main", [
+        {
+          groupId: "a_drinks",
+          items: [{ optionId: "a_drinks_coffee", quantity: 1 }],
+        },
+      ]),
+    /QUANTITY/,
+  );
+  f.db
+    .prepare("UPDATE menu_items SET out_of_stock_until=? WHERE id=?")
+    .run("2099-01-01T00:00:00Z", "a_coffee");
+  c = await f.api.loadOptionCatalog(f.env, "a");
+  assert.throws(
+    () => f.api.validateOptionSelection(c, "a_main", s),
+    /UNAVAILABLE/,
+  );
+});
+test("transaction rollback on write failure and group deletion does not alter product/other tenant", async () => {
+  const f = fixture();
+  await ok(await f.save("group", group()));
+  f.db.exec(
+    "CREATE TRIGGER reject_option BEFORE INSERT ON modifier_options WHEN NEW.price=999 BEGIN SELECT RAISE(ABORT,'write failure'); END;",
+  );
+  assert.equal(
+    (
+      await f.save("group", {
+        ...group(),
+        revision: 1,
+        name: "Changed",
+        options: [{ ...group().options[0], price: 999 }],
+      })
+    ).status,
+    400,
+  );
+  assert.equal(
+    f.db.prepare("SELECT name FROM modifier_groups WHERE id=?").get("a_drinks")
+      .name,
+    "Drink",
+  );
+  await ok(await f.save("group", { ...group(), revision: 1, delete: true }));
+  assert.equal(
+    f.db.prepare("SELECT count(*) n FROM modifier_options").get().n,
+    0,
+  );
+  assert.equal(f.db.prepare("SELECT count(*) n FROM menu_items").get().n, 6);
+});
+test("custom sub-options and eligibility are retained and server validated", async () => {
+  const f = fixture();
+  const g = {
+    ...group(),
+    options: [
+      {
+        id: "a_custom",
+        name: "Extra",
+        price: 2,
+        subOptions: [{ name: "Large", price: 3 }],
+        eligibilityRules: [{ min_order_subtotal: 200 }],
+      },
+    ],
+  };
+  await ok(await f.save("group", g));
+  const c = await f.api.loadOptionCatalog(f.env, "a"),
+    s = [
+      {
+        groupId: "a_drinks",
+        items: [
+          {
+            optionId: "a_custom",
+            quantity: 1,
+            subOptions: [{ name: "Large" }],
+          },
+        ],
+      },
+    ];
+  assert.equal(f.api.validateOptionSelection(c, "a_main", s, [], 200).extra, 5);
+  assert.throws(
+    () => f.api.validateOptionSelection(c, "a_main", s, [], 100),
+    /MIN_ORDER/,
+  );
+});
+test("3 of 7 choices, inherited override and restore do not mutate the shared group", async () => {
+  const f = fixture(),
+    g = {
+      ...group(),
+      itemIds: [],
+      options: Array.from({ length: 7 }, (_, i) => ({
+        id: "a_pick_" + i,
+        name: "Choice " + i,
+        price: i,
+      })),
+    };
+  await ok(await f.save("group", { ...g, categoryIds: ["a_food"] }));
+  let c = await f.api.loadOptionCatalog(f.env, "a");
+  assert.equal(f.api.effectiveGroups(c, "a_main")[0].inherited, true);
+  await ok(
+    await f.save(
+      "product",
+      product([
+        { groupId: g.id, optionIds: ["a_pick_0", "a_pick_1", "a_pick_2"] },
+      ]),
+    ),
+  );
+  c = await f.api.loadOptionCatalog(f.env, "a");
+  assert.equal(f.api.effectiveGroups(c, "a_main")[0].options.length, 3);
+  assert.equal(c.groups[0].options.length, 7);
+  assert.equal(f.api.effectiveGroups(c, "a_tea")[0].options.length, 7);
+  await ok(
+    await f.save("product", {
+      ...product([{ groupId: g.id, optionIds: null, disabled: true }]),
+      revision: 1,
+    }),
+  );
+  c = await f.api.loadOptionCatalog(f.env, "a");
+  assert.equal(f.api.effectiveGroups(c, "a_main").length, 0);
+  // Saving the group preserves a product's explicit suppression of category inheritance.
+  await ok(
+    await f.save("group", { ...g, revision: 1, categoryIds: ["a_food"] }),
+  );
+  c = await f.api.loadOptionCatalog(f.env, "a");
+  assert.equal(f.api.effectiveGroups(c, "a_main").length, 0);
+  await ok(await f.save("product", { ...product([]), revision: 2 }));
+  c = await f.api.loadOptionCatalog(f.env, "a");
+  assert.equal(f.api.effectiveGroups(c, "a_main")[0].inherited, true);
+  assert.equal(f.api.effectiveGroups(c, "a_main")[0].options.length, 7);
+});
+test("repeat rules count portions and price each portion without retail prices", async () => {
+  const f = fixture();
+  await ok(
+    await f.save("group", {
+      ...group(),
+      minSelection: 2,
+      maxSelection: 3,
+      allowRepeats: true,
+      options: [{ ...group().options[0], price: 5 }],
+    }),
+  );
+  const c = await f.api.loadOptionCatalog(f.env, "a");
+  const s = (q) => [
+    {
+      groupId: "a_drinks",
+      items: [{ optionId: "a_drinks_coffee", quantity: q }],
+    },
+  ];
+  assert.equal(f.api.validateOptionSelection(c, "a_main", s(3)).extra, 15);
+  assert.throws(
+    () => f.api.validateOptionSelection(c, "a_main", s(1)),
+    /QUANTITY/,
+  );
+  assert.throws(
+    () => f.api.validateOptionSelection(c, "a_main", s(4)),
+    /QUANTITY/,
+  );
+});
+test("stock restrictions and metadata survive editing; linked product changes remain live", async () => {
+  const f = fixture();
+  await ok(await f.save("group", group()));
+  f.db
+    .prepare(
+      "UPDATE modifier_options SET is_out_of_stock=1,source_metadata_json='{" +
+        '"source":"legacy"' +
+        "}' WHERE id='a_drinks_coffee'",
+    )
+    .run();
+  let c = await f.api.loadOptionCatalog(f.env, "a");
+  await ok(
+    await f.save("group", {
+      ...c.groups[0],
+      name: "New name",
+      itemIds: ["a_main"],
+    }),
+  );
+  const stored = f.db
+    .prepare("SELECT * FROM modifier_options WHERE id=?")
+    .get("a_drinks_coffee");
+  assert.equal(stored.is_out_of_stock, 1);
+  assert.equal(JSON.parse(stored.source_metadata_json).source, "legacy");
+  assert.equal(
+    f.db
+      .prepare("SELECT out_of_stock_until FROM menu_items WHERE id=?")
+      .get("a_coffee").out_of_stock_until,
+    null,
+  );
+  f.db
+    .prepare("UPDATE menu_items SET name=? WHERE id=?")
+    .run("Renamed tea", "a_tea");
+  c = await f.api.loadOptionCatalog(f.env, "a");
+  assert.equal(f.api.groupOptions(c, c.groups[0])[1].name, "Renamed tea");
+});
+test("catalog guard rejects a concurrent write atomically and old writers advance entity revision", async () => {
+  const f = fixture(),
+    batch = f.env.DB.batch.bind(f.env.DB);
+  let raced = false;
+  f.env.DB.batch = async (statements) => {
+    if (
+      !raced &&
+      statements[0].sql.startsWith("INSERT INTO menu_write_guards")
+    ) {
+      raced = true;
+      f.db.prepare("UPDATE menu_items SET price=71 WHERE id=?").run("a_coffee");
+    }
+    return batch(statements);
+  };
+  assert.equal((await f.save("group", group())).status, 409);
+  assert.equal(
+    f.db.prepare("SELECT count(*) n FROM modifier_groups").get().n,
+    0,
+  );
+  assert.equal(
+    f.db
+      .prepare("SELECT menu_revision FROM menu_items WHERE id=?")
+      .get("a_coffee").menu_revision,
+    1,
+  );
+  assert.equal(
+    (
+      await f.save("product", {
+        id: "a_coffee",
+        name: "Coffee",
+        price: 70,
+        categoryId: "a_food",
+        revision: 0,
+        links: [],
+      })
+    ).status,
+    409,
+  );
+});
+test("invalid child prices and foreign inherited categories cannot be saved", async () => {
+  const f = fixture();
+  assert.equal(
+    (await f.save("group", { ...group(), categoryIds: ["b_food"] })).status,
+    400,
+  );
+  assert.equal(
+    (
+      await f.save("group", {
+        ...group(),
+        options: [
+          {
+            id: "a_bad",
+            name: "Bad",
+            price: 0,
+            subOptions: [{ name: "x", price: -5 }],
+          },
+        ],
+      })
+    ).status,
+    400,
+  );
+});
+test("customer validation follows nested rules, live stock and canonical receipt prices", async () => {
+  const f = fixture();
+  await ok(await f.save("group", group()));
+  await ok(
+    await f.save("group", {
+      id: "a_temp",
+      name: "Temperature",
+      revision: 0,
+      minSelection: 1,
+      maxSelection: 1,
+      itemIds: ["a_coffee"],
+      options: [{ id: "a_cold", name: "Cold", price: 3 }],
+      sources: [],
+    }),
+  );
+  const c = await f.api.loadOptionCatalog(f.env, "a"),
+    rule = f.api.projectOptionRule(c, "a_main");
+  const vm = require("node:vm"),
+    fs = require("node:fs");
+  const sandbox = {
+    window: {},
+    document: { documentElement: { lang: "vi" } },
+    cart: { meal: 1 },
+    resolveCatalogItem: () => ({ basePrice: 100 }),
+    currentLocale: "vi",
+  };
+  vm.createContext(sandbox);
+  vm.runInContext(
+    fs.readFileSync("js/client-option-groups.js", "utf8"),
+    sandbox,
+  );
+  vm.runInContext(fs.readFileSync("js/bundle-builder-v2.js", "utf8"), sandbox);
+  const portion = {
+    groups: [
+      {
+        groupId: "a_drinks",
+        items: [
+          {
+            optionId: "a_drinks_coffee",
+            itemId: "a_coffee",
+            quantity: 1,
+            surcharge: 0,
+            groups: [
+              {
+                groupId: "a_temp",
+                items: [
+                  { optionId: "a_cold", quantity: 1, surcharge: 3, groups: [] },
+                ],
+              },
+            ],
+            modifiers: [{ name: "Cold", price: 3 }],
+          },
+        ],
+      },
+    ],
+  };
+  assert.equal(sandbox.window.UnifiedOptions.valid(rule, portion), true);
+  assert.equal(sandbox.window.bundlePortionExtra(portion), 3);
+  portion.groups[0].items[0].groups[0].items = [];
+  assert.equal(sandbox.window.UnifiedOptions.valid(rule, portion), false);
+});
+test("included subsets honor shared fixed quantity rules", async () => {
+  const f = fixture();
+  await ok(await f.save("group", { ...group(), included: true }));
+  assert.equal(
+    (
+      await f.save(
+        "product",
+        product([{ groupId: "a_drinks", optionIds: ["a_drinks_coffee"] }]),
+      )
+    ).status,
+    400,
+  );
+});
+test("legacy whole-menu writes cannot remove a referenced product or bypass the graph", async () => {
+  const f = fixture();
+  f.db.exec("ALTER TABLE menu_categories ADD COLUMN short_name TEXT;");
+  await ok(await f.save("group", group()));
+  const fs = require("node:fs"),
+    vm = require("node:vm"),
+    ts = require("../benmi-worker-official/node_modules/typescript");
+  const exports = {};
+  const context = vm.createContext({
+    exports,
+    console,
+    Date,
+    JSON,
+    Map,
+    Set,
+    crypto: require("node:crypto").webcrypto,
+    require: (name) => (name.includes("option-groups") ? f.api : {}),
+  });
+  const source =
+    fs.readFileSync("benmi-worker-official/src/modules/menu.ts", "utf8") +
+    "\nexport {syncMenuToD1};";
+  vm.runInContext(
+    ts.transpileModule(source, {
+      compilerOptions: {
+        module: ts.ModuleKind.CommonJS,
+        target: ts.ScriptTarget.ES2022,
+      },
+    }).outputText,
+    context,
+  );
+  await assert.rejects(
+    () =>
+      exports.syncMenuToD1("a", { __delete: { items: ["a_coffee"] } }, f.env),
+    /PRODUCT_IS_LINKED/,
+  );
+  assert.equal(f.db.prepare("SELECT count(*) n FROM menu_items").get().n, 6);
+  await assert.rejects(
+    () =>
+      exports.syncMenuToD1(
+        "a",
+        { __delete: { categories: ["a_food"] } },
+        f.env,
+      ),
+    /PRODUCT_IS_LINKED/,
+  );
+  assert.equal(
+    f.db.prepare("SELECT count(*) n FROM menu_categories").get().n,
+    2,
+  );
+});
+test("optional legacy groups keep minimum zero after migration", async () => {
+  const f = fixture();
+  await ok(await f.save("group", { ...group(), itemIds: [], minSelection: 0 }));
+  f.db
+    .prepare(
+      "UPDATE modifier_groups SET is_required=1,source_metadata_json=? WHERE id=?",
+    )
+    .run(JSON.stringify({ legacyBundleRuleId: "old_rule" }), "a_drinks");
+  f.db.exec(
+    require("node:fs").readFileSync(
+      "benmi-worker-official/migrations/0066_optional_migrated_option_groups.sql",
+      "utf8",
+    ),
+  );
+  const c = await f.api.loadOptionCatalog(f.env, "a");
+  assert.equal(c.groups[0].minSelection, 0);
+});

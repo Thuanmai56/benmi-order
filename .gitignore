@@ -34,3 +34,5 @@ scripts/latest_printed_receipt.png
 # Database backups
 backup_*.sql
 *.backup.sql
+
+.cloudflare/
