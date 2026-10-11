@@ -36,7 +36,9 @@ export default (ctx: ConfigContext) => {
 							headSamplingRate: 1,
 						},
 					},
-					env: {
+						LINE_RUNTIME_ENABLED: bindings.text("false"),
+						LINE_RUNTIME_TENANTS: bindings.text("[]"),
+						LINE_RUNTIME_ENVIRONMENT: bindings.text("staging"),
 						LIFF_ID: bindings.text("2009555608-DMioljsI"),
 						LIFF_URL: bindings.text("https://liff.line.me/2009555608-DMioljsI"),
 						DB: bindings.d1({
@@ -88,6 +90,10 @@ export default (ctx: ConfigContext) => {
 						},
 					},
 					env: {
+						UNIFIED_MENU_ENABLED: bindings.text("true"),
+						LINE_RUNTIME_ENABLED: bindings.text("false"),
+						LINE_RUNTIME_TENANTS: bindings.text("[]"),
+						LINE_RUNTIME_ENVIRONMENT: bindings.text("dev"),
 						LIFF_ID: bindings.text("2011224566-kLLdMjkq"),
 						LIFF_URL: bindings.text("https://liff.line.me/2011224566-kLLdMjkq"),
 						DB: bindings.d1({
@@ -139,6 +145,9 @@ export default (ctx: ConfigContext) => {
 						},
 					},
 					env: {
+						LINE_RUNTIME_ENABLED: bindings.text("false"),
+						LINE_RUNTIME_TENANTS: bindings.text("[]"),
+						LINE_RUNTIME_ENVIRONMENT: bindings.text("production"),
 						LIFF_ID: bindings.text("2009560906-c5taZfiY"),
 						LIFF_URL: bindings.text("https://liff.line.me/2009560906-c5taZfiY"),
 						DB: bindings.d1({

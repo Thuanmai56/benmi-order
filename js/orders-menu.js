@@ -493,6 +493,7 @@ async function loadMenuData() {
     // position interleaved with catalog categories rather than forcing it first.
     categories.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
 
+    if (data.unifiedMenu && window.UnifiedMenu) await window.UnifiedMenu.load();
     currentMenuData = categories;
     isMenuLoadedCompletely = true;
 
@@ -823,6 +824,7 @@ function handleCreateComboFromSidebar() {
 window.handleCreateComboFromSidebar = handleCreateComboFromSidebar;
 
 function handleCreateCustomFromSidebar() {
+  if (window.UnifiedMenu?.enabled) return window.UnifiedMenu.group();
   if (!confirmLeaveMenu()) return;
   if (!currentMenuData) currentMenuData = [];
   syncMenuDataFromDOM();
@@ -882,6 +884,7 @@ function renderMenuCategories() {
     btnManageCats.classList.toggle("active", Boolean(isCategoryManagerOpen));
   }
 
+  if (window.UnifiedMenu?.sidebar()) return;
   if (!currentMenuData) return;
 
   const plusIcon = (typeof POS_SVG !== "undefined" && POS_SVG.plus) || `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
@@ -913,7 +916,7 @@ function renderMenuCategories() {
       div.className = `menu-option-card ${activeCategoryIndex === originalIndex && !isCategoryManagerOpen ? 'active' : ''}`;
       div.setAttribute('aria-pressed', activeCategoryIndex === originalIndex && !isCategoryManagerOpen ? 'true' : 'false');
       const itemCount = Array.isArray(cat.items) ? cat.items.length : 0;
-      const isCombo = isComboCategory(cat);
+      const isCombo = !window.UnifiedMenu?.enabled && isComboCategory(cat);
       const comboBadgeHtml = isCombo 
         ? `<span class="cat-type-badge cat-type-combo">${escapeHtml(t('bundleBadge'))}</span>`
         : '';
@@ -1039,6 +1042,8 @@ function renderMenuCategories() {
 function getItemImageUrl(catId, itemName) {
   if (!itemName) return null;
   const list = window._tenantImageList;
+  const canonicalProduct = window.UnifiedMenu?.imageKey?.(catId,itemName);
+  if (canonicalProduct !== undefined && canonicalProduct !== null) return canonicalProduct ? `${WORKER_BASE}/api/image?tenant_id=${encodeURIComponent(getTenantIdFromUrl())}&name=${encodeURIComponent(canonicalProduct)}` : null;
   const key = `${catId}_${itemName}`;
   const tenantId = (typeof getTenantIdFromUrl === 'function' ? getTenantIdFromUrl() : null) || 'benmi';
   if (list && (list.has(key) || list.has(itemName))) {
@@ -1320,6 +1325,7 @@ function duplicateMenuItemAt(cIdx, iIdx) {
 window.duplicateMenuItemAt = duplicateMenuItemAt;
 
 function renderMenuCategoryEditor(index) {
+  if (window.UnifiedMenu?.workspace()) return;
   isCategoryManagerOpen = false;
   updateMenuWorkspace();
   const renameBtn = document.getElementById("btn-category-rename");
@@ -1350,7 +1356,7 @@ function renderMenuCategoryEditor(index) {
 
   const cat = currentMenuData[index];
   const isCustom = isCustomizationCategory(cat);
-  const isCombo = isComboCategory(cat);
+  const isCombo = !window.UnifiedMenu?.enabled && isComboCategory(cat);
 
   if (isCustom) {
     if (renameBtn) renameBtn.style.display = "none";
@@ -1392,7 +1398,7 @@ function renderMenuCategoryEditor(index) {
   const storeModifiers = cat.type === 'catalog' ? getStoreModifiersList() : [];
   const appliedCount = cat.type === 'catalog' ? storeModifiers.filter(mod => isModifierAppliedToCategory(mod, cat)).length : 0;
 
-  if (cat.type === 'catalog') {
+  if (cat.type === 'catalog' && !window.UnifiedMenu?.enabled) {
     const modCard = document.createElement("div");
     modCard.className = "cust-category-modifiers-card";
     const catKey = cat.id || String(index);
@@ -1511,7 +1517,7 @@ function renderMenuCategoryEditor(index) {
     });
 
     const oosText = item.isOos ? t("stockStatusOutOfStock") : t("stockStatusInStock");
-    const hasBundle = item.itemType === 'bundle' || Boolean(item.bundleRule && Array.isArray(item.bundleRule.groups) && item.bundleRule.groups.length > 0);
+    const hasBundle = !window.UnifiedMenu?.enabled && (item.itemType === 'bundle' || Boolean(item.bundleRule && Array.isArray(item.bundleRule.groups) && item.bundleRule.groups.length > 0));
 
     if (cat.type === 'catalog' && hasBundle) {
       row.classList.add("is-bundle-row");
@@ -1537,7 +1543,7 @@ function renderMenuCategoryEditor(index) {
       badgesHtml += `<span class="menu-item-quick-badge">${escapeHtml(String(item.badgeText).trim())}</span>`;
     }
 
-    const itemModCount = Array.isArray(item.modifierGroups) ? item.modifierGroups.length : 0;
+    const itemModCount = window.UnifiedMenu?.enabled ? window.UnifiedMenu.groupCount(item.id) : (Array.isArray(item.modifierGroups) ? item.modifierGroups.length : 0);
     if (itemModCount > 0) {
       badgesHtml += `<span class="item-mod-pill custom-mods" title="${itemModCount} ${escapeHtml(t('customItemModifiers'))}">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
@@ -1575,7 +1581,7 @@ function renderMenuCategoryEditor(index) {
       <div class="menu-item-meta-col">
         ${badgesHtml}
         <button type="button" class="menu-item-options-btn" onclick="openItemModifiersModal(${index}, ${iIdx})">${escapeHtml(t('btnItemModifiers'))}</button>
-        ${hasBundle ? `<button type="button" class="menu-item-options-btn" onclick="openBundleEditorModal(${index}, ${iIdx})">${escapeHtml(t('menuBundleSettings'))}</button>` : ''}
+        ${hasBundle && !window.UnifiedMenu?.enabled ? `<button type="button" class="menu-item-options-btn" onclick="openBundleEditorModal(${index}, ${iIdx})">${escapeHtml(t('menuBundleSettings'))}</button>` : ''}
       </div>
       <button type="button" class="menu-item-stock-toggle ${item.isOos ? 'is-oos' : 'is-instock'}"
         onclick="openStockModal(${index}, ${iIdx})" title="${oosText}" aria-label="${escapeHtml(item.name + ': ' + oosText)}">
@@ -2038,6 +2044,7 @@ function renderOrderCustomizationEditor(container, cat, cIdx) {
 }
 
 function openNewCustomGroupCreator(cIdx) {
+  if (window.UnifiedMenu?.enabled) return window.UnifiedMenu.group();
   syncMenuDataFromDOM();
   isCustomGroupCreatorOpen = true;
   newCustomGroupType = 'radio';
@@ -2780,6 +2787,7 @@ async function saveMenuData(skipConfirm = false) {
       const code = details?.code || details?.error || '';
       throw new Error(`API returned ${res.status}${code ? ` (${code})` : ''}`);
     }
+    if (window.UnifiedMenu?.enabled) await window.UnifiedMenu.load();
     clearMenuDirty();
     try {
       const tid = getTenantIdFromUrl();
@@ -3444,6 +3452,7 @@ let bundleActiveGroupIndex = 0;
 let bundleSourceTab = 'category'; // 'category' | 'items'
 
 async function openBundleEditorModal(catIdx, itemIdx) {
+  if (window.UnifiedMenu?.enabled) return window.UnifiedMenu.product(catIdx, itemIdx);
   if (isMenuDirty) syncMenuDataFromDOM();
   if (!currentMenuData || !currentMenuData[catIdx] || !currentMenuData[catIdx].items[itemIdx]) return;
 
@@ -4134,6 +4143,7 @@ function closeCreationTypeModal() {
 window.closeCreationTypeModal = closeCreationTypeModal;
 
 function handleMenuCreateClick() {
+  if (window.UnifiedMenu?.enabled) return menuSidebarTab === "options" ? window.UnifiedMenu.group() : window.UnifiedMenu.product(activeCategoryIndex);
   if (activeCategoryIndex >= 0 && currentMenuData && currentMenuData[activeCategoryIndex]) {
     const cat = currentMenuData[activeCategoryIndex];
     if (isCustomizationCategory(cat)) {
@@ -4199,6 +4209,7 @@ let itemModifiersSnapshotBeforeEdit = null;
 let itemCustomizationCategoriesSnapshotBeforeEdit = null;
 
 function openItemModifiersModal(cIdx, iIdx) {
+  if (window.UnifiedMenu?.enabled) return window.UnifiedMenu.product(cIdx, iIdx);
   syncMenuDataFromDOM();
   if (!currentMenuData || !currentMenuData[cIdx] || !currentMenuData[cIdx].items || !currentMenuData[cIdx].items[iIdx]) return;
   currentItemModifiersCidx = cIdx;
@@ -4887,6 +4898,7 @@ function autoCommitItemDetailFields() {
 }
 
 function openCreateItemModal(cIdx) {
+  if (window.UnifiedMenu?.enabled) return window.UnifiedMenu.product(cIdx);
   syncMenuDataFromDOM();
   if (!currentMenuData || !currentMenuData[cIdx]) return;
 
@@ -4987,6 +4999,7 @@ function openCreateItemModal(cIdx) {
 window.openCreateItemModal = openCreateItemModal;
 
 function openItemDetailModal(cIdx, iIdx) {
+  if (window.UnifiedMenu?.enabled) return window.UnifiedMenu.product(cIdx, iIdx);
   syncMenuDataFromDOM();
   if (!currentMenuData || !currentMenuData[cIdx] || !currentMenuData[cIdx].items || !currentMenuData[cIdx].items[iIdx]) return;
 

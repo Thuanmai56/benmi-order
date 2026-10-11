@@ -1,4 +1,5 @@
 import { tenantIsDeleted } from './utils/tenant-lifecycle';
+import { getOptionCatalog, saveOptionEntity } from './modules/option-groups';
 import { getModifierLibrary } from './modules/modifier-library';
 import { Env } from './types/env';
 import { corsHeaders, json } from './utils/http';
@@ -84,6 +85,9 @@ export default {
       if (request.method === "GET" && path === "/api/reports/items-analytics") return getItemAnalyticsReport(request, env);
       if (request.method === "GET" && path === "/api/config") return getConfig(request, env, tenantCtx);
       if (request.method === "POST" && path === "/api/config") return updateConfig(request, env, tenantCtx);
+      if (request.method === "GET" && path === "/api/menu/options") return getOptionCatalog(request, env);
+      if (request.method === "POST" && path === "/api/menu/product") return saveOptionEntity(request, env, 'product');
+      if (request.method === "POST" && path === "/api/menu/option-group") return saveOptionEntity(request, env, 'group');
       if (request.method === "GET" && path === "/api/menu/modifier-library") return getModifierLibrary(request, env);
       if (request.method === "GET" && path === "/api/menu") return getMenu(request, env);
       if (request.method === "POST" && path === "/api/menu") return updateMenu(request, env);
