@@ -444,7 +444,15 @@ body.ug-open { overflow: hidden; }
 .ug-overlay { position: fixed; inset: 0; z-index: 12000; background: rgb(15 23 42 / 40%); display: flex; justify-content: flex-end; }
 .ug-drawer { position: relative; width: 520px; max-width: calc(100vw - 16px); height: 100%; height: 100dvh; display: flex; flex-direction: column; background: #fff; color: #20262d; border-radius: 16px 0 0 16px; box-shadow: -12px 0 48px #17203318; }
 .ug-drawer header { display: flex; align-items: center; gap: 8px; padding: 18px 24px; flex-shrink: 0; }
-.ug-drawer h2 { font-size: 23px; line-height: 1.3; margin: 0; flex: 1; }
+.ug-drawer h2 { font-size: 23px; line-height: 1.3; margin: 0; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.ug-product-options-label { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 600; color: #167565; }
+.ug-product-options-body .ug-section-title { flex-wrap: wrap; }
+.ug-product-options-body .ug-section-title button { margin-left: auto; }
+.ug-product-options-body .ug-list { display: grid; gap: 12px; border: 0; overflow: visible; }
+.ug-drawer .ug-product-options-body .ug-row { border: 1px solid #e8eaed; border-radius: 10px; gap: 12px; }
+.ug-product-options-body .ug-row strong { overflow-wrap: anywhere; }
+#view-menu .menu-catalog-row { cursor: pointer; }
+#view-menu .menu-catalog-row:focus-visible { outline: 3px solid #4fa995; outline-offset: -3px; }
 .ug-drawer h3,.ug-workspace h3 { font-size: 17px; margin: 0 0 16px; }
 .ug-drawer button,.ug-workspace button { min-height: 48px; min-width: 48px; border: 0; background: transparent; color: #167565; cursor: pointer; padding: 10px 12px; font: inherit; font-weight: 600; border-radius: 8px; }
 .ug-drawer button:hover,.ug-row:hover { background: #f5f8f7; }
