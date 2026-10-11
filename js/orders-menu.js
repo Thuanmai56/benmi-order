@@ -16,14 +16,8 @@ let newCustomGroupScope = 'order';
 let newCustomGroupAppliedCategories = [];
 let currentLibraryOptionGroups = [];
 let menuModifierLibrary = [];
-let menuFilterCategoryIndex = -1;
 
 function updateMenuWorkspace() {
-  const tools = document.getElementById('menu-catalog-tools');
-  const cat = currentMenuData?.[activeCategoryIndex];
-  if (tools) tools.hidden = isCategoryManagerOpen || menuSidebarTab !== 'products' || !cat || isCustomizationCategory(cat);
-  const toolbar = document.getElementById('menu-workspace-toolbar');
-  if (toolbar) toolbar.hidden = !tools || tools.hidden;
   const optionsMode = menuSidebarTab === 'options' && Boolean(window.UnifiedMenu?.enabled);
   const body = document.getElementById('menu-editor-body');
   body?.classList.toggle('is-option-workspace', optionsMode);
@@ -37,34 +31,6 @@ function updateMenuWorkspace() {
       if (button) button.hidden = true;
     }
   }
-}
-
-function menuItemMatchesFilters(item, stock) {
-  return stock === 'available' ? !item.isOos : stock === 'unavailable' ? Boolean(item.isOos) : true;
-}
-
-function applyMenuItemFilters() {
-  const cat = currentMenuData?.[activeCategoryIndex];
-  if (!cat || isCustomizationCategory(cat) || isCategoryManagerOpen) return;
-  const stock = document.getElementById('menu-stock-filter')?.value || 'all';
-  const filtering = stock !== 'all';
-  let visible = 0;
-  document.querySelectorAll('#menu-editor-body .menu-catalog-row').forEach(row => {
-    const itemIndex = Number(row.getAttribute('data-item-index'));
-    const item = cat.items[itemIndex];
-    // Keep every input mounted so filtering cannot discard inline edits.
-    row.hidden = !item || !menuItemMatchesFilters(item, stock);
-    row.draggable = !filtering;
-    if (!row.hidden) visible++;
-  });
-  const empty = document.getElementById('menu-filter-empty');
-  if (empty) empty.hidden = visible > 0;
-}
-
-function clearMenuItemFilters() {
-  const stock = document.getElementById('menu-stock-filter');
-  if (stock) stock.value = 'all';
-  applyMenuItemFilters();
 }
 
 function moveMenuItem(cIdx, iIdx, direction) {
@@ -1395,10 +1361,6 @@ function renderMenuCategoryEditor(index) {
   if (!container) return;
   container.innerHTML = "";
   container.classList.add('is-catalog');
-  if (menuFilterCategoryIndex !== index) {
-    menuFilterCategoryIndex = index;
-    clearMenuItemFilters();
-  }
   const catalogCard = document.createElement("div");
   catalogCard.className = "cust-group-card menu-products-card";
   container.appendChild(catalogCard);
@@ -1607,12 +1569,12 @@ function renderMenuCategoryEditor(index) {
     itemsContainer.appendChild(row);
   });
   catalogCard.appendChild(itemsContainer);
-  const empty = document.createElement('div');
-  empty.id = 'menu-filter-empty';
-  empty.className = 'menu-filter-empty';
-  empty.innerHTML = cat.items.length ? `<p>${escapeHtml(t('menuNoMatchingItems'))}</p><button type="button" class="btn btn-ghost" onclick="clearMenuItemFilters()">${escapeHtml(t('menuClearFilters'))}</button>` : `<p>${escapeHtml(t('menuEmptyCategory'))}</p>`;
-  catalogCard.appendChild(empty);
-  applyMenuItemFilters();
+  if (!cat.items.length) {
+    const empty = document.createElement('div');
+    empty.className = 'menu-category-empty';
+    empty.innerHTML = `<p>${escapeHtml(t('menuEmptyCategory'))}</p>`;
+    catalogCard.appendChild(empty);
+  }
 }
 
 function getModifierCategorySelectionState(group, category) {
