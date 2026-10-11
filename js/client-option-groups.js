@@ -73,6 +73,44 @@
       };
     });
   }
+  function restore(rule, saved = [], legacy = {}) {
+    const selections = [...saved];
+    for (const g of rule.groups) {
+      if (
+        selections.some(
+          (v) => v.groupId === g.id || v.groupId === g.metadata?.legacyGroupId,
+        )
+      )
+        continue;
+      const aliases = [
+        g.id,
+        g.metadata?.source_id,
+        g.metadata?.slug,
+        g.metadata?.legacy_key,
+        g.name,
+      ].filter(Boolean);
+      const selected = aliases.map((id) => legacy.single?.[id]).find(Boolean);
+      const multiple = aliases
+        .map((id) => legacy.multiple?.[id])
+        .find((v) => Array.isArray(v));
+      const choices = options(g).filter(
+        (o) =>
+          o.name === selected ||
+          multiple?.includes(o.name) ||
+          legacy.multiple?.[o.name] === true,
+      );
+      if (choices.length)
+        selections.push({
+          groupId: g.id,
+          items: choices.map((o) => ({
+            optionId: o.id,
+            itemId: o.productId || o.id,
+            quantity: 1,
+          })),
+        });
+    }
+    return defaults(rule.groups, selections);
+  }
   function make(o, s = {}) {
     return {
       itemId: o.productId || o.id,
@@ -334,6 +372,14 @@
     const { key, index, cat, name } = context;
     window.bundleCartData = window.bundleCartData || {};
     window.bundleCartData[key] = window.bundleCartData[key] || [];
+    if (window.customizeData?.[key]?.[index]) {
+      const old = window.customizeData[key][index];
+      window.customizeData[key][index] = {
+        single: {},
+        multiple: {},
+        note: old.note || "",
+      };
+    }
     window.bundleCartData[key][index] = {
       portionIndex: index,
       groups: receipt(context.groups),
@@ -347,6 +393,7 @@
     updateTotal();
   }
   window.UnifiedOptions = {
+    restore,
     open(cat, name, index) {
       const key = cat + "_" + name,
         info = resolveCatalogItem(key),
@@ -359,9 +406,10 @@
         rule,
         index,
         price: info.targetItem?.price ?? info.price ?? 0,
-        groups: defaults(
-          rule.groups,
+        groups: restore(
+          rule,
           window.bundleCartData?.[key]?.[index]?.groups,
+          window.customizeData?.[key]?.[index],
         ),
         focus: document.activeElement,
       };
