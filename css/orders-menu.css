@@ -478,8 +478,24 @@ body.ug-open { overflow: hidden; }
 .ug-row small,.ug-check small,.ug-product-summary small { display: block; color: #747d84; margin-top: 7px; font-size: 13px; line-height: 1.5; }
 .ug-rule { display: flex; justify-content: space-between; align-items: center; gap: 18px; padding: 12px 14px; min-height: 64px; box-sizing: border-box; font-size: 14px; line-height: 1.5; }
 .ug-rule > span,.ug-rule > label { flex: 1; }
-.ug-rule input[type=checkbox] { appearance: none; width: 48px; min-width: 48px; height: 48px; margin: 0; cursor: pointer; border: 0; border-radius: 0; background: radial-gradient(circle at 16px 24px,white 8px,transparent 9px),linear-gradient(#bbc2c5,#bbc2c5) center/36px 22px no-repeat; }
-.ug-rule input[type=checkbox]:checked { background: radial-gradient(circle at 32px 24px,white 8px,transparent 9px),linear-gradient(#168454,#168454) center/36px 22px no-repeat; }
+.ug-rule-label { display: flex; align-items: center; gap: 4px; flex: 1; min-width: 0; }
+.ug-rule-label > label { cursor: pointer; overflow-wrap: anywhere; }
+.ug-rule > .ug-switch { position: relative; display: flex; align-items: center; justify-content: center; flex: 0 0 48px; width: 48px; height: 48px; cursor: pointer; }
+.ug-switch input[type=checkbox] { position: absolute; inset: 0; width: 48px; height: 48px; margin: 0; opacity: 0; cursor: pointer; z-index: 1; }
+.ug-switch-track { position: relative; display: block; width: 40px; height: 24px; box-sizing: border-box; border: 1px solid #647178; border-radius: 6px; background: #727e84; pointer-events: none; transition: background-color .15s, border-color .15s; }
+.ug-switch-track::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 3px; background: #fff; transition: transform .15s; }
+.ug-switch input:checked + .ug-switch-track { background: #176b5b; border-color: #176b5b; }
+.ug-switch input:checked + .ug-switch-track::after { transform: translateX(16px); }
+.ug-switch input:focus-visible + .ug-switch-track { outline: 3px solid #4fa995; outline-offset: 3px; }
+.ug-switch:has(input:disabled) { opacity: .55; cursor: not-allowed; }
+.ug-switch input:disabled { cursor: not-allowed; }
+.ug-rule-help { display: grid; grid-template-columns: minmax(0,1fr) 48px; gap: 0 12px; }
+.ug-drawer .ug-help-button { display: inline-flex; justify-content: center; align-items: center; flex: 0 0 48px; padding: 0; color: #596b72; }
+.ug-help-button svg { width: 18px; height: 18px; }
+.ug-help-button[aria-expanded=true] { color: #176b5b; background: #eef6f3; }
+.ug-help-text[hidden] { display: none; }
+.ug-help-text { grid-column: 1 / -1; margin: 0 0 10px; padding: 10px 12px; border-radius: 6px; background: #f5f8f7; color: #59626a; font-size: 13px; line-height: 1.6; }
+@media (prefers-reduced-motion: reduce) { .ug-switch-track, .ug-switch-track::after { transition: none; } }
 .ug-stepper { display: flex; align-items: center; }
 .ug-stepper input { width: 45px; height: 48px; border: 1px solid #e6e8eb; text-align: center; border-radius: 6px; font: inherit; padding: 0; appearance: textfield; }
 .ug-stepper input::-webkit-inner-spin-button { appearance: none; }
@@ -570,8 +586,6 @@ body.ug-open { overflow: hidden; }
   .ug-option-trailing { flex-direction: column; gap: 4px; }
 }
 @media(max-width: 600px) { .ug-body { padding: 12px 18px 24px; } .ug-drawer header { padding: 12px 14px; } .ug-drawer h2 { font-size: 20px; } .ug-drawer footer { padding-left: 18px; padding-right: 18px; } .ug-rule { gap: 6px; } }
-.ug-rule input[type=checkbox] { box-sizing: border-box; padding: 13px 6px; border-radius: 24px; background: radial-gradient(circle at 16px 24px,#fff 8px,transparent 9px),#bbc2c5; background-clip: content-box; background-origin: border-box; }
-.ug-rule input[type=checkbox]:checked { background: radial-gradient(circle at 32px 24px,#fff 8px,transparent 9px),#168454; background-clip: content-box; background-origin: border-box; }
 #menu-categories button[data-action="new-group"] { width: 100%; min-height: 48px; margin-bottom: 14px; border: 1px solid #167565; border-radius: 8px; background: #fff; color: #167565; font: inherit; font-weight: 600; padding: 10px; }
 
 .ug-photo-frame { position: relative; width: 112px; height: 112px; flex-shrink: 0; border-radius: 12px; background: #f4f7f6; display: grid; place-items: center; overflow: hidden; }
