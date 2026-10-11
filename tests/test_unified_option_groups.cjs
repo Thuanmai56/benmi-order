@@ -670,3 +670,87 @@ test("customer editing restores legacy per-product choices alongside bundle sele
     true,
   );
 });
+
+test("checkout refreshes canonical options in both languages and preserves a renamed product's cart", async () => {
+  const fs = require("node:fs"), vm = require("node:vm");
+  const source = fs.readFileSync("js/client-checkout.js", "utf8");
+  const start = source.indexOf("        if (err.serverRejected) {");
+  const end = source.indexOf('        console.warn("Primary API flow failed', start);
+  assert.ok(start >= 0 && end > start);
+  for (const locale of ["vi", "zh-TW"]) {
+    const oldKey = "food_Old meal", newKey = "food_New meal";
+    const selections = [{ groups: [{ groupId: "drinks", items: [{ optionId: "coffee", surcharge: 0 }] }] }];
+    const notes = [{ note: "Less salt" }];
+    const fresh = { catalog: [{ slug: "food", items: [{ id: "meal", name: "New meal", price: 110, bundleRule: { version: 3 } }] }] };
+    let alert, callback, opened, refreshed = 0, totals = 0;
+    const sandbox = {
+      window: { customizeData: { [oldKey]: notes }, comboDrinkData: {}, bundleCartData: { [oldKey]: selections } },
+      bootstrapData: { catalog: [{ slug: "food", items: [{ id: "meal", name: "Old meal" }] }] },
+      cart: { [oldKey]: 1, "food_Other meal": 2 },
+      currentLocale: locale,
+      document: { documentElement: { lang: locale } },
+      WORKER_BASE: "https://worker.example",
+      getTenantIdFromUrl: () => "tenant",
+      fetch: async () => { refreshed++; return { ok: true, json: async () => fresh }; },
+      buildStructuredCartItems: () => [{ itemId: "meal" }],
+      resolveCatalogItem: key => ({ itemId: key === oldKey ? "meal" : "other" }),
+      parseCartKey: () => ({ catSlug: "food", origName: "Old meal" }),
+      updateTotal: () => { totals++; },
+      customAlert: (message, onConfirm) => { alert = message; callback = onConfirm; },
+      openBundleBuilderModal: (...args) => { opened = args; },
+      console,
+      err: { serverRejected: true, details: { code: "OPTION_PRICE_CHANGED", itemIndex: 0, expectedSubtotal: 110, error: "餐點價格已更新" } },
+    };
+    vm.createContext(sandbox);
+    await vm.runInContext(`(async () => {${source.slice(start, end)}})()`, sandbox);
+    assert.equal(refreshed, 1);
+    assert.equal(totals, 1);
+    assert.equal(sandbox.window.bootstrapData, fresh);
+    assert.equal(sandbox.cart[newKey], 1);
+    assert.equal(sandbox.cart[oldKey], undefined);
+    assert.equal(sandbox.cart["food_Other meal"], 2);
+    assert.equal(sandbox.window.bundleCartData[newKey], selections);
+    assert.equal(sandbox.window.customizeData[newKey], notes);
+    assert.match(alert, locale === "vi" ? /Giá món đã thay đổi.*Số tiền cập nhật.*110/ : /餐點價格已更新.*更新後金額.*110/);
+    callback();
+    assert.deepEqual(opened, ["food", "New meal", 0]);
+    // Rejected options never send another order or discard unrelated cart data.
+    sandbox.err.details = { code: "OPTION_UNAVAILABLE", itemIndex: 0 };
+    sandbox.resolveCatalogItem = key => ({ itemId: key === newKey ? "meal" : "other" });
+    await vm.runInContext(`(async () => {${source.slice(start, end)}})()`, sandbox);
+    assert.match(alert, locale === "vi" ? /hết hàng/ : /已售完/);
+    assert.equal(sandbox.window.bundleCartData[newKey], selections);
+  }
+});
+
+test("configured legacy product choices become a shared live group with zero retail charge", async () => {
+  const f = fixture();
+  f.db.prepare("INSERT INTO menu_categories(id,tenant_id,name,category_type) VALUES ('a_source','a','Beverages','catalog')").run();
+  f.db.prepare("UPDATE menu_items SET category_id='a_source' WHERE id IN ('a_coffee','a_tea')").run();
+  const before = JSON.stringify(f.db.prepare("SELECT id,name,price,category_id,out_of_stock_until FROM menu_items ORDER BY id").all());
+  const catalog = await f.api.loadOptionCatalog(f.env, 'a');
+  const mapping = {parentCategoryId:'a_food',sourceCategoryId:'a_source',name:'Beverage choice',labels:{vi:'Chọn đồ uống','zh-TW':'飲料選擇'}};
+  const payload = require('../scripts/prepare-option-source-backfill.cjs').prepare(catalog,mapping);
+  await ok(await f.save('group',payload));
+  const updated = await f.api.loadOptionCatalog(f.env,'a');
+  const rule = f.api.projectOptionRule(updated,'a_main');
+  assert.equal(rule.groups.length,1);
+  assert.equal(rule.groups[0].minSelection,1);
+  assert.equal(rule.groups[0].maxSelection,1);
+  assert.equal(rule.groups[0].eligibleItems.length,2);
+  assert.ok(rule.groups[0].eligibleItems.every(o=>o.price===0 && o.retailPrice>0));
+  assert.equal(JSON.stringify(f.db.prepare("SELECT id,name,price,category_id,out_of_stock_until FROM menu_items ORDER BY id").all()),before);
+  const sandbox={window:{},document:{documentElement:{lang:'vi'}},cart:{}};
+  require('node:vm').createContext(sandbox);
+  require('node:vm').runInContext(require('node:fs').readFileSync('js/client-option-groups.js','utf8'),sandbox);
+  const restored=sandbox.window.UnifiedOptions.restore(rule,[],{},'Tea');
+  assert.equal(restored[0].items[0].itemId,'a_tea');
+  assert.equal(restored[0].items[0].surcharge,0);
+  assert.equal(sandbox.window.UnifiedOptions.valid(rule,{groups:restored}),true);
+  const order=[{itemId:'a_main',quantity:1,subtotal:100,bundleSelections:{version:3,portions:[{groups:restored}]}}];
+  assert.equal((await f.api.validateUnifiedOrderItems(f.env,'a',order)).valid,true);
+  assert.equal(order[0].subtotal,100);
+  f.db.prepare("INSERT INTO menu_items(id,tenant_id,category_id,name,price) VALUES ('a_new','a','a_source','Water',55)").run();
+  assert.equal(f.api.projectOptionRule(await f.api.loadOptionCatalog(f.env,'a'),'a_main').groups[0].eligibleItems.length,3);
+  assert.throws(()=>require('../scripts/prepare-option-source-backfill.cjs').prepare(updated,mapping),/GROUP_ALREADY_MIGRATED/);
+});
