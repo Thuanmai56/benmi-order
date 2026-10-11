@@ -18,7 +18,7 @@
     "start": "cf dev --mode dev",
     "types": "cf workers types --include-runtime=false",
     "check": "tsc --noEmit",
-    "test:cli": "node --test ../scripts/test-cloudflare-cli.mjs",
+    "test:cli": "node --experimental-strip-types --test ../scripts/test-cloudflare-cli.mjs",
     "db:migrations:list:dev": "cf d1 migrations list 40b67d8a-29e0-40c1-9ce2-b76f76864e95",
     "db:migrations:apply:dev": "cf d1 migrations apply 40b67d8a-29e0-40c1-9ce2-b76f76864e95",
     "db:migrations:list:staging": "cf d1 migrations list c0152835-7d42-4545-8cb4-6658dfc7e97d",
