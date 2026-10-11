@@ -6505,6 +6505,25 @@ select.form-input {
   transform: none;
 }
 
+/* Print In-Progress Debounce and Busy Loading State */
+[data-print-action].is-printing,
+.order-detail-circle-btn.is-printing {
+  opacity: 0.65;
+  cursor: wait !important;
+  pointer-events: none !important;
+  position: relative;
+}
+
+[data-print-action].is-printing svg,
+.order-detail-circle-btn.is-printing svg {
+  animation: pos-print-spin 1s linear infinite;
+}
+
+@keyframes pos-print-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* ==========================================================================
    Elevated Modal Lifecycle Footer (Compact Tablet-Friendly 40px Buttons)
    ========================================================================== */

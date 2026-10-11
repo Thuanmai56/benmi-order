@@ -40,6 +40,9 @@ public class EscPosBitmapConverter {
 
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
 
+        // 0. Cancel any pending/interrupted print buffer: CAN (0x18)
+        stream.write(0x18);
+
         // 1. Initialize printer: ESC @ (0x1B, 0x40)
         stream.write(0x1B);
         stream.write(0x40);

@@ -42,6 +42,7 @@ import java.util.concurrent.Executors;
 public class ThermalPrinterPlugin extends Plugin {
     private final ExecutorService executor = Executors.newFixedThreadPool(3);
     private static final UUID SPP_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+    private static final java.util.concurrent.locks.ReentrantLock BT_PRINT_LOCK = new java.util.concurrent.locks.ReentrantLock();
 
     /**
      * Send raw ESC/POS byte data over TCP socket.
@@ -413,6 +414,7 @@ public class ThermalPrinterPlugin extends Plugin {
         }
 
         executor.execute(() -> {
+            BT_PRINT_LOCK.lock();
             BluetoothSocket socket = null;
             try {
                 BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
@@ -428,7 +430,7 @@ public class ThermalPrinterPlugin extends Plugin {
                     }
                 }
 
-                // Cancel active discovery to ensure maximum socket connection speed
+                // Cancel active discovery to ensure maximum socket connection speed and radio stability
                 adapter.cancelDiscovery();
 
                 BluetoothDevice device = adapter.getRemoteDevice(macAddress.trim().toUpperCase());
@@ -480,22 +482,37 @@ public class ThermalPrinterPlugin extends Plugin {
                     }
                 }
 
+                // 1. Warm-up delay: Allow Bluetooth SPP UART bridge on thermal printer (e.g. BK3231/CSR on Xprinter)
+                // to settle baud rate and establish reliable serial handshake before transmitting first bytes
+                try { Thread.sleep(250); } catch (InterruptedException ignored) {}
+
                 OutputStream outputStream = socket.getOutputStream();
-                
-                // Transmit in 1024-byte chunks with pacing to prevent RFCOMM buffer overflow on Bluetooth thermal printers
-                final int chunkSize = 1024;
+
+                // 2. Buffer sanitization: Send CAN (0x18) to clear any lingering corrupted bytes
+                // and ESC @ (0x1B, 0x40) to guarantee clean printer initialization
+                if (!"tspl".equalsIgnoreCase(protocol)) {
+                    outputStream.write(new byte[]{0x18, 0x1B, 0x40});
+                    outputStream.flush();
+                    try { Thread.sleep(50); } catch (InterruptedException ignored) {}
+                }
+
+                // 3. Adaptive Chunking & Pacing:
+                // Transmit in 512-byte chunks with 35ms pacing to strictly stay under ~14.6 KB/s.
+                // This prevents hardware UART buffer overrun on low-cost Bluetooth thermal printers (2KB-4KB FIFO)
+                final int chunkSize = 512;
                 for (int i = 0; i < printBytes.length; i += chunkSize) {
                     int len = Math.min(chunkSize, printBytes.length - i);
                     outputStream.write(printBytes, i, len);
                     outputStream.flush();
                     if (i + chunkSize < printBytes.length) {
-                        try { Thread.sleep(15); } catch (InterruptedException ignored) {}
+                        try { Thread.sleep(35); } catch (InterruptedException ignored) {}
                     }
                 }
                 outputStream.flush();
 
-                // Dynamic wait based on payload size so thermal printhead finishes printing before RFCOMM socket closes
-                long waitTimeMs = Math.max(800, Math.min(4000, (printBytes.length / 1024) * 40));
+                // 4. Drain wait: Wait for mechanical printhead to complete burning and paper feeding
+                // before closing the RFCOMM connection to avoid truncating printhead buffer
+                long waitTimeMs = Math.max(1500, Math.min(6000, (long) ((printBytes.length / 512.0) * 35.0)));
                 try { Thread.sleep(waitTimeMs); } catch (InterruptedException ignored) {}
 
                 JSObject ret = new JSObject();
@@ -509,6 +526,7 @@ public class ThermalPrinterPlugin extends Plugin {
                 if (socket != null) {
                     try { socket.close(); } catch (Exception ignored) {}
                 }
+                BT_PRINT_LOCK.unlock();
             }
         });
     }
@@ -525,6 +543,7 @@ public class ThermalPrinterPlugin extends Plugin {
         }
 
         executor.execute(() -> {
+            BT_PRINT_LOCK.lock();
             BluetoothSocket socket = null;
             try {
                 BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
@@ -570,6 +589,7 @@ public class ThermalPrinterPlugin extends Plugin {
                 if (socket != null) {
                     try { socket.close(); } catch (Exception ignored) {}
                 }
+                BT_PRINT_LOCK.unlock();
             }
         });
     }

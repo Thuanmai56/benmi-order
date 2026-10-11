@@ -52,7 +52,70 @@
   class PrinterService {
     constructor() {
       this.isNative = this.checkIsNative();
+      this._printQueue = Promise.resolve();
+      this.isPrinting = false;
+      this.activeJobsCount = 0;
       console.log(`[PrinterService] Initialized. Native Bridge: ${this.isNative ? 'ACTIVE ✅' : 'BROWSER FALLBACK 🌐'}`);
+    }
+
+    enqueuePrintTask(taskFn) {
+      this.activeJobsCount = (this.activeJobsCount || 0) + 1;
+      this._setPrintingState(true);
+
+      const queuedPromise = this._printQueue.then(async () => {
+        try {
+          return await taskFn();
+        } finally {
+          this.activeJobsCount = Math.max(0, (this.activeJobsCount || 1) - 1);
+          if (this.activeJobsCount === 0) {
+            this._setPrintingState(false);
+          }
+        }
+      }).catch(err => {
+        this.activeJobsCount = Math.max(0, (this.activeJobsCount || 1) - 1);
+        if (this.activeJobsCount === 0) {
+          this._setPrintingState(false);
+        }
+        throw err;
+      });
+
+      this._printQueue = queuedPromise.catch(() => {});
+      return queuedPromise;
+    }
+
+    _setPrintingState(busy) {
+      const wasBusy = this.isPrinting;
+      this.isPrinting = busy;
+      if (typeof window !== 'undefined') {
+        if (typeof document !== 'undefined') {
+          const printControls = document.querySelectorAll('[data-print-action], #btn-review-quick-print');
+          printControls.forEach(el => {
+            el.classList.toggle('is-printing', busy);
+            if (busy) {
+              if (!el.hasAttribute('data-prev-disabled')) {
+                el.setAttribute('data-prev-disabled', el.disabled ? 'true' : 'false');
+              }
+              el.disabled = true;
+            } else {
+              const wasDisabled = el.getAttribute('data-prev-disabled') === 'true';
+              el.disabled = wasDisabled;
+              el.removeAttribute('data-prev-disabled');
+            }
+          });
+          if (!busy && typeof window.updatePrintActionAvailability === 'function') {
+            window.updatePrintActionAvailability();
+          }
+        }
+        if (wasBusy !== busy) {
+          window.dispatchEvent(new CustomEvent('pos-printer-state-change', {
+            detail: { isPrinting: busy, activeJobsCount: this.activeJobsCount }
+          }));
+        }
+      }
+    }
+
+    isPrinterBusy() {
+      return !!(this.isPrinting || (this.activeJobsCount > 0));
     }
 
     checkIsNative() {
@@ -272,6 +335,11 @@
       if (tasks.length === 0) {
         if (typeof showToast === 'function') showToast('⚠️ 請先在設定中啟用印表機');
         return;
+      }
+
+      if (this.isPrinterBusy()) {
+        const queueNotice = (typeof t === 'function' && t('printerBusyQueued')) || '⏳ 已加入列印排程，將依序出單...';
+        if (typeof showToast === 'function') showToast(queueNotice);
       }
 
       try {
@@ -1128,78 +1196,80 @@
     }
 
     async transmitReceiptBitmap(base64Png, config, logTitle) {
-      const interfaceType = config.interface_type || 'network';
-      const protocol = config.protocol || 'esc_pos';
-      const dim = this.resolveLabelDimensions(config);
-      const paperWidth = parseInt(config.paperWidth, 10) || 80;
-      const autoCut = config.autoCut !== false;
-      const plugin = this.getPlugin();
+      return this.enqueuePrintTask(async () => {
+        const interfaceType = config.interface_type || 'network';
+        const protocol = config.protocol || 'esc_pos';
+        const dim = this.resolveLabelDimensions(config);
+        const paperWidth = parseInt(config.paperWidth, 10) || 80;
+        const autoCut = config.autoCut !== false;
+        const plugin = this.getPlugin();
 
-      if (interfaceType === 'bluetooth') {
-        const macAddress = (config.mac_address || '').trim();
-        const deviceName = config.device_name || macAddress || 'Bluetooth Printer';
+        if (interfaceType === 'bluetooth') {
+          const macAddress = (config.mac_address || '').trim();
+          const deviceName = config.device_name || macAddress || 'Bluetooth Printer';
 
-        if (!macAddress) {
-          throw new Error('未選擇藍牙印表機 (Please select a paired Bluetooth printer)');
-        }
+          if (!macAddress) {
+            throw new Error('未選擇藍牙印表機 (Please select a paired Bluetooth printer)');
+          }
 
-        if (this.isNative && plugin && typeof plugin.printBluetooth === 'function') {
-          console.log(`[PrinterService] 📡 Transmitting ${protocol.toUpperCase()} raster bitmap via Native Bluetooth SPP [${deviceName} (${macAddress})]...`);
-          const res = await plugin.printBluetooth({
-            macAddress: macAddress,
-            base64Image: base64Png,
-            protocol: protocol,
-            paperWidth: paperWidth,
-            autoCut: autoCut,
-            feedBeforeCutMm: Number(config.feedBeforeCutMm) || 80,
-            labelWidthMm: dim.widthMm,
-            labelHeightMm: dim.heightMm,
-            dpi: dim.dpi,
-            xOffsetMm: dim.xOffsetMm,
-            yOffsetMm: dim.yOffsetMm,
-            timeoutMs: 8000
-          });
-          console.log(`[PrinterService] ✅ Native Bluetooth print success for [${logTitle}]:`, res);
-          return res;
+          if (this.isNative && plugin && typeof plugin.printBluetooth === 'function') {
+            console.log(`[PrinterService] 📡 Transmitting ${protocol.toUpperCase()} raster bitmap via Native Bluetooth SPP [${deviceName} (${macAddress})]...`);
+            const res = await plugin.printBluetooth({
+              macAddress: macAddress,
+              base64Image: base64Png,
+              protocol: protocol,
+              paperWidth: paperWidth,
+              autoCut: autoCut,
+              feedBeforeCutMm: Number(config.feedBeforeCutMm) || 80,
+              labelWidthMm: dim.widthMm,
+              labelHeightMm: dim.heightMm,
+              dpi: dim.dpi,
+              xOffsetMm: dim.xOffsetMm,
+              yOffsetMm: dim.yOffsetMm,
+              timeoutMs: 8000
+            });
+            console.log(`[PrinterService] ✅ Native Bluetooth print success for [${logTitle}]:`, res);
+            return res;
+          } else {
+            console.log(`[PrinterService] 🌐 Browser Simulator: Print job generated for [${logTitle}] -> Bluetooth ${deviceName} (${macAddress}) [${protocol.toUpperCase()}]`);
+            this.openBrowserPreview(base64Png, logTitle, `Bluetooth: ${deviceName} (${macAddress})`, `Protocol: ${protocol.toUpperCase()}`);
+            return { success: true, simulated: true, interface: 'bluetooth', protocol, macAddress };
+          }
         } else {
-          console.log(`[PrinterService] 🌐 Browser Simulator: Print job generated for [${logTitle}] -> Bluetooth ${deviceName} (${macAddress}) [${protocol.toUpperCase()}]`);
-          this.openBrowserPreview(base64Png, logTitle, `Bluetooth: ${deviceName} (${macAddress})`, `Protocol: ${protocol.toUpperCase()}`);
-          return { success: true, simulated: true, interface: 'bluetooth', protocol, macAddress };
-        }
-      } else {
-        // Network TCP Socket
-        const ip = (config.ip || '').trim();
-        const port = parseInt(config.port, 10) || 9100;
+          // Network TCP Socket
+          const ip = (config.ip || '').trim();
+          const port = parseInt(config.port, 10) || 9100;
 
-        if (!ip) {
-          throw new Error('未設定印表機 IP 位址 (No printer IP address configured)');
-        }
+          if (!ip) {
+            throw new Error('未設定印表機 IP 位址 (No printer IP address configured)');
+          }
 
-        if (this.isNative && plugin && typeof plugin.printBitmap === 'function') {
-          console.log(`[PrinterService] 🚀 Transmitting ${protocol.toUpperCase()} raster bitmap via Native TCP Socket ${ip}:${port}...`);
-          const res = await plugin.printBitmap({
-            ip: ip,
-            port: port,
-            base64Image: base64Png,
-            protocol: protocol,
-            paperWidth: paperWidth,
-            autoCut: autoCut,
-            feedBeforeCutMm: Number(config.feedBeforeCutMm) || 80,
-            labelWidthMm: dim.widthMm,
-            labelHeightMm: dim.heightMm,
-            dpi: dim.dpi,
-            xOffsetMm: dim.xOffsetMm,
-            yOffsetMm: dim.yOffsetMm,
-            timeoutMs: 5000
-          });
-          console.log(`[PrinterService] ✅ Native print success for [${logTitle}]:`, res);
-          return res;
-        } else {
-          console.log(`[PrinterService] 🌐 Browser Simulator: Print job generated for [${logTitle}] -> ${ip}:${port} [${protocol.toUpperCase()}]`);
-          this.openBrowserPreview(base64Png, logTitle, `Network IP: ${ip}:${port}`, `Protocol: ${protocol.toUpperCase()}`);
-          return { success: true, simulated: true, interface: 'network', protocol, ip, port };
+          if (this.isNative && plugin && typeof plugin.printBitmap === 'function') {
+            console.log(`[PrinterService] 🚀 Transmitting ${protocol.toUpperCase()} raster bitmap via Native TCP Socket ${ip}:${port}...`);
+            const res = await plugin.printBitmap({
+              ip: ip,
+              port: port,
+              base64Image: base64Png,
+              protocol: protocol,
+              paperWidth: paperWidth,
+              autoCut: autoCut,
+              feedBeforeCutMm: Number(config.feedBeforeCutMm) || 80,
+              labelWidthMm: dim.widthMm,
+              labelHeightMm: dim.heightMm,
+              dpi: dim.dpi,
+              xOffsetMm: dim.xOffsetMm,
+              yOffsetMm: dim.yOffsetMm,
+              timeoutMs: 5000
+            });
+            console.log(`[PrinterService] ✅ Native print success for [${logTitle}]:`, res);
+            return res;
+          } else {
+            console.log(`[PrinterService] 🌐 Browser Simulator: Print job generated for [${logTitle}] -> ${ip}:${port} [${protocol.toUpperCase()}]`);
+            this.openBrowserPreview(base64Png, logTitle, `Network IP: ${ip}:${port}`, `Protocol: ${protocol.toUpperCase()}`);
+            return { success: true, simulated: true, interface: 'network', protocol, ip, port };
+          }
         }
-      }
+      });
     }
 
     async testConnection(config) {
