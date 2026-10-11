@@ -238,7 +238,7 @@
   function rule(group) {
     return `${tr("ugChoose")} ${group.minSelection === group.maxSelection ? group.minSelection : `${group.minSelection}–${group.maxSelection}`}`;
   }
-  function affected(group) {
+  function affectedIds(group) {
     const ids =
       group.itemIds ||
       catalog.links
@@ -249,7 +249,7 @@
       catalog.categoryLinks
         .filter((l) => l.groupId === group.id)
         .map((l) => l.categoryId);
-    return new Set([
+    return [...new Set([
       ...ids,
       ...catalog.products
         .filter(
@@ -260,8 +260,9 @@
             ),
         )
         .map((p) => p.id),
-    ]).size;
+    ])];
   }
+  const affected = (group) => affectedIds(group).length;
   const btn = (action, label, attrs = "") =>
     `<button type="button" data-action="${action}" ${attrs}>${esc(tr(label))}</button>`;
   const field = (key, label, value, type = "text", extra = "") =>
@@ -420,7 +421,7 @@
             ),
           )
           .join("") || `<p class="ug-muted">${esc(tr("ugEmpty"))}</p>`
-      }</div></section><section><div class="ug-section-title"><h3>${esc(tr("ugLinked"))} (${d.itemIds.length})</h3>${btn("linked", "ugLink")}</div><div class="ug-linked">${d.itemIds.map((id) => `<div>${esc(productById(id)?.name || "")}</div>`).join("") || `<span class="ug-muted">${esc(tr("ugEmpty"))}</span>`}</div></section><details><summary>${esc(tr("ugCategoryLinks"))}</summary>${catalog.categories
+      }</div></section><section><div class="ug-section-title"><h3>${esc(tr("ugLinked"))} (${affected(d)})</h3>${btn("linked", "ugLink")}</div><div class="ug-linked">${affectedIds(d).map((id) => `<div>${esc(productById(id)?.name || "")}${!d.itemIds.includes(id) ? ` <small class="ug-muted">· ${esc(tr("ugInherited"))}</small>` : ""}</div>`).join("") || `<span class="ug-muted">${esc(tr("ugEmpty"))}</span>`}</div></section><details><summary>${esc(tr("ugCategoryLinks"))}</summary>${catalog.categories
         .filter((c) => c.category_type === "catalog")
         .map(
           (c) =>
@@ -476,7 +477,10 @@
       title = tr(r.page === "products" ? "ugFromProducts" : "ugLink");
       body =
         search() +
-        `<select class="ug-filter" data-field="filter"><option value="">${esc(tr("ugAll"))}</option>${catalog.categories.map((c) => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("")}</select><div class="ug-list">${catalog.products.map((p) => check(p.id, p.name, `${tr("ugRetail")} $${p.price}`, r.ids.includes(p.id), "product", p.category_id)).join("")}</div>`;
+        `<select class="ug-filter" data-field="filter"><option value="">${esc(tr("ugAll"))}</option>${catalog.categories.map((c) => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("")}</select><div class="ug-list">${catalog.products.map((p) => {
+          const inherited = r.page === "linked" && !r.ids.includes(p.id) && affectedIds(d).includes(p.id);
+          return check(p.id, p.name, inherited ? tr("ugInherited") : `${tr("ugRetail")} $${p.price}`, inherited || r.ids.includes(p.id), "product", p.category_id, inherited);
+        }).join("")}</div>`;
     } else if (r.page === "option") {
       const o = r.option;
       title = tr(o.productId ? "ugFromProducts" : "ugCustom");
@@ -517,8 +521,8 @@
   }
   const search = () =>
     `<input class="ug-search" type="search" data-field="search" placeholder="${esc(tr("ugSearch"))}" aria-label="${esc(tr("ugSearch"))}">`;
-  const check = (id, name, sub, checked, kind, category = "") =>
-    `<label class="ug-check" data-search="${esc(name.toLowerCase())}" data-category="${esc(category)}"><input type="checkbox" data-check="${kind}" value="${esc(id)}" ${checked ? "checked" : ""}><span><strong>${esc(name)}</strong><small>${esc(sub)}</small></span></label>`;
+  const check = (id, name, sub, checked, kind, category = "", disabled = false) =>
+    `<label class="ug-check" data-search="${esc(name.toLowerCase())}" data-category="${esc(category)}"><input type="checkbox" data-check="${kind}" value="${esc(id)}" ${checked ? "checked" : ""} ${disabled ? "disabled" : ""}><span><strong>${esc(name)}</strong><small>${esc(sub)}</small></span></label>`;
   function input(el) {
     if (!state || state.busy) return;
     const r = state.route,
