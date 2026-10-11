@@ -413,7 +413,6 @@ async function loadMenuData() {
                 sourceId: cust.id || custId,
                 canonicalId: libraryGroup?.canonicalId || null,
                 sortOrder: cust.sortOrder !== undefined ? cust.sortOrder : gIdx,
-                ...(Number.isSafeInteger(cust.displaySortOrder) ? { displaySortOrder: cust.displaySortOrder } : {}),
                 options: (cust.options || []).map(opt => ({
                   ...opt,
                   id: opt.id || opt.name,
@@ -546,14 +545,20 @@ let isCategoryManagerOpen = false;
 let categoryBeforeDisplayOrder = -1;
 let displayOrderCategory = null;
 let displayOrderInitial = [];
+let displayOrderGroupInitial = [];
+
+function captureMenuDisplayOrder() {
+  const capture = entry => ({ ...entry, value: entry.model[entry.field], hadOrder: Object.hasOwn(entry.model, entry.field) });
+  displayOrderInitial = getMenuDisplayEntries().map(capture);
+  displayOrderGroupInitial = getMenuOrderGroups().map(model => capture({ model, field: 'sortOrder', position: Number(model.sortOrder) || 0 }));
+}
 
 function openCategoriesManager() {
   if (!isMenuLoadedCompletely || !currentMenuData || isMenuSaving || isCategoryManagerOpen) return;
   syncMenuDataFromDOM();
   categoryBeforeDisplayOrder = activeCategoryIndex;
   displayOrderCategory = currentMenuData[activeCategoryIndex];
-  if (isCustomizationCategory(displayOrderCategory)) displayOrderCategory = null;
-  displayOrderInitial = getMenuDisplayEntries().map(entry => ({ model: entry.model, field: entry.field, value: entry.model[entry.field], hadOrder: Object.hasOwn(entry.model, entry.field), position: entry.position }));
+  captureMenuDisplayOrder();
   isCategoryManagerOpen = true;
   activeCategoryIndex = -1;
   // Stale inline inputs must not write into newly reordered item indexes.
@@ -620,22 +625,43 @@ function formatPlusBtnText(text, fallback) {
   return raw.startsWith('+') ? raw : `+ ${raw}`;
 }
 
-function getMenuDisplayEntries() {
-  const entries = [];
+function getMenuOrderGroups() {
+  const groups = [];
   const seenGroups = new Set();
   (currentMenuData || []).forEach(cat => {
-    if (!isCustomizationCategory(cat)) entries.push({ model: cat, title: cat.title, kind: 'categoryTypeCatalogBadge', field: 'sortOrder', position: Number(cat.sortOrder) || 0 });
-    else {
-      [...(cat.groups || [])].sort((a, b) => (Number(a.sortOrder) || 0) - (Number(b.sortOrder) || 0)).forEach(group => {
+    if (isCustomizationCategory(cat)) {
+      (cat.groups || []).forEach(group => {
         const scope = group.scope || (cat.type === 'modifier' ? 'item' : 'order');
         const id = String(group.canonicalId || group.id || '');
         if (scope !== 'order' || !id || seenGroups.has(id)) return;
         seenGroups.add(id);
-        entries.push({ model: group, title: group.title || group.name || cat.title, kind: 'scopeOrder', isOrderGroup: true, field: 'displaySortOrder', position: Number.isSafeInteger(group.displaySortOrder) ? group.displaySortOrder : Number(cat.sortOrder) || 0 });
+        groups.push(group);
       });
     }
   });
+  return groups.sort((a, b) => (Number(a.sortOrder) || 0) - (Number(b.sortOrder) || 0));
+}
+
+function getMenuDisplayEntries() {
+  const section = getMenuOrderGroups().length ? currentMenuData.find(cat => cat.type === 'order_customization') || currentMenuData.find(cat => isCustomizationCategory(cat) && cat.groups?.some(group => group.scope === 'order')) : null;
+  const entries = (currentMenuData || []).filter(cat => cat === section || !isCustomizationCategory(cat)).map(model => ({
+    model, title: model === section ? t('menuOrderFlavorSection') : model.title,
+    kind: model === section ? 'scopeOrder' : 'categoryTypeCatalogBadge', isOrderSection: model === section,
+    field: 'sortOrder', position: Number(model.sortOrder) || 0
+  }));
   return entries.sort((a, b) => a.position - b.position);
+}
+
+function commitMenuDisplayRanks(ordered, initial) {
+  const original = ordered.length === initial.length && ordered.every((entry, i) => entry.model === initial[i].model);
+  const slots = initial.map(entry => entry.position);
+  const useSlots = slots.length === ordered.length && slots.every((value, i) => Number.isFinite(value) && (!i || value > slots[i-1]));
+  ordered.forEach((entry, i) => {
+    if (original) {
+      if (initial[i].hadOrder) entry.model[entry.field] = initial[i].value;
+      else delete entry.model[entry.field];
+    } else entry.model[entry.field] = useSlots ? slots[i] : i + 1;
+  });
 }
 
 function renderCategoriesManagerView() {
@@ -648,9 +674,10 @@ function renderCategoriesManagerView() {
   document.getElementById('btn-menu-order-back-text').textContent = t('btnBack');
   container.innerHTML = '';
   const entries = getMenuDisplayEntries();
-  if (!entries.some(entry => entry.model === displayOrderCategory && !entry.isOrderGroup)) {
-    displayOrderCategory = entries.find(entry => !entry.isOrderGroup)?.model || null;
+  if (!entries.some(entry => entry.model === displayOrderCategory)) {
+    displayOrderCategory = entries.find(entry => !entry.isOrderSection)?.model || entries[0]?.model || null;
   }
+  const selected = entries.find(entry => entry.model === displayOrderCategory);
   const addPanel = (title, id) => {
     const section = document.createElement('section');
     section.className = 'menu-order-panel';
@@ -662,33 +689,22 @@ function renderCategoriesManagerView() {
     return list;
   };
   const sections = addPanel(t('menuOrderSections'), 'menu-order-sections-title');
-  const items = addPanel(displayOrderCategory ? t('menuOrderItems', {name:displayOrderCategory.title}) : t('segProducts'), 'menu-order-items-title');
+  const items = addPanel(selected?.isOrderSection ? t('menuOrderGroups') : displayOrderCategory ? t('menuOrderItems', {name:displayOrderCategory.title}) : t('segProducts'), 'menu-order-items-title');
   const empty = (list, key) => {
     const message = document.createElement('p'); message.className = 'menu-order-empty'; message.textContent = t(key); list.appendChild(message);
   };
-  const commitSections = ordered => {
-    const original = ordered.length === displayOrderInitial.length && ordered.every((entry, i) => entry.model === displayOrderInitial[i].model);
-    const slots = displayOrderInitial.map(entry => entry.position);
-    const useSlots = slots.length === ordered.length && slots.every((value, i) => Number.isFinite(value) && (!i || value > slots[i-1]));
-    ordered.forEach((entry, i) => {
-      if (original) {
-        const initial = displayOrderInitial[i];
-        if (initial.hadOrder) entry.model[entry.field] = initial.value;
-        else delete entry.model[entry.field];
-      } else entry.model[entry.field] = useSlots ? slots[i] : i + 1;
-    });
-  };
+  const commitSections = ordered => commitMenuDisplayRanks(ordered, displayOrderInitial);
   const rows = (list, values, kind, commit) => {
     let dragged = null;
     values.forEach((value, index) => {
       const model = kind === 'section' ? value.model : value;
-      const name = kind === 'section' ? value.title : value.name;
+      const name = kind === 'section' ? value.title : value.name || value.title;
       const row = document.createElement('div'); row.className = 'menu-display-order-row'; row.draggable = true;
       row.setAttribute('data-order-kind', kind); row.setAttribute('data-order-index', index);
       const ordinal = document.createElement('span'); ordinal.className = 'menu-order-index'; ordinal.textContent = String(index+1); ordinal.setAttribute('aria-hidden','true'); row.appendChild(ordinal);
-      const label = document.createElement(kind === 'section' && !value.isOrderGroup ? 'button' : 'span');
+      const label = document.createElement(kind === 'section' ? 'button' : 'span');
       label.className = 'menu-display-order-name';
-      label.innerHTML = `<strong>${escapeHtml(name)}</strong><small>${kind === 'section' ? escapeHtml(t(value.kind)) : '$' + escapeHtml(value.price ?? '')}</small>`;
+      label.innerHTML = `<strong>${escapeHtml(name)}</strong><small>${kind === 'section' ? escapeHtml(t(value.kind)) : kind === 'group' ? escapeHtml((value.options || []).length + ' ' + t('optionsCountUnit')) : '$' + escapeHtml(value.price ?? '')}</small>`;
       if (label.tagName.toLowerCase() === 'button') {
         label.type = 'button'; label.setAttribute('aria-pressed',model === displayOrderCategory);
         label.onclick = () => { displayOrderCategory = model; renderCategoriesManagerView(); document.getElementById('menu-order-items-title')?.focus(); };
@@ -728,8 +744,12 @@ function renderCategoriesManagerView() {
   rows(sections, entries, 'section', commitSections);
   if (!entries.length) empty(sections, 'menuSelectPrompt');
   const products = displayOrderCategory?.items || [];
-  rows(items, products, 'item', ordered => { displayOrderCategory.items.splice(0, products.length, ...ordered); });
-  if (!products.length) empty(items, 'menuEmptyCategory');
+  if (selected?.isOrderSection) {
+    rows(items, getMenuOrderGroups(), 'group', ordered => commitMenuDisplayRanks(ordered.map(model => ({ model, field: 'sortOrder' })), displayOrderGroupInitial));
+  } else {
+    rows(items, products, 'item', ordered => { displayOrderCategory.items.splice(0, products.length, ...ordered); });
+    if (!products.length) empty(items, 'menuEmptyCategory');
+  }
   [sections, items].forEach((list, i) => { list.scrollTop = positions[i] || 0; });
   document.getElementById('menu-order-items-title').setAttribute('tabindex','-1');
   container.inert = isMenuSaving;
@@ -2585,7 +2605,6 @@ function serializeMenuData(categories) {
           appliedCategories: Array.isArray(grp.appliedCategories) ? grp.appliedCategories : [],
           appliedItems: Array.isArray(grp.appliedItems) ? grp.appliedItems : [],
           sortOrder: grp.sortOrder !== undefined ? grp.sortOrder : (gIdx + 1),
-          ...(Number.isSafeInteger(grp.displaySortOrder) ? { displaySortOrder: grp.displaySortOrder } : {}),
           options: (grp.options || []).map(opt => {
             const optPrice = Number(opt.price ?? opt.surcharge ?? 0);
             const optIsDefault = Boolean(opt.isDefault ?? opt.is_default);
@@ -2760,7 +2779,7 @@ async function saveMenuData(skipConfirm = false) {
     if (window.UnifiedMenu?.enabled) await window.UnifiedMenu.load();
     clearMenuDirty();
     if (isCategoryManagerOpen) {
-      displayOrderInitial = getMenuDisplayEntries().map(entry => ({ model: entry.model, field: entry.field, value: entry.model[entry.field], hadOrder: Object.hasOwn(entry.model, entry.field), position: entry.position }));
+      captureMenuDisplayOrder();
     }
     try {
       const tid = getTenantIdFromUrl();

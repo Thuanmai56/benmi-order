@@ -91,28 +91,18 @@ function renderDynamicCatalog() {
     const globalCustomizationGroups = (bData.customizations || [])
         .filter(group => !group.scope || group.scope === 'order')
         .sort((a, b) => (Number(a.sortOrder) || 0) - (Number(b.sortOrder) || 0));
-    const groupedCustomizations = globalCustomizationGroups.filter(group => !Number.isSafeInteger(group.displaySortOrder));
-    if (groupedCustomizations.length > 0) {
+    if (globalCustomizationGroups.length > 0) {
+        const locale = typeof currentLocale !== 'undefined' && currentLocale ? currentLocale : bData.tenant?.locale || document.documentElement?.lang;
+        const sectionTitle = locale === 'vi' ? 'Tùy chọn khẩu vị' : '口味選擇';
         catalogSections.push({
             type: 'customizations',
-            groups: groupedCustomizations,
+            groups: globalCustomizationGroups,
             sectionId: 'sec-order-option',
-            title: bData.customizationTitle || '口味與客製化選擇',
-            shortName: bData.customizationShortName || '口味選擇',
+            title: sectionTitle,
+            shortName: sectionTitle,
             sortOrder: bData.customizationSortOrder ?? 0
         });
     }
-    globalCustomizationGroups.filter(group => Number.isSafeInteger(group.displaySortOrder)).forEach(group => {
-        catalogSections.push({
-            type: 'customizations',
-            groups: [group],
-            sectionId: 'sec-order-option-' + encodeURIComponent(group.id || group.key).replace(/'/g, '%27'),
-            title: group.title,
-            shortName: group.title,
-            sortOrder: group.displaySortOrder,
-            standalone: true
-        });
-    });
     catalogSections.sort((a, b) => a.sortOrder - b.sortOrder);
 
     // 1. Navigation Tabs
@@ -142,7 +132,7 @@ function renderDynamicCatalog() {
         sec.className = 'section-container';
         if (section.type === 'customizations') {
             sec.id = section.sectionId;
-            renderCustomizationsPanel(sec, section.groups, section.title, Boolean(section.standalone));
+            renderCustomizationsPanel(sec, section.groups, section.title);
         } else {
             const cat = section.category;
             sec.id = `sec-${cat.slug}`;
@@ -173,7 +163,7 @@ function renderDynamicCatalog() {
     }
 }
 
-function renderCustomizationsPanel(container, list, sectionTitle = '口味與客製化選擇', standalone = false) {
+function renderCustomizationsPanel(container, list, sectionTitle = '口味選擇') {
     if (!container || !list || list.length === 0) return;
 
     let html = `<div class="section-title">${escapeHtml(sectionTitle)}</div>
@@ -207,7 +197,7 @@ function renderCustomizationsPanel(container, list, sectionTitle = '口味與客
         const denseGridClass = hasDenseOptions ? ' dense-grid' : '';
 
         html += `<div class="custom-group" style="${topMargin}">
-            ${standalone ? '' : `<label class="custom-label">${escapeHtml(group.title)}</label>`}
+            <label class="custom-label">${escapeHtml(group.title)}</label>
             <div class="custom-options-grid${denseGridClass}">`;
 
         (group.options || []).forEach((opt, optIdx) => {

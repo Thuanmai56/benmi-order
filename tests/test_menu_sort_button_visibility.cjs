@@ -76,7 +76,7 @@ test('reordering items preserves identity and full configuration, and reverting 
 test('section reordering preserves rank slots and never includes per-item modifier libraries',()=>{
   const app=setup(),initial=JSON.stringify(app.data());app.context.openCategoriesManager();
   app.move('section',0,1);
-  assert.deepEqual(Array.from(app.context.getMenuDisplayEntries(),e=>e.model.id),['food','note','drinks']);
+  assert.deepEqual(Array.from(app.context.getMenuDisplayEntries(),e=>e.model.id),['food','notes','drinks']);
   assert.equal(app.data()[2].sortOrder,13);assert.equal(app.data()[1].sortOrder,0);
   app.move('section',1,-1);assert.equal(JSON.stringify(app.data()),initial);assert.equal(app.dirty(),false);
   app.context.closeCategoriesManager();app.context.openCategoriesManager();assert.equal(app.dirty(),false);
@@ -85,27 +85,37 @@ test('section reordering preserves rank slots and never includes per-item modifi
 test('tied or absent section ranks become sortable; reversing restores their exact original representation',()=>{
   const app=setup();app.data()[1].sortOrder=0;delete app.data()[3].sortOrder;app.context.clearMenuDirty();
   const original=JSON.stringify(app.data());app.context.openCategoriesManager();app.move('section',0,1);
-  assert.deepEqual(Array.from(app.context.getMenuDisplayEntries(),e=>e.model.id),['food','note','drinks']);
+  assert.deepEqual(Array.from(app.context.getMenuDisplayEntries(),e=>e.model.id),['food','notes','drinks']);
   app.move('section',1,-1);assert.equal(JSON.stringify(app.data()),original);assert.equal(app.dirty(),false);
 });
 
-test('each whole-order group has its own position between catalog sections; inherited item groups stay out',async()=>{
+test('one flavor section contains sortable order groups; inherited groups and old display positions stay out',async()=>{
   const app=setup();
   app.data()[0].groups.push({id:'utensils',key:'utensils',title:'Dụng cụ',scope:'order',sortOrder:2,options:[]},
     {id:'hidden',key:'hidden',title:'Theo phân loại',scope:'category',options:[]});
   app.data()[0].groups[0].key='note';app.context.clearMenuDirty();
+  app.data()[0].groups[0].displaySortOrder=99;app.context.clearMenuDirty();
   const original=JSON.stringify(app.data());app.context.openCategoriesManager();
-  assert.deepEqual(Array.from(app.context.getMenuDisplayEntries(),e=>e.model.id),['note','utensils','food','drinks']);
-  app.move('section',1,1);
-  assert.deepEqual(Array.from(app.context.getMenuDisplayEntries(),e=>e.model.id),['note','food','utensils','drinks']);
-  assert.equal(app.data()[0].sortOrder,0);assert.equal(app.data()[0].groups[1].sortOrder,2);
-  app.move('section',2,-1);assert.equal(JSON.stringify(app.data()),original);assert.equal(app.dirty(),false);
-  app.move('section',1,1);await app.context.saveMenuData(true);
+  assert.deepEqual(Array.from(app.context.getMenuDisplayEntries(),e=>e.model.id),['notes','food','drinks']);
+  app.rows('section')[0].querySelector('.menu-display-order-name').onclick();
+  assert.equal(app.dirty(),false);assert.equal(app.rows('group').length,2);assert.equal(app.rows('item').length,0);
+  app.move('group',0,1);
+  assert.deepEqual(Array.from(app.context.getMenuOrderGroups(),g=>g.id),['utensils','note']);
+  assert.equal(app.doc.activeElement.getAttribute('aria-label'),'moveDisplayUp: Ghi chú');
+  app.move('group',1,-1);assert.equal(JSON.stringify(app.data()),original);assert.equal(app.dirty(),false);
+  app.move('section',0,1);
+  assert.deepEqual(Array.from(app.context.getMenuDisplayEntries(),e=>e.model.id),['food','notes','drinks']);
+  assert.equal(app.data()[0].groups[1].sortOrder,2);
+  app.move('section',1,-1);assert.equal(JSON.stringify(app.data()),original);assert.equal(app.dirty(),false);
+  app.move('section',0,1);app.move('group',0,1);await app.context.saveMenuData(true);
   const groups=app.posts[0].__customizations.groups;
-  assert.equal(groups.find(g=>g.id==='note').displaySortOrder,1);
-  assert.equal(groups.find(g=>g.id==='utensils').displaySortOrder,3);
-  assert.equal(groups.find(g=>g.id==='hidden').displaySortOrder,undefined);
-  assert.equal(app.posts[0].food.__sort_order,2);
+  assert.equal(app.posts[0].__customizations.sortOrder,10);
+  assert.equal(groups.find(g=>g.id==='note').sortOrder,2);
+  assert.equal(groups.find(g=>g.id==='utensils').sortOrder,0);
+  assert.equal(groups.some(g=>g.displaySortOrder!==undefined),false);
+  assert.equal(app.posts[0].food.__sort_order,0);
+  assert.equal(app.data()[0].groups[0].displaySortOrder,99);
+  assert.equal(groups.find(g=>g.id==='hidden').sortOrder,3);
 });
 
 test('desktop drag/drop uses the same ordering path as buttons and ignores cross-list drops',()=>{
@@ -119,14 +129,40 @@ test('desktop drag/drop uses the same ordering path as buttons and ignores cross
 test('saving establishes a new baseline so further moves and reversals retain persisted group positions',async()=>{
   const app=setup();app.data()[0].groups[0].key='note';app.context.clearMenuDirty();app.context.openCategoriesManager();
   app.move('section',0,1);await app.context.saveMenuData(true);
-  assert.equal(app.posts[0].__customizations.groups[0].displaySortOrder,10);
+  assert.equal(app.posts[0].__customizations.sortOrder,10);
   app.move('section',1,-1);
-  assert.equal(app.data()[0].groups[0].displaySortOrder,0);
+  assert.equal(app.data()[0].sortOrder,0);
   assert.equal(app.dirty(),true);
-  app.move('section',0,1);assert.equal(app.data()[0].groups[0].displaySortOrder,10);assert.equal(app.dirty(),false);
+  app.move('section',0,1);assert.equal(app.data()[0].sortOrder,10);assert.equal(app.dirty(),false);
   app.move('section',1,-1);await app.context.saveMenuData(true);
-  assert.equal(app.posts[1].__customizations.groups[0].displaySortOrder,0);
+  assert.equal(app.posts[1].__customizations.sortOrder,0);
   assert.equal(app.dirty(),false);
+});
+
+test('inner group saves refresh entity versions and establish a new baseline without losing selection',async()=>{
+  const app=setup();let reloads=0;
+  app.context.UnifiedMenu={enabled:true,load:async()=>{reloads++;}};
+  app.data()[0].groups.push({id:'utensils',key:'utensils',title:'Dụng cụ',scope:'order',sortOrder:2,options:[]});
+  app.data()[0].groups[0].key='note';app.context.clearMenuDirty();app.context.openCategoriesManager();
+  app.rows('section')[0].querySelector('.menu-display-order-name').onclick();
+  app.move('group',0,1);await app.context.saveMenuData(true);
+  assert.equal(reloads,1);assert.equal(app.dirty(),false);assert.equal(app.rows('group').length,2);
+  app.move('group',1,-1);assert.equal(app.dirty(),true);
+  app.move('group',0,1);assert.equal(app.dirty(),false);
+  app.move('group',1,-1);
+  app.context.fetch=async()=>({ok:false,status:409,json:async()=>({code:'MENU_REVISION_CONFLICT'})});
+  const draft=JSON.stringify(app.data());await app.context.saveMenuData(true);
+  assert.equal(JSON.stringify(app.data()),draft);assert.equal(app.dirty(),true);assert.equal(reloads,1);
+  app.context.fetch=async()=>({ok:true});await app.context.saveMenuData(true);
+  assert.equal(app.dirty(),false);assert.equal(reloads,2);
+});
+
+test('empty order scope hides the aggregate, while an order-only menu opens its inner group list',()=>{
+  const empty=setup();empty.data()[0].groups=[];empty.context.clearMenuDirty();empty.context.openCategoriesManager();
+  assert.deepEqual(Array.from(empty.context.getMenuDisplayEntries(),e=>e.model.id),['food','drinks']);
+  const only=setup();only.data().splice(1);only.context.clearMenuDirty();only.context.openCategoriesManager();
+  assert.equal(only.rows('section').length,1);assert.equal(only.rows('group').length,1);
+  assert.equal(only.rows('item').length,0);assert.equal(only.dirty(),false);
 });
 
 test('inline edits are collected before ordering, with stale inputs removed before item indexes change',()=>{
@@ -154,6 +190,6 @@ test('ordering screen assets share the new cache buster', () => {
   const html = fs.readFileSync(path.resolve(__dirname, '../orders.html'), 'utf-8');
   for (const asset of ['css/orders-menu.css', 'js/orders-menu.js', 'js/orders-i18n.js']) {
     const escaped = asset.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    assert.match(html,new RegExp(`${escaped}\\?v=20261011_global_group_order_v2`));
+    assert.match(html,new RegExp(`${escaped}\\?v=20261012_flavor_section_order_v1`));
   }
 });
