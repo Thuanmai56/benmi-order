@@ -42,6 +42,9 @@
       ugRetail: "Giá bán lẻ",
       ugQuantity: "Số phần có sẵn",
       ugDefault: "Chọn sẵn",
+      ugExplain: "Giải thích",
+      ugDefaultHelp: "Tự chọn lựa chọn này khi khách mở món. Khách có thể đổi theo quy tắc của nhóm. Phụ thu vẫn được tính nếu có.",
+      ugLocalStockHelp: "Tạm thời không cho khách chọn lựa chọn này trong nhóm. Áp dụng cho mọi món dùng nhóm này và giữ cấu hình để bật lại. Món liên kết vẫn có thể bán riêng hoặc dùng trong nhóm khác.",
       ugInherited: "Từ phân loại",
       ugDefaults: "Dùng lại mặc định",
       ugOwn: "Danh sách riêng cho món",
@@ -133,6 +136,9 @@
       ugRetail: "單點售價",
       ugQuantity: "已包含份數",
       ugDefault: "預設選取",
+      ugExplain: "說明",
+      ugDefaultHelp: "顧客開啟餐點時會自動選取此選項。顧客可依群組規則更改選擇；若有加價，仍會計入金額。",
+      ugLocalStockHelp: "暫時不讓顧客在此群組選取此選項，適用於所有使用此群組的餐點。設定會保留，方便重新啟用；連結的餐點仍可單點販售或用於其他群組。",
       ugInherited: "來自分類",
       ugDefaults: "恢復預設",
       ugOwn: "此餐點專用選項",
@@ -387,8 +393,19 @@
     `<button type="button" data-action="${action}" ${attrs}>${esc(tr(label))}</button>`;
   const field = (key, label, value, type = "text", extra = "") =>
     `<label class="ug-field"><span>${esc(tr(label))}</span><input data-field="${key}" type="${type}" value="${esc(value)}" ${extra}></label>`;
-  const toggle = (key, label, value) =>
-    `<label class="ug-rule"><span>${esc(tr(label))}</span><input type="checkbox" role="switch" data-field="${key}" ${value ? "checked" : ""}></label>`;
+  const toggle = (key, label, value, help) => {
+    const id = `ug-${key.replace(/\./g, "-")}`;
+    // Keep the help button outside the switch label so reading help cannot toggle it.
+    // Help-circle SVG: Feather Icons (MIT).
+    return `<div class="ug-rule ${help ? "ug-rule-help" : ""}"><div class="ug-rule-label"><label for="${id}">${esc(tr(label))}</label>${help ? `<button type="button" class="ug-help-button" data-action="help" aria-label="${esc(tr("ugExplain"))}: ${esc(tr(label))}" aria-expanded="false" aria-controls="${id}-help"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></button>` : ""}</div><label class="ug-switch"><input id="${id}" type="checkbox" role="switch" data-field="${key}" ${help ? `aria-describedby="${id}-help"` : ""} ${value ? "checked" : ""}><span class="ug-switch-track" aria-hidden="true"></span></label>${help ? `<p id="${id}-help" class="ug-help-text" hidden>${esc(tr(help))}</p>` : ""}</div>`;
+  };
+  function toggleHelp(button, expanded = button.getAttribute("aria-expanded") !== "true") {
+    for (const other of ensureDrawer().querySelectorAll('[data-action="help"]')) {
+      const open = other === button && expanded;
+      other.setAttribute("aria-expanded", String(open));
+      other.closest(".ug-rule").querySelector(".ug-help-text").hidden = !open;
+    }
+  }
   const stepper = (key, label, value, min = 0) =>
     `<div class="ug-rule"><label for="ug-${key}">${esc(tr(label))}</label><div class="ug-stepper">${btn("step", "ugRemove", `data-key="${key}" data-delta="-1" aria-label="${esc(tr(label))} −"`)}<input id="ug-${key}" aria-label="${esc(tr(label))}" data-field="${key}" type="number" min="${min}" max="999" value="${value}"><button type="button" data-action="step" data-key="${key}" data-delta="1" aria-label="${esc(tr(label))} +">+</button></div></div>`;
   const row = (action, title, sub, attrs = "") =>
@@ -417,7 +434,13 @@
         event.preventDefault();
         event.stopPropagation();
         if (state?.confirm) dismissConfirmation();
-        else close();
+        else {
+          const help = el.querySelector('[data-action="help"][aria-expanded="true"]');
+          if (help) {
+            toggleHelp(help, false);
+            help.focus({ preventScroll: true });
+          } else close();
+        }
       }
       if (event.key === "Tab") {
         const root = state?.confirm ? el.querySelector(".ug-confirmation") : el;
@@ -641,7 +664,7 @@
         (d.included
           ? stepper("option.quantity", "ugQuantity", o.quantity, 1)
           : "") +
-        `<div class="ug-list ug-option-toggles">${toggle("option.isDefault", "ugDefault", o.isDefault)}${toggle("option.isLocallyOutOfStock", "ugLocalStock", o.isLocallyOutOfStock)}</div></section>` +
+        `<div class="ug-list ug-option-toggles">${toggle("option.isDefault", "ugDefault", o.isDefault, "ugDefaultHelp")}${toggle("option.isLocallyOutOfStock", "ugLocalStock", o.isLocallyOutOfStock, "ugLocalStockHelp")}</div></section>` +
         `<section class="ug-option-children"><div class="ug-section-title"><h3>${esc(tr("ugSub"))} (${(o.subOptions || []).length})</h3>${btn("add-sub", "ugAddSub")}</div>${(o.subOptions || []).map((s, i) => `<div class="ug-sub-option ug-sub-option-compact">${field(`sub.${i}.name`, "ugSubName", typeof s === "string" ? s : s.name)}${field(`sub.${i}.price`, "ugGroupSurcharge", s.price || 0, "number", 'min="0" step="0.01"')}${btn("remove-sub", "ugRemove", `data-index="${i}" aria-label="${esc(tr("ugRemove"))} ${esc(typeof s === "string" ? s : s.name || tr("ugSub"))}"`)}</div>`).join("") || `<p class="ug-muted">${esc(tr("ugSubEmpty"))}</p>`}</section>` +
         `<details data-section="description"><summary>${esc(tr("ugDescription"))}</summary>${field("option.description", "ugDescription", o.description || "")}</details><details data-section="conditions"><summary>${esc(tr("ugConditions"))}</summary>${field("eligibility.min_order_subtotal", "ugMinimumSubtotal", (o.eligibilityRules || []).find((r) => r.rule_type === "min_order_subtotal")?.min_order_subtotal || 0, "number", 'min="0" step="0.01"')}${field("eligibility.error_message", "ugRuleMessage", (o.eligibilityRules || []).find((r) => r.rule_type === "min_order_subtotal")?.error_message || "")}</details>` +
         (!r.isNew ? sourceContains(d, o)
@@ -768,6 +791,7 @@
     const d = state.draft,
       r = state.route;
     if (name === "close") return close();
+    if (name === "help") return toggleHelp(el);
     if (name === "back") return back();
     if (name === "discard") return finish();
     if (name === "continue") return dismissConfirmation();
