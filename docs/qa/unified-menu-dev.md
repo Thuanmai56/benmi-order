@@ -20,3 +20,32 @@ Preview: https://dev.benmi-order.pages.dev/orders
 Worker: https://platform-worker-dev.thuanmnc.workers.dev
 
 Tablet dimensions were tested in the browser; no physical printer or tablet hardware was used.
+
+## Option editor and unsaved-change fix — 2026-10-11
+
+The drawer now compares editable persisted values and un-applied child drafts,
+rather than treating the route stack as a change. Rendering fixed/included rules
+is read-only. Unchanged Apply/Save and reverted fields do not write data, including
+category-sourced options that must not become explicit overrides just by viewing.
+
+Direct option entry has no Back button and saves the selected option through the
+existing revision-checked group API. Entry from a group draft uses Apply without
+saving until Save group. Failed direct saves keep edits outside the parent snapshot
+so retrying or reverting cannot save a stale temporary option. Source-backed
+options expose local pause and explain why removal would automatically re-add them.
+
+Validation:
+- `npm run check`, `npm test`, and `npm run test:unified-menu` pass. The unified
+  suite includes 17 new event-driven drawer tests for clean navigation, real child
+  edits, reverts, default subsets, source overrides, fixed quantities, localized
+  labels, isolated writes, stale conflicts, retry and removal.
+- Browser fixture uses the real transactional API against isolated SQLite. Direct
+  surcharge save, Apply/Save group with a child surcharge, HTTP 503 retention and
+  retry, clean close, and compact dirty confirmation were verified.
+- Vietnamese and Traditional Chinese labels were inspected. Opening a disclosure
+  alone stays clean. Confirmation keeps form DOM, scroll, disclosure state and focus.
+- At 1024×768, 768×1024 and 390×844, the drawer is 520px (374px on the small screen),
+  no horizontal overflow occurs, the footer stays visible, and all visible controls
+  have touch targets at least 48px. The temporary viewport override was reset.
+
+Frontend cache-buster: `20261011_option_editor_v2`. No backend API or migration changes.

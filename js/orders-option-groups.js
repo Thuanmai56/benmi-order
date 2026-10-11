@@ -6,6 +6,17 @@
       ugNewProduct: "Thêm món",
       ugGroup: "Chỉnh sửa nhóm",
       ugNewGroup: "Thêm nhóm tùy chọn",
+      ugEditOption: "Chỉnh sửa lựa chọn",
+      ugNewOption: "Thêm lựa chọn",
+      ugSaveOption: "Lưu lựa chọn",
+      ugRemoveOption: "Gỡ khỏi nhóm",
+      ugSourceOption: "Lựa chọn được tự động lấy từ phân loại. Bạn có thể tạm ngừng lựa chọn trong nhóm.",
+      ugConditions: "Điều kiện áp dụng",
+      ugDiscardTitle: "Bỏ thay đổi chưa lưu?",
+      ugDeleteTitle: "Xác nhận xóa",
+      ugSubName: "Tên lựa chọn con",
+      ugSubEmpty: "Chưa có lựa chọn con",
+      ugAddSub: "Thêm lựa chọn con",
       ugDetails: "Thông tin",
       ugName: "Tên",
       ugCategory: "Phân loại",
@@ -86,6 +97,17 @@
       ugNewProduct: "新增餐點",
       ugGroup: "編輯選項群組",
       ugNewGroup: "新增選項群組",
+      ugEditOption: "編輯選項",
+      ugNewOption: "新增選項",
+      ugSaveOption: "儲存選項",
+      ugRemoveOption: "從群組移除",
+      ugSourceOption: "此選項會自動從分類加入。您可以暫停此群組內的選項。",
+      ugConditions: "適用條件",
+      ugDiscardTitle: "放棄尚未儲存的變更？",
+      ugDeleteTitle: "確認刪除",
+      ugSubName: "子選項名稱",
+      ugSubEmpty: "尚無子選項",
+      ugAddSub: "新增子選項",
       ugDetails: "詳細資料",
       ugName: "名稱",
       ugCategory: "分類",
@@ -215,6 +237,8 @@
         retailPrice: p?.price,
         isOutOfStock:
           o.isOutOfStock ||
+          o.isLocallyOutOfStock ||
+          (o.outOfStockUntil && Date.parse(o.outOfStockUntil) > Date.now()) ||
           Boolean(
             p?.is_out_of_stock ||
             (p?.out_of_stock_until &&
@@ -252,7 +276,8 @@
           (!count || (!group.allowRepeats && count < group.minSelection));
   }
   function rule(group) {
-    return `${tr("ugChoose")} ${group.minSelection === group.maxSelection ? group.minSelection : `${group.minSelection}–${group.maxSelection}`}`;
+    const [min, max] = selectionRules(group);
+    return `${tr("ugChoose")} ${min === max ? min : `${min}–${max}`}`;
   }
   function affectedIds(group) {
     const ids =
@@ -279,6 +304,85 @@
     ])];
   }
   const affected = (group) => affectedIds(group).length;
+  const sortedIds = (ids) => [...new Set(ids || [])].sort();
+  const stable = (value) => JSON.stringify(value, (_, v) =>
+    v && typeof v === "object" && !Array.isArray(v)
+      ? Object.fromEntries(Object.keys(v).sort().map((key) => [key, v[key]]))
+      : v,
+  );
+  function optionValues(o) {
+    return {
+      id: o.id,
+      productId: o.productId || null,
+      name: o.productId ? "" : String(o.name || "").trim(),
+      price: Number(o.price || 0),
+      quantity: Number(o.quantity ?? 1),
+      isDefault: Boolean(o.isDefault),
+      isLocallyOutOfStock: Boolean(o.isLocallyOutOfStock),
+      outOfStockUntil: o.outOfStockUntil || null,
+      description: o.description || "",
+      subOptions: (o.subOptions || []).map((s) => ({
+        name: String(typeof s === "string" ? s : s.name || "").trim(),
+        price: Number(typeof s === "string" ? 0 : s.price || 0),
+      })),
+      eligibilityRules: (o.eligibilityRules || []).map((r) => r.rule_type === "min_order_subtotal"
+        ? { ...r, min_order_subtotal: Number(r.min_order_subtotal || 0), error_message: r.error_message || "", threshold_basis: r.threshold_basis || "merchandise_subtotal" }
+        : r).filter((r) => r.rule_type !== "min_order_subtotal" || r.min_order_subtotal || r.error_message),
+    };
+  }
+  function selectionRules(group) {
+    if (!group.included) return [group.minSelection, group.maxSelection];
+    const count = options(group).reduce((sum, o) => sum + Number(o.quantity || 1), 0);
+    return [count, count];
+  }
+  function entitySnapshot(kind, d) {
+    if (kind === "product") return stable({
+      name: String(d.name || "").trim(), price: Number(d.price), categoryId: d.categoryId,
+      badgeText: d.badgeText || "", isRecommended: Boolean(d.isRecommended),
+      imageKey: d.imageKey, imageDraft: d.imageDraft || null,
+      links: (d.links || []).map((l) => ({ groupId: l.groupId, disabled: Boolean(l.disabled), optionIds: l.optionIds === null ? null : sortedIds(l.optionIds) })).sort((a, b) => a.groupId.localeCompare(b.groupId)),
+    });
+    return stable({
+      name: String(d.name || "").trim(),
+      minSelection: d.included ? null : d.minSelection,
+      maxSelection: d.included ? null : d.maxSelection,
+      allowRepeats: Boolean(d.allowRepeats), included: Boolean(d.included),
+      options: (d.options || []).filter((o) => !o.fromSource).map(optionValues),
+      itemIds: sortedIds(d.itemIds), categoryIds: sortedIds(d.categoryIds),
+      sources: (d.sources || []).map((s) => ({ type: s.type, refId: s.refId || s.categoryId || null, itemIds: sortedIds(s.itemIds) })).sort((a, b) => stable(a).localeCompare(stable(b))),
+    });
+  }
+  function routeSnapshot(r) {
+    if (r.page === "option") return stable(optionValues(r.option));
+    if (r.page === "subset") return stable(r.optionIds === null ? null : sortedIds(r.optionIds));
+    if (r.ids) return stable(sortedIds(r.ids));
+    return "";
+  }
+  const routeChanged = (r) => routeSnapshot(r) !== r.original;
+  const hasChanges = () => entitySnapshot(state.kind, state.draft) !== state.original ||
+    [state.route, ...state.stack.map((v) => v.route)].some(routeChanged);
+  function prepareRoute(route) {
+    route.original = routeSnapshot(route);
+    if (route.page === "subset") route.originalOptionIds = clone(route.optionIds);
+    return route;
+  }
+  function rememberView() {
+    if (!state) return;
+    const el = ensureDrawer(), body = el.querySelector(".ug-body"), active = document.activeElement;
+    state.route.view = {
+      scroll: body.scrollTop,
+      details: [...body.querySelectorAll("details[data-section]")].filter((e) => e.open).map((e) => e.dataset.section),
+      focus: active?.dataset.field ? `[data-field="${active.dataset.field}"]` :
+        active?.dataset.action ? `[data-action="${active.dataset.action}"]${active.dataset.index ? `[data-index="${active.dataset.index}"]` : ""}` : null,
+      search: body.querySelector('[data-field="search"]')?.value || "",
+      filter: body.querySelector('[data-field="filter"]')?.value || "",
+    };
+  }
+  function sourceContains(group, option) {
+    const p = productById(option.productId);
+    return p && (group.sources || []).some((s) => s.type === "category"
+      ? p.category_id === (s.refId || s.categoryId) : s.itemIds?.includes(p.id));
+  }
   const btn = (action, label, attrs = "") =>
     `<button type="button" data-action="${action}" ${attrs}>${esc(tr(label))}</button>`;
   const field = (key, label, value, type = "text", extra = "") =>
@@ -297,7 +401,7 @@
     el.className = "ug-overlay";
     el.hidden = true;
     el.innerHTML =
-      '<section class="ug-drawer" role="dialog" aria-modal="true" aria-labelledby="ug-title" tabindex="-1"><header></header><div class="ug-body"></div><footer></footer></section>';
+      '<section class="ug-drawer" role="dialog" aria-modal="true" aria-labelledby="ug-title" tabindex="-1"><header></header><div class="ug-body"></div><footer></footer><div class="ug-confirmation" hidden></div></section>';
     el.addEventListener("click", (event) => {
       if (event.target === el) close();
       const target = event.target.closest("[data-action]");
@@ -312,17 +416,19 @@
       if (event.key === "Escape") {
         event.preventDefault();
         event.stopPropagation();
-        close();
+        if (state?.confirm) dismissConfirmation();
+        else close();
       }
       if (event.key === "Tab") {
+        const root = state?.confirm ? el.querySelector(".ug-confirmation") : el;
         const elements = [
-          ...el.querySelectorAll(
-            "button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea",
+          ...root.querySelectorAll(
+            "button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea,summary",
           ),
         ].filter((e) => e.getClientRects().length);
         const first = elements[0],
           last = elements.at(-1);
-        if (event.shiftKey && document.activeElement === first) {
+        if (event.shiftKey && (document.activeElement === first || !elements.includes(document.activeElement))) {
           event.preventDefault();
           last?.focus();
         } else if (!event.shiftKey && document.activeElement === last) {
@@ -334,14 +440,14 @@
     document.body.appendChild(el);
     return el;
   }
-  function open(kind, draft) {
+  function open(kind, draft, route = { page: kind }) {
     returnFocus = document.activeElement;
     state = {
       kind,
       draft,
-      original: JSON.stringify(draft),
+      original: entitySnapshot(kind, draft),
       stack: [],
-      route: { page: kind },
+      route: prepareRoute(route),
       busy: false,
       error: "",
       scroll: 0,
@@ -354,9 +460,10 @@
         sibling.inert = true;
       }
     document.body.classList.add("ug-open");
-    render();
+    render(0);
   }
   function finish() {
+    dismissConfirmation();
     ensureDrawer().hidden = true;
     state = null;
     document.body.classList.remove("ug-open");
@@ -367,20 +474,39 @@
     returnFocus?.focus();
   }
   function close() {
-    if (!state || state.busy) return;
-    if (JSON.stringify(state.draft) !== state.original || state.stack.length) {
-      state.confirm = "discard";
-      render();
-    } else finish();
+    if (!state || state.busy || state.confirm) return;
+    if (hasChanges()) showConfirmation("discard");
+    else finish();
+  }
+  function showConfirmation(kind) {
+    const el = ensureDrawer();
+    state.confirm = kind;
+    state.confirmFocus = document.activeElement;
+    for (const part of el.querySelectorAll("header,.ug-body,footer")) part.inert = true;
+    el.querySelector(".ug-drawer").setAttribute("aria-modal", "false");
+    const box = el.querySelector(".ug-confirmation");
+    box.innerHTML = `<div class="ug-confirm-card" role="alertdialog" aria-modal="true" aria-labelledby="ug-confirm-title" aria-describedby="ug-confirm-message"><h3 id="ug-confirm-title">${esc(tr(kind === "discard" ? "ugDiscardTitle" : "ugDeleteTitle"))}</h3><p id="ug-confirm-message">${esc(tr(kind === "discard" ? "ugUnsaved" : "ugDeleteConfirm"))}</p><div class="ug-confirm-actions">${btn("continue", "ugCancel")}${btn(kind === "discard" ? "discard" : "confirm-delete", kind === "discard" ? "ugDiscard" : "ugDelete", 'class="ug-confirm-danger"')}</div></div>`;
+    box.hidden = false;
+    box.querySelector('[data-action="continue"]').focus();
+  }
+  function dismissConfirmation() {
+    if (!state?.confirm) return;
+    const el = ensureDrawer(), focus = state.confirmFocus;
+    state.confirm = null;
+    el.querySelector(".ug-confirmation").hidden = true;
+    for (const part of el.querySelectorAll("header,.ug-body,footer")) part.inert = false;
+    el.querySelector(".ug-drawer").setAttribute("aria-modal", "true");
+    if (focus?.isConnected) focus.focus({ preventScroll: true });
   }
   function push(route) {
+    rememberView();
     state.stack.push({
       route: state.route,
       scroll: ensureDrawer().querySelector(".ug-body").scrollTop,
     });
-    state.route = route;
+    state.route = prepareRoute(route);
     state.error = "";
-    render();
+    render(0);
   }
   function back() {
     const prev = state.stack.pop();
@@ -389,18 +515,14 @@
     state.error = "";
     render(prev.scroll);
   }
-  function render(scroll = 0) {
+  function render(scroll) {
     if (!state) return;
+    if (scroll === undefined) rememberView();
     const el = ensureDrawer(),
       d = state.draft,
       r = state.route;
     let title = tr(state.kind === "product" ? "ugProduct" : "ugGroup"),
       body = "";
-    if (r.page === "group" && d.included)
-      d.minSelection = d.maxSelection = options(d).reduce(
-        (n, o) => n + Number(o.quantity || 1),
-        0,
-      );
     if (r.page === "product") {
       const catOptions = catalog.categories
         .filter((c) => c.category_type === "catalog" || !c.category_type)
@@ -426,7 +548,8 @@
         "</div></section>" +
         (!d.isNew ? btn("delete", "ugDelete", 'class="ug-danger"') : "");
     } else if (r.page === "group") {
-      body = `<section><h3>${esc(tr("ugDetails"))}</h3>${field("name", "ugName", d.name)}</section><section><h3>${esc(tr("ugRules"))}</h3><div class="ug-list">${toggle("required", "ugRequired", d.minSelection > 0)}${stepper("minSelection", "ugMin", d.minSelection)}${stepper("maxSelection", "ugMax", d.maxSelection, 1)}</div><div class="ug-list">${toggle("allowRepeats", "ugRepeat", d.allowRepeats)}${toggle("included", "ugIncluded", d.included)}</div></section><section><div class="ug-section-title"><h3>${esc(tr("ugOptions"))} (${options(d).length})</h3>${btn("add-option", "ugAdd")}</div><div class="ug-list">${
+      const [min, max] = selectionRules(d);
+      body = `<section><h3>${esc(tr("ugDetails"))}</h3>${field("name", "ugName", d.name)}</section><section><h3>${esc(tr("ugRules"))}</h3><div class="ug-list">${toggle("required", "ugRequired", min > 0)}${stepper("minSelection", "ugMin", min)}${stepper("maxSelection", "ugMax", max, 1)}</div><div class="ug-list">${toggle("allowRepeats", "ugRepeat", d.allowRepeats)}${toggle("included", "ugIncluded", d.included)}</div></section><section><div class="ug-section-title"><h3>${esc(tr("ugOptions"))} (${options(d).length})</h3>${btn("add-option", "ugAdd")}</div><div class="ug-list">${
         options(d)
           .map((o) =>
             row(
@@ -501,11 +624,12 @@
         }).join("")}</div>`;
     } else if (r.page === "option") {
       const o = r.option;
-      title = tr(o.productId ? "ugFromProducts" : "ugCustom");
+      title = tr(r.isNew ? "ugNewOption" : "ugEditOption");
       const p = productById(o.productId);
       body =
+        `<p class="ug-option-context">${esc(d.name)}</p><section class="ug-option-details">` +
         (p
-          ? `<div class="ug-product-summary"><strong>${esc(p.name)}</strong><small>${esc(tr("ugRetail"))} $${p.price}</small></div>`
+          ? `<div class="ug-product-summary"><strong>${esc(p.name)}</strong><small>${esc(tr("ugRetail"))} $${p.price}${p.is_out_of_stock || (p.out_of_stock_until && Date.parse(p.out_of_stock_until) > Date.now()) ? ` · ${esc(tr("ugSoldOut"))}` : ""}</small></div>`
           : field("option.name", "ugName", o.name)) +
         field(
           "option.price",
@@ -517,22 +641,33 @@
         (d.included
           ? stepper("option.quantity", "ugQuantity", o.quantity, 1)
           : "") +
-        toggle("option.isDefault", "ugDefault", o.isDefault) +
-        `<details><summary>${esc(tr("ugAdvanced"))}</summary>${field("option.description", "ugDescription", o.description || "")}${toggle("option.isLocallyOutOfStock", "ugLocalStock", o.isLocallyOutOfStock)}${field("eligibility.min_order_subtotal", "ugMinimumSubtotal", (o.eligibilityRules || []).find((r) => r.rule_type === "min_order_subtotal")?.min_order_subtotal || 0, "number", 'min="0" step="0.01"')}${field("eligibility.error_message", "ugRuleMessage", (o.eligibilityRules || []).find((r) => r.rule_type === "min_order_subtotal")?.error_message || "")}<h3>${esc(tr("ugSub"))}</h3>${(o.subOptions || []).map((s, i) => `<div class="ug-sub-option">${field(`sub.${i}.name`, "ugName", typeof s === "string" ? s : s.name)}${field(`sub.${i}.price`, "ugSurcharge", s.price || 0, "number", 'min="0" step="0.01"')}${btn("remove-sub", "ugRemove", `data-index="${i}"`)}</div>`).join("")}${btn("add-sub", "ugAdd")}</details>${btn("remove-option", "ugRemove", 'class="ug-danger"')}`;
+        `<div class="ug-list ug-option-toggles">${toggle("option.isDefault", "ugDefault", o.isDefault)}${toggle("option.isLocallyOutOfStock", "ugLocalStock", o.isLocallyOutOfStock)}</div></section>` +
+        `<section class="ug-option-children"><div class="ug-section-title"><h3>${esc(tr("ugSub"))} (${(o.subOptions || []).length})</h3>${btn("add-sub", "ugAddSub")}</div>${(o.subOptions || []).map((s, i) => `<div class="ug-sub-option ug-sub-option-compact">${field(`sub.${i}.name`, "ugSubName", typeof s === "string" ? s : s.name)}${field(`sub.${i}.price`, "ugGroupSurcharge", s.price || 0, "number", 'min="0" step="0.01"')}${btn("remove-sub", "ugRemove", `data-index="${i}" aria-label="${esc(tr("ugRemove"))} ${esc(typeof s === "string" ? s : s.name || tr("ugSub"))}"`)}</div>`).join("") || `<p class="ug-muted">${esc(tr("ugSubEmpty"))}</p>`}</section>` +
+        `<details data-section="description"><summary>${esc(tr("ugDescription"))}</summary>${field("option.description", "ugDescription", o.description || "")}</details><details data-section="conditions"><summary>${esc(tr("ugConditions"))}</summary>${field("eligibility.min_order_subtotal", "ugMinimumSubtotal", (o.eligibilityRules || []).find((r) => r.rule_type === "min_order_subtotal")?.min_order_subtotal || 0, "number", 'min="0" step="0.01"')}${field("eligibility.error_message", "ugRuleMessage", (o.eligibilityRules || []).find((r) => r.rule_type === "min_order_subtotal")?.error_message || "")}</details>` +
+        (!r.isNew ? sourceContains(d, o)
+          ? `<p class="ug-muted ug-option-source">${esc(tr("ugSourceOption"))}</p>${btn("remove-option", "ugRemoveOption", 'class="ug-option-remove" disabled')}`
+          : btn("remove-option", "ugRemoveOption", 'class="ug-option-remove"') : "");
     }
-    if (state.confirm)
-      body = `<p>${esc(tr(state.confirm === "discard" ? "ugUnsaved" : "ugDeleteConfirm"))}</p>${btn("continue", "ugCancel")}${btn(state.confirm === "discard" ? "discard" : "confirm-delete", state.confirm === "discard" ? "ugDiscard" : "ugDelete", 'class="ug-danger"')}`;
     el.querySelector("header").innerHTML =
-      `${state.stack.length ? btn("back", "ugBack") : ""}<h2 id="ug-title" tabindex="-1">${esc(title)}</h2>${btn("close", "ugClose", 'class="ug-close"')}`;
+      `${state.stack.length && r.page !== "option" ? btn("back", "ugBack") : ""}<h2 id="ug-title" tabindex="-1">${esc(title)}</h2>${btn("close", "ugClose", 'class="ug-close"')}`;
+    el.querySelector(".ug-body").classList.toggle("ug-option-body", r.page === "option");
     el.querySelector(".ug-body").innerHTML = body;
+    el.querySelector(".ug-body").inert = state.busy;
     el.querySelector("footer").innerHTML =
-      `<p class="ug-error" role="alert">${esc(state.error)}</p>${state.kind === "group" && !state.stack.length ? `<p class="ug-muted">${esc(tr("ugAffected", { count: affected(d) }))}</p>` : ""}${state.confirm ? "" : btn(state.stack.length ? "apply" : "save", state.busy ? "ugSaving" : state.stack.length ? "ugApply" : state.kind === "product" ? "ugSaveProduct" : "ugSaveGroup", `class="ug-primary" ${state.busy ? "disabled" : ""}`)}`;
+      `<p class="ug-error" role="alert">${esc(state.error)}</p>${state.kind === "group" && !state.stack.length ? `<p class="ug-muted">${esc(tr("ugAffected", { count: affected(d) }))}</p>` : ""}${btn(state.stack.length ? "apply" : "save", state.busy ? "ugSaving" : state.stack.length ? "ugApply" : r.direct ? "ugSaveOption" : state.kind === "product" ? "ugSaveProduct" : "ugSaveGroup", `class="ug-primary" ${state.busy ? "disabled" : ""}`)}`;
     if (r.page === "group" && d.included)
       el.querySelectorAll(
         '[data-field="required"],[data-field="minSelection"],[data-field="maxSelection"],[data-field="allowRepeats"],.ug-stepper button',
       ).forEach((b) => (b.disabled = true));
-    el.querySelector(".ug-body").scrollTop = scroll;
-    el.querySelector("#ug-title").focus({ preventScroll: true });
+    const view = r.view;
+    for (const details of el.querySelectorAll("details[data-section]")) details.open = Boolean(view?.details.includes(details.dataset.section));
+    const q = el.querySelector('[data-field="search"]'), filter = el.querySelector('[data-field="filter"]');
+    if (q) q.value = view?.search || "";
+    if (filter) filter.value = view?.filter || "";
+    if (q) input(q);
+    el.querySelector(".ug-body").scrollTop = scroll ?? view?.scroll ?? 0;
+    const focus = scroll === undefined && view?.focus ? el.querySelector(view.focus) : null;
+    (focus || el.querySelector("#ug-title")).focus({ preventScroll: true });
     el.querySelectorAll('.ug-stepper button[data-delta="-1"]').forEach(
       (b) => (b.textContent = "−"),
     );
@@ -566,6 +701,8 @@
       if (el.checked) list.push(el.value);
       if (el.dataset.check === "subset") r.optionIds = list;
       else r.ids = list;
+      if (el.dataset.check === "subset" && r.originalOptionIds === null &&
+        options(groupById(r.id)).every((o) => list.includes(o.id))) r.optionIds = null;
       return;
     }
     if (el.dataset.categoryLink) {
@@ -620,19 +757,20 @@
       if (typeof r.option.subOptions[i] === "string")
         r.option.subOptions[i] = { name: r.option.subOptions[i], price: 0 };
       r.option.subOptions[i][k] = value;
-    } else d[key] = value;
+    } else {
+      d[key] = value;
+      if (key === "included") render();
+    }
   }
   function action(name, el) {
     if (!state || state.busy) return;
+    if (state.confirm && !["continue", "discard", "confirm-delete"].includes(name)) return;
     const d = state.draft,
       r = state.route;
     if (name === "close") return close();
     if (name === "back") return back();
     if (name === "discard") return finish();
-    if (name === "continue") {
-      state.confirm = null;
-      return render();
-    }
+    if (name === "continue") return dismissConfirmation();
     if (name === "remove-photo") {
       d.imageDraft = null;
       d.imageKey = "";
@@ -666,6 +804,7 @@
     if (name === "custom")
       return push({
         page: "option",
+        isNew: true,
         option: {
           id: uid("option"),
           name: "",
@@ -696,23 +835,28 @@
     if (name === "add-sub") {
       r.option.subOptions = r.option.subOptions || [];
       r.option.subOptions.push({ name: "", price: 0 });
-      return render();
+      render();
+      ensureDrawer().querySelector(`[data-field="sub.${r.option.subOptions.length - 1}.name"]`)?.focus();
+      return;
     }
     if (name === "remove-sub") {
       r.option.subOptions.splice(Number(el.dataset.index), 1);
       return render();
     }
     if (name === "remove-option") {
+      if (sourceContains(d, r.option)) return;
+      if (r.direct) return save(false, true);
       d.options = d.options.filter((o) => o.id !== r.option.id);
       return back();
     }
-    if (name === "delete") {
-      state.confirm = "delete";
-      return render();
+    if (name === "delete") return showConfirmation("delete");
+    if (name === "confirm-delete") {
+      dismissConfirmation();
+      return save(true);
     }
-    if (name === "confirm-delete") return save(true);
     if (name === "save") return save();
     if (name === "apply") {
+      if (!routeChanged(r)) return back();
       if (r.page === "groups") {
         d.links = d.links.filter((l) => r.ids.includes(l.groupId));
         for (const id of r.ids) {
@@ -777,24 +921,33 @@
         return back();
       }
       if (r.page === "option") {
-        if (
-          (!r.option.productId && !r.option.name.trim()) ||
-          !Number.isFinite(r.option.price) ||
-          r.option.price < 0
-        ) {
-          state.error = tr("ugInvalid");
-          return render();
-        }
-        r.option.fromSource = false;
-        const index = d.options.findIndex((o) => o.id === r.option.id);
-        if (index >= 0) d.options[index] = r.option;
-        else d.options.push(r.option);
+        if (!commitOption(d)) return render();
         back();
         if (state.route.page === "add-option") return back();
         return;
       }
       return back();
     }
+  }
+  function commitOption(target) {
+    const r = state.route, o = r.option;
+    if ((!o.productId && !String(o.name || "").trim()) || !Number.isFinite(o.price) || o.price < 0 ||
+      !Number.isInteger(Number(o.quantity ?? 1)) || Number(o.quantity ?? 1) < 1 ||
+      (o.subOptions || []).some((s) => !String(typeof s === "string" ? s : s.name || "").trim() ||
+        (typeof s !== "string" && (!Number.isFinite(Number(s.price)) || Number(s.price) < 0)))) {
+      state.error = tr("ugInvalid");
+      return false;
+    }
+    if (!routeChanged(r) && !r.isNew) return true;
+    const value = clone(o);
+    delete value.retailPrice;
+    delete value.imageUrl;
+    delete value.isOutOfStock;
+    value.fromSource = false;
+    const index = target.options.findIndex((v) => v.id === value.id);
+    if (index >= 0) target.options[index] = value;
+    else target.options.push(value);
+    return true;
   }
   async function photo(file) {
     if (!file?.type.startsWith("image/")) return;
@@ -811,8 +964,25 @@
     state.draft.imageDraft = canvas.toDataURL("image/webp", 0.85);
     render();
   }
-  async function save(remove = false) {
-    const d = state.draft;
+  async function save(remove = false, removeOption = false) {
+    if (!remove && !removeOption && !hasChanges()) return finish();
+    // A direct option editor never writes its temporary edits into the parent
+    // snapshot. Failed requests can be retried, changed or reverted safely.
+    const d = state.route.direct || (state.kind === "group" && state.draft.included)
+      ? clone(state.draft) : state.draft;
+    if (state.route.direct) {
+      if (removeOption) d.options = d.options.filter((o) => o.id !== state.route.option.id);
+      else if (!commitOption(d)) return render();
+    }
+    if (state.kind === "group" && d.included) {
+      const [min, max] = selectionRules(d);
+      // Normalize the outgoing copy, never the draft during rendering.
+      d.minSelection = min;
+      d.maxSelection = max;
+    }
+    return persist(d, remove);
+  }
+  async function persist(d, remove) {
     if (
       !remove &&
       (!d.name.trim() ||
@@ -1004,41 +1174,27 @@
     },
     group(id, entry, optionId) {
       const g = groupById(id);
-      open(
-        "group",
+      const draft =
         g
           ? {
               ...clone(g),
               isNew: false,
-              categoryIds: catalog.categoryLinks
-                .filter((l) => l.groupId === id)
-                .map((l) => l.categoryId),
-              itemIds: catalog.links
-                .filter((l) => l.groupId === id && !l.disabled)
-                .map((l) => l.itemId),
+              categoryIds: catalog.categoryLinks.filter((l) => l.groupId === id).map((l) => l.categoryId),
+              itemIds: catalog.links.filter((l) => l.groupId === id && !l.disabled).map((l) => l.itemId),
             }
           : {
-              id: uid("group"),
-              isNew: true,
-              name: "",
-              minSelection: 0,
-              maxSelection: 1,
-              allowRepeats: false,
-              included: false,
-              options: [],
-              sources: [],
-              labels: {},
-              revision: 0,
-              itemIds: [],
-              categoryIds: [],
-            },
+              id: uid("group"), isNew: true, name: "", minSelection: 0,
+              maxSelection: 1, allowRepeats: false, included: false,
+              options: [], sources: [], labels: {}, revision: 0, itemIds: [], categoryIds: [],
+            };
+      const option = g && entry === "option" ? options(draft).find((o) => o.id === optionId) : null;
+      open(
+        "group",
+        draft,
+        option ? { page: "option", option: clone(option), direct: true } : { page: "group" },
       );
       if (g && entry === "add-option") push({ page: "add-option" });
       if (g && entry === "linked") push({ page: "linked", ids: [...state.draft.itemIds] });
-      if (g && entry === "option") {
-        const option = options(state.draft).find((o) => o.id === optionId);
-        if (option) push({ page: "option", option: clone(option) });
-      }
     },
     sidebar() {
       if (!catalog || menuSidebarTab !== "options") return false;
