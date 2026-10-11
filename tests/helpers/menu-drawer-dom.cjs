@@ -44,12 +44,13 @@ class Element {
       const attrs = token.slice(tag.length + 1, -1);
       for (const attr of attrs.matchAll(/([^\s=]+)(?:="([^"]*)")?/g)) el.setAttribute(attr[1], decode(attr[2] || ''));
       stack.at(-1).appendChild(el);
-      if (!['input', 'img', 'br', 'hr'].includes(tag)) stack.push(el);
+      if (!['input', 'img', 'br', 'hr'].includes(tag) && !token.endsWith('/>')) stack.push(el);
     }
     for (const select of this.querySelectorAll('select')) select.value = (select.querySelectorAll('option').find((el) => 'selected' in el.attributes) || select.children[0])?.value || '';
   }
   get innerHTML() { return this._html || ''; }
   get textContent() { return this.text + this.children.map((el) => el.textContent).join(''); }
+  set textContent(value) { this.children.forEach((el) => { el.parentElement = null; }); this.children = []; this.text = String(value); }
   matches(selector) {
     selector = selector.trim();
     if (selector.includes(':not(:disabled)')) { if (this.disabled) return false; selector = selector.replace(':not(:disabled)', ''); }
