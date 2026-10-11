@@ -602,14 +602,13 @@ const I18N = {
     menuWorkspaceTitle: "菜單管理",
     menuWorkspaceSub: "管理餐點、供應狀態與客製化選項",
     menuModeLabel: "菜單管理模式",
-    menuSearchCategory: "搜尋此分類的餐點",
     menuStockFilter: "供應狀態",
     menuFilterAll: "全部狀態",
     menuFilterAvailable: "供應中",
     menuFilterUnavailable: "售完",
     menuNoMatchingItems: "沒有符合條件的餐點",
     menuEmptyCategory: "此分類尚無餐點，請新增第一道餐點。",
-    menuClearFilters: "清除搜尋與篩選",
+    menuClearFilters: "清除篩選",
     menuMoveUp: "上移一位",
     menuMoveDown: "下移一位",
     menuDragSort: "拖曳以排序",
@@ -1379,14 +1378,13 @@ const I18N = {
     menuWorkspaceTitle: "Quản lý thực đơn",
     menuWorkspaceSub: "Quản lý món ăn, trạng thái bán và các tùy chọn",
     menuModeLabel: "Chế độ quản lý thực đơn",
-    menuSearchCategory: "Tìm món trong danh mục này",
     menuStockFilter: "Trạng thái bán",
     menuFilterAll: "Tất cả trạng thái",
     menuFilterAvailable: "Còn món",
     menuFilterUnavailable: "Hết hàng",
     menuNoMatchingItems: "Không có món phù hợp",
     menuEmptyCategory: "Danh mục chưa có món. Hãy thêm món đầu tiên.",
-    menuClearFilters: "Xóa tìm kiếm và bộ lọc",
+    menuClearFilters: "Xóa bộ lọc",
     menuMoveUp: "Đưa lên một vị trí",
     menuMoveDown: "Đưa xuống một vị trí",
     menuDragSort: "Kéo để đổi thứ tự",
@@ -2553,11 +2551,6 @@ function applyLanguageToDOM() {
     const el = document.getElementById(id);
     if (el) el.textContent = dict[key];
   });
-  const menuSearch = document.getElementById('menu-item-search');
-  if (menuSearch) {
-    menuSearch.placeholder = dict.menuSearchCategory;
-    menuSearch.setAttribute('aria-label', dict.menuSearchCategory);
-  }
   document.getElementById('menu-stock-filter')?.setAttribute('aria-label', dict.menuStockFilter);
   document.getElementById('menu-mode-tabs')?.setAttribute('aria-label', dict.menuModeLabel);
 

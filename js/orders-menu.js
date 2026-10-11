@@ -39,26 +39,21 @@ function updateMenuWorkspace() {
   }
 }
 
-function menuItemMatchesFilters(item, query, stock) {
-  const normalize = value => String(value).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase().replace(/đ/g, 'd');
-  const text = normalize(`${item.name || ''} ${item.badgeText || ''}`);
-  const needle = normalize(String(query || '').trim());
-  return text.includes(needle) && (stock === 'available' ? !item.isOos : stock === 'unavailable' ? Boolean(item.isOos) : true);
+function menuItemMatchesFilters(item, stock) {
+  return stock === 'available' ? !item.isOos : stock === 'unavailable' ? Boolean(item.isOos) : true;
 }
 
 function applyMenuItemFilters() {
   const cat = currentMenuData?.[activeCategoryIndex];
   if (!cat || isCustomizationCategory(cat) || isCategoryManagerOpen) return;
-  const query = document.getElementById('menu-item-search')?.value || '';
   const stock = document.getElementById('menu-stock-filter')?.value || 'all';
-  const filtering = Boolean(query.trim()) || stock !== 'all';
+  const filtering = stock !== 'all';
   let visible = 0;
   document.querySelectorAll('#menu-editor-body .menu-catalog-row').forEach(row => {
     const itemIndex = Number(row.getAttribute('data-item-index'));
     const item = cat.items[itemIndex];
     // Keep every input mounted so filtering cannot discard inline edits.
-    const nameInput = row.querySelector('.menu-item-name-input');
-    row.hidden = !item || !menuItemMatchesFilters({ ...item, name: nameInput ? nameInput.value : item.name }, query, stock);
+    row.hidden = !item || !menuItemMatchesFilters(item, stock);
     row.draggable = !filtering;
     if (!row.hidden) visible++;
   });
@@ -67,9 +62,7 @@ function applyMenuItemFilters() {
 }
 
 function clearMenuItemFilters() {
-  const search = document.getElementById('menu-item-search');
   const stock = document.getElementById('menu-stock-filter');
-  if (search) search.value = '';
   if (stock) stock.value = 'all';
   applyMenuItemFilters();
 }
