@@ -36,6 +36,7 @@ export default (ctx: ConfigContext) => {
 							headSamplingRate: 1,
 						},
 					},
+					env: {
 						LINE_RUNTIME_ENABLED: bindings.text("false"),
 						LINE_RUNTIME_TENANTS: bindings.text("[]"),
 						LINE_RUNTIME_ENVIRONMENT: bindings.text("staging"),
