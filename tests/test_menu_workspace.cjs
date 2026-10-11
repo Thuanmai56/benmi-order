@@ -6,7 +6,6 @@ const path = require('node:path');
 
 function setup() {
   const elements = {
-    'menu-item-search': { value: '' },
     'menu-stock-filter': { value: 'all' },
     'menu-filter-empty': {},
     'btn-menu-save': { classList: { toggle() {} } },
@@ -54,13 +53,14 @@ function setup() {
   return { context, elements, rows: () => rows, data, renderMenuCategoryEditor };
 }
 
-test('search supports Vietnamese accents, đ, Traditional Chinese, badges and stock filters', () => {
+test('stock filters include only the requested availability state', () => {
   const { context } = setup();
-  assert.equal(context.menuItemMatchesFilters({name:'Bánh mì đặc biệt'}, 'DAC BIET', 'all'), true);
-  assert.equal(context.menuItemMatchesFilters({name:'烤肉麵包'}, '烤肉', 'all'), true);
-  assert.equal(context.menuItemMatchesFilters({badgeText:'Bán chạy'}, 'ban chay', 'all'), true);
-  assert.equal(context.menuItemMatchesFilters({isOos:true}, '', 'available'), false);
-  assert.equal(context.menuItemMatchesFilters({isOos:true}, '', 'unavailable'), true);
+  assert.equal(context.menuItemMatchesFilters({isOos:true}, 'all'), true);
+  assert.equal(context.menuItemMatchesFilters({isOos:false}, 'all'), true);
+  assert.equal(context.menuItemMatchesFilters({isOos:true}, 'available'), false);
+  assert.equal(context.menuItemMatchesFilters({isOos:false}, 'available'), true);
+  assert.equal(context.menuItemMatchesFilters({isOos:true}, 'unavailable'), true);
+  assert.equal(context.menuItemMatchesFilters({isOos:false}, 'unavailable'), false);
 });
 
 test('filtering preserves hidden edits and restores all items without dirtying the menu', () => {
@@ -68,7 +68,7 @@ test('filtering preserves hidden edits and restores all items without dirtying t
   app.rows()[0].name.value = 'Bánh mì đặc biệt mới';
   app.rows()[0].price.value = '149';
   app.context.markMenuDirty();
-  app.elements['menu-item-search'].value = 'cha lua';
+  app.elements['menu-stock-filter'].value = 'unavailable';
   app.context.applyMenuItemFilters();
   assert.equal(app.rows()[0].hidden, true);
   assert.equal(app.rows()[1].hidden, false);
@@ -76,7 +76,7 @@ test('filtering preserves hidden edits and restores all items without dirtying t
   assert.equal(app.data()[0].items[0].price, 149);
   app.elements['menu-stock-filter'].value = 'available';
   app.context.applyMenuItemFilters();
-  assert.equal(app.elements['menu-filter-empty'].hidden, false);
+  assert.equal(app.elements['menu-filter-empty'].hidden, true);
   app.context.clearMenuItemFilters();
   assert.equal(app.rows()[0].hidden, false);
   assert.equal(app.rows()[0].draggable, true);

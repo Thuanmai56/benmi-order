@@ -38,12 +38,7 @@
 #view-menu .menu-sidebar-segmented-toggle { width: 240px; max-width: 100% !important; min-height: 54px !important; padding: 4px !important; background: var(--menu-subtle); box-sizing: border-box; }
 #view-menu .menu-seg-btn { min-height: 48px; padding: 8px 12px !important; font-size: 15px !important; color: var(--menu-muted); font-weight: 650; }
 #view-menu .menu-seg-btn.active { background: #fff; color: var(--menu-ink); box-shadow: 0 1px 4px #17201b12; }
-#view-menu .menu-catalog-tools { display: flex; align-items: center; gap: 12px; min-width: 0; width: 100%; }
-#view-menu .menu-search-field { display: flex; align-items: center; flex: 1; min-width: 0; gap: 10px; padding: 0 14px; border: 1px solid #b9c4bc; border-radius: 10px; color: var(--menu-muted); }
-#view-menu .menu-search-field svg { flex-shrink: 0; }
-#view-menu .menu-search-field input { width: 100%; min-width: 0; height: 52px; border: 0; padding: 0; background: transparent; font: inherit; font-size: 15px; color: var(--menu-ink); box-shadow: none; }
-#view-menu .menu-search-field input:focus { outline: none; }
-#view-menu .menu-search-field:focus-within { outline: 2px solid var(--menu-accent); outline-offset: 2px; }
+#view-menu .menu-catalog-tools { display: flex; align-items: center; justify-content: flex-end; gap: 12px; min-width: 0; width: 100%; }
 #view-menu #menu-stock-filter { width: 180px; min-height: 54px; padding: 8px 12px; border: 1px solid #b9c4bc; border-radius: 10px; background: #fff; font: inherit; font-size: 14px; color: var(--menu-ink); }
 #view-menu .menu-split { display: grid !important; grid-template-columns: 240px minmax(0, 1fr); gap: 24px; flex: 1; min-height: 0; height: auto !important; overflow: hidden; }
 #view-menu .menu-sidebar-panel { border: 0 !important; box-shadow: none; min-height: 0; overflow: hidden; z-index: auto !important; }
@@ -161,7 +156,6 @@
   #view-menu .menu-workspace-heading p { display: none; }
   #view-menu .menu-action-btn { min-width: 100px; padding: 8px 12px; font-size: 14px; }
   #view-menu .menu-catalog-tools { flex-wrap: wrap; gap: 8px; }
-  #view-menu .menu-search-field { flex-basis: 100%; }
   #view-menu #menu-stock-filter { width: 100%; min-height: 48px; }
   #view-menu .menu-manage-cats-btn { width: 88px; }
   #view-menu .menu-editor-header { padding: 12px !important; gap: 8px; }
