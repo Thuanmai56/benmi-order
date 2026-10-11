@@ -475,9 +475,11 @@
         row("custom", tr("ugCustom"), tr("ugCustomHelp"));
     } else if (r.page === "products" || r.page === "linked") {
       title = tr(r.page === "products" ? "ugFromProducts" : "ugLink");
+      const selectableCategories = catalog.categories.filter((c) => c.category_type !== "modifier");
+      const selectableProducts = catalog.products.filter((p) => selectableCategories.some((c) => c.id === p.category_id));
       body =
         search() +
-        `<select class="ug-filter" data-field="filter"><option value="">${esc(tr("ugAll"))}</option>${catalog.categories.map((c) => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("")}</select><div class="ug-list">${catalog.products.map((p) => {
+        `<select class="ug-filter" data-field="filter"><option value="">${esc(tr("ugAll"))}</option>${selectableCategories.map((c) => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("")}</select><div class="ug-list">${selectableProducts.map((p) => {
           const inherited = r.page === "linked" && !r.ids.includes(p.id) && affectedIds(d).includes(p.id);
           return check(p.id, p.name, inherited ? tr("ugInherited") : `${tr("ugRetail")} $${p.price}`, inherited || r.ids.includes(p.id), "product", p.category_id, inherited);
         }).join("")}</div>`;
