@@ -8,7 +8,7 @@
   <base href="/" />
   <script src="js/orders-display.js?v=20261007_dev_main_sync_v1"></script>
   <link rel="stylesheet" href="css/orders.css?v=20261011_xprinter_bt_fix_v1" />
-  <link rel="stylesheet" href="css/orders-menu.css?v=20261011_product_option_sidebar_v1" />
+  <link rel="stylesheet" href="css/orders-menu.css?v=20261011_menu_order_screen_v1" />
     <script>
       (function () {
         document.documentElement.style.setProperty('--primary', '#00b900');
@@ -1312,11 +1312,15 @@
     <!-- Menu Editor -->
     <div class="content" id="view-menu" style="display:none;">
       <div class="menu-workspace">
-        <div class="menu-workspace-heading">
+        <div class="menu-workspace-heading" id="menu-workspace-heading">
           <p id="i18n-menu-workspace-sub">管理餐點、供應狀態與客製化選項</p>
           <div class="menu-workspace-heading-actions">
             <button type="button" class="btn btn-primary menu-action-btn" id="btn-menu-save" disabled onclick="saveMenuData()">
               <span id="btn-menu-save-text">儲存變更</span>
+            </button>
+            <button type="button" class="btn btn-ghost menu-action-btn menu-order-entry-btn" id="btn-menu-manage-cats" disabled onclick="openCategoriesManager()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v18M4 7l4-4 4 4M16 21V3m-4 14 4 4 4-4"/></svg>
+              <span id="i18n-btn-manage-cats-text">顯示排序</span>
             </button>
             <div class="menu-sidebar-segmented-toggle" role="tablist" id="menu-mode-tabs" aria-label="菜單管理模式">
               <button type="button" class="menu-seg-btn active" id="btn-seg-products" role="tab" aria-selected="true" onclick="setMenuSidebarTab('products')"><span id="i18n-seg-products">餐點</span></button>
@@ -1324,16 +1328,8 @@
             </div>
           </div>
         </div>
-      <div class="split menu-split">
+      <div class="split menu-split" id="menu-standard-workspace">
         <div class="panel menu-sidebar-panel">
-          <div class="panel-header menu-sidebar-header">
-            <div id="menu-sidebar-products-actions">
-              <button type="button" class="btn btn-ghost menu-manage-cats-btn" id="btn-menu-manage-cats" onclick="openCategoriesManager()">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" x2="20" y1="21" y2="21"></line><line x1="4" x2="20" y1="14" y2="14"></line><line x1="4" x2="20" y1="7" y2="7"></line><circle cx="8" cy="7" r="2"></circle><circle cx="16" cy="14" r="2"></circle><circle cx="12" cy="21" r="2"></circle></svg>
-                <span id="i18n-btn-manage-cats-text">顯示排序</span>
-              </button>
-            </div>
-          </div>
           <div class="panel-body menu-categories-body" id="menu-categories" style="padding: 0; background: #fff;">
             <!-- Categories rendered here -->
           </div>
@@ -1384,6 +1380,18 @@
           </div>
         </div>
       </div>
+      <section id="menu-display-order-screen" class="menu-display-order-screen" hidden aria-labelledby="menu-order-title">
+        <div class="menu-order-header">
+          <button type="button" class="btn btn-ghost menu-action-btn" id="btn-menu-order-back" onclick="closeCategoriesManager()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+            <span id="btn-menu-order-back-text">返回</span>
+          </button>
+          <h2 id="menu-order-title" tabindex="-1">顯示排序</h2>
+          <button type="button" class="btn btn-primary menu-action-btn" id="btn-menu-order-save" disabled onclick="saveMenuData()"><span id="btn-menu-order-save-text">已儲存</span></button>
+        </div>
+        <p id="menu-order-description" class="menu-order-description"></p>
+        <div id="menu-order-panels" class="menu-order-columns"></div>
+      </section>
       </div>
     </div>
     </main>
@@ -2679,7 +2687,7 @@
   </section>
 
   <!-- Benmi POS Modular Architecture Scripts -->
-  <script src="js/orders-i18n.js?v=20261011_menu_single_heading_v1"></script>
+  <script src="js/orders-i18n.js?v=20261011_menu_order_screen_v1"></script>
   <script src="js/orders-core.js?v=20261007_mobile_drawer_sidebar_v1"></script>
   <script src="js/orders-audio.js?v=20261007_dev_main_sync_v1"></script>
   <script src="js/printer-service.js?v=20261011_xprinter_bt_fix_v1"></script>
@@ -2688,7 +2696,7 @@
   <script src="js/orders-history.js?v=20261007_dev_main_sync_v1"></script>
   <script src="js/orders-reports.js?v=20261007_dev_main_sync_v1"></script>
   <script src="js/orders-settings.js?v=20261007_mobile_drawer_sidebar_v1"></script>
-  <script src="js/orders-menu.js?v=20261011_product_option_sidebar_v1"></script>
+  <script src="js/orders-menu.js?v=20261011_menu_order_screen_v1"></script>
   <script src="js/orders-bundle-wizard.js?v=20261007_dev_main_sync_v1"></script>
   <script src="/js/orders-option-groups.js?v=20261011_product_option_sidebar_v1"></script>
 

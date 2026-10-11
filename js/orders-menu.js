@@ -18,6 +18,13 @@ let currentLibraryOptionGroups = [];
 let menuModifierLibrary = [];
 
 function updateMenuWorkspace() {
+  const orderScreen = document.getElementById('menu-display-order-screen');
+  if (orderScreen) orderScreen.hidden = !isCategoryManagerOpen;
+  for (const id of ['menu-workspace-heading', 'menu-standard-workspace']) {
+    const section = document.getElementById(id);
+    if (section) section.hidden = isCategoryManagerOpen;
+  }
+  document.getElementById('btn-menu-manage-cats')?.classList.toggle('active', isCategoryManagerOpen);
   const optionsMode = menuSidebarTab === 'options' && Boolean(window.UnifiedMenu?.enabled);
   const body = document.getElementById('menu-editor-body');
   body?.classList.toggle('is-option-workspace', optionsMode);
@@ -41,7 +48,7 @@ function moveMenuItem(cIdx, iIdx, direction) {
   [items[iIdx], items[target]] = [items[target], items[iIdx]];
   renderMenuCategoryEditor(cIdx);
   markMenuDirty();
-  document.querySelector(`#menu-editor-body .menu-catalog-row[data-item-index="${target}"] .btn-more`)?.focus();
+  document.getElementById(`menu-item-card-${cIdx}-${target}`)?.focus();
 }
 
 function getBenmiDefaultCategories() {
@@ -55,14 +62,19 @@ function getBenmiDefaultCategories() {
 }
 
 function updateMenuSaveState() {
-  const btn = document.getElementById("btn-menu-save");
-  const label = document.getElementById("btn-menu-save-text");
-  if (!btn) return;
-  btn.disabled = isMenuSaving || !isMenuLoadedCompletely || !isMenuDirty;
-  btn.classList.toggle("has-changes", isMenuDirty);
   const text = t(isMenuSaving ? "menuSaving" : isMenuDirty ? "btnMenuSave" : "menuSaved");
-  if (label) label.textContent = text;
-  else btn.textContent = text;
+  for (const [id, labelId] of [['btn-menu-save','btn-menu-save-text'], ['btn-menu-order-save','btn-menu-order-save-text']]) {
+    const btn = document.getElementById(id), label = document.getElementById(labelId);
+    if (!btn) continue;
+    btn.disabled = isMenuSaving || !isMenuLoadedCompletely || !isMenuDirty;
+    btn.classList.toggle("has-changes", isMenuDirty);
+    if (label) label.textContent = text;
+    else btn.textContent = text;
+  }
+  const orderButton = document.getElementById('btn-menu-manage-cats');
+  if (orderButton) orderButton.disabled = isMenuSaving || !isMenuLoadedCompletely;
+  const backButton = document.getElementById('btn-menu-order-back');
+  if (backButton) backButton.disabled = isMenuSaving;
 }
 
 function canonicalMenuSnapshot(data) {
@@ -531,19 +543,27 @@ async function loadMenuData() {
 let draggedCategoryIndex = null;
 let isCategoryManagerOpen = false;
 let categoryBeforeDisplayOrder = -1;
+let displayOrderCategory = null;
+let displayOrderInitial = [];
 
 function openCategoriesManager() {
-  if (!isMenuLoadedCompletely || !currentMenuData) return;
+  if (!isMenuLoadedCompletely || !currentMenuData || isMenuSaving || isCategoryManagerOpen) return;
   syncMenuDataFromDOM();
-  menuSidebarTab = 'products';
   categoryBeforeDisplayOrder = activeCategoryIndex;
+  displayOrderCategory = currentMenuData[activeCategoryIndex];
+  if (isCustomizationCategory(displayOrderCategory)) displayOrderCategory = null;
+  displayOrderInitial = getMenuDisplayEntries().map(({ model }) => ({ model, value: model.sortOrder, hadOrder: Object.hasOwn(model, 'sortOrder') }));
   isCategoryManagerOpen = true;
   activeCategoryIndex = -1;
+  // Stale inline inputs must not write into newly reordered item indexes.
+  const body = document.getElementById('menu-editor-body');
+  if (body) body.innerHTML = '';
   renderMenuCategories();
-  renderCategoriesManagerView();
+  document.getElementById('menu-order-title')?.focus();
 }
 
 function closeCategoriesManager() {
+  if (isMenuSaving) return;
   isCategoryManagerOpen = false;
   activeCategoryIndex = currentMenuData?.[categoryBeforeDisplayOrder] ? categoryBeforeDisplayOrder : (currentMenuData || []).findIndex(cat => menuSidebarTab === 'products' ? !isCustomizationCategory(cat) : isCustomizationCategory(cat));
   renderMenuCategories();
@@ -567,6 +587,7 @@ function closeCategoriesManager() {
     if (addCatTopBtn) addCatTopBtn.style.display = "none";
     if (closeBtn) closeBtn.style.display = "none";
   }
+  document.getElementById('btn-menu-manage-cats')?.focus();
 }
 
 function getDragAfterElement(container, y, selector) {
@@ -611,60 +632,100 @@ function getMenuDisplayEntries() {
 
 function renderCategoriesManagerView() {
   updateMenuWorkspace();
-  document.getElementById('menu-editor-body').classList.remove('is-catalog');
-  document.getElementById('menu-editor-title').textContent = t('manageCategoriesTitle');
-  document.getElementById('i18n-menu-edit-sub').textContent = t('manageCategoriesSub');
-  ['btn-category-rename', 'btn-category-delete', 'btn-menu-create-unified', 'btn-menu-add-cat-top'].forEach(id => {
-    document.getElementById(id).style.display = 'none';
-  });
-  document.getElementById('btn-menu-manage-close').style.display = 'inline-flex';
-  const container = document.getElementById('menu-editor-body');
+  const container = document.getElementById('menu-order-panels');
+  if (!container) return;
+  const positions = [...container.querySelectorAll('[data-order-list]')].map(list => list.scrollTop);
+  document.getElementById('menu-order-title').textContent = t('manageCategoriesTitle');
+  document.getElementById('menu-order-description').textContent = t('manageCategoriesSub');
+  document.getElementById('btn-menu-order-back-text').textContent = t('btnBack');
   container.innerHTML = '';
-  const panel = document.createElement('div');
-  panel.className = 'cust-group-card menu-display-order';
-  const description = document.createElement('p');
-  description.textContent = t('manageCategoriesSub');
-  panel.appendChild(description);
   const entries = getMenuDisplayEntries();
-  let dragged = null;
-  const commit = ordered => {
-    ordered.forEach((entry, index) => { entry.model.sortOrder = index + 1; });
-    markMenuDirty();
-    renderCategoriesManagerView();
+  if (!entries.some(entry => entry.model === displayOrderCategory && !isCustomizationCategory(entry.model))) {
+    displayOrderCategory = entries.find(entry => !isCustomizationCategory(entry.model))?.model || null;
+  }
+  const addPanel = (title, id) => {
+    const section = document.createElement('section');
+    section.className = 'menu-order-panel';
+    section.setAttribute('aria-labelledby', id);
+    const heading = document.createElement('h3'); heading.id = id; heading.textContent = title;
+    const list = document.createElement('div'); list.className = 'menu-order-list';
+    list.setAttribute('data-order-list', id);
+    section.appendChild(heading); section.appendChild(list); container.appendChild(section);
+    return list;
   };
-  entries.forEach((entry, index) => {
-    const row = document.createElement('div');
-    row.className = 'menu-display-order-row';
-    row.draggable = true;
-    row.innerHTML = `<span aria-hidden="true">${typeof POS_SVG !== 'undefined' ? POS_SVG.grip || '' : ''}</span><span class="menu-display-order-name"><strong>${escapeHtml(entry.title)}</strong><small>${t(entry.kind)}</small></span>`;
-    [-1, 1].forEach(direction => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'btn btn-ghost';
-      button.disabled = index + direction < 0 || index + direction >= entries.length;
-      button.setAttribute('aria-label', t(direction < 0 ? 'moveDisplayUp' : 'moveDisplayDown') + ': ' + entry.title);
-      button.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="${direction < 0 ? 'm6 15 6-6 6 6' : 'm6 9 6 6 6-6'}"/></svg>`;
-      button.onclick = () => {
-        const ordered = [...entries];
-        [ordered[index], ordered[index + direction]] = [ordered[index + direction], ordered[index]];
-        commit(ordered);
-        container.querySelectorAll('.menu-display-order-row')[index + direction]?.querySelector('button:not(:disabled)')?.focus();
-      };
-      row.appendChild(button);
+  const sections = addPanel(t('menuOrderSections'), 'menu-order-sections-title');
+  const items = addPanel(displayOrderCategory ? t('menuOrderItems', {name:displayOrderCategory.title}) : t('segProducts'), 'menu-order-items-title');
+  const empty = (list, key) => {
+    const message = document.createElement('p'); message.className = 'menu-order-empty'; message.textContent = t(key); list.appendChild(message);
+  };
+  const commitSections = ordered => {
+    const original = ordered.length === displayOrderInitial.length && ordered.every((entry, i) => entry.model === displayOrderInitial[i].model);
+    const slots = displayOrderInitial.map(entry => Number(entry.value));
+    const useSlots = slots.length === ordered.length && slots.every((value, i) => Number.isFinite(value) && (!i || value > slots[i-1]));
+    ordered.forEach((entry, i) => {
+      if (original) {
+        const initial = displayOrderInitial[i];
+        if (initial.hadOrder) entry.model.sortOrder = initial.value;
+        else delete entry.model.sortOrder;
+      } else entry.model.sortOrder = useSlots ? slots[i] : i + 1;
     });
-    row.ondragstart = event => { dragged = index; event.dataTransfer.setData('text/plain', String(index)); row.classList.add('dragging'); };
-    row.ondragend = () => { dragged = null; row.classList.remove('dragging'); };
-    row.ondragover = event => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; };
-    row.ondrop = event => {
-      event.preventDefault();
-      if (dragged === null || dragged === index) return;
-      const ordered = [...entries];
-      ordered.splice(index, 0, ordered.splice(dragged, 1)[0]);
-      commit(ordered);
-    };
-    panel.appendChild(row);
-  });
-  container.appendChild(panel);
+  };
+  const rows = (list, values, kind, commit) => {
+    let dragged = null;
+    values.forEach((value, index) => {
+      const model = kind === 'section' ? value.model : value;
+      const name = kind === 'section' ? value.title : value.name;
+      const row = document.createElement('div'); row.className = 'menu-display-order-row'; row.draggable = true;
+      row.setAttribute('data-order-kind', kind); row.setAttribute('data-order-index', index);
+      const ordinal = document.createElement('span'); ordinal.className = 'menu-order-index'; ordinal.textContent = String(index+1); ordinal.setAttribute('aria-hidden','true'); row.appendChild(ordinal);
+      const label = document.createElement(kind === 'section' && !isCustomizationCategory(model) ? 'button' : 'span');
+      label.className = 'menu-display-order-name';
+      label.innerHTML = `<strong>${escapeHtml(name)}</strong><small>${kind === 'section' ? escapeHtml(t(value.kind)) : '$' + escapeHtml(value.price ?? '')}</small>`;
+      if (label.tagName.toLowerCase() === 'button') {
+        label.type = 'button'; label.setAttribute('aria-pressed',model === displayOrderCategory);
+        label.onclick = () => { displayOrderCategory = model; renderCategoriesManagerView(); document.getElementById('menu-order-items-title')?.focus(); };
+        row.classList.toggle('is-selected', model === displayOrderCategory);
+      }
+      row.appendChild(label);
+      const move = target => {
+        if (isMenuSaving || target < 0 || target >= values.length || target === index) return;
+        const ordered = [...values]; ordered.splice(target, 0, ordered.splice(index, 1)[0]);
+        commit(ordered); markMenuDirty(); renderCategoriesManagerView();
+        const moved = document.getElementById('menu-order-panels').querySelectorAll(`[data-order-kind="${kind}"]`)[target];
+        moved?.querySelector('button:not(:disabled)')?.focus({preventScroll:true});
+        moved?.scrollIntoView?.({block:'nearest'});
+      };
+      [-1, 1].forEach(direction => {
+        const button = document.createElement('button'); button.type = 'button'; button.className = 'menu-order-move';
+        button.disabled = index + direction < 0 || index + direction >= values.length;
+        button.setAttribute('aria-label', t(direction < 0 ? 'moveDisplayUp' : 'moveDisplayDown') + ': ' + name);
+        button.setAttribute('data-order-delta',direction);
+        button.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="${direction < 0 ? 'm6 15 6-6 6 6' : 'm6 9 6 6 6-6'}"/></svg>`;
+        button.onclick = () => move(index + direction); row.appendChild(button);
+      });
+      row.ondragstart = event => { if(isMenuSaving)return event.preventDefault(); dragged = index; event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain',String(index)); row.classList.add('dragging'); };
+      row.ondragend = () => { dragged = null; row.classList.remove('dragging'); };
+      row.ondragover = event => { if (dragged !== null) { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; } };
+      row.ondrop = event => {
+        event.preventDefault();
+        if (dragged === null || isMenuSaving) return;
+        const source = list.querySelectorAll('[data-order-index]')[dragged];
+        // Invoke the same commit path as the buttons, from the dragged row.
+        source?.moveTo(index);
+      };
+      row.moveTo = move;
+      list.appendChild(row);
+    });
+  };
+  rows(sections, entries, 'section', commitSections);
+  if (!entries.length) empty(sections, 'menuSelectPrompt');
+  const products = displayOrderCategory?.items || [];
+  rows(items, products, 'item', ordered => { displayOrderCategory.items.splice(0, products.length, ...ordered); });
+  if (!products.length) empty(items, 'menuEmptyCategory');
+  [sections, items].forEach((list, i) => { list.scrollTop = positions[i] || 0; });
+  document.getElementById('menu-order-items-title').setAttribute('tabindex','-1');
+  container.inert = isMenuSaving;
+  updateMenuSaveState();
 }
 
 const collapsedMenuSections = {
@@ -834,6 +895,7 @@ window.handleCreateCustomFromSidebar = handleCreateCustomFromSidebar;
 
 function renderMenuCategories() {
   updateMenuWorkspace();
+  if (isCategoryManagerOpen) return renderCategoriesManagerView();
   const container = document.getElementById("menu-categories");
   if (!container) return;
   container.innerHTML = "";
@@ -884,6 +946,7 @@ function renderMenuCategories() {
     actionCatalog.onclick = () => openAddCategoryModal('catalog');
     listEl.appendChild(actionCatalog);
 
+    catalogList.sort((a, b) => (Number(a.cat.sortOrder) || 0) - (Number(b.cat.sortOrder) || 0));
     catalogList.forEach(({ cat, originalIndex }) => {
       const div = document.createElement("button");
       div.type = 'button';
@@ -1232,57 +1295,6 @@ function closeAllItemActionMenus() {
 }
 window.closeAllItemActionMenus = closeAllItemActionMenus;
 
-if (!window._itemActionMenuListenerAttached) {
-  document.addEventListener("click", closeAllItemActionMenus);
-  document.addEventListener('scroll', event => {
-    if (event.target?.closest?.('#menu-editor-body')) closeAllItemActionMenus();
-  }, true);
-  window.addEventListener('resize', closeAllItemActionMenus);
-  window._itemActionMenuListenerAttached = true;
-}
-
-function toggleItemActionMenu(event, cIdx, iIdx) {
-  event.stopPropagation();
-  const wrapper = event.currentTarget.closest(".menu-item-more-wrapper");
-  if (!wrapper) return;
-  const existingMenu = wrapper.querySelector(".menu-item-dropdown-menu");
-  closeAllItemActionMenus();
-  if (existingMenu) return;
-
-  const settingsSvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`;
-  const copySvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
-  const trashSvg = (typeof POS_SVG !== "undefined" && POS_SVG.trash) || `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
-
-  const menuEl = document.createElement("div");
-  menuEl.className = "menu-item-dropdown-menu";
-  menuEl.innerHTML = `
-    <button type="button" class="dropdown-item" onclick="event.stopPropagation(); closeAllItemActionMenus(); openItemDetailModal(${cIdx}, ${iIdx})">
-      ${settingsSvg}
-      <span>${escapeHtml(t("btnItemSettings") || "Cài đặt")}</span>
-    </button>
-    <button type="button" class="dropdown-item" onclick="event.stopPropagation(); closeAllItemActionMenus(); duplicateMenuItemAt(${cIdx}, ${iIdx})">
-      ${copySvg}
-      <span>${escapeHtml(t("btnDuplicateItem") || "Sao chép món")}</span>
-    </button>
-    <button type="button" class="dropdown-item" ${iIdx === 0 ? 'disabled' : ''} onclick="event.stopPropagation(); closeAllItemActionMenus(); moveMenuItem(${cIdx}, ${iIdx}, -1)">${escapeHtml(t('menuMoveUp'))}</button>
-    <button type="button" class="dropdown-item" ${iIdx === currentMenuData[cIdx].items.length - 1 ? 'disabled' : ''} onclick="event.stopPropagation(); closeAllItemActionMenus(); moveMenuItem(${cIdx}, ${iIdx}, 1)">${escapeHtml(t('menuMoveDown'))}</button>
-    <button type="button" class="dropdown-item danger" onclick="event.stopPropagation(); closeAllItemActionMenus(); removeMenuItemAt(${cIdx}, ${iIdx})">
-      ${trashSvg}
-      <span>${escapeHtml(t("btnItemDelete") || "Xóa món")}</span>
-    </button>
-  `;
-  wrapper.appendChild(menuEl);
-  // Keep all actions reachable even on the last row of a short tablet viewport.
-  const anchor = event.currentTarget.getBoundingClientRect();
-  menuEl.style.position = 'fixed';
-  menuEl.style.maxHeight = `${Math.max(48, window.innerHeight - 24)}px`;
-  menuEl.style.overflowY = 'auto';
-  menuEl.style.right = 'auto';
-  menuEl.style.left = `${Math.max(12, Math.min(anchor.right - menuEl.offsetWidth, window.innerWidth - menuEl.offsetWidth - 12))}px`;
-  menuEl.style.top = `${Math.max(12, Math.min(anchor.bottom + 8, window.innerHeight - menuEl.offsetHeight - 12))}px`;
-}
-window.toggleItemActionMenu = toggleItemActionMenu;
-
 function duplicateMenuItemAt(cIdx, iIdx) {
   if (!currentMenuData || !currentMenuData[cIdx] || !currentMenuData[cIdx].items[iIdx]) return;
   syncMenuDataFromDOM();
@@ -1310,6 +1322,7 @@ function openMenuItemFromCard(event, cIdx, iIdx) {
 }
 
 function renderMenuCategoryEditor(index) {
+  if (isCategoryManagerOpen) return renderCategoriesManagerView();
   if (window.UnifiedMenu?.workspace()) return;
   isCategoryManagerOpen = false;
   updateMenuWorkspace();
@@ -1459,27 +1472,11 @@ function renderMenuCategoryEditor(index) {
   const itemsContainer = document.createElement("div");
   itemsContainer.className = "menu-catalog-items-container";
 
-  itemsContainer.addEventListener("dragover", (e) => {
-    e.preventDefault();
-    const draggingRow = itemsContainer.querySelector(".menu-catalog-row.dragging");
-    if (!draggingRow) return;
-    const afterElement = getDragAfterElement(itemsContainer, e.clientY, '.menu-catalog-row');
-    if (afterElement == null) {
-      itemsContainer.appendChild(draggingRow);
-    } else {
-      itemsContainer.insertBefore(draggingRow, afterElement);
-    }
-  });
-
   const cameraSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`;
-  const gripSvg = (typeof POS_SVG !== "undefined" && POS_SVG.grip) || `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>`;
-  const moreDotsSvg = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/><circle cx="5" cy="12" r="1.5"/></svg>`;
-
   cat.items.forEach((item, iIdx) => {
     const row = document.createElement("div");
     row.className = "menu-item-row-card menu-catalog-row";
     row.id = `menu-item-card-${index}-${iIdx}`;
-    row.draggable = true;
     row.setAttribute("data-item-index", iIdx);
     row.setAttribute("tabindex", "0");
     row.setAttribute("role", "group");
@@ -1487,22 +1484,6 @@ function renderMenuCategoryEditor(index) {
     row.setAttribute("aria-keyshortcuts", "Enter Space");
     row.addEventListener("click", (event) => openMenuItemFromCard(event, index, iIdx));
     row.addEventListener("keydown", (event) => openMenuItemFromCard(event, index, iIdx));
-
-    row.addEventListener("dragstart", (e) => {
-      syncMenuDataFromDOM();
-      row.classList.add("dragging");
-      e.dataTransfer.effectAllowed = "move";
-    });
-    row.addEventListener("dragend", () => {
-      row.classList.remove("dragging");
-      syncMenuDataFromDOM();
-      const currentItems = currentMenuData[index].items;
-      const newOrderIndices = [...itemsContainer.querySelectorAll('.menu-catalog-row')].map(r => parseInt(r.getAttribute('data-item-index'), 10));
-      const reordered = newOrderIndices.map(idx => currentItems[idx]).filter(Boolean);
-      currentMenuData[index].items = reordered;
-      markMenuDirty();
-      renderMenuCategoryEditor(index);
-    });
 
     const oosText = item.isOos ? t("stockStatusOutOfStock") : t("stockStatusInStock");
     const hasBundle = !window.UnifiedMenu?.enabled && (item.itemType === 'bundle' || Boolean(item.bundleRule && Array.isArray(item.bundleRule.groups) && item.bundleRule.groups.length > 0));
@@ -1548,7 +1529,6 @@ function renderMenuCategoryEditor(index) {
     }
 
     row.innerHTML = `
-      <div class="menu-item-drag-handle" title="${escapeHtml(t('menuDragSort'))}" aria-hidden="true">${gripSvg}</div>
       <button type="button" class="menu-item-thumb-box ${imgUrl ? 'has-image' : ''}" data-item-thumb-idx="${iIdx}"
         onclick="handleItemThumbClick(${index}, ${iIdx}, event)"
         ondragover="handleItemThumbDragOver(event)"
@@ -1576,13 +1556,6 @@ function renderMenuCategoryEditor(index) {
         <span class="stock-toggle-dot"></span>
         <span>${oosText}</span>
       </button>
-      <div class="menu-item-actions-cluster">
-        <div class="menu-item-more-wrapper">
-          <button type="button" class="menu-item-action-btn btn-more" onclick="toggleItemActionMenu(event, ${index}, ${iIdx})" title="${t('btnMoreActions')}" aria-label="${escapeHtml(t('btnMoreActions') + ': ' + item.name)}">
-            ${moreDotsSvg}
-          </button>
-        </div>
-      </div>
     `;
     itemsContainer.appendChild(row);
   });
@@ -2762,7 +2735,7 @@ async function saveMenuData(skipConfirm = false) {
   updateMenuSaveState();
   const editor = document.getElementById("menu-editor-body");
   if (editor) editor.inert = true;
-  document.querySelectorAll(".menu-header-actions, #menu-categories").forEach(el => el.inert = true);
+  document.querySelectorAll(".menu-header-actions, #menu-categories, #menu-order-panels").forEach(el => el.inert = true);
 
   try {
     const res = await fetch(`${WORKER_BASE}/api/menu?tenant_id=${getTenantIdFromUrl()}`, {
@@ -2793,7 +2766,7 @@ async function saveMenuData(skipConfirm = false) {
   } finally {
     isMenuSaving = false;
     if (editor) editor.inert = false;
-    document.querySelectorAll(".menu-header-actions, #menu-categories").forEach(el => el.inert = false);
+    document.querySelectorAll(".menu-header-actions, #menu-categories, #menu-order-panels").forEach(el => el.inert = false);
     updateMenuSaveState();
   }
 }

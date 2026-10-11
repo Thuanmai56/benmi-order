@@ -133,4 +133,4 @@ async function setup({ included = false, source = false, lang = 'vi' } = {}) {
   const input = (key, value) => { const el = get(`[data-field="${key}"]`); el.focus(); if (el.type === 'checkbox') el.checked = value; else el.value = String(value); emit('input', el); };
   return { context, doc, drawer, get, click, input, emit, posts, responses, launch, catalog:()=>catalog };
 }
-module.exports = { setup };
+module.exports = { setup, Element };
