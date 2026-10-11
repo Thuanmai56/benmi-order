@@ -7,8 +7,8 @@
   <title id="pos-page-title">Blab POS</title>
   <base href="/" />
   <script src="js/orders-display.js?v=20261007_dev_main_sync_v1"></script>
-  <link rel="stylesheet" href="css/orders.css?v=20261011_xprinter_bt_fix_v1" />
-  <link rel="stylesheet" href="css/orders-menu.css?v=20261011_global_group_order_v2" />
+  <link rel="stylesheet" href="css/orders.css?v=20261012_sort_display_ui_v1" />
+  <link rel="stylesheet" href="css/orders-menu.css?v=20261012_sort_display_ui_v1" />
     <script>
       (function () {
         document.documentElement.style.setProperty('--primary', '#00b900');
@@ -1382,14 +1382,59 @@
       </div>
       <section id="menu-display-order-screen" class="menu-display-order-screen" hidden aria-labelledby="menu-order-title">
         <div class="menu-order-header">
-          <button type="button" class="btn btn-ghost menu-action-btn" id="btn-menu-order-back" onclick="closeCategoriesManager()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
-            <span id="btn-menu-order-back-text">返回</span>
-          </button>
-          <h2 id="menu-order-title" tabindex="-1">顯示排序</h2>
-          <button type="button" class="btn btn-primary menu-action-btn" id="btn-menu-order-save" disabled onclick="saveMenuData()"><span id="btn-menu-order-save-text">已儲存</span></button>
+          <div class="menu-order-header-left">
+            <button type="button" class="btn menu-order-back-btn" id="btn-menu-order-back" onclick="closeCategoriesManager()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+              <span id="btn-menu-order-back-text">Quay lại</span>
+            </button>
+            <div class="menu-order-title-block">
+              <div class="menu-order-title-row">
+                <h2 id="menu-order-title" tabindex="-1">Sắp xếp hiển thị</h2>
+                <div class="menu-order-store-badge" id="menu-order-store-badge">
+                  <span class="store-badge-dot">●</span>
+                  <span id="menu-order-store-status-text">Đang mở quán</span>
+                </div>
+              </div>
+              <div class="menu-order-breadcrumb" id="menu-order-breadcrumb">
+                <span id="menu-order-bc-mgmt">Quản lý thực đơn</span> • <span id="menu-order-store-name">Quán Ăn Đài Loan</span> • <span id="menu-order-bc-dining">Bàn / Mang đi</span>
+              </div>
+            </div>
+          </div>
+          <div class="menu-order-header-actions">
+            <div class="menu-order-save-status is-saved" id="menu-order-save-status">
+              <svg class="save-status-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 6 9 17l-5-5"/>
+              </svg>
+              <span id="menu-order-save-status-text">Đã tự động lưu</span>
+            </div>
+            <button type="button" class="btn menu-order-revert-btn" id="btn-menu-order-revert" onclick="revertCategoriesDisplayOrder()">
+              <span id="btn-menu-order-revert-text">Khôi phục</span>
+            </button>
+            <button type="button" class="btn btn-primary menu-order-save-btn" id="btn-menu-order-save" disabled onclick="saveMenuData()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 6 9 17l-5-5"/>
+              </svg>
+              <span id="btn-menu-order-save-text">Lưu thay đổi</span>
+            </button>
+          </div>
         </div>
-        <p id="menu-order-description" class="menu-order-description"></p>
+
+        <div class="menu-order-tablet-banner" id="menu-order-tablet-banner">
+          <div class="tablet-banner-left">
+            <div class="tablet-banner-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M7 16V4m0 0L3 8m4-4l4 4m10 4v12m0 0l4-4m-4 4l-4-4"/>
+              </svg>
+            </div>
+            <div class="tablet-banner-text">
+              <strong id="tablet-tip-label">Mẹo sắp xếp cho Tablet:</strong>
+              <span id="tablet-tip-desc">Chạm và giữ thanh kéo ::: hoặc dùng các nút mũi tên ▲ ▼ để định vị món. Chạm vào thẻ bên trái để trực tiếp tải danh sách món tương ứng sang bên phải.</span>
+            </div>
+          </div>
+          <div class="tablet-banner-badge" id="tablet-mode-badge">Chế độ cảm ứng POS</div>
+        </div>
+
+        <p id="menu-order-description" class="menu-order-description" style="display:none;"></p>
         <div id="menu-order-panels" class="menu-order-columns"></div>
       </section>
       </div>
@@ -2687,7 +2732,7 @@
   </section>
 
   <!-- Benmi POS Modular Architecture Scripts -->
-  <script src="js/orders-i18n.js?v=20261011_global_group_order_v2"></script>
+  <script src="js/orders-i18n.js?v=20261012_sort_display_ui_v1"></script>
   <script src="js/orders-core.js?v=20261007_mobile_drawer_sidebar_v1"></script>
   <script src="js/orders-audio.js?v=20261007_dev_main_sync_v1"></script>
   <script src="js/printer-service.js?v=20261011_xprinter_bt_fix_v1"></script>
@@ -2696,7 +2741,7 @@
   <script src="js/orders-history.js?v=20261007_dev_main_sync_v1"></script>
   <script src="js/orders-reports.js?v=20261007_dev_main_sync_v1"></script>
   <script src="js/orders-settings.js?v=20261007_mobile_drawer_sidebar_v1"></script>
-  <script src="js/orders-menu.js?v=20261011_global_group_order_v2"></script>
+  <script src="js/orders-menu.js?v=20261012_sort_display_ui_v1"></script>
   <script src="js/orders-bundle-wizard.js?v=20261007_dev_main_sync_v1"></script>
   <script src="/js/orders-option-groups.js?v=20261011_product_option_sidebar_v1"></script>
 
