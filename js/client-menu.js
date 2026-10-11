@@ -91,28 +91,16 @@ function renderDynamicCatalog() {
     const globalCustomizationGroups = (bData.customizations || [])
         .filter(group => !group.scope || group.scope === 'order')
         .sort((a, b) => (Number(a.sortOrder) || 0) - (Number(b.sortOrder) || 0));
-    const groupedCustomizations = globalCustomizationGroups.filter(group => !Number.isSafeInteger(group.displaySortOrder));
-    if (groupedCustomizations.length > 0) {
+    if (globalCustomizationGroups.length > 0) {
         catalogSections.push({
             type: 'customizations',
-            groups: groupedCustomizations,
+            groups: globalCustomizationGroups,
             sectionId: 'sec-order-option',
             title: bData.customizationTitle || '口味與客製化選擇',
             shortName: bData.customizationShortName || '口味選擇',
             sortOrder: bData.customizationSortOrder ?? 0
         });
     }
-    globalCustomizationGroups.filter(group => Number.isSafeInteger(group.displaySortOrder)).forEach(group => {
-        catalogSections.push({
-            type: 'customizations',
-            groups: [group],
-            sectionId: 'sec-order-option-' + encodeURIComponent(group.id || group.key).replace(/'/g, '%27'),
-            title: group.title,
-            shortName: group.title,
-            sortOrder: group.displaySortOrder,
-            standalone: true
-        });
-    });
     catalogSections.sort((a, b) => a.sortOrder - b.sortOrder);
 
     // 1. Navigation Tabs

@@ -68,8 +68,23 @@ function updateMenuSaveState() {
     if (!btn) continue;
     btn.disabled = isMenuSaving || !isMenuLoadedCompletely || !isMenuDirty;
     btn.classList.toggle("has-changes", isMenuDirty);
-    if (label) label.textContent = text;
+    if (label) label.textContent = id === 'btn-menu-order-save' ? (isMenuDirty ? (t('btnSaveSortChanges') || text) : text) : text;
     else btn.textContent = text;
+  }
+  const statusWrap = document.getElementById('menu-order-save-status');
+  const statusText = document.getElementById('menu-order-save-status-text');
+  if (statusWrap && statusText) {
+    if (isMenuDirty) {
+      statusWrap.className = 'menu-order-save-status is-dirty';
+      statusText.textContent = t('statusUnsaved');
+    } else {
+      statusWrap.className = 'menu-order-save-status is-saved';
+      statusText.textContent = t('statusAutoSaved');
+    }
+  }
+  const revertBtn = document.getElementById('btn-menu-order-revert');
+  if (revertBtn) {
+    revertBtn.disabled = isMenuSaving || !isMenuDirty;
   }
   const orderButton = document.getElementById('btn-menu-manage-cats');
   if (orderButton) orderButton.disabled = isMenuSaving || !isMenuLoadedCompletely;
@@ -546,14 +561,20 @@ let isCategoryManagerOpen = false;
 let categoryBeforeDisplayOrder = -1;
 let displayOrderCategory = null;
 let displayOrderInitial = [];
+let displayOrderInitialSnapshot = null;
 
 function openCategoriesManager() {
   if (!isMenuLoadedCompletely || !currentMenuData || isMenuSaving || isCategoryManagerOpen) return;
   syncMenuDataFromDOM();
   categoryBeforeDisplayOrder = activeCategoryIndex;
-  displayOrderCategory = currentMenuData[activeCategoryIndex];
-  if (isCustomizationCategory(displayOrderCategory)) displayOrderCategory = null;
+  displayOrderCategory = currentMenuData[activeCategoryIndex] || null;
+  if (displayOrderCategory && displayOrderCategory.type === 'modifier') displayOrderCategory = null;
   displayOrderInitial = getMenuDisplayEntries().map(entry => ({ model: entry.model, field: entry.field, value: entry.model[entry.field], hadOrder: Object.hasOwn(entry.model, entry.field), position: entry.position }));
+  try {
+    displayOrderInitialSnapshot = JSON.stringify(currentMenuData);
+  } catch (e) {
+    displayOrderInitialSnapshot = null;
+  }
   isCategoryManagerOpen = true;
   activeCategoryIndex = -1;
   // Stale inline inputs must not write into newly reordered item indexes.
@@ -562,6 +583,19 @@ function openCategoriesManager() {
   renderMenuCategories();
   document.getElementById('menu-order-title')?.focus();
 }
+
+function revertCategoriesDisplayOrder() {
+  if (isMenuSaving || !displayOrderInitialSnapshot) return;
+  try {
+    currentMenuData = JSON.parse(displayOrderInitialSnapshot);
+  } catch (e) {
+    return;
+  }
+  clearMenuDirty();
+  displayOrderCategory = currentMenuData.find(c => !isCustomizationCategory(c)) || currentMenuData[0] || null;
+  renderCategoriesManagerView();
+}
+window.revertCategoriesDisplayOrder = revertCategoriesDisplayOrder;
 
 function closeCategoriesManager() {
   if (isMenuSaving) return;
@@ -622,16 +656,31 @@ function formatPlusBtnText(text, fallback) {
 
 function getMenuDisplayEntries() {
   const entries = [];
-  const seenGroups = new Set();
   (currentMenuData || []).forEach(cat => {
-    if (!isCustomizationCategory(cat)) entries.push({ model: cat, title: cat.title, kind: 'categoryTypeCatalogBadge', field: 'sortOrder', position: Number(cat.sortOrder) || 0 });
-    else {
-      [...(cat.groups || [])].sort((a, b) => (Number(a.sortOrder) || 0) - (Number(b.sortOrder) || 0)).forEach(group => {
-        const scope = group.scope || (cat.type === 'modifier' ? 'item' : 'order');
-        const id = String(group.canonicalId || group.id || '');
-        if (scope !== 'order' || !id || seenGroups.has(id)) return;
-        seenGroups.add(id);
-        entries.push({ model: group, title: group.title || group.name || cat.title, kind: 'scopeOrder', isOrderGroup: true, field: 'displaySortOrder', position: Number.isSafeInteger(group.displaySortOrder) ? group.displaySortOrder : Number(cat.sortOrder) || 0 });
+    if (!isCustomizationCategory(cat)) {
+      entries.push({
+        model: cat,
+        title: cat.title || cat.name || '',
+        kind: 'categoryTypeCatalogBadge',
+        field: 'sortOrder',
+        position: Number(cat.sortOrder) || 0,
+        isOrderGroup: false,
+        isCustomizationSection: false,
+        itemsCount: (cat.items || []).length
+      });
+    } else if (cat.type === 'order_customization' || cat.id === 'sec-flavor' || cat.slug === 'sec-flavor') {
+      const orderGroups = (cat.groups || []).filter(g => !g.scope || g.scope === 'order');
+      const isVi = typeof isLangVi !== 'undefined' && isLangVi;
+      const defaultTitle = isVi ? (cat.title?.includes('Tùy chọn') ? cat.title : 'Tùy chọn khẩu vị') : (cat.title || '口味與客製化選擇');
+      entries.push({
+        model: cat,
+        title: defaultTitle,
+        kind: 'scopeOrder',
+        field: 'sortOrder',
+        position: Number(cat.sortOrder) || 0,
+        isOrderGroup: true,
+        isCustomizationSection: true,
+        itemsCount: orderGroups.length
       });
     }
   });
@@ -643,29 +692,129 @@ function renderCategoriesManagerView() {
   const container = document.getElementById('menu-order-panels');
   if (!container) return;
   const positions = [...container.querySelectorAll('[data-order-list]')].map(list => list.scrollTop);
-  document.getElementById('menu-order-title').textContent = t('manageCategoriesTitle');
-  document.getElementById('menu-order-description').textContent = t('manageCategoriesSub');
-  document.getElementById('btn-menu-order-back-text').textContent = t('btnBack');
+
+  // Synchronize header text and badges
+  const titleEl = document.getElementById('menu-order-title');
+  if (titleEl) titleEl.textContent = t('manageCategoriesTitle');
+  const descEl = document.getElementById('menu-order-description');
+  if (descEl) descEl.textContent = t('manageCategoriesSub');
+  const backTextEl = document.getElementById('btn-menu-order-back-text');
+  if (backTextEl) backTextEl.textContent = t('btnBack');
+
+  const storeBadge = document.getElementById('menu-order-store-badge');
+  const storeStatusText = document.getElementById('menu-order-store-status-text');
+  const isOpen = (typeof currentStoreStatus !== 'undefined' ? currentStoreStatus : 'open') === 'open';
+  if (storeStatusText) storeStatusText.textContent = isOpen ? t('statusOpen') : t('statusClosed');
+  if (storeBadge) storeBadge.classList.toggle('is-closed', !isOpen);
+
+  const storeNameEl = document.getElementById('menu-order-store-name');
+  if (storeNameEl) {
+    const brand = window.currentTenantBrandName || window.storeBrandName || (typeof currentTenantConfig !== 'undefined' && (currentTenantConfig?.name || currentTenantConfig?.storeName)) || 'Quán Ăn Đài Loan';
+    storeNameEl.textContent = brand;
+  }
+  const bcMgmt = document.getElementById('menu-order-bc-mgmt');
+  if (bcMgmt) bcMgmt.textContent = t('menuSortBreadcrumbMenu');
+  const bcDining = document.getElementById('menu-order-bc-dining');
+  if (bcDining) bcDining.textContent = t('menuSortBreadcrumbDineTakeaway');
+
+  const tipLabel = document.getElementById('tablet-tip-label');
+  if (tipLabel) tipLabel.textContent = t('tabletSortTipLabel');
+  const tipDesc = document.getElementById('tablet-tip-desc');
+  if (tipDesc) tipDesc.textContent = t('tabletSortTipDesc');
+  const tipBadge = document.getElementById('tablet-mode-badge');
+  if (tipBadge) tipBadge.textContent = t('posTouchModeBadge');
+
   container.innerHTML = '';
   const entries = getMenuDisplayEntries();
-  if (!entries.some(entry => entry.model === displayOrderCategory && !entry.isOrderGroup)) {
-    displayOrderCategory = entries.find(entry => !entry.isOrderGroup)?.model || null;
+  if (!entries.some(entry => entry.model === displayOrderCategory)) {
+    displayOrderCategory = entries.find(entry => !entry.isCustomizationSection)?.model || entries[0]?.model || null;
   }
-  const addPanel = (title, id) => {
+
+  const addPanel = (headerEl, id) => {
     const section = document.createElement('section');
     section.className = 'menu-order-panel';
     section.setAttribute('aria-labelledby', id);
-    const heading = document.createElement('h3'); heading.id = id; heading.textContent = title;
-    const list = document.createElement('div'); list.className = 'menu-order-list';
+    section.appendChild(headerEl);
+    const list = document.createElement('div');
+    list.className = 'menu-order-list';
     list.setAttribute('data-order-list', id);
-    section.appendChild(heading); section.appendChild(list); container.appendChild(section);
+    section.appendChild(list);
+    container.appendChild(section);
     return list;
   };
-  const sections = addPanel(t('menuOrderSections'), 'menu-order-sections-title');
-  const items = addPanel(displayOrderCategory ? t('menuOrderItems', {name:displayOrderCategory.title}) : t('segProducts'), 'menu-order-items-title');
+
+  // Left Panel: Sections (Catalog Categories + Unified Whole-Order Customization Master Section)
+  const leftHeader = document.createElement('div');
+  leftHeader.className = 'menu-order-panel-header';
+  const leftTopRow = document.createElement('div');
+  leftTopRow.className = 'panel-header-top-row';
+  const leftTitleWrap = document.createElement('div');
+  leftTitleWrap.className = 'panel-header-title-wrap';
+  const leftTitle = document.createElement('h3');
+  leftTitle.className = 'panel-header-title';
+  leftTitle.id = 'menu-order-sections-title';
+  leftTitle.textContent = t('sortColSectionsTitle');
+  const leftCount = document.createElement('span');
+  leftCount.className = 'panel-count-badge';
+  leftCount.textContent = `${entries.length} ${t('menuUnitItem') || 'mục'}`;
+  leftTitleWrap.appendChild(leftTitle);
+  leftTitleWrap.appendChild(leftCount);
+  const leftHint = document.createElement('span');
+  leftHint.className = 'panel-header-hint';
+  leftHint.textContent = t('sortColClickToView');
+  leftTopRow.appendChild(leftTitleWrap);
+  leftTopRow.appendChild(leftHint);
+  leftHeader.appendChild(leftTopRow);
+
+  const sectionsList = addPanel(leftHeader, 'menu-order-sections-title');
+
+  // Right Panel: Items in Selected Category or Customization Groups in Master Section
+  const isSelectedCustom = displayOrderCategory && isCustomizationCategory(displayOrderCategory);
+  const targetCategoryTitle = displayOrderCategory ? (displayOrderCategory.title || displayOrderCategory.name || '') : '';
+  const rightHeader = document.createElement('div');
+  rightHeader.className = 'menu-order-panel-header';
+  const rightTopRow = document.createElement('div');
+  rightTopRow.className = 'panel-header-top-row';
+  const rightTitleWrap = document.createElement('div');
+  rightTitleWrap.className = 'panel-header-title-wrap';
+  const rightTitle = document.createElement('h3');
+  rightTitle.className = 'panel-header-title';
+  rightTitle.id = 'menu-order-items-title';
+  rightTitle.textContent = isSelectedCustom
+    ? t('menuOrderCustomizationsIn', { name: targetCategoryTitle || t('wholeOrderMasterTitle') })
+    : (displayOrderCategory ? t('menuOrderItemsIn', { name: targetCategoryTitle }) : t('segProducts'));
+
+  const orderGroups = isSelectedCustom
+    ? (displayOrderCategory.groups || []).filter(g => !g.scope || g.scope === 'order')
+    : [];
+  const products = isSelectedCustom ? [] : (displayOrderCategory?.items || []);
+  const rightItemsCount = isSelectedCustom ? orderGroups.length : products.length;
+
+  const rightCount = document.createElement('span');
+  rightCount.className = 'panel-count-badge count-badge-right';
+  rightCount.textContent = isSelectedCustom
+    ? t('nCustomizationsVisible', { n: rightItemsCount })
+    : t('nItemsVisible', { n: rightItemsCount });
+
+  rightTitleWrap.appendChild(rightTitle);
+  rightTopRow.appendChild(rightTitleWrap);
+  rightTopRow.appendChild(rightCount);
+
+  const rightSub = document.createElement('div');
+  rightSub.className = 'panel-header-sub';
+  rightSub.textContent = t('sortColItemsSubtitle');
+  rightHeader.appendChild(rightTopRow);
+  rightHeader.appendChild(rightSub);
+
+  const itemsList = addPanel(rightHeader, 'menu-order-items-title');
+
   const empty = (list, key) => {
-    const message = document.createElement('p'); message.className = 'menu-order-empty'; message.textContent = t(key); list.appendChild(message);
+    const message = document.createElement('p');
+    message.className = 'menu-order-empty';
+    message.textContent = t(key);
+    list.appendChild(message);
   };
+
   const commitSections = ordered => {
     const original = ordered.length === displayOrderInitial.length && ordered.every((entry, i) => entry.model === displayOrderInitial[i].model);
     const slots = displayOrderInitial.map(entry => entry.position);
@@ -678,60 +827,192 @@ function renderCategoriesManagerView() {
       } else entry.model[entry.field] = useSlots ? slots[i] : i + 1;
     });
   };
+
   const rows = (list, values, kind, commit) => {
     let dragged = null;
     values.forEach((value, index) => {
       const model = kind === 'section' ? value.model : value;
-      const name = kind === 'section' ? value.title : value.name;
-      const row = document.createElement('div'); row.className = 'menu-display-order-row'; row.draggable = true;
-      row.setAttribute('data-order-kind', kind); row.setAttribute('data-order-index', index);
-      const ordinal = document.createElement('span'); ordinal.className = 'menu-order-index'; ordinal.textContent = String(index+1); ordinal.setAttribute('aria-hidden','true'); row.appendChild(ordinal);
-      const label = document.createElement(kind === 'section' && !value.isOrderGroup ? 'button' : 'span');
-      label.className = 'menu-display-order-name';
-      label.innerHTML = `<strong>${escapeHtml(name)}</strong><small>${kind === 'section' ? escapeHtml(t(value.kind)) : '$' + escapeHtml(value.price ?? '')}</small>`;
-      if (label.tagName.toLowerCase() === 'button') {
-        label.type = 'button'; label.setAttribute('aria-pressed',model === displayOrderCategory);
-        label.onclick = () => { displayOrderCategory = model; renderCategoriesManagerView(); document.getElementById('menu-order-items-title')?.focus(); };
-        row.classList.toggle('is-selected', model === displayOrderCategory);
+      const isSelected = (kind === 'section' && displayOrderCategory && model === displayOrderCategory);
+      const row = document.createElement('div');
+      row.className = 'menu-order-card menu-display-order-row' + (isSelected ? ' is-selected' : '');
+      row.draggable = true;
+      row.setAttribute('data-order-kind', kind);
+      row.setAttribute('data-order-index', index);
+
+      // Index number circle
+      const ordinal = document.createElement('div');
+      ordinal.className = 'menu-order-card-idx menu-order-index' + (isSelected ? ' is-active-idx' : '');
+      ordinal.textContent = String(index + 1);
+      ordinal.setAttribute('aria-hidden', 'true');
+      row.appendChild(ordinal);
+
+      // Content
+      const contentEl = document.createElement(kind === 'section' ? 'button' : 'div');
+      contentEl.className = 'menu-order-card-content menu-display-order-name';
+      if (kind === 'section') {
+        contentEl.type = 'button';
+        contentEl.setAttribute('aria-pressed', isSelected);
+        contentEl.onclick = () => {
+          displayOrderCategory = model;
+          renderCategoriesManagerView();
+          document.getElementById('menu-order-items-title')?.focus();
+        };
       }
-      row.appendChild(label);
+
+      const titleRow = document.createElement('div');
+      titleRow.className = 'menu-order-card-title-row';
+      const titleStrong = document.createElement('strong');
+      titleStrong.className = 'menu-order-card-title';
+      titleStrong.textContent = kind === 'section' ? value.title : (isSelectedCustom ? (value.title || value.name || '') : (value.name || ''));
+      titleRow.appendChild(titleStrong);
+
+      if (kind === 'section') {
+        if (isSelected) {
+          const activeDot = document.createElement('span');
+          activeDot.className = 'menu-order-active-dot';
+          activeDot.textContent = '●';
+          titleRow.appendChild(activeDot);
+        }
+        const tag = document.createElement('span');
+        tag.className = 'menu-order-tag ' + (value.isCustomizationSection ? 'tag-order' : 'tag-catalog');
+        tag.textContent = value.isCustomizationSection ? t('badgeScopeOrder') : t('badgeFoodItem');
+        titleRow.appendChild(tag);
+      }
+      contentEl.appendChild(titleRow);
+
+      const subRow = document.createElement('div');
+      subRow.className = 'menu-order-card-sub';
+      if (kind === 'section') {
+        if (isSelected) {
+          const selBadge = document.createElement('span');
+          selBadge.className = 'badge-currently-selected';
+          selBadge.textContent = t('badgeSelectedState');
+          subRow.appendChild(selBadge);
+        }
+        const detail = document.createElement('span');
+        detail.className = 'menu-order-card-detail';
+        if (value.isCustomizationSection) {
+          detail.textContent = t('customizationOptionsCount', { n: value.itemsCount || 0 });
+        } else if (typeof isComboCategory === 'function' && isComboCategory(value.model)) {
+          detail.textContent = t('badgeComboItem');
+        } else if (value.itemsCount > 0) {
+          detail.textContent = t('categoryItemsCount', { n: value.itemsCount });
+        } else {
+          detail.textContent = t('badgeUncategorized');
+        }
+        subRow.appendChild(detail);
+      } else {
+        if (isSelectedCustom) {
+          const reqText = value.isRequired ? t('requiredOptionBadge') : t('optionalOptionBadge');
+          const typeText = (value.type === 'checkbox' || value.selectionType === 'multiple') ? (t('selectionTypeMultiple') || '多選') : (t('selectionTypeSingle') || '單選');
+          const detail = document.createElement('span');
+          detail.className = 'menu-order-card-detail';
+          detail.textContent = `${reqText} • ${typeText}`;
+          subRow.appendChild(detail);
+        } else {
+          const priceEl = document.createElement('span');
+          priceEl.className = 'menu-order-item-price';
+          priceEl.textContent = '$' + escapeHtml(value.price ?? '');
+          subRow.appendChild(priceEl);
+        }
+      }
+      contentEl.appendChild(subRow);
+      row.appendChild(contentEl);
+
+      // Actions
+      const actionsWrap = document.createElement('div');
+      actionsWrap.className = 'menu-order-card-actions';
+
+      if (kind === 'section' && isSelected) {
+        const openBtn = document.createElement('button');
+        openBtn.type = 'button';
+        openBtn.className = 'btn-opening-indicator';
+        openBtn.innerHTML = `<span>${escapeHtml(t('btnOpeningCategory'))}</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>`;
+        actionsWrap.appendChild(openBtn);
+      }
+
       const move = target => {
         if (isMenuSaving || target < 0 || target >= values.length || target === index) return;
-        const ordered = [...values]; ordered.splice(target, 0, ordered.splice(index, 1)[0]);
-        commit(ordered); markMenuDirty(); renderCategoriesManagerView();
-        const moved = document.getElementById('menu-order-panels').querySelectorAll(`[data-order-kind="${kind}"]`)[target];
-        moved?.querySelector('button:not(:disabled)')?.focus({preventScroll:true});
-        moved?.scrollIntoView?.({block:'nearest'});
+        const ordered = [...values];
+        ordered.splice(target, 0, ordered.splice(index, 1)[0]);
+        commit(ordered);
+        markMenuDirty();
+        renderCategoriesManagerView();
+        const moved = document.getElementById('menu-order-panels')?.querySelectorAll(`[data-order-kind="${kind}"]`)[target];
+        moved?.querySelector('button:not(:disabled)')?.focus({ preventScroll: true });
+        moved?.scrollIntoView?.({ block: 'nearest' });
       };
+
       [-1, 1].forEach(direction => {
-        const button = document.createElement('button'); button.type = 'button'; button.className = 'menu-order-move';
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'menu-order-move';
         button.disabled = index + direction < 0 || index + direction >= values.length;
-        button.setAttribute('aria-label', t(direction < 0 ? 'moveDisplayUp' : 'moveDisplayDown') + ': ' + name);
-        button.setAttribute('data-order-delta',direction);
-        button.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="${direction < 0 ? 'm6 15 6-6 6 6' : 'm6 9 6 6 6-6'}"/></svg>`;
-        button.onclick = () => move(index + direction); row.appendChild(button);
+        button.setAttribute('aria-label', t(direction < 0 ? 'moveDisplayUp' : 'moveDisplayDown') + ': ' + (kind === 'section' ? value.title : (value.title || value.name)));
+        button.setAttribute('data-order-delta', direction);
+        button.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="${direction < 0 ? 'm18 15-6-6-6 6' : 'm6 9 6 6 6-6'}"/></svg>`;
+        button.onclick = (e) => {
+          e?.stopPropagation?.();
+          move(index + direction);
+        };
+        actionsWrap.appendChild(button);
       });
-      row.ondragstart = event => { if(isMenuSaving)return event.preventDefault(); dragged = index; event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain',String(index)); row.classList.add('dragging'); };
-      row.ondragend = () => { dragged = null; row.classList.remove('dragging'); };
-      row.ondragover = event => { if (dragged !== null) { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; } };
+
+      const dragHandle = document.createElement('div');
+      dragHandle.className = 'menu-order-drag-handle';
+      dragHandle.title = t('dragToReorder');
+      dragHandle.innerHTML = `<svg width="14" height="20" viewBox="0 0 16 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="5" r="1.5"/><circle cx="11" cy="5" r="1.5"/><circle cx="5" cy="12" r="1.5"/><circle cx="11" cy="12" r="1.5"/><circle cx="5" cy="19" r="1.5"/><circle cx="11" cy="19" r="1.5"/></svg>`;
+      actionsWrap.appendChild(dragHandle);
+
+      row.appendChild(actionsWrap);
+
+      row.ondragstart = event => {
+        if (isMenuSaving) return event.preventDefault();
+        dragged = index;
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', String(index));
+        row.classList.add('dragging');
+      };
+      row.ondragend = () => {
+        dragged = null;
+        row.classList.remove('dragging');
+      };
+      row.ondragover = event => {
+        if (dragged !== null) {
+          event.preventDefault();
+          event.dataTransfer.dropEffect = 'move';
+        }
+      };
       row.ondrop = event => {
         event.preventDefault();
         if (dragged === null || isMenuSaving) return;
         const source = list.querySelectorAll('[data-order-index]')[dragged];
-        // Invoke the same commit path as the buttons, from the dragged row.
         source?.moveTo(index);
       };
       row.moveTo = move;
       list.appendChild(row);
     });
   };
-  rows(sections, entries, 'section', commitSections);
-  if (!entries.length) empty(sections, 'menuSelectPrompt');
-  const products = displayOrderCategory?.items || [];
-  rows(items, products, 'item', ordered => { displayOrderCategory.items.splice(0, products.length, ...ordered); });
-  if (!products.length) empty(items, 'menuEmptyCategory');
-  [sections, items].forEach((list, i) => { list.scrollTop = positions[i] || 0; });
-  document.getElementById('menu-order-items-title').setAttribute('tabindex','-1');
+
+  rows(sectionsList, entries, 'section', commitSections);
+  if (!entries.length) empty(sectionsList, 'menuSelectPrompt');
+
+  if (isSelectedCustom) {
+    rows(itemsList, orderGroups, 'item', ordered => {
+      ordered.forEach((g, idx) => { g.sortOrder = idx + 1; });
+      const otherGroups = (displayOrderCategory.groups || []).filter(g => g.scope && g.scope !== 'order');
+      displayOrderCategory.groups = [...ordered, ...otherGroups];
+    });
+    if (!orderGroups.length) empty(itemsList, 'menuEmptyCategory');
+  } else {
+    rows(itemsList, products, 'item', ordered => {
+      displayOrderCategory.items.splice(0, products.length, ...ordered);
+    });
+    if (!products.length) empty(itemsList, 'menuEmptyCategory');
+  }
+
+  [sectionsList, itemsList].forEach((list, i) => { list.scrollTop = positions[i] || 0; });
+  document.getElementById('menu-order-items-title')?.setAttribute('tabindex', '-1');
   container.inert = isMenuSaving;
   updateMenuSaveState();
 }
@@ -2761,6 +3042,11 @@ async function saveMenuData(skipConfirm = false) {
     clearMenuDirty();
     if (isCategoryManagerOpen) {
       displayOrderInitial = getMenuDisplayEntries().map(entry => ({ model: entry.model, field: entry.field, value: entry.model[entry.field], hadOrder: Object.hasOwn(entry.model, entry.field), position: entry.position }));
+      try {
+        displayOrderInitialSnapshot = JSON.stringify(currentMenuData);
+      } catch (e) {
+        displayOrderInitialSnapshot = null;
+      }
     }
     try {
       const tid = getTenantIdFromUrl();

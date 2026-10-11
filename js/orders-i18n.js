@@ -432,9 +432,37 @@ const I18N = {
     moveDisplayUp: "上移",
     moveDisplayDown: "下移",
     manageCategoriesTitle: "顯示排序",
-    manageCategoriesSub: "拖曳或使用上下按鈕調整分類與整筆訂單選項群組的位置。選取分類可排序餐點，完成後請儲存變更。",
-    menuOrderSections: "分類與整筆訂單選項群組",
+    manageCategoriesSub: "長按拖曳把手或使用上下箭頭調整分類與全單客製化群組的位置。選取分類可排序餐點，完成後請儲存變更。",
+    menuOrderSections: "分類與全單客製化群組",
     menuOrderItems: "{name}內的餐點",
+    tabletSortTipLabel: "平板排序提示：",
+    tabletSortTipDesc: "長按拖曳把手 ::: 或使用箭頭按鈕 ▲ ▼ 調整順序。點擊左側卡片即可將該分類餐點載入右側。",
+    posTouchModeBadge: "POS 觸控模式",
+    menuSortBreadcrumbMenu: "菜單管理",
+    menuSortBreadcrumbDineTakeaway: "內用 / 外帶",
+    statusAutoSaved: "已自動儲存",
+    statusUnsaved: "未儲存變更",
+    btnRevertSort: "復原",
+    btnSaveSortChanges: "儲存變更",
+    sortColSectionsTitle: "分類與全單客製化順序",
+    sortColClickToView: "點擊查看餐點",
+    badgeScopeOrder: "全單",
+    badgeFoodItem: "餐點",
+    badgeComboItem: "套餐搭配餐點",
+    badgeUncategorized: "未分類餐點",
+    badgeSelectedState: "已選取",
+    btnOpeningCategory: "正在開啟",
+    customizationOptionsCount: "{n} 項客製化",
+    categoryItemsCount: "{n} 道餐點",
+    menuOrderCustomizationsIn: "客製化選項：{name}",
+    menuOrderItemsIn: "分類內餐點：{name}",
+    sortColItemsSubtitle: "設定顧客先看到的餐點順序",
+    nItemsVisible: "{n} 道餐點顯示",
+    nCustomizationsVisible: "{n} 項客製化顯示",
+    dragToReorder: "拖曳以調整順序",
+    wholeOrderMasterTitle: "口味與客製化選擇",
+    requiredOptionBadge: "必選",
+    optionalOptionBadge: "可選",
     btnCloseManager: "關閉",
     btnAddCategory: "新增分類",
     btnMenuAddCategory: "新增分類",
@@ -1206,6 +1234,34 @@ const I18N = {
     manageCategoriesSub: "Kéo thả hoặc dùng nút lên/xuống để đặt vị trí phân loại và từng nhóm tùy chọn toàn đơn. Chọn phân loại để sắp xếp món, rồi bấm Lưu thay đổi khi hoàn tất.",
     menuOrderSections: "Phân loại và nhóm tùy chọn toàn đơn",
     menuOrderItems: "Món trong {name}",
+    tabletSortTipLabel: "Mẹo sắp xếp cho Tablet:",
+    tabletSortTipDesc: "Chạm và giữ thanh kéo ::: hoặc dùng các nút mũi tên ▲ ▼ để định vị món. Chạm vào thẻ bên trái để trực tiếp tải danh sách món tương ứng sang bên phải.",
+    posTouchModeBadge: "Chế độ cảm ứng POS",
+    menuSortBreadcrumbMenu: "Quản lý thực đơn",
+    menuSortBreadcrumbDineTakeaway: "Bàn / Mang đi",
+    statusAutoSaved: "Đã tự động lưu",
+    statusUnsaved: "Chưa lưu thay đổi",
+    btnRevertSort: "Khôi phục",
+    btnSaveSortChanges: "Lưu thay đổi",
+    sortColSectionsTitle: "THỨ TỰ PHÂN LOẠI & TÙY CHỌN",
+    sortColClickToView: "Bấm để xem món",
+    badgeScopeOrder: "Toàn đơn",
+    badgeFoodItem: "Món ăn",
+    badgeComboItem: "Món ăn kèm combo",
+    badgeUncategorized: "Chưa phân loại cụ thể",
+    badgeSelectedState: "Đang chọn",
+    btnOpeningCategory: "Đang mở",
+    customizationOptionsCount: "{n} mục tùy chọn",
+    categoryItemsCount: "{n} món",
+    menuOrderCustomizationsIn: "TÙY CHỌN TRONG: {name}",
+    menuOrderItemsIn: "MÓN TRONG PHÂN LOẠI: {name}",
+    sortColItemsSubtitle: "Sắp xếp thứ tự hiển thị khách hàng nhìn thấy trước",
+    nItemsVisible: "{n} món hiển thị",
+    nCustomizationsVisible: "{n} mục tùy chọn hiển thị",
+    dragToReorder: "Kéo để sắp xếp",
+    wholeOrderMasterTitle: "Tùy chọn khẩu vị",
+    requiredOptionBadge: "Bắt buộc",
+    optionalOptionBadge: "Tùy chọn",
     btnCloseManager: "Đóng",
     btnAddCategory: "Thêm phân loại",
     btnMenuAddCategory: "Thêm phân loại",
@@ -2391,6 +2447,24 @@ function applyLanguageToDOM() {
     const label = btnManageCats.querySelector('span');
     if (label) label.innerText = dict.btnManageCategories;
   }
+  const menuOrderTitle = document.getElementById("menu-order-title");
+  if (menuOrderTitle) menuOrderTitle.textContent = dict.manageCategoriesTitle || "Sắp xếp hiển thị";
+  const btnMenuOrderBackText = document.getElementById("btn-menu-order-back-text");
+  if (btnMenuOrderBackText) btnMenuOrderBackText.textContent = dict.btnBack || "Quay lại";
+  const tabletTipLabel = document.getElementById("tablet-tip-label");
+  if (tabletTipLabel) tabletTipLabel.textContent = dict.tabletSortTipLabel || "Mẹo sắp xếp cho Tablet:";
+  const tabletTipDesc = document.getElementById("tablet-tip-desc");
+  if (tabletTipDesc) tabletTipDesc.textContent = dict.tabletSortTipDesc || "";
+  const tabletModeBadge = document.getElementById("tablet-mode-badge");
+  if (tabletModeBadge) tabletModeBadge.textContent = dict.posTouchModeBadge || "Chế độ cảm ứng POS";
+  const btnMenuOrderRevertText = document.getElementById("btn-menu-order-revert-text");
+  if (btnMenuOrderRevertText) btnMenuOrderRevertText.textContent = dict.btnRevertSort || "Khôi phục";
+  const btnMenuOrderSaveText = document.getElementById("btn-menu-order-save-text");
+  if (btnMenuOrderSaveText) btnMenuOrderSaveText.textContent = dict.btnSaveSortChanges || "Lưu thay đổi";
+  const bcMgmt = document.getElementById("menu-order-bc-mgmt");
+  if (bcMgmt) bcMgmt.textContent = dict.menuSortBreadcrumbMenu || "Quản lý thực đơn";
+  const bcDining = document.getElementById("menu-order-bc-dining");
+  if (bcDining) bcDining.textContent = dict.menuSortBreadcrumbDineTakeaway || "Bàn / Mang đi";
   const btnManageClose = document.getElementById("btn-menu-manage-close");
   if (btnManageClose) btnManageClose.innerText = dict.btnCloseManager;
   const btnAddCatTop = document.getElementById("btn-menu-add-cat-top");
