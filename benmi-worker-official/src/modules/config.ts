@@ -4,7 +4,8 @@ import { getTenantId } from './menu';
 import { TenantContext, tenantHasFeature } from '../types/tenant';
 import { invalidateBootstrapCache, parseOperatingHours } from './bootstrap';
 import { invalidateMarketplaceCache } from './marketplace';
-import { customerOrderConfig, OrderDomainRow } from '../utils/order-domain';
+import { customerOrderConfig } from '../utils/order-domain';
+import { createTenantRepository } from '../repositories/tenant.repository';
 
 export async function getConfig(
   request: Request,
@@ -12,88 +13,65 @@ export async function getConfig(
   tenantCtx?: TenantContext | null
 ): Promise<Response> {
   const tenantId = tenantCtx?.tenantId || getTenantId(request);
+  const tenantRepo = createTenantRepository(env.DB, env.ORDER_STATE, env);
 
-  let operatingHours: any = null;
-  let allowScheduledPickup = true;
-  let allowDineIn = true;
-  let storeStatus = 'open';
-  let liffId: string | null = null;
-  let announcement: string | null = null;
-  let logoUrl: string | null = null;
-  let storeAddress: string | null = null;
-  let features: string[] = [];
-  let domainRow: OrderDomainRow | null = null;
-
-  // 1. Read exclusively from D1 Database
-  if (env.DB) {
-    try {
-      const row = await env.DB.prepare(
-        "SELECT operating_hours, allow_scheduled_pickup, allow_dine_in, store_status, liff_id, logo_url, store_address, announcement, features, customer_order_domain, legacy_liff_endpoint_url FROM tenant_config WHERE tenant_id = ? AND is_active = 1"
-      ).bind(tenantId).first<any>();
-
-      if (!row) return json({ error: 'Tenant not found' }, 404, { 'Cache-Control': 'no-store' });
-      domainRow = row;
-      if (row) {
-        operatingHours = parseOperatingHours(row.operating_hours, tenantId);
-        if (row.allow_scheduled_pickup !== undefined && row.allow_scheduled_pickup !== null) {
-          allowScheduledPickup = Boolean(row.allow_scheduled_pickup);
-        }
-        if (row.allow_dine_in !== undefined && row.allow_dine_in !== null) {
-          allowDineIn = Boolean(row.allow_dine_in);
-        }
-        if (row.store_status) {
-          storeStatus = row.store_status;
-        }
-        if (row.liff_id) {
-          liffId = row.liff_id;
-        }
-        if (row.logo_url) {
-          logoUrl = row.logo_url;
-        }
-        if (row.store_address) {
-          storeAddress = row.store_address;
-        }
-        if (row.announcement !== undefined) {
-          announcement = row.announcement;
-        }
-        try {
-          if (row.features) {
-            features = typeof row.features === 'string' ? JSON.parse(row.features) : row.features;
-          }
-        } catch (e) {
-          features = [];
-        }
-      }
-    } catch (e) {
-      console.error('[getConfig] D1 configuration unavailable');
-      return json({ error: 'Tenant configuration unavailable' }, 503, { 'Cache-Control': 'no-store' });
-    }
+  let domainRow;
+  try {
+    domainRow = await tenantRepo.getTenantConfigRow(tenantId);
+  } catch (e) {
+    console.error('[getConfig] D1 configuration unavailable');
+    return json({ error: 'Tenant configuration unavailable' }, 503, { 'Cache-Control': 'no-store' });
   }
 
-  if (!domainRow) return json({ error: 'Tenant configuration unavailable' }, 503, { 'Cache-Control': 'no-store' });
+  if (!domainRow) {
+    return json({ error: 'Tenant not found' }, 404, { 'Cache-Control': 'no-store' });
+  }
 
+  let operatingHours = parseOperatingHours(domainRow.operating_hours, tenantId);
   if (!operatingHours) {
     operatingHours = parseOperatingHours(null, tenantId);
+  }
+
+  let allowScheduledPickup = true;
+  if (domainRow.allow_scheduled_pickup !== undefined && domainRow.allow_scheduled_pickup !== null) {
+    allowScheduledPickup = Boolean(domainRow.allow_scheduled_pickup);
+  }
+
+  let allowDineIn = true;
+  if (domainRow.allow_dine_in !== undefined && domainRow.allow_dine_in !== null) {
+    allowDineIn = Boolean(domainRow.allow_dine_in);
+  }
+
+  let features: string[] = [];
+  try {
+    if (domainRow.features) {
+      features = typeof domainRow.features === 'string' ? JSON.parse(domainRow.features) : domainRow.features;
+    }
+  } catch {
+    features = [];
   }
 
   const finalFeatures = Array.isArray(features) && features.length > 0 ? features : (tenantCtx?.features || []);
 
   let orderConfig;
-  try { orderConfig = customerOrderConfig(tenantId, domainRow, request.url); }
-  catch { return json({ error: 'Invalid tenant endpoint configuration' }, 503, { 'Cache-Control': 'no-store' }); }
+  try {
+    orderConfig = customerOrderConfig(tenantId, domainRow, request.url);
+  } catch {
+    return json({ error: 'Invalid tenant endpoint configuration' }, 503, { 'Cache-Control': 'no-store' });
+  }
 
   return json({
     tenantId,
-    liffId: liffId || null,
+    liffId: domainRow.liff_id || null,
     ...orderConfig,
-    operatingHours: operatingHours,
-    allowScheduledPickup: allowScheduledPickup,
-    allowDineIn: allowDineIn,
+    operatingHours,
+    allowScheduledPickup,
+    allowDineIn,
     features: finalFeatures,
-    storeStatus: storeStatus || tenantCtx?.storeStatus || 'open',
-    logoUrl: logoUrl || tenantCtx?.logoUrl || null,
-    storeAddress: storeAddress || tenantCtx?.storeAddress || null,
-    announcement: announcement !== null ? announcement : (tenantCtx?.announcement || null)
+    storeStatus: domainRow.store_status || tenantCtx?.storeStatus || 'open',
+    logoUrl: domainRow.logo_url || tenantCtx?.logoUrl || null,
+    storeAddress: domainRow.store_address || tenantCtx?.storeAddress || null,
+    announcement: domainRow.announcement !== undefined && domainRow.announcement !== null ? domainRow.announcement : (tenantCtx?.announcement || null)
   }, 200, { 'Cache-Control': 'no-store' });
 }
 
@@ -105,90 +83,36 @@ export async function updateConfig(
   try {
     const tenantId = tenantCtx?.tenantId || getTenantId(request);
     const payload: any = await request.json();
+    const tenantRepo = createTenantRepository(env.DB, env.ORDER_STATE, env);
 
-    const opHoursStr = payload.operatingHours !== undefined
-      ? (typeof payload.operatingHours === 'string' ? payload.operatingHours : JSON.stringify(payload.operatingHours))
-      : null;
-    const allowPickupInt = payload.allowScheduledPickup !== undefined
-      ? (payload.allowScheduledPickup ? 1 : 0)
-      : null;
     const hasDineInFeature = tenantCtx ? tenantHasFeature(tenantCtx, 'dine_in') : true;
-    let allowDineInInt = payload.allowDineIn !== undefined
-      ? (payload.allowDineIn ? 1 : 0)
-      : null;
-
-    // Guard: Unsubscribed tenant cannot enable allowDineIn
-    if (allowDineInInt === 1 && !hasDineInFeature) {
+    let allowDineInVal = payload.allowDineIn !== undefined ? payload.allowDineIn : null;
+    if (allowDineInVal && !hasDineInFeature) {
       console.warn(`[updateConfig] Tenant ${tenantId} tried to enable allowDineIn without 'dine_in' feature.`);
-      allowDineInInt = 0;
+      allowDineInVal = false;
     }
 
-    const storeStatusVal = payload.storeStatus !== undefined ? payload.storeStatus : null;
-    const liffIdVal = payload.liffId !== undefined ? payload.liffId : null;
+    const brandName = tenantCtx?.brandName || (tenantId === 'benmi' ? 'Benmi 越式法國麵包' : tenantId);
 
-    const logoUrlVal = payload.logoUrl !== undefined ? payload.logoUrl : null;
-    const storeAddressVal = payload.storeAddress !== undefined ? payload.storeAddress : null;
-    const announcementVal = payload.announcement !== undefined ? payload.announcement : null;
-    const featuresVal = payload.features !== undefined
-      ? (typeof payload.features === 'string' ? payload.features : JSON.stringify(payload.features))
-      : null;
+    await tenantRepo.updateTenantConfig(tenantId, {
+      operatingHours: payload.operatingHours,
+      allowScheduledPickup: payload.allowScheduledPickup,
+      allowDineIn: allowDineInVal,
+      storeStatus: payload.storeStatus,
+      liffId: payload.liffId,
+      logoUrl: payload.logoUrl,
+      storeAddress: payload.storeAddress,
+      announcement: payload.announcement,
+      features: payload.features,
+      brandName
+    });
 
-    // 1. Update D1 database
-    if (env.DB) {
-      const brandName = tenantCtx?.brandName || (tenantId === 'benmi' ? 'Benmi 越式法國麵包' : tenantId);
-
-      await env.DB.prepare(`
-        INSERT INTO tenant_config (tenant_id, brand_name, operating_hours, allow_scheduled_pickup, allow_dine_in, store_status, liff_id, logo_url, store_address, announcement, features, updated_at)
-        VALUES (?, ?, ?, COALESCE(?, 1), COALESCE(?, 1), COALESCE(?, 'open'), ?, ?, ?, ?, COALESCE(?, '[]'), CURRENT_TIMESTAMP)
-        ON CONFLICT(tenant_id) DO UPDATE SET
-          operating_hours = CASE WHEN ? IS NOT NULL THEN ? ELSE tenant_config.operating_hours END,
-          allow_scheduled_pickup = CASE WHEN ? IS NOT NULL THEN ? ELSE tenant_config.allow_scheduled_pickup END,
-          allow_dine_in = CASE WHEN ? IS NOT NULL THEN ? ELSE tenant_config.allow_dine_in END,
-          store_status = CASE WHEN ? IS NOT NULL THEN ? ELSE tenant_config.store_status END,
-          liff_id = CASE WHEN ? IS NOT NULL THEN ? ELSE tenant_config.liff_id END,
-          logo_url = CASE WHEN ? IS NOT NULL THEN ? ELSE tenant_config.logo_url END,
-          store_address = CASE WHEN ? IS NOT NULL THEN ? ELSE tenant_config.store_address END,
-          announcement = CASE WHEN ? IS NOT NULL THEN ? ELSE tenant_config.announcement END,
-          features = CASE WHEN ? IS NOT NULL THEN ? ELSE tenant_config.features END,
-          updated_at = CURRENT_TIMESTAMP
-      `).bind(
-        tenantId,
-        brandName,
-        opHoursStr,
-        allowPickupInt,
-        allowDineInInt,
-        storeStatusVal,
-        liffIdVal,
-        logoUrlVal,
-        storeAddressVal,
-        announcementVal,
-        featuresVal,
-        opHoursStr, opHoursStr,
-        allowPickupInt, allowPickupInt,
-        allowDineInInt, allowDineInInt,
-        storeStatusVal, storeStatusVal,
-        liffIdVal, liffIdVal,
-        logoUrlVal, logoUrlVal,
-        storeAddressVal, storeAddressVal,
-        announcementVal, announcementVal,
-        featuresVal, featuresVal
-      ).run();
-    }
-
-    // 2. Invalidate memory/KV cache in tenant context so next request gets fresh config immediately
-    if (env.ORDER_STATE) {
-      try {
-        await env.ORDER_STATE.delete(`tenant:${tenantId}:config_cache`);
-        await invalidateBootstrapCache(tenantId, env);
-        await invalidateMarketplaceCache(env);
-      } catch (cacheErr) {
-        console.error(`[updateConfig] Cache invalidation failed for tenant ${tenantId}:`, cacheErr);
-      }
-    }
+    await invalidateBootstrapCache(tenantId, env);
+    await invalidateMarketplaceCache(env);
 
     return json({ success: true });
   } catch (e: any) {
-    console.error("[updateConfig] Error:", e);
+    console.error('[updateConfig] Error:', e);
     return json({ error: e.message }, 500);
   }
 }

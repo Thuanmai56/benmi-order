@@ -2,8 +2,8 @@ import { Env } from '../types/env';
 import { json } from '../utils/http';
 import { invalidateBootstrapCache } from './bootstrap';
 import { invalidateMarketplaceCache } from './marketplace';
-
 import { customerOrderConfig, validateLegacyEndpoint, OrderDomainRow } from '../utils/order-domain';
+import { createTenantRepository } from '../repositories/tenant.repository';
 
 export async function updateOrderDomain(request: Request, env: Env, tenantId: string): Promise<Response> {
   const noStore = { 'Cache-Control': 'no-store' };
@@ -15,8 +15,8 @@ export async function updateOrderDomain(request: Request, env: Env, tenantId: st
     return json({ error: 'customerOrderDomain, expectedCustomerOrderDomain and expectedLiffId are required' }, 400, noStore);
   }
   try {
-    const row = await env.DB.prepare('SELECT liff_id, customer_order_domain, legacy_liff_endpoint_url FROM tenant_config WHERE tenant_id = ? AND is_active = 1')
-      .bind(tenantId).first<OrderDomainRow>();
+    const tenantRepo = createTenantRepository(env.DB, env.ORDER_STATE, env);
+    const row = await tenantRepo.getOrderDomainRow(tenantId);
     if (!row) return json({ error: 'Tenant not found' }, 404, noStore);
     if (row.liff_id !== payload.expectedLiffId || row.customer_order_domain !== payload.expectedCustomerOrderDomain) {
       return json({ error: 'Order domain or LIFF ID changed; reload configuration' }, 409, noStore);
@@ -30,15 +30,25 @@ export async function updateOrderDomain(request: Request, env: Env, tenantId: st
     if (payload.customerOrderDomain === 'blabfood' && !legacyEndpoint) {
       return json({ error: 'Save legacyLiffEndpointUrl from LINE Console before activation' }, 400, noStore);
     }
-    const result = await env.DB.prepare(`UPDATE tenant_config SET customer_order_domain = ?, legacy_liff_endpoint_url = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE tenant_id = ? AND customer_order_domain = ? AND liff_id = ?
-      AND legacy_liff_endpoint_url IS ? AND is_active = 1`)
-      .bind(payload.customerOrderDomain, legacyEndpoint || null, tenantId, payload.expectedCustomerOrderDomain, payload.expectedLiffId, row.legacy_liff_endpoint_url || null).run();
-    if (!result.meta.changes) return json({ error: 'Configuration changed; reload and retry' }, 409, noStore);
+
+    const changed = await tenantRepo.updateOrderDomain(
+      tenantId,
+      payload.customerOrderDomain,
+      legacyEndpoint || null,
+      payload.expectedCustomerOrderDomain,
+      payload.expectedLiffId,
+      row.legacy_liff_endpoint_url || null
+    );
+    if (!changed) return json({ error: 'Configuration changed; reload and retry' }, 409, noStore);
+
     await invalidateBootstrapCache(tenantId, env);
     await invalidateMarketplaceCache(env);
-    return json({ success: true, tenantId, liffId: row.liff_id,
-      ...customerOrderConfig(tenantId, { ...row, customer_order_domain: payload.customerOrderDomain, legacy_liff_endpoint_url: legacyEndpoint }, request.url) }, 200, noStore);
+    return json({
+      success: true,
+      tenantId,
+      liffId: row.liff_id,
+      ...customerOrderConfig(tenantId, { ...row, customer_order_domain: payload.customerOrderDomain, legacy_liff_endpoint_url: legacyEndpoint }, request.url)
+    }, 200, noStore);
   } catch {
     return json({ error: 'Order domain configuration unavailable' }, 503, noStore);
   }
