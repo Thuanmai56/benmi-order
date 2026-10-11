@@ -103,3 +103,31 @@ test('switching menu modes restores product header controls', () => {
   assert.equal(app.elements['btn-option-add'].hidden, true);
   assert.equal(app.elements['btn-option-group-edit'].hidden, true);
 });
+
+test('product card surface and keyboard open settings without intercepting nested controls', () => {
+  const app = setup(), opens = [];
+  app.context.openItemDetailModal = (...args) => opens.push(args);
+  const card = {classList:{contains:()=>false}};
+  const event = (target = card, props = {}) => ({type:'click',currentTarget:card,target,defaultPrevented:false,preventDefault(){this.defaultPrevented=true;},...props});
+  card.closest = () => null;
+  app.context.openMenuItemFromCard(event(),0,1);
+  for (const type of ['button','input','select','textarea','label','drag-handle']) {
+    app.context.openMenuItemFromCard(event({closest:()=>({type})}),0,1);
+  }
+  const enter = event(card,{type:'keydown',key:'Enter'}); app.context.openMenuItemFromCard(enter,0,1);
+  assert.equal(enter.defaultPrevented,true);
+  app.context.openMenuItemFromCard(event(card,{type:'keydown',key:' '}),0,1);
+  app.context.openMenuItemFromCard(event({},{type:'keydown',key:'Enter'}),0,1);
+  app.context.openMenuItemFromCard(event(card,{type:'keydown',key:'ArrowDown'}),0,1);
+  app.context.openMenuItemFromCard(event(card,{type:'keydown',key:'Enter',repeat:true}),0,1);
+  card.classList.contains = () => true; app.context.openMenuItemFromCard(event(),0,1);
+  assert.deepEqual(opens,[[0,1],[0,1],[0,1]]);
+});
+
+test('item options button and product settings route to distinct unified drawer entries', () => {
+  const app = setup(), opens = [];
+  app.context.window.UnifiedMenu = {enabled:true,product:(...args)=>opens.push(args)};
+  app.context.openItemModifiersModal(0,1);
+  app.context.openItemDetailModal(0,1);
+  assert.deepEqual(opens,[[0,1,'options'],[0,1]]);
+});

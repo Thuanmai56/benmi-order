@@ -1298,6 +1298,17 @@ function duplicateMenuItemAt(cIdx, iIdx) {
 }
 window.duplicateMenuItemAt = duplicateMenuItemAt;
 
+function openMenuItemFromCard(event, cIdx, iIdx) {
+  if (event.defaultPrevented || event.currentTarget.classList.contains("dragging")) return;
+  if (event.type === "keydown") {
+    if (event.target !== event.currentTarget || event.repeat || event.isComposing || !["Enter", " "].includes(event.key)) return;
+    event.preventDefault();
+  } else if (event.target.closest('button,input,select,textarea,a,label,summary,[contenteditable],.menu-item-drag-handle')) {
+    return;
+  }
+  openItemDetailModal(cIdx, iIdx);
+}
+
 function renderMenuCategoryEditor(index) {
   if (window.UnifiedMenu?.workspace()) return;
   isCategoryManagerOpen = false;
@@ -1467,8 +1478,15 @@ function renderMenuCategoryEditor(index) {
   cat.items.forEach((item, iIdx) => {
     const row = document.createElement("div");
     row.className = "menu-item-row-card menu-catalog-row";
+    row.id = `menu-item-card-${index}-${iIdx}`;
     row.draggable = true;
     row.setAttribute("data-item-index", iIdx);
+    row.setAttribute("tabindex", "0");
+    row.setAttribute("role", "group");
+    row.setAttribute("aria-label", `${t("itemDetailTitle")}: ${item.name}`);
+    row.setAttribute("aria-keyshortcuts", "Enter Space");
+    row.addEventListener("click", (event) => openMenuItemFromCard(event, index, iIdx));
+    row.addEventListener("keydown", (event) => openMenuItemFromCard(event, index, iIdx));
 
     row.addEventListener("dragstart", (e) => {
       syncMenuDataFromDOM();
@@ -1550,7 +1568,7 @@ function renderMenuCategoryEditor(index) {
       </div>
       <div class="menu-item-meta-col">
         ${badgesHtml}
-        <button type="button" class="menu-item-options-btn" onclick="openItemModifiersModal(${index}, ${iIdx})">${escapeHtml(t('btnItemModifiers'))}</button>
+        <button type="button" id="menu-item-options-${index}-${iIdx}" class="menu-item-options-btn" onclick="openItemModifiersModal(${index}, ${iIdx})">${escapeHtml(t('btnItemModifiers'))}</button>
         ${hasBundle && !window.UnifiedMenu?.enabled ? `<button type="button" class="menu-item-options-btn" onclick="openBundleEditorModal(${index}, ${iIdx})">${escapeHtml(t('menuBundleSettings'))}</button>` : ''}
       </div>
       <button type="button" class="menu-item-stock-toggle ${item.isOos ? 'is-oos' : 'is-instock'}"
@@ -4179,7 +4197,7 @@ let itemModifiersSnapshotBeforeEdit = null;
 let itemCustomizationCategoriesSnapshotBeforeEdit = null;
 
 function openItemModifiersModal(cIdx, iIdx) {
-  if (window.UnifiedMenu?.enabled) return window.UnifiedMenu.product(cIdx, iIdx);
+  if (window.UnifiedMenu?.enabled) return window.UnifiedMenu.product(cIdx, iIdx, "options");
   syncMenuDataFromDOM();
   if (!currentMenuData || !currentMenuData[cIdx] || !currentMenuData[cIdx].items || !currentMenuData[cIdx].items[iIdx]) return;
   currentItemModifiersCidx = cIdx;

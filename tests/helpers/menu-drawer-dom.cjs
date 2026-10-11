@@ -102,12 +102,23 @@ async function setup({ included = false, source = false, lang = 'vi' } = {}) {
     canonicalMenuSnapshot: JSON.stringify, activeCategoryIndex:0,
     currentMenuData:[{id:'food',databaseId:'food',items:[{id:'meal',name:'Bản nháp khác',price:999}],groups:[{id:'drinks',canonicalId:'drinks',title:'Chọn đồ uống'}]}],
     savedMenuSnapshot: JSON.stringify([{id:'food',databaseId:'food',items:[{id:'meal',name:'Bánh mì',price:100}],groups:[{id:'drinks',canonicalId:'drinks',title:'Chọn đồ uống'}]}]),
-    fetch: async (_, request) => {
+    fetch: async (url, request) => {
       if (!request) return {ok:true,json:async()=>structuredClone(catalog)};
       const payload = JSON.parse(request.body); posts.push(payload);
       const queued = responses.shift(); if (queued) return queued;
-      const next = structuredClone(catalog), index = next.groups.findIndex((g) => g.id === payload.id);
-      next.groups[index] = {...payload,revision:payload.revision+1}; catalog = next;
+      const next = structuredClone(catalog);
+      if (url.includes('/api/menu/product?')) {
+        const index = next.products.findIndex((p) => p.id === payload.id);
+        next.products[index] = {...next.products[index],name:payload.name,price:payload.price,
+          category_id:payload.categoryId,badge_text:payload.badgeText,is_recommended:payload.isRecommended,
+          image_key:payload.imageKey,menu_revision:payload.revision+1};
+        next.links = next.links.filter((l) => l.itemId !== payload.id)
+          .concat(payload.links.map((l) => ({...l,itemId:payload.id})));
+      } else {
+        const index = next.groups.findIndex((g) => g.id === payload.id);
+        next.groups[index] = {...payload,revision:payload.revision+1};
+      }
+      catalog = next;
       return {ok:true,json:async()=>({catalog:structuredClone(catalog)})};
     },
   };

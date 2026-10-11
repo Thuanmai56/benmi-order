@@ -3,6 +3,8 @@
   const translations = {
     vi: {
       ugProduct: "Chỉnh sửa món",
+      ugProductOptions: "Tùy chọn món",
+      ugSaveProductOptions: "Lưu tùy chọn",
       ugNewProduct: "Thêm món",
       ugGroup: "Chỉnh sửa nhóm",
       ugNewGroup: "Thêm nhóm tùy chọn",
@@ -99,6 +101,8 @@
     },
     "zh-TW": {
       ugProduct: "編輯餐點",
+      ugProductOptions: "餐點選項",
+      ugSaveProductOptions: "儲存餐點選項",
       ugNewProduct: "新增餐點",
       ugGroup: "編輯選項群組",
       ugNewGroup: "新增選項群組",
@@ -474,6 +478,7 @@
       kind,
       draft,
       original: entitySnapshot(kind, draft),
+      optionsOnly: route.page === "product-options",
       stack: [],
       route: prepareRoute(route),
       busy: false,
@@ -543,6 +548,17 @@
     state.error = "";
     render(prev.scroll);
   }
+  function productGroupSection(d) {
+    const groups = productGroups(d);
+    return `<section><div class="ug-section-title"><h3>${esc(tr("ugGroups"))}</h3>${btn("groups", "ugAddGroup")}</div><div class="ug-list">${groups
+      .map(({ group: g, link, inherited }) => row(
+        "subset",
+        g.name,
+        `${rule(g)} · ${link.optionIds ? `${options(g).filter((o) => link.optionIds.includes(o.id)).length}/${options(g).length}` : options(g).length} ${tr("ugOptions").toLowerCase()}${inherited ? " · " + tr("ugInherited") : ""}${insufficient(g, link) ? " · " + tr("ugInsufficient") : ""}`,
+        `data-id="${esc(g.id)}"`,
+      ))
+      .join("") || `<p class="ug-muted">${esc(tr("ugNoGroups"))}</p>`}</div></section>`;
+  }
   function render(scroll) {
     if (!state) return;
     if (scroll === undefined) rememberView();
@@ -559,22 +575,12 @@
             `<option value="${esc(c.id)}" ${d.categoryId === c.id ? "selected" : ""}>${esc(c.name)}</option>`,
         )
         .join("");
-      body = `<section class="ug-photo"><div class="ug-photo-frame"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 6-6 4 4 3-3 5 5"/></svg><img ${d.imageKey === "" && !d.imageDraft ? "hidden" : ""} src="${esc(d.imageDraft || `${WORKER_BASE}/api/image?tenant_id=${encodeURIComponent(getTenantIdFromUrl())}&name=${encodeURIComponent(d.imageKey || d.name)}`)}" alt="" onerror="this.hidden=true"></div><div><label class="ug-upload">${esc(tr("ugPhoto"))}<input type="file" accept="image/*" data-field="photo"></label>${btn("remove-photo", "ugRemovePhoto")}</div></section>${field("name", "ugName", d.name)}<label class="ug-field"><span>${esc(tr("ugCategory"))}</span><select data-field="categoryId">${catOptions}</select></label>${field("price", "ugPrice", d.price, "number", 'min="0" step="0.01"')}${field("badgeText", "ugBadge", d.badgeText)}${toggle("isRecommended", "ugRecommended", d.isRecommended)}<section><div class="ug-section-title"><h3>${esc(tr("ugGroups"))}</h3>${btn("groups", "ugAddGroup")}</div><div class="ug-list">`;
-      const groups = productGroups(d);
-      body +=
-        groups
-          .map(({ group: g, link, inherited }) =>
-            row(
-              "subset",
-              g.name,
-              `${rule(g)} · ${link.optionIds ? `${options(g).filter((o) => link.optionIds.includes(o.id)).length}/${options(g).length}` : options(g).length} ${tr("ugOptions").toLowerCase()}${inherited ? " · " + tr("ugInherited") : ""}${insufficient(g, link) ? " · " + tr("ugInsufficient") : ""}`,
-              `data-id="${esc(g.id)}"`,
-            ),
-          )
-          .join("") || `<p class="ug-muted">${esc(tr("ugEmpty"))}</p>`;
-      body +=
-        "</div></section>" +
+      body = `<section class="ug-photo"><div class="ug-photo-frame"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 6-6 4 4 3-3 5 5"/></svg><img ${d.imageKey === "" && !d.imageDraft ? "hidden" : ""} src="${esc(d.imageDraft || `${WORKER_BASE}/api/image?tenant_id=${encodeURIComponent(getTenantIdFromUrl())}&name=${encodeURIComponent(d.imageKey || d.name)}`)}" alt="" onerror="this.hidden=true"></div><div><label class="ug-upload">${esc(tr("ugPhoto"))}<input type="file" accept="image/*" data-field="photo"></label>${btn("remove-photo", "ugRemovePhoto")}</div></section>${field("name", "ugName", d.name)}<label class="ug-field"><span>${esc(tr("ugCategory"))}</span><select data-field="categoryId">${catOptions}</select></label>${field("price", "ugPrice", d.price, "number", 'min="0" step="0.01"')}${field("badgeText", "ugBadge", d.badgeText)}${toggle("isRecommended", "ugRecommended", d.isRecommended)}`;
+      body += productGroupSection(d) +
         (!d.isNew ? btn("delete", "ugDelete", 'class="ug-danger"') : "");
+    } else if (r.page === "product-options") {
+      title = d.name;
+      body = productGroupSection(d);
     } else if (r.page === "group") {
       const [min, max] = selectionRules(d);
       body = `<section><h3>${esc(tr("ugDetails"))}</h3>${field("name", "ugName", d.name)}</section><section><h3>${esc(tr("ugRules"))}</h3><div class="ug-list">${toggle("required", "ugRequired", min > 0)}${stepper("minSelection", "ugMin", min)}${stepper("maxSelection", "ugMax", max, 1)}</div><div class="ug-list">${toggle("allowRepeats", "ugRepeat", d.allowRepeats)}${toggle("included", "ugIncluded", d.included)}</div></section><section><div class="ug-section-title"><h3>${esc(tr("ugOptions"))} (${options(d).length})</h3>${btn("add-option", "ugAdd")}</div><div class="ug-list">${
@@ -677,12 +683,13 @@
           : btn("remove-option", "ugRemoveOption", 'class="ug-option-remove"') : "");
     }
     el.querySelector("header").innerHTML =
-      `${state.stack.length && r.page !== "option" ? btn("back", "ugBack") : ""}<h2 id="ug-title" tabindex="-1">${esc(title)}</h2>${btn("close", "ugClose", 'class="ug-close"')}`;
+      `${state.stack.length && r.page !== "option" ? btn("back", "ugBack") : ""}<h2 id="ug-title" tabindex="-1">${r.page === "product-options" ? `<small class="ug-product-options-label">${esc(tr("ugProductOptions"))}</small>` : ""}${esc(title)}</h2>${btn("close", "ugClose", 'class="ug-close"')}`;
     el.querySelector(".ug-body").classList.toggle("ug-option-body", r.page === "option");
+    el.querySelector(".ug-body").classList.toggle("ug-product-options-body", r.page === "product-options");
     el.querySelector(".ug-body").innerHTML = body;
     el.querySelector(".ug-body").inert = state.busy;
     el.querySelector("footer").innerHTML =
-      `<p class="ug-error" role="alert">${esc(state.error)}</p>${state.kind === "group" && !state.stack.length ? `<p class="ug-muted">${esc(tr("ugAffected", { count: affected(d) }))}</p>` : ""}${btn(state.stack.length ? "apply" : "save", state.busy ? "ugSaving" : state.stack.length ? "ugApply" : r.direct ? "ugSaveOption" : state.kind === "product" ? "ugSaveProduct" : "ugSaveGroup", `class="ug-primary" ${state.busy ? "disabled" : ""}`)}`;
+      `<p class="ug-error" role="alert">${esc(state.error)}</p>${state.kind === "group" && !state.stack.length ? `<p class="ug-muted">${esc(tr("ugAffected", { count: affected(d) }))}</p>` : ""}${btn(state.stack.length ? "apply" : "save", state.busy ? "ugSaving" : state.stack.length ? "ugApply" : r.direct ? "ugSaveOption" : state.optionsOnly ? "ugSaveProductOptions" : state.kind === "product" ? "ugSaveProduct" : "ugSaveGroup", `class="ug-primary" ${state.busy ? "disabled" : ""}`)}`;
     if (r.page === "group" && d.included)
       el.querySelectorAll(
         '[data-field="required"],[data-field="minSelection"],[data-field="maxSelection"],[data-field="allowRepeats"],.ug-stepper button',
@@ -1063,7 +1070,7 @@
           throw new Error("IMAGE_SAVE_FAILED");
         }
       }
-      rebase(kind, d.id, remove);
+      rebase(kind, d.id, remove, state.optionsOnly);
       const focusId = returnFocus?.id;
       finish();
       renderMenuCategories();
@@ -1088,10 +1095,18 @@
       render();
     }
   }
-  function rebase(kind, id, remove) {
+  function rebase(kind, id, remove, optionsOnly = false) {
     const saved = JSON.parse(savedMenuSnapshot || "[]");
     for (const data of [currentMenuData, saved]) {
       if (kind === "product") {
+        if (optionsOnly) {
+          // Saving links must preserve inline product edits and their baseline.
+          for (const c of data) {
+            const item = c.items?.find((p) => p.id === id);
+            if (item) item.menuRevision = productById(id)?.menu_revision;
+          }
+          continue;
+        }
         let old, oldCategory, oldIndex;
         for (const c of data) {
           const i = c.items?.findIndex((p) => p.id === id);
@@ -1181,26 +1196,29 @@
         catalogTenant = tenantId;
       }
     },
-    product(cIdx, iIdx) {
+    product(cIdx, iIdx, entry) {
       syncMenuDataFromDOM();
       const c = currentMenuData[cIdx],
         local = c?.items?.[iIdx],
         p = local ? productById(local.id) : null;
       if (!c) return;
+      const optionsOnly = entry === "options" && Boolean(p);
       open("product", {
         id: local?.id || uid("product"),
         isNew: !p,
-        name: local?.name || "",
-        price: Number(local?.price || 0),
+        // The options-only entry writes links against the server revision;
+        // unrelated inline name/price drafts remain in the menu workspace.
+        name: optionsOnly ? p.name : local?.name || "",
+        price: Number(optionsOnly ? p.price : local?.price || 0),
         categoryId: p?.category_id || c.databaseId || c.catId,
-        badgeText: local?.badgeText || "",
-        isRecommended: local?.isRecommended || false,
+        badgeText: (optionsOnly ? p.badge_text : local?.badgeText) || "",
+        isRecommended: Boolean(optionsOnly ? p.is_recommended : local?.isRecommended),
         revision: Number(p?.menu_revision || 0),
         links: clone(catalog.links.filter((l) => l.itemId === local?.id)),
         imageKey:
-          p?.image_key ??
+          optionsOnly ? p.image_key : p?.image_key ??
           (local ? `${c.id}_${local.originalName || local.name}` : null),
-      });
+      }, { page: optionsOnly ? "product-options" : "product" });
     },
     group(id, entry, optionId) {
       const g = groupById(id);
