@@ -511,8 +511,11 @@ public class ThermalPrinterPlugin extends Plugin {
                 outputStream.flush();
 
                 // 4. Drain wait: Wait for mechanical printhead to complete burning and paper feeding
-                // before closing the RFCOMM connection to avoid truncating printhead buffer
-                long waitTimeMs = Math.max(1500, Math.min(6000, (long) ((printBytes.length / 512.0) * 35.0)));
+                // before closing the RFCOMM connection to avoid truncating printhead buffer.
+                // Scale dynamically based on payload size rather than a premature fixed cap (e.g. 6s).
+                long dynamicDrainMs = (long) ((printBytes.length / 512.0) * 35.0);
+                long waitTimeMs = Math.max(1500L, 1200L + dynamicDrainMs);
+                waitTimeMs = Math.min(waitTimeMs, 30000L); // Generous 30s safety ceiling to prevent indefinite block
                 try { Thread.sleep(waitTimeMs); } catch (InterruptedException ignored) {}
 
                 JSObject ret = new JSObject();

@@ -21,7 +21,7 @@ public class ReceiptRasterTest {
                     int rowBytes = (bytes[pos + 4] & 255) + ((bytes[pos + 5] & 255) << 8);
                     int height = (bytes[pos + 6] & 255) + ((bytes[pos + 7] & 255) << 8);
                     assertEquals(dots / 8, rowBytes);
-                    assertEquals(1701, height);
+                    assertTrue("Each raster strip should be at most 256 rows", height <= 256);
                     if (rows + height == 1701) {
                         assertEquals(128, bytes[pos + 8 + (height - 1) * rowBytes] & 255);
                     }

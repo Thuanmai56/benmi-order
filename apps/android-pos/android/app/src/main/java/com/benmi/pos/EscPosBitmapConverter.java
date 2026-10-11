@@ -40,9 +40,6 @@ public class EscPosBitmapConverter {
 
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
 
-        // 0. Cancel any pending/interrupted print buffer: CAN (0x18)
-        stream.write(0x18);
-
         // 1. Initialize printer: ESC @ (0x1B, 0x40)
         stream.write(0x1B);
         stream.write(0x40);
@@ -52,9 +49,11 @@ public class EscPosBitmapConverter {
         stream.write(0x33);
         stream.write(0x00);
 
-        // 3. Send one contiguous raster command. Some low-cost ESC/POS firmware treats
-        // successive GS v 0 strips as separate pages and can cut between strips.
-        final int MAX_CHUNK_HEIGHT = targetHeight;
+        // 3. Slice bitmap into discrete horizontal bands of max 256 rows per GS v 0 command.
+        // If transmission noise or packet drop occurs, corruption is localized to at most
+        // one 256-dot band, allowing the next band to resynchronize without corrupting subsequent prints.
+        // Paper feed and auto-cut remain strictly executed once at the end.
+        final int MAX_CHUNK_HEIGHT = 256;
         final int threshold = 175; // Standard thermal darkness threshold
 
         for (int yStart = 0; yStart < targetHeight; yStart += MAX_CHUNK_HEIGHT) {

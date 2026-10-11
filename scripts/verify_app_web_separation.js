@@ -60,13 +60,13 @@ assert(i18nJs.includes("printerStatusNone: \"Chưa kết nối máy in\""), "i18
 console.log("✓ I18N keys for printer connection status present in both zh-TW and vi dictionaries");
 
 // 4. Java ESC/POS & Bluetooth Print Fixes
-assert(escPosJava.includes("MAX_CHUNK_HEIGHT = 200"), "EscPosBitmapConverter must chunk raster bitmap into max 200 lines");
-assert(escPosJava.includes("stream.write(0x1B);\n            stream.write(0x64);\n            stream.write(0x04);"), "EscPosBitmapConverter must feed lines before cutting");
-console.log("✓ EscPosBitmapConverter slices raster bitmaps into max 200-line chunks to prevent buffer overflow/page splitting");
+assert(escPosJava.includes("MAX_CHUNK_HEIGHT = 256"), "EscPosBitmapConverter must chunk raster bitmap into max 256 lines");
+assert(escPosJava.includes("stream.write(0x1B);\n                stream.write(0x4A);"), "EscPosBitmapConverter must feed motion units before cutting");
+console.log("✓ EscPosBitmapConverter slices raster bitmaps into max 256-line bands to prevent buffer overflow and localize transmission noise");
 
-assert(pluginJava.includes("final int chunkSize = 1024;"), "ThermalPrinterPlugin must chunk Bluetooth writes into 1024-byte packets");
-assert(pluginJava.includes("Math.max(800,"), "ThermalPrinterPlugin must wait dynamically before closing Bluetooth RFCOMM socket");
-console.log("✓ ThermalPrinterPlugin paces Bluetooth writes and prevents premature socket closure");
+assert(pluginJava.includes("final int chunkSize = 512;"), "ThermalPrinterPlugin must chunk Bluetooth writes into 512-byte packets");
+assert(pluginJava.includes("long waitTimeMs = Math.max(1500L,"), "ThermalPrinterPlugin must scale drain wait dynamically before closing Bluetooth socket");
+console.log("✓ ThermalPrinterPlugin paces Bluetooth writes and scales drain wait dynamically");
 
 console.log("\n=================================================");
 console.log("🎉 ALL PLATFORM SEPARATION & PRINT FIX CHECKS PASSED!");
