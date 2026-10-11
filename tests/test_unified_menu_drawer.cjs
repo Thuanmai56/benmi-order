@@ -155,3 +155,78 @@ test('local stock toggle persists without changing referenced product availabili
   assert.equal(app.posts[0].options[0].isLocallyOutOfStock,true);
   assert.equal(app.catalog().products.find((p)=>p.id==='coffee').is_out_of_stock,undefined);
 });
+
+test('product options entry shows only group settings; normal product entry keeps its full form', async () => {
+  for (const [lang, label, save] of [['vi','Tùy chọn món','Lưu tùy chọn'],['zh-TW','餐點選項','儲存餐點選項']]) {
+    const app = await setup({lang}); app.context.UnifiedMenu.product(0,0,'options');
+    assert.equal(app.get('.ug-product-options-label').textContent,label);
+    assert.equal(app.get('#ug-title').textContent.includes('Bánh mì'),true);
+    assert.equal(app.get('[data-action="save"]').textContent,save);
+    assert.equal(app.get('[data-action="subset"]').textContent.includes('Chọn đồ uống'),true);
+    assert.ok(app.get('[data-action="groups"]'));
+    for (const selector of ['[data-field="name"]','[data-field="price"]','[data-field="photo"]','[data-action="delete"]','[data-action="back"]']) {
+      assert.equal(app.drawer().querySelector(selector),null);
+    }
+    await app.click('save'); assert.equal(app.posts.length,0); assert.equal(app.drawer().hidden,true);
+    app.context.UnifiedMenu.product(0,0);
+    assert.equal(app.get('[data-field="name"]').value,'Bản nháp khác');
+    assert.equal(app.get('[data-field="price"]').value,'999');
+    assert.ok(app.get('[data-action="delete"]'));
+    await app.click('close'); assert.equal(app.drawer().hidden,true);
+  }
+});
+
+test('saving product options only writes links and preserves inline drafts and their saved baseline', async () => {
+  const app = await setup();
+  Object.assign(app.catalog().products[0],{menu_revision:4,badge_text:'Đề xuất',is_recommended:true,image_key:null});
+  const item = app.context.currentMenuData[0].items[0];
+  Object.assign(item,{badgeText:'Nhãn nháp',imageKey:'draft-image',isRecommended:false});
+  const before = structuredClone(item), baseline = JSON.parse(app.context.savedMenuSnapshot)[0].items[0];
+  await app.context.UnifiedMenu.load(); app.context.UnifiedMenu.product(0,0,'options');
+  await app.click('subset','[data-id="drinks"]');
+  const custom = app.get('[data-check="subset"][value="custom"]'); custom.checked = false; app.emit('input',custom);
+  await app.click('apply'); assert.equal(app.posts.length,0);
+  assert.equal(app.get('[data-action="subset"]').textContent.includes('1/2'),true);
+  await app.click('save');
+  assert.equal(app.drawer().hidden,true);
+  assert.equal(app.posts[0].name,'Bánh mì'); assert.equal(app.posts[0].price,100);
+  assert.equal(app.posts[0].badgeText,'Đề xuất'); assert.equal(app.posts[0].isRecommended,true);
+  assert.equal(app.posts[0].imageKey,null); assert.equal(app.posts[0].revision,4);
+  assert.deepEqual(app.posts[0].links[0].optionIds,['coffee_option']);
+  assert.deepEqual(app.context.currentMenuData[0].items[0],{...before,menuRevision:5});
+  assert.deepEqual(JSON.parse(app.context.savedMenuSnapshot)[0].items[0],{...baseline,menuRevision:5});
+  assert.equal(app.catalog().groups[0].options.length,2);
+});
+
+test('options entry preserves inherited defaults on no-op apply and warns for unapplied changes', async () => {
+  const app = await setup(); app.catalog().links = [];
+  app.catalog().categoryLinks = [{groupId:'drinks',categoryId:'food'}];
+  await app.context.UnifiedMenu.load(); app.context.UnifiedMenu.product(0,0,'options');
+  assert.equal(app.get('[data-action="subset"]').textContent.includes('Từ phân loại'),true);
+  await app.click('groups'); app.input('search','đồ uống'); await app.click('apply');
+  await app.click('subset','[data-id="drinks"]'); await app.click('apply'); await app.click('close');
+  assert.equal(app.drawer().hidden,true); assert.equal(app.posts.length,0); assert.deepEqual(app.catalog().links,[]);
+  app.context.UnifiedMenu.product(0,0,'options'); await app.click('subset','[data-id="drinks"]');
+  const option = app.get('[data-check="subset"][value="custom"]'); option.checked = false; app.emit('input',option);
+  await app.click('close'); assert.equal(app.get('.ug-confirmation').hidden,false);
+  await app.click('continue'); assert.equal(app.get('[data-check="subset"][value="custom"]').checked,false);
+  await app.click('defaults'); await app.click('apply'); await app.click('save');
+  assert.equal(app.drawer().hidden,true); assert.equal(app.posts.length,0);
+});
+
+test('options-only network failures and version conflicts retain the subset draft for retry', async () => {
+  for (const error of ['MENU_SAVE_FAILED','MENU_CONFLICT']) {
+    const app = await setup(); app.context.UnifiedMenu.product(0,0,'options');
+    await app.click('subset','[data-id="drinks"]');
+    const custom = app.get('[data-check="subset"][value="custom"]'); custom.checked = false; app.emit('input',custom);
+    await app.click('apply');
+    app.responses.push({ok:false,json:async()=>({error})}); await app.click('save');
+    assert.equal(app.drawer().hidden,false); assert.equal(app.get('.ug-error').textContent.length>0,true);
+    assert.equal(app.get('[data-action="save"]').textContent,'Lưu tùy chọn');
+    await app.click('subset','[data-id="drinks"]');
+    assert.equal(app.get('[data-check="subset"][value="custom"]').checked,false);
+    await app.click('apply'); await app.click('save');
+    assert.equal(app.drawer().hidden,true); assert.deepEqual(app.posts[1].links[0].optionIds,['coffee_option']);
+    assert.equal(app.context.currentMenuData[0].items[0].price,999);
+  }
+});
