@@ -36,6 +36,12 @@
       ugOwn: "Danh sách riêng cho món",
       ugChoose: "Chọn",
       ugSearch: "Tìm kiếm",
+      ugSearchGroups: "Tìm nhóm",
+      ugClearGroupSearch: "Xóa từ khóa tìm nhóm",
+      ugNoMatchingGroups: "Không tìm thấy nhóm phù hợp",
+      ugNoGroups: "Chưa có nhóm tùy chọn",
+      ugGroupSurcharge: "Phụ thu",
+      ugAppliesToOrder: "Áp dụng cho cả đơn hàng",
       ugAll: "Tất cả phân loại",
       ugSaveProduct: "Lưu món",
       ugSaveGroup: "Lưu nhóm",
@@ -110,6 +116,12 @@
       ugOwn: "此餐點專用選項",
       ugChoose: "選擇",
       ugSearch: "搜尋",
+      ugSearchGroups: "搜尋群組",
+      ugClearGroupSearch: "清除群組搜尋",
+      ugNoMatchingGroups: "找不到符合的群組",
+      ugNoGroups: "尚無選項群組",
+      ugGroupSurcharge: "加價",
+      ugAppliesToOrder: "適用整筆訂單",
       ugAll: "所有分類",
       ugSaveProduct: "儲存餐點",
       ugSaveGroup: "儲存群組",
@@ -168,7 +180,11 @@
   let catalog = null,
     state = null,
     selectedGroup = null,
+    groupQuery = "",
+    catalogTenant = null,
     returnFocus = null;
+  const normalizeSearch = (value) =>
+    String(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase().replace(/đ/g, "d").trim();
   const uid = (kind) =>
     `${getTenantIdFromUrl()}_${kind}_${crypto.randomUUID()}`;
   const groupById = (id) => catalog.groups.find((g) => g.id === id);
@@ -849,10 +865,12 @@
         }
       }
       rebase(kind, d.id, remove);
+      const focusId = returnFocus?.id;
       finish();
       renderMenuCategories();
       renderMenuCategoryEditor(activeCategoryIndex);
       checkMenuDirty();
+      if (focusId) document.getElementById(focusId)?.focus({ preventScroll: true });
     } catch (error) {
       state.busy = false;
       state.error = tr(
@@ -951,11 +969,17 @@
         : 0;
     },
     async load() {
+      const tenantId = getTenantIdFromUrl();
       const res = await fetch(
-        `${WORKER_BASE}/api/menu/options?tenant_id=${encodeURIComponent(getTenantIdFromUrl())}`,
+        `${WORKER_BASE}/api/menu/options?tenant_id=${encodeURIComponent(tenantId)}`,
       );
       if (!res.ok) throw new Error("MENU_UNAVAILABLE");
       catalog = await res.json();
+      if (catalogTenant !== tenantId) {
+        selectedGroup = null;
+        groupQuery = "";
+        catalogTenant = tenantId;
+      }
     },
     product(cIdx, iIdx) {
       syncMenuDataFromDOM();
@@ -978,7 +1002,7 @@
           (local ? `${c.id}_${local.originalName || local.name}` : null),
       });
     },
-    group(id) {
+    group(id, entry, optionId) {
       const g = groupById(id);
       open(
         "group",
@@ -1009,30 +1033,67 @@
               categoryIds: [],
             },
       );
+      if (g && entry === "add-option") push({ page: "add-option" });
+      if (g && entry === "linked") push({ page: "linked", ids: [...state.draft.itemIds] });
+      if (g && entry === "option") {
+        const option = options(state.draft).find((o) => o.id === optionId);
+        if (option) push({ page: "option", option: clone(option) });
+      }
     },
     sidebar() {
       if (!catalog || menuSidebarTab !== "options") return false;
       const root = document.getElementById("menu-categories");
       if (!root) return false;
+      if (!groupById(selectedGroup))
+        selectedGroup = (catalog.groups.find((g) => g.scope !== "order") || catalog.groups[0])?.id;
+      root.classList.add("is-option-groups");
       root.innerHTML =
-        btn("new-group", "ugNewGroup") +
+        `<div class="ug-group-navigation">${btn("new-group", "ugNewGroup")}<div class="ug-group-search"><input type="search" id="ug-group-search" value="${esc(groupQuery)}" placeholder="${esc(tr("ugSearchGroups"))}" aria-label="${esc(tr("ugSearchGroups"))}"><button type="button" data-action="clear-search" aria-label="${esc(tr("ugClearGroupSearch"))}" ${groupQuery ? "" : "hidden"}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div></div><div class="ug-group-list">` +
         catalog.groups
           .map(
             (g) =>
-              `<button class="menu-option-card ${selectedGroup === g.id ? "active" : ""}" data-group="${esc(g.id)}"><span class="menu-option-card-content"><strong>${esc(g.name)}${g.scope === "order" ? " · " + esc(tr("ugOrderGroups")) : ""}</strong><small>${options(g).length} ${esc(tr("ugOptions"))}</small></span><span>›</span></button>`,
+              `<button type="button" class="menu-option-card ${selectedGroup === g.id ? "active" : ""}" data-group="${esc(g.id)}" aria-pressed="${selectedGroup === g.id}" ${normalizeSearch(g.name).includes(normalizeSearch(groupQuery)) ? "" : "hidden"}><span class="menu-option-card-content"><strong>${esc(g.name)}${g.scope === "order" ? " · " + esc(tr("ugOrderGroups")) : ""}</strong><small>${options(g).length} ${esc(tr("ugOptions"))}</small></span><span aria-hidden="true">›</span></button>`,
           )
-          .join("");
-      root.querySelector("[data-action]").onclick = () => this.group();
+          .join("") + `<p class="ug-group-empty ug-muted" role="status" hidden></p></div>`;
+      root.querySelector('[data-action="new-group"]').onclick = () => this.group();
+      const input = root.querySelector("#ug-group-search");
+      input.oninput = () => {
+        groupQuery = input.value;
+        this.filterGroups();
+      };
+      root.querySelector('[data-action="clear-search"]').onclick = () => {
+        groupQuery = "";
+        input.value = "";
+        this.filterGroups();
+        input.focus();
+      };
       root.querySelectorAll("[data-group]").forEach(
         (b) =>
           (b.onclick = () => {
             selectedGroup = b.dataset.group;
-            this.sidebar();
+            root.querySelectorAll("[data-group]").forEach((card) => {
+              card.classList.toggle("active", card.dataset.group === selectedGroup);
+              card.setAttribute("aria-pressed", card.dataset.group === selectedGroup);
+            });
             this.workspace();
           }),
       );
+      this.filterGroups();
       this.workspace();
       return true;
+    },
+    filterGroups() {
+      const root = document.getElementById("menu-categories");
+      const query = normalizeSearch(groupQuery);
+      let visible = 0;
+      root.querySelectorAll("[data-group]").forEach((card) => {
+        card.hidden = !normalizeSearch(groupById(card.dataset.group)?.name || "").includes(query);
+        if (!card.hidden) visible++;
+      });
+      const empty = root.querySelector(".ug-group-empty");
+      empty.hidden = visible > 0;
+      empty.textContent = tr(catalog.groups.length ? "ugNoMatchingGroups" : "ugNoGroups");
+      root.querySelector('[data-action="clear-search"]').hidden = !groupQuery;
     },
     workspace() {
       if (!catalog || menuSidebarTab !== "options") return false;
@@ -1040,7 +1101,7 @@
       if (!root) return true;
       const group =
         groupById(selectedGroup) ||
-        catalog.groups.find((g) => g.scope !== "order");
+        catalog.groups.find((g) => g.scope !== "order") || catalog.groups[0];
       selectedGroup = group?.id;
       for (const id of [
         "btn-category-rename",
@@ -1053,19 +1114,33 @@
       document.getElementById("menu-editor-title").textContent =
         group?.name || tr("ugGroups");
       root.classList.remove("is-catalog");
+      root.classList.add("is-option-workspace");
+      const edit = document.getElementById("btn-option-group-edit");
+      edit.hidden = !group;
+      edit.setAttribute("aria-label", tr("ugGroup"));
+      edit.title = tr("ugGroup");
+      edit.onclick = () => this.group(group.id);
+      const add = document.getElementById("btn-option-add");
+      add.hidden = !group;
+      add.querySelector("span").textContent = tr("ugAdd");
+      add.onclick = () => this.group(group.id, "add-option");
+      const ids = group ? affectedIds(group) : [];
       root.innerHTML = group
-        ? `<div class="ug-workspace"><div class="ug-section-title"><h3>${esc(group.name)}</h3>${btn("edit", "ugGroup")}</div><p class="ug-muted">${esc(rule(group))} · ${esc(tr("ugAffected", { count: affected(group) }))}</p><div class="ug-list">${options(
+        ? `<div class="ug-workspace"><div class="ug-workspace-linked"><div><strong>${esc(group.scope === "order" ? tr("ugAppliesToOrder") : `${tr("ugLinked")} (${ids.length})`)}</strong>${group.scope !== "order" && ids.length ? `<span>${esc(ids.map((id) => productById(id)?.name).filter(Boolean).join("、"))}</span>` : ""}</div>${group.scope !== "order" ? btn("linked", "ugLink") : ""}</div><p class="ug-workspace-rule ug-muted">${esc(rule(group))}${group.allowRepeats ? ` · ${esc(tr("ugRepeat"))}` : ""}${group.included ? ` · ${esc(tr("ugIncluded"))}` : ""}</p><div class="ug-workspace-options">${options(
             group,
           )
             .map(
               (o) =>
-                `<div class="ug-row"><span><strong>${esc(o.name)}</strong><small>${o.productId ? `${esc(tr("ugRetail"))} <s>$${o.retailPrice}</s> · ` : ""}+$${o.price}</small></span>${o.isOutOfStock ? `<span>${esc(tr("ugSoldOut"))}</span>` : ""}</div>`,
+                `<button type="button" id="ug-option-${esc(o.id)}" class="ug-row" data-action="option" data-id="${esc(o.id)}"><span class="ug-option-copy"><strong>${esc(o.name)}</strong><small class="ug-option-prices"><span>${esc(tr("ugGroupSurcharge"))} +$${esc(o.price)}</span>${o.productId ? `<span>${esc(tr("ugRetail"))} $${esc(o.retailPrice)}</span>` : ""}</small></span><span class="ug-option-trailing">${o.isOutOfStock ? `<span class="ug-muted">${esc(tr("ugSoldOut"))}</span>` : ""}<span aria-hidden="true">›</span></span></button>`,
             )
-            .join("")}</div></div>`
-        : "";
+            .join("") || `<p class="ug-workspace-empty ug-muted">${esc(tr("ugEmpty"))}</p>`}</div></div>`
+        : `<p class="ug-workspace-empty ug-muted">${esc(tr("ugNoGroups"))}</p>`;
       root
-        .querySelector('[data-action="edit"]')
-        ?.addEventListener("click", () => this.group(group.id));
+        .querySelector('[data-action="linked"]')
+        ?.addEventListener("click", () => this.group(group.id, "linked"));
+      root.querySelectorAll('[data-action="option"]').forEach((button) => {
+        button.onclick = () => this.group(group.id, "option", button.dataset.id);
+      });
       return true;
     },
   };
