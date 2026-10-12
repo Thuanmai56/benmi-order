@@ -682,7 +682,8 @@ function getMenuDisplayEntries() {
   const entries = (currentMenuData || []).filter(cat => cat === section || !isCustomizationCategory(cat)).map(model => ({
     model, title: model === section ? t('menuOrderFlavorSection') : model.title,
     kind: model === section ? 'scopeOrder' : 'categoryTypeCatalogBadge', isOrderSection: model === section,
-    field: 'sortOrder', position: Number(model.sortOrder) || 0
+    field: 'sortOrder', position: Number(model.sortOrder) || 0,
+    itemsCount: model === section ? getMenuOrderGroups().length : (model.items || []).length
   }));
   return entries.sort((a, b) => a.position - b.position);
 }
@@ -867,12 +868,6 @@ function renderCategoriesManagerView() {
       titleRow.appendChild(titleStrong);
 
       if (kind === 'section') {
-        if (isSelected) {
-          const activeDot = document.createElement('span');
-          activeDot.className = 'menu-order-active-dot';
-          activeDot.textContent = '●';
-          titleRow.appendChild(activeDot);
-        }
         const tag = document.createElement('span');
         tag.className = 'menu-order-tag ' + (value.isOrderSection ? 'tag-order' : 'tag-catalog');
         tag.textContent = value.isOrderSection ? t('badgeScopeOrder') : t('badgeFoodItem');
@@ -893,12 +888,9 @@ function renderCategoriesManagerView() {
         detail.className = 'menu-order-card-detail';
         if (value.isOrderSection) {
           detail.textContent = t('customizationOptionsCount', { n: getMenuOrderGroups().length });
-        } else if (typeof isComboCategory === 'function' && isComboCategory(value.model)) {
-          detail.textContent = t('badgeComboItem');
-        } else if (value.itemsCount > 0) {
-          detail.textContent = t('categoryItemsCount', { n: value.itemsCount });
         } else {
-          detail.textContent = t('badgeUncategorized');
+          const count = (model.items || []).length;
+          detail.textContent = t('categoryItemsCount', { n: count });
         }
         subRow.appendChild(detail);
       } else if (kind === 'group') {
