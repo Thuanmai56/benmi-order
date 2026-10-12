@@ -365,6 +365,8 @@ function validateMenuUpdate(data: any): void {
     const section = data.__customizations;
     const groups = Array.isArray(section) ? section : record(section) ? (section.groups ?? section.list) : undefined;
     if (!Array.isArray(groups)) throw new Error('INVALID_CUSTOMIZATIONS');
+    if (!Array.isArray(section) && section.sortOrder !== undefined && (!Number.isSafeInteger(section.sortOrder) || section.sortOrder < 0)) throw new Error('INVALID_CUSTOMIZATION_SECTION_ORDER');
+    if (!Array.isArray(section) && section.id !== undefined && !text(section.id)) throw new Error('INVALID_CUSTOMIZATION_CATEGORY_ID');
     const keys = new Set();
     const ids = new Set();
     for (const group of groups) {
@@ -381,8 +383,8 @@ function validateMenuUpdate(data: any): void {
           (group.minSelection !== undefined && group.maxSelection !== undefined && group.minSelection > group.maxSelection)) {
         throw new Error('INVALID_MODIFIER_GROUP_BOUNDS');
       }
-      if (group.displaySortOrder !== undefined && (!Number.isSafeInteger(group.displaySortOrder) || group.displaySortOrder < 0)) {
-        throw new Error('INVALID_GROUP_DISPLAY_ORDER');
+      if (group.sortOrder !== undefined && (!Number.isSafeInteger(group.sortOrder) || group.sortOrder < 0)) {
+        throw new Error('INVALID_GROUP_SORT_ORDER');
       }
       keys.add(group.key);
       if (group.id) ids.add(group.id);
@@ -533,9 +535,11 @@ function validateMenuUpdate(data: any): void {
 
 async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<void> {
   validateMenuUpdate(menuData);
+  // Anchor the guard before reading ranks and IDs used to construct the write batch.
+  const unifiedCatalog = unifiedMenuEnabled(env) ? await loadOptionCatalog(env, tenantId) : null;
   // 1. Nạp danh mục và món ăn hiện có để ánh xạ ID tránh xung đột unique
   const { results: existingCats } = await env.DB.prepare(
-    "SELECT id, slug, name, short_name, category_type FROM menu_categories WHERE tenant_id = ?"
+    "SELECT id, slug, name, short_name, category_type, sort_order FROM menu_categories WHERE tenant_id = ?"
   ).bind(tenantId).all();
 
   const { results: existingItems } = await env.DB.prepare(
@@ -548,7 +552,7 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
   const customIdMap = new Map((existingCustomizations || []).map(row => [row.key as string, row.id as string]));
   const ownedItemIds = new Set((existingItems || []).map(row => row.id as string));
   const ownedCustomIds = new Set((existingCustomizations || []).map(row => row.id as string));
-  const { results: existingGroups } = await env.DB.prepare('SELECT id,scope,source_metadata_json FROM modifier_groups WHERE tenant_id = ?').bind(tenantId).all();
+  const { results: existingGroups } = await env.DB.prepare('SELECT id,scope,sort_order FROM modifier_groups WHERE tenant_id = ?').bind(tenantId).all();
   const ownedGroupIds = new Set((existingGroups || []).map(row => row.id as string));
 
   // Collect all modifier group and option IDs from payload for cross-tenant pre-flight verification
@@ -649,7 +653,6 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
     itemIdMap.set(item.id as string, item.id as string);
   }
 
-  const unifiedCatalog = unifiedMenuEnabled(env) ? await loadOptionCatalog(env, tenantId) : null;
   const statements: any[] = [];
   const processedGroupIds = new Set<string>();
   const defaultCategoryNamesZh: Record<string, string> = {
@@ -685,7 +688,22 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
     if (slug === '__customizations') {
       const customizationData = menuData[slug];
       const customList = Array.isArray(customizationData) ? customizationData : (customizationData?.groups || customizationData?.list || []);
+      if (!Array.isArray(customizationData) && customizationData.sortOrder !== undefined && customList.some((group: any) => (group.scope || 'order') === 'order')) {
+        const sections = existingCats.filter(cat => cat.category_type === 'order_customization' || cat.slug === 'sec-flavor' || cat.slug === 'flavor');
+        if (sections.length > 1) throw new Error('AMBIGUOUS_CUSTOMIZATION_CATEGORY');
+        const section = sections[0];
+        const sectionId = String(section?.id || `${tenantId}_sec-flavor`);
+        // Older bootstrap readers use a tenant-prefixed placeholder when the category ID is absent.
+        if (customizationData.id && ![sectionId, 'sec-flavor', `${tenantId}_sec-flavor`].includes(customizationData.id)) throw new Error('INVALID_CUSTOMIZATION_CATEGORY_ID');
+        if (!section || Number(section.sort_order) !== customizationData.sortOrder || section.category_type !== 'order_customization') {
+          statements.push(env.DB.prepare(`INSERT INTO menu_categories (id,tenant_id,slug,name,short_name,category_type,allow_customization,applied_modifiers,sort_order)
+            VALUES (?,?,?,?,?,'order_customization',0,'[]',?)
+            ON CONFLICT(id) DO UPDATE SET sort_order=excluded.sort_order,category_type=excluded.category_type WHERE menu_categories.tenant_id=excluded.tenant_id`)
+            .bind(sectionId, tenantId, section?.slug || 'sec-flavor', section?.name || '口味選擇', section?.short_name || '口味選擇', customizationData.sortOrder));
+        }
+      }
       const activeCustomIds: string[] = [];
+      const sortedOrderGroups = new Set<string>();
       for (const cust of customList) {
         if (!cust || !cust.key) continue;
         const custKey = cust.key;
@@ -703,17 +721,20 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
         activeCustomIds.push(custId);
 
         const custScope = cust.scope || 'order';
-        if (cust.displaySortOrder !== undefined) {
+        if (unifiedMenuEnabled(env)) {
+          // The whole-menu writer changes order only; entity APIs own group configuration.
           const groupId = String(cust.canonicalId || cust.id || '');
           const stored = existingGroups.find(group => String(group.id) === groupId);
-          if (!stored || stored.scope !== 'order' || custScope !== 'order') throw new Error('INVALID_GROUP_DISPLAY_SCOPE');
-          const metadata = JSON.parse(String(stored.source_metadata_json || '{}'));
-          if (metadata.displaySortOrder !== cust.displaySortOrder) {
-            // Only the position changes; rules, options and other metadata stay intact.
-            statements.push(env.DB.prepare(`UPDATE modifier_groups SET source_metadata_json=json_set(COALESCE(NULLIF(source_metadata_json,''),'{}'),'$.displaySortOrder',?),${unifiedMenuEnabled(env) ? 'revision=revision+1,' : ''}updated_at=datetime('now') WHERE tenant_id=? AND id=? AND scope='order'`).bind(cust.displaySortOrder, tenantId, groupId));
+          if (custScope === 'order' && cust.sortOrder !== undefined) {
+            if (!stored || stored.scope !== 'order') throw new Error('INVALID_ORDER_GROUP_SCOPE');
+            if (sortedOrderGroups.has(groupId)) throw new Error('DUPLICATE_ORDER_GROUP');
+            sortedOrderGroups.add(groupId);
+            if (Number(stored.sort_order) !== cust.sortOrder) {
+              statements.push(env.DB.prepare(`UPDATE modifier_groups SET sort_order=?,revision=revision+1,updated_at=datetime('now') WHERE tenant_id=? AND id=? AND scope='order'`).bind(cust.sortOrder, tenantId, groupId));
+            }
           }
+          continue;
         }
-        if (unifiedMenuEnabled(env)) continue; // Shared groups have dedicated transactional writes.
         const modGroupId = String(cust.canonicalId || (cust.sourceId ? (cust.id || cust.sourceId) : (cust.id || `mg_${custId}`)));
         if (!ownedGroupIds.has(modGroupId) && !ownedCustomIds.has(modGroupId) && !modGroupId.startsWith(`custom_${tenantId}_`)) {
           throw new Error('INVALID_MODIFIER_GROUP_ID');
@@ -1081,6 +1102,7 @@ export async function updateMenu(request: Request, env: Env): Promise<Response> 
   } catch (e: any) {
     console.error("Update menu failed:", e);
     const code = typeof e?.message === 'string' && e.message ? e.message : 'INVALID_MENU_PAYLOAD';
+    if (code.includes('CHECK constraint')) return json({ code: 'MENU_CONFLICT', error: 'MENU_CONFLICT' }, 409);
     return json({ code, error: code }, 400);
   }
 }
