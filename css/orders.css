@@ -2508,8 +2508,327 @@ html.is-web-platform .store-activation-modal:not(.force-show) {
   width: min(480px, 95vw);
 }
 
-#blabContactModal .modal-content {
-  width: min(520px, 95vw);
+/* BLAB support: tablet-first dialog, inspired by the Stitch reference. */
+#blabContactModal {
+  --support-ink: #0f172a;
+  --support-muted: #64748b;
+  --support-border: #e2e8f0;
+  --support-green: #047857;
+  --support-soft: #ecfdf5;
+  background: rgba(15, 23, 42, 0.68);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 9999;
+  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+}
+
+#blabContactModal .blab-support-dialog {
+  width: min(880px, 100%);
+  max-height: 100%;
+  padding: 0;
+  border: 1px solid #f1f5f9;
+  border-radius: 24px;
+  box-shadow: 0 24px 64px rgba(2, 6, 23, 0.3);
+  color: var(--support-ink);
+}
+
+.blab-support-header {
+  position: relative;
+  flex-shrink: 0;
+  padding: 28px 32px 24px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.blab-support-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  padding-right: 48px;
+}
+
+.blab-support-heading-copy,
+.blab-support-card-copy {
+  min-width: 0;
+}
+
+.blab-support-heading h2 {
+  margin: 0;
+  font-size: var(--pos-text-title);
+  font-weight: 750;
+  line-height: 1.3;
+  letter-spacing: -0.4px;
+  overflow-wrap: anywhere;
+}
+
+.blab-support-heading p {
+  margin: 8px 0 0;
+  color: var(--support-muted);
+  font-size: var(--pos-text-body);
+  line-height: 1.6;
+}
+
+.blab-support-icon {
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 14px;
+}
+
+.blab-support-icon--header {
+  width: 56px;
+  height: 56px;
+  color: #059669;
+  background: var(--support-soft);
+  border: 1px solid #a7f3d0;
+  border-radius: 16px;
+}
+
+.blab-support-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  color: var(--support-muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.blab-support-close:hover {
+  background: #f1f5f9;
+  color: var(--support-ink);
+}
+
+.blab-support-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+  padding: 8px 14px;
+  border: 1px solid #a7f3d0;
+  border-radius: 999px;
+  background: var(--support-soft);
+  color: var(--support-green);
+  font-size: var(--pos-text-meta);
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.blab-support-status-dot {
+  width: 9px;
+  height: 9px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #059669;
+}
+
+#blabContactModal .blab-support-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 28px 32px;
+  scrollbar-gutter: stable;
+}
+
+.blab-support-context {
+  flex-shrink: 0;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 20px;
+  border: 1px solid var(--support-border);
+  border-radius: 14px;
+  font-size: var(--pos-text-meta);
+  line-height: 1.6;
+}
+
+#blab-context-banner-icon { flex-shrink: 0; padding-top: 2px; }
+.blab-support-context h3 { margin: 0 0 4px; font-size: inherit; font-weight: 700; }
+.blab-support-context p { margin: 0; color: #475569; }
+
+.blab-support-card {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 16px;
+  flex-shrink: 0;
+  padding: 24px;
+  border: 1px solid var(--support-border);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+}
+
+.blab-support-card--primary {
+  border: 2px solid #9ce5ce;
+  padding: 23px;
+  background: linear-gradient(120deg, #f3fdf8, #fff 65%);
+}
+
+.blab-support-icon--line {
+  background: #06c755;
+  color: #fff;
+  box-shadow: 0 2px 5px rgba(6, 199, 85, 0.18);
+}
+
+.blab-support-icon--upgrade {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid var(--support-border);
+}
+
+.blab-support-card-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.blab-support-card h3 {
+  margin: 0;
+  font-size: var(--pos-text-body);
+  font-weight: 750;
+  line-height: 1.5;
+}
+
+.blab-support-badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #d1fae5;
+  color: #065f46;
+  font-size: var(--pos-text-meta);
+  font-weight: 650;
+}
+
+.blab-support-card-subtitle {
+  margin: 6px 0 0;
+  color: var(--support-green);
+  font-size: var(--pos-text-meta);
+  font-weight: 650;
+  line-height: 1.6;
+}
+
+.blab-support-card-description {
+  margin: 8px 0 0;
+  color: var(--support-muted);
+  font-size: var(--pos-text-meta);
+  line-height: 1.65;
+}
+
+.blab-support-action {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  align-self: center;
+  gap: 10px;
+  min-width: 48px;
+  min-height: 48px;
+  padding: 12px 20px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: var(--pos-text-body);
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.blab-support-action svg { flex-shrink: 0; }
+.blab-support-action--line { background: #008537; color: #fff; box-shadow: 0 3px 8px rgba(6, 199, 85, 0.2); }
+.blab-support-action--line:hover { background: #006e2e; }
+.blab-support-action--secondary { background: #fff; color: #475569; border-color: #cbd5e1; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05); }
+.blab-support-action--secondary:hover { background: #f8fafc; border-color: #94a3b8; }
+.blab-support-action--close { width: 128px; flex-shrink: 0; background: var(--support-green); color: #fff; }
+.blab-support-action--close:hover { background: #065f46; }
+.blab-support-action:active { box-shadow: none; }
+
+.blab-support-action:focus-visible,
+.blab-support-close:focus-visible {
+  outline: 3px solid var(--support-green);
+  outline-offset: 4px;
+}
+
+.blab-support-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.blab-support-tags span {
+  padding: 4px 8px;
+  background: #f1f5f9;
+  border-radius: 5px;
+  color: #475569;
+  font-size: var(--pos-text-meta);
+  font-weight: 600;
+}
+
+.blab-support-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-shrink: 0;
+  padding: 20px 32px;
+  border-top: 1px solid #f1f5f9;
+  background: #f8fafc;
+}
+
+.blab-support-hours {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: var(--support-muted);
+  font-size: var(--pos-text-meta);
+  line-height: 1.6;
+}
+
+.blab-support-hours svg { flex-shrink: 0; }
+
+@media (max-width: 760px) {
+  .blab-support-card { grid-template-columns: 52px minmax(0, 1fr); }
+  .blab-support-card > .blab-support-action { grid-column: 2; justify-self: start; }
+}
+
+@media (max-width: 480px) {
+  #blabContactModal .blab-support-dialog { border-radius: 20px; }
+  .blab-support-header { padding: 20px; }
+  .blab-support-heading { padding-right: 44px; }
+  .blab-support-icon--header { display: none; }
+  .blab-support-close { top: 12px; right: 12px; }
+  .blab-support-heading h2 { font-size: var(--pos-text-title); }
+  .blab-support-heading p { font-size: var(--pos-text-meta); line-height: 1.5; }
+  .blab-support-status { margin-top: 16px; border-radius: 12px; padding: 8px 10px; }
+  #blabContactModal .blab-support-body { padding: 20px; gap: 16px; }
+  .blab-support-card { grid-template-columns: 44px minmax(0, 1fr); gap: 12px; padding: 16px; }
+  .blab-support-card--primary { padding: 15px; }
+  .blab-support-card .blab-support-icon { width: 44px; height: 44px; border-radius: 12px; }
+  .blab-support-card > .blab-support-action { grid-column: 1 / -1; width: 100%; }
+  .blab-support-footer { align-items: stretch; flex-direction: column; gap: 16px; padding: 16px 20px; }
+  .blab-support-action--close { width: 100%; }
+}
+
+/* Short landscape screens scroll the whole dialog to keep every control reachable. */
+@media (max-height: 540px) {
+  #blabContactModal .blab-support-dialog { overflow-y: auto; }
+  #blabContactModal .blab-support-body { flex: 0 0 auto; overflow: visible; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blab-support-action { transition: none; }
 }
 
 .modal-title,
