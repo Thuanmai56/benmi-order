@@ -1761,7 +1761,7 @@ function renderMenuCategoryEditor(index) {
   container.innerHTML = "";
   container.classList.add('is-catalog');
   const catalogCard = document.createElement("div");
-  catalogCard.className = "cust-group-card menu-products-card";
+  catalogCard.className = "menu-products-card";
   container.appendChild(catalogCard);
 
   const storeModifiers = cat.type === 'catalog' ? getStoreModifiersList() : [];
