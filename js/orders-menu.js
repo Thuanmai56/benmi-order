@@ -772,7 +772,7 @@ function renderCategoriesManagerView() {
   const isSelectedCustom = displayOrderCategory && isCustomizationCategory(displayOrderCategory);
   const targetCategoryTitle = displayOrderCategory ? (displayOrderCategory.title || displayOrderCategory.name || '') : '';
   const rightHeader = document.createElement('div');
-  rightHeader.className = 'menu-order-panel-header';
+  rightHeader.className = 'menu-order-panel-header header-right';
   const rightTopRow = document.createElement('div');
   rightTopRow.className = 'panel-header-top-row';
   const rightTitleWrap = document.createElement('div');
@@ -927,7 +927,7 @@ function renderCategoriesManagerView() {
         const openBtn = document.createElement('button');
         openBtn.type = 'button';
         openBtn.className = 'btn-opening-indicator';
-        openBtn.innerHTML = `<span>${escapeHtml(t('btnOpeningCategory'))}</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>`;
+        openBtn.innerHTML = `<span>${escapeHtml(t('btnOpeningCategory'))}</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 5 7 7-7 7"/></svg>`;
         actionsWrap.appendChild(openBtn);
       }
 
@@ -950,7 +950,7 @@ function renderCategoriesManagerView() {
         button.disabled = index + direction < 0 || index + direction >= values.length;
         button.setAttribute('aria-label', t(direction < 0 ? 'moveDisplayUp' : 'moveDisplayDown') + ': ' + (kind === 'section' ? value.title : (value.title || value.name)));
         button.setAttribute('data-order-delta', direction);
-        button.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="${direction < 0 ? 'm18 15-6-6-6 6' : 'm6 9 6 6 6-6'}"/></svg>`;
+        button.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${direction < 0 ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'}"/></svg>`;
         button.onclick = (e) => {
           e?.stopPropagation?.();
           move(index + direction);
@@ -961,7 +961,7 @@ function renderCategoriesManagerView() {
       const dragHandle = document.createElement('div');
       dragHandle.className = 'menu-order-drag-handle';
       dragHandle.title = t('dragToReorder');
-      dragHandle.innerHTML = `<svg width="14" height="20" viewBox="0 0 16 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="5" r="1.5"/><circle cx="11" cy="5" r="1.5"/><circle cx="5" cy="12" r="1.5"/><circle cx="11" cy="12" r="1.5"/><circle cx="5" cy="19" r="1.5"/><circle cx="11" cy="19" r="1.5"/></svg>`;
+      dragHandle.innerHTML = `<svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M7 2a2 2 0 10.001 4.001A2 2 0 007 2zm0 6a2 2 0 10.001 4.001A2 2 0 007 8zm0 6a2 2 0 10.001 4.001A2 2 0 007 14zm6-8a2 2 0 10-.001-4.001A2 2 0 0013 6zm0 2a2 2 0 10.001 4.001A2 2 0 0013 8zm0 6a2 2 0 10.001 4.001A2 2 0 0013 14z"/></svg>`;
       actionsWrap.appendChild(dragHandle);
 
       row.appendChild(actionsWrap);
