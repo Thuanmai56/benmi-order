@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+
+<html lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Quản lý thực đơn - Sắp xếp hiển thị</title>
+<!-- Load Tailwind CSS v3 with forms & container-queries -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857'
+            }
+          }
+        }
+      }
+    }
+  </script>
+<style data-purpose="custom-scrollbars">
+    /* Tùy chỉnh thanh cuộn cho màn hình tablet cảm ứng */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 9999px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="bg-[#f8fafc] text-slate-800 antialiased h-screen flex flex-col overflow-hidden select-none">
+<!-- BEGIN: MainHeader -->
+<header class="bg-white border-b border-slate-200 px-6 py-3.5 flex items-center justify-between shadow-sm flex-shrink-0 z-20" data-purpose="tablet-top-header">
+<!-- Cụm bên trái: Nút quay lại & Tiêu đề ngữ cảnh -->
+<div class="flex items-center space-x-4">
+<button class="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-95 transition-all text-sm font-semibold min-h-[44px]" type="button">
+<svg class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M15 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path>
+</svg>
+<span>Quay lại</span>
+</button>
+<div>
+<div class="flex items-center space-x-2.5">
+<h1 class="text-xl font-bold text-slate-900 tracking-tight">Sắp xếp hiển thị</h1>
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
+<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            Đang mở quán
+          </span>
+</div>
+<p class="text-xs font-medium text-slate-500 mt-0.5">
+          Quản lý thực đơn • <span class="text-slate-700 font-semibold">Quán Ăn Đài Loan</span> • Bàn / Mang đi
+        </p>
+</div>
+</div>
+<!-- Cụm bên phải: Trạng thái lưu & Bộ nút tác vụ nhanh -->
+<div class="flex items-center space-x-3">
+<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-50/80 border border-emerald-100">
+<svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path>
+</svg>
+        Đã tự động lưu
+      </span>
+<button class="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-semibold text-sm hover:bg-slate-50 active:bg-slate-100 transition-colors min-h-[44px]" type="button">
+        Khôi phục
+      </button>
+<button class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold text-sm hover:bg-emerald-700 active:scale-95 shadow-sm shadow-emerald-600/30 transition-all min-h-[44px]" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path>
+</svg>
+<span>Lưu thay đổi</span>
+</button>
+</div>
+</header>
+<!-- END: MainHeader -->
+<!-- BEGIN: NotificationTipBanner -->
+<section class="px-6 pt-3.5 pb-2 flex-shrink-0" data-purpose="instruction-banner">
+<div class="bg-gradient-to-r from-emerald-50/90 to-teal-50/70 border border-emerald-200/90 rounded-2xl p-3 px-4 flex items-center justify-between text-xs text-slate-700 shadow-xs">
+<div class="flex items-center space-x-3">
+<div class="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center flex-shrink-0 shadow-sm">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2"></path>
+</svg>
+</div>
+<div class="leading-relaxed">
+<strong class="font-bold text-emerald-950">Mẹo sắp xếp cho Tablet:</strong>
+          Chạm và giữ thanh kéo <span class="inline-block px-1.5 py-0.2 bg-white rounded border border-slate-200 text-slate-500 font-mono">⠿</span> hoặc dùng các nút mũi tên
+          <span class="inline-flex items-center gap-0.5 mx-1 font-semibold text-slate-800">▲ ▼</span>
+          để định vị món. Chạm vào thẻ bên trái để trực tiếp tải danh sách món tương ứng sang bên phải.
+        </div>
+</div>
+<span class="text-[11px] font-semibold text-emerald-700 bg-white/80 border border-emerald-200 px-2.5 py-1 rounded-lg flex-shrink-0">
+        Chế độ cảm ứng POS
+      </span>
+</div>
+</section>
+<!-- END: NotificationTipBanner -->
+<!-- BEGIN: SplitViewContent -->
+<main class="flex-1 px-6 pb-4 pt-1 grid grid-cols-12 gap-5 overflow-hidden" data-purpose="dual-column-tablet-layout">
+<!-- CỘT TRÁI: DANH MỤC & PHÂN LOẠI (Chiếm 6 / 12 phần trên tablet) -->
+<!-- BEGIN: LeftColumnCategories -->
+<section class="col-span-6 bg-white border border-slate-200/90 rounded-2xl flex flex-col shadow-xs overflow-hidden" data-purpose="category-order-panel">
+<!-- Tiêu đề cột trái -->
+<div class="px-5 py-3.5 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between flex-shrink-0">
+<div class="flex items-center space-x-2">
+<h2 class="text-sm font-bold text-slate-800 uppercase tracking-wider">Thứ tự phân loại &amp; tùy chọn</h2>
+<span class="px-2 py-0.5 rounded-full text-xs font-bold bg-slate-200 text-slate-700">7 mục</span>
+</div>
+<span class="text-xs text-slate-500 font-medium">Bấm để xem món</span>
+</div>
+<!-- Danh sách phân loại cuộn mượt -->
+<div class="flex-1 overflow-y-auto custom-scrollbar p-3.5 space-y-2.5" data-purpose="category-items-container">
+<!-- Item 1: Tùy chọn khẩu vị -->
+<article class="p-3 bg-white hover:bg-slate-50/80 border border-slate-200 rounded-xl flex items-center justify-between transition-all group">
+<div class="flex items-center space-x-3.5">
+<span class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 font-bold text-xs flex items-center justify-center flex-shrink-0">1</span>
+<div>
+<div class="flex items-center space-x-2">
+<span class="font-bold text-slate-900 text-sm">Tùy chọn khẩu vị</span>
+<span class="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">Toàn đơn</span>
+</div>
+<span class="text-xs text-slate-400">4 mục tùy chọn</span>
+</div>
+</div>
+<div class="flex items-center space-x-1.5">
+<button class="w-10 h-10 rounded-xl bg-slate-50 hover:bg-slate-200 text-slate-600 flex items-center justify-center border border-slate-200/70 active:scale-95 transition-all" title="Lên">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M5 15l7-7 7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path></svg>
+</button>
+<button class="w-10 h-10 rounded-xl bg-slate-50 hover:bg-slate-200 text-slate-600 flex items-center justify-center border border-slate-200/70 active:scale-95 transition-all" title="Xuống">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path></svg>
+</button>
+<div class="w-9 h-10 flex items-center justify-center text-slate-300 hover:text-slate-500 cursor-grab active:cursor-grabbing">
+<svg class="w-5 h-5" fill="currentColor" viewbox="0 0 20 20"><path d="M7 2a2 2 0 10.001 4.001A2 2 0 007 2zm0 6a2 2 0 10.001 4.001A2 2 0 007 8zm0 6a2 2 0 10.001 4.001A2 2 0 007 14zm6-8a2 2 0 10-.001-4.001A2 2 0 0013 6zm0 2a2 2 0 10.001 4.001A2 2 0 0013 8zm0 6a2 2 0 10.001 4.001A2 2 0 0013 14z"></path></svg>
+</div>
+</div>
+</article>
+<!-- Item 2: 肉類 (Các món thịt) -->
+<article class="p-3 bg-white hover:bg-slate-50/80 border border-slate-200 rounded-xl flex items-center justify-between transition-all group">
+<div class="flex items-center space-x-3.5">
+<span class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 font-bold text-xs flex items-center justify-center flex-shrink-0">2</span>
+<div>
+<div class="flex items-center space-x-2">
+<span class="font-bold text-slate-900 text-sm">肉類 (Các món thịt)</span>
+<span class="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-600">Món ăn</span>
+</div>
+<span class="text-xs text-slate-400">12 món</span>
+</div>
+</div>
+<div class="flex items-center space-x-1.5">
+<button class="w-10 h-10 rounded-xl bg-slate-50 hover:bg-slate-200 text-slate-600 flex items-center justify-center border border-slate-200/70 active:scale-95 transition-all">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M5 15l7-7 7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path></svg>
+</button>
+<button class="w-10 h-10 rounded-xl bg-slate-50 hover:bg-slate-200 text-slate-600 flex items-center justify-center border border-slate-200/70 active:scale-95 transition-all">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path></svg>
+</button>
+<div class="w-9 h-10 flex items-center justify-center text-slate-300 hover:text-slate-500 cursor-grab">
+<svg class="w-5 h-5" fill="currentColor" viewbox="0 0 20 20"><path d="M7 2a2 2 0 10.001 4.001A2 2 0 007 2zm0 6a2 2 0 10.001 4.001A2 2 0 007 8zm0 6a2 2 0 10.001 4.001A2 2 0 007 14zm6-8a2 2 0 10-.001-4.001A2 2 0 0013 6zm0 2a2 2 0 10.001 4.001A2 2 0 0013 8zm0 6a2 2 0 10.001 4.001A2 2 0 0013 14z"></path></svg>
+</div>
+</div>
+</article>
+<!-- Item 3: 精選小菜 $50/份 -->
+<article class="p-3 bg-white hover:bg-slate-50/80 border border-slate-200 rounded-xl flex items-center justify-between transition-all group">
+<div class="flex items-center space-x-3.5">
+<span class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 font-bold text-xs flex items-center justify-center flex-shrink-0">3</span>
+<div>
+<div class="flex items-center space-x-2">
+<span class="font-bold text-slate-900 text-sm">精選小菜 $50/份</span>
+<span class="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-600">Món ăn</span>
+</div>
+<span class="text-xs text-slate-500 font-semibold">$50</span>
+</div>
+</div>
+<div class="flex items-center space-x-1.5">
+<button class="w-10 h-10 rounded-xl bg-slate-50 hover:bg-slate-200 text-slate-600 flex items-center justify-center border border-slate-200/70 active:scale-95 transition-all">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M5 15l7-7 7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path></svg>
+</button>
+<button class="w-10 h-10 rounded-xl bg-slate-50 hover:bg-slate-200 text-slate-600 flex items-center justify-center border border-slate-200/70 active:scale-95 transition-all">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path></svg>
+</button>
+<div class="w-9 h-10 flex items-center justify-center text-slate-300 hover:text-slate-500 cursor-grab">
+<svg class="w-5 h-5" fill="currentColor" viewbox="0 0 20 20"><path d="M7 2a2 2 0 10.001 4.001A2 2 0 007 2zm0 6a2 2 0 10.001 4.001A2 2 0 007 8zm0 6a2 2 0 10.001 4.001A2 2 0 007 14zm6-8a2 2 0 10-.001-4.001A2 2 0 0013 6zm0 2a2 2 0 10.001 4.001A2 2 0 0013 8zm0 6a2 2 0 10.001 4.001A2 2 0 0013 14z"></path></svg>
+</div>
+</div>
+</article>
+<!-- Item 4: 特色小菜 $30/份 -->
+<article class="p-3 bg-white hover:bg-slate-50/80 border border-slate-200 rounded-xl flex items-center justify-between transition-all group">
+<div class="flex items-center space-x-3.5">
+<span class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 font-bold text-xs flex items-center justify-center flex-shrink-0">4</span>
+<div>
+<div class="flex items-center space-x-2">
+<span class="font-bold text-slate-900 text-sm">特色小菜 $30/份</span>
+<span class="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-600">Món ăn</span>
+</div>
+<span class="text-xs text-slate-500 font-semibold">$30</span>
+</div>
+</div>
+<div class="flex items-center space-x-1.5">
+<button class="w-10 h-10 rounded-xl bg-slate-50 hover:bg-slate-200 text-slate-600 flex items-center justify-center border border-slate-200/70 active:scale-95 transition-all">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M5 15l7-7 7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path></svg>
+</button>
+<button class="w-10 h-10 rounded-xl bg-slate-50 hover:bg-slate-200 text-slate-600 flex items-center justify-center border border-slate-200/70 active:scale-95 transition-all">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path></svg>
+</button>
+<div class="w-9 h-10 flex items-center justify-center text-slate-300 hover:text-slate-500 cursor-grab">
+<svg class="w-5 h-5" fill="currentColor" viewbox="0 0 20 20"><path d="M7 2a2 2 0 10.001 4.001A2 2 0 007 2zm0 6a2 2 0 10.001 4.001A2 2 0 007 8zm0 6a2 2 0 10.001 4.001A2 2 0 007 14zm6-8a2 2 0 10-.001-4.001A2 2 0 0013 6zm0 2a2 2 0 10.001 4.001A2 2 0 0013 8zm0 6a2 2 0 10.001 4.001A2 2 0 0013 14z"></path></svg>
+</div>
+</div>
+</article>
+<!-- Item 5: Đang chọn (ACTIVE ITEM HIGHLIGHT) -->
+<article class="p-3.5 bg-emerald-50/70 border-2 border-emerald-500 rounded-xl flex items-center justify-between shadow-xs ring-2 ring-emerald-500/10 transition-all relative">
+<div class="flex items-center space-x-3.5">
+<span class="w-8 h-8 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center flex-shrink-0 shadow-xs">5</span>
+<div>
+<div class="flex items-center space-x-2">
+<span class="font-bold text-emerald-950 text-base">經典小菜 $25/份</span>
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+</div>
+<div class="flex items-center space-x-2 mt-0.5">
+<span class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-white text-emerald-700 border border-emerald-300">Đang chọn</span>
+<span class="text-xs text-emerald-700/80 font-medium">7 món</span>
+</div>
+</div>
+</div>
+<div class="flex items-center space-x-1.5">
+<button class="w-10 h-10 rounded-xl bg-white hover:bg-emerald-100 text-emerald-700 flex items-center justify-center border border-emerald-300 active:scale-95 transition-all">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M5 15l7-7 7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path></svg>
+</button>
+<button class="w-10 h-10 rounded-xl bg-white hover:bg-emerald-100 text-emerald-700 flex items-center justify-center border border-emerald-300 active:scale-95 transition-all">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path></svg>
+</button>
+<div class="px-2.5 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded-lg flex items-center space-x-1">
+<span>Đang mở</span>
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path></svg>
+</div>
+</div>
+</article>
+<!-- Item 6: 蔬菜/配菜 1份$35 / 3份$100 -->
+<article class="p-3 bg-white hover:bg-slate-50/80 border border-slate-200 rounded-xl flex items-center justify-between transition-all group">
+<div class="flex items-center space-x-3.5">
+<span class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 font-bold text-xs flex items-center justify-center flex-shrink-0">6</span>
+<div>
+<div class="flex items-center space-x-2">
+<span class="font-bold text-slate-900 text-sm">蔬菜/配菜 1份$35 / 3份$100</span>
+</div>
+<span class="text-xs text-slate-400">Món ăn kèm combo</span>
+</div>
+</div>
+<div class="flex items-center space-x-1.5">
+<button class="w-10 h-10 rounded-xl bg-slate-50 hover:bg-slate-200 text-slate-600 flex items-center justify-center border border-slate-200/70 active:scale-95 transition-all">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M5 15l7-7 7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path></svg>
+</button>
+<button class="w-10 h-10 rounded-xl bg-slate-50 hover:bg-slate-200 text-slate-600 flex items-center justify-center border border-slate-200/70 active:scale-95 transition-all">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path></svg>
+</button>
+<div class="w-9 h-10 flex items-center justify-center text-slate-300 hover:text-slate-500 cursor-grab">
+<svg class="w-5 h-5" fill="currentColor" viewbox="0 0 20 20"><path d="M7 2a2 2 0 10.001 4.001A2 2 0 007 2zm0 6a2 2 0 10.001 4.001A2 2 0 007 8zm0 6a2 2 0 10.001 4.001A2 2 0 007 14zm6-8a2 2 0 10-.001-4.001A2 2 0 0013 6zm0 2a2 2 0 10.001 4.001A2 2 0 0013 8zm0 6a2 2 0 10.001 4.001A2 2 0 0013 14z"></path></svg>
+</div>
+</div>
+</article>
+<!-- Item 7: 其他 -->
+<article class="p-3 bg-white hover:bg-slate-50/80 border border-slate-200 rounded-xl flex items-center justify-between transition-all group">
+<div class="flex items-center space-x-3.5">
+<span class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 font-bold text-xs flex items-center justify-center flex-shrink-0">7</span>
+<div>
+<div class="flex items-center space-x-2">
+<span class="font-bold text-slate-900 text-sm">其他 (Khác)</span>
+<span class="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-600">Món ăn</span>
+</div>
+<span class="text-xs text-slate-400">Chưa phân loại cụ thể</span>
+</div>
+</div>
+<div class="flex items-center space-x-1.5">
+<button class="w-10 h-10 rounded-xl bg-slate-50 hover:bg-slate-200 text-slate-600 flex items-center justify-center border border-slate-200/70 active:scale-95 transition-all">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M5 15l7-7 7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path></svg>
+</button>
+<button class="w-10 h-10 rounded-xl bg-slate-50 hover:bg-slate-200 text-slate-600 flex items-center justify-center border border-slate-200/70 active:scale-95 transition-all">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path></svg>
+</button>
+<div class="w-9 h-10 flex items-center justify-center text-slate-300 hover:text-slate-500 cursor-grab">
+<svg class="w-5 h-5" fill="currentColor" viewbox="0 0 20 20"><path d="M7 2a2 2 0 10.001 4.001A2 2 0 007 2zm0 6a2 2 0 10.001 4.001A2 2 0 007 8zm0 6a2 2 0 10.001 4.001A2 2 0 007 14zm6-8a2 2 0 10-.001-4.001A2 2 0 0013 6zm0 2a2 2 0 10.001 4.001A2 2 0 0013 8zm0 6a2 2 0 10.001 4.001A2 2 0 0013 14z"></path></svg>
+</div>
+</div>
+</article>
+</div>
+</section>
+<!-- END: LeftColumnCategories -->
+<!-- CỘT PHẢI: MÓN TRONG DANH MỤC ĐANG CHỌN (Chiếm 6 / 12 phần trên tablet) -->
+<!-- BEGIN: RightColumnDishes -->
+<section class="col-span-6 bg-white border border-slate-200/90 rounded-2xl flex flex-col shadow-xs overflow-hidden" data-purpose="items-order-panel">
+<!-- Tiêu đề cột phải & Đếm số lượng món -->
+<div class="px-5 py-3 border-b border-slate-100 bg-emerald-50/30 flex items-center justify-between flex-shrink-0">
+<div>
+<div class="flex items-center space-x-2">
+<span class="text-xs font-semibold text-emerald-800 uppercase tracking-wider">Món trong phân loại:</span>
+<span class="font-extrabold text-slate-900 text-sm">經典小菜 $25/份</span>
+</div>
+<p class="text-xs text-slate-500 mt-0.5">Sắp xếp thứ tự hiển thị khách hàng nhìn thấy trước</p>
+</div>
+<div class="flex items-center space-x-2">
+<span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-white text-emerald-700 border border-emerald-200 shadow-2xs">
+            7 món hiển thị
+          </span>
+</div>
+</div>
+<!-- Danh sách các món của danh mục -->
+<div class="flex-1 overflow-y-auto custom-scrollbar p-3.5 space-y-2.5" data-purpose="dishes-items-container">
+<!-- Món 1: 豆乾絲 -->
+<article class="p-3 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-xl flex items-center justify-between transition-all">
+<div class="flex items-center space-x-3.5">
+<span class="w-8 h-8 rounded-full bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center flex-shrink-0">1</span>
+<div>
+<h3 class="font-bold text-slate-900 text-base leading-snug">豆乾絲</h3>
+<p class="text-xs font-medium text-emerald-600">$25</p>
+</div>
+</div>
+<div class="flex items-center space-x-1.5">
+<button class="w-10 h-10 rounded-xl bg-slate-50 hover:bg-slate-200 text-slate-600 flex items-center justify-center border border-slate-200/70 active:scale-95 transition-all" title="Lên">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M5 15l7-7 7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path></svg>
+</button>
+<button class="w-10 h-10 rounded-xl bg-slate-50 hover:bg-slate-200 text-slate-600 flex items-center justify-center border border-slate-200/70 active:scale-95 transition-all" title="Xuống">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path></svg>
+</button>
+<div class="w-9 h-10 flex items-center justify-center text-slate-300 hover:text-slate-500 cursor-grab">
+<svg class="w-5 h-5" fill="currentColor" viewbox="0 0 20 20"><path d="M7 2a2 2 0 10.001 4.001A2 2 0 007 2zm0 6a2 2 0 10.001 4.001A2 2 0 007 8zm0 6a2 2 0 10.001 4.001A2 2 0 007 14zm6-8a2 2 0 10-.001-4.001A2 2 0 0013 6zm0 2a2 2 0 10.001 4.001A2 2 0 0013 8zm0 6a2 2 0 10.001 4.001A2 2 0 0013 14z"></path></svg>
+</div>
+</div>
+</article>
+<!-- Món 2: 黑輪 -->
+<article class="p-3 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-xl flex items-center justify-between transition-all">
+<div class="flex items-center space-x-3.5">
+<span class="w-8 h-8 rounded-full bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center flex-shrink-0">2</span>
+<div>
+<h3 class="font-bold text-slate-900 text-base leading-snug">黑輪</h3>
+<p class="text-xs font-medium text-emerald-600">$25</p>
+</div>
+</div>
+<div class="flex items-center space-x-1.5">
+<button class="w-10 h-10 rounded-xl bg-slate-50 hover:bg-slate-200 text-slate-600 flex items-center justify-center border border-slate-200/70 active:scale-95 transition-all">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M5 15l7-7 7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path></svg>
+</button>
+<button class="w-10 h-10 rounded-xl bg-slate-50 hover:bg-slate-200 text-slate-600 flex items-center justify-center border border-slate-200/70 active:scale-95 transition-all">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path></svg>
+</button>
+<div class="w-9 h-10 flex items-center justify-center text-slate-300 hover:text-slate-500 cursor-grab">
+<svg class="w-5 h-5" fill="currentColor" viewbox="0 0 20 20"><path d="M7 2a2 2 0 10.001 4.001A2 2 0 007 2zm0 6a2 2 0 10.001 4.001A2 2 0 007 8zm0 6a2 2 0 10.001 4.001A2 2 0 007 14zm6-8a2 2 0 10-.001-4.001A2 2 0 0013 6zm0 2a2 2 0 10.001 4.001A2 2 0 0013 8zm0 6a2 2 0 10.001 4.001A2 2 0 0013 14z"></path></svg>
+</div>
+</div>
+</article>
+<!-- Món 3: 蝦子(一隻) -->
+<article class="p-3 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-xl flex items-center justify-between transition-all">
+<div class="flex items-center space-x-3.5">
+<span class="w-8 h-8 rounded-full bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center flex-shrink-0">3</span>
+<div>
+<h3 class="font-bold text-slate-900 text-base leading-snug">蝦子(一隻)</h3>
+<p class="text-xs font-medium text-emerald-600">$25</p>
+</div>
+</div>
+<div class="flex items-center space-x-1.5">
+<button class="w-10 h-10 rounded-xl bg-slate-50 hover:bg-slate-200 text-slate-600 flex items-center justify-center border border-slate-200/70 active:scale-95 transition-all">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M5 15l7-7 7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path></svg>
+</button>
+<button class="w-10 h-10 rounded-xl bg-slate-50 hover:bg-slate-200 text-slate-600 flex items-center justify-center border border-slate-200/70 active:scale-95 transition-all">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path></svg>
+</button>
+<div class="w-9 h-10 flex items-center justify-center text-slate-300 hover:text-slate-500 cursor-grab">
+<svg class="w-5 h-5" fill="currentColor" viewbox="0 0 20 20"><path d="M7 2a2 2 0 10.001 4.001A2 2 0 007 2zm0 6a2 2 0 10.001 4.001A2 2 0 007 8zm0 6a2 2 0 10.001 4.001A2 2 0 007 14zm6-8a2 2 0 10-.001-4.001A2 2 0 0013 6zm0 2a2 2 0 10.001 4.001A2 2 0 0013 8zm0 6a2 2 0 10.001 4.001A2 2 0 0013 14z"></path></svg>
+</div>
+</div>
+</article>
+<!-- Món 4: 大黑豆乾 -->
+<article class="p-3 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-xl flex items-center justify-between transition-all">
+<div class="flex items-center space-x-3.5">
+<span class="w-8 h-8 rounded-full bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center flex-shrink-0">4</span>
+<div>
+<h3 class="font-bold text-slate-900 text-base leading-snug">大黑豆乾</h3>
+<p class="text-xs font-medium text-emerald-600">$25</p>
+</div>
+</div>
+<div class="flex items-center space-x-1.5">
+<button class="w-10 h-10 rounded-xl bg-slate-50 hover:bg-slate-200 text-slate-600 flex items-center justify-center border border-slate-200/70 active:scale-95 transition-all">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M5 15l7-7 7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path></svg>
+</button>
+<button class="w-10 h-10 rounded-xl bg-slate-50 hover:bg-slate-200 text-slate-600 flex items-center justify-center border border-slate-200/70 active:scale-95 transition-all">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path></svg>
+</button>
+<div class="w-9 h-10 flex items-center justify-center text-slate-300 hover:text-slate-500 cursor-grab">
+<svg class="w-5 h-5" fill="currentColor" viewbox="0 0 20 20"><path d="M7 2a2 2 0 10.001 4.001A2 2 0 007 2zm0 6a2 2 0 10.001 4.001A2 2 0 007 8zm0 6a2 2 0 10.001 4.001A2 2 0 007 14zm6-8a2 2 0 10-.001-4.001A2 2 0 0013 6zm0 2a2 2 0 10.001 4.001A2 2 0 0013 8zm0 6a2 2 0 10.001 4.001A2 2 0 0013 14z"></path></svg>
+</div>
+</div>
+</article>
+<!-- Món 5: 竹輪 -->
+<article class="p-3 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-xl flex items-center justify-between transition-all">
+<div class="flex items-center space-x-3.5">
+<span class="w-8 h-8 rounded-full bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center flex-shrink-0">5</span>
+<div>
+<h3 class="font-bold text-slate-900 text-base leading-snug">竹輪</h3>
+<p class="text-xs font-medium text-emerald-600">$25</p>
+</div>
+</div>
+<div class="flex items-center space-x-1.5">
+<button class="w-10 h-10 rounded-xl bg-slate-50 hover:bg-slate-200 text-slate-600 flex items-center justify-center border border-slate-200/70 active:scale-95 transition-all">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M5 15l7-7 7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path></svg>
+</button>
+<button class="w-10 h-10 rounded-xl bg-slate-50 hover:bg-slate-200 text-slate-600 flex items-center justify-center border border-slate-200/70 active:scale-95 transition-all">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path></svg>
+</button>
+<div class="w-9 h-10 flex items-center justify-center text-slate-300 hover:text-slate-500 cursor-grab">
+<svg class="w-5 h-5" fill="currentColor" viewbox="0 0 20 20"><path d="M7 2a2 2 0 10.001 4.001A2 2 0 007 2zm0 6a2 2 0 10.001 4.001A2 2 0 007 8zm0 6a2 2 0 10.001 4.001A2 2 0 007 14zm6-8a2 2 0 10-.001-4.001A2 2 0 0013 6zm0 2a2 2 0 10.001 4.001A2 2 0 0013 8zm0 6a2 2 0 10.001 4.001A2 2 0 0013 14z"></path></svg>
+</div>
+</div>
+</article>
+<!-- Món 6: 皮蛋 -->
+<article class="p-3 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-xl flex items-center justify-between transition-all">
+<div class="flex items-center space-x-3.5">
+<span class="w-8 h-8 rounded-full bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center flex-shrink-0">6</span>
+<div>
+<h3 class="font-bold text-slate-900 text-base leading-snug">皮蛋</h3>
+<p class="text-xs font-medium text-emerald-600">$25</p>
+</div>
+</div>
+<div class="flex items-center space-x-1.5">
+<button class="w-10 h-10 rounded-xl bg-slate-50 hover:bg-slate-200 text-slate-600 flex items-center justify-center border border-slate-200/70 active:scale-95 transition-all">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M5 15l7-7 7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path></svg>
+</button>
+<button class="w-10 h-10 rounded-xl bg-slate-50 hover:bg-slate-200 text-slate-600 flex items-center justify-center border border-slate-200/70 active:scale-95 transition-all">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path></svg>
+</button>
+<div class="w-9 h-10 flex items-center justify-center text-slate-300 hover:text-slate-500 cursor-grab">
+<svg class="w-5 h-5" fill="currentColor" viewbox="0 0 20 20"><path d="M7 2a2 2 0 10.001 4.001A2 2 0 007 2zm0 6a2 2 0 10.001 4.001A2 2 0 007 8zm0 6a2 2 0 10.001 4.001A2 2 0 007 14zm6-8a2 2 0 10-.001-4.001A2 2 0 0013 6zm0 2a2 2 0 10.001 4.001A2 2 0 0013 8zm0 6a2 2 0 10.001 4.001A2 2 0 0013 14z"></path></svg>
+</div>
+</div>
+</article>
+<!-- Món 7: 甜不辣 -->
+<article class="p-3 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-xl flex items-center justify-between transition-all">
+<div class="flex items-center space-x-3.5">
+<span class="w-8 h-8 rounded-full bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center flex-shrink-0">7</span>
+<div>
+<h3 class="font-bold text-slate-900 text-base leading-snug">甜不辣</h3>
+<p class="text-xs font-medium text-emerald-600">$25</p>
+</div>
+</div>
+<div class="flex items-center space-x-1.5">
+<button class="w-10 h-10 rounded-xl bg-slate-50 hover:bg-slate-200 text-slate-600 flex items-center justify-center border border-slate-200/70 active:scale-95 transition-all">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M5 15l7-7 7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path></svg>
+</button>
+<button class="w-10 h-10 rounded-xl bg-slate-50 hover:bg-slate-200 text-slate-600 flex items-center justify-center border border-slate-200/70 active:scale-95 transition-all">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path></svg>
+</button>
+<div class="w-9 h-10 flex items-center justify-center text-slate-300 hover:text-slate-500 cursor-grab">
+<svg class="w-5 h-5" fill="currentColor" viewbox="0 0 20 20"><path d="M7 2a2 2 0 10.001 4.001A2 2 0 007 2zm0 6a2 2 0 10.001 4.001A2 2 0 007 8zm0 6a2 2 0 10.001 4.001A2 2 0 007 14zm6-8a2 2 0 10-.001-4.001A2 2 0 0013 6zm0 2a2 2 0 10.001 4.001A2 2 0 0013 8zm0 6a2 2 0 10.001 4.001A2 2 0 0013 14z"></path></svg>
+</div>
+</div>
+</article>
+</div>
+</section>
+<!-- END: RightColumnDishes -->
+</main>
+<!-- END: SplitViewContent -->
+</body></html>
