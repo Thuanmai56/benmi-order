@@ -137,7 +137,7 @@ test('blank new option can close cleanly and add/remove child reverts to the ori
   const app = await setup(); app.context.UnifiedMenu.group('drinks','add-option');
   await app.click('custom'); await app.click('close'); assert.equal(app.drawer().hidden,true);
   app.context.UnifiedMenu.group('drinks','option','coffee_option');
-  await app.click('add-sub'); await app.click('remove-sub','[data-index="0"]');
+  await app.click('add-sub'); await app.click('sub-custom'); await app.click('remove-sub','[data-index="0"]');
   await app.click('close'); assert.equal(app.drawer().hidden,true);
 });
 
@@ -229,4 +229,66 @@ test('options-only network failures and version conflicts retain the subset draf
     assert.equal(app.drawer().hidden,true); assert.deepEqual(app.posts[1].links[0].optionIds,['coffee_option']);
     assert.equal(app.context.currentMenuData[0].items[0].price,999);
   }
+});
+
+test('sub-option popover opens without dirtying the draft and Escape dismisses only the menu', async () => {
+  for (const lang of ['vi','zh-TW']) {
+    const app = await setup({lang}); app.context.UnifiedMenu.group('drinks','option','custom');
+    const name = app.get('[data-field="option.name"]'), body = app.get('.ug-body');
+    app.input('option.description','Draft description'); body.scrollTop = 160;
+    await app.click('add-sub');
+    assert.equal(app.get('.ug-sub-menu').hidden,false);
+    assert.equal(app.get('[data-action="add-sub"]').getAttribute('aria-expanded'),'true');
+    assert.equal(app.get('[data-action="sub-products"]').textContent.includes(lang==='vi'?'Từ món có sẵn':'從現有餐點選擇'),true);
+    app.emit('keydown',app.get('[data-action="sub-products"]'),{key:'Escape'});
+    assert.equal(app.get('.ug-sub-menu').hidden,true);
+    assert.equal(app.drawer().hidden,false); assert.equal(app.get('[data-field="option.name"]'),name);
+    assert.equal(app.get('[data-field="option.description"]').value,'Draft description');
+    assert.equal(body.scrollTop,160); assert.equal(app.posts.length,0);
+  }
+});
+
+test('sub-product picker retains both kinds, zero independent surcharge and selected reference on save/reopen', async () => {
+  const app = await setup(); app.context.UnifiedMenu.group('drinks','option','custom');
+  await app.click('add-sub'); await app.click('sub-products');
+  const tea=app.get('[data-check="product"][value="tea"]'); tea.checked=true; app.emit('input',tea);
+  await app.click('apply');
+  assert.equal(app.get('[data-field="sub.0.name"]').value,'Nóng');
+  assert.equal(app.get('[data-field="sub.1.name"]').value,'Trà đen');
+  assert.equal(app.get('[data-field="sub.1.name"]').getAttribute('readonly'),'');
+  assert.equal(app.get('[data-field="sub.1.price"]').value,'0');
+  assert.match(app.get('.ug-sub-source-meta').textContent,/#tea.*37/);
+  app.input('sub.1.price',15); await app.click('save');
+  const sub=app.posts[0].options.find(o=>o.id==='custom').subOptions[1];
+  assert.equal(sub.productId,'tea'); assert.equal(sub.price,15); assert.ok(sub.id);
+  assert.equal(app.catalog().products.find(p=>p.id==='tea').price,37);
+  app.context.UnifiedMenu.group('drinks','option','custom');
+  assert.equal(app.get('[data-field="sub.1.price"]').value,'15');
+  await app.click('add-sub'); await app.click('sub-products');
+  assert.equal(app.get('[data-check="product"][value="tea"]').disabled,true);
+  assert.equal(app.get('[data-check="product"][value="tea"]').checked,true);
+  await app.click('apply'); await app.click('save'); assert.equal(app.posts.length,1);
+});
+
+test('canceling a sub-product picker preserves the option and adding/removing a link restores a clean draft', async () => {
+  const app=await setup(); app.context.UnifiedMenu.group('drinks','option','coffee_option');
+  await app.click('add-sub'); await app.click('sub-products');
+  const tea=app.get('[data-check="product"][value="tea"]'); tea.checked=true; app.emit('input',tea);
+  await app.click('back'); assert.equal(app.get('.ug-option-children').textContent.includes('(0)'),true);
+  await app.click('add-sub'); await app.click('sub-products');
+  const picked=app.get('[data-check="product"][value="tea"]'); picked.checked=true; app.emit('input',picked);
+  await app.click('apply'); await app.click('remove-sub','[data-index="0"]');
+  await app.click('close'); assert.equal(app.drawer().hidden,true); assert.equal(app.posts.length,0);
+});
+
+test('linked sub-option names and stock come from the live catalog and cannot be renamed through the child form', async () => {
+  const app=await setup();
+  const sub={id:'linked-tea',productId:'tea',name:'Old tea',price:15};
+  app.catalog().groups[0].options[1].subOptions.push(sub);
+  app.catalog().products.find(p=>p.id==='tea').out_of_stock_until='2999-01-01T00:00:00Z';
+  await app.context.UnifiedMenu.load(); app.context.UnifiedMenu.group('drinks','option','custom');
+  assert.equal(app.get('[data-field="sub.1.name"]').value,'Trà đen');
+  assert.match(app.get('.ug-sub-source-meta').textContent,/Hết món/);
+  app.input('sub.1.name','Attempted rename'); await app.click('save');
+  assert.equal(app.posts.length,0); assert.equal(sub.name,'Old tea');
 });

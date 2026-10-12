@@ -190,6 +190,6 @@ test('ordering screen assets share the new cache buster', () => {
   const html = fs.readFileSync(path.resolve(__dirname, '../orders.html'), 'utf-8');
   for (const asset of ['css/orders-menu.css', 'js/orders-menu.js', 'js/orders-i18n.js']) {
     const escaped = asset.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    assert.match(html,new RegExp(`${escaped}\\?v=20261012_menu_compact_v6`));
+    assert.match(html,new RegExp(`${escaped}\\?v=20261012_menu_display_scale_v7`));
   }
 });

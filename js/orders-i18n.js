@@ -262,6 +262,7 @@ const I18N = {
     statusOpen: "營業中",
     statusBusy: "繁忙中 (+1小時)",
     statusPaused: "暫停接單",
+    statusClosed: "打烊休息",
     statusMenuHeader: "門市接單狀態",
     statusOptOpenTitle: "營業中",
     statusOptOpenDesc: "正常接單，顧客依一般時間預約",
@@ -269,6 +270,8 @@ const I18N = {
     statusOptBusyDesc: "新訂單製作時間自動延長 1 小時",
     statusOptPausedTitle: "暫停接單",
     statusOptPausedDesc: "暫停接收新訂單，顧客端無法下單",
+    statusOptClosedTitle: "打烊休息",
+    statusOptClosedDesc: "暫停接受新訂單",
     orderModeTitle: "點餐模式 / 取餐時間設定",
     orderModeSub: "自訂允許顧客預約時間或現場排隊即時製作 (ASAP)",
     btnSaveSetting: "儲存設定",
@@ -1213,6 +1216,7 @@ const I18N = {
     statusOpen: "Đang mở quán",
     statusBusy: "Đang bận (+1 giờ)",
     statusPaused: "Tạm dừng nhận đơn",
+    statusClosed: "Đóng cửa nghỉ",
     statusMenuHeader: "Trạng thái nhận đơn",
     statusOptOpenTitle: "Mở quán",
     statusOptOpenDesc: "Nhận đơn mới bình thường theo thời gian chuẩn",
@@ -1220,6 +1224,8 @@ const I18N = {
     statusOptBusyDesc: "Quán đang bận, tự động kéo dài thời gian làm thêm 1 tiếng cho mỗi đơn mới",
     statusOptPausedTitle: "Tạm dừng nhận đơn",
     statusOptPausedDesc: "Tạm dừng nhận đơn mới, khách hàng không thể gửi đơn",
+    statusOptClosedTitle: "Đóng cửa nghỉ",
+    statusOptClosedDesc: "Tạm ngừng nhận đơn mới",
     orderModeTitle: "Chế độ nhận đơn & Hẹn giờ",
     orderModeSub: "Tùy chỉnh cho phép khách hẹn giờ lấy hoặc nhận đơn làm ngay xếp theo thứ tự (ASAP)",
     btnSaveSetting: "Lưu thiết lập",
@@ -2048,6 +2054,7 @@ function applyLanguageToDOM() {
     if (currentStoreStatus === 'open') mobileSub.innerText = dict.statusOpen || "營業中";
     else if (currentStoreStatus === 'busy') mobileSub.innerText = dict.statusBusy || "忙碌中";
     else if (currentStoreStatus === 'paused') mobileSub.innerText = dict.statusPaused || "暫停接單";
+    else if (currentStoreStatus === 'closed') mobileSub.innerText = dict.statusClosed || "打烊休息";
   }
 
   if (typeof updateSidebarToggleIcon === "function") {
@@ -2352,6 +2359,10 @@ function applyLanguageToDOM() {
   if (stOptPausedT) stOptPausedT.innerText = dict.statusOptPausedTitle;
   const stOptPausedD = document.getElementById("i18n-status-desc-paused");
   if (stOptPausedD) stOptPausedD.innerText = dict.statusOptPausedDesc;
+  const stOptClosedT = document.getElementById("i18n-status-opt-closed");
+  if (stOptClosedT) stOptClosedT.innerText = dict.statusOptClosedTitle || dict.statusClosed;
+  const stOptClosedD = document.getElementById("i18n-status-desc-closed");
+  if (stOptClosedD) stOptClosedD.innerText = dict.statusOptClosedDesc;
 
   if (typeof renderStoreStatusUI === "function" && typeof currentStoreStatus !== "undefined") {
     renderStoreStatusUI(currentStoreStatus);
