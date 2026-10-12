@@ -813,26 +813,26 @@
   outline-offset: -3px;
 }
 #view-menu .menu-sidebar-segmented-toggle {
-  width: calc(156px * var(--menu-font-scale));
+  width: calc(186px * var(--menu-font-scale));
   max-width: 100% !important;
-  min-height: calc(34px * var(--menu-font-scale)) !important;
-  height: calc(34px * var(--menu-font-scale)) !important;
+  min-height: calc(38px * var(--menu-font-scale)) !important;
+  height: calc(38px * var(--menu-font-scale)) !important;
   padding: calc(3px * var(--menu-font-scale)) !important;
   background: #f1f5f9 !important;
   box-sizing: border-box;
-  border-radius: 8px !important;
+  border-radius: 9px !important;
   display: inline-flex;
   align-items: center;
   border: 1px solid #e2e8f0;
 }
 #view-menu .menu-seg-btn {
-  min-height: calc(28px * var(--menu-font-scale)) !important;
-  height: calc(28px * var(--menu-font-scale)) !important;
-  padding: calc(2px * var(--menu-font-scale)) calc(8px * var(--menu-font-scale)) !important;
-  font-size: var(--menu-font-sm) !important;
+  min-height: calc(32px * var(--menu-font-scale)) !important;
+  height: calc(32px * var(--menu-font-scale)) !important;
+  padding: calc(3px * var(--menu-font-scale)) calc(12px * var(--menu-font-scale)) !important;
+  font-size: var(--menu-font-base) !important;
   color: #64748b !important;
-  font-weight: 600;
-  border-radius: 6px !important;
+  font-weight: 650;
+  border-radius: 7px !important;
   border: 0 !important;
   background: transparent;
   flex: 1;
@@ -1325,7 +1325,7 @@
   border-radius: 0 !important;
   box-shadow: none !important;
   background: #fff !important;
-  min-height: calc(52px * var(--menu-font-scale)) !important;
+  min-height: calc(56px * var(--menu-font-scale)) !important;
   margin: 0 !important;
   transition: background 0.15s ease !important;
   cursor: pointer;
@@ -1424,17 +1424,17 @@
   flex: 1;
 }
 #view-menu .menu-item-name-input {
-  height: calc(28px * var(--menu-font-scale)) !important;
-  min-height: calc(28px * var(--menu-font-scale)) !important;
-  padding: 2px calc(6px * var(--menu-font-scale)) !important;
+  height: calc(32px * var(--menu-font-scale)) !important;
+  min-height: calc(32px * var(--menu-font-scale)) !important;
+  padding: 2px calc(8px * var(--menu-font-scale)) !important;
   border: 1px solid transparent !important;
   border-radius: 6px !important;
   background: transparent !important;
-  font-size: var(--menu-font-base) !important;
-  font-weight: 650 !important;
+  font-size: var(--menu-font-md) !important;
+  font-weight: 600 !important;
   color: #0f172a !important;
   width: 100% !important;
-  max-width: calc(340px * var(--menu-font-scale));
+  max-width: calc(360px * var(--menu-font-scale));
   box-sizing: border-box;
 }
 #view-menu .menu-item-name-input:hover {
@@ -1517,11 +1517,11 @@
   display: inline-flex !important;
   align-items: center;
   gap: 2px;
-  height: calc(28px * var(--menu-font-scale)) !important;
-  min-height: calc(28px * var(--menu-font-scale)) !important;
+  height: calc(32px * var(--menu-font-scale)) !important;
+  min-height: calc(32px * var(--menu-font-scale)) !important;
   border: 1px solid transparent !important;
   border-radius: 6px;
-  padding: 1px calc(4px * var(--menu-font-scale)) !important;
+  padding: 1px calc(6px * var(--menu-font-scale)) !important;
   width: auto !important;
   min-width: 0 !important;
 }
@@ -1540,8 +1540,8 @@
 }
 #view-menu .menu-item-price-wrapper .menu-item-price-input {
   width: calc(56px * var(--menu-font-scale)) !important;
-  height: calc(24px * var(--menu-font-scale)) !important;
-  min-height: calc(24px * var(--menu-font-scale)) !important;
+  height: calc(28px * var(--menu-font-scale)) !important;
+  min-height: calc(28px * var(--menu-font-scale)) !important;
   font-size: var(--menu-font-md) !important;
   font-weight: 750 !important;
   color: #0f172a !important;

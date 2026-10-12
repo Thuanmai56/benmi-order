@@ -32,16 +32,22 @@ test('Menu CSS contains zero hardcoded font-size in pixels', () => {
   assert.equal(hardcodedFontSizes, null, 'orders-menu.css should not have any hardcoded px font sizes');
 });
 
-test('Menu dish cards and inputs scale dynamically with --menu-font-scale', () => {
+test('Menu dish cards, inputs and segmented toggle scale dynamically with --menu-font-scale', () => {
   const css = read('css/orders-menu.css');
 
+  // Segmented toggle header scale
+  assert.match(css, /\.menu-sidebar-segmented-toggle[\s\S]*?width:\s*calc\(186px\s*\*\s*var\(--menu-font-scale\)\)/);
+  assert.match(css, /\.menu-sidebar-segmented-toggle[\s\S]*?height:\s*calc\(38px\s*\*\s*var\(--menu-font-scale\)\)/);
+  assert.match(css, /\.menu-seg-btn[\s\S]*?font-size:\s*var\(--menu-font-base\)/);
+
   // Dish row card heights and paddings scale
-  assert.match(css, /\.menu-item-row-card[\s\S]*?min-height:\s*calc\(52px\s*\*\s*var\(--menu-font-scale\)\)/);
+  assert.match(css, /\.menu-item-row-card[\s\S]*?min-height:\s*calc\(56px\s*\*\s*var\(--menu-font-scale\)\)/);
   assert.match(css, /\.menu-item-thumb-box[\s\S]*?calc\(44px\s*\*\s*var\(--menu-font-scale\)\)/);
 
   // Dish name, price, stock toggle, options button scale
-  assert.match(css, /\.menu-item-name-input[\s\S]*?font-size:\s*var\(--menu-font-base\)/);
-  assert.match(css, /\.menu-item-price-wrapper[\s\S]*?font-size:\s*var\(--menu-font-base\)/);
+  assert.match(css, /\.menu-item-name-input[\s\S]*?font-size:\s*var\(--menu-font-md\)/);
+  assert.match(css, /\.menu-item-name-input[\s\S]*?height:\s*calc\(32px\s*\*\s*var\(--menu-font-scale\)\)/);
+  assert.match(css, /\.menu-item-price-wrapper[\s\S]*?height:\s*calc\(32px\s*\*\s*var\(--menu-font-scale\)\)/);
   assert.match(css, /\.menu-item-price-input[\s\S]*?font-size:\s*var\(--menu-font-md\)/);
   assert.match(css, /\.menu-item-stock-toggle[\s\S]*?font-size:\s*var\(--menu-font-xs\)/);
   assert.match(css, /\.menu-item-options-btn[\s\S]*?font-size:\s*var\(--menu-font-xs\)/);
@@ -63,7 +69,7 @@ test('I18N dictionaries contain store closed status in zh-TW and vi', () => {
 
 test('orders.html has updated cache-busters for menu and display scaling', () => {
   const html = read('orders.html');
-  const version = '20261012_menu_display_scale_v7';
+  const version = '20261012_menu_toggle_item_scale_v8';
 
   assert.ok(html.includes(`css/orders.css?v=${version}`), 'orders.css must have bumped cache-buster');
   assert.ok(html.includes(`css/orders-menu.css?v=${version}`), 'orders-menu.css must have bumped cache-buster');
