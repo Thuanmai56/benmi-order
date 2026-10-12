@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+
+<html lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>BLAB POS - Hỗ trợ kỹ thuật &amp; Liên hệ</title>
+<!-- Tailwind CSS CDN with plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Google Fonts: Inter -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind Configuration -->
+<script data-purpose="tailwind-config">
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+            },
+            lineGreen: '#06C755',
+            lineGreenHover: '#05ad4a'
+          }
+        }
+      }
+    }
+  </script>
+<!-- Custom Scrollbar & Animations Styles -->
+<style data-purpose="custom-decorations">
+    /* Subtle custom scroll styling */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.3); opacity: 0.6; }
+    }
+    .pulse-indicator {
+      animation: pulse-dot 2s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-slate-900 font-sans text-slate-800 antialiased overflow-x-hidden relative min-h-screen">
+<!-- BEGIN: BackgroundMockupDashboard -->
+<!-- Nền dashboard F&B POS mờ phía sau tạo cảm giác ứng dụng thực tế chuyên nghiệp -->
+<div aria-hidden="true" class="fixed inset-0 pointer-events-none filter blur-md opacity-40 select-none overflow-hidden">
+<div class="flex h-screen w-full bg-slate-100">
+<!-- Sidebar Giả lập -->
+<aside class="w-64 bg-slate-900 p-5 flex flex-col justify-between text-white">
+<div class="space-y-6">
+<div class="flex items-center space-x-3">
+<div class="h-9 w-9 bg-emerald-500 rounded-lg flex items-center justify-center font-bold text-xl">B</div>
+<span class="text-lg font-bold tracking-tight">BLAB POS System</span>
+</div>
+<nav class="space-y-2 text-sm text-slate-300">
+<div class="p-2.5 rounded-lg bg-emerald-600/30 text-emerald-400 font-medium">Cài đặt hệ thống</div>
+<div class="p-2.5 rounded-lg">Trạng thái kết nối</div>
+<div class="p-2.5 rounded-lg">Quản lý hóa đơn &amp; Bán hàng</div>
+<div class="p-2.5 rounded-lg">Thiết lập in tại quầy</div>
+<div class="p-2.5 rounded-lg">Báo cáo doanh thu ca</div>
+</nav>
+</div>
+</aside>
+<!-- Main Dashboard Mock Content -->
+<main class="flex-1 p-8 space-y-6 overflow-hidden">
+<header class="flex justify-between items-center pb-4 border-b border-slate-200">
+<h1 class="text-2xl font-bold text-slate-800">Cấu hình &amp; Trạng thái thiết bị ngoại vi</h1>
+<div class="h-10 w-32 bg-slate-200 rounded-lg"></div>
+</header>
+<div class="grid grid-cols-3 gap-6">
+<div class="h-32 bg-white rounded-xl shadow-sm border border-slate-200"></div>
+<div class="h-32 bg-white rounded-xl border border-rose-200 bg-rose-50/50"></div>
+<div class="h-32 bg-white rounded-xl shadow-sm border border-slate-200"></div>
+</div>
+<div class="h-80 bg-white rounded-xl border border-slate-200"></div>
+</main>
+</div>
+</div>
+<!-- END: BackgroundMockupDashboard -->
+<!-- BEGIN: ModalOverlayContainer -->
+<!-- Container overlay căn giữa hộp thoại modal -->
+<div class="relative min-h-screen flex items-center justify-center p-4 sm:p-6 md:p-8 z-50">
+<!-- Backdrop tối kết hợp hiệu ứng kính (glassmorphism) -->
+<div aria-hidden="true" class="fixed inset-0 bg-slate-950/60 backdrop-blur-md transition-opacity"></div>
+<!-- BEGIN: SupportModalDialog -->
+<!-- Thân Modal chính -->
+<div aria-labelledby="modal-headline" aria-modal="true" class="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden transition-all transform flex flex-col max-h-[92vh]" role="dialog">
+<!-- BEGIN: ModalHeader -->
+<header class="px-6 sm:px-8 pt-7 pb-5 border-b border-slate-100 relative bg-white">
+<!-- Nút Đóng Modal ở góc phải -->
+<button aria-label="Đóng cửa sổ" class="absolute top-6 right-6 text-slate-400 hover:text-slate-600 hover:bg-slate-100 w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-500" onclick="alert('Đóng modal')" type="button">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<!-- Tiêu đề & Biểu tượng -->
+<div class="flex items-start space-x-4 pr-10">
+<div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0 border border-emerald-100">
+<!-- Icon tai nghe hỗ trợ CSKH -->
+<svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewbox="0 0 24 24">
+<path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z" stroke-linecap="round" stroke-linejoin="round"></path>
+<path d="M3 11a9 9 0 0118 0v3a3 3 0 01-3 3h-1.5a1.5 1.5 0 01-1.5-1.5v-3a1.5 1.5 0 011.5-1.5H19M5 11h1.5A1.5 1.5 0 018 12.5v3A1.5 1.5 0 016.5 17H5a3 3 0 01-3-3v-3z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<div>
+<h2 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight" id="modal-headline">
+              Hỗ trợ kỹ thuật &amp; Liên hệ BLAB
+            </h2>
+<p class="text-sm text-slate-500 mt-1 leading-relaxed">
+              Kênh chăm sóc khách hàng, giải quyết sự cố tức thì và tư vấn giải pháp POS F&amp;B chuyên sâu.
+            </p>
+</div>
+</div>
+<!-- Trạng thái Online Indicator Bar -->
+<div class="mt-4 inline-flex items-center space-x-2 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium border border-emerald-200/60">
+<span class="w-2.5 h-2.5 rounded-full bg-emerald-500 pulse-indicator"></span>
+<span>Đội ngũ hỗ trợ đang trực tuyến • Thời gian phản hồi trung bình <strong class="font-semibold text-emerald-800">&lt; 3 phút</strong></span>
+</div>
+</header>
+<!-- END: ModalHeader -->
+<!-- BEGIN: ModalContentBody -->
+<!-- Danh sách các kênh hỗ trợ được phân tầng trực quan -->
+<main class="px-6 sm:px-8 py-6 space-y-4 overflow-y-auto flex-1">
+<!-- THẺ 1: Hỗ trợ khẩn cấp qua LINE Official (Kênh ưu tiên số 1) -->
+<article class="p-5 rounded-2xl border-2 border-emerald-500/40 bg-gradient-to-br from-emerald-50/40 via-white to-emerald-50/20 shadow-sm relative transition-all hover:border-emerald-500 hover:shadow-md">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+<!-- Thông tin chi tiết kênh LINE -->
+<div class="flex items-start space-x-3.5">
+<div class="w-11 h-11 rounded-xl bg-lineGreen text-white flex items-center justify-center flex-shrink-0 shadow-sm shadow-emerald-500/30">
+<!-- Icon Tin nhắn / LINE Chat -->
+<svg class="w-6 h-6" fill="currentColor" viewbox="0 0 24 24">
+<path d="M12 2C6.477 2 2 6.03 2 11c0 2.825 1.455 5.352 3.738 6.945-.164 1.258-.696 3.123-.74 3.284-.078.29.136.536.417.477.34-.073 2.766-.667 4.148-1.595.77.202 1.588.312 2.437.312 5.523 0 10-4.03 10-9S17.523 2 12 2zm-4.25 11.25H6.5a.75.75 0 01-.75-.75v-4.5a.75.75 0 011.5 0V11h.5a.75.75 0 010 1.5zm2.75 0a.75.75 0 01-.75-.75v-4.5a.75.75 0 011.5 0v4.5a.75.75 0 01-.75.75zm3.75 0h-1.5a.75.75 0 01-.75-.75v-4.5a.75.75 0 01.75-.75h1.5a.75.75 0 010 1.5h-.75V9.5h.75a.75.75 0 010 1.5h-.75v.75h.75a.75.75 0 010 1.5z"></path>
+</svg>
+</div>
+<div>
+<div class="flex items-center space-x-2">
+<h3 class="font-bold text-slate-900 text-base">BLAB Customer Support</h3>
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800">
+                    Phản hồi 1-1 ngay lập tức
+                  </span>
+</div>
+<p class="text-xs font-semibold text-emerald-700 mt-0.5">LINE Official / Hỗ trợ kỹ thuật 24/7</p>
+<p class="text-xs text-slate-600 mt-1.5 leading-relaxed max-w-sm">
+                  Xử lý ngay lỗi ngắt kết nối máy in hóa đơn, kẹt lệnh in bill, lỗi đồng bộ bàn và sự cố vận hành ca.
+                </p>
+</div>
+</div>
+<!-- Nút Hành động & QR mini -->
+<div class="flex items-center sm:flex-col sm:items-end justify-between sm:justify-center gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+<a class="inline-flex items-center justify-center space-x-2 px-5 py-2.5 bg-[#06C755] hover:bg-[#05ad4a] text-white text-sm font-semibold rounded-xl shadow-md shadow-emerald-600/20 transition-all hover:scale-[1.02] active:scale-[0.99] whitespace-nowrap" href="https://line.me" rel="noopener noreferrer" target="_blank">
+<span>Mở LINE hỗ trợ ngay</span>
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<path d="M14 5l7 7m0 0l-7 7m7-7H3" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</a>
+<span class="text-[11px] text-slate-600 flex items-center space-x-1">
+<span>Quét QR tại quầy: @blab_pos</span>
+</span>
+</div>
+</div>
+</article>
+<!-- THẺ 2: Nâng cấp tính năng & Gói giải pháp F&B -->
+<article class="p-5 rounded-2xl border border-slate-200 bg-white hover:border-slate-300 shadow-sm transition-all hover:shadow-md">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+<div class="flex items-start space-x-3.5">
+<div class="w-11 h-11 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center flex-shrink-0 border border-slate-200">
+<!-- Icon Nâng cấp giải pháp / Tiền tệ -->
+<svg class="w-6 h-6 text-slate-700" fill="none" stroke="currentColor" stroke-width="1.8" viewbox="0 0 24 24">
+<path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<div>
+<h3 class="font-bold text-slate-900 text-base">Tư vấn nâng cấp tính năng &amp; Gói giải pháp</h3>
+<p class="text-xs text-slate-500 mt-1 leading-relaxed">
+                  Mở khóa module nâng cao: <strong class="text-slate-700 font-semibold">QR Order tại bàn</strong>, <strong class="text-slate-700 font-semibold">Định lượng kho nguyên vật liệu</strong>, Báo cáo tài chính chuyên sâu &amp; Chuỗi chi nhánh.
+                </p>
+<div class="flex flex-wrap gap-1.5 mt-2">
+<span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-medium">Ăn tại quán</span>
+<span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-medium">Kho Bar/Bếp</span>
+<span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-medium">Báo cáo đa kênh</span>
+</div>
+</div>
+</div>
+<!-- Nút Hành động Liên hệ tư vấn -->
+<div class="flex items-center sm:justify-end">
+<button class="w-full sm:w-auto px-4 py-2.5 border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm rounded-xl transition-colors shadow-sm whitespace-nowrap" onclick="alert('Chuyên viên tư vấn sẽ liên hệ lại trong vòng 15 phút.')" type="button">
+                Liên hệ tư vấn viên
+              </button>
+</div>
+</div>
+</article>
+<!-- THẺ 3: Hotline Khẩn Cấp & Email Hỗ Trợ -->
+<article class="p-4 rounded-2xl border border-slate-100 bg-slate-50/70">
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+<!-- Hotline -->
+<div class="flex items-center justify-between p-3 rounded-xl bg-white border border-slate-200">
+<div class="flex items-center space-x-2.5">
+<div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<div>
+<div class="text-[11px] text-slate-600 font-medium">Hotline kỹ thuật</div>
+<div class="text-sm font-bold text-slate-800">1900 8899 (Phím 1)</div>
+</div>
+</div>
+<a class="px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 rounded-md transition-colors" href="tel:19008899">
+                Gọi ngay
+              </a>
+</div>
+<!-- Email Kỹ thuật -->
+<div class="flex items-center justify-between p-3 rounded-xl bg-white border border-slate-200">
+<div class="flex items-center space-x-2.5">
+<div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<div>
+<div class="text-[11px] text-slate-600 font-medium">Email giải pháp</div>
+<div class="text-sm font-bold text-slate-800 truncate">support@blab-pos.com</div>
+</div>
+</div>
+<button class="px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-md transition-colors" onclick="navigator.clipboard.writeText('support@blab-pos.com'); alert('Đã sao chép email hỗ trợ!');" type="button">
+                Chép
+              </button>
+</div>
+</div>
+</article>
+</main>
+<!-- END: ModalContentBody -->
+<!-- BEGIN: ModalFooter -->
+<footer class="px-6 sm:px-8 py-4 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+<!-- Thông báo giờ làm việc -->
+<div class="flex items-center space-x-2 text-xs text-slate-500">
+<svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span>Khung giờ hỗ trợ: <strong class="font-medium text-slate-700">09:00 - 22:00</strong> hằng ngày (kể cả Lễ, Tết)</span>
+</div>
+<!-- Nút Đóng Modal Chính -->
+<button class="w-full sm:w-28 py-2.5 px-5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm rounded-xl shadow-sm hover:shadow transition-colors text-center" onclick="alert('Đã đóng hộp thoại hỗ trợ!')" type="button">
+          Đóng
+        </button>
+</footer>
+<!-- END: ModalFooter -->
+</div>
+<!-- END: SupportModalDialog -->
+</div>
+<!-- END: ModalOverlayContainer -->
+</body></html>

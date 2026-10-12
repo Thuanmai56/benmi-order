@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+
+<html class="h-full bg-slate-50" lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Quản lý thực đơn - F&amp;B POS Dashboard</title>
+<!-- Google Fonts: Inter -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS v3 with Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration -->
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+          },
+          colors: {
+            emerald: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+              800: '#065f46',
+            }
+          }
+        }
+      }
+    }
+  </script>
+<!-- Custom Styles for Scrollbars & Transitions -->
+<style data-purpose="custom-utilities">
+    /* Custom subtle scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="h-full flex overflow-hidden text-slate-800 antialiased font-sans">
+<!-- BEGIN: GlobalSidebarNavigation -->
+<!-- Main Left Icon Dock (POS Standard Navigation) -->
+<aside class="w-18 flex-shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col items-center py-5 justify-between z-20" data-purpose="primary-icon-dock">
+<div class="flex flex-col items-center gap-6 w-full">
+<!-- System Logo / Brand Mark -->
+<a class="w-11 h-11 bg-emerald-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-emerald-900/40 hover:bg-emerald-500 transition-colors" href="#" title="Trang chủ">
+<svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</a>
+<!-- Navigation Icons -->
+<nav aria-label="Icon Navigation" class="flex flex-col items-center gap-3 w-full px-2">
+<!-- Notification / Orders with Badge -->
+<a class="relative p-3 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors group" href="#" title="Đơn hàng">
+<svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path>
+</svg>
+<span class="absolute top-2 right-2 bg-rose-500 text-white text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center ring-2 ring-slate-900">29</span>
+</a>
+<!-- History / Operations -->
+<a class="p-3 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors" href="#" title="Lịch sử hóa đơn">
+<svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path>
+</svg>
+</a>
+<!-- Menu Management (Active) -->
+<a class="p-3 text-emerald-400 bg-emerald-950/60 ring-1 ring-emerald-500/30 rounded-xl transition-colors relative" href="#" title="Quản lý thực đơn">
+<svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path>
+</svg>
+<span class="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-emerald-500 rounded-l"></span>
+</a>
+<!-- Settings -->
+<a class="p-3 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors" href="#" title="Cài đặt">
+<svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path>
+<path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path>
+</svg>
+</a>
+</nav>
+</div>
+<!-- Bottom Actions / Support -->
+<div class="flex flex-col items-center gap-3">
+<a class="p-3 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors" href="#" title="Trợ giúp &amp; Hỗ trợ">
+<svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path>
+</svg>
+</a>
+<div class="w-9 h-9 rounded-full bg-emerald-800 text-emerald-200 font-semibold text-xs flex items-center justify-center ring-2 ring-slate-800">
+        AD
+      </div>
+</div>
+</aside>
+<!-- END: GlobalSidebarNavigation -->
+<!-- BEGIN: MasterContentArea -->
+<div class="flex-1 flex flex-col h-full min-w-0 bg-slate-50">
+<!-- BEGIN: TopBarHeader -->
+<header class="h-20 bg-white border-b border-slate-200/80 px-8 flex items-center justify-between shrink-0 shadow-sm z-10" data-purpose="top-header">
+<!-- Title & Live Status -->
+<div class="flex items-center gap-4">
+<div>
+<div class="flex items-center gap-3">
+<h1 class="text-2xl font-bold tracking-tight text-slate-900">Quản lý thực đơn</h1>
+<!-- Store Open Status Dropdown -->
+<div class="relative inline-block">
+<button class="inline-flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-full border border-emerald-200/80 hover:bg-emerald-100 transition-colors" type="button">
+<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+<span>Đang mở quán</span>
+<svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+</div>
+</div>
+<p class="text-xs text-slate-500 mt-0.5">Quản lý danh sách món ăn, giá bán, cấu hình tùy chọn và trạng thái kho món trong thời gian thực</p>
+</div>
+</div>
+<!-- Action Toolbar Controls -->
+<div class="flex items-center gap-3">
+<!-- Auto-save notification pill -->
+<div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-xs font-medium border border-slate-200">
+<svg class="w-4 h-4 text-emerald-500" fill="currentColor" viewbox="0 0 20 20">
+<path clip-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" fill-rule="evenodd"></path>
+</svg>
+<span>Đã lưu tự động</span>
+</div>
+<!-- Sort Display Order Button -->
+<button class="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:border-slate-400 transition-all shadow-sm" type="button">
+<svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span>Sắp xếp hiển thị</span>
+</button>
+<!-- View Switch Segmented Control -->
+<div class="flex p-1 bg-slate-100 rounded-xl border border-slate-200">
+<button class="px-4 py-1.5 rounded-lg text-xs font-semibold text-white bg-slate-900 shadow-sm transition-all" type="button">
+            Món ăn
+          </button>
+<button class="px-4 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 transition-all" type="button">
+            Tùy chọn
+          </button>
+</div>
+</div>
+</header>
+<!-- END: TopBarHeader -->
+<!-- BEGIN: MasterDetailContainer -->
+<div class="flex-1 flex overflow-hidden p-6 gap-6">
+<!-- BEGIN: LeftCategorySidebar -->
+<section class="w-80 flex flex-col shrink-0 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden" data-purpose="category-sidebar">
+<!-- Add Category Header Button -->
+<div class="p-4 border-b border-slate-100">
+<button class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-sm font-semibold rounded-xl border border-emerald-200 transition-all duration-150 group" type="button">
+<svg class="w-4 h-4 text-emerald-600 transition-transform group-hover:rotate-90 duration-200" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path>
+</svg>
+<span>Thêm phân loại món</span>
+</button>
+</div>
+<!-- Category List Items -->
+<div class="flex-1 overflow-y-auto p-3 space-y-1.5" role="list">
+<!-- Category 1: Active Meat Category -->
+<div class="group relative flex items-center justify-between p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-300 shadow-sm text-emerald-950 cursor-pointer transition-all" role="listitem">
+<div class="flex flex-col min-w-0 pr-2">
+<span class="font-bold text-sm tracking-tight flex items-center gap-1.5">
+                肉類 <span class="text-xs font-normal text-emerald-700 font-sans">(Thịt)</span>
+</span>
+<span class="text-xs font-medium text-emerald-700 mt-0.5">3 món ăn</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-200/80 text-emerald-900">3</span>
+<svg class="w-4 h-4 text-emerald-700" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+</div>
+<!-- Category 2 -->
+<div class="group flex items-center justify-between p-3.5 rounded-xl border border-transparent hover:border-slate-200 hover:bg-slate-50 text-slate-700 cursor-pointer transition-all" role="listitem">
+<div class="flex flex-col min-w-0 pr-2">
+<span class="font-semibold text-sm tracking-tight truncate group-hover:text-slate-900">精選小菜 $50/份</span>
+<span class="text-xs text-slate-400 mt-0.5">Món chọn lọc $50/phần</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">2 món</span>
+<svg class="w-4 h-4 text-slate-300 group-hover:text-slate-500" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+</div>
+<!-- Category 3 -->
+<div class="group flex items-center justify-between p-3.5 rounded-xl border border-transparent hover:border-slate-200 hover:bg-slate-50 text-slate-700 cursor-pointer transition-all" role="listitem">
+<div class="flex flex-col min-w-0 pr-2">
+<span class="font-semibold text-sm tracking-tight truncate group-hover:text-slate-900">特色小菜 $30/份</span>
+<span class="text-xs text-slate-400 mt-0.5">Món đặc sắc $30/phần</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">6 món</span>
+<svg class="w-4 h-4 text-slate-300 group-hover:text-slate-500" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+</div>
+<!-- Category 4 -->
+<div class="group flex items-center justify-between p-3.5 rounded-xl border border-transparent hover:border-slate-200 hover:bg-slate-50 text-slate-700 cursor-pointer transition-all" role="listitem">
+<div class="flex flex-col min-w-0 pr-2">
+<span class="font-semibold text-sm tracking-tight truncate group-hover:text-slate-900">經典小菜 $25/份</span>
+<span class="text-xs text-slate-400 mt-0.5">Món kinh điển $25/phần</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">7 món</span>
+<svg class="w-4 h-4 text-slate-300 group-hover:text-slate-500" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+</div>
+<!-- Category 5 -->
+<div class="group flex items-center justify-between p-3.5 rounded-xl border border-transparent hover:border-slate-200 hover:bg-slate-50 text-slate-700 cursor-pointer transition-all" role="listitem">
+<div class="flex flex-col min-w-0 pr-2">
+<span class="font-semibold text-sm tracking-tight truncate group-hover:text-slate-900">蔬菜/配菜 1份$35 / 3份$100</span>
+<span class="text-xs text-slate-400 mt-0.5">Rau / Món ăn kèm</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">31 món</span>
+<svg class="w-4 h-4 text-slate-300 group-hover:text-slate-500" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+</div>
+<!-- Category 6 -->
+<div class="group flex items-center justify-between p-3.5 rounded-xl border border-transparent hover:border-slate-200 hover:bg-slate-50 text-slate-700 cursor-pointer transition-all" role="listitem">
+<div class="flex flex-col min-w-0 pr-2">
+<span class="font-semibold text-sm tracking-tight truncate group-hover:text-slate-900">其他</span>
+<span class="text-xs text-slate-400 mt-0.5">Khác / Đồ uống</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">2 món</span>
+<svg class="w-4 h-4 text-slate-300 group-hover:text-slate-500" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+</div>
+</div>
+<!-- Sidebar Footer Summary -->
+<div class="p-3 bg-slate-50 border-t border-slate-200/80 text-xs text-slate-500 flex justify-between items-center">
+<span>Tổng số danh mục: <strong>6</strong></span>
+<span class="text-emerald-700 font-semibold">49 món hoạt động</span>
+</div>
+</section>
+<!-- END: LeftCategorySidebar -->
+<!-- BEGIN: RightDishDetailPanel -->
+<section class="flex-1 flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden min-w-0" data-purpose="items-detail-panel">
+<!-- Category Top Meta Bar -->
+<div class="p-5 border-b border-slate-200/80 flex flex-wrap items-center justify-between gap-4">
+<!-- Category Title & Management Actions -->
+<div class="flex items-center gap-3">
+<h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+<span>肉類</span>
+<span class="text-sm font-normal text-slate-500">(Tất cả 3 món)</span>
+</h2>
+<!-- Help Info Tooltip -->
+<button class="text-slate-400 hover:text-slate-600" title="Thông tin phân loại" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+<!-- Edit Category Button -->
+<button class="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors" title="Chỉnh sửa tên danh mục" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+<!-- Delete Category Button -->
+<button class="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg border border-rose-200 transition-colors" title="Xóa danh mục này" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+</div>
+<!-- Add Item Action Primary Button -->
+<div class="flex items-center gap-3">
+<button class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl shadow-sm shadow-emerald-700/20 transition-all" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span>Thêm món</span>
+</button>
+</div>
+</div>
+<!-- Filter & Search Sub-bar -->
+<div class="px-5 py-3 bg-slate-50/70 border-b border-slate-200/80 flex flex-wrap items-center justify-between gap-3 text-xs">
+<!-- Search Bar -->
+<div class="relative w-72">
+<span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</span>
+<input class="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 transition-all" placeholder="Tìm kiếm món trong phân loại này..." type="text"/>
+</div>
+<!-- Status Filter Pills -->
+<div class="flex items-center gap-2">
+<span class="text-slate-500 font-medium">Lọc theo:</span>
+<button class="px-2.5 py-1 bg-white border border-slate-300 rounded-lg text-slate-800 font-medium hover:bg-slate-100" type="button">Tất cả (3)</button>
+<button class="px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 font-medium" type="button">Còn món (3)</button>
+<button class="px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-slate-600" type="button">Hết hàng (0)</button>
+</div>
+</div>
+<!-- Dish List Items (Table/Card View) -->
+<div class="flex-1 overflow-y-auto divide-y divide-slate-100">
+<!-- ITEM 1: 雞胸肉 (Chicken Breast) -->
+<article class="p-5 hover:bg-slate-50/80 transition-colors flex items-center justify-between gap-6 group" data-purpose="dish-row-item">
+<!-- Left Info: Drag handle, Photo, Name, Options -->
+<div class="flex items-center gap-4 min-w-0">
+<!-- Reorder Drag Icon -->
+<span class="cursor-grab text-slate-300 hover:text-slate-500 transition-colors" title="Kéo để sắp xếp vị trí">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M4 8h16M4 16h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</span>
+<!-- Item Thumbnail -->
+<div class="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-200 shrink-0 bg-slate-100 shadow-sm group-hover:shadow transition-shadow">
+<img alt="雞胸肉 - Ức gà giòn" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC0JuTQhbdR4VnUm1dCj5llOmXfYWZaL02p065oy78HIjFkxrCl_O0Z-BkBPNRiWuxiGpTFp7rpv3g8OyDmXdLSUxZIG-LnVmPVNvBwUyIm9SGK0m73ux4FjrZ7uNeWE71qLp4ng1AWbtKG630OzfJli_fB1NWG3zk5qczh6VsGSI5zDA9vFJAqNOc3osbGw-q5t_xvLEF2N0jTWe_HNMZO1JDBvzsk7jjO4uHZt-_UIujZ7EUzaFri"/>
+<button class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity" title="Đổi ảnh món" type="button">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+<path d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+</div>
+<!-- Dish Details -->
+<div class="flex flex-col gap-1.5">
+<div class="flex items-center gap-2">
+<h3 class="text-base font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">雞胸肉</h3>
+<span class="text-xs text-slate-400 font-normal">Ức gà chiên thơm ngon</span>
+</div>
+<!-- Option Group Pill Button -->
+<div>
+<button class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-colors" type="button">
+<svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span>Tuỳ chọn món</span>
+<span class="text-[10px] bg-slate-200 text-slate-700 px-1.5 rounded-full">2</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Right Controls: Price, Status Toggle & Action Menu -->
+<div class="flex items-center gap-8 shrink-0">
+<!-- Dish Price -->
+<div class="text-right">
+<span class="text-xs text-slate-400 block font-normal">Giá bán</span>
+<span class="text-xl font-extrabold text-slate-900 tracking-tight">$ 60</span>
+</div>
+<!-- Availability Status Badge Button -->
+<div class="flex flex-col items-center gap-1">
+<button class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-100 transition-all shadow-sm" title="Nhấn để đổi trạng thái sang Hết hàng" type="button">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<span>Còn món</span>
+</button>
+<span class="text-[10px] text-slate-400">Đang phục vụ</span>
+</div>
+<!-- Quick Edit & Context Actions -->
+<div class="flex items-center gap-1 border-l border-slate-200 pl-4">
+<button class="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors" title="Chỉnh sửa chi tiết" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+<button class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" title="Xóa món" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+</div>
+</div>
+</article>
+<!-- ITEM 2: 雞腿肉 (Chicken Thigh) -->
+<article class="p-5 hover:bg-slate-50/80 transition-colors flex items-center justify-between gap-6 group" data-purpose="dish-row-item">
+<!-- Left Info -->
+<div class="flex items-center gap-4 min-w-0">
+<span class="cursor-grab text-slate-300 hover:text-slate-500 transition-colors">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M4 8h16M4 16h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</span>
+<!-- Item Thumbnail -->
+<div class="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-200 shrink-0 bg-slate-100 shadow-sm group-hover:shadow transition-shadow">
+<img alt="雞腿肉 - Đùi gà nướng thơm lừng" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAcgBALZnINSPN60i6-khTkWA-MKNoJ0L0tm6WN3P_LjlZb-H2JS5ai0fAlyq2W1QOLSBwrLtTXj0O5-HkgEzq01vukbt6w5vOkkXqsT0jVVVN8hsqRGdfFHzvS3enIXhI_HZJKKi44fADOW6nKVsrhmn74XrH1fabgrv5nycysNZEFyYApSQUBfFXAw0CCAJB2O9Q9E80rsJ44TdSgp4WKmEojjaqW3drb_Qyt2dwMh6m-l072Yzqa"/>
+<button class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity" title="Đổi ảnh món" type="button">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+<path d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+</div>
+<!-- Dish Details -->
+<div class="flex flex-col gap-1.5">
+<div class="flex items-center gap-2">
+<h3 class="text-base font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">雞腿肉</h3>
+<span class="text-xs text-slate-400 font-normal">Đùi gà nướng xốt đặc biệt</span>
+</div>
+<div>
+<button class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-colors" type="button">
+<svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span>Tuỳ chọn món</span>
+<span class="text-[10px] bg-slate-200 text-slate-700 px-1.5 rounded-full">3</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Right Controls -->
+<div class="flex items-center gap-8 shrink-0">
+<div class="text-right">
+<span class="text-xs text-slate-400 block font-normal">Giá bán</span>
+<span class="text-xl font-extrabold text-slate-900 tracking-tight">$ 70</span>
+</div>
+<div class="flex flex-col items-center gap-1">
+<button class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-100 transition-all shadow-sm" type="button">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<span>Còn món</span>
+</button>
+<span class="text-[10px] text-slate-400">Đang phục vụ</span>
+</div>
+<div class="flex items-center gap-1 border-l border-slate-200 pl-4">
+<button class="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors" title="Chỉnh sửa chi tiết" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+<button class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" title="Xóa món" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+</div>
+</div>
+</article>
+<!-- ITEM 3: 松阪豬 (Matsusaka Pork - Without uploaded image placeholder) -->
+<article class="p-5 hover:bg-slate-50/80 transition-colors flex items-center justify-between gap-6 group" data-purpose="dish-row-item">
+<!-- Left Info -->
+<div class="flex items-center gap-4 min-w-0">
+<span class="cursor-grab text-slate-300 hover:text-slate-500 transition-colors">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M4 8h16M4 16h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</span>
+<!-- Placeholder Upload Frame (Matches Screenshot Dash Border) -->
+<div class="w-20 h-20 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 flex flex-col items-center justify-center text-slate-400 shrink-0 hover:border-emerald-500 hover:text-emerald-600 hover:bg-emerald-50/30 transition-all cursor-pointer group/upload" title="Bấm để tải ảnh món">
+<svg class="w-6 h-6 stroke-[1.5]" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" stroke-linecap="round" stroke-linejoin="round"></path>
+<path d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span class="text-[10px] mt-1 font-medium group-hover/upload:text-emerald-700">Tải ảnh</span>
+</div>
+<!-- Dish Details -->
+<div class="flex flex-col gap-1.5">
+<div class="flex items-center gap-2">
+<h3 class="text-base font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">松阪豬</h3>
+<span class="text-xs text-slate-400 font-normal">Thịt heo Matsusaka giòn ngọt</span>
+</div>
+<div>
+<button class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-colors" type="button">
+<svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span>Tuỳ chọn món</span>
+<span class="text-[10px] bg-slate-200 text-slate-700 px-1.5 rounded-full">1</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Right Controls -->
+<div class="flex items-center gap-8 shrink-0">
+<div class="text-right">
+<span class="text-xs text-slate-400 block font-normal">Giá bán</span>
+<span class="text-xl font-extrabold text-slate-900 tracking-tight">$ 70</span>
+</div>
+<div class="flex flex-col items-center gap-1">
+<button class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-100 transition-all shadow-sm" type="button">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<span>Còn món</span>
+</button>
+<span class="text-[10px] text-slate-400">Đang phục vụ</span>
+</div>
+<div class="flex items-center gap-1 border-l border-slate-200 pl-4">
+<button class="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors" title="Chỉnh sửa chi tiết" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+<button class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" title="Xóa món" type="button">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+</div>
+</div>
+</article>
+</div>
+<!-- Dish List Footer Info & Pagination Info -->
+<div class="px-5 py-3.5 bg-slate-50/80 border-t border-slate-200/80 flex items-center justify-between text-xs text-slate-500">
+<div class="flex items-center gap-2">
+<span>Hiển thị 3 trên tổng 3 món trong phân loại <strong>肉類</strong></span>
+</div>
+<div class="flex items-center gap-3">
+<span class="inline-flex items-center gap-1 text-slate-400">
+<svg class="w-3.5 h-3.5 text-emerald-500" fill="currentColor" viewbox="0 0 20 20">
+<path clip-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" fill-rule="evenodd"></path>
+</svg>
+              Cập nhật đồng bộ POS tức thì
+            </span>
+</div>
+</div>
+</section>
+<!-- END: RightDishDetailPanel -->
+</div>
+<!-- END: MasterDetailContainer -->
+</div>
+<!-- END: MasterContentArea -->
+</body></html>
