@@ -699,6 +699,8 @@ function switchTab(tab) {
   if (viewSettings) viewSettings.style.display = tab === "settings" ? "block" : "none";
   if (viewMenu) viewMenu.style.display = tab === "menu" ? "block" : "none";
 
+  syncStoreStatusPlacement(tab);
+
   if (typeof syncLiveMobileView === "function") syncLiveMobileView();
 
   if (tab === "live") {
@@ -1147,6 +1149,29 @@ function initSmartHeaderScroll() {
 
 window.initSmartHeaderScroll = initSmartHeaderScroll;
 
+function syncStoreStatusPlacement(tab) {
+  const dd = document.getElementById("store-status-dropdown");
+  const isMenu = (tab === "menu");
+  document.body.classList.toggle("is-menu-active", isMenu);
+  const mainTopbar = document.getElementById("main-topbar");
+  if (mainTopbar) {
+    mainTopbar.style.display = isMenu ? "none" : "";
+  }
+  if (!dd) return;
+  if (isMenu) {
+    const target = document.getElementById("menu-workspace-store-slot");
+    if (target && dd.parentElement !== target) {
+      target.appendChild(dd);
+    }
+  } else {
+    const target = document.getElementById("main-topbar-right-slot") || document.querySelector(".main-topbar-right");
+    if (target && dd.parentElement !== target) {
+      target.appendChild(dd);
+    }
+  }
+}
+
+window.syncStoreStatusPlacement = syncStoreStatusPlacement;
 window.toggleSidebar = toggleSidebar;
 window.initSidebarState = initSidebarState;
 window.initMobileBrandInfo = initMobileBrandInfo;

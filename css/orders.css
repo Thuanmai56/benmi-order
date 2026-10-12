@@ -317,6 +317,12 @@ button.sidebar-nav-item.active {
   position: relative;
 }
 
+body.is-menu-active .main-topbar,
+.main-layout:has(#view-menu[style*="display: block"]) > .main-topbar,
+.main-layout:has(#view-menu:not([style*="display: none"]):not([style*="display:none"])) > .main-topbar {
+  display: none !important;
+}
+
 .main-topbar-left {
   display: flex;
   align-items: center;

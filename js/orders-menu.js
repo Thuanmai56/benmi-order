@@ -248,6 +248,9 @@ function openMenuSettings() {
   document.querySelectorAll(".content").forEach(c => c.style.display = "none");
   const viewMenu = document.getElementById("view-menu");
   if (viewMenu) viewMenu.style.display = "block";
+  if (typeof syncStoreStatusPlacement === "function") {
+    syncStoreStatusPlacement("menu");
+  }
   if (!currentMenuData || !isMenuLoadedCompletely) {
     loadMenuData();
   } else {
@@ -1226,11 +1229,9 @@ function renderMenuCategories() {
     if (footerCats) footerCats.textContent = t('menuSidebarTotalCats', { count: catalogList.length });
     if (footerItems) footerItems.textContent = t('menuSidebarActiveItems', { count: totalActiveItems });
 
-    const wsStoreBadge = document.getElementById('menu-workspace-store-badge');
-    const wsStoreText = document.getElementById('menu-workspace-store-status-text');
-    const isStoreCurrentlyOpen = (typeof currentStoreStatus !== 'undefined' ? currentStoreStatus : 'open') === 'open';
-    if (wsStoreText) wsStoreText.textContent = isStoreCurrentlyOpen ? t('statusOpen') : t('statusClosed');
-    if (wsStoreBadge) wsStoreBadge.classList.toggle('is-closed', !isStoreCurrentlyOpen);
+    if (typeof syncStoreStatusPlacement === 'function') {
+      syncStoreStatusPlacement('menu');
+    }
 
     const listEl = document.createElement("div");
     listEl.className = "menu-sidebar-section";
