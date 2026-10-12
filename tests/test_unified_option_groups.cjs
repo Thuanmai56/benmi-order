@@ -586,6 +586,14 @@ test("legacy whole-menu writes cannot remove a referenced product or bypass the 
   assert.equal(f.db.prepare('SELECT count(*) n FROM modifier_options').get().n,2);
   assert.equal(f.db.prepare('SELECT count(*) n FROM item_modifier_links').get().n,1);
 
+  const current = (await f.api.loadOptionCatalog(f.env,'a')).groups[0];
+  await ok(await f.save('group',{
+    ...current, itemIds:['a_main'], sources:[],
+    options:[{id:'child-only',name:'Custom parent',price:0,subOptions:[{id:'tea-child',productId:'a_tea',name:'Tea',price:15}]}],
+  }));
+  await assert.rejects(()=>exports.syncMenuToD1('a',{__delete:{items:['a_tea']}},f.env),/PRODUCT_IS_LINKED/);
+  assert.equal(f.db.prepare('SELECT count(*) n FROM menu_items WHERE id=?').get('a_tea').n,1);
+
 });
 test("optional legacy groups keep minimum zero after migration", async () => {
   const f = fixture();
@@ -753,4 +761,55 @@ test("configured legacy product choices become a shared live group with zero ret
   f.db.prepare("INSERT INTO menu_items(id,tenant_id,category_id,name,price) VALUES ('a_new','a','a_source','Water',55)").run();
   assert.equal(f.api.projectOptionRule(await f.api.loadOptionCatalog(f.env,'a'),'a_main').groups[0].eligibleItems.length,3);
   assert.throws(()=>require('../scripts/prepare-option-source-backfill.cjs').prepare(updated,mapping),/GROUP_ALREADY_MIGRATED/);
+});
+
+test('linked child choices preserve custom choices and independent surcharge while resolving live product data', async () => {
+  const f=fixture();
+  const draft={...group(), options:[{...group().options[0], subOptions:['Less',{id:'tea-child',productId:'a_tea',name:'Spoofed name',price:15}]}]};
+  await ok(await f.save('group',draft));
+  let catalog=await f.api.loadOptionCatalog(f.env,'a');
+  const stored=JSON.parse(f.db.prepare('SELECT sub_options_json FROM modifier_options WHERE id=?').get('a_drinks_coffee').sub_options_json);
+  assert.equal(stored[0],'Less'); assert.equal(stored[1].productId,'a_tea'); assert.equal(stored[1].name,'Tea'); assert.equal(stored[1].price,15);
+  f.db.prepare('UPDATE menu_items SET name=?,price=? WHERE id=?').run('Renamed tea',900,'a_tea');
+  catalog=await f.api.loadOptionCatalog(f.env,'a');
+  const child=f.api.groupOptions(catalog,catalog.groups[0])[0].subOptions[1];
+  assert.equal(child.name,'Renamed tea'); assert.equal(child.retailPrice,900); assert.equal(child.price,15);
+  const select=[{groupId:'a_drinks',items:[{optionId:'a_drinks_coffee',quantity:1,groups:[],subOptions:[{id:'tea-child',name:'Untrusted',price:999}]}]}];
+  const canonical=f.api.validateOptionSelection(catalog,'a_main',select);
+  assert.equal(canonical.extra,15);
+  assert.equal(canonical.groups[0].items[0].subOptions[0].name,'Renamed tea');
+  assert.equal(canonical.groups[0].items[0].subOptions[0].itemId,'a_tea');
+  assert.equal(canonical.groups[0].items[0].subOptions[0].id,'tea-child');
+  assert.equal(f.api.projectOptionRule(catalog,'a_main').groups[0].eligibleItems[0].subOptions[1].retailPrice,900);
+  f.db.close();
+});
+
+test('linked children reject foreign references and duplicate products without writing the group', async () => {
+  for (const children of [
+    [{id:'foreign',productId:'b_tea',name:'Tea',price:0}],
+    [{id:'one',productId:'a_tea',name:'Tea',price:0},{id:'two',productId:'a_tea',name:'Tea',price:5}],
+    [{id:'missing',productId:'does-not-exist',name:'Tea',price:0}],
+  ]) {
+    const f=fixture();
+    const response=await f.save('group',{...group(),options:[{...group().options[0],subOptions:children}]});
+    assert.equal(response.status,400);
+    assert.equal(f.db.prepare('SELECT COUNT(*) count FROM modifier_groups').get().count,0);
+    f.db.close();
+  }
+});
+
+test('child product availability and deletion guards follow the reference, including duplicate submitted children', async () => {
+  const f=fixture();
+  await ok(await f.save('group',{...group(),options:[{...group().options[0],subOptions:[{id:'tea-child',productId:'a_tea',name:'Tea',price:15}]}]}));
+  const select=(children)=>[{groupId:'a_drinks',items:[{optionId:'a_drinks_coffee',quantity:1,groups:[],subOptions:children}]}];
+  let catalog=await f.api.loadOptionCatalog(f.env,'a');
+  assert.throws(()=>f.api.validateOptionSelection(catalog,'a_main',select([{id:'tea-child'},{id:'tea-child'}])),/OPTION_SUB_DUPLICATE/);
+  const deletion=await f.save('product',{id:'a_tea',revision:0,delete:true});
+  assert.equal(deletion.status,400); assert.equal((await deletion.json()).error,'PRODUCT_IS_LINKED');
+  f.db.prepare('UPDATE menu_items SET out_of_stock_until=? WHERE id=?').run('2999-01-01T00:00:00Z','a_tea');
+  catalog=await f.api.loadOptionCatalog(f.env,'a');
+  assert.equal(f.api.projectOptionRule(catalog,'a_main').groups[0].eligibleItems[0].subOptions[0].isOutOfStock,true);
+  assert.throws(()=>f.api.validateOptionSelection(catalog,'a_main',select([{id:'tea-child'}])),/OPTION_SUB_INVALID/);
+  assert.equal(f.api.validateOptionSelection(catalog,'a_main',select([])).extra,0);
+  f.db.close();
 });

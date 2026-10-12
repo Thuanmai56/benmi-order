@@ -4211,6 +4211,11 @@ html.is-web-platform .store-activation-modal:not(.force-show) {
   background: #dc2626;
 }
 
+.store-status-pill.closed .status-dot,
+.status-dot.dot-closed {
+  background: #94a3b8;
+}
+
 .status-arrow {
   width: 14px;
   height: 14px;

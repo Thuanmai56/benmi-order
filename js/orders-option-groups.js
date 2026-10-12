@@ -40,6 +40,11 @@
       ugFromProductsHelp: "Chọn món trong thực đơn và đặt phụ thu riêng.",
       ugCustom: "Tùy chọn tự tạo",
       ugCustomHelp: "Tạo lựa chọn mới cho nhóm này.",
+      ugCustomStatus: "Tự tạo",
+      ugLinkedStatus: "Liên kết",
+      ugLinkedHelp: "Tên và trạng thái hết món được đồng bộ từ thực đơn. Phụ thu được đặt riêng cho lựa chọn này.",
+      ugOriginalPrice: "Giá gốc",
+      ugMissingProduct: "Món liên kết không còn trong thực đơn",
       ugSurcharge: "Phụ thu trong nhóm",
       ugRetail: "Giá bán lẻ",
       ugQuantity: "Số phần có sẵn",
@@ -138,6 +143,11 @@
       ugFromProductsHelp: "從菜單選取餐點並設定群組內的加價。",
       ugCustom: "自訂選項",
       ugCustomHelp: "為此群組建立新的選項。",
+      ugCustomStatus: "自訂",
+      ugLinkedStatus: "已連結",
+      ugLinkedHelp: "名稱與售完狀態會與菜單同步，此子選項的加價可獨立設定。",
+      ugOriginalPrice: "原價",
+      ugMissingProduct: "連結的餐點已不在菜單中",
       ugSurcharge: "群組內加價",
       ugRetail: "單點售價",
       ugQuantity: "已包含份數",
@@ -337,7 +347,9 @@
       outOfStockUntil: o.outOfStockUntil || null,
       description: o.description || "",
       subOptions: (o.subOptions || []).map((s) => ({
-        name: String(typeof s === "string" ? s : s.name || "").trim(),
+        ...(s.id ? { id: s.id } : {}),
+        ...(s.productId ? { productId: s.productId } : {}),
+        name: s.productId ? "" : String(typeof s === "string" ? s : s.name || "").trim(),
         price: Number(typeof s === "string" ? 0 : s.price || 0),
       })),
       eligibilityRules: (o.eligibilityRules || []).map((r) => r.rule_type === "min_order_subtotal"
@@ -419,6 +431,37 @@
     `<div class="ug-rule"><label for="ug-${key}">${esc(tr(label))}</label><div class="ug-stepper">${btn("step", "ugRemove", `data-key="${key}" data-delta="-1" aria-label="${esc(tr(label))} −"`)}<input id="ug-${key}" aria-label="${esc(tr(label))}" data-field="${key}" type="number" min="${min}" max="999" value="${value}"><button type="button" data-action="step" data-key="${key}" data-delta="1" aria-label="${esc(tr(label))} +">+</button></div></div>`;
   const row = (action, title, sub, attrs = "") =>
     `<button type="button" class="ug-row" data-action="${action}" ${attrs}><span><strong>${esc(title)}</strong>${sub ? `<small>${esc(sub)}</small>` : ""}</span><span aria-hidden="true">›</span></button>`;
+  // Feather/Lucide SVG paths (MIT); avoid emoji and keep the menu compact.
+  const subIcon = (paths) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+  function subMenu() {
+    const item = (action, title, help, icon) => `<button type="button" class="ug-sub-menu-action" role="menuitem" data-action="${action}"><span class="ug-sub-menu-icon">${subIcon(icon)}</span><span class="ug-sub-menu-copy"><strong>${esc(tr(title))}</strong><small>${esc(tr(help))}</small></span>${subIcon('<path d="m9 5 7 7-7 7"/>')}</button>`;
+    return `<div class="ug-sub-add">${btn("add-sub", "ugAddSub", 'id="ug-add-sub" aria-haspopup="menu" aria-expanded="false" aria-controls="ug-sub-menu"')}<div id="ug-sub-menu" class="ug-sub-menu" role="menu" aria-labelledby="ug-add-sub" hidden>${state.draft.scope === "order" ? "" : item("sub-products", "ugFromProducts", "ugFromProductsHelp", '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>')}${item("sub-custom", "ugCustom", "ugCustomHelp", '<path d="M12 5v14M5 12h14"/>')}</div></div>`;
+  }
+  function toggleSubMenu(open, focus = false) {
+    const root = ensureDrawer(), menu = root.querySelector(".ug-sub-menu"), trigger = root.querySelector('[data-action="add-sub"]');
+    if (!menu || !trigger) return false;
+    if (open === undefined) open = menu.hidden;
+    menu.hidden = !open;
+    trigger.setAttribute("aria-expanded", String(open));
+    if (open) {
+      const body = root.querySelector(".ug-body");
+      if (body?.getBoundingClientRect) {
+        // Keep the trigger visible, even when a short landscape viewport needs menu scrolling.
+        menu.style.maxHeight = `${Math.max(80, body.clientHeight - trigger.getBoundingClientRect().height - 18)}px`;
+        const overflow = menu.getBoundingClientRect().bottom - body.getBoundingClientRect().bottom + 8;
+        if (overflow > 0) body.scrollTop += overflow;
+      }
+    }
+    if (focus) (open ? menu.querySelector('button') : trigger)?.focus({ preventScroll: true });
+    return true;
+  }
+  function subRow(sub, index) {
+    const linked = Boolean(sub.productId), product = linked ? productById(sub.productId) : null;
+    const name = linked ? product?.name || sub.name || tr("ugMissingProduct") : typeof sub === "string" ? sub : sub.name || "";
+    const unavailable = linked && (!product || product.is_out_of_stock || (product.out_of_stock_until && Date.parse(product.out_of_stock_until) > Date.now()));
+    const metadata = product ? `#${product.sku || product.id} · ${tr("ugOriginalPrice")} $${Number(product.price || 0)}` : tr("ugMissingProduct");
+    return `<div class="ug-sub-option ug-sub-option-compact ${linked ? "ug-sub-option-linked" : ""}"><div class="ug-sub-name"><div class="ug-sub-origin"><span class="ug-sub-origin-copy">${linked ? `${subIcon('<path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-2 2M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l2-2"/>')}${esc(tr("ugFromProducts"))}` : esc(tr("ugSubName"))}</span><span class="ug-sub-kind" ${linked ? `title="${esc(tr("ugLinkedHelp"))}"` : ""}>${esc(tr(linked ? "ugLinkedStatus" : "ugCustomStatus"))}</span></div>${linked ? `<small class="ug-sub-source-meta" title="${esc(metadata)}">${esc(metadata)}${unavailable ? ` · ${esc(tr("ugSoldOut"))}` : ""}</small>` : ""}<label class="ug-field"><input data-field="sub.${index}.name" type="text" value="${esc(name)}" aria-label="${esc(tr("ugSubName"))}" ${linked ? 'readonly' : ''}></label></div><label class="ug-field ug-sub-price"><span>${esc(tr("ugGroupSurcharge"))}</span><div class="ug-sub-price-input"><span aria-hidden="true">$</span><input data-field="sub.${index}.price" type="number" value="${esc(typeof sub === "string" ? 0 : sub.price || 0)}" min="0" step="0.01"></div></label>${btn("remove-sub", "ugRemove", `data-index="${index}" aria-label="${esc(tr("ugRemove"))} ${esc(name || tr("ugSub"))}"`)}</div>`;
+  }
   function ensureDrawer() {
     let el = document.getElementById("unified-menu-drawer");
     if (el) return el;
@@ -429,6 +472,11 @@
     el.innerHTML =
       '<section class="ug-drawer" role="dialog" aria-modal="true" aria-labelledby="ug-title" tabindex="-1"><header></header><div class="ug-body"></div><footer></footer><div class="ug-confirmation" hidden></div></section>';
     el.addEventListener("click", (event) => {
+      if (!event.target.closest(".ug-sub-add")) {
+        const menu = el.querySelector(".ug-sub-menu"), wasOpen = menu && !menu.hidden;
+        toggleSubMenu(false);
+        if (wasOpen && event.target === el) return;
+      }
       if (event.target === el) close();
       const target = event.target.closest("[data-action]");
       if (target) action(target.dataset.action, target);
@@ -442,6 +490,8 @@
       if (event.key === "Escape") {
         event.preventDefault();
         event.stopPropagation();
+        const subMenuEl = el.querySelector(".ug-sub-menu");
+        if (subMenuEl && !subMenuEl.hidden) { toggleSubMenu(false, true); return; }
         if (state?.confirm) dismissConfirmation();
         else {
           const help = el.querySelector('[data-action="help"][aria-expanded="true"]');
@@ -450,6 +500,24 @@
             help.focus({ preventScroll: true });
           } else close();
         }
+      }
+      const menu = el.querySelector(".ug-sub-menu");
+      if (event.target.dataset.action === "add-sub" && ["ArrowDown", "ArrowUp"].includes(event.key)) {
+        event.preventDefault();
+        toggleSubMenu(true, true);
+        if (event.key === "ArrowUp") [...menu.querySelectorAll('button')].at(-1).focus();
+        return;
+      }
+      if (menu && !menu.hidden && event.target.closest(".ug-sub-menu")) {
+        const items = [...menu.querySelectorAll('button')];
+        const index = items.indexOf(document.activeElement);
+        if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
+          event.preventDefault();
+          const next = event.key === "Home" ? 0 : event.key === "End" ? items.length - 1 : (index + (event.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+          items[next].focus();
+          return;
+        }
+        if (event.key === "Tab") toggleSubMenu(false, true);
       }
       if (event.key === "Tab") {
         const root = state?.confirm ? el.querySelector(".ug-confirmation") : el;
@@ -646,15 +714,16 @@
           ? ""
           : row("products", tr("ugFromProducts"), tr("ugFromProductsHelp"))) +
         row("custom", tr("ugCustom"), tr("ugCustomHelp"));
-    } else if (r.page === "products" || r.page === "linked") {
-      title = tr(r.page === "products" ? "ugFromProducts" : "ugLink");
+    } else if (r.page === "products" || r.page === "linked" || r.page === "sub-products") {
+      title = tr(r.page === "linked" ? "ugLink" : "ugFromProducts");
       const selectableCategories = catalog.categories.filter((c) => c.category_type !== "modifier");
+      const existingSubProducts = r.page === "sub-products" ? state.stack.at(-1).route.option.subOptions?.map((sub) => sub.productId).filter(Boolean) || [] : [];
       const selectableProducts = catalog.products.filter((p) => selectableCategories.some((c) => c.id === p.category_id));
       body =
         search() +
         `<select class="ug-filter" data-field="filter"><option value="">${esc(tr("ugAll"))}</option>${selectableCategories.map((c) => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("")}</select><div class="ug-list">${selectableProducts.map((p) => {
           const inherited = r.page === "linked" && !r.ids.includes(p.id) && affectedIds(d).includes(p.id);
-          return check(p.id, p.name, inherited ? tr("ugInherited") : `${tr("ugRetail")} $${p.price}`, inherited || r.ids.includes(p.id), "product", p.category_id, inherited);
+          return check(p.id, p.name, inherited ? tr("ugInherited") : `${tr("ugRetail")} $${p.price}`, inherited || existingSubProducts.includes(p.id) || r.ids.includes(p.id), "product", p.category_id, inherited || existingSubProducts.includes(p.id));
         }).join("")}</div>`;
     } else if (r.page === "option") {
       const o = r.option;
@@ -676,7 +745,7 @@
           ? stepper("option.quantity", "ugQuantity", o.quantity, 1)
           : "") +
         `<div class="ug-list ug-option-toggles">${toggle("option.isDefault", "ugDefault", o.isDefault, "ugDefaultHelp")}${toggle("option.isLocallyOutOfStock", "ugLocalStock", o.isLocallyOutOfStock, "ugLocalStockHelp")}</div></section>` +
-        `<section class="ug-option-children"><div class="ug-section-title"><h3>${esc(tr("ugSub"))} (${(o.subOptions || []).length})</h3>${btn("add-sub", "ugAddSub")}</div>${(o.subOptions || []).map((s, i) => `<div class="ug-sub-option ug-sub-option-compact">${field(`sub.${i}.name`, "ugSubName", typeof s === "string" ? s : s.name)}${field(`sub.${i}.price`, "ugGroupSurcharge", s.price || 0, "number", 'min="0" step="0.01"')}${btn("remove-sub", "ugRemove", `data-index="${i}" aria-label="${esc(tr("ugRemove"))} ${esc(typeof s === "string" ? s : s.name || tr("ugSub"))}"`)}</div>`).join("") || `<p class="ug-muted">${esc(tr("ugSubEmpty"))}</p>`}</section>` +
+        `<section class="ug-option-children"><div class="ug-section-title"><h3>${esc(tr("ugSub"))} (${(o.subOptions || []).length})</h3>${subMenu()}</div>${(o.subOptions || []).map(subRow).join("") || `<p class="ug-muted">${esc(tr("ugSubEmpty"))}</p>`}</section>` +
         `<details data-section="description"><summary>${esc(tr("ugDescription"))}</summary>${field("option.description", "ugDescription", o.description || "")}</details><details data-section="conditions"><summary>${esc(tr("ugConditions"))}</summary>${field("eligibility.min_order_subtotal", "ugMinimumSubtotal", (o.eligibilityRules || []).find((r) => r.rule_type === "min_order_subtotal")?.min_order_subtotal || 0, "number", 'min="0" step="0.01"')}${field("eligibility.error_message", "ugRuleMessage", (o.eligibilityRules || []).find((r) => r.rule_type === "min_order_subtotal")?.error_message || "")}</details>` +
         (!r.isNew ? sourceContains(d, o)
           ? `<p class="ug-muted ug-option-source">${esc(tr("ugSourceOption"))}</p>${btn("remove-option", "ugRemoveOption", 'class="ug-option-remove" disabled')}`
@@ -791,6 +860,7 @@
       const [, i, k] = key.split(".");
       if (typeof r.option.subOptions[i] === "string")
         r.option.subOptions[i] = { name: r.option.subOptions[i], price: 0 };
+      if (k === "name" && r.option.subOptions[i].productId) return;
       r.option.subOptions[i][k] = value;
     } else {
       d[key] = value;
@@ -868,14 +938,18 @@
       input(target);
       return;
     }
-    if (name === "add-sub") {
+    if (name === "add-sub") return toggleSubMenu();
+    if (name === "sub-products") return push({ page: "sub-products", ids: [] });
+    if (name === "sub-custom") {
+      rememberView();
       r.option.subOptions = r.option.subOptions || [];
-      r.option.subOptions.push({ name: "", price: 0 });
+      r.option.subOptions.push({ id: uid("sub"), name: "", price: 0 });
       render();
       ensureDrawer().querySelector(`[data-field="sub.${r.option.subOptions.length - 1}.name"]`)?.focus();
       return;
     }
     if (name === "remove-sub") {
+      rememberView();
       r.option.subOptions.splice(Number(el.dataset.index), 1);
       return render();
     }
@@ -940,6 +1014,16 @@
             disabled: false,
           });
       }
+      if (r.page === "sub-products") {
+        const parent = state.stack.at(-1).route.option;
+        parent.subOptions = parent.subOptions || [];
+        for (const id of r.ids) {
+          const product = productById(id);
+          if (product && !parent.subOptions.some((sub) => sub.productId === id))
+            parent.subOptions.push({ id: uid("sub"), productId: id, name: product.name, price: 0 });
+        }
+        return back();
+      }
       if (r.page === "linked") d.itemIds = r.ids;
       if (r.page === "products") {
         for (const id of r.ids)
@@ -969,7 +1053,7 @@
     const r = state.route, o = r.option;
     if ((!o.productId && !String(o.name || "").trim()) || !Number.isFinite(o.price) || o.price < 0 ||
       !Number.isInteger(Number(o.quantity ?? 1)) || Number(o.quantity ?? 1) < 1 ||
-      (o.subOptions || []).some((s) => !String(typeof s === "string" ? s : s.name || "").trim() ||
+      (o.subOptions || []).some((s) => (s.productId ? !productById(s.productId) : !String(typeof s === "string" ? s : s.name || "").trim()) ||
         (typeof s !== "string" && (!Number.isFinite(Number(s.price)) || Number(s.price) < 0)))) {
       state.error = tr("ugInvalid");
       return false;
