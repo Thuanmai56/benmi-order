@@ -4,6 +4,15 @@ import { getTenantId } from './menu';
 import { invalidateBootstrapCache } from './bootstrap';
 
 type Row = Record<string, any>;
+type SubOption = {
+	id?: string;
+	name: string;
+	price?: number;
+	productId?: string;
+	isOutOfStock?: boolean;
+	isOos?: boolean;
+};
+const subKey = (sub: string | SubOption) => typeof sub === 'string' ? sub : sub?.id || sub?.productId || sub?.name;
 export type MenuOption = {
 	id: string;
 	name: string;
@@ -145,6 +154,17 @@ export function groupOptions(catalog: OptionCatalog, group: OptionGroup): MenuOp
 			...o,
 			name: product?.name || o.name,
 			retailPrice: product?.price,
+			subOptions: (o.subOptions || []).map((sub: string | SubOption) => {
+				if (typeof sub === 'string' || !sub.productId) return sub;
+				const linked = catalog.products.find((p) => p.id === sub.productId);
+				return {
+					...sub,
+					id: sub.id || `product:${sub.productId}`,
+					name: linked?.name || sub.name,
+					retailPrice: linked?.price,
+					isOutOfStock: !linked || oos(linked),
+				};
+			}),
 			imageUrl:
 				product && product.image_key !== ''
 					? `/api/image?tenant_id=${encodeURIComponent(product.tenant_id)}&name=${encodeURIComponent(product.image_key || product.name)}`
@@ -239,11 +259,17 @@ function normalizeGroup(raw: any, existing?: OptionGroup): OptionGroup {
 			ids.add(o.id);
 			if (
 				!Array.isArray(o.subOptions || []) ||
-				(o.subOptions || []).some((v: any) => (typeof v === 'string' ? !v.trim() : !v?.name?.trim() || !money(v.price || 0))) ||
+				(o.subOptions || []).some((v: SubOption | string) => typeof v === 'string' ? !v.trim()
+					: !v || (!v.productId && (typeof v.name !== 'string' || !v.name.trim())) ||
+						(v.productId != null && (typeof v.productId !== 'string' || !v.productId)) || !money(v.price ?? 0)) ||
 				!Array.isArray(o.eligibilityRules || []) ||
 				(o.eligibilityRules || []).some((v: any) => !money(v.min_order_subtotal || 0))
 			)
 				throw new Error('INVALID_OPTION_DETAILS');
+			const subIds = (o.subOptions || []).filter((v: SubOption | string) => typeof v !== 'string' && v.id).map((v: SubOption) => v.id);
+			if (new Set(subIds).size !== subIds.length) throw new Error('OPTION_SUB_DUPLICATE');
+			const linkedSubIds = (o.subOptions || []).filter((v: SubOption | string) => typeof v !== 'string' && v.productId).map((v: SubOption) => v.productId);
+			if (new Set(linkedSubIds).size !== linkedSubIds.length) throw new Error('OPTION_SUB_DUPLICATE');
 			// Unknown fields on existing custom options survive updates.
 			return {
 				...existing?.options.find((old) => old.id === o.id),
@@ -301,7 +327,7 @@ export async function saveOptionEntity(request: Request, env: Env, kind: 'produc
 			const entity = kind === 'product' ? catalog.products.find((p) => p.id === id) : catalog.groups.find((g) => g.id === id);
 			if (!entity || Number(raw.revision) !== Number(kind === 'product' ? entity.menu_revision : entity.revision))
 				return json({ error: 'MENU_CONFLICT' }, 409);
-			if (kind === 'product' && catalog.groups.some((g) => groupOptions(catalog, g).some((o) => o.productId === id)))
+			if (kind === 'product' && catalog.groups.some((g) => groupOptions(catalog, g).some((o) => o.productId === id || o.subOptions.some((sub: SubOption | string) => typeof sub !== 'string' && sub.productId === id))))
 				throw new Error('PRODUCT_IS_LINKED');
 			if (kind === 'product') catalog.products = catalog.products.filter((p) => p.id !== id);
 			else {
@@ -412,6 +438,14 @@ export async function saveOptionEntity(request: Request, env: Env, kind: 'produc
 				if (owner && (owner.tenant_id !== tenantId || owner.group_id !== id)) throw new Error('FOREIGN_OPTION');
 				if (group.scope === 'order' && option.productId) throw new Error('INVALID_ORDER_OPTION_PRODUCT');
 				if (option.productId && !catalog.products.some((p) => p.id === option.productId)) throw new Error('PRODUCT_NOT_FOUND');
+				option.subOptions = option.subOptions.map((sub: SubOption | string) => {
+					if (typeof sub === 'string' || !sub.productId) return sub;
+					if (group.scope === 'order') throw new Error('INVALID_ORDER_OPTION_PRODUCT');
+					const product = catalog.products.find((p) => p.id === sub.productId);
+					if (!product) throw new Error('PRODUCT_NOT_FOUND');
+					// Keep the reference and the independent surcharge; derived stock/retail data stays live.
+					return { id: sub.id || `product:${product.id}`, productId: product.id, name: product.name, price: Number(sub.price ?? 0) };
+				});
 			}
 			if (!Array.isArray(raw.itemIds) || raw.itemIds.some((pid: string) => !catalog.products.some((p) => p.id === pid)))
 				throw new Error('INVALID_LINKED_PRODUCTS');
@@ -553,11 +587,15 @@ export function validateOptionSelection(
 				: { groups: [], extra: 0 };
 			const allowedSub = option.subOptions || [];
 			const subs = Array.isArray(s.subOptions) ? s.subOptions : [];
-			if (new Set(subs.map((v: any) => v.id || v.name || v)).size !== subs.length) throw new Error('OPTION_SUB_DUPLICATE');
+			if (new Set(subs.map(subKey)).size !== subs.length) throw new Error('OPTION_SUB_DUPLICATE');
 			const resolvedSubs = subs.map((v: any) => {
-				const sub = allowedSub.find((o: any) => (o.id || o.name || o) === (v.id || v.name || v));
+				const sub = allowedSub.find((o: SubOption | string) => subKey(o) === subKey(v));
 				if (!sub || sub.isOutOfStock || sub.isOos) throw new Error('OPTION_SUB_INVALID');
-				return { name: typeof sub === 'string' ? sub : sub.name, price: Number(sub.price || 0) };
+				return {
+					...(sub.id ? { id: sub.id } : {}),
+					...(sub.productId ? { productId: sub.productId, itemId: sub.productId } : {}),
+					name: typeof sub === 'string' ? sub : sub.name, price: Number(sub.price || 0),
+				};
 			});
 			const subExtra = resolvedSubs.reduce((sum: number, s: any) => sum + s.price, 0);
 			extra += (option.price + child.extra + subExtra) * qty;

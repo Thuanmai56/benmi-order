@@ -1065,7 +1065,7 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
 
   if (unifiedCatalog) {
     const removed = new Set([...itemDeletes,...unifiedCatalog.products.filter(p=>categoryDeletes.includes(p.category_id)).map(p=>p.id)]);
-    if (unifiedCatalog.groups.some(g=>groupOptions(unifiedCatalog,g).some(o=>o.productId && removed.has(o.productId)))) throw new Error('PRODUCT_IS_LINKED');
+    if (unifiedCatalog.groups.some(g=>groupOptions(unifiedCatalog,g).some(o=>(o.productId && removed.has(o.productId)) || o.subOptions.some(sub=>sub.productId && removed.has(sub.productId))))) throw new Error('PRODUCT_IS_LINKED');
     unifiedCatalog.products=unifiedCatalog.products.filter(p=>!removed.has(p.id));
     const removedGroups=new Set(customDeletes.flatMap(id=>[id,id.startsWith('mg_')?id.slice(3):`mg_${id}`]));
     unifiedCatalog.groups=unifiedCatalog.groups.filter(g=>!removedGroups.has(g.id));
