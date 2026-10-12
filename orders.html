@@ -7,8 +7,8 @@
   <title id="pos-page-title">Blab POS</title>
   <base href="/" />
   <script src="js/orders-display.js?v=20261007_dev_main_sync_v1"></script>
-  <link rel="stylesheet" href="css/orders.css?v=20261012_sort_display_ui_v2" />
-  <link rel="stylesheet" href="css/orders-menu.css?v=20261012_menu_saas_ui_v4" />
+  <link rel="stylesheet" href="css/orders.css?v=20261012_menu_header_unify_v5" />
+  <link rel="stylesheet" href="css/orders-menu.css?v=20261012_menu_header_unify_v5" />
     <script>
       (function () {
         document.documentElement.style.setProperty('--primary', '#00b900');
@@ -235,7 +235,7 @@
           })();
         </script>
 
-        <div class="main-topbar-right">
+        <div class="main-topbar-right" id="main-topbar-right-slot">
           <!-- Uber-style Store Status Dropdown Widget -->
           <div class="store-status-dropdown" id="store-status-dropdown">
             <button type="button" class="store-status-pill open" id="store-status-btn" onclick="toggleStoreStatusMenu(event)">
@@ -1315,13 +1315,17 @@
         <div class="menu-workspace-heading" id="menu-workspace-heading">
           <div class="menu-workspace-heading-main">
             <div class="menu-workspace-title-row">
+              <button type="button" class="mobile-nav-toggle-btn menu-header-nav-btn" onclick="toggleSidebar(true)" aria-label="Mở menu điều hướng">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="4" x2="20" y1="6" y2="6"></line>
+                  <line x1="4" x2="20" y1="12" y2="12"></line>
+                  <line x1="4" x2="20" y1="18" y2="18"></line>
+                </svg>
+              </button>
               <h1 class="menu-workspace-title" id="i18n-menu-workspace-title">菜單管理</h1>
-              <div class="menu-order-store-badge" id="menu-workspace-store-badge">
-                <span class="store-badge-dot"></span>
-                <span id="menu-workspace-store-status-text">營業中</span>
-              </div>
+              <div id="menu-workspace-store-slot" class="menu-header-store-slot"></div>
             </div>
-            <p id="i18n-menu-workspace-sub">管理餐點、供應狀態與客製化選項</p>
+            <p class="menu-workspace-sub" id="i18n-menu-workspace-sub">管理餐點、供應狀態與客製化選項</p>
           </div>
           <div class="menu-workspace-heading-actions">
             <div class="menu-workspace-save-pill is-saved" id="menu-workspace-save-pill">
@@ -2772,8 +2776,8 @@
   </section>
 
   <!-- Benmi POS Modular Architecture Scripts -->
-  <script src="js/orders-i18n.js?v=20261012_menu_saas_ui_v4"></script>
-  <script src="js/orders-core.js?v=20261007_mobile_drawer_sidebar_v1"></script>
+  <script src="js/orders-i18n.js?v=20261012_menu_header_unify_v5"></script>
+  <script src="js/orders-core.js?v=20261012_menu_header_unify_v5"></script>
   <script src="js/orders-audio.js?v=20261007_dev_main_sync_v1"></script>
   <script src="js/printer-service.js?v=20261011_xprinter_bt_fix_v1"></script>
   <script src="js/orders-live.js?v=20261007_dev_main_sync_v1"></script>
@@ -2781,7 +2785,7 @@
   <script src="js/orders-history.js?v=20261007_dev_main_sync_v1"></script>
   <script src="js/orders-reports.js?v=20261007_dev_main_sync_v1"></script>
   <script src="js/orders-settings.js?v=20261007_mobile_drawer_sidebar_v1"></script>
-  <script src="js/orders-menu.js?v=20261012_menu_saas_ui_v4"></script>
+  <script src="js/orders-menu.js?v=20261012_menu_header_unify_v5"></script>
   <script src="js/orders-bundle-wizard.js?v=20261007_dev_main_sync_v1"></script>
   <script src="/js/orders-option-groups.js?v=20261011_product_option_sidebar_v1"></script>
 
