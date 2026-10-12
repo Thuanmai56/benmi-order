@@ -737,51 +737,68 @@ function openBlabContactModal(topic = 'general') {
   const modal = document.getElementById("blabContactModal");
   if (!modal) return;
 
-  const currentLang = (typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW');
-  const dict = (typeof I18N !== 'undefined' && I18N[currentLang]) ? I18N[currentLang] : (window.I18N ? window.I18N['zh-TW'] : {});
-
+  const lang = typeof currentLang !== 'undefined' ? currentLang : 'zh-TW';
+  const dict = typeof I18N !== 'undefined' ? (I18N[lang] || I18N['zh-TW']) : {};
   const bannerEl = document.getElementById("blab-contact-context-banner");
   const titleEl = document.getElementById("blab-context-banner-title");
   const descEl = document.getElementById("blab-context-banner-desc");
   const iconEl = document.getElementById("blab-context-banner-icon");
 
+  // The support card already explains general help; show a banner only for a specific request.
   if (bannerEl && titleEl && descEl) {
+    bannerEl.style.display = topic === 'history' || topic === 'upgrade' ? "flex" : "none";
     if (topic === 'history') {
-      bannerEl.style.display = "flex";
       bannerEl.style.background = "#f0fdf4";
       bannerEl.style.borderColor = "#86efac";
       if (iconEl) {
-        iconEl.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"></path><path d="M1 3h22v5H1z"></path><path d="M10 12h4"></path></svg>`;
+        iconEl.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5M3 8a9 9 0 1 1-1 4"/><path d="M12 7v5l4 2"/></svg>`;
       }
-      titleEl.innerText = dict.blabContextHistoryTitle || (currentLang === 'vi' ? "Tra cứu dữ liệu lịch sử > 30 ngày" : "歷史訂單進階調閱");
-      descEl.innerText = dict.blabContextHistoryDesc || (currentLang === 'vi' ? "Hệ thống hiển thị dữ liệu 30 ngày gần nhất. Dữ liệu trên 30 ngày được lưu trữ an toàn trên đám mây, quý khách cần tra cứu hoặc xuất báo cáo đối soát vui lòng liên hệ chuyên viên qua kênh dưới đây." : "系統預設提供近 30 天即時訂單記錄。超過 30 天之歷史資料封存於雲端資料庫，如需查詢或匯出完整財務報表，請透過下方管道聯繫技術團隊為您處理。");
+      titleEl.textContent = dict.blabContextHistoryTitle;
+      descEl.textContent = dict.blabContextHistoryDesc;
     } else if (topic === 'upgrade') {
-      bannerEl.style.display = "flex";
       bannerEl.style.background = "#faf5ff";
       bannerEl.style.borderColor = "#d8b4fe";
       if (iconEl) {
-        iconEl.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9333ea" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>`;
+        iconEl.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9333ea" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m13 2-3 8H3l8 12 3-8h7L13 2z"/></svg>`;
       }
-      titleEl.innerText = dict.blabContextUpgradeTitle || (currentLang === 'vi' ? "Mở khóa tính năng & Nâng cấp gói" : "方案升級與功能解鎖");
-      descEl.innerText = dict.blabContextUpgradeDesc || (currentLang === 'vi' ? "Để kích hoạt các tính năng nâng cao (Ăn tại quán, Báo cáo doanh thu chuyên sâu), chuyên viên BLAB luôn sẵn sàng tư vấn và kích hoạt cho quý quán trong 5 phút." : "如需開通「內用接單」或「銷量與營收報表分析」等進階模組，專員將於 5 分鐘內為您提供說明並線上開通。");
-    } else {
-      bannerEl.style.display = "flex";
-      bannerEl.style.background = "#f8fafc";
-      bannerEl.style.borderColor = "#e2e8f0";
-      if (iconEl) {
-        iconEl.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`;
-      }
-      titleEl.innerText = dict.blabContextSupportTitle || (currentLang === 'vi' ? "Kênh kết nối kỹ thuật trực tiếp" : "即時專屬支援管道");
-      descEl.innerText = dict.blabContextSupportDesc || (currentLang === 'vi' ? "Quý quán gặp sự cố vận hành, lỗi kết nối máy in hoặc cần hỗ trợ thao tác, vui lòng kết nối ngay với đội ngũ kỹ thuật BLAB." : "門市營運遇到疑問、出單機連線異常或需要功能協助，歡迎隨時透過下方官方管道與我們聯繫。");
+      titleEl.textContent = dict.blabContextUpgradeTitle;
+      descEl.textContent = dict.blabContextUpgradeDesc;
     }
   }
 
+  if (modal.style.display !== "flex") modal.blabReturnFocus = document.activeElement;
+  modal.onclick = (event) => {
+    if (event.target === modal) closeBlabContactModal();
+  };
+  modal.onkeydown = (event) => {
+    if (event.key === "Escape" || event.key === "Esc") {
+      event.preventDefault();
+      event.stopPropagation();
+      closeBlabContactModal();
+    } else if (event.key === "Tab") {
+      const controls = modal.querySelectorAll('button, a[href]');
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+  };
+
   showModalFromTop(modal);
+  document.getElementById("blab-support-close")?.focus({ preventScroll: true });
 }
 
 function closeBlabContactModal() {
   const modal = document.getElementById("blabContactModal");
-  if (modal) modal.style.display = "none";
+  if (!modal) return;
+  modal.style.display = "none";
+  if (modal.blabReturnFocus?.isConnected) modal.blabReturnFocus.focus({ preventScroll: true });
+  modal.blabReturnFocus = null;
 }
 
 function openPrinterGuideModal() {

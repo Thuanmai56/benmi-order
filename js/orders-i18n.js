@@ -95,13 +95,20 @@ const I18N = {
     historyOlderSub: "如需調閱更早歷史紀錄或匯出月報表，請聯繫 BLAB 團隊",
     btnContactBlab: "聯繫 BLAB",
     modalBlabTitle: "BLAB 客服與技術支援",
-    modalBlabSubtitle: "全方位門市營運與系統諮詢服務",
+    modalBlabSubtitle: "門市系統疑難排解、日常操作協助與餐飲 POS 解決方案諮詢。",
     modalBlabDesc: "系統預設提供近 30 天即時訂單記錄。超過 30 天之歷史資料封存於雲端資料庫，如需查詢或匯出完整財務報表，請聯繫 BLAB 團隊為您處理。",
     blabStatusOnline: "線上",
-    blabSupportDirectSub: "LINE 官方帳號 / 1對1 即時專人支援",
-    btnModalBlabLine: "開啟 LINE",
+    blabSupportChannel: "專人技術支援・LINE 一對一諮詢",
+    blabSupportDirectTitle: "BLAB 客服團隊",
+    blabSupportDirectBadge: "一對一支援",
+    blabSupportDirectSub: "LINE 官方帳號 / 一對一技術支援",
+    blabSupportDirectDesc: "出單機連線異常、列印問題、訂單同步與門市操作協助。",
+    btnModalBlabLine: "開啟 LINE 支援",
     blabUpgradeTitle: "功能開通與方案諮詢",
-    blabUpgradeSub: "內用模組、營收報表分析、歷史資料調閱",
+    blabUpgradeSub: "諮詢內用接單、營收報表分析與歷史資料調閱等進階功能。",
+    blabUpgradeTagDineIn: "內用接單",
+    blabUpgradeTagReports: "營收報表",
+    blabUpgradeTagHistory: "歷史資料",
     btnModalBlabUpgrade: "聯繫諮詢",
     blabHoursCommitment: "服務時間：每日 09:00 - 22:00（標準回覆時間 < 5 分鐘）",
     blabExportTitle: "月度報表 / 雲端匯出服務",
@@ -1039,13 +1046,20 @@ const I18N = {
     historyOlderSub: "Quý khách cần xuất báo cáo hoặc tra cứu lịch sử vui lòng liên hệ đội ngũ BLAB",
     btnContactBlab: "Liên hệ BLAB",
     modalBlabTitle: "Hỗ trợ kỹ thuật & Liên hệ BLAB",
-    modalBlabSubtitle: "Kênh chăm sóc khách hàng và tư vấn giải pháp POS",
+    modalBlabSubtitle: "Hỗ trợ xử lý sự cố, thao tác tại quầy và tư vấn giải pháp POS cho quán.",
     modalBlabDesc: "Hệ thống hiển thị dữ liệu 30 ngày gần nhất. Dữ liệu trên 30 ngày được lưu trữ an toàn trên đám mây, quý khách cần tra cứu hoặc xuất báo cáo đối soát vui lòng liên hệ đội ngũ BLAB.",
     blabStatusOnline: "Trực tuyến",
-    blabSupportDirectSub: "LINE Official / Hỗ trợ kỹ thuật 1-1 nhanh chóng",
+    blabSupportChannel: "Hỗ trợ kỹ thuật trực tiếp · Tư vấn 1-1 qua LINE",
+    blabSupportDirectTitle: "Đội ngũ hỗ trợ BLAB",
+    blabSupportDirectBadge: "Hỗ trợ 1-1",
+    blabSupportDirectSub: "LINE chính thức / Hỗ trợ kỹ thuật trực tiếp",
+    blabSupportDirectDesc: "Hỗ trợ lỗi kết nối máy in, lỗi in hóa đơn, đồng bộ đơn hàng và thao tác vận hành tại quầy.",
     btnModalBlabLine: "Mở LINE hỗ trợ",
     blabUpgradeTitle: "Tư vấn nâng cấp tính năng & Gói giải pháp",
-    blabUpgradeSub: "Mở khóa Ăn tại quán, Báo cáo tài chính, Tra cứu lịch sử",
+    blabUpgradeSub: "Tư vấn các tính năng nâng cao: nhận đơn tại bàn, báo cáo doanh thu và tra cứu dữ liệu lịch sử.",
+    blabUpgradeTagDineIn: "Ăn tại quán",
+    blabUpgradeTagReports: "Báo cáo doanh thu",
+    blabUpgradeTagHistory: "Dữ liệu lịch sử",
     btnModalBlabUpgrade: "Liên hệ tư vấn",
     blabHoursCommitment: "Khung giờ hỗ trợ: 09:00 - 22:00 hằng ngày (Phản hồi < 5 phút)",
     blabExportTitle: "Báo cáo theo tháng / Dữ liệu đám mây",
@@ -2110,6 +2124,21 @@ function applyLanguageToDOM() {
   if (histFTake) histFTake.innerText = dict.historyFilterTakeaway || "外帶";
 
   // BLAB Support & Contact Modal
+  const blabSupportLabels = {
+    "i18n-blab-support-channel": "blabSupportChannel",
+    "i18n-blab-support-direct-title": "blabSupportDirectTitle",
+    "i18n-blab-support-direct-badge": "blabSupportDirectBadge",
+    "i18n-blab-support-direct-desc": "blabSupportDirectDesc",
+    "i18n-blab-upgrade-tag-dine-in": "blabUpgradeTagDineIn",
+    "i18n-blab-upgrade-tag-reports": "blabUpgradeTagReports",
+    "i18n-blab-upgrade-tag-history": "blabUpgradeTagHistory"
+  };
+  Object.entries(blabSupportLabels).forEach(([id, key]) => {
+    const node = document.getElementById(id);
+    if (node) node.textContent = dict[key];
+  });
+  const blabSupportClose = document.getElementById("blab-support-close");
+  if (blabSupportClose) blabSupportClose.setAttribute("aria-label", dict.btnModalBlabClose);
   const mBlabT = document.getElementById("i18n-modal-blab-title");
   if (mBlabT) mBlabT.innerText = dict.modalBlabTitle;
   const mBlabSub = document.getElementById("i18n-modal-blab-subtitle");

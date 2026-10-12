@@ -7,8 +7,8 @@
   <title id="pos-page-title">Blab POS</title>
   <base href="/" />
   <script src="js/orders-display.js?v=20261007_dev_main_sync_v1"></script>
-  <link rel="stylesheet" href="css/orders.css?v=20261012_menu_header_unify_v5" />
-  <link rel="stylesheet" href="css/orders-menu.css?v=20261012_menu_header_unify_v5" />
+  <link rel="stylesheet" href="css/orders.css?v=20261012_support_modal_v1" />
+  <link rel="stylesheet" href="css/orders-menu.css?v=20261012_menu_compact_v6" />
     <script>
       (function () {
         document.documentElement.style.setProperty('--primary', '#00b900');
@@ -2586,96 +2586,82 @@
     </div>
   </div>
 
-  <!-- Modal Trung Tâm Hỗ Trợ & Liên Hệ BLAB -->
-  <div class="modal" id="blabContactModal" style="display: none; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(6px); z-index: 9999;">
-    <div class="modal-content" style="max-width: 520px; width: min(520px, 95vw); border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25); padding: 24px;">
-      <!-- Header -->
-      <div class="modal-title" style="margin-bottom: 16px;">
-        <div style="display:flex; align-items:center; gap: 12px;">
-          <div style="width: 44px; height: 44px; border-radius: 12px; background: #ecfdf5; border: 1.5px solid #a7f3d0; color: #059669; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3 18v-6a9 9 0 0 1 18 0v6"></path>
-              <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path>
+  <!-- BLAB Support & Contact -->
+  <div class="modal blab-support-modal" id="blabContactModal" style="display: none;">
+    <div class="modal-content blab-support-dialog" role="dialog" aria-modal="true" aria-labelledby="i18n-modal-blab-title" aria-describedby="i18n-modal-blab-subtitle" tabindex="-1">
+      <header class="blab-support-header">
+        <div class="blab-support-heading">
+          <div class="blab-support-icon blab-support-icon--header" aria-hidden="true">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/>
             </svg>
           </div>
+          <div class="blab-support-heading-copy">
+            <h2 id="i18n-modal-blab-title">BLAB 客服與技術支援</h2>
+            <p id="i18n-modal-blab-subtitle">全方位門市營運與系統諮詢服務</p>
+          </div>
+        </div>
+        <button type="button" class="blab-support-close" id="blab-support-close" onclick="closeBlabContactModal()" aria-label="關閉">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+        <div class="blab-support-status">
+          <span class="blab-support-status-dot" aria-hidden="true"></span>
+          <span id="i18n-blab-support-channel">專人技術支援・LINE 一對一諮詢</span>
+        </div>
+      </header>
+
+      <div class="modal-body blab-support-body">
+        <!-- Keep history and upgrade guidance for their respective entry points. -->
+        <div class="blab-support-context" id="blab-contact-context-banner" style="display: none;">
+          <div id="blab-context-banner-icon" aria-hidden="true"></div>
           <div>
-            <h3 style="font-size: var(--pos-text-body); font-weight: 1000; color: #0f172a; margin: 0; letter-spacing: -0.3px;" id="i18n-modal-blab-title">BLAB 客服與技術支援</h3>
-            <p style="font-size: var(--pos-text-meta); color: #64748b; margin: 2px 0 0 0; font-weight: 600;" id="i18n-modal-blab-subtitle">全方位門市營運與系統諮詢服務</p>
+            <h3 id="blab-context-banner-title"></h3>
+            <p id="blab-context-banner-desc"></p>
           </div>
         </div>
-        <div class="modal-close" onclick="closeBlabContactModal()" style="width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #f1f5f9; cursor: pointer; color: #64748b; transition: all 0.15s ease;" aria-label="Close">✕</div>
+
+        <article class="blab-support-card blab-support-card--primary">
+          <div class="blab-support-icon blab-support-icon--line" aria-hidden="true">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+          </div>
+          <div class="blab-support-card-copy">
+            <div class="blab-support-card-heading">
+              <h3 id="i18n-blab-support-direct-title">BLAB 客服團隊</h3>
+              <span class="blab-support-badge" id="i18n-blab-support-direct-badge">一對一支援</span>
+            </div>
+            <p class="blab-support-card-subtitle" id="i18n-blab-support-direct-sub">LINE 官方帳號 / 一對一技術支援</p>
+            <p class="blab-support-card-description" id="i18n-blab-support-direct-desc">出單機連線異常、列印問題、訂單同步與門市操作協助。</p>
+          </div>
+          <a class="blab-support-action blab-support-action--line" href="https://line.me/ti/p/8k-DsB-f5Y" target="_blank" rel="noopener noreferrer">
+            <span id="i18n-btn-modal-blab-line">開啟 LINE 支援</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+          </a>
+        </article>
+
+        <article class="blab-support-card">
+          <div class="blab-support-icon blab-support-icon--upgrade" aria-hidden="true">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H8m4-10v12"/></svg>
+          </div>
+          <div class="blab-support-card-copy">
+            <h3 id="i18n-blab-upgrade-title">功能開通與方案諮詢</h3>
+            <p class="blab-support-card-description" id="i18n-blab-upgrade-sub">諮詢內用接單、營收報表分析與歷史資料調閱等進階功能。</p>
+            <div class="blab-support-tags">
+              <span id="i18n-blab-upgrade-tag-dine-in">內用接單</span>
+              <span id="i18n-blab-upgrade-tag-reports">營收報表</span>
+              <span id="i18n-blab-upgrade-tag-history">歷史資料</span>
+            </div>
+          </div>
+          <a class="blab-support-action blab-support-action--secondary" href="https://line.me/ti/p/8k-DsB-f5Y" target="_blank" rel="noopener noreferrer" id="i18n-btn-modal-blab-upgrade">聯繫諮詢</a>
+        </article>
       </div>
 
-      <!-- Modal Body -->
-      <div class="modal-body" style="padding: 4px 0 14px 0; display:flex; flex-direction:column; gap: 14px;">
-        <!-- Contextual Notification Banner (Dynamic per topic: history, upgrade, support) -->
-        <div id="blab-contact-context-banner" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px 16px; font-size: var(--pos-text-meta); line-height: 1.55; color: #334155; display: flex; gap: 12px; align-items: flex-start;">
-          <div id="blab-context-banner-icon" style="color: #059669; margin-top: 2px; flex-shrink: 0;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-          </div>
-          <div style="flex: 1;">
-            <div id="blab-context-banner-title" style="font-weight: 800; font-size: var(--pos-text-meta); color: #0f172a; margin-bottom: 3px;">即時專屬支援管道</div>
-            <div id="blab-context-banner-desc" style="font-size: var(--pos-text-meta); color: #475569; line-height: 1.5;">如需技術諮詢、連線排障或功能開通，請透過下方官方服務渠道聯繫 BLAB 專員。</div>
-          </div>
-        </div>
-
-        <!-- Contact Channels List -->
-        <div style="display:flex; flex-direction:column; gap: 12px;">
-          <!-- 1. LINE Official Support Card -->
-          <a href="https://line.me/ti/p/8k-DsB-f5Y" target="_blank" rel="noopener noreferrer" style="text-decoration:none; display:flex; align-items:center; justify-content:space-between; background:#ffffff; border: 1.5px solid #86efac; padding: 14px 16px; border-radius: 14px; transition: all 0.2s ease; cursor: pointer; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.08);">
-            <div style="display:flex; align-items:center; gap: 12px;">
-              <div style="width: 44px; height: 44px; border-radius: 12px; background: #dcfce7; border: 1px solid #bbf7d0; color: #16a34a; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
-                </svg>
-              </div>
-              <div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <span style="font-weight: 1000; font-size: var(--pos-text-body); color: #0f172a;">BLAB Customer Support</span>
-                  <span style="display: inline-flex; align-items: center; gap: 4px; background: #dcfce7; color: #15803d; font-size: var(--pos-text-meta); font-weight: 800; padding: 2px 8px; border-radius: 999px;">
-                    <span style="width: 6px; height: 6px; border-radius: 50%; background: #22c55e;"></span>
-                    <span id="i18n-blab-status-online">線上</span>
-                  </span>
-                </div>
-                <div style="font-size: var(--pos-text-meta); color: #15803d; font-weight: 700; margin-top: 3px;" id="i18n-blab-support-direct-sub">LINE 官方帳號 / 1對1 即時專人支援</div>
-              </div>
-            </div>
-            <button class="btn btn-primary" style="padding: 10px 18px; min-height: 48px; font-size: var(--pos-text-meta); font-weight: 900; pointer-events:none; border-radius: 10px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-              <span id="i18n-btn-modal-blab-line">開啟 LINE</span>
-            </button>
-          </a>
-
-          <!-- 2. Feature Upgrade & Consultation Card -->
-          <a href="https://line.me/ti/p/8k-DsB-f5Y" target="_blank" rel="noopener noreferrer" style="text-decoration:none; display:flex; align-items:center; justify-content:space-between; background:#ffffff; border: 1.5px solid #e2e8f0; padding: 14px 16px; border-radius: 14px; transition: all 0.2s ease; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
-            <div style="display:flex; align-items:center; gap: 12px;">
-              <div style="width: 44px; height: 44px; border-radius: 12px; background: #f8fafc; border: 1px solid #e2e8f0; color: #475569; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M12 2v20"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                </svg>
-              </div>
-              <div>
-                <div style="font-weight: 1000; font-size: var(--pos-text-body); color: #0f172a;" id="i18n-blab-upgrade-title">功能開通與方案諮詢</div>
-                <div style="font-size: var(--pos-text-meta); color: #64748b; margin-top: 3px; font-weight: 600;" id="i18n-blab-upgrade-sub">內用模組、營收報表分析、歷史資料調閱</div>
-              </div>
-            </div>
-            <button class="btn btn-ghost" style="padding: 10px 18px; min-height: 48px; font-size: var(--pos-text-meta); font-weight: 800; pointer-events:none; border-radius: 10px; border: 1px solid #cbd5e1; white-space: nowrap;" id="i18n-btn-modal-blab-upgrade">
-              聯繫諮詢
-            </button>
-          </a>
-        </div>
-
-        <!-- Working Hours & SLA Note -->
-        <div style="display: flex; align-items: center; gap: 8px; justify-content: center; font-size: var(--pos-text-meta); color: #64748b; font-weight: 600; padding: 4px 0;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color: #10b981;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+      <footer class="blab-support-footer">
+        <p class="blab-support-hours">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
           <span id="i18n-blab-hours-commitment">服務時間：每日 09:00 - 22:00（標準回覆時間 &lt; 5 分鐘）</span>
-        </div>
-      </div>
-
-      <!-- Modal Footer -->
-      <div class="modal-actions" style="margin-top: 4px; padding-top: 8px;">
-        <button class="btn btn-primary btn-block" onclick="closeBlabContactModal()" style="min-height: 48px; font-size: var(--pos-text-body); font-weight: 900; border-radius: 12px;" id="i18n-btn-modal-blab-close">關閉</button>
-      </div>
+        </p>
+        <button type="button" class="blab-support-action blab-support-action--close" onclick="closeBlabContactModal()" id="i18n-btn-modal-blab-close">關閉</button>
+      </footer>
     </div>
   </div>
 
@@ -2776,16 +2762,16 @@
   </section>
 
   <!-- Benmi POS Modular Architecture Scripts -->
-  <script src="js/orders-i18n.js?v=20261012_menu_header_unify_v5"></script>
-  <script src="js/orders-core.js?v=20261012_menu_header_unify_v5"></script>
+  <script src="js/orders-i18n.js?v=20261012_menu_compact_v6"></script>
+  <script src="js/orders-core.js?v=20261012_menu_compact_v6"></script>
   <script src="js/orders-audio.js?v=20261007_dev_main_sync_v1"></script>
   <script src="js/printer-service.js?v=20261011_xprinter_bt_fix_v1"></script>
   <script src="js/orders-live.js?v=20261007_dev_main_sync_v1"></script>
-  <script src="js/orders-modals.js?v=20261007_dev_main_sync_v1"></script>
+  <script src="js/orders-modals.js?v=20261012_support_modal_v1"></script>
   <script src="js/orders-history.js?v=20261007_dev_main_sync_v1"></script>
   <script src="js/orders-reports.js?v=20261007_dev_main_sync_v1"></script>
   <script src="js/orders-settings.js?v=20261007_mobile_drawer_sidebar_v1"></script>
-  <script src="js/orders-menu.js?v=20261012_menu_header_unify_v5"></script>
+  <script src="js/orders-menu.js?v=20261012_menu_compact_v6"></script>
   <script src="js/orders-bundle-wizard.js?v=20261007_dev_main_sync_v1"></script>
   <script src="/js/orders-option-groups.js?v=20261011_product_option_sidebar_v1"></script>
 
