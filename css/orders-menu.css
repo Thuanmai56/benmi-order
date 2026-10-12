@@ -1856,7 +1856,7 @@
 #itemModifiersModal, #itemDetailModal { align-items: center !important; justify-content: flex-start !important; }
 #itemModifiersModal .item-modifiers-page-container, #itemDetailModal .item-detail-page-container { background: transparent !important; }
 /* The shared option library is part of the same item-setup flow. */
-#view-menu .cust-group-card, #view-menu .cust-new-group-card { background: white !important; border: 1px solid var(--menu-line) !important; border-radius: 12px !important; padding: 20px !important; box-shadow: none !important; }
+#view-menu .cust-group-card:not(.menu-products-card), #view-menu .cust-new-group-card { background: white !important; border: 1px solid var(--menu-line) !important; border-radius: 12px !important; padding: 20px !important; box-shadow: none !important; }
 #view-menu .cust-group-header { padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--menu-line); gap: 12px; flex-wrap: wrap; }
 #view-menu .cust-group-title { font-size: var(--menu-font-lg); color: var(--menu-ink); }
 #view-menu .cust-group-header button { border-radius: 8px !important; }
@@ -1886,7 +1886,7 @@
   #itemDetailModal .item-detail-topbar-right { margin-left: auto; }
 }
 @media (max-width: 600px) {
-  #view-menu .cust-group-card, #view-menu .cust-new-group-card { padding: 12px !important; }
+  #view-menu .cust-group-card:not(.menu-products-card), #view-menu .cust-new-group-card { padding: 12px !important; }
   #view-menu .cust-option-row { display: flex; flex-wrap: wrap; }
   #view-menu .cust-option-row .menu-item-name-input { flex: 1 1 100%; }
   #view-menu .cust-option-row .menu-item-actions { flex-wrap: wrap; }

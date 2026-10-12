@@ -69,11 +69,24 @@ test('I18N dictionaries contain store closed status in zh-TW and vi', () => {
 
 test('orders.html has updated cache-busters for menu and display scaling', () => {
   const html = read('orders.html');
-  const version = '20261012_menu_toggle_item_scale_v8';
+  const version = '20261012_menu_single_panel_v10';
 
   assert.ok(html.includes(`css/orders.css?v=${version}`), 'orders.css must have bumped cache-buster');
   assert.ok(html.includes(`css/orders-menu.css?v=${version}`), 'orders-menu.css must have bumped cache-buster');
   assert.ok(html.includes(`js/orders-i18n.js?v=${version}`), 'orders-i18n.js must have bumped cache-buster');
   assert.ok(html.includes(`js/orders-settings.js?v=${version}`), 'orders-settings.js must have bumped cache-buster');
   assert.ok(html.includes(`js/orders-menu.js?v=${version}`), 'orders-menu.js must have bumped cache-buster');
+});
+
+test('Menu items catalog card seamlessly integrates without nested duplicate panel borders', () => {
+  const css = read('css/orders-menu.css');
+  const js = read('js/orders-menu.js');
+
+  // css asserts menu-products-card is borderless and seamless
+  assert.match(css, /\.menu-products-card[\s\S]*?border:\s*0\s*!important/);
+  assert.match(css, /\.menu-products-card[\s\S]*?border-radius:\s*0\s*!important/);
+  assert.match(css, /\.cust-group-card:not\(\.menu-products-card\)/);
+
+  // js asserts catalogCard is not classified as cust-group-card
+  assert.match(js, /catalogCard\.className\s*=\s*["']menu-products-card["']/);
 });
