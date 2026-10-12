@@ -82,6 +82,17 @@ function updateMenuSaveState() {
       statusText.textContent = t('statusAutoSaved');
     }
   }
+  const wsSavePill = document.getElementById('menu-workspace-save-pill');
+  const wsSaveStatusText = document.getElementById('menu-workspace-save-status-text');
+  if (wsSavePill && wsSaveStatusText) {
+    if (isMenuDirty) {
+      wsSavePill.className = 'menu-workspace-save-pill is-dirty';
+      wsSaveStatusText.textContent = t('statusUnsaved');
+    } else {
+      wsSavePill.className = 'menu-workspace-save-pill is-saved';
+      wsSaveStatusText.textContent = t('statusAutoSaved');
+    }
+  }
   const revertBtn = document.getElementById('btn-menu-order-revert');
   if (revertBtn) {
     revertBtn.disabled = isMenuSaving || !isMenuDirty;
@@ -913,14 +924,6 @@ function renderCategoriesManagerView() {
       const actionsWrap = document.createElement('div');
       actionsWrap.className = 'menu-order-card-actions';
 
-      if (kind === 'section' && isSelected) {
-        const openBtn = document.createElement('button');
-        openBtn.type = 'button';
-        openBtn.className = 'btn-opening-indicator';
-        openBtn.innerHTML = `<span>${escapeHtml(t('btnOpeningCategory'))}</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 5 7 7-7 7"/></svg>`;
-        actionsWrap.appendChild(openBtn);
-      }
-
       const move = target => {
         if (isMenuSaving || target < 0 || target >= values.length || target === index) return;
         const ordered = [...values];
@@ -1210,6 +1213,25 @@ function renderMenuCategories() {
       }
     });
 
+    let totalActiveItems = 0;
+    catalogList.forEach(({ cat }) => {
+      if (Array.isArray(cat.items)) {
+        cat.items.forEach(item => {
+          if (!item.isOos) totalActiveItems++;
+        });
+      }
+    });
+    const footerCats = document.getElementById('menu-sidebar-footer-cats');
+    const footerItems = document.getElementById('menu-sidebar-footer-items');
+    if (footerCats) footerCats.textContent = t('menuSidebarTotalCats', { count: catalogList.length });
+    if (footerItems) footerItems.textContent = t('menuSidebarActiveItems', { count: totalActiveItems });
+
+    const wsStoreBadge = document.getElementById('menu-workspace-store-badge');
+    const wsStoreText = document.getElementById('menu-workspace-store-status-text');
+    const isStoreCurrentlyOpen = (typeof currentStoreStatus !== 'undefined' ? currentStoreStatus : 'open') === 'open';
+    if (wsStoreText) wsStoreText.textContent = isStoreCurrentlyOpen ? t('statusOpen') : t('statusClosed');
+    if (wsStoreBadge) wsStoreBadge.classList.toggle('is-closed', !isStoreCurrentlyOpen);
+
     const listEl = document.createElement("div");
     listEl.className = "menu-sidebar-section";
 
@@ -1236,8 +1258,11 @@ function renderMenuCategories() {
           <div class="menu-option-card-title">${escapeHtml(cat.title)}${comboBadgeHtml}</div>
           <div class="menu-option-card-subtitle">${itemCount} ${t("menuItemUnit")}</div>
         </div>
-        <div class="menu-option-card-chevron" aria-hidden="true">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        <div class="menu-option-card-right">
+          <span class="menu-option-card-badge">${itemCount}</span>
+          <div class="menu-option-card-chevron" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </div>
         </div>
       `;
 
@@ -1316,8 +1341,11 @@ function renderMenuCategories() {
         cardEl.innerHTML = `<span class="menu-option-card-content">
           <span class="menu-option-card-title">${escapeHtml(card.title)}</span>
           <span class="menu-option-card-subtitle">${card.count} ${escapeHtml(t('optionsCountUnit'))}</span>
-        </span><span class="menu-option-card-chevron" aria-hidden="true">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </span><span class="menu-option-card-right">
+          <span class="menu-option-card-badge">${card.count}</span>
+          <span class="menu-option-card-chevron" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </span>
         </span>`;
         cardEl.onclick = () => {
           if (activeCategoryIndex !== card.catIndex && !confirmLeaveMenu()) return;
@@ -1336,6 +1364,11 @@ function renderMenuCategories() {
       });
       optionsContainer.appendChild(section);
     });
+
+    const footerCats = document.getElementById('menu-sidebar-footer-cats');
+    const footerItems = document.getElementById('menu-sidebar-footer-items');
+    if (footerCats) footerCats.textContent = t('menuSidebarTotalCats', { count: optionCards.length });
+    if (footerItems) footerItems.textContent = '';
 
     container.appendChild(optionsContainer);
   }
@@ -1595,6 +1628,53 @@ function openMenuItemFromCard(event, cIdx, iIdx) {
   openItemDetailModal(cIdx, iIdx);
 }
 
+let menuItemFilterQuery = '';
+let menuItemFilterStatus = 'all';
+
+function handleMenuItemsSearch(query) {
+  menuItemFilterQuery = (query || '').toLowerCase().trim();
+  applyMenuItemFilters();
+}
+window.handleMenuItemsSearch = handleMenuItemsSearch;
+
+function setMenuItemFilter(status) {
+  menuItemFilterStatus = status;
+  document.querySelectorAll('.menu-filter-pill').forEach(btn => {
+    const isAct = btn.getAttribute('data-filter') === status;
+    btn.classList.toggle('active', isAct);
+  });
+  applyMenuItemFilters();
+}
+window.setMenuItemFilter = setMenuItemFilter;
+
+function applyMenuItemFilters() {
+  const rows = document.querySelectorAll('#menu-editor-body .menu-catalog-row');
+  let visibleCount = 0;
+  rows.forEach(row => {
+    const nameInput = row.querySelector('.menu-item-name-input');
+    const name = (nameInput ? nameInput.value : '').toLowerCase();
+    const isOos = row.querySelector('.menu-item-stock-toggle')?.classList.contains('is-oos');
+    const matchesSearch = !menuItemFilterQuery || name.includes(menuItemFilterQuery);
+    let matchesStatus = true;
+    if (menuItemFilterStatus === 'instock') matchesStatus = !isOos;
+    else if (menuItemFilterStatus === 'oos') matchesStatus = Boolean(isOos);
+
+    if (matchesSearch && matchesStatus) {
+      row.style.display = '';
+      visibleCount++;
+    } else {
+      row.style.display = 'none';
+    }
+  });
+
+  const cat = currentMenuData && currentMenuData[activeCategoryIndex];
+  const showingEl = document.getElementById('menu-footer-showing-count');
+  if (showingEl && cat && Array.isArray(cat.items)) {
+    showingEl.textContent = t('menuFooterShowing', { cat: cat.title, showing: visibleCount, total: cat.items.length });
+  }
+}
+window.applyMenuItemFilters = applyMenuItemFilters;
+
 function renderMenuCategoryEditor(index) {
   if (isCategoryManagerOpen) return renderCategoriesManagerView();
   if (window.UnifiedMenu?.workspace()) return;
@@ -1616,6 +1696,10 @@ function renderMenuCategoryEditor(index) {
     if (renameBtn) renameBtn.style.display = "none";
     if (deleteBtn) deleteBtn.style.display = "none";
     if (createBtn) createBtn.style.display = "none";
+    const tb = document.getElementById('menu-editor-toolbar');
+    if (tb) tb.style.display = 'none';
+    const ft = document.getElementById('menu-editor-footer');
+    if (ft) ft.style.display = 'none';
     const body = document.getElementById('menu-editor-body');
     if (body) {
       body.classList.remove('is-catalog');
@@ -1639,6 +1723,10 @@ function renderMenuCategoryEditor(index) {
     if (createBtn) {
       createBtn.style.display = "none";
     }
+    const tb = document.getElementById('menu-editor-toolbar');
+    if (tb) tb.style.display = 'none';
+    const ft = document.getElementById('menu-editor-footer');
+    if (ft) ft.style.display = 'none';
     renderOrderCustomizationEditor(document.getElementById("menu-editor-body"), cat, index);
     return;
   }
@@ -1654,6 +1742,18 @@ function renderMenuCategoryEditor(index) {
 
   const titleEl = document.getElementById("menu-editor-title");
   if (titleEl) titleEl.innerText = `${cat.title} ${t("menuItemTotalCount", { count: cat.items.length })}`;
+
+  const tb = document.getElementById('menu-editor-toolbar');
+  if (tb) tb.style.display = 'flex';
+  const ft = document.getElementById('menu-editor-footer');
+  if (ft) ft.style.display = 'flex';
+
+  const filterCountAll = document.getElementById('filter-count-all');
+  const filterCountInStock = document.getElementById('filter-count-instock');
+  const filterCountOos = document.getElementById('filter-count-oos');
+  if (filterCountAll) filterCountAll.textContent = cat.items.length;
+  if (filterCountInStock) filterCountInStock.textContent = cat.items.filter(i => !i.isOos).length;
+  if (filterCountOos) filterCountOos.textContent = cat.items.filter(i => i.isOos).length;
 
   const container = document.getElementById("menu-editor-body");
   if (!container) return;
@@ -1773,8 +1873,8 @@ function renderMenuCategoryEditor(index) {
 
     const imgUrl = getItemImageUrl(cat.id, item.name);
     const thumbHtml = imgUrl
-      ? `<img src="${imgUrl}" alt="${escapeHtml(item.name)}" class="menu-item-thumb-img">`
-      : `<div class="menu-item-thumb-placeholder">${cameraSvg}</div>`;
+      ? `<img src="${imgUrl}" alt="${escapeHtml(item.name)}" class="menu-item-thumb-img"><div class="thumb-hover-overlay">${cameraSvg}</div>`
+      : `<div class="menu-item-thumb-placeholder">${cameraSvg}<span class="thumb-upload-text">${escapeHtml(t('menuUploadImage'))}</span></div>`;
 
     const thumbTooltip = escapeHtml(t("tooltipDropToUpload") || (currentLang === 'vi' ? 'Thả ảnh vào đây hoặc bấm để tải lên' : '放開以立即上傳餐點圖片'));
 
@@ -1803,33 +1903,68 @@ function renderMenuCategoryEditor(index) {
     }
 
     row.innerHTML = `
-      <button type="button" class="menu-item-thumb-box ${imgUrl ? 'has-image' : ''}" data-item-thumb-idx="${iIdx}"
-        onclick="handleItemThumbClick(${index}, ${iIdx}, event)"
-        ondragover="handleItemThumbDragOver(event)"
-        ondragleave="handleItemThumbDragLeave(event)"
-        ondrop="handleItemThumbDrop(event, ${index}, ${iIdx})"
-        title="${thumbTooltip}" aria-label="${escapeHtml(t('btnItemImage') + ': ' + item.name)}">
-        ${thumbHtml}
-      </button>
-      <div class="menu-item-name-col">
-        <input type="text" class="menu-item-name-input" value="${escapeHtml(item.name)}" data-name-cidx="${index}" data-name-iidx="${iIdx}" oninput="markMenuDirty()"
-          placeholder="${t("newItemPlaceholder")}" aria-label="${escapeHtml(t('colItemName'))}">
+      <div class="menu-item-row-left">
+        <span class="menu-item-drag-handle" title="${escapeHtml(t('menuDragSort'))}">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="8" x2="20" y2="8"></line><line x1="4" y1="16" x2="20" y2="16"></line>
+          </svg>
+        </span>
+        <button type="button" class="menu-item-thumb-box ${imgUrl ? 'has-image' : ''}" data-item-thumb-idx="${iIdx}"
+          onclick="handleItemThumbClick(${index}, ${iIdx}, event)"
+          ondragover="handleItemThumbDragOver(event)"
+          ondragleave="handleItemThumbDragLeave(event)"
+          ondrop="handleItemThumbDrop(event, ${index}, ${iIdx})"
+          title="${thumbTooltip}" aria-label="${escapeHtml(t('btnItemImage') + ': ' + item.name)}">
+          ${thumbHtml}
+        </button>
+        <div class="menu-item-details-col">
+          <div class="menu-item-name-col">
+            <input type="text" class="menu-item-name-input" value="${escapeHtml(item.name)}" data-name-cidx="${index}" data-name-iidx="${iIdx}" oninput="markMenuDirty()"
+              placeholder="${t("newItemPlaceholder")}" aria-label="${escapeHtml(t('colItemName'))}">
+          </div>
+          <div class="menu-item-meta-col">
+            ${badgesHtml}
+            <button type="button" id="menu-item-options-${index}-${iIdx}" class="menu-item-options-btn" onclick="openItemModifiersModal(${index}, ${iIdx})">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+              </svg>
+              <span>${escapeHtml(t('btnItemModifiersShort') || t('btnItemModifiers'))}</span>
+              ${itemModCount > 0 ? `<span class="opt-count-pill">${itemModCount}</span>` : ''}
+            </button>
+            ${hasBundle && !window.UnifiedMenu?.enabled ? `<button type="button" class="menu-item-options-btn" onclick="openBundleEditorModal(${index}, ${iIdx})">${escapeHtml(t('menuBundleSettings'))}</button>` : ''}
+          </div>
+        </div>
       </div>
-      <div class="menu-item-price-wrapper">
-        <span class="price-currency">$</span>
-        <input type="number" class="menu-item-price-input" value="${item.price !== null && item.price !== undefined ? item.price : ''}" data-cidx="${index}" data-iidx="${iIdx}" oninput="markMenuDirty()"
-          placeholder="${t("priceHiddenPlaceholder")}" aria-label="${escapeHtml(t('colPrice') + ': ' + item.name)}">
+      <div class="menu-item-row-right">
+        <div class="menu-item-price-block">
+          <span class="menu-item-price-label">${escapeHtml(t('menuPriceLabel'))}</span>
+          <div class="menu-item-price-wrapper">
+            <span class="price-currency">$</span>
+            <input type="number" class="menu-item-price-input" value="${item.price !== null && item.price !== undefined ? item.price : ''}" data-cidx="${index}" data-iidx="${iIdx}" oninput="markMenuDirty()"
+              placeholder="${t("priceHiddenPlaceholder")}" aria-label="${escapeHtml(t('colPrice') + ': ' + item.name)}">
+          </div>
+        </div>
+        <div class="menu-item-status-block">
+          <button type="button" class="menu-item-stock-toggle ${item.isOos ? 'is-oos' : 'is-instock'}"
+            onclick="openStockModal(${index}, ${iIdx})" title="${oosText}" aria-label="${escapeHtml(item.name + ': ' + oosText)}">
+            <span class="stock-toggle-dot"></span>
+            <span>${oosText}</span>
+          </button>
+          <span class="stock-toggle-sub">${item.isOos ? escapeHtml(t('menuPausedStatus')) : escapeHtml(t('menuServingStatus'))}</span>
+        </div>
+        <div class="menu-item-quick-actions">
+          <button type="button" class="menu-item-action-icon-btn" onclick="openItemDetailModal(${index}, ${iIdx})" title="${escapeHtml(t('itemDetailTitle'))}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+            </svg>
+          </button>
+          <button type="button" class="menu-item-action-icon-btn delete-btn" onclick="removeMenuItemAt(${index}, ${iIdx})" title="${escapeHtml(t('btnItemDelete'))}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+            </svg>
+          </button>
+        </div>
       </div>
-      <div class="menu-item-meta-col">
-        ${badgesHtml}
-        <button type="button" id="menu-item-options-${index}-${iIdx}" class="menu-item-options-btn" onclick="openItemModifiersModal(${index}, ${iIdx})">${escapeHtml(t('btnItemModifiers'))}</button>
-        ${hasBundle && !window.UnifiedMenu?.enabled ? `<button type="button" class="menu-item-options-btn" onclick="openBundleEditorModal(${index}, ${iIdx})">${escapeHtml(t('menuBundleSettings'))}</button>` : ''}
-      </div>
-      <button type="button" class="menu-item-stock-toggle ${item.isOos ? 'is-oos' : 'is-instock'}"
-        onclick="openStockModal(${index}, ${iIdx})" title="${oosText}" aria-label="${escapeHtml(item.name + ': ' + oosText)}">
-        <span class="stock-toggle-dot"></span>
-        <span>${oosText}</span>
-      </button>
     `;
     itemsContainer.appendChild(row);
   });
@@ -1840,6 +1975,7 @@ function renderMenuCategoryEditor(index) {
     empty.innerHTML = `<p>${escapeHtml(t('menuEmptyCategory'))}</p>`;
     catalogCard.appendChild(empty);
   }
+  applyMenuItemFilters();
 }
 
 function getModifierCategorySelectionState(group, category) {
