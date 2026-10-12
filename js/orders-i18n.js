@@ -631,7 +631,24 @@ const I18N = {
     toggleRequiredOff: "切換為選填",
     btnMenuSave: "儲存變更",
     menuSaved: "已儲存",
-    menuWorkspaceSub: "管理餐點、供應狀態與客製化選項",
+    menuWorkspaceTitle: "菜單管理",
+    menuWorkspaceSub: "即時管理餐點項目、售價、客製化選項與庫存供應狀態",
+    menuSidebarTotalCats: "分類總數：{count}",
+    menuSidebarActiveItems: "{count} 項餐點供應中",
+    menuSearchPlaceholder: "搜尋此分類中的餐點...",
+    filterAll: "全部",
+    filterInStock: "供應中",
+    filterOutOfStock: "已售完",
+    filterLabel: "篩選：",
+    menuPriceLabel: "售價",
+    menuServingStatus: "正常供應",
+    menuPausedStatus: "暫停供應",
+    menuFooterShowing: "顯示分類【{cat}】中 {showing} / 共 {total} 項餐點",
+    menuFooterPosSync: "POS 即時同步更新",
+    menuUploadImage: "上傳圖片",
+    menuChangeImage: "更換圖片",
+    btnAddDish: "新增餐點",
+    btnItemModifiersShort: "客製化選項",
     menuModeLabel: "菜單管理模式",
     menuEmptyCategory: "此分類尚無餐點，請新增第一道餐點。",
     menuMoveUp: "上移一位",
@@ -1432,7 +1449,24 @@ const I18N = {
     toggleRequiredOff: "Tắt bắt buộc",
     btnMenuSave: "Lưu thay đổi",
     menuSaved: "Đã lưu",
-    menuWorkspaceSub: "Quản lý món ăn, trạng thái bán và các tùy chọn",
+    menuWorkspaceTitle: "Quản lý thực đơn",
+    menuWorkspaceSub: "Quản lý danh sách món ăn, giá bán, cấu hình tùy chọn và trạng thái kho món trong thời gian thực",
+    menuSidebarTotalCats: "Tổng số danh mục: {count}",
+    menuSidebarActiveItems: "{count} món hoạt động",
+    menuSearchPlaceholder: "Tìm kiếm món trong phân loại này...",
+    filterAll: "Tất cả",
+    filterInStock: "Còn món",
+    filterOutOfStock: "Hết hàng",
+    filterLabel: "Lọc theo:",
+    menuPriceLabel: "Giá bán",
+    menuServingStatus: "Đang phục vụ",
+    menuPausedStatus: "Tạm ngưng",
+    menuFooterShowing: "Hiển thị {showing} trên tổng {total} món trong phân loại {cat}",
+    menuFooterPosSync: "Cập nhật đồng bộ POS tức thì",
+    menuUploadImage: "Tải ảnh",
+    menuChangeImage: "Đổi ảnh",
+    btnAddDish: "Thêm món",
+    btnItemModifiersShort: "Tuỳ chọn món",
     menuModeLabel: "Chế độ quản lý thực đơn",
     menuEmptyCategory: "Danh mục chưa có món. Hãy thêm món đầu tiên.",
     menuMoveUp: "Đưa lên một vị trí",
@@ -2608,7 +2642,13 @@ function applyLanguageToDOM() {
   const menuPrompt = document.getElementById("i18n-menu-select-prompt");
   if (menuPrompt) menuPrompt.innerText = dict.menuSelectPrompt;
   [
+    ['i18n-menu-workspace-title', 'menuWorkspaceTitle'],
     ['i18n-menu-workspace-sub', 'menuWorkspaceSub'],
+    ['menu-filter-label', 'filterLabel'],
+    ['filter-all-label', 'filterAll'],
+    ['filter-instock-label', 'filterInStock'],
+    ['filter-oos-label', 'filterOutOfStock'],
+    ['menu-footer-sync-status', 'menuFooterPosSync'],
     ['item-detail-modal-sub', 'itemDetailSub'],
     ['i18n-item-basic-title', 'itemBasicTitle'],
     ['i18n-item-advanced-desc', 'itemAdvancedDesc']
@@ -2616,6 +2656,8 @@ function applyLanguageToDOM() {
     const el = document.getElementById(id);
     if (el) el.textContent = dict[key];
   });
+  const searchInput = document.getElementById('menu-items-search-input');
+  if (searchInput) searchInput.setAttribute('placeholder', dict.menuSearchPlaceholder || '');
   document.getElementById('menu-mode-tabs')?.setAttribute('aria-label', dict.menuModeLabel);
 
   // Image Modal
