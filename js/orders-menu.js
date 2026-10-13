@@ -1933,9 +1933,9 @@ function renderMenuCategoryEditor(index) {
         </button>
         <div class="menu-item-details-col">
           <div class="menu-item-name-col">
+            ${item.isRecommended ? `<svg class="menu-recommended-icon" viewBox="0 0 24 24" role="img" aria-label="${escapeHtml(t('ugRecommended'))}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v11H3V10zM7 10l4-8c2 0 3 2 2 5l-1 3h6a3 3 0 0 1 3 3l-2 6a3 3 0 0 1-3 2H7"/></svg>` : ''}
             <input type="text" class="menu-item-name-input" value="${escapeHtml(item.name)}" data-name-cidx="${index}" data-name-iidx="${iIdx}" oninput="markMenuDirty()"
               placeholder="${t("newItemPlaceholder")}" aria-label="${escapeHtml(t('colItemName'))}">
-            ${item.isRecommended ? `<svg class="menu-recommended-icon" viewBox="0 0 24 24" role="img" aria-label="${escapeHtml(t('ugRecommended'))}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v11H3V10zM7 10l4-8c2 0 3 2 2 5l-1 3h6a3 3 0 0 1 3 3l-2 6a3 3 0 0 1-3 2H7"/></svg>` : ''}
           </div>
           <div class="menu-item-meta-col">
             ${badgesHtml}
