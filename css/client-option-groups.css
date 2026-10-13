@@ -241,14 +241,6 @@
 .uoc-panel [role="alert"]:empty {
   display: none;
 }
-.item-recommended-icon {
-  display: inline-block;
-  width: 18px;
-  height: 18px;
-  color: #dc2626;
-  vertical-align: -3px;
-  margin-left: 4px;
-}
 @media (min-width: 640px) {
   .uoc-overlay {
     align-items: center;
