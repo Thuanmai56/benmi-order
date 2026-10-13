@@ -150,6 +150,7 @@ console.log('\n3. Testing POS UI Rendering (orders-live.js & orders-i18n.js)...'
 // Setup mock browser sandbox for POS scripts
 const mockWindow = {
   currentTenantBrandName: 'Benmi Test',
+  addEventListener() {},
   location: { hostname: 'localhost', search: '', pathname: '/', href: 'http://localhost/' }
 };
 const mockDocument = {

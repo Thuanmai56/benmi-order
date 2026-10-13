@@ -292,3 +292,55 @@ test('linked sub-option names and stock come from the live catalog and cannot be
   app.input('sub.1.name','Attempted rename'); await app.click('save');
   assert.equal(app.posts.length,0); assert.equal(sub.name,'Old tea');
 });
+
+test('optional rule hides minimum; switching required starts at one without correcting maximum', async () => {
+  const app = await setup(); app.context.UnifiedMenu.group('drinks');
+  app.input('required', false);
+  assert.equal(app.drawer().querySelector('[data-field="minSelection"]'), null);
+  assert.equal(app.get('[data-field="maxSelection"]').value, '1');
+  app.input('maxSelection', 0); app.input('required', true);
+  assert.equal(app.get('[data-field="minSelection"]').value, '1');
+  assert.equal(app.get('[data-field="maxSelection"]').value, '0');
+  await app.click('save'); assert.equal(app.posts.length, 0);
+  assert.equal(app.get('[data-field="maxSelection"]').getAttribute('aria-invalid'),'true');
+  app.input('maxSelection', 1); await app.click('close'); assert.equal(app.drawer().hidden, true);
+});
+
+test('numeric rules retain invalid inputs, show field errors and block writes until valid', async () => {
+  for (const [key,value] of [['minSelection',''],['minSelection',0],['minSelection',1.5],['maxSelection',1000],['maxSelection',0]]) {
+    const app=await setup(); app.context.UnifiedMenu.group('drinks'); app.input(key,value);
+    app.emit('focusout',app.get(`[data-field="${key}"]`));
+    assert.equal(app.get(`[data-field="${key}"]`).value,String(value));
+    assert.equal(app.get(`#ug-${key}-error`).hidden,false);
+    await app.click('save'); assert.equal(app.posts.length,0);
+    assert.equal(app.doc.activeElement,app.get(`[data-field="${key}"]`));
+    app.input(key,1); await app.click('save'); assert.equal(app.drawer().hidden,true); assert.equal(app.posts.length,0);
+  }
+  const app=await setup(); app.context.UnifiedMenu.group('drinks');
+  app.input('minSelection',2); assert.equal(app.get('[data-field="required"]').checked,true);
+  assert.equal(app.get('[data-field="maxSelection"]').value,'1');
+  await app.click('save'); assert.equal(app.posts.length,0);
+  assert.match(app.get('#ug-maxSelection-error').textContent,/lớn hơn hoặc bằng/);
+  app.input('maxSelection',3); await app.click('save');
+  assert.equal(app.posts[0].minSelection,2); assert.equal(app.posts[0].maxSelection,3);
+});
+
+test('optional minimum persists zero, rule errors are localized and included quantities stay read-only', async () => {
+  const app=await setup(); app.context.UnifiedMenu.group('drinks'); app.input('required',false); app.input('maxSelection',4);
+  await app.click('save'); assert.equal(app.posts[0].minSelection,0); assert.equal(app.posts[0].maxSelection,4);
+  const zh=await setup({lang:'zh-TW'}); zh.context.UnifiedMenu.group('drinks'); zh.input('maxSelection',0); await zh.click('save');
+  assert.match(zh.get('#ug-maxSelection-error').textContent,/請輸入/);
+  const fixed=await setup({included:true}); fixed.context.UnifiedMenu.group('drinks');
+  for(const key of ['required','minSelection','maxSelection','allowRepeats']) assert.equal(fixed.get(`[data-field="${key}"]`).disabled,true);
+});
+
+test('recommendation saves its explicit flag and publishes immediately, without deriving it from badge text', async () => {
+  const app=await setup(); app.context.UnifiedMenu.product(0,0);
+  assert.match(app.get('.ug-recommended-help').textContent,/sau khi lưu/);
+  app.input('badgeText','推薦'); app.input('isRecommended',true); await app.click('save');
+  assert.equal(app.posts[0].isRecommended,true);
+  assert.equal(app.context.currentMenuData[0].items[0].isRecommended,true);
+  app.context.UnifiedMenu.product(0,0); app.input('isRecommended',false); await app.click('save');
+  assert.equal(app.posts[1].isRecommended,false); assert.equal(app.posts[1].badgeText,'推薦');
+  assert.equal(app.context.currentMenuData[0].items[0].isRecommended,false);
+});

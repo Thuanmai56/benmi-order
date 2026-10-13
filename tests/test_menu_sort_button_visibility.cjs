@@ -42,11 +42,14 @@ function setup() {
   return {context,doc,posts,alerts,rows,move,data:()=>vm.runInContext('currentMenuData',context),dirty:()=>vm.runInContext('isMenuDirty',context)};
 }
 
-test('display-order entry is between Save and menu tabs, outside the product sidebar',()=>{
+test('display-order entry follows Save; menu tabs live above the replaceable rail list',()=>{
   const html=fs.readFileSync(path.resolve(__dirname,'../orders.html'),'utf8');
   const heading=html.slice(html.indexOf('id="menu-workspace-heading"'),html.indexOf('id="menu-standard-workspace"'));
   assert.ok(heading.indexOf('id="btn-menu-save"')<heading.indexOf('id="btn-menu-manage-cats"'));
-  assert.ok(heading.indexOf('id="btn-menu-manage-cats"')<heading.indexOf('id="menu-mode-tabs"'));
+  assert.equal(heading.includes('id="menu-mode-tabs"'),false);
+  const rail = html.slice(html.indexOf('class="panel menu-sidebar-panel"'), html.indexOf('id="menu-categories"'));
+  assert.ok(rail.includes('id="menu-mode-tabs"'));
+  assert.equal(html.match(/id="menu-mode-tabs"/g).length,1);
   assert.equal(html.match(/id="btn-menu-manage-cats"/g).length,1);
 });
 
@@ -186,10 +189,11 @@ test('save serializes the changed item sequence and failed saves retain the orde
   app.context.fetch=async()=>({ok:true});await app.context.saveMenuData(true);assert.equal(app.dirty(),false);
 });
 
-test('ordering screen assets share the new cache buster', () => {
+test('ordering screen assets include the current cache busters', () => {
   const html = fs.readFileSync(path.resolve(__dirname, '../orders.html'), 'utf-8');
   for (const asset of ['css/orders-menu.css', 'js/orders-menu.js', 'js/orders-i18n.js']) {
     const escaped = asset.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    assert.match(html,new RegExp(`${escaped}\\?v=20261012_menu_single_panel_v10`));
+    const version = asset === 'js/orders-i18n.js' ? '20261012_menu_single_panel_v10' : '20261013_menu_ui_v1';
+    assert.match(html,new RegExp(`${escaped}\\?v=${version}`));
   }
 });

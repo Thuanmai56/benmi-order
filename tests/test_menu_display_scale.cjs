@@ -37,7 +37,7 @@ test('Menu dish cards, inputs and segmented toggle scale dynamically with --menu
 
   // Segmented toggle header scale
   assert.match(css, /\.menu-sidebar-segmented-toggle[\s\S]*?width:\s*calc\(186px\s*\*\s*var\(--menu-font-scale\)\)/);
-  assert.match(css, /\.menu-sidebar-segmented-toggle[\s\S]*?height:\s*calc\(38px\s*\*\s*var\(--menu-font-scale\)\)/);
+  assert.match(css, /\.menu-sidebar-segmented-toggle[\s\S]*?min-height:\s*calc\(48px\s*\+\s*6px\s*\*\s*var\(--menu-font-scale\)\)/);
   assert.match(css, /\.menu-seg-btn[\s\S]*?font-size:\s*var\(--menu-font-base\)/);
 
   // Dish row card heights and paddings scale
@@ -45,10 +45,11 @@ test('Menu dish cards, inputs and segmented toggle scale dynamically with --menu
   assert.match(css, /\.menu-item-thumb-box[\s\S]*?calc\(44px\s*\*\s*var\(--menu-font-scale\)\)/);
 
   // Dish name, price, stock toggle, options button scale
-  assert.match(css, /\.menu-item-name-input[\s\S]*?font-size:\s*var\(--menu-font-md\)/);
-  assert.match(css, /\.menu-item-name-input[\s\S]*?height:\s*calc\(32px\s*\*\s*var\(--menu-font-scale\)\)/);
-  assert.match(css, /\.menu-item-price-wrapper[\s\S]*?height:\s*calc\(32px\s*\*\s*var\(--menu-font-scale\)\)/);
-  assert.match(css, /\.menu-item-price-input[\s\S]*?font-size:\s*var\(--menu-font-md\)/);
+  assert.match(css, /--menu-row-name-size:\s*var\(--menu-font-md\)/);
+  assert.match(css, /\.menu-item-name-input[\s\S]*?font-size:\s*var\(--menu-row-name-size\)/);
+  assert.match(css, /\.menu-item-name-input[\s\S]*?min-height:\s*48px/);
+  assert.match(css, /\.menu-item-price-wrapper\s*\{[\s\S]*?min-height:\s*48px/);
+  assert.match(css, /\.menu-item-price-input[\s\S]*?font-size:\s*var\(--menu-row-name-size\)/);
   assert.match(css, /\.menu-item-stock-toggle[\s\S]*?font-size:\s*var\(--menu-font-xs\)/);
   assert.match(css, /\.menu-item-options-btn[\s\S]*?font-size:\s*var\(--menu-font-xs\)/);
 });
@@ -72,10 +73,10 @@ test('orders.html has updated cache-busters for menu and display scaling', () =>
   const version = '20261012_menu_single_panel_v10';
 
   assert.ok(html.includes(`css/orders.css?v=${version}`), 'orders.css must have bumped cache-buster');
-  assert.ok(html.includes(`css/orders-menu.css?v=${version}`), 'orders-menu.css must have bumped cache-buster');
+  assert.ok(html.includes('css/orders-menu.css?v=20261013_menu_ui_v1'), 'orders-menu.css must have bumped cache-buster');
   assert.ok(html.includes(`js/orders-i18n.js?v=${version}`), 'orders-i18n.js must have bumped cache-buster');
   assert.ok(html.includes(`js/orders-settings.js?v=${version}`), 'orders-settings.js must have bumped cache-buster');
-  assert.ok(html.includes(`js/orders-menu.js?v=${version}`), 'orders-menu.js must have bumped cache-buster');
+  assert.ok(html.includes('js/orders-menu.js?v=20261013_menu_ui_v1'), 'orders-menu.js must have bumped cache-buster');
 });
 
 test('Menu items catalog card seamlessly integrates without nested duplicate panel borders', () => {

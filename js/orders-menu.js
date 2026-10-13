@@ -1187,6 +1187,19 @@ function renderMenuCategories() {
     btnProducts.classList.toggle("active", menuSidebarTab === 'products');
     btnProducts.setAttribute("aria-selected", menuSidebarTab === 'products');
   }
+  const tabs = document.getElementById("menu-mode-tabs");
+  if (tabs && !tabs.menuKeyboardReady) {
+    tabs.menuKeyboardReady = true;
+    tabs.addEventListener("keydown", event => {
+      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+      event.preventDefault();
+      const next = event.key === "Home" ? "products" : event.key === "End" ? "options" : menuSidebarTab === "products" ? "options" : "products";
+      setMenuSidebarTab(next);
+      document.getElementById(menuSidebarTab === "products" ? "btn-seg-products" : "btn-seg-options")?.focus();
+    });
+  }
+  if (btnProducts) btnProducts.tabIndex = menuSidebarTab === "products" ? 0 : -1;
+  if (btnOptions) btnOptions.tabIndex = menuSidebarTab === "options" ? 0 : -1;
   if (btnOptions) {
     btnOptions.classList.toggle("active", menuSidebarTab === 'options');
     btnOptions.setAttribute("aria-selected", menuSidebarTab === 'options');
@@ -1922,6 +1935,7 @@ function renderMenuCategoryEditor(index) {
           <div class="menu-item-name-col">
             <input type="text" class="menu-item-name-input" value="${escapeHtml(item.name)}" data-name-cidx="${index}" data-name-iidx="${iIdx}" oninput="markMenuDirty()"
               placeholder="${t("newItemPlaceholder")}" aria-label="${escapeHtml(t('colItemName'))}">
+            ${item.isRecommended ? `<svg class="menu-recommended-icon" viewBox="0 0 24 24" role="img" aria-label="${escapeHtml(t('ugRecommended'))}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v11H3V10zM7 10l4-8c2 0 3 2 2 5l-1 3h6a3 3 0 0 1 3 3l-2 6a3 3 0 0 1-3 2H7"/></svg>` : ''}
           </div>
           <div class="menu-item-meta-col">
             ${badgesHtml}
@@ -3027,7 +3041,7 @@ function serializeMenuData(categories) {
           id: item.id,
           price: item.price,
           badge_text: item.badgeText || null,
-          is_recommended: (item.badgeText && (item.badgeText.includes('推薦') || item.badgeText.toLowerCase().includes('khuyên dùng') || item.badgeText.toLowerCase().includes('recommend'))) || item.isRecommended ? 1 : 0,
+          is_recommended: item.isRecommended ? 1 : 0,
           item_type: item.itemType || (item.bundleRule && item.bundleRule.groups && item.bundleRule.groups.length > 0 ? 'bundle' : 'standard')
         };
         const sharedGroups = [];
@@ -5267,7 +5281,6 @@ function autoCommitItemDetailFields() {
   if (badgeInput) {
     const bVal = badgeInput.value.trim();
     item.badgeText = bVal;
-    item.isRecommended = Boolean(bVal && (bVal.includes('推薦') || bVal.toLowerCase().includes('khuyên dùng') || bVal.toLowerCase().includes('recommend')));
   }
   checkMenuDirty();
 }
@@ -5518,7 +5531,7 @@ function saveItemDetailModal() {
   const nameVal = nameInput ? nameInput.value.trim() : "";
   const priceVal = priceInput && priceInput.value !== "" ? parseFloat(priceInput.value) : 0;
   const badgeVal = badgeInput ? badgeInput.value.trim() : "";
-  const isRec = Boolean(badgeVal && (badgeVal.includes('推薦') || badgeVal.toLowerCase().includes('khuyên dùng') || badgeVal.toLowerCase().includes('recommend')));
+  const isRec = Boolean(cat.items?.[activeItemDetailItemIdx]?.isRecommended);
 
   if (!nameVal) {
     alert(t("enterItemName") || (currentLang === 'vi' ? "Vui lòng nhập tên món" : "請輸入餐點名稱"));
@@ -5590,7 +5603,7 @@ function transitionToSubEditor(type) {
   const nameVal = nameInput ? nameInput.value.trim() : "";
   const priceVal = priceInput && priceInput.value !== "" ? parseFloat(priceInput.value) : 0;
   const badgeVal = badgeInput ? badgeInput.value.trim() : "";
-  const isRec = Boolean(badgeVal && (badgeVal.includes('推薦') || badgeVal.toLowerCase().includes('khuyên dùng') || badgeVal.toLowerCase().includes('recommend')));
+  const isRec = Boolean(cat.items?.[activeItemDetailItemIdx]?.isRecommended);
 
   if (isItemDetailCreateMode || activeItemDetailItemIdx === null) {
     if (!nameVal) {

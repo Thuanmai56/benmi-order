@@ -98,7 +98,10 @@
           o.name === selected ||
           multiple?.includes(o.name) ||
           legacy.multiple?.[o.name] === true ||
-          (!g.included && maximum(g) === 1 && o.productId && o.name === legacyProductChoice),
+          (!g.included &&
+            maximum(g) === 1 &&
+            o.productId &&
+            o.name === legacyProductChoice),
       );
       if (choices.length)
         selections.push({
@@ -155,6 +158,23 @@
       0,
     );
   }
+  function invalidSubs(option, item) {
+    const subs = item.subOptions || [];
+    return (
+      new Set(subs.map((s) => s.id || s.name)).size !== subs.length ||
+      subs.some((s) => {
+        const current = (option.subOptions || []).find(
+          (o) => (o.id || o.name || o) === (s.id || s.name),
+        );
+        return (
+          !current ||
+          current.isOutOfStock ||
+          current.isOos ||
+          Number(current.price || 0) !== Number(s.price || 0)
+        );
+      })
+    );
+  }
   function invalid(groups, saved) {
     if (!saved || saved.length !== groups.length) return true;
     return groups.some((g) => {
@@ -182,88 +202,203 @@
           !o ||
           unavailable(o) ||
           Number(o.price || 0) !== i.surcharge ||
+          invalidSubs(o, i) ||
           invalid(o.optionGroups || [], i.groups || [])
         );
       });
     });
   }
-  function drawGroups(groups, selections, path = []) {
-    return groups
-      .map((g, gi) => {
-        const selection = selections[gi];
-        const key = [...path, gi].join(".");
-        const count = selection.items.length;
-        return `<section class="uoc-group"><h3>${esc(g.name)} <small>${minimum(g) === maximum(g) ? minimum(g) : `${minimum(g)}–${maximum(g)}`} · ${count}/${maximum(g)}</small></h3>${options(
-          g,
-        )
-          .map((o, oi) => {
-            const chosen = selection.items.filter(
-              (s) => s.optionId === o.id,
-            ).length;
-            return `<div class="uoc-choice ${unavailable(o) ? "is-oos" : ""}"><button type="button" data-choose="${key}" data-option="${oi}" ${unavailable(o) || g.included ? "disabled" : ""} aria-pressed="${chosen > 0}"><span>${esc(o.name)}<small>+$${Number(o.price || 0)}${o.isOutOfStock ? " · " + msg("已售完", "Hết món") : unavailable(o) ? " · " + esc((o.eligibilityRules || []).find((r) => r.min_order_subtotal > merchandiseSubtotal())?.error_message || msg("未達最低餐點金額", "Chưa đạt giá trị món tối thiểu")) : ""}</small></span><span>${g.included ? `×${chosen}` : g.allowRepeats ? "+" : chosen ? "✓" : "○"}</span></button>${g.allowRepeats && !g.included && chosen ? `<button type="button" data-minus="${key}" data-option="${oi}" aria-label="${msg("減少", "Giảm")} ${esc(o.name)}">− ${chosen}</button>` : ""}</div>`;
-          })
-          .join("")}${selection.items
-          .map((item, si) => {
-            const o = options(g).find((o) => o.id === item.optionId);
-            if (!o) return "";
-            const nested = drawGroups(o.optionGroups || [], item.groups, [
-              ...path,
-              gi,
-              si,
-            ]);
-            const sub = (o.subOptions || [])
-              .map(
-                (s, i) =>
-                  `<label class="uoc-sub"><input type="checkbox" data-sub="${[...path, gi, si].join(".")}" data-index="${i}" ${s.isOutOfStock || s.isOos ? "disabled" : ""} ${(item.subOptions || []).some((v) => (v.id || v.name) === (s.id || s.name || s)) ? "checked" : ""}><span>${esc(s.name || s)} +$${Number(s.price || 0)}</span></label>`,
-              )
-              .join("");
-            return nested || sub
-              ? `<div class="uoc-nested"><h4>${esc(item.name)}${g.allowRepeats ? ` · ${si + 1}` : ""}</h4>${nested}${sub}</div>`
-              : "";
-          })
-          .join("")}</section>`;
+  // Presentation follows the original chip popup and stepped bundle picker.
+  // Every control still edits the canonical v3 option snapshot.
+  const simpleGroup = (g) =>
+    !g.included &&
+    !g.allowRepeats &&
+    options(g).every((o) => !o.productId && !(o.optionGroups || []).length);
+  const presentation = (rule) =>
+    (rule.groups || []).every(simpleGroup) ? "chips" : "wizard";
+  const copy = (value) => JSON.parse(JSON.stringify(value));
+  const priceLabel = (value) => `+$${Number(value || 0)}`;
+  function groupHint(g) {
+    if (g.included) return msg("已包含", "Có sẵn trong món");
+    return minimum(g) === maximum(g)
+      ? msg(`選擇 ${minimum(g)} 樣`, `Chọn ${minimum(g)}`)
+      : msg(
+          `選擇 ${minimum(g)}–${maximum(g)} 樣`,
+          `Chọn ${minimum(g)}–${maximum(g)}`,
+        );
+  }
+  function child(path) {
+    const indexes = path.split(".").map(Number),
+      si = indexes.pop();
+    const { group, selection } = locate(indexes.join("."));
+    const item = selection.items[si];
+    return {
+      item,
+      option: options(group).find((o) => o.id === item.optionId),
+      group,
+    };
+  }
+  function drawSubs(option, item, path) {
+    return `<div class="modifier-checkbox-grid">${(option.subOptions || [])
+      .map((sub, index) => {
+        const chosen = (item.subOptions || []).some(
+          (value) => (value.id || value.name) === (sub.id || sub.name || sub),
+        );
+        const unavailable = sub.isOutOfStock || sub.isOos;
+        return `<label class="modifier-checkbox-chip ${chosen ? "active" : ""}"><input type="checkbox" data-sub="${path}" data-index="${index}" ${unavailable && !chosen ? "disabled" : ""} ${chosen ? "checked" : ""}><span>${esc(sub.name || sub)}${Number(sub.price) ? ` ${priceLabel(sub.price)}` : ""}${unavailable ? ` · ${esc(msg("已售完", "Hết món"))}` : ""}</span></label>`;
+      })
+      .join("")}</div>`;
+  }
+  function drawGroup(g, selection, key) {
+    const chips = simpleGroup(g),
+      total = selection.items.length;
+    const title = `<div class="modifier-group-title"><span>${esc(g.name)}</span><span class="${minimum(g) ? "modifier-required-badge" : "modifier-optional-badge"}">${esc(groupHint(g))}</span></div>`;
+    const rows = options(g)
+      .map((o, oi) => {
+        const chosen = selection.items.filter(
+          (s) => s.optionId === o.id,
+        ).length;
+        const blocked = unavailable(o),
+          full = total >= maximum(g),
+          addDisabled =
+            blocked ||
+            g.included ||
+            (full && (maximum(g) !== 1 || chosen)) ||
+            (!g.allowRepeats && chosen);
+        const warning = blocked
+          ? o.isOutOfStock
+            ? msg("已售完", "Hết món")
+            : (o.eligibilityRules || []).find(
+                (r) => Number(r.min_order_subtotal) > merchandiseSubtotal(),
+              )?.error_message ||
+              msg("未達最低餐點金額", "Chưa đạt giá trị món tối thiểu")
+          : "";
+        if (chips)
+          return `<button type="button" class="${maximum(g) === 1 ? "modifier-pill" : "modifier-checkbox-chip"} ${chosen ? "active" : ""}" data-choose="${key}" data-option="${oi}" aria-pressed="${Boolean(chosen)}" ${blocked || (full && !chosen && maximum(g) !== 1) ? "disabled" : ""}><span>${esc(o.name)}</span>${Number(o.price) ? `<small>${priceLabel(o.price)}</small>` : ""}${warning ? `<small>${esc(warning)}</small>` : ""}</button>`;
+        const image = o.imageUrl
+          ? `<img class="uoc-item-image" src="${esc((window.WORKER_BASE || "") + o.imageUrl)}" alt="" loading="lazy">`
+          : "";
+        return `<div class="bundle-item-card ${chosen ? "selected" : ""} ${blocked ? "sold-out" : ""}"><div class="bundle-item-info">${image}<div><span>${esc(o.name)}</span><small>${priceLabel(o.price)}${warning ? ` · ${esc(warning)}` : ""}</small></div></div><div class="bundle-stepper">${g.included ? `<span class="bundle-v2-badge-fixed">×${chosen}</span>` : chosen ? `<button type="button" class="bundle-btn-minus" data-minus="${key}" data-option="${oi}" aria-label="${esc(msg("減少", "Giảm") + " " + o.name)}">−</button><span class="bundle-qty-val">${chosen}</span><button type="button" class="bundle-btn-plus" data-add="${key}" data-option="${oi}" ${addDisabled ? "disabled" : ""} aria-label="${esc(msg("增加", "Tăng") + " " + o.name)}">+</button>` : `<button type="button" class="bundle-btn-add" data-add="${key}" data-option="${oi}" ${addDisabled ? "disabled" : ""} aria-label="${esc(msg("選擇", "Chọn") + " " + o.name)}">+</button>`}</div></div>`;
       })
       .join("");
+    const details = selection.items
+      .map((item, si) => {
+        const o = options(g).find((o) => o.id === item.optionId),
+          path = `${key}.${si}`;
+        if (!o)
+          return `<div class="bundle-v2-detail"><span>${esc(item.name)} · ${esc(msg("已無法選擇", "Không còn khả dụng"))}</span><button type="button" data-remove="${key}" data-index="${si}" ${g.included ? "disabled" : ""}>${esc(msg("移除", "Gỡ"))}</button></div>`;
+        if (!(o.optionGroups || []).length && !(o.subOptions || []).length)
+          return "";
+        if (chips)
+          return `<div class="uoc-inline-subs"><strong>${esc(item.name)}</strong>${drawSubs(o, item, path)}</div>`;
+        const names = [
+          ...(item.groups || []).flatMap((g) => g.items.map((i) => i.name)),
+          ...(item.subOptions || []).map((s) => s.name),
+        ].join("、");
+        return `<div class="bundle-v2-detail"><div><strong>${esc(item.name)}${g.allowRepeats || g.included ? ` · ${si + 1}` : ""}</strong><small class="bundle-v2-mod-labels">${esc(names || msg("尚未自訂", "Chưa tùy chỉnh"))}</small>${invalid(o.optionGroups || [], item.groups) ? `<small class="bundle-v2-mod-pending">${esc(msg("請完成必選項目", "Cần chọn đủ"))}</small>` : ""}</div><button type="button" class="bundle-v2-mod-btn" data-child="${path}">${esc(msg("自訂", "Tùy chỉnh"))}</button></div>`;
+      })
+      .join("");
+    return `<section class="uoc-group" data-group="${key}">${title}${!chips ? `<p class="uoc-count">${esc(msg("已選", "Đã chọn"))} ${total}/${maximum(g)}</p>` : ""}<div class="${chips ? (maximum(g) === 1 ? "modifier-pills-row" : "modifier-checkbox-grid") : "uoc-items"}">${rows || `<p>${esc(msg("目前沒有可選項目", "Chưa có lựa chọn"))}</p>`}</div>${details}</section>`;
   }
   function root() {
     let el = document.getElementById("unified-option-modal");
     if (el) return el;
     el = document.createElement("div");
     el.id = "unified-option-modal";
-    el.className = "uoc-overlay";
     el.hidden = true;
     el.innerHTML =
-      '<section class="uoc-panel" role="dialog" aria-modal="true" aria-labelledby="uoc-title"><header><h2 id="uoc-title" tabindex="-1"></h2><button type="button" data-close>×</button></header><div class="uoc-body"></div><footer><p role="alert"></p><button type="button" data-confirm></button></footer></section>';
+      '<section class="uoc-panel" role="dialog" aria-modal="true" aria-labelledby="uoc-title"><header><button type="button" data-back hidden></button><h2 id="uoc-title" tabindex="-1"></h2><button type="button" data-close>×</button></header><div class="uoc-portion-tabs"></div><nav class="bundle-v2-step-nav" aria-label=""></nav><div class="uoc-body"></div><footer><p role="alert"></p><button type="button" data-confirm></button></footer></section>';
     el.addEventListener("click", (event) => {
       if (event.target === el || event.target.closest("[data-close]"))
         return close();
-      const b = event.target.closest("[data-choose],[data-minus]");
-      if (b) {
-        const key = b.dataset.choose || b.dataset.minus;
-        const { group, selection } = locate(key);
-        const o = options(group)[Number(b.dataset.option)];
-        const idx = selection.items.findIndex((s) => s.optionId === o.id);
-        if (b.dataset.minus) {
-          if (idx >= 0) selection.items.splice(idx, 1);
-        } else if (!group.allowRepeats && idx >= 0)
-          selection.items.splice(idx, 1);
-        else if (maximum(group) === 1) selection.items = [make(o)];
-        else if (selection.items.length < maximum(group))
-          selection.items.push(make(o));
-        render();
+      const b = event.target.closest("button");
+      if (!b || b.disabled || !context) return;
+      if (b.dataset.portion !== undefined)
+        return switchPortion(Number(b.dataset.portion));
+      if (b.dataset.step !== undefined) {
+        context.step = Number(b.dataset.step);
+        context.error = "";
+        return render(true);
       }
-      if (event.target.closest("[data-confirm]")) confirm();
+      if (b.dataset.child !== undefined) {
+        context.views.push({
+          path: b.dataset.child,
+          scroll: el.querySelector(".uoc-body").scrollTop,
+          focus: `[data-child="${b.dataset.child}"]`,
+        });
+        context.error = "";
+        return render(true);
+      }
+      if (b.dataset.back !== undefined) return goBack();
+      if (b.dataset.copy !== undefined) {
+        const previous =
+          context.drafts[context.index - 1] || loadPortion(context.index - 1);
+        context.groups = copy(previous.groups);
+        context.note = previous.note;
+        context.error = "";
+        return render(true);
+      }
+      if (b.dataset.remove !== undefined) {
+        locate(b.dataset.remove).selection.items.splice(
+          Number(b.dataset.index),
+          1,
+        );
+        context.error = "";
+        return render();
+      }
+      const key = b.dataset.choose ?? b.dataset.add ?? b.dataset.minus;
+      if (key !== undefined) {
+        const { group, selection } = locate(key),
+          o = options(group)[Number(b.dataset.option)];
+        if (
+          !o ||
+          group.included ||
+          (unavailable(o) && b.dataset.minus === undefined)
+        )
+          return;
+        const idx = selection.items.findLastIndex((s) => s.optionId === o.id);
+        let added = false;
+        if (
+          b.dataset.minus !== undefined ||
+          (b.dataset.choose !== undefined && idx >= 0)
+        ) {
+          if (idx >= 0) selection.items.splice(idx, 1);
+        } else if (!group.allowRepeats && idx >= 0) return;
+        else if (maximum(group) === 1) {
+          selection.items = [make(o)];
+          added = true;
+        } else if (selection.items.length < maximum(group)) {
+          selection.items.push(make(o));
+          added = true;
+        }
+        context.error = "";
+        if (
+          added &&
+          invalid(o.optionGroups || [], selection.items.at(-1).groups)
+        ) {
+          const path = `${key}.${selection.items.length - 1}`;
+          context.views.push({
+            path,
+            scroll: el.querySelector(".uoc-body").scrollTop,
+            focus: `[data-child="${path}"]`,
+          });
+          return render(true);
+        }
+        return render();
+      }
+      if (b.dataset.confirm !== undefined) confirm();
+    });
+    el.addEventListener("input", (event) => {
+      if (event.target.dataset.note !== undefined)
+        context.note = event.target.value.slice(0, 50);
     });
     el.addEventListener("change", (event) => {
       const input = event.target;
-      if (!input.dataset.sub) return;
-      const nums = input.dataset.sub.split(".").map(Number),
-        si = nums.pop();
-      const { group, selection } = locate(nums.join("."));
-      const item = selection.items[si],
-        o = options(group).find((o) => o.id === item.optionId),
-        s = o.subOptions[Number(input.dataset.index)],
-        id = s.id || s.name || s;
+      if (input.dataset.sub === undefined) return;
+      const { item, option } = child(input.dataset.sub),
+        s = option.subOptions[Number(input.dataset.index)];
+      if (!s || (input.checked && (s.isOutOfStock || s.isOos))) return;
+      const id = s.id || s.name || s;
       item.subOptions = item.subOptions.filter((s) => (s.id || s.name) !== id);
       if (input.checked)
         item.subOptions.push({
@@ -271,23 +406,33 @@
           name: s.name || s,
           price: Number(s.price || 0),
         });
+      context.error = "";
       render();
     });
     el.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") close();
-      if (event.key === "Tab") {
-        const list = [
-            ...el.querySelectorAll("button:not(:disabled),input"),
-          ].filter((e) => e.getClientRects().length),
-          first = list[0],
-          last = list.at(-1);
-        if (event.shiftKey && document.activeElement === first) {
-          event.preventDefault();
-          last.focus();
-        } else if (!event.shiftKey && document.activeElement === last) {
-          event.preventDefault();
-          first.focus();
-        }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        return context.views.length ? goBack() : close();
+      }
+      if (event.key !== "Tab") return;
+      const list = [
+          ...el.querySelectorAll(
+            "button:not(:disabled),input:not(:disabled),textarea",
+          ),
+        ].filter((e) => e.getClientRects().length),
+        first = list[0],
+        last = list.at(-1);
+      if (
+        event.shiftKey &&
+        (document.activeElement === first ||
+          !list.includes(document.activeElement))
+      ) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
       }
     });
     document.body.appendChild(el);
@@ -299,28 +444,142 @@
       selections = context.groups;
     while (indexes.length > 1) {
       const gi = indexes.shift(),
-        si = indexes.shift();
-      const item = selections[gi].items[si],
+        si = indexes.shift(),
+        item = selections[gi].items[si],
         o = options(groups[gi]).find((o) => o.id === item.optionId);
       groups = o.optionGroups;
       selections = item.groups;
     }
-    const gi = indexes[0];
-    return { group: groups[gi], selection: selections[gi] };
+    return { group: groups[indexes[0]], selection: selections[indexes[0]] };
   }
-  function render() {
+  function focusSelector(el) {
+    for (const key of [
+      "choose",
+      "add",
+      "minus",
+      "child",
+      "sub",
+      "step",
+      "portion",
+      "confirm",
+      "copy",
+      "note",
+    ]) {
+      if (el?.dataset[key] !== undefined)
+        return `[data-${key}="${el.dataset[key]}"]${el.dataset.option !== undefined ? `[data-option="${el.dataset.option}"]` : ""}${el.dataset.index !== undefined ? `[data-index="${el.dataset.index}"]` : ""}`;
+    }
+    return null;
+  }
+  function render(reset = false, restoreFocus = null) {
     const el = root(),
       body = el.querySelector(".uoc-body"),
-      scroll = body.scrollTop;
-    el.querySelector("h2").textContent = context.name;
-    body.innerHTML = drawGroups(context.rule.groups, context.groups);
+      scroll = reset ? 0 : body.scrollTop,
+      focus = restoreFocus || focusSelector(document.activeElement);
+    const view = context.views.at(-1),
+      nested = view ? child(view.path) : null;
+    el.className = `uoc-overlay ${context.mode === "chips" ? "uoc-simple" : "uoc-wizard"}`;
+    el.querySelector(".uoc-panel").className =
+      `uoc-panel ${context.mode === "chips" ? "popup-box" : "bundle-modal-sheet"}`;
+    el.querySelector("h2").textContent = nested
+      ? nested.item.name
+      : context.name;
+    const back = el.querySelector("[data-back]");
+    back.hidden = !nested;
+    back.textContent = msg("返回", "Quay lại");
+    const qty = Number(cart[context.key] || 0);
+    const portions = el.querySelector(".uoc-portion-tabs");
+    portions.hidden = Boolean(nested) || !qty;
+    portions.innerHTML = Array.from(
+      { length: qty + 1 },
+      (_, index) =>
+        `<button type="button" class="portion-tab-btn ${index === context.index ? "active" : ""}" data-portion="${index}" aria-pressed="${index === context.index}">${esc(index === qty ? msg("＋ 新增一份", "+ Thêm một phần") : msg(`第 ${index + 1} 份`, `Phần ${index + 1}`))}</button>`,
+    ).join("");
+    const nav = el.querySelector("nav");
+    nav.hidden =
+      Boolean(nested) ||
+      context.mode === "chips" ||
+      context.rule.groups.length < 2;
+    nav.setAttribute("aria-label", msg("選擇步驟", "Các bước lựa chọn"));
+    nav.innerHTML = context.rule.groups
+      .map(
+        (g, gi) =>
+          `<button type="button" class="bundle-v2-nav ${gi === context.step ? "active" : ""}" data-step="${gi}" aria-current="${gi === context.step ? "step" : "false"}">${!invalid([g], [context.groups[gi]]) ? "✓ " : ""}${esc(g.name)}</button>`,
+      )
+      .join("");
+    if (nested) {
+      body.innerHTML =
+        (nested.option.optionGroups || [])
+          .map((g, gi) =>
+            drawGroup(g, nested.item.groups[gi], `${view.path}.${gi}`),
+          )
+          .join("") +
+        ((nested.option.subOptions || []).length
+          ? `<section class="uoc-group"><div class="modifier-group-title">${esc(msg("加料", "Lựa chọn thêm"))}</div>${drawSubs(nested.option, nested.item, view.path)}</section>`
+          : "");
+    } else {
+      body.innerHTML =
+        (context.index > 0
+          ? `<button type="button" class="bundle-v2-copy btn-copy-prev-custom" data-copy>${esc(msg("複製上一份的選擇", "Sao chép lựa chọn phần trước"))}</button>`
+          : "") +
+        context.rule.groups
+          .map((g, gi) =>
+            context.mode === "chips" || gi === context.step
+              ? drawGroup(g, context.groups[gi], String(gi))
+              : "",
+          )
+          .join("") +
+        `<label class="uoc-note"><span>${esc(msg("個別備註", "Ghi chú riêng"))}</span><textarea data-note maxlength="50" rows="2" placeholder="${esc(msg("例如：不要香菜、少醬", "Ví dụ: không rau thơm, ít sốt"))}">${esc(context.note)}</textarea></label>`;
+    }
     body.scrollTop = scroll;
     const b = el.querySelector("[data-confirm]");
-    b.textContent = `${msg("確認", "Xác nhận")} · $${Number(context.price) + extra(context.groups)}`;
+    b.textContent = nested
+      ? msg("完成", "Xong")
+      : context.mode === "wizard" &&
+          context.step < context.rule.groups.length - 1
+        ? msg("下一步", "Tiếp theo")
+        : `${msg("確認", "Xác nhận")} · $${Number(context.price) + extra(context.groups)}`;
+    el.querySelector('[role="alert"]').textContent = context.error || "";
     el.querySelector("[data-close]").setAttribute(
       "aria-label",
       msg("關閉", "Đóng"),
     );
+    const target = !reset && focus ? el.querySelector(focus) : null;
+    (target && !target.disabled && target.getClientRects().length
+      ? target
+      : el.querySelector("h2")
+    ).focus({ preventScroll: true });
+  }
+  function goBack() {
+    const view = context.views.pop();
+    if (!view) return;
+    context.error = "";
+    render(false, view.focus);
+    root().querySelector(".uoc-body").scrollTop = view.scroll;
+  }
+  function loadPortion(index) {
+    return {
+      groups: restore(
+        context.rule,
+        window.bundleCartData?.[context.key]?.[index]?.groups,
+        window.customizeData?.[context.key]?.[index],
+        window.comboDrinkData?.[context.name]?.[index],
+      ),
+      note: window.customizeData?.[context.key]?.[index]?.note || "",
+    };
+  }
+  function switchPortion(index) {
+    context.drafts[context.index] = {
+      groups: copy(context.groups),
+      note: context.note,
+    };
+    context.index = index;
+    const portion = context.drafts[index] || loadPortion(index);
+    context.groups = copy(portion.groups);
+    context.note = portion.note;
+    context.step = 0;
+    context.error = "";
+    context.views = [];
+    render(true);
   }
   function close() {
     root().hidden = true;
@@ -328,9 +587,10 @@
       el.inert = false;
       delete el.dataset.uocInert;
     });
-    const focus = context?.focus;
+    const focus = context?.focus,
+      overflow = context?.overflow || "";
     context = null;
-    document.body.style.overflow = "";
+    document.body.style.overflow = overflow;
     focus?.focus();
   }
   function receipt(groups) {
@@ -363,24 +623,53 @@
     }));
   }
   function confirm() {
+    const view = context.views.at(-1);
+    if (view) {
+      const nested = child(view.path);
+      if (
+        invalid(nested.option.optionGroups || [], nested.item.groups) ||
+        invalidSubs(nested.option, nested.item)
+      ) {
+        context.error = msg(
+          "請檢查必選項目與已售完的選項",
+          "Vui lòng kiểm tra lựa chọn bắt buộc và lựa chọn đã hết món",
+        );
+        return render();
+      }
+      return goBack();
+    }
+    if (
+      context.mode === "wizard" &&
+      context.step < context.rule.groups.length - 1 &&
+      !invalid(
+        [context.rule.groups[context.step]],
+        [context.groups[context.step]],
+      )
+    ) {
+      context.step++;
+      context.error = "";
+      return render(true);
+    }
     if (invalid(context.rule.groups, context.groups)) {
-      root().querySelector('[role="alert"]').textContent = msg(
-        "請完成所有必選項目",
-        "Vui lòng chọn đủ các nhóm bắt buộc",
+      context.step = context.rule.groups.findIndex((g, gi) =>
+        invalid([g], [context.groups[gi]]),
       );
-      return;
+      context.error = msg(
+        "請檢查必選項目與已售完的選項",
+        "Vui lòng kiểm tra lựa chọn bắt buộc và lựa chọn đã hết món",
+      );
+      return render(true);
     }
     const { key, index, cat, name } = context;
     window.bundleCartData = window.bundleCartData || {};
     window.bundleCartData[key] = window.bundleCartData[key] || [];
-    if (window.customizeData?.[key]?.[index]) {
-      const old = window.customizeData[key][index];
-      window.customizeData[key][index] = {
-        single: {},
-        multiple: {},
-        note: old.note || "",
-      };
-    }
+    window.customizeData = window.customizeData || {};
+    window.customizeData[key] = window.customizeData[key] || [];
+    window.customizeData[key][index] = {
+      single: {},
+      multiple: {},
+      note: context.note,
+    };
     window.bundleCartData[key][index] = {
       portionIndex: index,
       groups: receipt(context.groups),
@@ -395,11 +684,15 @@
   }
   window.UnifiedOptions = {
     restore,
+    presentation,
     open(cat, name, index) {
       const key = cat + "_" + name,
         info = resolveCatalogItem(key),
         rule = info.bundleRule || info.targetItem?.bundleRule;
-      index = Number.isInteger(index) ? index : Number(cart[key] || 0);
+      if (!rule?.groups?.length) return;
+      index = Number.isInteger(index)
+        ? Math.max(0, Math.min(index, Number(cart[key] || 0)))
+        : Number(cart[key] || 0);
       context = {
         key,
         cat,
@@ -414,6 +707,13 @@
           window.comboDrinkData?.[name]?.[index],
         ),
         focus: document.activeElement,
+        overflow: document.body.style.overflow,
+        mode: presentation(rule),
+        step: 0,
+        views: [],
+        drafts: {},
+        error: "",
+        note: window.customizeData?.[key]?.[index]?.note || "",
       };
       root().hidden = false;
       for (const el of document.body.children)
