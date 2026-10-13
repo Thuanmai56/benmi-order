@@ -448,7 +448,7 @@ function createDynamicItemCard(catSlug, item) {
             ${imgHTML}
             <div class="card-info">
                 <div>
-                    <div class="card-title">${item.name} ${item.isRecommended ? `<svg class="item-recommended-icon" viewBox="0 0 24 24" role="img" aria-label="${clientMenuLanguage() === 'vi' ? 'Món đề xuất' : '推薦餐點'}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v11H3V10zM7 10l4-8c2 0 3 2 2 5l-1 3h6a3 3 0 0 1 3 3l-2 6a3 3 0 0 1-3 2H7"/></svg>` : ''} ${badgeHTML} ${limitBadgeHTML}</div>
+                    <div class="card-title">${item.name} ${badgeHTML} ${limitBadgeHTML}</div>
                     ${transHTML}
                 </div>
                 <div class="card-footer">

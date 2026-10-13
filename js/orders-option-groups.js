@@ -104,7 +104,6 @@
       ugLocalStock: "Tạm ngừng lựa chọn trong nhóm",
       ugRemovePhoto: "Gỡ ảnh",
       ugRecommended: "Món đề xuất",
-      ugRecommendedHelp: "Hiển thị biểu tượng đề xuất cạnh tên món sau khi lưu.",
       ugInUse: "Món đang được dùng làm lựa chọn. Gỡ liên kết trước khi xóa.",
     },
     "zh-TW": {
@@ -209,7 +208,6 @@
       ugLocalStock: "暫停此群組內的選項",
       ugRemovePhoto: "移除圖片",
       ugRecommended: "推薦餐點",
-      ugRecommendedHelp: "儲存後，餐點名稱旁會顯示推薦圖示。",
       ugInUse: "此餐點仍被選項群組使用，請先移除連結再刪除。",
     },
   };
@@ -680,7 +678,7 @@
             `<option value="${esc(c.id)}" ${d.categoryId === c.id ? "selected" : ""}>${esc(c.name)}</option>`,
         )
         .join("");
-      body = `<section class="ug-photo"><div class="ug-photo-frame"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 6-6 4 4 3-3 5 5"/></svg><img ${d.imageKey === "" && !d.imageDraft ? "hidden" : ""} src="${esc(d.imageDraft || `${WORKER_BASE}/api/image?tenant_id=${encodeURIComponent(getTenantIdFromUrl())}&name=${encodeURIComponent(d.imageKey || d.name)}`)}" alt="" onerror="this.hidden=true"></div><div><label class="ug-upload">${esc(tr("ugPhoto"))}<input type="file" accept="image/*" data-field="photo"></label>${btn("remove-photo", "ugRemovePhoto")}</div></section>${field("name", "ugName", d.name)}<label class="ug-field"><span>${esc(tr("ugCategory"))}</span><select data-field="categoryId">${catOptions}</select></label>${field("price", "ugPrice", d.price, "number", 'min="0" step="0.01"')}${field("badgeText", "ugBadge", d.badgeText)}${toggle("isRecommended", "ugRecommended", d.isRecommended)}<p class="ug-muted ug-recommended-help">${esc(tr("ugRecommendedHelp"))}</p>`;
+      body = `<section class="ug-photo"><div class="ug-photo-frame"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 6-6 4 4 3-3 5 5"/></svg><img ${d.imageKey === "" && !d.imageDraft ? "hidden" : ""} src="${esc(d.imageDraft || `${WORKER_BASE}/api/image?tenant_id=${encodeURIComponent(getTenantIdFromUrl())}&name=${encodeURIComponent(d.imageKey || d.name)}`)}" alt="" onerror="this.hidden=true"></div><div><label class="ug-upload">${esc(tr("ugPhoto"))}<input type="file" accept="image/*" data-field="photo"></label>${btn("remove-photo", "ugRemovePhoto")}</div></section>${field("name", "ugName", d.name)}<label class="ug-field"><span>${esc(tr("ugCategory"))}</span><select data-field="categoryId">${catOptions}</select></label>${field("price", "ugPrice", d.price, "number", 'min="0" step="0.01"')}${field("badgeText", "ugBadge", d.badgeText)}${toggle("isRecommended", "ugRecommended", d.isRecommended)}`;
       body += productGroupSection(d) +
         (!d.isNew ? btn("delete", "ugDelete", 'class="ug-danger"') : "");
     } else if (r.page === "product-options") {

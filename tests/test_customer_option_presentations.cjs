@@ -283,7 +283,7 @@ test("nested navigation preserves parent scroll and focus, and keyboard trap inc
   assert.equal(app.doc.activeElement, app.launch);
 });
 
-test("customer cards render the red recommendation icon only for the explicit flag in both languages", () => {
+test("customer cards keep their badge without adding a separate recommendation icon", () => {
   for (const lang of ["vi", "zh-TW"]) {
     const app = setup([], { lang });
     app.context.bootstrapData = { catalog: [], translations: {} };
@@ -300,11 +300,9 @@ test("customer cards render the red recommendation icon only for the explicit fl
       ...base,
       isRecommended: true,
     });
-    assert.equal(
-      card.querySelector(".item-recommended-icon").getAttribute("aria-label"),
-      lang === "vi" ? "Món đề xuất" : "推薦餐點",
-    );
-    assert.equal(card.querySelectorAll(".item-recommended-icon").length, 1);
+    assert.equal(card.querySelector(".item-recommended-icon"), null);
+    assert.equal(card.querySelectorAll(".badge").length, 1);
+    assert.equal(card.querySelector(".badge").textContent, "推薦");
   }
 });
 
@@ -385,7 +383,7 @@ test('customer menu renders before any optional locale global exists, using the 
     app.context.bootstrapData={catalog:[],translations:{}};
     vm.runInContext(fs.readFileSync('js/client-menu.js','utf8'),app.context);
     const card=app.context.createDynamicItemCard('food',{name:'Meal',price:100,isRecommended:true,bundleRule:{version:3,groups:[]}});
-    assert.equal(card.querySelector('.item-recommended-icon').getAttribute('aria-label'),lang==='vi'?'Món đề xuất':'推薦餐點');
+    assert.equal(card.querySelector('.item-recommended-icon'),null);
     assert.match(card.querySelector('.bundle-edit-btn').textContent, lang==='vi'?/Tùy chỉnh món/:/自訂餐點/);
   }
 });
