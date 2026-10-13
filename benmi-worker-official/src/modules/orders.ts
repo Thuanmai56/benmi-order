@@ -5,6 +5,7 @@ import { corsHeaders, json } from '../utils/http';
 import { syncToGoogleSheets } from '../integrations/googleSheets';
 import { pushLineMessage, pushLineFlexMessage, buildOrderFlexMessage, buildAppendConfirmationFlexMessage, buildProgressFlexMessage, createRejectFlexBubble, createChangeFlexBubble, createTimeChangeFlexBubble, createSoldOutItemFlexBubble, createOrderModifiedConfirmationFlexBubble } from './line';
 import { getTenantId } from './menu';
+import { prepareOrderReceipt, pushOrderReceiptInBackground } from './line-order-receipts';
 
 import { TenantContext, tenantHasFeature, resolveTenantOrderPrefix, generateStandardOrderId } from '../types/tenant';
 import { resolveTenantContext } from './tenant';
@@ -471,7 +472,7 @@ export async function createOrder(
 
   // 1.1 Nếu client chủ động truyền parent_order_key thì chuyển sang xử lý append
   if (parentOrderKey && env.DB) {
-    const isDesktopOrder = data.is_desktop === true || data.isDesktop === true;
+    const isDesktopOrder = data.is_desktop === true || data.isDesktop === true || data.line_delivery_mode === 'push';
     return await executeAppendOrderInternal(
       env,
       tenantId,
@@ -530,8 +531,12 @@ export async function createOrder(
     round_count: 1
   };
 
+  let receipt: Awaited<ReturnType<typeof prepareOrderReceipt>> = null;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
+      receipt = await prepareOrderReceipt(env, tenantId, order.key, order.userId, 'create',
+        `[${tenantCtx?.brandName || "Benmi"}] 訂單明細 #${order.displayKey || order.key}`,
+        buildOrderFlexMessage(order, tenantCtx, rawItems, data.customizations));
       if (rawItems.length > 0 && env.DB) {
         const batchStatements: any[] = [
           env.DB.prepare(
@@ -580,9 +585,10 @@ export async function createOrder(
             );
           })
         ];
+        if (receipt) batchStatements.push(receipt.statement);
         await env.DB.batch(batchStatements);
       } else {
-        await saveOrder(env, order, tenantId, true);
+        await saveOrder(env, order, tenantId, true, receipt?.statement);
       }
       break;
     } catch (error) {
@@ -599,31 +605,11 @@ export async function createOrder(
     }
   }
 
-  // 2. Tự động gửi LINE Flex Message xác nhận đơn hàng đầy đủ nội dung cho khách đặt qua Desktop
   const isDesktopOrder = data.is_desktop === true || data.isDesktop === true;
-  if (order.userId && typeof order.userId === 'string' && order.userId.startsWith('U') && order.userId.length > 20 && isDesktopOrder) {
-    try {
-      const flexBubble = buildOrderFlexMessage(order, tenantCtx, rawItems, data.customizations);
-      const brandName = tenantCtx?.brandName || "Benmi";
-
-      const pushPromise = pushLineFlexMessage(
-        order.userId,
-        `[${brandName}] 訂單明細 #${order.displayKey || order.key}`,
-        flexBubble,
-        env,
-        tenantCtx
-      );
-      if (ctx && typeof ctx.waitUntil === 'function') {
-        ctx.waitUntil(pushPromise);
-      } else {
-        await pushPromise;
-      }
-    } catch (pushErr) {
-      console.error(`[${tenantId}] Failed to push desktop order Flex Message:`, pushErr);
-    }
+  if (isDesktopOrder || data.line_delivery_mode === 'push') {
+    await pushOrderReceiptInBackground(env, receipt?.notification.id, ctx, tenantCtx);
   }
-
-  return json({ success: true, key: order.key, orderId, displayKey, uuid: orderUuid });
+  return json({ success: true, key: order.key, orderId, displayKey, uuid: orderUuid, notification: receipt?.notification });
 }
 
 export async function executeAppendOrderInternal(
@@ -735,6 +721,33 @@ export async function executeAppendOrderInternal(
     : (row.note || "");
   const newTotal = (Number(row.total_amount) || 0) + appendedTotal;
 
+  // 7. Construct updated order object for notification & response
+  const updatedOrder: Order = {
+    key: parentKey,
+    orderId: row.order_id,
+    displayKey: row.display_key,
+    legacyKey: row.legacy_key,
+    businessDate: row.business_date,
+    customer: row.customer_name || customerName || "顧客",
+    time: row.pickup_time || "",
+    content: updatedContent,
+    status: "NEW",
+    createdAt: row.created_at ? new Date(row.created_at + "Z").getTime() : Date.now(),
+    userId: row.user_id || userId,
+    total: newTotal,
+    reason: row.reason || "",
+    note: combinedNote,
+    diningOption: (row.dining_option as any) || 'dine_in',
+    tableNumber: row.table_number || null,
+    roundCount: nextRound,
+    round_count: nextRound,
+    lastAppendedAt: new Date().toISOString()
+  };
+
+  const receipt = await prepareOrderReceipt(env, tenantId, parentKey, updatedOrder.userId, 'append',
+    `[${tenantCtx?.brandName || "Benmi"}] 現場加點確認 (第 ${nextRound} 輪)`,
+    buildAppendConfirmationFlexMessage(updatedOrder, appendedContent, appendedTotal, nextRound, tenantCtx));
+
   // 6. Persist to D1: Luôn chuyển trạng thái về NEW khi gọi thêm món để POS hiển thị ở cột Mới và phát chuông báo
   if (rawItems.length > 0) {
     const batchStatements: any[] = [
@@ -782,9 +795,10 @@ export async function executeAppendOrderInternal(
         );
       })
     ];
+    if (receipt) batchStatements.push(receipt.statement);
     await env.DB.batch(batchStatements);
   } else {
-    await env.DB.prepare(
+    const statement = env.DB.prepare(
       `UPDATE orders SET
          order_content = ?,
          total_amount = ?,
@@ -801,31 +815,10 @@ export async function executeAppendOrderInternal(
       combinedNote,
       parentKey,
       tenantId
-    ).run();
+    );
+    if (receipt) await env.DB.batch([statement, receipt.statement]);
+    else await statement.run();
   }
-
-  // 7. Construct updated order object for notification & response
-  const updatedOrder: Order = {
-    key: parentKey,
-    orderId: row.order_id,
-    displayKey: row.display_key,
-    legacyKey: row.legacy_key,
-    businessDate: row.business_date,
-    customer: row.customer_name || customerName || "顧客",
-    time: row.pickup_time || "",
-    content: updatedContent,
-    status: "NEW",
-    createdAt: row.created_at ? new Date(row.created_at + "Z").getTime() : Date.now(),
-    userId: row.user_id || userId,
-    total: newTotal,
-    reason: row.reason || "",
-    note: combinedNote,
-    diningOption: (row.dining_option as any) || 'dine_in',
-    tableNumber: row.table_number || null,
-    roundCount: nextRound,
-    round_count: nextRound,
-    lastAppendedAt: new Date().toISOString()
-  };
 
   // 8. Sync to Google Sheets
   try {
@@ -838,34 +831,7 @@ export async function executeAppendOrderInternal(
     console.error("[appendOrder] Google Sheets sync failed:", sheetErr);
   }
 
-  // 9. Tự động gửi LINE Flex Message xác nhận 加點 cho khách đặt qua Desktop
-  const targetUserId = row.user_id || userId;
-  if (targetUserId && typeof targetUserId === 'string' && targetUserId.startsWith('U') && targetUserId.length > 20 && isDesktop) {
-    try {
-      const flexBubble = buildAppendConfirmationFlexMessage(
-        updatedOrder,
-        appendedContent,
-        appendedTotal,
-        nextRound,
-        tenantCtx
-      );
-      const brandName = tenantCtx?.brandName || "Benmi";
-      const pushPromise = pushLineFlexMessage(
-        targetUserId,
-        `[${brandName}] 現場加點確認 (第 ${nextRound} 輪)`,
-        flexBubble,
-        env,
-        tenantCtx
-      );
-      if (ctx && typeof ctx.waitUntil === 'function') {
-        ctx.waitUntil(pushPromise);
-      } else {
-        await pushPromise;
-      }
-    } catch (pushErr) {
-      console.error(`[${tenantId}] Failed to push desktop append Flex Message:`, pushErr);
-    }
-  }
+  if (isDesktop) await pushOrderReceiptInBackground(env, receipt?.notification.id, ctx, tenantCtx);
 
   return json({
     success: true,
@@ -876,7 +842,8 @@ export async function executeAppendOrderInternal(
     businessDate: row.business_date,
     round_count: nextRound,
     total_amount: newTotal,
-    status: 'NEW'
+    status: 'NEW',
+    notification: receipt?.notification
   });
 }
 
@@ -896,7 +863,7 @@ export async function appendOrder(
     const note = payload.note ? String(payload.note).trim() : "";
     const userId = payload.user_id;
     const customerName = payload.customer_name;
-    const isDesktop = payload.is_desktop === true || payload.isDesktop === true;
+    const isDesktop = payload.is_desktop === true || payload.isDesktop === true || payload.line_delivery_mode === 'push';
 
     return await executeAppendOrderInternal(
       env,
@@ -1452,9 +1419,9 @@ export async function getHistoryAll(request: Request, env: Env): Promise<Respons
   }
 }
 
-export async function saveOrder(env: Env, order: Order, tenantId: string, createOnly = false): Promise<void> {
-  // Save order to D1
-  await env.DB.prepare(
+export async function saveOrder(env: Env, order: Order, tenantId: string, createOnly = false, receiptStatement?: D1PreparedStatement): Promise<void> {
+  // Save order and receipt atomically.
+  const statement = env.DB.prepare(
     `INSERT INTO orders (key, order_id, display_key, business_date, uuid, tenant_id, user_id, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, round_count, last_appended_at, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, 1), ?, datetime(?, 'unixepoch'), datetime('now'))
      ${createOnly ? '' : `ON CONFLICT(key) DO UPDATE SET
@@ -1495,7 +1462,9 @@ export async function saveOrder(env: Env, order: Order, tenantId: string, create
     order.roundCount || order.round_count || 1,
     order.lastAppendedAt || order.last_appended_at || null,
     Math.floor((order.createdAt || Date.now()) / 1000)
-  ).run();
+  );
+  if (receiptStatement) await env.DB.batch([statement, receiptStatement]);
+  else await statement.run();
 }
 
 export async function handleOrdersMigration(_request: Request, _env: Env): Promise<Response> {
@@ -1824,6 +1793,10 @@ export async function modifyOrder(
 
     const customerNote = payload.note ? String(payload.note).trim() : (orderRow.note || "");
 
+    const receipt = await prepareOrderReceipt(env, tenantId, resolvedKey, orderRow.user_id, 'modify',
+      `[${tenantCtx?.brandName || "Benmi"}] 訂單品項已成功更換 #${orderRow.display_key || resolvedKey}`,
+      createOrderModifiedConfirmationFlexBubble(resolvedKey, newTotal, deltaAmount, tenantCtx?.brandName || "Benmi", orderRow.display_key));
+
     // 4. Atomic D1 Batch: Update orders, delete old order_items & insert new ones, delete pending_actions
     const batchStatements: any[] = [
       env.DB.prepare(
@@ -1875,6 +1848,7 @@ export async function modifyOrder(
       ).bind(tenantId, resolvedKey)
     ];
 
+    if (receipt) batchStatements.push(receipt.statement);
     await env.DB.batch(batchStatements);
 
     // 5. Construct updated order object
@@ -1908,36 +1882,8 @@ export async function modifyOrder(
       await syncToGoogleSheets(updatedOrder, env, tenantCtx);
     }
 
-    // 7. Send LINE Confirmation Flex Message to customer
-    // Only push if customer edited via Desktop (outside LIFF) where liff.sendMessages cannot run.
-    // On mobile LIFF, the customer sends an order text message and the LINE webhook replies with free replyMessage.
-    const isDesktop = payload.is_desktop === true || payload.isDesktop === true;
-    const brandName = tenantCtx?.brandName || "Benmi";
-    if (orderRow.user_id && typeof orderRow.user_id === 'string' && orderRow.user_id.startsWith('U') && isDesktop) {
-      try {
-        const confirmBubble = createOrderModifiedConfirmationFlexBubble(
-          resolvedKey,
-          newTotal,
-          deltaAmount,
-          brandName,
-          orderRow.displayKey
-        );
-        const pushPromise = pushLineFlexMessage(
-          orderRow.user_id,
-          `[${brandName}] 訂單品項已成功更換 #${orderRow.displayKey || resolvedKey}`,
-          confirmBubble,
-          env,
-          tenantCtx
-        );
-        if (ctx && ctx.waitUntil) {
-          ctx.waitUntil(pushPromise);
-        } else {
-          await pushPromise;
-        }
-      } catch (pushErr) {
-        console.error(`[${tenantId}] Failed to push modify confirmation Flex Message:`, pushErr);
-      }
-    }
+    const isDesktop = payload.is_desktop === true || payload.isDesktop === true || payload.line_delivery_mode === 'push';
+    if (isDesktop) await pushOrderReceiptInBackground(env, receipt?.notification.id, ctx, tenantCtx);
 
     return json({
       success: true,
@@ -1946,7 +1892,8 @@ export async function modifyOrder(
       oldTotal,
       newTotal,
       deltaAmount,
-      isModified: true
+      isModified: true,
+      notification: receipt?.notification
     });
   } catch (err: any) {
     console.error("[modifyOrder] error:", err);

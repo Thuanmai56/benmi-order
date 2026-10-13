@@ -68,6 +68,8 @@ export async function recordLiffClientError(request: Request, tenantCtx?: Pick<T
     contextType: typeof payload.contextType === 'string' && CONTEXT_TYPES.has(payload.contextType) ? payload.contextType : null,
     liffId: safeText(payload.liffId, 64),
     chatMessageWriteScope: typeof payload.chatMessageWriteScope === 'boolean' ? payload.chatMessageWriteScope : null,
+    permissionState: ['granted', 'prompt', 'unavailable', 'unknown'].includes(String(payload.permissionState)) ? payload.permissionState : null,
+    isInClient: typeof payload.isInClient === 'boolean' ? payload.isInClient : null,
     clientTimestamp: typeof payload.clientTimestamp === 'number' && Number.isSafeInteger(payload.clientTimestamp) ? payload.clientTimestamp : null,
     receivedAt: new Date().toISOString()
   }));

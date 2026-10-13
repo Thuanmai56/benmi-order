@@ -1,3 +1,4 @@
+import { handleOrderReceiptWebhook } from './line-order-receipts';
 import { resolveOrderKey, findOrderForCustomer, isOrderId } from './order-identity';
 import { Env } from '../types/env';
 import { TenantContext, resolveTenantOrderPrefix, generateStandardOrderId } from '../types/tenant';
@@ -664,6 +665,12 @@ export async function handleLineWebhook(
     const userText = message.text || "";
     const pendingKey = `pending:${userId}`;
     const draftKey = `draft:${userId}`;
+
+    if (await handleOrderReceiptWebhook(env, tenantCtx, userId, normalizeLineText(userText), replyToken)) {
+      await env.DB.prepare("DELETE FROM pending_actions WHERE tenant_id = ? AND user_id = ?").bind(tenantId, userId).run();
+      try { await env.ORDER_STATE.delete(draftKey); } catch { }
+      continue;
+    }
 
     // 0.2) Handle text progress triggers (e.g. 查詢進度 / 進度 / tiến độ / check progress)
     const lowerText = userText.toLowerCase();

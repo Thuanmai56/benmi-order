@@ -7,7 +7,7 @@ const { execFileSync } = require('node:child_process');
 const root = path.resolve(__dirname, '..');
 const workerRoot = path.join(root, 'benmi-worker-official');
 const ts = require(path.join(workerRoot, 'node_modules/typescript'));
-const { Miniflare } = require(path.join(workerRoot, 'node_modules/miniflare'));
+const { Miniflare, convertV4MiniflareOptions } = require(path.join(workerRoot, 'node_modules/miniflare'));
 require.extensions['.ts'] = (mod, file) => mod._compile(ts.transpileModule(fs.readFileSync(file, 'utf8'), {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
 }).outputText, file);
@@ -22,7 +22,7 @@ for c in sys.stdin.read():
  if c==';' and sqlite3.complete_statement(s): result.append(s);s=''
 print(json.dumps(result))`], { input: sql, encoding: 'utf8' }));
 }
-const mf = new Miniflare({ modules: true, script: 'export default {fetch(){return new Response("local")}}', d1Databases: ['DB'] });
+const mf = new Miniflare(convertV4MiniflareOptions({ workers: [{ modules: true, script: 'export default {fetch(){return new Response("local")}}', d1Databases: ['DB'] }] }));
 const originalFetch = global.fetch;
 const outbound = [];
 global.fetch = async (...args) => { outbound.push(args); return new Response('{}', { status: 200 }); };
@@ -41,7 +41,7 @@ async function check(name, fn) { await fn(); passed++; console.log(`PASS ${name}
  await apply(`ALTER TABLE orders ADD COLUMN dining_option TEXT DEFAULT 'takeaway'; ALTER TABLE orders ADD COLUMN table_number TEXT;
  ALTER TABLE orders ADD COLUMN round_count INTEGER DEFAULT 1; ALTER TABLE orders ADD COLUMN last_appended_at TEXT;
  ALTER TABLE order_items ADD COLUMN bundle_snapshot_json TEXT;
- CREATE TABLE menu_items(id TEXT, tenant_id TEXT, name TEXT, out_of_stock_until TEXT);
+ CREATE TABLE menu_items(id TEXT, tenant_id TEXT, name TEXT, out_of_stock_until TEXT, max_per_order INTEGER);
  CREATE TABLE menu_bundle_rules(tenant_id TEXT, parent_item_id TEXT, schema_version INTEGER, config_json TEXT, is_active INTEGER);
  INSERT INTO orders(key,tenant_id,customer_name,pickup_time,total_amount,order_content,created_at,status)
  VALUES ('B0914-T007','a','Legacy','12:00',100,'Old item','2026-09-14 01:00:00','NEW');
@@ -50,6 +50,7 @@ async function check(name, fn) { await fn(); passed++; console.log(`PASS ${name}
  await check('migration preserves items/pending/amount and assigns a server UUID', async()=>{
    await apply(fs.readFileSync(path.join(workerRoot,'migrations/0055_expand_order_identity.sql'),'utf8'));
    await apply(fs.readFileSync(path.join(workerRoot,'migrations/0056_add_order_modified_tracking.sql'),'utf8'));
+   await apply(fs.readFileSync(path.join(workerRoot,'migrations/0065_line_order_receipts.sql'),'utf8'));
    const old=await DB.prepare('SELECT * FROM orders').first();
    assert(identity.isOrderId(old.order_id)); assert.equal(old.key,'B0914-T007'); assert.equal(old.display_key,'B0914-T007'); assert.equal(old.total_amount,100);
    assert.equal((await DB.prepare('SELECT order_key FROM order_items').first()).order_key,old.key);
@@ -96,6 +97,15 @@ async function check(name, fn) { await fn(); passed++; console.log(`PASS ${name}
    assert(list.every(o=>identity.isOrderId(o.orderId) && o.displayKey));
    const history=await (await orders.getOrdersByDate(new Request('https://local.test/api/orders/by-date?tenant_id=a&date=2026-09-14'),env)).json();
    assert(history.some(o=>o.displayKey==='B0914-T007'));
+ });
+ await check('LINE receipt uses real D1 atomic claims for simultaneous push and reply', async()=>{
+   const delivery=require(path.join(workerRoot,'src/modules/line-order-receipts.ts'));
+   const owner='U'+'a'.repeat(32), t={...tenant('a'),lineChannelToken:'fixture-token'};
+   const result=await (await orders.createOrder(request('/api/create',{uuid:'line-receipt',userId:owner,customer:'Customer',content:'One',total:30,items:[{name:'One',price:30}]}),env,undefined,t)).json();
+   assert(result.notification.id);const before=outbound.length;
+   await Promise.all([delivery.deliverOrderReceipt(env,result.notification.id,t),delivery.deliverOrderReceipt(env,result.notification.id,t,'fixture-reply')]);
+   assert.equal(outbound.length-before,1);
+   assert.equal((await DB.prepare('SELECT status FROM line_order_receipts WHERE id=?').bind(result.notification.id).first()).status,'sent');
  });
  await check('LINE card displays receipt while buttons retain stable references', async()=>{
    const order={key:created.key,displayKey:created.displayKey,customer:'Test',status:'NEW',content:'Item',total:50,time:'12:00',createdAt:Date.now(),diningOption:'dine_in',tableNumber:'1'};

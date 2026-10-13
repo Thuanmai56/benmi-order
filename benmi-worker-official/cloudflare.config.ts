@@ -1,4 +1,4 @@
-import { bindings, defineConfig, type ConfigContext } from "cf/config";
+import { bindings, triggers, defineConfig, type ConfigContext } from "cf/config";
 
 /**
  * Wrangler environments are selected through ctx.mode and the cf --mode flag.
@@ -20,6 +20,7 @@ export default (ctx: ConfigContext) => {
 					entrypoint: "src/index.ts",
 					workersDev: true,
 					previewUrls: true,
+					triggers: [triggers.scheduled({ schedule: "* * * * *" })],
 					observability: {
 						enabled: true,
 						headSamplingRate: 1,
@@ -70,6 +71,7 @@ export default (ctx: ConfigContext) => {
 					entrypoint: "src/index.ts",
 					workersDev: true,
 					previewUrls: true,
+					triggers: [triggers.scheduled({ schedule: "* * * * *" })],
 					observability: {
 						enabled: true,
 						headSamplingRate: 1,
@@ -120,6 +122,7 @@ export default (ctx: ConfigContext) => {
 					entrypoint: "src/index.ts",
 					workersDev: true,
 					previewUrls: true,
+					triggers: [triggers.scheduled({ schedule: "* * * * *" })],
 					observability: {
 						enabled: true,
 						headSamplingRate: 1,

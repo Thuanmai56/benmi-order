@@ -62,6 +62,7 @@ export interface AppendOrderPayload {
   appended_items?: OrderItemInput[];
   is_desktop?: boolean;
   isDesktop?: boolean;
+  line_delivery_mode?: 'reply' | 'push';
 }
 
 export interface Menu {

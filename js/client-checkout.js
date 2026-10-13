@@ -24,6 +24,64 @@ async function reportLiffSendFailure(details) {
     }
 }
 
+async function getLiffDeliveryDiagnostic() {
+    let context = null, permissionState = 'unknown', isInClient = false;
+    try {
+        if (typeof liff !== 'undefined') {
+            isInClient = Boolean(liff.isInClient?.());
+            context = liff.getContext?.() || null;
+            if (isInClient && typeof liff.permission?.query === 'function') {
+                // A stalled diagnostic must not block order submission.
+                let timer;
+                try {
+                    const permission = await Promise.race([
+                        liff.permission.query('chat_message.write'),
+                        new Promise(resolve => { timer = setTimeout(() => resolve(null), 1500); })
+                    ]);
+                    permissionState = permission?.state || 'unknown';
+                } finally { clearTimeout(timer); }
+            }
+        }
+    } catch (_) { }
+    const contextType = context?.type || null;
+    return {
+        permissionState, isInClient, contextType,
+        deliveryMode: !isInClient || ['prompt', 'unavailable'].includes(permissionState)
+            || ['none', 'external'].includes(contextType) ? 'push' : 'reply'
+    };
+}
+
+async function requestOrderConfirmationPush(notification, tenantId) {
+    if (!notification?.id || !notification?.token) return;
+    try {
+        const response = await fetch(`${WORKER_BASE}/api/line/order-receipt/push?tenant_id=${encodeURIComponent(tenantId)}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId },
+            body: JSON.stringify({ id: notification.id, token: notification.token }),
+            keepalive: true,
+            signal: AbortSignal.timeout(20000)
+        });
+        if (!response.ok) throw new Error(`Receipt fallback HTTP ${response.status}`);
+    } catch (error) {
+        // The committed backend receipt remains pending for scheduled delivery.
+        console.error('[LINE] Receipt fallback request failed', { receiptId: notification.id, message: String(error?.message || error) });
+    }
+}
+
+async function sendOrderConfirmation(messages, context, notification, diagnostic) {
+    if (diagnostic.deliveryMode === 'push') {
+        await requestOrderConfirmationPush(notification, context.tenantId);
+        return;
+    }
+    const trackedMessages = notification?.id ? messages.map(message => message.type === 'text'
+        ? { ...message, text: `${message.text}\n確認參考：${notification.id}` } : message) : messages;
+    try {
+        await sendLiffMessagesWithRetry(trackedMessages, { ...context, diagnostic });
+    } catch (_) {
+        await requestOrderConfirmationPush(notification, context.tenantId);
+    }
+}
+
 async function sendLiffMessagesWithRetry(messages, context) {
     const correlationId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
         ? crypto.randomUUID() : String(Date.now());
@@ -47,6 +105,8 @@ async function sendLiffMessagesWithRetry(messages, context) {
                 liffId: typeof liff.id === 'string' ? liff.id : null,
                 chatMessageWriteScope: Array.isArray(liffContext?.scope)
                     ? liffContext.scope.includes('chat_message.write') : null,
+                permissionState: context.diagnostic?.permissionState || 'unknown',
+                isInClient: context.diagnostic?.isInClient ?? null,
                 clientTimestamp: Date.now()
             };
             console.error('[LIFF] sendMessages failed', details);
@@ -1692,7 +1752,8 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
         let orderNum = generateOrderNumber(diningOption);
         let msg = formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, mainNote);
 
-        const isDesktop = !(typeof liff !== 'undefined' && liff.isInClient && liff.isInClient());
+        const deliveryDiagnostic = await getLiffDeliveryDiagnostic();
+        const isDesktop = !deliveryDiagnostic.isInClient;
 
         // 10.1 Xử lý riêng cho luồng 加點餐點 (Append Mode)
         if (window.isAppendMode && window.parentOrderKey) {
@@ -1710,7 +1771,8 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                 items: structuredItems,
                 customizations: getStructuredGlobalCustomizations(),
                 is_desktop: isDesktop,
-                isDesktop: isDesktop
+                isDesktop: isDesktop,
+                line_delivery_mode: deliveryDiagnostic.deliveryMode
             };
 
             const res = await fetch(`${WORKER_BASE}/api/orders/append?tenant_id=${tenantId}`, {
@@ -1784,20 +1846,12 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
 
             setAllSubmitButtonsState(true, '加點已送出', { cursor: 'not-allowed', opacity: '0.6' });
 
-            if (typeof liff !== 'undefined' && liff.isInClient) {
-                try {
-                    if (liff.isInClient() && typeof liff.sendMessages === 'function') {
-                        const tablePart = currentTable ? `\n桌號：${currentTable}` : '';
-                        const notePart = mainNote ? `\n📝 備註：${mainNote}` : '';
-                        const appendChatMsg = `[加點 #${window.parentOrderDisplayKey || ""}]\n訂單參考：${window.parentOrderKey}${tablePart}\n現場加點品項：\n${rawItemsText}${notePart}\n\n💰 加點金額：+$${currentTotal}`;
-                        await sendLiffMessagesWithRetry([{ type: 'text', text: appendChatMsg }], {
-                            tenantId, orderKey: window.parentOrderKey, flow: 'append'
-                        });
-                    }
-                } catch (_) {
-                    // The append is saved; the retry helper reports each failed LINE attempt.
-                }
-            }
+            const tablePart = currentTable ? `\n桌號：${currentTable}` : '';
+            const notePart = mainNote ? `\n📝 備註：${mainNote}` : '';
+            const appendChatMsg = `[加點 #${window.parentOrderDisplayKey || ""}]\n訂單參考：${window.parentOrderKey}${tablePart}\n現場加點品項：\n${rawItemsText}${notePart}\n\n💰 加點金額：+$${currentTotal}`;
+            await sendOrderConfirmation([{ type: 'text', text: appendChatMsg }], {
+                tenantId, orderKey: window.parentOrderKey, flow: 'append'
+            }, appendResult.notification, deliveryDiagnostic);
 
             cart = {};
             customizeData = {};
@@ -1835,7 +1889,8 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                 note: mainNote,
                 tenant_id: tenantId,
                 is_desktop: isDesktop,
-                isDesktop: isDesktop
+                isDesktop: isDesktop,
+                line_delivery_mode: deliveryDiagnostic.deliveryMode
             };
 
             const res = await fetch(`${WORKER_BASE}/api/orders/modify?tenant_id=${tenantId}`, {
@@ -1906,21 +1961,12 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
             const modifyResult = await res.json();
             setAllSubmitButtonsState(true, '品項已更新', { cursor: 'not-allowed', opacity: '0.6' });
 
-            // Gửi tin nhắn xác nhận nội dung đơn từ phía khách hàng vào phòng chat LINE
-            if (typeof liff !== 'undefined' && liff.isInClient) {
-                try {
-                    if (liff.isInClient() && typeof liff.sendMessages === 'function') {
-                        const rawItemsText = typeof formatAppendItemsOnlyText === 'function' ? formatAppendItemsOnlyText() : '';
-                        const notePart = mainNote ? `\n📝 備註：${mainNote}` : '';
-                        const editChatMsg = `[更換品項 #${window.editOrderDisplayKey || window.editOrderKey || ""}]\n訂單參考：${window.editOrderKey || ""}\n\n📦 更新後餐點內容：\n${rawItemsText}${notePart}\n\n💰 更新後金額：$${currentTotal}`;
-                        await sendLiffMessagesWithRetry([{ type: 'text', text: editChatMsg }], {
-                            tenantId, orderKey: window.editOrderKey, flow: 'modify'
-                        });
-                    }
-                } catch (_) {
-                    // The modification is saved; the retry helper reports each failed LINE attempt.
-                }
-            }
+            const rawItemsText = typeof formatAppendItemsOnlyText === 'function' ? formatAppendItemsOnlyText() : '';
+            const notePart = mainNote ? `\n📝 備註：${mainNote}` : '';
+            const editChatMsg = `[更換品項 #${window.editOrderDisplayKey || window.editOrderKey || ""}]\n訂單參考：${window.editOrderKey || ""}\n\n📦 更新後餐點內容：\n${rawItemsText}${notePart}\n\n💰 更新後金額：$${currentTotal}`;
+            await sendOrderConfirmation([{ type: 'text', text: editChatMsg }], {
+                tenantId, orderKey: window.editOrderKey, flow: 'modify'
+            }, modifyResult.notification, deliveryDiagnostic);
 
             cart = {};
             customizeData = {};
@@ -1947,7 +1993,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                 <div style="font-size: 14.5px; line-height: 1.5; color: #4b5563;">
                     門市已收到您的更新訂單！<br>
                     <strong>新總計：$${currentTotal}</strong> (${deltaMsg})<br>
-                    系統已發送確認卡片至您的 LINE 聊天室 🙏
+                    品項已更新，請在 LINE 查看確認與訂單進度。
                 </div>
             `, () => {
                 if (typeof closeAndExitLiff === 'function') closeAndExitLiff();
@@ -1972,7 +2018,8 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
             customizations: getStructuredGlobalCustomizations(),
             liffFallback: false,
             is_desktop: isDesktop,
-            isDesktop: isDesktop
+            isDesktop: isDesktop,
+            line_delivery_mode: deliveryDiagnostic.deliveryMode
         };
 
         const res = await fetch(`${WORKER_BASE}/api/create?tenant_id=${tenantId}`, {
@@ -2053,18 +2100,9 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
         orderSubmittedSuccessfully = true;
         setAllSubmitButtonsState(true, '訂單已送出', { cursor: 'not-allowed', opacity: '0.6' });
 
-        // Tùy chọn: Gửi tin nhắn vào chat LINE nếu đang mở trong LINE App
-        if (typeof liff !== 'undefined' && liff.isInClient) {
-            try {
-                if (liff.isInClient() && typeof liff.sendMessages === 'function') {
-                    await sendLiffMessagesWithRetry([{ type: 'text', text: msg }], {
-                        tenantId, orderKey: resData.key || orderNum, flow: 'create'
-                    });
-                }
-            } catch (_) {
-                // The order is saved; the retry helper reports each failed LINE attempt.
-            }
-        }
+        await sendOrderConfirmation([{ type: 'text', text: msg }], {
+            tenantId, orderKey: resData.key || orderNum, flow: 'create'
+        }, resData.notification, deliveryDiagnostic);
 
         // Xóa sạch giỏ hàng khi thành công
         cart = {};
@@ -2072,9 +2110,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
         comboDrinkData = {};
         if (typeof updateTotal === 'function') updateTotal();
 
-        const orderSuccessMsg = isDesktop && userId && userId.startsWith('U')
-            ? '店家已收到您的訂單，系統已將訂單進度卡片發送至您的 LINE 聊天室，您可以直接在LINE查看訂單狀態 🙏'
-            : '店家已收到您的訂單，您可以直接在LINE查看訂單狀態 🙏';
+        const orderSuccessMsg = '店家已收到您的訂單，請在 LINE 查看訂單確認與進度。';
 
         customAlert(`
             <div style="margin-bottom: 16px;">
