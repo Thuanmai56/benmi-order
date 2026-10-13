@@ -334,13 +334,18 @@ test('optional minimum persists zero, rule errors are localized and included qua
   for(const key of ['required','minSelection','maxSelection','allowRepeats']) assert.equal(fixed.get(`[data-field="${key}"]`).disabled,true);
 });
 
-test('recommendation saves its explicit flag and publishes immediately, without deriving it from badge text', async () => {
-  const app=await setup(); app.context.UnifiedMenu.product(0,0);
-  assert.equal(app.drawer().querySelector('.ug-recommended-help'),null);
-  app.input('badgeText','推薦'); app.input('isRecommended',true); await app.click('save');
-  assert.equal(app.posts[0].isRecommended,true);
-  assert.equal(app.context.currentMenuData[0].items[0].isRecommended,true);
-  app.context.UnifiedMenu.product(0,0); app.input('isRecommended',false); await app.click('save');
-  assert.equal(app.posts[1].isRecommended,false); assert.equal(app.posts[1].badgeText,'推薦');
-  assert.equal(app.context.currentMenuData[0].items[0].isRecommended,false);
+test('product settings expose the badge without recommendation controls and preserve legacy data on save', async () => {
+  for (const isRecommended of [false,true]) {
+    const app=await setup();
+    app.context.currentMenuData[0].items[0].isRecommended=isRecommended;
+    app.context.UnifiedMenu.product(0,0);
+    assert.equal(app.drawer().querySelector('[data-field="isRecommended"]'),null);
+    assert.equal(app.drawer().querySelector('.ug-recommended-help'),null);
+    app.input('badgeText','推薦'); await app.click('save');
+    assert.equal(app.posts[0].badgeText,'推薦');
+    assert.equal(app.posts[0].isRecommended,isRecommended);
+    assert.equal(app.context.currentMenuData[0].items[0].isRecommended,isRecommended);
+    app.context.UnifiedMenu.product(0,0); await app.click('save');
+    assert.equal(app.posts.length,1);
+  }
 });
