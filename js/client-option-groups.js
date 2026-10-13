@@ -1,6 +1,7 @@
 /* Canonical option groups use the existing cart/receipt snapshot envelope. */
 (() => {
   let context = null;
+  const failedOptionImages = new Set();
   const esc = (v) =>
     String(v ?? "").replace(
       /[&<>"']/g,
@@ -275,8 +276,10 @@
           : "";
         if (chips)
           return `<button type="button" class="${maximum(g) === 1 ? "modifier-pill" : "modifier-checkbox-chip"} ${chosen ? "active" : ""}" data-choose="${key}" data-option="${oi}" aria-pressed="${Boolean(chosen)}" ${blocked || (full && !chosen && maximum(g) !== 1) ? "disabled" : ""}><span>${esc(o.name)}</span>${Number(o.price) ? `<small>${priceLabel(o.price)}</small>` : ""}${warning ? `<small>${esc(warning)}</small>` : ""}</button>`;
-        const image = o.imageUrl
-          ? `<img class="uoc-item-image" src="${esc((window.WORKER_BASE || "") + o.imageUrl)}" alt="" loading="lazy">`
+        const imageUrl = String(o.imageUrl || "").trim();
+        const imageSrc = (window.WORKER_BASE || "") + imageUrl;
+        const image = imageUrl && !failedOptionImages.has(imageSrc)
+          ? `<img class="uoc-item-image" src="${esc(imageSrc)}" alt="" loading="lazy">`
           : "";
         return `<div class="bundle-item-card ${chosen ? "selected" : ""} ${blocked ? "sold-out" : ""}"><div class="bundle-item-info">${image}<div><span>${esc(o.name)}</span><small>${priceLabel(o.price)}${warning ? ` · ${esc(warning)}` : ""}</small></div></div><div class="bundle-stepper">${g.included ? `<span class="bundle-v2-badge-fixed">×${chosen}</span>` : chosen ? `<button type="button" class="bundle-btn-minus" data-minus="${key}" data-option="${oi}" aria-label="${esc(msg("減少", "Giảm") + " " + o.name)}">−</button><span class="bundle-qty-val">${chosen}</span><button type="button" class="bundle-btn-plus" data-add="${key}" data-option="${oi}" ${addDisabled ? "disabled" : ""} aria-label="${esc(msg("增加", "Tăng") + " " + o.name)}">+</button>` : `<button type="button" class="bundle-btn-add" data-add="${key}" data-option="${oi}" ${addDisabled ? "disabled" : ""} aria-label="${esc(msg("選擇", "Chọn") + " " + o.name)}">+</button>`}</div></div>`;
       })
@@ -308,6 +311,14 @@
     el.hidden = true;
     el.innerHTML =
       '<section class="uoc-panel" role="dialog" aria-modal="true" aria-labelledby="uoc-title"><header><button type="button" data-back hidden></button><h2 id="uoc-title" tabindex="-1"></h2><button type="button" data-close>×</button></header><div class="uoc-portion-tabs"></div><nav class="bundle-v2-step-nav" aria-label=""></nav><div class="uoc-body"></div><footer><p role="alert"></p><button type="button" data-confirm></button></footer></section>';
+    // Image errors do not bubble. Capture them so a missing photo never leaves
+    // a broken icon or reserves thumbnail space in the option row.
+    el.addEventListener("error", (event) => {
+      const image = event.target;
+      if (!image.classList?.contains("uoc-item-image")) return;
+      failedOptionImages.add(image.getAttribute("src"));
+      image.hidden = true;
+    }, true);
     el.addEventListener("click", (event) => {
       if (event.target === el || event.target.closest("[data-close]"))
         return close();
