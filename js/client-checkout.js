@@ -6,6 +6,58 @@
 var cart = window.cart;
 var customizeData = window.customizeData;
 
+async function reportLiffSendFailure(details) {
+    try {
+        const response = await fetch(`${WORKER_BASE}/api/line/client-error?tenant_id=${encodeURIComponent(details.tenantId)}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': details.tenantId },
+            body: JSON.stringify(details),
+            keepalive: true
+        });
+        if (!response.ok) throw new Error(`Telemetry returned HTTP ${response.status}`);
+    } catch (error) {
+        console.error('[LIFF] Failed to record send error in Cloudflare', {
+            orderKey: details.orderKey,
+            attempt: details.attempt,
+            message: String(error?.message || error)
+        });
+    }
+}
+
+async function sendLiffMessagesWithRetry(messages, context) {
+    const correlationId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID() : String(Date.now());
+    for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+            await liff.sendMessages(messages);
+            return;
+        } catch (error) {
+            let liffContext = null;
+            try { liffContext = liff.getContext?.() || null; } catch (_) { }
+            const details = {
+                tenantId: context.tenantId,
+                orderKey: context.orderKey,
+                flow: context.flow,
+                correlationId,
+                attempt,
+                maxAttempts: 2,
+                errorCode: String(error?.code || 'UNKNOWN').slice(0, 64),
+                errorMessage: String(error?.message || error).slice(0, 500),
+                contextType: liffContext?.type || null,
+                liffId: typeof liff.id === 'string' ? liff.id : null,
+                chatMessageWriteScope: Array.isArray(liffContext?.scope)
+                    ? liffContext.scope.includes('chat_message.write') : null,
+                clientTimestamp: Date.now()
+            };
+            console.error('[LIFF] sendMessages failed', details);
+            // Keep telemetry alive if the customer closes LINE; it must not block retry.
+            void reportLiffSendFailure(details);
+            if (attempt === 2) throw error;
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+    }
+}
+
 // Append Mode Global State
 window.isAppendMode = false;
 window.parentOrderKey = null;
@@ -1738,10 +1790,12 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                         const tablePart = currentTable ? `\n桌號：${currentTable}` : '';
                         const notePart = mainNote ? `\n📝 備註：${mainNote}` : '';
                         const appendChatMsg = `[加點 #${window.parentOrderDisplayKey || ""}]\n訂單參考：${window.parentOrderKey}${tablePart}\n現場加點品項：\n${rawItemsText}${notePart}\n\n💰 加點金額：+$${currentTotal}`;
-                        await liff.sendMessages([{ type: 'text', text: appendChatMsg }]);
+                        await sendLiffMessagesWithRetry([{ type: 'text', text: appendChatMsg }], {
+                            tenantId, orderKey: window.parentOrderKey, flow: 'append'
+                        });
                     }
-                } catch (liffMsgErr) {
-                    console.warn("liff.sendMessages notice:", liffMsgErr);
+                } catch (_) {
+                    // The append is saved; the retry helper reports each failed LINE attempt.
                 }
             }
 
@@ -1859,10 +1913,12 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                         const rawItemsText = typeof formatAppendItemsOnlyText === 'function' ? formatAppendItemsOnlyText() : '';
                         const notePart = mainNote ? `\n📝 備註：${mainNote}` : '';
                         const editChatMsg = `[更換品項 #${window.editOrderDisplayKey || window.editOrderKey || ""}]\n訂單參考：${window.editOrderKey || ""}\n\n📦 更新後餐點內容：\n${rawItemsText}${notePart}\n\n💰 更新後金額：$${currentTotal}`;
-                        await liff.sendMessages([{ type: 'text', text: editChatMsg }]);
+                        await sendLiffMessagesWithRetry([{ type: 'text', text: editChatMsg }], {
+                            tenantId, orderKey: window.editOrderKey, flow: 'modify'
+                        });
                     }
-                } catch (liffMsgErr) {
-                    console.warn("liff.sendMessages notice:", liffMsgErr);
+                } catch (_) {
+                    // The modification is saved; the retry helper reports each failed LINE attempt.
                 }
             }
 
@@ -2001,10 +2057,12 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
         if (typeof liff !== 'undefined' && liff.isInClient) {
             try {
                 if (liff.isInClient() && typeof liff.sendMessages === 'function') {
-                    await liff.sendMessages([{ type: 'text', text: msg }]);
+                    await sendLiffMessagesWithRetry([{ type: 'text', text: msg }], {
+                        tenantId, orderKey: resData.key || orderNum, flow: 'create'
+                    });
                 }
-            } catch (liffMsgErr) {
-                console.warn("liff.sendMessages notice:", liffMsgErr);
+            } catch (_) {
+                // The order is saved; the retry helper reports each failed LINE attempt.
             }
         }
 
@@ -2045,7 +2103,9 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                     const rawItemsText = typeof formatAppendItemsOnlyText === 'function' ? formatAppendItemsOnlyText() : '';
                     const notePart = mainNote ? `\n📝 備註：${mainNote}` : '';
                     const editChatMsg = `[更換品項 #${window.editOrderDisplayKey || window.editOrderKey || ""}]\n訂單參考：${window.editOrderKey || ""}\n\n📦 更新後餐點內容：\n${rawItemsText}${notePart}\n\n💰 更新後金額：$${currentTotal}`;
-                    await liff.sendMessages([{ type: 'text', text: editChatMsg }]);
+                    await sendLiffMessagesWithRetry([{ type: 'text', text: editChatMsg }], {
+                        tenantId, orderKey: window.editOrderKey, flow: 'modify_fallback'
+                    });
                 } else if (window.isAppendMode && window.parentOrderKey) {
                     const rawItemsText = formatAppendItemsOnlyText();
                     const tableInput = document.getElementById('dinein-table-number');
@@ -2053,13 +2113,17 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                     const tablePart = currentTable ? `\n桌號：${currentTable}` : '';
                     const notePart = mainNote ? `\n📝 備註：${mainNote}` : '';
                     const appendChatMsg = `[加點 #${window.parentOrderDisplayKey || ""}]\n訂單參考：${window.parentOrderKey}${tablePart}\n現場加點品項：\n${rawItemsText}${notePart}\n\n💰 加點金額：+$${currentTotal}`;
-                    await liff.sendMessages([{ type: 'text', text: appendChatMsg }]);
+                    await sendLiffMessagesWithRetry([{ type: 'text', text: appendChatMsg }], {
+                        tenantId, orderKey: window.parentOrderKey, flow: 'append_fallback'
+                    });
                 } else {
                     const isDineIn = (window.currentDiningOption === 'dine_in');
                     const diningOption = isDineIn ? 'dine_in' : 'takeaway';
                     const orderNum = generateOrderNumber(diningOption);
                     const msg = formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, mainNote);
-                    await liff.sendMessages([{ type: 'text', text: msg }]);
+                    await sendLiffMessagesWithRetry([{ type: 'text', text: msg }], {
+                        tenantId, orderKey: orderNum, flow: 'create_fallback'
+                    });
                 }
                 orderSubmittedSuccessfully = true;
                 setAllSubmitButtonsState(true, window.isAppendMode ? '加點已送出' : '訂單已送出', { cursor: 'not-allowed', opacity: '0.6' });
