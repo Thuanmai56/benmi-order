@@ -48,7 +48,7 @@ function createDOMEnvironment() {
   // Pre-populate common elements
   const commonIds = [
     'btn-menu-save', 'i18n-btn-menu-save',
-    'itemDetailModal', 'item-detail-name', 'item-detail-price', 'item-detail-badge', 'item-detail-recommended',
+    'itemDetailModal', 'item-detail-name-input', 'item-detail-price-input', 'item-detail-badge-input', 'item-detail-recommended',
     'itemModifiersModal', 'item-modifiers-modal-title', 'item-modifiers-groups-container',
     'modal-bundle-editor', 'bundle-modal-item-name', 'bundle-modal-item-price', 'btn-bundle-remove-config', 'bundle-danger-zone-card',
     'menu-editor-body', 'menu-categories', 'tab-menu'
@@ -194,9 +194,9 @@ test('Opening Item Detail and closing/saving without changes does NOT mark menu 
 
   // Open item detail modal again and save without modifications
   sandbox.openItemDetailModal(0, 0);
-  domElements['item-detail-name'].value = 'Sườn Bì';
-  domElements['item-detail-price'].value = '65';
-  domElements['item-detail-badge'].value = '';
+  domElements['item-detail-name-input'].value = 'Sườn Bì';
+  domElements['item-detail-price-input'].value = '65';
+  domElements['item-detail-badge-input'].value = '';
   domElements['item-detail-recommended'].checked = false;
 
   sandbox.saveItemDetailModal();
@@ -221,9 +221,9 @@ test('Item Detail Modal rolls back draft changes if user cancels / presses Escap
 
   sandbox.openItemDetailModal(0, 0);
   // User changes input fields and autoCommit runs
-  domElements['item-detail-name'].value = 'Sườn Bì Chả Trứng Đặc Biệt';
-  domElements['item-detail-price'].value = '999';
-  domElements['item-detail-badge'].value = 'New';
+  domElements['item-detail-name-input'].value = 'Sườn Bì Chả Trứng Đặc Biệt';
+  domElements['item-detail-price-input'].value = '999';
+  domElements['item-detail-badge-input'].value = 'New';
   sandbox.autoCommitItemDetailFields();
 
   assert.equal(getIsMenuDirty(), true, 'Dirty detected while drafting changes');
