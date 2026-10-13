@@ -336,7 +336,7 @@ test('optional minimum persists zero, rule errors are localized and included qua
 
 test('recommendation saves its explicit flag and publishes immediately, without deriving it from badge text', async () => {
   const app=await setup(); app.context.UnifiedMenu.product(0,0);
-  assert.match(app.get('.ug-recommended-help').textContent,/sau khi lưu/);
+  assert.equal(app.drawer().querySelector('.ug-recommended-help'),null);
   app.input('badgeText','推薦'); app.input('isRecommended',true); await app.click('save');
   assert.equal(app.posts[0].isRecommended,true);
   assert.equal(app.context.currentMenuData[0].items[0].isRecommended,true);

@@ -2028,7 +2028,6 @@ body.ug-open { overflow: hidden; }
 .ug-rule-error { margin: 0; padding: 0 16px 12px; color: #b42332; font-size: var(--menu-font-sm); }
 .ug-rule-error[hidden] { display: none; }
 .ug-stepper input[aria-invalid="true"] { border-color: #b42332; }
-.ug-recommended-help { margin: -8px 0 24px; font-size: var(--menu-font-sm); }
 .ug-field { display: flex; flex-direction: column; gap: 7px; margin: 0 0 18px; font-size: var(--menu-font-base); color: #59626a; }
 .ug-field input,.ug-field select,.ug-search,.ug-filter { border: 1px solid #dce1e5; border-radius: 8px; min-height: 52px; padding: 12px; font: inherit; color: #20262d; background: white; width: 100%; box-sizing: border-box; }
 .ug-search,.ug-filter { margin-bottom: 14px; }
@@ -2293,7 +2292,6 @@ body.ug-open { overflow: hidden; }
 #view-menu .menu-seg-btn:focus-visible { outline: 3px solid #4fa995; outline-offset: -3px; }
 #view-menu .menu-item-name-col { display: flex; align-items: center; gap: 8px; }
 #view-menu .menu-item-name-input { min-width: 0; flex: 1; }
-.menu-recommended-icon { width: 20px; height: 20px; color: #dc2626; flex: 0 0 20px; }
 @media(max-width: 900px) {
   #view-menu .menu-sidebar-panel { flex-direction: column !important; max-height: 300px; }
   #view-menu .menu-sidebar-tabs { padding: 8px 12px; }
