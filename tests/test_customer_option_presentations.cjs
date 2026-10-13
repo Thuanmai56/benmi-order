@@ -378,3 +378,14 @@ test("custom topping children remain inline chips within the original simple pop
     "soft",
   );
 });
+
+test('customer menu renders before any optional locale global exists, using the document language', () => {
+  for (const lang of ['vi','zh-TW']) {
+    const app=setup([], {lang}); delete app.context.currentLocale;
+    app.context.bootstrapData={catalog:[],translations:{}};
+    vm.runInContext(fs.readFileSync('js/client-menu.js','utf8'),app.context);
+    const card=app.context.createDynamicItemCard('food',{name:'Meal',price:100,isRecommended:true,bundleRule:{version:3,groups:[]}});
+    assert.equal(card.querySelector('.item-recommended-icon').getAttribute('aria-label'),lang==='vi'?'Món đề xuất':'推薦餐點');
+    assert.match(card.querySelector('.bundle-edit-btn').textContent, lang==='vi'?/Tùy chỉnh món/:/自訂餐點/);
+  }
+});
