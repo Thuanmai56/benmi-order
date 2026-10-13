@@ -8,6 +8,10 @@
     --border: #f3f4f6;
     --red: #ef4444;
     --orange: #d97706;
+    --order-auth-height: 0px;
+    --order-nav-height: 50px;
+    --order-sticky-gap: 8px;
+    --order-sticky-offset: calc(var(--order-auth-height) + var(--order-nav-height) + var(--order-sticky-gap));
 }
 
 * {
@@ -447,7 +451,7 @@ html.is-edit-order-loading #cart-summary {
 
 .sticky-nav {
     position: sticky;
-    top: 0;
+    top: var(--order-auth-height);
     z-index: 100;
     background: rgba(255, 255, 255, 0.96);
     backdrop-filter: blur(12px);
@@ -508,7 +512,7 @@ html.is-edit-order-loading #cart-summary {
 }
 
 .section-container {
-    scroll-margin-top: 65px;
+    scroll-margin-top: var(--order-sticky-offset);
     margin-bottom: 22px;
 }
 
@@ -1917,6 +1921,10 @@ input[type="checkbox"] {
 
 /* Desktop & Wide Screen Layout (>= 1024px) */
 @media (min-width: 1024px) {
+    :root {
+        --order-sticky-gap: 16px;
+    }
+
     body {
         padding-bottom: 24px;
         background: #f8f9fa;
@@ -1944,7 +1952,6 @@ input[type="checkbox"] {
 
     .sticky-nav {
         position: sticky;
-        top: 48px;
         z-index: 850;
         background: rgba(255, 255, 255, 0.98);
         backdrop-filter: blur(12px);
@@ -1966,8 +1973,8 @@ input[type="checkbox"] {
 
     .checkout-sidebar-col {
         position: sticky;
-        top: 108px;
-        max-height: calc(100vh - 120px);
+        top: var(--order-sticky-offset);
+        max-height: calc(100vh - var(--order-sticky-offset) - 12px);
         overflow-y: auto;
         overflow-x: hidden;
         scrollbar-width: thin;
