@@ -796,6 +796,63 @@ function applyPickupConfig() {
 // --- SCROLL & NAV ---
 var isManualScrollLock = false;
 var manualScrollTimeout = null;
+var orderStickyHeights = { auth: null, nav: null };
+
+function syncOrderStickyLayout() {
+    const authBar = document.getElementById('desktop-auth-bar');
+    const nav = document.getElementById('main-nav');
+    // offsetHeight is zero for hidden bars, including the auth bar inside LIFF.
+    const authHeight = authBar ? (authBar.offsetHeight || 0) : 0;
+    const navHeight = nav ? (nav.offsetHeight || 0) : 0;
+    const rootStyle = document.documentElement.style;
+    if (authHeight !== orderStickyHeights.auth) {
+        rootStyle.setProperty('--order-auth-height', `${authHeight}px`);
+        orderStickyHeights.auth = authHeight;
+    }
+    if (navHeight !== orderStickyHeights.nav) {
+        rootStyle.setProperty('--order-nav-height', `${navHeight}px`);
+        orderStickyHeights.nav = navHeight;
+    }
+    return {
+        height: authHeight + navHeight,
+        offset: authHeight + navHeight + (window.innerWidth >= 1024 ? 16 : 8)
+    };
+}
+
+function initOrderStickyLayout() {
+    syncOrderStickyLayout();
+    if (typeof ResizeObserver !== 'undefined') {
+        const observer = new ResizeObserver(() => {
+            syncOrderStickyLayout();
+        });
+        ['desktop-auth-bar', 'main-nav'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) observer.observe(el);
+        });
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initOrderStickyLayout, { once: true });
+} else {
+    initOrderStickyLayout();
+}
+window.addEventListener('resize', () => {
+    syncOrderStickyLayout();
+    updateActiveNavOnScroll();
+});
+
+function scrollNavButtonHorizontally(btn) {
+    const nav = document.getElementById('main-nav');
+    if (!nav) return;
+    const navRect = nav.getBoundingClientRect();
+    const btnRect = btn.getBoundingClientRect();
+    // scrollIntoView also scrolls the document when sticky bars resize.
+    nav.scrollTo({
+        left: nav.scrollLeft + btnRect.left - navRect.left - (nav.clientWidth - btnRect.width) / 2,
+        behavior: 'smooth'
+    });
+}
 
 function scrollToSec(id) {
     const el = document.getElementById(id);
@@ -811,15 +868,10 @@ function scrollToSec(id) {
     const targetBtn = document.querySelector(`.nav-btn[onclick="scrollToSec('${id}')"]`);
     if (targetBtn) {
         targetBtn.classList.add('active');
-        targetBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        scrollNavButtonHorizontally(targetBtn);
     }
 
-    const navEl = document.getElementById('main-nav');
-    const authBar = document.querySelector('.desktop-auth-bar');
-    const isDesktop = window.innerWidth >= 1024;
-    const authHeight = (isDesktop && authBar && authBar.style.display !== 'none') ? (authBar.offsetHeight || 48) : 0;
-    const navHeight = navEl ? (navEl.offsetHeight || 50) : 50;
-    const totalOffset = authHeight + navHeight + (isDesktop ? 16 : 8);
+    const totalOffset = syncOrderStickyLayout().offset;
 
     const targetY = el.getBoundingClientRect().top + window.pageYOffset - totalOffset;
     window.scrollTo({ top: Math.max(0, targetY), behavior: 'smooth' });
@@ -840,12 +892,7 @@ function updateActiveNavOnScroll() {
     const sections = Array.from(document.querySelectorAll('.section-container'));
     if (sections.length === 0) return;
 
-    const navEl = document.getElementById('main-nav');
-    const authBar = document.querySelector('.desktop-auth-bar');
-    const isDesktop = window.innerWidth >= 1024;
-    const authHeight = (isDesktop && authBar && authBar.style.display !== 'none') ? (authBar.offsetHeight || 48) : 0;
-    const navHeight = navEl ? (navEl.offsetHeight || 50) : 50;
-    const scanLine = authHeight + navHeight + 40;
+    const scanLine = syncOrderStickyLayout().height + 40;
 
     const isBottom = (window.innerHeight + window.scrollY) >= (document.documentElement.scrollHeight - 60);
     let currentActiveId = null;
@@ -870,7 +917,7 @@ function updateActiveNavOnScroll() {
         if (targetBtn && !targetBtn.classList.contains('active')) {
             document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
             targetBtn.classList.add('active');
-            targetBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            scrollNavButtonHorizontally(targetBtn);
         }
     }
 }
@@ -1184,6 +1231,7 @@ async function updateDesktopAuthUI() {
         if (bar) bar.style.display = 'none';
         if (centerOverlay) centerOverlay.style.display = 'none';
         if (pageBody) pageBody.classList.remove('desktop-guest-locked');
+        syncOrderStickyLayout();
         return;
     }
 
@@ -1205,6 +1253,7 @@ async function updateDesktopAuthUI() {
         if (loggedInEl) loggedInEl.style.display = 'flex';
         if (centerOverlay) centerOverlay.style.display = 'none';
         if (pageBody) pageBody.classList.remove('desktop-guest-locked');
+        syncOrderStickyLayout();
 
         try {
             const profile = await liff.getProfile();
@@ -1227,6 +1276,7 @@ async function updateDesktopAuthUI() {
         if (centerOverlay) centerOverlay.style.display = 'flex';
         if (pageBody) pageBody.classList.add('desktop-guest-locked');
     }
+    syncOrderStickyLayout();
 }
 
 // --- STORE STATUS & BUSINESS HOURS ---
