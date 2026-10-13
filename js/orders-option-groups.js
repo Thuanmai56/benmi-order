@@ -29,6 +29,8 @@
       ugRequired: "Bắt buộc chọn ít nhất một lựa chọn",
       ugMin: "Số lượng tối thiểu",
       ugMax: "Số lượng tối đa",
+      ugRuleInteger: "Nhập số nguyên từ {min} đến 999.",
+      ugRuleRange: "Số lượng tối đa phải lớn hơn hoặc bằng tối thiểu.",
       ugRepeat: "Cho phép chọn nhiều phần của cùng một lựa chọn",
       ugIncluded: "Có sẵn trong món",
       ugOptions: "Lựa chọn",
@@ -102,6 +104,7 @@
       ugLocalStock: "Tạm ngừng lựa chọn trong nhóm",
       ugRemovePhoto: "Gỡ ảnh",
       ugRecommended: "Món đề xuất",
+      ugRecommendedHelp: "Hiển thị biểu tượng đề xuất cạnh tên món sau khi lưu.",
       ugInUse: "Món đang được dùng làm lựa chọn. Gỡ liên kết trước khi xóa.",
     },
     "zh-TW": {
@@ -132,6 +135,8 @@
       ugRequired: "顧客必須選擇至少一個選項",
       ugMin: "最少選擇數量",
       ugMax: "最多選擇數量",
+      ugRuleInteger: "請輸入 {min} 至 999 的整數。",
+      ugRuleRange: "最多選擇數量必須大於或等於最少選擇數量。",
       ugRepeat: "允許重複選擇同一選項",
       ugIncluded: "餐點已包含的內容",
       ugOptions: "選項",
@@ -204,6 +209,7 @@
       ugLocalStock: "暫停此群組內的選項",
       ugRemovePhoto: "移除圖片",
       ugRecommended: "推薦餐點",
+      ugRecommendedHelp: "儲存後，餐點名稱旁會顯示推薦圖示。",
       ugInUse: "此餐點仍被選項群組使用，請先移除連結再刪除。",
     },
   };
@@ -428,7 +434,33 @@
     }
   }
   const stepper = (key, label, value, min = 0) =>
-    `<div class="ug-rule"><label for="ug-${key}">${esc(tr(label))}</label><div class="ug-stepper">${btn("step", "ugRemove", `data-key="${key}" data-delta="-1" aria-label="${esc(tr(label))} −"`)}<input id="ug-${key}" aria-label="${esc(tr(label))}" data-field="${key}" type="number" min="${min}" max="999" value="${value}"><button type="button" data-action="step" data-key="${key}" data-delta="1" aria-label="${esc(tr(label))} +">+</button></div></div>`;
+    `<div class="ug-rule-field"><div class="ug-rule"><label for="ug-${key}">${esc(tr(label))}</label><div class="ug-stepper">${btn("step", "ugRemove", `data-key="${key}" data-delta="-1" aria-label="${esc(tr(label))} −"`)}<input id="ug-${key}" aria-label="${esc(tr(label))}" aria-describedby="ug-${key}-error" data-field="${key}" type="number" min="${min}" max="999" step="1" value="${esc(value)}"><button type="button" data-action="step" data-key="${key}" data-delta="1" aria-label="${esc(tr(label))} +">+</button></div></div><p id="ug-${key}-error" class="ug-rule-error" hidden></p></div>`;
+  function selectionErrors(d) {
+    if (d.included) return {};
+    const errors = {}, lower = state.required ? 1 : 0;
+    for (const [key, min] of [["minSelection", lower], ["maxSelection", 1]]) {
+      const value = d[key];
+      if (value === "" || !Number.isInteger(Number(value)) || Number(value) < min || Number(value) > 999)
+        errors[key] = tr("ugRuleInteger", { min });
+    }
+    if (!errors.minSelection && !errors.maxSelection && Number(d.maxSelection) < Number(d.minSelection)) {
+      errors.minSelection = errors.maxSelection = tr("ugRuleRange");
+    }
+    return errors;
+  }
+  function showSelectionErrors(focus = false) {
+    if (state.kind !== "group") return true;
+    state.ruleErrors = selectionErrors(state.draft);
+    const root = ensureDrawer();
+    for (const key of ["minSelection", "maxSelection"]) {
+      const field = root.querySelector(`[data-field="${key}"]`), error = root.querySelector(`#ug-${key}-error`);
+      const message = state.ruleErrors[key] || "";
+      if (field) field.setAttribute("aria-invalid", String(Boolean(message)));
+      if (error) { error.textContent = message; error.hidden = !message; }
+    }
+    if (focus) root.querySelector(`[data-field="${Object.keys(state.ruleErrors)[0]}"]`)?.focus();
+    return !Object.keys(state.ruleErrors).length;
+  }
   const row = (action, title, sub, attrs = "") =>
     `<button type="button" class="ug-row" data-action="${action}" ${attrs}><span><strong>${esc(title)}</strong>${sub ? `<small>${esc(sub)}</small>` : ""}</span><span aria-hidden="true">›</span></button>`;
   // Feather/Lucide SVG paths (MIT); avoid emoji and keep the menu compact.
@@ -482,6 +514,9 @@
       if (target) action(target.dataset.action, target);
     });
     el.addEventListener("input", (event) => input(event.target));
+    el.addEventListener("focusout", (event) => {
+      if (state?.route.page === "group" && ["minSelection", "maxSelection"].includes(event.target.dataset.field)) showSelectionErrors();
+    });
     el.addEventListener("change", (event) => {
       if (event.target.type === "checkbox" || event.target.tagName === "SELECT")
         input(event.target);
@@ -546,6 +581,8 @@
       kind,
       draft,
       original: entitySnapshot(kind, draft),
+      required: Number(draft.minSelection) > 0,
+      ruleErrors: {},
       optionsOnly: route.page === "product-options",
       stack: [],
       route: prepareRoute(route),
@@ -643,7 +680,7 @@
             `<option value="${esc(c.id)}" ${d.categoryId === c.id ? "selected" : ""}>${esc(c.name)}</option>`,
         )
         .join("");
-      body = `<section class="ug-photo"><div class="ug-photo-frame"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 6-6 4 4 3-3 5 5"/></svg><img ${d.imageKey === "" && !d.imageDraft ? "hidden" : ""} src="${esc(d.imageDraft || `${WORKER_BASE}/api/image?tenant_id=${encodeURIComponent(getTenantIdFromUrl())}&name=${encodeURIComponent(d.imageKey || d.name)}`)}" alt="" onerror="this.hidden=true"></div><div><label class="ug-upload">${esc(tr("ugPhoto"))}<input type="file" accept="image/*" data-field="photo"></label>${btn("remove-photo", "ugRemovePhoto")}</div></section>${field("name", "ugName", d.name)}<label class="ug-field"><span>${esc(tr("ugCategory"))}</span><select data-field="categoryId">${catOptions}</select></label>${field("price", "ugPrice", d.price, "number", 'min="0" step="0.01"')}${field("badgeText", "ugBadge", d.badgeText)}${toggle("isRecommended", "ugRecommended", d.isRecommended)}`;
+      body = `<section class="ug-photo"><div class="ug-photo-frame"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 6-6 4 4 3-3 5 5"/></svg><img ${d.imageKey === "" && !d.imageDraft ? "hidden" : ""} src="${esc(d.imageDraft || `${WORKER_BASE}/api/image?tenant_id=${encodeURIComponent(getTenantIdFromUrl())}&name=${encodeURIComponent(d.imageKey || d.name)}`)}" alt="" onerror="this.hidden=true"></div><div><label class="ug-upload">${esc(tr("ugPhoto"))}<input type="file" accept="image/*" data-field="photo"></label>${btn("remove-photo", "ugRemovePhoto")}</div></section>${field("name", "ugName", d.name)}<label class="ug-field"><span>${esc(tr("ugCategory"))}</span><select data-field="categoryId">${catOptions}</select></label>${field("price", "ugPrice", d.price, "number", 'min="0" step="0.01"')}${field("badgeText", "ugBadge", d.badgeText)}${toggle("isRecommended", "ugRecommended", d.isRecommended)}<p class="ug-muted ug-recommended-help">${esc(tr("ugRecommendedHelp"))}</p>`;
       body += productGroupSection(d) +
         (!d.isNew ? btn("delete", "ugDelete", 'class="ug-danger"') : "");
     } else if (r.page === "product-options") {
@@ -651,7 +688,7 @@
       body = productGroupSection(d);
     } else if (r.page === "group") {
       const [min, max] = selectionRules(d);
-      body = `<section><h3>${esc(tr("ugDetails"))}</h3>${field("name", "ugName", d.name)}</section><section><h3>${esc(tr("ugRules"))}</h3><div class="ug-list">${toggle("required", "ugRequired", min > 0)}${stepper("minSelection", "ugMin", min)}${stepper("maxSelection", "ugMax", max, 1)}</div><div class="ug-list">${toggle("allowRepeats", "ugRepeat", d.allowRepeats)}${toggle("included", "ugIncluded", d.included)}</div></section><section><div class="ug-section-title"><h3>${esc(tr("ugOptions"))} (${options(d).length})</h3>${btn("add-option", "ugAdd")}</div><div class="ug-list">${
+      body = `<section><h3>${esc(tr("ugDetails"))}</h3>${field("name", "ugName", d.name)}</section><section><h3>${esc(tr("ugRules"))}</h3><div class="ug-list">${toggle("required", "ugRequired", d.included ? min > 0 : state.required)}${d.included || state.required ? stepper("minSelection", "ugMin", min, 1) : ""}${stepper("maxSelection", "ugMax", max, 1)}</div><div class="ug-list">${toggle("allowRepeats", "ugRepeat", d.allowRepeats)}${toggle("included", "ugIncluded", d.included)}</div></section><section><div class="ug-section-title"><h3>${esc(tr("ugOptions"))} (${options(d).length})</h3>${btn("add-option", "ugAdd")}</div><div class="ug-list">${
         options(d)
           .map((o) =>
             row(
@@ -763,6 +800,7 @@
       el.querySelectorAll(
         '[data-field="required"],[data-field="minSelection"],[data-field="maxSelection"],[data-field="allowRepeats"],.ug-stepper button',
       ).forEach((b) => (b.disabled = true));
+    if (r.page === "group" && Object.keys(state.ruleErrors).length) showSelectionErrors();
     const view = r.view;
     for (const details of el.querySelectorAll("details[data-section]")) details.open = Boolean(view?.details.includes(details.dataset.section));
     const q = el.querySelector('[data-field="search"]'), filter = el.querySelector('[data-field="filter"]');
@@ -833,11 +871,11 @@
       el.type === "checkbox"
         ? el.checked
         : el.type === "number"
-          ? Number(el.value)
+          ? (["minSelection", "maxSelection"].includes(key) && el.value === "" ? "" : Number(el.value))
           : el.value;
     if (key === "required") {
-      d.minSelection = value ? Math.max(1, d.minSelection) : 0;
-      d.maxSelection = Math.max(d.maxSelection, d.minSelection);
+      state.required = Boolean(value);
+      d.minSelection = value ? 1 : 0;
       render();
       return;
     }
@@ -865,6 +903,7 @@
     } else {
       d[key] = value;
       if (key === "included") render();
+      if (["minSelection", "maxSelection"].includes(key) && Object.keys(state.ruleErrors).length) showSelectionErrors();
     }
   }
   function action(name, el) {
@@ -931,10 +970,10 @@
     if (name === "step") {
       const key = el.dataset.key;
       const target = ensureDrawer().querySelector(`[data-field="${key}"]`);
-      target.value = Math.max(
-        Number(target.min || 0),
+      target.value = Math.min(Number(target.getAttribute("max") || Infinity), Math.max(
+        Number(target.getAttribute("min") || 0),
         Number(target.value) + Number(el.dataset.delta),
-      );
+      ));
       input(target);
       return;
     }
@@ -1103,6 +1142,7 @@
     return persist(d, remove);
   }
   async function persist(d, remove) {
+    if (!remove && state.kind === "group" && !showSelectionErrors(true)) return;
     if (
       !remove &&
       (!d.name.trim() ||
@@ -1406,6 +1446,8 @@
         groupById(selectedGroup) ||
         catalog.groups.find((g) => g.scope !== "order") || catalog.groups[0];
       selectedGroup = group?.id;
+      const footer = document.getElementById("menu-editor-footer");
+      if (footer) footer.style.display = "none";
       for (const id of [
         "btn-category-rename",
         "btn-category-delete",

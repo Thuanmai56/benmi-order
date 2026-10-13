@@ -419,7 +419,9 @@ function createDynamicItemCard(catSlug, item) {
     const hasBundleRule = Boolean(item.bundleRule);
     const bundleGroupLabel = (item.bundleRule?.groups?.[0]?.name || '').replace(/^請選擇\s*(\d+\s*樣)?/g, '').trim();
     const hasCombinedModifiers = hasBundleRule && hasModifiers;
-    const bundleBtnText = hasCombinedModifiers 
+    const bundleBtnText = item.bundleRule?.version === 3
+        ? (currentLocale === 'vi' ? 'Tùy chỉnh món' : '自訂餐點')
+        : hasCombinedModifiers
         ? (bundleGroupLabel ? `調整${bundleGroupLabel} / 加料` : '調整搭配 / 加料')
         : (bundleGroupLabel ? `調整${bundleGroupLabel}` : '調整套餐配菜');
 
@@ -442,7 +444,7 @@ function createDynamicItemCard(catSlug, item) {
             ${imgHTML}
             <div class="card-info">
                 <div>
-                    <div class="card-title">${item.name} ${badgeHTML} ${limitBadgeHTML}</div>
+                    <div class="card-title">${item.name} ${item.isRecommended ? `<svg class="item-recommended-icon" viewBox="0 0 24 24" role="img" aria-label="${currentLocale === 'vi' ? 'Món đề xuất' : '推薦餐點'}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v11H3V10zM7 10l4-8c2 0 3 2 2 5l-1 3h6a3 3 0 0 1 3 3l-2 6a3 3 0 0 1-3 2H7"/></svg>` : ''} ${badgeHTML} ${limitBadgeHTML}</div>
                     ${transHTML}
                 </div>
                 <div class="card-footer">
@@ -510,7 +512,9 @@ function updateDynamicStockAndPrices() {
                 bundleEditBtn.style.display = (!item.isOutOfStock && qty > 0 && hasBundleRule) ? 'flex' : 'none';
                 const bundleGroupLabel = (item.bundleRule?.groups?.[0]?.name || '').replace(/^請選擇\s*(\d+\s*樣)?/g, '').trim();
                 const hasCombinedModifiers = hasBundleRule && hasModifiers;
-                const bundleBtnText = hasCombinedModifiers 
+                const bundleBtnText = item.bundleRule?.version === 3
+                    ? (currentLocale === 'vi' ? 'Tùy chỉnh món' : '自訂餐點')
+                    : hasCombinedModifiers
                     ? (bundleGroupLabel ? `調整${bundleGroupLabel} / 加料` : '調整搭配 / 加料')
                     : (bundleGroupLabel ? `調整${bundleGroupLabel}` : '調整套餐配菜');
                 const span = bundleEditBtn.querySelector('span');

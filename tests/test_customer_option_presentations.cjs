@@ -1,0 +1,380 @@
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const vm = require("node:vm");
+const { Element } = require("./helpers/menu-drawer-dom.cjs");
+function setup(groups, { lang = "vi", qty = 0, saved = [], notes = [] } = {}) {
+  const doc = {
+    createElement(tag) {
+      const e = new Element(tag, doc);
+      e.style = {};
+      return e;
+    },
+  };
+  doc.body = doc.createElement("body");
+  doc.body.style.overflow = "auto";
+  doc.documentElement = { lang };
+  doc.activeElement = doc.body;
+  doc.getElementById = (id) => doc.body.querySelector("#" + id);
+  doc.querySelectorAll = (s) => doc.body.querySelectorAll(s);
+  const launch = doc.body.appendChild(doc.createElement("button"));
+  launch.focus();
+  const rule = { version: 3, groups };
+  const key = "food_Meal";
+  let updates = 0;
+  const context = {
+    document: doc,
+    console,
+    currentLocale: lang,
+    cart: { [key]: qty },
+    bundleCartData: { [key]: structuredClone(saved) },
+    customizeData: { [key]: structuredClone(notes) },
+    resolveCatalogItem: () => ({
+      targetItem: { price: 100, bundleRule: rule },
+      bundleRule: rule,
+    }),
+    updateTotal() {
+      updates++;
+    },
+  };
+  context.window = context;
+  vm.createContext(context);
+  vm.runInContext(
+    fs.readFileSync("js/client-option-groups.js", "utf8"),
+    context,
+  );
+  const modal = () => doc.getElementById("unified-option-modal");
+  const get = (s) => {
+    const e = modal().querySelector(s);
+    assert.ok(e, `Missing ${s}`);
+    return e;
+  };
+  const emit = (type, target, extra = {}) => {
+    for (const fn of modal().listeners[type] || [])
+      fn({ target, preventDefault() {}, stopPropagation() {}, ...extra });
+  };
+  const click = (s) => {
+    const e = get(s);
+    e.focus();
+    emit("click", e);
+  };
+  return {
+    context,
+    rule,
+    key,
+    doc,
+    launch,
+    modal,
+    get,
+    click,
+    emit,
+    updates: () => updates,
+    open: (index) => context.UnifiedOptions.open("food", "Meal", index),
+  };
+}
+const option = (id, price = 0, extra = {}) => ({
+  id,
+  name: id,
+  price,
+  ...extra,
+});
+const group = (id, options, extra = {}) => ({
+  id,
+  name: id,
+  minSelection: 0,
+  maxSelection: 1,
+  eligibleItems: options,
+  ...extra,
+});
+
+test("simple canonical options use the original chip popup, enforce bounds and preserve notes/pricing", () => {
+  const app = setup([
+    group("Spice", [option("Mild"), option("Hot")], { minSelection: 1 }),
+    group("Toppings", [option("Egg", 5), option("Meat", 10)], {
+      maxSelection: 2,
+    }),
+  ]);
+  app.open(0);
+  assert.equal(app.modal().classList.contains("uoc-simple"), true);
+  assert.equal(app.get("nav").hidden, true);
+  app.click("[data-confirm]");
+  assert.equal(app.context.cart[app.key], 0);
+  assert.match(app.get('[role="alert"]').textContent, /bắt buộc/);
+  app.click('[data-choose="0"][data-option="0"]');
+  app.click('[data-choose="0"][data-option="1"]');
+  assert.equal(
+    app.get('[data-choose="0"][data-option="0"]').getAttribute("aria-pressed"),
+    "false",
+  );
+  app.click('[data-choose="1"][data-option="0"]');
+  app.click('[data-choose="1"][data-option="1"]');
+  const note = app.get("[data-note]");
+  note.value = "Ít sốt";
+  app.emit("input", note);
+  assert.match(app.get("[data-confirm]").textContent, /\$115/);
+  app.click("[data-confirm]");
+  const saved = app.context.bundleCartData[app.key][0];
+  assert.equal(saved.groups[0].items[0].optionId, "Hot");
+  assert.equal(saved.groups[1].items.length, 2);
+  assert.equal(app.context.UnifiedOptions.valid(app.rule, saved), true);
+  assert.equal(app.context.customizeData[app.key][0].note, "Ít sốt");
+  assert.equal(app.updates(), 1);
+  assert.equal(app.doc.activeElement, app.launch);
+  assert.equal(app.doc.body.style.overflow, "auto");
+});
+
+test("wizard keeps server group order, repeat portions and independent child configuration with zero retail surcharge", () => {
+  const temp = group("Temperature", [option("Hot", 2), option("Cold")], {
+    minSelection: 1,
+  });
+  const coffee = option("Coffee", 0, {
+    productId: "coffee",
+    retailPrice: 48,
+    optionGroups: [temp],
+    subOptions: [{ id: "milk", name: "Milk", price: 3 }],
+  });
+  const app = setup([
+    group("Drinks", [coffee], {
+      minSelection: 2,
+      maxSelection: 2,
+      allowRepeats: true,
+    }),
+    group("Spice", [option("Mild")], { minSelection: 1 }),
+  ]);
+  app.open(0);
+  assert.equal(app.modal().classList.contains("uoc-wizard"), true);
+  assert.deepEqual(
+    app
+      .get("nav")
+      .querySelectorAll("button")
+      .map((b) => b.dataset.step),
+    ["0", "1"],
+  );
+  app.click('[data-add="0"][data-option="0"]');
+  assert.equal(app.get("h2").textContent, "Coffee");
+  app.click("[data-confirm]");
+  assert.match(app.get('[role="alert"]').textContent, /bắt buộc/);
+  app.click('[data-choose="0.0.0"][data-option="0"]');
+  const milk = app.get('[data-sub="0.0"][data-index="0"]');
+  milk.checked = true;
+  app.emit("change", milk);
+  app.click("[data-confirm]");
+  app.click('[data-add="0"][data-option="0"]');
+  app.click('[data-choose="0.1.0"][data-option="1"]');
+  app.click("[data-confirm]");
+  assert.equal(app.get('[data-add="0"][data-option="0"]').disabled, true);
+  app.click("[data-confirm]");
+  assert.ok(app.get('[data-choose="1"][data-option="0"]'));
+  app.click('[data-choose="1"][data-option="0"]');
+  assert.match(app.get("[data-confirm]").textContent, /\$105/);
+  app.click("[data-confirm]");
+  const portion = app.context.bundleCartData[app.key][0];
+  assert.equal(portion.groups[0].items.length, 2);
+  assert.equal(portion.groups[0].items[0].groups[0].items[0].optionId, "Hot");
+  assert.equal(portion.groups[0].items[1].groups[0].items[0].optionId, "Cold");
+  assert.equal(portion.groups[0].items[0].subOptions[0].price, 3);
+  assert.equal(app.context.UnifiedOptions.valid(app.rule, portion), true);
+});
+
+test("opening, canceling, switching and copying portions never write until confirmation", () => {
+  const groups = [group("Topping", [option("Egg", 5), option("Meat", 10)])];
+  const saved = [
+    {
+      groups: [
+        { groupId: "Topping", items: [{ optionId: "Egg", quantity: 1 }] },
+      ],
+    },
+  ];
+  const app = setup(groups, { qty: 1, saved, notes: [{ note: "No onion" }] });
+  const before = JSON.stringify([
+    app.context.cart,
+    app.context.bundleCartData,
+    app.context.customizeData,
+  ]);
+  app.open(0);
+  app.click('[data-choose="0"][data-option="1"]');
+  app.click('[data-portion="1"]');
+  app.click("[data-copy]");
+  assert.equal(
+    app.get('[data-choose="0"][data-option="1"]').getAttribute("aria-pressed"),
+    "true",
+  );
+  app.click('[data-portion="0"]');
+  assert.equal(
+    app.get('[data-choose="0"][data-option="1"]').getAttribute("aria-pressed"),
+    "true",
+  );
+  app.click("[data-close]");
+  assert.equal(
+    JSON.stringify([
+      app.context.cart,
+      app.context.bundleCartData,
+      app.context.customizeData,
+    ]),
+    before,
+  );
+  assert.equal(app.updates(), 0);
+  app.open(1);
+  app.click("[data-copy]");
+  assert.equal(
+    app.get('[data-choose="0"][data-option="0"]').getAttribute("aria-pressed"),
+    "true",
+  );
+  app.click("[data-confirm]");
+  assert.equal(app.context.cart[app.key], 2);
+  assert.equal(
+    app.context.bundleCartData[app.key][1].groups[0].items[0].optionId,
+    "Egg",
+  );
+  assert.equal(app.context.customizeData[app.key][1].note, "No onion");
+});
+
+test("fixed counts stay read-only; stock and nested choices block invalid checkout; Traditional Chinese labels", () => {
+  const app = setup(
+    [
+      group(
+        "Included",
+        [option("Drink", 0, { productId: "drink", quantity: 2 })],
+        { included: true },
+      ),
+    ],
+    { lang: "zh-TW" },
+  );
+  app.open(0);
+  assert.equal(app.get("[data-confirm]").textContent, "確認 · $100");
+  assert.equal(app.modal().querySelector("[data-add]"), null);
+  app.click("[data-confirm]");
+  assert.equal(
+    app.context.bundleCartData[app.key][0].groups[0].items.length,
+    2,
+  );
+  const oos = setup([
+    group("Drink", [option("Unavailable", 0, { isOutOfStock: true })], {
+      minSelection: 1,
+    }),
+  ]);
+  oos.open(0);
+  assert.equal(oos.get("[data-choose]").disabled, true);
+  oos.click("[data-confirm]");
+  assert.equal(oos.context.cart[oos.key], 0);
+});
+
+test("nested navigation preserves parent scroll and focus, and keyboard trap includes the note field", () => {
+  const app = setup([
+    group("Drink", [
+      option("Coffee", 0, {
+        productId: "coffee",
+        subOptions: [{ id: "milk", name: "Milk" }],
+        isDefault: true,
+      }),
+    ]),
+  ]);
+  app.open(0);
+  app.get(".uoc-body").scrollTop = 130;
+  app.click('[data-child="0.0"]');
+  app.emit("keydown", app.doc.activeElement, { key: "Escape" });
+  assert.equal(app.get(".uoc-body").scrollTop, 130);
+  assert.equal(app.doc.activeElement, app.get('[data-child="0.0"]'));
+  app.get("[data-confirm]").focus();
+  app.emit("keydown", app.doc.activeElement, { key: "Tab" });
+  assert.equal(app.doc.activeElement, app.get("[data-close]"));
+  app.emit("keydown", app.doc.activeElement, { key: "Escape" });
+  assert.equal(app.modal().hidden, true);
+  assert.equal(app.doc.activeElement, app.launch);
+});
+
+test("customer cards render the red recommendation icon only for the explicit flag in both languages", () => {
+  for (const lang of ["vi", "zh-TW"]) {
+    const app = setup([], { lang });
+    app.context.bootstrapData = { catalog: [], translations: {} };
+    vm.runInContext(fs.readFileSync("js/client-menu.js", "utf8"), app.context);
+    const base = {
+      name: "Meal",
+      price: 100,
+      badgeText: "推薦",
+      isRecommended: false,
+    };
+    let card = app.context.createDynamicItemCard("food", base);
+    assert.equal(card.querySelector(".item-recommended-icon"), null);
+    card = app.context.createDynamicItemCard("food", {
+      ...base,
+      isRecommended: true,
+    });
+    assert.equal(
+      card.querySelector(".item-recommended-icon").getAttribute("aria-label"),
+      lang === "vi" ? "Món đề xuất" : "推薦餐點",
+    );
+    assert.equal(card.querySelectorAll(".item-recommended-icon").length, 1);
+  }
+});
+
+test("unavailable linked child choices are rejected and can be removed without losing the parent selection", () => {
+  const coffee = option("Coffee", 0, {
+    productId: "coffee",
+    isDefault: true,
+    subOptions: [{ id: "milk", name: "Milk", price: 3, isOutOfStock: true }],
+  });
+  const ruleGroups = [group("Drinks", [coffee], { minSelection: 1 })];
+  const saved = [
+    {
+      groups: [
+        {
+          groupId: "Drinks",
+          items: [
+            {
+              optionId: "Coffee",
+              quantity: 1,
+              subOptions: [{ id: "milk", name: "Milk", price: 3 }],
+            },
+          ],
+        },
+      ],
+    },
+  ];
+  const app = setup(ruleGroups, { qty: 1, saved });
+  app.open(0);
+  app.click("[data-confirm]");
+  assert.equal(app.modal().hidden, false);
+  assert.equal(app.updates(), 0);
+  app.click('[data-child="0.0"]');
+  const milk = app.get('[data-sub="0.0"][data-index="0"]');
+  assert.equal(milk.disabled, false);
+  milk.checked = false;
+  app.emit("change", milk);
+  app.click("[data-confirm]");
+  app.click("[data-confirm]");
+  assert.equal(
+    app.context.bundleCartData[app.key][0].groups[0].items[0].subOptions.length,
+    0,
+  );
+  assert.equal(
+    app.context.UnifiedOptions.valid(
+      app.rule,
+      app.context.bundleCartData[app.key][0],
+    ),
+    true,
+  );
+});
+
+test("custom topping children remain inline chips within the original simple popup", () => {
+  const app = setup([
+    group("Topping", [
+      option("Egg", 5, {
+        subOptions: [{ id: "soft", name: "Soft", price: 2 }],
+      }),
+    ]),
+  ]);
+  app.open(0);
+  app.click('[data-choose="0"][data-option="0"]');
+  assert.equal(app.modal().classList.contains("uoc-simple"), true);
+  assert.equal(app.modal().querySelector("[data-child]"), null);
+  const soft = app.get('[data-sub="0.0"][data-index="0"]');
+  soft.checked = true;
+  app.emit("change", soft);
+  assert.match(app.get("[data-confirm]").textContent, /\$107/);
+  app.click("[data-confirm]");
+  assert.equal(
+    app.context.bundleCartData[app.key][0].groups[0].items[0].subOptions[0].id,
+    "soft",
+  );
+});

@@ -33,8 +33,8 @@ const domElements = {
   'bundle-step-nav': { innerHTML: '', style: { display: 'none' } },
   'bundle-refresh-prices': { style: { display: 'none' } },
   'bundle-copy-previous': { style: { display: 'none' } },
-  'bundle-cat-tabs': { innerHTML: '' },
-  'bundle-items-list': { innerHTML: '' },
+  'bundle-cat-tabs': { innerHTML: '', style: {} },
+  'bundle-items-list': { innerHTML: '', style: {} },
   'bundle-modifier-editor': { innerHTML: '', style: { display: 'none' } },
   'bundle-modal-item-name': { textContent: '' },
   'bundle-modal-group-label': { textContent: '' },
@@ -151,11 +151,13 @@ assert.ok(itemsHtml.includes('紅茶'), 'Must display item 紅茶');
 
 // Add 1 Tea
 sandbox.window.bundleAddItem('item_tea');
+sandbox.window.bundleChooseGroup(1); // Inspect the drink step after automatic navigation.
 itemsHtml = domElements['bundle-items-list'].innerHTML;
 assert.ok(itemsHtml.includes('bundle-qty-val">1</span>'), 'Tea count should be 1');
 
 // Add 2nd Tea (repeats allowed, max 2 reached)
 sandbox.window.bundleAddItem('item_tea');
+sandbox.window.bundleChooseGroup(1); // Inspect the drink step after automatic navigation.
 itemsHtml = domElements['bundle-items-list'].innerHTML;
 assert.ok(itemsHtml.includes('bundle-qty-val">2</span>'), 'Tea count should be 2');
 assert.ok(itemsHtml.includes('bundle-btn-plus disabled'), 'Plus button must be disabled when group max is reached');
