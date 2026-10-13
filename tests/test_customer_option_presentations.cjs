@@ -87,6 +87,27 @@ const group = (id, options, extra = {}) => ({
   ...extra,
 });
 
+test("option rows omit absent images and hide failed thumbnails across rerenders", () => {
+  const app = setup([
+    group("Sides", [
+      option("No photo", 0, { productId: "no-photo" }),
+      option("Blank photo", 0, { productId: "blank-photo", imageUrl: "   " }),
+      option("Missing photo", 0, { productId: "missing", imageUrl: "/missing.jpg" }),
+      option("With photo", 0, { productId: "photo", imageUrl: "/photo.jpg" }),
+    ], { maxSelection: 6, allowRepeats: true }),
+  ]);
+  app.open(0);
+  assert.equal(app.modal().querySelectorAll(".uoc-item-image").length, 2);
+  const missing = app.get('img[src="/missing.jpg"]');
+  app.emit("error", missing);
+  assert.equal(missing.hidden, true);
+  assert.match(missing.parentElement.textContent, /Missing photo/);
+  assert.equal(app.get('img[src="/photo.jpg"]').hidden, false);
+  app.click('[data-add="0"][data-option="0"]');
+  assert.equal(app.modal().querySelector('img[src="/missing.jpg"]'), null);
+  assert.equal(app.modal().querySelectorAll(".uoc-item-image").length, 1);
+});
+
 test("simple canonical options use the original chip popup, enforce bounds and preserve notes/pricing", () => {
   const app = setup([
     group("Spice", [option("Mild"), option("Hot")], { minSelection: 1 }),
