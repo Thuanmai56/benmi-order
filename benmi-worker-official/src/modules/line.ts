@@ -1,4 +1,5 @@
 import { handleOrderReceiptWebhook } from './line-order-receipts';
+import { receiveCancellationEvent, unsendCancellationMessage } from './order-cancellations';
 import { resolveOrderKey, findOrderForCustomer, isOrderId } from './order-identity';
 import { Env } from '../types/env';
 import { TenantContext, resolveTenantOrderPrefix, generateStandardOrderId } from '../types/tenant';
@@ -452,9 +453,43 @@ export async function handleLineWebhook(
   ctx: ExecutionContext,
   tenantCtx?: TenantContext | null
 ): Promise<Response> {
-  const body: any = await request.json().catch(() => ({}));
+  // Bound webhook input before decoding or verifying the raw signed payload.
+  const reader=request.body?.getReader();
+  if (!reader) return Response.json({error:'Missing webhook'}, {status:400});
+  const decoder=new TextDecoder();
+  let raw='',size=0;
+  try {
+    while (true) {
+      const {done,value}=await reader.read();
+      if (done) break;
+      size+=value.byteLength;
+      if (size>1024*1024) {await reader.cancel();return Response.json({error:'Webhook too large'}, {status:413});}
+      raw+=decoder.decode(value,{stream:true});
+    }
+    raw+=decoder.decode();
+  } finally {reader.releaseLock();}
+  const skipSignatureVerification = env.LINE_WEBHOOK_SKIP_SIGNATURE === 'true';
+  let verified = false;
+  if (tenantCtx?.lineChannelSecret && !skipSignatureVerification) {
+    try {
+      const signature=request.headers.get('x-line-signature') || '';
+      const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(tenantCtx.lineChannelSecret),{name:'HMAC',hash:'SHA-256'},false,['verify']);
+      verified=await crypto.subtle.verify('HMAC',key,Uint8Array.from(atob(signature),c=>c.charCodeAt(0)),new TextEncoder().encode(raw));
+    } catch {verified=false;}
+    if (!verified) return Response.json({error:'Invalid LINE signature'}, {status:401});
+  }
+  let body;
+  try {body=JSON.parse(raw);} catch {return Response.json({error:'Invalid webhook'}, {status:400});}
+  return handleLineEvents(body,env,ctx,tenantCtx,verified || skipSignatureVerification,false,getTenantId(request));
+}
+
+// Internal continuation for a classified non-cancellation; never exposed as an API.
+export async function handleLineEvents(
+  body: {events?: any[]}, env: Env, ctx: ExecutionContext, tenantCtx?: TenantContext|null,
+  cancellationAllowed=false, skipCancellation=false, fallbackTenantId=''
+): Promise<Response> {
   const events = Array.isArray(body.events) ? body.events : [];
-  const tenantId = tenantCtx?.tenantId || getTenantId(request);
+  const tenantId = tenantCtx?.tenantId || fallbackTenantId;
   const brandName = tenantCtx?.brandName || tenantId;
 
   for (const event of events) {
@@ -464,6 +499,11 @@ export async function handleLineWebhook(
     const source = event.source || {};
     const userId = source.userId;
     if (!userId) continue;
+
+    if (event.type==='unsend' && cancellationAllowed && tenantCtx && event.unsend?.messageId) {
+      await unsendCancellationMessage(env,tenantCtx.tenantId,userId,event.unsend.messageId);
+      continue;
+    }
 
     // 0.1) Handle postback events (e.g. Progress Check, Reject/Change Agree/Disagree button taps)
     if (event.type === "postback") {
@@ -660,9 +700,9 @@ export async function handleLineWebhook(
       continue;
     }
 
-    if (message.type !== "text") continue;
+    if (message.type !== "text" || typeof message.text !== 'string') continue;
 
-    const userText = message.text || "";
+    const userText = normalizeLineText(message.text || "");
     const pendingKey = `pending:${userId}`;
     const draftKey = `draft:${userId}`;
 
@@ -670,6 +710,14 @@ export async function handleLineWebhook(
       await env.DB.prepare("DELETE FROM pending_actions WHERE tenant_id = ? AND user_id = ?").bind(tenantId, userId).run();
       try { await env.ORDER_STATE.delete(draftKey); } catch { }
       continue;
+    }
+
+    const pendingMapBeforeDraft = await getPendingMap(env, tenantId, userId);
+    const hasPendingAction = Object.keys(pendingMapBeforeDraft).length > 0;
+    const structuredNotification = userText.includes('訂單編號：') || userText.includes('[加點') || userText.includes('加點成功')
+      || userText.includes('加點餐點') || userText.includes('[更換品項') || userText.includes('更換品項內容');
+    if (!skipCancellation && cancellationAllowed && source.type==='user' && tenantCtx && !hasPendingAction && !structuredNotification) {
+      if (await receiveCancellationEvent(env,tenantCtx,event,ctx)) continue;
     }
 
     // 0.2) Handle text progress triggers (e.g. 查詢進度 / 進度 / tiến độ / check progress)
@@ -1071,8 +1119,6 @@ export async function handleLineWebhook(
 
     // 0.5) If no pending action exists, a stale draft may be classified for LIFF redirect.
     // Pending actions must win so a change/reject response can never enter the generic order flow.
-    const pendingMapBeforeDraft = await getPendingMap(env, tenantId, userId);
-    const hasPendingAction = Object.keys(pendingMapBeforeDraft).length > 0;
     const draftRaw = tenantCtx?.aiOrderRedirectEnabled === false || hasPendingAction
       ? null
       : await env.ORDER_STATE.get(draftKey);

@@ -6,6 +6,7 @@ import { invalidateBootstrapCache, parseOperatingHours } from './bootstrap';
 import { invalidateMarketplaceCache } from './marketplace';
 import { customerOrderConfig } from '../utils/order-domain';
 import { createTenantRepository } from '../repositories/tenant.repository';
+import { getCancellationConfig } from './order-cancellations';
 
 export async function getConfig(
   request: Request,
@@ -62,6 +63,8 @@ export async function getConfig(
 
   return json({
     tenantId,
+    cancellationDetection: await getCancellationConfig(env,tenantId),
+    cancellationDetectionAvailable: env.CANCELLATION_ENGINE_ENABLED==='true' && (env.LINE_WEBHOOK_SKIP_SIGNATURE==='true' || !!tenantCtx?.lineChannelSecret),
     liffId: domainRow.liff_id || null,
     ...orderConfig,
     operatingHours,
@@ -85,6 +88,17 @@ export async function updateConfig(
     const payload: any = await request.json();
     const tenantRepo = createTenantRepository(env.DB, env.ORDER_STATE, env);
 
+    const cancellation = payload.cancellationDetection;
+    if (cancellation !== undefined) {
+      if (!cancellation || typeof cancellation.enabled!=='boolean' || typeof cancellation.review!=='number' || typeof cancellation.clear!=='number'
+        || !Number.isFinite(cancellation.review) || !Number.isFinite(cancellation.clear) || cancellation.review<=0 || cancellation.review>=cancellation.clear || cancellation.clear>1) {
+        return json({error:'Invalid cancellation thresholds'},400);
+      }
+      if (cancellation.enabled && (env.CANCELLATION_ENGINE_ENABLED!=='true' || (env.LINE_WEBHOOK_SKIP_SIGNATURE!=='true' && !tenantCtx?.lineChannelSecret))) {
+        return json({error:'Cancellation detection requires an enabled engine and configured LINE channel secret'},400);
+      }
+    }
+
     const hasDineInFeature = tenantCtx ? tenantHasFeature(tenantCtx, 'dine_in') : true;
     let allowDineInVal = payload.allowDineIn !== undefined ? payload.allowDineIn : null;
     if (allowDineInVal && !hasDineInFeature) {
@@ -106,6 +120,12 @@ export async function updateConfig(
       features: payload.features,
       brandName
     });
+
+    if (cancellation !== undefined) {
+      await env.DB.prepare(`UPDATE tenant_config SET cancellation_detection_enabled=?,cancellation_review_threshold=?,cancellation_clear_threshold=?,updated_at=datetime('now') WHERE tenant_id=?`)
+        .bind(cancellation.enabled?1:0,cancellation.review,cancellation.clear,tenantId).run();
+      await env.ORDER_STATE.delete(`tenant:${tenantId}:config_cache`);
+    }
 
     await invalidateBootstrapCache(tenantId, env);
     await invalidateMarketplaceCache(env);

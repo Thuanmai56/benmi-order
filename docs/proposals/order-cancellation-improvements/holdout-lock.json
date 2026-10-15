@@ -1,0 +1,14 @@
+{
+  "sha256": "1802fc408d4c9456027b4519afcd5d6b15a9a024a00b050ea1d9dd4db6a94e67",
+  "cases": 120,
+  "groups": {
+    "explicit": 40,
+    "possible": 20,
+    "negative": 40,
+    "pending": 20
+  },
+  "synthetic": true,
+  "generation": 4,
+  "promptAtLock": "clef-cancellation-v7",
+  "reason": "Final untouched acceptance set created after full-message Vietnamese regex guards. Prior failures kept without relabelling."
+}

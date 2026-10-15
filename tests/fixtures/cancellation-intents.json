@@ -1,0 +1,1314 @@
+[
+  {
+    "locale": "vi",
+    "text": "Hủy đơn giúp mình",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Xin hủy toàn bộ đơn này nhé",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Mình muốn hủy đơn vừa đặt",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Bạn hủy đơn hàng này cho tôi được không?",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Mình không qua lấy nữa được rồi",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Có việc đột xuất nên mình không lấy đồ ăn được, quán hủy giúp",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Mình đặt nhầm quán, xin bỏ toàn bộ đơn",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Thôi quán đừng làm đơn của mình nữa nhé",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Mình không cần đơn này nữa",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Xin lỗi mình phải hủy lần đặt này",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Bỏ hết đơn giúp em với",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Mình đặt trùng đơn, bỏ đơn mới nhất nhé",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Không cần giao đơn này nữa, hủy giúp mình",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Cho tôi hủy đơn trước khi quán làm",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Tôi muốn rút đơn đã đặt",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Không thể đến lấy, đừng chuẩn bị đồ ăn cho tôi nữa",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Hủy cả đồ ăn và đồ uống trong đơn giúp mình",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "取消訂單",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "請幫我取消訂單",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "我想取消剛才的訂單",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "可以幫我取消這筆訂單嗎？",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "我臨時有事，今天沒辦法去拿，請取消",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "整筆不要了，麻煩取消",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "我訂錯店了，請取消全部",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "不用做我的餐了，今天不拿了",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "這筆訂單我不要了",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "重複下單了，最新那筆幫我取消",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "餐點和飲料都不要了",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "我不需要這份訂單了",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "突然不能過去取餐，請幫我處理取消",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "請撤回我剛下的訂單",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "我要取消整份餐點",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "今天不方便拿，整單都取消吧",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "麻煩停掉我的訂單，謝謝",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Cancel my order",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Please cancel the entire order",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Could you cancel the order I just placed?",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "I cannot collect my meal anymore, please cancel it",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "I ordered from the wrong shop, cancel everything",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Please stop preparing my order, I no longer need it",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "I placed two orders accidentally, cancel the latest one",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "I would like to withdraw my food order",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "I will not be picking this order up; please cancel",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Cancel all the food and drinks I ordered",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Something came up and I cannot come, please cancel my meal",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "I want to cancel this order before you prepare it",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "I no longer want any of this order",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Please void my order",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Do not make my meal anymore, I am cancelling the order",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "I need my entire order cancelled",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Đừng hủy đơn",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "vi",
+    "text": "Không hủy đơn nữa",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "vi",
+    "text": "Chỉ bỏ ly trà thôi, vẫn làm bánh mì nhé",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "vi",
+    "text": "Bỏ topping trân châu, giữ đơn",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "vi",
+    "text": "Mình muốn bỏ một món trong đơn",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "vi",
+    "text": "Quán có chính sách hủy đơn thế nào?",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Hủy đơn thì có mất phí không?",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Nếu hủy đơn thì có được hoàn tiền không?",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Nếu chờ lâu quá thì tôi sẽ hủy",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Đơn đã làm xong chưa?",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Mình sẽ tới lấy lúc 6 giờ",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Thay trà sữa thành cà phê giúp mình",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Không hủy đâu, mình vẫn đến lấy",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "vi",
+    "text": "Mình hủy ý định hủy đơn rồi",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "vi",
+    "text": "Đơn hôm qua đã hủy, hôm nay tôi đặt đơn mới",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Cho mình thêm một bánh mì",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Đừng bỏ đơn này, chỉ bỏ hành thôi",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "zh-TW",
+    "text": "不要取消訂單",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "zh-TW",
+    "text": "不用取消了",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "zh-TW",
+    "text": "只取消飲料，餐點保留",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "zh-TW",
+    "text": "不要珍珠，訂單照常",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "zh-TW",
+    "text": "幫我刪掉其中一個品項",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "zh-TW",
+    "text": "你們的取消政策是什麼？",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "取消訂單會收費嗎？",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "如果取消可以退款嗎？",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "如果等太久我就取消",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "我的餐做好了嗎？",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "我六點會去拿",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "幫我把奶茶換成咖啡",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "我沒有要取消，還是會拿",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "zh-TW",
+    "text": "我收回取消申請，餐點照做",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "zh-TW",
+    "text": "昨天取消那筆，今天我想重新點",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "再加一個麵包",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "不要取消整單，只取消小菜",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "en",
+    "text": "Do not cancel my order",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "en",
+    "text": "Don't cancel my order",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "en",
+    "text": "Remove just the tea, keep the meal",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "en",
+    "text": "No pearls please, keep the order",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "en",
+    "text": "I want to remove one item only",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "en",
+    "text": "What is your cancellation policy?",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Is there a cancellation fee?",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Would I get a refund if I cancelled?",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "If it takes too long I will cancel",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Is my food ready?",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "I will collect it at six",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Replace the tea with coffee",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "I am not cancelling, I still want the order",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "en",
+    "text": "I withdraw my cancellation request",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "en",
+    "text": "Yesterday I cancelled; today I want to order again",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Add one more sandwich",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Chào quán, Hủy đơn giúp mình",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Chào quán, Xin hủy toàn bộ đơn này nhé",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Chào quán, Mình muốn hủy đơn vừa đặt",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Chào quán, Bạn hủy đơn hàng này cho tôi được không?",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Chào quán, Mình không qua lấy nữa được rồi",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Chào quán, Có việc đột xuất nên mình không lấy đồ ăn được, quán hủy giúp",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Chào quán, Mình đặt nhầm quán, xin bỏ toàn bộ đơn",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Chào quán, Thôi quán đừng làm đơn của mình nữa nhé",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Chào quán, Mình không cần đơn này nữa",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Chào quán, Xin lỗi mình phải hủy lần đặt này",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Chào quán, Bỏ hết đơn giúp em với",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Chào quán, Mình đặt trùng đơn, bỏ đơn mới nhất nhé",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Chào quán, Không cần giao đơn này nữa, hủy giúp mình",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Chào quán, Cho tôi hủy đơn trước khi quán làm",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Chào quán, Tôi muốn rút đơn đã đặt",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Chào quán, Không thể đến lấy, đừng chuẩn bị đồ ăn cho tôi nữa",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Chào quán, Hủy cả đồ ăn và đồ uống trong đơn giúp mình",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "您好，取消訂單",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "您好，請幫我取消訂單",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "您好，我想取消剛才的訂單",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "您好，可以幫我取消這筆訂單嗎？",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "您好，我臨時有事，今天沒辦法去拿，請取消",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "您好，整筆不要了，麻煩取消",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "您好，我訂錯店了，請取消全部",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "您好，不用做我的餐了，今天不拿了",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "您好，這筆訂單我不要了",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "您好，重複下單了，最新那筆幫我取消",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "您好，餐點和飲料都不要了",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "您好，我不需要這份訂單了",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "您好，突然不能過去取餐，請幫我處理取消",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "您好，請撤回我剛下的訂單",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "您好，我要取消整份餐點",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "您好，今天不方便拿，整單都取消吧",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "您好，麻煩停掉我的訂單，謝謝",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Hello, Cancel my order",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Hello, Please cancel the entire order",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Hello, Could you cancel the order I just placed?",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Hello, I cannot collect my meal anymore, please cancel it",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Hello, I ordered from the wrong shop, cancel everything",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Hello, Please stop preparing my order, I no longer need it",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Hello, I placed two orders accidentally, cancel the latest one",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Hello, I would like to withdraw my food order",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Hello, I will not be picking this order up; please cancel",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Hello, Cancel all the food and drinks I ordered",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Hello, Something came up and I cannot come, please cancel my meal",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Hello, I want to cancel this order before you prepare it",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Hello, I no longer want any of this order",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Hello, Please void my order",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Hello, Do not make my meal anymore, I am cancelling the order",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Hello, I need my entire order cancelled",
+    "expectedCancel": true,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Chào quán, Đừng hủy đơn",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "vi",
+    "text": "Chào quán, Không hủy đơn nữa",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "vi",
+    "text": "Chào quán, Chỉ bỏ ly trà thôi, vẫn làm bánh mì nhé",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "vi",
+    "text": "Chào quán, Bỏ topping trân châu, giữ đơn",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "vi",
+    "text": "Chào quán, Mình muốn bỏ một món trong đơn",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "vi",
+    "text": "Chào quán, Quán có chính sách hủy đơn thế nào?",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Chào quán, Hủy đơn thì có mất phí không?",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Chào quán, Nếu hủy đơn thì có được hoàn tiền không?",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Chào quán, Nếu chờ lâu quá thì tôi sẽ hủy",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Chào quán, Đơn đã làm xong chưa?",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Chào quán, Mình sẽ tới lấy lúc 6 giờ",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Chào quán, Thay trà sữa thành cà phê giúp mình",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Chào quán, Không hủy đâu, mình vẫn đến lấy",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "vi",
+    "text": "Chào quán, Mình hủy ý định hủy đơn rồi",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "vi",
+    "text": "Chào quán, Đơn hôm qua đã hủy, hôm nay tôi đặt đơn mới",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Chào quán, Cho mình thêm một bánh mì",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Chào quán, Đừng bỏ đơn này, chỉ bỏ hành thôi",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "zh-TW",
+    "text": "您好，不要取消訂單",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "zh-TW",
+    "text": "您好，不用取消了",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "zh-TW",
+    "text": "您好，只取消飲料，餐點保留",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "zh-TW",
+    "text": "您好，不要珍珠，訂單照常",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "zh-TW",
+    "text": "您好，幫我刪掉其中一個品項",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "zh-TW",
+    "text": "您好，你們的取消政策是什麼？",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "您好，取消訂單會收費嗎？",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "您好，如果取消可以退款嗎？",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "您好，如果等太久我就取消",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "您好，我的餐做好了嗎？",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "您好，我六點會去拿",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "您好，幫我把奶茶換成咖啡",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "您好，我沒有要取消，還是會拿",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "zh-TW",
+    "text": "您好，我收回取消申請，餐點照做",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "zh-TW",
+    "text": "您好，昨天取消那筆，今天我想重新點",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "您好，再加一個麵包",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "zh-TW",
+    "text": "您好，不要取消整單，只取消小菜",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "en",
+    "text": "Hello, Do not cancel my order",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "en",
+    "text": "Hello, Don't cancel my order",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "en",
+    "text": "Hello, Remove just the tea, keep the meal",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "en",
+    "text": "Hello, No pearls please, keep the order",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "en",
+    "text": "Hello, I want to remove one item only",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "en",
+    "text": "Hello, What is your cancellation policy?",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Hello, Is there a cancellation fee?",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Hello, Would I get a refund if I cancelled?",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Hello, If it takes too long I will cancel",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Hello, Is my food ready?",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Hello, I will collect it at six",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Hello, Replace the tea with coffee",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Hello, I am not cancelling, I still want the order",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "en",
+    "text": "Hello, I withdraw my cancellation request",
+    "expectedCancel": false,
+    "hardNegative": true
+  },
+  {
+    "locale": "en",
+    "text": "Hello, Yesterday I cancelled; today I want to order again",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "en",
+    "text": "Hello, Add one more sandwich",
+    "expectedCancel": false,
+    "hardNegative": false
+  },
+  {
+    "locale": "vi",
+    "text": "Tôi nghĩ tôi không thể lấy món",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "status": "NEW"
+  },
+  {
+    "locale": "vi",
+    "text": "Chắc hôm nay tôi không đến lấy đồ ăn được rồi",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "status": "NEW"
+  },
+  {
+    "locale": "vi",
+    "text": "Có lẽ mình không thể nhận đơn này nữa",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "status": "NEW"
+  },
+  {
+    "locale": "zh-TW",
+    "text": "我想我沒辦法去拿餐點了",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "status": "NEW"
+  },
+  {
+    "locale": "zh-TW",
+    "text": "今天應該沒辦法去取餐了",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "status": "NEW"
+  },
+  {
+    "locale": "en",
+    "text": "I think I won't be able to collect the food",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "status": "NEW"
+  },
+  {
+    "locale": "vi",
+    "text": "Tôi không thể lấy món bây giờ, lát nữa tôi sẽ đến",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "status": "NEW"
+  },
+  {
+    "locale": "vi",
+    "text": "Tôi không thể lấy món, bạn tôi sẽ lấy giúp",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "status": "NEW"
+  },
+  {
+    "locale": "vi",
+    "text": "Tôi không thể đến lấy, quán giao giúp tôi được không?",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "status": "NEW"
+  },
+  {
+    "locale": "vi",
+    "text": "Tôi nghĩ tôi không thể ăn cay, bỏ ớt thôi nhé",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "status": "NEW"
+  },
+  {
+    "locale": "vi",
+    "text": "Nếu không thể đến lấy thì tôi có được hủy không?",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "status": "NEW"
+  },
+  {
+    "locale": "vi",
+    "text": "Tôi vẫn đến lấy, đừng hủy đơn",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "status": "NEW"
+  },
+  {
+    "locale": "zh-TW",
+    "text": "我沒辦法去拿，朋友會幫我取餐",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "status": "NEW"
+  },
+  {
+    "locale": "zh-TW",
+    "text": "我現在不能去拿，晚點會過去",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "status": "NEW"
+  },
+  {
+    "locale": "en",
+    "text": "I can't collect it now, I will pick it up later",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "status": "NEW"
+  },
+  {
+    "locale": "en",
+    "text": "I cannot collect, please deliver instead",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "status": "NEW"
+  }
+]

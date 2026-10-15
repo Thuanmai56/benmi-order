@@ -1,0 +1,7 @@
+{
+  "sha256": "f0df05d300759b0e02f336cc83ebc10d56491231b04ce68fa0c85358d35efea9",
+  "cases": 80,
+  "synthetic": true,
+  "promptAtLock": "clef-cancellation-v8-tw",
+  "purpose": "Untouched Taiwan validation. Locked before first evaluation; no prompt examples copied from this set."
+}

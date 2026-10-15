@@ -1038,6 +1038,7 @@ window.updatePageMainTitle = updatePageMainTitle;
 // 1.5s Polling loop for active order updates - ALWAYS runs across all dashboard tabs!
 setInterval(() => {
   fetchOrders();
+  if (typeof window.fetchCancellationRequests === "function") window.fetchCancellationRequests();
 }, 1500);
 
 // Dynamic 10s timer to automatically refresh ETA time countdowns

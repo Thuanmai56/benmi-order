@@ -85,6 +85,7 @@
         } catch (e) {}
       })();
     </script>
+  <link rel="stylesheet" href="css/orders-cancellations.css?v=20261014_cancel_intent_v3">
 </head>
 
 <body>
@@ -167,6 +168,7 @@
 
     <!-- Main Content Area -->
     <main class="main-layout" id="main-layout">
+      <div id="cancellation-banner" class="cancel-banner" role="status" aria-live="polite" hidden><span id="cancellation-banner-label"></span><button type="button" class="btn" id="cancellation-banner-open" onclick="openCancellationRequests()"></button></div>
       <!-- Main Content Topbar (Uber Eats Style) -->
       <header class="main-topbar" id="main-topbar">
         <div class="main-topbar-left">
@@ -693,6 +695,10 @@
                 </button>
               </div>
 
+              <div class="cancel-setting">
+                <label><input type="checkbox" id="cancellation-setting-enabled" disabled onchange="saveCancellationSetting()"><span data-cancellation-i18n="SettingTitle"></span></label>
+                <p data-cancellation-i18n="SettingHint"></p><p id="cancellation-setting-status" role="status"></p>
+              </div>
               <div style="padding: 22px 20px; display: flex; flex-direction: column; gap: 20px;">
 
                 <!-- 1. Store Logo Section -->
@@ -1463,6 +1469,7 @@
 
             <!-- Lifecycle Action Buttons -->
             <div class="modal-lifecycle-footer">
+              <div id="review-cancellation-summary" class="cancel-review-summary" hidden></div>
               <div class="modal-actions" id="review-actions">
                 <button class="btn btn-primary btn-lifecycle-primary" id="btn-review-accept" onclick="reviewAccept(this)">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
@@ -2118,15 +2125,20 @@
   </div>
 
   <!-- Benmi POS Modular Architecture Scripts -->
-  <script src="js/orders-i18n.js?v=20261011_xprinter_bt_fix_v1"></script>
-  <script src="js/orders-core.js?v=20261006_tablet_text_v1"></script>
+  <div id="cancellationModal" class="modal cancellation-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="cancellation-title">
+    <div class="cancel-dialog"><header class="cancel-dialog-header"><h2 id="cancellation-title"></h2><button type="button" class="btn btn-ghost" id="cancellation-close" onclick="closeCancellationRequests()"></button></header><div class="cancel-dialog-body" id="cancellation-body"></div><footer class="cancel-dialog-actions" id="cancellation-actions" hidden></footer></div>
+  </div>
+
+  <script src="js/orders-i18n.js?v=20261014_cancel_intent_v3"></script>
+  <script src="js/orders-core.js?v=20261014_cancel_intent_v3"></script>
   <script src="js/orders-audio.js?v=20261006_tablet_text_v1"></script>
   <script src="js/printer-service.js?v=20261011_xprinter_bt_fix_v1"></script>
-  <script src="js/orders-live.js?v=20261006_tablet_text_v1"></script>
-  <script src="js/orders-modals.js?v=20261006_tablet_text_v1"></script>
+  <script src="js/orders-live.js?v=20261014_cancel_intent_v3"></script>
+  <script src="js/orders-modals.js?v=20261014_cancel_intent_v3"></script>
+  <script src="js/orders-cancellations.js?v=20261014_cancel_intent_v3"></script>
   <script src="js/orders-history.js?v=20261006_tablet_text_v1"></script>
   <script src="js/orders-reports.js?v=20261006_tablet_text_v1"></script>
-  <script src="js/orders-settings.js?v=20261006_tablet_text_v1"></script>
+  <script src="js/orders-settings.js?v=20261014_cancel_intent_v3"></script>
   <script src="js/orders-menu.js?v=20261006_tablet_text_v1"></script>
 
   <!-- POS Bootstrap & Initialization -->

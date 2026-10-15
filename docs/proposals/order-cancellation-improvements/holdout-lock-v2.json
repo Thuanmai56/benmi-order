@@ -1,0 +1,14 @@
+{
+  "sha256": "0ae750b15a9423ee4bc143a0793d207f86e038d13b74a77447ce07ba375d47d1",
+  "cases": 120,
+  "groups": {
+    "explicit": 40,
+    "possible": 20,
+    "negative": 40,
+    "pending": 20
+  },
+  "synthetic": true,
+  "generation": 2,
+  "reason": "First holdout failed; retained as historical audit. Replacement locked before its first evaluation, after v5 prompt was written.",
+  "promptAtLock": "clef-cancellation-v5"
+}

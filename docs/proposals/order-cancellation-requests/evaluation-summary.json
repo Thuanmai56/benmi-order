@@ -1,0 +1,19 @@
+{
+  "cases": 216,
+  "realModelCalls": 194,
+  "review": 0.6,
+  "clear": 0.9,
+  "clearPrecision": 1,
+  "combinedRecall": 0.9716981132075472,
+  "hardNegativeFailures": 0,
+  "passed": true,
+  "date": "2026-10-14",
+  "model": "@cf/cloudflare/clef-flash",
+  "questions": [
+    "cancel_entire_order",
+    "needs_cancellation_review"
+  ],
+  "corpus": "216 synthetic messages: 200 baseline messages and 16 indirect collection/alternative-arrangement regression cases",
+  "dataset_sha256": "6f199c875de1dc5e4f073bcf6b0ae30490af7e6ba80001bfb450b118e302eb96",
+  "note": "Offline intent evaluation; not a production message benchmark or end-to-end latency measurement."
+}

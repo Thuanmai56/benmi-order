@@ -157,6 +157,7 @@ HTML_FILES.forEach(htmlFile => {
         innerText: "",
         appendChild: () => {},
         getElementsByClassName: () => [],
+        querySelectorAll: () => [],
         addEventListener: () => {},
         removeEventListener: () => {}
       }),

@@ -27,7 +27,15 @@ for (const mode of ['dev', 'test', 'production']) {
     for (const { binding, store_id: storeId, secret_name: secretName } of original.secrets_store_secrets) {
       expected[binding] = { type: 'secrets-store-secret', storeId, secretName };
     }
-    assert.deepEqual(worker.env, expected);
+    const { AI, CANCELLATION_QUEUE, CANCELLATION_ENGINE_ENABLED, LINE_WEBHOOK_SKIP_SIGNATURE, CLEF_MODEL_VARIANT, ...preserved } = worker.env;
+    assert.deepEqual(preserved, expected);
+    assert.deepEqual(AI, { type: 'ai' });
+    const suffix = mode === 'test' ? 'staging' : mode;
+    assert.deepEqual(CANCELLATION_QUEUE, { type: 'queue', name: `order-cancellation-${suffix}` });
+    assert.deepEqual(CANCELLATION_ENGINE_ENABLED, { type: 'text', value: mode === 'production' ? 'false' : 'true' });
+    assert.deepEqual(LINE_WEBHOOK_SKIP_SIGNATURE, mode === 'test' ? { type: 'text', value: 'true' } : undefined);
+    assert.deepEqual(CLEF_MODEL_VARIANT, mode === 'test' ? { type: 'text', value: '@cf/cloudflare/clef' } : undefined);
+    assert(worker.triggers.some(trigger => trigger.type === 'queue' && trigger.name === `order-cancellation-${suffix}` && trigger.deadLetterQueue === `order-cancellation-${suffix}-dlq`));
     assert.equal(worker.observability.logs.persist, original.observability.logs.persist);
     assert.equal(worker.observability.logs.invocationLogs, original.observability.logs.invocation_logs);
     assert.equal(worker.observability.headSamplingRate, original.observability.head_sampling_rate);

@@ -1,0 +1,902 @@
+[
+  {
+    "id": "tw-holdout-cancel-01",
+    "locale": "zh-TW",
+    "text": "拍謝，麻煩取消我這張訂單",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-cancel-02",
+    "locale": "zh-TW",
+    "text": "店家不好意思，這單幫我撤掉",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-cancel-03",
+    "locale": "zh-TW",
+    "text": "可以退掉剛下的那個訂單嗎",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-cancel-04",
+    "locale": "zh-TW",
+    "text": "這張訂單我不要了喔，請取消",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-cancel-05",
+    "locale": "zh-TW",
+    "text": "請把最新那筆多訂的取消",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-cancel-06",
+    "locale": "zh-TW",
+    "text": "餐不用準備了，我要退掉整單",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-cancel-07",
+    "locale": "zh-TW",
+    "text": "不好意思下錯單，這筆取消一下",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-cancel-08",
+    "locale": "zh-TW",
+    "text": "我改到別的店吃，幫我取消整單",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-cancel-09",
+    "locale": "zh-TW",
+    "text": "這單整張退掉就好，謝謝你",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-cancel-10",
+    "locale": "zh-TW",
+    "text": "剛剛下的餐整單不訂了",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-cancel-11",
+    "locale": "zh-TW",
+    "text": "今天的訂餐想撤單，麻煩幫忙",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-cancel-12",
+    "locale": "zh-TW",
+    "text": "麻煩刪掉整筆外帶訂單",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-cancel-13",
+    "locale": "zh-TW",
+    "text": "這張訂單全部都不要了",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-cancel-14",
+    "locale": "zh-TW",
+    "text": "整份外帶請取消，抱歉喔",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-cancel-15",
+    "locale": "zh-TW",
+    "text": "能把我下錯的那張單取消嗎",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-cancel-16",
+    "locale": "zh-TW",
+    "text": "我的午餐整單幫我退掉",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-cancel-17",
+    "locale": "zh-TW",
+    "text": "訂單我送重複了，幫我退最後那張",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-cancel-18",
+    "locale": "zh-TW",
+    "text": "請取消這一筆餐點訂單",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-cancel-19",
+    "locale": "zh-TW",
+    "text": "這份訂好的餐整份不要做了",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-cancel-20",
+    "locale": "zh-TW",
+    "text": "退掉剛才整個訂單，謝謝",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-possible_cancel-01",
+    "locale": "zh-TW",
+    "text": "我怕趕不上去店裡領這餐",
+    "expectedIntent": "possible_cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-possible_cancel-02",
+    "locale": "zh-TW",
+    "text": "我今天可能沒辦法過去領餐",
+    "expectedIntent": "possible_cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-possible_cancel-03",
+    "locale": "zh-TW",
+    "text": "這份外帶我應該沒法拿到了",
+    "expectedIntent": "possible_cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-possible_cancel-04",
+    "locale": "zh-TW",
+    "text": "突然有急事，我取不了今天的餐",
+    "expectedIntent": "possible_cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-possible_cancel-05",
+    "locale": "zh-TW",
+    "text": "今天這單可能無法去收餐",
+    "expectedIntent": "possible_cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-possible_cancel-06",
+    "locale": "zh-TW",
+    "text": "我沒辦法收到這份已訂的餐了",
+    "expectedIntent": "possible_cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-possible_cancel-07",
+    "locale": "zh-TW",
+    "text": "我應該來不及拿這張的餐",
+    "expectedIntent": "possible_cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-possible_cancel-08",
+    "locale": "zh-TW",
+    "text": "看來今天我拿不到已訂的餐了",
+    "expectedIntent": "possible_cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-possible_cancel-09",
+    "locale": "zh-TW",
+    "text": "訂好的餐我可能沒辦法去取",
+    "expectedIntent": "possible_cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-possible_cancel-10",
+    "locale": "zh-TW",
+    "text": "今天這餐恐怕沒人能去取",
+    "expectedIntent": "possible_cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-possible_cancel-11",
+    "locale": "zh-TW",
+    "text": "臨時要離開，餐點應該無法領了",
+    "expectedIntent": "possible_cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-possible_cancel-12",
+    "locale": "zh-TW",
+    "text": "這份餐我真的沒辦法去拿",
+    "expectedIntent": "possible_cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-possible_cancel-13",
+    "locale": "zh-TW",
+    "text": "我想我領不了這筆餐了",
+    "expectedIntent": "possible_cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-possible_cancel-14",
+    "locale": "zh-TW",
+    "text": "我今天不會去領這份餐了",
+    "expectedIntent": "possible_cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-possible_cancel-15",
+    "locale": "zh-TW",
+    "text": "取餐我可能趕不到現場了",
+    "expectedIntent": "possible_cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-other-01",
+    "locale": "zh-TW",
+    "text": "我現在沒法去拿，晚一點會到店",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-other-02",
+    "locale": "zh-TW",
+    "text": "餐幫我留著，我同事會代領",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-other-03",
+    "locale": "zh-TW",
+    "text": "我不能親自拿，能改成送餐嗎",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-other-04",
+    "locale": "zh-TW",
+    "text": "不方便自取，叫外送員幫我拿可以嗎",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-other-05",
+    "locale": "zh-TW",
+    "text": "不用取消訂單，我晚些到",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-other-06",
+    "locale": "zh-TW",
+    "text": "不要退整單，只退那杯紅茶",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-other-07",
+    "locale": "zh-TW",
+    "text": "取消套餐裡的飲料，飯還是要",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-other-08",
+    "locale": "zh-TW",
+    "text": "去掉蔥花就好，訂單照做",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-other-09",
+    "locale": "zh-TW",
+    "text": "我只取消加點，原本訂的保留",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-other-10",
+    "locale": "zh-TW",
+    "text": "餐留著，妹妹下班幫我拿",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-other-11",
+    "locale": "zh-TW",
+    "text": "我只是問問取消能退錢嗎",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-other-12",
+    "locale": "zh-TW",
+    "text": "退訂餐的費用怎麼計算？",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-other-13",
+    "locale": "zh-TW",
+    "text": "若沒辦法領餐，之後能取消嗎",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-other-14",
+    "locale": "zh-TW",
+    "text": "還沒決定取消，先問規則而已",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-other-15",
+    "locale": "zh-TW",
+    "text": "假如做太慢我才會取消",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-other-16",
+    "locale": "zh-TW",
+    "text": "如果臨時不能拿再退單",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-other-17",
+    "locale": "zh-TW",
+    "text": "店家餐還要多久才能領",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-other-18",
+    "locale": "zh-TW",
+    "text": "請問這筆現在的進度如何",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-other-19",
+    "locale": "zh-TW",
+    "text": "有收到我的訂單嗎",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-other-20",
+    "locale": "zh-TW",
+    "text": "我等等就到了，辛苦了",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-other-21",
+    "locale": "zh-TW",
+    "text": "現在在哪邊取餐比較方便",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-other-22",
+    "locale": "zh-TW",
+    "text": "幫我改辣度，訂單不要取消",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-other-23",
+    "locale": "zh-TW",
+    "text": "不是要退單，我只是問外送",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-other-24",
+    "locale": "zh-TW",
+    "text": "朋友沒空領，但我還是會去拿",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-other-25",
+    "locale": "zh-TW",
+    "text": "算了，我會等餐做好再領",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "tw-holdout-pending-01",
+    "locale": "zh-TW",
+    "text": "原本說取消的不用了，訂單保留",
+    "expectedIntent": "withdraw_cancel",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "這個訂單請全部取消",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "tw-holdout-pending-02",
+    "locale": "zh-TW",
+    "text": "我想繼續訂這餐，別取消了",
+    "expectedIntent": "withdraw_cancel",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "這個訂單請全部取消",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "tw-holdout-pending-03",
+    "locale": "zh-TW",
+    "text": "我還是要這份餐，麻煩保留",
+    "expectedIntent": "withdraw_cancel",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "這個訂單請全部取消",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "tw-holdout-pending-04",
+    "locale": "zh-TW",
+    "text": "剛才退單的要求請收回",
+    "expectedIntent": "withdraw_cancel",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "這個訂單請全部取消",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "tw-holdout-pending-05",
+    "locale": "zh-TW",
+    "text": "不用撤單，家人會代領",
+    "expectedIntent": "withdraw_cancel",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "這個訂單請全部取消",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "tw-holdout-pending-06",
+    "locale": "zh-TW",
+    "text": "我改主意，餐點還是要的",
+    "expectedIntent": "withdraw_cancel",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "這個訂單請全部取消",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "tw-holdout-pending-07",
+    "locale": "zh-TW",
+    "text": "之前的取消申請撤回，這單照做",
+    "expectedIntent": "withdraw_cancel",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "這個訂單請全部取消",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "tw-holdout-pending-08",
+    "locale": "zh-TW",
+    "text": "訂單還是照常出餐，別退喔",
+    "expectedIntent": "withdraw_cancel",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "這個訂單請全部取消",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "tw-holdout-pending-09",
+    "locale": "zh-TW",
+    "text": "我不取消這單了，會去拿",
+    "expectedIntent": "withdraw_cancel",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "這個訂單請全部取消",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "tw-holdout-pending-10",
+    "locale": "zh-TW",
+    "text": "餐我要繼續拿，不要退掉",
+    "expectedIntent": "withdraw_cancel",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "這個訂單請全部取消",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "tw-holdout-pending-11",
+    "locale": "zh-TW",
+    "text": "請問這張外帶多久可以領",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "這個訂單請全部取消",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "tw-holdout-pending-12",
+    "locale": "zh-TW",
+    "text": "想查詢一下目前做餐進度",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "這個訂單請全部取消",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "tw-holdout-pending-13",
+    "locale": "zh-TW",
+    "text": "不好意思，餐點已經好了嗎",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "這個訂單請全部取消",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "tw-holdout-pending-14",
+    "locale": "zh-TW",
+    "text": "目前還需要等幾分鐘？",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "這個訂單請全部取消",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "tw-holdout-pending-15",
+    "locale": "zh-TW",
+    "text": "這單幾點能夠領到？",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "這個訂單請全部取消",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "tw-holdout-pending-16",
+    "locale": "zh-TW",
+    "text": "店家謝謝你回覆",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "這個訂單請全部取消",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "tw-holdout-pending-17",
+    "locale": "zh-TW",
+    "text": "辛苦了，謝謝",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "這個訂單請全部取消",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "tw-holdout-pending-18",
+    "locale": "zh-TW",
+    "text": "餐現在做到哪了呢",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "這個訂單請全部取消",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "tw-holdout-pending-19",
+    "locale": "zh-TW",
+    "text": "確認整筆退單，我不要這餐了",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "這個訂單請全部取消",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "tw-holdout-pending-20",
+    "locale": "zh-TW",
+    "text": "還是取消這張訂單，麻煩了",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "這個訂單請全部取消",
+        "event_at": 1
+      }
+    ]
+  }
+]

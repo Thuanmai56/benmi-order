@@ -56,6 +56,7 @@ if (typeof window !== "undefined" && !window.__orderModalEscRegistered) {
   window.__orderModalEscRegistered = true;
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" || e.key === "Esc") {
+      if (document.getElementById('cancellationModal')?.style.display === 'flex') return;
       const alertEl = document.getElementById("new-alert");
       if (alertEl && alertEl.style.display === "flex") {
         dismissNewAlert();
@@ -399,6 +400,7 @@ function openReview(orderKey) {
     if (actionsWaiting) actionsWaiting.style.display = "grid";
   }
 
+  if (typeof window.refreshCancellationReview === "function") window.refreshCancellationReview();
   const revModal = document.getElementById("reviewModal");
   if (revModal) {
     showModalFromTop(revModal);

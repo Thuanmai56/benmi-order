@@ -498,6 +498,11 @@ function renderListLeft(orders) {
       rightActions = `<button type="button" class="btn tile-action-btn btn-action-waiting" disabled><span>${t('btnWaitingReply')}</span></button>`;
     }
 
+    if (typeof window.getPendingCancellation === "function" && window.getPendingCancellation(order.key)) {
+      const cancellation = window.getPendingCancellation(order.key);
+      rightActions = `<button type="button" class="btn tile-action-btn" data-cancel-request="${escapeHtml(cancellation.id)}">${t("cancelOpen")}</button>`;
+    }
+
     const tableNum = getOrderTableNumber(order);
     const lang = window.currentLang || (typeof currentLang !== "undefined" ? currentLang : "zh-TW");
     const tableLabel = tableNum ? (lang === 'vi' ? ` · Bàn ${tableNum}` : ` · 桌號 ${tableNum}`) : "";
@@ -534,6 +539,7 @@ function renderListLeft(orders) {
           <span class="tile-order-key">#${escapeHtml(order.displayKey || order.key)}</span>
           ${newBadge}
           ${modifiedBadge}
+          ${typeof window.renderCancellationBadge === "function" ? window.renderCancellationBadge(order.key) : ""}
           ${diningBadge}
           ${appendBadge}
         </div>
@@ -616,6 +622,7 @@ function renderListRight(orders) {
           <span class="tile-customer" title="${escapeHtml(order.customer || t('defaultCustomer'))}">${escapeHtml(order.customer || t('defaultCustomer'))}</span>
           <span class="tile-order-key">#${escapeHtml(order.displayKey || order.key)}</span>
           ${modifiedBadge}
+          ${typeof window.renderCancellationBadge === "function" ? window.renderCancellationBadge(order.key) : ""}
           ${diningBadge}
           ${appendBadge}
         </div>
@@ -631,7 +638,9 @@ function renderListRight(orders) {
         </div>
       </div>
       <div class="tile-actions">
-        ${isDineIn
+        ${typeof window.getPendingCancellation === "function" && window.getPendingCancellation(order.key)
+          ? `<button type="button" class="btn tile-action-btn" data-cancel-request="${escapeHtml(window.getPendingCancellation(order.key).id)}">${t("cancelOpen")}</button>`
+          : isDineIn
           ? `<button type="button" class="btn tile-action-btn btn-action-paid" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','PAID', {}, this)">${POS_SVG.checkAll}<span>${t('btnPaid')}</span></button>`
           : `<button type="button" class="btn tile-action-btn btn-action-pickup" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','PICKED_UP', {}, this)">${POS_SVG.checkAll}<span>${t('btnPickedUp')}</span></button>`
         }
@@ -1569,6 +1578,10 @@ window.renderCustomizationsHtml = renderCustomizationsHtml;
 
 async function updateStatus(key, status, extra = {}, btn = null) {
   if (!key) return;
+  if (["ACCEPTED", "DONE", "PICKED_UP", "PAID"].includes(status) && typeof window.getPendingCancellation === "function") {
+    const cancellation = window.getPendingCancellation(key);
+    if (cancellation) { window.openCancellationRequests(cancellation.id); return; }
+  }
   if (processingKeys.has(key)) return;
   processingKeys.add(key);
 
@@ -1584,6 +1597,15 @@ async function updateStatus(key, status, extra = {}, btn = null) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ key, status, ...extra })
     });
+    if (response.status === 409) {
+      const problem = await response.json();
+      if (problem.code === "CANCELLATION_PENDING") {
+        await window.fetchCancellationRequests?.(true);
+        const cancellation = window.getPendingCancellation?.(key);
+        window.openCancellationRequests?.(cancellation?.id || null);
+        return;
+      }
+    }
     if (!response.ok) throw new Error(`update failed: ${response.status}`);
 
     // Apply local override immediately for responsiveness

@@ -1,0 +1,6 @@
+{
+  "sha256": "73b54ec40cbd78de4fcf46b758ae8f5097466d6600c9c10a24e89ecd4f9352e8",
+  "cases": 120,
+  "synthetic": true,
+  "purpose": "Taiwan development/regression corpus. Labels fixed before v8 prompt edits; not an independent real-customer accuracy estimate."
+}

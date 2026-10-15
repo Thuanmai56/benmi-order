@@ -2,6 +2,11 @@ export interface Env {
   // Bindings
   ORDER_STATE: KVNamespace;
   DB: D1Database;
+  AI?: Ai;
+  CANCELLATION_QUEUE?: Queue<import('../modules/order-cancellations').CancellationJob>;
+  CANCELLATION_ENGINE_ENABLED?: string;
+  CLEF_MODEL_VARIANT?: string;
+  LINE_WEBHOOK_SKIP_SIGNATURE?: string;
 
   // Global Admin Secret
   ADMIN_API_KEY?: any;

@@ -1,0 +1,1302 @@
+[
+  {
+    "id": "holdout2-explicit-01",
+    "family": "explicit-01",
+    "text": "Nhờ tiệm xóa cả đơn em vừa gửi đi.",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-02",
+    "family": "explicit-02",
+    "text": "Xin hủy suất ăn tôi đã đặt với quán.",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-03",
+    "family": "explicit-03",
+    "text": "Em không cần đơn vừa đặt nữa, giúp em hủy.",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-04",
+    "family": "explicit-04",
+    "text": "Huy toan bo don cua em luc nay nhe.",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-05",
+    "family": "explicit-05",
+    "text": "Minh muon huy don hang moi dat.",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-06",
+    "family": "explicit-06",
+    "text": "Phần đặt hôm nay em xin hủy hết ạ.",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-07",
+    "family": "explicit-07",
+    "text": "Bạn có thể hủy toàn bộ đơn vừa rồi giúp mình?",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-08",
+    "family": "explicit-08",
+    "text": "Em xin ngừng đặt món, hủy phiếu vừa tạo.",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-09",
+    "family": "explicit-09",
+    "text": "Tôi bấm đặt nhầm hai phiếu, xin hủy phiếu mới.",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-10",
+    "family": "explicit-10",
+    "text": "Nhờ cửa hàng hủy trọn đơn mang về này.",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-11",
+    "family": "explicit-11",
+    "text": "Tôi xin hủy đơn này do thay đổi lịch.",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-12",
+    "family": "explicit-12",
+    "text": "Xin quán đừng làm nữa và hủy đơn nhé.",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-13",
+    "family": "explicit-13",
+    "text": "Bỏ hết phần ăn trong đơn tôi vừa đặt giúp.",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-14",
+    "family": "explicit-14",
+    "text": "Đơn đặt sau bị trùng, hủy đơn sau giúp em.",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-15",
+    "family": "explicit-15",
+    "text": "Hủy cả phần đặt chứ không chỉ một món ạ.",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-16",
+    "family": "explicit-16",
+    "text": "請取消今天剛送出的這筆訂單。",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-17",
+    "family": "explicit-17",
+    "text": "我不買這份已訂的餐了，請整筆取消。",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-18",
+    "family": "explicit-18",
+    "text": "麻煩把剛建立的訂單撤銷。",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-19",
+    "family": "explicit-19",
+    "text": "這張是多按出來的，請取消掉。",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-20",
+    "family": "explicit-20",
+    "text": "我要取消這筆完整的外帶單。",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-21",
+    "family": "explicit-21",
+    "text": "剛點的套餐整份取消，謝謝。",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-22",
+    "family": "explicit-22",
+    "text": "可以取消我已經送出的這張單嗎？",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-23",
+    "family": "explicit-23",
+    "text": "訂錯分店，麻煩取消這一筆。",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-24",
+    "family": "explicit-24",
+    "text": "兩張單重複了，留下第一張，取消第二張。",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-25",
+    "family": "explicit-25",
+    "text": "請取消整張訂單，不用準備了。",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-26",
+    "family": "explicit-26",
+    "text": "因為臨時改行程，這張單請撤銷。",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-27",
+    "family": "explicit-27",
+    "text": "麻煩幫我取消剛剛點的全部餐點。",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-28",
+    "family": "explicit-28",
+    "text": "我想取消這份訂好的午餐。",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-29",
+    "family": "explicit-29",
+    "text": "Please void the takeaway order I placed today.",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-30",
+    "family": "explicit-30",
+    "text": "Cancel the full meal order I sent just now please.",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-31",
+    "family": "explicit-31",
+    "text": "I accidentally submitted a duplicate, cancel the last one.",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-32",
+    "family": "explicit-32",
+    "text": "Could you void my complete food order?",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-33",
+    "family": "explicit-33",
+    "text": "I need to withdraw this order entirely.",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-34",
+    "family": "explicit-34",
+    "text": "Please cancel this order, I made a mistake.",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-35",
+    "family": "explicit-35",
+    "text": "I do not need the ordered meal anymore, please cancel it.",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-36",
+    "family": "explicit-36",
+    "text": "Remove my whole food order, thanks.",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-37",
+    "family": "explicit-37",
+    "text": "Cancel everything in my submitted order please.",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-38",
+    "family": "explicit-38",
+    "text": "Please cancel the order for this evening.",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-39",
+    "family": "explicit-39",
+    "text": "The second order is accidental, please void that one.",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-explicit-40",
+    "family": "explicit-40",
+    "text": "Stop preparing my order and cancel it, please.",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-possible-01",
+    "family": "possible-01",
+    "text": "Mình sợ không tới nhận món hôm nay được.",
+    "expectedIntent": "possible_cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-possible-02",
+    "family": "possible-02",
+    "text": "Hôm nay em không có cách tới lấy đồ ăn.",
+    "expectedIntent": "possible_cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-possible-03",
+    "family": "possible-03",
+    "text": "Tôi không thể nhận phần đã đặt ở tiệm nữa.",
+    "expectedIntent": "possible_cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-possible-04",
+    "family": "possible-04",
+    "text": "Chắc em không tới nhận phần cơm này được rồi.",
+    "expectedIntent": "possible_cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-possible-05",
+    "family": "possible-05",
+    "text": "Không ai nhận giúp tôi phần ăn hôm nay được.",
+    "expectedIntent": "possible_cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-possible-06",
+    "family": "possible-06",
+    "text": "Em sẽ không ghé lấy món đã đặt nữa.",
+    "expectedIntent": "possible_cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-possible-07",
+    "family": "possible-07",
+    "text": "Hom nay minh khong lay mon da dat duoc.",
+    "expectedIntent": "possible_cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-possible-08",
+    "family": "possible-08",
+    "text": "Có chuyện đột xuất nên mình không nhận đồ ăn được.",
+    "expectedIntent": "possible_cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-possible-09",
+    "family": "possible-09",
+    "text": "Hôm nay đơn của tôi có lẽ không nhận được.",
+    "expectedIntent": "possible_cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-possible-10",
+    "family": "possible-10",
+    "text": "今天我可能領不到剛訂的餐。",
+    "expectedIntent": "possible_cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-possible-11",
+    "family": "possible-11",
+    "text": "這份已訂的餐恐怕無法去取。",
+    "expectedIntent": "possible_cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-possible-12",
+    "family": "possible-12",
+    "text": "我沒有辦法領今天的外帶餐了。",
+    "expectedIntent": "possible_cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-possible-13",
+    "family": "possible-13",
+    "text": "沒有人能幫我拿這筆餐點。",
+    "expectedIntent": "possible_cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-possible-14",
+    "family": "possible-14",
+    "text": "我臨時走不開，可能拿不了餐了。",
+    "expectedIntent": "possible_cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-possible-15",
+    "family": "possible-15",
+    "text": "今天這份餐我不會過去拿了。",
+    "expectedIntent": "possible_cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-possible-16",
+    "family": "possible-16",
+    "text": "I cannot get the meal I already ordered today.",
+    "expectedIntent": "possible_cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-possible-17",
+    "family": "possible-17",
+    "text": "I probably cannot receive my ordered food.",
+    "expectedIntent": "possible_cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-possible-18",
+    "family": "possible-18",
+    "text": "Nobody can collect the food I ordered for me.",
+    "expectedIntent": "possible_cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-possible-19",
+    "family": "possible-19",
+    "text": "I will not be coming to collect this meal.",
+    "expectedIntent": "possible_cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-possible-20",
+    "family": "possible-20",
+    "text": "I am worried I cannot make it to receive the order.",
+    "expectedIntent": "possible_cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-01",
+    "family": "negative-01",
+    "text": "Hôm nay tôi bận, người nhà sẽ nhận món.",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-02",
+    "family": "negative-02",
+    "text": "Mình chưa ra được, tối mình ghé lấy sau.",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-03",
+    "family": "negative-03",
+    "text": "Đổi từ tự lấy sang giao giúp em được không?",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-04",
+    "family": "negative-04",
+    "text": "Tôi giữ nguyên đơn, xin dời giờ nhận.",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-05",
+    "family": "negative-05",
+    "text": "Bỏ món khoai thôi, phần chính vẫn lấy.",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-06",
+    "family": "negative-06",
+    "text": "Không hủy cả đơn, chỉ bớt một phần nước.",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-07",
+    "family": "negative-07",
+    "text": "Huy rieng phan topping, giu nguyen mon.",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-08",
+    "family": "negative-08",
+    "text": "Cho em hỏi trước về chính sách hoàn tiền khi hủy.",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-09",
+    "family": "negative-09",
+    "text": "Nếu có việc đột xuất thì sau này hủy được chứ?",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-10",
+    "family": "negative-10",
+    "text": "Nếu lâu hơn dự kiến tôi mới tính chuyện hủy.",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-11",
+    "family": "negative-11",
+    "text": "Đừng hủy đơn, tôi sắp tới nơi.",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-12",
+    "family": "negative-12",
+    "text": "Mình cảm ơn tiệm nhiều.",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-13",
+    "family": "negative-13",
+    "text": "Thức ăn đã chuẩn bị xong chưa?",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-14",
+    "family": "negative-14",
+    "text": "Cửa hàng đóng lúc mấy giờ vậy?",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-15",
+    "family": "negative-15",
+    "text": "Lấy món tại đâu?",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-16",
+    "family": "negative-16",
+    "text": "Tôi không nhận trực tiếp, nhờ người giao tới lấy.",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-17",
+    "family": "negative-17",
+    "text": "我沒空過去，弟弟會代拿。",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-18",
+    "family": "negative-18",
+    "text": "請留著餐點，我會晚一點取。",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-19",
+    "family": "negative-19",
+    "text": "可以保留訂單改成送到家嗎？",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-20",
+    "family": "negative-20",
+    "text": "整單不用取消，只去掉薯條。",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-21",
+    "family": "negative-21",
+    "text": "主餐留著，取消飲料即可。",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-22",
+    "family": "negative-22",
+    "text": "我想知道你們取消的規定。",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-23",
+    "family": "negative-23",
+    "text": "如果等很久才會考慮取消。",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-24",
+    "family": "negative-24",
+    "text": "明天如果有事能取消嗎？",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-25",
+    "family": "negative-25",
+    "text": "請勿取消這筆訂單。",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-26",
+    "family": "negative-26",
+    "text": "感謝店家，我正在路上。",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-27",
+    "family": "negative-27",
+    "text": "店裡何時打烊？",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-28",
+    "family": "negative-28",
+    "text": "餐點在哪個櫃檯領？",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-29",
+    "family": "negative-29",
+    "text": "My brother will pick it up because I cannot come.",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-30",
+    "family": "negative-30",
+    "text": "I will collect later, keep the order please.",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-31",
+    "family": "negative-31",
+    "text": "Please keep it and send a courier instead.",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-32",
+    "family": "negative-32",
+    "text": "Cancel only the drink, keep the rest of the order.",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-33",
+    "family": "negative-33",
+    "text": "Remove just the extra topping.",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-34",
+    "family": "negative-34",
+    "text": "I am asking about your cancellation fees.",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-35",
+    "family": "negative-35",
+    "text": "If the wait becomes too long, I might cancel later.",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-36",
+    "family": "negative-36",
+    "text": "Could I cancel tomorrow if something happens?",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-37",
+    "family": "negative-37",
+    "text": "Do not cancel my meal, I am nearly there.",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-38",
+    "family": "negative-38",
+    "text": "Thank you for preparing my food.",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-39",
+    "family": "negative-39",
+    "text": "Where should I collect my meal?",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-negative-40",
+    "family": "negative-40",
+    "text": "What time does the restaurant close?",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": false,
+    "history": []
+  },
+  {
+    "id": "holdout2-pending-01",
+    "family": "pending-01",
+    "text": "Mình muốn giữ phần ăn, cứ làm tiếp nhé.",
+    "expectedIntent": "withdraw_cancel",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "I want to cancel the order",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "holdout2-pending-02",
+    "family": "pending-02",
+    "text": "Em đã sắp xếp người nhận, đừng hủy nữa.",
+    "expectedIntent": "withdraw_cancel",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "I want to cancel the order",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "holdout2-pending-03",
+    "family": "pending-03",
+    "text": "Giữ lại đơn nhé, em đổi ý rồi.",
+    "expectedIntent": "withdraw_cancel",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "I want to cancel the order",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "holdout2-pending-04",
+    "family": "pending-04",
+    "text": "Minh van lay don, dung huy nua.",
+    "expectedIntent": "withdraw_cancel",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "I want to cancel the order",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "holdout2-pending-05",
+    "family": "pending-05",
+    "text": "Cho mình rút yêu cầu hủy vừa gửi.",
+    "expectedIntent": "withdraw_cancel",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "I want to cancel the order",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "holdout2-pending-06",
+    "family": "pending-06",
+    "text": "我的餐要保留，我改主意了。",
+    "expectedIntent": "withdraw_cancel",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "I want to cancel the order",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "holdout2-pending-07",
+    "family": "pending-07",
+    "text": "不用撤單，家人可以拿。",
+    "expectedIntent": "withdraw_cancel",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "I want to cancel the order",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "holdout2-pending-08",
+    "family": "pending-08",
+    "text": "剛才說取消的收回，餐照做。",
+    "expectedIntent": "withdraw_cancel",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "I want to cancel the order",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "holdout2-pending-09",
+    "family": "pending-09",
+    "text": "Please retract my cancellation request.",
+    "expectedIntent": "withdraw_cancel",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "I want to cancel the order",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "holdout2-pending-10",
+    "family": "pending-10",
+    "text": "I still want the food, please keep preparing it.",
+    "expectedIntent": "withdraw_cancel",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "I want to cancel the order",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "holdout2-pending-11",
+    "family": "pending-11",
+    "text": "Quán có thể báo còn phải đợi bao lâu không?",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "I want to cancel the order",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "holdout2-pending-12",
+    "family": "pending-12",
+    "text": "Mấy giờ thì phần ăn chuẩn bị xong?",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "I want to cancel the order",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "holdout2-pending-13",
+    "family": "pending-13",
+    "text": "Cảm ơn quán đã xem tin.",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "I want to cancel the order",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "holdout2-pending-14",
+    "family": "pending-14",
+    "text": "餐點還需要等幾分鐘？",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "I want to cancel the order",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "holdout2-pending-15",
+    "family": "pending-15",
+    "text": "請問何時可以領餐？",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "I want to cancel the order",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "holdout2-pending-16",
+    "family": "pending-16",
+    "text": "謝謝回覆。",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "I want to cancel the order",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "holdout2-pending-17",
+    "family": "pending-17",
+    "text": "Is the meal ready to pick up yet?",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "I want to cancel the order",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "holdout2-pending-18",
+    "family": "pending-18",
+    "text": "How much longer until preparation is finished?",
+    "expectedIntent": "other",
+    "expectedCancel": false,
+    "hardNegative": true,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "I want to cancel the order",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "holdout2-pending-19",
+    "family": "pending-19",
+    "text": "Em vẫn xin hủy đơn như tin trước.",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "I want to cancel the order",
+        "event_at": 1
+      }
+    ]
+  },
+  {
+    "id": "holdout2-pending-20",
+    "family": "pending-20",
+    "text": "Please go ahead with cancelling the complete order.",
+    "expectedIntent": "cancel",
+    "expectedCancel": true,
+    "hardNegative": false,
+    "pending": true,
+    "history": [
+      {
+        "message_text": "I want to cancel the order",
+        "event_at": 1
+      }
+    ]
+  }
+]

@@ -1,0 +1,12 @@
+{
+  "sha256": "691613ed7732db6d36fc3ce335aba541056266b1e7e4a43b22f7430525d9b9fd",
+  "cases": 120,
+  "groups": {
+    "explicit": 40,
+    "possible": 20,
+    "negative": 40,
+    "pending": 20
+  },
+  "lockedBeforePromptImplementation": true,
+  "synthetic": true
+}

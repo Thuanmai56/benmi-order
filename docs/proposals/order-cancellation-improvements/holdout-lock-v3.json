@@ -1,0 +1,14 @@
+{
+  "sha256": "2c6c7750276dcfa5057e1d928662bef5192a4aeb408bc47c669b9da9bdae71e6",
+  "cases": 120,
+  "groups": {
+    "explicit": 40,
+    "possible": 20,
+    "negative": 40,
+    "pending": 20
+  },
+  "synthetic": true,
+  "generation": 3,
+  "promptAtLock": "clef-cancellation-v7",
+  "reason": "Replacement untouched validation set. Earlier failed holdouts retained as development audits, no labels changed."
+}

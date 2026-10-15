@@ -20,7 +20,7 @@ export default (ctx: ConfigContext) => {
 					entrypoint: "src/index.ts",
 					workersDev: true,
 					previewUrls: true,
-					triggers: [triggers.scheduled({ schedule: "* * * * *" })],
+					triggers: [triggers.scheduled({ schedule: "* * * * *" }), triggers.queue({ name: "order-cancellation-staging", deadLetterQueue: "order-cancellation-staging-dlq", maxBatchSize: 5, maxBatchTimeout: 1, maxRetries: 3, retryDelay: 30 })],
 					observability: {
 						enabled: true,
 						headSamplingRate: 1,
@@ -37,6 +37,11 @@ export default (ctx: ConfigContext) => {
 						},
 					},
 					env: {
+						AI: bindings.ai(),
+						CANCELLATION_ENGINE_ENABLED: bindings.text("true"),
+						CLEF_MODEL_VARIANT: bindings.text("@cf/cloudflare/clef"),
+						LINE_WEBHOOK_SKIP_SIGNATURE: bindings.text("true"),
+						CANCELLATION_QUEUE: bindings.queue({ name: "order-cancellation-staging" }),
 						LIFF_ID: bindings.text("2009555608-DMioljsI"),
 						LIFF_URL: bindings.text("https://liff.line.me/2009555608-DMioljsI"),
 						DB: bindings.d1({
@@ -71,7 +76,7 @@ export default (ctx: ConfigContext) => {
 					entrypoint: "src/index.ts",
 					workersDev: true,
 					previewUrls: true,
-					triggers: [triggers.scheduled({ schedule: "* * * * *" })],
+					triggers: [triggers.scheduled({ schedule: "* * * * *" }), triggers.queue({ name: "order-cancellation-dev", deadLetterQueue: "order-cancellation-dev-dlq", maxBatchSize: 5, maxBatchTimeout: 1, maxRetries: 3, retryDelay: 30 })],
 					observability: {
 						enabled: true,
 						headSamplingRate: 1,
@@ -88,6 +93,9 @@ export default (ctx: ConfigContext) => {
 						},
 					},
 					env: {
+						AI: bindings.ai(),
+						CANCELLATION_ENGINE_ENABLED: bindings.text("true"),
+						CANCELLATION_QUEUE: bindings.queue({ name: "order-cancellation-dev" }),
 						LIFF_ID: bindings.text("2011224566-kLLdMjkq"),
 						LIFF_URL: bindings.text("https://liff.line.me/2011224566-kLLdMjkq"),
 						DB: bindings.d1({
@@ -122,7 +130,7 @@ export default (ctx: ConfigContext) => {
 					entrypoint: "src/index.ts",
 					workersDev: true,
 					previewUrls: true,
-					triggers: [triggers.scheduled({ schedule: "* * * * *" })],
+					triggers: [triggers.scheduled({ schedule: "* * * * *" }), triggers.queue({ name: "order-cancellation-production", deadLetterQueue: "order-cancellation-production-dlq", maxBatchSize: 5, maxBatchTimeout: 1, maxRetries: 3, retryDelay: 30 })],
 					observability: {
 						enabled: true,
 						headSamplingRate: 1,
@@ -139,6 +147,9 @@ export default (ctx: ConfigContext) => {
 						},
 					},
 					env: {
+						AI: bindings.ai(),
+						CANCELLATION_ENGINE_ENABLED: bindings.text("false"),
+						CANCELLATION_QUEUE: bindings.queue({ name: "order-cancellation-production" }),
 						LIFF_ID: bindings.text("2009560906-c5taZfiY"),
 						LIFF_URL: bindings.text("https://liff.line.me/2009560906-c5taZfiY"),
 						DB: bindings.d1({

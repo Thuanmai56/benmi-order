@@ -13,10 +13,15 @@ import { getItemAnalyticsReport } from './modules/reports';
 import { getMarketplaceTenants } from './modules/marketplace';
 import { requestOrderReceiptPush, processPendingOrderReceipts } from './modules/line-order-receipts';
 import { recordLiffClientError } from './modules/line-client-telemetry';
+import { getCancellationRequests, acknowledgeCancellationAlert, resolveCancellationRequest, retryCancellationNotification, processCancellationQueue, recoverCancellations, type CancellationJob } from './modules/order-cancellations';
 
 export default {
   async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     ctx.waitUntil(processPendingOrderReceipts(env));
+    ctx.waitUntil(recoverCancellations(env));
+  },
+  async queue(batch: MessageBatch<CancellationJob>, env: Env): Promise<void> {
+    await processCancellationQueue(batch,env);
   },
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     try {
@@ -57,6 +62,13 @@ export default {
       const tenantCtx = await resolveTenantContext(tenantId, env);
 
       // 4. API Endpoints
+      if (request.method==='GET' && path==='/api/order-cancellation-requests') return getCancellationRequests(request,env,tenantCtx);
+      const alertRoute=path.match(/^\/api\/order-cancellation-alerts\/([0-9a-f-]{36})\/acknowledge$/);
+      if (request.method==='POST' && alertRoute) return acknowledgeCancellationAlert(request,env,tenantCtx,alertRoute[1]);
+      const cancellationRoute=path.match(/^\/api\/order-cancellation-requests\/([0-9a-f-]{36})\/(resolve|retry-notification)$/);
+      if (request.method==='POST' && cancellationRoute) return cancellationRoute[2]==='resolve'
+        ? resolveCancellationRequest(request,env,tenantCtx,cancellationRoute[1])
+        : retryCancellationNotification(request,env,tenantCtx,cancellationRoute[1]);
       if (request.method === "POST" && path === "/api/line/order-receipt/push") return requestOrderReceiptPush(request, env, tenantCtx);
       if (request.method === "POST" && path === "/api/line/client-error") return recordLiffClientError(request, tenantCtx);
       if (request.method === "GET" && (path === "/api/marketplace/tenants" || path === "/api/marketplace")) return getMarketplaceTenants(request, env);
@@ -96,6 +108,7 @@ export default {
 
       return new Response("Not Found", { status: 404, headers: corsHeaders() });
     } catch (err: any) {
+      if (String(err?.message).includes('CANCELLATION_PENDING')) return json({error:'Resolve cancellation request first',code:'CANCELLATION_PENDING'},409);
       console.error("[Fatal API Error]", err);
       return json({ error: err.message || "Internal Server Error", stack: err.stack }, 500);
     }

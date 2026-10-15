@@ -201,6 +201,7 @@ async function loadOperatingHours() {
         currentTenantFeatures = Array.isArray(data.features) ? data.features : (typeof data.features === 'string' ? JSON.parse(data.features) : []);
         window.currentTenantFeatures = currentTenantFeatures;
       }
+      if (typeof window.setCancellationSettings === "function") window.setCancellationSettings(data);
       if (data.storeStatus) currentStoreStatus = data.storeStatus;
       if (data.storeAddress !== undefined && data.storeAddress !== null) {
         const addrInput = document.getElementById("setting-store-address-input");
