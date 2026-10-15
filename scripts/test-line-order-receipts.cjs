@@ -15,7 +15,7 @@ const tenant = { tenantId: 'tenant-a', brandName: 'Shop A', orderPrefix: 'A', fe
 function fixture(t) {
   const db = new DatabaseSync(':memory:');
   t.after(() => db.close());
-  db.exec("CREATE TABLE tenants(id TEXT PRIMARY KEY); INSERT INTO tenants VALUES ('tenant-a');");
+  db.exec("CREATE TABLE tenants(id TEXT PRIMARY KEY); INSERT INTO tenants VALUES ('tenant-a'); CREATE TABLE tenant_lifecycle(tenant_id TEXT PRIMARY KEY,state TEXT); INSERT INTO tenant_lifecycle VALUES('tenant-a','active');");
   for (const file of ['0005_create_orders_table.sql', '0032_create_order_items.sql', '0004_add_tenant_id_to_pending_actions.sql', '0046_add_order_uuid_and_daily_counter.sql']) {
     db.exec(fs.readFileSync('benmi-worker-official/migrations/' + file, 'utf8'));
   }
@@ -194,4 +194,12 @@ test('orders without structured items also persist receipt atomically; fallback 
   assert.equal(f.row(result.notification.id).order_key, result.key);
   assert.equal((await push(f, { ...result.notification, junk: 'x'.repeat(3000) })).status, 413);
   assert.equal(f.requests.length, 0);
+});
+
+test('cron skips deleted tenants even when a cached LINE context still exists', async t => {
+  const f = fixture(t), result = await create(f);
+  f.db.exec("UPDATE tenant_lifecycle SET state='deleted'; UPDATE line_order_receipts SET next_attempt_at=0");
+  await receipts.processPendingOrderReceipts(f.env);
+  assert.equal(f.requests.length, 0);
+  assert.equal(f.row(result.notification.id).attempts, 0);
 });

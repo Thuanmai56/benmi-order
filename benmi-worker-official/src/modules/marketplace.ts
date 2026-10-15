@@ -112,6 +112,8 @@ export function isStoreCurrentlyOpen(
 export async function getMarketplaceTenants(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   const noCache = url.searchParams.has('nocache') || url.searchParams.has('_t');
+  const deleted = await env.DB.prepare("SELECT tenant_id FROM tenant_lifecycle WHERE state<>'active'").all<{ tenant_id: string }>();
+  const deletedIds = new Set(deleted.results.map(row => row.tenant_id));
 
   // 1. Check KV Edge Cache
   if (!noCache && env.ORDER_STATE) {
@@ -121,7 +123,7 @@ export async function getMarketplaceTenants(request: Request, env: Env): Promise
         const parsed = JSON.parse(cached);
         // Refresh isOpen flag on cached response dynamically based on real-time Taiwan clock
         const now = new Date();
-        const refreshedData = (parsed.data || []).map((t: MarketplaceTenantItem) => ({
+        const refreshedData = (parsed.data || []).filter((t: MarketplaceTenantItem) => !deletedIds.has(t.tenantId)).map((t: MarketplaceTenantItem) => ({
           ...t,
           isOpen: isStoreCurrentlyOpen(t.storeStatus, t.parsedHours, now)
         }));
@@ -132,7 +134,7 @@ export async function getMarketplaceTenants(request: Request, env: Env): Promise
           data: refreshedData
         }, 200, {
           'X-Cache': 'HIT',
-          'Cache-Control': 'public, max-age=60, s-maxage=300'
+          'Cache-Control': 'no-store'
         });
       }
     } catch (e) {
@@ -167,7 +169,7 @@ export async function getMarketplaceTenants(request: Request, env: Env): Promise
       `)
     ]);
 
-    const rawTenants = (tenantsRes.results as any[]) || [];
+    const rawTenants = ((tenantsRes.results as any[]) || []).filter(t => !deletedIds.has(t.tenant_id));
     const rawCategories = (categoriesRes.results as any[]) || [];
 
     // Group categories summary by tenant
@@ -239,7 +241,7 @@ export async function getMarketplaceTenants(request: Request, env: Env): Promise
 
     return json(payload, 200, {
       'X-Cache': 'MISS',
-      'Cache-Control': 'public, max-age=60, s-maxage=300'
+      'Cache-Control': 'no-store'
     });
 
   } catch (err: any) {

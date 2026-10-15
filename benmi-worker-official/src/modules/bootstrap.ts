@@ -1,3 +1,4 @@
+import { tenantIsDeleted } from '../utils/tenant-lifecycle';
 import { Env } from '../types/env';
 import { json } from '../utils/http';
 import { getTenantId } from './menu';
@@ -331,6 +332,7 @@ export function formatOperatingHoursForDisplay(
 
 export async function getTenantBootstrap(request: Request, env: Env): Promise<Response> {
   const tenantId = getTenantId(request);
+  if (await tenantIsDeleted(env.DB, tenantId)) return json({ error: 'TENANT_DELETED' }, 410, { 'Cache-Control': 'no-store' });
   const cacheKey = `tenant:${tenantId}:bootstrap`;
 
   try {

@@ -1,3 +1,4 @@
+import { tenantIsDeleted } from './utils/tenant-lifecycle';
 import { Env } from './types/env';
 import { corsHeaders, json } from './utils/http';
 import { handleLineWebhook } from './modules/line';
@@ -32,11 +33,14 @@ export default {
         return handleAdminRoute(request, env, path);
       }
 
+      const webhookTenant = path.match(/^\/webhook\/([a-zA-Z0-9_-]+)(?:\/verify\/[a-f0-9-]{36})?$/);
+      if (webhookTenant && await tenantIsDeleted(env.DB, webhookTenant[1])) return json({ error: 'TENANT_DELETED' }, 410, { 'Cache-Control': 'no-store' });
       // 2. LINE Webhook Routes
       if (request.method === "POST") {
         // Legacy Webhook Path (/webhook or /) -> Fallback to "benmi" tenant
         if (path === "/webhook" || path === "/") {
           const tenantCtx = await resolveTenantContext("benmi", env);
+          if (!tenantCtx) return json({ error: 'Unknown or inactive tenant' }, 404);
           return handleLineWebhook(request, env, ctx, tenantCtx);
         }
 
@@ -54,6 +58,8 @@ export default {
 
       // 3. Resolve Tenant Context for API Requests
       const tenantId = getTenantId(request);
+      if (path.startsWith('/api/') && !['/api/health','/api/marketplace','/api/marketplace/tenants'].includes(path)
+        && await tenantIsDeleted(env.DB, tenantId)) return json({ error: 'TENANT_DELETED' }, 410, { 'Cache-Control': 'no-store' });
       const tenantCtx = await resolveTenantContext(tenantId, env);
 
       // 4. API Endpoints

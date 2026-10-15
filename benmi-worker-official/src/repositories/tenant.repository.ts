@@ -2,6 +2,7 @@ import type { Env } from '../types/env';
 import type { TenantContext } from '../types/tenant';
 import type { CustomerOrderDomain, OrderDomainRow } from '../utils/order-domain';
 import { resolveSecret } from '../utils/secrets';
+import { tenantIsDeleted } from '../utils/tenant-lifecycle';
 import type {
   TenantRepository,
   TenantConfigRow,
@@ -37,6 +38,7 @@ export function createTenantRepository(
     invalidateCache,
 
     async getTenantContext(tenantId: string): Promise<TenantContext | null> {
+      if (await tenantIsDeleted(db, tenantId)) return null;
       const cacheKey = `tenant:${tenantId}:config_cache`;
 
       // 1. Check KV Cache
@@ -292,6 +294,7 @@ export function createTenantRepository(
                 tc.ai_order_redirect_enabled, tc.is_active, tc.created_at, tc.updated_at
          FROM tenants t
          LEFT JOIN tenant_config tc ON t.id = tc.tenant_id
+         WHERE NOT EXISTS(SELECT 1 FROM tenant_lifecycle l WHERE l.tenant_id=t.id AND l.state<>'active')
          ORDER BY t.created_at DESC`
       ).all<TenantAdminSummaryRow>();
       return results || [];
