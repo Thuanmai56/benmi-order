@@ -53,6 +53,7 @@
     constructor() {
       this.isNative = this.checkIsNative();
       this._printQueue = Promise.resolve();
+      this._inFlightOrderKeys = new Set();
       this.isPrinting = false;
       this.activeJobsCount = 0;
       console.log(`[PrinterService] Initialized. Native Bridge: ${this.isNative ? 'ACTIVE ✅' : 'BROWSER FALLBACK 🌐'}`);
@@ -266,16 +267,35 @@
       if (!settings.autoPrintNewOrders) return;
       if (!Array.isArray(ordersList) || ordersList.length === 0) return;
 
+      if (!this._inFlightOrderKeys) {
+        this._inFlightOrderKeys = new Set();
+      }
+
       for (const order of ordersList) {
+        if (!order || !order.key) continue;
         const status = (order.status || '').toUpperCase();
-        if (status === 'NEW' && !this.isOrderAlreadyPrinted(order.key) && !(order.legacyKey && this.isOrderAlreadyPrinted(order.legacyKey))) {
-          console.log(`[PrinterService] 🖨️ Auto-printing new incoming order #${order.key}...`);
-          try {
-            const result = await this.printDualStation(order);
-            if (result?.success) this.markOrderAsPrinted(order.key);
-          } catch (err) {
-            console.error(`[PrinterService] Auto-print failed for #${order.key}:`, err);
-          }
+        const key = order.key;
+        const legacyKey = order.legacyKey;
+
+        if (status !== 'NEW') continue;
+        if (this.isOrderAlreadyPrinted(key) || (legacyKey && this.isOrderAlreadyPrinted(legacyKey))) continue;
+        if (this._inFlightOrderKeys.has(key) || (legacyKey && this._inFlightOrderKeys.has(legacyKey))) continue;
+
+        this._inFlightOrderKeys.add(key);
+        if (legacyKey) this._inFlightOrderKeys.add(legacyKey);
+
+        console.log(`[PrinterService] 🖨️ Auto-printing new incoming order #${key}...`);
+        try {
+          await this.printDualStation(order);
+        } catch (err) {
+          console.error(`[PrinterService] Auto-print failed for #${key}:`, err);
+        } finally {
+          // Mark as processed for auto-print deduplication so failed/offline stations do not trigger an infinite print loop.
+          // Staff can still manually reprint via the UI if needed.
+          this.markOrderAsPrinted(key);
+          if (legacyKey) this.markOrderAsPrinted(legacyKey);
+          this._inFlightOrderKeys.delete(key);
+          if (legacyKey) this._inFlightOrderKeys.delete(legacyKey);
         }
       }
     }
@@ -1116,7 +1136,10 @@
         if (op.line) this.drawDashedLine(paint, padding, width - padding, op.y);
         else { paint.font = op.font; paint.textAlign = op.align; paint.fillText(op.text, op.x, op.y); }
       }
-      return canvas.toDataURL('image/png');
+      const dataUrl = canvas.toDataURL('image/png');
+      canvas.width = 0;
+      canvas.height = 0;
+      return dataUrl;
     }
 
     drawDashedLine(ctx, x1, x2, y) {
@@ -1173,7 +1196,10 @@
       draw(header, padding, topHeight, sizes[0], 'normal');
       draw(body, padding + topHeight + gap, height - padding * 2 - topHeight - bottomHeight - gap * 2, sizes[1], 'normal');
       draw(footer, height - padding - bottomHeight, bottomHeight, sizes[2], 'normal');
-      return canvas.toDataURL('image/png');
+      const dataUrl = canvas.toDataURL('image/png');
+      canvas.width = 0;
+      canvas.height = 0;
+      return dataUrl;
     }
 
     drawItemStickerToCanvas(item, orderContext, itemIdx, totalItems, widthMm = 40, heightMm = 30, dpi = 203) {

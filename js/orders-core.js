@@ -720,7 +720,15 @@ function switchTab(tab) {
   }
 }
 
+let isFetchingOrders = false;
+
 async function fetchOrders() {
+  if (isFetchingOrders) return;
+  isFetchingOrders = true;
+
+  const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+  const timeoutId = controller ? setTimeout(() => controller.abort(), 8000) : null;
+
   try {
     const tenantId = getTenantIdFromUrl();
     if (!tenantId) return;
@@ -729,7 +737,12 @@ async function fetchOrders() {
       headers["If-None-Match"] = lastOrdersETag;
     }
 
-    const response = await fetch(`${WORKER_BASE}/api/orders?tenant_id=${tenantId}`, { headers });
+    const fetchOptions = { headers };
+    if (controller) {
+      fetchOptions.signal = controller.signal;
+    }
+
+    const response = await fetch(`${WORKER_BASE}/api/orders?tenant_id=${tenantId}`, fetchOptions);
     if (response.status === 304) {
       // Even on 304, re-check snooze expiration for new alert
       if (typeof updateNewAlert === "function") updateNewAlert();
@@ -822,6 +835,10 @@ async function fetchOrders() {
 
     renderAll();
   } catch (e) {
+    if (e.name === "AbortError") {
+      console.warn("[Orders] fetchOrders timed out after 8s, releasing mutex for next cycle.");
+      return;
+    }
     console.error(e);
     const leftEl = document.getElementById("list-left");
     if (leftEl) leftEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#d32f2f;">${escapeHtml(e?.message || e)}</div>`;
@@ -829,6 +846,9 @@ async function fetchOrders() {
     if (rightEl) rightEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#d32f2f;">-</div>`;
     const histEl = document.getElementById("list-history");
     if (histEl) histEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#d32f2f;">-</div>`;
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+    isFetchingOrders = false;
   }
 }
 
