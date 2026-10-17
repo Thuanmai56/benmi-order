@@ -1041,7 +1041,13 @@ function isCustomizationCategory(cat) {
 }
 window.isCustomizationCategory = isCustomizationCategory;
 
-let menuSidebarTab = 'products';
+var menuSidebarTab = 'products';
+try {
+  const savedMenuSubtab = sessionStorage.getItem("pos_menu_subtab");
+  if (savedMenuSubtab === "products" || savedMenuSubtab === "options") {
+    menuSidebarTab = savedMenuSubtab;
+  }
+} catch (e) {}
 let activeOptionGroupIndex = null;
 const menuOptionSectionsOpen = { order: true, item: true };
 
@@ -1050,6 +1056,9 @@ function setMenuSidebarTab(tab) {
   if (!confirmLeaveMenu()) return;
   if (isMenuDirty) syncMenuDataFromDOM();
   menuSidebarTab = tab;
+  try {
+    sessionStorage.setItem("pos_menu_subtab", tab);
+  } catch (e) {}
 
   // Update toggle buttons in DOM
   const btnProducts = document.getElementById("btn-seg-products");
@@ -1110,6 +1119,7 @@ function handleCreateComboFromSidebar() {
   syncMenuDataFromDOM();
 
   menuSidebarTab = 'products';
+  try { sessionStorage.setItem("pos_menu_subtab", 'products'); } catch (e) {}
   let comboCatIdx = currentMenuData.findIndex(c => isComboCategory(c));
   if (comboCatIdx < 0) {
     const comboCat = {
@@ -1145,6 +1155,7 @@ function handleCreateCustomFromSidebar() {
   syncMenuDataFromDOM();
 
   menuSidebarTab = 'options';
+  try { sessionStorage.setItem("pos_menu_subtab", 'options'); } catch (e) {}
   let flavorIdx = currentMenuData.findIndex(c => c.type === 'order_customization' || c.id === 'sec-flavor');
   if (flavorIdx < 0) {
     const newCat = {
