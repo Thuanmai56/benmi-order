@@ -1,6 +1,6 @@
 import { Order, OrderItemInput } from '../../../types/index';
 import { TenantContext } from '../../../types/tenant';
-import { remainingItemNote } from '../../../utils/order-item-notes';
+import { itemNoteKey, remainingItemNote } from '../../../utils/order-item-notes';
 
 export function buildOrderFlexMessage(
   order: Order,
@@ -54,7 +54,7 @@ export function buildOrderFlexMessage(
     for (const rawLine of lines) {
       const l = rawLine.trim();
       if (/^\[(?:第\s*\d+\s*輪|Đợt\s*\d+)/i.test(l)) inItem = false;
-      if (/^\d+\s*(?:份|[x×])/i.test(l)) inItem = true;
+      if (/^\d+\s*(?:份|[x×])/i.test(l) || /^.+?\s*[x×*]\s*\d+(?:\s*[\$đ]|$)/i.test(l)) inItem = true;
       if (inItem) continue;
       if (l.includes("口味設定") || l.includes("客製化設定")) {
         const inlineFlavors = l.replace(/.*(?:口味設定|客製化設定)[：:]\s*/, '').replace(/[【】]/g, '').trim();
@@ -65,6 +65,18 @@ export function buildOrderFlexMessage(
             if (pMatch) {
               const label = pMatch[1].replace(/✦/g, '').replace(/選擇|調整/g, '').replace(/\(朝天椒\)/g, '').replace(/（朝天椒）/g, '').trim();
               const val = cleanItemVal(pMatch[2].trim());
+              if (
+                label.includes('備註') ||
+                label.includes('Ghi chú') ||
+                label.includes('Note') ||
+                label.includes('訂單') ||
+                label.includes('總金額') ||
+                label.includes('時間') ||
+                label.includes('取餐') ||
+                label.includes('用餐方式')
+              ) {
+                return;
+              }
               if (label.includes('配料') || label.includes('加價')) {
                 extraPills.push(`${label}：${val}`);
               } else {
@@ -80,10 +92,21 @@ export function buildOrderFlexMessage(
       if (match) {
         const label = match[1].replace(/✦/g, '').replace(/選擇|調整/g, '').replace(/\(朝天椒\)/g, '').replace(/（朝天椒）/g, '').trim();
         const val = cleanItemVal(match[2].trim());
-        if (label.includes('配料') || label.includes('加價')) {
-          extraPills.push(`${label}：${val}`);
-        } else {
-          flavorPills.push(val);
+        if (
+          !label.includes('備註') &&
+          !label.includes('Ghi chú') &&
+          !label.includes('Note') &&
+          !label.includes('訂單') &&
+          !label.includes('總金額') &&
+          !label.includes('時間') &&
+          !label.includes('取餐') &&
+          !label.includes('用餐方式')
+        ) {
+          if (label.includes('配料') || label.includes('加價')) {
+            extraPills.push(`${label}：${val}`);
+          } else {
+            flavorPills.push(val);
+          }
         }
       }
     }
@@ -324,11 +347,17 @@ export function buildOrderFlexMessage(
       return true;
     });
 
+    const seenNoteKeys = new Set<string>();
     itemLines.slice(0, 30).forEach((line, idx) => {
       const isOption = line.startsWith("↳") || line.startsWith("-") || line.startsWith("+") || line.startsWith("  ");
       const cleanLine = line.replace(/^[↳\-+]\s*/, "").replace(/[🍽️🛍️📦🎁🪑]/g, "").trim();
 
       if (isOption) {
+        const key = itemNoteKey(cleanLine, true);
+        if (key !== null) {
+          if (seenNoteKeys.has(key)) return;
+          seenNoteKeys.add(key);
+        }
         itemComponents.push({
           type: "text",
           text: `↳ ${cleanLine}`,
@@ -338,6 +367,7 @@ export function buildOrderFlexMessage(
           margin: "xs"
         });
       } else {
+        seenNoteKeys.clear();
         itemComponents.push({
           type: "text",
           text: cleanLine,
