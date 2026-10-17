@@ -97,6 +97,15 @@
 .uoc-panel nav {
   flex: 0 0 auto;
 }
+.uoc-panel .bundle-v2-step-nav {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  overscroll-behavior-x: contain;
+}
+.uoc-panel .bundle-v2-nav {
+  flex: 0 0 auto;
+}
 .uoc-body {
   flex: 1;
   min-height: 0;
