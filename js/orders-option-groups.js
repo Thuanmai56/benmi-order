@@ -501,9 +501,9 @@
     }
     return errors;
   }
-  function showSelectionErrors(focus = false) {
-    if (state.kind !== "group") return true;
-    state.ruleErrors = selectionErrors(state.draft);
+  function showSelectionErrors(focus = false, target = state?.draft) {
+    if (state.kind !== "group" || !target) return true;
+    state.ruleErrors = selectionErrors(target);
     const root = ensureDrawer();
     for (const key of ["minSelection", "maxSelection"]) {
       const field = root.querySelector(`[data-field="${key}"]`), error = root.querySelector(`#ug-${key}-error`);
@@ -1388,7 +1388,7 @@
         if (typeof alert === "function") alert(msg);
         return;
       }
-      if (!showSelectionErrors(true)) {
+      if (!showSelectionErrors(true, d)) {
         const firstKey = Object.keys(state.ruleErrors)[0];
         const msg = state.ruleErrors[firstKey] || tr("ugInvalid");
         state.error = msg;
@@ -1606,10 +1606,16 @@
       const g = groupById(id);
       const current = groupById(selectedGroup);
       const scope = g ? (g.scope === "order" ? "order" : "item") : (defaultScope || (current?.scope === "order" ? "order" : "item"));
+      const totalOptions = g ? options(g).length : 0;
+      let initialMax = g ? g.maxSelection : 1;
+      if (g && !g.allowRepeats && totalOptions > 0 && initialMax > totalOptions && (!g.maxSelection || initialMax >= 99)) {
+        initialMax = totalOptions;
+      }
       const draft =
         g
           ? {
               ...clone(g),
+              maxSelection: initialMax,
               scope,
               autoPopup: g.autoPopup !== undefined ? Boolean(g.autoPopup) : true,
               isNew: false,

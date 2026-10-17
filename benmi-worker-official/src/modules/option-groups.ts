@@ -78,12 +78,17 @@ export async function loadOptionCatalog(env: Env, tenantId: string): Promise<Opt
 		const autoPopup = (included || minSelection > 0)
 			? true
 			: (g.auto_popup !== undefined && g.auto_popup !== null ? Boolean(g.auto_popup) : true);
+		const totalOptions = options.filter((o) => o.group_id === g.id).length;
+		let maxSelection = Number(g.max_selection || (g.selection_type === 'single' ? 1 : 999));
+		if (!Boolean(g.allow_repeats) && totalOptions > 0 && maxSelection > totalOptions && (!g.max_selection || Number(g.max_selection) >= 99)) {
+			maxSelection = totalOptions;
+		}
 		return {
 			id: g.id,
 			name: g.name,
 			scope: g.scope || 'item',
 			minSelection,
-			maxSelection: Number(g.max_selection || (g.selection_type === 'single' ? 1 : 999)),
+			maxSelection,
 			allowRepeats: Boolean(g.allow_repeats),
 			included,
 			autoPopup,
@@ -492,6 +497,9 @@ export async function saveOptionEntity(request: Request, env: Env, kind: 'produc
 			const totalOptions = groupOptions(catalog, group).length;
 			if (!group.included) {
 				if (totalOptions === 0) throw new Error(`INSUFFICIENT_OPTIONS:${group.id}`);
+				if (!group.allowRepeats && totalOptions > 0 && group.maxSelection > totalOptions && group.maxSelection >= 99) {
+					group.maxSelection = totalOptions;
+				}
 				if (!group.allowRepeats && group.minSelection > totalOptions) throw new Error(`INSUFFICIENT_OPTIONS:${group.id}`);
 				if (!group.allowRepeats && group.maxSelection > totalOptions) throw new Error(`INSUFFICIENT_OPTIONS:${group.id}`);
 			}
