@@ -419,3 +419,43 @@ test('product settings expose the badge without recommendation controls and pres
     assert.equal(app.posts.length,1);
   }
 });
+
+test('group drawer exposes scope selector; switching scope updates UI and serializes correctly', async () => {
+  const app = await setup();
+  // 1. New group defaults to 'item' scope
+  app.context.UnifiedMenu.group();
+  const scopeSelect = app.get('[data-field="scope"]');
+  assert.equal(scopeSelect.value, 'item');
+  assert.equal(app.drawer().querySelector('.ug-order-scope-notice'), null);
+  assert.notEqual(app.drawer().querySelector('[data-action="linked"]'), null);
+
+  // 2. Switch to 'order' scope
+  app.input('scope', 'order');
+  assert.equal(app.get('[data-field="scope"]').value, 'order');
+  assert.notEqual(app.drawer().querySelector('.ug-order-scope-notice'), null);
+  assert.match(app.drawer().querySelector('.ug-order-scope-notice').textContent, /Áp dụng cho cả đơn hàng/);
+  // Item link buttons and category links details are hidden
+  assert.equal(app.drawer().querySelector('[data-action="linked"]'), null);
+  assert.equal(app.drawer().querySelector('[data-category-link]'), null);
+
+  // 3. Add an option and save
+  app.input('name', 'Ghi chú toàn đơn');
+  await app.click('add-option');
+  await app.click('custom');
+  app.input('option.name', 'Ít đá');
+  await app.click('apply');
+  await app.click('save');
+
+  assert.equal(app.posts.length, 1);
+  assert.equal(app.posts[0].name, 'Ghi chú toàn đơn');
+  assert.equal(app.posts[0].scope, 'order');
+  assert.deepEqual(app.posts[0].itemIds, []);
+
+  // 4. Editing an existing group with product options disables scope selector
+  const app2 = await setup();
+  app2.context.UnifiedMenu.group('drinks'); // contains 'coffee_option' linked to product 'coffee'
+  const disabledScope = app2.get('[data-field="scope"]');
+  assert.equal(disabledScope.disabled, true);
+  assert.match(disabledScope.getAttribute('title'), /không thể chuyển sang tùy chọn toàn đơn/);
+});
+
