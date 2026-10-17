@@ -142,3 +142,41 @@ test('text-only global note fallback accepts explicit global labels, never a nes
   const html = sandbox.formatContentHtml({ key: 'legacy', content: '1份 x Meal\n📝 總備註：Leave at door' });
   assert.equal(count(html, 'Leave at door'), 1);
 });
+
+test('exact Issue #64 reproduction: combo item without leading digits does not pollute flavor chips or customer note', () => {
+  const issue64Raw = 'Combo 2 Món Tiết Kiệm (Phần 1: Bánh mì Pate Cột Đèn...) x1 $180\n   ↳ ✦ Ghi chú dặn dò: Không bạc hà x1\n  - 備註: Test thôi\n  - 備註: Test thôi';
+  const order = { key: 'JJ1016-T001', content: issue64Raw, total: 180 };
+
+  // 1. extractFlavorSettings must be null (notes are NOT flavor settings or toppings)
+  assert.equal(sandbox.extractFlavorSettings(issue64Raw), null);
+
+  // 2. getGlobalCustomizations must be empty
+  assert.equal(service.getGlobalCustomizations(order).length, 0);
+
+  // 3. formatContentHtml must render "Test thôi" exactly 1 time
+  const html = sandbox.formatContentHtml(order);
+  assert.equal(count(html, 'Test thôi'), 1);
+
+  // 4. "Ghi chú dặn dò" modifier group must NOT be promoted to order-level customer note
+  assert.ok(!html.includes('dặn dò: Không bạc hà'));
+  assert.ok(!html.includes('order-note-alert'));
+
+  // 5. LINE flex message must not treat "Test thôi" as a flavor pill or extra ingredient
+  const flexMsg = buildOrderFlexMessage(order, null);
+  const flexStr = flexText(flexMsg);
+  assert.equal(count(flexStr, 'Test thôi'), 1);
+});
+
+test('renderItemRowHtml suppresses duplicate note row when optionsHtml already includes mod-chip-note', () => {
+  const item = {
+    name: 'Meal',
+    quantity: 1,
+    price: '$150',
+    options: '備註: Test thôi',
+    note: 'Test thôi'
+  };
+  const rowHtml = sandbox.renderItemRowHtml(item, 0, 'ORDER-1');
+  assert.equal(count(rowHtml, 'Test thôi'), 1);
+  assert.ok(!rowHtml.includes('review-item-note'));
+});
+

@@ -945,7 +945,7 @@ function extractFlavorSettings(rawContent) {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     if (/^\[(?:第\s*\d+\s*輪|Đợt\s*\d+)/i.test(line)) inItem = false;
-    if (/^\d+\s*(?:份|[x×])/i.test(line)) inItem = true;
+    if (/^\d+\s*(?:份|[x×])/i.test(line) || /^.+?\s*[x×*]\s*\d+(?:\s*[\$đ]|$)/i.test(line)) inItem = true;
     if (inItem) continue;
     if (
       line.includes("口味設定") ||
@@ -988,7 +988,10 @@ function extractFlavorSettings(rawContent) {
           !label.includes("總金額") &&
           !label.includes("時間") &&
           !label.includes("取餐") &&
-          !label.includes("用餐方式")
+          !label.includes("用餐方式") &&
+          !label.includes("備註") &&
+          !label.includes("Ghi chú") &&
+          !label.includes("Note")
         ) {
           extraIngredients.push({ label, value: val });
         }
@@ -1327,9 +1330,11 @@ function renderItemRowHtml(it, idx, orderKey) {
   const noteIcon = (typeof POS_SVG !== "undefined" && POS_SVG.note) || "";
   let noteHtml = "";
   if (it.note) {
-    const rawNote = String(it.note).trim();
-    if (rawNote) {
-      noteHtml = `<div class="review-item-note">${noteIcon}${escapeHtml(rawNote)}</div>`;
+    const remaining = (typeof PrinterService !== "undefined" && typeof PrinterService.remainingItemNote === "function")
+      ? PrinterService.remainingItemNote(optsToRender, it.note)
+      : (optionsHtml && optionsHtml.includes("mod-chip-note") ? "" : String(it.note).trim());
+    if (remaining) {
+      noteHtml = `<div class="review-item-note">${noteIcon}${escapeHtml(remaining)}</div>`;
     }
   }
 
@@ -1430,7 +1435,7 @@ function formatContentHtml(order) {
     }
   }
   if (!noteText && raw) {
-    const m = raw.match(/^(?:[ \t]*📝[ \t]*)?(?:總備註|顧客備註|備註|Ghi chú(?: toàn đơn)?)\s*[:：][ \t]*([^\n]+)/mi);
+    const m = raw.match(/^(?:[ \t]*📝[ \t]*(?:總備註|顧客備註|備註|Ghi chú(?: toàn đơn)?)?|[ \t]*(?:總備註|顧客備註|Ghi chú toàn đơn))\s*[:：][ \t]*([^\n]+)/mi);
     if (m && m[1]) {
       noteText = m[1].trim();
     }
