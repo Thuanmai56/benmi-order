@@ -23,7 +23,9 @@
       ugName: "Tên",
       ugScope: "Phân loại nhóm",
       ugScopeItem: "Tùy chọn theo món",
+      ugScopeItemDesc: "Áp dụng cho từng món riêng lẻ",
       ugScopeOrder: "Tùy chọn toàn đơn",
+      ugScopeOrderDesc: "Áp dụng cho cả đơn hàng",
       ugScopeDisabledHelp: "Nhóm đang có lựa chọn liên kết từ món, không thể chuyển sang tùy chọn toàn đơn.",
       ugCategory: "Phân loại",
       ugPrice: "Giá bán",
@@ -134,7 +136,9 @@
       ugName: "名稱",
       ugScope: "群組類型",
       ugScopeItem: "餐點選項",
+      ugScopeItemDesc: "套用至個別餐點",
       ugScopeOrder: "整筆訂單選項",
+      ugScopeOrderDesc: "套用至整筆訂單",
       ugScopeDisabledHelp: "此群組內含有來自餐點的選項，無法變更為整筆訂單選項。",
       ugCategory: "分類",
       ugPrice: "售價",
@@ -712,7 +716,7 @@
       const hasProductOptions = (d.options || []).some(
         (o) => o.productId || (o.subOptions && o.subOptions.some((sub) => typeof sub !== "string" && sub.productId)),
       );
-      const scopeField = `<label class="ug-field"><span>${esc(tr("ugScope"))}</span><select data-field="scope"${!d.isNew && hasProductOptions ? ' disabled title="' + esc(tr("ugScopeDisabledHelp")) + '"' : ""}><option value="item"${!isOrder ? " selected" : ""}>${esc(tr("ugScopeItem"))}</option><option value="order"${isOrder ? " selected" : ""}>${esc(tr("ugScopeOrder"))}</option></select>${!d.isNew && hasProductOptions ? `<small class="ug-muted">${esc(tr("ugScopeDisabledHelp"))}</small>` : ""}</label>`;
+      const scopeField = `<div class="ug-field ug-scope-field"><span>${esc(tr("ugScope"))}</span><div class="ug-scope-selector" role="radiogroup" aria-label="${esc(tr("ugScope"))}"><button type="button" class="ug-scope-card ${!isOrder ? "active" : ""}" data-action="set-scope" data-scope="item" role="radio" aria-checked="${!isOrder}" ${!d.isNew && hasProductOptions ? 'disabled title="' + esc(tr("ugScopeDisabledHelp")) + '"' : ""}><div class="ug-scope-card-header"><span class="ug-scope-radio-dot" aria-hidden="true"></span><strong class="ug-scope-title">${esc(tr("ugScopeItem"))}</strong></div><small class="ug-scope-desc">${esc(tr("ugScopeItemDesc"))}</small></button><button type="button" class="ug-scope-card ${isOrder ? "active" : ""}" data-action="set-scope" data-scope="order" role="radio" aria-checked="${isOrder}" ${!d.isNew && hasProductOptions ? 'disabled title="' + esc(tr("ugScopeDisabledHelp")) + '"' : ""}><div class="ug-scope-card-header"><span class="ug-scope-radio-dot" aria-hidden="true"></span><strong class="ug-scope-title">${esc(tr("ugScopeOrder"))}</strong></div><small class="ug-scope-desc">${esc(tr("ugScopeOrderDesc"))}</small></button></div>${!d.isNew && hasProductOptions ? `<small class="ug-muted">${esc(tr("ugScopeDisabledHelp"))}</small>` : ""}<select data-field="scope"${!d.isNew && hasProductOptions ? ' disabled title="' + esc(tr("ugScopeDisabledHelp")) + '"' : ""} style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;margin:-1px;border:0;padding:0;clip:rect(0,0,0,0);overflow:hidden;" aria-hidden="true" tabindex="-1"><option value="item"${!isOrder ? " selected" : ""}>${esc(tr("ugScopeItem"))}</option><option value="order"${isOrder ? " selected" : ""}>${esc(tr("ugScopeOrder"))}</option></select></div>`;
       body = `<section><h3>${esc(tr("ugDetails"))}</h3>${field("name", "ugName", d.name)}${scopeField}</section><section><h3>${esc(tr("ugRules"))}</h3><div class="ug-list">${toggle("required", "ugRequired", d.included ? min > 0 : state.required)}${d.included || state.required ? stepper("minSelection", "ugMin", min, 1) : ""}${stepper("maxSelection", "ugMax", max, 1)}</div><div class="ug-list">${toggle("allowRepeats", "ugRepeat", d.allowRepeats)}${toggle("included", "ugIncluded", d.included)}</div></section><section><div class="ug-section-title"><h3>${esc(tr("ugOptions"))} (${options(d).length})</h3>${btn("add-option", "ugAdd")}</div><div class="ug-list">${
         options(d)
           .map((o) =>
@@ -955,6 +959,18 @@
     if (name === "back") return back();
     if (name === "discard") return finish();
     if (name === "continue") return dismissConfirmation();
+    if (name === "set-scope") {
+      const card = el.closest("[data-scope]");
+      const scope = card?.dataset.scope;
+      if (card?.disabled || !scope || scope === d.scope) return;
+      d.scope = scope;
+      if (scope === "order") {
+        d.itemIds = [];
+        d.categoryIds = [];
+        d.sources = [];
+      }
+      return render();
+    }
     if (name === "remove-photo") {
       d.imageDraft = null;
       d.imageKey = "";
