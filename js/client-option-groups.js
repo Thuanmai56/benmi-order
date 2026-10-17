@@ -177,7 +177,9 @@
     );
   }
   function invalid(groups, saved) {
-    if (!saved || saved.length !== groups.length) return true;
+    if (!saved || saved.length !== groups.length) {
+      return groups.some((g) => minimum(g) > 0 || g.included);
+    }
     return groups.some((g) => {
       const selections = saved.find((s) => s.groupId === g.id)?.items || [],
         count = selections.reduce((sum, i) => sum + Number(i.quantity || 1), 0);

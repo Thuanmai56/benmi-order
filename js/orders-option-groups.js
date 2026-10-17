@@ -27,6 +27,10 @@
       ugScopeOrder: "Tùy chọn toàn đơn",
       ugScopeOrderDesc: "Áp dụng cho cả đơn hàng",
       ugScopeDisabledHelp: "Nhóm đang có lựa chọn liên kết từ món, không thể chuyển sang tùy chọn toàn đơn.",
+      ugAutoPopup: "Tự động hiện khi chọn món",
+      ugAutoPopupHelp: "Mở bảng chọn ngay khi khách bấm món trên thực đơn (phù hợp với combo, món ăn kèm). Tắt nếu muốn khách bấm món thêm ngay vào giỏ và tự bấm tùy chỉnh khi cần (phù hợp với độ cay, ghi chú).",
+      ugAutoPopupHelpLocked: "Bắt buộc mở bảng chọn vì nhóm tùy chọn này có số lượng tối thiểu > 0 hoặc đã bao gồm trong món.",
+      ugManualCustomize: "Tự bấm tùy chỉnh",
       ugCategory: "Phân loại",
       ugPrice: "Giá bán",
       ugBadge: "Nhãn",
@@ -143,6 +147,10 @@
       ugScopeOrder: "整筆訂單選項",
       ugScopeOrderDesc: "套用至整筆訂單",
       ugScopeDisabledHelp: "此群組內含有來自餐點的選項，無法變更為整筆訂單選項。",
+      ugAutoPopup: "選餐時自動彈出",
+      ugAutoPopupHelp: "顧客在菜單點選餐點時立即彈出選項視窗（適合套餐、配菜）。關閉時點選餐點直接加入購物車，顧客如需客製化可自行點選自訂（適合辣度、備註）。",
+      ugAutoPopupHelpLocked: "此群組最少選擇數量大於 0 或已內含於餐點，點選時強制彈出視窗。",
+      ugManualCustomize: "手動自訂",
       ugCategory: "分類",
       ugPrice: "售價",
       ugBadge: "標籤",
@@ -401,6 +409,7 @@
       minSelection: d.included ? null : d.minSelection,
       maxSelection: d.included ? null : d.maxSelection,
       allowRepeats: Boolean(d.allowRepeats), included: Boolean(d.included),
+      autoPopup: d.scope === "item" ? Boolean(d.included || (d.minSelection && d.minSelection > 0) ? true : (d.autoPopup ?? true)) : null,
       options: (d.options || []).filter((o) => !o.fromSource).map(optionValues),
       itemIds: sortedIds(d.itemIds), categoryIds: sortedIds(d.categoryIds),
       sources: (d.sources || []).map((s) => ({ type: s.type, refId: s.refId || s.categoryId || null, itemIds: sortedIds(s.itemIds) })).sort((a, b) => stable(a).localeCompare(stable(b))),
@@ -442,11 +451,11 @@
     `<button type="button" data-action="${action}" ${attrs}>${esc(tr(label))}</button>`;
   const field = (key, label, value, type = "text", extra = "") =>
     `<label class="ug-field"><span>${esc(tr(label))}</span><input data-field="${key}" type="${type}" value="${esc(value)}" ${extra}></label>`;
-  const toggle = (key, label, value, help) => {
+  const toggle = (key, label, value, help, extra = "") => {
     const id = `ug-${key.replace(/\./g, "-")}`;
     // Keep the help button outside the switch label so reading help cannot toggle it.
     // Help-circle SVG: Feather Icons (MIT).
-    return `<div class="ug-rule ${help ? "ug-rule-help" : ""}"><div class="ug-rule-label"><label for="${id}">${esc(tr(label))}</label>${help ? `<button type="button" class="ug-help-button" data-action="help" aria-label="${esc(tr("ugExplain"))}: ${esc(tr(label))}" aria-expanded="false" aria-controls="${id}-help"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></button>` : ""}</div><label class="ug-switch"><input id="${id}" type="checkbox" role="switch" data-field="${key}" ${help ? `aria-describedby="${id}-help"` : ""} ${value ? "checked" : ""}><span class="ug-switch-track" aria-hidden="true"></span></label>${help ? `<p id="${id}-help" class="ug-help-text" hidden>${esc(tr(help))}</p>` : ""}</div>`;
+    return `<div class="ug-rule ${help ? "ug-rule-help" : ""}"><div class="ug-rule-label"><label for="${id}">${esc(tr(label))}</label>${help ? `<button type="button" class="ug-help-button" data-action="help" aria-label="${esc(tr("ugExplain"))}: ${esc(tr(label))}" aria-expanded="false" aria-controls="${id}-help"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></button>` : ""}</div><label class="ug-switch"><input id="${id}" type="checkbox" role="switch" data-field="${key}" ${help ? `aria-describedby="${id}-help"` : ""} ${value ? "checked" : ""} ${extra}><span class="ug-switch-track" aria-hidden="true"></span></label>${help ? `<p id="${id}-help" class="ug-help-text" hidden>${esc(tr(help))}</p>` : ""}</div>`;
   };
   function toggleHelp(button, expanded = button.getAttribute("aria-expanded") !== "true") {
     for (const other of ensureDrawer().querySelectorAll('[data-action="help"]')) {
@@ -723,8 +732,11 @@
       const hasProductOptions = (d.options || []).some(
         (o) => o.productId || (o.subOptions && o.subOptions.some((sub) => typeof sub !== "string" && sub.productId)),
       );
+      const isAutoPopupLocked = d.included || min > 0;
+      const autoPopupVal = isAutoPopupLocked ? true : (d.autoPopup !== undefined ? Boolean(d.autoPopup) : true);
+      const autoPopupHelp = isAutoPopupLocked ? "ugAutoPopupHelpLocked" : "ugAutoPopupHelp";
       const scopeField = `<div class="ug-field ug-scope-field"><span>${esc(tr("ugScope"))}</span><div class="ug-scope-selector" role="radiogroup" aria-label="${esc(tr("ugScope"))}"><button type="button" class="ug-scope-card ${!isOrder ? "active" : ""}" data-action="set-scope" data-scope="item" role="radio" aria-checked="${!isOrder}" ${!d.isNew && hasProductOptions ? 'disabled title="' + esc(tr("ugScopeDisabledHelp")) + '"' : ""}><div class="ug-scope-card-header"><span class="ug-scope-radio-dot" aria-hidden="true"></span><strong class="ug-scope-title">${esc(tr("ugScopeItem"))}</strong></div><small class="ug-scope-desc">${esc(tr("ugScopeItemDesc"))}</small></button><button type="button" class="ug-scope-card ${isOrder ? "active" : ""}" data-action="set-scope" data-scope="order" role="radio" aria-checked="${isOrder}" ${!d.isNew && hasProductOptions ? 'disabled title="' + esc(tr("ugScopeDisabledHelp")) + '"' : ""}><div class="ug-scope-card-header"><span class="ug-scope-radio-dot" aria-hidden="true"></span><strong class="ug-scope-title">${esc(tr("ugScopeOrder"))}</strong></div><small class="ug-scope-desc">${esc(tr("ugScopeOrderDesc"))}</small></button></div>${!d.isNew && hasProductOptions ? `<small class="ug-muted">${esc(tr("ugScopeDisabledHelp"))}</small>` : ""}<select data-field="scope"${!d.isNew && hasProductOptions ? ' disabled title="' + esc(tr("ugScopeDisabledHelp")) + '"' : ""} style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;margin:-1px;border:0;padding:0;clip:rect(0,0,0,0);overflow:hidden;" aria-hidden="true" tabindex="-1"><option value="item"${!isOrder ? " selected" : ""}>${esc(tr("ugScopeItem"))}</option><option value="order"${isOrder ? " selected" : ""}>${esc(tr("ugScopeOrder"))}</option></select></div>`;
-      body = `<section><h3>${esc(tr("ugDetails"))}</h3>${field("name", "ugName", d.name)}${scopeField}</section><section><h3>${esc(tr("ugRules"))}</h3><div class="ug-list">${toggle("required", "ugRequired", d.included ? min > 0 : state.required)}${d.included || state.required ? stepper("minSelection", "ugMin", min, 1) : ""}${stepper("maxSelection", "ugMax", max, 1)}</div><div class="ug-list">${toggle("allowRepeats", "ugRepeat", d.allowRepeats)}${toggle("included", "ugIncluded", d.included)}</div></section><section><div class="ug-section-title"><h3>${esc(tr("ugOptions"))} (${options(d).length})</h3>${btn("add-option", "ugAdd")}</div><div class="ug-list">${
+      body = `<section><h3>${esc(tr("ugDetails"))}</h3>${field("name", "ugName", d.name)}${scopeField}</section><section><h3>${esc(tr("ugRules"))}</h3><div class="ug-list">${toggle("required", "ugRequired", d.included ? min > 0 : state.required)}${d.included || state.required ? stepper("minSelection", "ugMin", min, 1) : ""}${stepper("maxSelection", "ugMax", max, 1)}</div><div class="ug-list">${toggle("allowRepeats", "ugRepeat", d.allowRepeats)}${toggle("included", "ugIncluded", d.included)}${!isOrder ? toggle("autoPopup", "ugAutoPopup", autoPopupVal, autoPopupHelp, isAutoPopupLocked ? 'disabled title="' + esc(tr("ugAutoPopupHelpLocked")) + '"' : "") : ""}</div></section><section><div class="ug-section-title"><h3>${esc(tr("ugOptions"))} (${options(d).length})</h3>${btn("add-option", "ugAdd")}</div><div class="ug-list">${
         options(d)
           .map((o) =>
             row(
@@ -1067,6 +1079,7 @@
         }
         render();
       }
+      if (key === "autoPopup") render();
       if (["minSelection", "maxSelection", "allowRepeats"].includes(key)) showSelectionErrors();
     }
   }
@@ -1346,6 +1359,10 @@
       d.minSelection = min;
       d.maxSelection = max;
     }
+    if (state.kind === "group" && d.scope === "item") {
+      if (d.included || d.minSelection > 0) d.autoPopup = true;
+      else d.autoPopup = d.autoPopup !== undefined ? Boolean(d.autoPopup) : true;
+    }
     return persist(d, remove, removeOption);
   }
   async function persist(d, remove, removeOption = false) {
@@ -1581,6 +1598,7 @@
           ? {
               ...clone(g),
               scope,
+              autoPopup: g.autoPopup !== undefined ? Boolean(g.autoPopup) : true,
               isNew: false,
               categoryIds: catalog.categoryLinks.filter((l) => l.groupId === id).map((l) => l.categoryId),
               itemIds: catalog.links.filter((l) => l.groupId === id && !l.disabled).map((l) => l.itemId),
@@ -1588,6 +1606,7 @@
           : {
               id: uid("group"), isNew: true, name: "", scope, minSelection: 0,
               maxSelection: 1, allowRepeats: false, included: false,
+              autoPopup: true,
               options: [], sources: [], labels: {}, revision: 0, itemIds: [], categoryIds: [],
             };
       const option = g && entry === "option" ? options(draft).find((o) => o.id === optionId) : null;
@@ -1705,7 +1724,7 @@
       add.onclick = () => this.group(group.id, "add-option");
       const ids = group ? affectedIds(group) : [];
       root.innerHTML = group
-        ? `<div class="ug-workspace"><div class="ug-workspace-linked"><div><strong>${esc(group.scope === "order" ? tr("ugAppliesToOrder") : `${tr("ugLinked")} (${ids.length})`)}</strong>${group.scope !== "order" && ids.length ? `<span>${esc(ids.map((id) => productById(id)?.name).filter(Boolean).join("、"))}</span>` : ""}</div>${group.scope !== "order" ? btn("linked", "ugLink") : ""}</div><p class="ug-workspace-rule ug-muted">${esc(rule(group))}${group.allowRepeats ? ` · ${esc(tr("ugRepeat"))}` : ""}${group.included ? ` · ${esc(tr("ugIncluded"))}` : ""}</p><div class="ug-workspace-options">${options(
+        ? `<div class="ug-workspace"><div class="ug-workspace-linked"><div><strong>${esc(group.scope === "order" ? tr("ugAppliesToOrder") : `${tr("ugLinked")} (${ids.length})`)}</strong>${group.scope !== "order" && ids.length ? `<span>${esc(ids.map((id) => productById(id)?.name).filter(Boolean).join("、"))}</span>` : ""}</div>${group.scope !== "order" ? btn("linked", "ugLink") : ""}</div><p class="ug-workspace-rule ug-muted">${esc(rule(group))}${group.allowRepeats ? ` · ${esc(tr("ugRepeat"))}` : ""}${group.included ? ` · ${esc(tr("ugIncluded"))}` : ""}${group.scope !== "order" && group.autoPopup === false ? ` · ${esc(tr("ugManualCustomize"))}` : ""}</p><div class="ug-workspace-options">${options(
             group,
           )
             .map(

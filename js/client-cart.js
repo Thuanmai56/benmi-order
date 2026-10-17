@@ -259,13 +259,28 @@ function updateQty(category, origName, change) {
     const hasModifiers = Array.isArray(itemModifiers) && itemModifiers.length > 0;
     const hasRequiredModifiers = hasModifiers && itemModifiers.some(m => m.isRequired || Number(m.minSelection || 0) > 0);
 
-    // Intercept bundle item increment: open builder modal instead of direct cart increment
-    if (bundleRule && change > 0) {
+    const shouldBundleAutoPopup = bundleRule ? (bundleRule.autoPopup !== false) : false;
+
+    // Intercept bundle item increment: open builder modal only if bundle requires auto-popup
+    if (bundleRule && shouldBundleAutoPopup && change > 0) {
         const currentQty = cartObj[key] || 0;
         if (typeof openBundleBuilderModal === 'function') {
             openBundleBuilderModal(category, origName, currentQty);
         }
         return;
+    }
+
+    // If adding a portion for a bundle item that does NOT auto-popup, initialize default bundle portion data
+    if (bundleRule && !shouldBundleAutoPopup && change > 0) {
+        window.bundleCartData = window.bundleCartData || {};
+        window.bundleCartData[key] = window.bundleCartData[key] || [];
+        const currentQty = cartObj[key] || 0;
+        if (window.bundleCartData[key].length < currentQty + 1) {
+            const defaultGroups = window.UnifiedOptions && typeof window.UnifiedOptions.restore === 'function'
+                ? window.UnifiedOptions.restore(bundleRule)
+                : [];
+            window.bundleCartData[key].push({ portionIndex: currentQty, groups: defaultGroups });
+        }
     }
 
     // Intercept customize item increment: ONLY open modal automatically if item has REQUIRED modifiers
