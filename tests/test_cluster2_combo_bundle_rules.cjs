@@ -503,6 +503,7 @@ describe('Cluster 2: Combo / Bundle Multi-Choice & Surcharges Test Suite', () =>
       bootstrapData: mockWindow.bootstrapData,
       document: {
         addEventListener: () => {},
+        documentElement: { style: { setProperty() {} } },
         getElementById: () => null,
         querySelectorAll: () => []
       }

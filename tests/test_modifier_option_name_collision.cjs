@@ -77,7 +77,7 @@ function setupFrontendSandbox(fixtureBootstrap) {
                 appendChild: () => {}
             },
             documentElement: {
-                style: {},
+                style: { setProperty() {} },
                 classList: {
                     add: () => {},
                     remove: () => {},

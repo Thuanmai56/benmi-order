@@ -33,5 +33,17 @@ assert(printedText.join('').includes('#B0914-T007'));assert(!printedText.join(''
  await service.handleIncomingOrders([order]);assert.equal(ids.length,0);
  const later={...order,key:'8588ce97-8efc-4baa-a509-9a6d983b030e',legacyKey:null};
  await service.handleIncomingOrders([later]);assert.deepEqual(ids,[later.key]);
+ let release, calls=0;
+ const concurrent={...order,key:'concurrent-order',legacyKey:'concurrent-display'};
+ service.printDualStation=async()=>{calls++;await new Promise(resolve=>{release=resolve;});};
+ const printing=service.handleIncomingOrders([concurrent]);
+ await service.handleIncomingOrders([concurrent]);assert.equal(calls,1);
+ release();await printing;await service.handleIncomingOrders([concurrent]);assert.equal(calls,1);
+ assert.equal(service.isOrderAlreadyPrinted(concurrent.key),true);
+ assert.equal(service.isOrderAlreadyPrinted(concurrent.legacyKey),true);
+ const failed={...order,key:'offline-order',legacyKey:null};
+ service.printDualStation=async()=>{calls++;throw Error('station offline');};
+ await service.handleIncomingOrders([failed]);await service.handleIncomingOrders([failed]);
+ assert.equal(calls,2);assert.equal(service._inFlightOrderKeys.size,0);
  console.log('PASS receipt/sticker display number, migrated print dedup, later-year new order still prints');
 })().catch(e=>{console.error(e);process.exitCode=1});

@@ -27,7 +27,11 @@ for (const mode of ['dev', 'test', 'production']) {
     for (const { binding, store_id: storeId, secret_name: secretName } of original.secrets_store_secrets) {
       expected[binding] = { type: 'secrets-store-secret', storeId, secretName };
     }
-    if (mode === 'dev') expected.UNIFIED_MENU_ENABLED = {type:'text',value:'true'};
+    if (mode === 'dev') {
+      expected.UNIFIED_MENU_ENABLED = {type:'text',value:'true'};
+      expected.ORDER_STATE = {type:'kv',id:'f85c539e10df45049780abe25631f082'};
+      assert.notEqual(expected.ORDER_STATE.id, config({mode:'test'}).worker.env.ORDER_STATE.id);
+    }
     assert.deepEqual(worker.env, expected);
     assert.equal(worker.observability.logs.persist, original.observability.logs.persist);
     assert.equal(worker.observability.logs.invocationLogs, original.observability.logs.invocation_logs);
