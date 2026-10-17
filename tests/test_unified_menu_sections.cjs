@@ -4,7 +4,7 @@ const { setup } = require('./helpers/menu-drawer-dom.cjs');
 
 async function workspace({ lang = 'vi', empty = false } = {}) {
   const app = await setup({ lang });
-  const group = (id, name, scope) => ({ id, name, scope, revision: 1, minSelection: 0, maxSelection: 1, options: [], sources: [], labels: {} });
+  const group = (id, name, scope) => ({ id, name, scope, revision: 1, minSelection: 0, maxSelection: 1, options: [{ id: `${id}_opt`, name: 'Mặc định', price: 0, quantity: 1, subOptions: [], eligibilityRules: [] }], sources: [], labels: {} });
   const catalog = app.catalog();
   catalog.groups = empty ? [] : [
     group('notes', 'Ghi chú chung', 'order'),
@@ -97,7 +97,7 @@ test('rerendering after tab switches, reloads and group save retains collapse, q
   app.context.UnifiedMenu.sidebar();
   assert.equal(app.root.querySelector('#ug-group-search').value, 'Dụng cụ');
   assert.equal(app.doc.getElementById('menu-editor-title').textContent, 'Dụng cụ ăn mới');
-  app.clear(); assert.equal(app.section('order').open, false); assert.equal(app.section('item').open, true);
+  app.clear(); assert.equal(app.section('order').open, true); assert.equal(app.section('item').open, true);
 });
 
 test('empty sections stay visible with zero counts, localized names and empty messages', async () => {
