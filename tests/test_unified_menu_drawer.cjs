@@ -360,6 +360,7 @@ test('group creation validates options count and alerts when options are insuffi
 
   // 1. New group starts with 0 options: saving directly must alert and block
   app.context.UnifiedMenu.group(); // new group
+  await app.click('select-new-scope', '[data-scope="item"]');
   app.input('name', 'Nhóm mới');
   await app.click('save');
   assert.equal(app.posts.length, 0);
@@ -424,6 +425,7 @@ test('group drawer exposes scope selector; switching scope updates UI and serial
   const app = await setup();
   // 1. New group defaults to 'item' scope
   app.context.UnifiedMenu.group();
+  await app.click('select-new-scope', '[data-scope="item"]');
   const scopeSelect = app.get('[data-field="scope"]');
   assert.equal(scopeSelect.value, 'item');
   assert.equal(app.drawer().querySelector('.ug-order-scope-notice'), null);
@@ -466,6 +468,7 @@ test('group drawer exposes autoPopup toggle for item groups, locks when required
 
   // 1. New group defaults to autoPopup: true and minSelection: 0 (optional)
   app.context.UnifiedMenu.group();
+  await app.click('select-new-scope', '[data-scope="item"]');
   let autoPopupToggle = app.get('[data-field="autoPopup"]');
   assert.notEqual(autoPopupToggle, null);
   assert.equal(autoPopupToggle.checked, true);
@@ -502,7 +505,7 @@ test('group drawer exposes autoPopup toggle for item groups, locks when required
   // 6. Switching to order scope hides autoPopup toggle
   const app3 = await setup();
   app3.context.UnifiedMenu.group();
-  await app3.click('set-scope', '[data-scope="order"]');
+  await app3.click('select-new-scope', '[data-scope="order"]');
   assert.equal(app3.drawer().querySelector('[data-field="autoPopup"]'), null);
 });
 
@@ -513,6 +516,7 @@ test('option group rule logic matches Foodpanda specification (Issue #63)', asyn
 
   // 1. Foodpanda exact case: required toggle ON, 0 options, min: 2, max: 1
   app.context.UnifiedMenu.group(); // new group, 0 options
+  await app.click('select-new-scope', '[data-scope="item"]');
   app.input('required', true);
   app.input('minSelection', 2);
   app.input('maxSelection', 1);
@@ -598,6 +602,51 @@ test('legacy group with maxSelection 999 normalizes to option count and can be e
   assert.equal(app.posts[0].name, 'Đồ uống đặc biệt');
   assert.equal(app.posts[0].maxSelection, 2);
 });
+
+test('new option group flow has 2 steps: step 1 picks scope, step 2 fills details with back button to step 1', async () => {
+  const app = await setup();
+
+  // 1. Launching new group starts at Step 1 (new-group-scope)
+  app.context.UnifiedMenu.group();
+  assert.equal(app.get('#ug-title').textContent, 'Tạo nhóm tùy chọn');
+  assert.notEqual(app.drawer().querySelector('.ug-scope-step'), null);
+  const scopeCards = app.drawer().querySelectorAll('.ug-scope-step-card');
+  assert.equal(scopeCards.length, 2);
+  assert.equal(app.drawer().querySelector('[data-action="back"]'), null); // No back button on Step 1
+  assert.equal(app.drawer().querySelector('footer').hidden, true); // Footer hidden on Step 1
+
+  // 2. Click "Tùy chọn cho món" -> advances to Step 2
+  await app.click('select-new-scope', '[data-scope="item"]');
+  assert.equal(app.get('#ug-title').textContent, 'Thêm nhóm tùy chọn');
+  assert.notEqual(app.drawer().querySelector('[data-action="back"]'), null); // Back button present on Step 2
+  assert.equal(app.drawer().querySelector('footer').hidden, false); // Footer visible
+  assert.equal(app.get('[data-action="save"]').textContent, 'Lưu nhóm'); // Primary action is save
+  assert.equal(app.get('[data-field="scope"]').value, 'item');
+  assert.notEqual(app.drawer().querySelector('[data-field="autoPopup"]'), null); // autoPopup visible for item
+
+  // 3. Click Back -> returns to Step 1
+  await app.click('back');
+  assert.equal(app.get('#ug-title').textContent, 'Tạo nhóm tùy chọn');
+  assert.equal(app.drawer().querySelector('[data-action="back"]'), null);
+  assert.equal(app.drawer().querySelector('footer').hidden, true);
+
+  // 4. Click "Tùy chọn toàn cục" -> advances to Step 2 with order scope
+  await app.click('select-new-scope', '[data-scope="order"]');
+  assert.equal(app.get('#ug-title').textContent, 'Thêm nhóm tùy chọn');
+  assert.equal(app.get('[data-field="scope"]').value, 'order');
+  assert.equal(app.drawer().querySelector('[data-field="autoPopup"]'), null); // No autoPopup for order
+  assert.equal(app.get('[data-action="save"]').textContent, 'Lưu nhóm');
+
+  // 5. Test Traditional Chinese (zh-TW)
+  const zhApp = await setup({ lang: 'zh-TW' });
+  zhApp.context.UnifiedMenu.group();
+  assert.equal(zhApp.get('#ug-title').textContent, '建立選項群組');
+  await zhApp.click('select-new-scope', '[data-scope="item"]');
+  assert.equal(zhApp.get('#ug-title').textContent, '新增選項群組');
+  assert.equal(zhApp.get('[data-action="save"]').textContent, '儲存群組');
+  assert.equal(zhApp.get('[data-action="back"]').textContent, '返回');
+});
+
 
 
 

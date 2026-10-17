@@ -193,7 +193,7 @@ test('ordering screen assets include the current cache busters', () => {
   const html = fs.readFileSync(path.resolve(__dirname, '../orders.html'), 'utf-8');
   for (const asset of ['css/orders-menu.css', 'js/orders-menu.js', 'js/orders-i18n.js']) {
     const escaped = asset.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const version = asset === 'js/orders-i18n.js' ? '20261017_order_detail_v1' : (asset === 'css/orders-menu.css' ? '20261017_category_checkbox_v1' : '20261013_badge_only_v1');
+    const version = asset === 'js/orders-i18n.js' ? '20261017_order_detail_v1' : (asset === 'css/orders-menu.css' ? '20261017_group_scope_step_v5' : '20261013_badge_only_v1');
     assert.match(html,new RegExp(`${escaped}\\?v=${version}`));
   }
 });
