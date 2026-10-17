@@ -235,7 +235,7 @@ test('sub-option popover opens without dirtying the draft and Escape dismisses o
   for (const lang of ['vi','zh-TW']) {
     const app = await setup({lang}); app.context.UnifiedMenu.group('drinks','option','custom');
     const name = app.get('[data-field="option.name"]'), body = app.get('.ug-body');
-    app.input('option.description','Draft description'); body.scrollTop = 160;
+    app.input('option.price', '25'); body.scrollTop = 160;
     await app.click('add-sub');
     assert.equal(app.get('.ug-sub-menu').hidden,false);
     assert.equal(app.get('[data-action="add-sub"]').getAttribute('aria-expanded'),'true');
@@ -243,7 +243,8 @@ test('sub-option popover opens without dirtying the draft and Escape dismisses o
     app.emit('keydown',app.get('[data-action="sub-products"]'),{key:'Escape'});
     assert.equal(app.get('.ug-sub-menu').hidden,true);
     assert.equal(app.drawer().hidden,false); assert.equal(app.get('[data-field="option.name"]'),name);
-    assert.equal(app.get('[data-field="option.description"]').value,'Draft description');
+    assert.equal(app.get('[data-field="option.price"]').value,'25');
+    assert.equal(app.drawer().querySelector('[data-field="option.description"]'), null);
     assert.equal(body.scrollTop,160); assert.equal(app.posts.length,0);
   }
 });
