@@ -329,7 +329,7 @@
       if (b.dataset.step !== undefined) {
         context.step = Number(b.dataset.step);
         context.error = "";
-        return render(true);
+        return render(true, `[data-step="${context.step}"]`);
       }
       if (b.dataset.child !== undefined) {
         context.views.push({
@@ -420,6 +420,10 @@
       context.error = "";
       render();
     });
+    el.addEventListener("focusin", (event) => {
+      const step = event.target.closest("[data-step]");
+      if (step) revealStep(el.querySelector("nav"), step);
+    });
     el.addEventListener("keydown", (event) => {
       if (event.key === "Escape") {
         event.preventDefault();
@@ -481,9 +485,24 @@
     }
     return null;
   }
+  function revealStep(nav, step) {
+    if (nav.hidden || !nav.clientWidth || !step) return;
+    // Scroll only this strip: scrollIntoView would also move the sheet/body.
+    const strip = nav.getBoundingClientRect(),
+      button = step.getBoundingClientRect(),
+      left = button.left - strip.left,
+      right = button.right - strip.left;
+    if (left < 8 || button.width > nav.clientWidth - 16)
+      nav.scrollLeft += left - 8;
+    else if (right > nav.clientWidth - 8)
+      nav.scrollLeft += right - nav.clientWidth + 8;
+  }
   function render(reset = false, restoreFocus = null) {
     const el = root(),
       body = el.querySelector(".uoc-body"),
+      nav = el.querySelector("nav"),
+      navScroll = nav.scrollLeft,
+      previousStep = nav.querySelector('[aria-current="step"]')?.dataset.step,
       scroll = reset ? 0 : body.scrollTop,
       focus = restoreFocus || focusSelector(document.activeElement);
     const view = context.views.at(-1),
@@ -505,7 +524,6 @@
       (_, index) =>
         `<button type="button" class="portion-tab-btn ${index === context.index ? "active" : ""}" data-portion="${index}" aria-pressed="${index === context.index}">${esc(index === qty ? msg("＋ 新增一份", "+ Thêm một phần") : msg(`第 ${index + 1} 份`, `Phần ${index + 1}`))}</button>`,
     ).join("");
-    const nav = el.querySelector("nav");
     nav.hidden =
       Boolean(nested) ||
       context.mode === "chips" ||
@@ -554,11 +572,14 @@
       "aria-label",
       msg("關閉", "Đóng"),
     );
-    const target = !reset && focus ? el.querySelector(focus) : null;
+    nav.scrollLeft = navScroll;
+    const target = focus && (!reset || restoreFocus) ? el.querySelector(focus) : null;
     (target && !target.disabled && target.getClientRects().length
       ? target
       : el.querySelector("h2")
     ).focus({ preventScroll: true });
+    if (previousStep !== String(context.step))
+      revealStep(nav, nav.querySelector('[aria-current="step"]'));
   }
   function goBack() {
     const view = context.views.pop();
@@ -727,6 +748,8 @@
         note: window.customizeData?.[key]?.[index]?.note || "",
       };
       root().hidden = false;
+      root().querySelector("nav").innerHTML = "";
+      root().querySelector("nav").scrollLeft = 0;
       for (const el of document.body.children)
         if (el !== root() && !el.inert) {
           el.dataset.uocInert = "1";
