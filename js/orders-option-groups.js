@@ -41,6 +41,8 @@
       ugMax: "Số lượng tối đa",
       ugRuleInteger: "Nhập số nguyên từ {min} đến 999.",
       ugRuleRange: "Số lượng tối đa phải lớn hơn hoặc bằng tối thiểu.",
+      ugRuleRangeMin: "Số lượng tối thiểu không được lớn hơn số lượng tối đa.",
+      ugRuleRangeMax: "Số lượng tối đa phải lớn hơn hoặc bằng số lượng tối thiểu.",
       ugRuleOptionCountMin: "Số lượng tối thiểu không thể lớn hơn số lựa chọn trong nhóm (hiện có {count} lựa chọn).",
       ugRuleOptionCountMax: "Số lượng tối đa không thể lớn hơn số lựa chọn trong nhóm (hiện có {count} lựa chọn).",
       ugGroupNoOptions: "Nhóm tùy chọn phải có ít nhất 1 lựa chọn.",
@@ -161,6 +163,8 @@
       ugMax: "最多選擇數量",
       ugRuleInteger: "請輸入 {min} 至 999 的整數。",
       ugRuleRange: "最多選擇數量必須大於或等於最少選擇數量。",
+      ugRuleRangeMin: "最少選擇數量不可大於最多選擇數量。",
+      ugRuleRangeMax: "最多選擇數量必須大於或等於最少選擇數量。",
       ugRuleOptionCountMin: "最少選擇數量不可大於群組內的選項數量（目前有 {count} 個選項）。",
       ugRuleOptionCountMax: "最多選擇數量不可大於群組內的選項數量（目前有 {count} 個選項）。",
       ugGroupNoOptions: "選項群組必須至少包含一個選項。",
@@ -474,16 +478,25 @@
       if (value === "" || !Number.isInteger(Number(value)) || Number(value) < min || Number(value) > 999)
         errors[key] = tr("ugRuleInteger", { min });
     }
-    if (!errors.minSelection && !errors.maxSelection && Number(d.maxSelection) < Number(d.minSelection)) {
-      errors.minSelection = errors.maxSelection = tr("ugRuleRange");
-    }
     const optionCount = options(d).length;
-    if (optionCount > 0) {
-      if (!errors.minSelection && !d.allowRepeats && Number(d.minSelection) > optionCount) {
-        errors.minSelection = tr("ugRuleOptionCountMin", { count: optionCount });
-      }
-      if (!errors.maxSelection && !d.allowRepeats && Number(d.maxSelection) > optionCount) {
-        errors.maxSelection = tr("ugRuleOptionCountMax", { count: optionCount });
+    const shouldCheckOptionCount = optionCount > 0 || state.required || Number(d.minSelection) > 0;
+    if (!errors.minSelection && !errors.maxSelection) {
+      if (Number(d.maxSelection) < Number(d.minSelection)) {
+        errors.minSelection = tr("ugRuleRangeMin");
+        if (!d.allowRepeats && shouldCheckOptionCount && Number(d.maxSelection) > optionCount) {
+          errors.maxSelection = tr("ugRuleOptionCountMax", { count: optionCount });
+        } else {
+          errors.maxSelection = tr("ugRuleRangeMax");
+        }
+      } else {
+        if (!d.allowRepeats && shouldCheckOptionCount) {
+          if (Number(d.minSelection) > optionCount) {
+            errors.minSelection = tr("ugRuleOptionCountMin", { count: optionCount });
+          }
+          if (Number(d.maxSelection) > optionCount) {
+            errors.maxSelection = tr("ugRuleOptionCountMax", { count: optionCount });
+          }
+        }
       }
     }
     return errors;
