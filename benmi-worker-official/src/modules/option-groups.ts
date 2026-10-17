@@ -291,7 +291,7 @@ function normalizeGroup(raw: any, existing?: OptionGroup): OptionGroup {
 		...raw,
 		metadata: existing?.metadata || {},
 		name: String(raw.name).trim(),
-		scope: existing?.scope || 'item',
+		scope: raw.scope === 'order' || raw.scope === 'item' ? raw.scope : existing?.scope || 'item',
 		minSelection: min,
 		maxSelection: max,
 		allowRepeats: Boolean(raw.allowRepeats),
@@ -447,6 +447,11 @@ export async function saveOptionEntity(request: Request, env: Env, kind: 'produc
 					return { id: sub.id || `product:${product.id}`, productId: product.id, name: product.name, price: Number(sub.price ?? 0) };
 				});
 			}
+			if (group.scope === 'order') {
+				raw.itemIds = [];
+				raw.categoryIds = [];
+				group.sources = [];
+			}
 			if (!Array.isArray(raw.itemIds) || raw.itemIds.some((pid: string) => !catalog.products.some((p) => p.id === pid)))
 				throw new Error('INVALID_LINKED_PRODUCTS');
 			const categoryIds = raw.categoryIds ?? catalog.categoryLinks.filter((l) => l.groupId === id).map((l) => l.categoryId);
@@ -483,7 +488,7 @@ export async function saveOptionEntity(request: Request, env: Env, kind: 'produc
 			validateOptionGraph(catalog);
 			statements.push(
 				env.DB.prepare(
-					`INSERT INTO modifier_groups (id,tenant_id,name,selection_type,is_required,min_selection,max_selection,allow_repeats,included,sources_json,labels_json,revision,scope) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,selection_type=excluded.selection_type,is_required=excluded.is_required,min_selection=excluded.min_selection,max_selection=excluded.max_selection,allow_repeats=excluded.allow_repeats,included=excluded.included,sources_json=excluded.sources_json,labels_json=excluded.labels_json,revision=excluded.revision,updated_at=datetime('now')`,
+					`INSERT INTO modifier_groups (id,tenant_id,name,selection_type,is_required,min_selection,max_selection,allow_repeats,included,sources_json,labels_json,revision,scope) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,selection_type=excluded.selection_type,is_required=excluded.is_required,min_selection=excluded.min_selection,max_selection=excluded.max_selection,allow_repeats=excluded.allow_repeats,included=excluded.included,sources_json=excluded.sources_json,labels_json=excluded.labels_json,revision=excluded.revision,scope=excluded.scope,updated_at=datetime('now')`,
 				).bind(
 					id,
 					tenantId,

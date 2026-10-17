@@ -21,6 +21,10 @@
       ugAddSub: "Thêm lựa chọn con",
       ugDetails: "Thông tin",
       ugName: "Tên",
+      ugScope: "Phân loại nhóm",
+      ugScopeItem: "Tùy chọn theo món",
+      ugScopeOrder: "Tùy chọn toàn đơn",
+      ugScopeDisabledHelp: "Nhóm đang có lựa chọn liên kết từ món, không thể chuyển sang tùy chọn toàn đơn.",
       ugCategory: "Phân loại",
       ugPrice: "Giá bán",
       ugBadge: "Nhãn",
@@ -128,6 +132,10 @@
       ugAddSub: "新增子選項",
       ugDetails: "詳細資料",
       ugName: "名稱",
+      ugScope: "群組類型",
+      ugScopeItem: "餐點選項",
+      ugScopeOrder: "整筆訂單選項",
+      ugScopeDisabledHelp: "此群組內含有來自餐點的選項，無法變更為整筆訂單選項。",
       ugCategory: "分類",
       ugPrice: "售價",
       ugBadge: "標籤",
@@ -379,6 +387,7 @@
     });
     return stable({
       name: String(d.name || "").trim(),
+      scope: d.scope === "order" ? "order" : "item",
       minSelection: d.included ? null : d.minSelection,
       maxSelection: d.included ? null : d.maxSelection,
       allowRepeats: Boolean(d.allowRepeats), included: Boolean(d.included),
@@ -699,7 +708,12 @@
       body = productGroupSection(d);
     } else if (r.page === "group") {
       const [min, max] = selectionRules(d);
-      body = `<section><h3>${esc(tr("ugDetails"))}</h3>${field("name", "ugName", d.name)}</section><section><h3>${esc(tr("ugRules"))}</h3><div class="ug-list">${toggle("required", "ugRequired", d.included ? min > 0 : state.required)}${d.included || state.required ? stepper("minSelection", "ugMin", min, 1) : ""}${stepper("maxSelection", "ugMax", max, 1)}</div><div class="ug-list">${toggle("allowRepeats", "ugRepeat", d.allowRepeats)}${toggle("included", "ugIncluded", d.included)}</div></section><section><div class="ug-section-title"><h3>${esc(tr("ugOptions"))} (${options(d).length})</h3>${btn("add-option", "ugAdd")}</div><div class="ug-list">${
+      const isOrder = d.scope === "order";
+      const hasProductOptions = (d.options || []).some(
+        (o) => o.productId || (o.subOptions && o.subOptions.some((sub) => typeof sub !== "string" && sub.productId)),
+      );
+      const scopeField = `<label class="ug-field"><span>${esc(tr("ugScope"))}</span><select data-field="scope"${!d.isNew && hasProductOptions ? ' disabled title="' + esc(tr("ugScopeDisabledHelp")) + '"' : ""}><option value="item"${!isOrder ? " selected" : ""}>${esc(tr("ugScopeItem"))}</option><option value="order"${isOrder ? " selected" : ""}>${esc(tr("ugScopeOrder"))}</option></select>${!d.isNew && hasProductOptions ? `<small class="ug-muted">${esc(tr("ugScopeDisabledHelp"))}</small>` : ""}</label>`;
+      body = `<section><h3>${esc(tr("ugDetails"))}</h3>${field("name", "ugName", d.name)}${scopeField}</section><section><h3>${esc(tr("ugRules"))}</h3><div class="ug-list">${toggle("required", "ugRequired", d.included ? min > 0 : state.required)}${d.included || state.required ? stepper("minSelection", "ugMin", min, 1) : ""}${stepper("maxSelection", "ugMax", max, 1)}</div><div class="ug-list">${toggle("allowRepeats", "ugRepeat", d.allowRepeats)}${toggle("included", "ugIncluded", d.included)}</div></section><section><div class="ug-section-title"><h3>${esc(tr("ugOptions"))} (${options(d).length})</h3>${btn("add-option", "ugAdd")}</div><div class="ug-list">${
         options(d)
           .map((o) =>
             row(
@@ -710,15 +724,21 @@
             ),
           )
           .join("") || `<p class="ug-muted">${esc(tr("ugEmpty"))}</p>`
-      }</div></section><section><div class="ug-section-title"><h3>${esc(tr("ugLinked"))} (${affected(d)})</h3>${btn("linked", "ugLink")}</div><div class="ug-linked">${affectedIds(d).map((id) => `<div>${esc(productById(id)?.name || "")}${!d.itemIds.includes(id) ? ` <small class="ug-muted">· ${esc(tr("ugInherited"))}</small>` : ""}</div>`).join("") || `<span class="ug-muted">${esc(tr("ugEmpty"))}</span>`}</div></section><details><summary>${esc(tr("ugCategoryLinks"))}</summary>${catalog.categories
-        .filter((c) => c.category_type === "catalog")
-        .map(
-          (c) =>
-            `<label class="ug-check"><input type="checkbox" data-category-link="${esc(c.id)}" ${d.categoryIds.includes(c.id) ? "checked" : ""}>${esc(c.name)}</label>`,
-        )
-        .join(
-          "",
-        )}</details><details><summary>${esc(tr("ugSources"))}</summary><p class="ug-muted">${esc(tr("ugSourceHint"))}</p>${catalog.categories.map((c) => `<label class="ug-check"><input type="checkbox" data-source="${esc(c.id)}" ${(d.sources || []).some((s) => (s.refId || s.categoryId) === c.id) ? "checked" : ""}>${esc(c.name)}</label>`).join("")}</details>${!d.isNew ? btn("delete", "ugDelete", 'class="ug-danger"') : ""}`;
+      }</div></section>`;
+      if (isOrder) {
+        body += `<section class="ug-order-scope-notice"><p class="ug-muted">${esc(tr("ugAppliesToOrder"))}</p></section>`;
+      } else {
+        body += `<section><div class="ug-section-title"><h3>${esc(tr("ugLinked"))} (${affected(d)})</h3>${btn("linked", "ugLink")}</div><div class="ug-linked">${affectedIds(d).map((id) => `<div>${esc(productById(id)?.name || "")}${!d.itemIds.includes(id) ? ` <small class="ug-muted">· ${esc(tr("ugInherited"))}</small>` : ""}</div>`).join("") || `<span class="ug-muted">${esc(tr("ugEmpty"))}</span>`}</div></section><details><summary>${esc(tr("ugCategoryLinks"))}</summary>${catalog.categories
+          .filter((c) => c.category_type === "catalog")
+          .map(
+            (c) =>
+              `<label class="ug-check"><input type="checkbox" data-category-link="${esc(c.id)}" ${d.categoryIds.includes(c.id) ? "checked" : ""}>${esc(c.name)}</label>`,
+          )
+          .join(
+            "",
+          )}</details><details><summary>${esc(tr("ugSources"))}</summary><p class="ug-muted">${esc(tr("ugSourceHint"))}</p>${catalog.categories.map((c) => `<label class="ug-check"><input type="checkbox" data-source="${esc(c.id)}" ${(d.sources || []).some((s) => (s.refId || s.categoryId) === c.id) ? "checked" : ""}>${esc(c.name)}</label>`).join("")}</details>`;
+      }
+      body += !d.isNew ? btn("delete", "ugDelete", 'class="ug-danger"') : "";
     } else if (r.page === "groups") {
       title = tr("ugAddGroup");
       body =
@@ -914,6 +934,14 @@
     } else {
       d[key] = value;
       if (key === "included") render();
+      if (key === "scope") {
+        if (value === "order") {
+          d.itemIds = [];
+          d.categoryIds = [];
+          d.sources = [];
+        }
+        render();
+      }
       if (["minSelection", "maxSelection", "allowRepeats"].includes(key)) showSelectionErrors();
     }
   }
@@ -1238,6 +1266,10 @@
         }
       }
       rebase(kind, d.id, remove, state.optionsOnly);
+      if (kind === "group" && !remove) {
+        selectedGroup = d.id;
+        if (d.scope) groupSectionsOpen[d.scope] = true;
+      }
       const focusId = returnFocus?.id;
       finish();
       renderMenuCategories();
@@ -1387,18 +1419,21 @@
           (local ? `${c.id}_${local.originalName || local.name}` : null),
       }, { page: optionsOnly ? "product-options" : "product" });
     },
-    group(id, entry, optionId) {
+    group(id, entry, optionId, defaultScope) {
       const g = groupById(id);
+      const current = groupById(selectedGroup);
+      const scope = g ? (g.scope === "order" ? "order" : "item") : (defaultScope || (current?.scope === "order" ? "order" : "item"));
       const draft =
         g
           ? {
               ...clone(g),
+              scope,
               isNew: false,
               categoryIds: catalog.categoryLinks.filter((l) => l.groupId === id).map((l) => l.categoryId),
               itemIds: catalog.links.filter((l) => l.groupId === id && !l.disabled).map((l) => l.itemId),
             }
           : {
-              id: uid("group"), isNew: true, name: "", minSelection: 0,
+              id: uid("group"), isNew: true, name: "", scope, minSelection: 0,
               maxSelection: 1, allowRepeats: false, included: false,
               options: [], sources: [], labels: {}, revision: 0, itemIds: [], categoryIds: [],
             };
@@ -1436,7 +1471,10 @@
           if (!normalizeSearch(groupQuery)) groupSectionsOpen[section.dataset.groupScope] = section.open;
         };
       });
-      root.querySelector('[data-action="new-group"]').onclick = () => this.group();
+      root.querySelector('[data-action="new-group"]').onclick = () => {
+        const current = groupById(selectedGroup);
+        this.group(undefined, undefined, undefined, current?.scope === "order" ? "order" : "item");
+      };
       const input = root.querySelector("#ug-group-search");
       input.oninput = () => {
         groupQuery = input.value;

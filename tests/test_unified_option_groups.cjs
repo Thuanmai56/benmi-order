@@ -837,3 +837,45 @@ test('rejects saving group with 0 options or with insufficient options for min/m
 
   f.db.close();
 });
+
+test('group scope persists as order or item, clears item links for order scope, and updates on conflict', async () => {
+  const f = fixture();
+  // 1. Create an order-level group with custom options
+  const orderGroup = {
+    id: 'a_order_note',
+    name: 'Ghi chú toàn đơn',
+    scope: 'order',
+    revision: 0,
+    minSelection: 0,
+    maxSelection: 1,
+    allowRepeats: false,
+    included: false,
+    options: [{ id: 'a_opt_note', name: 'Ít đá', price: 0, quantity: 1 }],
+  };
+  const res = await f.save('group', orderGroup);
+  assert.equal(res.status, 200);
+
+  let c = await f.api.loadOptionCatalog(f.env, 'a');
+  const saved = c.groups.find((g) => g.id === 'a_order_note');
+  assert.equal(saved.scope, 'order');
+  // Order group is not linked to meal
+  assert.equal(f.api.effectiveGroups(c, 'a_main').some((g) => g.id === 'a_order_note'), false);
+
+  // 2. Updating scope on conflict works
+  const updateRes = await f.save('group', {
+    ...orderGroup,
+    name: 'Ghi chú cập nhật',
+    scope: 'item',
+    itemIds: ['a_main'],
+    revision: saved.revision,
+  });
+  assert.equal(updateRes.status, 200);
+  c = await f.api.loadOptionCatalog(f.env, 'a');
+  const updated = c.groups.find((g) => g.id === 'a_order_note');
+  assert.equal(updated.scope, 'item');
+  assert.equal(updated.name, 'Ghi chú cập nhật');
+  assert.equal(f.api.effectiveGroups(c, 'a_main').some((g) => g.id === 'a_order_note'), true);
+
+  f.db.close();
+});
+
