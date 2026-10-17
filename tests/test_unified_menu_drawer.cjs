@@ -429,9 +429,11 @@ test('group drawer exposes scope selector; switching scope updates UI and serial
   assert.equal(app.drawer().querySelector('.ug-order-scope-notice'), null);
   assert.notEqual(app.drawer().querySelector('[data-action="linked"]'), null);
 
-  // 2. Switch to 'order' scope
-  app.input('scope', 'order');
+  // 2. Switch to 'order' scope via clicking card
+  await app.click('set-scope', '[data-scope="order"]');
   assert.equal(app.get('[data-field="scope"]').value, 'order');
+  assert.equal(app.drawer().querySelector('[data-scope="order"]').classList.contains('active'), true);
+  assert.equal(app.drawer().querySelector('[data-scope="item"]').classList.contains('active'), false);
   assert.notEqual(app.drawer().querySelector('.ug-order-scope-notice'), null);
   assert.match(app.drawer().querySelector('.ug-order-scope-notice').textContent, /Áp dụng cho cả đơn hàng/);
   // Item link buttons and category links details are hidden
