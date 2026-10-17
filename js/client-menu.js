@@ -372,7 +372,9 @@ function handleItemCardClick(catSlug, itemName, event) {
     const cartObj = window.cart || cart || {};
     const currentQty = cartObj[key] || 0;
 
-    if (bundleRule) {
+    const shouldBundleAutoPopup = bundleRule ? (bundleRule.autoPopup !== false) : false;
+
+    if (bundleRule && shouldBundleAutoPopup) {
         if (typeof openBundleBuilderModal === 'function') {
             openBundleBuilderModal(catSlug, itemName, currentQty > 0 ? 0 : 0);
         }

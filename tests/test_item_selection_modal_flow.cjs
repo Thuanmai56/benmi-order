@@ -114,6 +114,36 @@ const windowMock = {
                 items: [
                     { id: 'item_egg', name: '滷蛋', price: 15 }
                 ]
+            },
+            {
+                slug: 'banhmi',
+                name: 'Bánh Mì',
+                allowCustomization: false,
+                items: [
+                    {
+                        id: 'item_banhmi_thit',
+                        name: 'Bánh Mì Thịt Nướng',
+                        price: 90,
+                        bundleRule: {
+                            id: 'rule_banhmi',
+                            version: 3,
+                            autoPopup: false,
+                            groups: [
+                                {
+                                    id: 'g_spice',
+                                    name: 'Độ cay',
+                                    type: 'choice',
+                                    minQuantity: 0,
+                                    maxQuantity: 1,
+                                    autoPopup: false,
+                                    eligibleItems: [
+                                        { id: 'opt_cay', name: 'Ít cay', surcharge: 0 }
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                ]
             }
         ],
         modifiers: [
@@ -211,4 +241,24 @@ assert.ok(Array.isArray(itemMods) && itemMods.length > 0, 'Combo item should det
 assert.strictEqual(itemMods[0].slug, 'spice_level');
 console.log('✓ Combined Combo + Customize correctly detects spice_level modifier.');
 
+console.log('\nTest 5: Item with autoPopup: false bundle rule (Bánh Mì Thịt Nướng) adds to cart directly without opening modal...');
+modalOpened = null;
+ctx.handleItemCardClick('banhmi', 'Bánh Mì Thịt Nướng', null);
+assert.strictEqual(modalOpened, null, 'Item with autoPopup: false should NOT open any modal on card click');
+assert.strictEqual(ctx.cart['banhmi_Bánh Mì Thịt Nướng'], 1, 'Item should increment directly to 1');
+assert.ok(ctx.bundleCartData['banhmi_Bánh Mì Thịt Nướng'], 'Should initialize bundleCartData for item');
+assert.strictEqual(ctx.bundleCartData['banhmi_Bánh Mì Thịt Nướng'].length, 1);
+
+ctx.updateQty('banhmi', 'Bánh Mì Thịt Nướng', 1);
+assert.strictEqual(modalOpened, null, 'Item with autoPopup: false should NOT open any modal on +');
+assert.strictEqual(ctx.cart['banhmi_Bánh Mì Thịt Nướng'], 2, 'Item cart should increment to 2');
+assert.strictEqual(ctx.bundleCartData['banhmi_Bánh Mì Thịt Nướng'].length, 2);
+
+ctx.updateQty('banhmi', 'Bánh Mì Thịt Nướng', -1);
+assert.strictEqual(ctx.cart['banhmi_Bánh Mì Thịt Nướng'], 1, 'Item cart should decrement to 1');
+assert.strictEqual(ctx.bundleCartData['banhmi_Bánh Mì Thịt Nướng'].length, 1);
+
+console.log('✓ Item with autoPopup: false adds to cart directly with zero modal overhead and manages portion data.');
+
 console.log('\n✅ All Item Selection Modal Flow tests passed successfully!');
+

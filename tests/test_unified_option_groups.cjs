@@ -879,3 +879,77 @@ test('group scope persists as order or item, clears item links for order scope, 
   f.db.close();
 });
 
+test('autoPopup behaves correctly for optional vs required groups, persists in DB, and projects on bundle rules', async () => {
+  const f = fixture();
+
+  // 1. Group with autoPopup: false and minSelection: 0 (e.g. spicy level / cilantro)
+  const optionalGroup = {
+    id: 'a_spice',
+    name: 'Độ cay',
+    scope: 'item',
+    revision: 0,
+    minSelection: 0,
+    maxSelection: 1,
+    allowRepeats: false,
+    included: false,
+    autoPopup: false,
+    itemIds: ['a_main'],
+    options: [
+      { id: 'a_spice_mild', name: 'Ít cay', price: 0, quantity: 1 },
+      { id: 'a_spice_hot', name: 'Cay nhiều', price: 0, quantity: 1 },
+    ],
+  };
+  const res1 = await f.save('group', optionalGroup);
+  assert.equal(res1.status, 200);
+
+  let c = await f.api.loadOptionCatalog(f.env, 'a');
+  let savedSpice = c.groups.find((g) => g.id === 'a_spice');
+  assert.equal(savedSpice.autoPopup, false);
+
+  // When only optional group exists on a_main, projected rule has autoPopup: false
+  let rule = f.api.projectOptionRule(c, 'a_main');
+  assert.equal(rule.autoPopup, false);
+  assert.equal(rule.groups[0].autoPopup, false);
+
+  // 2. Required group (minSelection: 1) forces autoPopup: true even if autoPopup: false is submitted
+  const requiredGroup = {
+    id: 'a_drink_required',
+    name: 'Chọn nước',
+    scope: 'item',
+    revision: 0,
+    minSelection: 1,
+    maxSelection: 1,
+    allowRepeats: false,
+    included: false,
+    autoPopup: false, // Should be overridden to true
+    itemIds: ['a_main'],
+    options: [
+      { id: 'a_opt_tea', name: 'Trà tắc', productId: 'a_tea', price: 0, quantity: 1 },
+    ],
+  };
+  const res2 = await f.save('group', requiredGroup);
+  assert.equal(res2.status, 200);
+
+  c = await f.api.loadOptionCatalog(f.env, 'a');
+  let savedDrink = c.groups.find((g) => g.id === 'a_drink_required');
+  assert.equal(savedDrink.autoPopup, true);
+
+  // Now a_main has one optional group (autoPopup: false) and one required group (autoPopup: true)
+  // Overall rule autoPopup must be true
+  rule = f.api.projectOptionRule(c, 'a_main');
+  assert.equal(rule.autoPopup, true);
+
+  // 3. Updating optionalGroup to autoPopup: true persists
+  const res3 = await f.save('group', {
+    ...optionalGroup,
+    revision: savedSpice.revision,
+    autoPopup: true,
+  });
+  assert.equal(res3.status, 200);
+  c = await f.api.loadOptionCatalog(f.env, 'a');
+  savedSpice = c.groups.find((g) => g.id === 'a_spice');
+  assert.equal(savedSpice.autoPopup, true);
+
+  f.db.close();
+});
+

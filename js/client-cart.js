@@ -259,13 +259,31 @@ function updateQty(category, origName, change) {
     const hasModifiers = Array.isArray(itemModifiers) && itemModifiers.length > 0;
     const hasRequiredModifiers = hasModifiers && itemModifiers.some(m => m.isRequired || Number(m.minSelection || 0) > 0);
 
-    // Intercept bundle item increment: open builder modal instead of direct cart increment
-    if (bundleRule && change > 0) {
+    const shouldBundleAutoPopup = bundleRule ? (bundleRule.autoPopup !== false) : false;
+
+    // Intercept bundle item increment: open builder modal only if bundle requires auto-popup
+    if (bundleRule && shouldBundleAutoPopup && change > 0) {
         const currentQty = cartObj[key] || 0;
         if (typeof openBundleBuilderModal === 'function') {
             openBundleBuilderModal(category, origName, currentQty);
         }
         return;
+    }
+
+    // If adding a portion for a bundle item that does NOT auto-popup, initialize default bundle portion data
+    if (bundleRule && !shouldBundleAutoPopup) {
+        window.bundleCartData = window.bundleCartData || {};
+        window.bundleCartData[key] = window.bundleCartData[key] || [];
+        const currentQty = cartObj[key] || 0;
+        const targetQty = Math.max(0, currentQty + change);
+        if (change > 0 && window.bundleCartData[key].length < targetQty) {
+            const defaultGroups = window.UnifiedOptions && typeof window.UnifiedOptions.restore === 'function'
+                ? window.UnifiedOptions.restore(bundleRule)
+                : [];
+            while (window.bundleCartData[key].length < targetQty) {
+                window.bundleCartData[key].push({ portionIndex: window.bundleCartData[key].length, groups: defaultGroups });
+            }
+        }
     }
 
     // Intercept customize item increment: ONLY open modal automatically if item has REQUIRED modifiers
@@ -302,10 +320,13 @@ function updateQty(category, origName, change) {
 
     // Decrement bundle item: remove the last portion selection
     if (bundleRule && change < 0) {
-        if (window.bundleCartData && window.bundleCartData[key] && window.bundleCartData[key].length > 0) {
-            window.bundleCartData[key].pop();
-            if (window.bundleCartData[key].length === 0) {
+        const currentQty = cartObj[key] || 0;
+        const targetQty = Math.max(0, currentQty + change);
+        if (window.bundleCartData && window.bundleCartData[key]) {
+            if (targetQty === 0) {
                 delete window.bundleCartData[key];
+            } else if (window.bundleCartData[key].length > targetQty) {
+                window.bundleCartData[key].length = targetQty;
             }
         }
         const cData = window.customizeData || customizeData;
