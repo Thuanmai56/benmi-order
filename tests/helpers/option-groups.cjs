@@ -121,6 +121,7 @@ function fixture() {
     "0064_add_modifier_migration_metadata.sql",
     "0065_unified_option_groups.sql",
     "0066_optional_migrated_option_groups.sql",
+    "0070_add_modifier_group_auto_popup.sql",
   ])
     db.exec(
       fs.readFileSync("benmi-worker-official/migrations/" + file, "utf8"),

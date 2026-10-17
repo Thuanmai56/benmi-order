@@ -35,6 +35,7 @@ export type OptionGroup = {
 	maxSelection: number;
 	allowRepeats: boolean;
 	included: boolean;
+	autoPopup?: boolean;
 	options: MenuOption[];
 	sources: any[];
 	labels: Record<string, string>;
@@ -72,14 +73,20 @@ export async function loadOptionCatalog(env: Env, tenantId: string): Promise<Opt
 	const [products, categories, groups, options, links, categoryLinks] = results.map((r) => r.results as Row[]);
 	const normalized: OptionGroup[] = groups.map((g) => {
 		const metadata = parse(g.source_metadata_json, {});
+		const minSelection = Math.max(Number(g.min_selection || 0), g.is_required ? 1 : 0);
+		const included = Boolean(g.included);
+		const autoPopup = (included || minSelection > 0)
+			? true
+			: (g.auto_popup !== undefined && g.auto_popup !== null ? Boolean(g.auto_popup) : true);
 		return {
 			id: g.id,
 			name: g.name,
 			scope: g.scope || 'item',
-			minSelection: Math.max(Number(g.min_selection || 0), g.is_required ? 1 : 0),
+			minSelection,
 			maxSelection: Number(g.max_selection || (g.selection_type === 'single' ? 1 : 999)),
 			allowRepeats: Boolean(g.allow_repeats),
-			included: Boolean(g.included),
+			included,
+			autoPopup,
 			sources: parse(g.sources_json, []),
 			labels: parse(g.labels_json, {}),
 			revision: Number(g.revision || 0),
@@ -219,11 +226,14 @@ export function projectOptionRule(catalog: OptionCatalog, productId: string, pat
 	if (path.includes(productId) || path.length > 12) throw new Error('OPTION_PRODUCT_CYCLE');
 	const groups = effectiveGroups(catalog, productId);
 	if (!groups.length) return null;
+	const autoPopup = groups.some((g) => g.minSelection > 0 || g.included || g.autoPopup !== false);
 	return {
 		version: 3,
+		autoPopup,
 		groups: groups.map((g) => ({
 			...g,
 			type: g.included ? 'fixed' : 'choice',
+			autoPopup: g.included || g.minSelection > 0 ? true : (g.autoPopup !== false),
 			minQuantity: g.minSelection,
 			maxQuantity: g.maxSelection,
 			name: g.name,
@@ -286,6 +296,10 @@ function normalizeGroup(raw: any, existing?: OptionGroup): OptionGroup {
 				description: o.description || null,
 			};
 		});
+	const included = Boolean(raw.included);
+	const autoPopup = (included || min > 0)
+		? true
+		: (raw.autoPopup !== undefined ? Boolean(raw.autoPopup) : (existing?.autoPopup ?? true));
 	return {
 		...existing,
 		...raw,
@@ -295,7 +309,8 @@ function normalizeGroup(raw: any, existing?: OptionGroup): OptionGroup {
 		minSelection: min,
 		maxSelection: max,
 		allowRepeats: Boolean(raw.allowRepeats),
-		included: Boolean(raw.included),
+		included,
+		autoPopup,
 		options,
 		sources: raw.sources || [],
 		labels: raw.labels || {},
@@ -488,7 +503,7 @@ export async function saveOptionEntity(request: Request, env: Env, kind: 'produc
 			validateOptionGraph(catalog);
 			statements.push(
 				env.DB.prepare(
-					`INSERT INTO modifier_groups (id,tenant_id,name,selection_type,is_required,min_selection,max_selection,allow_repeats,included,sources_json,labels_json,revision,scope) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,selection_type=excluded.selection_type,is_required=excluded.is_required,min_selection=excluded.min_selection,max_selection=excluded.max_selection,allow_repeats=excluded.allow_repeats,included=excluded.included,sources_json=excluded.sources_json,labels_json=excluded.labels_json,revision=excluded.revision,scope=excluded.scope,updated_at=datetime('now')`,
+					`INSERT INTO modifier_groups (id,tenant_id,name,selection_type,is_required,min_selection,max_selection,allow_repeats,included,sources_json,labels_json,revision,scope,auto_popup) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,selection_type=excluded.selection_type,is_required=excluded.is_required,min_selection=excluded.min_selection,max_selection=excluded.max_selection,allow_repeats=excluded.allow_repeats,included=excluded.included,sources_json=excluded.sources_json,labels_json=excluded.labels_json,revision=excluded.revision,scope=excluded.scope,auto_popup=excluded.auto_popup,updated_at=datetime('now')`,
 				).bind(
 					id,
 					tenantId,
@@ -503,6 +518,7 @@ export async function saveOptionEntity(request: Request, env: Env, kind: 'produc
 					JSON.stringify(group.labels),
 					group.revision,
 					group.scope,
+					group.autoPopup ? 1 : 0,
 				),
 			);
 			statements.push(env.DB.prepare('DELETE FROM modifier_options WHERE tenant_id=? AND group_id=?').bind(tenantId, id));

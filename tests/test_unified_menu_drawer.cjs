@@ -461,3 +461,49 @@ test('group drawer exposes scope selector; switching scope updates UI and serial
   assert.match(disabledScope.getAttribute('title'), /không thể chuyển sang tùy chọn toàn đơn/);
 });
 
+test('group drawer exposes autoPopup toggle for item groups, locks when required/included, and serializes on save', async () => {
+  const app = await setup();
+
+  // 1. New group defaults to autoPopup: true and minSelection: 0 (optional)
+  app.context.UnifiedMenu.group();
+  let autoPopupToggle = app.get('[data-field="autoPopup"]');
+  assert.notEqual(autoPopupToggle, null);
+  assert.equal(autoPopupToggle.checked, true);
+  assert.equal(autoPopupToggle.disabled, false);
+
+  // 2. Turning required ON locks autoPopup to checked and disabled
+  app.input('required', true);
+  autoPopupToggle = app.get('[data-field="autoPopup"]');
+  assert.equal(autoPopupToggle.checked, true);
+  assert.equal(autoPopupToggle.disabled, true);
+
+  // 3. Turning required OFF unlocks autoPopup
+  app.input('required', false);
+  autoPopupToggle = app.get('[data-field="autoPopup"]');
+  assert.equal(autoPopupToggle.disabled, false);
+
+  // 4. User can uncheck autoPopup for optional customization
+  app.input('autoPopup', false);
+  autoPopupToggle = app.get('[data-field="autoPopup"]');
+  assert.equal(autoPopupToggle.checked, false);
+
+  // 5. Save serializes autoPopup: false
+  app.input('name', 'Độ cay');
+  await app.click('add-option');
+  await app.click('custom');
+  app.input('option.name', 'Ít cay');
+  await app.click('apply');
+  await app.click('save');
+
+  assert.equal(app.posts.length, 1);
+  assert.equal(app.posts[0].name, 'Độ cay');
+  assert.equal(app.posts[0].autoPopup, false);
+
+  // 6. Switching to order scope hides autoPopup toggle
+  const app3 = await setup();
+  app3.context.UnifiedMenu.group();
+  await app3.click('set-scope', '[data-scope="order"]');
+  assert.equal(app3.drawer().querySelector('[data-field="autoPopup"]'), null);
+});
+
+

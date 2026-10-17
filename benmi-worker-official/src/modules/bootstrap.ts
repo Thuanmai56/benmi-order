@@ -16,6 +16,7 @@ export interface BootstrapBundleGroup {
   minQuantity: number;
   maxQuantity: number;
   allowRepeats: boolean;
+  autoPopup?: boolean;
   sources: Array<{
     type: 'category' | 'item_list';
     refId?: string;
@@ -36,6 +37,7 @@ export interface BootstrapBundleGroup {
 
 export interface BootstrapBundleRule {
   version: number;
+  autoPopup?: boolean;
   groups: BootstrapBundleGroup[];
 }
 
