@@ -2,6 +2,11 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const ts = require('../benmi-worker-official/node_modules/typescript');
+const noteModule = { exports: {} };
+vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname, '../benmi-worker-official/src/utils/order-item-notes.ts'), 'utf8'), {
+  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
+}).outputText, { exports: noteModule.exports });
 
 console.log('=== Running Universal Bundle Display All-Touchpoints Tests ===\n');
 
@@ -16,6 +21,7 @@ const ordersTsContent = fs.readFileSync(ordersTsPath, 'utf8');
 // Lightweight test context for pure TS functions in orders.ts
 const tsSandbox = {
   console,
+  remainingItemNote: noteModule.exports.remainingItemNote,
   ORDER_INDEX_LATEST: 'order_index:latest',
   MAX_INDEX: 200,
   exports: {}
@@ -96,7 +102,6 @@ console.log('✓ formatItemsToText and extractAllOrderSearchNames passed with bu
 // 2. Test buildOrderFlexMessage in line templates (output verification)
 // -------------------------------------------------------------
 console.log('\n2. Testing line/templates/order-receipt.ts buildOrderFlexMessage output...');
-const ts = require('../benmi-worker-official/node_modules/typescript');
 const lineTsPath = path.join(__dirname, '../benmi-worker-official/src/modules/line.ts');
 const lineTsContent = fs.readFileSync(lineTsPath, 'utf8');
 assert(lineTsContent.includes('buildOrderFlexMessage'), 'line.ts must export buildOrderFlexMessage');
@@ -111,7 +116,7 @@ const compiledReceipt = ts.transpileModule(orderReceiptTsContent, {
 const receiptModule = { exports: {} };
 const receiptContext = vm.createContext({
   console,
-  require: () => ({}),
+  require: name => name.includes('order-item-notes') ? noteModule.exports : ({}),
   module: receiptModule,
   exports: receiptModule.exports
 });
