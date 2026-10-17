@@ -576,4 +576,28 @@ test('option group rule logic matches Foodpanda specification (Issue #63)', asyn
   assert.equal(zhAlerted, '最少選擇數量不可大於最多選擇數量。');
 });
 
+test('legacy group with maxSelection 999 normalizes to option count and can be edited and saved without errors', async () => {
+  let alerted = null;
+  const app = await setup();
+  app.context.alert = (msg) => { alerted = msg; };
+  const drinkGroup = app.catalog().groups.find((g) => g.id === 'drinks');
+  drinkGroup.maxSelection = 999;
+  drinkGroup.allowRepeats = false;
+  await app.context.UnifiedMenu.load();
+
+  app.context.UnifiedMenu.group('drinks');
+
+  assert.equal(app.get('#ug-maxSelection-error').hidden, true);
+  assert.equal(app.get('[data-field="maxSelection"]').value, '2');
+
+  app.input('name', 'Đồ uống đặc biệt');
+  await app.click('save');
+
+  assert.equal(alerted, null);
+  assert.equal(app.posts.length, 1);
+  assert.equal(app.posts[0].name, 'Đồ uống đặc biệt');
+  assert.equal(app.posts[0].maxSelection, 2);
+});
+
+
 
