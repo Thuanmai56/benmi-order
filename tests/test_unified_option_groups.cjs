@@ -813,3 +813,27 @@ test('child product availability and deletion guards follow the reference, inclu
   assert.equal(f.api.validateOptionSelection(catalog,'a_main',select([])).extra,0);
   f.db.close();
 });
+
+test('rejects saving group with 0 options or with insufficient options for min/max selection', async () => {
+  const f = fixture();
+  // 1. Group with 0 options is rejected
+  const emptyRes = await f.save('group', { ...group(), options: [] });
+  assert.equal(emptyRes.status, 400);
+  assert.equal((await emptyRes.json()).error, 'INSUFFICIENT_OPTIONS:a_drinks');
+
+  // 2. Group with 1 option but minSelection = 2 is rejected
+  const minRes = await f.save('group', { ...group(), options: [group().options[0]], minSelection: 2, maxSelection: 2 });
+  assert.equal(minRes.status, 400);
+  assert.equal((await minRes.json()).error, 'INSUFFICIENT_OPTIONS:a_drinks');
+
+  // 3. Group with 1 option and allowRepeats = false but maxSelection = 2 is rejected
+  const maxRes = await f.save('group', { ...group(), options: [group().options[0]], minSelection: 1, maxSelection: 2, allowRepeats: false });
+  assert.equal(maxRes.status, 400);
+  assert.equal((await maxRes.json()).error, 'INSUFFICIENT_OPTIONS:a_drinks');
+
+  // 4. Group with 1 option and allowRepeats = true with maxSelection = 2 succeeds
+  const repeatRes = await f.save('group', { ...group(), options: [group().options[0]], minSelection: 1, maxSelection: 2, allowRepeats: true });
+  assert.equal(repeatRes.status, 200);
+
+  f.db.close();
+});

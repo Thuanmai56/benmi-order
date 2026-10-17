@@ -31,6 +31,9 @@
       ugMax: "Số lượng tối đa",
       ugRuleInteger: "Nhập số nguyên từ {min} đến 999.",
       ugRuleRange: "Số lượng tối đa phải lớn hơn hoặc bằng tối thiểu.",
+      ugRuleOptionCountMin: "Số lượng tối thiểu không thể lớn hơn số lựa chọn trong nhóm (hiện có {count} lựa chọn).",
+      ugRuleOptionCountMax: "Số lượng tối đa không thể lớn hơn số lựa chọn trong nhóm (hiện có {count} lựa chọn).",
+      ugGroupNoOptions: "Nhóm tùy chọn phải có ít nhất 1 lựa chọn.",
       ugRepeat: "Cho phép chọn nhiều phần của cùng một lựa chọn",
       ugIncluded: "Có sẵn trong món",
       ugOptions: "Lựa chọn",
@@ -135,6 +138,9 @@
       ugMax: "最多選擇數量",
       ugRuleInteger: "請輸入 {min} 至 999 的整數。",
       ugRuleRange: "最多選擇數量必須大於或等於最少選擇數量。",
+      ugRuleOptionCountMin: "最少選擇數量不可大於群組內的選項數量（目前有 {count} 個選項）。",
+      ugRuleOptionCountMax: "最多選擇數量不可大於群組內的選項數量（目前有 {count} 個選項）。",
+      ugGroupNoOptions: "選項群組必須至少包含一個選項。",
       ugRepeat: "允許重複選擇同一選項",
       ugIncluded: "餐點已包含的內容",
       ugOptions: "選項",
@@ -441,6 +447,15 @@
     }
     if (!errors.minSelection && !errors.maxSelection && Number(d.maxSelection) < Number(d.minSelection)) {
       errors.minSelection = errors.maxSelection = tr("ugRuleRange");
+    }
+    const optionCount = options(d).length;
+    if (optionCount > 0) {
+      if (!errors.minSelection && !d.allowRepeats && Number(d.minSelection) > optionCount) {
+        errors.minSelection = tr("ugRuleOptionCountMin", { count: optionCount });
+      }
+      if (!errors.maxSelection && !d.allowRepeats && Number(d.maxSelection) > optionCount) {
+        errors.maxSelection = tr("ugRuleOptionCountMax", { count: optionCount });
+      }
     }
     return errors;
   }
@@ -796,7 +811,7 @@
       el.querySelectorAll(
         '[data-field="required"],[data-field="minSelection"],[data-field="maxSelection"],[data-field="allowRepeats"],.ug-stepper button',
       ).forEach((b) => (b.disabled = true));
-    if (r.page === "group" && Object.keys(state.ruleErrors).length) showSelectionErrors();
+    if (r.page === "group") showSelectionErrors();
     const view = r.view;
     for (const details of el.querySelectorAll("details[data-section]")) details.open = Boolean(view?.details.includes(details.dataset.section));
     const q = el.querySelector('[data-field="search"]'), filter = el.querySelector('[data-field="filter"]');
@@ -899,7 +914,7 @@
     } else {
       d[key] = value;
       if (key === "included") render();
-      if (["minSelection", "maxSelection"].includes(key) && Object.keys(state.ruleErrors).length) showSelectionErrors();
+      if (["minSelection", "maxSelection", "allowRepeats"].includes(key)) showSelectionErrors();
     }
   }
   function action(name, el) {
@@ -966,10 +981,25 @@
     if (name === "step") {
       const key = el.dataset.key;
       const target = ensureDrawer().querySelector(`[data-field="${key}"]`);
-      target.value = Math.min(Number(target.getAttribute("max") || Infinity), Math.max(
+      target.value = String(Math.min(Number(target.getAttribute("max") || Infinity), Math.max(
         Number(target.getAttribute("min") || 0),
         Number(target.value) + Number(el.dataset.delta),
-      ));
+      )));
+      if (key === "minSelection") {
+        const newMin = Number(target.value);
+        if (newMin > Number(d.maxSelection)) {
+          d.maxSelection = newMin;
+          const maxTarget = ensureDrawer().querySelector('[data-field="maxSelection"]');
+          if (maxTarget) maxTarget.value = String(newMin);
+        }
+      } else if (key === "maxSelection") {
+        const newMax = Number(target.value);
+        if (newMax < Number(d.minSelection)) {
+          d.minSelection = newMax;
+          const minTarget = ensureDrawer().querySelector('[data-field="minSelection"]');
+          if (minTarget) minTarget.value = String(newMax);
+        }
+      }
       input(target);
       return;
     }
@@ -1135,10 +1165,27 @@
       d.minSelection = min;
       d.maxSelection = max;
     }
-    return persist(d, remove);
+    return persist(d, remove, removeOption);
   }
-  async function persist(d, remove) {
-    if (!remove && state.kind === "group" && !showSelectionErrors(true)) return;
+  async function persist(d, remove, removeOption = false) {
+    if (!remove && !removeOption && state.kind === "group") {
+      const optionCount = options(d).length;
+      if (optionCount === 0) {
+        const msg = tr("ugGroupNoOptions");
+        state.error = msg;
+        render();
+        if (typeof alert === "function") alert(msg);
+        return;
+      }
+      if (!showSelectionErrors(true)) {
+        const firstKey = Object.keys(state.ruleErrors)[0];
+        const msg = state.ruleErrors[firstKey] || tr("ugInvalid");
+        state.error = msg;
+        render();
+        if (typeof alert === "function") alert(msg);
+        return;
+      }
+    }
     if (
       !remove &&
       (!d.name.trim() ||
