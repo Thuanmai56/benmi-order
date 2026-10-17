@@ -1195,14 +1195,23 @@ export async function handleLineWebhook(
             continue;
           }
 
+          const historyKey = `pending_replies:${tenantId}:${orderKey}`;
+          let existingReplies: string[] = [];
+          try {
+            const rawReplies = await env.ORDER_STATE.get(historyKey);
+            if (rawReplies) existingReplies = JSON.parse(rawReplies);
+          } catch {}
+          const allCustomerReplies = [...existingReplies, userText];
+
           // CÁC TRƯỜNG HỢP KHÁC: DÙNG AI ĐỂ XỬ LÝ
           let aiDecision: "YES" | "NO" | "UNKNOWN" = questionText ? "UNKNOWN" : "YES";
           if (questionText) {
             const menuData = await getMenuData(env, tenantId);
             const menuContext = formatMenuForPrompt(menuData);
-            const systemPrompt = `你是 ${brandName} 的 AI 訂單助理。\n\n${menuContext}\n\n請對照店家菜單品項與庫存狀況，分析顧客的回覆內容。`;
+            const systemPrompt = `你是 ${brandName} 的 AI 訂單助理。\n\n${menuContext}\n\n請對照店家菜單品項、庫存狀況與原訂單內容，分析顧客的回覆內容。`;
 
-            const prompt = `店家剛才詢問顧客：「${questionText}」\n顧客的回覆是：「${userText}」\n\n請問顧客的回覆是否已針對問題做出明確決定（例如：已明確選擇欲更換的口味、同意變更、同意取消等）？\n注意：\n1. 若問題是詢問更換口味，但顧客僅回覆「好/同意」而未說明要換什麼口味，請回覆 NO。\n2. 若顧客是反問問題，請回覆 NO。\n3. 若顧客已明確選擇具體品項或同意取消，請回覆 YES。\n請嚴格只回覆 YES 或 NO。`;
+            const repliesFormatted = allCustomerReplies.map((r, i) => `${i + 1}. ${r}`).join("\n");
+            const prompt = `店家通知品項調整詢問：「${questionText}」\n顧客原訂單餐點內容：\n${order.content || "（無資料）"}\n\n顧客至今的回覆歷程：\n${repliesFormatted}\n\n請問顧客的回覆歷程是否已針對問題做出明確決定（例如：已明確選擇欲更換的口味或餐點、同意變更、同意取消等）？\n注意：\n1. 若問題是詢問更換口味，但顧客僅回覆「好/同意」而未說明要換什麼口味，請回覆 NO。\n2. 若顧客是反問問題，請回覆 NO。\n3. 若顧客已明確選擇具體品項或同意取消，請回覆 YES。\n請嚴格只回覆 YES 或 NO。`;
             const changeFewShot: FewShotExample[] = [
               {
                 role: "user",
@@ -1261,6 +1270,7 @@ export async function handleLineWebhook(
 
             if (isCancel) {
               order.status = "REJECTED";
+              try { await env.ORDER_STATE.delete(historyKey); } catch {}
               await replyText(replyToken, `好的，已為您取消訂單 #${order.displayKey || order.key}。`, env, tenantCtx);
               const cleanup = async () => { await saveOrder(env, order, tenantId); await finishPending(); await syncToGoogleSheets(order, env, tenantCtx); };
               if (ctx && ctx.waitUntil) ctx.waitUntil(cleanup()); else await cleanup();
@@ -1268,16 +1278,33 @@ export async function handleLineWebhook(
             }
 
             if (aiDecision !== "YES") {
+              try {
+                await env.ORDER_STATE.put(historyKey, JSON.stringify(allCustomerReplies), { expirationTtl: 3600 });
+              } catch {}
               await replyText(replyToken, `請您明確告訴我們想換什麼品項，或者回覆「取消」直接取消訂單。`, env, tenantCtx);
               continue;
             }
 
             // Trường hợp đổi món / đổi vị:
-            order.content = `【顧客換單】：${userText}\n----原本訂單 👇----\n${order.content}`;
+            try { await env.ORDER_STATE.delete(historyKey); } catch {}
+            const repliesText = allCustomerReplies.length > 1
+              ? allCustomerReplies.map((r) => `• ${r}`).join("\n")
+              : userText;
+            order.content = `【顧客換單需求】：\n${repliesText}\n----原本訂單 👇----\n${order.content}`;
             order.reason = "";
             order.note = "";
             order.status = "NEW"; // Tái kích hoạt chuông và trạng thái đơn mới trên POS để quán nhận
-            await replyText(replyToken, `收到您的回覆！店家已收到您的更換品項需求「${userText}」，將儘速為您確認訂單。`, env, tenantCtx);
+
+            // Ghi nhận cửa sổ 5 phút hỗ trợ nhận thêm tin nhắn bổ sung từ khách
+            try {
+              await env.ORDER_STATE.put(`recent_modified:${tenantId}:${userId}`, JSON.stringify({
+                orderKey: order.key,
+                displayKey: order.displayKey || order.key,
+                timestamp: Date.now()
+              }), { expirationTtl: 300 });
+            } catch {}
+
+            await replyText(replyToken, `收到您的回覆！店家已收到您的更換品項需求：\n${repliesText}\n將儘速為您確認訂單。`, env, tenantCtx);
             const cleanup = async () => { await saveOrder(env, order, tenantId); await finishPending(); };
             if (ctx && ctx.waitUntil) ctx.waitUntil(cleanup()); else await cleanup();
             continue;
@@ -1326,6 +1353,44 @@ export async function handleLineWebhook(
       } catch { }
       await replyText(replyToken, `目前有點狀況，請稍後再確認一次。`, env, tenantCtx);
       continue;
+    }
+
+    // 1.5) Follow-up / supplementary message for recently modified order (Grace period: 5 mins while status is still NEW)
+    const recentModRaw = await env.ORDER_STATE.get(`recent_modified:${tenantId}:${userId}`);
+    if (recentModRaw) {
+      let recentMod: any = null;
+      try { recentMod = JSON.parse(recentModRaw); } catch {}
+      if (recentMod && recentMod.orderKey) {
+        const recentOrderRow = await env.DB.prepare(
+          "SELECT * FROM orders WHERE tenant_id = ? AND key = ? AND status = 'NEW' LIMIT 1"
+        ).bind(tenantId, recentMod.orderKey).first<any>();
+
+        if (recentOrderRow) {
+          const isCancel = lowerText.includes("不要了") || lowerText.includes("取消") || lowerText.includes("不用了") || lowerText === "不要";
+          const dKey = recentOrderRow.display_key || recentMod.displayKey || recentMod.orderKey;
+          if (isCancel) {
+            await env.DB.prepare(
+              "UPDATE orders SET status = 'REJECTED', updated_at = strftime('%Y-%m-%d %H:%M:%f', 'now') WHERE tenant_id = ? AND key = ?"
+            ).bind(tenantId, recentMod.orderKey).run();
+            try { await env.ORDER_STATE.delete(`recent_modified:${tenantId}:${userId}`); } catch {}
+            if (replyToken) {
+              await replyText(replyToken, `好的，已為您取消訂單 #${dKey}。`, env, tenantCtx);
+            }
+            continue;
+          } else {
+            const updatedContent = `【顧客補充說明】：${userText}\n${recentOrderRow.order_content || ""}`;
+            await env.DB.prepare(
+              "UPDATE orders SET order_content = ?, updated_at = strftime('%Y-%m-%d %H:%M:%f', 'now') WHERE tenant_id = ? AND key = ?"
+            ).bind(updatedContent, tenantId, recentMod.orderKey).run();
+            if (replyToken) {
+              await replyText(replyToken, `收到！已為您在訂單 #${dKey} 補充說明「${userText}」，店家將一併確認處理。`, env, tenantCtx);
+            }
+            continue;
+          }
+        } else {
+          try { await env.ORDER_STATE.delete(`recent_modified:${tenantId}:${userId}`); } catch {}
+        }
+      }
     }
 
     // 2) Quick reply
