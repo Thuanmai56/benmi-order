@@ -165,10 +165,26 @@ test('searching filters categories and automatically expands categories with mat
   assert.equal(teaRow.hidden, false);
   assert.equal(coffeeRow.hidden, true);
 
-  // Clear search restores all categories
+  // Clear search restores all categories and collapses auto-expanded categories
   app.input('search', '');
   assert.equal(foodCard.hidden, false);
   assert.equal(drinksCard.hidden, false);
+  assert.equal(drinksItems.hidden, true, 'Auto-expanded category should collapse back when search is cleared');
+  assert.equal(drinksCard.classList.contains('ug-category-open'), false);
+
+  // If merchant manually expanded food category, it remains open after search is cleared
+  await app.click('toggle-category', '[data-category="food"]');
+  const foodItems = foodCard.querySelector('.ug-category-items');
+  assert.equal(foodItems.hidden, false);
+
+  app.input('search', 'Trà');
+  assert.equal(foodCard.hidden, true);
+  assert.equal(drinksItems.hidden, false);
+
+  app.input('search', '');
+  assert.equal(foodCard.hidden, false);
+  assert.equal(foodItems.hidden, false, 'Manually opened category should remain open after clearing search');
+  assert.equal(drinksItems.hidden, true, 'Category that was not manually opened should collapse back');
 });
 
 test('category accordion labels and accessibility support zh-TW and vi', async () => {
