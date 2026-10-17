@@ -1062,6 +1062,7 @@ export async function updateOrder(
         await env.DB.prepare(
           "DELETE FROM pending_actions WHERE tenant_id = ? AND user_id = ? AND order_key = ?"
         ).bind(tenantId, order.userId, order.key).run();
+        await env.ORDER_STATE.delete(`recent_modified:${tenantId}:${order.userId}`);
       } catch { }
     }
     return json({ success: true });
@@ -1234,6 +1235,7 @@ export async function updateOrder(
         await env.DB.prepare(
           "DELETE FROM pending_actions WHERE tenant_id = ? AND user_id = ? AND order_key = ?"
         ).bind(tenantId, order.userId, order.key).run();
+        await env.ORDER_STATE.delete(`recent_modified:${tenantId}:${order.userId}`);
       } catch { }
       await pushLineMessage(order.userId, `${brandName}：由於未收到您的回覆，訂單 #${order.displayKey || order.key} 已自動取消。期待下次為您服務！`, env, tenantCtx);
     }
