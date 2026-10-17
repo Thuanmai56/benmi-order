@@ -367,11 +367,55 @@ async function ensureTenantCustomizations() {
 window.ensureTenantCustomizations = ensureTenantCustomizations;
 
 // Global POS State
+var VALID_POS_TABS = ["live", "history", "menu", "reports", "settings"];
+
+function getInitialTab() {
+  if (typeof window === "undefined") return "live";
+
+  // 1. Check URL hash (e.g. #menu, #history, #reports, #settings, #live)
+  try {
+    const rawHash = (window.location.hash || "").replace(/^#/, "").trim().toLowerCase();
+    if (rawHash && VALID_POS_TABS.includes(rawHash)) {
+      if (rawHash === "reports" && typeof isNativeAppPlatform === "function" && isNativeAppPlatform()) {
+        return "live";
+      }
+      return rawHash;
+    }
+  } catch (e) {}
+
+  // 2. Check query param (e.g. ?tab=menu)
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const queryTab = (params.get("tab") || "").trim().toLowerCase();
+    if (queryTab && VALID_POS_TABS.includes(queryTab)) {
+      if (queryTab === "reports" && typeof isNativeAppPlatform === "function" && isNativeAppPlatform()) {
+        return "live";
+      }
+      return queryTab;
+    }
+  } catch (e) {}
+
+  // 3. Check sessionStorage fallback
+  try {
+    const saved = (sessionStorage.getItem("pos_active_tab") || "").trim().toLowerCase();
+    if (saved && VALID_POS_TABS.includes(saved)) {
+      if (saved === "reports" && typeof isNativeAppPlatform === "function" && isNativeAppPlatform()) {
+        return "live";
+      }
+      return saved;
+    }
+  } catch (e) {}
+
+  return "live";
+}
+window.VALID_POS_TABS = VALID_POS_TABS;
+window.getInitialTab = getInitialTab;
+
 var latestOrders = [];
 var pendingNewOrders = [];
 var reviewingOrder = null;
 var currentOrderKey = null;
-var activeTab = "live";
+var activeTab = getInitialTab();
 var newAlertSnoozeUntilMs = 0;
 var snoozedNewOrderKeys = new Set();
 var newAlertSnoozeTimerId = null;
@@ -661,7 +705,16 @@ function parsePortionCustomizations(rawOpts) {
 window.parsePortionCustomizations = parsePortionCustomizations;
 
 function switchTab(tab) {
-  if (activeTab === "menu" && tab !== "menu" && typeof confirmLeaveMenu === "function" && !confirmLeaveMenu()) return;
+  if (activeTab === "menu" && tab !== "menu" && typeof confirmLeaveMenu === "function" && !confirmLeaveMenu()) {
+    try {
+      if (typeof window !== "undefined" && window.location && (window.location.hash || "") !== "#menu") {
+        const revertUrl = new URL(window.location.href);
+        revertUrl.hash = "menu";
+        window.history.replaceState(null, "", revertUrl.toString());
+      }
+    } catch (e) {}
+    return;
+  }
   if (tab === "reports" && isNativeAppPlatform()) {
     tab = "live";
   }
@@ -669,6 +722,21 @@ function switchTab(tab) {
     toggleSidebar(false);
   }
   activeTab = tab;
+
+  // Persist active tab to sessionStorage and URL hash (without creating redundant history entries)
+  try {
+    sessionStorage.setItem("pos_active_tab", tab);
+    if (typeof window !== "undefined" && window.location) {
+      const currentHash = (window.location.hash || "").replace(/^#/, "").trim().toLowerCase();
+      const targetHash = tab === "live" ? "" : tab;
+      if (currentHash !== targetHash) {
+        const newUrl = new URL(window.location.href);
+        newUrl.hash = targetHash;
+        window.history.replaceState(null, "", newUrl.toString());
+      }
+    }
+  } catch (e) {}
+
   const tabLive = document.getElementById("tab-live");
   const tabHistory = document.getElementById("tab-history");
   const tabReports = document.getElementById("tab-reports");
@@ -724,6 +792,19 @@ function switchTab(tab) {
       openSettings();
     }
   }
+}
+window.switchTab = switchTab;
+
+if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+  window.addEventListener("hashchange", () => {
+    try {
+      const rawHash = (window.location.hash || "").replace(/^#/, "").trim().toLowerCase();
+      const targetTab = (typeof VALID_POS_TABS !== "undefined" && VALID_POS_TABS.includes(rawHash)) ? rawHash : "live";
+      if (targetTab !== activeTab && typeof switchTab === "function") {
+        switchTab(targetTab);
+      }
+    } catch (e) {}
+  });
 }
 
 let isFetchingOrders = false;
