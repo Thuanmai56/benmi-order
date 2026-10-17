@@ -13,7 +13,7 @@ global.window = {
   localStorage: global.localStorage
 };
 
-eval(fs.readFileSync(path.join(__dirname, '../js/printer-service.js'), 'utf8'));
+eval(('(function(){var module;\n' + fs.readFileSync(require.resolve('../js/order-legacy-adapter.js'),'utf8') + '\n})();\n' + fs.readFileSync(path.join(__dirname, '../js/printer-service.js'), 'utf8')));
 
 const service = window.PrinterService;
 const order = {

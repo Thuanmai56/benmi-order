@@ -50,7 +50,7 @@ const window = {
 };
 
 // 2. Load PrinterService
-const printerCode = fs.readFileSync(require.resolve('../js/printer-service.js'), 'utf8');
+const printerCode = ('(function(){var module;\n' + fs.readFileSync(require.resolve('../js/order-legacy-adapter.js'),'utf8') + '\n})();\n' + fs.readFileSync(require.resolve('../js/printer-service.js'), 'utf8'));
 vm.runInNewContext(printerCode, {
   window,
   document,

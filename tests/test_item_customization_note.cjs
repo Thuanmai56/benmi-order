@@ -173,7 +173,7 @@ vm.runInContext(coreJsContent, posSandbox);
 
 // Load printer-service.js
 const printerJsPath = path.join(__dirname, '../js/printer-service.js');
-const printerJsContent = fs.readFileSync(printerJsPath, 'utf8');
+const printerJsContent = fs.readFileSync(require.resolve('../js/order-legacy-adapter.js'), 'utf8') + '\n' + fs.readFileSync(printerJsPath, 'utf8');
 vm.runInContext(printerJsContent, posSandbox);
 
 // Load orders-live.js

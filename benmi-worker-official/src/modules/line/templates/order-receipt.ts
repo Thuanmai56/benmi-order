@@ -1,3 +1,5 @@
+import LegacyOrderAdapter from '../../../../../js/order-legacy-adapter.js';
+import { DetailView } from '../../order-detail';
 import { Order, OrderItemInput } from '../../../types/index';
 import { TenantContext } from '../../../types/tenant';
 import { itemNoteKey, remainingItemNote } from '../../../utils/order-item-notes';
@@ -8,12 +10,18 @@ export function buildOrderFlexMessage(
   items?: OrderItemInput[],
   customizations?: Array<{ label: string; value: string }>
 ): any {
+  const structured = DetailView.isSnapshot(order.detailSnapshot);
+  if (structured) {
+    items = DetailView.lines(order.detailSnapshot);
+    customizations = DetailView.globalChoices(order.detailSnapshot);
+    order = { ...order, note: DetailView.notes(order.detailSnapshot) };
+  }
   const brandColor = tenantCtx?.brandColor || "#059669";
   const isScheduled = tenantCtx?.allowScheduledPickup !== false;
   const isDineIn = order.diningOption === "dine_in" || ((order.content || "").includes("用餐方式：") && (order.content || "").includes("內用")) || (order.content || "").includes("【內用】");
 
   let tableNum = (order.tableNumber || "").trim();
-  if (!tableNum || tableNum === "-") {
+  if (!structured && (!tableNum || tableNum === "-")) {
     const tableMatch = (order.content || "").match(/(?:桌號|Bàn)[：:\s]*([^\n\r,，()（）]+)/i) ||
       (order.note || "").match(/(?:桌號|Bàn)[：:\s]*([^\n\r,，()（）]+)/i);
     if (tableMatch) tableNum = tableMatch[1].trim();
@@ -38,7 +46,9 @@ export function buildOrderFlexMessage(
      .replace(/\(\s*[^)]*缺貨[^)]*\)/g, '')
      .trim();
 
-  if (Array.isArray(customizations) && customizations.length > 0) {
+  if (structured) {
+    (customizations || []).forEach(c => extraPills.push(`${c.label}: ${c.value}`));
+  } else if (Array.isArray(customizations) && customizations.length > 0) {
     customizations.forEach(c => {
       const label = (c.label || '').replace(/✦/g, '').replace(/選擇|調整/g, '').replace(/\(朝天椒\)/g, '').replace(/（朝天椒）/g, '').trim();
       const val = cleanItemVal(c.value || '');
@@ -48,76 +58,19 @@ export function buildOrderFlexMessage(
         flavorPills.push(val);
       }
     });
-  } else if (order.content) {
-    const lines = (order.content || "").split("\n");
-    let inItem = false;
-    for (const rawLine of lines) {
-      const l = rawLine.trim();
-      if (/^\[(?:第\s*\d+\s*輪|Đợt\s*\d+)/i.test(l)) inItem = false;
-      if (/^\d+\s*(?:份|[x×])/i.test(l) || /^.+?\s*[x×*]\s*\d+(?:\s*[\$đ]|$)/i.test(l)) inItem = true;
-      if (inItem) continue;
-      if (l.includes("口味設定") || l.includes("客製化設定")) {
-        const inlineFlavors = l.replace(/.*(?:口味設定|客製化設定)[：:]\s*/, '').replace(/[【】]/g, '').trim();
-        if (inlineFlavors) {
-          const parts = inlineFlavors.split(/[・·|]/).map(p => cleanItemVal(p.trim())).filter(Boolean);
-          parts.forEach(p => {
-            const pMatch = p.match(/([^：:]+)[：:]\s*(.+)/);
-            if (pMatch) {
-              const label = pMatch[1].replace(/✦/g, '').replace(/選擇|調整/g, '').replace(/\(朝天椒\)/g, '').replace(/（朝天椒）/g, '').trim();
-              const val = cleanItemVal(pMatch[2].trim());
-              if (
-                label.includes('備註') ||
-                label.includes('Ghi chú') ||
-                label.includes('Note') ||
-                label.includes('訂單') ||
-                label.includes('總金額') ||
-                label.includes('時間') ||
-                label.includes('取餐') ||
-                label.includes('用餐方式')
-              ) {
-                return;
-              }
-              if (label.includes('配料') || label.includes('加價')) {
-                extraPills.push(`${label}：${val}`);
-              } else {
-                flavorPills.push(val);
-              }
-            } else {
-              flavorPills.push(p);
-            }
-          });
-        }
-      }
-      const match = l.match(/^[•\-*]\s*([^：:]+)[：:]\s*(.+)$/);
-      if (match) {
-        const label = match[1].replace(/✦/g, '').replace(/選擇|調整/g, '').replace(/\(朝天椒\)/g, '').replace(/（朝天椒）/g, '').trim();
-        const val = cleanItemVal(match[2].trim());
-        if (
-          !label.includes('備註') &&
-          !label.includes('Ghi chú') &&
-          !label.includes('Note') &&
-          !label.includes('訂單') &&
-          !label.includes('總金額') &&
-          !label.includes('時間') &&
-          !label.includes('取餐') &&
-          !label.includes('用餐方式')
-        ) {
-          if (label.includes('配料') || label.includes('加價')) {
-            extraPills.push(`${label}：${val}`);
-          } else {
-            flavorPills.push(val);
-          }
-        }
-      }
-    }
+  } else {
+    LegacyOrderAdapter.globalChoices(order).forEach((c: any) => extraPills.push(`${c.label}: ${c.value}`));
   }
 
-  const uniqueFlavors = Array.from(new Set(flavorPills.filter(Boolean)));
-  const uniqueExtras = Array.from(new Set(extraPills.filter(Boolean)));
+  const uniqueFlavors = structured ? flavorPills : Array.from(new Set(flavorPills.filter(Boolean)));
+  const uniqueExtras = structured ? extraPills : Array.from(new Set(extraPills.filter(Boolean)));
 
   // Format Items in a clean POS Table
   const itemComponents: any[] = [];
   const rawItems: OrderItemInput[] = Array.isArray(items) && items.length > 0 ? items : [];
+  if (structured) for (const r of order.detailSnapshot!.rounds) {
+    if (r.legacyContent !== undefined) itemComponents.push({ type: 'text', text: r.legacyContent || '—', wrap: true, size: 'sm' });
+  }
 
   if (rawItems.length > 0) {
     let itemsSubtotalSum = 0;
@@ -165,7 +118,7 @@ export function buildOrderFlexMessage(
         }
       }
 
-      const itemNote = remainingItemNote(opts, it.note || it.notes);
+      const itemNote = structured ? it.note : remainingItemNote(opts, it.note || it.notes);
       if (itemNote) optionTexts.push(itemNote);
 
       const isVi = (order.content || "").includes("Đợt") || (order.content || "").includes("Bàn số") || (order.content || "").includes("Mang về");
@@ -338,26 +291,8 @@ export function buildOrderFlexMessage(
       });
     }
   } else {
-    // Fallback: Clean parse from order.content string
-    const lines = (order.content || "").split("\n").map(l => l.trim()).filter(l => l.length > 0);
-    const itemLines = lines.filter(l => {
-      if (l.startsWith("[") || l.startsWith("【")) return false;
-      if (l.includes("訂單編號") || l.includes("訂單內容") || l.includes("用餐方式") || l.includes("取餐時間") || l.includes("點餐時間") || l.includes("總金額") || l.includes("總備註") || l.includes("桌號") || l.includes("口味設定") || l.includes("客製化設定")) return false;
-      if (l.startsWith("•") || l.startsWith("●") || l.startsWith("🧂") || l.startsWith("🧪") || l.startsWith("🎛️")) return false;
-      return true;
-    });
-
-    const seenNoteKeys = new Set<string>();
-    itemLines.slice(0, 30).forEach((line, idx) => {
-      const isOption = line.startsWith("↳") || line.startsWith("-") || line.startsWith("+") || line.startsWith("  ");
-      const cleanLine = line.replace(/^[↳\-+]\s*/, "").replace(/[🍽️🛍️📦🎁🪑]/g, "").trim();
-
+    LegacyOrderAdapter.receiptLines(order.content, itemNoteKey).slice(0, 30).forEach(({text: cleanLine, isOption}: any, idx: number) => {
       if (isOption) {
-        const key = itemNoteKey(cleanLine, true);
-        if (key !== null) {
-          if (seenNoteKeys.has(key)) return;
-          seenNoteKeys.add(key);
-        }
         itemComponents.push({
           type: "text",
           text: `↳ ${cleanLine}`,
@@ -367,7 +302,6 @@ export function buildOrderFlexMessage(
           margin: "xs"
         });
       } else {
-        seenNoteKeys.clear();
         itemComponents.push({
           type: "text",
           text: cleanLine,

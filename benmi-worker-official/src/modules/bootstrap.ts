@@ -1,3 +1,4 @@
+import { detailWrites } from './order-detail';
 import { tenantIsDeleted } from '../utils/tenant-lifecycle';
 import { groupOptions, loadOptionCatalog, projectOptionRule, unifiedMenuEnabled } from './option-groups';
 import { Env } from '../types/env';
@@ -400,7 +401,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
       if (cached) {
         try {
           const parsed = JSON.parse(cached);
-          if (parsed && parsed.bootstrapVersion === BOOTSTRAP_VERSION && parsed.menuComplete === true && Boolean(parsed.unifiedMenu) === unifiedMenuEnabled(env)) {
+          if (parsed && parsed.bootstrapVersion === BOOTSTRAP_VERSION && parsed.menuComplete === true && Boolean(parsed.unifiedMenu) === unifiedMenuEnabled(env) && (parsed.orderDetailVersion === 1) === detailWrites(env)) {
             return json(parsed, 200, {
               "X-Cache": "HIT",
               "Cache-Control": "no-cache, must-revalidate"
@@ -1058,6 +1059,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
       }
       (payload as any).unifiedMenu = true;
     }
+    (payload as any).orderDetailVersion = detailWrites(env) ? 1 : 0;
     // 6. Cache in KV Edge Cache
     if (menuComplete && env.ORDER_STATE) {
       try {

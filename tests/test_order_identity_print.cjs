@@ -14,7 +14,7 @@ const document = { createElement() {
   canvas.getContext=()=>context; return canvas;
 }};
 const window={currentTenantBrandName:'Test',location:{search:'?tenant=identity-test'}};
-vm.runInNewContext(fs.readFileSync(require.resolve('../js/printer-service.js'),'utf8'),{
+vm.runInNewContext(('(function(){var module;\n' + fs.readFileSync(require.resolve('../js/order-legacy-adapter.js'),'utf8') + '\n})();\n' + fs.readFileSync(require.resolve('../js/printer-service.js'),'utf8')),{
   window,document,console,URLSearchParams,localStorage:{getItem:k=>storage[k]||null,setItem:(k,v)=>{storage[k]=v}}
 });
 const service=window.PrinterService;

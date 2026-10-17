@@ -1,3 +1,5 @@
+import { writeDetailedOrder } from './order-detail-write';
+import { attachOrderDetails, detailReads, detailWrites } from './order-detail';
 import { unifiedMenuEnabled, validateUnifiedOrderItems } from './option-groups';
 import { resolveOrderKey } from './order-identity';
 import { Env } from '../types/env';
@@ -399,6 +401,7 @@ export async function createOrder(
 ): Promise<Response> {
   const data: any = await request.json();
   const tenantId = tenantCtx?.tenantId || getTenantId(request);
+  if (data.detailVersion !== undefined) return writeDetailedOrder(env, tenantId, data, data.parent_order_key ? 'append' : 'create', ctx, tenantCtx);
 
   if (tenantCtx?.storeStatus === 'paused') {
     return json({ error: "店家目前暫停接單中，暫無法接收新訂單", code: "STORE_PAUSED" }, 400);
@@ -773,6 +776,8 @@ export async function executeAppendOrderInternal(
     return json({ error: "找不到原訂單 / Order not found", code: "ORDER_NOT_FOUND" }, 404);
   }
 
+  if (Number(row.detail_revision || 0) > 0) return json({ code: 'ORDER_CLIENT_UPGRADE_REQUIRED' }, 409);
+
   // 2. Lock boundary: Cannot append if order is PICKED_UP, REJECTED, or PAID
   if (row.status === 'PICKED_UP' || row.status === 'REJECTED' || row.status === 'PAID') {
     return json({
@@ -938,6 +943,7 @@ export async function appendOrder(
   try {
     const payload: AppendOrderPayload = await request.json();
     const tenantId = tenantCtx?.tenantId || payload.tenant_id || getTenantId(request);
+    if (payload.detailVersion !== undefined) return writeDetailedOrder(env, tenantId, payload, 'append', ctx, tenantCtx);
     const parentKey = payload.parent_order_key;
     const rawItems: OrderItemInput[] = Array.isArray(payload.items) ? payload.items : (Array.isArray(payload.appended_items) ? payload.appended_items : []);
     const appendedContent = payload.appended_content || formatItemsToText(rawItems);
@@ -1300,7 +1306,7 @@ export async function getWaitingCount(request: Request, env: Env): Promise<Respo
       }
     }
 
-    const currentVersion = `identity3_items_${waitingCount}_${lastUpdated}`;
+    const currentVersion = `detail1_items_${waitingCount}_${lastUpdated}`;
 
     const clientETag = request.headers.get("if-none-match")?.replace(/^W\//, '').replace(/"/g, '');
     if (clientETag && clientETag === currentVersion) {
@@ -1374,14 +1380,14 @@ export async function getOrders(request: Request, env: Env): Promise<Response> {
   try {
     // 1. Tính toán ETag version tức thì dựa trên Index D1 (Tối ưu O(1) - Chỉ đọc đúng 1 dòng)
     const verRow = await env.DB.prepare(
-      "SELECT updated_at, key, status, round_count FROM orders WHERE tenant_id = ? ORDER BY updated_at DESC LIMIT 1"
-    ).bind(tenantId).first<{ updated_at: string | null; key: string | null; status: string | null; round_count: number | null }>();
+      `SELECT updated_at, key, status, round_count${detailReads(env) ? ', detail_revision' : ''} FROM orders WHERE tenant_id = ? ORDER BY updated_at DESC, key DESC LIMIT 1`
+    ).bind(tenantId).first<{ updated_at: string | null; key: string | null; status: string | null; round_count: number | null; detail_revision?: number }>();
 
     const lastUpdated = verRow?.updated_at || "0";
     const lastKey = verRow?.key || "empty";
     const lastStatus = verRow?.status || "none";
     const lastRound = verRow?.round_count || 1;
-    const currentVersion = `identity3_items_${lastUpdated}_${lastKey}_${lastStatus}_${lastRound}`;
+    const currentVersion = `detail1_items_${lastUpdated}_${lastKey}_${lastStatus}_${lastRound}_${verRow?.detail_revision || 0}`;
 
     // 2. Client gửi Header "If-None-Match" -> So sánh với D1 version
     const clientETag = request.headers.get("if-none-match")?.replace(/^W\//, '').replace(/"/g, '');
@@ -1412,6 +1418,7 @@ export async function getOrders(request: Request, env: Env): Promise<Response> {
 
     const orders = mapOrderRows(results || []);
     await attachOrderPrintItems(env, tenantId, orders);
+    await attachOrderDetails(env, tenantId, orders);
     return jsonWithETag(orders, currentVersion);
   } catch (e: any) {
     console.error("[getOrders] D1 error:", e);
@@ -1472,6 +1479,7 @@ export async function getOrdersByDate(request: Request, env: Env): Promise<Respo
 
     const orders = mapOrderRows(results || []);
     await attachOrderPrintItems(env, tenantId, orders);
+    await attachOrderDetails(env, tenantId, orders);
     return json(orders);
   } catch (e: any) {
     console.error("[getOrdersByDate] D1 error:", e);
@@ -1495,6 +1503,7 @@ export async function getHistoryAll(request: Request, env: Env): Promise<Respons
 
     const orders = mapOrderRows(results || []);
     await attachOrderPrintItems(env, tenantId, orders);
+    await attachOrderDetails(env, tenantId, orders);
     return json(orders);
   } catch (e: any) {
     console.error("[getHistoryAll] D1 error:", e);
@@ -1629,6 +1638,7 @@ export async function getOrderQueueAhead(env: Env, tenantId: string, orderKey: s
       last_appended_at: row.last_appended_at || null
     };
 
+    await attachOrderDetails(env, tenantId, [order]);
     if (order.status === 'DONE' || order.status === 'PICKED_UP' || order.status === 'REJECTED') {
       return { order, queueAhead: 0 };
     }
@@ -1749,9 +1759,14 @@ export async function getOrderEditContext(request: Request, env: Env, tenantCtx?
       };
     });
 
+    const detailOrder = mapOrderRows([orderRow])[0];
+    await attachOrderDetails(env, tenantId, [detailOrder]);
+
     return json({
       success: true,
       order: {
+        detailSnapshot: detailOrder.detailSnapshot,
+        detailRevision: detailOrder.detailRevision || 0,
         key: orderRow.key,
         orderId: orderRow.order_id,
         displayKey: orderRow.display_key,
@@ -1791,6 +1806,7 @@ export async function modifyOrder(
     const payload: any = await request.json();
     const rawKey = payload.order_key || payload.key;
     const tenantId = tenantCtx?.tenantId || payload.tenant_id || getTenantId(request);
+    if (payload.detailVersion !== undefined) return writeDetailedOrder(env, tenantId, payload, 'modify', ctx, tenantCtx);
 
     if (!rawKey) {
       return json({ error: "Missing order_key", code: "MISSING_KEY" }, 400);
@@ -1808,6 +1824,8 @@ export async function modifyOrder(
     if (!orderRow) {
       return json({ error: "Order not found", code: "ORDER_NOT_FOUND" }, 404);
     }
+
+    if (Number(orderRow.detail_revision || 0) > 0) return json({ code: 'ORDER_CLIENT_UPGRADE_REQUIRED' }, 409);
 
     if (orderRow.status !== 'WAITING_CUSTOMER_CHANGE') {
       return json({

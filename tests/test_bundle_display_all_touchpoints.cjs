@@ -193,7 +193,7 @@ vm.createContext(domSandbox);
 // Load required scripts in sequence
 const i18nJs = fs.readFileSync(path.join(__dirname, '../js/orders-i18n.js'), 'utf8');
 const coreJs = fs.readFileSync(path.join(__dirname, '../js/orders-core.js'), 'utf8');
-const printerJs = fs.readFileSync(path.join(__dirname, '../js/printer-service.js'), 'utf8');
+const printerJs = ('(function(){var module;\n' + fs.readFileSync(require.resolve('../js/order-legacy-adapter.js'),'utf8') + '\n})();\n' + fs.readFileSync(path.join(__dirname, '../js/printer-service.js'), 'utf8'));
 const liveJs = fs.readFileSync(path.join(__dirname, '../js/orders-live.js'), 'utf8');
 
 vm.runInContext(i18nJs, domSandbox);

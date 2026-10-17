@@ -53,7 +53,7 @@ global.window = {
 };
 
 // Load js/printer-service.js
-const printerServiceCode = fs.readFileSync(path.join(__dirname, '../js/printer-service.js'), 'utf8');
+const printerServiceCode = ('(function(){var module;\n' + fs.readFileSync(require.resolve('../js/order-legacy-adapter.js'),'utf8') + '\n})();\n' + fs.readFileSync(path.join(__dirname, '../js/printer-service.js'), 'utf8'));
 eval(printerServiceCode);
 
 const service = global.window.PrinterService;
