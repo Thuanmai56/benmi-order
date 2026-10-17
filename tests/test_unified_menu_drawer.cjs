@@ -506,4 +506,74 @@ test('group drawer exposes autoPopup toggle for item groups, locks when required
   assert.equal(app3.drawer().querySelector('[data-field="autoPopup"]'), null);
 });
 
+test('option group rule logic matches Foodpanda specification (Issue #63)', async () => {
+  let alerted = null;
+  const app = await setup();
+  app.context.alert = (msg) => { alerted = msg; };
+
+  // 1. Foodpanda exact case: required toggle ON, 0 options, min: 2, max: 1
+  app.context.UnifiedMenu.group(); // new group, 0 options
+  app.input('required', true);
+  app.input('minSelection', 2);
+  app.input('maxSelection', 1);
+
+  assert.equal(app.get('#ug-minSelection-error').hidden, false);
+  assert.equal(app.get('#ug-minSelection-error').textContent, 'Số lượng tối thiểu không được lớn hơn số lượng tối đa.');
+  assert.equal(app.get('#ug-maxSelection-error').hidden, false);
+  assert.match(app.get('#ug-maxSelection-error').textContent, /Số lượng tối đa không thể lớn hơn số lựa chọn trong nhóm \(hiện có 0 lựa chọn\)/);
+
+  // 2. Existing group with 2 options: min: 3, max: 1
+  const app2 = await setup();
+  app2.context.alert = (msg) => { alerted = msg; };
+  app2.context.UnifiedMenu.group('drinks'); // has 2 options
+  app2.input('minSelection', 3);
+  app2.input('maxSelection', 1);
+
+  assert.equal(app2.get('#ug-minSelection-error').hidden, false);
+  assert.equal(app2.get('#ug-minSelection-error').textContent, 'Số lượng tối thiểu không được lớn hơn số lượng tối đa.');
+  assert.equal(app2.get('#ug-maxSelection-error').hidden, false);
+  assert.equal(app2.get('#ug-maxSelection-error').textContent, 'Số lượng tối đa phải lớn hơn hoặc bằng số lượng tối thiểu.');
+
+  // Attempting to save blocks and alerts the minimum range error
+  await app2.click('save');
+  assert.equal(app2.posts.length, 0);
+  assert.equal(alerted, 'Số lượng tối thiểu không được lớn hơn số lượng tối đa.');
+
+  // 3. Setting min: 3, max: 3 (exceeds option count 2 without repeats)
+  app2.input('maxSelection', 3);
+  assert.equal(app2.get('#ug-minSelection-error').hidden, false);
+  assert.match(app2.get('#ug-minSelection-error').textContent, /hiện có 2 lựa chọn/);
+  assert.equal(app2.get('#ug-maxSelection-error').hidden, false);
+  assert.match(app2.get('#ug-maxSelection-error').textContent, /hiện có 2 lựa chọn/);
+
+  await app2.click('save');
+  assert.equal(app2.posts.length, 0);
+  assert.match(alerted, /hiện có 2 lựa chọn/);
+
+  // 4. Enabling allowRepeats removes optionCount restriction, but range error persists if min > max
+  app2.input('allowRepeats', true);
+  assert.equal(app2.get('#ug-minSelection-error').hidden, true);
+  assert.equal(app2.get('#ug-maxSelection-error').hidden, true);
+
+  app2.input('minSelection', 4);
+  app2.input('maxSelection', 2);
+  assert.equal(app2.get('#ug-minSelection-error').textContent, 'Số lượng tối thiểu không được lớn hơn số lượng tối đa.');
+  assert.equal(app2.get('#ug-maxSelection-error').textContent, 'Số lượng tối đa phải lớn hơn hoặc bằng số lượng tối thiểu.');
+
+  // 5. Localization in Traditional Chinese (zh-TW)
+  const zhApp = await setup({ lang: 'zh-TW' });
+  let zhAlerted = null;
+  zhApp.context.alert = (msg) => { zhAlerted = msg; };
+  zhApp.context.UnifiedMenu.group('drinks');
+  zhApp.input('minSelection', 3);
+  zhApp.input('maxSelection', 1);
+
+  assert.equal(zhApp.get('#ug-minSelection-error').textContent, '最少選擇數量不可大於最多選擇數量。');
+  assert.equal(zhApp.get('#ug-maxSelection-error').textContent, '最多選擇數量必須大於或等於最少選擇數量。');
+
+  await zhApp.click('save');
+  assert.equal(zhApp.posts.length, 0);
+  assert.equal(zhAlerted, '最少選擇數量不可大於最多選擇數量。');
+});
+
 
