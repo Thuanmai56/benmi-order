@@ -936,82 +936,8 @@ function renderCustomizationsHtml(customItems) {
   `;
 }
 function extractFlavorSettings(rawContent) {
-  if (!rawContent) return null;
-  const lines = String(rawContent).split("\n");
-  const flavors = [];
-  const extraIngredients = [];
-  let inItem = false;
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (/^\[(?:第\s*\d+\s*輪|Đợt\s*\d+)/i.test(line)) inItem = false;
-    if (/^\d+\s*(?:份|[x×])/i.test(line) || /^.+?\s*[x×*]\s*\d+(?:\s*[\$đ]|$)/i.test(line)) inItem = true;
-    if (inItem) continue;
-    if (
-      line.includes("口味設定") ||
-      line.includes("Hương vị") ||
-      line.includes("Khẩu vị") ||
-      line.includes("客製化設定") ||
-      line.includes("客製設定") ||
-      line.includes("Tùy chọn khẩu vị")
-    ) {
-      const inline = line
-        .replace(/.*(?:口味設定|Hương vị|Khẩu vị|客製化設定|客製設定|Tùy chọn khẩu vị)[：:]\s*/, "")
-        .replace(/[【】🧂🧪]/g, "")
-        .trim();
-      if (inline) {
-        const parts = inline.split(/[・·|,|｜]/).map(p => p.trim()).filter(Boolean);
-        parts.forEach(p => {
-          const m = p.match(/^([^：:]+)[：:]\s*(.+)$/);
-          if (m) {
-            const key = m[1].replace(/^[✦•\-*●]\s*/, "").replace(/選擇|調整/g, "").replace(/[\(（]朝天椒[\)）]/g, "").trim();
-            const val = m[2].trim();
-            flavors.push({ label: key, value: val });
-          } else {
-            flavors.push({ label: "", value: p });
-          }
-        });
-      }
-    } else {
-      const extraMatch = line.match(/^[•\-*●]\s*([^：:]+)[：:]\s*(.+)$/);
-      if (extraMatch) {
-        const label = extraMatch[1]
-          .replace(/^[✦•\-*●]\s*/, "")
-          .replace(/選擇|調整/g, "")
-          .replace(/[\(（]朝天椒[\)）]/g, "")
-          .trim();
-        const val = extraMatch[2].trim();
-        if (
-          label &&
-          val &&
-          !label.includes("訂單") &&
-          !label.includes("總金額") &&
-          !label.includes("時間") &&
-          !label.includes("取餐") &&
-          !label.includes("用餐方式") &&
-          !label.includes("備註") &&
-          !label.includes("Ghi chú") &&
-          !label.includes("Note")
-        ) {
-          extraIngredients.push({ label, value: val });
-        }
-      } else if (line.includes("| 口味:") || line.includes("| 口味：") || line.includes("｜ 口味:") || line.includes("｜ 口味：")) {
-        const flavorPart = line.split(/[|｜]/).slice(1).join("|").trim();
-        const parts = flavorPart.split(/[/／]/).map(p => p.trim()).filter(Boolean);
-        parts.forEach(p => {
-          const m = p.match(/^([^：:]+)[：:]\s*(.+)$/);
-          if (m) {
-            flavors.push({ label: m[1].trim(), value: m[2].trim() });
-          } else {
-            flavors.push({ label: "", value: p });
-          }
-        });
-      }
-    }
-  }
-
-  if (flavors.length === 0 && extraIngredients.length === 0) return null;
-  return { flavors, extraIngredients };
+  const choices = LegacyOrderAdapter.flavors(rawContent);
+  return choices.length ? { flavors: [], extraIngredients: choices } : null;
 }
 window.extractFlavorSettings = extractFlavorSettings;
 
@@ -1273,7 +1199,7 @@ function renderItemRowHtml(it, idx, orderKey) {
     && typeof PrinterService.getPrintCapabilities === "function"
     && PrinterService.getPrintCapabilities().stickers;
 
-  const bundleInfo = extractBundleFromItem(it);
+  const bundleInfo = it.detailLine ? null : extractBundleFromItem(it);
   const bundleHtml = renderBundleComponentsHtml(bundleInfo);
 
   let optsToRender = it.options;
@@ -1283,7 +1209,14 @@ function renderItemRowHtml(it, idx, orderKey) {
     optsToRender = bundleInfo.remainingOptionsStr;
   }
 
-  if (optsToRender) {
+  if (it.detailLine) {
+    optionsHtml = it.detailLine.portions.map(p => {
+      const chips = OrderDetailView.choices(p.groups).map(c => `<span class="mod-chip">${escapeHtml(c.label)}: ${escapeHtml(c.value)}${c.price ? ` (+$${c.price})` : ''}</span>`).join('');
+      const note = p.note ? `<span class="mod-chip mod-chip-note">${escapeHtml(p.note)}</span>` : '';
+      const label = itemQty > 1 ? `<span class="portion-badge">${escapeHtml(t('detailPortion', { n: p.portionIndex + 1 }))}</span>` : '';
+      return chips || note ? `<div class="review-item-portion-row">${label}<div class="portion-chips-wrap">${chips}${note}</div></div>` : '';
+    }).join('');
+  } else if (optsToRender) {
     const rawOpts = String(optsToRender).trim();
     const parsed = typeof parsePortionCustomizations === "function" ? parsePortionCustomizations(rawOpts) : null;
     if (parsed && parsed.portions && parsed.portions.length > 0) {
@@ -1329,7 +1262,9 @@ function renderItemRowHtml(it, idx, orderKey) {
   }
   const noteIcon = (typeof POS_SVG !== "undefined" && POS_SVG.note) || "";
   let noteHtml = "";
-  if (it.note) {
+  if (it.detailLine?.note) {
+    noteHtml = `<div class="review-item-note">${noteIcon}${escapeHtml(it.detailLine.note)}</div>`;
+  } else if (!it.detailLine && it.note) {
     const remaining = (typeof PrinterService !== "undefined" && typeof PrinterService.remainingItemNote === "function")
       ? PrinterService.remainingItemNote(optsToRender, it.note)
       : (optionsHtml && optionsHtml.includes("mod-chip-note") ? "" : String(it.note).trim());
@@ -1372,6 +1307,21 @@ function renderItemRowHtml(it, idx, orderKey) {
 window.renderItemRowHtml = renderItemRowHtml;
 
 function formatContentHtml(order) {
+  if (typeof OrderDetailView !== 'undefined' && OrderDetailView.isSnapshot(order?.detailSnapshot)) {
+    const snapshot = order.detailSnapshot;
+    const items = OrderDetailView.printItems(snapshot, false);
+    let stickerIndex = 0;
+    items.forEach(i => { i.stickerIndex = stickerIndex; stickerIndex += i.quantity; });
+    return snapshot.rounds.slice().reverse().map(round => {
+      const heading = snapshot.rounds.length > 1 ? `<div class="round-section-header">${escapeHtml(t('detailRound', { n: round.roundNumber }))}</div>` : '';
+      if (round.legacyContent !== undefined) return `<section class="round-section-block">${heading}<div>${escapeHtml(t('detailLegacy'))}</div><div class="review-content-raw" style="white-space:pre-wrap">${escapeHtml(round.legacyContent)}</div></section>`;
+      const choices = OrderDetailView.choices(round.groups);
+      const chips = choices.map(c => `<span class="flavor-chip"><span class="flavor-label">${escapeHtml(c.label)}:</span><strong class="flavor-val">${escapeHtml(c.value)}</strong></span>`).join('');
+      const note = round.note ? `<div class="review-item-note">${escapeHtml(round.note)}</div>` : '';
+      const options = chips || note ? `<div class="flavor-custom-card"><div class="flavor-chips-grid">${chips}</div>${note}</div>` : '';
+      return `<section class="round-section-block">${heading}${options}${items.filter(i => i.round_number === round.roundNumber).map(i => renderItemRowHtml(i, items.indexOf(i), order.key)).join('')}</section>`;
+    }).join('');
+  }
   const raw = String(order?.content || "");
   if (order?.reason === "Đơn qua tin nhắn") {
     return `<div class="review-content-raw">${escapeHtml(raw)}</div>`;

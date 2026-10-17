@@ -21,7 +21,7 @@ const document = {
   }
 };
 const window = { currentTenantBrandName: 'Test Restaurant' };
-vm.runInNewContext(fs.readFileSync(require.resolve('../js/printer-service.js'), 'utf8'), {
+vm.runInNewContext(('(function(){var module;\n' + fs.readFileSync(require.resolve('../js/order-legacy-adapter.js'),'utf8') + '\n})();\n' + fs.readFileSync(require.resolve('../js/printer-service.js'), 'utf8')), {
   window, document, console, URLSearchParams,
   localStorage: { getItem: () => null }
 });

@@ -4,6 +4,9 @@
 
 const I18N = {
   "zh-TW": {
+    detailRound: "第 {n} 輪",
+    detailPortion: "第 {n} 份",
+    detailLegacy: "原始訂單內容",
     displayTitle: "顯示",
     displayTextSize: "文字大小",
     displayDeviceHint: "立即套用，僅儲存在此裝置。",
@@ -958,6 +961,9 @@ const I18N = {
     quickTagSpicy: "辣"
   },
   "vi": {
+    detailRound: "Đợt {n}",
+    detailPortion: "Phần {n}",
+    detailLegacy: "Nội dung đơn cũ",
     displayTitle: "Hiển thị",
     displayTextSize: "Cỡ chữ",
     displayDeviceHint: "Áp dụng ngay, chỉ lưu trên thiết bị này.",

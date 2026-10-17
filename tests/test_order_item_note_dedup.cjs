@@ -25,7 +25,7 @@ const sandbox = {
 };
 sandbox.window = sandbox;
 vm.createContext(sandbox);
-for (const file of ['orders-i18n', 'orders-core', 'printer-service', 'orders-live', 'client-checkout'])
+for (const file of ['orders-i18n', 'orders-core', 'order-detail-view', 'order-legacy-adapter', 'printer-service', 'orders-live', 'client-checkout'])
   vm.runInContext(fs.readFileSync(`js/${file}.js`, 'utf8'), sandbox);
 const service = sandbox.PrinterService;
 const count = (value, text = 'Test thôi') => value.split(text).length - 1;

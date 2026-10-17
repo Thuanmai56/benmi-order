@@ -13,6 +13,8 @@ export type OrderStatus =
   | 'FORCE_REJECT';
 
 export interface Order {
+  detailSnapshot?: import('./order-detail').OrderDetailSnapshot;
+  detailRevision?: number;
   items?: Array<{
     item_name: string;
     quantity: number;
@@ -51,6 +53,7 @@ export interface Order {
 }
 
 export interface AppendOrderPayload {
+  detailVersion?: number;
   parent_order_key: string;
   user_id?: string;
   customer_name?: string;
