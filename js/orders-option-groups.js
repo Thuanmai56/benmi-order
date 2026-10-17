@@ -21,10 +21,12 @@
       ugAddSub: "Thêm lựa chọn con",
       ugDetails: "Thông tin",
       ugName: "Tên",
+      ugNewGroupTitle: "Tạo nhóm tùy chọn",
+      ugSelectScopeIntro: "Chọn loại nhóm tùy chọn bạn muốn tạo:",
       ugScope: "Phân loại nhóm",
-      ugScopeItem: "Tùy chọn theo món",
+      ugScopeItem: "Tùy chọn cho món",
       ugScopeItemDesc: "Áp dụng cho từng món riêng lẻ",
-      ugScopeOrder: "Tùy chọn toàn đơn",
+      ugScopeOrder: "Tùy chọn toàn cục",
       ugScopeOrderDesc: "Áp dụng cho cả đơn hàng",
       ugScopeDisabledHelp: "Nhóm đang có lựa chọn liên kết từ món, không thể chuyển sang tùy chọn toàn đơn.",
       ugAutoPopup: "Tự động hiện khi chọn món",
@@ -143,6 +145,8 @@
       ugAddSub: "新增子選項",
       ugDetails: "詳細資料",
       ugName: "名稱",
+      ugNewGroupTitle: "建立選項群組",
+      ugSelectScopeIntro: "請選擇欲建立的選項群組類型：",
       ugScope: "群組類型",
       ugScopeItem: "餐點選項",
       ugScopeItemDesc: "套用至個別餐點",
@@ -723,9 +727,12 @@
     const el = ensureDrawer(),
       d = state.draft,
       r = state.route;
-    let title = tr(state.kind === "product" ? "ugProduct" : "ugGroup"),
+    let title = tr(state.kind === "product" ? (d.isNew ? "ugNewProduct" : "ugProduct") : (d.isNew ? "ugNewGroup" : "ugGroup")),
       body = "";
-    if (r.page === "product") {
+    if (r.page === "new-group-scope") {
+      title = tr("ugNewGroupTitle");
+      body = `<div class="ug-scope-step"><p class="ug-scope-step-intro">${esc(tr("ugSelectScopeIntro"))}</p><div class="ug-scope-step-cards"><button type="button" class="ug-scope-step-card" data-action="select-new-scope" data-scope="item"><div class="ug-scope-step-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg></div><div class="ug-scope-step-info"><strong class="ug-scope-step-title">${esc(tr("ugScopeItem"))}</strong><small class="ug-scope-step-desc">${esc(tr("ugScopeItemDesc"))}</small></div><svg class="ug-scope-step-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button><button type="button" class="ug-scope-step-card" data-action="select-new-scope" data-scope="order"><div class="ug-scope-step-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></div><div class="ug-scope-step-info"><strong class="ug-scope-step-title">${esc(tr("ugScopeOrder"))}</strong><small class="ug-scope-step-desc">${esc(tr("ugScopeOrderDesc"))}</small></div><svg class="ug-scope-step-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button></div></div>`;
+    } else if (r.page === "product") {
       const catOptions = catalog.categories
         .filter((c) => c.category_type === "catalog" || !c.category_type)
         .map(
@@ -884,8 +891,19 @@
     el.querySelector(".ug-body").classList.toggle("ug-product-options-body", r.page === "product-options");
     el.querySelector(".ug-body").innerHTML = body;
     el.querySelector(".ug-body").inert = state.busy;
-    el.querySelector("footer").innerHTML =
-      `<p class="ug-error" role="alert">${esc(state.error)}</p>${state.kind === "group" && !state.stack.length ? `<p class="ug-muted">${esc(tr("ugAffected", { count: affected(d) }))}</p>` : ""}${btn(state.stack.length ? "apply" : "save", state.busy ? "ugSaving" : state.stack.length ? "ugApply" : r.direct ? "ugSaveOption" : state.optionsOnly ? "ugSaveProductOptions" : state.kind === "product" ? "ugSaveProduct" : "ugSaveGroup", `class="ug-primary" ${state.busy ? "disabled" : ""}`)}`;
+    const isScopeStep = r.page === "new-group-scope";
+    const footerEl = el.querySelector("footer");
+    footerEl.hidden = isScopeStep;
+    if (!isScopeStep) {
+      const isMainEntityPage = r.page === "group" || r.page === "product" || r.page === "product-options";
+      const btnAction = isMainEntityPage ? "save" : (state.stack.length ? "apply" : "save");
+      const btnLabel = state.busy ? "ugSaving" :
+        isMainEntityPage
+          ? (state.optionsOnly ? "ugSaveProductOptions" : state.kind === "product" ? "ugSaveProduct" : "ugSaveGroup")
+          : (state.stack.length ? "ugApply" : (r.direct ? "ugSaveOption" : "ugSaveGroup"));
+      footerEl.innerHTML =
+        `<p class="ug-error" role="alert">${esc(state.error)}</p>${state.kind === "group" && isMainEntityPage ? `<p class="ug-muted">${esc(tr("ugAffected", { count: affected(d) }))}</p>` : ""}${btn(btnAction, btnLabel, `class="ug-primary" ${state.busy ? "disabled" : ""}`)}`;
+    }
     if (r.page === "group" && d.included)
       el.querySelectorAll(
         '[data-field="required"],[data-field="minSelection"],[data-field="maxSelection"],[data-field="allowRepeats"],.ug-stepper button',
@@ -900,7 +918,10 @@
     syncCategoryCheckboxes(el);
     el.querySelector(".ug-body").scrollTop = scroll ?? view?.scroll ?? 0;
     const focus = scroll === undefined && view?.focus ? el.querySelector(view.focus) : null;
-    (focus || el.querySelector("#ug-title")).focus({ preventScroll: true });
+    const defaultFocus = (r.page === "new-group-scope" && el.querySelector('[data-action="select-new-scope"]')) ||
+      (r.page === "group" && d.isNew && el.querySelector("#ug-name")) ||
+      el.querySelector("#ug-title");
+    (focus || defaultFocus)?.focus({ preventScroll: true });
     el.querySelectorAll('.ug-stepper button[data-delta="-1"]').forEach(
       (b) => (b.textContent = "−"),
     );
@@ -1121,6 +1142,20 @@
       r.view = r.view || {};
       r.view.openCategories = [...ensureDrawer().querySelectorAll(".ug-category-card.ug-category-open")].map((c) => c.dataset.category);
       return;
+    }
+    if (name === "select-new-scope") {
+      const card = el.closest("[data-scope]");
+      const scope = card?.dataset.scope || "item";
+      d.scope = scope;
+      if (scope === "order") {
+        d.itemIds = [];
+        d.categoryIds = [];
+        d.sources = [];
+        d.autoPopup = false;
+      } else {
+        d.autoPopup = true;
+      }
+      return push({ page: "group" });
     }
     if (name === "set-scope") {
       const card = el.closest("[data-scope]");
@@ -1629,10 +1664,13 @@
               options: [], sources: [], labels: {}, revision: 0, itemIds: [], categoryIds: [],
             };
       const option = g && entry === "option" ? options(draft).find((o) => o.id === optionId) : null;
+      const initialRoute = g
+        ? (option ? { page: "option", option: clone(option), direct: true } : { page: "group" })
+        : (entry === "group" ? { page: "group" } : { page: "new-group-scope" });
       open(
         "group",
         draft,
-        option ? { page: "option", option: clone(option), direct: true } : { page: "group" },
+        initialRoute,
       );
       if (g && entry === "add-option") push({ page: "add-option" });
       if (g && entry === "linked") push({ page: "linked", ids: [...state.draft.itemIds] });
@@ -1663,8 +1701,7 @@
         };
       });
       root.querySelector('[data-action="new-group"]').onclick = () => {
-        const current = groupById(selectedGroup);
-        this.group(undefined, undefined, undefined, current?.scope === "order" ? "order" : "item");
+        this.group();
       };
       const input = root.querySelector("#ug-group-search");
       input.oninput = () => {
