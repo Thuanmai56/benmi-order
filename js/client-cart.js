@@ -271,15 +271,18 @@ function updateQty(category, origName, change) {
     }
 
     // If adding a portion for a bundle item that does NOT auto-popup, initialize default bundle portion data
-    if (bundleRule && !shouldBundleAutoPopup && change > 0) {
+    if (bundleRule && !shouldBundleAutoPopup) {
         window.bundleCartData = window.bundleCartData || {};
         window.bundleCartData[key] = window.bundleCartData[key] || [];
         const currentQty = cartObj[key] || 0;
-        if (window.bundleCartData[key].length < currentQty + 1) {
+        const targetQty = Math.max(0, currentQty + change);
+        if (change > 0 && window.bundleCartData[key].length < targetQty) {
             const defaultGroups = window.UnifiedOptions && typeof window.UnifiedOptions.restore === 'function'
                 ? window.UnifiedOptions.restore(bundleRule)
                 : [];
-            window.bundleCartData[key].push({ portionIndex: currentQty, groups: defaultGroups });
+            while (window.bundleCartData[key].length < targetQty) {
+                window.bundleCartData[key].push({ portionIndex: window.bundleCartData[key].length, groups: defaultGroups });
+            }
         }
     }
 
@@ -317,10 +320,13 @@ function updateQty(category, origName, change) {
 
     // Decrement bundle item: remove the last portion selection
     if (bundleRule && change < 0) {
-        if (window.bundleCartData && window.bundleCartData[key] && window.bundleCartData[key].length > 0) {
-            window.bundleCartData[key].pop();
-            if (window.bundleCartData[key].length === 0) {
+        const currentQty = cartObj[key] || 0;
+        const targetQty = Math.max(0, currentQty + change);
+        if (window.bundleCartData && window.bundleCartData[key]) {
+            if (targetQty === 0) {
                 delete window.bundleCartData[key];
+            } else if (window.bundleCartData[key].length > targetQty) {
+                window.bundleCartData[key].length = targetQty;
             }
         }
         const cData = window.customizeData || customizeData;
