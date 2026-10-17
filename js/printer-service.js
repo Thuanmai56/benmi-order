@@ -685,7 +685,7 @@
       for (const line of lines) {
         const trimmed = line.trim();
         if (/^\[(?:第\s*\d+\s*輪|Đợt\s*\d+)/i.test(trimmed)) inItem = false;
-        if (/^\d+\s*(?:份|[x×])/i.test(trimmed)) inItem = true;
+        if (/^\d+\s*(?:份|[x×])/i.test(trimmed) || /^.+?\s*[x×*]\s*\d+(?:\s*[\$đ]|$)/i.test(trimmed)) inItem = true;
         if (inItem) continue;
         if (trimmed.includes('口味設定') || trimmed.includes('Hương vị') || trimmed.includes('Khẩu vị')) {
           const inline = trimmed.replace(/.*(?:口味設定|Hương vị|Khẩu vị)[：:]\s*/, '').replace(/[【】🧂]/g, '').trim();
@@ -705,7 +705,18 @@
           if (extraMatch) {
             const label = extraMatch[1].replace(/✦/g, '').replace(/選擇|調整/g, '').trim();
             const val = extraMatch[2].trim();
-            if (label && val && !label.includes('訂單') && !label.includes('總金額') && !label.includes('時間') && !label.includes('取餐') && !label.includes('用餐方式')) {
+            if (
+              label &&
+              val &&
+              !label.includes('訂單') &&
+              !label.includes('總金額') &&
+              !label.includes('時間') &&
+              !label.includes('取餐') &&
+              !label.includes('用餐方式') &&
+              !label.includes('備註') &&
+              !label.includes('Ghi chú') &&
+              !label.includes('Note')
+            ) {
               res.push({ label, value: val });
             }
           }
