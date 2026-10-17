@@ -7,7 +7,7 @@
     <title id="page-title">線上點餐</title>
     <link rel="preload" href="/index.css?v=20261016_option_alignment_v1" as="style">
     <link rel="preload" href="/js/client-core.js?v=20261014_sticky_nav_v1" as="script">
-    <link rel="preload" href="/js/client-menu.js?v=20261013_badge_only_v1" as="script">
+    <link rel="preload" href="/js/client-menu.js?v=20261017_order_detail_v1" as="script">
     <link rel="stylesheet" href="/index.css?v=20261016_option_alignment_v1">
     <style>html.tenant-resolution-failed body > :not(#tenant-resolution-error) { display: none !important; }</style>
     <script>
@@ -851,7 +851,7 @@
 
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="/js/client-core.js?v=20261014_sticky_nav_v1"></script>
-    <script src="/js/client-menu.js?v=20261013_badge_only_v1"></script>
+    <script src="/js/client-menu.js?v=20261017_order_detail_v1"></script>
     <script src="/js/client-customizations.js?v=20261011_unified_options_v4"></script>
     <script src="/js/client-bundle.js?v=20261007_dev_main_sync_v1"></script>
     <script src="/js/client-cart.js?v=20261011_unified_options_v4"></script>
@@ -879,7 +879,10 @@
             </button>
         </div>
     </div>
-    <script src="/js/client-checkout.js?v=20261017_main_rebase_v1"></script>
+    <script src="/js/order-legacy-adapter.js?v=20261017_order_detail_v1"></script>
+  <script src="/js/order-detail-view.js?v=20261017_order_detail_v1"></script>
+  <script src="/js/order-detail-checkout.js?v=20261017_order_detail_v1"></script>
+    <script src="/js/client-checkout.js?v=20261017_order_detail_v1"></script>
     <script>
         if (window.__TENANT_RESOLUTION_FAILED) {
             document.getElementById('page-body-content').style.display = 'none';

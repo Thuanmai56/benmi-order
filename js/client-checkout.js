@@ -369,8 +369,46 @@ async function initEditOrderModeIfPresent() {
                 return;
             }
 
+            if (data.order.detailSnapshot?.schemaVersion === 1) {
+                DetailCheckout.setContext(data.order);
+                const rounds = data.order.detailSnapshot.rounds.filter(r => r.legacyContent === undefined);
+                const requestedRound = Number(urlParams.get('round'));
+                const selectedRound = rounds.find(r => r.roundNumber === requestedRound) || rounds[rounds.length - 1];
+                if (!selectedRound) throw new Error('Đơn cũ cần đối chiếu / 舊訂單需確認');
+                window.detailTargetRound = selectedRound.roundNumber;
+                window.editOrderOriginalTotal = selectedRound.total;
+                data.items = selectedRound.items.map(i => ({ ...i, unitPrice: i.unitPrice,
+                    bundleSelections: { portions: i.portions }, roundNumber: selectedRound.roundNumber }));
+                const noteField = document.getElementById('note');
+                if (noteField) noteField.value = selectedRound.note;
+                const banner = document.getElementById('edit-order-mode-banner');
+                if (banner && rounds.length > 1) {
+                    const select = document.createElement('select');
+                    select.style.minHeight = '48px';
+                    select.setAttribute('aria-label', document.documentElement.lang === 'vi' ? 'Đợt cần sửa' : '選擇修改輪次');
+                    rounds.forEach(r => {
+                        const option = document.createElement('option'); option.value = String(r.roundNumber);
+                        option.textContent = document.documentElement.lang === 'vi' ? `Đợt ${r.roundNumber}` : `第 ${r.roundNumber} 輪`;
+                        option.selected = r === selectedRound; select.appendChild(option);
+                    });
+                    select.addEventListener('change', () => {
+                        if (!confirm(document.documentElement.lang === 'vi' ? 'Chuyển đợt và bỏ bản nháp đang chỉnh?' : '切換輪次並放棄目前修改？')) { select.value = String(selectedRound.roundNumber); return; }
+                        const url = new URL(location.href); url.searchParams.set('round', select.value); location.href = url.href;
+                    });
+                    banner.appendChild(select);
+                }
+                for (const group of selectedRound.groups) {
+                    for (const el of document.getElementsByName(`opt-${group.groupId}`)) {
+                        const choice = group.items.find(c => c.optionId === el.dataset.optionId);
+                        el.checked = Boolean(choice);
+                        const container = el.closest('.flavor-option-container');
+                        if (container) for (const sub of container.querySelectorAll('.sub-opt-chk'))
+                            sub.checked = Boolean(choice?.subOptions?.some(s => (s.id || s.name) === (sub.dataset.subId || sub.value)));
+                    }
+                }
+            }
             window.editOrderDisplayKey = data.order.displayKey || orderKey;
-            window.editOrderOriginalTotal = Number(data.order.total) || 0;
+            window.editOrderOriginalTotal = window.detailTargetRound ? data.order.detailSnapshot.rounds.find(r => r.roundNumber === window.detailTargetRound).total : Number(data.order.total) || 0;
             window.editOrderSoldOutNames = Array.isArray(data.soldOutItemNames) ? data.soldOutItemNames.filter(s => s && s.trim()) : [];
             window.editOrderContextLoaded = true;
 
@@ -464,9 +502,13 @@ async function initEditOrderModeIfPresent() {
                             subtotal: Number(item.subtotal) || ((Number(item.unitPrice || item.price) || 0) * qty)
                         });
                     } else {
+                        if (item.lineId) {
+                            DetailCheckout.register(matchedKey, item);
+                            customizeData[matchedKey] = (customizeData[matchedKey] || []).concat(item.portions.map(p => ({ note: p.note })));
+                        }
                         cart[matchedKey] = (cart[matchedKey] || 0) + qty;
                         if (item.bundleSelections && item.bundleSelections.portions) {
-                            window.bundleCartData[matchedKey] = item.bundleSelections.portions;
+                            window.bundleCartData[matchedKey] = (window.bundleCartData[matchedKey] || []).concat(item.bundleSelections.portions);
                         }
                     }
                 });
@@ -1980,7 +2022,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                     "Content-Type": "application/json",
                     "X-Tenant-ID": tenantId
                 },
-                body: JSON.stringify(appendPayload),
+                body: JSON.stringify(await DetailCheckout.prepare(appendPayload)),
                 signal: abortController.signal
             });
 
@@ -2043,6 +2085,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
             }
 
             const appendResult = await res.json();
+            if (appendResult.success && typeof DetailCheckout !== 'undefined') DetailCheckout.completed();
             window.parentOrderKey = appendResult.key;
             window.parentOrderDisplayKey = appendResult.displayKey || window.parentOrderDisplayKey;
 
@@ -2102,7 +2145,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                     "Content-Type": "application/json",
                     "X-Tenant-ID": tenantId
                 },
-                body: JSON.stringify(modifyPayload),
+                body: JSON.stringify(await DetailCheckout.prepare(modifyPayload)),
                 signal: abortController.signal
             });
 
@@ -2162,6 +2205,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
             }
 
             const modifyResult = await res.json();
+            if (modifyResult.success && typeof DetailCheckout !== 'undefined') DetailCheckout.completed();
             setAllSubmitButtonsState(true, '品項已更新', { cursor: 'not-allowed', opacity: '0.6' });
 
             const rawItemsText = typeof formatAppendItemsOnlyText === 'function' ? formatAppendItemsOnlyText() : '';
@@ -2231,7 +2275,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                 "Content-Type": "application/json",
                 "X-Tenant-ID": tenantId
             },
-            body: JSON.stringify(orderPayload),
+            body: JSON.stringify(await DetailCheckout.prepare(orderPayload)),
             signal: abortController.signal
         });
 
@@ -2389,6 +2433,12 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                 const safeMessage = String(err.message || '訂單送出失敗').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
                 customAlert(safeMessage);
             }
+            return;
+        }
+        if (typeof DetailCheckout !== 'undefined' && DetailCheckout.enabled()) {
+            customAlert(document.documentElement.lang === 'vi'
+                ? 'Chưa xác nhận được kết quả. Giỏ hàng được giữ lại; vui lòng thử gửi lại.'
+                : '尚未確認送出結果，購物車已保留，請重試。');
             return;
         }
         console.warn("Primary API flow failed, falling back to LINE message flow:", err);

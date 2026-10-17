@@ -244,8 +244,8 @@ function renderCustomizationsPanel(container, list, sectionTitle = '口味選擇
                     html += `<div class="sub-option-container" data-parent-flavor="${escapeHtml(optName)}" style="display: ${(optIdx === firstAvailableIdx && !isOos) ? 'flex' : 'none'};">`;
                     subOpts.forEach((sub) => {
                         html += `<label class="checkbox-label sub-chip">
-                            <input type="checkbox" class="sub-opt-chk" data-flavor="${escapeHtml(optName)}" value="${escapeHtml(sub)}" onchange="handleCustomizationChange(event)"> 
-                            <span>${escapeHtml(sub)}</span>
+                            <input type="checkbox" class="sub-opt-chk" data-flavor="${escapeHtml(optName)}" data-sub-id="${escapeHtml(typeof sub === 'string' ? sub : sub.id || sub.productId || sub.name)}" data-price="${Number(sub.price || 0)}" value="${escapeHtml(typeof sub === 'string' ? sub : sub.name)}" onchange="handleCustomizationChange(event)"> 
+                            <span>${escapeHtml(typeof sub === 'string' ? sub : sub.name)}</span>
                         </label>`;
                     });
                     html += `</div>`;

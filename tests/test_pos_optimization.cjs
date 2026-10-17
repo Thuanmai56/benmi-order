@@ -19,7 +19,7 @@ const root = path.resolve(__dirname, '..');
       window.alert = message => { window.lastAlert = message; };
       window.confirm = () => true;
     });
-    for (const file of ['js/printer-service.js', 'js/orders-menu.js', 'js/orders-settings.js']) await page.addScriptTag({ content: fs.readFileSync(path.join(root, file), 'utf8') });
+    for (const file of ['js/order-legacy-adapter.js', 'js/printer-service.js', 'js/orders-menu.js', 'js/orders-settings.js']) await page.addScriptTag({ content: fs.readFileSync(path.join(root, file), 'utf8') });
     const printing = await page.evaluate(() => {
       window.currentTenantBrandName = '小巷餐廳';
       const order = { key: 'K0909-001', customer: '王小姐', time: '2026-09-09 12:30', total: 180,

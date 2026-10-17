@@ -45,7 +45,7 @@ const coreCode = fs.readFileSync(path.join(__dirname, '../js/orders-core.js'), '
 vm.runInNewContext(coreCode, sandbox);
 
 // Load printer-service.js
-const printerCode = fs.readFileSync(path.join(__dirname, '../js/printer-service.js'), 'utf8');
+const printerCode = ('(function(){var module;\n' + fs.readFileSync(require.resolve('../js/order-legacy-adapter.js'),'utf8') + '\n})();\n' + fs.readFileSync(path.join(__dirname, '../js/printer-service.js'), 'utf8'));
 vm.runInNewContext(printerCode, sandbox);
 
 const service = window.PrinterService;
