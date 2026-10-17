@@ -538,6 +538,36 @@
       return String(value).replace(/[ \t]*[（(]\s*\+\s*\$\s*\d[\d,]*(?:\.\d+)?\s*[)）]/g, '').trim();
     }
 
+    // Keep in sync with backend utils/order-item-notes; the contract tests cover both runtimes.
+    itemNoteKey(value, labeledOnly = false) {
+      let text = String(value || '').trim();
+      const portion = text.match(/^(第\s*[\d一二三四五六七八九十]+\s*份|Phần\s*\d+)\s*[:：]\s*/i);
+      if (portion) text = text.slice(portion[0].length);
+      const label = text.match(/^(?:備註|Ghi chú|Note)\s*[:：]\s*/i);
+      if (labeledOnly && !label) return null;
+      if (label) text = text.slice(label[0].length);
+      const portionId = portion ? (portion[1].match(/\d+/)?.[0] || portion[1].replace(/\s/g, '')) : '';
+      return `${portionId}:${text.trim().normalize('NFC')}`;
+    }
+
+    remainingItemNote(rawOptions, note) {
+      let options = rawOptions;
+      if (typeof options === 'string') {
+        const text = options;
+        try { options = JSON.parse(text); } catch { options = text.split('\n'); }
+      }
+      const represented = new Set((Array.isArray(options) ? options : []).map(option =>
+        this.itemNoteKey(typeof option === 'string' ? option : option?.choice || option?.name || '', true)
+      ).filter(key => key !== null));
+      return String(note || '').trim()
+        .split(/\s*\|\s*(?=(?:第\s*[\d一二三四五六七八九十]+\s*份|Phần\s*\d+)\s*[:：])/i)
+        .filter(entry => {
+          const key = this.itemNoteKey(entry);
+          return entry && key !== null && !represented.has(key);
+        })
+        .join(' | ');
+    }
+
     formatPrintOptions(value) {
       if (!value) return '';
       if (typeof value === 'string') {
@@ -651,8 +681,12 @@
       // 3. Built-in inline parsing fallback
       const lines = String(content).split('\n');
       const res = [];
+      let inItem = false;
       for (const line of lines) {
         const trimmed = line.trim();
+        if (/^\[(?:第\s*\d+\s*輪|Đợt\s*\d+)/i.test(trimmed)) inItem = false;
+        if (/^\d+\s*(?:份|[x×])/i.test(trimmed)) inItem = true;
+        if (inItem) continue;
         if (trimmed.includes('口味設定') || trimmed.includes('Hương vị') || trimmed.includes('Khẩu vị')) {
           const inline = trimmed.replace(/.*(?:口味設定|Hương vị|Khẩu vị)[：:]\s*/, '').replace(/[【】🧂]/g, '').trim();
           if (inline) {
@@ -782,7 +816,7 @@
             baseOptions: this.formatPrintOptions(baseOptions ? (Array.isArray(baseOptions) ? baseOptions : [baseOptions]) : []),
             bundle_snapshot_json: it.bundle_snapshot_json || (it.bundleSelections ? (typeof it.bundleSelections === 'string' ? it.bundleSelections : JSON.stringify(it.bundleSelections)) : null),
             bundleData: bundleData,
-            note: it.note || it.notes || '',
+            note: this.remainingItemNote(baseOptions, it.note || it.notes),
             round: it.round || (Number(order.roundCount || order.round_count) > 1 ? '[第' + (it.round_number || 1) + '輪]' : '')
           });
         });
@@ -857,6 +891,16 @@
         items.push({ name: '特餐餐點', quantity: 1, price: '', options: '', note: '', round: '' });
       }
 
+      items.forEach(item => {
+        const seenNotes = new Set();
+        item.options = String(item.options || '').split('\n').filter(line => {
+          const key = this.itemNoteKey(line, true);
+          if (key === null) return true;
+          if (seenNotes.has(key)) return false;
+          seenNotes.add(key);
+          return true;
+        }).join('\n');
+      });
       if (!expand) {
         return items;
       }

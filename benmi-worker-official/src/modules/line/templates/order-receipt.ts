@@ -1,5 +1,6 @@
 import { Order, OrderItemInput } from '../../../types/index';
 import { TenantContext } from '../../../types/tenant';
+import { remainingItemNote } from '../../../utils/order-item-notes';
 
 export function buildOrderFlexMessage(
   order: Order,
@@ -49,8 +50,12 @@ export function buildOrderFlexMessage(
     });
   } else if (order.content) {
     const lines = (order.content || "").split("\n");
+    let inItem = false;
     for (const rawLine of lines) {
       const l = rawLine.trim();
+      if (/^\[(?:第\s*\d+\s*輪|Đợt\s*\d+)/i.test(l)) inItem = false;
+      if (/^\d+\s*(?:份|[x×])/i.test(l)) inItem = true;
+      if (inItem) continue;
       if (l.includes("口味設定") || l.includes("客製化設定")) {
         const inlineFlavors = l.replace(/.*(?:口味設定|客製化設定)[：:]\s*/, '').replace(/[【】]/g, '').trim();
         if (inlineFlavors) {
@@ -137,11 +142,8 @@ export function buildOrderFlexMessage(
         }
       }
 
-      if (it.note && it.note.trim()) {
-        optionTexts.push(it.note.trim());
-      } else if (it.notes && it.notes.trim()) {
-        optionTexts.push(it.notes.trim());
-      }
+      const itemNote = remainingItemNote(opts, it.note || it.notes);
+      if (itemNote) optionTexts.push(itemNote);
 
       const isVi = (order.content || "").includes("Đợt") || (order.content || "").includes("Bàn số") || (order.content || "").includes("Mang về");
 

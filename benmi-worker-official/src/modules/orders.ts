@@ -13,6 +13,7 @@ import { resolveTenantContext } from './tenant';
 import { attachOrderPrintItems } from './order-print-items';
 import { invalidateBootstrapCache } from './bootstrap';
 import { validateBundleOrderItems, BundleCheck } from './bundle-rules';
+import { remainingItemNote } from '../utils/order-item-notes';
 
 function jsonWithETag(data: any, version: string, status: number = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -77,8 +78,9 @@ export function formatItemsToText(items: OrderItemInput[]): string {
       }).join("\n");
       line += `\n${optLines}`;
     }
-    if (item.note || item.notes) {
-      line += `\n  - 備註: ${item.note || item.notes}`;
+    const itemNote = remainingItemNote(options, item.note || item.notes);
+    if (itemNote) {
+      line += `\n  - 備註: ${itemNote}`;
     }
     return line;
   }).join("\n");

@@ -940,9 +940,13 @@ function extractFlavorSettings(rawContent) {
   const lines = String(rawContent).split("\n");
   const flavors = [];
   const extraIngredients = [];
+  let inItem = false;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
+    if (/^\[(?:第\s*\d+\s*輪|Đợt\s*\d+)/i.test(line)) inItem = false;
+    if (/^\d+\s*(?:份|[x×])/i.test(line)) inItem = true;
+    if (inItem) continue;
     if (
       line.includes("口味設定") ||
       line.includes("Hương vị") ||
@@ -1324,8 +1328,7 @@ function renderItemRowHtml(it, idx, orderKey) {
   let noteHtml = "";
   if (it.note) {
     const rawNote = String(it.note).trim();
-    const alreadyShownInOptions = optionsHtml && optionsHtml.includes("mod-chip-note");
-    if (!alreadyShownInOptions && rawNote) {
+    if (rawNote) {
       noteHtml = `<div class="review-item-note">${noteIcon}${escapeHtml(rawNote)}</div>`;
     }
   }
@@ -1427,7 +1430,7 @@ function formatContentHtml(order) {
     }
   }
   if (!noteText && raw) {
-    const m = raw.match(/(?:📝\s*)?(?:顧客備註|備註|Ghi chú)[：:\s]+([^\n]+)/i);
+    const m = raw.match(/^(?:[ \t]*📝[ \t]*)?(?:總備註|顧客備註|備註|Ghi chú(?: toàn đơn)?)\s*[:：][ \t]*([^\n]+)/mi);
     if (m && m[1]) {
       noteText = m[1].trim();
     }

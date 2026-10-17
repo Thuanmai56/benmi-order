@@ -56,6 +56,7 @@ const checkoutSandbox = {
     ]
   },
   comboDrinkData: {},
+  bootstrapData: { unifiedMenu: false },
   modPriceMap: {},
   resolveCatalogItem: (key) => {
     if (key === 'food_chicken') {
@@ -141,7 +142,9 @@ console.log('\n3. Testing POS review modal & printer service handling...');
 
 const posSandbox = {
   window: {},
+  addEventListener: () => {},
   document: {
+    addEventListener: () => {},
     documentElement: { lang: 'zh-TW' },
     createElement: () => ({ style: {} }),
     getElementById: () => null
@@ -194,7 +197,7 @@ assert.strictEqual(parsedItems.length, 2);
 const chickenParsed = parsedItems[0];
 assert(chickenParsed.options.includes('第1份: 小辣、備註: 不要香菜'), 'Should contain formatted portion 1 note');
 assert(chickenParsed.options.includes('第2份: 中辣、備註: 加蔥多一點'), 'Should contain formatted portion 2 note');
-assert.strictEqual(chickenParsed.note, '第1份: 不要香菜 | 第2份: 加蔥多一點');
+assert.strictEqual(chickenParsed.note, '', 'Notes represented by portion options must not be printed a second time');
 
 // Test renderItemRowHtml for portion chips with .mod-chip-note
 const chickenHtml = renderItemRowHtml(chickenParsed, 0, mockOrder.key);
