@@ -73,7 +73,7 @@ test('orders.html has updated cache-busters for menu and display scaling', () =>
   const version = '20261012_menu_single_panel_v10';
 
   assert.ok(html.includes(`css/orders.css?v=${version}`), 'orders.css must have bumped cache-buster');
-  assert.ok(html.includes('css/orders-menu.css?v=20261013_badge_only_v1'), 'orders-menu.css must have bumped cache-buster');
+  assert.ok(html.includes('css/orders-menu.css?v=20261017_scope_card_v1'), 'orders-menu.css must have bumped cache-buster');
   assert.ok(/js\/orders-i18n\.js\?v=202610\w+/.test(html), 'orders-i18n.js must have bumped cache-buster');
   assert.ok(html.includes(`js/orders-settings.js?v=${version}`), 'orders-settings.js must have bumped cache-buster');
   assert.ok(html.includes('js/orders-menu.js?v=20261013_badge_only_v1'), 'orders-menu.js must have bumped cache-buster');
