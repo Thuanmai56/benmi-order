@@ -904,6 +904,11 @@
         const inherited = r.page === "linked" && !r.ids.includes(p.id) && affectedIds(d).includes(p.id);
         return inherited || existingSubProducts.includes(p.id) || r.ids.includes(p.id);
       }).length;
+      const selectableProducts = catProducts.filter((p) => {
+        const inherited = r.page === "linked" && !r.ids.includes(p.id) && affectedIds(d).includes(p.id);
+        return !(inherited || existingSubProducts.includes(p.id));
+      });
+      catCheckbox.disabled = selectableProducts.length === 0;
       if (selectedCount === catProducts.length) {
         catCheckbox.checked = true;
         catCheckbox.indeterminate = false;
@@ -943,12 +948,11 @@
             if (match) visibleCount++;
           });
           card.hidden = q ? visibleCount === 0 : false;
-          if (q && visibleCount > 0) {
-            const items = card.querySelector(".ug-category-items");
-            if (items) items.hidden = false;
-            card.classList.add("ug-category-open");
-            card.querySelector(".ug-category-toggle")?.setAttribute("aria-expanded", "true");
-          }
+          const items = card.querySelector(".ug-category-items");
+          const shouldBeOpen = q ? visibleCount > 0 : Boolean(r.view?.openCategories?.includes(cardCat));
+          if (items) items.hidden = !shouldBeOpen;
+          card.classList.toggle("ug-category-open", shouldBeOpen);
+          card.querySelector(".ug-category-toggle")?.setAttribute("aria-expanded", String(shouldBeOpen));
         });
       } else {
         root.querySelectorAll("[data-search]").forEach((row) => {
