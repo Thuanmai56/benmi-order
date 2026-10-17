@@ -68,6 +68,9 @@
       ugOwn: "Danh sách riêng cho món",
       ugChoose: "Chọn",
       ugSearch: "Tìm kiếm",
+      ugSelectAllCategory: "Chọn toàn bộ món trong nhóm",
+      ugToggleCategory: "Mở rộng hoặc thu gọn nhóm món",
+      ugOther: "Khác",
       ugSearchGroups: "Tìm nhóm",
       ugClearGroupSearch: "Xóa từ khóa tìm nhóm",
       ugNoMatchingGroups: "Không tìm thấy nhóm phù hợp",
@@ -181,6 +184,9 @@
       ugOwn: "此餐點專用選項",
       ugChoose: "選擇",
       ugSearch: "搜尋",
+      ugSelectAllCategory: "選取該分類全部餐點",
+      ugToggleCategory: "展開或收合分類",
+      ugOther: "其他",
       ugSearchGroups: "搜尋群組",
       ugClearGroupSearch: "清除群組搜尋",
       ugNoMatchingGroups: "找不到符合的群組",
@@ -424,6 +430,7 @@
         active?.dataset.action ? `[data-action="${active.dataset.action}"]${active.dataset.index ? `[data-index="${active.dataset.index}"]` : ""}` : null,
       search: body.querySelector('[data-field="search"]')?.value || "",
       filter: body.querySelector('[data-field="filter"]')?.value || "",
+      openCategories: [...body.querySelectorAll(".ug-category-card.ug-category-open")].map((c) => c.dataset.category),
     };
   }
   function sourceContains(group, option) {
@@ -791,12 +798,35 @@
       const selectableCategories = catalog.categories.filter((c) => c.category_type !== "modifier");
       const existingSubProducts = r.page === "sub-products" ? state.stack.at(-1).route.option.subOptions?.map((sub) => sub.productId).filter(Boolean) || [] : [];
       const selectableProducts = catalog.products.filter((p) => selectableCategories.some((c) => c.id === p.category_id));
+      const uncategorizedProducts = catalog.products.filter((p) => !selectableCategories.some((c) => c.id === p.category_id));
+      const renderCategoryCard = (c, products) => {
+        if (!products.length) return "";
+        const isOpen = Boolean(r.view?.openCategories?.includes(c.id));
+        return `<div class="ug-category-card ${isOpen ? "ug-category-open" : ""}" data-category="${esc(c.id)}">` +
+          `<div class="ug-category-header">` +
+            `<button type="button" class="ug-category-toggle" data-action="toggle-category" data-category="${esc(c.id)}" aria-expanded="${isOpen ? "true" : "false"}" aria-label="${esc(tr("ugToggleCategory"))}: ${esc(c.name)}">` +
+              `<svg class="ug-category-chevron" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>` +
+              `<span class="ug-category-name">${esc(c.name)}</span>` +
+              `<span class="ug-category-count ug-muted">(${products.length})</span>` +
+            `</button>` +
+            `<label class="ug-category-check" title="${esc(tr("ugSelectAllCategory"))}: ${esc(c.name)}" aria-label="${esc(tr("ugSelectAllCategory"))}: ${esc(c.name)}">` +
+              `<input type="checkbox" data-check="category" data-category="${esc(c.id)}">` +
+            `</label>` +
+          `</div>` +
+          `<div class="ug-category-items ug-list" ${isOpen ? "" : "hidden"}>` +
+            products.map((p) => {
+              const inherited = r.page === "linked" && !r.ids.includes(p.id) && affectedIds(d).includes(p.id);
+              return check(p.id, p.name, inherited ? tr("ugInherited") : `${tr("ugRetail")} $${p.price}`, inherited || existingSubProducts.includes(p.id) || r.ids.includes(p.id), "product", p.category_id, inherited || existingSubProducts.includes(p.id));
+            }).join("") +
+          `</div>` +
+        `</div>`;
+      };
       body =
         search() +
-        `<select class="ug-filter" data-field="filter"><option value="">${esc(tr("ugAll"))}</option>${selectableCategories.map((c) => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("")}</select><div class="ug-list">${selectableProducts.map((p) => {
-          const inherited = r.page === "linked" && !r.ids.includes(p.id) && affectedIds(d).includes(p.id);
-          return check(p.id, p.name, inherited ? tr("ugInherited") : `${tr("ugRetail")} $${p.price}`, inherited || existingSubProducts.includes(p.id) || r.ids.includes(p.id), "product", p.category_id, inherited || existingSubProducts.includes(p.id));
-        }).join("")}</div>`;
+        `<select class="ug-filter" data-field="filter" hidden><option value="">${esc(tr("ugAll"))}</option>${selectableCategories.map((c) => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("")}</select><div class="ug-category-accordion-list">${selectableCategories.map((c) => {
+          const catProducts = selectableProducts.filter((p) => p.category_id === c.id);
+          return renderCategoryCard(c, catProducts);
+        }).join("")}${uncategorizedProducts.length ? renderCategoryCard({ id: "uncategorized", name: tr("ugOther") }, uncategorizedProducts) : ""}</div>`;
     } else if (r.page === "option") {
       const o = r.option;
       title = tr(r.isNew ? "ugNewOption" : "ugEditOption");
@@ -842,6 +872,7 @@
     if (q) q.value = view?.search || "";
     if (filter) filter.value = view?.filter || "";
     if (q) input(q);
+    syncCategoryCheckboxes(el);
     el.querySelector(".ug-body").scrollTop = scroll ?? view?.scroll ?? 0;
     const focus = scroll === undefined && view?.focus ? el.querySelector(view.focus) : null;
     (focus || el.querySelector("#ug-title")).focus({ preventScroll: true });
@@ -853,6 +884,38 @@
     `<input class="ug-search" type="search" data-field="search" placeholder="${esc(tr("ugSearch"))}" aria-label="${esc(tr("ugSearch"))}">`;
   const check = (id, name, sub, checked, kind, category = "", disabled = false) =>
     `<label class="ug-check" data-search="${esc(name.toLowerCase())}" data-category="${esc(category)}"><input type="checkbox" data-check="${kind}" value="${esc(id)}" ${checked ? "checked" : ""} ${disabled ? "disabled" : ""}><span><strong>${esc(name)}</strong><small>${esc(sub)}</small></span></label>`;
+  function syncCategoryCheckboxes(root) {
+    if (!root || !state || !state.route) return;
+    const r = state.route;
+    if (!["products", "linked", "sub-products"].includes(r.page)) return;
+    const d = state.draft;
+    const existingSubProducts = r.page === "sub-products" ? state.stack.at(-1)?.route.option.subOptions?.map((sub) => sub.productId).filter(Boolean) || [] : [];
+    root.querySelectorAll(".ug-category-card").forEach((card) => {
+      const catId = card.dataset.category;
+      const catCheckbox = card.querySelector('[data-check="category"]');
+      if (!catCheckbox) return;
+      const catProducts = catalog.products.filter((p) => (catId === "uncategorized" ? !catalog.categories.some((c) => c.id === p.category_id) : p.category_id === catId));
+      if (!catProducts.length) {
+        catCheckbox.checked = false;
+        catCheckbox.indeterminate = false;
+        return;
+      }
+      const selectedCount = catProducts.filter((p) => {
+        const inherited = r.page === "linked" && !r.ids.includes(p.id) && affectedIds(d).includes(p.id);
+        return inherited || existingSubProducts.includes(p.id) || r.ids.includes(p.id);
+      }).length;
+      if (selectedCount === catProducts.length) {
+        catCheckbox.checked = true;
+        catCheckbox.indeterminate = false;
+      } else if (selectedCount > 0) {
+        catCheckbox.checked = false;
+        catCheckbox.indeterminate = true;
+      } else {
+        catCheckbox.checked = false;
+        catCheckbox.indeterminate = false;
+      }
+    });
+  }
   function input(el) {
     if (!state || state.busy) return;
     const r = state.route,
@@ -860,16 +923,69 @@
       key = el.dataset.field;
     if (key === "search" || key === "filter") {
       const root = ensureDrawer(),
-        q = root.querySelector('[data-field="search"]').value.toLowerCase(),
+        q = root.querySelector('[data-field="search"]').value.toLowerCase().trim(),
         cat = root.querySelector('[data-field="filter"]')?.value;
-      root.querySelectorAll("[data-search]").forEach((row) => {
-        row.hidden =
-          !row.dataset.search.includes(q) ||
-          Boolean(cat && row.dataset.category !== cat);
-      });
+      const cards = root.querySelectorAll(".ug-category-card");
+      if (cards.length) {
+        cards.forEach((card) => {
+          const cardCat = card.dataset.category;
+          if (cat && cardCat !== cat) {
+            card.hidden = true;
+            return;
+          }
+          const catNameEl = card.querySelector(".ug-category-name");
+          const catName = catNameEl ? catNameEl.textContent.toLowerCase() : "";
+          const rows = card.querySelectorAll("[data-search]");
+          let visibleCount = 0;
+          rows.forEach((row) => {
+            const match = !q || row.dataset.search.includes(q) || catName.includes(q);
+            row.hidden = !match;
+            if (match) visibleCount++;
+          });
+          card.hidden = q ? visibleCount === 0 : false;
+          if (q && visibleCount > 0) {
+            const items = card.querySelector(".ug-category-items");
+            if (items) items.hidden = false;
+            card.classList.add("ug-category-open");
+            card.querySelector(".ug-category-toggle")?.setAttribute("aria-expanded", "true");
+          }
+        });
+      } else {
+        root.querySelectorAll("[data-search]").forEach((row) => {
+          row.hidden =
+            !row.dataset.search.includes(q) ||
+            Boolean(cat && row.dataset.category !== cat);
+        });
+      }
       return;
     }
     if (el.dataset.check) {
+      if (el.dataset.check === "category") {
+        const catId = el.dataset.category;
+        const catProducts = catalog.products.filter((p) => (catId === "uncategorized" ? !catalog.categories.some((c) => c.id === p.category_id) : p.category_id === catId));
+        const existingSubProducts = r.page === "sub-products" ? state.stack.at(-1)?.route.option.subOptions?.map((sub) => sub.productId).filter(Boolean) || [] : [];
+        const selectableProducts = catProducts.filter((p) => {
+          const inherited = r.page === "linked" && !r.ids.includes(p.id) && affectedIds(d).includes(p.id);
+          return !(inherited || existingSubProducts.includes(p.id));
+        });
+        if (el.checked) {
+          for (const p of selectableProducts) {
+            if (!r.ids.includes(p.id)) r.ids.push(p.id);
+          }
+        } else {
+          const selectableIds = new Set(selectableProducts.map((p) => p.id));
+          r.ids = r.ids.filter((id) => !selectableIds.has(id));
+        }
+        const root = ensureDrawer();
+        const card = root.querySelector(`.ug-category-card[data-category="${catId}"]`);
+        if (card) {
+          card.querySelectorAll('[data-check="product"]').forEach((chk) => {
+            if (!chk.disabled) chk.checked = el.checked;
+          });
+        }
+        syncCategoryCheckboxes(root);
+        return;
+      }
       let list =
         el.dataset.check === "subset"
           ? (r.optionIds ?? options(groupById(r.id)).map((o) => o.id))
@@ -880,6 +996,7 @@
       else r.ids = list;
       if (el.dataset.check === "subset" && r.originalOptionIds === null &&
         options(groupById(r.id)).every((o) => list.includes(o.id))) r.optionIds = null;
+      syncCategoryCheckboxes(ensureDrawer());
       return;
     }
     if (el.dataset.categoryLink) {
@@ -959,6 +1076,22 @@
     if (name === "back") return back();
     if (name === "discard") return finish();
     if (name === "continue") return dismissConfirmation();
+    if (name === "toggle-category") {
+      const card = el.closest(".ug-category-card");
+      if (!card) return;
+      const items = card.querySelector(".ug-category-items");
+      const toggleBtn = card.querySelector(".ug-category-toggle");
+      if (!items) return;
+      const isHidden = items.hidden;
+      items.hidden = !isHidden;
+      card.classList.toggle("ug-category-open", isHidden);
+      if (toggleBtn) {
+        toggleBtn.setAttribute("aria-expanded", String(isHidden));
+      }
+      r.view = r.view || {};
+      r.view.openCategories = [...ensureDrawer().querySelectorAll(".ug-category-card.ug-category-open")].map((c) => c.dataset.category);
+      return;
+    }
     if (name === "set-scope") {
       const card = el.closest("[data-scope]");
       const scope = card?.dataset.scope;
