@@ -99,7 +99,7 @@ test('desktop LINE login keeps tenant in redirect URI and does not retry without
       search: location.search,
       hash: location.hash
     },
-    document: { title: 'Menu' },
+    document: { title: 'Menu', getElementById() { return null; }, documentElement: { style: { setProperty() {} } } },
     sessionStorage: storage(),
     localStorage: storage({ tenant_bootstrap_bsc: JSON.stringify({ tenant: { id: 'bsc', liffId: '2011532198-9wCmvSiU' } }) }),
     storeConfig: { liffId: '2011532198-9wCmvSiU' },
@@ -154,7 +154,8 @@ function liffRuntime(url, domain, endpoint, failure = false) {
   const initialized = [], cleaned = [], moved = [];
   const context = { URL, URLSearchParams, console: { log() {}, warn() {}, error() {} }, addEventListener() {},
     location: { href: current.href, hostname: current.hostname, pathname: current.pathname, search: current.search, hash: current.hash, replace: value => moved.push(value) },
-    history: { replaceState: (...args) => cleaned.push(args[2]) }, document: { title: 'Menu' },
+    history: { replaceState: (...args) => cleaned.push(args[2]) },
+    document: { title: 'Menu', getElementById() { return null; }, documentElement: { style: { setProperty() {} } } },
     sessionStorage: storage(), localStorage: storage(), extractTenantId: () => 'bsc',
     fetch: async () => { if (failure) throw new Error('D1 unavailable'); return { ok: true, json: async () => ({ tenantId: 'bsc', liffId: '12345678-abcde', customerOrderDomain: domain, liffEndpointUrl: endpoint }) }; },
     liff: { init: async options => { assert.equal(cleaned.length, 0, 'SDK parameters must remain until init completes'); initialized.push(options); } } };

@@ -102,7 +102,7 @@ export default (ctx: ConfigContext) => {
 							id: "40b67d8a-29e0-40c1-9ce2-b76f76864e95",
 						}),
 						ORDER_STATE: bindings.kv({
-							id: "ad5b1e14aad4486fb2ffcd9961cadf3a",
+							id: "f85c539e10df45049780abe25631f082",
 						}),
 						LINE_CHANNEL_TOKEN: bindings.secretsStoreSecret({
 							storeId: "7e2896f1c5cf4e1eb80ef6c89f3024d4",

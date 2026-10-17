@@ -51,7 +51,7 @@ test('deleted lifecycle overrides cached context, cached bootstrap, and legacy e
 test('all customer/POS APIs and both webhook routes reject deleted tenants before cache or LINE work',async()=>{
   const {db,env}=fixture();db.exec("UPDATE tenant_lifecycle SET state='deleted' WHERE tenant_id IN ('primary','benmi')");
   const context={waitUntil(){}};
-  for(const [path,method] of [['/api/menu','GET'],['/api/config','GET'],['/api/orders','GET'],['/api/orders/history-all','GET'],
+  for(const [path,method] of [['/api/menu','GET'],['/api/menu/options','GET'],['/api/menu/group','POST'],['/api/menu/product','POST'],['/api/config','GET'],['/api/orders','GET'],['/api/orders/history-all','GET'],
     ['/api/auth','POST'],['/api/create','POST'],['/api/orders/append','POST'],['/api/orders/modify','POST'],['/api/image','GET']]) {
     const response=await worker.fetch(new Request(`https://example.com${path}?tenant_id=primary`,{method}),env,context);
     assert.equal(response.status,410,path);assert.equal(response.headers.get('cache-control'),'no-store');
@@ -78,5 +78,20 @@ test('purge fences re-creation, cross-tenant row moves, and late menu/config/run
 test('migration applies without optional development menu or LINE projection tables', () => {
   const {db} = fixture(false);
   assert.equal(db.prepare("SELECT state FROM tenant_lifecycle WHERE tenant_id='other'").get().state, 'active');
+  db.close();
+});
+
+
+test('canonical menu and LINE projection fences reject late writes and row moves, while purge deletes remain possible', () => {
+  const {db}=fixture();
+  db.exec(fs.readFileSync('benmi-worker-official/migrations/0068_unified_menu_lifecycle_guards.sql','utf8'));
+  const tables=['modifier_groups','modifier_options','item_modifier_links','category_modifier_links','tenant_line_runtime','tenant_line_webhook_probes'];
+  for(const table of tables) db.exec(`INSERT INTO ${table} VALUES('owned','primary')`);
+  db.exec("UPDATE tenant_lifecycle SET state='purging' WHERE tenant_id='primary'");
+  for(const table of tables) {
+    assert.throws(()=>db.exec(`INSERT INTO ${table} VALUES('late','primary')`),/TENANT_DELETED/,table);
+    assert.throws(()=>db.exec(`UPDATE ${table} SET tenant_id='other' WHERE id='owned'`),/TENANT_DELETED/,table);
+    db.exec(`INSERT INTO ${table} VALUES('active','other'); DELETE FROM ${table} WHERE id='owned'`);
+  }
   db.close();
 });
