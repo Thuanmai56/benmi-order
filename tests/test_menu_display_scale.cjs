@@ -76,7 +76,7 @@ test('orders.html has updated cache-busters for menu and display scaling', () =>
   assert.ok(html.includes('css/orders-menu.css?v=20261017_group_scope_step_v5'), 'orders-menu.css must have bumped cache-buster');
   assert.ok(/js\/orders-i18n\.js\?v=202610\w+/.test(html), 'orders-i18n.js must have bumped cache-buster');
   assert.ok(html.includes(`js/orders-settings.js?v=${version}`), 'orders-settings.js must have bumped cache-buster');
-  assert.ok(html.includes('js/orders-menu.js?v=20261013_badge_only_v1'), 'orders-menu.js must have bumped cache-buster');
+  assert.ok(html.includes('js/orders-menu.js?v=20261018_tab_persist_v1'), 'orders-menu.js must have bumped cache-buster');
 });
 
 test('Menu items catalog card seamlessly integrates without nested duplicate panel borders', () => {
