@@ -421,21 +421,21 @@ test('product settings expose the badge without recommendation controls and pres
   }
 });
 
-test('group drawer exposes scope selector; switching scope updates UI and serializes correctly', async () => {
+test('group drawer scope is determined in step 1; detail view does not expose scope selector and serializes correctly', async () => {
   const app = await setup();
-  // 1. New group defaults to 'item' scope
+  // 1. New group starts at Step 1, select 'item' scope
   app.context.UnifiedMenu.group();
   await app.click('select-new-scope', '[data-scope="item"]');
-  const scopeSelect = app.get('[data-field="scope"]');
-  assert.equal(scopeSelect.value, 'item');
+  // Detail view does NOT expose scope selector
+  assert.equal(app.drawer().querySelector('.ug-scope-selector'), null);
+  assert.equal(app.drawer().querySelector('[data-field="scope"]'), null);
   assert.equal(app.drawer().querySelector('.ug-order-scope-notice'), null);
   assert.notEqual(app.drawer().querySelector('[data-action="linked"]'), null);
 
-  // 2. Switch to 'order' scope via clicking card
-  await app.click('set-scope', '[data-scope="order"]');
-  assert.equal(app.get('[data-field="scope"]').value, 'order');
-  assert.equal(app.drawer().querySelector('[data-scope="order"]').classList.contains('active'), true);
-  assert.equal(app.drawer().querySelector('[data-scope="item"]').classList.contains('active'), false);
+  // 2. Click Back to return to step 1 and select 'order' scope
+  await app.click('back');
+  await app.click('select-new-scope', '[data-scope="order"]');
+  assert.equal(app.drawer().querySelector('.ug-scope-selector'), null);
   assert.notEqual(app.drawer().querySelector('.ug-order-scope-notice'), null);
   assert.match(app.drawer().querySelector('.ug-order-scope-notice').textContent, /Áp dụng cho cả đơn hàng/);
   // Item link buttons and category links details are hidden
@@ -455,12 +455,11 @@ test('group drawer exposes scope selector; switching scope updates UI and serial
   assert.equal(app.posts[0].scope, 'order');
   assert.deepEqual(app.posts[0].itemIds, []);
 
-  // 4. Editing an existing group with product options disables scope selector
+  // 4. Existing group also does not expose scope selector in detail view
   const app2 = await setup();
-  app2.context.UnifiedMenu.group('drinks'); // contains 'coffee_option' linked to product 'coffee'
-  const disabledScope = app2.get('[data-field="scope"]');
-  assert.equal(disabledScope.disabled, true);
-  assert.match(disabledScope.getAttribute('title'), /không thể chuyển sang tùy chọn toàn đơn/);
+  app2.context.UnifiedMenu.group('drinks'); // existing group
+  assert.equal(app2.drawer().querySelector('.ug-scope-selector'), null);
+  assert.equal(app2.drawer().querySelector('[data-field="scope"]'), null);
 });
 
 test('group drawer exposes autoPopup toggle for item groups, locks when required/included, and serializes on save', async () => {
@@ -621,7 +620,7 @@ test('new option group flow has 2 steps: step 1 picks scope, step 2 fills detail
   assert.notEqual(app.drawer().querySelector('[data-action="back"]'), null); // Back button present on Step 2
   assert.equal(app.drawer().querySelector('footer').hidden, false); // Footer visible
   assert.equal(app.get('[data-action="save"]').textContent, 'Lưu nhóm'); // Primary action is save
-  assert.equal(app.get('[data-field="scope"]').value, 'item');
+  assert.equal(app.drawer().querySelector('.ug-scope-selector'), null); // No scope selector in detail view
   assert.notEqual(app.drawer().querySelector('[data-field="autoPopup"]'), null); // autoPopup visible for item
 
   // 3. Click Back -> returns to Step 1
@@ -633,7 +632,7 @@ test('new option group flow has 2 steps: step 1 picks scope, step 2 fills detail
   // 4. Click "Tùy chọn toàn cục" -> advances to Step 2 with order scope
   await app.click('select-new-scope', '[data-scope="order"]');
   assert.equal(app.get('#ug-title').textContent, 'Thêm nhóm tùy chọn');
-  assert.equal(app.get('[data-field="scope"]').value, 'order');
+  assert.equal(app.drawer().querySelector('.ug-scope-selector'), null); // No scope selector in detail view
   assert.equal(app.drawer().querySelector('[data-field="autoPopup"]'), null); // No autoPopup for order
   assert.equal(app.get('[data-action="save"]').textContent, 'Lưu nhóm');
 
