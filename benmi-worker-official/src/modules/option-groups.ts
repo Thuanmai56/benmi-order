@@ -469,6 +469,12 @@ export async function saveOptionEntity(request: Request, env: Env, kind: 'produc
 				);
 			if (group.included) group.minSelection = group.maxSelection = groupOptions(catalog, group).reduce((sum, o) => sum + o.quantity, 0);
 			if (group.included && !group.maxSelection) throw new Error(`INSUFFICIENT_OPTIONS:${group.id}`);
+			const totalOptions = groupOptions(catalog, group).length;
+			if (!group.included) {
+				if (totalOptions === 0) throw new Error(`INSUFFICIENT_OPTIONS:${group.id}`);
+				if (!group.allowRepeats && group.minSelection > totalOptions) throw new Error(`INSUFFICIENT_OPTIONS:${group.id}`);
+				if (!group.allowRepeats && group.maxSelection > totalOptions) throw new Error(`INSUFFICIENT_OPTIONS:${group.id}`);
+			}
 			for (const link of newLinks)
 				if (Array.isArray(link.optionIds))
 					link.optionIds = link.optionIds.filter((oid: string) => groupOptions(catalog, group).some((o) => o.id === oid));
