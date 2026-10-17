@@ -321,17 +321,86 @@ test('numeric rules retain invalid inputs, show field errors and block writes un
   assert.equal(app.get('[data-field="maxSelection"]').value,'1');
   await app.click('save'); assert.equal(app.posts.length,0);
   assert.match(app.get('#ug-maxSelection-error').textContent,/lớn hơn hoặc bằng/);
-  app.input('maxSelection',3); await app.click('save');
-  assert.equal(app.posts[0].minSelection,2); assert.equal(app.posts[0].maxSelection,3);
+  app.input('maxSelection',2); await app.click('save');
+  assert.equal(app.posts[0].minSelection,2); assert.equal(app.posts[0].maxSelection,2);
 });
 
 test('optional minimum persists zero, rule errors are localized and included quantities stay read-only', async () => {
-  const app=await setup(); app.context.UnifiedMenu.group('drinks'); app.input('required',false); app.input('maxSelection',4);
-  await app.click('save'); assert.equal(app.posts[0].minSelection,0); assert.equal(app.posts[0].maxSelection,4);
+  const app=await setup(); app.context.UnifiedMenu.group('drinks'); app.input('required',false); app.input('maxSelection',2);
+  await app.click('save'); assert.equal(app.posts[0].minSelection,0); assert.equal(app.posts[0].maxSelection,2);
   const zh=await setup({lang:'zh-TW'}); zh.context.UnifiedMenu.group('drinks'); zh.input('maxSelection',0); await zh.click('save');
   assert.match(zh.get('#ug-maxSelection-error').textContent,/請輸入/);
   const fixed=await setup({included:true}); fixed.context.UnifiedMenu.group('drinks');
   for(const key of ['required','minSelection','maxSelection','allowRepeats']) assert.equal(fixed.get(`[data-field="${key}"]`).disabled,true);
+});
+
+test('stepper couples min and max selection to prevent min > max', async () => {
+  const app = await setup();
+  app.context.UnifiedMenu.group('drinks');
+  // drinks starts with minSelection: 1, maxSelection: 1
+  assert.equal(app.get('[data-field="minSelection"]').value, '1');
+  assert.equal(app.get('[data-field="maxSelection"]').value, '1');
+
+  // Step up minSelection -> maxSelection should automatically advance to 2
+  await app.click('step', '[data-key="minSelection"][data-delta="1"]');
+  assert.equal(app.get('[data-field="minSelection"]').value, '2');
+  assert.equal(app.get('[data-field="maxSelection"]').value, '2');
+
+  // Step down maxSelection -> minSelection should automatically lower to 1
+  await app.click('step', '[data-key="maxSelection"][data-delta="-1"]');
+  assert.equal(app.get('[data-field="maxSelection"]').value, '1');
+  assert.equal(app.get('[data-field="minSelection"]').value, '1');
+});
+
+test('group creation validates options count and alerts when options are insufficient', async () => {
+  let alertedMessage = null;
+  const app = await setup();
+  app.context.alert = (msg) => { alertedMessage = msg; };
+
+  // 1. New group starts with 0 options: saving directly must alert and block
+  app.context.UnifiedMenu.group(); // new group
+  app.input('name', 'Nhóm mới');
+  await app.click('save');
+  assert.equal(app.posts.length, 0);
+  assert.match(alertedMessage, /ít nhất 1 lựa chọn/);
+  assert.match(app.get('.ug-error').textContent, /ít nhất 1 lựa chọn/);
+
+  // 2. Existing group with 2 options, allowRepeats: false
+  const app2 = await setup();
+  app2.context.alert = (msg) => { alertedMessage = msg; };
+  app2.context.UnifiedMenu.group('drinks'); // has 2 options
+
+  // Setting minSelection and maxSelection to 3 (> 2 options) shows error under fields and blocks save
+  app2.input('minSelection', 3);
+  app2.input('maxSelection', 3);
+  assert.equal(app2.get('#ug-minSelection-error').hidden, false);
+  assert.match(app2.get('#ug-minSelection-error').textContent, /hiện có 2 lựa chọn/);
+  assert.equal(app2.get('#ug-maxSelection-error').hidden, false);
+  assert.match(app2.get('#ug-maxSelection-error').textContent, /hiện có 2 lựa chọn/);
+  await app2.click('save');
+  assert.equal(app2.posts.length, 0);
+  assert.match(alertedMessage, /hiện có 2 lựa chọn/);
+
+  // Lower minSelection back to 2 -> min error clears (maxSelection is still 3 so max error remains)
+  app2.input('minSelection', 2);
+  assert.equal(app2.get('#ug-minSelection-error').hidden, true);
+  assert.equal(app2.get('#ug-maxSelection-error').hidden, false);
+
+  // Setting maxSelection to 3 (> 2 options without repeats) shows error and blocks save
+  app2.input('maxSelection', 3);
+  assert.equal(app2.get('#ug-maxSelection-error').hidden, false);
+  assert.match(app2.get('#ug-maxSelection-error').textContent, /hiện có 2 lựa chọn/);
+  await app2.click('save');
+  assert.equal(app2.posts.length, 0);
+
+  // Enabling allowRepeats clears maxSelection option count error and allows saving
+  app2.input('allowRepeats', true);
+  assert.equal(app2.get('#ug-maxSelection-error').hidden, true);
+  await app2.click('save');
+  assert.equal(app2.posts.length, 1);
+  assert.equal(app2.posts[0].minSelection, 2);
+  assert.equal(app2.posts[0].maxSelection, 3);
+  assert.equal(app2.posts[0].allowRepeats, true);
 });
 
 test('product settings expose the badge without recommendation controls and preserve legacy data on save', async () => {
