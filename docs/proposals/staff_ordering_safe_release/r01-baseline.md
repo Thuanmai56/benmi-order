@@ -1,8 +1,8 @@
 # R01 — Baseline hồi quy và checklist release
 
-**Kết quả local: 17/17 suite đạt. Người dùng đã xác nhận push nhánh; CI GitHub chưa chạy và bước tạo PR chưa được xác nhận.**
+**Kết quả local: 17/17 suite đạt. CI Ubuntu lần đầu trên PR #74 đạt 16/17 suite do thiếu lịch sử Git. Bản sửa checkout đã kiểm chứng local và được người dùng xác nhận push; đang chờ kết quả CI ở commit mới.**
 
-Người dùng đã cho phép bắt đầu R01, sau đó xác nhận “pussh nhánh” ngày 19/10/2026. Phạm vi được phép là chuẩn bị dependency/test/CI/checklist và commit/push nhánh `codex/staff-order-r01-baseline`; chưa cho phép tạo PR, merge, deploy thủ công, migration hoặc đổi cờ Cloudflare. Push nhánh có thể tạo Pages preview theo cấu hình R00. R02 chưa bắt đầu.
+Người dùng đã cho phép bắt đầu R01, xác nhận “pussh nhánh”, rồi tự tạo PR #74 ngày 19/10/2026. Chưa có xác nhận merge, deploy thủ công, migration hoặc đổi cờ Cloudflare. Push nhánh có thể tạo Pages/Worker preview theo cấu hình Cloudflare. R02 chưa bắt đầu.
 
 ## Baseline và môi trường
 
@@ -22,7 +22,7 @@ Người dùng đã cho phép bắt đầu R01, sau đó xác nhận “pussh nh
 4. Thêm workflow `Release baseline`: Node 24, hai lần `npm ci`, cài Chromium/WebKit, chạy cùng lệnh release gate và giữ log/screenshot 14 ngày. Action được khóa bằng commit SHA; quyền chỉ `contents: read`; không có deployment step hoặc Cloudflare secret.
 5. Thêm checklist cho scope/diff, baseline, cache-buster, môi trường API, schema, bật demo, tranh chấp, in và rollback. Mọi bước ngoài local vẫn có xác nhận riêng của người dùng.
 
-Workflow được chuẩn bị cho pull request vào `main/staging/dev`, push vào ba nhánh đó và manual dispatch. Chưa kích hoạt workflow từ xa; chưa thay branch protection. Để kiểm chứng CI thật cần một bước người dùng xác nhận riêng, có xét Pages preview tự tạo khi push.
+Workflow chạy cho pull request vào `main/staging/dev`, push vào ba nhánh đó và manual dispatch. Người dùng đã mở PR #74, kích hoạt CI lần đầu trên Ubuntu: 16/17 suite đạt, test legacy thiếu lịch sử Git do shallow checkout. Chưa thay branch protection. Chi tiết: [r01-ci-check.md](./r01-ci-check.md).
 
 ## Kết quả kiểm chứng
 
@@ -66,10 +66,10 @@ Trên Ubuntu CI, cài browser bằng `npx --no-install playwright install --with
 
 ## Giới hạn và cổng còn mở
 
-- CI YAML đã kiểm tra local nhưng chưa chạy trên GitHub/Ubuntu; không đánh dấu là CI xanh hoặc required check đã được áp dụng.
+- CI Ubuntu lần đầu có 16/17 suite đạt, chưa được coi là CI xanh. Người dùng đã xác nhận push bản sửa checkout `fetch-depth: 0`; cần kiểm tra lại CI ở commit mới, chưa áp dụng required check.
 - Fixture dùng dữ liệu tổng hợp và các migration cần cho đường nghiệp vụ, bao gồm nền staff `0057`; không phải bản sao toàn bộ production DB. Chênh lệch ledger/schema R00 vẫn cần phân loại trước R02.
 - Chưa kiểm thử các API staff mới, tắt/bật capability, race staff với thanh toán hoặc in trên thiết bị thật; các phần đó chưa được triển khai và thuộc release sau.
 - Các test remote như `scripts/test-staging-orders.ts` không nằm trong gate. Những API/LINE/printer trong fixture được thay bằng local/stub; không dùng dữ liệu thật để kiểm chứng ghi.
 - Worker auto-deploy bằng Wrangler, preview trỏ API theo hostname, cờ staging ngoài demo và hai đơn staff đang mở vẫn giữ nguyên trạng thái đã ghi ở R00. Chưa cấp quyền sửa các điểm đó.
 
-R01 cung cấp baseline local và cấu hình CI có thể review. Push nhánh đã được người dùng cho phép. Workflow hiện chạy cho PR vào `main/staging/dev` hoặc push trực tiếp ba nhánh đó; chỉ push nhánh R01 chưa tạo một lần chạy CI này. Tạo PR để chạy CI và chuyển sang task kế tiếp cần người dùng xác nhận riêng theo flow đã chốt.
+R01 cung cấp baseline local và CI đã chạy lần đầu trên PR #74. Người dùng đã xác nhận push bản sửa checkout; cần kiểm chứng CI lại trước khi xét duyệt kết quả R01. Chưa merge hoặc chuyển sang task tiếp theo.

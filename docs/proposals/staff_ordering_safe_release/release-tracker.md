@@ -18,13 +18,16 @@
 | 19/10/2026 | Người dùng: “bắt đầu R01” | Cho phép chuẩn bị baseline kiểm thử/checklist local |
 | 19/10/2026 | R01: cài sạch dependency, baseline 17/17 suite đạt, chuẩn bị CI/checklist | Phần local hoàn tất; chờ người dùng xác nhận. CI GitHub chưa chạy |
 | 19/10/2026 | Người dùng: “pussh nhánh” | Cho phép commit/push nhánh `codex/staff-order-r01-baseline`; chưa cho phép tạo PR hoặc merge |
+| 19/10/2026 | Người dùng tự tạo PR #74 và thông báo trong chat | PR vào `main` đã mở; không có xác nhận merge |
+| 19/10/2026 | CI Ubuntu lần đầu: 16/17 suite đạt; test legacy thiếu commit do shallow checkout | Chuẩn bị sửa `fetch-depth: 0` local; 19 ca order identity đạt lại; chờ xác nhận push bản sửa |
+| 19/10/2026 | Người dùng: “push” sau khi xem bản sửa checkout | Cho phép commit/push checkout fix và theo dõi CI của PR #74; chưa merge hoặc chuyển R02 |
 
 ## Danh sách task
 
 | Task | Nội dung | Trạng thái |
 | --- | --- | --- |
 | R00 | Schema, ledger, tenant, cờ, dữ liệu staff, deploy, mốc rollback | Đã khảo sát; người dùng cho phép R01 |
-| R01 | Baseline hồi quy, test POS và release checklist | Local đạt 17/17; người dùng đã duyệt push nhánh; CI chờ bước PR được xác nhận riêng |
+| R01 | Baseline hồi quy, test POS và release checklist | PR #74: người dùng đã duyệt push checkout fix; chờ CI ở commit mới; chưa merge |
 | R02 | Schema capability mặc định đóng | Chưa bắt đầu; bị chặn bởi đối chiếu schema |
 | R03 | Guard tập trung và API capabilities | Chưa bắt đầu |
 | R04 | Đăng nhập/đăng xuất staff | Chưa bắt đầu |
@@ -55,3 +58,5 @@ Các việc phát sinh từ R00 cần task riêng trước release runtime: ch�
 Chi tiết và bằng chứng: [r00-inventory.md](./r00-inventory.md).
 
 Kết quả R01: [r01-baseline.md](./r01-baseline.md). Checklist áp dụng cho từng task: [release-checklist.md](./release-checklist.md).
+
+CI lần đầu và bản sửa chờ duyệt: [r01-ci-check.md](./r01-ci-check.md).
