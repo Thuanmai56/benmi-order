@@ -3,20 +3,13 @@ import { json } from '../utils/http';
 import { getTenantId } from './menu';
 import { resolveTenantContext } from './tenant';
 import { TenantContext } from '../types/tenant';
+import { createTenantRepository } from '../repositories';
 
 export const DEFAULT_PASSWORD = "12345678";
 
 async function getStoredPassword(env: Env, tenantId: string, tenantCtx?: TenantContext | null): Promise<string> {
-  const cacheKey = `tenant:${tenantId}:password`;
-  let stored = await env.ORDER_STATE.get(cacheKey);
-  if (!stored && tenantId === "benmi") {
-    stored = await env.ORDER_STATE.get("dashboard:password");
-    if (stored) {
-      // Auto-migrate
-      await env.ORDER_STATE.put(cacheKey, stored);
-    }
-  }
-  return stored || tenantCtx?.defaultPassword || DEFAULT_PASSWORD;
+  const repo = createTenantRepository(env.DB, env.ORDER_STATE, env);
+  return repo.getStorePassword(tenantId, tenantCtx?.defaultPassword || DEFAULT_PASSWORD);
 }
 
 export async function handleAuth(request: Request, env: Env, url?: URL, tenantCtx?: TenantContext | null): Promise<Response> {
@@ -67,12 +60,12 @@ export async function handleAuthChange(request: Request, env: Env, tenantCtx?: T
     return json({ ok: false, error: "invalid_tenant", message: `門市代碼 '${tenantId}' 不存在或已停用` }, 404);
   }
 
-  const stored = await getStoredPassword(env, tenantId, tenantCtx);
+  const repo = createTenantRepository(env.DB, env.ORDER_STATE, env);
+  const stored = await repo.getStorePassword(tenantId, tenantCtx.defaultPassword || DEFAULT_PASSWORD);
   if (current !== stored) return json({ ok: false, error: "Wrong current password" }, 401);
   if (newPassword.length < 4) return json({ ok: false, error: "Password too short" }, 400);
   
-  const cacheKey = `tenant:${tenantId}:password`;
-  await env.ORDER_STATE.put(cacheKey, newPassword);
+  await repo.setStorePassword(tenantId, newPassword);
   return json({ ok: true });
 }
 
@@ -87,14 +80,15 @@ export async function handleCreateTempLink(request: Request, env: Env, tenantCtx
     return json({ ok: false, error: "invalid_tenant" }, 404);
   }
 
-  const stored = await getStoredPassword(env, tenantId, tenantCtx);
+  const repo = createTenantRepository(env.DB, env.ORDER_STATE, env);
+  const stored = await repo.getStorePassword(tenantId, tenantCtx.defaultPassword || DEFAULT_PASSWORD);
   if (password !== stored) return json({ ok: false, error: "Wrong password" }, 401);
 
   const ttl = Math.min(Math.max(parseInt(hours) || 24, 1), 168);
   const token = Array.from(crypto.getRandomValues(new Uint8Array(12)))
     .map(b => b.toString(16).padStart(2, "0")).join("");
 
-  await env.ORDER_STATE.put(`templink:${tenantId}:${token}`, "1", { expirationTtl: ttl * 3600 });
+  await repo.createTempLinkToken(tenantId, token, ttl * 3600);
   return json({ ok: true, token, hours: ttl });
 }
 
@@ -104,6 +98,8 @@ export async function handleVerifyTempLink(request: Request, env: Env, tenantCtx
   if (!token) return json({ ok: false });
 
   const tenantId = url.searchParams.get("tenant_id") || tenantCtx?.tenantId || getTenantId(request);
-  const val = await env.ORDER_STATE.get(`templink:${tenantId}:${token}`);
-  return json({ ok: val === "1" });
+  const repo = createTenantRepository(env.DB, env.ORDER_STATE, env);
+  const ok = await repo.verifyTempLinkToken(tenantId, token);
+  return json({ ok });
 }
+

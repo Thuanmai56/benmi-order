@@ -2,6 +2,7 @@ import { customerOrderConfig } from '../utils/order-domain';
 import { Env } from '../types/env';
 import { json } from '../utils/http';
 import { parseOperatingHours } from './bootstrap';
+import { createTenantRepository } from '../repositories';
 
 export interface MarketplaceTenantItem {
   tenantId: string;
@@ -25,9 +26,6 @@ export interface MarketplaceTenantItem {
   liffUrl: string | null;
   orderUrl: string;
 }
-
-const MARKETPLACE_CACHE_KEY = 'marketplace:tenants_catalog';
-const MARKETPLACE_CACHE_TTL = 300; // 5 minutes
 
 /**
  * Checks if a restaurant is currently open based on store_status, parsed operating hours, and Taiwan time (UTC+8).
@@ -112,33 +110,30 @@ export function isStoreCurrentlyOpen(
 export async function getMarketplaceTenants(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   const noCache = url.searchParams.has('nocache') || url.searchParams.has('_t');
-  const deleted = await env.DB.prepare("SELECT tenant_id FROM tenant_lifecycle WHERE state<>'active'").all<{ tenant_id: string }>();
-  const deletedIds = new Set(deleted.results.map(row => row.tenant_id));
+  const repo = createTenantRepository(env.DB, env.ORDER_STATE, env);
+  const deletedIds = await repo.getDeletedTenantIds();
 
   // 1. Check KV Edge Cache
-  if (!noCache && env.ORDER_STATE) {
-    try {
-      const cached = await env.ORDER_STATE.get(MARKETPLACE_CACHE_KEY);
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        // Refresh isOpen flag on cached response dynamically based on real-time Taiwan clock
-        const now = new Date();
-        const refreshedData = (parsed.data || []).filter((t: MarketplaceTenantItem) => !deletedIds.has(t.tenantId)).map((t: MarketplaceTenantItem) => ({
+  if (!noCache) {
+    const parsed = await repo.getCachedMarketplaceCatalog();
+    if (parsed) {
+      // Refresh isOpen flag on cached response dynamically based on real-time Taiwan clock
+      const now = new Date();
+      const refreshedData = (parsed.data || [])
+        .filter((t: MarketplaceTenantItem) => !deletedIds.has(t.tenantId))
+        .map((t: MarketplaceTenantItem) => ({
           ...t,
           isOpen: isStoreCurrentlyOpen(t.storeStatus, t.parsedHours, now)
         }));
 
-        return json({
-          success: true,
-          count: refreshedData.length,
-          data: refreshedData
-        }, 200, {
-          'X-Cache': 'HIT',
-          'Cache-Control': 'no-store'
-        });
-      }
-    } catch (e) {
-      console.error('[Marketplace] KV Cache read error:', e);
+      return json({
+        success: true,
+        count: refreshedData.length,
+        data: refreshedData
+      }, 200, {
+        'X-Cache': 'HIT',
+        'Cache-Control': 'no-store'
+      });
     }
   }
 
@@ -148,29 +143,8 @@ export async function getMarketplaceTenants(request: Request, env: Env): Promise
   }
 
   try {
-    const [tenantsRes, categoriesRes] = await env.DB.batch([
-      env.DB.prepare(`
-        SELECT tenant_id, brand_name, announcement, brand_color, logo_url, store_address,
-               operating_hours, delivery_policy, 
-               COALESCE(allow_dine_in, 1) AS allow_dine_in, 
-               COALESCE(allow_scheduled_pickup, 1) AS allow_scheduled_pickup,
-               COALESCE(store_status, 'open') AS store_status, 
-               COALESCE(cuisine_type, 'vietnamese') AS cuisine_type, 
-               latitude, longitude, locale, liff_url, customer_order_domain, legacy_liff_endpoint_url
-        FROM tenant_config
-        WHERE is_active = 1 AND COALESCE(is_marketplace_visible, 1) = 1
-        ORDER BY rowid ASC
-      `),
-      env.DB.prepare(`
-        SELECT tenant_id, name, sort_order 
-        FROM menu_categories 
-        WHERE COALESCE(category_type, 'catalog') = 'catalog'
-        ORDER BY tenant_id, sort_order ASC
-      `)
-    ]);
-
-    const rawTenants = ((tenantsRes.results as any[]) || []).filter(t => !deletedIds.has(t.tenant_id));
-    const rawCategories = (categoriesRes.results as any[]) || [];
+    const { tenants: allTenants, categories: rawCategories } = await repo.listMarketplaceTenants();
+    const rawTenants = allTenants.filter(t => !deletedIds.has(t.tenant_id));
 
     // Group categories summary by tenant
     const catMap = new Map<string, string[]>();
@@ -229,15 +203,7 @@ export async function getMarketplaceTenants(request: Request, env: Env): Promise
     };
 
     // 3. Cache in KV
-    if (env.ORDER_STATE) {
-      try {
-        await env.ORDER_STATE.put(MARKETPLACE_CACHE_KEY, JSON.stringify(payload), {
-          expirationTtl: MARKETPLACE_CACHE_TTL
-        });
-      } catch (kvErr) {
-        console.error('[Marketplace] KV Cache write error:', kvErr);
-      }
-    }
+    await repo.setCachedMarketplaceCatalog(payload);
 
     return json(payload, 200, {
       'X-Cache': 'MISS',
@@ -254,12 +220,7 @@ export async function getMarketplaceTenants(request: Request, env: Env): Promise
  * Invalidates the Marketplace KV Cache across edge nodes.
  */
 export async function invalidateMarketplaceCache(env: Env): Promise<void> {
-  if (env.ORDER_STATE) {
-    try {
-      await env.ORDER_STATE.delete(MARKETPLACE_CACHE_KEY);
-      console.log('[Marketplace] Invalidated marketplace cache');
-    } catch (e) {
-      console.error('[Marketplace] Failed to invalidate marketplace cache:', e);
-    }
-  }
+  const repo = createTenantRepository(env.DB, env.ORDER_STATE, env);
+  await repo.invalidateMarketplaceCache();
 }
+
