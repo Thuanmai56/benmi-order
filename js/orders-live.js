@@ -488,6 +488,13 @@ function renderListLeft(orders) {
     tile.className = `tile ${isNew ? "is-new" : ""} ${isDineIn ? "is-dine-in" : "is-takeaway"} ${isAppendedUnread ? "is-append-new" : ""} ${hasCancel ? "has-cancellation" : ""}`;
     tile.onclick = () => {
       if (typeof unacknowledgedAppends !== "undefined") unacknowledgedAppends.delete(order.key);
+      if (hasCancel) {
+        const cancellation = window.getPendingCancellation(order.key);
+        if (cancellation) {
+          window.openCancellationRequests(cancellation.id);
+          return;
+        }
+      }
       openReview(order.key);
     };
 
@@ -541,7 +548,6 @@ function renderListLeft(orders) {
           <span class="tile-order-key">#${escapeHtml(order.displayKey || order.key)}</span>
           ${newBadge}
           ${modifiedBadge}
-          ${typeof window.renderCancellationBadge === "function" ? window.renderCancellationBadge(order.key) : ""}
           ${diningBadge}
           ${appendBadge}
         </div>
@@ -593,7 +599,16 @@ function renderListRight(orders) {
 
     const tile = document.createElement("div");
     tile.className = `tile ${isDineIn ? "is-dine-in" : "is-takeaway"} ${hasCancel ? "has-cancellation" : ""}`;
-    tile.onclick = () => openReview(order.key);
+    tile.onclick = () => {
+      if (hasCancel) {
+        const cancellation = window.getPendingCancellation(order.key);
+        if (cancellation) {
+          window.openCancellationRequests(cancellation.id);
+          return;
+        }
+      }
+      openReview(order.key);
+    };
 
     const tableNum = getOrderTableNumber(order);
     const lang = window.currentLang || (typeof currentLang !== "undefined" ? currentLang : "zh-TW");
@@ -626,7 +641,6 @@ function renderListRight(orders) {
           <span class="tile-customer" title="${escapeHtml(order.customer || t('defaultCustomer'))}">${escapeHtml(order.customer || t('defaultCustomer'))}</span>
           <span class="tile-order-key">#${escapeHtml(order.displayKey || order.key)}</span>
           ${modifiedBadge}
-          ${typeof window.renderCancellationBadge === "function" ? window.renderCancellationBadge(order.key) : ""}
           ${diningBadge}
           ${appendBadge}
         </div>
