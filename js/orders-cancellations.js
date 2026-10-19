@@ -13,7 +13,7 @@
   window.getPendingCancellation = key => pending().find(r => r.order_key === key) || null;
   window.renderCancellationBadge = key => {
     const r = window.getPendingCancellation(key);
-    return r ? `<button type="button" class="cancel-badge" data-cancel-request="${escape(r.id)}">${escape(badge(r))}</button>` : '';
+    return r ? `<button type="button" class="tile-badge cancel-badge" data-cancel-request="${escape(r.id)}">${typeof POS_SVG !== 'undefined' && POS_SVG.alert ? POS_SVG.alert : ''}${escape(badge(r))}</button>` : '';
   };
 
   function renderBanner() {
@@ -22,7 +22,11 @@
     const count = pending().length, failed = requests.filter(r => r.notification_status === 'failed').length;
     banner.hidden = !count && !failed && !technicalAlerts.length && !offline;
     const label = el('cancellation-banner-label');
-    if (label) label.textContent = offline ? tr('Offline') : [count ? tr('Count', { count }) : '', failed ? tr('FailedCount', { count: failed }) : '', technicalAlerts.length ? tr('TechnicalCount', { count: technicalAlerts.length }) : ''].filter(Boolean).join(' · ');
+    if (label) {
+      const icon = typeof POS_SVG !== 'undefined' && POS_SVG.alert ? POS_SVG.alert : '';
+      const text = offline ? tr('Offline') : [count ? tr('Count', { count }) : '', failed ? tr('FailedCount', { count: failed }) : '', technicalAlerts.length ? tr('TechnicalCount', { count: technicalAlerts.length }) : ''].filter(Boolean).join(' · ');
+      label.innerHTML = `${icon}<span>${escape(text)}</span>`;
+    }
     const button = el('cancellation-banner-open');
     if (button) { button.textContent = tr('Open'); button.disabled = !requests.length && !technicalAlerts.length; }
     window.refreshCancellationReview();

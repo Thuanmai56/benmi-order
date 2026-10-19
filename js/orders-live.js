@@ -482,8 +482,10 @@ function renderListLeft(orders) {
 
     const isAppendedUnread = (typeof unacknowledgedAppends !== "undefined" && unacknowledgedAppends.has(order.key));
 
+    const hasCancel = typeof window.getPendingCancellation === "function" && !!window.getPendingCancellation(order.key);
+
     const tile = document.createElement("div");
-    tile.className = `tile ${isNew ? "is-new" : ""} ${isDineIn ? "is-dine-in" : "is-takeaway"} ${isAppendedUnread ? "is-append-new" : ""}`;
+    tile.className = `tile ${isNew ? "is-new" : ""} ${isDineIn ? "is-dine-in" : "is-takeaway"} ${isAppendedUnread ? "is-append-new" : ""} ${hasCancel ? "has-cancellation" : ""}`;
     tile.onclick = () => {
       if (typeof unacknowledgedAppends !== "undefined") unacknowledgedAppends.delete(order.key);
       openReview(order.key);
@@ -500,7 +502,7 @@ function renderListLeft(orders) {
 
     if (typeof window.getPendingCancellation === "function" && window.getPendingCancellation(order.key)) {
       const cancellation = window.getPendingCancellation(order.key);
-      rightActions = `<button type="button" class="btn tile-action-btn" data-cancel-request="${escapeHtml(cancellation.id)}">${t("cancelOpen")}</button>`;
+      rightActions = `<button type="button" class="btn tile-action-btn btn-action-cancel" data-cancel-request="${escapeHtml(cancellation.id)}">${POS_SVG.alert || ''}<span>${t("cancelOpen")}</span></button>`;
     }
 
     const tableNum = getOrderTableNumber(order);
@@ -587,8 +589,10 @@ function renderListRight(orders) {
     const itemCount = countItemsFromContent(order.content);
     const itemCountStr = t("tileItemCount", { count: itemCount > 0 ? itemCount : "?" });
 
+    const hasCancel = typeof window.getPendingCancellation === "function" && !!window.getPendingCancellation(order.key);
+
     const tile = document.createElement("div");
-    tile.className = `tile ${isDineIn ? "is-dine-in" : "is-takeaway"}`;
+    tile.className = `tile ${isDineIn ? "is-dine-in" : "is-takeaway"} ${hasCancel ? "has-cancellation" : ""}`;
     tile.onclick = () => openReview(order.key);
 
     const tableNum = getOrderTableNumber(order);
@@ -639,7 +643,7 @@ function renderListRight(orders) {
       </div>
       <div class="tile-actions">
         ${typeof window.getPendingCancellation === "function" && window.getPendingCancellation(order.key)
-          ? `<button type="button" class="btn tile-action-btn" data-cancel-request="${escapeHtml(window.getPendingCancellation(order.key).id)}">${t("cancelOpen")}</button>`
+          ? `<button type="button" class="btn tile-action-btn btn-action-cancel" data-cancel-request="${escapeHtml(window.getPendingCancellation(order.key).id)}">${POS_SVG.alert || ''}<span>${t("cancelOpen")}</span></button>`
           : isDineIn
           ? `<button type="button" class="btn tile-action-btn btn-action-paid" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','PAID', {}, this)">${POS_SVG.checkAll}<span>${t('btnPaid')}</span></button>`
           : `<button type="button" class="btn tile-action-btn btn-action-pickup" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','PICKED_UP', {}, this)">${POS_SVG.checkAll}<span>${t('btnPickedUp')}</span></button>`
