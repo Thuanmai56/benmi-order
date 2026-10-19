@@ -146,3 +146,31 @@ export interface TenantRepository {
    */
   invalidateCache(tenantId: string): Promise<void>;
 }
+
+export interface RawItemAnalyticsRow {
+  item_name: string;
+  category_name: string | null;
+  total_quantity: number;
+  total_sales: number;
+  order_appearances: number;
+  all_options_raw: string | null;
+}
+
+export interface ReportItemAnalyticsResult {
+  items: import('../types').ItemAnalyticsRow[];
+  totalItemsSold: number;
+  totalRevenue: number;
+  totalOrders: number;
+}
+
+export interface ReportRepository {
+  /**
+   * Query aggregated item sales and order counts for a given tenant within UTC time bounds.
+   */
+  getItemAnalytics(
+    tenantId: string,
+    startUtcIso: string,
+    endUtcIso: string
+  ): Promise<ReportItemAnalyticsResult>;
+}
+
