@@ -88,6 +88,31 @@ export interface SaveAdminTenantInput {
   is_active?: number;
 }
 
+export interface MarketplaceTenantConfigRow extends OrderDomainRow {
+  tenant_id: string;
+  brand_name: string | null;
+  announcement: string | null;
+  brand_color: string | null;
+  logo_url: string | null;
+  store_address: string | null;
+  operating_hours: string | null;
+  delivery_policy: string | null;
+  allow_dine_in: number | boolean;
+  allow_scheduled_pickup: number | boolean;
+  store_status: 'open' | 'busy' | 'paused' | string;
+  cuisine_type: string;
+  latitude: number | null;
+  longitude: number | null;
+  locale: string | null;
+  liff_url: string | null;
+}
+
+export interface MarketplaceCategoryRow {
+  tenant_id: string;
+  name: string;
+  sort_order: number | null;
+}
+
 export interface TenantRepository {
   /**
    * Resolve full TenantContext for runtime (reads KV cache with D1 fallback).
@@ -145,4 +170,53 @@ export interface TenantRepository {
    * Invalidate tenant KV config cache.
    */
   invalidateCache(tenantId: string): Promise<void>;
+
+  /**
+   * Return set of tenant IDs whose lifecycle state is not 'active' (deleted/purging).
+   */
+  getDeletedTenantIds(): Promise<Set<string>>;
+
+  /**
+   * Read cached marketplace catalog payload from KV.
+   */
+  getCachedMarketplaceCatalog(): Promise<any | null>;
+
+  /**
+   * Write marketplace catalog payload to KV cache.
+   */
+  setCachedMarketplaceCatalog(payload: any): Promise<void>;
+
+  /**
+   * Invalidate marketplace catalog KV cache.
+   */
+  invalidateMarketplaceCache(): Promise<void>;
+
+  /**
+   * Query active marketplace-visible tenants and their catalog categories from D1.
+   */
+  listMarketplaceTenants(): Promise<{
+    tenants: MarketplaceTenantConfigRow[];
+    categories: MarketplaceCategoryRow[];
+  }>;
+
+  /**
+   * Read POS store PIN password from KV with fallback to defaultPassword.
+   */
+  getStorePassword(tenantId: string, defaultPassword?: string): Promise<string>;
+
+  /**
+   * Update POS store PIN password in KV.
+   */
+  setStorePassword(tenantId: string, newPassword: string): Promise<void>;
+
+  /**
+   * Store a temporary POS access token in KV with TTL (in seconds).
+   */
+  createTempLinkToken(tenantId: string, token: string, ttlSeconds: number): Promise<void>;
+
+  /**
+   * Verify a temporary POS access token in KV.
+   */
+  verifyTempLinkToken(tenantId: string, token: string): Promise<boolean>;
 }
+

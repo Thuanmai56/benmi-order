@@ -8,10 +8,15 @@ import type {
   TenantConfigRow,
   TenantAdminSummaryRow,
   UpdateTenantConfigInput,
-  SaveAdminTenantInput
+  SaveAdminTenantInput,
+  MarketplaceTenantConfigRow,
+  MarketplaceCategoryRow
 } from './types';
 
 const TENANT_CACHE_TTL = 300; // 5 minutes
+const MARKETPLACE_CACHE_KEY = 'marketplace:tenants_catalog';
+const MARKETPLACE_CACHE_TTL = 300; // 5 minutes
+const DEFAULT_STORE_PASSWORD = '12345678';
 
 function normalizeMultiline(text: string | null | undefined): string | null {
   if (!text) return null;
@@ -396,6 +401,110 @@ export function createTenantRepository(
       ).bind(tenantId).run();
 
       await invalidateCache(tenantId);
+    },
+
+    async getDeletedTenantIds(): Promise<Set<string>> {
+      if (!db) return new Set();
+      const deleted = await db
+        .prepare("SELECT tenant_id FROM tenant_lifecycle WHERE state<>'active'")
+        .all<{ tenant_id: string }>();
+      return new Set((deleted.results || []).map(row => row.tenant_id));
+    },
+
+    async getCachedMarketplaceCatalog(): Promise<any | null> {
+      if (!kv) return null;
+      try {
+        const cached = await kv.get(MARKETPLACE_CACHE_KEY);
+        return cached ? JSON.parse(cached) : null;
+      } catch (e) {
+        console.error('[TenantRepository] Marketplace KV cache read error:', e);
+        return null;
+      }
+    },
+
+    async setCachedMarketplaceCatalog(payload: any): Promise<void> {
+      if (!kv) return;
+      try {
+        await kv.put(MARKETPLACE_CACHE_KEY, JSON.stringify(payload), {
+          expirationTtl: MARKETPLACE_CACHE_TTL
+        });
+      } catch (e) {
+        console.error('[TenantRepository] Marketplace KV cache write error:', e);
+      }
+    },
+
+    async invalidateMarketplaceCache(): Promise<void> {
+      if (!kv) return;
+      try {
+        await kv.delete(MARKETPLACE_CACHE_KEY);
+        console.log('[TenantRepository] Invalidated marketplace cache');
+      } catch (e) {
+        console.error('[TenantRepository] Failed to invalidate marketplace cache:', e);
+      }
+    },
+
+    async listMarketplaceTenants(): Promise<{
+      tenants: MarketplaceTenantConfigRow[];
+      categories: MarketplaceCategoryRow[];
+    }> {
+      if (!db) return { tenants: [], categories: [] };
+      const [tenantsRes, categoriesRes] = await db.batch([
+        db.prepare(`
+          SELECT tenant_id, brand_name, announcement, brand_color, logo_url, store_address,
+                 operating_hours, delivery_policy, 
+                 COALESCE(allow_dine_in, 1) AS allow_dine_in, 
+                 COALESCE(allow_scheduled_pickup, 1) AS allow_scheduled_pickup,
+                 COALESCE(store_status, 'open') AS store_status, 
+                 COALESCE(cuisine_type, 'vietnamese') AS cuisine_type, 
+                 latitude, longitude, locale, liff_url, customer_order_domain, legacy_liff_endpoint_url
+          FROM tenant_config
+          WHERE is_active = 1 AND COALESCE(is_marketplace_visible, 1) = 1
+          ORDER BY rowid ASC
+        `),
+        db.prepare(`
+          SELECT tenant_id, name, sort_order 
+          FROM menu_categories 
+          WHERE COALESCE(category_type, 'catalog') = 'catalog'
+          ORDER BY tenant_id, sort_order ASC
+        `)
+      ]);
+
+      return {
+        tenants: (tenantsRes.results as MarketplaceTenantConfigRow[]) || [],
+        categories: (categoriesRes.results as MarketplaceCategoryRow[]) || []
+      };
+    },
+
+    async getStorePassword(tenantId: string, defaultPassword?: string): Promise<string> {
+      if (kv) {
+        const cacheKey = `tenant:${tenantId}:password`;
+        let stored = await kv.get(cacheKey);
+        if (!stored && tenantId === 'benmi') {
+          stored = await kv.get('dashboard:password');
+          if (stored) {
+            await kv.put(cacheKey, stored);
+          }
+        }
+        if (stored) return stored;
+      }
+      return defaultPassword || DEFAULT_STORE_PASSWORD;
+    },
+
+    async setStorePassword(tenantId: string, newPassword: string): Promise<void> {
+      if (!kv) return;
+      await kv.put(`tenant:${tenantId}:password`, newPassword);
+    },
+
+    async createTempLinkToken(tenantId: string, token: string, ttlSeconds: number): Promise<void> {
+      if (!kv) return;
+      await kv.put(`templink:${tenantId}:${token}`, '1', { expirationTtl: ttlSeconds });
+    },
+
+    async verifyTempLinkToken(tenantId: string, token: string): Promise<boolean> {
+      if (!kv) return false;
+      const val = await kv.get(`templink:${tenantId}:${token}`);
+      return val === '1';
     }
   };
 }
+
