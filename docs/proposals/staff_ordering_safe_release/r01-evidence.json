@@ -1,0 +1,372 @@
+{
+  "schemaVersion": 1,
+  "task": "R01",
+  "status": "local passed; user review and remote CI pending",
+  "cloudflareMutations": false,
+  "githubWorkflowRun": null,
+  "artifactDirectory": "artifacts/release-baseline/2026-10-19T13-38-29-146Z",
+  "browsers": [
+    {
+      "name": "chromium",
+      "revision": "1248",
+      "browserVersion": "156.0.8078.4"
+    },
+    {
+      "name": "chromium-headless-shell",
+      "revision": "1248",
+      "browserVersion": "156.0.8078.4"
+    },
+    {
+      "name": "webkit",
+      "revision": "2370",
+      "browserVersion": "27.2"
+    }
+  ],
+  "preparedFiles": {
+    ".github/workflows/release-baseline.yml": "981675609ec0f350c7d2be1cf6a108a49003814c0e43cffc797143cf84d810b3",
+    ".nvmrc": "68ca3fba3b7e864770cb61aeb306d4bd4354b68ab4dd38450860c5d823e42a53",
+    ".gitignore": "969e4d579ec6155388a6bde435b6efda1409f9044083155bc089359475c28918",
+    "package.json": "15bd8f01b94c61f83b8569e63913a2c589ca2115f800eb0ab1b128413144a285",
+    "package-lock.json": "f70797f0a0aafdbff52e93dae62248c7a0a24a6a4259fdd1fe6d817a7c2f7389",
+    "scripts/check-release-baseline.mjs": "18e0ddff2f32f998333277325f28557afb2fd37c7617d7a7e9212fa58b1e6628",
+    "tests/test_order_identity.cjs": "6dfd7792312d662de8c6d9455d1df644b0bd9b307223aaba12b53899fd475b85",
+    "tests/test_pos_display.cjs": "977ea16bc188f405e0dacfb345324ac6fa73d89fc77aa49492d5db72e29d4297",
+    "tests/test_pos_live_mobile.cjs": "0f00f800018f4bf7349bb7baacb970f99c8fa7a936f5209055719eb36c6028ed"
+  },
+  "startedAt": "2026-10-19T13:38:29.147Z",
+  "node": "v24.22.0",
+  "platform": "darwin-arm64",
+  "commit": "512a642cde71a7a1626aa6d215fabbae858ae632",
+  "branch": "codex/staff-order-r01-baseline",
+  "workingTree": "M .gitignore\n M package.json\n M tests/test_order_identity.cjs\n M tests/test_pos_display.cjs\n M tests/test_pos_live_mobile.cjs\n?? .github/workflows/release-baseline.yml\n?? .nvmrc\n?? docs/proposals/staff_ordering_safe_release/r00-evidence.json\n?? docs/proposals/staff_ordering_safe_release/r00-inventory.md\n?? docs/proposals/staff_ordering_safe_release/release-checklist.md\n?? docs/proposals/staff_ordering_safe_release/release-tracker.md\n?? package-lock.json\n?? scripts/check-release-baseline.mjs",
+  "mode": "local synthetic fixtures; no Cloudflare CLI or deployment commands",
+  "suites": [
+    {
+      "name": "frontend-static",
+      "command": [
+        "node",
+        "scripts/check-frontend.js"
+      ],
+      "environment": {},
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 697,
+      "log": "frontend-static.log",
+      "inputHashes": {
+        "scripts/check-frontend.js": "b06598a2c51d8fe0f383303cb1dbd467d29deb65db1affb96d3bb6b965540ab1"
+      },
+      "logSha256": "0d690ea2ebdc91ab242a45121b0ce9ae887102cf29866da30ed19d4d66fc69a7"
+    },
+    {
+      "name": "routing-lifecycle",
+      "command": [
+        "node",
+        "--test",
+        "scripts/test-explore-routing.mjs",
+        "scripts/test-client-modular.mjs",
+        "scripts/test-line-tenant-redirect.mjs",
+        "scripts/test-line-text-normalization.mjs",
+        "scripts/test-order-domain-routing.mjs",
+        "scripts/test-order-domain-api.cjs",
+        "scripts/test-tenant-lifecycle.cjs"
+      ],
+      "environment": {},
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 679,
+      "log": "routing-lifecycle.log",
+      "inputHashes": {
+        "scripts/test-explore-routing.mjs": "93189ca013f11ba078e1acc244e77cae0f04cd0537f0b79a75a1b0d70705f514",
+        "scripts/test-client-modular.mjs": "00527ff35a48a4c5b97cd057ce092d7414f1bafb81a942ed579e12a944a8b2c5",
+        "scripts/test-line-tenant-redirect.mjs": "56b74a896553bfec7cfc0db6e61a512d2b3bd1432c5cbd48f726cae5ad375734",
+        "scripts/test-line-text-normalization.mjs": "68406d571fa248a9bd44c847d4e250606df5105f8dc7c3debfb47db629422a35",
+        "scripts/test-order-domain-routing.mjs": "2a77f6781da5bf8b3560c38dbc03e1a587671568869213f82ad3551e82c2609a",
+        "scripts/test-order-domain-api.cjs": "337e440af534a897af2f59c8491e0dc383313321966d61afa75f65a371806950",
+        "scripts/test-tenant-lifecycle.cjs": "3679ae870ec2ef9fcf25aa6fb98f08816605267056d35499104c25d02c9f33e0"
+      },
+      "logSha256": "0f8cbaf99ea946d7d4ec0a20a38b2ac1124b2b79489571a4c6a9addc6e21d69d"
+    },
+    {
+      "name": "worker-types",
+      "command": [
+        "node",
+        "benmi-worker-official/node_modules/typescript/bin/tsc",
+        "--noEmit",
+        "-p",
+        "benmi-worker-official/tsconfig.json"
+      ],
+      "environment": {},
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 786,
+      "log": "worker-types.log",
+      "inputHashes": {
+        "benmi-worker-official/node_modules/typescript/bin/tsc": "8d5fa5bd883fec0979fc2004f1fe1d99aef40570155d550eadc0b03b55513bf0",
+        "benmi-worker-official/tsconfig.json": "c894aad3ca361b24beb88c56885cb503c22367504411c1fa6e12bd933aea6552"
+      },
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "cloudflare-config",
+      "command": [
+        "node",
+        "--test",
+        "scripts/test-cloudflare-cli.mjs"
+      ],
+      "environment": {},
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 126,
+      "log": "cloudflare-config.log",
+      "inputHashes": {
+        "scripts/test-cloudflare-cli.mjs": "25504c362cb09abed420cb813269e5d4af9943374bb0f5f02529929876243296"
+      },
+      "logSha256": "59a4bed1119002f34ddb6af59174a887b894af14bb73a9acc7d07001253b11ce"
+    },
+    {
+      "name": "order-identity",
+      "command": [
+        "node",
+        "tests/test_order_identity.cjs"
+      ],
+      "environment": {},
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 2098,
+      "log": "order-identity.log",
+      "inputHashes": {
+        "tests/test_order_identity.cjs": "6dfd7792312d662de8c6d9455d1df644b0bd9b307223aaba12b53899fd475b85"
+      },
+      "logSha256": "846ffa510b2f4312566ad8686151f1872a2497e80c17a8e5ccf5a74a71faa168"
+    },
+    {
+      "name": "line-receipts",
+      "command": [
+        "node",
+        "--test",
+        "scripts/test-line-order-receipts.cjs"
+      ],
+      "environment": {},
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 513,
+      "log": "line-receipts.log",
+      "inputHashes": {
+        "scripts/test-line-order-receipts.cjs": "414dca8c239961996eef37c1cbf2aa81e27e2db8fdd7d4373eea93fac17195b3"
+      },
+      "logSha256": "f9b7e683ec21dd833089cec20866f488e10f07798015593655a0e31d95d43516"
+    },
+    {
+      "name": "liff-retry",
+      "command": [
+        "node",
+        "--test",
+        "scripts/test-liff-message-retry.cjs"
+      ],
+      "environment": {},
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 260,
+      "log": "liff-retry.log",
+      "inputHashes": {
+        "scripts/test-liff-message-retry.cjs": "ed21c9057ea178708c2d5c4cf1d983ac2cf388efe5cf1b3fbc82c3abab3ebdcf"
+      },
+      "logSha256": "105d51864a790a30acc02395f778ab3b85be3963a4b6b2952376c6b1582076a5"
+    },
+    {
+      "name": "menu-safety",
+      "command": [
+        "node",
+        "--test",
+        "scripts/test-menu-safety.cjs"
+      ],
+      "environment": {},
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 271,
+      "log": "menu-safety.log",
+      "inputHashes": {
+        "scripts/test-menu-safety.cjs": "dd3964972c2ea8ef32c308c41aa8fbf4cac19b8c8d0ec0ec22144bb6b9e6e3c2"
+      },
+      "logSha256": "b5123c97eecc85d36e40a452b45009501c469b9154a1b07bf5296511f10b07c0"
+    },
+    {
+      "name": "print-identity",
+      "command": [
+        "node",
+        "tests/test_order_identity_print.cjs"
+      ],
+      "environment": {},
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 133,
+      "log": "print-identity.log",
+      "inputHashes": {
+        "tests/test_order_identity_print.cjs": "c2cca5157a1ffc0226c2163c3018f4aa6dcc266bb092f4125d3fcb1b417ca4b3"
+      },
+      "logSha256": "478b6b4c99a2c59e6fb62b120f9479e5b3b8af85ec55d3c357723f263e5341bd"
+    },
+    {
+      "name": "print-items",
+      "command": [
+        "node",
+        "tests/test_order_print_items.js"
+      ],
+      "environment": {},
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 170,
+      "log": "print-items.log",
+      "inputHashes": {
+        "tests/test_order_print_items.js": "8edcb5cf23dd02603b9ad800797a0cc2ca78e09cb5014746b0b459b3c6fea65a"
+      },
+      "logSha256": "3ada3a26fa1838dab8515267dec3e5b49007a6106b0c13e5606a11e767753e7c"
+    },
+    {
+      "name": "print-sequence",
+      "command": [
+        "node",
+        "tests/test_printer_sequence.js"
+      ],
+      "environment": {},
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 36,
+      "log": "print-sequence.log",
+      "inputHashes": {
+        "tests/test_printer_sequence.js": "aa5b365fd3841798d99dc56b1612fd2d4762a2318e37550d4698da983ad07959"
+      },
+      "logSha256": "efbcc6aaa62ecefaef911f292e9e3de0582f497c5e38f65f49a582dbb92e53e7"
+    },
+    {
+      "name": "print-subtotals",
+      "command": [
+        "node",
+        "tests/test_order_print_subtotal_bundle.cjs"
+      ],
+      "environment": {},
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 43,
+      "log": "print-subtotals.log",
+      "inputHashes": {
+        "tests/test_order_print_subtotal_bundle.cjs": "f2041ac905c7dc6c1bbf6018be07a96225c3cf3394b921bbcd8b6c44fd186892"
+      },
+      "logSha256": "1f66cae8e617d1ccf5db16b91c56c08a487652c67d51dc429f3e4821ca15b58c"
+    },
+    {
+      "name": "print-canvas",
+      "command": [
+        "node",
+        "tests/test_receipt_canvas_height.js"
+      ],
+      "environment": {},
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 43,
+      "log": "print-canvas.log",
+      "inputHashes": {
+        "tests/test_receipt_canvas_height.js": "f54da415cf0ff2205b034a2f9e461032c9aa818c4f83b655e5465a2961560c5a"
+      },
+      "logSha256": "17add9d833e8108ff0950b9ebf4bfe356ee206cb92a63e4dd607eefb68fcab33"
+    },
+    {
+      "name": "pos-display-chromium",
+      "command": [
+        "node",
+        "tests/test_pos_display.cjs"
+      ],
+      "environment": {
+        "POS_DISPLAY_BROWSER": "chromium"
+      },
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 13136,
+      "log": "pos-display-chromium.log",
+      "inputHashes": {
+        "tests/test_pos_display.cjs": "977ea16bc188f405e0dacfb345324ac6fa73d89fc77aa49492d5db72e29d4297"
+      },
+      "logSha256": "cc46d0f42f9c1748480fffb084db38ffbded916c6f8f03ba839f18cbf165d6d7"
+    },
+    {
+      "name": "pos-display-webkit",
+      "command": [
+        "node",
+        "tests/test_pos_display.cjs"
+      ],
+      "environment": {
+        "POS_DISPLAY_BROWSER": "webkit"
+      },
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 20422,
+      "log": "pos-display-webkit.log",
+      "inputHashes": {
+        "tests/test_pos_display.cjs": "977ea16bc188f405e0dacfb345324ac6fa73d89fc77aa49492d5db72e29d4297"
+      },
+      "logSha256": "cc46d0f42f9c1748480fffb084db38ffbded916c6f8f03ba839f18cbf165d6d7"
+    },
+    {
+      "name": "pos-live-mobile",
+      "command": [
+        "node",
+        "tests/test_pos_live_mobile.cjs"
+      ],
+      "environment": {},
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 9601,
+      "log": "pos-live-mobile.log",
+      "inputHashes": {
+        "tests/test_pos_live_mobile.cjs": "0f00f800018f4bf7349bb7baacb970f99c8fa7a936f5209055719eb36c6028ed"
+      },
+      "logSha256": "6e5582776b69a265d38e456b6b08539df469bc1d31c8930940236c59db085ee2"
+    },
+    {
+      "name": "pos-detail-scroll",
+      "command": [
+        "node",
+        "tests/test_order_detail_mobile_scroll.cjs"
+      ],
+      "environment": {},
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 1191,
+      "log": "pos-detail-scroll.log",
+      "inputHashes": {
+        "tests/test_order_detail_mobile_scroll.cjs": "6b8399133242c87e4bb4cd7253da1706bd21b9d9356e6c41f028c9fa868327a6"
+      },
+      "logSha256": "0686ff48120557951d81fd75344a09f2a6e5ffc592b85522349bfd7be8dd2b1a"
+    }
+  ],
+  "dependencies": {
+    "playwright": "1.64.1",
+    "lockfiles": {
+      "package-lock.json": "f70797f0a0aafdbff52e93dae62248c7a0a24a6a4259fdd1fe6d817a7c2f7389",
+      "benmi-worker-official/package-lock.json": "249f60544504b85abb183c3c07656ff35b66762d40d408fc5148067652ad1c09"
+    }
+  },
+  "application": {
+    "sha256": "f2b40c24f8246d0f38bbaffb641fb6b7b3443523a84c82a9d6a5a8ed39ade3e3",
+    "fileCount": 129,
+    "changedFromHead": ""
+  },
+  "finishedAt": "2026-10-19T13:39:19.482Z"
+}

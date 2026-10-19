@@ -30,4 +30,5 @@ dist/
 # Temporary and test artifacts
 scratch/
 scripts/latest_printed_receipt.png
+artifacts/release-baseline/
 
