@@ -1,0 +1,62 @@
+# Staff ordering — Theo dõi release và xác nhận
+
+## Quy tắc thực hiện
+
+- Làm đúng một task mỗi lượt; dừng sau báo cáo để người dùng xác nhận kết quả và task kế tiếp.
+- Chưa có xác nhận thì không bắt đầu task tiếp theo.
+- Push/merge có thể gây deploy. Trình thay đổi cụ thể trước khi xin xác nhận các thao tác ngoài máy local: push, merge, deploy, migration, thay đổi cờ và xử lý đơn.
+- Mỗi task code lấy từ `main` mới nhất; chỉ trích phần cần thiết từ `origin/staff_dine_in`.
+- Chỉ mở rollout cho tenant ID thực tế **`blab_demo`**; mọi capability mới mặc định đóng.
+- Không tự thay đổi hai đơn staff staging đang mở hoặc cờ staging ngoài demo.
+
+## Lịch sử xác nhận
+
+| Ngày JST | Nội dung | Trạng thái |
+| --- | --- | --- |
+| 19/10/2026 | Người dùng yêu cầu bắt đầu, làm từng task và luôn có người dùng xác nhận | Cho phép R00 |
+| 19/10/2026 | R00 khảo sát hiện trạng và chuẩn bị báo cáo local | Đã khảo sát; người dùng cho phép chuyển sang R01 |
+| 19/10/2026 | Người dùng: “bắt đầu R01” | Cho phép chuẩn bị baseline kiểm thử/checklist local |
+| 19/10/2026 | R01: cài sạch dependency, baseline 17/17 suite đạt, chuẩn bị CI/checklist | Phần local hoàn tất; chờ người dùng xác nhận. CI GitHub chưa chạy |
+| 19/10/2026 | Người dùng: “pussh nhánh” | Cho phép commit/push nhánh `codex/staff-order-r01-baseline`; chưa cho phép tạo PR hoặc merge |
+| 19/10/2026 | Người dùng tự tạo PR #74 và thông báo trong chat | PR vào `main` đã mở; không có xác nhận merge |
+| 19/10/2026 | CI Ubuntu lần đầu: 16/17 suite đạt; test legacy thiếu commit do shallow checkout | Chuẩn bị sửa `fetch-depth: 0` local; 19 ca order identity đạt lại; chờ xác nhận push bản sửa |
+| 19/10/2026 | Người dùng: “push” sau khi xem bản sửa checkout | Cho phép commit/push checkout fix và theo dõi CI của PR #74; chưa merge hoặc chuyển R02 |
+
+## Danh sách task
+
+| Task | Nội dung | Trạng thái |
+| --- | --- | --- |
+| R00 | Schema, ledger, tenant, cờ, dữ liệu staff, deploy, mốc rollback | Đã khảo sát; người dùng cho phép R01 |
+| R01 | Baseline hồi quy, test POS và release checklist | PR #74: người dùng đã duyệt push checkout fix; chờ CI ở commit mới; chưa merge |
+| R02 | Schema capability mặc định đóng | Chưa bắt đầu; bị chặn bởi đối chiếu schema |
+| R03 | Guard tập trung và API capabilities | Chưa bắt đầu |
+| R04 | Đăng nhập/đăng xuất staff | Chưa bắt đầu |
+| R05 | Thu hồi session khi đổi PIN | Chưa bắt đầu |
+| R06 | API đọc bàn | Chưa bắt đầu |
+| R07 | API tạo bàn | Chưa bắt đầu |
+| R08 | API sửa/ngừng bàn | Chưa bắt đầu |
+| R09 | Metadata staff trên danh sách/lịch sử đơn | Chưa bắt đầu |
+| R10 | Chặn đường sửa đơn staff không hợp lệ | Chưa bắt đầu |
+| R11 | Migration revision guard | Chưa bắt đầu |
+| R12 | API cập nhật trạng thái staff có revision | Chưa bắt đầu |
+| R13 | POS xử lý trạng thái staff qua API mới | Chưa bắt đầu |
+| R14 | Kiểm tra món và giá từ server | Chưa bắt đầu |
+| R15 | API tạo đơn, quyền create đóng | Chưa bắt đầu |
+| R16 | Trang đăng nhập/xem bàn | Chưa bắt đầu |
+| R17 | Giao diện quản lý bàn/lối vào POS | Chưa bắt đầu |
+| R18 | Catalog/tùy chọn/giỏ hàng, chưa gửi đơn | Chưa bắt đầu |
+| R19 | Gửi đơn mới, mở demo sau kiểm chứng | Chưa bắt đầu |
+| R20 | API gọi thêm, quyền append đóng | Chưa bắt đầu |
+| R21 | Giao diện gọi thêm, mở demo sau kiểm chứng | Chưa bắt đầu |
+| R22 | Thông báo POS cho staff | Chưa bắt đầu |
+| R23 | In tự động đơn staff mới | Chưa bắt đầu |
+| R24 | In tự động từng lượt gọi thêm | Chưa bắt đầu |
+| R25 | Đối soát và kết thúc rollout chỉ-demo | Chưa bắt đầu |
+
+Các việc phát sinh từ R00 cần task riêng trước release runtime: chốt auto-deploy backend theo `cf`; xử lý chênh lệch migration/schema; chốt dữ liệu và cờ staging. Chưa có việc nào được phép thực hiện chỉ nhờ xác nhận R00/R01.
+
+Chi tiết và bằng chứng: [r00-inventory.md](./r00-inventory.md).
+
+Kết quả R01: [r01-baseline.md](./r01-baseline.md). Checklist áp dụng cho từng task: [release-checklist.md](./release-checklist.md).
+
+CI lần đầu và bản sửa chờ duyệt: [r01-ci-check.md](./r01-ci-check.md).

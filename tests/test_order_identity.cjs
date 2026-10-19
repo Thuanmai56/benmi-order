@@ -34,7 +34,9 @@ async function check(name, fn) { await fn(); passed++; console.log(`PASS ${name}
  const DB = await mf.getD1Database('DB');
  const env = { DB, ORDER_STATE: { get: async key => key.endsWith(':config_cache') ? JSON.stringify(tenant(key.split(':')[1])) : null, put: async()=>{}, delete:async()=>{} } };
  const apply = async sql => DB.batch(statements(sql).map(s=>DB.prepare(s)));
- await apply(`CREATE TABLE tenants(id TEXT PRIMARY KEY); INSERT INTO tenants VALUES ('a'),('b');`);
+ await apply(`CREATE TABLE tenants(id TEXT PRIMARY KEY); INSERT INTO tenants VALUES ('a'),('b');
+ CREATE TABLE tenant_config(tenant_id TEXT PRIMARY KEY REFERENCES tenants(id));
+ INSERT INTO tenant_config VALUES ('a'),('b');`);
  for (const file of ['0005_create_orders_table.sql','0032_create_order_items.sql','0004_add_tenant_id_to_pending_actions.sql','0046_add_order_uuid_and_daily_counter.sql']) {
    await apply(fs.readFileSync(path.join(workerRoot,'migrations',file),'utf8'));
  }
@@ -58,6 +60,19 @@ async function check(name, fn) { await fn(); passed++; console.log(`PASS ${name}
    assert.equal((await DB.prepare('PRAGMA foreign_key_check').all()).results.length,0);
    assert.equal(await identity.resolveOrderKey(env,'a','B0914-T007'),old.key);
    assert.equal(await identity.resolveOrderKey(env,'b','B0914-T007'),null);
+ });
+ await check('production staff scaffold preserves legacy data and defaults every tenant to disabled', async()=>{
+   const before=await DB.prepare('SELECT * FROM orders ORDER BY key').all();
+   const itemsBefore=await DB.prepare('SELECT * FROM order_items ORDER BY id').all();
+   await apply(fs.readFileSync(path.join(workerRoot,'migrations/0057_create_staff_ordering_and_tables.sql'),'utf8'));
+   const after=await DB.prepare('SELECT * FROM orders ORDER BY key').all();
+   assert.deepEqual(after.results.map(({table_id,source,revision,...legacy})=>legacy),before.results);
+   assert(after.results.every(row=>row.table_id===null&&row.source==='legacy'&&row.revision===0));
+   assert.deepEqual((await DB.prepare('SELECT * FROM order_items ORDER BY id').all()).results,itemsBefore.results);
+   assert.deepEqual((await DB.prepare('SELECT tenant_id,staff_ordering_enabled FROM tenant_config ORDER BY tenant_id').all()).results,
+     [{tenant_id:'a',staff_ordering_enabled:0},{tenant_id:'b',staff_ordering_enabled:0}]);
+   assert.equal(await DB.prepare("SELECT name FROM sqlite_master WHERE type='trigger' AND name='orders_staff_revision_guard'").first(),null);
+   assert.equal((await DB.prepare('PRAGMA foreign_key_check').all()).results.length,0);
  });
  await check('same display number across tenant and year never overwrites another order', async()=>{
    for(const [id,date] of [['a','2027-09-14'],['b','2026-09-14']]) {

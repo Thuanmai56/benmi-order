@@ -1,0 +1,1823 @@
+{
+  "schema_version": 1,
+  "purpose": "R00 read-only staff ordering inventory; approval pending",
+  "timezone": "Asia/Tokyo",
+  "authorization": {
+    "task": "R00",
+    "next_task_authorized": false,
+    "external_mutations_performed": false
+  },
+  "repository": {
+    "branch": "codex/staff-order-r00-inventory",
+    "main_commit": "512a642cde71a7a1626aa6d215fabbae858ae632",
+    "feature_remote_commit": "97708e8e20c8b19db7045ac4013d447940d5b38f",
+    "feature_local_commit": "b2d6488eb338220b51af97509f1d19eb75c19a52",
+    "divergence": "43\t4",
+    "main_protected": false,
+    "workflows": [
+      {
+        "name": "PR-Agent",
+        "path": ".github/workflows/pr_agent.yml"
+      }
+    ]
+  },
+  "d1": {
+    "captured_at_utc": "2026-10-19T12:42:39.069Z",
+    "queries": {
+      "schema": "SELECT name,type,sql FROM sqlite_master WHERE name IN ('d1_migrations','restaurant_tables','staff_order_requests','staff_sessions','idx_orders_active_staff_table','orders_staff_revision_guard')",
+      "config_columns": "SELECT name,type,dflt_value FROM pragma_table_info('tenant_config') WHERE name IN ('staff_ordering_enabled','staff_ordering_capabilities')",
+      "order_columns": "SELECT name,type,dflt_value FROM pragma_table_info('orders') WHERE name IN ('table_id','source','revision')",
+      "ledger": "SELECT name,applied_at FROM d1_migrations ORDER BY name",
+      "flags": "SELECT tenant_id,staff_ordering_enabled,is_active FROM tenant_config ORDER BY tenant_id",
+      "demo": "SELECT t.id AS tenant_id,tc.is_active AS config_active,tc.staff_ordering_enabled,tc.allow_dine_in FROM tenants t LEFT JOIN tenant_config tc ON tc.tenant_id=t.id WHERE t.id='blab_demo'",
+      "orders": "SELECT tenant_id,status,COUNT(*) AS count FROM orders WHERE source='staff' GROUP BY tenant_id,status ORDER BY tenant_id,status",
+      "tables": "SELECT tenant_id,COUNT(*) AS total,SUM(CASE WHEN is_active=1 THEN 1 ELSE 0 END) AS active FROM restaurant_tables GROUP BY tenant_id ORDER BY tenant_id",
+      "sessions": "SELECT tenant_id,COUNT(*) AS total,SUM(CASE WHEN revoked_at IS NULL AND datetime(expires_at)>datetime('now') THEN 1 ELSE 0 END) AS unexpired FROM staff_sessions GROUP BY tenant_id ORDER BY tenant_id",
+      "requests": "SELECT tenant_id,COUNT(*) AS count FROM staff_order_requests GROUP BY tenant_id ORDER BY tenant_id",
+      "duplicates": "SELECT tenant_id,table_id,COUNT(*) AS count FROM orders WHERE source='staff' AND table_id IS NOT NULL AND status NOT IN ('PAID','REJECTED','PICKED_UP') GROUP BY tenant_id,table_id HAVING COUNT(*)>1"
+    },
+    "local_migrations": [
+      "0001_initialize_menu_tables.sql",
+      "0002_seed_initial_menu.sql",
+      "0003_create_pending_actions.sql",
+      "0004_add_tenant_id_to_pending_actions.sql",
+      "0005_create_orders_table.sql",
+      "0006_create_tenant_config.sql",
+      "0007_add_performance_indexes.sql",
+      "0008_add_allow_scheduled_pickup_to_tenant_config.sql",
+      "0009_add_store_status_to_tenant_config.sql",
+      "0010_seed_zhadan_tenants.sql",
+      "0011_enhance_menu_categories_for_modifiers.sql",
+      "0012_set_default_liff_id_for_tenants.sql",
+      "0013_add_logo_url_to_tenant_config.sql",
+      "0013_merge_zhadan_snack_into_main.sql",
+      "0014_update_zhadan_address.sql",
+      "0015_fix_zhadan_brand_name.sql",
+      "0016_add_badge_and_recommended_to_menu_items.sql",
+      "0017_fix_zhadan_category_names.sql",
+      "0018_seed_jidangaodashu_menu.sql",
+      "0019_unify_all_tenant_brand_colors.sql",
+      "0019_update_zhadan_line_credentials.sql",
+      "0020_update_zhadan_store_address.sql",
+      "0021_add_zhadan_drinks_category.sql",
+      "0022_update_jidangaodashu_line_credentials.sql",
+      "0023_add_announcement_to_tenant_config.sql",
+      "0024_add_dining_options.sql",
+      "0025_add_tenant_features.sql",
+      "0026_add_order_prefix.sql",
+      "0027_add_table_number.sql",
+      "0028_add_append_rounds.sql",
+      "0029_add_category_customization.sql",
+      "0030_sync_zhadan_menu_from_production.sql",
+      "0031_add_category_applied_modifiers.sql",
+      "0032_create_order_items.sql",
+      "0033_set_benmi_production_features.sql",
+      "0034_seed_weiweibao_menu.sql",
+      "0035_update_weiweibao_line_credentials.sql",
+      "0036_enable_weiweibao_dine_in.sql",
+      "0037_seed_bsc_menu.sql",
+      "0038_seed_52kaoroufan_menu.sql",
+      "0039_sync_benmi_menu_to_dev.sql",
+      "0040_fix_bsc_menu_and_categories.sql",
+      "0041_seed_xiaolan_menu.sql",
+      "0042_update_xiaolan_item_names_and_subtitles.sql",
+      "0043_add_pricing_rules_to_menu_categories.sql",
+      "0044_seed_thuyngason_menu.sql",
+      "0045_seed_blab_demo_tenant_and_orders.sql",
+      "0046_add_order_uuid_and_daily_counter.sql",
+      "0047_add_coordinates_to_tenant_config.sql",
+      "0048_seed_haojihui_menu.sql",
+      "0048_seed_jiangjiejie_menu.sql",
+      "0048_seed_quanthuyhang_menu.sql",
+      "0049_create_universal_bundle_and_threshold_rules.sql",
+      "0049_jiangjiejie_order_customizations.sql",
+      "0050_update_order_prefixes_for_j_tenants.sql",
+      "0051_make_order_prefix_unique.sql",
+      "0052_rename_tenant_haojihui_to_dapinglin.sql",
+      "0053_seed_dapinglin_bundle_rules.sql",
+      "0054_add_ai_order_redirect_enabled.sql",
+      "0055_expand_order_identity.sql",
+      "0056_add_order_modified_tracking.sql",
+      "0057_create_staff_ordering_and_tables.sql",
+      "0058_seed_haoshiguoshao_menu.sql",
+      "0059_seed_haoshiguoshao_bundle_rules.sql",
+      "0060_add_admin_menu_seed_receipts.sql",
+      "0061_add_max_per_order_to_menu_items.sql",
+      "0064_customer_order_domain.sql",
+      "0065_line_order_receipts.sql",
+      "0067_tenant_lifecycle.sql"
+    ],
+    "environments": {
+      "production": {
+        "database_id": "48479f91-eec7-4da2-b044-edaaf622f195",
+        "schema": [
+          {
+            "name": "d1_migrations",
+            "type": "table",
+            "sql": "CREATE TABLE d1_migrations(\n\t\tid         INTEGER PRIMARY KEY AUTOINCREMENT,\n\t\tname       TEXT UNIQUE,\n\t\tapplied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL\n)"
+          },
+          {
+            "name": "restaurant_tables",
+            "type": "table",
+            "sql": "CREATE TABLE restaurant_tables (\n    id TEXT PRIMARY KEY,\n    tenant_id TEXT NOT NULL,\n    label TEXT NOT NULL,\n    sort_order INTEGER NOT NULL DEFAULT 0,\n    is_active INTEGER NOT NULL DEFAULT 1,\n    created_at TEXT NOT NULL DEFAULT (datetime('now')),\n    updated_at TEXT NOT NULL DEFAULT (datetime('now')),\n    FOREIGN KEY (tenant_id) REFERENCES tenant_config(tenant_id) ON DELETE CASCADE\n)"
+          },
+          {
+            "name": "idx_orders_active_staff_table",
+            "type": "index",
+            "sql": "CREATE UNIQUE INDEX idx_orders_active_staff_table\nON orders(tenant_id, table_id)\nWHERE source = 'staff' AND status NOT IN ('PAID', 'REJECTED', 'PICKED_UP')"
+          },
+          {
+            "name": "staff_order_requests",
+            "type": "table",
+            "sql": "CREATE TABLE staff_order_requests (\n    tenant_id TEXT NOT NULL,\n    request_id TEXT NOT NULL,\n    request_hash TEXT NOT NULL,\n    order_key TEXT NOT NULL,\n    round_number INTEGER NOT NULL,\n    response_json TEXT NOT NULL,\n    created_at TEXT NOT NULL DEFAULT (datetime('now')),\n    PRIMARY KEY (tenant_id, request_id)\n)"
+          },
+          {
+            "name": "staff_sessions",
+            "type": "table",
+            "sql": "CREATE TABLE staff_sessions (\n    token_hash TEXT PRIMARY KEY,\n    tenant_id TEXT NOT NULL,\n    expires_at TEXT NOT NULL,\n    revoked_at TEXT DEFAULT NULL,\n    created_at TEXT NOT NULL DEFAULT (datetime('now'))\n)"
+          }
+        ],
+        "config_columns": [
+          {
+            "name": "staff_ordering_enabled",
+            "type": "INTEGER",
+            "dflt_value": "0"
+          }
+        ],
+        "order_columns": [
+          {
+            "name": "table_id",
+            "type": "TEXT",
+            "dflt_value": "NULL"
+          },
+          {
+            "name": "source",
+            "type": "TEXT",
+            "dflt_value": "'legacy'"
+          },
+          {
+            "name": "revision",
+            "type": "INTEGER",
+            "dflt_value": "0"
+          }
+        ],
+        "ledger": [
+          {
+            "name": "0001_initialize_menu_tables.sql",
+            "applied_at": "2026-07-18 06:53:50"
+          },
+          {
+            "name": "0002_seed_initial_menu.sql",
+            "applied_at": "2026-07-18 06:53:50"
+          },
+          {
+            "name": "0003_create_pending_actions.sql",
+            "applied_at": "2026-07-18 06:53:50"
+          },
+          {
+            "name": "0004_add_tenant_id_to_pending_actions.sql",
+            "applied_at": "2026-07-18 06:53:50"
+          },
+          {
+            "name": "0005_create_orders_table.sql",
+            "applied_at": "2026-07-21 14:52:25"
+          },
+          {
+            "name": "0006_add_performance_indexes.sql",
+            "applied_at": "2026-07-30 09:38:55"
+          },
+          {
+            "name": "0006_create_tenant_config.sql",
+            "applied_at": "2026-08-02 04:28:37"
+          },
+          {
+            "name": "0007_add_performance_indexes.sql",
+            "applied_at": "2026-08-18 12:25:04"
+          },
+          {
+            "name": "0008_add_allow_scheduled_pickup_to_tenant_config.sql",
+            "applied_at": "2026-08-20 07:10:05"
+          },
+          {
+            "name": "0009_add_store_status_to_tenant_config.sql",
+            "applied_at": "2026-08-20 07:10:05"
+          },
+          {
+            "name": "0010_seed_zhadan_tenants.sql",
+            "applied_at": "2026-08-20 07:10:27"
+          },
+          {
+            "name": "0011_enhance_menu_categories_for_modifiers.sql",
+            "applied_at": "2026-08-20 07:10:27"
+          },
+          {
+            "name": "0012_set_default_liff_id_for_tenants.sql",
+            "applied_at": "2026-08-20 07:10:27"
+          },
+          {
+            "name": "0013_add_logo_url_to_tenant_config.sql",
+            "applied_at": "2026-08-20 07:10:27"
+          },
+          {
+            "name": "0013_merge_zhadan_snack_into_main.sql",
+            "applied_at": "2026-08-20 07:10:27"
+          },
+          {
+            "name": "0014_update_zhadan_address.sql",
+            "applied_at": "2026-08-20 07:10:27"
+          },
+          {
+            "name": "0015_fix_zhadan_brand_name.sql",
+            "applied_at": "2026-08-20 07:10:27"
+          },
+          {
+            "name": "0016_add_badge_and_recommended_to_menu_items.sql",
+            "applied_at": "2026-08-20 07:10:28"
+          },
+          {
+            "name": "0017_fix_zhadan_category_names.sql",
+            "applied_at": "2026-08-20 07:10:28"
+          },
+          {
+            "name": "0018_seed_jidangaodashu_menu.sql",
+            "applied_at": "2026-08-20 07:54:01"
+          },
+          {
+            "name": "0019_unify_all_tenant_brand_colors.sql",
+            "applied_at": "2026-08-22 09:11:09"
+          },
+          {
+            "name": "0019_update_zhadan_line_credentials.sql",
+            "applied_at": "2026-08-20 10:50:35"
+          },
+          {
+            "name": "0020_update_zhadan_store_address.sql",
+            "applied_at": "2026-08-22 09:11:09"
+          },
+          {
+            "name": "0021_add_zhadan_drinks_category.sql",
+            "applied_at": "2026-08-22 09:11:10"
+          },
+          {
+            "name": "0022_update_jidangaodashu_line_credentials.sql",
+            "applied_at": "2026-08-22 09:11:10"
+          },
+          {
+            "name": "0023_add_announcement_to_tenant_config.sql",
+            "applied_at": "2026-08-22 09:11:10"
+          },
+          {
+            "name": "0024_add_dining_options.sql",
+            "applied_at": "2026-08-23 04:01:36"
+          },
+          {
+            "name": "0025_add_tenant_features.sql",
+            "applied_at": "2026-08-23 04:01:36"
+          },
+          {
+            "name": "0026_add_order_prefix.sql",
+            "applied_at": "2026-08-23 04:01:36"
+          },
+          {
+            "name": "0027_add_table_number.sql",
+            "applied_at": "2026-08-23 04:01:36"
+          },
+          {
+            "name": "0028_add_append_rounds.sql",
+            "applied_at": "2026-08-23 04:01:37"
+          },
+          {
+            "name": "0029_add_category_customization.sql",
+            "applied_at": "2026-08-23 04:01:37"
+          },
+          {
+            "name": "0030_sync_zhadan_menu_from_production.sql",
+            "applied_at": "2026-08-23 04:01:37"
+          },
+          {
+            "name": "0031_add_category_applied_modifiers.sql",
+            "applied_at": "2026-08-23 04:01:37"
+          },
+          {
+            "name": "0032_create_order_items.sql",
+            "applied_at": "2026-08-23 15:11:22"
+          },
+          {
+            "name": "0033_set_benmi_production_features.sql",
+            "applied_at": "2026-08-23 15:11:22"
+          },
+          {
+            "name": "0034_seed_weiweibao_menu.sql",
+            "applied_at": "2026-08-23 15:22:10"
+          },
+          {
+            "name": "0035_update_weiweibao_line_credentials.sql",
+            "applied_at": "2026-08-23 15:24:21"
+          },
+          {
+            "name": "0036_enable_weiweibao_dine_in.sql",
+            "applied_at": "2026-08-24 02:28:14"
+          },
+          {
+            "name": "0037_seed_bsc_menu.sql",
+            "applied_at": "2026-08-24 21:09:17"
+          },
+          {
+            "name": "0038_seed_52kaoroufan_menu.sql",
+            "applied_at": "2026-08-24 21:09:18"
+          },
+          {
+            "name": "0039_sync_benmi_menu_to_dev.sql",
+            "applied_at": "2026-08-26 15:38:16"
+          },
+          {
+            "name": "0040_fix_bsc_menu_and_categories.sql",
+            "applied_at": "2026-08-26 15:38:16"
+          },
+          {
+            "name": "0041_seed_xiaolan_menu.sql",
+            "applied_at": "2026-08-27 15:27:39"
+          },
+          {
+            "name": "0042_update_xiaolan_item_names_and_subtitles.sql",
+            "applied_at": "2026-08-27 15:39:44"
+          },
+          {
+            "name": "0043_add_pricing_rules_to_menu_categories.sql",
+            "applied_at": "2026-08-29 06:45:04"
+          },
+          {
+            "name": "0044_seed_thuyngason_menu.sql",
+            "applied_at": "2026-08-29 12:04:27"
+          },
+          {
+            "name": "0045_seed_blab_demo_tenant_and_orders.sql",
+            "applied_at": "2026-08-29 12:25:59"
+          },
+          {
+            "name": "0046_add_order_uuid_and_daily_counter.sql",
+            "applied_at": "2026-08-30 14:44:29"
+          },
+          {
+            "name": "0047_add_coordinates_to_tenant_config.sql",
+            "applied_at": "2026-09-01 16:30:33"
+          },
+          {
+            "name": "0048_seed_haojihui_menu.sql",
+            "applied_at": "2026-09-11 08:30:40"
+          },
+          {
+            "name": "0048_seed_jiangjiejie_menu.sql",
+            "applied_at": "2026-09-10 02:47:22"
+          },
+          {
+            "name": "0048_seed_quanthuyhang_menu.sql",
+            "applied_at": "2026-09-07 15:10:38"
+          },
+          {
+            "name": "0049_create_universal_bundle_and_threshold_rules.sql",
+            "applied_at": "2026-09-12 03:47:11"
+          },
+          {
+            "name": "0049_jiangjiejie_order_customizations.sql",
+            "applied_at": "2026-09-10 12:18:34"
+          },
+          {
+            "name": "0050_update_order_prefixes_for_j_tenants.sql",
+            "applied_at": "2026-09-12 07:38:40"
+          },
+          {
+            "name": "0051_make_order_prefix_unique.sql",
+            "applied_at": "2026-09-12 11:54:50"
+          },
+          {
+            "name": "0052_rename_tenant_haojihui_to_dapinglin.sql",
+            "applied_at": "2026-09-12 13:38:56"
+          },
+          {
+            "name": "0053_seed_dapinglin_bundle_rules.sql",
+            "applied_at": "2026-09-12 13:56:19"
+          },
+          {
+            "name": "0054_add_ai_order_redirect_enabled.sql",
+            "applied_at": "2026-09-14 07:46:21"
+          },
+          {
+            "name": "0055_expand_order_identity.sql",
+            "applied_at": "2026-09-14 08:38:44"
+          },
+          {
+            "name": "0056_add_order_modified_tracking.sql",
+            "applied_at": "2026-09-19 15:23:50"
+          },
+          {
+            "name": "0057_create_staff_ordering_and_tables.sql",
+            "applied_at": "2026-09-20 04:27:38"
+          },
+          {
+            "name": "0058_seed_haoshiguoshao_menu.sql",
+            "applied_at": "2026-09-20 04:27:38"
+          },
+          {
+            "name": "0059_seed_haoshiguoshao_bundle_rules.sql",
+            "applied_at": "2026-09-20 08:33:50"
+          },
+          {
+            "name": "0060_add_admin_menu_seed_receipts.sql",
+            "applied_at": "2026-09-28 05:43:58"
+          },
+          {
+            "name": "0061_add_max_per_order_to_menu_items.sql",
+            "applied_at": "2026-10-01 11:52:03"
+          },
+          {
+            "name": "0061_unified_bundle_and_customization_schema.sql",
+            "applied_at": "2026-09-28 05:43:59"
+          },
+          {
+            "name": "0062_tenant_line_runtime.sql",
+            "applied_at": "2026-09-28 05:43:59"
+          },
+          {
+            "name": "0063_clean_customizations_and_category_links.sql",
+            "applied_at": "2026-09-28 05:43:59"
+          },
+          {
+            "name": "0064_customer_order_domain.sql",
+            "applied_at": "2026-10-06 13:16:42"
+          },
+          {
+            "name": "0065_line_order_receipts.sql",
+            "applied_at": "2026-10-13 13:56:31"
+          },
+          {
+            "name": "0067_tenant_lifecycle.sql",
+            "applied_at": "2026-10-15 02:25:09"
+          }
+        ],
+        "flags": [
+          {
+            "tenant_id": "52kaoroufan",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "benmi",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "blab_demo",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "bsc",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "dapinglin",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "haoshiguoshao",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "jiangjiejie",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "jidangaodashu",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "miyansuo",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "quanthuyhang",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "thuyngason",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "weiweibao",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "xiaolan",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "zhadantongxue",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          }
+        ],
+        "demo": [
+          {
+            "tenant_id": "blab_demo",
+            "config_active": 1,
+            "staff_ordering_enabled": 0,
+            "allow_dine_in": 1
+          }
+        ],
+        "orders": [],
+        "tables": [],
+        "sessions": [],
+        "requests": [],
+        "duplicates": [],
+        "read_only": true,
+        "pending_local": [],
+        "recorded_not_in_main": [
+          "0006_add_performance_indexes.sql",
+          "0061_unified_bundle_and_customization_schema.sql",
+          "0062_tenant_line_runtime.sql",
+          "0063_clean_customizations_and_category_links.sql"
+        ]
+      },
+      "test": {
+        "database_id": "c0152835-7d42-4545-8cb4-6658dfc7e97d",
+        "schema": [
+          {
+            "name": "d1_migrations",
+            "type": "table",
+            "sql": "CREATE TABLE d1_migrations(\n\t\tid         INTEGER PRIMARY KEY AUTOINCREMENT,\n\t\tname       TEXT UNIQUE,\n\t\tapplied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL\n)"
+          },
+          {
+            "name": "restaurant_tables",
+            "type": "table",
+            "sql": "CREATE TABLE restaurant_tables (\n    id TEXT PRIMARY KEY,\n    tenant_id TEXT NOT NULL,\n    label TEXT NOT NULL,\n    sort_order INTEGER NOT NULL DEFAULT 0,\n    is_active INTEGER NOT NULL DEFAULT 1,\n    created_at TEXT NOT NULL DEFAULT (datetime('now')),\n    updated_at TEXT NOT NULL DEFAULT (datetime('now')),\n    FOREIGN KEY (tenant_id) REFERENCES tenant_config(tenant_id) ON DELETE CASCADE\n)"
+          },
+          {
+            "name": "idx_orders_active_staff_table",
+            "type": "index",
+            "sql": "CREATE UNIQUE INDEX idx_orders_active_staff_table\nON orders(tenant_id, table_id)\nWHERE source = 'staff' AND status NOT IN ('PAID', 'REJECTED', 'PICKED_UP')"
+          },
+          {
+            "name": "staff_order_requests",
+            "type": "table",
+            "sql": "CREATE TABLE staff_order_requests (\n    tenant_id TEXT NOT NULL,\n    request_id TEXT NOT NULL,\n    request_hash TEXT NOT NULL,\n    order_key TEXT NOT NULL,\n    round_number INTEGER NOT NULL,\n    response_json TEXT NOT NULL,\n    created_at TEXT NOT NULL DEFAULT (datetime('now')),\n    PRIMARY KEY (tenant_id, request_id)\n)"
+          },
+          {
+            "name": "staff_sessions",
+            "type": "table",
+            "sql": "CREATE TABLE staff_sessions (\n    token_hash TEXT PRIMARY KEY,\n    tenant_id TEXT NOT NULL,\n    expires_at TEXT NOT NULL,\n    revoked_at TEXT DEFAULT NULL,\n    created_at TEXT NOT NULL DEFAULT (datetime('now'))\n)"
+          },
+          {
+            "name": "orders_staff_revision_guard",
+            "type": "trigger",
+            "sql": "CREATE TRIGGER orders_staff_revision_guard\nBEFORE UPDATE OF revision ON orders\nWHEN NEW.revision < 0\nBEGIN\n  SELECT RAISE(ABORT, 'REVISION_CONFLICT: CHECK constraint failed: revision >= 0');\nEND"
+          }
+        ],
+        "config_columns": [
+          {
+            "name": "staff_ordering_enabled",
+            "type": "INTEGER",
+            "dflt_value": "0"
+          }
+        ],
+        "order_columns": [
+          {
+            "name": "table_id",
+            "type": "TEXT",
+            "dflt_value": "NULL"
+          },
+          {
+            "name": "source",
+            "type": "TEXT",
+            "dflt_value": "'legacy'"
+          },
+          {
+            "name": "revision",
+            "type": "INTEGER",
+            "dflt_value": "0"
+          }
+        ],
+        "ledger": [
+          {
+            "name": "0001_initialize_menu_tables.sql",
+            "applied_at": "2026-07-14 13:57:19"
+          },
+          {
+            "name": "0002_seed_initial_menu.sql",
+            "applied_at": "2026-07-14 13:57:19"
+          },
+          {
+            "name": "0003_create_pending_actions.sql",
+            "applied_at": "2026-07-14 15:59:50"
+          },
+          {
+            "name": "0004_add_tenant_id_to_pending_actions.sql",
+            "applied_at": "2026-07-14 16:02:21"
+          },
+          {
+            "name": "0005_create_orders_table.sql",
+            "applied_at": "2026-07-21 14:52:20"
+          },
+          {
+            "name": "0006_add_performance_indexes.sql",
+            "applied_at": "2026-07-30 09:36:41"
+          },
+          {
+            "name": "0006_create_tenant_config.sql",
+            "applied_at": "2026-08-16 10:56:30"
+          },
+          {
+            "name": "0007_add_performance_indexes.sql",
+            "applied_at": "2026-08-16 10:56:30"
+          },
+          {
+            "name": "0008_add_allow_scheduled_pickup_to_tenant_config.sql",
+            "applied_at": "2026-08-16 10:56:38"
+          },
+          {
+            "name": "0009_add_store_status_to_tenant_config.sql",
+            "applied_at": "2026-08-16 10:56:38"
+          },
+          {
+            "name": "0010_add_menu_customizations_and_seed_bsc.sql",
+            "applied_at": "2026-08-16 10:56:50"
+          },
+          {
+            "name": "0010_seed_zhadan_tenants.sql",
+            "applied_at": "2026-08-17 12:04:32"
+          },
+          {
+            "name": "0011_enhance_menu_categories_for_modifiers.sql",
+            "applied_at": "2026-08-17 12:04:32"
+          },
+          {
+            "name": "0012_set_default_liff_id_for_tenants.sql",
+            "applied_at": "2026-08-17 15:43:44"
+          },
+          {
+            "name": "0013_add_logo_url_to_tenant_config.sql",
+            "applied_at": "2026-08-18 01:07:06"
+          },
+          {
+            "name": "0013_merge_zhadan_snack_into_main.sql",
+            "applied_at": "2026-08-18 13:20:37"
+          },
+          {
+            "name": "0014_update_zhadan_address.sql",
+            "applied_at": "2026-08-18 12:24:38"
+          },
+          {
+            "name": "0015_fix_zhadan_brand_name.sql",
+            "applied_at": "2026-08-18 12:24:57"
+          },
+          {
+            "name": "0016_add_badge_and_recommended_to_menu_items.sql",
+            "applied_at": "2026-08-18 12:41:57"
+          },
+          {
+            "name": "0017_fix_zhadan_category_names.sql",
+            "applied_at": "2026-08-20 06:56:20"
+          },
+          {
+            "name": "0018_seed_jidangaodashu_menu.sql",
+            "applied_at": "2026-08-20 07:53:53"
+          },
+          {
+            "name": "0019_unify_all_tenant_brand_colors.sql",
+            "applied_at": "2026-08-22 15:37:06"
+          },
+          {
+            "name": "0019_update_zhadan_line_credentials.sql",
+            "applied_at": "2026-08-20 10:50:28"
+          },
+          {
+            "name": "0020_update_zhadan_store_address.sql",
+            "applied_at": "2026-08-22 15:37:07"
+          },
+          {
+            "name": "0021_add_zhadan_drinks_category.sql",
+            "applied_at": "2026-08-22 15:37:07"
+          },
+          {
+            "name": "0022_update_jidangaodashu_line_credentials.sql",
+            "applied_at": "2026-08-22 15:37:45"
+          },
+          {
+            "name": "0023_add_announcement_to_tenant_config.sql",
+            "applied_at": "2026-08-22 15:37:46"
+          },
+          {
+            "name": "0024_add_dining_options.sql",
+            "applied_at": "2026-08-22 15:37:51"
+          },
+          {
+            "name": "0025_add_tenant_features.sql",
+            "applied_at": "2026-08-22 15:37:51"
+          },
+          {
+            "name": "0026_add_order_prefix.sql",
+            "applied_at": "2026-08-22 15:37:51"
+          },
+          {
+            "name": "0027_add_table_number.sql",
+            "applied_at": "2026-08-22 15:37:51"
+          },
+          {
+            "name": "0028_add_append_rounds.sql",
+            "applied_at": "2026-08-22 15:57:27"
+          },
+          {
+            "name": "0029_add_category_customization.sql",
+            "applied_at": "2026-08-23 08:54:25"
+          },
+          {
+            "name": "0030_sync_zhadan_menu_from_production.sql",
+            "applied_at": "2026-08-23 08:54:25"
+          },
+          {
+            "name": "0031_add_category_applied_modifiers.sql",
+            "applied_at": "2026-08-23 08:54:25"
+          },
+          {
+            "name": "0032_create_order_items.sql",
+            "applied_at": "2026-08-23 08:54:33"
+          },
+          {
+            "name": "0033_set_benmi_production_features.sql",
+            "applied_at": "2026-08-23 15:22:00"
+          },
+          {
+            "name": "0034_seed_weiweibao_menu.sql",
+            "applied_at": "2026-08-23 15:22:01"
+          },
+          {
+            "name": "0035_update_weiweibao_line_credentials.sql",
+            "applied_at": "2026-08-24 21:09:12"
+          },
+          {
+            "name": "0036_enable_weiweibao_dine_in.sql",
+            "applied_at": "2026-08-24 21:09:12"
+          },
+          {
+            "name": "0037_seed_bsc_menu.sql",
+            "applied_at": "2026-08-24 21:09:12"
+          },
+          {
+            "name": "0038_seed_52kaoroufan_menu.sql",
+            "applied_at": "2026-08-24 21:09:13"
+          },
+          {
+            "name": "0039_sync_benmi_menu_to_dev.sql",
+            "applied_at": "2026-08-26 15:37:02"
+          },
+          {
+            "name": "0040_fix_bsc_menu_and_categories.sql",
+            "applied_at": "2026-08-26 15:37:02"
+          },
+          {
+            "name": "0041_seed_xiaolan_menu.sql",
+            "applied_at": "2026-08-27 15:27:27"
+          },
+          {
+            "name": "0042_update_xiaolan_item_names_and_subtitles.sql",
+            "applied_at": "2026-08-27 15:39:31"
+          },
+          {
+            "name": "0043_add_pricing_rules_to_menu_categories.sql",
+            "applied_at": "2026-08-29 06:44:42"
+          },
+          {
+            "name": "0044_seed_thuyngason_menu.sql",
+            "applied_at": "2026-08-29 12:04:22"
+          },
+          {
+            "name": "0045_seed_blab_demo_tenant_and_orders.sql",
+            "applied_at": "2026-08-29 12:25:53"
+          },
+          {
+            "name": "0046_add_order_uuid_and_daily_counter.sql",
+            "applied_at": "2026-08-29 17:39:16"
+          },
+          {
+            "name": "0047_add_coordinates_to_tenant_config.sql",
+            "applied_at": "2026-09-01 16:30:31"
+          },
+          {
+            "name": "0048_seed_haojihui_menu.sql",
+            "applied_at": "2026-09-11 08:30:44"
+          },
+          {
+            "name": "0048_seed_jiangjiejie_menu.sql",
+            "applied_at": "2026-09-10 02:47:19"
+          },
+          {
+            "name": "0048_seed_quanthuyhang_menu.sql",
+            "applied_at": "2026-09-07 15:10:20"
+          },
+          {
+            "name": "0049_create_universal_bundle_and_threshold_rules.sql",
+            "applied_at": "2026-09-12 02:52:01"
+          },
+          {
+            "name": "0049_jiangjiejie_order_customizations.sql",
+            "applied_at": "2026-09-10 12:18:31"
+          },
+          {
+            "name": "0050_update_order_prefixes_for_j_tenants.sql",
+            "applied_at": "2026-09-12 07:38:35"
+          },
+          {
+            "name": "0051_make_order_prefix_unique.sql",
+            "applied_at": "2026-09-12 11:54:28"
+          },
+          {
+            "name": "0052_rename_tenant_haojihui_to_dapinglin.sql",
+            "applied_at": "2026-09-12 13:38:51"
+          },
+          {
+            "name": "0053_seed_dapinglin_bundle_rules.sql",
+            "applied_at": "2026-09-12 13:56:12"
+          },
+          {
+            "name": "0054_add_ai_order_redirect_enabled.sql",
+            "applied_at": "2026-09-15 22:26:25"
+          },
+          {
+            "name": "0055_expand_order_identity.sql",
+            "applied_at": "2026-09-15 22:26:25"
+          },
+          {
+            "name": "0056_add_order_modified_tracking.sql",
+            "applied_at": "2026-09-19 02:37:55"
+          },
+          {
+            "name": "0057_create_staff_ordering_and_tables.sql",
+            "applied_at": "2026-09-20 04:27:32"
+          },
+          {
+            "name": "0058_seed_haoshiguoshao_menu.sql",
+            "applied_at": "2026-09-20 04:27:32"
+          },
+          {
+            "name": "0059_seed_haoshiguoshao_bundle_rules.sql",
+            "applied_at": "2026-09-20 08:33:42"
+          },
+          {
+            "name": "0060_add_admin_menu_seed_receipts.sql",
+            "applied_at": "2026-09-20 13:01:05"
+          },
+          {
+            "name": "0061_add_max_per_order_to_menu_items.sql",
+            "applied_at": "2026-10-01 11:51:59"
+          },
+          {
+            "name": "0061_add_staff_order_revision_guard.sql",
+            "applied_at": "2026-09-20 13:01:06"
+          },
+          {
+            "name": "0061_unified_bundle_and_customization_schema.sql",
+            "applied_at": "2026-09-28 05:35:38"
+          },
+          {
+            "name": "0062_tenant_line_runtime.sql",
+            "applied_at": "2026-09-28 05:35:38"
+          },
+          {
+            "name": "0063_clean_customizations_and_category_links.sql",
+            "applied_at": "2026-09-28 05:38:29"
+          },
+          {
+            "name": "0064_customer_order_domain.sql",
+            "applied_at": "2026-10-13 17:43:00"
+          },
+          {
+            "name": "0065_line_order_receipts.sql",
+            "applied_at": "2026-10-13 17:42:43"
+          },
+          {
+            "name": "0066_order_cancellation_requests.sql",
+            "applied_at": "2026-10-13 17:42:43"
+          },
+          {
+            "name": "0067_cancellation_intent_improvements.sql",
+            "applied_at": "2026-10-14 01:12:17"
+          }
+        ],
+        "flags": [
+          {
+            "tenant_id": "52kaoroufan",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "benmi",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "blab_demo",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "bsc",
+            "staff_ordering_enabled": 1,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "dapinglin",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "haoshiguoshao",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "jiangjiejie",
+            "staff_ordering_enabled": 1,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "jidangaodashu",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "miyansuo",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "quanthuyhang",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "thuyngason",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "weiweibao",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "xiaolan",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "zhadantongxue",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          }
+        ],
+        "demo": [
+          {
+            "tenant_id": "blab_demo",
+            "config_active": 1,
+            "staff_ordering_enabled": 0,
+            "allow_dine_in": 1
+          }
+        ],
+        "orders": [
+          {
+            "tenant_id": "bsc",
+            "status": "ACCEPTED",
+            "count": 2
+          },
+          {
+            "tenant_id": "bsc",
+            "status": "PAID",
+            "count": 3
+          },
+          {
+            "tenant_id": "bsc",
+            "status": "REJECTED",
+            "count": 3
+          }
+        ],
+        "tables": [
+          {
+            "tenant_id": "bsc",
+            "total": 3,
+            "active": 3
+          }
+        ],
+        "sessions": [
+          {
+            "tenant_id": "bsc",
+            "total": 11,
+            "unexpired": 0
+          },
+          {
+            "tenant_id": "jiangjiejie",
+            "total": 2,
+            "unexpired": 0
+          }
+        ],
+        "requests": [
+          {
+            "tenant_id": "bsc",
+            "count": 17
+          }
+        ],
+        "duplicates": [],
+        "read_only": true,
+        "pending_local": [
+          "0067_tenant_lifecycle.sql"
+        ],
+        "recorded_not_in_main": [
+          "0006_add_performance_indexes.sql",
+          "0010_add_menu_customizations_and_seed_bsc.sql",
+          "0061_add_staff_order_revision_guard.sql",
+          "0061_unified_bundle_and_customization_schema.sql",
+          "0062_tenant_line_runtime.sql",
+          "0063_clean_customizations_and_category_links.sql",
+          "0066_order_cancellation_requests.sql",
+          "0067_cancellation_intent_improvements.sql"
+        ]
+      },
+      "dev": {
+        "database_id": "40b67d8a-29e0-40c1-9ce2-b76f76864e95",
+        "schema": [
+          {
+            "name": "d1_migrations",
+            "type": "table",
+            "sql": "CREATE TABLE d1_migrations(\n\t\tid         INTEGER PRIMARY KEY AUTOINCREMENT,\n\t\tname       TEXT UNIQUE,\n\t\tapplied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL\n)"
+          },
+          {
+            "name": "restaurant_tables",
+            "type": "table",
+            "sql": "CREATE TABLE restaurant_tables (\n    id TEXT PRIMARY KEY,\n    tenant_id TEXT NOT NULL,\n    label TEXT NOT NULL,\n    sort_order INTEGER NOT NULL DEFAULT 0,\n    is_active INTEGER NOT NULL DEFAULT 1,\n    created_at TEXT NOT NULL DEFAULT (datetime('now')),\n    updated_at TEXT NOT NULL DEFAULT (datetime('now')),\n    FOREIGN KEY (tenant_id) REFERENCES tenant_config(tenant_id) ON DELETE CASCADE\n)"
+          },
+          {
+            "name": "idx_orders_active_staff_table",
+            "type": "index",
+            "sql": "CREATE UNIQUE INDEX idx_orders_active_staff_table\nON orders(tenant_id, table_id)\nWHERE source = 'staff' AND status NOT IN ('PAID', 'REJECTED', 'PICKED_UP')"
+          },
+          {
+            "name": "staff_order_requests",
+            "type": "table",
+            "sql": "CREATE TABLE staff_order_requests (\n    tenant_id TEXT NOT NULL,\n    request_id TEXT NOT NULL,\n    request_hash TEXT NOT NULL,\n    order_key TEXT NOT NULL,\n    round_number INTEGER NOT NULL,\n    response_json TEXT NOT NULL,\n    created_at TEXT NOT NULL DEFAULT (datetime('now')),\n    PRIMARY KEY (tenant_id, request_id)\n)"
+          },
+          {
+            "name": "staff_sessions",
+            "type": "table",
+            "sql": "CREATE TABLE staff_sessions (\n    token_hash TEXT PRIMARY KEY,\n    tenant_id TEXT NOT NULL,\n    expires_at TEXT NOT NULL,\n    revoked_at TEXT DEFAULT NULL,\n    created_at TEXT NOT NULL DEFAULT (datetime('now'))\n)"
+          }
+        ],
+        "config_columns": [
+          {
+            "name": "staff_ordering_enabled",
+            "type": "INTEGER",
+            "dflt_value": "0"
+          }
+        ],
+        "order_columns": [
+          {
+            "name": "table_id",
+            "type": "TEXT",
+            "dflt_value": "NULL"
+          },
+          {
+            "name": "source",
+            "type": "TEXT",
+            "dflt_value": "'legacy'"
+          },
+          {
+            "name": "revision",
+            "type": "INTEGER",
+            "dflt_value": "0"
+          }
+        ],
+        "ledger": [
+          {
+            "name": "0001_initialize_menu_tables.sql",
+            "applied_at": "2026-07-12 07:10:27"
+          },
+          {
+            "name": "0002_seed_initial_menu.sql",
+            "applied_at": "2026-07-12 07:10:28"
+          },
+          {
+            "name": "0003_create_pending_actions.sql",
+            "applied_at": "2026-08-24 11:59:36"
+          },
+          {
+            "name": "0004_add_tenant_id_to_pending_actions.sql",
+            "applied_at": "2026-08-24 11:59:37"
+          },
+          {
+            "name": "0005_create_orders_table.sql",
+            "applied_at": "2026-08-24 11:59:37"
+          },
+          {
+            "name": "0006_create_tenant_config.sql",
+            "applied_at": "2026-08-24 11:59:37"
+          },
+          {
+            "name": "0007_add_performance_indexes.sql",
+            "applied_at": "2026-08-24 11:59:37"
+          },
+          {
+            "name": "0008_add_allow_scheduled_pickup_to_tenant_config.sql",
+            "applied_at": "2026-08-24 11:59:38"
+          },
+          {
+            "name": "0009_add_store_status_to_tenant_config.sql",
+            "applied_at": "2026-08-24 11:59:38"
+          },
+          {
+            "name": "0010_seed_zhadan_tenants.sql",
+            "applied_at": "2026-08-24 11:59:38"
+          },
+          {
+            "name": "0011_enhance_menu_categories_for_modifiers.sql",
+            "applied_at": "2026-08-24 11:59:39"
+          },
+          {
+            "name": "0012_set_default_liff_id_for_tenants.sql",
+            "applied_at": "2026-08-24 11:59:39"
+          },
+          {
+            "name": "0013_add_logo_url_to_tenant_config.sql",
+            "applied_at": "2026-08-24 11:59:39"
+          },
+          {
+            "name": "0013_merge_zhadan_snack_into_main.sql",
+            "applied_at": "2026-08-24 11:59:40"
+          },
+          {
+            "name": "0014_update_zhadan_address.sql",
+            "applied_at": "2026-08-24 11:59:40"
+          },
+          {
+            "name": "0015_fix_zhadan_brand_name.sql",
+            "applied_at": "2026-08-24 11:59:40"
+          },
+          {
+            "name": "0016_add_badge_and_recommended_to_menu_items.sql",
+            "applied_at": "2026-08-24 11:59:41"
+          },
+          {
+            "name": "0017_fix_zhadan_category_names.sql",
+            "applied_at": "2026-08-24 11:59:41"
+          },
+          {
+            "name": "0018_seed_jidangaodashu_menu.sql",
+            "applied_at": "2026-08-24 11:59:41"
+          },
+          {
+            "name": "0019_unify_all_tenant_brand_colors.sql",
+            "applied_at": "2026-08-24 11:59:42"
+          },
+          {
+            "name": "0019_update_zhadan_line_credentials.sql",
+            "applied_at": "2026-08-24 11:59:42"
+          },
+          {
+            "name": "0020_update_zhadan_store_address.sql",
+            "applied_at": "2026-08-24 11:59:42"
+          },
+          {
+            "name": "0021_add_zhadan_drinks_category.sql",
+            "applied_at": "2026-08-24 11:59:43"
+          },
+          {
+            "name": "0022_update_jidangaodashu_line_credentials.sql",
+            "applied_at": "2026-08-24 11:59:43"
+          },
+          {
+            "name": "0023_add_announcement_to_tenant_config.sql",
+            "applied_at": "2026-08-24 11:59:43"
+          },
+          {
+            "name": "0024_add_dining_options.sql",
+            "applied_at": "2026-08-24 11:59:43"
+          },
+          {
+            "name": "0025_add_tenant_features.sql",
+            "applied_at": "2026-08-24 11:59:44"
+          },
+          {
+            "name": "0026_add_order_prefix.sql",
+            "applied_at": "2026-08-24 11:59:44"
+          },
+          {
+            "name": "0027_add_table_number.sql",
+            "applied_at": "2026-08-24 11:59:44"
+          },
+          {
+            "name": "0028_add_append_rounds.sql",
+            "applied_at": "2026-08-24 11:59:45"
+          },
+          {
+            "name": "0029_add_category_customization.sql",
+            "applied_at": "2026-08-24 11:59:45"
+          },
+          {
+            "name": "0030_sync_zhadan_menu_from_production.sql",
+            "applied_at": "2026-08-24 11:59:46"
+          },
+          {
+            "name": "0031_add_category_applied_modifiers.sql",
+            "applied_at": "2026-08-24 11:59:46"
+          },
+          {
+            "name": "0032_create_order_items.sql",
+            "applied_at": "2026-08-24 11:59:46"
+          },
+          {
+            "name": "0033_set_benmi_production_features.sql",
+            "applied_at": "2026-08-24 11:59:47"
+          },
+          {
+            "name": "0034_seed_weiweibao_menu.sql",
+            "applied_at": "2026-08-24 11:59:47"
+          },
+          {
+            "name": "0035_update_weiweibao_line_credentials.sql",
+            "applied_at": "2026-08-24 11:59:47"
+          },
+          {
+            "name": "0036_enable_weiweibao_dine_in.sql",
+            "applied_at": "2026-08-24 11:59:48"
+          },
+          {
+            "name": "0037_seed_bsc_menu.sql",
+            "applied_at": "2026-08-24 13:00:27"
+          },
+          {
+            "name": "0038_seed_52kaoroufan_menu.sql",
+            "applied_at": "2026-08-24 21:09:07"
+          },
+          {
+            "name": "0039_sync_benmi_menu_to_dev.sql",
+            "applied_at": "2026-08-25 12:21:17"
+          },
+          {
+            "name": "0040_fix_bsc_menu_and_categories.sql",
+            "applied_at": "2026-08-25 13:57:01"
+          },
+          {
+            "name": "0041_seed_xiaolan_menu.sql",
+            "applied_at": "2026-08-27 15:24:49"
+          },
+          {
+            "name": "0042_update_xiaolan_item_names_and_subtitles.sql",
+            "applied_at": "2026-08-27 15:38:58"
+          },
+          {
+            "name": "0043_add_pricing_rules_to_menu_categories.sql",
+            "applied_at": "2026-08-29 06:38:02"
+          },
+          {
+            "name": "0044_seed_thuyngason_menu.sql",
+            "applied_at": "2026-08-29 12:04:15"
+          },
+          {
+            "name": "0045_seed_blab_demo_tenant_and_orders.sql",
+            "applied_at": "2026-08-29 12:25:48"
+          },
+          {
+            "name": "0046_add_order_uuid_and_daily_counter.sql",
+            "applied_at": "2026-09-01 16:30:21"
+          },
+          {
+            "name": "0047_add_coordinates_to_tenant_config.sql",
+            "applied_at": "2026-09-01 16:30:21"
+          },
+          {
+            "name": "0048_seed_haojihui_menu.sql",
+            "applied_at": "2026-09-11 08:30:48"
+          },
+          {
+            "name": "0048_seed_jiangjiejie_menu.sql",
+            "applied_at": "2026-09-10 02:47:17"
+          },
+          {
+            "name": "0048_seed_quanthuyhang_menu.sql",
+            "applied_at": "2026-09-07 15:09:50"
+          },
+          {
+            "name": "0049_create_universal_bundle_and_threshold_rules.sql",
+            "applied_at": "2026-09-12 03:12:04"
+          },
+          {
+            "name": "0049_jiangjiejie_order_customizations.sql",
+            "applied_at": "2026-09-10 12:18:27"
+          },
+          {
+            "name": "0050_update_order_prefixes_for_j_tenants.sql",
+            "applied_at": "2026-09-12 07:38:30"
+          },
+          {
+            "name": "0051_make_order_prefix_unique.sql",
+            "applied_at": "2026-09-12 11:54:12"
+          },
+          {
+            "name": "0052_rename_tenant_haojihui_to_dapinglin.sql",
+            "applied_at": "2026-09-12 13:38:39"
+          },
+          {
+            "name": "0053_seed_dapinglin_bundle_rules.sql",
+            "applied_at": "2026-09-12 13:56:03"
+          },
+          {
+            "name": "0054_add_ai_order_redirect_enabled.sql",
+            "applied_at": "2026-09-15 22:05:37"
+          },
+          {
+            "name": "0055_expand_order_identity.sql",
+            "applied_at": "2026-09-14 08:35:55"
+          },
+          {
+            "name": "0056_add_order_modified_tracking.sql",
+            "applied_at": "2026-09-27 05:14:20"
+          },
+          {
+            "name": "0057_create_staff_ordering_and_tables.sql",
+            "applied_at": "2026-09-27 05:14:20"
+          },
+          {
+            "name": "0058_seed_haoshiguoshao_menu.sql",
+            "applied_at": "2026-09-27 05:14:20"
+          },
+          {
+            "name": "0059_seed_haoshiguoshao_bundle_rules.sql",
+            "applied_at": "2026-09-27 05:14:20"
+          },
+          {
+            "name": "0060_add_admin_menu_seed_receipts.sql",
+            "applied_at": "2026-09-27 05:14:21"
+          },
+          {
+            "name": "0061_add_max_per_order_to_menu_items.sql",
+            "applied_at": "2026-10-01 11:52:08"
+          },
+          {
+            "name": "0061_unified_bundle_and_customization_schema.sql",
+            "applied_at": "2026-09-25 07:36:21"
+          },
+          {
+            "name": "0062_tenant_line_runtime.sql",
+            "applied_at": "2026-09-28 05:04:32"
+          },
+          {
+            "name": "0063_clean_customizations_and_category_links.sql",
+            "applied_at": "2026-09-28 05:04:32"
+          },
+          {
+            "name": "0064_add_modifier_migration_metadata.sql",
+            "applied_at": "2026-10-01 12:10:06"
+          },
+          {
+            "name": "0064_customer_order_domain.sql",
+            "applied_at": "2026-10-06 15:56:33"
+          },
+          {
+            "name": "0065_line_order_receipts.sql",
+            "applied_at": "2026-10-17 03:06:06"
+          },
+          {
+            "name": "0065_unified_option_groups.sql",
+            "applied_at": "2026-10-11 03:37:59"
+          },
+          {
+            "name": "0066_optional_migrated_option_groups.sql",
+            "applied_at": "2026-10-11 03:44:29"
+          },
+          {
+            "name": "0067_tenant_lifecycle.sql",
+            "applied_at": "2026-10-17 03:06:06"
+          },
+          {
+            "name": "0068_unified_menu_lifecycle_guards.sql",
+            "applied_at": "2026-10-17 03:06:06"
+          },
+          {
+            "name": "0069_order_detail_snapshots.sql",
+            "applied_at": "2026-10-17 14:28:20"
+          },
+          {
+            "name": "0070_add_modifier_group_auto_popup.sql",
+            "applied_at": "2026-10-17 14:28:20"
+          }
+        ],
+        "flags": [
+          {
+            "tenant_id": "52kaoroufan",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "benmi",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "blab_demo",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "bsc",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "dapinglin",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "haoshiguoshao",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "jiangjiejie",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "jidangaodashu",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "miyansuo",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "quanthuyhang",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "thuyngason",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "weiweibao",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "xiaolan",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          },
+          {
+            "tenant_id": "zhadantongxue",
+            "staff_ordering_enabled": 0,
+            "is_active": 1
+          }
+        ],
+        "demo": [
+          {
+            "tenant_id": "blab_demo",
+            "config_active": 1,
+            "staff_ordering_enabled": 0,
+            "allow_dine_in": 1
+          }
+        ],
+        "orders": [],
+        "tables": [],
+        "sessions": [],
+        "requests": [],
+        "duplicates": [],
+        "read_only": true,
+        "pending_local": [],
+        "recorded_not_in_main": [
+          "0061_unified_bundle_and_customization_schema.sql",
+          "0062_tenant_line_runtime.sql",
+          "0063_clean_customizations_and_category_links.sql",
+          "0064_add_modifier_migration_metadata.sql",
+          "0065_unified_option_groups.sql",
+          "0066_optional_migrated_option_groups.sql",
+          "0068_unified_menu_lifecycle_guards.sql",
+          "0069_order_detail_snapshots.sql",
+          "0070_add_modifier_group_auto_popup.sql"
+        ]
+      }
+    }
+  },
+  "platform": {
+    "captured_at_utc": "2026-10-19T12:43:47.772Z",
+    "workers": {
+      "production": {
+        "name": "benmi-worker-official",
+        "deployments": [
+          {
+            "id": "ba908a4f-07d3-43f2-b3b0-a4a45154ab3b",
+            "created_on": "2026-10-19T11:25:21.682666Z",
+            "source": "wrangler",
+            "strategy": "percentage",
+            "annotations": {
+              "workers/triggered_by": "deployment"
+            },
+            "versions": [
+              {
+                "version_id": "bcfd87a2-632d-41c3-9fb8-e8ac2d6f481d",
+                "percentage": 100
+              }
+            ]
+          },
+          {
+            "id": "55bfcae3-b1b3-421f-8a8f-9143f521f660",
+            "created_on": "2026-10-16T14:29:29.260584Z",
+            "source": "wrangler",
+            "strategy": "percentage",
+            "annotations": {
+              "workers/triggered_by": "deployment"
+            },
+            "versions": [
+              {
+                "version_id": "06d9c565-8a8c-4e55-9f40-96bbad8a4935",
+                "percentage": 100
+              }
+            ]
+          },
+          {
+            "id": "10d8e297-ad64-47b0-8564-72f96c9a0314",
+            "created_on": "2026-10-15T00:43:45.141317Z",
+            "source": "wrangler",
+            "strategy": "percentage",
+            "annotations": {
+              "workers/triggered_by": "deployment"
+            },
+            "versions": [
+              {
+                "version_id": "a836479d-097e-4772-9bb7-2e942232da18",
+                "percentage": 100
+              }
+            ]
+          }
+        ]
+      },
+      "test": {
+        "name": "platform-worker-staging",
+        "deployments": [
+          {
+            "id": "cbcb4b87-3009-4485-9c86-7f9375c88712",
+            "created_on": "2026-10-19T12:03:22.68975Z",
+            "source": "wrangler",
+            "strategy": "percentage",
+            "annotations": {
+              "workers/triggered_by": "deployment"
+            },
+            "versions": [
+              {
+                "version_id": "896e2c9f-7c71-4a66-9bca-0f0f944723f8",
+                "percentage": 100
+              }
+            ]
+          },
+          {
+            "id": "dc276901-b89e-492f-b2c0-23886fd1e45c",
+            "created_on": "2026-10-19T11:46:12.877155Z",
+            "source": "wrangler",
+            "strategy": "percentage",
+            "annotations": {
+              "workers/triggered_by": "deployment"
+            },
+            "versions": [
+              {
+                "version_id": "8ac53d5e-0eaf-4044-9690-68c1601abf18",
+                "percentage": 100
+              }
+            ]
+          },
+          {
+            "id": "d978e7eb-6fe0-447f-a93e-94ef697b524d",
+            "created_on": "2026-10-15T14:29:55.010138Z",
+            "source": "cf_cli",
+            "strategy": "percentage",
+            "annotations": {
+              "workers/triggered_by": "deployment"
+            },
+            "versions": [
+              {
+                "version_id": "4e0ebc5d-0cb3-4fb7-9be2-2899c2bc9649",
+                "percentage": 100
+              }
+            ]
+          }
+        ]
+      },
+      "dev": {
+        "name": "platform-worker-dev",
+        "deployments": [
+          {
+            "id": "d835ba98-9715-40af-9af9-5e3821592448",
+            "created_on": "2026-10-17T15:17:07.069279Z",
+            "source": "cf_cli",
+            "strategy": "percentage",
+            "annotations": {
+              "workers/triggered_by": "deployment"
+            },
+            "versions": [
+              {
+                "version_id": "f78e0017-377f-4852-a057-aab8d48cce86",
+                "percentage": 100
+              }
+            ]
+          },
+          {
+            "id": "42faf62c-ef0e-4e8b-b4d0-da7450288189",
+            "created_on": "2026-10-17T15:02:52.655795Z",
+            "source": "cf_cli",
+            "strategy": "percentage",
+            "annotations": {
+              "workers/triggered_by": "deployment"
+            },
+            "versions": [
+              {
+                "version_id": "9ae2d0ef-f104-45d0-8252-5285de8fd598",
+                "percentage": 100
+              }
+            ]
+          },
+          {
+            "id": "e8f71340-a248-4e93-a6ef-90062482410c",
+            "created_on": "2026-10-17T14:57:58.519958Z",
+            "source": "cf_cli",
+            "strategy": "percentage",
+            "annotations": {
+              "workers/triggered_by": "deployment"
+            },
+            "versions": [
+              {
+                "version_id": "c7588de8-8822-4300-ac83-f961d6e4b3e1",
+                "percentage": 100
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "pages": {
+      "name": "benmi-order",
+      "subdomain": "benmi-order.pages.dev",
+      "domains": [
+        "benmi-order.pages.dev",
+        "blabfood.app",
+        "explore.blabfood.app",
+        "order.blabfood.app",
+        "pos.blabfood.app",
+        "www.blabfood.app"
+      ],
+      "production_branch": "main",
+      "build_config": {
+        "build_command": "",
+        "destination_dir": "",
+        "root_dir": ""
+      },
+      "source": {
+        "type": "github",
+        "owner": "Thuanmai56",
+        "repo_name": "benmi-order",
+        "production_branch": "main",
+        "production_deployments_enabled": true,
+        "preview_deployment_setting": "all",
+        "preview_branch_includes": [
+          "*"
+        ],
+        "preview_branch_excludes": [],
+        "deployments_enabled": true
+      },
+      "canonical_deployment": {
+        "id": "bea91706-4e53-4ee1-b3b7-9936828580a8",
+        "environment": "production",
+        "url": "https://bea91706.benmi-order.pages.dev",
+        "created_on": "2026-10-19T11:24:56.851895Z",
+        "latest_stage": {
+          "name": "deploy",
+          "started_on": "2026-10-19T11:25:04.144926Z",
+          "ended_on": "2026-10-19T11:25:11.989789Z",
+          "status": "success"
+        },
+        "trigger": {
+          "type": "github:push",
+          "metadata": {
+            "branch": "main",
+            "commit_hash": "512a642cde71a7a1626aa6d215fabbae858ae632",
+            "commit_message": "docs(proposals): add LINE Pay integration plan and dormitory meal chain docs",
+            "commit_dirty": false
+          }
+        }
+      },
+      "production_deployments": [
+        {
+          "id": "bea91706-4e53-4ee1-b3b7-9936828580a8",
+          "environment": "production",
+          "url": "https://bea91706.benmi-order.pages.dev",
+          "created_on": "2026-10-19T11:24:56.851895Z",
+          "latest_stage": {
+            "name": "deploy",
+            "started_on": "2026-10-19T11:25:04.144926Z",
+            "ended_on": "2026-10-19T11:25:11.989789Z",
+            "status": "success"
+          },
+          "trigger": {
+            "type": "github:push",
+            "metadata": {
+              "branch": "main",
+              "commit_hash": "512a642cde71a7a1626aa6d215fabbae858ae632",
+              "commit_message": "docs(proposals): add LINE Pay integration plan and dormitory meal chain docs",
+              "commit_dirty": false
+            }
+          }
+        },
+        {
+          "id": "ccc409ff-fba1-4523-a7b2-1e65a973bbae",
+          "environment": "production",
+          "url": "https://ccc409ff.benmi-order.pages.dev",
+          "created_on": "2026-10-16T14:29:01.978745Z",
+          "latest_stage": {
+            "name": "deploy",
+            "started_on": "2026-10-16T14:29:20.06068Z",
+            "ended_on": "2026-10-16T14:29:30.00928Z",
+            "status": "success"
+          },
+          "trigger": {
+            "type": "github:push",
+            "metadata": {
+              "branch": "main",
+              "commit_hash": "3fb69495be7146c7cfcb91374e07d605ec7fbe2e",
+              "commit_message": "fix(pos): resolve auto-print infinite loop, add polling timeout, and build v1.0.3 APKs (#67)\n\n- Prevent infinite auto-print loop with in-flight tracking Set and reliable markOrderAsPrinted\n- Add AbortController 8s timeout to fetchOrders polling to prevent hung network requests\n- Clean up canvas backing store dimensions after toDataURL in PrinterService\n- Restore sticker footer rendering in drawStickerLayout\n- Bump orders.html cache-busters to v20261016_autoprint_loop_fix_v2\n- Build and package Android POS APK v1.0.3 (code 27) for universal prod and pilot",
+              "commit_dirty": false
+            }
+          }
+        },
+        {
+          "id": "1bcd2861-359d-41ed-8f56-6e6ef7ac07d2",
+          "environment": "production",
+          "url": "https://1bcd2861.benmi-order.pages.dev",
+          "created_on": "2026-10-15T00:43:15.721852Z",
+          "latest_stage": {
+            "name": "deploy",
+            "started_on": "2026-10-15T00:43:26.081535Z",
+            "ended_on": "2026-10-15T00:43:33.506259Z",
+            "status": "success"
+          },
+          "trigger": {
+            "type": "github:push",
+            "metadata": {
+              "branch": "main",
+              "commit_hash": "2bb4941fe0d20550c0ed945f30ec3539ef6dfb13",
+              "commit_message": "feat: fence deleted tenants and persist order history",
+              "commit_dirty": false
+            }
+          }
+        }
+      ]
+    },
+    "worker_build_triggers": {
+      "verified": true,
+      "data": [
+        {
+          "trigger_uuid": "36711d05-ab03-443b-808d-d445bac111da",
+          "external_script_id": "c45897570496472998cc7e7d356e6674",
+          "trigger_name": "Deploy default branch",
+          "build_command": "",
+          "deploy_command": "npx wrangler deploy",
+          "root_directory": "/benmi-worker-official/",
+          "branch_includes": [
+            "main"
+          ],
+          "branch_excludes": [],
+          "path_includes": [
+            "*"
+          ],
+          "path_excludes": [],
+          "created_on": "2026-07-05T13:34:51.431Z",
+          "modified_on": "2026-07-05T14:09:19.545Z",
+          "deleted_on": null,
+          "repository": {
+            "name": "benmi-order",
+            "owner": "Thuanmai56",
+            "provider": "github"
+          }
+        }
+      ]
+    }
+  }
+}

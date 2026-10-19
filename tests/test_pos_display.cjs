@@ -79,7 +79,7 @@ async function screenshot(page, name) {
 async function run() {
   const useWebKit = process.env.POS_DISPLAY_BROWSER === 'webkit';
   const browser = await (useWebKit ? webkit : chromium).launch(useWebKit ? {} : {
-    executablePath: process.env.CHROME_PATH || (process.platform === 'darwin' ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' : undefined), headless: true
+    executablePath: process.env.CHROME_PATH || undefined, headless: true
   });
   try {
     const page = await browser.newPage({ viewport: { width: 1024, height: 768 }, hasTouch: true });

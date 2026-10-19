@@ -104,7 +104,7 @@ async function swipeQueue(page, direction, options) {
 
 (async () => {
   const browser = await chromium.launch({
-    executablePath: process.env.CHROME_PATH || (process.platform === 'darwin' ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' : undefined),
+    executablePath: process.env.CHROME_PATH || undefined,
     headless: true
   });
   try {
