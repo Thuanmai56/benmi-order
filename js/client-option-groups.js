@@ -137,7 +137,15 @@
               })),
           })),
       ),
-      subOptions: s.subOptions || [],
+      subOptions: (s.subOptions || []).map((sub) => {
+        const current = (o.subOptions || []).find(
+          (candidate) => (candidate.id || candidate.name || candidate) === (sub.id || sub.name),
+        );
+        // Keep unavailable selections visible for removal; refresh prices before reconfirming.
+        return current
+          ? { ...sub, name: typeof current === "string" ? current : current.name, price: Number(current.price || 0) }
+          : sub;
+      }),
     };
   }
   function extra(groups) {

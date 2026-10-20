@@ -2456,7 +2456,10 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                 let key = affected && Object.keys(cart).find(candidate => resolveCatalogItem(candidate)?.itemId === affected.itemId);
                 let location = key ? parseCartKey(key) : null;
                 try {
-                    const fresh = await fetch(`${WORKER_BASE}/api/tenant/bootstrap?tenant_id=${encodeURIComponent(getTenantIdFromUrl())}&_t=${Date.now()}`);
+                    const fresh = await fetch(`${WORKER_BASE}/api/tenant/bootstrap?tenant_id=${encodeURIComponent(getTenantIdFromUrl())}&_t=${Date.now()}`, {
+                        cache: 'no-store',
+                        signal: AbortSignal.timeout(8000)
+                    });
                     if (fresh.ok) {
                         bootstrapData = await fresh.json();
                         window.bootstrapData = bootstrapData;
