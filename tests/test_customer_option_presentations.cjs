@@ -173,16 +173,18 @@ test("wizard keeps server group order, repeat portions and independent child con
   );
   app.click('[data-add="0"][data-option="0"]');
   assert.equal(app.get("h2").textContent, "Coffee");
+  assert.equal(app.modal().querySelector('[data-sub="0.0"]'), null);
   app.click("[data-confirm]");
   assert.match(app.get('[role="alert"]').textContent, /bắt buộc/);
   app.click('[data-choose="0.0.0"][data-option="0"]');
+  app.click("[data-confirm]");
   const milk = app.get('[data-sub="0.0"][data-index="0"]');
   milk.checked = true;
   app.emit("change", milk);
-  app.click("[data-confirm]");
   app.click('[data-add="0"][data-option="0"]');
   app.click('[data-choose="0.1.0"][data-option="1"]');
   app.click("[data-confirm]");
+  assert.equal(app.get('[data-sub="0.1"][data-index="0"]').checked, false);
   assert.equal(app.get('[data-add="0"][data-option="0"]').disabled, true);
   app.click("[data-confirm]");
   assert.ok(app.get('[data-choose="1"][data-option="0"]'));
@@ -285,7 +287,7 @@ test("nested navigation preserves parent scroll and focus, and keyboard trap inc
     group("Drink", [
       option("Coffee", 0, {
         productId: "coffee",
-        subOptions: [{ id: "milk", name: "Milk" }],
+        optionGroups: [group("Temperature", [option("Hot")])],
         isDefault: true,
       }),
     ]),
@@ -355,12 +357,11 @@ test("unavailable linked child choices are rejected and can be removed without l
   app.click("[data-confirm]");
   assert.equal(app.modal().hidden, false);
   assert.equal(app.updates(), 0);
-  app.click('[data-child="0.0"]');
+  assert.equal(app.modal().querySelector('[data-child="0.0"]'), null);
   const milk = app.get('[data-sub="0.0"][data-index="0"]');
   assert.equal(milk.disabled, false);
   milk.checked = false;
   app.emit("change", milk);
-  app.click("[data-confirm]");
   app.click("[data-confirm]");
   assert.equal(
     app.context.bundleCartData[app.key][0].groups[0].items[0].subOptions.length,
@@ -373,6 +374,39 @@ test("unavailable linked child choices are rejected and can be removed without l
     ),
     true,
   );
+});
+
+test("menu-linked choice keeps existing custom child checkboxes under their parent in wizard", () => {
+  for (const lang of ["vi", "zh-TW"]) {
+    const app = setup([
+      group("Sides", [
+        option("Egg", 5, { subOptions: [{ id: "soft", name: "Soft", price: 2 }] }),
+        option("Tofu", 4, { subOptions: [{ id: "crispy", name: "Crispy", price: 3 }] }),
+        option("Menu dish", 6, { productId: "menu-product" }),
+      ], { maxSelection: 3 }),
+    ], { lang });
+    app.open(0);
+    assert.equal(app.modal().classList.contains("uoc-wizard"), true);
+    for (let index = 0; index < 3; index++)
+      app.click(`[data-add="0"][data-option="${index}"]`);
+    assert.equal(app.modal().querySelectorAll("[data-child]").length, 0);
+    assert.equal(app.modal().querySelectorAll(".uoc-inline-subs").length, 2);
+    for (const [path, parent] of [["0.0", "Egg"], ["0.1", "Tofu"]]) {
+      const input = app.get(`[data-sub="${path}"][data-index="0"]`);
+      assert.match(input.closest(".uoc-option-entry").textContent, new RegExp(parent));
+      input.checked = true;
+      app.emit("change", input);
+    }
+    assert.match(app.get("[data-confirm]").textContent, /\$120/);
+    app.click("[data-confirm]");
+    const saved = app.context.bundleCartData[app.key][0];
+    assert.deepEqual(saved.groups[0].items.map((item) => item.subOptions.length), [1, 1, 0]);
+    assert.equal(app.context.UnifiedOptions.valid(app.rule, saved), true);
+    app.open(0);
+    assert.equal(app.get('[data-sub="0.0"][data-index="0"]').checked, true);
+    assert.equal(app.get('[data-sub="0.1"][data-index="0"]').checked, true);
+    assert.equal(app.modal().querySelectorAll("[data-child]").length, 0);
+  }
 });
 
 test("custom topping children remain inline chips within the original simple popup", () => {
