@@ -75,9 +75,7 @@ export async function loadOptionCatalog(env: Env, tenantId: string): Promise<Opt
 		const metadata = parse(g.source_metadata_json, {});
 		const minSelection = Math.max(Number(g.min_selection || 0), g.is_required ? 1 : 0);
 		const included = Boolean(g.included);
-		const autoPopup = (included || minSelection > 0)
-			? true
-			: (g.auto_popup !== undefined && g.auto_popup !== null ? Boolean(g.auto_popup) : true);
+		const autoPopup = included || minSelection > 0;
 		const totalOptions = options.filter((o) => o.group_id === g.id).length;
 		let maxSelection = Number(g.max_selection || (g.selection_type === 'single' ? 1 : 999));
 		if (!Boolean(g.allow_repeats) && totalOptions > 0 && maxSelection > totalOptions && (!g.max_selection || Number(g.max_selection) >= 99)) {
@@ -231,14 +229,14 @@ export function projectOptionRule(catalog: OptionCatalog, productId: string, pat
 	if (path.includes(productId) || path.length > 12) throw new Error('OPTION_PRODUCT_CYCLE');
 	const groups = effectiveGroups(catalog, productId);
 	if (!groups.length) return null;
-	const autoPopup = groups.some((g) => g.minSelection > 0 || g.included || g.autoPopup !== false);
+	const autoPopup = groups.some((g) => g.minSelection > 0 || g.included);
 	return {
 		version: 3,
 		autoPopup,
 		groups: groups.map((g) => ({
 			...g,
 			type: g.included ? 'fixed' : 'choice',
-			autoPopup: g.included || g.minSelection > 0 ? true : (g.autoPopup !== false),
+			autoPopup: g.included || g.minSelection > 0,
 			minQuantity: g.minSelection,
 			maxQuantity: g.maxSelection,
 			name: g.name,
@@ -302,9 +300,7 @@ function normalizeGroup(raw: any, existing?: OptionGroup): OptionGroup {
 			};
 		});
 	const included = Boolean(raw.included);
-	const autoPopup = (included || min > 0)
-		? true
-		: (raw.autoPopup !== undefined ? Boolean(raw.autoPopup) : (existing?.autoPopup ?? true));
+	const autoPopup = included || min > 0;
 	return {
 		...existing,
 		...raw,

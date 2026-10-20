@@ -88,6 +88,38 @@ test('legacy bundle modifier surcharges remain in the total', () => {
   assert.equal(app.bundlePortionExtra(portion), 10);
 });
 
+test('card and plus derive v3 popup behavior from all groups and preserve legacy rules', () => {
+  for (const [rule, popup] of [
+    [{ version: 3, autoPopup: true, groups: [{ minSelection: 0 }] }, false],
+    [{ version: 3, autoPopup: false, groups: [{ minSelection: 1 }] }, true],
+    [{ version: 3, groups: [{ minSelection: 0 }, { minSelection: 2 }] }, true],
+    [{ version: 3, autoPopup: false, groups: [{ minSelection: 0, included: true }] }, true],
+    [{ version: 2, autoPopup: false, groups: [{ minSelection: 1 }] }, false],
+    [{ version: 2, groups: [{ minSelection: 0 }] }, true],
+  ]) {
+    const app = client();
+    app.bootstrapData = { catalog: [{ slug: 'food', items: [{ id: 'meal', name: 'Meal', price: 100, bundleRule: rule }] }] };
+    app.cart = {}; app.checkDesktopAuthGuard = () => true;
+    let opens = 0;
+    app.openBundleBuilderModal = () => { opens++; };
+    app.handleItemCardClick('food', 'Meal');
+    app.updateQty('food', 'Meal', 1);
+    assert.equal(opens, popup ? 2 : 0, JSON.stringify(rule));
+    assert.equal(app.cart.food_Meal || 0, popup ? 0 : 2, JSON.stringify(rule));
+  }
+});
+
+test('optional portions initialize independent defaults even when adding multiple portions', () => {
+  const app = client();
+  const rule = { version: 3, autoPopup: true, groups: [{ id: 'sides', minSelection: 0 }] };
+  app.bootstrapData = { catalog: [{ slug: 'food', items: [{ id: 'meal', name: 'Meal', price: 100, bundleRule: rule }] }] };
+  app.cart = {}; app.bundleCartData = {}; app.checkDesktopAuthGuard = () => true;
+  app.UnifiedOptions = { restore: () => [{ groupId: 'sides', items: [] }] };
+  app.updateQty('food', 'Meal', 2);
+  app.bundleCartData.food_Meal[0].groups[0].items.push({ optionId: 'egg', surcharge: 5 });
+  assert.equal(app.bundleCartData.food_Meal[1].groups[0].items.length, 0);
+});
+
 for (const flow of ['create', 'append', 'modify']) {
   test(`${flow} rejects a changed price without leaving submit locked or sending a fallback order`, async () => {
     const app = client();

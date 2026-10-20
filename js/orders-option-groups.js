@@ -29,9 +29,6 @@
       ugScopeOrder: "Tùy chọn toàn cục",
       ugScopeOrderDesc: "Áp dụng cho cả đơn hàng",
       ugScopeDisabledHelp: "Nhóm đang có lựa chọn liên kết từ món, không thể chuyển sang tùy chọn toàn đơn.",
-      ugAutoPopup: "Tự động hiện khi chọn món",
-      ugAutoPopupHelp: "Mở bảng chọn ngay khi khách bấm món trên thực đơn (phù hợp với combo, món ăn kèm). Tắt nếu muốn khách bấm món thêm ngay vào giỏ và tự bấm tùy chỉnh khi cần (phù hợp với độ cay, ghi chú).",
-      ugAutoPopupHelpLocked: "Bắt buộc mở bảng chọn vì nhóm tùy chọn này có số lượng tối thiểu > 0 hoặc đã bao gồm trong món.",
       ugManualCustomize: "Tự bấm tùy chỉnh",
       ugCategory: "Phân loại",
       ugPrice: "Giá bán",
@@ -39,6 +36,7 @@
       ugGroups: "Nhóm tùy chọn",
       ugRules: "Quy tắc",
       ugRequired: "Bắt buộc chọn ít nhất một lựa chọn",
+      ugRequiredHelp: "Bật để khách chọn tuỳ chọn khi thêm món. Tắt để thêm món ngay vào giỏ; khách có thể bấm Tuỳ chọn bên dưới món để chỉnh sau.",
       ugMin: "Số lượng tối thiểu",
       ugMax: "Số lượng tối đa",
       ugRuleInteger: "Nhập số nguyên từ {min} đến 999.",
@@ -153,9 +151,6 @@
       ugScopeOrder: "整筆訂單選項",
       ugScopeOrderDesc: "套用至整筆訂單",
       ugScopeDisabledHelp: "此群組內含有來自餐點的選項，無法變更為整筆訂單選項。",
-      ugAutoPopup: "選餐時自動彈出",
-      ugAutoPopupHelp: "顧客在菜單點選餐點時立即彈出選項視窗（適合套餐、配菜）。關閉時點選餐點直接加入購物車，顧客如需客製化可自行點選自訂（適合辣度、備註）。",
-      ugAutoPopupHelpLocked: "此群組最少選擇數量大於 0 或已內含於餐點，點選時強制彈出視窗。",
       ugManualCustomize: "手動自訂",
       ugCategory: "分類",
       ugPrice: "售價",
@@ -163,6 +158,7 @@
       ugGroups: "選項群組",
       ugRules: "選擇規則",
       ugRequired: "顧客必須選擇至少一個選項",
+      ugRequiredHelp: "開啟時，加入餐點會先顯示選項視窗。關閉時，餐點直接加入購物車，顧客可點選餐點下方的「選項」再調整。",
       ugMin: "最少選擇數量",
       ugMax: "最多選擇數量",
       ugRuleInteger: "請輸入 {min} 至 999 的整數。",
@@ -417,7 +413,7 @@
       minSelection: d.included ? null : d.minSelection,
       maxSelection: d.included ? null : d.maxSelection,
       allowRepeats: Boolean(d.allowRepeats), included: Boolean(d.included),
-      autoPopup: d.scope === "item" ? Boolean(d.included || (d.minSelection && d.minSelection > 0) ? true : (d.autoPopup ?? true)) : null,
+      autoPopup: d.scope === "item" ? Boolean(d.included || Number(d.minSelection) > 0) : null,
       options: (d.options || []).filter((o) => !o.fromSource).map(optionValues),
       itemIds: sortedIds(d.itemIds), categoryIds: sortedIds(d.categoryIds),
       sources: (d.sources || []).map((s) => ({ type: s.type, refId: s.refId || s.categoryId || null, itemIds: sortedIds(s.itemIds) })).sort((a, b) => stable(a).localeCompare(stable(b))),
@@ -749,10 +745,7 @@
     } else if (r.page === "group") {
       const [min, max] = selectionRules(d);
       const isOrder = d.scope === "order";
-      const isAutoPopupLocked = d.included || min > 0;
-      const autoPopupVal = isAutoPopupLocked ? true : (d.autoPopup !== undefined ? Boolean(d.autoPopup) : true);
-      const autoPopupHelp = isAutoPopupLocked ? "ugAutoPopupHelpLocked" : "ugAutoPopupHelp";
-      body = `<section><h3>${esc(tr("ugDetails"))}</h3>${field("name", "ugName", d.name)}</section><section><h3>${esc(tr("ugRules"))}</h3><div class="ug-list">${toggle("required", "ugRequired", d.included ? min > 0 : state.required)}${d.included || state.required ? stepper("minSelection", "ugMin", min, 1) : ""}${stepper("maxSelection", "ugMax", max, 1)}</div><div class="ug-list">${toggle("allowRepeats", "ugRepeat", d.allowRepeats)}${toggle("included", "ugIncluded", d.included)}${!isOrder ? toggle("autoPopup", "ugAutoPopup", autoPopupVal, autoPopupHelp, isAutoPopupLocked ? 'disabled title="' + esc(tr("ugAutoPopupHelpLocked")) + '"' : "") : ""}</div></section><section><div class="ug-section-title"><h3>${esc(tr("ugOptions"))} (${options(d).length})</h3>${btn("add-option", "ugAdd")}</div><div class="ug-list">${
+      body = `<section><h3>${esc(tr("ugDetails"))}</h3>${field("name", "ugName", d.name)}</section><section><h3>${esc(tr("ugRules"))}</h3><div class="ug-list">${toggle("required", "ugRequired", d.included ? min > 0 : state.required, d.scope === "order" || d.included ? null : "ugRequiredHelp")}${d.included || state.required ? stepper("minSelection", "ugMin", min, 1) : ""}${stepper("maxSelection", "ugMax", max, 1)}</div><div class="ug-list">${toggle("allowRepeats", "ugRepeat", d.allowRepeats)}${toggle("included", "ugIncluded", d.included)}</div></section><section><div class="ug-section-title"><h3>${esc(tr("ugOptions"))} (${options(d).length})</h3>${btn("add-option", "ugAdd")}</div><div class="ug-list">${
         options(d)
           .map((o) =>
             row(
@@ -1109,7 +1102,6 @@
         }
         render();
       }
-      if (key === "autoPopup") render();
       if (["minSelection", "maxSelection", "allowRepeats"].includes(key)) showSelectionErrors();
     }
   }
@@ -1147,10 +1139,8 @@
         d.itemIds = [];
         d.categoryIds = [];
         d.sources = [];
-        d.autoPopup = false;
-      } else {
-        d.autoPopup = true;
       }
+      d.autoPopup = Boolean(d.included || Number(d.minSelection) > 0);
       return push({ page: "group" });
     }
     if (name === "set-scope") {
@@ -1404,8 +1394,7 @@
       d.maxSelection = max;
     }
     if (state.kind === "group" && d.scope === "item") {
-      if (d.included || d.minSelection > 0) d.autoPopup = true;
-      else d.autoPopup = d.autoPopup !== undefined ? Boolean(d.autoPopup) : true;
+      d.autoPopup = Boolean(d.included || Number(d.minSelection) > 0);
     }
     return persist(d, remove, removeOption);
   }
@@ -1648,7 +1637,7 @@
               ...clone(g),
               maxSelection: initialMax,
               scope,
-              autoPopup: g.autoPopup !== undefined ? Boolean(g.autoPopup) : true,
+              autoPopup: Boolean(g.included || Number(g.minSelection) > 0),
               isNew: false,
               categoryIds: catalog.categoryLinks.filter((l) => l.groupId === id).map((l) => l.categoryId),
               itemIds: catalog.links.filter((l) => l.groupId === id && !l.disabled).map((l) => l.itemId),
@@ -1656,7 +1645,7 @@
           : {
               id: uid("group"), isNew: true, name: "", scope, minSelection: 0,
               maxSelection: 1, allowRepeats: false, included: false,
-              autoPopup: true,
+              autoPopup: false,
               options: [], sources: [], labels: {}, revision: 0, itemIds: [], categoryIds: [],
             };
       const option = g && entry === "option" ? options(draft).find((o) => o.id === optionId) : null;

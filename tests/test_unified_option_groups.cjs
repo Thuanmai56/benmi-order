@@ -880,7 +880,7 @@ test('group scope persists as order or item, clears item links for order scope, 
   f.db.close();
 });
 
-test('autoPopup behaves correctly for optional vs required groups, persists in DB, and projects on bundle rules', async () => {
+test('autoPopup is derived from required or included groups and ignores legacy independent flags', async () => {
   const f = fixture();
 
   // 1. Group with autoPopup: false and minSelection: 0 (e.g. spicy level / cilantro)
@@ -897,7 +897,7 @@ test('autoPopup behaves correctly for optional vs required groups, persists in D
     itemIds: ['a_main'],
     options: [
       { id: 'a_spice_mild', name: 'Ít cay', price: 0, quantity: 1 },
-      { id: 'a_spice_hot', name: 'Cay nhiều', price: 0, quantity: 1 },
+      { id: 'a_spice_hot', name: 'Cay nhiều', price: 5, quantity: 1 },
     ],
   };
   const res1 = await f.save('group', optionalGroup);
@@ -911,6 +911,12 @@ test('autoPopup behaves correctly for optional vs required groups, persists in D
   let rule = f.api.projectOptionRule(c, 'a_main');
   assert.equal(rule.autoPopup, false);
   assert.equal(rule.groups[0].autoPopup, false);
+  const orderItems = [{ itemId: 'a_main', quantity: 2, subtotal: 205, bundleSelections: { portions: [
+    { groups: [{ groupId: 'a_spice', items: [{ optionId: 'a_spice_hot', quantity: 1 }] }] },
+    { groups: [{ groupId: 'a_spice', items: [] }] },
+  ] } }];
+  assert.equal((await f.api.validateUnifiedOrderItems(f.env, 'a', orderItems)).valid, true);
+  assert.equal(orderItems[0].subtotal, 205);
 
   // 2. Required group (minSelection: 1) forces autoPopup: true even if autoPopup: false is submitted
   const requiredGroup = {
@@ -940,7 +946,7 @@ test('autoPopup behaves correctly for optional vs required groups, persists in D
   rule = f.api.projectOptionRule(c, 'a_main');
   assert.equal(rule.autoPopup, true);
 
-  // 3. Updating optionalGroup to autoPopup: true persists
+  // A stale client cannot turn popup on independently of the minimum quantity.
   const res3 = await f.save('group', {
     ...optionalGroup,
     revision: savedSpice.revision,
@@ -949,7 +955,18 @@ test('autoPopup behaves correctly for optional vs required groups, persists in D
   assert.equal(res3.status, 200);
   c = await f.api.loadOptionCatalog(f.env, 'a');
   savedSpice = c.groups.find((g) => g.id === 'a_spice');
-  assert.equal(savedSpice.autoPopup, true);
+  assert.equal(savedSpice.autoPopup, false);
+  assert.equal(f.db.prepare('SELECT auto_popup FROM modifier_groups WHERE id=?').get('a_spice').auto_popup, 0);
+  // Old rows are read with the same derived rule without needing a migration.
+  f.db.prepare('UPDATE modifier_groups SET auto_popup=1 WHERE id=?').run('a_spice');
+  c = await f.api.loadOptionCatalog(f.env, 'a');
+  assert.equal(c.groups.find(g => g.id === 'a_spice').autoPopup, false);
+  await ok(await f.save('group', { ...requiredGroup, revision: savedDrink.revision, minSelection: 0, autoPopup: true }));
+  c = await f.api.loadOptionCatalog(f.env, 'a');
+  assert.equal(f.api.projectOptionRule(c, 'a_main').autoPopup, false);
+  await ok(await f.save('group', { ...optionalGroup, revision: savedSpice.revision, included: true, autoPopup: false }));
+  c = await f.api.loadOptionCatalog(f.env, 'a');
+  assert.equal(f.api.projectOptionRule(c, 'a_main').autoPopup, true);
 
   f.db.close();
 });
