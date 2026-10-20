@@ -86,10 +86,21 @@ for (let i = tableData.length - 1; i >= 0; i--) {
 }
 
 // Insertion order (forward: parent tables first)
+const DEV_LINE_TOKEN = 'XrjnxIi7SDIMC+t8VSATqCH0MHZ7Ws5CbNVyb+BZ6orZiNC5e+D9nzb82nqLjr2FGlJwMP+K9JKdX+qJfNWl625lCvopMSgKJrUgFdrJc1diuVQz6yWmbwiUXCWjWSav+BvzQRP8FafI8Jfo+9kvbAdB04t89/1O/w1cDnyilFU=';
+const DEV_LIFF_ID = '2011224566-kLLdMjkq';
+const DEV_LIFF_URL = 'https://liff.line.me/2011224566-kLLdMjkq';
+
 let totalInserted = 0;
 for (const t of tableData) {
   if (t.rows.length === 0) continue;
   for (const row of t.rows) {
+    // When syncing tenant_config to dev, sanitize credentials to dev environment defaults
+    if (t.name === 'tenant_config') {
+      row['line_channel_token'] = DEV_LINE_TOKEN;
+      row['line_channel_secret'] = null;
+      row['liff_id'] = DEV_LIFF_ID;
+      row['liff_url'] = DEV_LIFF_URL;
+    }
     // Only keep columns that exist in the target dev table
     const targetCols = Object.keys(row).filter(c => t.devCols.includes(c));
     const targetVals = targetCols.map(c => escapeSqlValue(row[c]));
@@ -138,6 +149,9 @@ for (const t of tableData) {
 // 5. Purge and warm bootstrap cache on dev
 console.log(`\n5. Purging and warming bootstrap cache on dev Worker...`);
 try {
+  try {
+    execSync(`npx wrangler kv key delete --binding=ORDER_STATE --env dev --remote "tenant:${TENANT_ID}:config_cache"`, { cwd: WORKER_DIR, stdio: 'ignore' });
+  } catch {}
   const warmUrl = `https://platform-worker-dev.thuanmnc.workers.dev/api/tenant/bootstrap?tenant_id=${TENANT_ID}&_purge=1&_t=${Date.now()}`;
   const warmRes = execSync(`curl -s "${warmUrl}"`, { encoding: 'utf8' });
   const warmData = JSON.parse(warmRes);

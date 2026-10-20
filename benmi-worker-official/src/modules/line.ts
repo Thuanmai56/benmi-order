@@ -76,7 +76,8 @@ export async function pushLineMessage(
 
     if (!res.ok) {
       const body = await res.text().catch(() => "(unreadable)");
-      console.error(`[${brand}] pushLineMessage FAILED: status=${res.status} userId=${userId} body=${body}`);
+      const tokenPrefix = token ? token.substring(0, 10) + '...' : 'none';
+      console.error(`[${brand}] pushLineMessage FAILED: status=${res.status} userId=${userId} tokenPrefix=${tokenPrefix} body=${body}`);
     } else {
       console.log(`[${brand}] pushLineMessage OK: userId=${userId}`);
     }
@@ -148,7 +149,8 @@ export async function pushLineFlexMessage(
 
     if (!res.ok) {
       const body = await res.text().catch(() => "(unreadable)");
-      console.error(`[${brand}] pushLineFlexMessage FAILED: status=${res.status} userId=${userId} body=${body}`);
+      const tokenPrefix = token ? token.substring(0, 10) + '...' : 'none';
+      console.error(`[${brand}] pushLineFlexMessage FAILED: status=${res.status} userId=${userId} tokenPrefix=${tokenPrefix} body=${body}`);
       return false;
     }
     return true;
