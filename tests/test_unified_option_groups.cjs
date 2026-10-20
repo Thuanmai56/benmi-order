@@ -698,6 +698,7 @@ test("checkout refreshes canonical options in both languages and preserves a ren
       currentLocale: locale,
       document: { documentElement: { lang: locale } },
       WORKER_BASE: "https://worker.example",
+      AbortSignal,
       getTenantIdFromUrl: () => "tenant",
       fetch: async () => { refreshed++; return { ok: true, json: async () => fresh }; },
       buildStructuredCartItems: () => [{ itemId: "meal" }],
