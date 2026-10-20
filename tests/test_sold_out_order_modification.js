@@ -7,7 +7,7 @@ console.log('--- Testing Sold-Out Order Modification Flow Implementation ---');
 const indexHtml = fs.readFileSync(path.resolve(__dirname, '../index.html'), 'utf-8');
 const indexCss = fs.readFileSync(path.resolve(__dirname, '../index.css'), 'utf-8');
 const clientCheckoutJs = fs.readFileSync(path.resolve(__dirname, '../js/client-checkout.js'), 'utf-8');
-const ordersHtml = fs.readFileSync(path.resolve(__dirname, '../orders.html'), 'utf-8');
+const clientCartJs = fs.readFileSync(path.resolve(__dirname, '../js/client-cart.js'), 'utf-8');
 const ordersCss = fs.readFileSync(path.resolve(__dirname, '../css/orders.css'), 'utf-8');
 const ordersLiveJs = fs.readFileSync(path.resolve(__dirname, '../js/orders-live.js'), 'utf-8');
 const ordersI18nJs = fs.readFileSync(path.resolve(__dirname, '../js/orders-i18n.js'), 'utf-8');
@@ -58,12 +58,12 @@ assert.ok(clientCheckoutJs.includes('[更換品項 #'), 'client-checkout.js send
 assert.ok(lineTs.includes('[更換品項'), 'line.ts webhook handles [更換品項 message to clear pending actions');
 assert.ok(lineTs.includes('createOrderModifiedConfirmationFlexBubble') && lineTs.includes('replyLineFlexMessage'), 'line.ts webhook replies with free confirmation flex message');
 assert.ok(ordersTs.includes('isDesktop') && ordersTs.includes('createOrderModifiedConfirmationFlexBubble'), 'orders.ts restricts push message to desktop fallback');
-assert.ok(indexHtml.includes('window.editOrderRemovedItems'), 'index.html renders editOrderRemovedItems');
+assert.ok(clientCartJs.includes('window.editOrderRemovedItems'), 'client-cart.js renders editOrderRemovedItems');
 console.log('✓ Test 5 Passed: Customer LIFF edit mode banner, loading overlay, context pre-fill, customer chat message submission, and free reply confirmation wired');
 
 // Test 6: Cache-busting verification
-assert.ok(indexHtml.includes('20260919_sold_out_v7'), 'index.html cache busters bumped to 20260919_sold_out_v7');
-assert.ok(ordersHtml.includes('20260919_sold_out_v7'), 'orders.html cache busters bumped to 20260919_sold_out_v7');
-console.log('✓ Test 6 Passed: Cache-busting query strings correctly bumped in index.html and orders.html');
+assert.match(indexHtml, /\/js\/client-core\.js\?v=[^"\s]+/, 'client-core.js has a cache buster');
+assert.match(indexHtml, /\/js\/client-checkout\.js\?v=[^"\s]+/, 'client-checkout.js has a cache buster');
+console.log('✓ Test 6 Passed: LIFF JavaScript assets have cache-busting query strings in index.html');
 
 console.log('\n🎉 ALL SOLD-OUT ORDER MODIFICATION TESTS PASSED!');

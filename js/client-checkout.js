@@ -134,6 +134,7 @@ window.editOrderDisplayKey = null;
 window.editOrderOriginalTotal = 0;
 window.editOrderSoldOutNames = [];
 window.editOrderContextLoaded = false;
+window.editOrderContextFailed = false;
 
 function hasAvailableCartItems() {
     if (typeof cart === 'undefined') return false;
@@ -344,6 +345,8 @@ async function initEditOrderModeIfPresent() {
         try {
             window.isEditOrderMode = true;
             window.editOrderKey = orderKey;
+            window.editOrderContextFailed = false;
+            updateFooterButtonState();
             try {
                 sessionStorage.setItem('benmi_edit_order_key', orderKey);
             } catch (e) {}
@@ -363,12 +366,14 @@ async function initEditOrderModeIfPresent() {
             if (!res.ok) {
                 const errData = await res.json().catch(() => ({}));
                 console.warn('[EditOrder] Failed to load edit context:', errData);
+                window.editOrderContextFailed = true;
                 return;
             }
 
             const data = await res.json();
             if (!data.success || !data.order) {
                 console.warn('[EditOrder] Invalid response:', data);
+                window.editOrderContextFailed = true;
                 return;
             }
 
@@ -546,8 +551,10 @@ async function initEditOrderModeIfPresent() {
             }
         } catch (err) {
             console.error('[EditOrder] Error initializing edit order mode:', err);
+            window.editOrderContextFailed = true;
         } finally {
             clearTimeout(safetyTimer);
+            updateFooterButtonState();
             dismissEditOrderLoadingOverlay();
         }
     })();
@@ -577,7 +584,7 @@ function isCheckoutSectionVisible() {
 // 2. Cập nhật trạng thái chữ trên nút cố định ở chân trang
 function updateFooterButtonState() {
     const btn = document.getElementById('btn-submit');
-    if (!btn || btn.disabled || isSubmitting) return;
+    if (!btn || isSubmitting || (btn.disabled && !window.isEditOrderMode)) return;
 
     if (window.isAppendMode) {
         btn.innerHTML = '<span>確認加點</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 4px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>';
@@ -585,17 +592,20 @@ function updateFooterButtonState() {
     }
 
     if (window.isEditOrderMode) {
-        const hasItems = hasAvailableCartItems();
+        const hasItems = window.editOrderContextLoaded && hasAvailableCartItems();
+        const isPaused = typeof storeConfig !== 'undefined' && storeConfig?.storeStatus === 'paused';
         const deskBtn = document.getElementById('btn-desktop-submit');
-        if (!hasItems) {
-            btn.innerHTML = '<span>餐點已售完</span>';
+        if (!hasItems || isPaused) {
+            const label = isPaused ? '店家目前暫停接單' : window.editOrderContextFailed ? '訂單載入失敗，請重新整理' : window.editOrderContextLoaded ? '餐點已售完' : '載入訂單中...';
+            btn.innerHTML = `<span>${label}</span>`;
             btn.disabled = true;
             btn.style.opacity = '0.6';
             btn.style.cursor = 'not-allowed';
             if (deskBtn) {
-                deskBtn.innerText = '餐點已售完';
+                deskBtn.innerText = label;
                 deskBtn.disabled = true;
                 deskBtn.style.opacity = '0.6';
+                deskBtn.style.cursor = 'not-allowed';
             }
             return;
         } else {
@@ -605,6 +615,7 @@ function updateFooterButtonState() {
             if (deskBtn) {
                 deskBtn.disabled = false;
                 deskBtn.style.opacity = '1';
+                deskBtn.style.cursor = 'pointer';
             }
             const btnText = '確認下單';
             btn.innerHTML = `<span>${btnText}</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 4px;"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
