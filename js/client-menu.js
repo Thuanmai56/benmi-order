@@ -10,6 +10,12 @@ function clientMenuLanguage() {
     return typeof currentLocale !== 'undefined' ? currentLocale : document.documentElement.lang;
 }
 
+function shouldAutoOpenItemOptions(rule) {
+    if (!rule) return false;
+    if (Number(rule.version) !== 3) return rule.autoPopup !== false;
+    return (rule.groups || []).some(group => group.included || Number(group.minSelection ?? group.minQuantity ?? 0) > 0);
+}
+
 // --- FETCH DATA ---
 async function fetchMenu() {
     try {
@@ -372,13 +378,13 @@ function handleItemCardClick(catSlug, itemName, event) {
     const cartObj = window.cart || cart || {};
     const currentQty = cartObj[key] || 0;
 
-    const shouldBundleAutoPopup = bundleRule ? (bundleRule.autoPopup !== false) : false;
+    const shouldBundleAutoPopup = shouldAutoOpenItemOptions(bundleRule);
 
     if (bundleRule && shouldBundleAutoPopup) {
         if (typeof openBundleBuilderModal === 'function') {
             openBundleBuilderModal(catSlug, itemName, currentQty > 0 ? 0 : 0);
         }
-    } else if (hasRequiredModifiers) {
+    } else if (!bundleRule && hasRequiredModifiers) {
         const openCustFn = typeof openItemCustomizeModal === 'function' ? openItemCustomizeModal : window.openItemCustomizeModal;
         if (typeof openCustFn === 'function') {
             openCustFn(catSlug, itemName, currentQty > 0 ? 0 : 0);
@@ -426,7 +432,7 @@ function createDynamicItemCard(catSlug, item) {
     const bundleGroupLabel = (item.bundleRule?.groups?.[0]?.name || '').replace(/^請選擇\s*(\d+\s*樣)?/g, '').trim();
     const hasCombinedModifiers = hasBundleRule && hasModifiers;
     const bundleBtnText = item.bundleRule?.version === 3
-        ? (clientMenuLanguage() === 'vi' ? 'Tùy chỉnh món' : '自訂餐點')
+        ? (clientMenuLanguage() === 'vi' ? 'Tuỳ chọn' : '選項')
         : hasCombinedModifiers
         ? (bundleGroupLabel ? `調整${bundleGroupLabel} / 加料` : '調整搭配 / 加料')
         : (bundleGroupLabel ? `調整${bundleGroupLabel}` : '調整套餐配菜');
@@ -519,7 +525,7 @@ function updateDynamicStockAndPrices() {
                 const bundleGroupLabel = (item.bundleRule?.groups?.[0]?.name || '').replace(/^請選擇\s*(\d+\s*樣)?/g, '').trim();
                 const hasCombinedModifiers = hasBundleRule && hasModifiers;
                 const bundleBtnText = item.bundleRule?.version === 3
-                    ? (clientMenuLanguage() === 'vi' ? 'Tùy chỉnh món' : '自訂餐點')
+                    ? (clientMenuLanguage() === 'vi' ? 'Tuỳ chọn' : '選項')
                     : hasCombinedModifiers
                     ? (bundleGroupLabel ? `調整${bundleGroupLabel} / 加料` : '調整搭配 / 加料')
                     : (bundleGroupLabel ? `調整${bundleGroupLabel}` : '調整套餐配菜');

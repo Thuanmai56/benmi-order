@@ -259,7 +259,7 @@ function updateQty(category, origName, change) {
     const hasModifiers = Array.isArray(itemModifiers) && itemModifiers.length > 0;
     const hasRequiredModifiers = hasModifiers && itemModifiers.some(m => m.isRequired || Number(m.minSelection || 0) > 0);
 
-    const shouldBundleAutoPopup = bundleRule ? (bundleRule.autoPopup !== false) : false;
+    const shouldBundleAutoPopup = shouldAutoOpenItemOptions(bundleRule);
 
     // Intercept bundle item increment: open builder modal only if bundle requires auto-popup
     if (bundleRule && shouldBundleAutoPopup && change > 0) {
@@ -277,11 +277,11 @@ function updateQty(category, origName, change) {
         const currentQty = cartObj[key] || 0;
         const targetQty = Math.max(0, currentQty + change);
         if (change > 0 && window.bundleCartData[key].length < targetQty) {
-            const defaultGroups = window.UnifiedOptions && typeof window.UnifiedOptions.restore === 'function'
-                ? window.UnifiedOptions.restore(bundleRule)
-                : [];
             while (window.bundleCartData[key].length < targetQty) {
-                window.bundleCartData[key].push({ portionIndex: window.bundleCartData[key].length, groups: defaultGroups });
+                const groups = window.UnifiedOptions && typeof window.UnifiedOptions.restore === 'function'
+                    ? window.UnifiedOptions.restore(bundleRule)
+                    : [];
+                window.bundleCartData[key].push({ portionIndex: window.bundleCartData[key].length, groups });
             }
         }
     }

@@ -439,6 +439,6 @@ test('customer menu renders before any optional locale global exists, using the 
     vm.runInContext(fs.readFileSync('js/client-menu.js','utf8'),app.context);
     const card=app.context.createDynamicItemCard('food',{name:'Meal',price:100,isRecommended:true,bundleRule:{version:3,groups:[]}});
     assert.equal(card.querySelector('.item-recommended-icon'),null);
-    assert.match(card.querySelector('.bundle-edit-btn').textContent, lang==='vi'?/Tùy chỉnh món/:/自訂餐點/);
+    assert.match(card.querySelector('.bundle-edit-btn').textContent, lang==='vi'?/Tuỳ chọn/:/選項/);
   }
 });

@@ -462,34 +462,20 @@ test('group drawer scope is determined in step 1; detail view does not expose sc
   assert.equal(app2.drawer().querySelector('[data-field="scope"]'), null);
 });
 
-test('group drawer exposes autoPopup toggle for item groups, locks when required/included, and serializes on save', async () => {
+test('group drawer derives autoPopup from required selection without a separate toggle', async () => {
   const app = await setup();
 
-  // 1. New group defaults to autoPopup: true and minSelection: 0 (optional)
   app.context.UnifiedMenu.group();
   await app.click('select-new-scope', '[data-scope="item"]');
-  let autoPopupToggle = app.get('[data-field="autoPopup"]');
-  assert.notEqual(autoPopupToggle, null);
-  assert.equal(autoPopupToggle.checked, true);
-  assert.equal(autoPopupToggle.disabled, false);
+  assert.equal(app.drawer().querySelector('[data-field="autoPopup"]'), null);
+  assert.equal(app.get('[data-field="required"]').checked, false);
 
-  // 2. Turning required ON locks autoPopup to checked and disabled
   app.input('required', true);
-  autoPopupToggle = app.get('[data-field="autoPopup"]');
-  assert.equal(autoPopupToggle.checked, true);
-  assert.equal(autoPopupToggle.disabled, true);
+  assert.equal(app.get('[data-field="minSelection"]').value, '1');
 
-  // 3. Turning required OFF unlocks autoPopup
   app.input('required', false);
-  autoPopupToggle = app.get('[data-field="autoPopup"]');
-  assert.equal(autoPopupToggle.disabled, false);
+  assert.equal(app.drawer().querySelector('[data-field="minSelection"]'), null);
 
-  // 4. User can uncheck autoPopup for optional customization
-  app.input('autoPopup', false);
-  autoPopupToggle = app.get('[data-field="autoPopup"]');
-  assert.equal(autoPopupToggle.checked, false);
-
-  // 5. Save serializes autoPopup: false
   app.input('name', 'Độ cay');
   await app.click('add-option');
   await app.click('custom');
@@ -500,8 +486,22 @@ test('group drawer exposes autoPopup toggle for item groups, locks when required
   assert.equal(app.posts.length, 1);
   assert.equal(app.posts[0].name, 'Độ cay');
   assert.equal(app.posts[0].autoPopup, false);
+  assert.equal(app.posts[0].minSelection, 0);
 
-  // 6. Switching to order scope hides autoPopup toggle
+  // Reading an old optional group must neither open the popup nor dirty the form.
+  const old = await setup();
+  old.catalog().groups[0].minSelection = 0;
+  old.catalog().groups[0].autoPopup = true;
+  await old.context.UnifiedMenu.load();
+  old.context.UnifiedMenu.group('drinks');
+  await old.click('save');
+  assert.equal(old.posts.length, 0);
+  old.context.UnifiedMenu.group('drinks');
+  old.input('required', true);
+  await old.click('save');
+  assert.equal(old.posts[0].minSelection, 1);
+  assert.equal(old.posts[0].autoPopup, true);
+
   const app3 = await setup();
   app3.context.UnifiedMenu.group();
   await app3.click('select-new-scope', '[data-scope="order"]');
@@ -621,7 +621,7 @@ test('new option group flow has 2 steps: step 1 picks scope, step 2 fills detail
   assert.equal(app.drawer().querySelector('footer').hidden, false); // Footer visible
   assert.equal(app.get('[data-action="save"]').textContent, 'Lưu nhóm'); // Primary action is save
   assert.equal(app.drawer().querySelector('.ug-scope-selector'), null); // No scope selector in detail view
-  assert.notEqual(app.drawer().querySelector('[data-field="autoPopup"]'), null); // autoPopup visible for item
+  assert.equal(app.drawer().querySelector('[data-field="autoPopup"]'), null);
 
   // 3. Click Back -> returns to Step 1
   await app.click('back');
