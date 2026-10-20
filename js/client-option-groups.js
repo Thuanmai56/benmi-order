@@ -256,11 +256,24 @@
     const chips = simpleGroup(g),
       total = selection.items.length;
     const title = `<div class="modifier-group-title"><span>${esc(g.name)}</span><span class="${minimum(g) ? "modifier-required-badge" : "modifier-optional-badge"}">${esc(groupHint(g))}</span></div>`;
+    const details = (o, item, si) => {
+      const path = `${key}.${si}`,
+        label = `${item.name}${g.allowRepeats || g.included ? ` · ${si + 1}` : ""}`;
+      const subs = (o.subOptions || []).length
+        ? `<div class="uoc-inline-subs"><strong>${esc(label)}</strong>${drawSubs(o, item, path)}</div>`
+        : "";
+      if (!(o.optionGroups || []).length) return subs;
+      const names = (item.groups || [])
+        .flatMap((group) => group.items.map((choice) => choice.name))
+        .join("、");
+      return `${subs}<div class="bundle-v2-detail"><div><strong>${esc(label)}</strong><small class="bundle-v2-mod-labels">${esc(names || msg("尚未自訂", "Chưa tùy chỉnh"))}</small>${invalid(o.optionGroups, item.groups) ? `<small class="bundle-v2-mod-pending">${esc(msg("請完成必選項目", "Cần chọn đủ"))}</small>` : ""}</div><button type="button" class="bundle-v2-mod-btn" data-child="${path}">${esc(msg("自訂", "Tùy chỉnh"))}</button></div>`;
+    };
     const rows = options(g)
       .map((o, oi) => {
-        const chosen = selection.items.filter(
-          (s) => s.optionId === o.id,
-        ).length;
+        const selected = selection.items.flatMap((item, si) =>
+          item.optionId === o.id ? [{ item, si }] : [],
+        );
+        const chosen = selected.length;
         const blocked = unavailable(o),
           full = total >= maximum(g),
           addDisabled =
@@ -283,27 +296,18 @@
         const image = imageUrl && !failedOptionImages.has(imageSrc)
           ? `<img class="uoc-item-image" src="${esc(imageSrc)}" alt="" loading="lazy">`
           : "";
-        return `<div class="bundle-item-card ${chosen ? "selected" : ""} ${blocked ? "sold-out" : ""}"><div class="bundle-item-info">${image}<div><span>${esc(o.name)}</span><small>${priceLabel(o.price)}${warning ? ` · ${esc(warning)}` : ""}</small></div></div><div class="bundle-stepper">${g.included ? `<span class="bundle-v2-badge-fixed">×${chosen}</span>` : chosen ? `<button type="button" class="bundle-btn-minus" data-minus="${key}" data-option="${oi}" aria-label="${esc(msg("減少", "Giảm") + " " + o.name)}">−</button><span class="bundle-qty-val">${chosen}</span><button type="button" class="bundle-btn-plus" data-add="${key}" data-option="${oi}" ${addDisabled ? "disabled" : ""} aria-label="${esc(msg("增加", "Tăng") + " " + o.name)}">+</button>` : `<button type="button" class="bundle-btn-add" data-add="${key}" data-option="${oi}" ${addDisabled ? "disabled" : ""} aria-label="${esc(msg("選擇", "Chọn") + " " + o.name)}">+</button>`}</div></div>`;
+        return `<div class="uoc-option-entry"><div class="bundle-item-card ${chosen ? "selected" : ""} ${blocked ? "sold-out" : ""}"><div class="bundle-item-info">${image}<div><span>${esc(o.name)}</span><small>${priceLabel(o.price)}${warning ? ` · ${esc(warning)}` : ""}</small></div></div><div class="bundle-stepper">${g.included ? `<span class="bundle-v2-badge-fixed">×${chosen}</span>` : chosen ? `<button type="button" class="bundle-btn-minus" data-minus="${key}" data-option="${oi}" aria-label="${esc(msg("減少", "Giảm") + " " + o.name)}">−</button><span class="bundle-qty-val">${chosen}</span><button type="button" class="bundle-btn-plus" data-add="${key}" data-option="${oi}" ${addDisabled ? "disabled" : ""} aria-label="${esc(msg("增加", "Tăng") + " " + o.name)}">+</button>` : `<button type="button" class="bundle-btn-add" data-add="${key}" data-option="${oi}" ${addDisabled ? "disabled" : ""} aria-label="${esc(msg("選擇", "Chọn") + " " + o.name)}">+</button>`}</div></div>${selected.map(({ item, si }) => details(o, item, si)).join("")}</div>`;
       })
       .join("");
-    const details = selection.items
+    const detachedDetails = selection.items
       .map((item, si) => {
-        const o = options(g).find((o) => o.id === item.optionId),
-          path = `${key}.${si}`;
+        const o = options(g).find((o) => o.id === item.optionId);
         if (!o)
           return `<div class="bundle-v2-detail"><span>${esc(item.name)} · ${esc(msg("已無法選擇", "Không còn khả dụng"))}</span><button type="button" data-remove="${key}" data-index="${si}" ${g.included ? "disabled" : ""}>${esc(msg("移除", "Gỡ"))}</button></div>`;
-        if (!(o.optionGroups || []).length && !(o.subOptions || []).length)
-          return "";
-        if (chips)
-          return `<div class="uoc-inline-subs"><strong>${esc(item.name)}</strong>${drawSubs(o, item, path)}</div>`;
-        const names = [
-          ...(item.groups || []).flatMap((g) => g.items.map((i) => i.name)),
-          ...(item.subOptions || []).map((s) => s.name),
-        ].join("、");
-        return `<div class="bundle-v2-detail"><div><strong>${esc(item.name)}${g.allowRepeats || g.included ? ` · ${si + 1}` : ""}</strong><small class="bundle-v2-mod-labels">${esc(names || msg("尚未自訂", "Chưa tùy chỉnh"))}</small>${invalid(o.optionGroups || [], item.groups) ? `<small class="bundle-v2-mod-pending">${esc(msg("請完成必選項目", "Cần chọn đủ"))}</small>` : ""}</div><button type="button" class="bundle-v2-mod-btn" data-child="${path}">${esc(msg("自訂", "Tùy chỉnh"))}</button></div>`;
+        return chips ? details(o, item, si) : "";
       })
       .join("");
-    return `<section class="uoc-group" data-group="${key}">${title}${!chips ? `<p class="uoc-count">${esc(msg("已選", "Đã chọn"))} ${total}/${maximum(g)}</p>` : ""}<div class="${chips ? (maximum(g) === 1 ? "modifier-pills-row" : "modifier-checkbox-grid") : "uoc-items"}">${rows || `<p>${esc(msg("目前沒有可選項目", "Chưa có lựa chọn"))}</p>`}</div>${details}</section>`;
+    return `<section class="uoc-group" data-group="${key}">${title}${!chips ? `<p class="uoc-count">${esc(msg("已選", "Đã chọn"))} ${total}/${maximum(g)}</p>` : ""}<div class="${chips ? (maximum(g) === 1 ? "modifier-pills-row" : "modifier-checkbox-grid") : "uoc-items"}">${rows || `<p>${esc(msg("目前沒有可選項目", "Chưa có lựa chọn"))}</p>`}</div>${detachedDetails}</section>`;
   }
   function root() {
     let el = document.getElementById("unified-option-modal");
@@ -543,10 +547,7 @@
           .map((g, gi) =>
             drawGroup(g, nested.item.groups[gi], `${view.path}.${gi}`),
           )
-          .join("") +
-        ((nested.option.subOptions || []).length
-          ? `<section class="uoc-group"><div class="modifier-group-title">${esc(msg("加料", "Lựa chọn thêm"))}</div>${drawSubs(nested.option, nested.item, view.path)}</section>`
-          : "");
+          .join("");
     } else {
       body.innerHTML =
         (context.index > 0
@@ -660,10 +661,7 @@
     const view = context.views.at(-1);
     if (view) {
       const nested = child(view.path);
-      if (
-        invalid(nested.option.optionGroups || [], nested.item.groups) ||
-        invalidSubs(nested.option, nested.item)
-      ) {
+      if (invalid(nested.option.optionGroups || [], nested.item.groups)) {
         context.error = msg(
           "請檢查必選項目與已售完的選項",
           "Vui lòng kiểm tra lựa chọn bắt buộc và lựa chọn đã hết món",

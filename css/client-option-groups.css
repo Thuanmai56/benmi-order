@@ -130,6 +130,24 @@
   display: grid;
   gap: 8px;
 }
+.uoc-option-entry {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+.uoc-option-entry .uoc-inline-subs,
+.uoc-option-entry .bundle-v2-detail {
+  margin: 0 0 2px 12px;
+}
+.uoc-option-entry .uoc-inline-subs {
+  padding: 10px 12px;
+  border-radius: 0 10px 10px 0;
+  background: #f8fafc;
+}
+.uoc-option-entry .modifier-checkbox-grid {
+  grid-template-columns: minmax(0, 1fr);
+  margin-bottom: 0;
+}
 .uoc-panel .modifier-pill,
 .uoc-panel .modifier-checkbox-chip {
   text-align: start;
