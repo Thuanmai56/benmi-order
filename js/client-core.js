@@ -1356,7 +1356,7 @@ function checkStoreStatus() {
         }
         if (pausedBanner) pausedBanner.style.display = 'flex';
         if (busyBanner) busyBanner.style.display = 'none';
-        if (submitBtn) {
+        if (submitBtn && !window.isSubmitting) {
             submitBtn.disabled = true;
             submitBtn.innerText = '店家目前暫停接單';
             submitBtn.style.background = '#9ca3af';
@@ -1369,7 +1369,7 @@ function checkStoreStatus() {
         }
         if (pausedBanner) pausedBanner.style.display = 'none';
         if (busyBanner) busyBanner.style.display = 'flex';
-        if (submitBtn) {
+        if (submitBtn && !window.isSubmitting) {
             submitBtn.disabled = false;
             submitBtn.innerText = '確認下單';
             submitBtn.style.background = '';
@@ -1382,12 +1382,15 @@ function checkStoreStatus() {
         }
         if (pausedBanner) pausedBanner.style.display = 'none';
         if (busyBanner) busyBanner.style.display = 'none';
-        if (submitBtn) {
+        if (submitBtn && !window.isSubmitting) {
             submitBtn.disabled = false;
             submitBtn.innerText = '確認下單';
             submitBtn.style.background = '';
             submitBtn.style.cursor = '';
         }
+    }
+    if (window.isEditOrderMode && !window.isSubmitting && typeof updateFooterButtonState === 'function') {
+        updateFooterButtonState();
     }
 }
 
