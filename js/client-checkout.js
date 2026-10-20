@@ -876,7 +876,8 @@ function resolveCatalogItem(key) {
         targetItem,
         basePrice: Number(targetItem?.price) || 0,
         categoryName: targetCat?.name || catSlug || "Món",
-        itemId: targetItem?.id || key
+        itemId: targetItem?.id || key,
+        bundleRule: targetItem?.bundleRule || null
     };
 }
 
