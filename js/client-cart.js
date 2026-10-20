@@ -563,26 +563,29 @@ function updateTotal() {
 
             if (cData[key]) {
                 cData[key].slice(0, qty).forEach((c, i) => {
+                    if (!c) return;
                     const parts = [];
-                    if (c.single) {
+                    if (c.selectedDetails && Object.keys(c.selectedDetails).length > 0) {
+                        Object.values(c.selectedDetails).forEach(detail => {
+                            if (!detail) return;
+                            const sub = detail.subOption || c.subOptions?.[detail.id] || c.subOptions?.[detail.name];
+                            const price = Number(detail.price || 0) + Number(sub?.price || 0);
+                            const label = `${detail.name || detail.id}${sub ? ` (${sub.name})` : ''}`;
+                            parts.push(price > 0 ? `${label} (+$${price})` : label);
+                        });
+                    } else if (c.single) {
                         for (let s in c.single) {
                             const val = c.single[s];
                             if (val && val !== '不辣' && val !== '不需要') {
                                 const addP = getPrice(val);
-                                if (addP > 0) {
-                                    if (!isOutOfStock) itemModifiersTotal += addP;
-                                    parts.push(`${val} (+$${addP})`);
-                                } else {
-                                    parts.push(val);
-                                }
+                                parts.push(addP > 0 ? `${val} (+$${addP})` : val);
                             }
                         }
                     }
-                    if (c.multiple) {
+                    if ((!c.selectedDetails || Object.keys(c.selectedDetails).length === 0) && c.multiple) {
                         for (let topName in c.multiple) {
                             if (c.multiple[topName]) {
                                 const topPrice = getPrice(topName);
-                                if (!isOutOfStock) itemModifiersTotal += topPrice;
                                 if (topPrice > 0) {
                                     parts.push(`${topName} (+$${topPrice})`);
                                 } else {
@@ -592,6 +595,13 @@ function updateTotal() {
                         }
                     }
                     if (c.note && c.note.trim() !== '') parts.push(c.note.trim());
+                    if (!isOutOfStock && typeof calculatePortionExtra === 'function') {
+                        itemModifiersTotal += calculatePortionExtra(key, c);
+                    } else if (!isOutOfStock) {
+                        Object.values(c.single || {}).forEach(value => { if (value) itemModifiersTotal += getPrice(value); });
+                        Object.entries(c.multiple || {}).forEach(([value, selected]) => { if (selected) itemModifiersTotal += getPrice(value); });
+                        Object.values(c.subOptions || {}).forEach(sub => { itemModifiersTotal += Number(sub?.price || 0); });
+                    }
 
                     if (!it.itemInfo?.bundleRule && parts.length > 0) {
                         const zhIdx = zhNumbers[i] || `第 ${i + 1} 份`;

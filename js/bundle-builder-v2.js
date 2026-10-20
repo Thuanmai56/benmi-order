@@ -28,7 +28,11 @@
     return [...itemMods, ...catMods.filter(m => !existingGids.has(m.id))];
   };
   const optionPrice = option => Number(option?.price || 0);
-  const itemExtra = item => Number(item.surcharge || 0) + (item.modifiers || []).reduce((sum, mod) => sum + Number(mod.price || 0), 0);
+  const groupExtra = groups => groups.reduce((sum, group) => sum + (group.items || []).reduce((amount, item) => amount + itemExtra(item) * Number(item.quantity || 1), 0), 0);
+  const itemExtra = item => Number(item.surcharge || 0) +
+    (Array.isArray(item.subOptions) || (Array.isArray(item.groups) && item.groups.length > 0)
+      ? groupExtra(item.groups || []) + (item.subOptions || []).reduce((sum, sub) => sum + Number(sub.price || 0), 0)
+      : (item.modifiers || []).reduce((sum, mod) => sum + Number(mod.price || 0), 0));
 
   function buildFixed(group) {
     return (group.items || []).flatMap(fixed => {
@@ -656,7 +660,7 @@
     if (edit) edit.style.display = cart[key] > 0 ? 'flex' : 'none';
     updateTotal();
   };
-  window.bundlePortionExtra = portion => (portion?.groups || []).reduce((sum, group) => sum + (group.items || []).reduce((amount, item) => amount + itemExtra(item) * Number(item.quantity || 1), 0), 0);
+  window.bundlePortionExtra = portion => groupExtra(portion?.groups || []);
   window.checkAllBundlesComplete = function() {
     for (const key of Object.keys(cart || {})) {
       if (!cart[key]) continue;

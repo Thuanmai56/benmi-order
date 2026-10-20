@@ -39,7 +39,7 @@ const mockDocument = {
     style: {}
   },
   documentElement: {
-    style: {}
+    style: { setProperty: () => {} }
   }
 };
 
