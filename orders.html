@@ -8,7 +8,7 @@
   <base href="/" />
   <script src="js/orders-display.js?v=20261007_dev_main_sync_v1"></script>
   <link rel="stylesheet" href="css/orders.css?v=20261012_menu_single_panel_v10" />
-  <link rel="stylesheet" href="css/orders-menu.css?v=20261017_group_scope_step_v5" />
+  <link rel="stylesheet" href="css/orders-menu.css?v=20261021_menu_loading_v1" />
     <script>
       (function () {
         document.documentElement.style.setProperty('--primary', '#00b900');
@@ -1344,7 +1344,30 @@
           </div>
         </div>
       <div class="split menu-split" id="menu-standard-workspace">
-        <div class="panel menu-sidebar-panel">
+        <div class="menu-loading" id="menu-loading" hidden>
+          <div class="menu-loading-status" role="status" aria-live="polite" aria-atomic="true">
+            <span class="menu-loading-spinner" aria-hidden="true"></span>
+            <span id="i18n-menu-loading">載入菜單中...</span>
+          </div>
+          <div class="menu-loading-preview" aria-hidden="true">
+            <div class="menu-loading-row">
+              <span class="menu-loading-thumb"></span>
+              <span class="menu-loading-lines"><span></span><span></span></span>
+              <span class="menu-loading-price"></span>
+            </div>
+            <div class="menu-loading-row">
+              <span class="menu-loading-thumb"></span>
+              <span class="menu-loading-lines"><span></span><span></span></span>
+              <span class="menu-loading-price"></span>
+            </div>
+            <div class="menu-loading-row">
+              <span class="menu-loading-thumb"></span>
+              <span class="menu-loading-lines"><span></span><span></span></span>
+              <span class="menu-loading-price"></span>
+            </div>
+          </div>
+        </div>
+        <div class="panel menu-sidebar-panel" id="menu-sidebar-panel">
           <div class="menu-sidebar-tabs">
             <div class="menu-sidebar-segmented-toggle" role="tablist" id="menu-mode-tabs" aria-label="菜單管理模式">
               <button type="button" class="menu-seg-btn active" id="btn-seg-products" role="tab" aria-selected="true" onclick="setMenuSidebarTab('products')"><span id="i18n-seg-products">餐點</span></button>
@@ -2750,7 +2773,7 @@
   </section>
 
   <!-- Benmi POS Modular Architecture Scripts -->
-  <script src="js/orders-i18n.js?v=20261017_order_detail_v1"></script>
+  <script src="js/orders-i18n.js?v=20261021_menu_loading_v1"></script>
   <script src="js/orders-core.js?v=20261018_tab_persist_v1"></script>
   <script src="js/orders-audio.js?v=20261007_dev_main_sync_v1"></script>
   <script src="/js/order-legacy-adapter.js?v=20261017_order_detail_v1"></script>
@@ -2761,7 +2784,7 @@
   <script src="js/orders-history.js?v=20261007_dev_main_sync_v1"></script>
   <script src="js/orders-reports.js?v=20261007_dev_main_sync_v1"></script>
   <script src="js/orders-settings.js?v=20261012_menu_single_panel_v10"></script>
-  <script src="js/orders-menu.js?v=20261021_image_key_repair_v1"></script>
+  <script src="js/orders-menu.js?v=20261021_menu_loading_v1"></script>
   <script src="js/orders-bundle-wizard.js?v=20261007_dev_main_sync_v1"></script>
   <script src="/js/orders-option-groups.js?v=20261020_required_options_v1"></script>
 

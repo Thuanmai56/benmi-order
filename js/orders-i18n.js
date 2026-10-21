@@ -2690,6 +2690,7 @@ function applyLanguageToDOM() {
   [
     ['i18n-menu-workspace-title', 'menuWorkspaceTitle'],
     ['i18n-menu-workspace-sub', 'menuWorkspaceSub'],
+    ['i18n-menu-loading', 'menuLoading'],
     ['menu-filter-label', 'filterLabel'],
     ['filter-all-label', 'filterAll'],
     ['filter-instock-label', 'filterInStock'],
