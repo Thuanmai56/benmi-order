@@ -9,6 +9,7 @@ let isMenuDirty = false;
 let savedMenuSnapshot = null;
 let isMenuSaving = false;
 let isMenuLoadedCompletely = false;
+let isMenuLoading = false;
 let isCustomGroupCreatorOpen = false;
 let newCustomGroupType = 'radio';
 let newCustomGroupRequired = false;
@@ -261,11 +262,27 @@ function openMenuSettings() {
   }
 }
 
+function setMenuLoading(loading) {
+  isMenuLoading = loading;
+  const indicator = document.getElementById('menu-loading');
+  if (indicator) indicator.hidden = !loading;
+  const label = document.getElementById('i18n-menu-loading');
+  if (label) label.textContent = t('menuLoading');
+  for (const id of ['menu-sidebar-panel', 'menu-editor-panel']) {
+    const panel = document.getElementById(id);
+    if (panel) {
+      panel.inert = loading;
+      panel.setAttribute('aria-busy', String(loading));
+    }
+  }
+}
+
 async function loadMenuData() {
+  if (isMenuLoading) return;
+  setMenuLoading(true);
   isMenuLoadedCompletely = false;
   updateMenuSaveState();
   const bodyEl = document.getElementById("menu-editor-body");
-  if (bodyEl) bodyEl.innerHTML = `<div style="text-align:center; padding: 22px; color:#999;">${t("menuLoading")}</div>`;
   try {
     const tenantId = getTenantIdFromUrl();
     const [res, libraryResponse, imageListRes] = await Promise.all([
@@ -566,6 +583,8 @@ async function loadMenuData() {
       retry.addEventListener('click', loadMenuData);
       bodyEl.appendChild(retry);
     }
+  } finally {
+    setMenuLoading(false);
   }
 }
 

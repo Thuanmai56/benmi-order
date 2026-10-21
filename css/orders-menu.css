@@ -856,6 +856,7 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 #view-menu .menu-split {
+  position: relative;
   display: grid !important;
   grid-template-columns: calc(240px * var(--menu-font-scale)) minmax(0, 1fr) !important;
   gap: 12px;
@@ -866,6 +867,64 @@
   height: auto !important;
   overflow: hidden;
   background: #f8fafc;
+}
+#view-menu .menu-loading {
+  position: absolute;
+  inset: 10px 14px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  padding: 24px;
+  overflow: hidden;
+  border: 1px solid var(--menu-line);
+  border-radius: 12px;
+  background: var(--menu-surface);
+}
+#view-menu .menu-loading-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--menu-muted);
+  font-size: var(--menu-font-md);
+  line-height: 1.5;
+}
+#view-menu .menu-loading-spinner {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  box-sizing: border-box;
+  border: 2px solid var(--menu-line);
+  border-top-color: var(--menu-accent);
+  border-radius: 50%;
+  animation: pos-menu-loading-spin .9s linear infinite;
+}
+#view-menu .menu-loading-preview { width: min(100%, 560px); }
+#view-menu .menu-loading-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--menu-line);
+}
+#view-menu .menu-loading-row:last-child { border-bottom: 0; }
+#view-menu .menu-loading-thumb,
+#view-menu .menu-loading-lines > span,
+#view-menu .menu-loading-price {
+  display: block;
+  border-radius: 6px;
+  background: var(--menu-subtle);
+}
+#view-menu .menu-loading-thumb { flex: 0 0 48px; height: 48px; border-radius: 10px; }
+#view-menu .menu-loading-lines { display: grid; gap: 10px; flex: 1; min-width: 0; }
+#view-menu .menu-loading-lines > span:first-child { width: 75%; height: 14px; }
+#view-menu .menu-loading-lines > span:last-child { width: 45%; height: 10px; }
+#view-menu .menu-loading-price { flex: 0 0 44px; height: 14px; }
+@keyframes pos-menu-loading-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  #view-menu .menu-loading-spinner { animation: none; }
 }
 #view-menu .menu-sidebar-panel {
   border: 1px solid #e2e8f0 !important;
