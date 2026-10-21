@@ -160,6 +160,17 @@ export async function deleteImage(request: Request, env: Env): Promise<Response>
       }
     }
 
+    // The unified catalog stores a pointer to the KV image. Clear pointers for
+    // every key removed above so bootstrap cannot publish a broken image URL.
+    const deletedImageNames = Array.from(keysToDelete)
+      .filter(k => k.startsWith(`tenant:${tenantId}:image:`))
+      .map(k => k.slice(`tenant:${tenantId}:image:`.length));
+    if (deletedImageNames.length > 0) {
+      await env.DB.prepare(
+        `UPDATE menu_items SET image_key = NULL WHERE tenant_id = ? AND image_key IN (${deletedImageNames.map(() => '?').join(',')})`
+      ).bind(tenantId, ...deletedImageNames).run();
+    }
+
     await Promise.all(Array.from(keysToDelete).map(k => env.ORDER_STATE.delete(k)));
 
     // 2. Clean up tenant image_list

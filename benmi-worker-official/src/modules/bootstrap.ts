@@ -868,6 +868,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
 
     // Load image_list to accurately attach imageUrl only to items with uploaded image
     let imageList: string[] = [];
+    let imageListLoaded = false;
     if (env.ORDER_STATE) {
       const listKey = `tenant:${tenantId}:image_list`;
       let listRaw = await env.ORDER_STATE.get(listKey);
@@ -875,7 +876,13 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
         listRaw = await env.ORDER_STATE.get("image_list");
       }
       if (listRaw) {
-        try { imageList = JSON.parse(listRaw); } catch (e) { }
+        try {
+          const parsed = JSON.parse(listRaw);
+          if (Array.isArray(parsed)) {
+            imageList = parsed;
+            imageListLoaded = true;
+          }
+        } catch (e) { }
       }
     }
 
@@ -1045,7 +1052,11 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
       for (const category of catalog) for (const item of category.items) {
         const product = options.products.find(p=>p.id===item.id);
         (item as any).imageKey = product?.image_key;
-        if (product?.image_key !== null && product?.image_key !== undefined) item.imageUrl = product.image_key ? `/api/image?tenant_id=${encodeURIComponent(tenantId)}&name=${encodeURIComponent(product.image_key)}` : null;
+        if (product?.image_key !== null && product?.image_key !== undefined) {
+          item.imageUrl = product.image_key && (!imageListLoaded || imageList.includes(product.image_key))
+            ? `/api/image?tenant_id=${encodeURIComponent(tenantId)}&name=${encodeURIComponent(product.image_key)}`
+            : null;
+        }
         (item as any).modifierGroups = [];
         (item as any).unifiedOptions = true;
         const rule = projectOptionRule(options, item.id!);

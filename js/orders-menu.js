@@ -1412,9 +1412,11 @@ function getItemImageUrl(catId, itemName) {
   if (!itemName) return null;
   const list = window._tenantImageList;
   const canonicalProduct = window.UnifiedMenu?.imageKey?.(catId,itemName);
-  if (canonicalProduct !== undefined && canonicalProduct !== null) return canonicalProduct ? `${WORKER_BASE}/api/image?tenant_id=${encodeURIComponent(getTenantIdFromUrl())}&name=${encodeURIComponent(canonicalProduct)}` : null;
-  const key = `${catId}_${itemName}`;
   const tenantId = (typeof getTenantIdFromUrl === 'function' ? getTenantIdFromUrl() : null) || 'benmi';
+  if (canonicalProduct && (!list || list.has(canonicalProduct))) {
+    return `${WORKER_BASE}/api/image?tenant_id=${encodeURIComponent(tenantId)}&name=${encodeURIComponent(canonicalProduct)}`;
+  }
+  const key = `${catId}_${itemName}`;
   if (list && (list.has(key) || list.has(itemName))) {
     const resolvedName = list.has(key) ? key : itemName;
     return `${WORKER_BASE}/api/image?tenant_id=${encodeURIComponent(tenantId)}&name=${encodeURIComponent(resolvedName)}`;
@@ -1991,6 +1993,15 @@ function renderMenuCategoryEditor(index) {
         </div>
       </div>
     `;
+    const thumbImage = row.querySelector('.menu-item-thumb-img');
+    thumbImage?.addEventListener('error', () => {
+      const imageName = new URL(imgUrl, window.location.href).searchParams.get('name');
+      if (imageName) window._tenantImageList?.delete(imageName);
+      const thumbBox = row.querySelector('.menu-item-thumb-box');
+      if (!thumbBox) return;
+      thumbBox.classList.remove('has-image');
+      thumbBox.innerHTML = `<div class="menu-item-thumb-placeholder">${cameraSvg}<span class="thumb-upload-text">${escapeHtml(t('menuUploadImage'))}</span></div>`;
+    });
     itemsContainer.appendChild(row);
   });
   catalogCard.appendChild(itemsContainer);
