@@ -39,7 +39,7 @@ test('snapshot portions keep each arbitrary group and note in separate rows, inc
   const portions = root.querySelectorAll('.detail-portion-block');
   assert.equal(portions.length, 3);
   assert.deepEqual(portions.map(p => p.querySelector('.portion-badge').textContent), ['Phần 1', 'Phần 2', 'Phần 3']);
-  assert.deepEqual(portions[0].querySelectorAll('.detail-group-label').map(n => n.textContent), ['Nhóm bất kỳ Z', 'Độ cay', 'Nước sốt', 'Nhóm trống', 'Ghi chú']);
+  assert.deepEqual(portions[0].querySelectorAll('.detail-group-label').map(n => n.textContent), ['Nhóm bất kỳ Z', 'Độ cay', 'Nước sốt', 'Ghi chú']);
   assert.equal(portions[0].querySelectorAll('.detail-group-row')[0].querySelectorAll('.detail-choice-chip').length, 2);
   assert.equal(portions[0].querySelector('.detail-note-text').textContent, 'Không hành\nĐể riêng');
   assert.equal(portions[2].querySelector('.portion-default-chip').textContent, '—');
@@ -89,4 +89,21 @@ test('unstructured legacy lines are retained without splitting comma-separated v
   const root = app.parse(app.context.renderItemRowHtml({ name: 'Cũ', quantity: 1, price: '$20', options: 'Yêu cầu lạ: A, B、C\nDặn dò riêng', note: '' }, 0, 'legacy'));
   assert.deepEqual(root.querySelector('.review-item-options').querySelectorAll('.mod-chip').map(n => n.textContent), ['Yêu cầu lạ: A, B、C', 'Dặn dò riêng']);
   assert.equal(root.querySelector('.detail-group-label'), null);
+});
+
+
+test('empty note groups and whitespace-only notes do not take up rows in legacy or snapshot details', () => {
+  const app = setup();
+  const empty = group('✦ Ghi chú dặn dò', []);
+  const original = JSON.stringify(empty);
+  assert.equal(app.context.renderReviewGroupHtml(empty), '');
+  assert.equal(app.context.renderReviewNoteHtml(' \n\t ', 'detailPortionNote'), '');
+  const legacy = app.context.renderBundleComponentsHtml({ isStructured: true, portions: [{ groups: [empty, group('Bất kỳ', [choice('Có nội dung')])] }] });
+  assert.equal(legacy.includes('Ghi chú dặn dò'), false);
+  assert.equal(legacy.includes('Có nội dung'), true);
+  const detailLine = line({ quantity: 1, note: '  ', portions: [{ portionIndex: 0, groups: [empty], note: '\t' }] });
+  const root = app.parse(app.context.renderItemRowHtml({ detailLine, name: 'Món', quantity: 1, price: '$1' }, 0, 'order'));
+  assert.equal(root.querySelector('.detail-group-row'), null);
+  assert.equal(root.querySelector('.detail-portion-block'), null);
+  assert.equal(JSON.stringify(empty), original);
 });
