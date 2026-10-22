@@ -24,6 +24,7 @@
 | 19/10/2026 | Người dùng: “kiểm tra lại và bắt đầu merge” | Đã đồng bộ PR #75, kiểm thử lại, squash merge PR #74 tại `f31de7f`; CI sau merge và deploy production thành công |
 | 20/10/2026 | Người dùng yêu cầu tiếp theo R02, sau đó “continue” | Cho phép chuẩn bị R02 local từ main mới nhất; chưa push, deploy hoặc apply migration từ xa |
 | 22/10/2026 | Người dùng: “commit và push” | Cho phép commit/push R02 đã chuẩn bị và theo dõi kiểm tra tự động; chưa tạo PR, merge, deploy thủ công hoặc apply migration |
+| 22/10/2026 | R02 commit/push `9394433`; người dùng tạo PR #77 vào dev rồi xác nhận đổi sang main | Đã đổi base main; baseline local và workflow_dispatch 18/18 đạt. Check pull_request cũ vẫn đỏ; người dùng xác nhận commit/push tài liệu để kích hoạt CI PR mới |
 
 ## Danh sách task
 
@@ -31,7 +32,7 @@
 | --- | --- | --- |
 | R00 | Schema, ledger, tenant, cờ, dữ liệu staff, deploy, mốc rollback | Đã khảo sát; người dùng cho phép R01 |
 | R01 | Baseline hồi quy, test POS và release checklist | Đã merge PR #74 tại `f31de7f`; CI main 17/17 và production deploy thành công; lỗi preview dev vẫn là mục riêng |
-| R02 | Schema capability mặc định đóng | Migration `0071` và baseline 18/18 đạt; người dùng đã duyệt commit/push ngày 22/10; chờ CI trên PR và xác nhận merge/apply riêng |
+| R02 | Schema capability mặc định đóng | Đã push `9394433`, PR #77 vào main; local/dispatch 18/18 đạt; đã được duyệt push tài liệu để chạy lại check PR. Chưa merge/apply |
 | R03 | Guard tập trung và API capabilities | Chưa bắt đầu |
 | R04 | Đăng nhập/đăng xuất staff | Chưa bắt đầu |
 | R05 | Thu hồi session khi đổi PIN | Chưa bắt đầu |
@@ -65,3 +66,5 @@ Kết quả R01: [r01-baseline.md](./r01-baseline.md). Checklist áp dụng cho 
 CI lần đầu và bản sửa chờ duyệt: [r01-ci-check.md](./r01-ci-check.md).
 
 R02: [schema và kiểm chứng](./r02-capability-schema.md), [runbook apply từng môi trường](./r02-apply-runbook.md).
+
+R02 CI: [nguyên nhân, kết quả và check PR còn chờ](./r02-ci-check.md).
