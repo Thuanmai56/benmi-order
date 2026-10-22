@@ -185,6 +185,40 @@
   object-fit: cover;
   flex: 0 0 48px;
 }
+.uoc-image-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.uoc-image-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 200px;
+  color: #475569;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.uoc-image-spinner {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  box-sizing: border-box;
+  border: 2px solid #e2e8f0;
+  border-top-color: var(--primary, #059669);
+  border-radius: 50%;
+  animation: uoc-image-spin .9s linear infinite;
+}
+@keyframes uoc-image-spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .uoc-image-spinner { animation: none; }
+}
 .uoc-panel .bundle-item-card.sold-out {
   background: #f8fafc;
 }

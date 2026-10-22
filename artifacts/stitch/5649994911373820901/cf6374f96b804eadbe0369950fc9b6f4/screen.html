@@ -1,0 +1,392 @@
+<!DOCTYPE html><html class="h-full bg-slate-100" lang="vi" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Chi Tiết Đơn Hàng POS - JJ1020-T005</title>
+<!-- Tailwind CSS CDN with Forms & Container Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Google Fonts: Inter -->
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+            }
+          }
+        }
+      }
+    }
+  </script>
+<style data-purpose="custom-scrollbars">
+    /* Tùy chỉnh thanh cuộn cho khu vực hiển thị danh sách order */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+<style data-purpose="component-tags">
+    /* Tag pill styling cho từng món topping */
+    .food-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.25rem 0.625rem;
+      border-radius: 0.5rem;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      color: #334155;
+      transition: all 0.15s ease-in-out;
+    }
+    .food-chip:hover {
+      border-color: #cbd5e1;
+      background-color: #f1f5f9;
+    }
+  </style>
+</head>
+<body class="h-full text-slate-800 antialiased flex flex-col font-sans">
+<!-- BEGIN: OrderDetailsModalWrapper -->
+<div class="min-h-screen bg-slate-900/60 backdrop-blur-sm p-3 sm:p-6 lg:p-8 flex items-center justify-center">
+<!-- Modal Container -->
+<div class="w-full max-w-7xl bg-slate-50 rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[96vh]">
+<!-- BEGIN: HeaderSection -->
+<header class="bg-white px-6 py-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-20">
+<!-- Bên trái: Back / Close & Thông tin đơn -->
+<div class="flex items-center gap-4">
+<button class="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 flex items-center justify-center transition-colors" title="Đóng cửa sổ" type="button">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path>
+</svg>
+</button>
+<div class="flex items-center gap-3">
+<h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+<span class="">Evan</span>
+<span class="text-slate-300 font-light">•</span>
+<span class="text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200 text-lg font-mono">JJ1020–T005</span>
+</h1>
+</div>
+</div>
+<!-- Bên phải: Trạng thái & Quick Print Actions -->
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700">
+<span class="w-2.5 h-2.5 rounded-full bg-rose-600 animate-pulse"></span>
+<span class="text-sm font-bold tracking-wide uppercase">Đã hủy</span>
+</div>
+<button class="inline-flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2 rounded-xl transition-all border border-slate-300 shadow-sm text-sm" title="In lại toàn bộ đơn" type="button">
+<svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2span" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+<path d="M17 9V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span class="">In nhanh</span>
+</button>
+</div>
+</header>
+<!-- END: HeaderSection -->
+<!-- BEGIN: MainContentGrid -->
+<div class="flex-1 overflow-y-auto grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-slate-200">
+<!-- CỘT TRÁI: Danh sách món ăn & Chi tiết Combo (8 Cột) -->
+<main class="lg:col-span-8 p-4 space-y-3 bg-slate-50/60" data-purpose="order-item-list"><!-- Tiêu đề danh mục món tinh gọn Monochrome -->
+  <div class="flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <span class="w-1.5 h-3.5 bg-slate-900 rounded-full"></span>
+      <h2 class="text-sm font-bold text-slate-900 tracking-tight">Chi tiết món ăn</h2>
+      <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">3 món (Combo)</span>
+    </div>
+    <span class="text-[11px] text-slate-400 font-medium font-mono">Hệ thống POS V3.4 • Bếp</span>
+  </div>
+
+  <!-- Container Combo Chính Monochrome Siêu Tinh Gọn -->
+  <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden text-xs">
+    <!-- Header Món Chính: Tinh giản, Monochrome -->
+    <div class="px-3.5 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="px-1.5 py-0.5 rounded-md bg-slate-900 text-white font-extrabold text-xs shrink-0 leading-none">3×</span>
+        <div class="truncate flex items-baseline gap-2 flex-wrap">
+          <h3 class="text-sm font-bold text-slate-900 leading-none">套餐 A</h3>
+          <span class="text-xs text-slate-600 font-medium">(3隻鹹水雞翅+6樣菜)</span>
+          <span class="text-[10px] text-slate-400 hidden sm:inline">• 3 cánh gà muối + 6 món rau tùy chọn</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-2.5 shrink-0">
+        <span class="text-base font-extrabold text-slate-900 font-mono">$465</span>
+        <button class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 transition-colors shadow-2xs" title="In toàn bộ tem combo" type="button">
+          <svg class="w-3.5 h-3.5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2span" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+            <path d="M17 9V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+          </svg>
+          <span class="">In 3 tem</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Danh sách 3 phần: Monochrome siêu tinh gọn -->
+    <div class="divide-y divide-slate-200"><!-- PHẦN 1 -->
+<div class="px-4 py-3 hover:bg-slate-50/60 transition-colors space-y-2 text-xs">
+  <div class="space-y-1.5">
+    <div class="flex items-center gap-2">
+      <span class="px-1.5 py-0.5 rounded bg-slate-900 text-white font-bold text-[10px] tracking-wide uppercase">Phần 1</span>
+      <span class="font-bold text-slate-800 text-xs">6 樣配菜 <span class="font-normal text-slate-500">(Đã chọn 6 món)</span>:</span>
+    </div>
+    <div class="flex flex-wrap gap-1.5 items-center pl-2">
+      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-800 text-[11px] font-medium">
+        <span class="">水晶藻</span><span class="text-[9px] font-mono font-bold text-slate-600 bg-white px-1 rounded border border-slate-200">x1</span>
+      </span>
+      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-800 text-[11px] font-medium">
+        <span class="">海帶芽</span><span class="text-[9px] font-mono font-bold text-slate-600 bg-white px-1 rounded border border-slate-200">x1</span>
+      </span>
+      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-800 text-[11px] font-medium">
+        <span class="">紫晶藻</span><span class="text-[9px] font-mono font-bold text-slate-600 bg-white px-1 rounded border border-slate-200">x1</span>
+      </span>
+      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-800 text-[11px] font-medium">
+        <span class="">魷魚花</span><span class="text-[9px] font-mono font-bold text-slate-600 bg-white px-1 rounded border border-slate-200">x1</span>
+      </span>
+      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-800 text-[11px] font-medium">
+        <span class="">青龍椒（糯米椒）</span><span class="text-[9px] font-mono font-bold text-slate-600 bg-white px-1 rounded border border-slate-200">x1</span>
+      </span>
+      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-800 text-[11px] font-medium">
+        <span class="">佛手瓜</span><span class="text-[9px] font-mono font-bold text-slate-600 bg-white px-1 rounded border border-slate-200">x1</span>
+      </span>
+      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 border border-slate-300 text-slate-800 text-[11px] font-semibold">
+        <span class="">Không cay</span><span class="text-[9px] font-mono font-bold text-slate-600 bg-white px-1 rounded border border-slate-200">x1</span>
+        <span class="text-[9px] font-mono font-bold text-slate-600 bg-white px-1 rounded border border-slate-200">+$10</span>
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- PHẦN 2 -->
+<div class="px-4 py-3 hover:bg-slate-50/60 transition-colors space-y-2 text-xs">
+  <div class="space-y-1.5">
+    <div class="flex items-center gap-2">
+      <span class="px-1.5 py-0.5 rounded bg-slate-900 text-white font-bold text-[10px] tracking-wide uppercase">Phần 2</span>
+      <span class="font-bold text-slate-800 text-xs">6 樣配菜 <span class="font-normal text-slate-500">(Đã chọn 6 món)</span>:</span>
+    </div>
+    <div class="flex flex-wrap gap-1.5 items-center pl-2">
+      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-800 text-[11px] font-medium">
+        <span class="">海帶芽</span><span class="text-[9px] font-mono font-bold text-slate-600 bg-white px-1 rounded border border-slate-200">x1</span>
+      </span>
+      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-800 text-[11px] font-medium">
+        <span class="">紫晶藻</span><span class="text-[9px] font-mono font-bold text-slate-600 bg-white px-1 rounded border border-slate-200">x1</span>
+      </span>
+      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-800 text-[11px] font-medium">
+        <span class="">佛手瓜</span><span class="text-[9px] font-mono font-bold text-slate-600 bg-white px-1 rounded border border-slate-200">x1</span>
+      </span>
+      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-800 text-[11px] font-medium">
+        <span class="">玉米筍</span><span class="text-[9px] font-mono font-bold text-slate-600 bg-white px-1 rounded border border-slate-200">x1</span>
+      </span>
+      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-800 text-[11px] font-medium">
+        <span class="">馬鈴薯</span><span class="text-[9px] font-mono font-bold text-slate-600 bg-white px-1 rounded border border-slate-200">x1</span>
+      </span>
+      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-800 text-[11px] font-medium">
+        <span class="">脆筍片</span><span class="text-[9px] font-mono font-bold text-slate-600 bg-white px-1 rounded border border-slate-200">x1</span>
+      </span>
+      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 border border-slate-300 text-slate-800 text-[11px] font-semibold">
+        <span class="">Có cay Cay nhiều</span><span class="text-[9px] font-mono font-bold text-slate-600 bg-white px-1 rounded border border-slate-200">x1</span>
+        <span class="text-[9px] font-mono font-bold text-slate-600 bg-white px-1 rounded border border-slate-200">+$5</span>
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- PHẦN 3 -->
+<div class="px-4 py-3 hover:bg-slate-50/60 transition-colors space-y-2 text-xs">
+  <div class="space-y-1.5">
+    <div class="flex items-center gap-2">
+      <span class="px-1.5 py-0.5 rounded bg-slate-900 text-white font-bold text-[10px] tracking-wide uppercase">Phần 3</span>
+      <span class="font-bold text-slate-800 text-xs">6 樣配菜 <span class="font-normal text-slate-500">(Đã chọn 6 món)</span>:</span>
+    </div>
+    <div class="flex flex-wrap gap-1.5 items-center pl-2">
+      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-800 text-[11px] font-medium">
+        <span class="">水晶藻</span><span class="text-[9px] font-mono font-bold text-slate-600 bg-white px-1 rounded border border-slate-200">x1</span>
+      </span>
+      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-800 text-[11px] font-medium">
+        <span class="">海帶芽</span><span class="text-[9px] font-mono font-bold text-slate-600 bg-white px-1 rounded border border-slate-200">x1</span>
+      </span>
+      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-800 text-[11px] font-medium">
+        <span class="">紫晶藻</span><span class="text-[9px] font-mono font-bold text-slate-600 bg-white px-1 rounded border border-slate-200">x1</span>
+      </span>
+      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-800 text-[11px] font-medium">
+        <span class="">大朵香菇</span><span class="text-[9px] font-mono font-bold text-slate-600 bg-white px-1 rounded border border-slate-200">x1</span>
+      </span>
+      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-800 text-[11px] font-medium">
+        <span class="">黃大豆芽</span><span class="text-[9px] font-mono font-bold text-slate-600 bg-white px-1 rounded border border-slate-200">x1</span>
+      </span>
+      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-800 text-[11px] font-medium">
+        <span class="">紫糯玉米</span><span class="text-[9px] font-mono font-bold text-slate-600 bg-white px-1 rounded border border-slate-200">x1</span>
+      </span>
+      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 border border-slate-300 text-slate-800 text-[11px] font-semibold">
+        <span class="">Ít cay</span><span class="text-[9px] font-mono font-bold text-slate-600 bg-white px-1 rounded border border-slate-200">x1</span>
+      </span>
+    </div>
+  </div>
+  <div class="flex items-center gap-2 pl-2 text-[11px] text-slate-700">
+    <span class="text-slate-400">•</span>
+    <span class="text-slate-500 font-medium">Ghi chú:</span>
+    <span class="italic text-slate-700 font-medium">Mặc định theo đầu bếp</span>
+  </div>
+</div></div>
+
+    <!-- Footer phụ: Ghi chú tem 第3份 Monochrome -->
+    <div class="px-3.5 py-2 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-2">
+        <span class="px-1.5 py-0.2 rounded bg-slate-800 text-white font-bold text-[10px] tracking-wide">第3份</span>
+        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white text-slate-700 border border-slate-300 font-medium text-[11px]">
+          <svg class="w-3 h-3 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+          </svg>
+          <span class="">備註: Test 3</span>
+        </span>
+      </div>
+      <button class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 transition-colors shadow-2xs" type="button">
+        <svg class="w-3 h-3 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2span" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+          <path d="M17 9V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+        </svg>
+        <span class="">In tem</span>
+      </button>
+    </div>
+  </div></main>
+<!-- END: Main Content -->
+<!-- CỘT PHẢI: Thông tin khách hàng & Bảng điều khiển POS (4 Cột) -->
+<aside class="lg:col-span-4 p-6 bg-white flex flex-col justify-between space-y-6" data-purpose="sidebar-actions">
+<div class="space-y-6">
+<!-- BLOCK 1: THỜI GIAN & TRẠNG THÁI HỦY -->
+<section class="bg-rose-50/50 border border-rose-100 rounded-2xl p-4 space-y-3">
+<div class="flex items-center justify-between pb-2 border-b border-rose-100/80">
+<span class="text-xs font-bold uppercase tracking-wider text-rose-800">Trạng thái đơn</span>
+<span class="text-base font-black text-rose-600">ĐÃ HỦY</span>
+</div>
+<div class="grid grid-cols-2 gap-3 pt-1 text-sm">
+<div>
+<div class="text-slate-400 text-xs font-medium">GIỜ LẤY HÀNG</div>
+<div class="font-bold text-slate-800 flex items-center gap-1.5 mt-0.5">
+<svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span class="">10/23 17:00</span>
+</div>
+</div>
+<div>
+<div class="text-slate-400 text-xs font-medium">THỜI GIAN CÒN</div>
+<div class="font-bold text-rose-600 mt-0.5">Đã hủy</div>
+</div>
+</div>
+</section>
+<!-- BLOCK 2: THÔNG TIN KHÁCH HÀNG & HÌNH THỨC -->
+<section class="bg-slate-50 rounded-2xl p-4 border border-slate-200/80">
+<div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Khách hàng</div>
+<div class="flex items-center gap-3.5">
+<div class="w-12 h-12 rounded-2xl bg-slate-900 text-white font-extrabold text-xl flex items-center justify-center shadow-md">
+                  E
+                </div>
+<div>
+<h4 class="font-bold text-slate-900 text-base leading-snug">Evan</h4>
+<div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 text-xs font-bold mt-1">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span class="">Mang đi (Takeaway)</span>
+</div>
+</div>
+</div>
+</section>
+<!-- BLOCK 3: CÔNG CỤ IN ẤN & TEM NHÃN -->
+<section class="space-y-3">
+<div class="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
+<svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2span" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+<path d="M17 9V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span class="">CÔNG CỤ IN ẤN &amp; TEM NHÃN</span>
+</div>
+<!-- 3 Phím chức năng POS lớn -->
+<div class="grid grid-cols-3 gap-2.5">
+<!-- Phím 1: In cả đơn -->
+<button class="group flex flex-col items-center justify-center p-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white transition-all shadow-md active:scale-95 text-center" type="button">
+<div class="w-7 h-7 rounded-lg bg-slate-800 group-hover:bg-slate-700 flex items-center justify-center mb-1.5">
+<svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2span" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+<path d="M17 9V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+<span class="text-xs font-bold leading-tight uppercase">IN CẢ ĐƠN</span>
+<span class="text-[10px] text-slate-400 font-medium mt-0.5">(1 Bill + 3 Tem)</span>
+</button>
+<!-- Phím 2: In Bill Thu Ngân -->
+<button class="group flex flex-col items-center justify-center p-3 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-800 transition-all active:scale-95 text-center" type="button">
+<div class="w-7 h-7 rounded-lg bg-white flex items-center justify-center mb-1.5 shadow-2xs">
+<svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+<span class="text-xs font-bold leading-tight uppercase">IN BILL THU NGÂN</span>
+</button>
+<!-- Phím 3: In Bù Tem -->
+<button class="group flex flex-col items-center justify-center p-3 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-800 transition-all active:scale-95 text-center" type="button">
+<div class="w-7 h-7 rounded-lg bg-white flex items-center justify-center mb-1.5 shadow-2xs">
+<svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+<path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+<span class="text-xs font-bold leading-tight uppercase">IN BÙ TEM TÙY CHỌN</span>
+</button>
+</div>
+</section>
+</div>
+<!-- BLOCK 4: TỔNG KẾT THANH TOÁN (BILLING FOOTER) -->
+<div class="pt-4 border-t border-slate-200 space-y-3">
+<div class="space-y-1.5 text-xs text-slate-500">
+<div class="flex justify-between">
+<span class="">Tạm tính combo (3 suất):</span>
+<span class="font-medium text-slate-700">$450</span>
+</div>
+<div class="flex justify-between">
+<span class="">Phụ thu gia vị &amp; sốt cay:</span>
+<span class="font-medium text-slate-700">+$15</span>
+</div>
+</div>
+<!-- Tổng cộng nổi bật -->
+<div class="p-3.5 bg-emerald-50 border border-emerald-200/80 rounded-xl flex items-center justify-between">
+<span class="text-base font-extrabold text-slate-900">Tổng cộng</span>
+<span class="text-3xl font-black text-emerald-600 tracking-tight">$465</span>
+</div>
+</div>
+</aside>
+<!-- END: Right Sidebar -->
+</div>
+<!-- END: MainContentGrid -->
+</div>
+</div>
+<!-- END: OrderDetailsModalWrapper -->
+
+
+
+
+
+
+
+
+</body></html>
