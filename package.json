@@ -23,11 +23,12 @@
     "test:cluster2": "node --experimental-sqlite --test tests/test_cluster2_combo_bundle_rules.cjs",
     "test:cluster3-5": "node --experimental-sqlite --test tests/test_cluster3_4_5_full_schema_cutover.cjs",
     "test:unified-menu": "node --test tests/test_unified_option_groups.cjs tests/test_unified_menu_drawer.cjs tests/test_unified_menu_sections.cjs tests/test_menu_global_group_order.cjs tests/test_customer_option_presentations.cjs tests/test_option_surcharge_cart.cjs",
-    "test:customer-option-layout": "node --test tests/test_customer_option_steps_browser.cjs",
+    "test:customer-option-layout": "node --test tests/test_customer_option_steps_browser.cjs tests/test_customer_option_images_browser.cjs",
     "test:combo-price-recovery": "node --test tests/test_combo_price_recovery_browser.cjs",
     "test:required-option-popup": "node --test tests/test_required_option_popup_browser.cjs",
     "test:item-notes": "node --test tests/test_order_item_note_dedup.cjs",
-    "test:order-details": "node --experimental-sqlite --test tests/test_order_detail_snapshots.cjs"
+    "test:order-details": "node --experimental-sqlite --test tests/test_order_detail_snapshots.cjs tests/test_order_detail_groups.cjs",
+    "test:order-detail-layout": "node --test tests/test_order_detail_groups_browser.cjs"
   },
   "keywords": [
     "pos",

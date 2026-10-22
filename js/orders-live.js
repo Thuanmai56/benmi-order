@@ -1145,13 +1145,14 @@ function renderBundleComponentsHtml(bundleInfo) {
 
         return `
           <div class="bundle-group-row">
-            <span class="bundle-group-label">${pPrefix ? `${escapeHtml(pPrefix)} ` : ""}${escapeHtml(groupName)}</span>
+            <span class="bundle-group-label">${escapeHtml(groupName)}</span>
             <div class="bundle-group-items">${itemsHtml}</div>
           </div>
         `;
       }).join("");
 
-      return `<div class="bundle-portion-block">${groupsHtml}</div>`;
+      const heading = pPrefix ? `<div class="detail-portion-heading"><span class="portion-badge">${escapeHtml(pPrefix)}</span></div>` : '';
+      return `<div class="bundle-portion-block detail-portion-block">${heading}<div class="detail-portion-content">${groupsHtml || '<span class="portion-default-chip">—</span>'}</div></div>`;
     }).join("");
   } else if (bundleInfo.textGroups) {
     listHtml = bundleInfo.textGroups.map(tg => {
@@ -1189,6 +1190,20 @@ function renderBundleComponentsHtml(bundleInfo) {
 }
 window.renderBundleComponentsHtml = renderBundleComponentsHtml;
 
+function renderReviewNoteHtml(note, labelKey) {
+  if (!note) return '';
+  return `<div class="detail-group-row detail-note-row"><span class="detail-group-label">${escapeHtml(t(labelKey))}</span><div class="detail-note-text">${escapeHtml(note)}</div></div>`;
+}
+
+function renderReviewGroupHtml(group) {
+  const chips = (group.items || []).map(choice => {
+    const value = OrderDetailView.choiceText({ ...choice, quantity: 1 });
+    const price = OrderDetailView.extra(choice);
+    return `<span class="mod-chip detail-choice-chip"><span>${escapeHtml(value)}</span>${choice.quantity > 1 ? `<span class="detail-choice-qty">×${escapeHtml(choice.quantity)}</span>` : ''}${price ? `<span class="detail-choice-extra">+$${escapeHtml(price)}</span>` : ''}</span>`;
+  }).join('');
+  return `<div class="detail-group-row"><span class="detail-group-label">${escapeHtml(group.groupName || t('detailOptionGroup'))}</span><div class="detail-group-choices">${chips || '<span class="portion-default-chip">—</span>'}</div></div>`;
+}
+
 function renderItemRowHtml(it, idx, orderKey) {
   let optionsHtml = "";
   const startStickerIndex = (typeof it.stickerIndex === "number") ? it.stickerIndex : idx;
@@ -1211,10 +1226,11 @@ function renderItemRowHtml(it, idx, orderKey) {
 
   if (it.detailLine) {
     optionsHtml = it.detailLine.portions.map(p => {
-      const chips = OrderDetailView.choices(p.groups).map(c => `<span class="mod-chip">${escapeHtml(c.label)}: ${escapeHtml(c.value)}${c.price ? ` (+$${c.price})` : ''}</span>`).join('');
-      const note = p.note ? `<span class="mod-chip mod-chip-note">${escapeHtml(p.note)}</span>` : '';
+      const groups = p.groups.map(renderReviewGroupHtml).join('');
+      const note = renderReviewNoteHtml(p.note, 'detailPortionNote');
       const label = itemQty > 1 ? `<span class="portion-badge">${escapeHtml(t('detailPortion', { n: p.portionIndex + 1 }))}</span>` : '';
-      return chips || note ? `<div class="review-item-portion-row">${label}<div class="portion-chips-wrap">${chips}${note}</div></div>` : '';
+      if (!label && !groups && !note) return '';
+      return `<section class="review-item-portion-row detail-portion-block">${label ? `<div class="detail-portion-heading">${label}</div>` : ''}<div class="detail-portion-content">${groups}${note}${!groups && !note ? '<span class="portion-default-chip">—</span>' : ''}</div></section>`;
     }).join('');
   } else if (optsToRender) {
     const rawOpts = String(optsToRender).trim();
@@ -1230,9 +1246,9 @@ function renderItemRowHtml(it, idx, orderKey) {
             const portionStickerIdx = startStickerIndex + pIdx;
             const portionPrintTitle = (typeof t === "function" && t("btnPrintPortion")) || (document.documentElement.lang === "vi" ? `In tem ${p.label}` : `列印${p.label}標籤`);
             return `
-            <div class="review-item-portion-row">
-              <span class="portion-badge">${escapeHtml(p.label)}</span>
-              <div class="portion-chips-wrap">
+            <div class="review-item-portion-row detail-portion-block">
+              <div class="detail-portion-heading"><span class="portion-badge">${escapeHtml(p.label)}</span></div>
+              <div class="portion-chips-wrap detail-legacy-lines">
                 ${p.chips.length > 0 ? p.chips.map(chip => {
                   const isNote = chip.startsWith("備註") || chip.startsWith("Ghi chú") || chip.startsWith("Note");
                   const chipCls = isNote ? "mod-chip mod-chip-note" : "mod-chip";
@@ -1250,7 +1266,7 @@ function renderItemRowHtml(it, idx, orderKey) {
       `;
       optionsHtml = commonHtml + portionsHtml;
     } else if (rawOpts) {
-      const splitOpts = rawOpts.split(/[、,，\n]+/).map(s => s.trim()).filter(Boolean);
+      const splitOpts = rawOpts.split(/\n+/).map(s => s.trim()).filter(Boolean);
       if (splitOpts.length > 0) {
         optionsHtml = `<div class="review-item-options">${splitOpts.map(opt => {
           const isNote = opt.startsWith("備註") || opt.startsWith("Ghi chú") || opt.startsWith("Note");
@@ -1260,16 +1276,15 @@ function renderItemRowHtml(it, idx, orderKey) {
       }
     }
   }
-  const noteIcon = (typeof POS_SVG !== "undefined" && POS_SVG.note) || "";
   let noteHtml = "";
   if (it.detailLine?.note) {
-    noteHtml = `<div class="review-item-note">${noteIcon}${escapeHtml(it.detailLine.note)}</div>`;
+    noteHtml = renderReviewNoteHtml(it.detailLine.note, 'detailItemNote');
   } else if (!it.detailLine && it.note) {
     const remaining = (typeof PrinterService !== "undefined" && typeof PrinterService.remainingItemNote === "function")
       ? PrinterService.remainingItemNote(optsToRender, it.note)
       : (optionsHtml && optionsHtml.includes("mod-chip-note") ? "" : String(it.note).trim());
     if (remaining) {
-      noteHtml = `<div class="review-item-note">${noteIcon}${escapeHtml(remaining)}</div>`;
+      noteHtml = renderReviewNoteHtml(remaining, 'detailItemNote');
     }
   }
 
@@ -1289,7 +1304,7 @@ function renderItemRowHtml(it, idx, orderKey) {
   return `
     <div class="review-item-row" id="review-item-${escapeHtml(orderKey)}-${idx}">
       <div class="review-item-header">
-        <span class="review-item-name">${it.quantity || 1} x ${escapeHtml(it.name)}</span>
+        <div class="review-item-name"><span class="review-item-qty-badge">${itemQty}×</span><span class="review-item-name-text">${escapeHtml(it.name)}</span></div>
         <div class="review-item-meta-right">
           <span class="review-item-price ${isEmptyPrice ? 'is-empty' : ''}">${escapeHtml(displayPrice || "—")}</span>
           <button type="button" class="btn btn-ghost review-item-print-btn" data-print-action="stickers" data-print-action-title="${escapeHtml(mainPrintLabel)}" ${canPrintStickers ? "" : "disabled aria-disabled=\"true\""} onclick="${mainPrintAction}" title="${escapeHtml(mainPrintLabel)}">
@@ -1317,7 +1332,7 @@ function formatContentHtml(order) {
       if (round.legacyContent !== undefined) return `<section class="round-section-block">${heading}<div>${escapeHtml(t('detailLegacy'))}</div><div class="review-content-raw" style="white-space:pre-wrap">${escapeHtml(round.legacyContent)}</div></section>`;
       const choices = OrderDetailView.choices(round.groups);
       const chips = choices.map(c => `<span class="flavor-chip"><span class="flavor-label">${escapeHtml(c.label)}:</span><strong class="flavor-val">${escapeHtml(c.value)}</strong></span>`).join('');
-      const note = round.note ? `<div class="review-item-note">${escapeHtml(round.note)}</div>` : '';
+      const note = renderReviewNoteHtml(round.note, 'detailRoundNote');
       const options = chips || note ? `<div class="flavor-custom-card"><div class="flavor-chips-grid">${chips}</div>${note}</div>` : '';
       return `<section class="round-section-block">${heading}${options}${items.filter(i => i.round_number === round.roundNumber).map(i => renderItemRowHtml(i, items.indexOf(i), order.key)).join('')}</section>`;
     }).join('');

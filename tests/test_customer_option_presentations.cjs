@@ -25,6 +25,15 @@ function setup(groups, { lang = "vi", qty = 0, saved = [], notes = [] } = {}) {
   const context = {
     document: doc,
     console,
+    setTimeout,
+    clearTimeout,
+    Image: class {
+      naturalWidth = 48;
+      set src(value) {
+        queueMicrotask(() => value.includes("missing") ? this.onerror?.() : this.onload?.());
+      }
+      decode() { return Promise.resolve(); }
+    },
     currentLocale: lang,
     cart: { [key]: qty },
     bundleCartData: { [key]: structuredClone(saved) },
@@ -87,7 +96,7 @@ const group = (id, options, extra = {}) => ({
   ...extra,
 });
 
-test("option rows omit absent images and hide failed thumbnails across rerenders", () => {
+test("option rows wait for image checks and omit failed thumbnails before revealing text", async () => {
   const app = setup([
     group("Sides", [
       option("No photo", 0, { productId: "no-photo" }),
@@ -97,15 +106,22 @@ test("option rows omit absent images and hide failed thumbnails across rerenders
     ], { maxSelection: 6, allowRepeats: true }),
   ]);
   app.open(0);
-  assert.equal(app.modal().querySelectorAll(".uoc-item-image").length, 2);
-  const missing = app.get('img[src="/missing.jpg"]');
-  app.emit("error", missing);
-  assert.equal(missing.hidden, true);
-  assert.match(missing.parentElement.textContent, /Missing photo/);
+  assert.equal(app.get('.uoc-body').getAttribute('aria-busy'), 'true');
+  assert.equal(app.modal().querySelectorAll('.bundle-item-card').length, 0);
+  await new Promise(setImmediate);
+  assert.equal(app.get('.uoc-body').getAttribute('aria-busy'), 'false');
+  assert.equal(app.modal().querySelector('img[src="/missing.jpg"]'), null);
+  assert.equal(app.modal().querySelectorAll(".uoc-item-image").length, 1);
   assert.equal(app.get('img[src="/photo.jpg"]').hidden, false);
   app.click('[data-add="0"][data-option="0"]');
   assert.equal(app.modal().querySelector('img[src="/missing.jpg"]'), null);
   assert.equal(app.modal().querySelectorAll(".uoc-item-image").length, 1);
+  app.emit('error', app.get('img[src="/photo.jpg"]'));
+  assert.equal(app.get('.uoc-body').getAttribute('aria-busy'), 'true');
+  assert.equal(app.modal().querySelectorAll('.bundle-item-card').length, 0);
+  await new Promise(resolve => setTimeout(resolve, 120));
+  assert.equal(app.modal().querySelectorAll('.uoc-item-image').length, 0);
+  assert.equal(app.get('[data-add="0"][data-option="0"]').disabled, false);
 });
 
 test("simple canonical options use the original chip popup, enforce bounds and preserve notes/pricing", () => {

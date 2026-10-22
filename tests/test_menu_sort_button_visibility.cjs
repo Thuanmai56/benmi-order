@@ -193,7 +193,7 @@ test('ordering screen assets include the current cache busters', () => {
   const html = fs.readFileSync(path.resolve(__dirname, '../orders.html'), 'utf-8');
   for (const asset of ['css/orders-menu.css', 'js/orders-menu.js', 'js/orders-i18n.js']) {
     const escaped = asset.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const version = '20261021_menu_loading_v1';
+    const version = asset === 'js/orders-i18n.js' ? '20261022_detail_group_rows_v1' : '20261021_menu_loading_v1';
     assert.match(html,new RegExp(`${escaped}\\?v=${version}`));
   }
 });

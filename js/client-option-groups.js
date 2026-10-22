@@ -1,7 +1,7 @@
 /* Canonical option groups use the existing cart/receipt snapshot envelope. */
 (() => {
   let context = null;
-  const failedOptionImages = new Set();
+  const IMAGE_WAIT_MS = 2000;
   const esc = (v) =>
     String(v ?? "").replace(
       /[&<>"']/g,
@@ -260,6 +260,46 @@
       })
       .join("")}</div>`;
   }
+  function optionImageSource(option) {
+    const url = String(option.imageUrl || "").trim();
+    if (!url) return "";
+    return /^(?:https?:)?\/\//.test(url) ? url : (window.WORKER_BASE || "") + url;
+  }
+  function prepareOptionImage(src) {
+    if (context.images.has(src)) return context.images.get(src);
+    const entry = { state: "pending" };
+    context.images.set(src, entry);
+    entry.promise = new Promise((resolve) => {
+      let image;
+      entry.finish = (ready = false) => {
+        if (entry.state !== "pending") return;
+        entry.state = ready ? "ready" : "failed";
+        clearTimeout(entry.timer);
+        if (image) image.onload = image.onerror = null;
+        resolve();
+      };
+      entry.timer = setTimeout(() => entry.finish(), IMAGE_WAIT_MS);
+      try {
+        image = new Image();
+        image.onerror = () => entry.finish();
+        image.onload = () => {
+          if (!image.naturalWidth) return entry.finish();
+          try {
+            Promise.resolve(image.decode ? image.decode() : undefined).then(
+              () => entry.finish(true),
+              () => entry.finish(),
+            );
+          } catch (_) {
+            entry.finish();
+          }
+        };
+        image.src = src;
+      } catch (_) {
+        entry.finish();
+      }
+    });
+    return entry;
+  }
   function drawGroup(g, selection, key) {
     const chips = simpleGroup(g),
       total = selection.items.length;
@@ -299,10 +339,9 @@
           : "";
         if (chips)
           return `<button type="button" class="${maximum(g) === 1 ? "modifier-pill" : "modifier-checkbox-chip"} ${chosen ? "active" : ""}" data-choose="${key}" data-option="${oi}" aria-pressed="${Boolean(chosen)}" ${blocked || (full && !chosen && maximum(g) !== 1) ? "disabled" : ""}><span>${esc(o.name)}</span>${Number(o.price) ? `<small>${priceLabel(o.price)}</small>` : ""}${warning ? `<small>${esc(warning)}</small>` : ""}</button>`;
-        const imageUrl = String(o.imageUrl || "").trim();
-        const imageSrc = (window.WORKER_BASE || "") + imageUrl;
-        const image = imageUrl && !failedOptionImages.has(imageSrc)
-          ? `<img class="uoc-item-image" src="${esc(imageSrc)}" alt="" loading="lazy">`
+        const imageSrc = optionImageSource(o);
+        const image = context.images.get(imageSrc)?.state === "ready"
+          ? `<img class="uoc-item-image" src="${esc(imageSrc)}" alt="" width="48" height="48">`
           : "";
         return `<div class="uoc-option-entry"><div class="bundle-item-card ${chosen ? "selected" : ""} ${blocked ? "sold-out" : ""}"><div class="bundle-item-info">${image}<div><span>${esc(o.name)}</span><small>${priceLabel(o.price)}${warning ? ` · ${esc(warning)}` : ""}</small></div></div><div class="bundle-stepper">${g.included ? `<span class="bundle-v2-badge-fixed">×${chosen}</span>` : chosen ? `<button type="button" class="bundle-btn-minus" data-minus="${key}" data-option="${oi}" aria-label="${esc(msg("減少", "Giảm") + " " + o.name)}">−</button><span class="bundle-qty-val">${chosen}</span><button type="button" class="bundle-btn-plus" data-add="${key}" data-option="${oi}" ${addDisabled ? "disabled" : ""} aria-label="${esc(msg("增加", "Tăng") + " " + o.name)}">+</button>` : `<button type="button" class="bundle-btn-add" data-add="${key}" data-option="${oi}" ${addDisabled ? "disabled" : ""} aria-label="${esc(msg("選擇", "Chọn") + " " + o.name)}">+</button>`}</div></div>${selected.map(({ item, si }) => details(o, item, si)).join("")}</div>`;
       })
@@ -324,14 +363,23 @@
     el.id = "unified-option-modal";
     el.hidden = true;
     el.innerHTML =
-      '<section class="uoc-panel" role="dialog" aria-modal="true" aria-labelledby="uoc-title"><header><button type="button" data-back hidden></button><h2 id="uoc-title" tabindex="-1"></h2><button type="button" data-close>×</button></header><div class="uoc-portion-tabs"></div><nav class="bundle-v2-step-nav" aria-label=""></nav><div class="uoc-body"></div><footer><p role="alert"></p><button type="button" data-confirm></button></footer></section>';
-    // Image errors do not bubble. Capture them so a missing photo never leaves
-    // a broken icon or reserves thumbnail space in the option row.
+      '<section class="uoc-panel" role="dialog" aria-modal="true" aria-labelledby="uoc-title"><header><button type="button" data-back hidden></button><h2 id="uoc-title" tabindex="-1"></h2><button type="button" data-close>×</button></header><div class="uoc-portion-tabs"></div><nav class="bundle-v2-step-nav" aria-label=""></nav><div class="uoc-image-status" role="status" aria-live="polite" aria-atomic="true"></div><div class="uoc-body"></div><footer><p role="alert"></p><button type="button" data-confirm></button></footer></section>';
+    // A photo can disappear after preflight. Replace the list with loading
+    // before rebuilding it, rather than collapsing an image inside a live row.
     el.addEventListener("error", (event) => {
       const image = event.target;
-      if (!image.classList?.contains("uoc-item-image")) return;
-      failedOptionImages.add(image.getAttribute("src"));
-      image.hidden = true;
+      if (!context || !image.isConnected || !image.classList?.contains("uoc-item-image")) return;
+      const entry = { state: "pending" };
+      entry.promise = new Promise((resolve) => {
+        entry.finish = () => {
+          clearTimeout(entry.timer);
+          entry.state = "failed";
+          resolve();
+        };
+        entry.timer = setTimeout(entry.finish, 100);
+      });
+      context.images.set(image.getAttribute("src"), entry);
+      render();
     }, true);
     el.addEventListener("click", (event) => {
       if (event.target === el || event.target.closest("[data-close]"))
@@ -493,6 +541,8 @@
       "confirm",
       "copy",
       "note",
+      "close",
+      "back",
     ]) {
       if (el?.dataset[key] !== undefined)
         return `[data-${key}="${el.dataset[key]}"]${el.dataset.option !== undefined ? `[data-option="${el.dataset.option}"]` : ""}${el.dataset.index !== undefined ? `[data-index="${el.dataset.index}"]` : ""}`;
@@ -512,6 +562,8 @@
       nav.scrollLeft += right - nav.clientWidth + 8;
   }
   function render(reset = false, restoreFocus = null) {
+    const session = context;
+    const renderVersion = ++session.renderVersion;
     const el = root(),
       body = el.querySelector(".uoc-body"),
       nav = el.querySelector("nav"),
@@ -521,6 +573,14 @@
       focus = restoreFocus || focusSelector(document.activeElement);
     const view = context.views.at(-1),
       nested = view ? child(view.path) : null;
+    const visibleGroups = nested
+      ? nested.option.optionGroups || []
+      : context.rule.groups.filter((_, gi) => context.mode === "chips" || gi === context.step);
+    const sources = new Set(visibleGroups.filter(g => !simpleGroup(g))
+      .flatMap(g => options(g).map(optionImageSource)).filter(Boolean));
+    const pending = [...sources].map(prepareOptionImage)
+      .filter(entry => entry.state === "pending").map(entry => entry.promise);
+    const loading = pending.length > 0;
     el.className = `uoc-overlay ${context.mode === "chips" ? "uoc-simple" : "uoc-wizard"}`;
     el.querySelector(".uoc-panel").className =
       `uoc-panel ${context.mode === "chips" ? "popup-box" : "bundle-modal-sheet"}`;
@@ -549,7 +609,17 @@
           `<button type="button" class="bundle-v2-nav ${gi === context.step ? "active" : ""}" data-step="${gi}" aria-current="${gi === context.step ? "step" : "false"}">${!invalid([g], [context.groups[gi]]) ? "✓ " : ""}${esc(g.name)}</button>`,
       )
       .join("");
-    if (nested) {
+    body.setAttribute("aria-busy", String(loading));
+    const loadingText = msg("載入選項中…", "Đang tải tùy chọn…");
+    el.querySelector(".uoc-image-status").textContent = loading ? loadingText : "";
+    if (loading) {
+      body.innerHTML = `<div class="uoc-image-loading" aria-hidden="true"><span class="uoc-image-spinner"></span><span>${esc(loadingText)}</span></div>`;
+      Promise.all(pending).then(() => {
+        if (context !== session || session.renderVersion !== renderVersion) return;
+        render(false, focusSelector(document.activeElement) || focus);
+        body.scrollTop = scroll;
+      });
+    } else if (nested) {
       body.innerHTML =
         (nested.option.optionGroups || [])
           .map((g, gi) =>
@@ -572,6 +642,7 @@
     }
     body.scrollTop = scroll;
     const b = el.querySelector("[data-confirm]");
+    b.disabled = loading;
     b.textContent = nested
       ? msg("完成", "Xong")
       : context.mode === "wizard" &&
@@ -632,6 +703,7 @@
     });
     const focus = context?.focus,
       overflow = context?.overflow || "";
+    context?.images.forEach(entry => entry.finish?.());
     context = null;
     document.body.style.overflow = overflow;
     focus?.focus();
@@ -730,6 +802,7 @@
         info = resolveCatalogItem(key),
         rule = info.bundleRule || info.targetItem?.bundleRule;
       if (!rule?.groups?.length) return;
+      if (context) close();
       index = Number.isInteger(index)
         ? Math.max(0, Math.min(index, Number(cart[key] || 0)))
         : Number(cart[key] || 0);
@@ -752,6 +825,8 @@
         step: 0,
         views: [],
         drafts: {},
+        images: new Map(),
+        renderVersion: 0,
         error: "",
         note: window.customizeData?.[key]?.[index]?.note || "",
       };
