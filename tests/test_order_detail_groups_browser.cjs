@@ -82,7 +82,7 @@ for (const viewport of [{ width: 320, height: 740 }, { width: 390, height: 844 }
           assert.equal(await portions.count(), 3);
           const labels = await portions.first().locator('.detail-group-label').allTextContents();
           assert.deepEqual(labels.slice(0, 3), lang === 'vi' ? ['Rau ăn kèm', 'Độ cay', 'Nước sốt'] : ['配菜', '辣度', '醬料']);
-          assert.equal(await portions.first().locator('.detail-group-row').count(), 6);
+          assert.equal(await portions.first().locator('.detail-group-row').count(), 5);
           assert.equal(await portions.nth(2).locator('.portion-default-chip').textContent(), '—');
           const layout = await page.locator('#review-content').evaluate(root => {
             const selectors = '.review-item-row,.review-item-name,.detail-group-row,.detail-group-label,.detail-choice-chip,.detail-note-text,.review-item-header';

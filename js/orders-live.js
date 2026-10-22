@@ -1128,6 +1128,7 @@ function renderBundleComponentsHtml(bundleInfo) {
       const groupsHtml = groups.map(g => {
         const groupName = g.groupName || g.group_name || groupFallback;
         const items = g.items || [];
+        if (!items.length) return '';
         const itemsHtml = items.map(bi => {
           const bName = bi.name || bi.item_name || "";
           const bQty = Number(bi.quantity) || 1;
@@ -1156,6 +1157,7 @@ function renderBundleComponentsHtml(bundleInfo) {
     }).join("");
   } else if (bundleInfo.textGroups) {
     listHtml = bundleInfo.textGroups.map(tg => {
+      if (!tg.items?.length) return '';
       const label = tg.portionLabel ? `${tg.portionLabel} ${tg.groupName}` : tg.groupName;
       const itemsHtml = tg.items.map(bi => `
         <span class="bundle-item-chip">
@@ -1191,11 +1193,12 @@ function renderBundleComponentsHtml(bundleInfo) {
 window.renderBundleComponentsHtml = renderBundleComponentsHtml;
 
 function renderReviewNoteHtml(note, labelKey) {
-  if (!note) return '';
+  if (!String(note ?? '').trim()) return '';
   return `<div class="detail-group-row detail-note-row"><span class="detail-group-label">${escapeHtml(t(labelKey))}</span><div class="detail-note-text">${escapeHtml(note)}</div></div>`;
 }
 
 function renderReviewGroupHtml(group) {
+  if (!group.items?.length) return '';
   const chips = (group.items || []).map(choice => {
     const value = OrderDetailView.choiceText({ ...choice, quantity: 1 });
     const price = OrderDetailView.extra(choice);
