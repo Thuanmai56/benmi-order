@@ -32,15 +32,17 @@ report.dependencies = {
     [file, createHash('sha256').update(readFileSync(path.join(root, file))).digest('hex')]))
 };
 const sourcePaths = ['*.html', 'index.css', 'js', 'css', 'benmi-worker-official/src', 'benmi-worker-official/migrations', 'benmi-worker-official/cloudflare.config.ts', 'benmi-worker-official/wrangler.config.ts'];
-const sourceFiles = git('ls-files', '--', ...sourcePaths).split('\n').filter(Boolean).sort();
+const sourceFiles = git('ls-files', '--cached', '--others', '--exclude-standard', '--', ...sourcePaths).split('\n').filter(Boolean).sort();
 const sourceHash = createHash('sha256');
 for (const file of sourceFiles) sourceHash.update(file).update('\0').update(readFileSync(path.join(root, file))).update('\0');
-report.application = { sha256: sourceHash.digest('hex'), fileCount: sourceFiles.length, changedFromHead: git('diff', '--name-only', 'HEAD', '--', ...sourcePaths) };
+const changedSourceFiles = [git('diff', '--name-only', 'HEAD', '--', ...sourcePaths), git('ls-files', '--others', '--exclude-standard', '--', ...sourcePaths)].flatMap(value => value.split('\n')).filter(Boolean);
+report.application = { sha256: sourceHash.digest('hex'), fileCount: sourceFiles.length, changedFromHead: [...new Set(changedSourceFiles)].sort().join('\n') };
 const suites = [
   ['frontend-static', ['scripts/check-frontend.js']],
   ['routing-lifecycle', ['--test', 'scripts/test-explore-routing.mjs', 'scripts/test-client-modular.mjs', 'scripts/test-line-tenant-redirect.mjs', 'scripts/test-line-text-normalization.mjs', 'scripts/test-order-domain-routing.mjs', 'scripts/test-order-domain-api.cjs', 'scripts/test-tenant-lifecycle.cjs']],
   ['worker-types', ['benmi-worker-official/node_modules/typescript/bin/tsc', '--noEmit', '-p', 'benmi-worker-official/tsconfig.json']],
   ['cloudflare-config', ['--test', 'scripts/test-cloudflare-cli.mjs']],
+  ['staff-capability-schema', ['--test', 'tests/test_staff_capability_schema.cjs']],
   ['order-identity', ['tests/test_order_identity.cjs']],
   ['line-receipts', ['--test', 'scripts/test-line-order-receipts.cjs']],
   ['liff-retry', ['--test', 'scripts/test-liff-message-retry.cjs']],

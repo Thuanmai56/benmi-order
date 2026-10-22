@@ -1,0 +1,559 @@
+{
+  "schemaVersion": 1,
+  "task": "R02",
+  "status": "local verified; user authorized commit/push; PR CI and migration approval pending",
+  "remoteMutationsPerformed": false,
+  "baseCommit": "c35c3332c95becaef9f523f0e9380c18321f0fb3",
+  "branch": "codex/staff-order-r02-capabilities",
+  "node": "v24.22.0",
+  "localStartedAt": "2026-10-20T01:28:12.156Z",
+  "localFinishedAt": "2026-10-20T01:28:56.807Z",
+  "artifactDirectory": "artifacts/release-baseline/2026-10-20T01-28-12-155Z",
+  "application": {
+    "sha256": "bb02db60b8719b1fc6306db7602037cf591a4f8392f50006df00545336a0f747",
+    "fileCount": 131,
+    "changedFromHead": "benmi-worker-official/migrations/0071_add_staff_ordering_capabilities.sql"
+  },
+  "preparedFileHashes": {
+    "benmi-worker-official/migrations/0071_add_staff_ordering_capabilities.sql": "2d2034792a85b2219ad3646ec6ef864c35cc53a12db9be7d64f8c5ffdea4d7e4",
+    "tests/test_staff_capability_schema.cjs": "b100f1e3507e1ee46260c2715261cb4fe3fac99ac58bee4db721c16a0e560ed1",
+    "tests/fixtures/staff-ordering/schema-baselines.json": "d15e829f2a4af0c2b1b835b4ca4a2b528e47a2344fb659cf54bfbaca7a12a43f",
+    "tests/test_order_identity.cjs": "41c35a040b55fbd80af60e30ca071fdfb73eeb2dad83e9e22e3f2cdcdd913ea5",
+    "scripts/check-release-baseline.mjs": "629291fb0493d08ff9ede4cd4886891f427bd9b77a2a3139280129ed27c68775"
+  },
+  "migrationNumberAllocation": {
+    "highestObserved": 70,
+    "selected": 71,
+    "checkedHistoryAndThreeRemoteLedgers": true
+  },
+  "schemaClassification": {
+    "oldIndexMigration": {
+      "oldName": "0006_add_performance_indexes.sql",
+      "currentName": "0007_add_performance_indexes.sql",
+      "renameCommit": "1e1c084bcdc1d4c040cc640649b7232dc2d96e8a",
+      "identical": true
+    },
+    "outsideMainDomains": {
+      "0061_unified_bundle_and_customization_schema.sql": "menu/modifiers",
+      "0062_tenant_line_runtime.sql": "LINE runtime/probes",
+      "0063_clean_customizations_and_category_links.sql": "menu/modifiers cleanup"
+    },
+    "stagingExtraConfigColumns": [
+      "cancellation_detection_enabled",
+      "cancellation_review_threshold",
+      "cancellation_clear_threshold"
+    ]
+  },
+  "remoteSnapshotAt": "2026-10-20T01:22:39.023Z",
+  "environments": {
+    "production": {
+      "databaseId": "48479f91-eec7-4da2-b044-edaaf622f195",
+      "readOnly": true,
+      "ledgerCount": 73,
+      "highestRecorded": 67,
+      "pendingMain": [],
+      "recordedOutsideMain": [
+        "0006_add_performance_indexes.sql",
+        "0061_unified_bundle_and_customization_schema.sql",
+        "0062_tenant_line_runtime.sql",
+        "0063_clean_customizations_and_category_links.sql"
+      ],
+      "targetColumns": [
+        {
+          "name": "tenant_id",
+          "type": "TEXT",
+          "required": 0,
+          "dflt_value": null
+        },
+        {
+          "name": "staff_ordering_enabled",
+          "type": "INTEGER",
+          "required": 1,
+          "dflt_value": "0"
+        }
+      ],
+      "flags": [
+        {
+          "staff_ordering_enabled": 0,
+          "tenant_count": 14
+        }
+      ],
+      "enabledTenants": [],
+      "staffOrders": [],
+      "demo": [
+        {
+          "tenant_id": "blab_demo",
+          "staff_ordering_enabled": 0,
+          "is_active": 1
+        }
+      ],
+      "tenantConfigSchemaSha256": "c1487521c2af55a630986ab33262262db957d7efe89be934609c6bfe83202250"
+    },
+    "test": {
+      "databaseId": "c0152835-7d42-4545-8cb4-6658dfc7e97d",
+      "readOnly": true,
+      "ledgerCount": 76,
+      "highestRecorded": 67,
+      "pendingMain": [
+        "0067_tenant_lifecycle.sql"
+      ],
+      "recordedOutsideMain": [
+        "0006_add_performance_indexes.sql",
+        "0010_add_menu_customizations_and_seed_bsc.sql",
+        "0061_add_staff_order_revision_guard.sql",
+        "0061_unified_bundle_and_customization_schema.sql",
+        "0062_tenant_line_runtime.sql",
+        "0063_clean_customizations_and_category_links.sql",
+        "0066_order_cancellation_requests.sql",
+        "0067_cancellation_intent_improvements.sql"
+      ],
+      "targetColumns": [
+        {
+          "name": "tenant_id",
+          "type": "TEXT",
+          "required": 0,
+          "dflt_value": null
+        },
+        {
+          "name": "staff_ordering_enabled",
+          "type": "INTEGER",
+          "required": 1,
+          "dflt_value": "0"
+        }
+      ],
+      "flags": [
+        {
+          "staff_ordering_enabled": 0,
+          "tenant_count": 12
+        },
+        {
+          "staff_ordering_enabled": 1,
+          "tenant_count": 2
+        }
+      ],
+      "enabledTenants": [
+        {
+          "tenant_id": "bsc"
+        },
+        {
+          "tenant_id": "jiangjiejie"
+        }
+      ],
+      "staffOrders": [
+        {
+          "status": "ACCEPTED",
+          "count": 2
+        },
+        {
+          "status": "PAID",
+          "count": 3
+        },
+        {
+          "status": "REJECTED",
+          "count": 3
+        }
+      ],
+      "demo": [
+        {
+          "tenant_id": "blab_demo",
+          "staff_ordering_enabled": 0,
+          "is_active": 1
+        }
+      ],
+      "tenantConfigSchemaSha256": "a52dc3ef3221cc3c1d2be45f8ecb532ba21d960ce4f1d65b62e7f7b5e2fc0760"
+    },
+    "dev": {
+      "databaseId": "40b67d8a-29e0-40c1-9ce2-b76f76864e95",
+      "readOnly": true,
+      "ledgerCount": 78,
+      "highestRecorded": 70,
+      "pendingMain": [],
+      "recordedOutsideMain": [
+        "0061_unified_bundle_and_customization_schema.sql",
+        "0062_tenant_line_runtime.sql",
+        "0063_clean_customizations_and_category_links.sql",
+        "0064_add_modifier_migration_metadata.sql",
+        "0065_unified_option_groups.sql",
+        "0066_optional_migrated_option_groups.sql",
+        "0068_unified_menu_lifecycle_guards.sql",
+        "0069_order_detail_snapshots.sql",
+        "0070_add_modifier_group_auto_popup.sql"
+      ],
+      "targetColumns": [
+        {
+          "name": "tenant_id",
+          "type": "TEXT",
+          "required": 0,
+          "dflt_value": null
+        },
+        {
+          "name": "staff_ordering_enabled",
+          "type": "INTEGER",
+          "required": 1,
+          "dflt_value": "0"
+        }
+      ],
+      "flags": [
+        {
+          "staff_ordering_enabled": 0,
+          "tenant_count": 14
+        }
+      ],
+      "enabledTenants": [],
+      "staffOrders": [],
+      "demo": [
+        {
+          "tenant_id": "blab_demo",
+          "staff_ordering_enabled": 0,
+          "is_active": 1
+        }
+      ],
+      "tenantConfigSchemaSha256": "2e5c742f797528b2f778547c77fd9fa074bf6a77766f3727697e2de0011cd961"
+    }
+  },
+  "suites": [
+    {
+      "name": "frontend-static",
+      "command": [
+        "node",
+        "scripts/check-frontend.js"
+      ],
+      "environment": {},
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 736,
+      "log": "frontend-static.log",
+      "inputHashes": {
+        "scripts/check-frontend.js": "b06598a2c51d8fe0f383303cb1dbd467d29deb65db1affb96d3bb6b965540ab1"
+      },
+      "logSha256": "0d690ea2ebdc91ab242a45121b0ce9ae887102cf29866da30ed19d4d66fc69a7"
+    },
+    {
+      "name": "routing-lifecycle",
+      "command": [
+        "node",
+        "--test",
+        "scripts/test-explore-routing.mjs",
+        "scripts/test-client-modular.mjs",
+        "scripts/test-line-tenant-redirect.mjs",
+        "scripts/test-line-text-normalization.mjs",
+        "scripts/test-order-domain-routing.mjs",
+        "scripts/test-order-domain-api.cjs",
+        "scripts/test-tenant-lifecycle.cjs"
+      ],
+      "environment": {},
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 649,
+      "log": "routing-lifecycle.log",
+      "inputHashes": {
+        "scripts/test-explore-routing.mjs": "93189ca013f11ba078e1acc244e77cae0f04cd0537f0b79a75a1b0d70705f514",
+        "scripts/test-client-modular.mjs": "00527ff35a48a4c5b97cd057ce092d7414f1bafb81a942ed579e12a944a8b2c5",
+        "scripts/test-line-tenant-redirect.mjs": "56b74a896553bfec7cfc0db6e61a512d2b3bd1432c5cbd48f726cae5ad375734",
+        "scripts/test-line-text-normalization.mjs": "68406d571fa248a9bd44c847d4e250606df5105f8dc7c3debfb47db629422a35",
+        "scripts/test-order-domain-routing.mjs": "2a77f6781da5bf8b3560c38dbc03e1a587671568869213f82ad3551e82c2609a",
+        "scripts/test-order-domain-api.cjs": "337e440af534a897af2f59c8491e0dc383313321966d61afa75f65a371806950",
+        "scripts/test-tenant-lifecycle.cjs": "3679ae870ec2ef9fcf25aa6fb98f08816605267056d35499104c25d02c9f33e0"
+      },
+      "logSha256": "fa3934d7be685421ad2e8318a0a7446f934e3c9023ea1f74871e37095bcb134c"
+    },
+    {
+      "name": "worker-types",
+      "command": [
+        "node",
+        "benmi-worker-official/node_modules/typescript/bin/tsc",
+        "--noEmit",
+        "-p",
+        "benmi-worker-official/tsconfig.json"
+      ],
+      "environment": {},
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 854,
+      "log": "worker-types.log",
+      "inputHashes": {
+        "benmi-worker-official/node_modules/typescript/bin/tsc": "8d5fa5bd883fec0979fc2004f1fe1d99aef40570155d550eadc0b03b55513bf0",
+        "benmi-worker-official/tsconfig.json": "c894aad3ca361b24beb88c56885cb503c22367504411c1fa6e12bd933aea6552"
+      },
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "cloudflare-config",
+      "command": [
+        "node",
+        "--test",
+        "scripts/test-cloudflare-cli.mjs"
+      ],
+      "environment": {},
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 125,
+      "log": "cloudflare-config.log",
+      "inputHashes": {
+        "scripts/test-cloudflare-cli.mjs": "25504c362cb09abed420cb813269e5d4af9943374bb0f5f02529929876243296"
+      },
+      "logSha256": "4ace1b9d83d57dac8839c29e08b9363f91f37557034195981d95d84fb1ef251f"
+    },
+    {
+      "name": "staff-capability-schema",
+      "command": [
+        "node",
+        "--test",
+        "tests/test_staff_capability_schema.cjs"
+      ],
+      "environment": {},
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 1656,
+      "log": "staff-capability-schema.log",
+      "inputHashes": {
+        "tests/test_staff_capability_schema.cjs": "b100f1e3507e1ee46260c2715261cb4fe3fac99ac58bee4db721c16a0e560ed1"
+      },
+      "logSha256": "8bc91db2dc137d965e7b05138a2ae1aa13bfaec469e9758bfab67c57d900466b"
+    },
+    {
+      "name": "order-identity",
+      "command": [
+        "node",
+        "tests/test_order_identity.cjs"
+      ],
+      "environment": {},
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 2127,
+      "log": "order-identity.log",
+      "inputHashes": {
+        "tests/test_order_identity.cjs": "41c35a040b55fbd80af60e30ca071fdfb73eeb2dad83e9e22e3f2cdcdd913ea5"
+      },
+      "logSha256": "80c6a61928bb9d1528a3325417ca068b5e32122faa9a53efc3f9197261037e9e"
+    },
+    {
+      "name": "line-receipts",
+      "command": [
+        "node",
+        "--test",
+        "scripts/test-line-order-receipts.cjs"
+      ],
+      "environment": {},
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 514,
+      "log": "line-receipts.log",
+      "inputHashes": {
+        "scripts/test-line-order-receipts.cjs": "414dca8c239961996eef37c1cbf2aa81e27e2db8fdd7d4373eea93fac17195b3"
+      },
+      "logSha256": "211a148ab4ea4a0c19cde473b71c2a5f23cc89cc322b2929ca9f34d0e86b6229"
+    },
+    {
+      "name": "liff-retry",
+      "command": [
+        "node",
+        "--test",
+        "scripts/test-liff-message-retry.cjs"
+      ],
+      "environment": {},
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 266,
+      "log": "liff-retry.log",
+      "inputHashes": {
+        "scripts/test-liff-message-retry.cjs": "ed21c9057ea178708c2d5c4cf1d983ac2cf388efe5cf1b3fbc82c3abab3ebdcf"
+      },
+      "logSha256": "1a1c3c8a5ab65cb62f8d8d712d0bb7478deac42f248df07858003ab2a82fc0ea"
+    },
+    {
+      "name": "menu-safety",
+      "command": [
+        "node",
+        "--test",
+        "scripts/test-menu-safety.cjs"
+      ],
+      "environment": {},
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 259,
+      "log": "menu-safety.log",
+      "inputHashes": {
+        "scripts/test-menu-safety.cjs": "dd3964972c2ea8ef32c308c41aa8fbf4cac19b8c8d0ec0ec22144bb6b9e6e3c2"
+      },
+      "logSha256": "92fe49ce9374dca2cbc353dbb2a394036d7d27f2a3ed9b4d1cd626b3b4c4b048"
+    },
+    {
+      "name": "print-identity",
+      "command": [
+        "node",
+        "tests/test_order_identity_print.cjs"
+      ],
+      "environment": {},
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 39,
+      "log": "print-identity.log",
+      "inputHashes": {
+        "tests/test_order_identity_print.cjs": "c2cca5157a1ffc0226c2163c3018f4aa6dcc266bb092f4125d3fcb1b417ca4b3"
+      },
+      "logSha256": "478b6b4c99a2c59e6fb62b120f9479e5b3b8af85ec55d3c357723f263e5341bd"
+    },
+    {
+      "name": "print-items",
+      "command": [
+        "node",
+        "tests/test_order_print_items.js"
+      ],
+      "environment": {},
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 167,
+      "log": "print-items.log",
+      "inputHashes": {
+        "tests/test_order_print_items.js": "8edcb5cf23dd02603b9ad800797a0cc2ca78e09cb5014746b0b459b3c6fea65a"
+      },
+      "logSha256": "3ada3a26fa1838dab8515267dec3e5b49007a6106b0c13e5606a11e767753e7c"
+    },
+    {
+      "name": "print-sequence",
+      "command": [
+        "node",
+        "tests/test_printer_sequence.js"
+      ],
+      "environment": {},
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 37,
+      "log": "print-sequence.log",
+      "inputHashes": {
+        "tests/test_printer_sequence.js": "aa5b365fd3841798d99dc56b1612fd2d4762a2318e37550d4698da983ad07959"
+      },
+      "logSha256": "efbcc6aaa62ecefaef911f292e9e3de0582f497c5e38f65f49a582dbb92e53e7"
+    },
+    {
+      "name": "print-subtotals",
+      "command": [
+        "node",
+        "tests/test_order_print_subtotal_bundle.cjs"
+      ],
+      "environment": {},
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 40,
+      "log": "print-subtotals.log",
+      "inputHashes": {
+        "tests/test_order_print_subtotal_bundle.cjs": "f2041ac905c7dc6c1bbf6018be07a96225c3cf3394b921bbcd8b6c44fd186892"
+      },
+      "logSha256": "1f66cae8e617d1ccf5db16b91c56c08a487652c67d51dc429f3e4821ca15b58c"
+    },
+    {
+      "name": "print-canvas",
+      "command": [
+        "node",
+        "tests/test_receipt_canvas_height.js"
+      ],
+      "environment": {},
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 41,
+      "log": "print-canvas.log",
+      "inputHashes": {
+        "tests/test_receipt_canvas_height.js": "f54da415cf0ff2205b034a2f9e461032c9aa818c4f83b655e5465a2961560c5a"
+      },
+      "logSha256": "17add9d833e8108ff0950b9ebf4bfe356ee206cb92a63e4dd607eefb68fcab33"
+    },
+    {
+      "name": "pos-display-chromium",
+      "command": [
+        "node",
+        "tests/test_pos_display.cjs"
+      ],
+      "environment": {
+        "POS_DISPLAY_BROWSER": "chromium"
+      },
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 10628,
+      "log": "pos-display-chromium.log",
+      "inputHashes": {
+        "tests/test_pos_display.cjs": "977ea16bc188f405e0dacfb345324ac6fa73d89fc77aa49492d5db72e29d4297"
+      },
+      "logSha256": "cc46d0f42f9c1748480fffb084db38ffbded916c6f8f03ba839f18cbf165d6d7"
+    },
+    {
+      "name": "pos-display-webkit",
+      "command": [
+        "node",
+        "tests/test_pos_display.cjs"
+      ],
+      "environment": {
+        "POS_DISPLAY_BROWSER": "webkit"
+      },
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 15298,
+      "log": "pos-display-webkit.log",
+      "inputHashes": {
+        "tests/test_pos_display.cjs": "977ea16bc188f405e0dacfb345324ac6fa73d89fc77aa49492d5db72e29d4297"
+      },
+      "logSha256": "cc46d0f42f9c1748480fffb084db38ffbded916c6f8f03ba839f18cbf165d6d7"
+    },
+    {
+      "name": "pos-live-mobile",
+      "command": [
+        "node",
+        "tests/test_pos_live_mobile.cjs"
+      ],
+      "environment": {},
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 9776,
+      "log": "pos-live-mobile.log",
+      "inputHashes": {
+        "tests/test_pos_live_mobile.cjs": "0f00f800018f4bf7349bb7baacb970f99c8fa7a936f5209055719eb36c6028ed"
+      },
+      "logSha256": "6e5582776b69a265d38e456b6b08539df469bc1d31c8930940236c59db085ee2"
+    },
+    {
+      "name": "pos-detail-scroll",
+      "command": [
+        "node",
+        "tests/test_order_detail_mobile_scroll.cjs"
+      ],
+      "environment": {},
+      "status": "passed",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 1283,
+      "log": "pos-detail-scroll.log",
+      "inputHashes": {
+        "tests/test_order_detail_mobile_scroll.cjs": "6b8399133242c87e4bb4cd7253da1706bd21b9d9356e6c41f028c9fa868327a6"
+      },
+      "logSha256": "0686ff48120557951d81fd75344a09f2a6e5ffc592b85522349bfd7be8dd2b1a"
+    }
+  ],
+  "testScenarioCounts": {
+    "schemaNodeTests": 21,
+    "schemaChildScenarios": 18,
+    "legacyOrderIdentity": 19
+  },
+  "nextTaskAuthorized": false,
+  "commitPushAuthorization": {
+    "dateJST": "2026-10-22",
+    "userInstruction": "commit và push",
+    "scope": "commit/push prepared R02 branch; no PR creation, merge, manual deploy or remote migration"
+  }
+}

@@ -65,12 +65,14 @@ async function check(name, fn) { await fn(); passed++; console.log(`PASS ${name}
    const before=await DB.prepare('SELECT * FROM orders ORDER BY key').all();
    const itemsBefore=await DB.prepare('SELECT * FROM order_items ORDER BY id').all();
    await apply(fs.readFileSync(path.join(workerRoot,'migrations/0057_create_staff_ordering_and_tables.sql'),'utf8'));
+   await apply(fs.readFileSync(path.join(workerRoot,'migrations/0071_add_staff_ordering_capabilities.sql'),'utf8'));
    const after=await DB.prepare('SELECT * FROM orders ORDER BY key').all();
    assert.deepEqual(after.results.map(({table_id,source,revision,...legacy})=>legacy),before.results);
    assert(after.results.every(row=>row.table_id===null&&row.source==='legacy'&&row.revision===0));
    assert.deepEqual((await DB.prepare('SELECT * FROM order_items ORDER BY id').all()).results,itemsBefore.results);
    assert.deepEqual((await DB.prepare('SELECT tenant_id,staff_ordering_enabled FROM tenant_config ORDER BY tenant_id').all()).results,
      [{tenant_id:'a',staff_ordering_enabled:0},{tenant_id:'b',staff_ordering_enabled:0}]);
+   assert((await DB.prepare('SELECT staff_ordering_capabilities FROM tenant_config').all()).results.every(row=>row.staff_ordering_capabilities==='{}'));
    assert.equal(await DB.prepare("SELECT name FROM sqlite_master WHERE type='trigger' AND name='orders_staff_revision_guard'").first(),null);
    assert.equal((await DB.prepare('PRAGMA foreign_key_check').all()).results.length,0);
  });
