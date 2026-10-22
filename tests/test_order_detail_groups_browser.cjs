@@ -36,6 +36,9 @@ async function fixture(page, lang) {
     PrinterService.getPrintCapabilities = () => ({ stickers: true, bill: true });
     PrinterService.printItemRangeStickers = (...args) => printCalls.push(['range', ...args]);
     PrinterService.printSingleItemSticker = (...args) => printCalls.push(['single', ...args]);
+    PrinterService.printFullOrder = (...args) => printCalls.push(['full', ...args]);
+    PrinterService.printCashierOnly = (...args) => printCalls.push(['bill', ...args]);
+    window.openQuickStickerModal = (...args) => printCalls.push(['custom', ...args]);
     const c = (name, quantity = 1, surcharge = 0, extra = {}) => ({ optionId: name, itemId: name, name, quantity, surcharge, groups: [], subOptions: [], ...extra });
     const g = (groupName, items) => ({ groupId: groupName, groupName, items });
     const vi = lang === 'vi';
@@ -97,12 +100,39 @@ for (const viewport of [{ width: 320, height: 740 }, { width: 390, height: 844 }
           assert.ok(layout.pageWidth <= viewport.width + 1);
           if (viewport.width <= 600) assert.ok(layout.choicesTop >= layout.labelBottom, 'mobile labels sit above choices');
           else assert.ok(layout.choicesLeft > layout.labelRight, 'tablet labels sit beside choices');
+          const printLayout = await page.locator('.review-print-macro-bar').evaluate(bar => {
+            const buttons = [...bar.querySelectorAll('button')];
+            return buttons.map(button => {
+              const rect = button.getBoundingClientRect();
+              return { width: rect.width, height: rect.height, top: rect.top, bottom: rect.bottom,
+                clipped: button.scrollWidth > button.clientWidth + 1,
+                labelClipped: button.lastElementChild.scrollWidth > button.lastElementChild.clientWidth + 1 };
+            });
+          });
+          assert.ok(printLayout.every(b => b.width >= 48 && b.height >= 48 && !b.clipped && !b.labelClipped));
+          assert.ok(printLayout.slice(1).every((b, i) => b.top >= printLayout[i].bottom), 'print actions have room for readable labels');
         }
         await multi.locator('.review-item-print-btn').click();
         assert.deepEqual(await page.evaluate(() => printCalls.at(-1).slice(0, 4)), ['range', 'detail-fixture', 0, 3]);
         assert.equal(await multi.locator('.review-item-price').textContent(), '$465');
         const notes = await page.locator('#review-content .detail-note-text').allTextContents();
         assert.equal(notes.length, 4, 'round, item and portion notes appear once in their own scope');
+        assert.match(await page.locator('#i18n-btn-print-full .print-action-summary').textContent(), /5/);
+        for (const [id, action] of [['full', 'full'], ['bill', 'bill'], ['custom', 'custom']]) {
+          await page.locator(`#btn-review-print-${id}`).click();
+          assert.deepEqual(await page.evaluate(() => printCalls.at(-1)), [action, 'detail-fixture']);
+        }
+        await page.evaluate(() => {
+          PrinterService.getPrintCapabilities = () => ({ stickers: false, bill: true });
+          updatePrintActionAvailability();
+        });
+        assert.equal(await page.locator('#btn-review-print-full').isDisabled(), true);
+        assert.equal(await page.locator('#btn-review-print-custom').isDisabled(), true);
+        assert.equal(await page.locator('#btn-review-print-bill').isEnabled(), true);
+        await page.evaluate(() => {
+          PrinterService.getPrintCapabilities = () => ({ stickers: true, bill: true });
+          updatePrintActionAvailability();
+        });
         const artifacts = process.env.ORDER_DETAIL_ARTIFACT_DIR;
         if (artifacts && lang === 'vi' && viewport.width >= 390) {
           fs.mkdirSync(artifacts, { recursive: true });
@@ -127,6 +157,33 @@ test('legacy portion buttons keep their original sticker indexes', async () => {
     assert.equal(await buttons.count(), 2);
     await buttons.nth(1).click();
     assert.deepEqual(await page.evaluate(() => printCalls.at(-1)), ['single', 'legacy-order', 5]);
+    assert.deepEqual(errors, []);
+  } finally { await page.close(); }
+});
+
+test('a sparse legacy note stays inside bundle portion 3 and prints that portion', async () => {
+  const page = await browser.newPage({ viewport: { width: 1024, height: 900 } });
+  try {
+    const errors = await fixture(page, 'vi');
+    await page.evaluate(() => {
+      const order = { key: 'legacy-bundle', items: [{ name: 'Combo A', quantity: 3, unit_price: 150, subtotal: 465,
+        options: [{ choice: '第3份: 備註: Test 3', price: 0 }],
+        bundle_snapshot_json: JSON.stringify({ portions: [0, 1, 2].map(portionIndex => ({ portionIndex,
+          groups: [{ groupName: 'Nhóm bất kỳ', items: [{ name: 'Lựa chọn A', quantity: 1 }] }] })) }) }] };
+      const item = PrinterService.parseOrderItems(order, false)[0];
+      document.getElementById('review-content').innerHTML = renderItemRowHtml({ ...item, stickerIndex: 4 }, 0, order.key);
+    });
+    const portions = page.locator('#review-content .detail-portion-block');
+    assert.equal(await portions.count(), 3);
+    assert.equal(await portions.nth(2).locator('.detail-note-text').textContent(), 'Test 3');
+    assert.equal(await portions.nth(0).locator('.detail-note-row').count(), 0);
+    assert.equal(await portions.nth(1).locator('.detail-note-row').count(), 0);
+    assert.equal(await page.locator('#review-content .detail-note-row').count(), 1);
+    await portions.nth(2).locator('.portion-print-btn').click();
+    assert.deepEqual(await page.evaluate(() => printCalls.at(-1)), ['single', 'legacy-bundle', 6]);
+    if (process.env.ORDER_DETAIL_ARTIFACT_DIR) {
+      await page.locator('#review-content').screenshot({ path: path.join(process.env.ORDER_DETAIL_ARTIFACT_DIR, 'legacy-portion-note.png') });
+    }
     assert.deepEqual(errors, []);
   } finally { await page.close(); }
 });
