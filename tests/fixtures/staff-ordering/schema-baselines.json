@@ -1,0 +1,89 @@
+{
+  "capturedAtUtc": "2026-10-20T01:22:39.023Z",
+  "description": "Schema definitions only; tests insert synthetic data. No tenant records or credentials.",
+  "environments": {
+    "production": {
+      "tenantConfigSql": "CREATE TABLE tenant_config (\n    tenant_id TEXT PRIMARY KEY,\n    \n    line_channel_token TEXT,          \n    line_channel_secret TEXT,         \n    liff_id TEXT,\n    liff_url TEXT,\n    \n    groq_api_key TEXT,\n    groq_model TEXT DEFAULT 'llama-3.1-8b-instant',\n    openrouter_api_key TEXT,\n    openrouter_model TEXT DEFAULT 'google/gemini-2.5-flash:free',\n    \n    brand_name TEXT NOT NULL,         \n    brand_color TEXT DEFAULT '#00b900',\n    store_address TEXT,\n    \n    operating_hours TEXT,             \n    delivery_policy TEXT,             \n    quick_replies TEXT,               \n    flex_template TEXT,               \n    default_password TEXT DEFAULT '12345678',\n    locale TEXT DEFAULT 'zh-TW',      \n    \n    google_sheets_url TEXT,\n    \n    is_active INTEGER DEFAULT 1,\n    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,\n    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, allow_scheduled_pickup INTEGER DEFAULT 1, store_status TEXT DEFAULT 'open', logo_url TEXT, announcement TEXT DEFAULT NULL, allow_dine_in INTEGER DEFAULT 1, features TEXT DEFAULT '[]', order_prefix TEXT DEFAULT NULL, latitude REAL, longitude REAL, cuisine_type TEXT DEFAULT 'vietnamese', is_marketplace_visible INTEGER DEFAULT 1, ai_order_redirect_enabled INTEGER NOT NULL DEFAULT 1, staff_ordering_enabled INTEGER NOT NULL DEFAULT 0, customer_order_domain TEXT NOT NULL DEFAULT 'legacy'\n  CHECK (customer_order_domain IN ('legacy', 'blabfood')), legacy_liff_endpoint_url TEXT,\n    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE\n)",
+      "tenantConfigSqlSha256": "c1487521c2af55a630986ab33262262db957d7efe89be934609c6bfe83202250",
+      "staffObjects": [
+        {
+          "name": "idx_orders_active_staff_table",
+          "type": "index",
+          "sql": "CREATE UNIQUE INDEX idx_orders_active_staff_table\nON orders(tenant_id, table_id)\nWHERE source = 'staff' AND status NOT IN ('PAID', 'REJECTED', 'PICKED_UP')"
+        },
+        {
+          "name": "restaurant_tables",
+          "type": "table",
+          "sql": "CREATE TABLE restaurant_tables (\n    id TEXT PRIMARY KEY,\n    tenant_id TEXT NOT NULL,\n    label TEXT NOT NULL,\n    sort_order INTEGER NOT NULL DEFAULT 0,\n    is_active INTEGER NOT NULL DEFAULT 1,\n    created_at TEXT NOT NULL DEFAULT (datetime('now')),\n    updated_at TEXT NOT NULL DEFAULT (datetime('now')),\n    FOREIGN KEY (tenant_id) REFERENCES tenant_config(tenant_id) ON DELETE CASCADE\n)"
+        },
+        {
+          "name": "staff_order_requests",
+          "type": "table",
+          "sql": "CREATE TABLE staff_order_requests (\n    tenant_id TEXT NOT NULL,\n    request_id TEXT NOT NULL,\n    request_hash TEXT NOT NULL,\n    order_key TEXT NOT NULL,\n    round_number INTEGER NOT NULL,\n    response_json TEXT NOT NULL,\n    created_at TEXT NOT NULL DEFAULT (datetime('now')),\n    PRIMARY KEY (tenant_id, request_id)\n)"
+        },
+        {
+          "name": "staff_sessions",
+          "type": "table",
+          "sql": "CREATE TABLE staff_sessions (\n    token_hash TEXT PRIMARY KEY,\n    tenant_id TEXT NOT NULL,\n    expires_at TEXT NOT NULL,\n    revoked_at TEXT DEFAULT NULL,\n    created_at TEXT NOT NULL DEFAULT (datetime('now'))\n)"
+        }
+      ]
+    },
+    "test": {
+      "tenantConfigSql": "CREATE TABLE tenant_config (\n    tenant_id TEXT PRIMARY KEY,\n    line_channel_token TEXT,\n    line_channel_secret TEXT,\n    liff_id TEXT,\n    liff_url TEXT,\n    groq_api_key TEXT,\n    groq_model TEXT DEFAULT 'openai/gpt-oss-120b',\n    openrouter_api_key TEXT,\n    openrouter_model TEXT DEFAULT 'google/gemini-2.5-flash:free',\n    brand_name TEXT NOT NULL DEFAULT 'Benmi',\n    brand_color TEXT DEFAULT '#00b900',\n    store_address TEXT,\n    operating_hours TEXT,\n    allow_scheduled_pickup INTEGER DEFAULT 1,\n    delivery_policy TEXT,\n    quick_replies TEXT,\n    flex_template TEXT,\n    default_password TEXT DEFAULT '12345678',\n    locale TEXT DEFAULT 'zh-TW',\n    google_sheets_url TEXT,\n    is_active INTEGER DEFAULT 1,\n    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,\n    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP\n, store_status TEXT DEFAULT 'open', logo_url TEXT, allow_dine_in INTEGER DEFAULT 1, features TEXT DEFAULT '[]', order_prefix TEXT DEFAULT NULL, announcement TEXT DEFAULT NULL, latitude REAL, longitude REAL, cuisine_type TEXT DEFAULT 'vietnamese', is_marketplace_visible INTEGER DEFAULT 1, ai_order_redirect_enabled INTEGER NOT NULL DEFAULT 1, staff_ordering_enabled INTEGER NOT NULL DEFAULT 0, cancellation_detection_enabled INTEGER NOT NULL DEFAULT 0 CHECK(cancellation_detection_enabled IN (0,1)), cancellation_review_threshold REAL NOT NULL DEFAULT 0.60 CHECK(cancellation_review_threshold > 0 AND cancellation_review_threshold < 1), cancellation_clear_threshold REAL NOT NULL DEFAULT 0.90 CHECK(cancellation_clear_threshold > cancellation_review_threshold AND cancellation_clear_threshold <= 1), customer_order_domain TEXT NOT NULL DEFAULT 'legacy'\n  CHECK (customer_order_domain IN ('legacy', 'blabfood')), legacy_liff_endpoint_url TEXT)",
+      "tenantConfigSqlSha256": "a52dc3ef3221cc3c1d2be45f8ecb532ba21d960ce4f1d65b62e7f7b5e2fc0760",
+      "staffObjects": [
+        {
+          "name": "idx_orders_active_staff_table",
+          "type": "index",
+          "sql": "CREATE UNIQUE INDEX idx_orders_active_staff_table\nON orders(tenant_id, table_id)\nWHERE source = 'staff' AND status NOT IN ('PAID', 'REJECTED', 'PICKED_UP')"
+        },
+        {
+          "name": "orders_staff_revision_guard",
+          "type": "trigger",
+          "sql": "CREATE TRIGGER orders_staff_revision_guard\nBEFORE UPDATE OF revision ON orders\nWHEN NEW.revision < 0\nBEGIN\n  SELECT RAISE(ABORT, 'REVISION_CONFLICT: CHECK constraint failed: revision >= 0');\nEND"
+        },
+        {
+          "name": "restaurant_tables",
+          "type": "table",
+          "sql": "CREATE TABLE restaurant_tables (\n    id TEXT PRIMARY KEY,\n    tenant_id TEXT NOT NULL,\n    label TEXT NOT NULL,\n    sort_order INTEGER NOT NULL DEFAULT 0,\n    is_active INTEGER NOT NULL DEFAULT 1,\n    created_at TEXT NOT NULL DEFAULT (datetime('now')),\n    updated_at TEXT NOT NULL DEFAULT (datetime('now')),\n    FOREIGN KEY (tenant_id) REFERENCES tenant_config(tenant_id) ON DELETE CASCADE\n)"
+        },
+        {
+          "name": "staff_order_requests",
+          "type": "table",
+          "sql": "CREATE TABLE staff_order_requests (\n    tenant_id TEXT NOT NULL,\n    request_id TEXT NOT NULL,\n    request_hash TEXT NOT NULL,\n    order_key TEXT NOT NULL,\n    round_number INTEGER NOT NULL,\n    response_json TEXT NOT NULL,\n    created_at TEXT NOT NULL DEFAULT (datetime('now')),\n    PRIMARY KEY (tenant_id, request_id)\n)"
+        },
+        {
+          "name": "staff_sessions",
+          "type": "table",
+          "sql": "CREATE TABLE staff_sessions (\n    token_hash TEXT PRIMARY KEY,\n    tenant_id TEXT NOT NULL,\n    expires_at TEXT NOT NULL,\n    revoked_at TEXT DEFAULT NULL,\n    created_at TEXT NOT NULL DEFAULT (datetime('now'))\n)"
+        }
+      ]
+    },
+    "dev": {
+      "tenantConfigSql": "CREATE TABLE tenant_config (\n    tenant_id TEXT PRIMARY KEY,\n    \n    line_channel_token TEXT,          \n    line_channel_secret TEXT,         \n    liff_id TEXT,\n    liff_url TEXT,\n    \n    groq_api_key TEXT,\n    groq_model TEXT DEFAULT 'openai/gpt-oss-120b',\n    openrouter_api_key TEXT,\n    openrouter_model TEXT DEFAULT 'google/gemini-2.5-flash:free',\n    \n    brand_name TEXT NOT NULL,         \n    brand_color TEXT DEFAULT '#00b900',\n    store_address TEXT,\n    \n    operating_hours TEXT,             \n    delivery_policy TEXT,             \n    quick_replies TEXT,               \n    flex_template TEXT,               \n    default_password TEXT DEFAULT '12345678',\n    locale TEXT DEFAULT 'zh-TW',      \n    \n    google_sheets_url TEXT,\n    \n    is_active INTEGER DEFAULT 1,\n    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,\n    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, allow_scheduled_pickup INTEGER DEFAULT 1, store_status TEXT DEFAULT 'open', logo_url TEXT, announcement TEXT DEFAULT NULL, allow_dine_in INTEGER DEFAULT 1, features TEXT DEFAULT '[]', order_prefix TEXT DEFAULT NULL, latitude REAL, longitude REAL, cuisine_type TEXT DEFAULT 'vietnamese', is_marketplace_visible INTEGER DEFAULT 1, ai_order_redirect_enabled INTEGER NOT NULL DEFAULT 1, staff_ordering_enabled INTEGER NOT NULL DEFAULT 0, customer_order_domain TEXT NOT NULL DEFAULT 'legacy'\n  CHECK (customer_order_domain IN ('legacy', 'blabfood')), legacy_liff_endpoint_url TEXT,\n    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE\n)",
+      "tenantConfigSqlSha256": "2e5c742f797528b2f778547c77fd9fa074bf6a77766f3727697e2de0011cd961",
+      "staffObjects": [
+        {
+          "name": "idx_orders_active_staff_table",
+          "type": "index",
+          "sql": "CREATE UNIQUE INDEX idx_orders_active_staff_table\nON orders(tenant_id, table_id)\nWHERE source = 'staff' AND status NOT IN ('PAID', 'REJECTED', 'PICKED_UP')"
+        },
+        {
+          "name": "restaurant_tables",
+          "type": "table",
+          "sql": "CREATE TABLE restaurant_tables (\n    id TEXT PRIMARY KEY,\n    tenant_id TEXT NOT NULL,\n    label TEXT NOT NULL,\n    sort_order INTEGER NOT NULL DEFAULT 0,\n    is_active INTEGER NOT NULL DEFAULT 1,\n    created_at TEXT NOT NULL DEFAULT (datetime('now')),\n    updated_at TEXT NOT NULL DEFAULT (datetime('now')),\n    FOREIGN KEY (tenant_id) REFERENCES tenant_config(tenant_id) ON DELETE CASCADE\n)"
+        },
+        {
+          "name": "staff_order_requests",
+          "type": "table",
+          "sql": "CREATE TABLE staff_order_requests (\n    tenant_id TEXT NOT NULL,\n    request_id TEXT NOT NULL,\n    request_hash TEXT NOT NULL,\n    order_key TEXT NOT NULL,\n    round_number INTEGER NOT NULL,\n    response_json TEXT NOT NULL,\n    created_at TEXT NOT NULL DEFAULT (datetime('now')),\n    PRIMARY KEY (tenant_id, request_id)\n)"
+        },
+        {
+          "name": "staff_sessions",
+          "type": "table",
+          "sql": "CREATE TABLE staff_sessions (\n    token_hash TEXT PRIMARY KEY,\n    tenant_id TEXT NOT NULL,\n    expires_at TEXT NOT NULL,\n    revoked_at TEXT DEFAULT NULL,\n    created_at TEXT NOT NULL DEFAULT (datetime('now'))\n)"
+        }
+      ]
+    }
+  }
+}

@@ -22,7 +22,7 @@ Mỗi task có một bản điền riêng. Ô chưa xác minh vẫn để trốn
 
 ## B. Trước push / PR / merge
 
-- [ ] `npm run test:release` đạt toàn bộ 17 suite; lưu log, trạng thái từng suite và mã thoát.
+- [ ] `npm run test:release` đạt toàn bộ suite được khai báo (R02: 18 suite); lưu log, trạng thái từng suite và mã thoát.
 - [ ] Test order identity chạy với schema nền `0057`, tenant mặc định đóng; test dữ liệu fixture không thay production.
 - [ ] Có test riêng cho hành vi mới và lỗi chính của task; mock không thay thế kiểm thử D1 transaction khi thay thao tác ghi.
 - [ ] Nếu sửa `js/*.js` hoặc CSS frontend, đã bump version trong tất cả HTML sử dụng asset và chạy frontend check.
