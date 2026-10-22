@@ -16,6 +16,8 @@ function setup(stickers = true) {
   context.window = context;
   vm.createContext(context);
   for (const file of ['js/orders-i18n.js', 'js/orders-live.js']) vm.runInContext(fs.readFileSync(file, 'utf8'), context);
+  const core = fs.readFileSync('js/orders-core.js', 'utf8');
+  vm.runInContext(core.slice(core.indexOf('function parsePortionCustomizations('), core.indexOf('window.parsePortionCustomizations =')), context);
   vm.runInContext("currentLang = window.currentLang = 'vi'", context);
   return {
     context,
@@ -106,4 +108,24 @@ test('empty note groups and whitespace-only notes do not take up rows in legacy 
   assert.equal(root.querySelector('.detail-group-row'), null);
   assert.equal(root.querySelector('.detail-portion-block'), null);
   assert.equal(JSON.stringify(empty), original);
+});
+
+
+test('legacy portion 3 note is inside its bundle portion, with the correct sticker index', () => {
+  const app = setup();
+  for (const label of ['第3份', 'Phần 3', '第三份']) {
+    const bundleData = { portions: [0, 1, 2].map(portionIndex => ({ portionIndex, groups: [group('Bất kỳ', [choice('Lựa chọn')])] })) };
+    const item = { name: 'Combo', quantity: 3, price: '$465', stickerIndex: 4, bundleData,
+      baseOptions: `${label}: 備註: Test 3`, note: '' };
+    const before = JSON.stringify(item);
+    const root = app.parse(app.context.renderItemRowHtml(item, 0, 'legacy'));
+    const portions = root.querySelectorAll('.detail-portion-block');
+    assert.equal(portions.length, 3);
+    assert.equal(portions[0].querySelector('.detail-note-row'), null);
+    assert.equal(portions[1].querySelector('.detail-note-row'), null);
+    assert.equal(portions[2].querySelector('.detail-note-text').textContent, 'Test 3');
+    assert.equal(root.textContent.split('Test 3').length - 1, 1);
+    assert.match(portions[2].querySelector('.portion-print-btn').getAttribute('onclick'), /printSingleItemSticker\('legacy', 6\)/);
+    assert.equal(JSON.stringify(item), before);
+  }
 });

@@ -1108,7 +1108,7 @@ function extractBundleFromItem(it) {
 }
 window.extractBundleFromItem = extractBundleFromItem;
 
-function renderBundleComponentsHtml(bundleInfo) {
+function renderBundleComponentsHtml(bundleInfo, portionExtras = new Map()) {
   if (!bundleInfo) return "";
   const bundleTitle = (typeof t === "function" && t("bundleSelectionsTitle")) || "套餐組合內容";
   const groupFallback = (typeof t === "function" && t("bundleGroupFallback")) || "搭配";
@@ -1153,7 +1153,8 @@ function renderBundleComponentsHtml(bundleInfo) {
       }).join("");
 
       const heading = pPrefix ? `<div class="detail-portion-heading"><span class="portion-badge">${escapeHtml(pPrefix)}</span></div>` : '';
-      return `<div class="bundle-portion-block detail-portion-block">${heading}<div class="detail-portion-content">${groupsHtml || '<span class="portion-default-chip">—</span>'}</div></div>`;
+      const extra = portionExtras.get(pNum);
+      return `<div class="bundle-portion-block detail-portion-block">${heading}<div class="detail-portion-content">${groupsHtml}${extra?.content || ''}${!groupsHtml && !extra?.content ? '<span class="portion-default-chip">—</span>' : ''}</div>${extra?.print || ''}</div>`;
     }).join("");
   } else if (bundleInfo.textGroups) {
     listHtml = bundleInfo.textGroups.map(tg => {
@@ -1207,6 +1208,28 @@ function renderReviewGroupHtml(group) {
   return `<div class="detail-group-row"><span class="detail-group-label">${escapeHtml(group.groupName || t('detailOptionGroup'))}</span><div class="detail-group-choices">${chips || '<span class="portion-default-chip">—</span>'}</div></div>`;
 }
 
+// Read the explicit legacy portion identifier; never infer ownership from its position.
+function reviewPortionNumber(label) {
+  const value = String(label).replace(/\s/g, '').match(/^(?:第([\d一二三四五六七八九十]+)份|Phần(\d+))$/i);
+  if (!value) return null;
+  const number = value[1] || value[2];
+  if (/^\d+$/.test(number)) return Number(number) || null;
+  const digits = '一二三四五六七八九';
+  if (number.includes('十')) {
+    const [tens, units] = number.split('十');
+    return (tens ? digits.indexOf(tens) + 1 : 1) * 10 + (units ? digits.indexOf(units) + 1 : 0);
+  }
+  return digits.indexOf(number) + 1 || null;
+}
+
+function renderReviewLegacyPortionContent(portion) {
+  return portion.chips.map(chip => {
+    const note = chip.match(/^(?:備註|Ghi chú|Note)\s*[:：]\s*([\s\S]*)$/i);
+    return note ? renderReviewNoteHtml(note[1], 'detailPortionNote')
+      : `<span class="mod-chip">${escapeHtml(chip)}</span>`;
+  }).join('');
+}
+
 function renderItemRowHtml(it, idx, orderKey) {
   let optionsHtml = "";
   const startStickerIndex = (typeof it.stickerIndex === "number") ? it.stickerIndex : idx;
@@ -1218,7 +1241,6 @@ function renderItemRowHtml(it, idx, orderKey) {
     && PrinterService.getPrintCapabilities().stickers;
 
   const bundleInfo = it.detailLine ? null : extractBundleFromItem(it);
-  const bundleHtml = renderBundleComponentsHtml(bundleInfo);
 
   let optsToRender = it.options;
   if (it.baseOptions !== undefined && it.baseOptions !== null) {
@@ -1226,6 +1248,28 @@ function renderItemRowHtml(it, idx, orderKey) {
   } else if (bundleInfo && bundleInfo.remainingOptionsStr !== undefined) {
     optsToRender = bundleInfo.remainingOptionsStr;
   }
+  const parsed = !it.detailLine && optsToRender && typeof parsePortionCustomizations === 'function'
+    ? parsePortionCustomizations(String(optsToRender).trim()) : null;
+  const portionExtras = new Map();
+  const attachedPortions = new Set();
+  const renderPortionPrint = (portion, fallbackIndex) => {
+    const number = reviewPortionNumber(portion.label);
+    const stickerIndex = startStickerIndex + (number ? number - 1 : fallbackIndex);
+    return `<button type="button" class="btn btn-ghost portion-print-btn" data-print-action="stickers" ${canPrintStickers ? '' : 'disabled aria-disabled="true"'} onclick="if(typeof PrinterService !== 'undefined') PrinterService.printSingleItemSticker('${escapeHtml(orderKey)}', ${stickerIndex})" title="${escapeHtml(t('btnPrintPortion'))}">${printerIcon}<span>${escapeHtml(printLabel)}</span></button>`;
+  };
+  if (bundleInfo?.isStructured && parsed?.portions) {
+    parsed.portions.forEach((portion, index) => {
+      const number = reviewPortionNumber(portion.label);
+      if (!number || !bundleInfo.portions.some((p, i) => (typeof p.portionIndex === 'number' ? p.portionIndex : i) + 1 === number)) return;
+      const previous = portionExtras.get(number);
+      portionExtras.set(number, {
+        content: (previous?.content || '') + renderReviewLegacyPortionContent(portion),
+        print: previous?.print || renderPortionPrint(portion, index),
+      });
+      attachedPortions.add(portion);
+    });
+  }
+  const bundleHtml = renderBundleComponentsHtml(bundleInfo, portionExtras);
 
   if (it.detailLine) {
     optionsHtml = it.detailLine.portions.map(p => {
@@ -1237,7 +1281,6 @@ function renderItemRowHtml(it, idx, orderKey) {
     }).join('');
   } else if (optsToRender) {
     const rawOpts = String(optsToRender).trim();
-    const parsed = typeof parsePortionCustomizations === "function" ? parsePortionCustomizations(rawOpts) : null;
     if (parsed && parsed.portions && parsed.portions.length > 0) {
       let commonHtml = "";
       if (parsed.commonChips && parsed.commonChips.length > 0) {
@@ -1246,22 +1289,14 @@ function renderItemRowHtml(it, idx, orderKey) {
       const portionsHtml = `
         <div class="review-item-portions-container">
           ${parsed.portions.map((p, pIdx) => {
-            const portionStickerIdx = startStickerIndex + pIdx;
-            const portionPrintTitle = (typeof t === "function" && t("btnPrintPortion")) || (document.documentElement.lang === "vi" ? `In tem ${p.label}` : `列印${p.label}標籤`);
+            if (attachedPortions.has(p)) return '';
             return `
             <div class="review-item-portion-row detail-portion-block">
               <div class="detail-portion-heading"><span class="portion-badge">${escapeHtml(p.label)}</span></div>
               <div class="portion-chips-wrap detail-legacy-lines">
-                ${p.chips.length > 0 ? p.chips.map(chip => {
-                  const isNote = chip.startsWith("備註") || chip.startsWith("Ghi chú") || chip.startsWith("Note");
-                  const chipCls = isNote ? "mod-chip mod-chip-note" : "mod-chip";
-                  return `<span class="${chipCls}">${escapeHtml(chip)}</span>`;
-                }).join("") : `<span class="portion-default-chip">—</span>`}
+                ${p.chips.length > 0 ? renderReviewLegacyPortionContent(p) : `<span class="portion-default-chip">—</span>`}
               </div>
-              <button type="button" class="btn btn-ghost portion-print-btn" data-print-action="stickers" ${canPrintStickers ? "" : "disabled aria-disabled=\"true\""} onclick="if(typeof PrinterService !== 'undefined') PrinterService.printSingleItemSticker('${escapeHtml(orderKey)}', ${portionStickerIdx})" title="${escapeHtml(portionPrintTitle)}">
-                ${printerIcon}
-                <span>${escapeHtml(printLabel)}</span>
-              </button>
+              ${renderPortionPrint(p, pIdx)}
             </div>
           `;
           }).join("")}
@@ -1285,7 +1320,7 @@ function renderItemRowHtml(it, idx, orderKey) {
   } else if (!it.detailLine && it.note) {
     const remaining = (typeof PrinterService !== "undefined" && typeof PrinterService.remainingItemNote === "function")
       ? PrinterService.remainingItemNote(optsToRender, it.note)
-      : (optionsHtml && optionsHtml.includes("mod-chip-note") ? "" : String(it.note).trim());
+      : ((bundleHtml + optionsHtml).includes("detail-note-row") || optionsHtml.includes("mod-chip-note") ? "" : String(it.note).trim());
     if (remaining) {
       noteHtml = renderReviewNoteHtml(remaining, 'detailItemNote');
     }

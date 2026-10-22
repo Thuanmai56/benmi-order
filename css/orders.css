@@ -12363,3 +12363,51 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
   #review-content .detail-portion-block:has(> .portion-print-btn) { grid-template-columns: max-content minmax(0, 1fr); }
   #review-content .portion-print-btn { grid-column: 2; justify-self: end; }
 }
+
+/* Full-width print actions stay readable in the order's narrow sidebar. */
+#reviewModal .modal-print-toolbar {
+  padding: 12px;
+  background: #f8fafc;
+}
+#reviewModal .print-toolbar-header {
+  margin-bottom: 10px;
+  padding: 0;
+  border: 0;
+  gap: 8px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+#reviewModal .print-toolbar-header svg { flex: 0 0 auto; }
+#reviewModal .review-print-macro-bar { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+#reviewModal .review-print-macro-bar > .btn {
+  width: 100%;
+  min-width: 48px;
+  min-height: 48px;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  gap: 12px;
+  justify-content: flex-start;
+  text-align: left;
+  font-weight: 650;
+  line-height: 1.4;
+  text-transform: none;
+  white-space: normal;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+}
+#reviewModal .review-print-macro-bar > .btn > svg { width: 18px; height: 18px; flex: 0 0 18px; }
+#reviewModal .review-print-macro-bar > .btn > span { min-width: 0; overflow-wrap: anywhere; }
+#reviewModal .review-print-macro-bar > .btn-print-full:not(:disabled):not(.is-printer-disabled) {
+  background: #e6f3ef;
+  color: #1f665c;
+  border-color: #bedbd1;
+}
+#reviewModal .review-print-macro-bar > .btn-print-full:not(:disabled):not(.is-printer-disabled):hover { background: #d9ece5; }
+#reviewModal .btn-print-full svg { color: currentColor; }
+#reviewModal .print-action-summary {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--pos-text-meta);
+  font-weight: 400;
+  color: inherit;
+}
