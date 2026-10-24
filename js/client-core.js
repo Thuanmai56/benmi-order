@@ -668,7 +668,13 @@ function ensureLiffReady() {
         try {
             // Resolve from D1 before initializing LIFF. Cached menu/theme data can
             // contain an old LIFF ID and start login in another store's LINE app.
-            const configResponse = await fetch(`${WORKER_BASE}/api/config?tenant_id=${encodeURIComponent(tenantId)}`, { cache: 'no-store' });
+            const configSignal = typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+                ? AbortSignal.timeout(5000)
+                : undefined;
+            const configResponse = await fetch(`${WORKER_BASE}/api/config?tenant_id=${encodeURIComponent(tenantId)}`, {
+                cache: 'no-store',
+                signal: configSignal
+            });
             if (!configResponse.ok) throw new Error(`Tenant config request failed: ${configResponse.status}`);
             const tenantConfig = await configResponse.json();
             if (tenantConfig.tenantId !== tenantId || !['legacy', 'blabfood'].includes(tenantConfig.customerOrderDomain) || !tenantConfig.liffEndpointUrl) {
@@ -689,7 +695,21 @@ function ensureLiffReady() {
                 window.location.replace(getLiffLoginRedirectUri());
                 return null;
             }
-            await liff.init({ liffId });
+            let initTimer;
+            try {
+                if (typeof setTimeout === 'function') {
+                    await Promise.race([
+                        liff.init({ liffId }),
+                        new Promise((_, reject) => {
+                            initTimer = setTimeout(() => reject(new Error('LIFF init timeout')), 5000);
+                        })
+                    ]);
+                } else {
+                    await liff.init({ liffId });
+                }
+            } finally {
+                if (typeof clearTimeout === 'function') clearTimeout(initTimer);
+            }
             isLiffInitialized = true;
             console.log(`[LIFF] Initialized successfully for tenant [${tenantId}] with ID:`, liffId);
 
