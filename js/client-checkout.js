@@ -54,12 +54,15 @@ async function getLiffDeliveryDiagnostic() {
 async function requestOrderConfirmationPush(notification, tenantId) {
     if (!notification?.id || !notification?.token) return;
     try {
+        const timeoutSignal = typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+            ? AbortSignal.timeout(6000)
+            : undefined;
         const response = await fetch(`${WORKER_BASE}/api/line/order-receipt/push?tenant_id=${encodeURIComponent(tenantId)}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId },
             body: JSON.stringify({ id: notification.id, token: notification.token }),
             keepalive: true,
-            signal: AbortSignal.timeout(20000)
+            signal: timeoutSignal
         });
         if (!response.ok) throw new Error(`Receipt fallback HTTP ${response.status}`);
     } catch (error) {
@@ -1527,8 +1530,12 @@ async function validateCartStockBeforeSubmit() {
     const tenantId = getTenantIdFromUrl();
     try {
         console.log(`[Validation] Fetching fresh bootstrap data for tenant: ${tenantId}...`);
+        const fetchSignal = typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+            ? AbortSignal.timeout(5000)
+            : undefined;
         const res = await fetch(`${WORKER_BASE}/api/tenant/bootstrap?tenant_id=${tenantId}`, {
-            cache: 'no-cache'
+            cache: 'no-cache',
+            signal: fetchSignal
         });
         if (!res.ok) {
             console.warn(`[Validation] Bootstrap fetch returned status ${res.status}`);
@@ -1603,6 +1610,7 @@ async function validateCartStockBeforeSubmit() {
 
 // 10. Hàm nội bộ thực thi POST dữ liệu
 async function doSubmitOrderExecution(dateInput, timeInput) {
+    let orderSubmittedSuccessfully = false;
     isSubmitting = true;
     setAllSubmitButtonsState(true, '驗證餐點中...', { cursor: 'not-allowed', opacity: '0.7' });
 
@@ -1664,7 +1672,19 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
 
         setAllSubmitButtonsState(true, '處理中...', { cursor: 'not-allowed', opacity: '0.7' });
         if (typeof window.ensureLiffReady === 'function') {
-            await window.ensureLiffReady();
+            let liffReadyTimer;
+            try {
+                await Promise.race([
+                    window.ensureLiffReady(),
+                    new Promise((_, reject) => {
+                        liffReadyTimer = setTimeout(() => reject(new Error('ensureLiffReady timeout')), 4500);
+                    })
+                ]);
+            } catch(e) {
+                console.warn("[Checkout] LIFF initialization timed out or failed:", e);
+            } finally {
+                clearTimeout(liffReadyTimer);
+            }
             if (window.__ORDER_DOMAIN_HANDOFF) return;
         }
 
@@ -1731,14 +1751,24 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
         let customerName = "顧客";
         let userId = "guest_" + Date.now();
 
-        if (typeof liff !== 'undefined' && liff.getProfile) {
+        if (typeof liff !== 'undefined' && typeof liff.isLoggedIn === 'function' && liff.isLoggedIn() && typeof liff.getProfile === 'function') {
+            let profileTimer;
             try {
-                const profile = await liff.getProfile();
+                const profile = await Promise.race([
+                    liff.getProfile(),
+                    new Promise((_, reject) => {
+                        profileTimer = setTimeout(() => reject(new Error('Profile timeout')), 2500);
+                    })
+                ]);
                 if (profile) {
                     customerName = profile.displayName || customerName;
                     userId = profile.userId || userId;
                 }
-            } catch (e) { }
+            } catch (e) {
+                console.warn("[Checkout] LIFF profile fetch failed or timed out:", e);
+            } finally {
+                clearTimeout(profileTimer);
+            }
         }
 
         const currentTotal = typeof updateTotal === 'function' ? updateTotal() : 0;
@@ -1837,10 +1867,14 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                         );
                     }
                 }
-                throw new Error(errData.error || `API returned status ${res.status}`);
+                const serverError = new Error(errData.error || `API returned status ${res.status}`);
+                serverError.serverRejected = true;
+                serverError.details = errData;
+                throw serverError;
             }
 
             const appendResult = await res.json();
+            orderSubmittedSuccessfully = true;
             window.parentOrderKey = appendResult.key;
             window.parentOrderDisplayKey = appendResult.displayKey || window.parentOrderDisplayKey;
 
@@ -1849,13 +1883,14 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
             const tablePart = currentTable ? `\n桌號：${currentTable}` : '';
             const notePart = mainNote ? `\n📝 備註：${mainNote}` : '';
             const appendChatMsg = `[加點 #${window.parentOrderDisplayKey || ""}]\n訂單參考：${window.parentOrderKey}${tablePart}\n現場加點品項：\n${rawItemsText}${notePart}\n\n💰 加點金額：+$${currentTotal}`;
-            await sendOrderConfirmation([{ type: 'text', text: appendChatMsg }], {
-                tenantId, orderKey: window.parentOrderKey, flow: 'append'
-            }, appendResult.notification, deliveryDiagnostic);
 
             cart = {};
+            window.cart = cart;
             customizeData = {};
+            window.customizeData = customizeData;
             comboDrinkData = {};
+            window.comboDrinkData = comboDrinkData;
+            if (window.bundleCartData) window.bundleCartData = {};
             try {
                 sessionStorage.removeItem('benmi_append_parent');
                 sessionStorage.removeItem('benmi_append_display');
@@ -1872,8 +1907,16 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                         </svg>
                     </div>
                 </div>
+                <div style="font-size: 19px; font-weight: 900; color: #111827; margin-bottom: 6px;">現場加點已送出！</div>
+                <div style="font-size: 14.5px; line-height: 1.5; color: #4b5563;">${appendSuccessMsg}</div>
             `, () => {
                 if (typeof closeAndExitLiff === 'function') closeAndExitLiff();
+            });
+
+            sendOrderConfirmation([{ type: 'text', text: appendChatMsg }], {
+                tenantId, orderKey: window.parentOrderKey, flow: 'append'
+            }, appendResult.notification, deliveryDiagnostic).catch(confErr => {
+                console.warn('[Checkout] Background append confirmation notice:', confErr);
             });
 
             return;
@@ -1955,22 +1998,27 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                         );
                     }
                 }
-                throw new Error(errData.error || `API returned status ${res.status}`);
+                const serverError = new Error(errData.error || `API returned status ${res.status}`);
+                serverError.serverRejected = true;
+                serverError.details = errData;
+                throw serverError;
             }
 
             const modifyResult = await res.json();
+            orderSubmittedSuccessfully = true;
             setAllSubmitButtonsState(true, '品項已更新', { cursor: 'not-allowed', opacity: '0.6' });
 
             const rawItemsText = typeof formatAppendItemsOnlyText === 'function' ? formatAppendItemsOnlyText() : '';
             const notePart = mainNote ? `\n📝 備註：${mainNote}` : '';
             const editChatMsg = `[更換品項 #${window.editOrderDisplayKey || window.editOrderKey || ""}]\n訂單參考：${window.editOrderKey || ""}\n\n📦 更新後餐點內容：\n${rawItemsText}${notePart}\n\n💰 更新後金額：$${currentTotal}`;
-            await sendOrderConfirmation([{ type: 'text', text: editChatMsg }], {
-                tenantId, orderKey: window.editOrderKey, flow: 'modify'
-            }, modifyResult.notification, deliveryDiagnostic);
 
             cart = {};
+            window.cart = cart;
             customizeData = {};
+            window.customizeData = customizeData;
             comboDrinkData = {};
+            window.comboDrinkData = comboDrinkData;
+            if (window.bundleCartData) window.bundleCartData = {};
             try {
                 sessionStorage.removeItem('benmi_edit_order_key');
             } catch(e) {}
@@ -1997,6 +2045,12 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                 </div>
             `, () => {
                 if (typeof closeAndExitLiff === 'function') closeAndExitLiff();
+            });
+
+            sendOrderConfirmation([{ type: 'text', text: editChatMsg }], {
+                tenantId, orderKey: window.editOrderKey, flow: 'modify'
+            }, modifyResult.notification, deliveryDiagnostic).catch(confErr => {
+                console.warn('[Checkout] Background modify confirmation notice:', confErr);
             });
 
             return;
@@ -2084,7 +2138,10 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                     );
                 }
             }
-            throw new Error(errData.error || `API returned status ${res.status}`);
+            const serverError = new Error(errData.error || `API returned status ${res.status}`);
+            serverError.serverRejected = true;
+            serverError.details = errData;
+            throw serverError;
         }
 
         const resData = await res.json().catch(() => ({}));
@@ -2100,14 +2157,14 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
         orderSubmittedSuccessfully = true;
         setAllSubmitButtonsState(true, '訂單已送出', { cursor: 'not-allowed', opacity: '0.6' });
 
-        await sendOrderConfirmation([{ type: 'text', text: msg }], {
-            tenantId, orderKey: resData.key || orderNum, flow: 'create'
-        }, resData.notification, deliveryDiagnostic);
-
-        // Xóa sạch giỏ hàng khi thành công
+        // Xóa sạch giỏ hàng khi thành công ngay lập tức để giao diện phản hồi nhanh chóng
         cart = {};
+        window.cart = cart;
         customizeData = {};
+        window.customizeData = customizeData;
         comboDrinkData = {};
+        window.comboDrinkData = comboDrinkData;
+        if (window.bundleCartData) window.bundleCartData = {};
         if (typeof updateTotal === 'function') updateTotal();
 
         const orderSuccessMsg = '店家已收到您的訂單，請在 LINE 查看訂單確認與進度。';
@@ -2126,8 +2183,21 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
             if (typeof closeAndExitLiff === 'function') closeAndExitLiff();
         });
 
+        // Gửi xác nhận LINE chạy ngầm, không chặn thông báo thành công của người dùng
+        sendOrderConfirmation([{ type: 'text', text: msg }], {
+            tenantId, orderKey: resData.key || orderNum, flow: 'create'
+        }, resData.notification, deliveryDiagnostic).catch(confErr => {
+            console.warn('[Checkout] Background order confirmation notice:', confErr);
+        });
+
     } catch (err) {
         clearTimeout(timeoutId);
+        if (err.serverRejected) {
+            const details = err.details || {};
+            const errorMsg = details.error || err.message || '訂單未能送出';
+            customAlert(`訂單送出失敗：<br><br><span style="color:#ef4444; font-weight:700;">${errorMsg}</span><br><br>請確認餐點內容後再次點擊確認下單。`);
+            return;
+        }
         console.warn("Primary API flow failed, falling back to LINE message flow:", err);
 
         try {
@@ -2165,8 +2235,12 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                 setAllSubmitButtonsState(true, window.isAppendMode ? '加點已送出' : '訂單已送出', { cursor: 'not-allowed', opacity: '0.6' });
 
                 cart = {};
+                window.cart = cart;
                 customizeData = {};
+                window.customizeData = customizeData;
                 comboDrinkData = {};
+                window.comboDrinkData = comboDrinkData;
+                if (window.bundleCartData) window.bundleCartData = {};
                 try {
                     sessionStorage.removeItem('benmi_append_parent');
                     sessionStorage.removeItem('benmi_append_display');

@@ -104,12 +104,12 @@ test('ReportRepository aggregates items and computes totalOrders only for DONE/P
   assert.deepEqual(drink.optionsBreakdown, { 'Ít đường': 1 });
 
   // Test HTTP endpoint getItemAnalyticsReport integration
-  const req = new Request('https://example.com/api/reports/items-analytics?tenant_id=benmi&range=today');
+  const req = new Request('https://example.com/api/reports/items-analytics?tenant_id=benmi&range=custom&start_date=2026-10-19&end_date=2026-10-19');
   const res = await getItemAnalyticsReport(req, env);
   assert.equal(res.status, 200);
   const summary = await res.json();
   assert.equal(summary.tenantId, 'benmi');
-  assert.equal(summary.range, 'today');
+  assert.equal(summary.range, 'custom');
   assert.equal(summary.totalOrders, 2);
   assert.equal(summary.totalRevenue, 245);
   assert.equal(summary.topItem.itemName, 'Bánh Mì Thịt Nướng');
