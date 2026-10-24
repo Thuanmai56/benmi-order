@@ -16,6 +16,7 @@ const RELEVANT_TABLES = [
   'menu_items',
   'menu_customizations',
   'menu_customization_option_rules',
+  'menu_bundle_rules',
   'modifier_groups',
   'modifier_options',
   'category_modifier_links',
@@ -118,6 +119,15 @@ export async function createSnapshot(dbName = 'blab-db-production', isRemote = t
     encoding: 'utf8'
   });
   fs.unlinkSync(tmpRestorePath);
+
+  // Đảm bảo migration 0064 (additive metadata columns) đã có trên isolated_target.db nếu nguồn chưa chạy 0064
+  const modGroupCols = execFileSync('sqlite3', [targetDbPath, 'PRAGMA table_info(modifier_groups);'], { encoding: 'utf8' });
+  if (!modGroupCols.includes('source_metadata_json')) {
+    const mig0064Path = path.resolve(REPO_ROOT, 'benmi-worker-official/migrations/0064_add_modifier_migration_metadata.sql');
+    const mig0064Sql = fs.readFileSync(mig0064Path, 'utf8');
+    execFileSync('sqlite3', [targetDbPath], { input: mig0064Sql, encoding: 'utf8' });
+    console.log('  ✓ Đã áp dụng additive migration 0064 lên isolated_target.db');
+  }
 
   // Xác minh số dòng trong SQLite DB đã khôi phục
   console.log(`[Snapshot] Xác minh số dòng sau khi khôi phục vào isolated SQLite DB:`);

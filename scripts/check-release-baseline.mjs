@@ -1,3 +1,4 @@
+import { menuSuites, testOutcome } from './menu-qa/suites.mjs';
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -12,6 +13,7 @@ if (Number(process.versions.node.split('.')[0]) !== 24) {
 const directory = path.join(root, 'artifacts/release-baseline', new Date().toISOString().replace(/[:.]/g, '-'));
 mkdirSync(directory, { recursive: true });
 const git = (...args) => {
+  env.MENU_QA_ARTIFACT_DIR = path.join(directory, name);
   const result = spawnSync('git', args, { cwd: root, encoding: 'utf8' });
   if (result.status !== 0) throw new Error(result.stderr || 'Cannot capture baseline Git provenance');
   return result.stdout.trim();
@@ -37,6 +39,7 @@ const sourceHash = createHash('sha256');
 for (const file of sourceFiles) sourceHash.update(file).update('\0').update(readFileSync(path.join(root, file))).update('\0');
 const changedSourceFiles = [git('diff', '--name-only', 'HEAD', '--', ...sourcePaths), git('ls-files', '--others', '--exclude-standard', '--', ...sourcePaths)].flatMap(value => value.split('\n')).filter(Boolean);
 report.application = { sha256: sourceHash.digest('hex'), fileCount: sourceFiles.length, changedFromHead: [...new Set(changedSourceFiles)].sort().join('\n') };
+const menuOnly = process.argv.includes('--menu');
 const suites = [
   ['frontend-static', ['scripts/check-frontend.js']],
   ['routing-lifecycle', ['--test', 'scripts/test-explore-routing.mjs', 'scripts/test-client-modular.mjs', 'scripts/test-line-tenant-redirect.mjs', 'scripts/test-line-text-normalization.mjs', 'scripts/test-order-domain-routing.mjs', 'scripts/test-order-domain-api.cjs', 'scripts/test-tenant-lifecycle.cjs']],
@@ -58,7 +61,8 @@ const suites = [
   ['pos-detail-scroll', ['tests/test_order_detail_mobile_scroll.cjs']]
 ];
 
-for (const [name, args, overrides = {}] of suites) {
+for (const [name, rawArgs, overrides = {}] of [...(menuOnly ? suites.slice(0, 4) : suites), ...menuSuites]) {
+  const args = rawArgs.includes('--test') ? ['--test-reporter=tap', ...rawArgs] : rawArgs;
   console.log(`Running ${name}...`);
   const started = Date.now();
   const env = { ...process.env, ...overrides, NO_COLOR: '1' };
@@ -69,14 +73,16 @@ for (const [name, args, overrides = {}] of suites) {
   delete env.FORCE_COLOR;
   env.POS_DISPLAY_SCREENSHOT_DIR = path.join(directory, name);
   env.POS_LIVE_SCREENSHOT_DIR = path.join(directory, name);
+  env.MENU_QA_ARTIFACT_DIR = path.join(directory, name);
   const result = spawnSync(process.execPath, args, {
     cwd: root, env, encoding: 'utf8', timeout: 300_000, killSignal: 'SIGKILL', maxBuffer: 16 * 1024 * 1024
   });
   const log = `${result.stdout || ''}${result.stderr || ''}${result.error ? `\n${result.error.message}\n` : ''}`;
   writeFileSync(path.join(directory, `${name}.log`), log);
-  report.suites.push({ name, command: ['node', ...args], environment: overrides, status: result.status === 0 ? 'passed' : 'failed', exitCode: result.status, signal: result.signal, elapsedMs: Date.now() - started, log: `${name}.log`, inputHashes: Object.fromEntries(args.filter(file => !file.startsWith('-')).map(file => [file, createHash('sha256').update(readFileSync(path.join(root, file))).digest('hex')])) });
-  console.log(`${result.status === 0 ? 'PASS' : 'FAIL'} ${name} (${Date.now() - started} ms)`);
-  if (result.status !== 0) console.error(log.slice(-6000));
+  const status = testOutcome(result, log, args.includes('--test'));
+  report.suites.push({ name, command: ['node', ...args], environment: overrides, status, exitCode: result.status, signal: result.signal, elapsedMs: Date.now() - started, log: `${name}.log`, inputHashes: Object.fromEntries(args.filter(file => !file.startsWith('-')).map(file => [file, createHash('sha256').update(readFileSync(path.join(root, file))).digest('hex')])) });
+  console.log(`${status === 'passed' ? 'PASS' : 'FAIL'} ${name} (${Date.now() - started} ms)`);
+  if (status !== 'passed') console.error(log.slice(-6000));
   // Save after every suite so partial runs still leave reviewable evidence.
   writeFileSync(path.join(directory, 'summary.json'), `${JSON.stringify(report, null, 2)}\n`);
 }

@@ -1,7 +1,7 @@
 {
-  "run_id": "apply_1790855923344",
-  "started_at": "2026-10-01T11:58:43.344Z",
-  "completed_at": "2026-10-01T11:58:43.405Z",
+  "run_id": "apply_1792660820245",
+  "started_at": "2026-10-22T09:20:20.245Z",
+  "completed_at": "2026-10-22T09:20:20.309Z",
   "target_database": "/Users/duccao/Documents/benmi-order/docs/proposals/full_menu_schema_migration/artifacts/latest_isolated_target.db",
   "tenants_processed": [
     "blab_demo",
@@ -17,8 +17,8 @@
     "haoshiguoshao"
   ],
   "tenants_failed": [],
-  "total_inserted_groups": 46,
-  "total_inserted_options": 169,
-  "total_inserted_links": 24,
+  "total_inserted_groups": 44,
+  "total_inserted_options": 170,
+  "total_inserted_links": 25,
   "status": "COMPLETED_SUCCESS"
 }

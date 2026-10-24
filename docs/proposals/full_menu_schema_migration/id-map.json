@@ -1,7 +1,7 @@
 {
   "meta": {
-    "generated_at": "2026-10-03T05:05:55.122Z",
-    "source_snapshot_hash": "3a347308f604cee38e6d12e490eba90350858e13f5362957d6ee664ceb6500ea"
+    "generated_at": "2026-10-22T09:20:20.221Z",
+    "source_snapshot_hash": "21726e6dd2e12f05a5c78a499169467ee07b72b42112d14db4353b028b0ce68f"
   },
   "groups": [
     {
@@ -701,7 +701,7 @@
         "max_selection": 1,
         "sort_order": 4,
         "scope": "category",
-        "source_metadata_json": "{\"source_table\":\"menu_categories\",\"source_id\":\"cat_xx_spicy\",\"slug\":\"spiciness\",\"short_name\":\"辣度\",\"category_type\":\"modifier\",\"original_selection_type\":\"single\"}"
+        "source_metadata_json": "{\"source_table\":\"menu_categories\",\"source_id\":\"cat_xx_spicy\",\"slug\":\"spiciness\",\"short_name\":\"辣度選擇\",\"category_type\":\"modifier\",\"original_selection_type\":\"single\"}"
       }
     },
     {
@@ -721,7 +721,7 @@
         "max_selection": 10,
         "sort_order": 5,
         "scope": "category",
-        "source_metadata_json": "{\"source_table\":\"menu_categories\",\"source_id\":\"cat_xx_custom\",\"slug\":\"customization\",\"short_name\":\"客製選項\",\"category_type\":\"modifier\",\"original_selection_type\":\"multiple\"}"
+        "source_metadata_json": "{\"source_table\":\"menu_categories\",\"source_id\":\"cat_xx_custom\",\"slug\":\"customization\",\"short_name\":\"客製選項 (不加配料)\",\"category_type\":\"modifier\",\"original_selection_type\":\"multiple\"}"
       }
     },
     {
@@ -741,7 +741,7 @@
         "max_selection": 10,
         "sort_order": 6,
         "scope": "category",
-        "source_metadata_json": "{\"source_table\":\"menu_categories\",\"source_id\":\"cat_xx_topping\",\"slug\":\"toppings\",\"short_name\":\"加料\",\"category_type\":\"modifier\",\"original_selection_type\":\"multiple\"}"
+        "source_metadata_json": "{\"source_table\":\"menu_categories\",\"source_id\":\"cat_xx_topping\",\"slug\":\"toppings\",\"short_name\":\"加料選項\",\"category_type\":\"modifier\",\"original_selection_type\":\"multiple\"}"
       }
     },
     {
@@ -1970,6 +1970,29 @@
     {
       "tenant_id": "jiangjiejie",
       "source_kind": "customization_option",
+      "source_group_id": "custom_mod_jj_scallion",
+      "source_option_identity": "opt_mv9eat2v",
+      "target_table": "modifier_options",
+      "target_id": "opt_0df3adfdba47872a",
+      "data": {
+        "id": "opt_0df3adfdba47872a",
+        "tenant_id": "jiangjiejie",
+        "group_id": "mg_cust_jiangjiejie_custom_mod_jj_scallion",
+        "name": "多",
+        "price": 0,
+        "is_default": 0,
+        "sort_order": 3,
+        "out_of_stock_until": null,
+        "sub_options_json": "[]",
+        "eligibility_rules_json": "[]",
+        "is_out_of_stock": 0,
+        "description": null,
+        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"custom_mod_jj_scallion\",\"source_option_id\":\"opt_mv9eat2v\",\"snapshot_ordinal\":3,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
+      }
+    },
+    {
+      "tenant_id": "jiangjiejie",
+      "source_kind": "customization_option",
       "source_group_id": "custom_mod_jj_sesame_oil",
       "source_option_identity": "不要",
       "target_table": "modifier_options",
@@ -2615,11 +2638,11 @@
       "tenant_id": "bsc",
       "source_kind": "customization_option",
       "source_group_id": "bsc_flavor",
-      "source_option_identity": "ordinal:0",
+      "source_option_identity": "特調胡椒",
       "target_table": "modifier_options",
-      "target_id": "opt_d7a16e5d7ff7d164",
+      "target_id": "opt_dc5b77bedf598e5d",
       "data": {
-        "id": "opt_d7a16e5d7ff7d164",
+        "id": "opt_dc5b77bedf598e5d",
         "tenant_id": "bsc",
         "group_id": "mg_cust_bsc_bsc_flavor",
         "name": "特調胡椒",
@@ -2631,18 +2654,18 @@
         "eligibility_rules_json": "[]",
         "is_out_of_stock": 0,
         "description": null,
-        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_flavor\",\"source_option_id\":null,\"snapshot_ordinal\":0,\"raw_keys\":[\"name\"]}"
+        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_flavor\",\"source_option_id\":\"特調胡椒\",\"snapshot_ordinal\":0,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
       }
     },
     {
       "tenant_id": "bsc",
       "source_kind": "customization_option",
       "source_group_id": "bsc_flavor",
-      "source_option_identity": "ordinal:1",
+      "source_option_identity": "泰式酸辣",
       "target_table": "modifier_options",
-      "target_id": "opt_3b0acde457ee54ee",
+      "target_id": "opt_97934bca64158b3b",
       "data": {
-        "id": "opt_3b0acde457ee54ee",
+        "id": "opt_97934bca64158b3b",
         "tenant_id": "bsc",
         "group_id": "mg_cust_bsc_bsc_flavor",
         "name": "泰式酸辣",
@@ -2654,18 +2677,18 @@
         "eligibility_rules_json": "[]",
         "is_out_of_stock": 0,
         "description": null,
-        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_flavor\",\"source_option_id\":null,\"snapshot_ordinal\":1,\"raw_keys\":[\"name\"]}"
+        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_flavor\",\"source_option_id\":\"泰式酸辣\",\"snapshot_ordinal\":1,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
       }
     },
     {
       "tenant_id": "bsc",
       "source_kind": "customization_option",
       "source_group_id": "bsc_flavor",
-      "source_option_identity": "ordinal:2",
+      "source_option_identity": "清爽檸檬",
       "target_table": "modifier_options",
-      "target_id": "opt_436596282e86e9cd",
+      "target_id": "opt_09aee42ebf2f1530",
       "data": {
-        "id": "opt_436596282e86e9cd",
+        "id": "opt_09aee42ebf2f1530",
         "tenant_id": "bsc",
         "group_id": "mg_cust_bsc_bsc_flavor",
         "name": "清爽檸檬",
@@ -2677,21 +2700,21 @@
         "eligibility_rules_json": "[]",
         "is_out_of_stock": 0,
         "description": null,
-        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_flavor\",\"source_option_id\":null,\"snapshot_ordinal\":2,\"raw_keys\":[\"name\",\"sub_options\"]}"
+        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_flavor\",\"source_option_id\":\"清爽檸檬\",\"snapshot_ordinal\":2,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
       }
     },
     {
       "tenant_id": "bsc",
       "source_kind": "customization_option",
       "source_group_id": "bsc_flavor",
-      "source_option_identity": "ordinal:3",
+      "source_option_identity": "檸檬香菜（ 香菜缺貨中，請選檸檬口味）",
       "target_table": "modifier_options",
-      "target_id": "opt_0e72012752eed8a6",
+      "target_id": "opt_fb9e23a04616a764",
       "data": {
-        "id": "opt_0e72012752eed8a6",
+        "id": "opt_fb9e23a04616a764",
         "tenant_id": "bsc",
         "group_id": "mg_cust_bsc_bsc_flavor",
-        "name": "檸檬香菜（ 香菜缺貨中，請選檸檬口味）",
+        "name": "檸檬香菜",
         "price": 0,
         "is_default": 0,
         "sort_order": 3,
@@ -2700,18 +2723,18 @@
         "eligibility_rules_json": "[]",
         "is_out_of_stock": 0,
         "description": null,
-        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_flavor\",\"source_option_id\":null,\"snapshot_ordinal\":3,\"raw_keys\":[\"name\",\"sub_options\"]}"
+        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_flavor\",\"source_option_id\":\"檸檬香菜（ 香菜缺貨中，請選檸檬口味）\",\"snapshot_ordinal\":3,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
       }
     },
     {
       "tenant_id": "bsc",
       "source_kind": "customization_option",
       "source_group_id": "bsc_flavor",
-      "source_option_identity": "ordinal:4",
+      "source_option_identity": "原味客製",
       "target_table": "modifier_options",
-      "target_id": "opt_92e0483e765eaba0",
+      "target_id": "opt_f7cc69208a31b4a1",
       "data": {
-        "id": "opt_92e0483e765eaba0",
+        "id": "opt_f7cc69208a31b4a1",
         "tenant_id": "bsc",
         "group_id": "mg_cust_bsc_bsc_flavor",
         "name": "原味客製",
@@ -2723,18 +2746,18 @@
         "eligibility_rules_json": "[]",
         "is_out_of_stock": 0,
         "description": null,
-        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_flavor\",\"source_option_id\":null,\"snapshot_ordinal\":4,\"raw_keys\":[\"name\",\"sub_options\"]}"
+        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_flavor\",\"source_option_id\":\"原味客製\",\"snapshot_ordinal\":4,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
       }
     },
     {
       "tenant_id": "bsc",
       "source_kind": "customization_option",
       "source_group_id": "bsc_salt",
-      "source_option_identity": "ordinal:0",
+      "source_option_identity": "正常",
       "target_table": "modifier_options",
-      "target_id": "opt_2bc62e8fe1e32b15",
+      "target_id": "opt_bfca181903f5c57b",
       "data": {
-        "id": "opt_2bc62e8fe1e32b15",
+        "id": "opt_bfca181903f5c57b",
         "tenant_id": "bsc",
         "group_id": "mg_cust_bsc_bsc_salt",
         "name": "正常",
@@ -2746,18 +2769,18 @@
         "eligibility_rules_json": "[]",
         "is_out_of_stock": 0,
         "description": null,
-        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_salt\",\"source_option_id\":null,\"snapshot_ordinal\":0,\"raw_keys\":[\"name\"]}"
+        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_salt\",\"source_option_id\":\"正常\",\"snapshot_ordinal\":0,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
       }
     },
     {
       "tenant_id": "bsc",
       "source_kind": "customization_option",
       "source_group_id": "bsc_salt",
-      "source_option_identity": "ordinal:1",
+      "source_option_identity": "調味重",
       "target_table": "modifier_options",
-      "target_id": "opt_8aaa55019d141dee",
+      "target_id": "opt_a737d5ea99b1981d",
       "data": {
-        "id": "opt_8aaa55019d141dee",
+        "id": "opt_a737d5ea99b1981d",
         "tenant_id": "bsc",
         "group_id": "mg_cust_bsc_bsc_salt",
         "name": "調味重",
@@ -2769,18 +2792,18 @@
         "eligibility_rules_json": "[]",
         "is_out_of_stock": 0,
         "description": null,
-        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_salt\",\"source_option_id\":null,\"snapshot_ordinal\":1,\"raw_keys\":[\"name\"]}"
+        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_salt\",\"source_option_id\":\"調味重\",\"snapshot_ordinal\":1,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
       }
     },
     {
       "tenant_id": "bsc",
       "source_kind": "customization_option",
       "source_group_id": "bsc_salt",
-      "source_option_identity": "ordinal:2",
+      "source_option_identity": "調味清淡",
       "target_table": "modifier_options",
-      "target_id": "opt_5db2f2724dedbb2f",
+      "target_id": "opt_7f4539b0f7f47156",
       "data": {
-        "id": "opt_5db2f2724dedbb2f",
+        "id": "opt_7f4539b0f7f47156",
         "tenant_id": "bsc",
         "group_id": "mg_cust_bsc_bsc_salt",
         "name": "調味清淡",
@@ -2792,18 +2815,18 @@
         "eligibility_rules_json": "[]",
         "is_out_of_stock": 0,
         "description": null,
-        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_salt\",\"source_option_id\":null,\"snapshot_ordinal\":2,\"raw_keys\":[\"name\"]}"
+        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_salt\",\"source_option_id\":\"調味清淡\",\"snapshot_ordinal\":2,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
       }
     },
     {
       "tenant_id": "bsc",
       "source_kind": "customization_option",
       "source_group_id": "bsc_spicy",
-      "source_option_identity": "ordinal:0",
+      "source_option_identity": "不辣",
       "target_table": "modifier_options",
-      "target_id": "opt_dfd32fcfd1d5cb1c",
+      "target_id": "opt_f0240e1e36c642d5",
       "data": {
-        "id": "opt_dfd32fcfd1d5cb1c",
+        "id": "opt_f0240e1e36c642d5",
         "tenant_id": "bsc",
         "group_id": "mg_cust_bsc_bsc_spicy",
         "name": "不辣",
@@ -2815,18 +2838,18 @@
         "eligibility_rules_json": "[]",
         "is_out_of_stock": 0,
         "description": null,
-        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_spicy\",\"source_option_id\":null,\"snapshot_ordinal\":0,\"raw_keys\":[\"name\"]}"
+        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_spicy\",\"source_option_id\":\"不辣\",\"snapshot_ordinal\":0,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
       }
     },
     {
       "tenant_id": "bsc",
       "source_kind": "customization_option",
       "source_group_id": "bsc_spicy",
-      "source_option_identity": "ordinal:1",
+      "source_option_identity": "微辣",
       "target_table": "modifier_options",
-      "target_id": "opt_3cd927dde89897a9",
+      "target_id": "opt_197233338fb98ba5",
       "data": {
-        "id": "opt_3cd927dde89897a9",
+        "id": "opt_197233338fb98ba5",
         "tenant_id": "bsc",
         "group_id": "mg_cust_bsc_bsc_spicy",
         "name": "微辣",
@@ -2838,18 +2861,18 @@
         "eligibility_rules_json": "[]",
         "is_out_of_stock": 0,
         "description": null,
-        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_spicy\",\"source_option_id\":null,\"snapshot_ordinal\":1,\"raw_keys\":[\"name\"]}"
+        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_spicy\",\"source_option_id\":\"微辣\",\"snapshot_ordinal\":1,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
       }
     },
     {
       "tenant_id": "bsc",
       "source_kind": "customization_option",
       "source_group_id": "bsc_spicy",
-      "source_option_identity": "ordinal:2",
+      "source_option_identity": "小辣",
       "target_table": "modifier_options",
-      "target_id": "opt_cbde8e357feaa815",
+      "target_id": "opt_c45271cecb438eb4",
       "data": {
-        "id": "opt_cbde8e357feaa815",
+        "id": "opt_c45271cecb438eb4",
         "tenant_id": "bsc",
         "group_id": "mg_cust_bsc_bsc_spicy",
         "name": "小辣",
@@ -2861,18 +2884,18 @@
         "eligibility_rules_json": "[]",
         "is_out_of_stock": 0,
         "description": null,
-        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_spicy\",\"source_option_id\":null,\"snapshot_ordinal\":2,\"raw_keys\":[\"name\"]}"
+        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_spicy\",\"source_option_id\":\"小辣\",\"snapshot_ordinal\":2,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
       }
     },
     {
       "tenant_id": "bsc",
       "source_kind": "customization_option",
       "source_group_id": "bsc_spicy",
-      "source_option_identity": "ordinal:3",
+      "source_option_identity": "中辣",
       "target_table": "modifier_options",
-      "target_id": "opt_b2847bba7ee28bd3",
+      "target_id": "opt_2b4c9f0faaa47f21",
       "data": {
-        "id": "opt_b2847bba7ee28bd3",
+        "id": "opt_2b4c9f0faaa47f21",
         "tenant_id": "bsc",
         "group_id": "mg_cust_bsc_bsc_spicy",
         "name": "中辣",
@@ -2884,18 +2907,18 @@
         "eligibility_rules_json": "[]",
         "is_out_of_stock": 0,
         "description": null,
-        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_spicy\",\"source_option_id\":null,\"snapshot_ordinal\":3,\"raw_keys\":[\"name\"]}"
+        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_spicy\",\"source_option_id\":\"中辣\",\"snapshot_ordinal\":3,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
       }
     },
     {
       "tenant_id": "bsc",
       "source_kind": "customization_option",
       "source_group_id": "bsc_spicy",
-      "source_option_identity": "ordinal:4",
+      "source_option_identity": "大辣",
       "target_table": "modifier_options",
-      "target_id": "opt_a31baac05099a558",
+      "target_id": "opt_aaaa9c9ecf65062f",
       "data": {
-        "id": "opt_a31baac05099a558",
+        "id": "opt_aaaa9c9ecf65062f",
         "tenant_id": "bsc",
         "group_id": "mg_cust_bsc_bsc_spicy",
         "name": "大辣",
@@ -2907,18 +2930,18 @@
         "eligibility_rules_json": "[]",
         "is_out_of_stock": 0,
         "description": null,
-        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_spicy\",\"source_option_id\":null,\"snapshot_ordinal\":4,\"raw_keys\":[\"name\"]}"
+        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_spicy\",\"source_option_id\":\"大辣\",\"snapshot_ordinal\":4,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
       }
     },
     {
       "tenant_id": "bsc",
       "source_kind": "customization_option",
       "source_group_id": "bsc_spicy",
-      "source_option_identity": "ordinal:5",
+      "source_option_identity": "辣椒放餐盒角落",
       "target_table": "modifier_options",
-      "target_id": "opt_b04bffd31cd7af39",
+      "target_id": "opt_d51b82fdae1ba02d",
       "data": {
-        "id": "opt_b04bffd31cd7af39",
+        "id": "opt_d51b82fdae1ba02d",
         "tenant_id": "bsc",
         "group_id": "mg_cust_bsc_bsc_spicy",
         "name": "辣椒放餐盒角落",
@@ -2930,18 +2953,18 @@
         "eligibility_rules_json": "[]",
         "is_out_of_stock": 0,
         "description": null,
-        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_spicy\",\"source_option_id\":null,\"snapshot_ordinal\":5,\"raw_keys\":[\"name\"]}"
+        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_spicy\",\"source_option_id\":\"辣椒放餐盒角落\",\"snapshot_ordinal\":5,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
       }
     },
     {
       "tenant_id": "bsc",
       "source_kind": "customization_option",
       "source_group_id": "bsc_ingredients",
-      "source_option_identity": "ordinal:0",
+      "source_option_identity": "不加蔥花",
       "target_table": "modifier_options",
-      "target_id": "opt_a5a98b5901983c2d",
+      "target_id": "opt_6222aa26fc3c697c",
       "data": {
-        "id": "opt_a5a98b5901983c2d",
+        "id": "opt_6222aa26fc3c697c",
         "tenant_id": "bsc",
         "group_id": "mg_cust_bsc_bsc_ingredients",
         "name": "不加蔥花",
@@ -2953,18 +2976,18 @@
         "eligibility_rules_json": "[]",
         "is_out_of_stock": 0,
         "description": null,
-        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_ingredients\",\"source_option_id\":null,\"snapshot_ordinal\":0,\"raw_keys\":[\"name\"]}"
+        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_ingredients\",\"source_option_id\":\"不加蔥花\",\"snapshot_ordinal\":0,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
       }
     },
     {
       "tenant_id": "bsc",
       "source_kind": "customization_option",
       "source_group_id": "bsc_ingredients",
-      "source_option_identity": "ordinal:1",
+      "source_option_identity": "不加蒜頭",
       "target_table": "modifier_options",
-      "target_id": "opt_07026616e9250059",
+      "target_id": "opt_601c785027e9f17f",
       "data": {
-        "id": "opt_07026616e9250059",
+        "id": "opt_601c785027e9f17f",
         "tenant_id": "bsc",
         "group_id": "mg_cust_bsc_bsc_ingredients",
         "name": "不加蒜頭",
@@ -2976,18 +2999,18 @@
         "eligibility_rules_json": "[]",
         "is_out_of_stock": 0,
         "description": null,
-        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_ingredients\",\"source_option_id\":null,\"snapshot_ordinal\":1,\"raw_keys\":[\"name\"]}"
+        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_ingredients\",\"source_option_id\":\"不加蒜頭\",\"snapshot_ordinal\":1,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
       }
     },
     {
       "tenant_id": "bsc",
       "source_kind": "customization_option",
       "source_group_id": "bsc_ingredients",
-      "source_option_identity": "ordinal:2",
+      "source_option_identity": "不加洋蔥",
       "target_table": "modifier_options",
-      "target_id": "opt_168888fdba26fa9c",
+      "target_id": "opt_526ca68a7ac369bc",
       "data": {
-        "id": "opt_168888fdba26fa9c",
+        "id": "opt_526ca68a7ac369bc",
         "tenant_id": "bsc",
         "group_id": "mg_cust_bsc_bsc_ingredients",
         "name": "不加洋蔥",
@@ -2999,18 +3022,18 @@
         "eligibility_rules_json": "[]",
         "is_out_of_stock": 0,
         "description": null,
-        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_ingredients\",\"source_option_id\":null,\"snapshot_ordinal\":2,\"raw_keys\":[\"name\"]}"
+        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_ingredients\",\"source_option_id\":\"不加洋蔥\",\"snapshot_ordinal\":2,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
       }
     },
     {
       "tenant_id": "bsc",
       "source_kind": "customization_option",
       "source_group_id": "bsc_addons",
-      "source_option_identity": "ordinal:0",
+      "source_option_identity": "加香菜",
       "target_table": "modifier_options",
-      "target_id": "opt_d791cab3f7917db1",
+      "target_id": "opt_8b3d460894ad702f",
       "data": {
-        "id": "opt_d791cab3f7917db1",
+        "id": "opt_8b3d460894ad702f",
         "tenant_id": "bsc",
         "group_id": "mg_cust_bsc_bsc_addons",
         "name": "加香菜",
@@ -3022,18 +3045,18 @@
         "eligibility_rules_json": "[]",
         "is_out_of_stock": 1,
         "description": null,
-        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_addons\",\"source_option_id\":null,\"snapshot_ordinal\":0,\"raw_keys\":[\"name\",\"price\",\"is_out_of_stock\"]}"
+        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_addons\",\"source_option_id\":\"加香菜\",\"snapshot_ordinal\":0,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
       }
     },
     {
       "tenant_id": "bsc",
       "source_kind": "customization_option",
       "source_group_id": "bsc_addons",
-      "source_option_identity": "ordinal:1",
+      "source_option_identity": "加檸檬汁",
       "target_table": "modifier_options",
-      "target_id": "opt_6f7c07cfbb6ddfd8",
+      "target_id": "opt_b347d52d184358bc",
       "data": {
-        "id": "opt_6f7c07cfbb6ddfd8",
+        "id": "opt_b347d52d184358bc",
         "tenant_id": "bsc",
         "group_id": "mg_cust_bsc_bsc_addons",
         "name": "加檸檬汁",
@@ -3045,7 +3068,7 @@
         "eligibility_rules_json": "[]",
         "is_out_of_stock": 1,
         "description": null,
-        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_addons\",\"source_option_id\":null,\"snapshot_ordinal\":1,\"raw_keys\":[\"name\",\"price\",\"is_out_of_stock\"]}"
+        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_addons\",\"source_option_id\":\"加檸檬汁\",\"snapshot_ordinal\":1,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
       }
     },
     {
@@ -3084,14 +3107,14 @@
         "group_id": "mg_cust_miyansuo_custom_mys_bag",
         "name": "不需要提袋",
         "price": 0,
-        "is_default": 1,
+        "is_default": 0,
         "sort_order": 0,
         "out_of_stock_until": null,
         "sub_options_json": "[]",
         "eligibility_rules_json": "[]",
         "is_out_of_stock": 0,
         "description": null,
-        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"custom_mys_bag\",\"source_option_id\":\"bag_none\",\"snapshot_ordinal\":0,\"raw_keys\":[\"id\",\"name\",\"price\",\"is_default\"]}"
+        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"custom_mys_bag\",\"source_option_id\":\"bag_none\",\"snapshot_ordinal\":0,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
       }
     },
     {
@@ -3114,7 +3137,7 @@
         "eligibility_rules_json": "[]",
         "is_out_of_stock": 0,
         "description": null,
-        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"custom_mys_bag\",\"source_option_id\":\"bag_buy\",\"snapshot_ordinal\":1,\"raw_keys\":[\"id\",\"name\",\"price\",\"is_default\"]}"
+        "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"custom_mys_bag\",\"source_option_id\":\"bag_buy\",\"snapshot_ordinal\":1,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
       }
     },
     {
@@ -3543,7 +3566,7 @@
         "tenant_id": "zhadantongxue",
         "group_id": "mg_cat_zhadantongxue_cat_zd_topping",
         "name": "雞腿肉卷",
-        "price": 35,
+        "price": 40,
         "is_default": 0,
         "sort_order": 8,
         "out_of_stock_until": null,
@@ -4925,9 +4948,16 @@
     {
       "tenant_id": "haoshiguoshao",
       "category_id": "cat_hs_guoshao",
-      "group_id": "mg_cat_haoshiguoshao_mod_hs_guoshao_addons",
+      "group_id": "mg_cat_haoshiguoshao_mod_hs_noodle_type",
       "sort_order": 0,
-      "derived_from": "token:mod_hs_guoshao_addons"
+      "derived_from": "wildcard_all"
+    },
+    {
+      "tenant_id": "haoshiguoshao",
+      "category_id": "cat_hs_guoshao",
+      "group_id": "mg_cat_haoshiguoshao_mod_hs_guoshao_addons",
+      "sort_order": 1,
+      "derived_from": "wildcard_all"
     },
     {
       "tenant_id": "haoshiguoshao",

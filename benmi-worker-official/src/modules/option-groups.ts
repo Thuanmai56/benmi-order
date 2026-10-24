@@ -60,8 +60,13 @@ const parse = (value: any, fallback: any) => {
 };
 const money = (v: any) => Number.isFinite(Number(v)) && Number(v) >= 0 && Math.abs(Number(v) * 100 - Math.round(Number(v) * 100)) < 0.00001;
 const integer = (v: any, min = 0) => Number.isInteger(Number(v)) && Number(v) >= min && Number(v) <= 999;
-const oos = (row: Row) => Boolean(row.is_out_of_stock || (row.out_of_stock_until && Date.parse(row.out_of_stock_until) > Date.now()));
-export const unifiedMenuEnabled = (env: Env) => env.UNIFIED_MENU_ENABLED === 'true';
+const parseUtc = (s: string) => {
+	if (!s) return 0;
+	const norm = s.includes('T') ? (s.endsWith('Z') || s.includes('+') ? s : s + 'Z') : s.replace(' ', 'T') + 'Z';
+	return Date.parse(norm) || Date.parse(s);
+};
+const oos = (row: Row) => Boolean(row.is_out_of_stock || (row.out_of_stock_until && parseUtc(row.out_of_stock_until) > Date.now()));
+export const unifiedMenuEnabled = (env: Env) => env.UNIFIED_MENU_ENABLED !== 'false';
 
 export async function loadOptionCatalog(env: Env, tenantId: string): Promise<OptionCatalog> {
 	const tables = ['menu_items', 'menu_categories', 'modifier_groups', 'modifier_options', 'item_modifier_links', 'category_modifier_links'];
@@ -117,7 +122,7 @@ export async function loadOptionCatalog(env: Env, tenantId: string): Promise<Opt
 	const catalog = {
 		revision: Number((results[6].results[0] as Row)?.revision || 0),
 		products,
-		categories,
+		categories: categories.filter((c) => !['order_customization', 'bundle_pool'].includes(c.category_type)),
 		groups: normalized,
 		links: links.map((l) => ({
 			itemId: l.item_id,
@@ -339,12 +344,13 @@ export async function saveOptionEntity(request: Request, env: Env, kind: 'produc
 				'INSERT INTO menu_write_guards (id,valid) VALUES (?, CASE WHEN COALESCE((SELECT revision FROM menu_catalog_revisions WHERE tenant_id=?),0)=? THEN 1 ELSE 0 END)',
 			).bind(guardId, tenantId, catalog.revision || 0),
 		];
-		if (raw.delete) {
+		if (raw.delete || raw.deleted) {
 			const entity = kind === 'product' ? catalog.products.find((p) => p.id === id) : catalog.groups.find((g) => g.id === id);
 			if (!entity || Number(raw.revision) !== Number(kind === 'product' ? entity.menu_revision : entity.revision))
 				return json({ error: 'MENU_CONFLICT' }, 409);
 			if (kind === 'product' && catalog.groups.some((g) => groupOptions(catalog, g).some((o) => o.productId === id || o.subOptions.some((sub: SubOption | string) => typeof sub !== 'string' && sub.productId === id))))
 				throw new Error('PRODUCT_IS_LINKED');
+			const affectedItemIds = kind === 'group' ? new Set<string>(catalog.links.filter((l) => l.groupId === id).map((l) => l.itemId)) : new Set<string>();
 			if (kind === 'product') catalog.products = catalog.products.filter((p) => p.id !== id);
 			else {
 				catalog.groups = catalog.groups.filter((g) => g.id !== id);
@@ -359,8 +365,44 @@ export async function saveOptionEntity(request: Request, env: Env, kind: 'produc
 				),
 			);
 			if (kind === 'group') {
+				const legacyId = entity.metadata?.source_id || entity.metadata?.source_group_id || id;
+				const legacyKey = entity.metadata?.legacy_key || entity.metadata?.source_group_id || id;
 				statements.push(env.DB.prepare('DELETE FROM category_modifier_links WHERE tenant_id=? AND group_id=?').bind(tenantId, id));
 				statements.push(env.DB.prepare('DELETE FROM modifier_options WHERE tenant_id=? AND group_id=?').bind(tenantId, id));
+				// Double-write shadow sync to legacy customizations
+				statements.push(
+					env.DB.prepare('DELETE FROM menu_customizations WHERE tenant_id=? AND (id IN (?,?) OR key IN (?,?))').bind(
+						tenantId,
+						id,
+						legacyId,
+						id,
+						legacyKey,
+					),
+				);
+				// Double-write shadow sync to legacy bundle rules for affected items
+				for (const itemId of affectedItemIds) {
+					const rule = projectOptionRule(catalog, itemId);
+					if (rule && rule.groups && rule.groups.length > 0) {
+						const ruleId = `rule_${tenantId}_${itemId}`;
+						statements.push(
+							env.DB.prepare(
+								`INSERT INTO menu_bundle_rules (id, tenant_id, parent_item_id, schema_version, config_json, is_active)
+								 VALUES (?, ?, ?, 3, ?, 1)
+								 ON CONFLICT(tenant_id, parent_item_id) DO UPDATE SET
+								   schema_version = 3,
+								   config_json = excluded.config_json,
+								   is_active = 1`,
+							).bind(ruleId, tenantId, itemId, JSON.stringify(rule)),
+						);
+					} else {
+						statements.push(
+							env.DB.prepare('DELETE FROM menu_bundle_rules WHERE tenant_id=? AND parent_item_id=?').bind(tenantId, itemId),
+						);
+					}
+				}
+			} else {
+				// Double-write shadow sync to legacy bundle rules
+				statements.push(env.DB.prepare('DELETE FROM menu_bundle_rules WHERE tenant_id=? AND parent_item_id=?').bind(tenantId, id));
 			}
 			statements.push(env.DB.prepare(`DELETE FROM ${table} WHERE tenant_id=? AND id=?`).bind(tenantId, id));
 			statements.push(env.DB.prepare('DELETE FROM menu_write_guards WHERE id=?').bind(guardId));
@@ -381,7 +423,7 @@ export async function saveOptionEntity(request: Request, env: Env, kind: 'produc
 			const links = raw.links.map((l: any) => ({
 				itemId: id,
 				groupId: String(l.groupId),
-				optionIds: l.optionIds === null ? null : l.optionIds,
+				optionIds: Array.isArray(l.optionIds) ? l.optionIds : null,
 				disabled: Boolean(l.disabled),
 			}));
 			if (new Set(links.map((l: any) => l.groupId)).size !== links.length) throw new Error('DUPLICATE_GROUP');
@@ -434,6 +476,25 @@ export async function saveOptionEntity(request: Request, env: Env, kind: 'produc
 						'INSERT INTO item_modifier_links (tenant_id,item_id,group_id,option_ids_json,is_disabled,sort_order) VALUES (?,?,?,?,?,?)',
 					).bind(tenantId, id, l.groupId, l.optionIds === null ? null : JSON.stringify(l.optionIds), l.disabled ? 1 : 0, i),
 				);
+			// Double-write shadow sync to menu_bundle_rules
+			const bundleRule = projectOptionRule(catalog, id);
+			if (bundleRule && bundleRule.groups && bundleRule.groups.length > 0) {
+				const ruleId = `rule_${tenantId}_${id}`;
+				statements.push(
+					env.DB.prepare(
+						`INSERT INTO menu_bundle_rules (id, tenant_id, parent_item_id, schema_version, config_json, is_active)
+						 VALUES (?, ?, ?, 3, ?, 1)
+						 ON CONFLICT(tenant_id, parent_item_id) DO UPDATE SET
+						   schema_version = 3,
+						   config_json = excluded.config_json,
+						   is_active = 1`,
+					).bind(ruleId, tenantId, id, JSON.stringify(bundleRule)),
+				);
+			} else {
+				statements.push(
+					env.DB.prepare('DELETE FROM menu_bundle_rules WHERE tenant_id=? AND parent_item_id=?').bind(tenantId, id),
+				);
+			}
 		} else {
 			const existing = catalog.groups.find((g) => g.id === id);
 			if (existing && Number(raw.revision) !== existing.revision) return json({ error: 'MENU_CONFLICT' }, 409);
@@ -468,12 +529,14 @@ export async function saveOptionEntity(request: Request, env: Env, kind: 'produc
 				raw.categoryIds = [];
 				group.sources = [];
 			}
-			if (!Array.isArray(raw.itemIds) || raw.itemIds.some((pid: string) => !catalog.products.some((p) => p.id === pid)))
+			raw.itemIds = raw.itemIds ?? catalog.links.filter((l) => l.groupId === id && !l.disabled).map((l) => l.itemId);
+			const itemIds = raw.itemIds;
+			if (!Array.isArray(itemIds) || itemIds.some((pid: string) => !catalog.products.some((p) => p.id === pid)))
 				throw new Error('INVALID_LINKED_PRODUCTS');
 			const categoryIds = raw.categoryIds ?? catalog.categoryLinks.filter((l) => l.groupId === id).map((l) => l.categoryId);
 			if (
 				!Array.isArray(categoryIds) ||
-				categoryIds.some((cid: string) => !catalog.categories.some((c) => c.id === cid && c.category_type === 'catalog'))
+				categoryIds.some((cid: string) => !catalog.categories.some((c) => c.id === cid && (c.category_type || 'catalog') === 'catalog'))
 			)
 				throw new Error('INVALID_LINKED_CATEGORIES');
 			catalog.categoryLinks = catalog.categoryLinks
@@ -481,9 +544,9 @@ export async function saveOptionEntity(request: Request, env: Env, kind: 'produc
 				.concat([...new Set<string>(categoryIds)].map((categoryId) => ({ categoryId, groupId: id })));
 			const oldLinks = catalog.links.filter((l) => l.groupId === id);
 			const newLinks = oldLinks
-				.filter((l) => l.disabled && !raw.itemIds.includes(l.itemId))
+				.filter((l) => l.disabled && !itemIds.includes(l.itemId))
 				.concat(
-					[...new Set<string>(raw.itemIds)].map(
+					[...new Set<string>(itemIds)].map(
 						(itemId) =>
 							oldLinks.find((l) => l.itemId === itemId && !l.disabled) || { itemId, groupId: id, optionIds: null, disabled: false },
 					),
@@ -564,6 +627,102 @@ export async function saveOptionEntity(request: Request, env: Env, kind: 'produc
 						'INSERT INTO item_modifier_links (tenant_id,item_id,group_id,option_ids_json,is_disabled) VALUES (?,?,?,?,?)',
 					).bind(tenantId, l.itemId, id, l.optionIds === null ? null : JSON.stringify(l.optionIds), l.disabled ? 1 : 0),
 				);
+			// Double-write shadow sync:
+			const legacyCustomId = group.metadata?.source_id || group.metadata?.source_group_id || id;
+			const legacyCustomKey = group.metadata?.legacy_key || group.metadata?.source_group_id || id;
+			if (group.scope === 'order') {
+				const legacyOptionsJson = JSON.stringify(
+					group.options.map((o) => ({
+						id: o.id,
+						name: o.name,
+						price: o.price,
+						surcharge: o.price,
+						isDefault: o.isDefault,
+						isOutOfStock: o.isLocallyOutOfStock,
+						is_out_of_stock: o.isLocallyOutOfStock,
+						outOfStockUntil: o.outOfStockUntil,
+						subOptions: o.subOptions,
+						sub_options: o.subOptions,
+						eligibilityRules: o.eligibilityRules,
+						minOrderSubtotal: o.eligibilityRules?.find((r: any) => r.rule_type === 'min_order_subtotal')?.min_order_subtotal,
+					})),
+				);
+				statements.push(
+					env.DB.prepare(
+						`INSERT INTO menu_customizations (id, tenant_id, key, title, type, sort_order, options_json)
+						 VALUES (?, ?, ?, ?, ?, ?, ?)
+						 ON CONFLICT(id) DO UPDATE SET
+						   title = excluded.title,
+						   type = excluded.type,
+						   sort_order = excluded.sort_order,
+						   options_json = excluded.options_json`,
+					).bind(
+						legacyCustomId,
+						tenantId,
+						legacyCustomKey,
+						group.name,
+						group.maxSelection === 1 ? 'radio' : 'checkbox',
+						Number(group.sortOrder || 0),
+						legacyOptionsJson,
+					),
+				);
+				// If group changed from item scope to order scope, update old linked items
+				for (const itemId of new Set<string>(oldLinks.map((l) => l.itemId))) {
+					const rule = projectOptionRule(catalog, itemId);
+					if (rule && rule.groups && rule.groups.length > 0) {
+						const ruleId = `rule_${tenantId}_${itemId}`;
+						statements.push(
+							env.DB.prepare(
+								`INSERT INTO menu_bundle_rules (id, tenant_id, parent_item_id, schema_version, config_json, is_active)
+								 VALUES (?, ?, ?, 3, ?, 1)
+								 ON CONFLICT(tenant_id, parent_item_id) DO UPDATE SET
+								   schema_version = 3,
+								   config_json = excluded.config_json,
+								   is_active = 1`,
+							).bind(ruleId, tenantId, itemId, JSON.stringify(rule)),
+						);
+					} else {
+						statements.push(
+							env.DB.prepare('DELETE FROM menu_bundle_rules WHERE tenant_id=? AND parent_item_id=?').bind(tenantId, itemId),
+						);
+					}
+				}
+			} else {
+				// If group changed from order scope to item scope, remove from menu_customizations
+				if (existing?.scope === 'order') {
+					statements.push(
+						env.DB.prepare('DELETE FROM menu_customizations WHERE tenant_id=? AND (id IN (?,?) OR key IN (?,?))').bind(
+							tenantId,
+							id,
+							legacyCustomId,
+							id,
+							legacyCustomKey,
+						),
+					);
+				}
+				// For item-scope group, sync menu_bundle_rules for any linked items
+				const affectedItemIds = new Set<string>([...raw.itemIds, ...oldLinks.map((l) => l.itemId)]);
+				for (const itemId of affectedItemIds) {
+					const rule = projectOptionRule(catalog, itemId);
+					if (rule && rule.groups && rule.groups.length > 0) {
+						const ruleId = `rule_${tenantId}_${itemId}`;
+						statements.push(
+							env.DB.prepare(
+								`INSERT INTO menu_bundle_rules (id, tenant_id, parent_item_id, schema_version, config_json, is_active)
+								 VALUES (?, ?, ?, 3, ?, 1)
+								 ON CONFLICT(tenant_id, parent_item_id) DO UPDATE SET
+								   schema_version = 3,
+								   config_json = excluded.config_json,
+								   is_active = 1`,
+							).bind(ruleId, tenantId, itemId, JSON.stringify(rule)),
+						);
+					} else {
+						statements.push(
+							env.DB.prepare('DELETE FROM menu_bundle_rules WHERE tenant_id=? AND parent_item_id=?').bind(tenantId, itemId),
+						);
+					}
+				}
+			}
 		}
 		statements.push(env.DB.prepare('DELETE FROM menu_write_guards WHERE id=?').bind(guardId));
 		await env.DB.batch(statements);
@@ -661,15 +820,18 @@ export function validateOptionSelection(
 export async function validateUnifiedOrderItems(env: Env, tenantId: string, items: any[]) {
 	const catalog = await loadOptionCatalog(env, tenantId);
 	const legacy: any[] = [];
-	const merchandiseSubtotal = items.reduce(
-		(sum, item) =>
-			sum + Number(catalog.products.find((p) => p.id === (item.itemId || item.item_id))?.price || 0) * Number(item.quantity || 0),
-		0,
-	);
+	const computedSubtotals = new Map<number, { id: string; portions: any[]; subtotal: number }>();
+	let merchandiseSubtotal = 0;
+
+	// Pass 1: Validate structure, stock, prices and compute server-authoritative subtotal per item
 	for (const [itemIndex, item] of items.entries()) {
 		const id = item.itemId || item.item_id;
-		if (!catalog.products.some((p) => p.id === id) || !effectiveGroups(catalog, id).length) {
+		const product = catalog.products.find((p) => p.id === id);
+		if (!product || !effectiveGroups(catalog, id).length) {
 			legacy.push(item);
+			if (product && integer(item.quantity, 1)) {
+				merchandiseSubtotal += Number(product.price || 0) * Number(item.quantity);
+			}
 			continue;
 		}
 		try {
@@ -678,17 +840,57 @@ export async function validateUnifiedOrderItems(env: Env, tenantId: string, item
 			if (!Array.isArray(raw?.portions) || raw.portions.length !== Number(item.quantity)) throw new Error('OPTION_SELECTION_REQUIRED');
 			let extra = 0;
 			const portions = raw.portions.map((p: any, i: number) => {
-				const result = validateOptionSelection(catalog, id, p.groups, [], merchandiseSubtotal);
+				const result = validateOptionSelection(catalog, id, p.groups, [], Infinity);
 				extra += result.extra;
-				return { portionIndex: i, groups: result.groups };
+				return { portionIndex: i, groups: result.groups, rawGroups: p.groups };
 			});
-			const product = catalog.products.find((p) => p.id === id)!;
 			const subtotal = Math.round((Number(product.price) * Number(item.quantity) + extra) * 100) / 100;
 			if (Math.abs(Number(item.subtotal) - subtotal) > 0.001 || !Number.isFinite(Number(item.subtotal)))
 				return { valid: false, code: 'OPTION_PRICE_CHANGED', error: '餐點價格已更新，請重新確認', itemIndex, expectedSubtotal: subtotal };
-			item.bundleSelections = { version: 3, portions };
+			computedSubtotals.set(itemIndex, { id, portions, subtotal });
+			merchandiseSubtotal += subtotal;
+		} catch (error) {
+			return {
+				valid: false,
+				code: error instanceof Error ? error.message : 'OPTION_INVALID',
+				error: '餐點選項已更新，請重新確認',
+				itemIndex,
+			};
+		}
+	}
+
+	// Subtract category bundle discounts if any
+	for (const cat of catalog.categories) {
+		const rule = parse(cat.pricing_rules, null);
+		if (!rule?.bundle_qty || !rule?.bundle_price) continue;
+		const prices = items
+			.filter((item) => {
+				const p = catalog.products.find((prod) => prod.id === (item.itemId || item.item_id));
+				return p && p.category_id === cat.id && integer(item.quantity, 1);
+			})
+			.flatMap((item) => {
+				const p = catalog.products.find((prod) => prod.id === (item.itemId || item.item_id))!;
+				return Array(Number(item.quantity)).fill(Number(p.price || 0));
+			})
+			.sort((a, b) => b - a);
+		const count = Math.floor(prices.length / rule.bundle_qty);
+		if (count) {
+			merchandiseSubtotal -= Math.max(0, prices.slice(0, count * rule.bundle_qty).reduce((a, b) => a + b, 0) - count * rule.bundle_price);
+		}
+	}
+	merchandiseSubtotal = Math.max(0, Math.round(merchandiseSubtotal * 100) / 100);
+
+	// Pass 2: Enforce min_order_subtotal eligibility rules against server-authoritative merchandiseSubtotal
+	for (const [itemIndex, computed] of computedSubtotals.entries()) {
+		try {
+			const cleanPortions = computed.portions.map((p: any, i: number) => {
+				const result = validateOptionSelection(catalog, computed.id, p.rawGroups, [], merchandiseSubtotal);
+				return { portionIndex: i, groups: result.groups };
+			});
+			const item = items[itemIndex];
+			item.bundleSelections = { version: 3, portions: cleanPortions };
 			item.bundle_snapshot_json = JSON.stringify(item.bundleSelections);
-			item.subtotal = subtotal;
+			item.subtotal = computed.subtotal;
 		} catch (error) {
 			return {
 				valid: false,

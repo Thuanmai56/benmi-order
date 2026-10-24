@@ -27,16 +27,23 @@
   const maximum = (g) =>
     g.included ? minimum(g) : Number(g.maxSelection ?? g.maxQuantity ?? 1);
   function merchandiseSubtotal() {
-    let sum = Object.keys(cart || {}).reduce((n, key) => {
-      const info = resolveCatalogItem(key);
-      return (
-        n +
-        Number(info?.targetItem?.price ?? info?.basePrice ?? info?.price ?? 0) *
-          Number(cart[key] || 0)
-      );
-    }, 0);
-    if (context && context.index >= Number(cart[context.key] || 0))
-      sum += Number(context.price);
+    let sum = typeof calculateCurrentFoodSubtotal === "function"
+      ? calculateCurrentFoodSubtotal()
+      : Object.keys(cart || {}).reduce((n, key) => {
+          const info = resolveCatalogItem(key);
+          return (
+            n +
+            Number(info?.targetItem?.price ?? info?.basePrice ?? info?.price ?? 0) *
+              Number(cart[key] || 0)
+          );
+        }, 0);
+    if (context) {
+      if (context.index >= Number(cart[context.key] || 0)) {
+        sum += Number(context.price) + extra(context.groups || []);
+      } else if (typeof window.bundlePortionExtra === "function" && window.bundleCartData?.[context.key]?.[context.index]) {
+        sum += extra(context.groups || []) - Number(window.bundlePortionExtra(window.bundleCartData[context.key][context.index]) || 0);
+      }
+    }
     return sum;
   }
   const unavailable = (o) =>

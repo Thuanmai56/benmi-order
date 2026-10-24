@@ -971,3 +971,33 @@ test('autoPopup is derived from required or included groups and ignores legacy i
   f.db.close();
 });
 
+test("saving option group linked to item with existing legacy bundle rule ID updates menu_bundle_rules without UNIQUE conflict", async () => {
+  const f = fixture();
+  // Insert an existing rule with legacy ID format into menu_bundle_rules
+  f.db.prepare(
+    "INSERT INTO menu_bundle_rules (id, tenant_id, parent_item_id, schema_version, config_json, is_active) VALUES (?, ?, ?, 1, ?, 1)"
+  ).run("legacy_rule_combo_1", "a", "a_main", JSON.stringify({ version: 1, groups: [] }));
+
+  // Save a group linked to a_main with a custom option
+  const res = await f.save("group", {
+    ...group(),
+    id: "a_drinks",
+    itemIds: ["a_main"],
+    options: [
+      { id: "a_opt_tea", name: "Trà tắc", productId: "a_tea", price: 0, quantity: 1 },
+      { id: "a_opt_custom", name: "Custom Choice", productId: null, price: 10, quantity: 1 }
+    ]
+  });
+  assert.equal(res.status, 200);
+
+  // Check that menu_bundle_rules still has exactly 1 row for (tenant_id='a', parent_item_id='a_main')
+  const rows = f.db.prepare("SELECT id, schema_version, config_json FROM menu_bundle_rules WHERE tenant_id='a' AND parent_item_id='a_main'").all();
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].id, "legacy_rule_combo_1");
+  assert.equal(rows[0].schema_version, 3);
+  const config = JSON.parse(rows[0].config_json);
+  assert.equal(config.groups[0].eligibleItems.some(o => o.name === "Custom Choice"), true);
+
+  f.db.close();
+});
+

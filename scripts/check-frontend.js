@@ -269,6 +269,6 @@ if (hasErrors) {
   console.log(`${COLORS.bold}${COLORS.red}❌ FAILED: Frontend linter found errors. Please fix before deploying!${COLORS.reset}\n`);
   process.exit(1);
 } else {
-  console.log(`${COLORS.bold}${COLORS.green}✅ PASSED: All frontend scripts are clean and ready for production!${COLORS.reset}\n`);
+  console.log(`${COLORS.bold}${COLORS.green}✅ PASSED: Static syntax and shared-scope checks passed. Browser, persistence and deployment checks are separate.${COLORS.reset}\n`);
   process.exit(0);
 }

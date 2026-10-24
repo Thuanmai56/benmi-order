@@ -106,6 +106,9 @@ export default {
         return json({
           status: "ok",
           service: "benmi-worker",
+          commit: env.BUILD_COMMIT || null,
+          environment: env.BUILD_ENVIRONMENT || null,
+          dirty: env.BUILD_DIRTY !== "false",
           tenantId: tenantCtx?.tenantId || tenantId,
           timestamp: new Date().toISOString(),
         });

@@ -39,12 +39,16 @@ function calculateCurrentFoodSubtotal() {
     const bData = window.bootstrapData || bootstrapData;
     if (typeof cartObj === 'undefined' || !bData?.catalog) return 0;
     const priceMap = {};
+    const categoryMetaMap = {};
     bData.catalog.forEach(cat => {
+        categoryMetaMap[cat.slug] = cat;
         cat.items.forEach(it => { priceMap[`${cat.slug}_${it.name}`] = it.price; });
     });
     const resolveFn = typeof resolveCatalogItem === 'function' ? resolveCatalogItem : (window.resolveCatalogItem || (k => ({ origName: k, displayName: k })));
     const cData = window.customizeData || customizeData;
     const getPrice = window.getModifierPrice || (typeof getModifierPrice === 'function' ? getModifierPrice : () => 0);
+
+    const itemsByCategory = {};
 
     for (let key in cartObj) {
         if (cartObj[key] > 0) {
@@ -59,6 +63,10 @@ function calculateCurrentFoodSubtotal() {
             const basePrice = itemInfo.basePrice || priceMap[key] || 0;
             const qty = cartObj[key];
             subtotal += (basePrice * qty);
+
+            const { catSlug } = parseCartKey(key);
+            if (!itemsByCategory[catSlug]) itemsByCategory[catSlug] = [];
+            itemsByCategory[catSlug].push({ price: basePrice, qty });
 
             const portions = cData ? cData[key] : null;
             if (Array.isArray(portions)) {
@@ -84,12 +92,26 @@ function calculateCurrentFoodSubtotal() {
                 });
             }
 
-            if (itemInfo?.bundleRule && window.bundleCartData && window.bundleCartData[key] && window.bundlePortionExtra) {
+            if ((itemInfo?.bundleRule || itemInfo?.targetItem?.bundleRule || window.bundleCartData?.[key]?.length) && window.bundleCartData && window.bundleCartData[key] && window.bundlePortionExtra) {
                 subtotal += window.bundleCartData[key].slice(0, qty).reduce((sum, portion) => sum + (window.bundlePortionExtra(portion) || 0), 0);
             }
         }
     }
-    return subtotal;
+
+    if (typeof calculateCategoryBundleSubtotal === 'function') {
+        for (let slug in itemsByCategory) {
+            const catMeta = categoryMetaMap[slug];
+            const rule = catMeta?.pricingRules || catMeta?.pricing_rules;
+            if (rule) {
+                const bundleRes = calculateCategoryBundleSubtotal(rule, itemsByCategory[slug]);
+                if (bundleRes?.discountAmount > 0) {
+                    subtotal -= bundleRes.discountAmount;
+                }
+            }
+        }
+    }
+
+    return Math.max(0, subtotal);
 }
 
 function updateCustomizationThresholdUI() {

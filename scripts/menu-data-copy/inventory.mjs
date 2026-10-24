@@ -8,31 +8,54 @@ const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, '../..');
 const WORKER_DIR = path.resolve(REPO_ROOT, 'benmi-worker-official');
 
+const DB_UUID_MAP = {
+  'blab-db-production': { id: '48479f91-eec7-4da2-b044-edaaf622f195', mode: 'production' },
+  'blab-db-dev': { id: '40b67d8a-29e0-40c1-9ce2-b76f76864e95', mode: 'dev' },
+  'blab-db-test': { id: 'c0152835-7d42-4545-8cb4-6658dfc7e97d', mode: 'test' }
+};
+
 /**
- * Execute D1 command and parse JSON output safely via execFileSync (no shell escaping issues)
+ * Execute D1 command and parse JSON output safely via execFileSync using Cloudflare `cf` CLI
  */
+export function executeD1BatchQueries(dbName, sql, isRemote = true, env = null) {
+  const mapped = DB_UUID_MAP[dbName] || { id: dbName, mode: env || 'production' };
+  const mode = env === 'staging' ? 'test' : (env || mapped.mode || 'production');
+  const args = ['cf', 'd1', 'query', mapped.id, '--mode', mode, '-q'];
+  if (!isRemote) args.push('--local');
+  args.push('--sql', sql.trim());
+
+  let lastErr;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const rawOutput = execFileSync('npx', args, {
+        cwd: WORKER_DIR,
+        encoding: 'utf8',
+        maxBuffer: 100 * 1024 * 1024,
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+
+      const jsonStart = rawOutput.indexOf('[');
+      if (jsonStart === -1) {
+        throw new Error(`cf d1 query output does not contain JSON array:\n${rawOutput}`);
+      }
+      const parsed = JSON.parse(rawOutput.substring(jsonStart));
+      if (!parsed || !parsed[0] || parsed.some(p => p.success === false)) {
+        throw new Error(`D1 query execution failed: ${JSON.stringify(parsed)}`);
+      }
+      return parsed.map(p => p.results || []);
+    } catch (err) {
+      lastErr = err;
+      if (attempt < 3) {
+        console.warn(`  [Retry ${attempt}/3] D1 query transient error, retrying...`);
+      }
+    }
+  }
+  throw lastErr;
+}
+
 export function executeD1Query(dbName, sql, isRemote = true, env = null) {
-  const args = ['wrangler', 'd1', 'execute', dbName];
-  if (isRemote) args.push('--remote');
-  if (env) args.push('--env', env);
-  args.push('--json', `--command=${sql.trim()}`);
-
-  const rawOutput = execFileSync('npx', args, {
-    cwd: WORKER_DIR,
-    encoding: 'utf8',
-    maxBuffer: 100 * 1024 * 1024,
-    stdio: ['pipe', 'pipe', 'pipe']
-  });
-
-  const jsonStart = rawOutput.indexOf('[');
-  if (jsonStart === -1) {
-    throw new Error(`Wrangler output does not contain JSON array:\n${rawOutput}`);
-  }
-  const parsed = JSON.parse(rawOutput.substring(jsonStart));
-  if (!parsed || !parsed[0] || parsed[0].success === false) {
-    throw new Error(`D1 query execution failed: ${JSON.stringify(parsed)}`);
-  }
-  return parsed[0].results || [];
+  const batchRes = executeD1BatchQueries(dbName, sql, isRemote, env);
+  return batchRes[0] || [];
 }
 
 /**
@@ -101,15 +124,27 @@ export async function runInventory(dbName = 'blab-db-production', isRemote = tru
 
   for (const t of tables) {
     if (t.type === 'table') {
-      const tableInfo = executeD1Query(dbName, `PRAGMA table_info(${t.name});`, isRemote, env);
-      const fkList = executeD1Query(dbName, `PRAGMA foreign_key_list(${t.name});`, isRemote, env);
-      const indexList = executeD1Query(dbName, `PRAGMA index_list(${t.name});`, isRemote, env);
-      inventory.schema[t.name] = {
-        sql: t.sql,
-        columns: tableInfo,
-        foreign_keys: fkList,
-        indexes: indexList
-      };
+      if (relevantTables.includes(t.name)) {
+        const [tableInfo, fkList, indexList] = executeD1BatchQueries(
+          dbName,
+          `PRAGMA table_info(${t.name}); PRAGMA foreign_key_list(${t.name}); PRAGMA index_list(${t.name});`,
+          isRemote,
+          env
+        );
+        inventory.schema[t.name] = {
+          sql: t.sql,
+          columns: tableInfo || [],
+          foreign_keys: fkList || [],
+          indexes: indexList || []
+        };
+      } else {
+        inventory.schema[t.name] = {
+          sql: t.sql,
+          columns: [],
+          foreign_keys: [],
+          indexes: []
+        };
+      }
     }
   }
 
@@ -361,7 +396,9 @@ export async function runInventory(dbName = 'blab-db-production', isRemote = tru
     inventory.validation.numeric_types.modifier_options_price = modOptionPriceTypes;
   }
 
-  console.log(`[Inventory] Hoàn tất kiểm kê!`);
+  const outPath = path.resolve(REPO_ROOT, 'docs/proposals/full_menu_schema_migration/inventory.json');
+  fs.writeFileSync(outPath, JSON.stringify(inventory, null, 2), 'utf8');
+  console.log(`[Inventory] Hoàn tất kiểm kê! Đã lưu kết quả ra file: ${outPath}`);
   return inventory;
 }
 

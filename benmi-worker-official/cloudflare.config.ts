@@ -1,3 +1,4 @@
+import { buildMetadata } from '../scripts/build-metadata.cjs';
 import { bindings, triggers, defineConfig, type ConfigContext } from "cf/config";
 
 /**
@@ -6,6 +7,7 @@ import { bindings, triggers, defineConfig, type ConfigContext } from "cf/config"
  */
 
 export default (ctx: ConfigContext) => {
+	const metadata = buildMetadata(ctx.mode === "test" ? "staging" : (ctx.mode || "production"));
 	if (ctx.mode && !["dev", "test", "staging", "production"].includes(ctx.mode)) {
 		throw new Error(`Unknown Cloudflare mode: ${ctx.mode}. Use dev, test, staging, or production.`);
 	}
@@ -37,6 +39,12 @@ export default (ctx: ConfigContext) => {
 						},
 					},
 					env: {
+						BUILD_COMMIT: bindings.text(metadata.commit),
+						BUILD_ENVIRONMENT: bindings.text(metadata.environment),
+						BUILD_DIRTY: bindings.text(String(metadata.dirty)),
+						UNIFIED_MENU_ENABLED: bindings.text("true"),
+						ORDER_DETAIL_READS: bindings.text("true"),
+						ORDER_DETAIL_WRITES: bindings.text("true"),
 						LINE_RUNTIME_ENABLED: bindings.text("false"),
 						LINE_RUNTIME_TENANTS: bindings.text("[]"),
 						LINE_RUNTIME_ENVIRONMENT: bindings.text("staging"),
@@ -91,7 +99,12 @@ export default (ctx: ConfigContext) => {
 						},
 					},
 					env: {
+						BUILD_COMMIT: bindings.text(metadata.commit),
+						BUILD_ENVIRONMENT: bindings.text(metadata.environment),
+						BUILD_DIRTY: bindings.text(String(metadata.dirty)),
 						UNIFIED_MENU_ENABLED: bindings.text("true"),
+						ORDER_DETAIL_READS: bindings.text("true"),
+						ORDER_DETAIL_WRITES: bindings.text("true"),
 						LINE_RUNTIME_ENABLED: bindings.text("false"),
 						LINE_RUNTIME_TENANTS: bindings.text("[]"),
 						LINE_RUNTIME_ENVIRONMENT: bindings.text("dev"),
@@ -146,6 +159,12 @@ export default (ctx: ConfigContext) => {
 						},
 					},
 					env: {
+						BUILD_COMMIT: bindings.text(metadata.commit),
+						BUILD_ENVIRONMENT: bindings.text(metadata.environment),
+						BUILD_DIRTY: bindings.text(String(metadata.dirty)),
+						UNIFIED_MENU_ENABLED: bindings.text("true"),
+						ORDER_DETAIL_READS: bindings.text("true"),
+						ORDER_DETAIL_WRITES: bindings.text("true"),
 						LINE_RUNTIME_ENABLED: bindings.text("false"),
 						LINE_RUNTIME_TENANTS: bindings.text("[]"),
 						LINE_RUNTIME_ENVIRONMENT: bindings.text("production"),

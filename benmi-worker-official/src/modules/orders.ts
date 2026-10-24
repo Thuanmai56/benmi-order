@@ -245,7 +245,10 @@ export async function validateThresholdCustomizations(
   if (!env.DB || (!Array.isArray(customizations) && !rawItems.some(it => Array.isArray(it.options) || Array.isArray(it.selected_options)))) return { valid: true };
 
   try {
-    const foodMerchandiseSubtotal = rawItems.reduce((sum, it) => sum + (Number(it.price || it.unit_price || 0) * Number(it.quantity || 1)), 0);
+    const foodMerchandiseSubtotal = rawItems.reduce(
+      (sum, it) => sum + Number(it.subtotal !== undefined && it.subtotal !== null ? it.subtotal : (Number(it.price || it.unit_price || 0) * Number(it.quantity || 1))),
+      0
+    );
 
     // 1. Primary: Load rules directly from modifier_options (Pure Schema Mới)
     let hasCheckedNewSchema = false;
@@ -319,7 +322,7 @@ export async function validateThresholdCustomizations(
       // Table modifier_options not ready, fallback below
     }
 
-    if (hasCheckedNewSchema) return { valid: true };
+    if (hasCheckedNewSchema || unifiedMenuEnabled(env)) return { valid: true };
 
     // 2. Legacy Fallback (for unmigrated environments)
     const rulesRes = await env.DB.prepare(
@@ -505,7 +508,7 @@ export async function createOrder(
         // Table or column might not exist on older DBs
       }
 
-      if (reqCustRows.length === 0) {
+      if (reqCustRows.length === 0 && !unifiedMenuEnabled(env)) {
         const reqCustRes = await env.DB.prepare(
           `SELECT key, title FROM menu_customizations WHERE tenant_id = ? AND is_required = 1`
         ).bind(tenantId).all<{ key: string; title: string }>();

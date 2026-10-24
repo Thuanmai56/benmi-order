@@ -19,16 +19,18 @@
     "types": "cf workers types --include-runtime=false",
     "check": "tsc --noEmit",
     "test:cli": "node --experimental-strip-types --test ../scripts/test-cloudflare-cli.mjs",
-    "db:migrations:list:dev": "cf d1 migrations list 40b67d8a-29e0-40c1-9ce2-b76f76864e95",
-    "db:migrations:apply:dev": "cf d1 migrations apply 40b67d8a-29e0-40c1-9ce2-b76f76864e95",
-    "db:migrations:list:staging": "cf d1 migrations list c0152835-7d42-4545-8cb4-6658dfc7e97d",
-    "db:migrations:apply:staging": "cf d1 migrations apply c0152835-7d42-4545-8cb4-6658dfc7e97d",
-    "db:migrations:list:production": "cf d1 migrations list 48479f91-eec7-4da2-b044-edaaf622f195",
-    "db:migrations:apply:production": "cf d1 migrations apply 48479f91-eec7-4da2-b044-edaaf622f195"
+    "db:migrations:list:dev": "cf d1 migrations list 40b67d8a-29e0-40c1-9ce2-b76f76864e95 --mode dev",
+    "db:migrations:apply:dev": "cf d1 migrations apply 40b67d8a-29e0-40c1-9ce2-b76f76864e95 --mode dev",
+    "db:migrations:list:staging": "cf d1 migrations list c0152835-7d42-4545-8cb4-6658dfc7e97d --mode test",
+    "db:migrations:apply:staging": "cf d1 migrations apply c0152835-7d42-4545-8cb4-6658dfc7e97d --mode test",
+    "db:migrations:list:production": "cf d1 migrations list 48479f91-eec7-4da2-b044-edaaf622f195 --mode production",
+    "db:migrations:apply:production": "cf d1 migrations apply 48479f91-eec7-4da2-b044-edaaf622f195 --mode production"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20261007.1",
     "cf": "1.0.0-beta.12",
+    "esbuild": "0.28.1",
+    "miniflare": "5.20261006.0-alpha",
     "typescript": "^6.0.3",
     "wrangler": "4.148.0"
   }
