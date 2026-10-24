@@ -1,10 +1,10 @@
 # Bảng Quy chiếu Mapping Dữ liệu (Field Mapping Specification)
 
-- **Thời điểm sinh**: 2026-10-03T05:05:55.128Z
-- **Snapshot Run ID**: `snap_2026-10-01T11-56-30-635Z`
+- **Thời điểm sinh**: 2026-10-22T09:20:20.225Z
+- **Snapshot Run ID**: `snap_2026-10-22T09-20-05-611Z`
 - **Tổng số Groups map**: 44 nhóm
-- **Tổng số Options map**: 169 lựa chọn
-- **Tổng số Category Links map**: 24 liên kết
+- **Tổng số Options map**: 170 lựa chọn
+- **Tổng số Category Links map**: 25 liên kết
 - **Tổng số Conflicts / Unresolved**: 0
 
 ---

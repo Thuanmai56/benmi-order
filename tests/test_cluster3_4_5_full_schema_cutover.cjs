@@ -65,7 +65,8 @@ function compileThresholdValidatorFunction() {
   // Extract exactly validateThresholdCustomizations
   const startIdx = fullSource.indexOf('export async function validateThresholdCustomizations');
   const endIdx = fullSource.indexOf('export async function createOrder');
-  const fnSource = fullSource.slice(startIdx, endIdx);
+  const noteSource = fs.readFileSync(path.join(__dirname, '..', 'benmi-worker-official/src/utils/order-item-notes.ts'), 'utf8');
+    const fnSource = noteSource + '\n' + fullSource.slice(startIdx, endIdx);
 
   const compiled = ts.transpileModule(fnSource, {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
@@ -364,7 +365,8 @@ describe('Clusters 3, 4, 5: Full Menu Schema Cutover Test Suite', () => {
 
     const startIdx = fullSource.indexOf('export function formatItemsToText');
     const endIdx = fullSource.indexOf('export const ORDER_INDEX_LATEST');
-    const fnSource = fullSource.slice(startIdx, endIdx);
+    const noteSource = fs.readFileSync(path.join(__dirname, '..', 'benmi-worker-official/src/utils/order-item-notes.ts'), 'utf8');
+    const fnSource = noteSource + '\n' + fullSource.slice(startIdx, endIdx);
 
     const compiled = ts.transpileModule(fnSource, {
       compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }

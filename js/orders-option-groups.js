@@ -760,15 +760,7 @@
       if (isOrder) {
         body += `<section class="ug-order-scope-notice"><p class="ug-muted">${esc(tr("ugAppliesToOrder"))}</p></section>`;
       } else {
-        body += `<section><div class="ug-section-title"><h3>${esc(tr("ugLinked"))} (${affected(d)})</h3>${btn("linked", "ugLink")}</div><div class="ug-linked">${affectedIds(d).map((id) => `<div>${esc(productById(id)?.name || "")}${!d.itemIds.includes(id) ? ` <small class="ug-muted">· ${esc(tr("ugInherited"))}</small>` : ""}</div>`).join("") || `<span class="ug-muted">${esc(tr("ugEmpty"))}</span>`}</div></section><details><summary>${esc(tr("ugCategoryLinks"))}</summary>${catalog.categories
-          .filter((c) => c.category_type === "catalog")
-          .map(
-            (c) =>
-              `<label class="ug-check"><input type="checkbox" data-category-link="${esc(c.id)}" ${d.categoryIds.includes(c.id) ? "checked" : ""}>${esc(c.name)}</label>`,
-          )
-          .join(
-            "",
-          )}</details><details><summary>${esc(tr("ugSources"))}</summary><p class="ug-muted">${esc(tr("ugSourceHint"))}</p>${catalog.categories.map((c) => `<label class="ug-check"><input type="checkbox" data-source="${esc(c.id)}" ${(d.sources || []).some((s) => (s.refId || s.categoryId) === c.id) ? "checked" : ""}>${esc(c.name)}</label>`).join("")}</details>`;
+        body += `<section><div class="ug-section-title"><h3>${esc(tr("ugLinked"))} (${affected(d)})</h3>${btn("linked", "ugLink")}</div><div class="ug-linked">${affectedIds(d).map((id) => `<div>${esc(productById(id)?.name || "")}${!d.itemIds.includes(id) ? ` <small class="ug-muted">· ${esc(tr("ugInherited"))}</small>` : ""}</div>`).join("") || `<span class="ug-muted">${esc(tr("ugEmpty"))}</span>`}</div></section>`;
       }
       body += !d.isNew ? btn("delete", "ugDelete", 'class="ug-danger"') : "";
     } else if (r.page === "groups") {
@@ -816,7 +808,7 @@
         row("custom", tr("ugCustom"), tr("ugCustomHelp"));
     } else if (r.page === "products" || r.page === "linked" || r.page === "sub-products") {
       title = tr(r.page === "linked" ? "ugLink" : "ugFromProducts");
-      const selectableCategories = catalog.categories.filter((c) => c.category_type !== "modifier");
+      const selectableCategories = catalog.categories.filter((c) => (c.category_type || 'catalog') === "catalog");
       const existingSubProducts = r.page === "sub-products" ? state.stack.at(-1).route.option.subOptions?.map((sub) => sub.productId).filter(Boolean) || [] : [];
       const selectableProducts = catalog.products.filter((p) => selectableCategories.some((c) => c.id === p.category_id));
       const uncategorizedProducts = catalog.products.filter((p) => !selectableCategories.some((c) => c.id === p.category_id));

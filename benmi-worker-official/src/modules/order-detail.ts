@@ -5,8 +5,8 @@ import { loadOptionCatalog, effectiveGroups, groupOptions, validateOptionSelecti
 import DetailView from '../../../js/order-detail-view.js';
 
 export { DetailView };
-export const detailReads = (env: Env) => env.ORDER_DETAIL_READS === 'true';
-export const detailWrites = (env: Env) => env.ORDER_DETAIL_WRITES === 'true';
+export const detailReads = (env: Env) => env.ORDER_DETAIL_READS !== 'false';
+export const detailWrites = (env: Env) => env.ORDER_DETAIL_WRITES !== 'false';
 export class DetailError extends Error {
   constructor(public code: string, public status = 400) { super(code); }
 }
@@ -71,7 +71,7 @@ export async function buildDetailRound(env: Env, tenant: string, input: any, rou
     const portionNotes = raw.portionNotes;
     if (portionNotes !== undefined && (!Array.isArray(portionNotes) || portionNotes.length !== quantity)) fail('INVALID_PORTION_NOTES');
     const portions = Array.from({ length: quantity }, (_, index) => {
-      const result = validateOptionSelection(catalog, product.id, supplied?.[index]?.groups || [], [], baseSubtotal);
+      const result = validateOptionSelection(catalog, product.id, supplied?.[index]?.groups || [], [], Infinity);
       return { portionIndex: index, groups: result.groups as DetailGroup[],
         note: portionNotes === undefined ? old?.portions[index]?.note || '' : note(portionNotes[index]) };
     });
@@ -82,6 +82,24 @@ export async function buildDetailRound(env: Env, tenant: string, input: any, rou
       subtotal: amount(Number(product.price) * quantity + extra),
       note: raw.note === undefined ? old?.note || '' : note(raw.note), portions };
   });
+  let discount = 0;
+  for (const cat of catalog.categories) {
+    const rule = typeof cat.pricing_rules === 'string' ? JSON.parse(cat.pricing_rules || 'null') : cat.pricing_rules;
+    if (!rule?.bundle_qty || !rule?.bundle_price) continue;
+    const prices = items.filter(i => i.categoryId === cat.id).flatMap(i => Array(i.quantity).fill(i.unitPrice)).sort((a, b) => b - a);
+    const count = Math.floor(prices.length / rule.bundle_qty);
+    if (count) discount += Math.max(0, prices.slice(0, count * rule.bundle_qty).reduce((a, b) => a + b, 0) - count * rule.bundle_price);
+  }
+  if (previous && items.length === previous.items.length && input.items.every(unchangedLine)) discount = previous.discount;
+  const merchandiseSubtotal = amount(Math.max(0, items.reduce((n, i) => n + i.subtotal, 0) - discount));
+  for (const raw of input.items) {
+    if (unchangedLine(raw)) continue;
+    const id = raw.itemId || raw.item_id;
+    const supplied = raw.bundleSelections?.portions;
+    if (Array.isArray(supplied)) {
+      for (const p of supplied) validateOptionSelection(catalog, id, p?.groups || [], [], merchandiseSubtotal);
+    }
+  }
   let selectedGroups: DetailGroup[];
   if (previous && (input.orderSelections === undefined || (Array.isArray(input.orderSelections) && sameSelections(input.orderSelections, previous.groups)))) selectedGroups = previous.groups;
   else {
@@ -93,17 +111,8 @@ export async function buildDetailRound(env: Env, tenant: string, input: any, rou
       products: [...catalog.products, { id: syntheticId, price: 0 }],
       groups: catalog.groups.map(g => g.scope === 'order' ? { ...g, scope: 'item', options: groupOptions(catalog, g) } : g),
       links: [...catalog.links, ...orderGroups.map(g => ({ itemId: syntheticId, groupId: g.id }))] };
-    selectedGroups = validateOptionSelection(synthetic, syntheticId, input.orderSelections, [], baseSubtotal).groups;
+    selectedGroups = validateOptionSelection(synthetic, syntheticId, input.orderSelections, [], merchandiseSubtotal).groups;
   }
-  let discount = 0;
-  for (const cat of catalog.categories) {
-    const rule = typeof cat.pricing_rules === 'string' ? JSON.parse(cat.pricing_rules || 'null') : cat.pricing_rules;
-    if (!rule?.bundle_qty || !rule?.bundle_price) continue;
-    const prices = items.filter(i => i.categoryId === cat.id).flatMap(i => Array(i.quantity).fill(i.unitPrice)).sort((a, b) => b - a);
-    const count = Math.floor(prices.length / rule.bundle_qty);
-    if (count) discount += Math.max(0, prices.slice(0, count * rule.bundle_qty).reduce((a, b) => a + b, 0) - count * rule.bundle_price);
-  }
-  if (previous && items.length === previous.items.length && input.items.every(unchangedLine)) discount = previous.discount;
   const total = amount(items.reduce((n, i) => n + i.subtotal, 0) - discount
     + selectedGroups.reduce((n, g) => n + g.items.reduce((x, c) => x + DetailView.extra(c), 0), 0));
   const submitted = input.appended_total ?? input.new_total ?? input.total;

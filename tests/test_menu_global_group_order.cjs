@@ -65,7 +65,8 @@ test('one aggregate position and inner group order persist without changing conf
   assert.deepEqual(after.groups.find(g => g.id === 'a_item'), before.groups.find(g => g.id === 'a_item'));
   assert.deepEqual(f.db.prepare('SELECT * FROM modifier_groups WHERE id=?').get('b_notes'), foreign);
   assert.equal(after.categories.find(c => c.id === 'a_food').sort_order, 2);
-  const aggregate = after.categories.find(c => c.category_type === 'order_customization');
+  assert.equal(after.categories.some(c => c.category_type === 'order_customization'), false);
+  const aggregate = f.db.prepare("SELECT * FROM menu_categories WHERE tenant_id='a' AND category_type='order_customization'").get();
   assert.equal(aggregate.id, 'a_sec-flavor');
   assert.equal(aggregate.sort_order, 3);
   assert.ok(f.deleted.includes('bootstrap:a'));
@@ -90,12 +91,13 @@ test('existing aggregate identity and settings are retained across repeated save
   const unchanged = await f.api.loadOptionCatalog(f.env, 'a');
   assert.equal(unchanged.revision, before.revision);
   assert.deepEqual(unchanged.categories, before.categories);
-  const section = unchanged.categories.find(c => c.category_type === 'order_customization');
+  assert.equal(unchanged.categories.some(c => c.category_type === 'order_customization'), false);
+  const section = f.db.prepare("SELECT * FROM menu_categories WHERE tenant_id='a' AND category_type='order_customization'").get();
   assert.equal(section.name, 'Existing title');
   assert.equal(section.short_name, 'Existing short');
   assert.equal(section.allow_customization, 1);
   assert.equal(section.sort_order, 0);
-  assert.equal(unchanged.categories.filter(c => c.category_type === 'order_customization').length, 1);
+  assert.equal(f.db.prepare("SELECT count(*) AS n FROM menu_categories WHERE tenant_id='a' AND category_type='order_customization'").get().n, 1);
   const group = before.groups.find(g => g.id === 'a_notes');
   const stale = await f.save('group', f.definitions.find(g => g.id === group.id));
   assert.equal(stale.status, 409);

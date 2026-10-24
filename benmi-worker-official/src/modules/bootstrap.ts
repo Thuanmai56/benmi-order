@@ -392,7 +392,8 @@ export function formatOperatingHoursForDisplay(
 export async function getTenantBootstrap(request: Request, env: Env): Promise<Response> {
   const tenantId = getTenantId(request);
   if (await tenantIsDeleted(env.DB, tenantId)) return json({ error: 'TENANT_DELETED' }, 410, { 'Cache-Control': 'no-store' });
-  const cacheKey = `tenant:${tenantId}:bootstrap`;
+  const isUnified = unifiedMenuEnabled(env);
+  const cacheKey = isUnified ? `tenant:${tenantId}:bootstrap:v2` : `tenant:${tenantId}:bootstrap`;
 
   try {
     // 1. Check KV Edge Cache (bypass if _t or nocache query param is present)
@@ -476,7 +477,9 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
              WHERE tenant_id = ? 
              ORDER BY sort_order ASC`
           ).bind(tenantId),
-          env.DB.prepare(
+          isUnified
+            ? env.DB.prepare('SELECT 1 WHERE 0')
+            : env.DB.prepare(
             `SELECT id, key, title, type, sort_order, options_json,
                     COALESCE(is_required, 0) AS is_required,
                     COALESCE((SELECT g.scope FROM modifier_groups g
@@ -513,27 +516,29 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
         orderModifierRows = (orderModRes && orderModRes.success && Array.isArray(orderModRes.results)) ? (orderModRes.results as any[]) : [];
         menuComplete = true;
 
-        try {
-          const [bRes, rRes] = await env.DB.batch([
-            env.DB.prepare(
-              `SELECT parent_item_id, schema_version, config_json
-               FROM menu_bundle_rules
-               WHERE tenant_id = ? AND is_active = 1`
-            ).bind(tenantId),
-            env.DB.prepare(
-              `SELECT customization_key, option_id, rule_type, min_order_subtotal, threshold_basis, error_message
-               FROM menu_customization_option_rules
-               WHERE tenant_id = ? AND is_active = 1`
-            ).bind(tenantId)
-          ]);
-          if (!bRes || !bRes.success || !Array.isArray(bRes.results) || !rRes || !rRes.success || !Array.isArray(rRes.results)) {
-            throw new Error('Incomplete bundle or custom rules query');
+        if (!isUnified) {
+          try {
+            const [bRes, rRes] = await env.DB.batch([
+              env.DB.prepare(
+                `SELECT parent_item_id, schema_version, config_json
+                 FROM menu_bundle_rules
+                 WHERE tenant_id = ? AND is_active = 1`
+              ).bind(tenantId),
+              env.DB.prepare(
+                `SELECT customization_key, option_id, rule_type, min_order_subtotal, threshold_basis, error_message
+                 FROM menu_customization_option_rules
+                 WHERE tenant_id = ? AND is_active = 1`
+              ).bind(tenantId)
+            ]);
+            if (!bRes || !bRes.success || !Array.isArray(bRes.results) || !rRes || !rRes.success || !Array.isArray(rRes.results)) {
+              throw new Error('Incomplete bundle or custom rules query');
+            }
+            bundleRulesRows = (bRes.results as any[]) || [];
+            customRulesRows = (rRes.results as any[]) || [];
+          } catch (subRulesErr) {
+            menuComplete = false;
+            console.warn(`[Bootstrap] menu_bundle_rules or option_rules query failure for ${tenantId}:`, subRulesErr);
           }
-          bundleRulesRows = (bRes.results as any[]) || [];
-          customRulesRows = (rRes.results as any[]) || [];
-        } catch (subRulesErr) {
-          menuComplete = false;
-          console.warn(`[Bootstrap] menu_bundle_rules or option_rules query failure for ${tenantId}:`, subRulesErr);
         }
 
         try {
@@ -1098,6 +1103,7 @@ export async function invalidateBootstrapCache(tenantId: string, env: Env): Prom
     try {
       await Promise.all([
         env.ORDER_STATE.delete(`tenant:${tenantId}:bootstrap`),
+        env.ORDER_STATE.delete(`tenant:${tenantId}:bootstrap:v2`),
         env.ORDER_STATE.delete(`tenant:${tenantId}:config_cache`)
       ]);
       console.log(`[Bootstrap] Invalidated KV cache and config_cache for tenant ${tenantId}`);

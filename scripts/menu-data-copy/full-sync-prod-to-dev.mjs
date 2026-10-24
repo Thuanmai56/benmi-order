@@ -1,8 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
-import { executeD1Query } from './inventory.mjs';
+import { executeD1Query, executeD1BatchQueries } from './inventory.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -145,21 +144,12 @@ PRAGMA foreign_keys = ON;
     return sql;
   };
 
-  // Helper execute SQL string via temporary file with wrangler
+  // Helper execute SQL string via cf d1 query
   const executeBatchSql = (label, sql) => {
-    const tmpFile = path.resolve(WORKER_DIR, `_tmp_sync_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.sql`);
-    fs.writeFileSync(tmpFile, sql, 'utf8');
-    try {
-      process.stdout.write(`  [Sync] Đang nạp ${label.padEnd(35)}... `);
-      execFileSync('npx', ['wrangler', 'd1', 'execute', 'blab-db-dev', '--remote', '--env', 'dev', `--file=${path.basename(tmpFile)}`], {
-        cwd: WORKER_DIR,
-        encoding: 'utf8',
-        maxBuffer: 100 * 1024 * 1024
-      });
-      console.log('Xong ✓');
-    } finally {
-      if (fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile);
-    }
+    if (!sql || !sql.trim()) return;
+    process.stdout.write(`  [Sync] Đang nạp ${label.padEnd(35)}... `);
+    executeD1BatchQueries('blab-db-dev', sql, true, 'dev');
+    console.log('Xong ✓');
   };
 
   // 5. Thực thi tuần tự lên blab-db-dev
@@ -203,6 +193,38 @@ PRAGMA foreign_keys = ON;
   }
 
   executeBatchSql(`category_modifier_links (${canonicalLinks.length} rows)`, buildInserts('category_modifier_links', canonicalLinks));
+
+  // Bước 5.5: Chuyển đổi menu_bundle_rules sang canonical modifier_groups / modifier_options / item_modifier_links (0065 & 0066, giữ nguyên is_active=1)
+  const bundleCanonicalSql = `
+INSERT INTO modifier_groups (id,tenant_id,name,selection_type,is_required,min_selection,max_selection,sort_order,scope,allow_repeats,included,sources_json,labels_json,source_metadata_json)
+SELECT 'ug_'||r.id||'_'||j.key,r.tenant_id,
+ COALESCE(json_extract(j.value,'$.name'),json_extract(j.value,'$.label."zh-TW"'),json_extract(j.value,'$.label.vi'),'Options'),
+ 'multiple',1,
+ CASE WHEN json_extract(j.value,'$.type')='fixed' THEN (SELECT SUM(COALESCE(json_extract(v.value,'$.quantity'),1)) FROM json_each(j.value,'$.items') v) ELSE COALESCE(json_extract(j.value,'$.minQuantity'),json_extract(j.value,'$.minSelections'),json_extract(j.value,'$.requiredCount'),1) END,
+ CASE WHEN json_extract(j.value,'$.type')='fixed' THEN (SELECT SUM(COALESCE(json_extract(v.value,'$.quantity'),1)) FROM json_each(j.value,'$.items') v) ELSE COALESCE(json_extract(j.value,'$.maxQuantity'),json_extract(j.value,'$.maxSelections'),json_extract(j.value,'$.requiredCount'),1) END,
+ j.key,'item',COALESCE(json_extract(j.value,'$.allowRepeats'),json_extract(j.value,'$.allowRepeat'),0),
+ COALESCE(json_extract(j.value,'$.type')='fixed',0),
+ COALESCE(json_extract(j.value,'$.sources'),'[]'),COALESCE(json_extract(j.value,'$.label'),'{}'),
+ json_object('legacyBundleRuleId',r.id,'legacyGroupId',json_extract(j.value,'$.id'),'legacySurcharges',json(COALESCE(json_extract(j.value,'$.surcharges'),'{}')))
+FROM menu_bundle_rules r,json_each(r.config_json,'$.groups') j WHERE r.is_active=1;
+
+INSERT INTO modifier_options (id,tenant_id,group_id,name,price,product_id,included_quantity,sort_order)
+SELECT 'uo_'||r.id||'_'||j.key||'_'||v.key,r.tenant_id,'ug_'||r.id||'_'||j.key,p.name,
+ COALESCE(json_extract(v.value,'$.surcharge'),0),p.id,COALESCE(json_extract(v.value,'$.quantity'),1),v.key
+FROM menu_bundle_rules r,json_each(r.config_json,'$.groups') j,json_each(j.value,'$.items') v
+JOIN menu_items p ON p.id=json_extract(v.value,'$.itemId') AND p.tenant_id=r.tenant_id
+WHERE r.is_active=1 AND json_extract(j.value,'$.type')='fixed';
+
+INSERT INTO item_modifier_links (tenant_id,item_id,group_id,sort_order)
+SELECT r.tenant_id,r.parent_item_id,'ug_'||r.id||'_'||j.key,j.key
+FROM menu_bundle_rules r,json_each(r.config_json,'$.groups') j WHERE r.is_active=1;
+
+UPDATE modifier_groups
+SET is_required=0
+WHERE included=0 AND min_selection=0
+  AND json_extract(source_metadata_json,'$.legacyBundleRuleId') IS NOT NULL;
+`;
+  executeBatchSql('Chuyển đổi menu_bundle_rules -> Canonical Groups', bundleCanonicalSql);
 
   // 6. Đối chiếu và kiểm tra sau nạp
   console.log('\n[FullSync] 6. Kiểm tra đối chiếu số lượng và toàn vẹn dữ liệu trên Dev...');

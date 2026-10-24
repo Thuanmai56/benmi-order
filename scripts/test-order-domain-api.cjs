@@ -33,7 +33,7 @@ test('config uses fresh D1, preserves LIFF ID and disables HTTP caching',async()
 });
 test('activation captures legacy endpoint, uses CAS and invalidates all three caches',async()=>{
   const f=fixture();const r=await updateOrderDomain(request(payload),f.env,'tenant-a');assert.equal(r.status,200);assert.equal((await r.json()).orderUrl,'https://order.blabfood.app/tenant-a');
-  assert.deepEqual(f.deletes.sort(),['marketplace:tenants_catalog','tenant:tenant-a:bootstrap','tenant:tenant-a:config_cache']);
+  assert.deepEqual(f.deletes.sort(),['marketplace:tenants_catalog','tenant:tenant-a:bootstrap','tenant:tenant-a:bootstrap:v2','tenant:tenant-a:config_cache']);
   assert.equal((await updateOrderDomain(request(payload),f.env,'tenant-a')).status,409);
   const rollback={...payload,customerOrderDomain:'legacy',expectedCustomerOrderDomain:'blabfood'};
   assert.equal((await updateOrderDomain(request(rollback),f.env,'tenant-a')).status,200);

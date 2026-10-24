@@ -37,3 +37,7 @@ backup_*.sql
 *.backup.sql
 
 .cloudflare/
+
+# Build provenance and menu QA evidence
+_build.json
+artifacts/menu-qa/

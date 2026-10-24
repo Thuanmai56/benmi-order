@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generated_at": "2026-10-01T11:53:43.987Z",
+    "generated_at": "2026-10-22T14:13:36.348Z",
     "database_name": "blab-db-production",
     "is_remote": true,
     "env": "production"
@@ -8,83 +8,9 @@
   "schema": {
     "admin_menu_seed_receipts": {
       "sql": "CREATE TABLE admin_menu_seed_receipts (\n  request_id TEXT PRIMARY KEY,\n  tenant_id TEXT NOT NULL UNIQUE,\n  approved_revision INTEGER NOT NULL CHECK (approved_revision > 0),\n  menu_hash TEXT NOT NULL,\n  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE\n)",
-      "columns": [
-        {
-          "cid": 0,
-          "name": "request_id",
-          "type": "TEXT",
-          "notnull": 0,
-          "dflt_value": null,
-          "pk": 1
-        },
-        {
-          "cid": 1,
-          "name": "tenant_id",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 2,
-          "name": "approved_revision",
-          "type": "INTEGER",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 3,
-          "name": "menu_hash",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 4,
-          "name": "created_at",
-          "type": "DATETIME",
-          "notnull": 1,
-          "dflt_value": "CURRENT_TIMESTAMP",
-          "pk": 0
-        }
-      ],
-      "foreign_keys": [
-        {
-          "id": 0,
-          "seq": 0,
-          "table": "tenants",
-          "from": "tenant_id",
-          "to": "id",
-          "on_update": "NO ACTION",
-          "on_delete": "CASCADE",
-          "match": "NONE"
-        }
-      ],
-      "indexes": [
-        {
-          "seq": 0,
-          "name": "idx_admin_menu_seed_receipts_tenant",
-          "unique": 0,
-          "origin": "c",
-          "partial": 0
-        },
-        {
-          "seq": 1,
-          "name": "sqlite_autoindex_admin_menu_seed_receipts_2",
-          "unique": 1,
-          "origin": "u",
-          "partial": 0
-        },
-        {
-          "seq": 2,
-          "name": "sqlite_autoindex_admin_menu_seed_receipts_1",
-          "unique": 1,
-          "origin": "pk",
-          "partial": 0
-        }
-      ]
+      "columns": [],
+      "foreign_keys": [],
+      "indexes": []
     },
     "category_modifier_links": {
       "sql": "CREATE TABLE category_modifier_links (\n    tenant_id TEXT NOT NULL,\n    category_id TEXT NOT NULL REFERENCES menu_categories(id) ON DELETE CASCADE,\n    group_id TEXT NOT NULL REFERENCES modifier_groups(id) ON DELETE CASCADE,\n    sort_order INTEGER NOT NULL DEFAULT 0,\n    PRIMARY KEY (tenant_id, category_id, group_id)\n)",
@@ -202,50 +128,9 @@
     },
     "daily_order_counters": {
       "sql": "CREATE TABLE daily_order_counters (\n    tenant_id TEXT NOT NULL,\n    order_date TEXT NOT NULL, \n    dining_option TEXT NOT NULL, \n    last_seq INTEGER NOT NULL DEFAULT 0,\n    PRIMARY KEY (tenant_id, order_date, dining_option)\n)",
-      "columns": [
-        {
-          "cid": 0,
-          "name": "tenant_id",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 1
-        },
-        {
-          "cid": 1,
-          "name": "order_date",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 2
-        },
-        {
-          "cid": 2,
-          "name": "dining_option",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 3
-        },
-        {
-          "cid": 3,
-          "name": "last_seq",
-          "type": "INTEGER",
-          "notnull": 1,
-          "dflt_value": "0",
-          "pk": 0
-        }
-      ],
+      "columns": [],
       "foreign_keys": [],
-      "indexes": [
-        {
-          "seq": 0,
-          "name": "sqlite_autoindex_daily_order_counters_1",
-          "unique": 1,
-          "origin": "pk",
-          "partial": 0
-        }
-      ]
+      "indexes": []
     },
     "item_modifier_links": {
       "sql": "CREATE TABLE item_modifier_links (\n    tenant_id TEXT NOT NULL,\n    item_id TEXT NOT NULL REFERENCES menu_items(id) ON DELETE CASCADE,\n    group_id TEXT NOT NULL REFERENCES modifier_groups(id) ON DELETE CASCADE,\n    sort_order INTEGER NOT NULL DEFAULT 0,\n    PRIMARY KEY (tenant_id, item_id, group_id)\n)",
@@ -322,119 +207,17 @@
         }
       ]
     },
+    "line_order_receipts": {
+      "sql": "CREATE TABLE line_order_receipts (\n  id TEXT PRIMARY KEY,\n  tenant_id TEXT NOT NULL,\n  order_key TEXT NOT NULL,\n  user_id TEXT NOT NULL,\n  flow TEXT NOT NULL CHECK (flow IN ('create', 'append', 'modify')),\n  alt_text TEXT NOT NULL,\n  contents_json TEXT NOT NULL,\n  fallback_token_hash TEXT NOT NULL,\n  retry_key TEXT NOT NULL,\n  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'sending', 'sent', 'failed')),\n  method TEXT CHECK (method IN ('reply', 'push')),\n  attempts INTEGER NOT NULL DEFAULT 0,\n  next_attempt_at INTEGER NOT NULL,\n  lease_until INTEGER NOT NULL DEFAULT 0,\n  claim_id TEXT,\n  last_error TEXT,\n  created_at INTEGER NOT NULL,\n  sent_at INTEGER\n)",
+      "columns": [],
+      "foreign_keys": [],
+      "indexes": []
+    },
     "menu_bundle_rules": {
       "sql": "CREATE TABLE menu_bundle_rules (\n    id TEXT PRIMARY KEY,\n    tenant_id TEXT NOT NULL,\n    parent_item_id TEXT NOT NULL,\n    schema_version INTEGER NOT NULL DEFAULT 1,\n    config_json TEXT NOT NULL,\n    is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),\n    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,\n    FOREIGN KEY (parent_item_id) REFERENCES menu_items(id) ON DELETE CASCADE,\n    UNIQUE (tenant_id, parent_item_id)\n)",
-      "columns": [
-        {
-          "cid": 0,
-          "name": "id",
-          "type": "TEXT",
-          "notnull": 0,
-          "dflt_value": null,
-          "pk": 1
-        },
-        {
-          "cid": 1,
-          "name": "tenant_id",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 2,
-          "name": "parent_item_id",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 3,
-          "name": "schema_version",
-          "type": "INTEGER",
-          "notnull": 1,
-          "dflt_value": "1",
-          "pk": 0
-        },
-        {
-          "cid": 4,
-          "name": "config_json",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 5,
-          "name": "is_active",
-          "type": "INTEGER",
-          "notnull": 1,
-          "dflt_value": "1",
-          "pk": 0
-        },
-        {
-          "cid": 6,
-          "name": "created_at",
-          "type": "DATETIME",
-          "notnull": 1,
-          "dflt_value": "CURRENT_TIMESTAMP",
-          "pk": 0
-        },
-        {
-          "cid": 7,
-          "name": "updated_at",
-          "type": "DATETIME",
-          "notnull": 1,
-          "dflt_value": "CURRENT_TIMESTAMP",
-          "pk": 0
-        }
-      ],
-      "foreign_keys": [
-        {
-          "id": 0,
-          "seq": 0,
-          "table": "menu_items",
-          "from": "parent_item_id",
-          "to": "id",
-          "on_update": "NO ACTION",
-          "on_delete": "CASCADE",
-          "match": "NONE"
-        },
-        {
-          "id": 1,
-          "seq": 0,
-          "table": "tenants",
-          "from": "tenant_id",
-          "to": "id",
-          "on_update": "NO ACTION",
-          "on_delete": "CASCADE",
-          "match": "NONE"
-        }
-      ],
-      "indexes": [
-        {
-          "seq": 0,
-          "name": "idx_menu_bundle_rules_lookup",
-          "unique": 0,
-          "origin": "c",
-          "partial": 0
-        },
-        {
-          "seq": 1,
-          "name": "sqlite_autoindex_menu_bundle_rules_2",
-          "unique": 1,
-          "origin": "u",
-          "partial": 0
-        },
-        {
-          "seq": 2,
-          "name": "sqlite_autoindex_menu_bundle_rules_1",
-          "unique": 1,
-          "origin": "pk",
-          "partial": 0
-        }
-      ]
+      "columns": [],
+      "foreign_keys": [],
+      "indexes": []
     },
     "menu_categories": {
       "sql": "CREATE TABLE menu_categories (\n    id TEXT PRIMARY KEY,\n    tenant_id TEXT NOT NULL,\n    name TEXT NOT NULL,\n    slug TEXT NOT NULL, \n    sort_order INTEGER DEFAULT 0,\n    created_at DATETIME DEFAULT CURRENT_TIMESTAMP, category_type TEXT DEFAULT 'catalog', selection_type TEXT DEFAULT 'single', is_required INTEGER DEFAULT 0, min_selection INTEGER DEFAULT 0, max_selection INTEGER DEFAULT 1, allow_customization INTEGER DEFAULT 1, applied_modifiers TEXT DEFAULT NULL, short_name TEXT, pricing_rules TEXT,\n    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,\n    UNIQUE(tenant_id, slug)\n)",
@@ -1223,804 +1006,42 @@
     },
     "order_items": {
       "sql": "CREATE TABLE order_items (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    tenant_id TEXT NOT NULL,\n    order_key TEXT NOT NULL,\n    round_number INTEGER NOT NULL DEFAULT 1,\n    item_id TEXT,                          \n    item_name TEXT NOT NULL,               \n    category_name TEXT,                    \n    quantity INTEGER NOT NULL DEFAULT 1,   \n    unit_price REAL NOT NULL DEFAULT 0,    \n    subtotal REAL NOT NULL DEFAULT 0,      \n    selected_options TEXT,                 \n    notes TEXT,                            \n    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, bundle_snapshot_json TEXT DEFAULT NULL,\n    FOREIGN KEY (order_key) REFERENCES orders(key) ON DELETE CASCADE\n)",
-      "columns": [
-        {
-          "cid": 0,
-          "name": "id",
-          "type": "INTEGER",
-          "notnull": 0,
-          "dflt_value": null,
-          "pk": 1
-        },
-        {
-          "cid": 1,
-          "name": "tenant_id",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 2,
-          "name": "order_key",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 3,
-          "name": "round_number",
-          "type": "INTEGER",
-          "notnull": 1,
-          "dflt_value": "1",
-          "pk": 0
-        },
-        {
-          "cid": 4,
-          "name": "item_id",
-          "type": "TEXT",
-          "notnull": 0,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 5,
-          "name": "item_name",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 6,
-          "name": "category_name",
-          "type": "TEXT",
-          "notnull": 0,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 7,
-          "name": "quantity",
-          "type": "INTEGER",
-          "notnull": 1,
-          "dflt_value": "1",
-          "pk": 0
-        },
-        {
-          "cid": 8,
-          "name": "unit_price",
-          "type": "REAL",
-          "notnull": 1,
-          "dflt_value": "0",
-          "pk": 0
-        },
-        {
-          "cid": 9,
-          "name": "subtotal",
-          "type": "REAL",
-          "notnull": 1,
-          "dflt_value": "0",
-          "pk": 0
-        },
-        {
-          "cid": 10,
-          "name": "selected_options",
-          "type": "TEXT",
-          "notnull": 0,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 11,
-          "name": "notes",
-          "type": "TEXT",
-          "notnull": 0,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 12,
-          "name": "created_at",
-          "type": "DATETIME",
-          "notnull": 1,
-          "dflt_value": "CURRENT_TIMESTAMP",
-          "pk": 0
-        },
-        {
-          "cid": 13,
-          "name": "bundle_snapshot_json",
-          "type": "TEXT",
-          "notnull": 0,
-          "dflt_value": "NULL",
-          "pk": 0
-        }
-      ],
-      "foreign_keys": [
-        {
-          "id": 0,
-          "seq": 0,
-          "table": "orders",
-          "from": "order_key",
-          "to": "key",
-          "on_update": "NO ACTION",
-          "on_delete": "CASCADE",
-          "match": "NONE"
-        }
-      ],
-      "indexes": [
-        {
-          "seq": 0,
-          "name": "idx_order_items_tenant_item",
-          "unique": 0,
-          "origin": "c",
-          "partial": 0
-        },
-        {
-          "seq": 1,
-          "name": "idx_order_items_order_key",
-          "unique": 0,
-          "origin": "c",
-          "partial": 0
-        },
-        {
-          "seq": 2,
-          "name": "idx_order_items_tenant_created",
-          "unique": 0,
-          "origin": "c",
-          "partial": 0
-        }
-      ]
+      "columns": [],
+      "foreign_keys": [],
+      "indexes": []
     },
     "orders": {
       "sql": "CREATE TABLE orders (\n    key TEXT PRIMARY KEY,\n    tenant_id TEXT NOT NULL,\n    user_id TEXT,\n    customer_name TEXT NOT NULL,\n    pickup_time TEXT NOT NULL,\n    status TEXT NOT NULL DEFAULT 'NEW',\n    total_amount REAL NOT NULL CHECK(total_amount >= 0),\n    order_content TEXT NOT NULL, \n    reason TEXT DEFAULT '',\n    note TEXT DEFAULT '',\n    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,\n    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, dining_option TEXT NOT NULL DEFAULT 'takeaway', table_number TEXT DEFAULT NULL, round_count INTEGER DEFAULT 1, last_appended_at TEXT DEFAULT NULL, uuid TEXT DEFAULT NULL, order_id TEXT, legacy_key TEXT, display_key TEXT NOT NULL DEFAULT '', business_date TEXT NOT NULL DEFAULT '', is_modified INTEGER NOT NULL DEFAULT 0, table_id TEXT DEFAULT NULL REFERENCES restaurant_tables(id), source TEXT NOT NULL DEFAULT 'legacy', revision INTEGER NOT NULL DEFAULT 0,\n    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE\n)",
-      "columns": [
-        {
-          "cid": 0,
-          "name": "key",
-          "type": "TEXT",
-          "notnull": 0,
-          "dflt_value": null,
-          "pk": 1
-        },
-        {
-          "cid": 1,
-          "name": "tenant_id",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 2,
-          "name": "user_id",
-          "type": "TEXT",
-          "notnull": 0,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 3,
-          "name": "customer_name",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 4,
-          "name": "pickup_time",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 5,
-          "name": "status",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": "'NEW'",
-          "pk": 0
-        },
-        {
-          "cid": 6,
-          "name": "total_amount",
-          "type": "REAL",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 7,
-          "name": "order_content",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 8,
-          "name": "reason",
-          "type": "TEXT",
-          "notnull": 0,
-          "dflt_value": "''",
-          "pk": 0
-        },
-        {
-          "cid": 9,
-          "name": "note",
-          "type": "TEXT",
-          "notnull": 0,
-          "dflt_value": "''",
-          "pk": 0
-        },
-        {
-          "cid": 10,
-          "name": "created_at",
-          "type": "DATETIME",
-          "notnull": 0,
-          "dflt_value": "CURRENT_TIMESTAMP",
-          "pk": 0
-        },
-        {
-          "cid": 11,
-          "name": "updated_at",
-          "type": "DATETIME",
-          "notnull": 0,
-          "dflt_value": "CURRENT_TIMESTAMP",
-          "pk": 0
-        },
-        {
-          "cid": 12,
-          "name": "dining_option",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": "'takeaway'",
-          "pk": 0
-        },
-        {
-          "cid": 13,
-          "name": "table_number",
-          "type": "TEXT",
-          "notnull": 0,
-          "dflt_value": "NULL",
-          "pk": 0
-        },
-        {
-          "cid": 14,
-          "name": "round_count",
-          "type": "INTEGER",
-          "notnull": 0,
-          "dflt_value": "1",
-          "pk": 0
-        },
-        {
-          "cid": 15,
-          "name": "last_appended_at",
-          "type": "TEXT",
-          "notnull": 0,
-          "dflt_value": "NULL",
-          "pk": 0
-        },
-        {
-          "cid": 16,
-          "name": "uuid",
-          "type": "TEXT",
-          "notnull": 0,
-          "dflt_value": "NULL",
-          "pk": 0
-        },
-        {
-          "cid": 17,
-          "name": "order_id",
-          "type": "TEXT",
-          "notnull": 0,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 18,
-          "name": "legacy_key",
-          "type": "TEXT",
-          "notnull": 0,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 19,
-          "name": "display_key",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": "''",
-          "pk": 0
-        },
-        {
-          "cid": 20,
-          "name": "business_date",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": "''",
-          "pk": 0
-        },
-        {
-          "cid": 21,
-          "name": "is_modified",
-          "type": "INTEGER",
-          "notnull": 1,
-          "dflt_value": "0",
-          "pk": 0
-        },
-        {
-          "cid": 22,
-          "name": "table_id",
-          "type": "TEXT",
-          "notnull": 0,
-          "dflt_value": "NULL",
-          "pk": 0
-        },
-        {
-          "cid": 23,
-          "name": "source",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": "'legacy'",
-          "pk": 0
-        },
-        {
-          "cid": 24,
-          "name": "revision",
-          "type": "INTEGER",
-          "notnull": 1,
-          "dflt_value": "0",
-          "pk": 0
-        }
-      ],
-      "foreign_keys": [
-        {
-          "id": 0,
-          "seq": 0,
-          "table": "tenants",
-          "from": "tenant_id",
-          "to": "id",
-          "on_update": "NO ACTION",
-          "on_delete": "CASCADE",
-          "match": "NONE"
-        },
-        {
-          "id": 1,
-          "seq": 0,
-          "table": "restaurant_tables",
-          "from": "table_id",
-          "to": "id",
-          "on_update": "NO ACTION",
-          "on_delete": "NO ACTION",
-          "match": "NONE"
-        }
-      ],
-      "indexes": [
-        {
-          "seq": 0,
-          "name": "idx_orders_active_staff_table",
-          "unique": 1,
-          "origin": "c",
-          "partial": 1
-        },
-        {
-          "seq": 1,
-          "name": "idx_orders_tenant_request_uuid",
-          "unique": 1,
-          "origin": "c",
-          "partial": 0
-        },
-        {
-          "seq": 2,
-          "name": "idx_orders_tenant_business_display",
-          "unique": 0,
-          "origin": "c",
-          "partial": 0
-        },
-        {
-          "seq": 3,
-          "name": "idx_orders_order_id",
-          "unique": 1,
-          "origin": "c",
-          "partial": 0
-        },
-        {
-          "seq": 4,
-          "name": "idx_orders_tenant_date_key",
-          "unique": 0,
-          "origin": "c",
-          "partial": 0
-        },
-        {
-          "seq": 5,
-          "name": "idx_orders_tenant_table_status",
-          "unique": 0,
-          "origin": "c",
-          "partial": 0
-        },
-        {
-          "seq": 6,
-          "name": "idx_orders_tenant_dining",
-          "unique": 0,
-          "origin": "c",
-          "partial": 0
-        },
-        {
-          "seq": 7,
-          "name": "idx_orders_tenant_updated",
-          "unique": 0,
-          "origin": "c",
-          "partial": 0
-        },
-        {
-          "seq": 8,
-          "name": "idx_orders_user",
-          "unique": 0,
-          "origin": "c",
-          "partial": 0
-        },
-        {
-          "seq": 9,
-          "name": "idx_orders_tenant_status",
-          "unique": 0,
-          "origin": "c",
-          "partial": 0
-        },
-        {
-          "seq": 10,
-          "name": "idx_orders_tenant_created",
-          "unique": 0,
-          "origin": "c",
-          "partial": 0
-        },
-        {
-          "seq": 11,
-          "name": "sqlite_autoindex_orders_1",
-          "unique": 1,
-          "origin": "pk",
-          "partial": 0
-        }
-      ]
+      "columns": [],
+      "foreign_keys": [],
+      "indexes": []
     },
     "pending_actions": {
       "sql": "CREATE TABLE pending_actions (\n    tenant_id TEXT NOT NULL,\n    user_id TEXT NOT NULL,\n    order_key TEXT NOT NULL,\n    action_type TEXT NOT NULL,      \n    question_text TEXT NOT NULL,    \n    reason TEXT,                    \n    note TEXT,                      \n    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,\n    PRIMARY KEY (tenant_id, user_id, order_key),\n    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE\n)",
-      "columns": [
-        {
-          "cid": 0,
-          "name": "tenant_id",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 1
-        },
-        {
-          "cid": 1,
-          "name": "user_id",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 2
-        },
-        {
-          "cid": 2,
-          "name": "order_key",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 3
-        },
-        {
-          "cid": 3,
-          "name": "action_type",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 4,
-          "name": "question_text",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 5,
-          "name": "reason",
-          "type": "TEXT",
-          "notnull": 0,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 6,
-          "name": "note",
-          "type": "TEXT",
-          "notnull": 0,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 7,
-          "name": "created_at",
-          "type": "DATETIME",
-          "notnull": 0,
-          "dflt_value": "CURRENT_TIMESTAMP",
-          "pk": 0
-        }
-      ],
-      "foreign_keys": [
-        {
-          "id": 0,
-          "seq": 0,
-          "table": "tenants",
-          "from": "tenant_id",
-          "to": "id",
-          "on_update": "NO ACTION",
-          "on_delete": "CASCADE",
-          "match": "NONE"
-        }
-      ],
-      "indexes": [
-        {
-          "seq": 0,
-          "name": "idx_pending_actions_tenant_user",
-          "unique": 0,
-          "origin": "c",
-          "partial": 0
-        },
-        {
-          "seq": 1,
-          "name": "sqlite_autoindex_pending_actions_1",
-          "unique": 1,
-          "origin": "pk",
-          "partial": 0
-        }
-      ]
+      "columns": [],
+      "foreign_keys": [],
+      "indexes": []
     },
     "restaurant_tables": {
       "sql": "CREATE TABLE restaurant_tables (\n    id TEXT PRIMARY KEY,\n    tenant_id TEXT NOT NULL,\n    label TEXT NOT NULL,\n    sort_order INTEGER NOT NULL DEFAULT 0,\n    is_active INTEGER NOT NULL DEFAULT 1,\n    created_at TEXT NOT NULL DEFAULT (datetime('now')),\n    updated_at TEXT NOT NULL DEFAULT (datetime('now')),\n    FOREIGN KEY (tenant_id) REFERENCES tenant_config(tenant_id) ON DELETE CASCADE\n)",
-      "columns": [
-        {
-          "cid": 0,
-          "name": "id",
-          "type": "TEXT",
-          "notnull": 0,
-          "dflt_value": null,
-          "pk": 1
-        },
-        {
-          "cid": 1,
-          "name": "tenant_id",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 2,
-          "name": "label",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 3,
-          "name": "sort_order",
-          "type": "INTEGER",
-          "notnull": 1,
-          "dflt_value": "0",
-          "pk": 0
-        },
-        {
-          "cid": 4,
-          "name": "is_active",
-          "type": "INTEGER",
-          "notnull": 1,
-          "dflt_value": "1",
-          "pk": 0
-        },
-        {
-          "cid": 5,
-          "name": "created_at",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": "datetime('now')",
-          "pk": 0
-        },
-        {
-          "cid": 6,
-          "name": "updated_at",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": "datetime('now')",
-          "pk": 0
-        }
-      ],
-      "foreign_keys": [
-        {
-          "id": 0,
-          "seq": 0,
-          "table": "tenant_config",
-          "from": "tenant_id",
-          "to": "tenant_id",
-          "on_update": "NO ACTION",
-          "on_delete": "CASCADE",
-          "match": "NONE"
-        }
-      ],
-      "indexes": [
-        {
-          "seq": 0,
-          "name": "idx_restaurant_tables_tenant_active",
-          "unique": 0,
-          "origin": "c",
-          "partial": 0
-        },
-        {
-          "seq": 1,
-          "name": "idx_restaurant_tables_tenant_label",
-          "unique": 1,
-          "origin": "c",
-          "partial": 0
-        },
-        {
-          "seq": 2,
-          "name": "sqlite_autoindex_restaurant_tables_1",
-          "unique": 1,
-          "origin": "pk",
-          "partial": 0
-        }
-      ]
+      "columns": [],
+      "foreign_keys": [],
+      "indexes": []
     },
     "staff_order_requests": {
       "sql": "CREATE TABLE staff_order_requests (\n    tenant_id TEXT NOT NULL,\n    request_id TEXT NOT NULL,\n    request_hash TEXT NOT NULL,\n    order_key TEXT NOT NULL,\n    round_number INTEGER NOT NULL,\n    response_json TEXT NOT NULL,\n    created_at TEXT NOT NULL DEFAULT (datetime('now')),\n    PRIMARY KEY (tenant_id, request_id)\n)",
-      "columns": [
-        {
-          "cid": 0,
-          "name": "tenant_id",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 1
-        },
-        {
-          "cid": 1,
-          "name": "request_id",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 2
-        },
-        {
-          "cid": 2,
-          "name": "request_hash",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 3,
-          "name": "order_key",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 4,
-          "name": "round_number",
-          "type": "INTEGER",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 5,
-          "name": "response_json",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 6,
-          "name": "created_at",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": "datetime('now')",
-          "pk": 0
-        }
-      ],
+      "columns": [],
       "foreign_keys": [],
-      "indexes": [
-        {
-          "seq": 0,
-          "name": "idx_staff_order_requests_order",
-          "unique": 0,
-          "origin": "c",
-          "partial": 0
-        },
-        {
-          "seq": 1,
-          "name": "sqlite_autoindex_staff_order_requests_1",
-          "unique": 1,
-          "origin": "pk",
-          "partial": 0
-        }
-      ]
+      "indexes": []
     },
     "staff_sessions": {
       "sql": "CREATE TABLE staff_sessions (\n    token_hash TEXT PRIMARY KEY,\n    tenant_id TEXT NOT NULL,\n    expires_at TEXT NOT NULL,\n    revoked_at TEXT DEFAULT NULL,\n    created_at TEXT NOT NULL DEFAULT (datetime('now'))\n)",
-      "columns": [
-        {
-          "cid": 0,
-          "name": "token_hash",
-          "type": "TEXT",
-          "notnull": 0,
-          "dflt_value": null,
-          "pk": 1
-        },
-        {
-          "cid": 1,
-          "name": "tenant_id",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 2,
-          "name": "expires_at",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 3,
-          "name": "revoked_at",
-          "type": "TEXT",
-          "notnull": 0,
-          "dflt_value": "NULL",
-          "pk": 0
-        },
-        {
-          "cid": 4,
-          "name": "created_at",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": "datetime('now')",
-          "pk": 0
-        }
-      ],
+      "columns": [],
       "foreign_keys": [],
-      "indexes": [
-        {
-          "seq": 0,
-          "name": "idx_staff_sessions_tenant",
-          "unique": 0,
-          "origin": "c",
-          "partial": 0
-        },
-        {
-          "seq": 1,
-          "name": "sqlite_autoindex_staff_sessions_1",
-          "unique": 1,
-          "origin": "pk",
-          "partial": 0
-        }
-      ]
+      "indexes": []
     },
     "tenant_config": {
-      "sql": "CREATE TABLE tenant_config (\n    tenant_id TEXT PRIMARY KEY,\n    \n    line_channel_token TEXT,          \n    line_channel_secret TEXT,         \n    liff_id TEXT,\n    liff_url TEXT,\n    \n    groq_api_key TEXT,\n    groq_model TEXT DEFAULT 'llama-3.1-8b-instant',\n    openrouter_api_key TEXT,\n    openrouter_model TEXT DEFAULT 'google/gemini-2.5-flash:free',\n    \n    brand_name TEXT NOT NULL,         \n    brand_color TEXT DEFAULT '#00b900',\n    store_address TEXT,\n    \n    operating_hours TEXT,             \n    delivery_policy TEXT,             \n    quick_replies TEXT,               \n    flex_template TEXT,               \n    default_password TEXT DEFAULT '12345678',\n    locale TEXT DEFAULT 'zh-TW',      \n    \n    google_sheets_url TEXT,\n    \n    is_active INTEGER DEFAULT 1,\n    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,\n    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, allow_scheduled_pickup INTEGER DEFAULT 1, store_status TEXT DEFAULT 'open', logo_url TEXT, announcement TEXT DEFAULT NULL, allow_dine_in INTEGER DEFAULT 1, features TEXT DEFAULT '[]', order_prefix TEXT DEFAULT NULL, latitude REAL, longitude REAL, cuisine_type TEXT DEFAULT 'vietnamese', is_marketplace_visible INTEGER DEFAULT 1, ai_order_redirect_enabled INTEGER NOT NULL DEFAULT 1, staff_ordering_enabled INTEGER NOT NULL DEFAULT 0,\n    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE\n)",
+      "sql": "CREATE TABLE tenant_config (\n    tenant_id TEXT PRIMARY KEY,\n    \n    line_channel_token TEXT,          \n    line_channel_secret TEXT,         \n    liff_id TEXT,\n    liff_url TEXT,\n    \n    groq_api_key TEXT,\n    groq_model TEXT DEFAULT 'llama-3.1-8b-instant',\n    openrouter_api_key TEXT,\n    openrouter_model TEXT DEFAULT 'google/gemini-2.5-flash:free',\n    \n    brand_name TEXT NOT NULL,         \n    brand_color TEXT DEFAULT '#00b900',\n    store_address TEXT,\n    \n    operating_hours TEXT,             \n    delivery_policy TEXT,             \n    quick_replies TEXT,               \n    flex_template TEXT,               \n    default_password TEXT DEFAULT '12345678',\n    locale TEXT DEFAULT 'zh-TW',      \n    \n    google_sheets_url TEXT,\n    \n    is_active INTEGER DEFAULT 1,\n    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,\n    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, allow_scheduled_pickup INTEGER DEFAULT 1, store_status TEXT DEFAULT 'open', logo_url TEXT, announcement TEXT DEFAULT NULL, allow_dine_in INTEGER DEFAULT 1, features TEXT DEFAULT '[]', order_prefix TEXT DEFAULT NULL, latitude REAL, longitude REAL, cuisine_type TEXT DEFAULT 'vietnamese', is_marketplace_visible INTEGER DEFAULT 1, ai_order_redirect_enabled INTEGER NOT NULL DEFAULT 1, staff_ordering_enabled INTEGER NOT NULL DEFAULT 0, customer_order_domain TEXT NOT NULL DEFAULT 'legacy'\n  CHECK (customer_order_domain IN ('legacy', 'blabfood')), legacy_liff_endpoint_url TEXT,\n    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE\n)",
       "columns": [
         {
           "cid": 0,
@@ -2301,6 +1322,22 @@
           "notnull": 1,
           "dflt_value": "0",
           "pk": 0
+        },
+        {
+          "cid": 35,
+          "name": "customer_order_domain",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'legacy'",
+          "pk": 0
+        },
+        {
+          "cid": 36,
+          "name": "legacy_liff_endpoint_url",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
         }
       ],
       "foreign_keys": [
@@ -2346,279 +1383,23 @@
         }
       ]
     },
+    "tenant_lifecycle": {
+      "sql": "CREATE TABLE tenant_lifecycle (\n  tenant_id TEXT PRIMARY KEY,\n  state TEXT NOT NULL DEFAULT 'active' CHECK(state IN ('active','deleted','purging')),\n  has_order_history INTEGER CHECK(has_order_history IN (0,1)),\n  deleted_at TEXT,\n  deleted_by TEXT,\n  purged_at TEXT\n)",
+      "columns": [],
+      "foreign_keys": [],
+      "indexes": []
+    },
     "tenant_line_runtime": {
       "sql": "CREATE TABLE tenant_line_runtime (\n  tenant_id TEXT PRIMARY KEY REFERENCES tenants(id) ON DELETE CASCADE,\n  environment TEXT NOT NULL,\n  connection_id TEXT NOT NULL,\n  revision INTEGER NOT NULL CHECK (revision > 0),\n  operation_id TEXT NOT NULL,\n  bot_user_id TEXT NOT NULL,\n  messaging_channel_id TEXT,\n  token_encrypted_value TEXT NOT NULL,\n  token_key_version TEXT NOT NULL,\n  secret_encrypted_value TEXT NOT NULL,\n  secret_key_version TEXT NOT NULL,\n  liff_id TEXT,\n  liff_url TEXT,\n  applied_at TEXT NOT NULL,\n  webhook_verified_at TEXT,\n  webhook_verified_revision INTEGER,\n  UNIQUE(environment, bot_user_id)\n)",
-      "columns": [
-        {
-          "cid": 0,
-          "name": "tenant_id",
-          "type": "TEXT",
-          "notnull": 0,
-          "dflt_value": null,
-          "pk": 1
-        },
-        {
-          "cid": 1,
-          "name": "environment",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 2,
-          "name": "connection_id",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 3,
-          "name": "revision",
-          "type": "INTEGER",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 4,
-          "name": "operation_id",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 5,
-          "name": "bot_user_id",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 6,
-          "name": "messaging_channel_id",
-          "type": "TEXT",
-          "notnull": 0,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 7,
-          "name": "token_encrypted_value",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 8,
-          "name": "token_key_version",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 9,
-          "name": "secret_encrypted_value",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 10,
-          "name": "secret_key_version",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 11,
-          "name": "liff_id",
-          "type": "TEXT",
-          "notnull": 0,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 12,
-          "name": "liff_url",
-          "type": "TEXT",
-          "notnull": 0,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 13,
-          "name": "applied_at",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 14,
-          "name": "webhook_verified_at",
-          "type": "TEXT",
-          "notnull": 0,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 15,
-          "name": "webhook_verified_revision",
-          "type": "INTEGER",
-          "notnull": 0,
-          "dflt_value": null,
-          "pk": 0
-        }
-      ],
-      "foreign_keys": [
-        {
-          "id": 0,
-          "seq": 0,
-          "table": "tenants",
-          "from": "tenant_id",
-          "to": "id",
-          "on_update": "NO ACTION",
-          "on_delete": "CASCADE",
-          "match": "NONE"
-        }
-      ],
-      "indexes": [
-        {
-          "seq": 0,
-          "name": "sqlite_autoindex_tenant_line_runtime_2",
-          "unique": 1,
-          "origin": "u",
-          "partial": 0
-        },
-        {
-          "seq": 1,
-          "name": "sqlite_autoindex_tenant_line_runtime_1",
-          "unique": 1,
-          "origin": "pk",
-          "partial": 0
-        }
-      ]
+      "columns": [],
+      "foreign_keys": [],
+      "indexes": []
     },
     "tenant_line_webhook_probes": {
       "sql": "CREATE TABLE tenant_line_webhook_probes (\n  id TEXT PRIMARY KEY,\n  tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,\n  environment TEXT NOT NULL,\n  connection_id TEXT NOT NULL,\n  revision INTEGER NOT NULL CHECK (revision > 0),\n  bot_user_id TEXT NOT NULL,\n  secret_encrypted_value TEXT NOT NULL,\n  secret_key_version TEXT NOT NULL,\n  expires_at TEXT NOT NULL,\n  verified_at TEXT\n)",
-      "columns": [
-        {
-          "cid": 0,
-          "name": "id",
-          "type": "TEXT",
-          "notnull": 0,
-          "dflt_value": null,
-          "pk": 1
-        },
-        {
-          "cid": 1,
-          "name": "tenant_id",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 2,
-          "name": "environment",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 3,
-          "name": "connection_id",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 4,
-          "name": "revision",
-          "type": "INTEGER",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 5,
-          "name": "bot_user_id",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 6,
-          "name": "secret_encrypted_value",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 7,
-          "name": "secret_key_version",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 8,
-          "name": "expires_at",
-          "type": "TEXT",
-          "notnull": 1,
-          "dflt_value": null,
-          "pk": 0
-        },
-        {
-          "cid": 9,
-          "name": "verified_at",
-          "type": "TEXT",
-          "notnull": 0,
-          "dflt_value": null,
-          "pk": 0
-        }
-      ],
-      "foreign_keys": [
-        {
-          "id": 0,
-          "seq": 0,
-          "table": "tenants",
-          "from": "tenant_id",
-          "to": "id",
-          "on_update": "NO ACTION",
-          "on_delete": "CASCADE",
-          "match": "NONE"
-        }
-      ],
-      "indexes": [
-        {
-          "seq": 0,
-          "name": "tenant_line_webhook_probes_expiry",
-          "unique": 0,
-          "origin": "c",
-          "partial": 0
-        },
-        {
-          "seq": 1,
-          "name": "sqlite_autoindex_tenant_line_webhook_probes_1",
-          "unique": 1,
-          "origin": "pk",
-          "partial": 0
-        }
-      ]
+      "columns": [],
+      "foreign_keys": [],
+      "indexes": []
     },
     "tenants": {
       "sql": "CREATE TABLE tenants (\n    id TEXT PRIMARY KEY,\n    name TEXT NOT NULL,\n    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,\n    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP\n, line_channel_token_secret TEXT, liff_id TEXT, liff_url TEXT, store_display_name TEXT, timezone TEXT DEFAULT 'Asia/Taipei', message_templates TEXT)",
@@ -3066,6 +1847,21 @@
       "id": 71,
       "name": "0061_add_max_per_order_to_menu_items.sql",
       "applied_at": "2026-10-01 11:52:03"
+    },
+    {
+      "id": 72,
+      "name": "0064_customer_order_domain.sql",
+      "applied_at": "2026-10-06 13:16:42"
+    },
+    {
+      "id": 73,
+      "name": "0065_line_order_receipts.sql",
+      "applied_at": "2026-10-13 13:56:31"
+    },
+    {
+      "id": 74,
+      "name": "0067_tenant_lifecycle.sql",
+      "applied_at": "2026-10-15 02:25:09"
     }
   ],
   "tenants": [
@@ -3147,7 +1943,7 @@
       "store_display_name": null,
       "brand_name": "米研所 Rice Bakery",
       "is_active": 1,
-      "store_status": "open",
+      "store_status": "paused",
       "allow_dine_in": 0
     },
     {
@@ -3156,7 +1952,7 @@
       "store_display_name": null,
       "brand_name": "翠姬 THUY HANG 越南小吃",
       "is_active": 1,
-      "store_status": "open",
+      "store_status": "paused",
       "allow_dine_in": 0
     },
     {
@@ -3198,7 +1994,7 @@
   ],
   "tables_summary": {
     "menu_categories": {
-      "total": 82,
+      "total": 83,
       "by_tenant": [
         {
           "tenant_id": "52kaoroufan",
@@ -3214,7 +2010,7 @@
         },
         {
           "tenant_id": "bsc",
-          "count": 6
+          "count": 7
         },
         {
           "tenant_id": "dapinglin",
@@ -3259,7 +2055,7 @@
       ]
     },
     "menu_items": {
-      "total": 527,
+      "total": 528,
       "by_tenant": [
         {
           "tenant_id": "52kaoroufan",
@@ -3275,7 +2071,7 @@
         },
         {
           "tenant_id": "bsc",
-          "count": 51
+          "count": 53
         },
         {
           "tenant_id": "dapinglin",
@@ -3287,7 +2083,7 @@
         },
         {
           "tenant_id": "jiangjiejie",
-          "count": 76
+          "count": 73
         },
         {
           "tenant_id": "jidangaodashu",
@@ -3295,7 +2091,7 @@
         },
         {
           "tenant_id": "miyansuo",
-          "count": 11
+          "count": 13
         },
         {
           "tenant_id": "quanthuyhang",
@@ -3435,7 +2231,7 @@
       "by_tenant": []
     },
     "d1_migrations": {
-      "total": 70,
+      "total": 73,
       "by_tenant": []
     }
   },
@@ -3726,30 +2522,57 @@
         "type": "radio",
         "sort_order": 0,
         "is_required": 0,
-        "options_json": "[{\"name\":\"特調胡椒\"},{\"name\":\"泰式酸辣\"},{\"name\":\"清爽檸檬\",\"sub_options\":[\"不加香油\",\"不加鹽巴\"]},{\"name\":\"檸檬香菜（ 香菜缺貨中，請選檸檬口味）\",\"sub_options\":[\"不加香油\",\"不加鹽巴\"]},{\"name\":\"原味客製\",\"sub_options\":[\"不加香油\",\"不加胡椒\",\"不加胡椒加鹽巴\"]}]",
+        "options_json": "[{\"id\":\"特調胡椒\",\"name\":\"特調胡椒\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"泰式酸辣\",\"name\":\"泰式酸辣\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"清爽檸檬\",\"name\":\"清爽檸檬\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[\"不加香油\",\"不加鹽巴\"]},{\"id\":\"檸檬香菜（ 香菜缺貨中，請選檸檬口味）\",\"name\":\"檸檬香菜\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[\"不加香油\",\"不加鹽巴\"]},{\"id\":\"原味客製\",\"name\":\"原味客製\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[\"不加香油\",\"不加胡椒\",\"不加胡椒加鹽巴\"]}]",
         "parsed_options": [
           {
-            "name": "特調胡椒"
+            "id": "特調胡椒",
+            "name": "特調胡椒",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
           },
           {
-            "name": "泰式酸辣"
+            "id": "泰式酸辣",
+            "name": "泰式酸辣",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
           },
           {
+            "id": "清爽檸檬",
             "name": "清爽檸檬",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
             "sub_options": [
               "不加香油",
               "不加鹽巴"
             ]
           },
           {
-            "name": "檸檬香菜（ 香菜缺貨中，請選檸檬口味）",
+            "id": "檸檬香菜（ 香菜缺貨中，請選檸檬口味）",
+            "name": "檸檬香菜",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
             "sub_options": [
               "不加香油",
               "不加鹽巴"
             ]
           },
           {
+            "id": "原味客製",
             "name": "原味客製",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
             "sub_options": [
               "不加香油",
               "不加胡椒",
@@ -3767,16 +2590,34 @@
         "type": "radio",
         "sort_order": 1,
         "is_required": 0,
-        "options_json": "[{\"name\":\"正常\"},{\"name\":\"調味重\"},{\"name\":\"調味清淡\"}]",
+        "options_json": "[{\"id\":\"正常\",\"name\":\"正常\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"調味重\",\"name\":\"調味重\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"調味清淡\",\"name\":\"調味清淡\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]}]",
         "parsed_options": [
           {
-            "name": "正常"
+            "id": "正常",
+            "name": "正常",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
           },
           {
-            "name": "調味重"
+            "id": "調味重",
+            "name": "調味重",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
           },
           {
-            "name": "調味清淡"
+            "id": "調味清淡",
+            "name": "調味清淡",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
           }
         ],
         "options_count": 3
@@ -3789,25 +2630,61 @@
         "type": "radio",
         "sort_order": 2,
         "is_required": 0,
-        "options_json": "[{\"name\":\"不辣\"},{\"name\":\"微辣\"},{\"name\":\"小辣\"},{\"name\":\"中辣\"},{\"name\":\"大辣\"},{\"name\":\"辣椒放餐盒角落\"}]",
+        "options_json": "[{\"id\":\"不辣\",\"name\":\"不辣\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"微辣\",\"name\":\"微辣\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"小辣\",\"name\":\"小辣\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"中辣\",\"name\":\"中辣\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"大辣\",\"name\":\"大辣\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"辣椒放餐盒角落\",\"name\":\"辣椒放餐盒角落\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]}]",
         "parsed_options": [
           {
-            "name": "不辣"
+            "id": "不辣",
+            "name": "不辣",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
           },
           {
-            "name": "微辣"
+            "id": "微辣",
+            "name": "微辣",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
           },
           {
-            "name": "小辣"
+            "id": "小辣",
+            "name": "小辣",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
           },
           {
-            "name": "中辣"
+            "id": "中辣",
+            "name": "中辣",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
           },
           {
-            "name": "大辣"
+            "id": "大辣",
+            "name": "大辣",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
           },
           {
-            "name": "辣椒放餐盒角落"
+            "id": "辣椒放餐盒角落",
+            "name": "辣椒放餐盒角落",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
           }
         ],
         "options_count": 6
@@ -3820,16 +2697,34 @@
         "type": "checkbox",
         "sort_order": 3,
         "is_required": 0,
-        "options_json": "[{\"name\":\"不加蔥花\"},{\"name\":\"不加蒜頭\"},{\"name\":\"不加洋蔥\"}]",
+        "options_json": "[{\"id\":\"不加蔥花\",\"name\":\"不加蔥花\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"不加蒜頭\",\"name\":\"不加蒜頭\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"不加洋蔥\",\"name\":\"不加洋蔥\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]}]",
         "parsed_options": [
           {
-            "name": "不加蔥花"
+            "id": "不加蔥花",
+            "name": "不加蔥花",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
           },
           {
-            "name": "不加蒜頭"
+            "id": "不加蒜頭",
+            "name": "不加蒜頭",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
           },
           {
-            "name": "不加洋蔥"
+            "id": "不加洋蔥",
+            "name": "不加洋蔥",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
           }
         ],
         "options_count": 3
@@ -3842,17 +2737,25 @@
         "type": "checkbox",
         "sort_order": 4,
         "is_required": 0,
-        "options_json": "[{\"name\":\"加香菜\",\"price\":15,\"is_out_of_stock\":true},{\"name\":\"加檸檬汁\",\"price\":20,\"is_out_of_stock\":true}]",
+        "options_json": "[{\"id\":\"加香菜\",\"name\":\"加香菜\",\"surcharge\":15,\"price\":15,\"is_out_of_stock\":true,\"isOutOfStock\":true,\"sub_options\":[]},{\"id\":\"加檸檬汁\",\"name\":\"加檸檬汁\",\"surcharge\":20,\"price\":20,\"is_out_of_stock\":true,\"isOutOfStock\":true,\"sub_options\":[]}]",
         "parsed_options": [
           {
+            "id": "加香菜",
             "name": "加香菜",
+            "surcharge": 15,
             "price": 15,
-            "is_out_of_stock": true
+            "is_out_of_stock": true,
+            "isOutOfStock": true,
+            "sub_options": []
           },
           {
+            "id": "加檸檬汁",
             "name": "加檸檬汁",
+            "surcharge": 20,
             "price": 20,
-            "is_out_of_stock": true
+            "is_out_of_stock": true,
+            "isOutOfStock": true,
+            "sub_options": []
           }
         ],
         "options_count": 2
@@ -4218,7 +3121,7 @@
         "type": "radio",
         "sort_order": 5,
         "is_required": 0,
-        "options_json": "[{\"id\":\"不要\",\"name\":\"不要\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"要\",\"name\":\"要\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"opt_mtzvx96q\",\"name\":\"少\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]}]",
+        "options_json": "[{\"id\":\"不要\",\"name\":\"不要\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"要\",\"name\":\"要\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"opt_mtzvx96q\",\"name\":\"少\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"opt_mv9eat2v\",\"name\":\"多\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]}]",
         "parsed_options": [
           {
             "id": "不要",
@@ -4246,9 +3149,18 @@
             "is_out_of_stock": false,
             "isOutOfStock": false,
             "sub_options": []
+          },
+          {
+            "id": "opt_mv9eat2v",
+            "name": "多",
+            "surcharge": 0,
+            "price": 0,
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
           }
         ],
-        "options_count": 3
+        "options_count": 4
       },
       {
         "id": "custom_mod_jj_sesame_oil",
@@ -4504,19 +3416,25 @@
         "type": "radio",
         "sort_order": 0,
         "is_required": 0,
-        "options_json": "[{\"id\":\"bag_none\",\"name\":\"不需要提袋\",\"price\":0,\"is_default\":true},{\"id\":\"bag_buy\",\"name\":\"購買提袋\",\"price\":1,\"is_default\":false}]",
+        "options_json": "[{\"id\":\"bag_none\",\"name\":\"不需要提袋\",\"surcharge\":0,\"price\":0,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]},{\"id\":\"bag_buy\",\"name\":\"購買提袋\",\"surcharge\":1,\"price\":1,\"is_out_of_stock\":false,\"isOutOfStock\":false,\"sub_options\":[]}]",
         "parsed_options": [
           {
             "id": "bag_none",
             "name": "不需要提袋",
+            "surcharge": 0,
             "price": 0,
-            "is_default": true
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
           },
           {
             "id": "bag_buy",
             "name": "購買提袋",
+            "surcharge": 1,
             "price": 1,
-            "is_default": false
+            "is_out_of_stock": false,
+            "isOutOfStock": false,
+            "sub_options": []
           }
         ],
         "options_count": 2
@@ -4775,6 +3693,23 @@
         ]
       },
       {
+        "id": "bsc_sec-flavor",
+        "tenant_id": "bsc",
+        "name": "口味與客製化選擇",
+        "slug": "sec-flavor",
+        "short_name": "口味選擇",
+        "category_type": "order_customization",
+        "is_required": 0,
+        "selection_type": "single",
+        "min_selection": 0,
+        "max_selection": 1,
+        "sort_order": 0,
+        "allow_customization": 0,
+        "applied_modifiers": "[]",
+        "items_count": 0,
+        "items": []
+      },
+      {
         "id": "mod_hs_noodle_type",
         "tenant_id": "haoshiguoshao",
         "name": "麵體選擇 (必選1項)",
@@ -4940,9 +3875,9 @@
       {
         "id": "cat_mys_sec_flavor",
         "tenant_id": "miyansuo",
-        "name": "加購服務 / 響應環保",
+        "name": "口味與客製化選擇",
         "slug": "sec-flavor",
-        "short_name": "提袋加購",
+        "short_name": "口味選擇",
         "category_type": "order_customization",
         "is_required": 0,
         "selection_type": "single",
@@ -5277,15 +4212,15 @@
         "tenant_id": "xiaolan",
         "name": "辣度選擇",
         "slug": "spiciness",
-        "short_name": "辣度",
+        "short_name": "辣度選擇",
         "category_type": "modifier",
         "is_required": 1,
         "selection_type": "single",
         "min_selection": 1,
         "max_selection": 1,
         "sort_order": 4,
-        "allow_customization": 0,
-        "applied_modifiers": "[]",
+        "allow_customization": 1,
+        "applied_modifiers": "[\"*\"]",
         "items_count": 5,
         "items": [
           {
@@ -5345,15 +4280,15 @@
         "tenant_id": "xiaolan",
         "name": "客製選項 (不加配料)",
         "slug": "customization",
-        "short_name": "客製選項",
+        "short_name": "客製選項 (不加配料)",
         "category_type": "modifier",
         "is_required": 0,
         "selection_type": "multiple",
         "min_selection": 0,
         "max_selection": 10,
         "sort_order": 5,
-        "allow_customization": 0,
-        "applied_modifiers": "[]",
+        "allow_customization": 1,
+        "applied_modifiers": "[\"*\"]",
         "items_count": 5,
         "items": [
           {
@@ -5413,15 +4348,15 @@
         "tenant_id": "xiaolan",
         "name": "加料選項",
         "slug": "toppings",
-        "short_name": "加料",
+        "short_name": "加料選項",
         "category_type": "modifier",
         "is_required": 0,
         "selection_type": "multiple",
         "min_selection": 0,
         "max_selection": 10,
         "sort_order": 6,
-        "allow_customization": 0,
-        "applied_modifiers": "[]",
+        "allow_customization": 1,
+        "applied_modifiers": "[\"*\"]",
         "items_count": 1,
         "items": [
           {
@@ -5641,7 +4576,7 @@
             "tenant_id": "zhadantongxue",
             "category_id": "cat_zd_topping",
             "name": "雞腿肉卷",
-            "price": 35,
+            "price": 40,
             "sort_order": 8,
             "out_of_stock_until": null,
             "description": null
@@ -5908,9 +4843,9 @@
         "category_id": "cat_hs_guoshao",
         "category_name": "鍋燒麵系列",
         "allow_customization": 1,
-        "raw_applied_modifiers": "[\"mod_hs_guoshao_addons\"]",
+        "raw_applied_modifiers": "[\"*\"]",
         "parsed_applied": [
-          "mod_hs_guoshao_addons"
+          "*"
         ],
         "effective_scope": "specific"
       },
@@ -6187,7 +5122,7 @@
         "category_id": "cat_xx_banhmi",
         "category_name": "越式麵包",
         "allow_customization": 1,
-        "raw_applied_modifiers": "[\"cat_xx_spicy\", \"cat_xx_custom\", \"cat_xx_topping\"]",
+        "raw_applied_modifiers": "[\"cat_xx_spicy\",\"cat_xx_custom\",\"cat_xx_topping\"]",
         "parsed_applied": [
           "cat_xx_spicy",
           "cat_xx_custom",
@@ -6269,7 +5204,7 @@
       "menu_items_price": [
         {
           "type_name": "real",
-          "count": 527
+          "count": 528
         }
       ],
       "modifier_options_price": []

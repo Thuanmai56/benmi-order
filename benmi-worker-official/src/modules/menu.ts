@@ -82,7 +82,7 @@ export async function getMenu(request: Request, env: Env): Promise<Response> {
     // 2. Cache Miss: Truy vấn từ D1 Database
     // Sử dụng batch queries để giảm thiểu số vòng kết nối mạng
     const [categoriesRes, itemsRes] = await env.DB.batch([
-      env.DB.prepare("SELECT id, name, short_name, slug FROM menu_categories WHERE tenant_id = ? ORDER BY sort_order ASC").bind(tenantId),
+      env.DB.prepare("SELECT id, name, short_name, slug FROM menu_categories WHERE tenant_id = ? AND COALESCE(category_type, 'catalog') = 'catalog' ORDER BY sort_order ASC").bind(tenantId),
       env.DB.prepare("SELECT id, category_id, name, price, description, out_of_stock_until FROM menu_items WHERE tenant_id = ? ORDER BY sort_order ASC").bind(tenantId)
     ]);
 
@@ -216,7 +216,7 @@ export async function updateStockStatus(request: Request, env: Env): Promise<Res
     async function updateModifierOptionStock(): Promise<boolean> {
       const optTargetId = option_id || optionId;
       const grpTargetId = group_id || groupId;
-      let query = "SELECT id, group_id FROM modifier_options WHERE tenant_id = ?";
+      let query = "SELECT id, group_id, name FROM modifier_options WHERE tenant_id = ?";
       const params: any[] = [tenantId];
       if (optTargetId) {
         query += " AND id = ?";
@@ -232,10 +232,43 @@ export async function updateStockStatus(request: Request, env: Env): Promise<Res
       if (!optionRows.results || optionRows.results.length === 0) return false;
 
       const targetIds = optionRows.results.map((r: any) => r.id as string);
+      const isOos = status === "out_of_stock" ? 1 : 0;
       const idPlaceholders = targetIds.map(() => '?').join(',');
-      await env.DB.prepare(
-        `UPDATE modifier_options SET out_of_stock_until = ?, updated_at = datetime('now') WHERE tenant_id = ? AND id IN (${idPlaceholders})`
-      ).bind(outOfStockUntil, tenantId, ...targetIds).run();
+      const statements: any[] = [
+        env.DB.prepare(
+          `UPDATE modifier_options SET out_of_stock_until = ?, is_out_of_stock = ?, updated_at = datetime('now') WHERE tenant_id = ? AND id IN (${idPlaceholders})`
+        ).bind(outOfStockUntil, isOos, tenantId, ...targetIds)
+      ];
+
+      // Double-write shadow sync to menu_customizations
+      try {
+        const { results: customRows } = await env.DB.prepare("SELECT id, options_json FROM menu_customizations WHERE tenant_id = ?").bind(tenantId).all<any>();
+        if (customRows && customRows.length > 0) {
+          const optNames = new Set(optionRows.results.map((r: any) => r.name).filter(Boolean));
+          for (const row of customRows) {
+            try {
+              const opts = typeof row.options_json === 'string' ? JSON.parse(row.options_json) : (row.options_json || []);
+              let found = false;
+              for (const opt of opts) {
+                const optIdentifier = opt.id || opt.name;
+                if (targetIds.includes(opt.id) || optNames.has(opt.name) || optIdentifier === name) {
+                  opt.is_out_of_stock = (status === "out_of_stock");
+                  opt.out_of_stock_until = outOfStockUntil;
+                  found = true;
+                }
+              }
+              if (found) {
+                statements.push(
+                  env.DB.prepare("UPDATE menu_customizations SET options_json = ? WHERE id = ? AND tenant_id = ?")
+                    .bind(JSON.stringify(opts), row.id, tenantId)
+                );
+              }
+            } catch {}
+          }
+        }
+      } catch {}
+
+      await env.DB.batch(statements);
 
       const cacheKey = `tenant:${tenantId}:menu`;
       if (env.ORDER_STATE) await env.ORDER_STATE.delete(cacheKey);
@@ -271,12 +304,21 @@ export async function updateStockStatus(request: Request, env: Env): Promise<Res
             }
           }
           if (found) {
-            await env.DB.prepare(
-              "UPDATE menu_customizations SET options_json = ?, updated_at = datetime('now') WHERE id = ? AND tenant_id = ?"
-            ).bind(JSON.stringify(opts), row.id, tenantId).run();
+            const isOos = status === "out_of_stock" ? 1 : 0;
+            const statements: any[] = [
+              env.DB.prepare(
+                "UPDATE menu_customizations SET options_json = ? WHERE id = ? AND tenant_id = ?"
+              ).bind(JSON.stringify(opts), row.id, tenantId),
+              // Double-write shadow sync to modifier_options
+              env.DB.prepare(
+                "UPDATE modifier_options SET out_of_stock_until = ?, is_out_of_stock = ?, updated_at = datetime('now') WHERE tenant_id = ? AND (name = ? OR id = ?)"
+              ).bind(outOfStockUntil, isOos, tenantId, name, name)
+            ];
+
+            await env.DB.batch(statements);
 
             const cacheKey = `tenant:${tenantId}:menu`;
-            await env.ORDER_STATE.delete(cacheKey);
+            if (env.ORDER_STATE) await env.ORDER_STATE.delete(cacheKey);
             await invalidateBootstrapCache(tenantId, env);
             return true;
           }
@@ -310,6 +352,21 @@ export async function updateStockStatus(request: Request, env: Env): Promise<Res
          AND name = ? 
          AND category_id = (SELECT id FROM menu_categories WHERE tenant_id = ? AND (slug = ? OR id = ?))`
     ).bind(outOfStockUntil, tenantId, name, tenantId, category_slug, category_slug).run();
+
+    if (dbRes.meta.changes > 0) {
+      // Double-write shadow sync: if this item is used in modifier_options, sync stock
+      try {
+        const isOos = status === "out_of_stock" ? 1 : 0;
+        await env.DB.prepare(
+          `UPDATE modifier_options SET out_of_stock_until = ?, is_out_of_stock = ?, updated_at = datetime('now')
+           WHERE tenant_id = ? AND product_id = (
+             SELECT id FROM menu_items WHERE tenant_id = ? AND name = ? AND category_id = (
+               SELECT id FROM menu_categories WHERE tenant_id = ? AND (slug = ? OR id = ?)
+             ) LIMIT 1
+           )`
+        ).bind(outOfStockUntil, isOos, tenantId, tenantId, name, tenantId, category_slug, category_slug).run();
+      } catch {}
+    }
 
     if (dbRes.meta.changes === 0) {
       // Fallback 1: check menu_customizations if not found in menu_items
@@ -1053,6 +1110,24 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
     }
   }
 
+  if (itemDeletes.length > 0) {
+    try {
+      const { results: bundleTbl } = await env.DB.prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='menu_bundle_rules'"
+      ).all();
+      if (bundleTbl && bundleTbl.length > 0) {
+        for (let i = 0; i < itemDeletes.length; i += 50) {
+          const chunk = itemDeletes.slice(i, i + 50);
+          statements.push(env.DB.prepare(
+            `DELETE FROM menu_bundle_rules WHERE tenant_id = ? AND parent_item_id IN (${chunk.map(() => '?').join(',')})`
+          ).bind(tenantId, ...chunk));
+        }
+      }
+    } catch {
+      // Ignore if sqlite_master check is unsupported in mock DB
+    }
+  }
+
   for (const id of customDeletes) {
     const groupIds = new Set([id, id.startsWith('mg_') ? id.slice(3) : `mg_${id}`]);
     for (const groupId of groupIds) {
@@ -1134,7 +1209,7 @@ export async function getMenuData(env: Env, tenantId: string): Promise<Menu> {
   if (env.DB) {
     try {
       const [categoriesRes, itemsRes] = await env.DB.batch([
-        env.DB.prepare("SELECT id, name, slug FROM menu_categories WHERE tenant_id = ? ORDER BY sort_order ASC").bind(tenantId),
+        env.DB.prepare("SELECT id, name, slug FROM menu_categories WHERE tenant_id = ? AND COALESCE(category_type, 'catalog') = 'catalog' ORDER BY sort_order ASC").bind(tenantId),
         env.DB.prepare("SELECT id, category_id, name, price, description, out_of_stock_until FROM menu_items WHERE tenant_id = ? ORDER BY sort_order ASC").bind(tenantId)
       ]);
 

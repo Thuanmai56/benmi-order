@@ -32,7 +32,12 @@ for (const mode of ['dev', 'test', 'production']) {
       expected.ORDER_STATE = {type:'kv',id:'f85c539e10df45049780abe25631f082'};
       assert.notEqual(expected.ORDER_STATE.id, config({mode:'test'}).worker.env.ORDER_STATE.id);
     }
-    assert.deepEqual(worker.env, expected);
+    for (const key of ["UNIFIED_MENU_ENABLED", "ORDER_DETAIL_READS", "ORDER_DETAIL_WRITES"]) expected[key] = { type: "text", value: "true" };
+    assert.match(worker.env.BUILD_COMMIT.value, /^[a-f0-9]{40}$/);
+    assert.equal(worker.env.BUILD_ENVIRONMENT.value, mode === "test" ? "staging" : mode);
+    assert.match(worker.env.BUILD_DIRTY.value, /^(true|false)$/);
+    const { BUILD_COMMIT, BUILD_ENVIRONMENT, BUILD_DIRTY, ...resourceBindings } = worker.env;
+    assert.deepEqual(resourceBindings, expected);
     assert.equal(worker.observability.logs.persist, original.observability.logs.persist);
     assert.equal(worker.observability.logs.invocationLogs, original.observability.logs.invocation_logs);
     assert.equal(worker.observability.headSamplingRate, original.observability.head_sampling_rate);

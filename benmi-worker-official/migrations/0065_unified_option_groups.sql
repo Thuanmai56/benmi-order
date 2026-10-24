@@ -35,7 +35,7 @@ WHERE r.is_active=1 AND json_extract(j.value,'$.type')='fixed';
 INSERT INTO item_modifier_links (tenant_id,item_id,group_id,sort_order)
 SELECT r.tenant_id,r.parent_item_id,'ug_'||r.id||'_'||j.key,j.key
 FROM menu_bundle_rules r,json_each(r.config_json,'$.groups') j WHERE r.is_active=1;
-UPDATE menu_bundle_rules SET is_active=0 WHERE id IN (SELECT json_extract(source_metadata_json,'$.legacyBundleRuleId') FROM modifier_groups WHERE json_extract(source_metadata_json,'$.legacyBundleRuleId') IS NOT NULL);
+-- Preserve menu_bundle_rules.is_active=1 so legacy read rollback remains 100% functional while canonical reads ignore menu_bundle_rules.
 
 -- Catalog-wide optimistic guard also covers concurrent stock/category edits.
 CREATE TABLE menu_catalog_revisions (tenant_id TEXT PRIMARY KEY, revision INTEGER NOT NULL DEFAULT 0);

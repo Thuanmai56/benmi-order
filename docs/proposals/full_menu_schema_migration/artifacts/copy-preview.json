@@ -1,91 +1,91 @@
 {
   "meta": {
-    "generated_at": "2026-10-01T11:58:48.399Z",
+    "generated_at": "2026-10-22T09:20:20.226Z",
     "target_db": "/Users/duccao/Documents/benmi-order/docs/proposals/full_menu_schema_migration/artifacts/latest_isolated_target.db",
-    "id_map_source_hash": "3a347308f604cee38e6d12e490eba90350858e13f5362957d6ee664ceb6500ea"
+    "id_map_source_hash": "21726e6dd2e12f05a5c78a499169467ee07b72b42112d14db4353b028b0ce68f"
   },
   "summary": {
     "total_operations": 239,
-    "insert": 0,
-    "already_equal": 239,
+    "insert": 239,
+    "already_equal": 0,
     "conflict": 0,
     "unresolved": 0,
     "by_tenant": {
       "blab_demo": {
-        "groups_insert": 0,
-        "options_insert": 0,
-        "links_insert": 0,
-        "already_equal": 33,
+        "groups_insert": 7,
+        "options_insert": 25,
+        "links_insert": 1,
+        "already_equal": 0,
         "conflicts": 0
       },
       "jiangjiejie": {
-        "groups_insert": 0,
-        "options_insert": 0,
+        "groups_insert": 11,
+        "options_insert": 45,
         "links_insert": 0,
-        "already_equal": 56,
+        "already_equal": 0,
         "conflicts": 0
       },
       "dapinglin": {
-        "groups_insert": 0,
-        "options_insert": 0,
+        "groups_insert": 3,
+        "options_insert": 11,
         "links_insert": 0,
-        "already_equal": 14,
+        "already_equal": 0,
         "conflicts": 0
       },
       "bsc": {
-        "groups_insert": 0,
-        "options_insert": 0,
+        "groups_insert": 5,
+        "options_insert": 19,
         "links_insert": 0,
-        "already_equal": 24,
+        "already_equal": 0,
         "conflicts": 0
       },
       "miyansuo": {
-        "groups_insert": 0,
-        "options_insert": 0,
+        "groups_insert": 1,
+        "options_insert": 2,
         "links_insert": 0,
-        "already_equal": 4,
+        "already_equal": 0,
         "conflicts": 0
       },
       "benmi": {
-        "groups_insert": 0,
-        "options_insert": 0,
-        "links_insert": 0,
-        "already_equal": 18,
+        "groups_insert": 2,
+        "options_insert": 10,
+        "links_insert": 6,
+        "already_equal": 0,
         "conflicts": 0
       },
       "zhadantongxue": {
-        "groups_insert": 0,
-        "options_insert": 0,
-        "links_insert": 0,
-        "already_equal": 22,
+        "groups_insert": 4,
+        "options_insert": 15,
+        "links_insert": 3,
+        "already_equal": 0,
         "conflicts": 0
       },
       "weiweibao": {
-        "groups_insert": 0,
-        "options_insert": 0,
-        "links_insert": 0,
-        "already_equal": 20,
+        "groups_insert": 3,
+        "options_insert": 12,
+        "links_insert": 5,
+        "already_equal": 0,
         "conflicts": 0
       },
       "xiaolan": {
-        "groups_insert": 0,
-        "options_insert": 0,
-        "links_insert": 0,
-        "already_equal": 17,
+        "groups_insert": 3,
+        "options_insert": 11,
+        "links_insert": 3,
+        "already_equal": 0,
         "conflicts": 0
       },
       "thuyngason": {
-        "groups_insert": 0,
-        "options_insert": 0,
-        "links_insert": 0,
-        "already_equal": 15,
+        "groups_insert": 3,
+        "options_insert": 9,
+        "links_insert": 3,
+        "already_equal": 0,
         "conflicts": 0
       },
       "haoshiguoshao": {
-        "groups_insert": 0,
-        "options_insert": 0,
-        "links_insert": 0,
-        "already_equal": 16,
+        "groups_insert": 2,
+        "options_insert": 11,
+        "links_insert": 4,
+        "already_equal": 0,
         "conflicts": 0
       }
     }
@@ -93,7 +93,7 @@
   "plan": {
     "modifier_groups": [
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "blab_demo",
         "source_kind": "menu_customizations",
         "source_id": "demo_flavor",
@@ -115,7 +115,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "blab_demo",
         "source_kind": "menu_customizations",
         "source_id": "demo_salt",
@@ -137,7 +137,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "blab_demo",
         "source_kind": "menu_customizations",
         "source_id": "demo_spicy",
@@ -159,7 +159,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "blab_demo",
         "source_kind": "menu_customizations",
         "source_id": "demo_ingredients",
@@ -181,7 +181,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "blab_demo",
         "source_kind": "menu_customizations",
         "source_id": "demo_addons",
@@ -203,7 +203,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "menu_customizations",
         "source_id": "custom_mod_jj_pepper",
@@ -225,7 +225,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "menu_customizations",
         "source_id": "custom_mod_jj_chili",
@@ -247,7 +247,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "menu_customizations",
         "source_id": "custom_mod_jj_ma",
@@ -269,7 +269,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "menu_customizations",
         "source_id": "custom_mod_jj_onion",
@@ -291,7 +291,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "menu_customizations",
         "source_id": "custom_mod_jj_garlic",
@@ -313,7 +313,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "menu_customizations",
         "source_id": "custom_mod_jj_scallion",
@@ -335,7 +335,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "menu_customizations",
         "source_id": "custom_mod_jj_sesame_oil",
@@ -357,7 +357,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "menu_customizations",
         "source_id": "custom_mod_jj_veg_soup",
@@ -379,7 +379,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "menu_customizations",
         "source_id": "custom_mod_jj_chicken_prep",
@@ -401,7 +401,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "menu_customizations",
         "source_id": "custom_mod_jj_lemon_juice",
@@ -423,7 +423,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "dapinglin",
         "source_kind": "menu_customizations",
         "source_id": "hjh_custom_sauce",
@@ -445,7 +445,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "dapinglin",
         "source_kind": "menu_customizations",
         "source_id": "hjh_custom_spicy",
@@ -467,7 +467,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "dapinglin",
         "source_kind": "menu_customizations",
         "source_id": "hjh_custom_seasoning",
@@ -489,7 +489,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "menu_customizations",
         "source_id": "custom_jiangjiejie_group_mtzvqwy1",
@@ -511,7 +511,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "bsc",
         "source_kind": "menu_customizations",
         "source_id": "bsc_flavor",
@@ -533,7 +533,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "bsc",
         "source_kind": "menu_customizations",
         "source_id": "bsc_salt",
@@ -555,7 +555,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "bsc",
         "source_kind": "menu_customizations",
         "source_id": "bsc_spicy",
@@ -577,7 +577,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "bsc",
         "source_kind": "menu_customizations",
         "source_id": "bsc_ingredients",
@@ -599,7 +599,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "bsc",
         "source_kind": "menu_customizations",
         "source_id": "bsc_addons",
@@ -621,7 +621,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "blab_demo",
         "source_kind": "menu_customizations",
         "source_id": "custom_blab_demo_group_mud2onv1",
@@ -643,7 +643,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "miyansuo",
         "source_kind": "menu_customizations",
         "source_id": "custom_mys_bag",
@@ -665,7 +665,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "benmi",
         "source_kind": "menu_categories.modifier",
         "source_id": "cat_topping",
@@ -687,7 +687,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "zhadantongxue",
         "source_kind": "menu_categories.modifier",
         "source_id": "cat_zd_spicy",
@@ -709,7 +709,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "zhadantongxue",
         "source_kind": "menu_categories.modifier",
         "source_id": "cat_zd_egg",
@@ -731,7 +731,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "zhadantongxue",
         "source_kind": "menu_categories.modifier",
         "source_id": "cat_zd_lettuce",
@@ -753,7 +753,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "zhadantongxue",
         "source_kind": "menu_categories.modifier",
         "source_id": "cat_zd_topping",
@@ -775,7 +775,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "weiweibao",
         "source_kind": "menu_categories.modifier",
         "source_id": "cat_wwb_custom_general",
@@ -797,7 +797,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "weiweibao",
         "source_kind": "menu_categories.modifier",
         "source_id": "cat_wwb_custom_noodle",
@@ -819,7 +819,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "weiweibao",
         "source_kind": "menu_categories.modifier",
         "source_id": "cat_wwb_combo_drink",
@@ -841,7 +841,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "xiaolan",
         "source_kind": "menu_categories.modifier",
         "source_id": "cat_xx_spicy",
@@ -856,14 +856,14 @@
           "max_selection": 1,
           "sort_order": 4,
           "scope": "category",
-          "source_metadata_json": "{\"source_table\":\"menu_categories\",\"source_id\":\"cat_xx_spicy\",\"slug\":\"spiciness\",\"short_name\":\"辣度\",\"category_type\":\"modifier\",\"original_selection_type\":\"single\"}"
+          "source_metadata_json": "{\"source_table\":\"menu_categories\",\"source_id\":\"cat_xx_spicy\",\"slug\":\"spiciness\",\"short_name\":\"辣度選擇\",\"category_type\":\"modifier\",\"original_selection_type\":\"single\"}"
         },
-        "source_hash": "afd6b5a18bb23a8fd885780a4c7c18b87fd2b6859c82028fb4a08c71f4c6c9e3",
-        "expected_target_hash": "91e53a154597a1ef25f509747fcae026fa5b8cc0f9594883b3ddb4e75d7c4fa9",
+        "source_hash": "40295e4e786ab569a1ea791acd69713d6e2dc4ab0f3bd687af1d35401ac73e51",
+        "expected_target_hash": "b344aa3c5cf004529fee6a6375e456eb9a349810794bb13e67c2e64d1b5a1bc5",
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "xiaolan",
         "source_kind": "menu_categories.modifier",
         "source_id": "cat_xx_custom",
@@ -878,14 +878,14 @@
           "max_selection": 10,
           "sort_order": 5,
           "scope": "category",
-          "source_metadata_json": "{\"source_table\":\"menu_categories\",\"source_id\":\"cat_xx_custom\",\"slug\":\"customization\",\"short_name\":\"客製選項\",\"category_type\":\"modifier\",\"original_selection_type\":\"multiple\"}"
+          "source_metadata_json": "{\"source_table\":\"menu_categories\",\"source_id\":\"cat_xx_custom\",\"slug\":\"customization\",\"short_name\":\"客製選項 (不加配料)\",\"category_type\":\"modifier\",\"original_selection_type\":\"multiple\"}"
         },
-        "source_hash": "11cf33d585b10f7592aa1a00a94c5a378cf91277997fbce37d0ed8933ba98300",
-        "expected_target_hash": "3eee3078a088a9ac304f0421a09c668f89ea9862fce706c37f3736ec8e0aa51b",
+        "source_hash": "be0ed7a34adfc9556dd9dc308291831c7121b1015b6dafb6665f57542bbae6f8",
+        "expected_target_hash": "a3a3e38b771c8d3660dbe850a0ebdd2044873223d052a8568866df7767a27273",
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "xiaolan",
         "source_kind": "menu_categories.modifier",
         "source_id": "cat_xx_topping",
@@ -900,14 +900,14 @@
           "max_selection": 10,
           "sort_order": 6,
           "scope": "category",
-          "source_metadata_json": "{\"source_table\":\"menu_categories\",\"source_id\":\"cat_xx_topping\",\"slug\":\"toppings\",\"short_name\":\"加料\",\"category_type\":\"modifier\",\"original_selection_type\":\"multiple\"}"
+          "source_metadata_json": "{\"source_table\":\"menu_categories\",\"source_id\":\"cat_xx_topping\",\"slug\":\"toppings\",\"short_name\":\"加料選項\",\"category_type\":\"modifier\",\"original_selection_type\":\"multiple\"}"
         },
-        "source_hash": "302817831081aafe0fef20f8931858f1e9e26d098475234c01cd3a535eb96bb5",
-        "expected_target_hash": "0fd5bedcf9711f9fd81ae45a60c39623a718274fc63ae85c59c10fd790b74fb0",
+        "source_hash": "b5c01cfe16a314b49d91e457c6e15464a0bdaebfac154ff7dddd30ffee379374",
+        "expected_target_hash": "1b7d47f32947cdb6a6ffcc1519aa6695758e1710c1e241e65b1487b35708f281",
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "benmi",
         "source_kind": "menu_categories.modifier",
         "source_id": "benmi_spicy",
@@ -929,7 +929,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "thuyngason",
         "source_kind": "menu_categories.modifier",
         "source_id": "cat_tns_spicy",
@@ -951,7 +951,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "thuyngason",
         "source_kind": "menu_categories.modifier",
         "source_id": "cat_tns_custom",
@@ -973,7 +973,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "thuyngason",
         "source_kind": "menu_categories.modifier",
         "source_id": "cat_tns_topping",
@@ -995,7 +995,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "blab_demo",
         "source_kind": "menu_categories.modifier",
         "source_id": "blab_demo_cat-mtfz94iw",
@@ -1017,7 +1017,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "haoshiguoshao",
         "source_kind": "menu_categories.modifier",
         "source_id": "mod_hs_noodle_type",
@@ -1039,7 +1039,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "haoshiguoshao",
         "source_kind": "menu_categories.modifier",
         "source_id": "mod_hs_guoshao_addons",
@@ -1059,55 +1059,11 @@
         "source_hash": "bf3a478d7f307155fed7d9cad25511c37eda90615bd470a8889f4305c3d225fa",
         "expected_target_hash": "d5c3cd964a43268a35cc2c7cc46d2ab56ea29b0812f958f399596ea916c11fba",
         "conflict_reason": null
-      },
-      {
-        "action": "already_equal",
-        "tenant_id": "jiangjiejie",
-        "source_kind": "menu_categories.modifier",
-        "source_id": "jiangjiejie_sec-flavor",
-        "target_id": "mg_cat_jiangjiejie_jiangjiejie_sec-flavor",
-        "payload": {
-          "id": "mg_cat_jiangjiejie_jiangjiejie_sec-flavor",
-          "tenant_id": "jiangjiejie",
-          "name": "口味與客製化選擇",
-          "selection_type": "single",
-          "is_required": 0,
-          "min_selection": 0,
-          "max_selection": 1,
-          "sort_order": 8,
-          "scope": "order",
-          "source_metadata_json": "{\"source_table\":\"menu_categories\",\"source_id\":\"jiangjiejie_sec-flavor\",\"slug\":\"sec-flavor\",\"short_name\":\"口味選擇\",\"category_type\":\"order_customization\",\"original_selection_type\":\"single\"}"
-        },
-        "source_hash": "449515f886a2d1ee7f0f0fbceaa72c53de55e7d1aeba8e3c897d88c3abf71d14",
-        "expected_target_hash": "c069a3d777b69799099f1a13d6b933b4e60fc8fdb00a09a88fcaab2f930d1a06",
-        "conflict_reason": null
-      },
-      {
-        "action": "already_equal",
-        "tenant_id": "miyansuo",
-        "source_kind": "menu_categories.modifier",
-        "source_id": "cat_mys_sec_flavor",
-        "target_id": "mg_cat_miyansuo_cat_mys_sec_flavor",
-        "payload": {
-          "id": "mg_cat_miyansuo_cat_mys_sec_flavor",
-          "tenant_id": "miyansuo",
-          "name": "加購服務 / 響應環保",
-          "selection_type": "single",
-          "is_required": 0,
-          "min_selection": 0,
-          "max_selection": 1,
-          "sort_order": 0,
-          "scope": "order",
-          "source_metadata_json": "{\"source_table\":\"menu_categories\",\"source_id\":\"cat_mys_sec_flavor\",\"slug\":\"sec-flavor\",\"short_name\":\"提袋加購\",\"category_type\":\"order_customization\",\"original_selection_type\":\"single\"}"
-        },
-        "source_hash": "e9dfc73469e98e70ccdf8ef9f6ce7e62207d798bde2e070808506618ad7f9238",
-        "expected_target_hash": "f8e132bed88e50a107d000914ae745ed46abe39b070f7a032d66bab6627f9ca9",
-        "conflict_reason": null
       }
     ],
     "modifier_options": [
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "blab_demo",
         "source_kind": "customization_option",
         "source_group_id": "demo_flavor",
@@ -1133,7 +1089,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "blab_demo",
         "source_kind": "customization_option",
         "source_group_id": "demo_flavor",
@@ -1159,7 +1115,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "blab_demo",
         "source_kind": "customization_option",
         "source_group_id": "demo_flavor",
@@ -1185,7 +1141,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "blab_demo",
         "source_kind": "customization_option",
         "source_group_id": "demo_flavor",
@@ -1211,7 +1167,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "blab_demo",
         "source_kind": "customization_option",
         "source_group_id": "demo_flavor",
@@ -1237,7 +1193,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "blab_demo",
         "source_kind": "customization_option",
         "source_group_id": "demo_salt",
@@ -1263,7 +1219,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "blab_demo",
         "source_kind": "customization_option",
         "source_group_id": "demo_salt",
@@ -1289,7 +1245,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "blab_demo",
         "source_kind": "customization_option",
         "source_group_id": "demo_salt",
@@ -1315,7 +1271,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "blab_demo",
         "source_kind": "customization_option",
         "source_group_id": "demo_spicy",
@@ -1341,7 +1297,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "blab_demo",
         "source_kind": "customization_option",
         "source_group_id": "demo_spicy",
@@ -1367,7 +1323,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "blab_demo",
         "source_kind": "customization_option",
         "source_group_id": "demo_spicy",
@@ -1393,7 +1349,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "blab_demo",
         "source_kind": "customization_option",
         "source_group_id": "demo_spicy",
@@ -1419,7 +1375,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "blab_demo",
         "source_kind": "customization_option",
         "source_group_id": "demo_spicy",
@@ -1445,7 +1401,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "blab_demo",
         "source_kind": "customization_option",
         "source_group_id": "demo_spicy",
@@ -1471,7 +1427,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "blab_demo",
         "source_kind": "customization_option",
         "source_group_id": "demo_ingredients",
@@ -1497,7 +1453,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "blab_demo",
         "source_kind": "customization_option",
         "source_group_id": "demo_ingredients",
@@ -1523,7 +1479,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "blab_demo",
         "source_kind": "customization_option",
         "source_group_id": "demo_ingredients",
@@ -1549,7 +1505,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "blab_demo",
         "source_kind": "customization_option",
         "source_group_id": "demo_addons",
@@ -1575,7 +1531,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "blab_demo",
         "source_kind": "customization_option",
         "source_group_id": "demo_addons",
@@ -1601,7 +1557,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "blab_demo",
         "source_kind": "customization_option",
         "source_group_id": "demo_addons",
@@ -1627,7 +1583,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_pepper",
@@ -1653,7 +1609,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_pepper",
@@ -1679,7 +1635,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_pepper",
@@ -1705,7 +1661,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_pepper",
@@ -1731,7 +1687,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_pepper",
@@ -1757,7 +1713,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_pepper",
@@ -1783,7 +1739,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_chili",
@@ -1809,7 +1765,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_chili",
@@ -1835,7 +1791,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_chili",
@@ -1861,7 +1817,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_chili",
@@ -1887,7 +1843,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_chili",
@@ -1913,7 +1869,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_chili",
@@ -1939,7 +1895,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_ma",
@@ -1965,7 +1921,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_ma",
@@ -1991,7 +1947,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_ma",
@@ -2017,7 +1973,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_ma",
@@ -2043,7 +1999,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_ma",
@@ -2069,7 +2025,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_onion",
@@ -2095,7 +2051,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_onion",
@@ -2121,7 +2077,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_onion",
@@ -2147,7 +2103,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_garlic",
@@ -2173,7 +2129,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_garlic",
@@ -2199,7 +2155,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_garlic",
@@ -2225,7 +2181,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_garlic",
@@ -2251,7 +2207,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_scallion",
@@ -2277,7 +2233,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_scallion",
@@ -2303,7 +2259,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_scallion",
@@ -2329,7 +2285,33 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
+        "tenant_id": "jiangjiejie",
+        "source_kind": "customization_option",
+        "source_group_id": "custom_mod_jj_scallion",
+        "source_option_identity": "opt_mv9eat2v",
+        "target_id": "opt_0df3adfdba47872a",
+        "payload": {
+          "id": "opt_0df3adfdba47872a",
+          "tenant_id": "jiangjiejie",
+          "group_id": "mg_cust_jiangjiejie_custom_mod_jj_scallion",
+          "name": "多",
+          "price": 0,
+          "is_default": 0,
+          "sort_order": 3,
+          "out_of_stock_until": null,
+          "sub_options_json": "[]",
+          "eligibility_rules_json": "[]",
+          "is_out_of_stock": 0,
+          "description": null,
+          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"custom_mod_jj_scallion\",\"source_option_id\":\"opt_mv9eat2v\",\"snapshot_ordinal\":3,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
+        },
+        "source_hash": "04397dd8d04049f999e28b9efc95f42ff22b31fb198cb12dc292c635761ade35",
+        "expected_target_hash": "f9829ae54cb210dbf29018dd571534a86cead2d816a68718fe4b1e53b5d4521c",
+        "conflict_reason": null
+      },
+      {
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_sesame_oil",
@@ -2355,7 +2337,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_sesame_oil",
@@ -2381,7 +2363,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_sesame_oil",
@@ -2407,7 +2389,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_sesame_oil",
@@ -2433,7 +2415,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_veg_soup",
@@ -2459,7 +2441,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_veg_soup",
@@ -2485,7 +2467,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_veg_soup",
@@ -2511,7 +2493,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_veg_soup",
@@ -2537,7 +2519,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_chicken_prep",
@@ -2563,7 +2545,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_chicken_prep",
@@ -2589,7 +2571,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_lemon_juice",
@@ -2615,7 +2597,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_lemon_juice",
@@ -2641,7 +2623,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_lemon_juice",
@@ -2667,7 +2649,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_mod_jj_lemon_juice",
@@ -2693,7 +2675,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "dapinglin",
         "source_kind": "customization_option",
         "source_group_id": "hjh_custom_sauce",
@@ -2719,7 +2701,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "dapinglin",
         "source_kind": "customization_option",
         "source_group_id": "hjh_custom_sauce",
@@ -2745,7 +2727,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "dapinglin",
         "source_kind": "customization_option",
         "source_group_id": "hjh_custom_spicy",
@@ -2771,7 +2753,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "dapinglin",
         "source_kind": "customization_option",
         "source_group_id": "hjh_custom_spicy",
@@ -2797,7 +2779,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "dapinglin",
         "source_kind": "customization_option",
         "source_group_id": "hjh_custom_spicy",
@@ -2823,7 +2805,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "dapinglin",
         "source_kind": "customization_option",
         "source_group_id": "hjh_custom_spicy",
@@ -2849,7 +2831,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "dapinglin",
         "source_kind": "customization_option",
         "source_group_id": "hjh_custom_spicy",
@@ -2875,7 +2857,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "dapinglin",
         "source_kind": "customization_option",
         "source_group_id": "hjh_custom_seasoning",
@@ -2901,7 +2883,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "dapinglin",
         "source_kind": "customization_option",
         "source_group_id": "hjh_custom_seasoning",
@@ -2927,7 +2909,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "dapinglin",
         "source_kind": "customization_option",
         "source_group_id": "hjh_custom_seasoning",
@@ -2953,7 +2935,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "dapinglin",
         "source_kind": "customization_option",
         "source_group_id": "hjh_custom_seasoning",
@@ -2979,7 +2961,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_jiangjiejie_group_mtzvqwy1",
@@ -3005,7 +2987,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_jiangjiejie_group_mtzvqwy1",
@@ -3031,7 +3013,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "jiangjiejie",
         "source_kind": "customization_option",
         "source_group_id": "custom_jiangjiejie_group_mtzvqwy1",
@@ -3057,14 +3039,14 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "bsc",
         "source_kind": "customization_option",
         "source_group_id": "bsc_flavor",
-        "source_option_identity": "ordinal:0",
-        "target_id": "opt_d7a16e5d7ff7d164",
+        "source_option_identity": "特調胡椒",
+        "target_id": "opt_dc5b77bedf598e5d",
         "payload": {
-          "id": "opt_d7a16e5d7ff7d164",
+          "id": "opt_dc5b77bedf598e5d",
           "tenant_id": "bsc",
           "group_id": "mg_cust_bsc_bsc_flavor",
           "name": "特調胡椒",
@@ -3076,21 +3058,21 @@
           "eligibility_rules_json": "[]",
           "is_out_of_stock": 0,
           "description": null,
-          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_flavor\",\"source_option_id\":null,\"snapshot_ordinal\":0,\"raw_keys\":[\"name\"]}"
+          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_flavor\",\"source_option_id\":\"特調胡椒\",\"snapshot_ordinal\":0,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
         },
-        "source_hash": "2095ba322d5cc04f6beb4124082d98ba84e43f98b5d0d78809c8734e4b98264d",
-        "expected_target_hash": "ea45f657bfc51c93ed45e614fa875f8e7e4358e427a8be31418e13aeab75da39",
+        "source_hash": "23da5b6bb3c4d2503642c642600fb0ae8abc9aac0e145c5105442bfad6449468",
+        "expected_target_hash": "5b3d69b4c42bc2f9c5ffbf592768569c3d9add6f8db80b584c6f0efd115b994d",
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "bsc",
         "source_kind": "customization_option",
         "source_group_id": "bsc_flavor",
-        "source_option_identity": "ordinal:1",
-        "target_id": "opt_3b0acde457ee54ee",
+        "source_option_identity": "泰式酸辣",
+        "target_id": "opt_97934bca64158b3b",
         "payload": {
-          "id": "opt_3b0acde457ee54ee",
+          "id": "opt_97934bca64158b3b",
           "tenant_id": "bsc",
           "group_id": "mg_cust_bsc_bsc_flavor",
           "name": "泰式酸辣",
@@ -3102,21 +3084,21 @@
           "eligibility_rules_json": "[]",
           "is_out_of_stock": 0,
           "description": null,
-          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_flavor\",\"source_option_id\":null,\"snapshot_ordinal\":1,\"raw_keys\":[\"name\"]}"
+          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_flavor\",\"source_option_id\":\"泰式酸辣\",\"snapshot_ordinal\":1,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
         },
-        "source_hash": "27ac4e0fff18737392f346d83d869962f426c5c2f591969bc6603fdfd6c4840c",
-        "expected_target_hash": "8ed21feff0c4138fef751a08500029c0816d5acee10ed24a62d1f2a41b3d8494",
+        "source_hash": "87b79fbd5e24e1421790c15fb31148a0dd229ab0e3372c618376b6c040db84ec",
+        "expected_target_hash": "f9871daac323a33ed0e8dd1baa4b0ea2f2da7cb7dfbde0657acc84db6431e9d9",
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "bsc",
         "source_kind": "customization_option",
         "source_group_id": "bsc_flavor",
-        "source_option_identity": "ordinal:2",
-        "target_id": "opt_436596282e86e9cd",
+        "source_option_identity": "清爽檸檬",
+        "target_id": "opt_09aee42ebf2f1530",
         "payload": {
-          "id": "opt_436596282e86e9cd",
+          "id": "opt_09aee42ebf2f1530",
           "tenant_id": "bsc",
           "group_id": "mg_cust_bsc_bsc_flavor",
           "name": "清爽檸檬",
@@ -3128,24 +3110,24 @@
           "eligibility_rules_json": "[]",
           "is_out_of_stock": 0,
           "description": null,
-          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_flavor\",\"source_option_id\":null,\"snapshot_ordinal\":2,\"raw_keys\":[\"name\",\"sub_options\"]}"
+          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_flavor\",\"source_option_id\":\"清爽檸檬\",\"snapshot_ordinal\":2,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
         },
-        "source_hash": "b911ff338876fc6f28c71028cd623702265c2de87e12f4dd8e7c06b2d7f6e351",
-        "expected_target_hash": "e621560bb1acef10f179c2e329ba3caad7182489160407e43c046939c94c2e4d",
+        "source_hash": "c8a777849190304f6bf02500976e1dfc49cd48ced8c97a7f838b252af816c069",
+        "expected_target_hash": "6ef40abaff388b016182aca0e43763557ed31340b86e6ffaaf1a0ad69d399b82",
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "bsc",
         "source_kind": "customization_option",
         "source_group_id": "bsc_flavor",
-        "source_option_identity": "ordinal:3",
-        "target_id": "opt_0e72012752eed8a6",
+        "source_option_identity": "檸檬香菜（ 香菜缺貨中，請選檸檬口味）",
+        "target_id": "opt_fb9e23a04616a764",
         "payload": {
-          "id": "opt_0e72012752eed8a6",
+          "id": "opt_fb9e23a04616a764",
           "tenant_id": "bsc",
           "group_id": "mg_cust_bsc_bsc_flavor",
-          "name": "檸檬香菜（ 香菜缺貨中，請選檸檬口味）",
+          "name": "檸檬香菜",
           "price": 0,
           "is_default": 0,
           "sort_order": 3,
@@ -3154,21 +3136,21 @@
           "eligibility_rules_json": "[]",
           "is_out_of_stock": 0,
           "description": null,
-          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_flavor\",\"source_option_id\":null,\"snapshot_ordinal\":3,\"raw_keys\":[\"name\",\"sub_options\"]}"
+          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_flavor\",\"source_option_id\":\"檸檬香菜（ 香菜缺貨中，請選檸檬口味）\",\"snapshot_ordinal\":3,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
         },
-        "source_hash": "0db11acb3aa037a624f5c851f46af342ad1502eb23336a258f054d3364e8ad23",
-        "expected_target_hash": "b970c1daab85c1f5654d4c6e4cb4af8f276caca4015a633425291f9b06fea30c",
+        "source_hash": "6aa0e3e79612fffdb3ef67ea042133cb2e233b54282b93025a6ffa156a839a83",
+        "expected_target_hash": "648e1b19d03d3b6a9d5ab2e1c65a2ddbe1aa415a7750ec46c4f615da73367134",
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "bsc",
         "source_kind": "customization_option",
         "source_group_id": "bsc_flavor",
-        "source_option_identity": "ordinal:4",
-        "target_id": "opt_92e0483e765eaba0",
+        "source_option_identity": "原味客製",
+        "target_id": "opt_f7cc69208a31b4a1",
         "payload": {
-          "id": "opt_92e0483e765eaba0",
+          "id": "opt_f7cc69208a31b4a1",
           "tenant_id": "bsc",
           "group_id": "mg_cust_bsc_bsc_flavor",
           "name": "原味客製",
@@ -3180,21 +3162,21 @@
           "eligibility_rules_json": "[]",
           "is_out_of_stock": 0,
           "description": null,
-          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_flavor\",\"source_option_id\":null,\"snapshot_ordinal\":4,\"raw_keys\":[\"name\",\"sub_options\"]}"
+          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_flavor\",\"source_option_id\":\"原味客製\",\"snapshot_ordinal\":4,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
         },
-        "source_hash": "6db1f83192c1cb18847e21ed0c7c5c0d9e8c231e91dc5851aa89285f6da296b2",
-        "expected_target_hash": "400bcd427028a1e6302fe30bc1d146783b3d1193ff6901de81d9e4cb8a270639",
+        "source_hash": "e02a082fd6cc96dd0047ce6bff30b74ca5f1b5188e130315abca49f2e0984814",
+        "expected_target_hash": "c5b7b2f1dbbc2519b0227b107ab1715fe62477d1f38e10e03ed43af6ea994dc0",
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "bsc",
         "source_kind": "customization_option",
         "source_group_id": "bsc_salt",
-        "source_option_identity": "ordinal:0",
-        "target_id": "opt_2bc62e8fe1e32b15",
+        "source_option_identity": "正常",
+        "target_id": "opt_bfca181903f5c57b",
         "payload": {
-          "id": "opt_2bc62e8fe1e32b15",
+          "id": "opt_bfca181903f5c57b",
           "tenant_id": "bsc",
           "group_id": "mg_cust_bsc_bsc_salt",
           "name": "正常",
@@ -3206,21 +3188,21 @@
           "eligibility_rules_json": "[]",
           "is_out_of_stock": 0,
           "description": null,
-          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_salt\",\"source_option_id\":null,\"snapshot_ordinal\":0,\"raw_keys\":[\"name\"]}"
+          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_salt\",\"source_option_id\":\"正常\",\"snapshot_ordinal\":0,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
         },
-        "source_hash": "7aa9eef8df283eee834152b1144cce7b92dfa419573803086be82e06e2547107",
-        "expected_target_hash": "503a44a8e8978c1c5baaeebc30f6351a12f193ea7e425fc5f294c4e142825ef3",
+        "source_hash": "7bb055eb9d3ede09ab7432e57826be44954a2334c591e62496133764720af0c4",
+        "expected_target_hash": "4fc35c3f53820d3f640085bde5c82a4889c0ed7820dc256ab648b5e89992c8fb",
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "bsc",
         "source_kind": "customization_option",
         "source_group_id": "bsc_salt",
-        "source_option_identity": "ordinal:1",
-        "target_id": "opt_8aaa55019d141dee",
+        "source_option_identity": "調味重",
+        "target_id": "opt_a737d5ea99b1981d",
         "payload": {
-          "id": "opt_8aaa55019d141dee",
+          "id": "opt_a737d5ea99b1981d",
           "tenant_id": "bsc",
           "group_id": "mg_cust_bsc_bsc_salt",
           "name": "調味重",
@@ -3232,21 +3214,21 @@
           "eligibility_rules_json": "[]",
           "is_out_of_stock": 0,
           "description": null,
-          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_salt\",\"source_option_id\":null,\"snapshot_ordinal\":1,\"raw_keys\":[\"name\"]}"
+          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_salt\",\"source_option_id\":\"調味重\",\"snapshot_ordinal\":1,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
         },
-        "source_hash": "1856d2d5c4244fc2f8ed4ea3ddabf5aa0b4d1cefa073d69bba78d827c32fd8ca",
-        "expected_target_hash": "42a28d3d91c959e3d4d56122301260bd733aa003e2f1fdb4a72b162a8ab1b56a",
+        "source_hash": "e1f88f371e50091e393b2003d484e4c64216c4de8f361f30e3beff96b47602f5",
+        "expected_target_hash": "7d3c8ef87eac4d65bdc44376ac7c6127052a761081e700a3efc1d183f2387e4d",
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "bsc",
         "source_kind": "customization_option",
         "source_group_id": "bsc_salt",
-        "source_option_identity": "ordinal:2",
-        "target_id": "opt_5db2f2724dedbb2f",
+        "source_option_identity": "調味清淡",
+        "target_id": "opt_7f4539b0f7f47156",
         "payload": {
-          "id": "opt_5db2f2724dedbb2f",
+          "id": "opt_7f4539b0f7f47156",
           "tenant_id": "bsc",
           "group_id": "mg_cust_bsc_bsc_salt",
           "name": "調味清淡",
@@ -3258,21 +3240,21 @@
           "eligibility_rules_json": "[]",
           "is_out_of_stock": 0,
           "description": null,
-          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_salt\",\"source_option_id\":null,\"snapshot_ordinal\":2,\"raw_keys\":[\"name\"]}"
+          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_salt\",\"source_option_id\":\"調味清淡\",\"snapshot_ordinal\":2,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
         },
-        "source_hash": "85394f4284b0c0c18fd02069475e2ef3dc0f2f7152e42383d64eceddb77323df",
-        "expected_target_hash": "3ab6dc62e051aa212945c72023f28cad25f7e35b4595a52c6c837d48cc5bc4a0",
+        "source_hash": "1209504306f163649501cab7924945e242733c5bb551dd077c4ca39b5bbceb61",
+        "expected_target_hash": "b6c4e99fe2a919afb1f08a0b70896a73bc6e975fc0ebd4eb153bdc900c589709",
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "bsc",
         "source_kind": "customization_option",
         "source_group_id": "bsc_spicy",
-        "source_option_identity": "ordinal:0",
-        "target_id": "opt_dfd32fcfd1d5cb1c",
+        "source_option_identity": "不辣",
+        "target_id": "opt_f0240e1e36c642d5",
         "payload": {
-          "id": "opt_dfd32fcfd1d5cb1c",
+          "id": "opt_f0240e1e36c642d5",
           "tenant_id": "bsc",
           "group_id": "mg_cust_bsc_bsc_spicy",
           "name": "不辣",
@@ -3284,21 +3266,21 @@
           "eligibility_rules_json": "[]",
           "is_out_of_stock": 0,
           "description": null,
-          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_spicy\",\"source_option_id\":null,\"snapshot_ordinal\":0,\"raw_keys\":[\"name\"]}"
+          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_spicy\",\"source_option_id\":\"不辣\",\"snapshot_ordinal\":0,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
         },
-        "source_hash": "237e801a1458ca082a92614fb962d7bde17db62dc5e4f0f76869030995f256f5",
-        "expected_target_hash": "33a59f102e51a88eecf272e2807311df00487c93ff57f639725cf2a1460731e0",
+        "source_hash": "152f1dc675858f3390fa515d4738ebaf5692110a2459892007ba60fa9d24fffe",
+        "expected_target_hash": "b5239bda215b1118958b3e21095e87026dfc83a9c9232d00ce77c952b0d79eb3",
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "bsc",
         "source_kind": "customization_option",
         "source_group_id": "bsc_spicy",
-        "source_option_identity": "ordinal:1",
-        "target_id": "opt_3cd927dde89897a9",
+        "source_option_identity": "微辣",
+        "target_id": "opt_197233338fb98ba5",
         "payload": {
-          "id": "opt_3cd927dde89897a9",
+          "id": "opt_197233338fb98ba5",
           "tenant_id": "bsc",
           "group_id": "mg_cust_bsc_bsc_spicy",
           "name": "微辣",
@@ -3310,21 +3292,21 @@
           "eligibility_rules_json": "[]",
           "is_out_of_stock": 0,
           "description": null,
-          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_spicy\",\"source_option_id\":null,\"snapshot_ordinal\":1,\"raw_keys\":[\"name\"]}"
+          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_spicy\",\"source_option_id\":\"微辣\",\"snapshot_ordinal\":1,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
         },
-        "source_hash": "677d4f811af7b8232e05ac91048f8992a18f8e94f0cca50598fce5ae7127ee19",
-        "expected_target_hash": "7c399312bbaa7acec96294851fca73b1f7a0a27726ebd4502135d25acd482718",
+        "source_hash": "ba1abd72ee448a8edca0faf7682397f1de648acdd17458d32ac0073398bb9ff5",
+        "expected_target_hash": "2ccfc224c87205bfc4772ff7c18c0f045894fef05ed3eb9c16248b13dbfb56dd",
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "bsc",
         "source_kind": "customization_option",
         "source_group_id": "bsc_spicy",
-        "source_option_identity": "ordinal:2",
-        "target_id": "opt_cbde8e357feaa815",
+        "source_option_identity": "小辣",
+        "target_id": "opt_c45271cecb438eb4",
         "payload": {
-          "id": "opt_cbde8e357feaa815",
+          "id": "opt_c45271cecb438eb4",
           "tenant_id": "bsc",
           "group_id": "mg_cust_bsc_bsc_spicy",
           "name": "小辣",
@@ -3336,21 +3318,21 @@
           "eligibility_rules_json": "[]",
           "is_out_of_stock": 0,
           "description": null,
-          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_spicy\",\"source_option_id\":null,\"snapshot_ordinal\":2,\"raw_keys\":[\"name\"]}"
+          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_spicy\",\"source_option_id\":\"小辣\",\"snapshot_ordinal\":2,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
         },
-        "source_hash": "12ff15c6a8afb4b0aaaeb0c3a1caf80028dee97946a96a9fdaf5873dd31dd7a9",
-        "expected_target_hash": "95bca77f255f693fb6e29d9abef993640768417d8870a8c1b44f02ef6fa66e1b",
+        "source_hash": "82d1c60041cde59683f47f85184fcada342b1ee58a8a368b128e22890d2ceb17",
+        "expected_target_hash": "754f2ff0e76ef7efe4ab6f0d08b21ff66b910844691b57b040190f989f152d85",
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "bsc",
         "source_kind": "customization_option",
         "source_group_id": "bsc_spicy",
-        "source_option_identity": "ordinal:3",
-        "target_id": "opt_b2847bba7ee28bd3",
+        "source_option_identity": "中辣",
+        "target_id": "opt_2b4c9f0faaa47f21",
         "payload": {
-          "id": "opt_b2847bba7ee28bd3",
+          "id": "opt_2b4c9f0faaa47f21",
           "tenant_id": "bsc",
           "group_id": "mg_cust_bsc_bsc_spicy",
           "name": "中辣",
@@ -3362,21 +3344,21 @@
           "eligibility_rules_json": "[]",
           "is_out_of_stock": 0,
           "description": null,
-          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_spicy\",\"source_option_id\":null,\"snapshot_ordinal\":3,\"raw_keys\":[\"name\"]}"
+          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_spicy\",\"source_option_id\":\"中辣\",\"snapshot_ordinal\":3,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
         },
-        "source_hash": "a812eb19c5eeaf27e41cd037102552574ab2e23fa44f65a0a6d92905e0fe5a88",
-        "expected_target_hash": "63ded0f67fdb26a8b941a04c3c85c0aab04ecf70c66216eb82dec14028cd224b",
+        "source_hash": "79b181ae39b7c4c69a53669ee685d4a35fbf0acd238fb9c5f5c084ea9c43efaa",
+        "expected_target_hash": "1486d6d0c413c73a813983457fe1ee312bda16903b48b4bd5a1ba27bbb4ace59",
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "bsc",
         "source_kind": "customization_option",
         "source_group_id": "bsc_spicy",
-        "source_option_identity": "ordinal:4",
-        "target_id": "opt_a31baac05099a558",
+        "source_option_identity": "大辣",
+        "target_id": "opt_aaaa9c9ecf65062f",
         "payload": {
-          "id": "opt_a31baac05099a558",
+          "id": "opt_aaaa9c9ecf65062f",
           "tenant_id": "bsc",
           "group_id": "mg_cust_bsc_bsc_spicy",
           "name": "大辣",
@@ -3388,21 +3370,21 @@
           "eligibility_rules_json": "[]",
           "is_out_of_stock": 0,
           "description": null,
-          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_spicy\",\"source_option_id\":null,\"snapshot_ordinal\":4,\"raw_keys\":[\"name\"]}"
+          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_spicy\",\"source_option_id\":\"大辣\",\"snapshot_ordinal\":4,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
         },
-        "source_hash": "85a0d191bcb4f8fdf5ae3475c9d5ec608776b1cfb28617912c165c72c14dfc73",
-        "expected_target_hash": "23ea05a08909b1c991a7f82330dfc505f463cc3433604733906d6fa393dc1c79",
+        "source_hash": "2599da3a3def6291c26971e7a02ef6d00c16bcd8f4716521a797ce9da13e8e47",
+        "expected_target_hash": "5a27dce3408a75a3d0c5ce198d2ec33e5785771239eef141fe02e166d240c50e",
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "bsc",
         "source_kind": "customization_option",
         "source_group_id": "bsc_spicy",
-        "source_option_identity": "ordinal:5",
-        "target_id": "opt_b04bffd31cd7af39",
+        "source_option_identity": "辣椒放餐盒角落",
+        "target_id": "opt_d51b82fdae1ba02d",
         "payload": {
-          "id": "opt_b04bffd31cd7af39",
+          "id": "opt_d51b82fdae1ba02d",
           "tenant_id": "bsc",
           "group_id": "mg_cust_bsc_bsc_spicy",
           "name": "辣椒放餐盒角落",
@@ -3414,21 +3396,21 @@
           "eligibility_rules_json": "[]",
           "is_out_of_stock": 0,
           "description": null,
-          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_spicy\",\"source_option_id\":null,\"snapshot_ordinal\":5,\"raw_keys\":[\"name\"]}"
+          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_spicy\",\"source_option_id\":\"辣椒放餐盒角落\",\"snapshot_ordinal\":5,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
         },
-        "source_hash": "0ca0eedba5c1615f5a72ff1d764c48e83871512b65bbe8a519554e2af0a93174",
-        "expected_target_hash": "14d76ceccc5b63ee560fa3e01f793d6850aa2b95235219d5010530ed51556f09",
+        "source_hash": "41305c888451e119b0b63966cb1d8a1e2bf25ee19d45d8bf3fc99863dbe5e121",
+        "expected_target_hash": "eeb65b18548f5f471f3485162424b4ea9382be5038ae94b202c0ff0ab76f832e",
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "bsc",
         "source_kind": "customization_option",
         "source_group_id": "bsc_ingredients",
-        "source_option_identity": "ordinal:0",
-        "target_id": "opt_a5a98b5901983c2d",
+        "source_option_identity": "不加蔥花",
+        "target_id": "opt_6222aa26fc3c697c",
         "payload": {
-          "id": "opt_a5a98b5901983c2d",
+          "id": "opt_6222aa26fc3c697c",
           "tenant_id": "bsc",
           "group_id": "mg_cust_bsc_bsc_ingredients",
           "name": "不加蔥花",
@@ -3440,21 +3422,21 @@
           "eligibility_rules_json": "[]",
           "is_out_of_stock": 0,
           "description": null,
-          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_ingredients\",\"source_option_id\":null,\"snapshot_ordinal\":0,\"raw_keys\":[\"name\"]}"
+          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_ingredients\",\"source_option_id\":\"不加蔥花\",\"snapshot_ordinal\":0,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
         },
-        "source_hash": "fc0f7c10a8bbebc44fb32ccc1f3603dd581a91c8f90f07b16987b77332453132",
-        "expected_target_hash": "0c4e5a77ee3afca8aa423729b625f75c46bce0b32e7b508fa408093e17e5b797",
+        "source_hash": "01fc615ef2febf9b470307f0d6fc454b1679de8bc91dc681116ee437d6778757",
+        "expected_target_hash": "b3b2011c44ad241c36449427dcadebe376b0fd6e6d152c183df063be3d3465f2",
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "bsc",
         "source_kind": "customization_option",
         "source_group_id": "bsc_ingredients",
-        "source_option_identity": "ordinal:1",
-        "target_id": "opt_07026616e9250059",
+        "source_option_identity": "不加蒜頭",
+        "target_id": "opt_601c785027e9f17f",
         "payload": {
-          "id": "opt_07026616e9250059",
+          "id": "opt_601c785027e9f17f",
           "tenant_id": "bsc",
           "group_id": "mg_cust_bsc_bsc_ingredients",
           "name": "不加蒜頭",
@@ -3466,21 +3448,21 @@
           "eligibility_rules_json": "[]",
           "is_out_of_stock": 0,
           "description": null,
-          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_ingredients\",\"source_option_id\":null,\"snapshot_ordinal\":1,\"raw_keys\":[\"name\"]}"
+          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_ingredients\",\"source_option_id\":\"不加蒜頭\",\"snapshot_ordinal\":1,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
         },
-        "source_hash": "4bab2029917479ee8d008e1158a53162dee711ff330f9c57a61bc7d8158095fe",
-        "expected_target_hash": "f516674cebe2df9829c592e9131261172dd5db45be0a389a4cc6a734600aeec3",
+        "source_hash": "26f085af7cfb812e2120812b61aded145e699da6595d1c776136b5f0d4ce3b79",
+        "expected_target_hash": "ada51764612f47a9597cc2806b6d2993bdc2e0fe254d7287cfc3e1e6f7b3bb1a",
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "bsc",
         "source_kind": "customization_option",
         "source_group_id": "bsc_ingredients",
-        "source_option_identity": "ordinal:2",
-        "target_id": "opt_168888fdba26fa9c",
+        "source_option_identity": "不加洋蔥",
+        "target_id": "opt_526ca68a7ac369bc",
         "payload": {
-          "id": "opt_168888fdba26fa9c",
+          "id": "opt_526ca68a7ac369bc",
           "tenant_id": "bsc",
           "group_id": "mg_cust_bsc_bsc_ingredients",
           "name": "不加洋蔥",
@@ -3492,21 +3474,21 @@
           "eligibility_rules_json": "[]",
           "is_out_of_stock": 0,
           "description": null,
-          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_ingredients\",\"source_option_id\":null,\"snapshot_ordinal\":2,\"raw_keys\":[\"name\"]}"
+          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_ingredients\",\"source_option_id\":\"不加洋蔥\",\"snapshot_ordinal\":2,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
         },
-        "source_hash": "9f5c4338279c0f9a428a8e606ba24004470836e201c7172a0d97889e9c5102e4",
-        "expected_target_hash": "2de2067f6148b56cb046119ea28aae2b76954ba42d4fdf5275412a0728b6b79c",
+        "source_hash": "79863ea2dac8273c80db3b2ad3372419de646c39c9fd4340429091726ad92aac",
+        "expected_target_hash": "636ebb21a6005a41ab0e007e38f6adc8ca6d98a34c2f9555e1a4790709a23b06",
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "bsc",
         "source_kind": "customization_option",
         "source_group_id": "bsc_addons",
-        "source_option_identity": "ordinal:0",
-        "target_id": "opt_d791cab3f7917db1",
+        "source_option_identity": "加香菜",
+        "target_id": "opt_8b3d460894ad702f",
         "payload": {
-          "id": "opt_d791cab3f7917db1",
+          "id": "opt_8b3d460894ad702f",
           "tenant_id": "bsc",
           "group_id": "mg_cust_bsc_bsc_addons",
           "name": "加香菜",
@@ -3518,21 +3500,21 @@
           "eligibility_rules_json": "[]",
           "is_out_of_stock": 1,
           "description": null,
-          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_addons\",\"source_option_id\":null,\"snapshot_ordinal\":0,\"raw_keys\":[\"name\",\"price\",\"is_out_of_stock\"]}"
+          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_addons\",\"source_option_id\":\"加香菜\",\"snapshot_ordinal\":0,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
         },
-        "source_hash": "02031a830e220baf25beb10e16bb4fc5c47c595ad27ed1da14e9734df44380aa",
-        "expected_target_hash": "e57816ee301f3ef777d7135384958497c29c73977581b601506e85e81527f966",
+        "source_hash": "d4b65d467e766f4497da3c41966a0ae307d723c7b5345d36a5ce654f1e72d28f",
+        "expected_target_hash": "aac6438605972c34c9f9860ecc1610862c50d245d99247fe0ca64d960d9172d3",
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "bsc",
         "source_kind": "customization_option",
         "source_group_id": "bsc_addons",
-        "source_option_identity": "ordinal:1",
-        "target_id": "opt_6f7c07cfbb6ddfd8",
+        "source_option_identity": "加檸檬汁",
+        "target_id": "opt_b347d52d184358bc",
         "payload": {
-          "id": "opt_6f7c07cfbb6ddfd8",
+          "id": "opt_b347d52d184358bc",
           "tenant_id": "bsc",
           "group_id": "mg_cust_bsc_bsc_addons",
           "name": "加檸檬汁",
@@ -3544,14 +3526,14 @@
           "eligibility_rules_json": "[]",
           "is_out_of_stock": 1,
           "description": null,
-          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_addons\",\"source_option_id\":null,\"snapshot_ordinal\":1,\"raw_keys\":[\"name\",\"price\",\"is_out_of_stock\"]}"
+          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"bsc_addons\",\"source_option_id\":\"加檸檬汁\",\"snapshot_ordinal\":1,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
         },
-        "source_hash": "1fe5f3bb2a39c61895aaf0d85b6e0a2fae8869c6b122c84aeb77f87f2c52e4d8",
-        "expected_target_hash": "0e3ba4558094eb2ca3822dda4e949bb2a125d5fb3a8ba969469370a937ccee3b",
+        "source_hash": "a6ece097a0cdf3af31241bdf08a6f4a7d06133e1cd1bbf0e12c1e2e9689c8c32",
+        "expected_target_hash": "25c653453cebd9d44651ae267ee37def3550c3a3d28dfcbbc58751385bbb574e",
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "blab_demo",
         "source_kind": "customization_option",
         "source_group_id": "custom_blab_demo_group_mud2onv1",
@@ -3577,7 +3559,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "miyansuo",
         "source_kind": "customization_option",
         "source_group_id": "custom_mys_bag",
@@ -3589,21 +3571,21 @@
           "group_id": "mg_cust_miyansuo_custom_mys_bag",
           "name": "不需要提袋",
           "price": 0,
-          "is_default": 1,
+          "is_default": 0,
           "sort_order": 0,
           "out_of_stock_until": null,
           "sub_options_json": "[]",
           "eligibility_rules_json": "[]",
           "is_out_of_stock": 0,
           "description": null,
-          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"custom_mys_bag\",\"source_option_id\":\"bag_none\",\"snapshot_ordinal\":0,\"raw_keys\":[\"id\",\"name\",\"price\",\"is_default\"]}"
+          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"custom_mys_bag\",\"source_option_id\":\"bag_none\",\"snapshot_ordinal\":0,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
         },
-        "source_hash": "dda47fb389fd4f03c0fd12c29cb7dc54e35c4a56b2f20100826a541599c6f86b",
-        "expected_target_hash": "d7bc3b0ffb61663662bd547dfecf50ea5945370b3965c4b92b763875ddc6a671",
+        "source_hash": "379f434e580aba6ba8e17daa0a56586875a9d578fb07d69eb624458ba5a3490f",
+        "expected_target_hash": "d29c40b69889c3c5566cf2f70c1bc202438c5894d84e02ba5dafff60ff99153b",
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "miyansuo",
         "source_kind": "customization_option",
         "source_group_id": "custom_mys_bag",
@@ -3622,14 +3604,14 @@
           "eligibility_rules_json": "[]",
           "is_out_of_stock": 0,
           "description": null,
-          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"custom_mys_bag\",\"source_option_id\":\"bag_buy\",\"snapshot_ordinal\":1,\"raw_keys\":[\"id\",\"name\",\"price\",\"is_default\"]}"
+          "source_metadata_json": "{\"source_table\":\"menu_customizations.options_json\",\"source_group_id\":\"custom_mys_bag\",\"source_option_id\":\"bag_buy\",\"snapshot_ordinal\":1,\"raw_keys\":[\"id\",\"name\",\"surcharge\",\"price\",\"is_out_of_stock\",\"isOutOfStock\",\"sub_options\"]}"
         },
-        "source_hash": "758d211fb89c80539442082af28efb48a6d61664883e5aa66e57766c327b2a65",
-        "expected_target_hash": "3a19dda778c8e7c701e21c1fb11156da41827c159717f5c3f3ce48e9c0d6e655",
+        "source_hash": "9e9f519e469d7146e30f8c17e3cf7d1ded29dab2315694a676ab74e9121b480b",
+        "expected_target_hash": "21a00fce11b43eb6e38e735b02a1751513e34485a9f94c3c61cba2c2bc646407",
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "benmi",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_topping",
@@ -3655,7 +3637,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "benmi",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_topping",
@@ -3681,7 +3663,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "benmi",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_topping",
@@ -3707,7 +3689,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "benmi",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_topping",
@@ -3733,7 +3715,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "benmi",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_topping",
@@ -3759,7 +3741,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "benmi",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_topping",
@@ -3785,7 +3767,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "zhadantongxue",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_zd_spicy",
@@ -3811,7 +3793,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "zhadantongxue",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_zd_spicy",
@@ -3837,7 +3819,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "zhadantongxue",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_zd_egg",
@@ -3863,7 +3845,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "zhadantongxue",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_zd_egg",
@@ -3889,7 +3871,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "zhadantongxue",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_zd_lettuce",
@@ -3915,7 +3897,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "zhadantongxue",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_zd_lettuce",
@@ -3941,7 +3923,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "zhadantongxue",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_zd_topping",
@@ -3967,7 +3949,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "zhadantongxue",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_zd_topping",
@@ -3993,7 +3975,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "zhadantongxue",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_zd_topping",
@@ -4019,7 +4001,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "zhadantongxue",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_zd_topping",
@@ -4045,7 +4027,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "zhadantongxue",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_zd_topping",
@@ -4071,7 +4053,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "zhadantongxue",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_zd_topping",
@@ -4097,7 +4079,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "zhadantongxue",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_zd_topping",
@@ -4108,7 +4090,7 @@
           "tenant_id": "zhadantongxue",
           "group_id": "mg_cat_zhadantongxue_cat_zd_topping",
           "name": "雞腿肉卷",
-          "price": 35,
+          "price": 40,
           "is_default": 0,
           "sort_order": 8,
           "out_of_stock_until": null,
@@ -4118,12 +4100,12 @@
           "description": null,
           "source_metadata_json": "{\"source_table\":\"menu_items\",\"source_item_id\":\"zd_top_07\",\"category_id\":\"cat_zd_topping\",\"badge_text\":null}"
         },
-        "source_hash": "bb43a9e55916544f7396c3a0fefbbed4561f91f60839d65fcf4d3994deabf1cf",
-        "expected_target_hash": "63db8831c733e1141eaa65c4bfda3318930eb8a18d735c9c81a4ffe140731085",
+        "source_hash": "ca742e8c722115fbc3896df21dddb9e4efdc80cb84d5d1c387666d7136ab4619",
+        "expected_target_hash": "dc675522fdfc160c5ac46a5fad4b6979403a07a969ef749e75fe3674bf616c43",
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "zhadantongxue",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_zd_topping",
@@ -4149,7 +4131,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "zhadantongxue",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_zd_topping",
@@ -4175,7 +4157,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "weiweibao",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_wwb_custom_general",
@@ -4201,7 +4183,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "weiweibao",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_wwb_custom_general",
@@ -4227,7 +4209,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "weiweibao",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_wwb_custom_general",
@@ -4253,7 +4235,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "weiweibao",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_wwb_custom_general",
@@ -4279,7 +4261,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "weiweibao",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_wwb_custom_general",
@@ -4305,7 +4287,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "weiweibao",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_wwb_custom_general",
@@ -4331,7 +4313,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "weiweibao",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_wwb_custom_general",
@@ -4357,7 +4339,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "weiweibao",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_wwb_custom_general",
@@ -4383,7 +4365,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "weiweibao",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_wwb_custom_noodle",
@@ -4409,7 +4391,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "weiweibao",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_wwb_combo_drink",
@@ -4435,7 +4417,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "weiweibao",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_wwb_combo_drink",
@@ -4461,7 +4443,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "weiweibao",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_wwb_combo_drink",
@@ -4487,7 +4469,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "xiaolan",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_xx_spicy",
@@ -4513,7 +4495,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "xiaolan",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_xx_spicy",
@@ -4539,7 +4521,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "xiaolan",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_xx_spicy",
@@ -4565,7 +4547,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "xiaolan",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_xx_spicy",
@@ -4591,7 +4573,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "xiaolan",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_xx_spicy",
@@ -4617,7 +4599,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "xiaolan",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_xx_custom",
@@ -4643,7 +4625,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "xiaolan",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_xx_custom",
@@ -4669,7 +4651,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "xiaolan",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_xx_custom",
@@ -4695,7 +4677,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "xiaolan",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_xx_custom",
@@ -4721,7 +4703,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "xiaolan",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_xx_custom",
@@ -4747,7 +4729,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "xiaolan",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_xx_topping",
@@ -4773,7 +4755,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "benmi",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "benmi_spicy",
@@ -4799,7 +4781,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "benmi",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "benmi_spicy",
@@ -4825,7 +4807,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "benmi",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "benmi_spicy",
@@ -4851,7 +4833,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "benmi",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "benmi_spicy",
@@ -4877,7 +4859,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "thuyngason",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_tns_spicy",
@@ -4903,7 +4885,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "thuyngason",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_tns_spicy",
@@ -4929,7 +4911,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "thuyngason",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_tns_spicy",
@@ -4955,7 +4937,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "thuyngason",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_tns_spicy",
@@ -4981,7 +4963,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "thuyngason",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_tns_custom",
@@ -5007,7 +4989,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "thuyngason",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_tns_custom",
@@ -5033,7 +5015,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "thuyngason",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_tns_custom",
@@ -5059,7 +5041,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "thuyngason",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_tns_custom",
@@ -5085,7 +5067,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "thuyngason",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "cat_tns_topping",
@@ -5111,7 +5093,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "blab_demo",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "blab_demo_cat-mtfz94iw",
@@ -5137,7 +5119,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "blab_demo",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "blab_demo_cat-mtfz94iw",
@@ -5163,7 +5145,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "blab_demo",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "blab_demo_cat-mtfz94iw",
@@ -5189,7 +5171,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "blab_demo",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "blab_demo_cat-mtfz94iw",
@@ -5215,7 +5197,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "haoshiguoshao",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "mod_hs_noodle_type",
@@ -5241,7 +5223,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "haoshiguoshao",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "mod_hs_noodle_type",
@@ -5267,7 +5249,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "haoshiguoshao",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "mod_hs_noodle_type",
@@ -5293,7 +5275,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "haoshiguoshao",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "mod_hs_noodle_type",
@@ -5319,7 +5301,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "haoshiguoshao",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "mod_hs_noodle_type",
@@ -5345,7 +5327,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "haoshiguoshao",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "mod_hs_guoshao_addons",
@@ -5371,7 +5353,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "haoshiguoshao",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "mod_hs_guoshao_addons",
@@ -5397,7 +5379,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "haoshiguoshao",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "mod_hs_guoshao_addons",
@@ -5423,7 +5405,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "haoshiguoshao",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "mod_hs_guoshao_addons",
@@ -5449,7 +5431,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "haoshiguoshao",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "mod_hs_guoshao_addons",
@@ -5475,7 +5457,7 @@
         "conflict_reason": null
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "haoshiguoshao",
         "source_kind": "menu_items.modifier_option",
         "source_group_id": "mod_hs_guoshao_addons",
@@ -5503,7 +5485,7 @@
     ],
     "category_modifier_links": [
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "benmi",
         "category_id": "cat_small",
         "group_id": "mg_cat_benmi_cat_topping",
@@ -5511,7 +5493,7 @@
         "derived_from": "wildcard_all"
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "benmi",
         "category_id": "cat_small",
         "group_id": "mg_cat_benmi_benmi_spicy",
@@ -5519,7 +5501,7 @@
         "derived_from": "wildcard_all"
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "benmi",
         "category_id": "cat_large",
         "group_id": "mg_cat_benmi_cat_topping",
@@ -5527,7 +5509,7 @@
         "derived_from": "wildcard_all"
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "benmi",
         "category_id": "cat_large",
         "group_id": "mg_cat_benmi_benmi_spicy",
@@ -5535,7 +5517,7 @@
         "derived_from": "wildcard_all"
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "benmi",
         "category_id": "cat_combo",
         "group_id": "mg_cat_benmi_cat_topping",
@@ -5543,7 +5525,7 @@
         "derived_from": "wildcard_all"
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "benmi",
         "category_id": "cat_combo",
         "group_id": "mg_cat_benmi_benmi_spicy",
@@ -5551,7 +5533,7 @@
         "derived_from": "wildcard_all"
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "zhadantongxue",
         "category_id": "cat_zd_main",
         "group_id": "mg_cat_zhadantongxue_cat_zd_spicy",
@@ -5559,7 +5541,7 @@
         "derived_from": "token:spicy"
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "zhadantongxue",
         "category_id": "cat_zd_main",
         "group_id": "mg_cat_zhadantongxue_cat_zd_lettuce",
@@ -5567,7 +5549,7 @@
         "derived_from": "token:lettuce"
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "zhadantongxue",
         "category_id": "cat_zd_main",
         "group_id": "mg_cat_zhadantongxue_cat_zd_topping",
@@ -5575,7 +5557,7 @@
         "derived_from": "token:topping"
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "weiweibao",
         "category_id": "cat_wwb_bread",
         "group_id": "mg_cat_weiweibao_cat_wwb_custom_general",
@@ -5583,7 +5565,7 @@
         "derived_from": "token:customizations-general"
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "weiweibao",
         "category_id": "cat_wwb_bread",
         "group_id": "mg_cat_weiweibao_cat_wwb_combo_drink",
@@ -5591,7 +5573,7 @@
         "derived_from": "token:combo-drink-discount"
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "weiweibao",
         "category_id": "cat_wwb_noodle",
         "group_id": "mg_cat_weiweibao_cat_wwb_custom_general",
@@ -5599,7 +5581,7 @@
         "derived_from": "token:customizations-general"
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "weiweibao",
         "category_id": "cat_wwb_noodle",
         "group_id": "mg_cat_weiweibao_cat_wwb_custom_noodle",
@@ -5607,7 +5589,7 @@
         "derived_from": "token:customizations-noodle"
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "weiweibao",
         "category_id": "cat_wwb_pork",
         "group_id": "mg_cat_weiweibao_cat_wwb_custom_general",
@@ -5615,7 +5597,7 @@
         "derived_from": "token:customizations-general"
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "xiaolan",
         "category_id": "cat_xx_banhmi",
         "group_id": "mg_cat_xiaolan_cat_xx_spicy",
@@ -5623,7 +5605,7 @@
         "derived_from": "token:cat_xx_spicy"
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "xiaolan",
         "category_id": "cat_xx_banhmi",
         "group_id": "mg_cat_xiaolan_cat_xx_custom",
@@ -5631,7 +5613,7 @@
         "derived_from": "token:cat_xx_custom"
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "xiaolan",
         "category_id": "cat_xx_banhmi",
         "group_id": "mg_cat_xiaolan_cat_xx_topping",
@@ -5639,7 +5621,7 @@
         "derived_from": "token:cat_xx_topping"
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "thuyngason",
         "category_id": "cat_tns_main",
         "group_id": "mg_cat_thuyngason_cat_tns_spicy",
@@ -5647,7 +5629,7 @@
         "derived_from": "token:cat_tns_spicy"
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "thuyngason",
         "category_id": "cat_tns_main",
         "group_id": "mg_cat_thuyngason_cat_tns_custom",
@@ -5655,7 +5637,7 @@
         "derived_from": "token:cat_tns_custom"
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "thuyngason",
         "category_id": "cat_tns_main",
         "group_id": "mg_cat_thuyngason_cat_tns_topping",
@@ -5663,7 +5645,7 @@
         "derived_from": "token:cat_tns_topping"
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "blab_demo",
         "category_id": "cat_demo_meat",
         "group_id": "mg_cat_blab_demo_blab_demo_cat-mtfz94iw",
@@ -5671,15 +5653,23 @@
         "derived_from": "wildcard_all"
       },
       {
-        "action": "already_equal",
+        "action": "insert",
+        "tenant_id": "haoshiguoshao",
+        "category_id": "cat_hs_guoshao",
+        "group_id": "mg_cat_haoshiguoshao_mod_hs_noodle_type",
+        "sort_order": 0,
+        "derived_from": "wildcard_all"
+      },
+      {
+        "action": "insert",
         "tenant_id": "haoshiguoshao",
         "category_id": "cat_hs_guoshao",
         "group_id": "mg_cat_haoshiguoshao_mod_hs_guoshao_addons",
-        "sort_order": 0,
-        "derived_from": "token:mod_hs_guoshao_addons"
+        "sort_order": 1,
+        "derived_from": "wildcard_all"
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "haoshiguoshao",
         "category_id": "cat_hs_fried_noodles",
         "group_id": "mg_cat_haoshiguoshao_mod_hs_guoshao_addons",
@@ -5687,7 +5677,7 @@
         "derived_from": "token:guoshao-addons"
       },
       {
-        "action": "already_equal",
+        "action": "insert",
         "tenant_id": "haoshiguoshao",
         "category_id": "cat_hs_soups",
         "group_id": "mg_cat_haoshiguoshao_mod_hs_guoshao_addons",

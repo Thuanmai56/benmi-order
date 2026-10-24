@@ -114,7 +114,7 @@ function fixture() {
  CREATE TABLE menu_categories(id TEXT PRIMARY KEY,tenant_id TEXT,slug TEXT,name TEXT,sort_order INTEGER DEFAULT 0,category_type TEXT,allow_customization INTEGER,applied_modifiers TEXT);
  CREATE TABLE menu_items(id TEXT PRIMARY KEY,tenant_id TEXT,category_id TEXT REFERENCES menu_categories(id),name TEXT,price REAL,sort_order INTEGER DEFAULT 0,out_of_stock_until TEXT,badge_text TEXT,is_recommended INTEGER DEFAULT 0,updated_at TEXT);
  CREATE TABLE menu_customizations(id TEXT PRIMARY KEY,tenant_id TEXT,key TEXT,title TEXT,type TEXT,sort_order INTEGER,options_json TEXT);
- CREATE TABLE menu_bundle_rules(id TEXT PRIMARY KEY,tenant_id TEXT,parent_item_id TEXT,schema_version INTEGER,config_json TEXT,is_active INTEGER DEFAULT 1);`);
+ CREATE TABLE menu_bundle_rules(id TEXT PRIMARY KEY,tenant_id TEXT,parent_item_id TEXT,schema_version INTEGER,config_json TEXT,is_active INTEGER DEFAULT 1,UNIQUE(tenant_id,parent_item_id));`);
   for (const file of [
     "0061_unified_bundle_and_customization_schema.sql",
     "0063_clean_customizations_and_category_links.sql",
@@ -141,4 +141,19 @@ function fixture() {
   }
   return { db, ...moduleFor(db) };
 }
-module.exports = { fixture, moduleFor, DatabaseSync };
+function schemaTrueFixture() {
+  const db = new DatabaseSync(":memory:");
+  db.exec("PRAGMA foreign_keys=ON;");
+  const files = fs
+    .readdirSync("benmi-worker-official/migrations")
+    .filter((f) => f.endsWith(".sql"))
+    .sort();
+  for (const file of files) {
+    db.exec(
+      fs.readFileSync("benmi-worker-official/migrations/" + file, "utf8"),
+    );
+  }
+  return { db, ...moduleFor(db) };
+}
+
+module.exports = { fixture, schemaTrueFixture, moduleFor, DatabaseSync };

@@ -1,6 +1,6 @@
 {
-  "run_id": "snap_2026-10-01T11-56-30-635Z",
-  "timestamp": "2026-10-01T11:56:30.640Z",
+  "run_id": "snap_2026-10-22T14-14-29-643Z",
+  "timestamp": "2026-10-22T14:14:29.647Z",
   "source_database": "blab-db-production",
   "is_remote": true,
   "tables": {
@@ -11,28 +11,33 @@
     },
     "tenant_config": {
       "row_count": 14,
-      "sha256": "748b3216eb8f2f70f8846c38f0145263fdd44fc008ad83cb950b77df0cc5b53e",
+      "sha256": "fa8824391c277154d2e35b63eac5b962da6d5dd72f17e2205df79e2260904b8a",
       "file": "tenant_config.json"
     },
     "menu_categories": {
-      "row_count": 82,
-      "sha256": "b7cc9d72bc213f2d2831ea0f6ae3da16b767eba399a6d2b87f42797fbdb0b90d",
+      "row_count": 83,
+      "sha256": "6abaa9db8ddc2d4f2704d1aa2d00e12dbfb8f3aaeb72de8347636ed1fbc403a8",
       "file": "menu_categories.json"
     },
     "menu_items": {
-      "row_count": 527,
-      "sha256": "e4702cf4fd8ee791c670e0e7bf76bfb88925d7a860bd2f62d1dbabfaa42a220a",
+      "row_count": 528,
+      "sha256": "e471eef8cf0658dee620ebacf6ca6e71c8f94410c6ef806ed4ea82b0148e94ac",
       "file": "menu_items.json"
     },
     "menu_customizations": {
       "row_count": 26,
-      "sha256": "e9674e9898f16246970bfe77dcd2807957436f3271881d8c7751ed6f292d2f16",
+      "sha256": "e311e0a86ca91a4052456dfceffdae43bc6a1def23ea0ada1334ce8cb577a284",
       "file": "menu_customizations.json"
     },
     "menu_customization_option_rules": {
       "row_count": 5,
       "sha256": "6618663406a1d36a1e5c4efcb8a8284eb29e079f4dc43e44fa958dfafdef20db",
       "file": "menu_customization_option_rules.json"
+    },
+    "menu_bundle_rules": {
+      "row_count": 31,
+      "sha256": "886f53a5a505f62a91cbc8f2032fa164d0ade9ff634673e52dcf3f1662fabcd4",
+      "file": "menu_bundle_rules.json"
     },
     "modifier_groups": {
       "row_count": 0,
@@ -55,10 +60,10 @@
       "file": "item_modifier_links.json"
     },
     "d1_migrations": {
-      "row_count": 70,
-      "sha256": "f94b10a96d479f03deb742d0233d428425410137736152acfdddd211b6bba025",
+      "row_count": 73,
+      "sha256": "2a2bbd58039896efca2db3b902c3c49926275af3a9963ee0278bb0aa13594dfe",
       "file": "d1_migrations.json"
     }
   },
-  "overall_sha256": "648ec114a2f5ea00b58c946ea5ea79fbe54b856c57b574c25aef608733a93ac6"
+  "overall_sha256": "2bb72abe7ec02dabd1e89c9aec4b6c0a9323fef665f8d9fd40a903ad9c235829"
 }

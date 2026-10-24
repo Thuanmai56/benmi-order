@@ -1,5 +1,8 @@
 export interface Env extends Partial<Pick<RuntimeBindings,
   'LINE_RUNTIME_ENABLED' | 'LINE_RUNTIME_TENANTS' | 'LINE_RUNTIME_ENVIRONMENT' | 'LINE_SECRET_KEYS'>> {
+  BUILD_COMMIT?: string;
+  BUILD_ENVIRONMENT?: string;
+  BUILD_DIRTY?: string;
   UNIFIED_MENU_ENABLED?: string;
   ORDER_DETAIL_READS?: string;
   ORDER_DETAIL_WRITES?: string;
