@@ -378,7 +378,7 @@ async function initEditOrderModeIfPresent() {
             }
 
             if (data.order.detailSnapshot?.schemaVersion === 1) {
-                DetailCheckout.setContext(data.order);
+                if (typeof DetailCheckout !== 'undefined') DetailCheckout.setContext(data.order);
                 const rounds = data.order.detailSnapshot.rounds.filter(r => r.legacyContent === undefined);
                 const requestedRound = Number(urlParams.get('round'));
                 const selectedRound = rounds.find(r => r.roundNumber === requestedRound) || rounds[rounds.length - 1];
@@ -511,7 +511,7 @@ async function initEditOrderModeIfPresent() {
                         });
                     } else {
                         if (item.lineId) {
-                            DetailCheckout.register(matchedKey, item);
+                            if (typeof DetailCheckout !== 'undefined') DetailCheckout.register(matchedKey, item);
                             customizeData[matchedKey] = (customizeData[matchedKey] || []).concat(item.portions.map(p => ({ note: p.note })));
                         }
                         cart[matchedKey] = (cart[matchedKey] || 0) + qty;
@@ -2064,7 +2064,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                     "Content-Type": "application/json",
                     "X-Tenant-ID": tenantId
                 },
-                body: JSON.stringify(await DetailCheckout.prepare(appendPayload)),
+                body: JSON.stringify(typeof DetailCheckout !== 'undefined' ? await DetailCheckout.prepare(appendPayload) : appendPayload),
                 signal: abortController.signal
             });
 
@@ -2196,7 +2196,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                     "Content-Type": "application/json",
                     "X-Tenant-ID": tenantId
                 },
-                body: JSON.stringify(await DetailCheckout.prepare(modifyPayload)),
+                body: JSON.stringify(typeof DetailCheckout !== 'undefined' ? await DetailCheckout.prepare(modifyPayload) : modifyPayload),
                 signal: abortController.signal
             });
 
@@ -2337,7 +2337,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                 "Content-Type": "application/json",
                 "X-Tenant-ID": tenantId
             },
-            body: JSON.stringify(await DetailCheckout.prepare(orderPayload)),
+            body: JSON.stringify(typeof DetailCheckout !== 'undefined' ? await DetailCheckout.prepare(orderPayload) : orderPayload),
             signal: abortController.signal
         });
 
@@ -2496,7 +2496,9 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                 if (typeof updateTotal === 'function') updateTotal();
                 customAlert(`${safeMessage}${expected !== undefined ? `<br>${vi ? 'Số tiền cập nhật' : '更新後金額'}：$${Number(expected)}` : ''}`, () => {
                     if (location && (!optionError || (product?.bundleRule && !product.isOutOfStock))) {
-                        openBundleBuilderModal(location.catSlug, location.origName, Number(details.portionIndex || 0));
+                        if (typeof openBundleBuilderModal === 'function') {
+                            openBundleBuilderModal(location.catSlug, location.origName, Number(details.portionIndex || 0));
+                        }
                         if (details.groupId && typeof window.bundleFocusGroup === 'function') window.bundleFocusGroup(details.groupId);
                     }
                 });

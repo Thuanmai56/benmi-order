@@ -56,7 +56,10 @@ function createCheckoutEnvironment(overrides = {}) {
       querySelectorAll: (sel) => [],
       querySelector: (sel) => null,
       createElement: (tag) => element(tag),
-      documentElement: { classList: { add() {}, remove() {}, contains: () => false } },
+      documentElement: {
+        style: { setProperty() {}, getPropertyValue: () => '' },
+        classList: { add() {}, remove() {}, contains: () => false }
+      },
     },
     sessionStorage: { getItem: () => null, setItem() {}, removeItem() {} },
     localStorage: { getItem: () => null, setItem() {}, removeItem() {} },
@@ -64,7 +67,7 @@ function createCheckoutEnvironment(overrides = {}) {
     AbortController,
     AbortSignal,
     WORKER_BASE: 'https://worker.test',
-    cart: { mys_ec_01: 1 },
+    cart: { 'cat_egg_cake_原味雞蛋糕 (5入)': 1 },
     customizeData: {},
     comboDrinkData: {},
     bootstrapData: {
@@ -85,7 +88,7 @@ function createCheckoutEnvironment(overrides = {}) {
     getTenantIdFromUrl: () => 'miyansuo',
     formatTaiwanDateTime: () => ({ dateStr: '2026-10-24', timeStr: '12:00' }),
     parseCartKey: (k) => ({ catSlug: 'cat_egg_cake', origName: '原味雞蛋糕 (5入)' }),
-    resolveCatalogItem: (k) => ({ displayName: '原味雞蛋糕 (5入)', targetItem: { price: 60 } }),
+    resolveCatalogItem: (k) => ({ displayName: '原味雞蛋糕 (5入)', itemId: 'mys_ec_01', targetItem: { price: 60 } }),
     buildStructuredCartItems: () => [{ itemId: 'mys_ec_01', name: '原味雞蛋糕 (5入)', quantity: 1, price: 60 }],
     getStructuredGlobalCustomizations: () => [],
     updateTotal: () => 60,
@@ -157,7 +160,7 @@ test('doSubmitOrderExecution unlocks submit buttons when server returns 400 reje
   assert.equal(env.alerts.length, 1);
   assert.match(env.alerts[0].msg, /請為套餐選擇內容搭配/);
   // Verify cart is NOT cleared on rejection
-  assert.equal(env.cart.mys_ec_01, 1);
+  assert.equal(env.cart['cat_egg_cake_原味雞蛋糕 (5入)'], 1);
 });
 
 test('doSubmitOrderExecution unlocks submit buttons when pre-submit stock validation fails', async () => {
