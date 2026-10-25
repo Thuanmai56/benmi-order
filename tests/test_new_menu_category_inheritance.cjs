@@ -2,7 +2,7 @@ const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { schemaTrueFixture } = require("./helpers/option-groups.cjs");
 
-test("Category Inheritance: All products in category inherit group; other categories do not", async () => {
+test("Abolished Category Inheritance: Category-level linking is disabled; only explicit itemIds link groups", async () => {
   const f = schemaTrueFixture();
   const catalog = await f.api.loadOptionCatalog(f.env, "haoshiguoshao");
   const targetCategory = catalog.categories.find((c) => c.id === "cat_hs_guoshao");
@@ -10,10 +10,10 @@ test("Category Inheritance: All products in category inherit group; other catego
 
   const itemsInCategory = catalog.products.filter((p) => p.category_id === targetCategory.id);
   assert.ok(itemsInCategory.length >= 2, "Should have at least 2 items in cat_hs_guoshao");
-  const itemInOtherCat = catalog.products.find((p) => p.category_id !== targetCategory.id);
-  assert.ok(itemInOtherCat, "Should have items in other categories");
+  const linkedItem = itemsInCategory[0];
+  const unlinkedItem = itemsInCategory[1];
 
-  // Create an option group linked to cat_hs_guoshao
+  // Create an option group linked directly only to linkedItem, with categoryIds ignored
   const newGroup = {
     id: "g_hs_spicy_level",
     name: "辣度選擇",
@@ -23,7 +23,7 @@ test("Category Inheritance: All products in category inherit group; other catego
     maxSelection: 1,
     allowRepeats: false,
     categoryIds: [targetCategory.id],
-    itemIds: [],
+    itemIds: [linkedItem.id],
     sources: [],
     options: [
       { id: "opt_hs_no_spicy", name: "不辣", price: 0, quantity: 1 },
@@ -37,30 +37,25 @@ test("Category Inheritance: All products in category inherit group; other catego
 
   const refreshedCatalog = await f.api.loadOptionCatalog(f.env, "haoshiguoshao");
 
-  // Every item in target category MUST inherit g_hs_spicy_level
-  for (const item of itemsInCategory) {
-    const groups = f.api.effectiveGroups(refreshedCatalog, item.id);
-    const hasSpicy = groups.some((g) => g.id === "g_hs_spicy_level");
-    assert.ok(hasSpicy, `Item ${item.name} (${item.id}) in ${targetCategory.id} must inherit g_hs_spicy_level`);
-  }
+  // Only the directly linked item gets the group
+  const linkedGroups = f.api.effectiveGroups(refreshedCatalog, linkedItem.id);
+  assert.ok(linkedGroups.some((g) => g.id === "g_hs_spicy_level"), "Directly linked item must have group");
 
-  // Item in other category MUST NOT inherit g_hs_spicy_level
-  const otherGroups = f.api.effectiveGroups(refreshedCatalog, itemInOtherCat.id);
-  const otherHasSpicy = otherGroups.some((g) => g.id === "g_hs_spicy_level");
-  assert.equal(otherHasSpicy, false, `Item ${itemInOtherCat.name} in other category must NOT inherit g_hs_spicy_level`);
+  // Unlinked item in the same category must NOT inherit the group
+  const unlinkedGroups = f.api.effectiveGroups(refreshedCatalog, unlinkedItem.id);
+  assert.equal(unlinkedGroups.some((g) => g.id === "g_hs_spicy_level"), false, "Unlinked item must not inherit group from category");
 
   f.db.close();
 });
 
-test("Category Inheritance Override: Product can explicitly disable inherited category group", async () => {
+test("Direct Link Product Override: Product can explicitly disable linked group", async () => {
   const f = schemaTrueFixture();
   const catalog = await f.api.loadOptionCatalog(f.env, "haoshiguoshao");
   const targetCategory = catalog.categories.find((c) => c.id === "cat_hs_guoshao");
   const items = catalog.products.filter((p) => p.category_id === targetCategory.id);
   const itemToOverride = items[0];
-  const siblingItem = items[1];
 
-  // 1. Create category-linked group
+  // 1. Create directly linked group
   const groupPayload = {
     id: "g_hs_temp_override",
     name: "溫度",
@@ -68,7 +63,7 @@ test("Category Inheritance Override: Product can explicitly disable inherited ca
     scope: "item",
     minSelection: 1,
     maxSelection: 1,
-    categoryIds: [targetCategory.id],
+    itemIds: [itemToOverride.id],
     options: [
       { id: "opt_hot", name: "熱", price: 0, quantity: 1 },
       { id: "opt_warm", name: "溫", price: 0, quantity: 1 },
@@ -104,18 +99,10 @@ test("Category Inheritance Override: Product can explicitly disable inherited ca
     "Overridden item must have g_hs_temp_override disabled"
   );
 
-  // Sibling item MUST still have the inherited group
-  const siblingGroups = f.api.effectiveGroups(refreshed, siblingItem.id);
-  assert.equal(
-    siblingGroups.some((g) => g.id === "g_hs_temp_override"),
-    true,
-    "Sibling item must still inherit g_hs_temp_override"
-  );
-
   f.db.close();
 });
 
-test("Category Inheritance Subset: Product can restrict inherited group to a subset of options", async () => {
+test("Direct Link Subset: Product can restrict group to a subset of options", async () => {
   const f = schemaTrueFixture();
   const catalog = await f.api.loadOptionCatalog(f.env, "haoshiguoshao");
   const targetCategory = catalog.categories.find((c) => c.id === "cat_hs_guoshao");
@@ -123,7 +110,7 @@ test("Category Inheritance Subset: Product can restrict inherited group to a sub
   const itemA = items[0];
   const itemB = items[1];
 
-  // Group has 4 options
+  // Group has 4 options, directly linked to itemA and itemB
   const groupPayload = {
     id: "g_hs_topping_subset",
     name: "加料",
@@ -131,7 +118,7 @@ test("Category Inheritance Subset: Product can restrict inherited group to a sub
     scope: "item",
     minSelection: 0,
     maxSelection: 2,
-    categoryIds: [targetCategory.id],
+    itemIds: [itemA.id, itemB.id],
     options: [
       { id: "opt_t1", name: "滷蛋", price: 15, quantity: 1 },
       { id: "opt_t2", name: "貢丸", price: 15, quantity: 1 },
@@ -175,37 +162,6 @@ test("Category Inheritance Subset: Product can restrict inherited group to a sub
   const fullGroupB = groupsB.find((g) => g.id === "g_hs_topping_subset");
   assert.ok(fullGroupB, "Item B must have g_hs_topping_subset");
   assert.equal(fullGroupB.options.length, 4);
-
-  f.db.close();
-});
-
-test("Category Inheritance: No duplication when item is linked directly AND via category", async () => {
-  const f = schemaTrueFixture();
-  const catalog = await f.api.loadOptionCatalog(f.env, "haoshiguoshao");
-  const targetCategory = catalog.categories.find((c) => c.id === "cat_hs_guoshao");
-  const targetItem = catalog.products.find((p) => p.category_id === targetCategory.id);
-
-  // Link to both categoryIds and itemIds
-  const groupPayload = {
-    id: "g_hs_dual_link",
-    name: "雙重關聯測試",
-    revision: 0,
-    scope: "item",
-    minSelection: 1,
-    maxSelection: 1,
-    categoryIds: [targetCategory.id],
-    itemIds: [targetItem.id],
-    options: [
-      { id: "opt_d1", name: "選項1", price: 0, quantity: 1 },
-      { id: "opt_d2", name: "選項2", price: 0, quantity: 1 },
-    ],
-  };
-  await f.save("group", groupPayload, "haoshiguoshao");
-
-  const refreshed = await f.api.loadOptionCatalog(f.env, "haoshiguoshao");
-  const groups = f.api.effectiveGroups(refreshed, targetItem.id);
-  const dualMatches = groups.filter((g) => g.id === "g_hs_dual_link");
-  assert.equal(dualMatches.length, 1, "Must never duplicate group in effectiveGroups");
 
   f.db.close();
 });

@@ -276,22 +276,6 @@
   const productById = (id) => catalog.products.find((p) => p.id === id);
   function options(group) {
     const result = clone(group.options || []);
-    for (const source of group.sources || [])
-      for (const p of catalog.products) {
-        if (
-          (source.type === "category"
-            ? p.category_id === (source.refId || source.categoryId)
-            : source.itemIds?.includes(p.id)) &&
-          !result.some((o) => o.productId === p.id)
-        )
-          result.push({
-            id: `source:${group.id}:${p.id}`,
-            productId: p.id,
-            price: Number(group.metadata?.legacySurcharges?.[p.id] || 0),
-            quantity: 1,
-            fromSource: true,
-          });
-      }
     return result.map((o) => {
       const p = productById(o.productId);
       return {
@@ -312,17 +296,12 @@
   }
   function productGroups(product) {
     const direct = product.links || [];
-    const inherited = catalog.categoryLinks.filter(
-      (l) =>
-        l.categoryId === product.categoryId &&
-        !direct.some((d) => d.groupId === l.groupId),
-    );
-    return [...direct, ...inherited]
+    return direct
       .filter((l) => !l.disabled)
       .map((l) => ({
         group: groupById(l.groupId),
         link: l,
-        inherited: !direct.includes(l),
+        inherited: false,
       }))
       .filter((v) => v.group && v.group.scope !== "order");
   }
@@ -348,23 +327,7 @@
       catalog.links
         .filter((l) => l.groupId === group.id && !l.disabled)
         .map((l) => l.itemId);
-    const cats =
-      group.categoryIds ||
-      catalog.categoryLinks
-        .filter((l) => l.groupId === group.id)
-        .map((l) => l.categoryId);
-    return [...new Set([
-      ...ids,
-      ...catalog.products
-        .filter(
-          (p) =>
-            cats.includes(p.category_id) &&
-            !catalog.links.some(
-              (l) => l.groupId === group.id && l.itemId === p.id && l.disabled,
-            ),
-        )
-        .map((p) => p.id),
-    ])];
+    return [...new Set(ids)];
   }
   const affected = (group) => affectedIds(group).length;
   const sortedIds = (ids) => [...new Set(ids || [])].sort();
@@ -414,9 +377,9 @@
       maxSelection: d.included ? null : d.maxSelection,
       allowRepeats: Boolean(d.allowRepeats), included: Boolean(d.included),
       autoPopup: d.scope === "item" ? Boolean(d.included || Number(d.minSelection) > 0) : null,
-      options: (d.options || []).filter((o) => !o.fromSource).map(optionValues),
-      itemIds: sortedIds(d.itemIds), categoryIds: sortedIds(d.categoryIds),
-      sources: (d.sources || []).map((s) => ({ type: s.type, refId: s.refId || s.categoryId || null, itemIds: sortedIds(s.itemIds) })).sort((a, b) => stable(a).localeCompare(stable(b))),
+      options: (d.options || []).map(optionValues),
+      itemIds: sortedIds(d.itemIds), categoryIds: [],
+      sources: [],
     });
   }
   function routeSnapshot(r) {
@@ -447,9 +410,7 @@
     };
   }
   function sourceContains(group, option) {
-    const p = productById(option.productId);
-    return p && (group.sources || []).some((s) => s.type === "category"
-      ? p.category_id === (s.refId || s.categoryId) : s.itemIds?.includes(p.id));
+    return false;
   }
   const btn = (action, label, attrs = "") =>
     `<button type="button" data-action="${action}" ${attrs}>${esc(tr(label))}</button>`;
@@ -712,7 +673,7 @@
       .map(({ group: g, link, inherited }) => row(
         "subset",
         g.name,
-        `${rule(g)} · ${link.optionIds ? `${options(g).filter((o) => link.optionIds.includes(o.id)).length}/${options(g).length}` : options(g).length} ${tr("ugOptions").toLowerCase()}${inherited ? " · " + tr("ugInherited") : ""}${insufficient(g, link) ? " · " + tr("ugInsufficient") : ""}`,
+        `${rule(g)} · ${link.optionIds ? `${options(g).filter((o) => link.optionIds.includes(o.id)).length}/${options(g).length}` : options(g).length} ${tr("ugOptions").toLowerCase()}${insufficient(g, link) ? " · " + tr("ugInsufficient") : ""}`,
         `data-id="${esc(g.id)}"`,
       ))
       .join("") || `<p class="ug-muted">${esc(tr("ugNoGroups"))}</p>`}</div></section>`;
@@ -760,7 +721,7 @@
       if (isOrder) {
         body += `<section class="ug-order-scope-notice"><p class="ug-muted">${esc(tr("ugAppliesToOrder"))}</p></section>`;
       } else {
-        body += `<section><div class="ug-section-title"><h3>${esc(tr("ugLinked"))} (${affected(d)})</h3>${btn("linked", "ugLink")}</div><div class="ug-linked">${affectedIds(d).map((id) => `<div>${esc(productById(id)?.name || "")}${!d.itemIds.includes(id) ? ` <small class="ug-muted">· ${esc(tr("ugInherited"))}</small>` : ""}</div>`).join("") || `<span class="ug-muted">${esc(tr("ugEmpty"))}</span>`}</div></section>`;
+        body += `<section><div class="ug-section-title"><h3>${esc(tr("ugLinked"))} (${affected(d)})</h3>${btn("linked", "ugLink")}</div><div class="ug-linked">${affectedIds(d).map((id) => `<div>${esc(productById(id)?.name || "")}</div>`).join("") || `<span class="ug-muted">${esc(tr("ugEmpty"))}</span>`}</div></section>`;
       }
       body += !d.isNew ? btn("delete", "ugDelete", 'class="ug-danger"') : "";
     } else if (r.page === "groups") {
@@ -828,8 +789,9 @@
           `</div>` +
           `<div class="ug-category-items ug-list" ${isOpen ? "" : "hidden"}>` +
             products.map((p) => {
-              const inherited = r.page === "linked" && !r.ids.includes(p.id) && affectedIds(d).includes(p.id);
-              return check(p.id, p.name, inherited ? tr("ugInherited") : `${tr("ugRetail")} $${p.price}`, inherited || existingSubProducts.includes(p.id) || r.ids.includes(p.id), "product", p.category_id, inherited || existingSubProducts.includes(p.id));
+              const isChecked = existingSubProducts.includes(p.id) || r.ids.includes(p.id);
+              const isDisabled = existingSubProducts.includes(p.id);
+              return check(p.id, p.name, `${tr("ugRetail")} $${p.price}`, isChecked, "product", p.category_id, isDisabled);
             }).join("") +
           `</div>` +
         `</div>`;
@@ -928,12 +890,10 @@
         return;
       }
       const selectedCount = catProducts.filter((p) => {
-        const inherited = r.page === "linked" && !r.ids.includes(p.id) && affectedIds(d).includes(p.id);
-        return inherited || existingSubProducts.includes(p.id) || r.ids.includes(p.id);
+        return existingSubProducts.includes(p.id) || r.ids.includes(p.id);
       }).length;
       const selectableProducts = catProducts.filter((p) => {
-        const inherited = r.page === "linked" && !r.ids.includes(p.id) && affectedIds(d).includes(p.id);
-        return !(inherited || existingSubProducts.includes(p.id));
+        return !existingSubProducts.includes(p.id);
       });
       catCheckbox.disabled = selectableProducts.length === 0;
       if (selectedCount === catProducts.length) {
@@ -996,8 +956,7 @@
         const catProducts = catalog.products.filter((p) => (catId === "uncategorized" ? !catalog.categories.some((c) => c.id === p.category_id) : p.category_id === catId));
         const existingSubProducts = r.page === "sub-products" ? state.stack.at(-1)?.route.option.subOptions?.map((sub) => sub.productId).filter(Boolean) || [] : [];
         const selectableProducts = catProducts.filter((p) => {
-          const inherited = r.page === "linked" && !r.ids.includes(p.id) && affectedIds(d).includes(p.id);
-          return !(inherited || existingSubProducts.includes(p.id));
+          return !existingSubProducts.includes(p.id);
         });
         if (el.checked) {
           for (const p of selectableProducts) {
@@ -1257,17 +1216,8 @@
         for (const id of r.ids) {
           let l = d.links.find((l) => l.groupId === id);
           if (l) l.disabled = false;
-          else if (
-            !catalog.categoryLinks.some(
-              (l) => l.groupId === id && l.categoryId === d.categoryId,
-            )
-          )
-            d.links.push({ groupId: id, optionIds: null, disabled: false });
+          else d.links.push({ groupId: id, optionIds: null, disabled: false });
         }
-        for (const l of catalog.categoryLinks.filter(
-          (l) => l.categoryId === d.categoryId && !r.ids.includes(l.groupId),
-        ))
-          d.links.push({ groupId: l.groupId, optionIds: null, disabled: true });
       }
       if (r.page === "subset") {
         const g = groupById(r.id),
@@ -1287,17 +1237,11 @@
           return render();
         }
         d.links = d.links.filter((l) => l.groupId !== r.id);
-        if (
-          r.optionIds !== null ||
-          !catalog.categoryLinks.some(
-            (l) => l.groupId === r.id && l.categoryId === d.categoryId,
-          )
-        )
-          d.links.push({
-            groupId: r.id,
-            optionIds: r.optionIds,
-            disabled: false,
-          });
+        d.links.push({
+          groupId: r.id,
+          optionIds: r.optionIds,
+          disabled: false,
+        });
       }
       if (r.page === "sub-products") {
         const parent = state.stack.at(-1).route.option;
@@ -1631,7 +1575,8 @@
               scope,
               autoPopup: Boolean(g.included || Number(g.minSelection) > 0),
               isNew: false,
-              categoryIds: catalog.categoryLinks.filter((l) => l.groupId === id).map((l) => l.categoryId),
+              categoryIds: [],
+              sources: [],
               itemIds: catalog.links.filter((l) => l.groupId === id && !l.disabled).map((l) => l.itemId),
             }
           : {

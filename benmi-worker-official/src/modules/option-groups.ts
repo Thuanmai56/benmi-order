@@ -130,16 +130,16 @@ export async function loadOptionCatalog(env: Env, tenantId: string): Promise<Opt
 			optionIds: parse(l.option_ids_json, null),
 			disabled: Boolean(l.is_disabled),
 		})),
-		categoryLinks: categoryLinks.map((l) => ({ categoryId: l.category_id, groupId: l.group_id })),
+		categoryLinks: [],
 	};
 	return catalog;
 }
 
-/** Resolve live product data and category sources. A retail price is never a surcharge. */
+/** Resolve live product data. A retail price is never a surcharge. */
 export function groupOptions(catalog: OptionCatalog, group: OptionGroup): MenuOption[] {
-	const options = group.options.map((o) => ({ ...o }));
+	const options = (group.options || []).map((o) => ({ ...o }));
 	const seen = new Set(options.map((o) => o.productId).filter(Boolean));
-	for (const source of group.sources) {
+	for (const source of group.sources || []) {
 		for (const product of catalog.products) {
 			const matches =
 				source.type === 'category'
@@ -192,16 +192,13 @@ export function effectiveGroups(catalog: OptionCatalog, productId: string): Opti
 	const product = catalog.products.find((p) => p.id === productId);
 	if (!product) throw new Error('PRODUCT_NOT_FOUND');
 	const direct = catalog.links.filter((l) => l.itemId === productId);
-	const inherited = catalog.categoryLinks.filter(
-		(l) => l.categoryId === product.category_id && !direct.some((d) => d.groupId === l.groupId),
-	);
-	return [...direct, ...inherited]
+	return direct
 		.filter((l) => !l.disabled)
 		.map((link) => {
 			const group = catalog.groups.find((g) => g.id === link.groupId);
 			if (!group || group.scope === 'order') return null;
 			const options = groupOptions(catalog, group).filter((o) => !Array.isArray(link.optionIds) || link.optionIds.includes(o.id));
-			return { ...group, options, inherited: !direct.includes(link), optionIds: link.optionIds ?? null };
+			return { ...group, options, inherited: false, optionIds: link.optionIds ?? null };
 		})
 		.filter(Boolean) as OptionGroup[];
 }
@@ -526,22 +523,14 @@ export async function saveOptionEntity(request: Request, env: Env, kind: 'produc
 			}
 			if (group.scope === 'order') {
 				raw.itemIds = [];
-				raw.categoryIds = [];
-				group.sources = [];
 			}
+			group.sources = raw.sources ?? (group.metadata?.legacyBundleRuleId ? group.sources : []);
 			raw.itemIds = raw.itemIds ?? catalog.links.filter((l) => l.groupId === id && !l.disabled).map((l) => l.itemId);
 			const itemIds = raw.itemIds;
 			if (!Array.isArray(itemIds) || itemIds.some((pid: string) => !catalog.products.some((p) => p.id === pid)))
 				throw new Error('INVALID_LINKED_PRODUCTS');
-			const categoryIds = raw.categoryIds ?? catalog.categoryLinks.filter((l) => l.groupId === id).map((l) => l.categoryId);
-			if (
-				!Array.isArray(categoryIds) ||
-				categoryIds.some((cid: string) => !catalog.categories.some((c) => c.id === cid && (c.category_type || 'catalog') === 'catalog'))
-			)
-				throw new Error('INVALID_LINKED_CATEGORIES');
-			catalog.categoryLinks = catalog.categoryLinks
-				.filter((l) => l.groupId !== id)
-				.concat([...new Set<string>(categoryIds)].map((categoryId) => ({ categoryId, groupId: id })));
+			const categoryIds: string[] = [];
+			catalog.categoryLinks = catalog.categoryLinks.filter((l) => l.groupId !== id);
 			const oldLinks = catalog.links.filter((l) => l.groupId === id);
 			const newLinks = oldLinks
 				.filter((l) => l.disabled && !itemIds.includes(l.itemId))

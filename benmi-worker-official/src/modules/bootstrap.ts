@@ -802,13 +802,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
               try { appliedModifiers = JSON.parse(cat.applied_modifiers || '[]'); }
               catch { appliedModifiers = String(cat.applied_modifiers || '').split(',').map((s: string) => s.trim()).filter(Boolean); }
             }
-            const itItemMods = itemModifierGroupsMap.get(it.id) || [];
-            const itCatMods = categoryModifierGroupsMap.get(it.category_id) || [];
-            const itExistingGids = new Set(itItemMods.map((g: any) => g.id));
-            const modGroups = [
-              ...itItemMods,
-              ...itCatMods.filter((g: any) => !itExistingGids.has(g.id))
-            ];
+            const modGroups = itemModifierGroupsMap.get(it.id) || [];
             eligibleItems.push({
               id: it.id,
               name: it.name,
@@ -905,13 +899,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
                        imageList.some(k => k.endsWith(`_${item.name}`) || (k.includes('_') && k.split('_').slice(1).join('_') === item.name));
       const imageUrl = hasImage ? `/api/image?tenant_id=${tenantId}&name=${encodeURIComponent(item.name)}` : null;
       const bundleRule = bundleRulesByItemId.get(item.id) || null;
-      const itemModGroups = itemModifierGroupsMap.get(item.id) || [];
-      const catModGroups = categoryModifierGroupsMap.get(item.category_id) || [];
-      const existingGids = new Set(itemModGroups.map((g: any) => g.id));
-      const modGroups = [
-        ...itemModGroups,
-        ...catModGroups.filter((g: any) => !existingGids.has(g.id))
-      ];
+      const modGroups = itemModifierGroupsMap.get(item.id) || [];
 
       itemsByCatId.get(item.category_id)!.push({
         id: item.id,

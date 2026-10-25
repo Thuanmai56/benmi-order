@@ -41,12 +41,10 @@ test('editing in a group only applies to its draft, then group save writes once'
   await app.click('save'); assert.equal(app.posts[0].name,'Tên nhóm mới'); assert.equal(app.posts[0].options[0].price,9);
 });
 
-test('unchanged child apply and source-option apply never materialize an override', async () => {
-  for (const [source,id] of [[false,'coffee_option'],[true,'source:drinks:tea']]) {
-    const app = await setup({source}); app.context.UnifiedMenu.group('drinks');
-    await app.click('option',`[data-id="${id}"]`); await app.click('apply'); await app.click('close');
-    assert.equal(app.drawer().hidden,true); assert.equal(app.posts.length,0);
-  }
+test('unchanged child apply never materializes an override', async () => {
+  const app = await setup(); app.context.UnifiedMenu.group('drinks');
+  await app.click('option','[data-id="coffee_option"]'); await app.click('apply'); await app.click('close');
+  assert.equal(app.drawer().hidden,true); assert.equal(app.posts.length,0);
 });
 
 test('reverting fields, toggles and legacy child representations becomes clean', async () => {
@@ -107,13 +105,9 @@ test('removing in a draft waits for group save, direct removal waits for server 
   await app.click('remove-option'); assert.equal(app.drawer().hidden,true); assert.equal(app.posts.at(-1).options.length,0);
 });
 
-test('source options retain automatic source; meaningful edit creates only a selected override', async () => {
-  const app = await setup({source:true}); app.context.UnifiedMenu.group('drinks','option','source:drinks:tea');
-  assert.equal(app.get('[data-action="remove-option"]').disabled,true); app.input('option.price',6); await app.click('save');
-  assert.equal(app.posts[0].options.filter((o)=>o.productId==='tea').length,1);
-  assert.equal(app.posts[0].options.find((o)=>o.productId==='tea').fromSource,false);
-  assert.equal(app.posts[0].options.find((o)=>o.productId==='coffee').price,0);
-  assert.deepEqual(app.posts[0].sources,[{type:'category',categoryId:'drinks'}]);
+test('category sources are abolished: options are only direct options', async () => {
+  const app = await setup({source:true}); app.context.UnifiedMenu.group('drinks');
+  assert.equal(app.drawer().querySelector('[data-id="source:drinks:tea"]'), null);
 });
 
 test('option form sections and primary action use Traditional Chinese labels', async () => {
@@ -198,20 +192,13 @@ test('saving product options only writes links and preserves inline drafts and t
   assert.equal(app.catalog().groups[0].options.length,2);
 });
 
-test('options entry preserves inherited defaults on no-op apply and warns for unapplied changes', async () => {
-  const app = await setup(); app.catalog().links = [];
+test('category inheritance is abolished: options entry does not inherit from categoryLinks', async () => {
+  const app = await setup();
+  app.catalog().links = [];
   app.catalog().categoryLinks = [{groupId:'drinks',categoryId:'food'}];
-  await app.context.UnifiedMenu.load(); app.context.UnifiedMenu.product(0,0,'options');
-  assert.equal(app.get('[data-action="subset"]').textContent.includes('Từ phân loại'),true);
-  await app.click('groups'); app.input('search','đồ uống'); await app.click('apply');
-  await app.click('subset','[data-id="drinks"]'); await app.click('apply'); await app.click('close');
-  assert.equal(app.drawer().hidden,true); assert.equal(app.posts.length,0); assert.deepEqual(app.catalog().links,[]);
-  app.context.UnifiedMenu.product(0,0,'options'); await app.click('subset','[data-id="drinks"]');
-  const option = app.get('[data-check="subset"][value="custom"]'); option.checked = false; app.emit('input',option);
-  await app.click('close'); assert.equal(app.get('.ug-confirmation').hidden,false);
-  await app.click('continue'); assert.equal(app.get('[data-check="subset"][value="custom"]').checked,false);
-  await app.click('defaults'); await app.click('apply'); await app.click('save');
-  assert.equal(app.drawer().hidden,true); assert.equal(app.posts.length,0);
+  await app.context.UnifiedMenu.load();
+  app.context.UnifiedMenu.product(0,0,'options');
+  assert.equal(app.drawer().querySelector('[data-action="subset"]'), null);
 });
 
 test('options-only network failures and version conflicts retain the subset draft for retry', async () => {
