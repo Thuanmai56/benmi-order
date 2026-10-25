@@ -37,6 +37,8 @@ export default (ctx: ConfigContext) => {
 						},
 					},
 					env: {
+						LINE_PAY_ENABLED: bindings.text("false"),
+						LINE_PAY_DEPLOYMENT_ENV: bindings.text("test"),
 						LIFF_ID: bindings.text("2009555608-DMioljsI"),
 						LIFF_URL: bindings.text("https://liff.line.me/2009555608-DMioljsI"),
 						DB: bindings.d1({
@@ -88,6 +90,8 @@ export default (ctx: ConfigContext) => {
 						},
 					},
 					env: {
+						LINE_PAY_ENABLED: bindings.text("false"),
+						LINE_PAY_DEPLOYMENT_ENV: bindings.text("dev"),
 						LIFF_ID: bindings.text("2011224566-kLLdMjkq"),
 						LIFF_URL: bindings.text("https://liff.line.me/2011224566-kLLdMjkq"),
 						DB: bindings.d1({
@@ -139,6 +143,8 @@ export default (ctx: ConfigContext) => {
 						},
 					},
 					env: {
+						LINE_PAY_ENABLED: bindings.text("false"),
+						LINE_PAY_DEPLOYMENT_ENV: bindings.text("production"),
 						LIFF_ID: bindings.text("2009560906-c5taZfiY"),
 						LIFF_URL: bindings.text("https://liff.line.me/2009560906-c5taZfiY"),
 						DB: bindings.d1({

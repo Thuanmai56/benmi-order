@@ -43,6 +43,7 @@ const suites = [
   ['worker-types', ['benmi-worker-official/node_modules/typescript/bin/tsc', '--noEmit', '-p', 'benmi-worker-official/tsconfig.json']],
   ['cloudflare-config', ['--test', 'scripts/test-cloudflare-cli.mjs']],
   ['staff-capability-schema', ['--test', 'tests/test_staff_capability_schema.cjs']],
+  ['linepay-foundation', ['--test', 'tests/test_linepay_foundation.cjs']],
   ['order-identity', ['tests/test_order_identity.cjs']],
   ['line-receipts', ['--test', 'scripts/test-line-order-receipts.cjs']],
   ['liff-retry', ['--test', 'scripts/test-liff-message-retry.cjs']],

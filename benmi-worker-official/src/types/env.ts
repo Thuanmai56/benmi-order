@@ -1,4 +1,6 @@
-export interface Env {
+import type { LinePayBindings } from '../modules/linepay/types';
+
+export interface Env extends LinePayBindings {
   // Bindings
   ORDER_STATE: KVNamespace;
   DB: D1Database;
