@@ -15,7 +15,14 @@ export function legacyCustomerOrigin(requestUrl: string): string {
 export function validateLegacyEndpoint(value: unknown, tenantId: string, requestUrl: string): string {
   if (typeof value !== 'string' || value.length > 2048) throw new Error('Invalid legacy endpoint');
   const url = new URL(value);
-  const origins = [legacyCustomerOrigin(requestUrl), 'https://blabfood.app', 'https://www.blabfood.app'];
+  const origins = [
+    legacyCustomerOrigin(requestUrl),
+    'https://benmi-order.pages.dev',
+    'https://dev.benmi-order.pages.dev',
+    'https://staging.benmi-order.pages.dev',
+    'https://blabfood.app',
+    'https://www.blabfood.app'
+  ];
   if (url.protocol !== 'https:' || !origins.includes(url.origin) || url.username || url.password || url.hash) {
     throw new Error('Legacy endpoint must use an approved customer origin');
   }
@@ -29,9 +36,16 @@ export function customerOrderConfig(tenantId: string, row: OrderDomainRow, reque
   const customerOrderDomain: CustomerOrderDomain = row.customer_order_domain === 'blabfood' ? 'blabfood' : 'legacy';
   const fallback = new URL('/', legacyCustomerOrigin(requestUrl));
   fallback.searchParams.set('tenant_id', tenantId);
-  const legacyEndpoint = row.legacy_liff_endpoint_url
-    ? validateLegacyEndpoint(row.legacy_liff_endpoint_url, tenantId, requestUrl)
-    : fallback.toString();
+  let legacyEndpoint: string;
+  if (row.legacy_liff_endpoint_url) {
+    try {
+      legacyEndpoint = validateLegacyEndpoint(row.legacy_liff_endpoint_url, tenantId, requestUrl);
+    } catch {
+      legacyEndpoint = fallback.toString();
+    }
+  } else {
+    legacyEndpoint = fallback.toString();
+  }
   const liffEndpointUrl = customerOrderDomain === 'blabfood'
     ? `https://order.blabfood.app/${encodeURIComponent(tenantId)}`
     : legacyEndpoint;

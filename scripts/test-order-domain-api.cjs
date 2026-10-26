@@ -50,3 +50,27 @@ test('admin migration route accepts only configured secret; fallback key is reje
   const path='/api/admin/tenants/tenant-a/order-domain';assert.equal((await handleAdminRoute(req,{...f.env,ADMIN_API_KEY:undefined},path)).status,401);
   req.headers.set('X-Admin-Key','configured-only');assert.equal((await handleAdminRoute(req,f.env,path)).status,200);
 });
+test('config gracefully handles dev environment requests and cross-environment origins',async()=>{
+  const f=fixture();
+  f.db.exec("UPDATE tenant_config SET customer_order_domain='blabfood', legacy_liff_endpoint_url='https://benmi-order.pages.dev/?tenant_id=tenant-a'");
+  const devReq=new Request('https://platform-worker-dev.thuanmnc.workers.dev/api/config?tenant_id=tenant-a');
+  let r=await getConfig(devReq,f.env);
+  assert.equal(r.status,200);
+  let data=await r.json();
+  assert.equal(data.customerOrderDomain,'blabfood');
+  assert.equal(data.orderUrl,'https://order.blabfood.app/tenant-a');
+
+  // Also test legacy domain in dev environment with production legacy_liff_endpoint_url
+  f.db.exec("UPDATE tenant_config SET customer_order_domain='legacy'");
+  r=await getConfig(devReq,f.env);
+  assert.equal(r.status,200);
+  data=await r.json();
+  assert.equal(data.orderUrl,'https://benmi-order.pages.dev/?tenant_id=tenant-a');
+
+  // Test fallback if stored legacy URL is invalid
+  f.db.exec("UPDATE tenant_config SET legacy_liff_endpoint_url='https://corrupt-domain.com'");
+  r=await getConfig(devReq,f.env);
+  assert.equal(r.status,200);
+  data=await r.json();
+  assert.equal(data.orderUrl,'https://dev.benmi-order.pages.dev/?tenant_id=tenant-a');
+});
