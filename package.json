@@ -16,7 +16,8 @@
     "test:liff-message-retry": "node --test scripts/test-liff-message-retry.cjs",
     "test:pos-display": "node tests/test_pos_display.cjs",
     "test:menu-safety": "node --experimental-sqlite --test scripts/test-menu-safety.cjs",
-    "test:release": "node scripts/check-release-baseline.mjs"
+    "test:release": "node scripts/check-release-baseline.mjs",
+    "test:linepay-foundation": "node --test tests/test_linepay_foundation.cjs"
   },
   "keywords": [
     "pos",

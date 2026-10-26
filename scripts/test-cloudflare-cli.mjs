@@ -27,6 +27,8 @@ for (const mode of ['dev', 'test', 'production']) {
     for (const { binding, store_id: storeId, secret_name: secretName } of original.secrets_store_secrets) {
       expected[binding] = { type: 'secrets-store-secret', storeId, secretName };
     }
+    expected.LINE_PAY_ENABLED = { type: 'text', value: 'false' };
+    expected.LINE_PAY_DEPLOYMENT_ENV = { type: 'text', value: mode };
     assert.deepEqual(worker.env, expected);
     assert.equal(worker.observability.logs.persist, original.observability.logs.persist);
     assert.equal(worker.observability.logs.invocationLogs, original.observability.logs.invocation_logs);
