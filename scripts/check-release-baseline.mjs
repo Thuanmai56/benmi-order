@@ -13,7 +13,6 @@ if (Number(process.versions.node.split('.')[0]) !== 24) {
 const directory = path.join(root, 'artifacts/release-baseline', new Date().toISOString().replace(/[:.]/g, '-'));
 mkdirSync(directory, { recursive: true });
 const git = (...args) => {
-  env.MENU_QA_ARTIFACT_DIR = path.join(directory, name);
   const result = spawnSync('git', args, { cwd: root, encoding: 'utf8' });
   if (result.status !== 0) throw new Error(result.stderr || 'Cannot capture baseline Git provenance');
   return result.stdout.trim();
