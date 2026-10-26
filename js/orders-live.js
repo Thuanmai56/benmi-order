@@ -415,9 +415,9 @@ function renderEmptyLiveState(type) {
 }
 
 function updateDiningFilterStats(allLiveOrders) {
-  const isFeatureEnabled = Array.isArray(window.currentTenantFeatures)
-    ? window.currentTenantFeatures.includes('dine_in')
-    : false;
+  const isFeatureEnabled = typeof window.isDineInSupported === "function"
+    ? window.isDineInSupported()
+    : ((Array.isArray(window.currentTenantFeatures) && window.currentTenantFeatures.includes('dine_in')) && (window.allowDineIn !== false));
 
   const diningFilterBar = document.getElementById("dining-filter-bar");
   const filterDineInBtn = document.getElementById("filter-btn-dine-in");

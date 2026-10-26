@@ -123,7 +123,8 @@ async function loadStoreStatus() {
         allowScheduledPickup = data.allowScheduledPickup;
       }
       if (data.allowDineIn !== undefined) {
-        allowDineIn = data.allowDineIn;
+        allowDineIn = Boolean(data.allowDineIn);
+        window.allowDineIn = allowDineIn;
       }
       if (data.features) {
         currentTenantFeatures = Array.isArray(data.features) ? data.features : (typeof data.features === 'string' ? JSON.parse(data.features) : []);
@@ -137,6 +138,9 @@ async function loadStoreStatus() {
   renderStoreStatusUI(currentStoreStatus);
   if (typeof updateDiningFilterStats === "function" && typeof orders !== "undefined") {
     updateDiningFilterStats(orders);
+  }
+  if (typeof updateHistoryFilterVisibility === "function") {
+    updateHistoryFilterVisibility();
   }
   renderLanguageSetting();
   renderDineInSetting();
@@ -205,7 +209,8 @@ async function loadOperatingHours() {
       const data = await res.json();
       storeOperatingHours = ensureParsedOperatingHours(data.operatingHours);
       allowScheduledPickup = data.allowScheduledPickup !== undefined ? data.allowScheduledPickup : true;
-      allowDineIn = data.allowDineIn !== undefined ? data.allowDineIn : true;
+      allowDineIn = data.allowDineIn !== undefined ? Boolean(data.allowDineIn) : true;
+      window.allowDineIn = allowDineIn;
       if (data.features) {
         currentTenantFeatures = Array.isArray(data.features) ? data.features : (typeof data.features === 'string' ? JSON.parse(data.features) : []);
         window.currentTenantFeatures = currentTenantFeatures;
@@ -230,18 +235,23 @@ async function loadOperatingHours() {
       storeOperatingHours = createDefaultOperatingHours();
       allowScheduledPickup = true;
       allowDineIn = true;
+      window.allowDineIn = allowDineIn;
       if (!currentStoreLogoUrl) renderStoreLogoUI(null);
     }
   } catch (e) {
     storeOperatingHours = createDefaultOperatingHours();
     allowScheduledPickup = true;
     allowDineIn = true;
+    window.allowDineIn = allowDineIn;
     if (!currentStoreLogoUrl) renderStoreLogoUI(null);
   }
   renderStoreStatusUI(currentStoreStatus);
   renderOperatingHours();
   renderScheduledPickupSetting();
   renderDineInSetting();
+  if (typeof updateHistoryFilterVisibility === "function") {
+    updateHistoryFilterVisibility();
+  }
 }
 
 function renderScheduledPickupSetting() {
@@ -386,6 +396,13 @@ async function saveDineInSetting() {
       body: JSON.stringify({ allowDineIn: allowDineIn })
     });
     if (!res.ok) throw new Error("API returned " + res.status);
+    window.allowDineIn = allowDineIn;
+    if (typeof updateHistoryFilterVisibility === "function") {
+      updateHistoryFilterVisibility();
+    }
+    if (typeof updateDiningFilterStats === "function" && typeof orders !== "undefined") {
+      updateDiningFilterStats(orders);
+    }
     alert(t("dineInSaveSuccess") || t("saveSuccess"));
   } catch (e) {
     alert((t("dineInSaveFail") || t("saveFail")) + e.message);

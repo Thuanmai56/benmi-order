@@ -113,7 +113,22 @@ function setHistoryFilter(type) {
   renderHistory(lastHistoryOrders);
 }
 
+function updateHistoryFilterVisibility() {
+  const isSupported = typeof window.isDineInSupported === "function"
+    ? window.isDineInSupported()
+    : ((Array.isArray(window.currentTenantFeatures) && window.currentTenantFeatures.includes('dine_in')) && (window.allowDineIn !== false));
+  
+  const filterGroup = document.getElementById("history-filter-group");
+  if (filterGroup) {
+    filterGroup.style.display = isSupported ? "" : "none";
+  }
+  if (!isSupported && historyFilterType !== "all") {
+    historyFilterType = "all";
+  }
+}
+
 async function fetchHistoryOrders(force = false) {
+  updateHistoryFilterVisibility();
   const tenantId = getTenantIdFromUrl();
   const now = Date.now();
   if (!force && lastHistoryTenantId === tenantId && lastHistoryOrders.length > 0 && (now - historyLastFetchedAt < 15000)) {
@@ -184,6 +199,7 @@ function groupByDate(orders) {
 }
 
 function renderHistory(orders) {
+  updateHistoryFilterVisibility();
   if (Array.isArray(orders)) {
     lastHistoryOrders = orders;
   }
@@ -469,6 +485,7 @@ window.toggleHistoryDateGroup = toggleHistoryDateGroup;
 window.toggleAllHistoryGroups = toggleAllHistoryGroups;
 window.fetchHistoryOrders = fetchHistoryOrders;
 window.renderHistory = renderHistory;
+window.updateHistoryFilterVisibility = updateHistoryFilterVisibility;
 
 // Safe DOM initialization for keyboard shortcuts and direct event listeners
 if (typeof document !== "undefined") {

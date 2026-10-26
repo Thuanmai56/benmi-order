@@ -704,6 +704,15 @@ function parsePortionCustomizations(rawOpts) {
 }
 window.parsePortionCustomizations = parsePortionCustomizations;
 
+function isDineInSupported() {
+  const hasFeature = Array.isArray(window.currentTenantFeatures)
+    ? window.currentTenantFeatures.includes('dine_in')
+    : false;
+  const isAllowed = window.allowDineIn !== false;
+  return hasFeature && isAllowed;
+}
+window.isDineInSupported = isDineInSupported;
+
 function switchTab(tab) {
   if (activeTab === "menu" && tab !== "menu" && typeof confirmLeaveMenu === "function" && !confirmLeaveMenu()) {
     try {
@@ -774,6 +783,9 @@ function switchTab(tab) {
   if (tab === "live") {
     renderAll();
   } else if (tab === "history") {
+    if (typeof updateHistoryFilterVisibility === "function") {
+      updateHistoryFilterVisibility();
+    }
     if (typeof fetchHistoryOrders === "function") {
       fetchHistoryOrders();
     } else if (typeof renderHistory === "function") {
