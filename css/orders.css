@@ -3784,17 +3784,19 @@ html.is-web-platform .store-activation-modal:not(.force-show) {
   }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 680px) {
   .history-header {
-    padding: 12px 14px;
+    padding: 10px 12px;
   }
 
   .history-toolbar {
-    gap: 10px;
+    gap: 8px;
   }
 
   .history-search-input {
-    font-size: 14px;
+    font-size: 13.5px;
+    height: 44px;
+    min-height: 44px;
   }
 
   .history-controls-row {
@@ -3811,7 +3813,9 @@ html.is-web-platform .store-activation-modal:not(.force-show) {
 
   .history-filter-btn {
     flex: 1;
-    padding: 6px 8px;
+    padding: 6px 4px;
+    min-height: 44px;
+    font-size: 13px;
     text-align: center;
   }
 
@@ -3823,6 +3827,10 @@ html.is-web-platform .store-activation-modal:not(.force-show) {
 
   .history-toggle-btn {
     flex-shrink: 0;
+    min-height: 42px;
+    height: 42px;
+    font-size: 13px;
+    padding: 0 12px;
   }
 }
 
@@ -11822,7 +11830,13 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
   .settings-split { grid-template-columns: 200px minmax(0, 1fr); }
 }
 @media (max-width: 680px) {
-  .settings-split { display: flex; }
+  .settings-split {
+    display: flex !important;
+    flex-direction: column !important;
+    height: auto !important;
+    overflow: visible !important;
+    gap: 0 !important;
+  }
   .pos-display-body { padding: 14px; }
 
   /* Mobile Navigation Drawer & Hamburger Trigger (Rounded Square Button) */
@@ -12270,6 +12284,317 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
   .order-detail-total-row.grand-total-row .total-val {
     font-size: 20px !important;
     font-weight: 800 !important;
+  }
+
+  /* -------------------------------------------------------------
+     Mobile Live Orders Refinements (Single Column Fallback & Spacing)
+     ------------------------------------------------------------- */
+  #view-live .live-split {
+    grid-template-columns: minmax(0, 1fr) !important;
+    padding: 6px 6px 0 !important;
+    gap: 0 !important;
+  }
+
+  .dining-filter-bar {
+    padding: 6px 8px !important;
+    gap: 6px !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    flex-wrap: nowrap !important;
+    -webkit-overflow-scrolling: touch !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+  }
+
+  .dining-filter-stats {
+    display: none !important;
+  }
+
+  .dining-filter-btn {
+    min-height: 40px !important;
+    height: 40px !important;
+    font-size: 13px !important;
+    padding: 0 12px !important;
+    border-radius: 8px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .tile {
+    border-radius: 12px !important;
+    margin-bottom: 8px !important;
+    min-height: 76px !important;
+  }
+
+  .tile-info {
+    padding: 8px 10px !important;
+    gap: 4px !important;
+  }
+
+  .tile-customer {
+    max-width: 140px !important;
+    font-size: 14px !important;
+  }
+
+  .tile-actions {
+    width: 88px !important;
+    min-width: 80px !important;
+    max-width: 96px !important;
+    padding: 6px 8px 6px 0 !important;
+  }
+
+  .tile-action-btn {
+    height: 48px !important;
+    min-height: 48px !important;
+    padding: 4px 6px !important;
+    font-size: 13px !important;
+    border-radius: 8px !important;
+  }
+
+  /* -------------------------------------------------------------
+     Mobile Order History Refinements (Cramped Space Elimination)
+     ------------------------------------------------------------- */
+  #view-history {
+    padding: 6px 8px !important;
+    box-sizing: border-box !important;
+  }
+
+  #view-history .panel {
+    border-radius: 12px !important;
+    border: 1px solid #e2e8f0 !important;
+  }
+
+  #view-history .panel-header.history-header {
+    padding: 10px 12px !important;
+    gap: 8px !important;
+  }
+
+  #view-history .panel-body#list-history {
+    padding: 8px 6px !important;
+    gap: 8px !important;
+  }
+
+  .history-date-header {
+    padding: 10px 12px !important;
+    border-radius: 10px !important;
+    gap: 8px !important;
+  }
+
+  .history-date-left {
+    gap: 8px !important;
+    min-width: 0 !important;
+    flex: 1 !important;
+    overflow: hidden !important;
+  }
+
+  .history-date-icon-box {
+    width: 28px !important;
+    height: 28px !important;
+    border-radius: 6px !important;
+  }
+
+  .history-date-icon-box svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+
+  .history-date-text {
+    font-size: 14px !important;
+    white-space: nowrap !important;
+  }
+
+  .history-today-tag {
+    font-size: 11px !important;
+    padding: 2px 6px !important;
+    border-radius: 4px !important;
+  }
+
+  .history-date-right {
+    gap: 6px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .history-date-right .badge {
+    font-size: 12px !important;
+    padding: 2px 6px !important;
+  }
+
+  .history-tile {
+    flex-direction: column !important;
+    border-radius: 12px !important;
+    padding: 12px 14px !important;
+    gap: 6px !important;
+    min-height: auto !important;
+  }
+
+  .history-tile-info {
+    padding: 0 !important;
+    gap: 5px !important;
+    width: 100% !important;
+  }
+
+  .history-tile-top {
+    flex-wrap: wrap !important;
+    gap: 5px 8px !important;
+    align-items: center !important;
+  }
+
+  .history-tile-customer {
+    max-width: none !important;
+    font-size: 14.5px !important;
+    font-weight: 800 !important;
+  }
+
+  .history-tile-meta-row {
+    padding-top: 2px !important;
+    font-size: 12.5px !important;
+  }
+
+  .history-tile-items {
+    white-space: normal !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    line-height: 1.4 !important;
+    font-size: 13px !important;
+    color: #64748b !important;
+  }
+
+  .history-tile-price {
+    font-size: 16px !important;
+    font-weight: 900 !important;
+  }
+
+  .history-tile-actions {
+    display: none !important;
+  }
+
+  /* -------------------------------------------------------------
+     Mobile Settings TOC & Content Refinements
+     ------------------------------------------------------------- */
+  .settings-toc-panel {
+    display: flex !important;
+    flex-direction: row !important;
+    width: 100% !important;
+    height: auto !important;
+    border-radius: 0 !important;
+    border-right: none !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    background: #f8fafc !important;
+    padding: 8px 10px !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    -webkit-overflow-scrolling: touch !important;
+    box-sizing: border-box !important;
+    flex-shrink: 0 !important;
+  }
+
+  .settings-toc-panel .panel-header {
+    display: none !important;
+  }
+
+  .settings-toc-list {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 6px !important;
+    padding: 0 !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    width: 100% !important;
+  }
+
+  .settings-toc-item {
+    display: inline-flex !important;
+    align-items: center !important;
+    padding: 8px 14px !important;
+    min-height: 42px !important;
+    border-radius: 999px !important;
+    border: 1px solid #e2e8f0 !important;
+    background: #ffffff !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: #475569 !important;
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+  }
+
+  .settings-toc-item.active {
+    background: #0f172a !important;
+    color: #ffffff !important;
+    border-color: #0f172a !important;
+  }
+
+  .settings-toc-item.active .toc-item-label {
+    color: #ffffff !important;
+  }
+
+  .settings-toc-item.active .toc-icon-box {
+    background: rgba(255, 255, 255, 0.2) !important;
+    color: #ffffff !important;
+  }
+
+  .settings-content-panel {
+    width: 100% !important;
+    padding: 10px 8px 40px !important;
+    box-sizing: border-box !important;
+  }
+
+  .settings-content-body {
+    padding: 0 !important;
+    gap: 12px !important;
+  }
+
+  .setting-card {
+    border-radius: 12px !important;
+    padding: 14px 12px !important;
+    box-sizing: border-box !important;
+  }
+
+  /* -------------------------------------------------------------
+     Mobile Reports View Refinements
+     ------------------------------------------------------------- */
+  #view-reports {
+    padding: 10px 8px 40px !important;
+    box-sizing: border-box !important;
+  }
+
+  #view-reports .kpi-card {
+    padding: 12px 14px !important;
+    border-radius: 12px !important;
+  }
+
+  .report-range-group {
+    width: 100% !important;
+    display: flex !important;
+    box-sizing: border-box !important;
+  }
+
+  .report-range-btn {
+    flex: 1 !important;
+    min-height: 42px !important;
+    padding: 6px 4px !important;
+    font-size: 13px !important;
+  }
+
+  /* -------------------------------------------------------------
+     Mobile Order Review Modal Refinements
+     ------------------------------------------------------------- */
+  .order-detail-page-container {
+    padding: 8px 8px max(60px, calc(36px + env(safe-area-inset-bottom, 24px))) 8px !important;
+  }
+
+  .order-detail-topbar {
+    padding: 8px 10px !important;
+    min-height: 50px !important;
+  }
+
+  .order-detail-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 12px !important;
+  }
+
+  .order-detail-card {
+    border-radius: 12px !important;
+    padding: 12px !important;
   }
 }
 

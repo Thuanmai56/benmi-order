@@ -5,7 +5,7 @@
 let currentDiningFilter = "all"; // 'all' | 'takeaway' | 'dine_in'
 
 // Separate from the main POS tab: both queues keep receiving live updates.
-const LIVE_MOBILE_QUERY = "(max-width: 600px) and (orientation: portrait)";
+const LIVE_MOBILE_QUERY = "(max-width: 680px)";
 const LIVE_MOBILE_LIST_IDS = { pending: "list-left", ready: "list-right" };
 const liveMobileScrollPositions = { pending: 0, ready: 0 };
 let liveMobileStation = "pending";
