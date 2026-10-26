@@ -125,6 +125,34 @@ test('Bug 3: Direct cyclic link validation rejects linking a group to a product 
   assert.equal(data.error, 'OPTION_PRODUCT_CYCLE', 'Backend must reject direct product-group cycle with OPTION_PRODUCT_CYCLE');
 });
 
+test('Bug 3: In POS product groups picker, groups containing this product are dimmed/disabled with cycle warning', async () => {
+  const app = await setup({ lang: 'vi' });
+  // Add a group that contains 'meal' as an option
+  app.catalog().groups.push({
+    id: 'g_combo_drinks',
+    name: 'Chọn đồ uống combo',
+    scope: 'item',
+    revision: 1,
+    minSelection: 1,
+    maxSelection: 1,
+    options: [{ id: 'opt_meal_in_combo', productId: 'meal', name: 'Bánh mì', price: 0, quantity: 1, isDefault: false, subOptions: [], eligibilityRules: [] }],
+    sources: [],
+    labels: {}
+  });
+  await app.context.UnifiedMenu.load();
+  // Open product options drawer for 'meal' (index 0, 0), and navigate to 'groups'
+  app.context.UnifiedMenu.product(0, 0, 'options');
+  await app.click('groups');
+  const drawer = app.drawer();
+  assert.ok(drawer, 'Drawer should be open');
+  const input = drawer.querySelector('input[value="g_combo_drinks"]');
+  assert.ok(input, 'Must have group checkbox input for g_combo_drinks');
+  assert.equal(input.disabled, true, 'Checkbox must be disabled');
+  const checkMealGroup = input.parentElement;
+  assert.ok(checkMealGroup.classList.contains('ug-check-disabled'), 'Cyclic group must have ug-check-disabled class');
+  assert.ok(checkMealGroup.textContent.includes('Không thể chọn do tạo vòng lặp'), 'Must show cycle warning text');
+});
+
 test('Bug 4: Category and item reordering preserves and serializes explicit sort_order', () => {
   const currentMenuData = [
     { id: 'cat_drinks', slug: 'cat_drinks', title: 'Đồ uống', sortOrder: 2, items: [{ id: 'item_coke', name: 'Coke', price: 20 }] },

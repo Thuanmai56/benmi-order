@@ -108,6 +108,7 @@
       ugUploading: "Đang tải ảnh…",
       ugSaving: "Đang lưu…",
       ugCycle: "Liên kết này tạo vòng lặp giữa các món.",
+      ugCycleGroupBlocked: "Không thể chọn do tạo vòng lặp (món này nằm trong nhóm)",
       ugSub: "Lựa chọn con",
       ugSources: "Tự động lấy món từ phân loại",
       ugSourceHint: "Nhóm luôn có các món trong phân loại đã chọn.",
@@ -229,6 +230,7 @@
       ugUploading: "正在上傳圖片…",
       ugSaving: "正在儲存…",
       ugCycle: "此連結會造成餐點之間的循環。",
+      ugCycleGroupBlocked: "無法選取（此餐點已在此群組內，選取會形成循環）",
       ugSub: "子選項",
       ugSources: "自動加入分類中的餐點",
       ugSourceHint: "群組會持續包含所選分類中的餐點。",
@@ -754,18 +756,23 @@
       body =
         search() +
         `<div class="ug-list">${catalog.groups
-          .filter((g) => g.scope !== "order" && !options(g).some((o) => o.productId === d.id))
-          .map((g) =>
-            check(
+          .filter((g) => g.scope !== "order")
+          .map((g) => {
+            const isCycle = options(g).some((o) => o.productId === d.id);
+            const sub = isCycle
+              ? tr("ugCycleGroupBlocked")
+              : `${rule(g)} · ${options(g).map((o) => o.name).join("、")}`;
+            return check(
               g.id,
               g.name,
-              `${rule(g)} · ${options(g)
-                .map((o) => o.name)
-                .join("、")}`,
+              sub,
               r.ids.includes(g.id),
               "group",
-            ),
-          )
+              "",
+              isCycle,
+              isCycle ? tr("ugCycle") : ""
+            );
+          })
           .join("")}</div>`;
     } else if (r.page === "subset") {
       const g = groupById(r.id);
@@ -896,8 +903,8 @@
   }
   const search = () =>
     `<input class="ug-search" type="search" data-field="search" placeholder="${esc(tr("ugSearch"))}" aria-label="${esc(tr("ugSearch"))}">`;
-  const check = (id, name, sub, checked, kind, category = "", disabled = false) =>
-    `<label class="ug-check" data-search="${esc(name.toLowerCase())}" data-category="${esc(category)}"><input type="checkbox" data-check="${kind}" value="${esc(id)}" ${checked ? "checked" : ""} ${disabled ? "disabled" : ""}><span><strong>${esc(name)}</strong><small>${esc(sub)}</small></span></label>`;
+  const check = (id, name, sub, checked, kind, category = "", disabled = false, warning = "") =>
+    `<label class="ug-check ${disabled ? "ug-check-disabled" : ""}" data-search="${esc(name.toLowerCase())}" data-category="${esc(category)}"><input type="checkbox" data-check="${kind}" value="${esc(id)}" ${checked ? "checked" : ""} ${disabled ? "disabled" : ""}><span><strong>${esc(name)}${warning ? ` <span class="ug-cycle-badge">${esc(warning)}</span>` : ""}</strong><small>${esc(sub)}</small></span></label>`;
   function syncCategoryCheckboxes(root) {
     if (!root || !state || !state.route) return;
     const r = state.route;
