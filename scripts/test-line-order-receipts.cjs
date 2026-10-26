@@ -22,20 +22,40 @@ function fixture(t) {
   db.exec(`ALTER TABLE orders ADD COLUMN dining_option TEXT DEFAULT 'takeaway'; ALTER TABLE orders ADD COLUMN table_number TEXT;
     ALTER TABLE orders ADD COLUMN round_count INTEGER DEFAULT 1; ALTER TABLE orders ADD COLUMN last_appended_at TEXT;
     ALTER TABLE order_items ADD COLUMN bundle_snapshot_json TEXT;
-    CREATE TABLE menu_items(id TEXT, tenant_id TEXT, name TEXT, out_of_stock_until TEXT);
+    CREATE TABLE menu_items(id TEXT, tenant_id TEXT, category_id TEXT, name TEXT, price REAL DEFAULT 0, description TEXT, out_of_stock_until TEXT, max_per_order INTEGER, sort_order INTEGER DEFAULT 0, badge_text TEXT, is_recommended INTEGER DEFAULT 0, image_key TEXT, item_type TEXT DEFAULT 'standard');
+    CREATE TABLE menu_categories(id TEXT, tenant_id TEXT, name TEXT, slug TEXT, sort_order INTEGER DEFAULT 0);
+    CREATE TABLE modifier_groups(id TEXT, tenant_id TEXT, name TEXT, scope TEXT DEFAULT 'item', min_selection INTEGER DEFAULT 0, max_selection INTEGER DEFAULT 999, allow_repeats INTEGER DEFAULT 0, included INTEGER DEFAULT 0, auto_popup INTEGER DEFAULT 0, sources_json TEXT DEFAULT '[]', labels_json TEXT DEFAULT '{}', revision INTEGER DEFAULT 0, source_metadata_json TEXT DEFAULT '{}', sort_order INTEGER DEFAULT 0, selection_type TEXT, is_required INTEGER DEFAULT 0);
+    CREATE TABLE modifier_options(id TEXT, tenant_id TEXT, group_id TEXT, name TEXT, price REAL DEFAULT 0, product_id TEXT, included_quantity INTEGER DEFAULT 1, is_default INTEGER DEFAULT 0, is_out_of_stock INTEGER DEFAULT 0, source_metadata_json TEXT DEFAULT '{}', out_of_stock_until TEXT, sub_options_json TEXT DEFAULT '[]', eligibility_rules_json TEXT DEFAULT '[]', description TEXT, sort_order INTEGER DEFAULT 0);
+    CREATE TABLE item_modifier_links(tenant_id TEXT, item_id TEXT, group_id TEXT, sort_order INTEGER DEFAULT 0, is_disabled INTEGER DEFAULT 0, option_ids_json TEXT);
+    CREATE TABLE category_modifier_links(tenant_id TEXT, category_id TEXT, group_id TEXT, sort_order INTEGER DEFAULT 0);
+    CREATE TABLE menu_catalog_revisions(tenant_id TEXT PRIMARY KEY, revision INTEGER DEFAULT 0);
     CREATE TABLE menu_bundle_rules(tenant_id TEXT, parent_item_id TEXT, schema_version INTEGER, config_json TEXT, is_active INTEGER);`);
   for (const file of ['0055_expand_order_identity.sql', '0056_add_order_modified_tracking.sql', '0065_line_order_receipts.sql']) db.exec(fs.readFileSync('benmi-worker-official/migrations/' + file, 'utf8'));
   const DB = {
     prepare(sql) {
-      const build = params => ({ bind(...p) { return build(p); },
+      const build = params => ({
+        sql,
+        params,
+        bind(...p) { return build(p); },
         async first() { return db.prepare(sql).get(...params) || null; },
-        async all() { return { results: db.prepare(sql).all(...params) }; },
-        async run() { return { meta: { changes: db.prepare(sql).run(...params).changes } }; }
+        async all() { return { success: true, results: db.prepare(sql).all(...params) }; },
+        async run() { return { success: true, results: [], meta: { changes: db.prepare(sql).run(...params).changes } }; }
       }); return build([]);
     },
     async batch(statements) {
       db.exec('BEGIN');
-      try { const results = []; for (const statement of statements) results.push(await statement.run()); db.exec('COMMIT'); return results; }
+      try {
+        const results = [];
+        for (const s of statements) {
+          if (/^\s*SELECT/i.test(s.sql)) {
+            results.push({ success: true, results: db.prepare(s.sql).all(...(s.params || [])) });
+          } else {
+            results.push(await s.run());
+          }
+        }
+        db.exec('COMMIT');
+        return results;
+      }
       catch (error) { db.exec('ROLLBACK'); throw error; }
     }
   };

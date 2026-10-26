@@ -553,6 +553,8 @@ export async function saveOptionEntity(request: Request, env: Env, kind: 'produc
 			const itemIds = raw.itemIds;
 			if (!Array.isArray(itemIds) || itemIds.some((pid: string) => !catalog.products.some((p) => p.id === pid)))
 				throw new Error('INVALID_LINKED_PRODUCTS');
+			if (Array.isArray(raw.categoryIds) && raw.categoryIds.some((cid: string) => !catalog.categories.some((c) => c.id === cid)))
+				throw new Error('INVALID_LINKED_CATEGORIES');
 			const groupOptionsList = groupOptions(catalog, group);
 			if (itemIds.some((itemId: string) => groupOptionsList.some((o) => o.productId === itemId))) {
 				throw new Error('OPTION_PRODUCT_CYCLE');
@@ -835,6 +837,9 @@ export function validateOptionSelection(
 	return { groups: snapshots, extra };
 }
 export async function validateUnifiedOrderItems(env: Env, tenantId: string, items: any[]) {
+	if (!Array.isArray(items) || items.length === 0) {
+		return { valid: true, legacy: [] };
+	}
 	const catalog = await loadOptionCatalog(env, tenantId);
 	const legacy: any[] = [];
 	const computedSubtotals = new Map<number, { id: string; portions: any[]; subtotal: number }>();

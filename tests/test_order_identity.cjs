@@ -37,13 +37,24 @@ async function check(name, fn) { await fn(); passed++; console.log(`PASS ${name}
  await apply(`CREATE TABLE tenants(id TEXT PRIMARY KEY); INSERT INTO tenants VALUES ('a'),('b');
  CREATE TABLE tenant_config(tenant_id TEXT PRIMARY KEY REFERENCES tenants(id));
  INSERT INTO tenant_config VALUES ('a'),('b');`);
- for (const file of ['0005_create_orders_table.sql','0032_create_order_items.sql','0004_add_tenant_id_to_pending_actions.sql','0046_add_order_uuid_and_daily_counter.sql']) {
+ for (const file of [
+   '0005_create_orders_table.sql',
+   '0032_create_order_items.sql',
+   '0004_add_tenant_id_to_pending_actions.sql',
+   '0046_add_order_uuid_and_daily_counter.sql'
+ ]) {
    await apply(fs.readFileSync(path.join(workerRoot,'migrations',file),'utf8'));
  }
  await apply(`ALTER TABLE orders ADD COLUMN dining_option TEXT DEFAULT 'takeaway'; ALTER TABLE orders ADD COLUMN table_number TEXT;
  ALTER TABLE orders ADD COLUMN round_count INTEGER DEFAULT 1; ALTER TABLE orders ADD COLUMN last_appended_at TEXT;
  ALTER TABLE order_items ADD COLUMN bundle_snapshot_json TEXT;
- CREATE TABLE menu_items(id TEXT, tenant_id TEXT, name TEXT, out_of_stock_until TEXT, max_per_order INTEGER);
+ CREATE TABLE menu_items(id TEXT, tenant_id TEXT, category_id TEXT, name TEXT, price REAL DEFAULT 0, description TEXT, out_of_stock_until TEXT, max_per_order INTEGER, sort_order INTEGER DEFAULT 0, badge_text TEXT, is_recommended INTEGER DEFAULT 0, image_key TEXT, item_type TEXT DEFAULT 'standard');
+ CREATE TABLE menu_categories(id TEXT, tenant_id TEXT, name TEXT, slug TEXT, sort_order INTEGER DEFAULT 0);
+ CREATE TABLE modifier_groups(id TEXT, tenant_id TEXT, name TEXT, scope TEXT DEFAULT 'item', min_selection INTEGER DEFAULT 0, max_selection INTEGER DEFAULT 999, allow_repeats INTEGER DEFAULT 0, included INTEGER DEFAULT 0, auto_popup INTEGER DEFAULT 0, sources_json TEXT DEFAULT '[]', labels_json TEXT DEFAULT '{}', revision INTEGER DEFAULT 0, source_metadata_json TEXT DEFAULT '{}', sort_order INTEGER DEFAULT 0, selection_type TEXT, is_required INTEGER DEFAULT 0);
+ CREATE TABLE modifier_options(id TEXT, tenant_id TEXT, group_id TEXT, name TEXT, price REAL DEFAULT 0, product_id TEXT, included_quantity INTEGER DEFAULT 1, is_default INTEGER DEFAULT 0, is_out_of_stock INTEGER DEFAULT 0, source_metadata_json TEXT DEFAULT '{}', out_of_stock_until TEXT, sub_options_json TEXT DEFAULT '[]', eligibility_rules_json TEXT DEFAULT '[]', description TEXT, sort_order INTEGER DEFAULT 0);
+ CREATE TABLE item_modifier_links(tenant_id TEXT, item_id TEXT, group_id TEXT, sort_order INTEGER DEFAULT 0, is_disabled INTEGER DEFAULT 0, option_ids_json TEXT);
+ CREATE TABLE category_modifier_links(tenant_id TEXT, category_id TEXT, group_id TEXT, sort_order INTEGER DEFAULT 0);
+ CREATE TABLE menu_catalog_revisions(tenant_id TEXT PRIMARY KEY, revision INTEGER DEFAULT 0);
  CREATE TABLE menu_bundle_rules(tenant_id TEXT, parent_item_id TEXT, schema_version INTEGER, config_json TEXT, is_active INTEGER);
  INSERT INTO orders(key,tenant_id,customer_name,pickup_time,total_amount,order_content,created_at,status)
  VALUES ('B0914-T007','a','Legacy','12:00',100,'Old item','2026-09-14 01:00:00','NEW');
@@ -76,6 +87,9 @@ async function check(name, fn) { await fn(); passed++; console.log(`PASS ${name}
    assert.equal(await DB.prepare("SELECT name FROM sqlite_master WHERE type='trigger' AND name='orders_staff_revision_guard'").first(),null);
    assert.equal((await DB.prepare('PRAGMA foreign_key_check').all()).results.length,0);
  });
+ await apply(`CREATE TABLE IF NOT EXISTS tenant_lifecycle(tenant_id TEXT PRIMARY KEY, state TEXT DEFAULT 'active');
+ ALTER TABLE orders ADD COLUMN detail_revision INTEGER NOT NULL DEFAULT 0;
+ CREATE TABLE IF NOT EXISTS order_detail_snapshots(tenant_id TEXT, order_key TEXT, revision INTEGER, operation_id TEXT, request_hash TEXT, operation_kind TEXT, snapshot_json TEXT, created_at TEXT, PRIMARY KEY(tenant_id, order_key, revision));`);
  await check('same display number across tenant and year never overwrites another order', async()=>{
    for(const [id,date] of [['a','2027-09-14'],['b','2026-09-14']]) {
      await orders.saveOrder(env,{key:crypto.randomUUID(),displayKey:'B0914-T007',businessDate:date,customer:'New',time:'12:00',total:20,content:'new',status:'NEW',createdAt:Date.parse(date+'T01:00:00Z')},id);

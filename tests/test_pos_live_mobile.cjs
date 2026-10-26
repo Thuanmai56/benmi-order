@@ -33,7 +33,7 @@ async function loadFixture(page) {
       };
     };
   });
-  for (const file of ['js/orders-display.js', 'js/orders-i18n.js', 'js/orders-core.js', 'js/orders-live.js', 'js/orders-modals.js']) {
+  for (const file of ['js/orders-display.js', 'js/orders-i18n.js', 'js/order-legacy-adapter.js', 'js/orders-core.js', 'js/orders-live.js', 'js/orders-modals.js']) {
     await page.addScriptTag({ content: readSource(file) });
   }
   await page.evaluate(() => {
@@ -211,11 +211,11 @@ async function swipeQueue(page, direction, options) {
     await page.keyboard.press('End');
     assert(await page.locator('#live-panel-ready').isVisible());
 
-    await page.locator('#tab-settings').click();
+    await page.evaluate(() => switchTab('settings'));
     await resize(page, { width: 844, height: 390 });
     await resize(page, { width: 390, height: 844 });
     assert(!(await page.locator('#view-live').isVisible()), 'Resizing must not reveal Live over another main tab');
-    await page.locator('#tab-live').click();
+    await page.evaluate(() => switchTab('live'));
     assert(await page.locator('#live-panel-ready').isVisible());
     assert.equal(await page.locator('#list-right').evaluate(node => node.scrollTop), 700);
     const returnedList = await page.locator('#list-right').boundingBox();

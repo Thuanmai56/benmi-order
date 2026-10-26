@@ -12,7 +12,11 @@ async function workspace({ lang = 'vi', empty = false } = {}) {
     group('utensils', 'Dụng cụ ăn', 'order'),
     group('spice', 'Độ cay 辣度', 'category'),
   ];
-  catalog.categoryLinks = empty ? [] : [{ groupId: 'spice', categoryId: 'food' }];
+  if (!empty) {
+    catalog.links.push({ groupId: 'spice', itemId: catalog.products[0].id, disabled: false, optionIds: null });
+  } else {
+    catalog.links = [];
+  }
   await app.context.UnifiedMenu.load();
   for (const [id, tag] of [['menu-categories', 'div'], ['menu-editor-body', 'div'], ['menu-editor-title', 'div'], ['btn-option-group-edit', 'button'], ['btn-option-add', 'button']]) {
     const el = app.doc.createElement(tag); el.id = id; app.doc.body.appendChild(el);

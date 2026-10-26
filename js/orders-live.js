@@ -255,11 +255,22 @@ function initLiveMobileView() {
     liveMobileMedia.addListener(syncLiveMobileView);
   }
 
+  let isWindowResizing = false;
+  let resizeTimer = null;
+  const onLiveResponsiveResize = () => {
+    isWindowResizing = true;
+    clearTimeout(resizeTimer);
+    syncLiveMobileView();
+    resizeTimer = setTimeout(() => {
+      isWindowResizing = false;
+    }, 350);
+  };
+
   Object.entries(LIVE_MOBILE_LIST_IDS).forEach(([station, id]) => {
     const list = document.getElementById(id);
     if (list) list.addEventListener("scroll", () => {
       // Ignore resize-generated scroll events while the responsive mode changes.
-      if (liveMobileMode && isLiveMobilePortrait() && station === liveMobileStation && list.clientHeight > 0) {
+      if (!isWindowResizing && liveMobileMode && isLiveMobilePortrait() && station === liveMobileStation && list.clientHeight > 0) {
         liveMobileScrollPositions[station] = list.scrollTop;
       }
     }, { passive: true });
@@ -283,10 +294,10 @@ function initLiveMobileView() {
     document.getElementById(`live-mobile-tab-${station}`).focus({ preventScroll: true });
   });
   initLiveMobileSwipe();
-  window.addEventListener("resize", syncLiveMobileView, { passive: true });
+  window.addEventListener("resize", onLiveResponsiveResize, { passive: true });
   if (typeof ResizeObserver === "function") {
     const main = document.getElementById("main-layout");
-    if (main) new ResizeObserver(syncLiveMobileView).observe(main);
+    if (main) new ResizeObserver(onLiveResponsiveResize).observe(main);
   }
   syncLiveMobileView();
 }
