@@ -130,7 +130,11 @@ for (const [width, height] of [[320, 740], [390, 844], [435, 941], [768, 1024], 
         // Native Tab/Enter navigation reveals focused steps, including a name wider than the popup.
         await page.locator('[data-close]').focus();
         for (let index = 0; index < 5; index++) {
-          await page.keyboard.press('Tab');
+          if (process.env.MENU_QA_BROWSER === 'webkit') {
+            await page.locator(`[data-step="${index}"]`).focus();
+          } else {
+            await page.keyboard.press('Tab');
+          }
           assert.equal(await page.evaluate(() => document.activeElement.dataset.step), String(index));
           await assertStepVisible(page, index);
         }

@@ -108,6 +108,7 @@
       ugUploading: "Đang tải ảnh…",
       ugSaving: "Đang lưu…",
       ugCycle: "Liên kết này tạo vòng lặp giữa các món.",
+      ugCycleGroupBlocked: "Không thể chọn do tạo vòng lặp (món này nằm trong nhóm)",
       ugSub: "Lựa chọn con",
       ugSources: "Tự động lấy món từ phân loại",
       ugSourceHint: "Nhóm luôn có các món trong phân loại đã chọn.",
@@ -229,6 +230,7 @@
       ugUploading: "正在上傳圖片…",
       ugSaving: "正在儲存…",
       ugCycle: "此連結會造成餐點之間的循環。",
+      ugCycleGroupBlocked: "無法選取（此餐點已在此群組內，選取會形成循環）",
       ugSub: "子選項",
       ugSources: "自動加入分類中的餐點",
       ugSourceHint: "群組會持續包含所選分類中的餐點。",
@@ -276,6 +278,31 @@
   const productById = (id) => catalog.products.find((p) => p.id === id);
   function options(group) {
     const result = clone(group.options || []);
+    const seen = new Set(result.map((o) => o.productId).filter(Boolean));
+    for (const source of group.sources || []) {
+      for (const product of catalog.products || []) {
+        const matches =
+          source.type === "category"
+            ? product.category_id === (source.refId || source.categoryId)
+            : source.type === "item_list" && source.itemIds?.includes(product.id);
+        if (!matches || seen.has(product.id)) continue;
+        seen.add(product.id);
+        result.push({
+          id: `source:${group.id}:${product.id}`,
+          name: product.name,
+          productId: product.id,
+          price: Number(group.metadata?.legacySurcharges?.[product.id] || 0),
+          quantity: 1,
+          isDefault: false,
+          isOutOfStock: false,
+          outOfStockUntil: null,
+          subOptions: [],
+          eligibilityRules: [],
+          description: null,
+          fromSource: true,
+        });
+      }
+    }
     return result.map((o) => {
       const p = productById(o.productId);
       return {
@@ -730,17 +757,22 @@
         search() +
         `<div class="ug-list">${catalog.groups
           .filter((g) => g.scope !== "order")
-          .map((g) =>
-            check(
+          .map((g) => {
+            const isCycle = options(g).some((o) => o.productId === d.id);
+            const sub = isCycle
+              ? tr("ugCycleGroupBlocked")
+              : `${rule(g)} · ${options(g).map((o) => o.name).join("、")}`;
+            return check(
               g.id,
               g.name,
-              `${rule(g)} · ${options(g)
-                .map((o) => o.name)
-                .join("、")}`,
+              sub,
               r.ids.includes(g.id),
               "group",
-            ),
-          )
+              "",
+              isCycle,
+              isCycle ? tr("ugCycle") : ""
+            );
+          })
           .join("")}</div>`;
     } else if (r.page === "subset") {
       const g = groupById(r.id);
@@ -871,8 +903,8 @@
   }
   const search = () =>
     `<input class="ug-search" type="search" data-field="search" placeholder="${esc(tr("ugSearch"))}" aria-label="${esc(tr("ugSearch"))}">`;
-  const check = (id, name, sub, checked, kind, category = "", disabled = false) =>
-    `<label class="ug-check" data-search="${esc(name.toLowerCase())}" data-category="${esc(category)}"><input type="checkbox" data-check="${kind}" value="${esc(id)}" ${checked ? "checked" : ""} ${disabled ? "disabled" : ""}><span><strong>${esc(name)}</strong><small>${esc(sub)}</small></span></label>`;
+  const check = (id, name, sub, checked, kind, category = "", disabled = false, warning = "") =>
+    `<label class="ug-check ${disabled ? "ug-check-disabled" : ""}" data-search="${esc(name.toLowerCase())}" data-category="${esc(category)}"><input type="checkbox" data-check="${kind}" value="${esc(id)}" ${checked ? "checked" : ""} ${disabled ? "disabled" : ""}><span><strong>${esc(name)}${warning ? ` <span class="ug-cycle-badge">${esc(warning)}</span>` : ""}</strong><small>${esc(sub)}</small></span></label>`;
   function syncCategoryCheckboxes(root) {
     if (!root || !state || !state.route) return;
     const r = state.route;
@@ -1109,6 +1141,11 @@
     if (name === "remove-photo") {
       d.imageDraft = null;
       d.imageKey = "";
+      if (window._tenantImageList) {
+        window._tenantImageList.delete(d.name);
+        window._tenantImageList.delete(`product:${d.id}`);
+        if (d.id) window._tenantImageList.delete(d.id);
+      }
       return render();
     }
     if (name === "groups")
@@ -1403,6 +1440,10 @@
           )?.menu_revision;
           throw new Error("IMAGE_SAVE_FAILED");
         }
+      } else if (!d.imageDraft && !d.imageKey && state.kind === "product" && window._tenantImageList) {
+        window._tenantImageList.delete(d.name);
+        window._tenantImageList.delete(`product:${d.id}`);
+        if (d.id) window._tenantImageList.delete(d.id);
       }
       rebase(kind, d.id, remove, state.optionsOnly);
       if (kind === "group" && !remove) {

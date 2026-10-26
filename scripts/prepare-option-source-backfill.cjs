@@ -19,7 +19,8 @@ function prepare(catalog, mapping) {
     sources: [{type: 'category', categoryId: source.id}],
     labels: mapping.labels || {},
     options: [{id: `uo_${id}_${first.id}`, productId: first.id, name: first.name, price: 0, quantity: 1, isDefault: true}],
-    itemIds: [], categoryIds: [parent.id],
+    itemIds: catalog.products.filter(p => p.category_id === parent.id).map(p => p.id),
+    categoryIds: [parent.id],
   };
 }
 module.exports = {prepare};

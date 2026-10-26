@@ -197,7 +197,7 @@ async function run() {
     assert.equal(await page.evaluate(() => getPOSTextScale()), 1.125);
 
     // ResizeObserver must account for opening the sidebar without window resize.
-    await page.evaluate(() => { selectPOSTextSize('extra-large'); toggleSidebar(true); });
+    await page.evaluate(() => { switchTab('live'); selectPOSTextSize('extra-large'); toggleSidebar(true); });
     await page.waitForFunction(() => document.getElementById('view-live').classList.contains('live-adaptive-stations'));
     assert(await page.locator('#live-mobile-tabs').isVisible());
     await page.locator('#live-mobile-tab-ready').click();

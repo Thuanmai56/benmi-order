@@ -972,6 +972,10 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
           unifiedCatalog.products = unifiedCatalog.products.filter(p=>p.id!==itemId).concat({...old,id:itemId,tenant_id:tenantId,category_id:catId,name:itemName,price});
         }
 
+        const explicitItemSort = (itemVal && (itemVal.sort_order !== undefined || itemVal.sortOrder !== undefined))
+          ? Number(itemVal.sort_order ?? itemVal.sortOrder)
+          : itemSortOrder++;
+
         statements.push(
           env.DB.prepare(
             `INSERT INTO menu_items (id, tenant_id, category_id, name, price, badge_text, is_recommended, sort_order, item_type)
@@ -985,7 +989,7 @@ async function syncMenuToD1(tenantId: string, menuData: any, env: Env): Promise<
                sort_order = excluded.sort_order,
                item_type = excluded.item_type
              WHERE menu_items.tenant_id = excluded.tenant_id`
-          ).bind(itemId, tenantId, catId, itemName, price, badgeText, isRec, itemSortOrder++, itemType)
+          ).bind(itemId, tenantId, catId, itemName, price, badgeText, isRec, explicitItemSort, itemType)
         );
 
         // If modifier groups are provided for this item, persist them

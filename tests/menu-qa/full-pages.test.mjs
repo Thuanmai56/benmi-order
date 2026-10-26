@@ -68,8 +68,10 @@ test('Full POS page: create group, persist in D1, independent GET, reload, edit 
     assert.ok(stored.order_content.includes(product.name));
     assert.ok(stored.order_content.includes('QA portion note'));
     await page.locator('#tab-live').click();
-    await page.getByText(order.displayKey, {exact:true}).first().waitFor();
-    await page.getByText(order.displayKey, {exact:true}).first().click();
+    const orderCard = page.locator('.tile', { hasText: order.displayKey }).first();
+    await orderCard.waitFor();
+    await page.evaluate(() => { if (typeof dismissNewAlert === 'function') dismissNewAlert(); });
+    await orderCard.click({ force: true });
     await page.locator('#reviewModal').waitFor({state:'visible'});
     assert.ok((await page.locator('#reviewModal').textContent()).includes(product.name));
     await customer.screenshot({ path: session.directory + '/customer-cart.png', fullPage: true });

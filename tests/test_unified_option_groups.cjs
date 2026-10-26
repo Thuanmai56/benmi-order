@@ -161,16 +161,10 @@ test("rejects direct/indirect cycles, foreign options/products and impossible su
 });
 test("inheritance override, disable, restore; group update validates linked subset", async () => {
   const f = fixture();
-  await ok(await f.save("group", { ...group(), itemIds: [] }));
-  f.db
-    .prepare(
-      "INSERT INTO category_modifier_links(tenant_id,category_id,group_id) VALUES (?,?,?)",
-    )
-    .run("a", "a_food", "a_drinks");
-  // A category with product refs pointing back into itself is correctly rejected.
+  await ok(await f.save("group", { ...group(), itemIds: ["a_main"] }));
   const c = await f.api.loadOptionCatalog(f.env, "a");
+  c.links.push({ itemId: "a_tea", groupId: "a_drinks", optionIds: null, disabled: false });
   assert.throws(() => f.api.validateOptionGraph(c), /CYCLE/);
-  f.db.prepare("DELETE FROM category_modifier_links").run();
   await ok(
     await f.save(
       "product",
@@ -288,20 +282,20 @@ test("custom sub-options and eligibility are retained and server validated", asy
     /MIN_ORDER/,
   );
 });
-test("3 of 7 choices, inherited override and restore do not mutate the shared group", async () => {
+test("3 of 7 choices, direct override and restore do not mutate the shared group", async () => {
   const f = fixture(),
     g = {
       ...group(),
-      itemIds: [],
+      itemIds: ["a_main", "a_tea"],
       options: Array.from({ length: 7 }, (_, i) => ({
         id: "a_pick_" + i,
         name: "Choice " + i,
         price: i,
       })),
     };
-  await ok(await f.save("group", { ...g, categoryIds: ["a_food"] }));
+  await ok(await f.save("group", g));
   let c = await f.api.loadOptionCatalog(f.env, "a");
-  assert.equal(f.api.effectiveGroups(c, "a_main")[0].inherited, true);
+  assert.equal(f.api.effectiveGroups(c, "a_main")[0].inherited, false);
   await ok(
     await f.save(
       "product",
@@ -322,15 +316,15 @@ test("3 of 7 choices, inherited override and restore do not mutate the shared gr
   );
   c = await f.api.loadOptionCatalog(f.env, "a");
   assert.equal(f.api.effectiveGroups(c, "a_main").length, 0);
-  // Saving the group preserves a product's explicit suppression of category inheritance.
+  // Saving the group preserves a product's explicit suppression of group linking.
   await ok(
-    await f.save("group", { ...g, revision: 1, categoryIds: ["a_food"] }),
+    await f.save("group", { ...g, revision: 1, itemIds: [] }),
   );
   c = await f.api.loadOptionCatalog(f.env, "a");
   assert.equal(f.api.effectiveGroups(c, "a_main").length, 0);
-  await ok(await f.save("product", { ...product([]), revision: 2 }));
+  await ok(await f.save("product", { ...product([{ groupId: g.id, optionIds: null, disabled: false }]), revision: 2 }));
   c = await f.api.loadOptionCatalog(f.env, "a");
-  assert.equal(f.api.effectiveGroups(c, "a_main")[0].inherited, true);
+  assert.equal(f.api.effectiveGroups(c, "a_main")[0].inherited, false);
   assert.equal(f.api.effectiveGroups(c, "a_main")[0].options.length, 7);
 });
 test("repeat rules count portions and price each portion without retail prices", async () => {

@@ -12144,8 +12144,8 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
 
   #view-live.live-adaptive-stations .tile-action-btn,
   .tile-action-btn {
-    min-height: 42px !important;
-    height: 42px !important;
+    min-height: 48px !important;
+    height: 48px !important;
     font-size: 14px !important;
     font-weight: 700 !important;
     padding: 8px 12px !important;
