@@ -107,8 +107,28 @@ async function run() {
     assert.ok(actionsLayout1.btnHeight >= 46, `Toggle button height should be >= 48px standard, got ${actionsLayout1.btnHeight}`);
     assert.ok(actionsLayout1.badgeLeft < actionsLayout1.btnRight, 'Badge should be to the left of toggle button');
 
+    // Check hamburger button (mobile-nav-toggle-btn) is a recognizable squircle button
+    const hamburgerStyle = await page1.evaluate(() => {
+      const btn = document.getElementById('mobile-nav-toggle-btn');
+      if (!btn) return null;
+      const s = window.getComputedStyle(btn);
+      const rect = btn.getBoundingClientRect();
+      return {
+        display: s.display,
+        borderRadius: s.borderRadius,
+        borderWidth: s.borderTopWidth,
+        width: rect.width,
+        height: rect.height
+      };
+    });
+    assert.ok(hamburgerStyle, 'mobile-nav-toggle-btn should exist');
+    assert.ok(hamburgerStyle.display.includes('flex'), 'Hamburger button should be displayed on mobile');
+    assert.equal(hamburgerStyle.borderRadius, '10px', 'Hamburger button should have 10px rounded square corners');
+    assert.ok(parseFloat(hamburgerStyle.borderWidth) >= 1, 'Hamburger button should have visible border');
+    assert.ok(hamburgerStyle.width >= 36 && hamburgerStyle.height >= 36, `Hamburger button should be at least 36px, got ${hamburgerStyle.width}x${hamburgerStyle.height}`);
+
     await context1.close();
-    console.log('  ✓ Tenant WITHOUT dine-in passed: filter hidden, actions cleanly balanced.');
+    console.log('  ✓ Tenant WITHOUT dine-in passed: filter hidden, actions cleanly balanced, hamburger squircle verified.');
 
     // ---------------------------------------------------------
     // TEST CASE 2: Tenant WITH dine-in (e.g., blab_demo)

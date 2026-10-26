@@ -11825,38 +11825,40 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
   .settings-split { display: flex; }
   .pos-display-body { padding: 14px; }
 
-  /* Mobile Navigation Drawer & Hamburger Trigger (Frameless, clean flat icon button) */
+  /* Mobile Navigation Drawer & Hamburger Trigger (Rounded Square Button) */
   .mobile-nav-toggle-btn {
     display: inline-flex !important;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
-    min-width: 36px;
-    border-radius: 0 !important;
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    min-height: 38px;
+    border-radius: 10px !important;
+    background: #ffffff !important;
+    border: 1.5px solid #e2e8f0 !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
     color: #0f172a !important;
     cursor: pointer;
     padding: 0;
-    margin: 0;
-    margin-left: -4px !important;
-    transition: opacity 0.15s ease, transform 0.15s ease;
+    margin: 0 !important;
+    transition: all 0.15s ease;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
     flex-shrink: 0;
+    box-sizing: border-box;
   }
 
   .mobile-nav-toggle-btn:hover {
-    background: transparent !important;
-    opacity: 0.75;
+    background: #f8fafc !important;
+    border-color: #cbd5e1 !important;
+    color: #000000 !important;
   }
 
   .mobile-nav-toggle-btn:active {
-    transform: scale(0.92);
-    background: transparent !important;
-    opacity: 0.55;
+    transform: scale(0.94);
+    background: #f1f5f9 !important;
+    border-color: #94a3b8 !important;
   }
 
   .main-topbar-left {
@@ -11980,31 +11982,36 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
   }
 
   .sidebar-toggle-btn {
-    width: 34px !important;
-    height: 34px !important;
-    min-width: 34px !important;
-    border-radius: 50% !important;
-    background: #f1f5f9 !important;
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+    border-radius: 10px !important;
+    background: #ffffff !important;
     color: #475569 !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    border: 1px solid #e2e8f0 !important;
+    border: 1.5px solid #e2e8f0 !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
     cursor: pointer !important;
     padding: 0 !important;
     margin: 0 !important;
     transition: all 0.15s ease !important;
     flex-shrink: 0 !important;
+    box-sizing: border-box !important;
   }
 
   .sidebar-toggle-btn:hover {
     color: #0f172a !important;
-    background: #e2e8f0 !important;
+    background: #f8fafc !important;
+    border-color: #cbd5e1 !important;
   }
 
   .sidebar-toggle-btn:active {
-    transform: scale(0.92) !important;
-    background: #cbd5e1 !important;
+    transform: scale(0.94) !important;
+    background: #f1f5f9 !important;
+    border-color: #94a3b8 !important;
     color: #0f172a !important;
   }
 
