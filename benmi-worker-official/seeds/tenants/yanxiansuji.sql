@@ -252,3 +252,157 @@ ON CONFLICT(tenant_id, parent_item_id) DO UPDATE SET
     schema_version = excluded.schema_version,
     config_json = excluded.config_json,
     is_active = excluded.is_active;
+
+-- 7. Canonical Unified Option Groups & Options (Schema v2)
+-- 7.1 Order-level Bag Customization
+INSERT INTO modifier_groups (
+    id, tenant_id, name, selection_type, is_required, min_selection, max_selection, sort_order, scope, auto_popup, source_metadata_json
+) VALUES (
+    'mg_cust_yanxiansuji_custom_yzs_bag',
+    'yanxiansuji',
+    '✦ 響應環保 / 提袋加購',
+    'single',
+    0,
+    0,
+    1,
+    0,
+    'order',
+    0,
+    '{"source_table":"menu_customizations","source_id":"custom_yzs_bag","legacy_key":"bag","legacy_type":"radio"}'
+) ON CONFLICT(id) DO UPDATE SET
+    name = excluded.name,
+    selection_type = excluded.selection_type,
+    is_required = excluded.is_required,
+    min_selection = excluded.min_selection,
+    max_selection = excluded.max_selection,
+    sort_order = excluded.sort_order,
+    scope = excluded.scope;
+
+INSERT INTO modifier_options (
+    id, tenant_id, group_id, name, price, is_default, sort_order, sub_options_json, eligibility_rules_json, source_metadata_json
+) VALUES
+(
+    'opt_yzs_bag_none',
+    'yanxiansuji',
+    'mg_cust_yanxiansuji_custom_yzs_bag',
+    '不需要提袋',
+    0,
+    1,
+    0,
+    '[]',
+    '[]',
+    '{"source_table":"menu_customizations.options_json","source_group_id":"custom_yzs_bag","source_option_id":"bag_none"}'
+),
+(
+    'opt_yzs_bag_buy',
+    'yanxiansuji',
+    'mg_cust_yanxiansuji_custom_yzs_bag',
+    '購買提袋 (+1元)',
+    1,
+    0,
+    1,
+    '[]',
+    '[]',
+    '{"source_table":"menu_customizations.options_json","source_group_id":"custom_yzs_bag","source_option_id":"bag_buy"}'
+) ON CONFLICT(id) DO UPDATE SET
+    name = excluded.name,
+    price = excluded.price,
+    is_default = excluded.is_default,
+    sort_order = excluded.sort_order;
+
+-- 7.2 Category-level Flavor Group (口味選擇)
+INSERT INTO modifier_groups (
+    id, tenant_id, name, selection_type, is_required, min_selection, max_selection, sort_order, scope, auto_popup, source_metadata_json
+) VALUES (
+    'mg_cat_yanxiansuji_cat_yanzisuchun_flavor',
+    'yanxiansuji',
+    '口味選擇',
+    'single',
+    0,
+    0,
+    1,
+    7,
+    'category',
+    0,
+    '{"source_table":"menu_categories","source_id":"cat_yanzisuchun_flavor","slug":"cat_yanzisuchun_flavor","category_type":"modifier"}'
+) ON CONFLICT(id) DO UPDATE SET
+    name = excluded.name,
+    selection_type = excluded.selection_type,
+    is_required = excluded.is_required,
+    min_selection = excluded.min_selection,
+    max_selection = excluded.max_selection,
+    sort_order = excluded.sort_order,
+    scope = excluded.scope;
+
+INSERT INTO modifier_options (
+    id, tenant_id, group_id, name, price, is_default, sort_order, sub_options_json, eligibility_rules_json, source_metadata_json
+) VALUES
+('opt_yzs_fl_01', 'yanxiansuji', 'mg_cat_yanxiansuji_cat_yanzisuchun_flavor', '椒鹽',     0, 1, 1,  '[]', '[]', '{"source_table":"menu_items","source_item_id":"yzs_fl_01"}'),
+('opt_yzs_fl_02', 'yanxiansuji', 'mg_cat_yanxiansuji_cat_yanzisuchun_flavor', '胡椒',     0, 0, 2,  '[]', '[]', '{"source_table":"menu_items","source_item_id":"yzs_fl_02"}'),
+('opt_yzs_fl_03', 'yanxiansuji', 'mg_cat_yanxiansuji_cat_yanzisuchun_flavor', '海苔椒鹽', 0, 0, 3,  '[]', '[]', '{"source_table":"menu_items","source_item_id":"yzs_fl_03"}'),
+('opt_yzs_fl_04', 'yanxiansuji', 'mg_cat_yanxiansuji_cat_yanzisuchun_flavor', '小辣',     0, 0, 4,  '[]', '[]', '{"source_table":"menu_items","source_item_id":"yzs_fl_04"}'),
+('opt_yzs_fl_05', 'yanxiansuji', 'mg_cat_yanxiansuji_cat_yanzisuchun_flavor', '山葵椒鹽', 0, 0, 5,  '[]', '[]', '{"source_table":"menu_items","source_item_id":"yzs_fl_05"}'),
+('opt_yzs_fl_06', 'yanxiansuji', 'mg_cat_yanxiansuji_cat_yanzisuchun_flavor', '青花椒鹽', 0, 0, 6,  '[]', '[]', '{"source_table":"menu_items","source_item_id":"yzs_fl_06"}'),
+('opt_yzs_fl_07', 'yanxiansuji', 'mg_cat_yanxiansuji_cat_yanzisuchun_flavor', '咖哩椒鹽', 0, 0, 7,  '[]', '[]', '{"source_table":"menu_items","source_item_id":"yzs_fl_07"}'),
+('opt_yzs_fl_08', 'yanxiansuji', 'mg_cat_yanxiansuji_cat_yanzisuchun_flavor', '沙茶椒鹽', 0, 0, 8,  '[]', '[]', '{"source_table":"menu_items","source_item_id":"yzs_fl_08"}'),
+('opt_yzs_fl_09', 'yanxiansuji', 'mg_cat_yanxiansuji_cat_yanzisuchun_flavor', '胡椒梅粉', 0, 0, 9,  '[]', '[]', '{"source_table":"menu_items","source_item_id":"yzs_fl_09"}'),
+('opt_yzs_fl_10', 'yanxiansuji', 'mg_cat_yanxiansuji_cat_yanzisuchun_flavor', '梅粉',     0, 0, 10, '[]', '[]', '{"source_table":"menu_items","source_item_id":"yzs_fl_10"}')
+ON CONFLICT(id) DO UPDATE SET
+    name = excluded.name,
+    price = excluded.price,
+    is_default = excluded.is_default,
+    sort_order = excluded.sort_order;
+
+INSERT INTO category_modifier_links (tenant_id, category_id, group_id, sort_order)
+VALUES
+('yanxiansuji', 'cat_yanzisuchun_signature', 'mg_cat_yanxiansuji_cat_yanzisuchun_flavor', 0),
+('yanxiansuji', 'cat_yanzisuchun_classic',   'mg_cat_yanxiansuji_cat_yanzisuchun_flavor', 0),
+('yanxiansuji', 'cat_yanzisuchun_snack',     'mg_cat_yanxiansuji_cat_yanzisuchun_flavor', 0),
+('yanxiansuji', 'cat_yanzisuchun_fries',     'mg_cat_yanxiansuji_cat_yanzisuchun_flavor', 0),
+('yanxiansuji', 'cat_yanzisuchun_veggies',   'mg_cat_yanxiansuji_cat_yanzisuchun_flavor', 0),
+('yanxiansuji', 'cat_yanzisuchun_combos',    'mg_cat_yanxiansuji_cat_yanzisuchun_flavor', 0)
+ON CONFLICT(tenant_id, category_id, group_id) DO UPDATE SET
+    sort_order = excluded.sort_order;
+
+-- 7.3 Combo / Bundle Rule for 個人獨享餐 (yzs_cb_04)
+INSERT INTO modifier_groups (
+    id, tenant_id, name, selection_type, is_required, min_selection, max_selection, sort_order, scope,
+    allow_repeats, included, sources_json, labels_json, auto_popup, source_metadata_json
+) VALUES (
+    'ug_rule_yzs_cb_04_drink_0',
+    'yanxiansuji',
+    '飲料選擇 (二擇一)',
+    'single',
+    1,
+    1,
+    1,
+    0,
+    'item',
+    0,
+    1,
+    '[{"type":"category","categoryId":"cat_yanzisuchun_drink_choice"}]',
+    '{"zh-TW":"請選擇 1 樣飲料","vi":"Chọn 1 loại đồ uống"}',
+    1,
+    '{"legacyBundleRuleId":"rule_yzs_cb_04_drink","legacyGroupId":"drink-choice","legacySurcharges":{}}'
+) ON CONFLICT(id) DO UPDATE SET
+    name = excluded.name,
+    selection_type = excluded.selection_type,
+    is_required = excluded.is_required,
+    min_selection = excluded.min_selection,
+    max_selection = excluded.max_selection,
+    sort_order = excluded.sort_order,
+    scope = excluded.scope,
+    sources_json = excluded.sources_json,
+    labels_json = excluded.labels_json,
+    auto_popup = excluded.auto_popup;
+
+INSERT INTO item_modifier_links (tenant_id, item_id, group_id, sort_order, is_disabled)
+VALUES (
+    'yanxiansuji',
+    'yzs_cb_04',
+    'ug_rule_yzs_cb_04_drink_0',
+    0,
+    0
+) ON CONFLICT(tenant_id, item_id, group_id) DO UPDATE SET
+    sort_order = excluded.sort_order,
+    is_disabled = excluded.is_disabled;
