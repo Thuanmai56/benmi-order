@@ -152,3 +152,59 @@ ON CONFLICT(id) DO UPDATE SET
     type = excluded.type,
     sort_order = excluded.sort_order,
     options_json = excluded.options_json;
+
+-- 6. Canonical Unified Option Groups & Options (Schema v2)
+INSERT INTO modifier_groups (
+    id, tenant_id, name, selection_type, is_required, min_selection, max_selection, sort_order, scope, auto_popup, source_metadata_json
+) VALUES (
+    'mg_cust_nongfumingjia_custom_nfm_bag',
+    'nongfumingjia',
+    '✦ 響應環保 / 提袋加購',
+    'single',
+    0,
+    0,
+    1,
+    0,
+    'order',
+    0,
+    '{"source_table":"menu_customizations","source_id":"custom_nfm_bag","legacy_key":"bag","legacy_type":"radio"}'
+) ON CONFLICT(id) DO UPDATE SET
+    name = excluded.name,
+    selection_type = excluded.selection_type,
+    is_required = excluded.is_required,
+    min_selection = excluded.min_selection,
+    max_selection = excluded.max_selection,
+    sort_order = excluded.sort_order,
+    scope = excluded.scope;
+
+INSERT INTO modifier_options (
+    id, tenant_id, group_id, name, price, is_default, sort_order, sub_options_json, eligibility_rules_json, source_metadata_json
+) VALUES
+(
+    'opt_nfm_bag_none',
+    'nongfumingjia',
+    'mg_cust_nongfumingjia_custom_nfm_bag',
+    '不需要提袋',
+    0,
+    1,
+    0,
+    '[]',
+    '[]',
+    '{"source_table":"menu_customizations.options_json","source_group_id":"custom_nfm_bag","source_option_id":"bag_none"}'
+),
+(
+    'opt_nfm_bag_buy',
+    'nongfumingjia',
+    'mg_cust_nongfumingjia_custom_nfm_bag',
+    '購買提袋 (+1元)',
+    1,
+    0,
+    1,
+    '[]',
+    '[]',
+    '{"source_table":"menu_customizations.options_json","source_group_id":"custom_nfm_bag","source_option_id":"bag_buy"}'
+) ON CONFLICT(id) DO UPDATE SET
+    name = excluded.name,
+    price = excluded.price,
+    is_default = excluded.is_default,
+    sort_order = excluded.sort_order;

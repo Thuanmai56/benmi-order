@@ -83,15 +83,20 @@ Backend đã migrate sang Cloudflare `cf` CLI. Cấu hình chính: `benmi-worker
    - Trước khi deploy frontend, **BẮT BUỘC** chạy: `npm run check` (hoặc `node scripts/check-frontend.js`).
    - Lệnh này kiểm tra cú pháp, phát hiện trùng lặp biến toàn cục (`const`/`let`) giữa các thẻ `<script>`, và mô phỏng khởi tạo trong VM context.
    - **Kiểm tra Cache-Buster**: Đảm bảo các file HTML liên quan (`orders.html`, `index.html`, `marketplace.html`) đã được bump version `?v=...` nếu có file `.css` hoặc `.js` tương ứng bị sửa đổi.
-2. **Phát triển trên Dev**:
+2. **Quy trình Kiểm thử Tinh gọn khi Phát triển (Tiered Testing)**:
+   - Trong quá trình code & sửa bug nhỏ: Chỉ dùng `npm run check` kết hợp với file test mục tiêu của module tương ứng (0.5s - 3s).
+   - Tuyệt đối không chạy full baseline (`npm run test:release` ~2 phút) cho từng chỉnh sửa nhỏ.
+   - Chỉ chạy `npm run test:release` làm cổng nghiệm thu cuối cùng trước khi tạo/merge PR hoặc deploy.
+   - Xem chi tiết tại: [testing-workflow.md](file:///.agents/rules/testing-workflow.md).
+3. **Phát triển trên Dev**:
    - Lập trình và kiểm thử trên nhánh `dev`.
    - Apply migration: `npm run db:migrations:apply:dev`.
    - Deploy backend dev: `npm run deploy:dev`.
-3. **Kiểm thử QA & Demo trên Staging**:
+4. **Kiểm thử QA & Demo trên Staging**:
    - Hợp nhất `dev` vào `staging`: `git checkout staging && git merge dev && git push origin staging`.
    - Apply migration: `npm run db:migrations:apply:staging`.
    - Deploy backend staging: `npm run deploy:staging`.
-4. **Phát hành chính thức (Production)**:
+5. **Phát hành chính thức (Production)**:
    - Hợp nhất `staging` vào `main`: `git checkout main && git merge staging && git push origin main`.
    - Apply migration: `npm run db:migrations:apply:production`.
    - Deploy backend production: `npm run deploy`.
