@@ -276,6 +276,31 @@
   const productById = (id) => catalog.products.find((p) => p.id === id);
   function options(group) {
     const result = clone(group.options || []);
+    const seen = new Set(result.map((o) => o.productId).filter(Boolean));
+    for (const source of group.sources || []) {
+      for (const product of catalog.products || []) {
+        const matches =
+          source.type === "category"
+            ? product.category_id === (source.refId || source.categoryId)
+            : source.type === "item_list" && source.itemIds?.includes(product.id);
+        if (!matches || seen.has(product.id)) continue;
+        seen.add(product.id);
+        result.push({
+          id: `source:${group.id}:${product.id}`,
+          name: product.name,
+          productId: product.id,
+          price: Number(group.metadata?.legacySurcharges?.[product.id] || 0),
+          quantity: 1,
+          isDefault: false,
+          isOutOfStock: false,
+          outOfStockUntil: null,
+          subOptions: [],
+          eligibilityRules: [],
+          description: null,
+          fromSource: true,
+        });
+      }
+    }
     return result.map((o) => {
       const p = productById(o.productId);
       return {
@@ -729,7 +754,7 @@
       body =
         search() +
         `<div class="ug-list">${catalog.groups
-          .filter((g) => g.scope !== "order")
+          .filter((g) => g.scope !== "order" && !options(g).some((o) => o.productId === d.id))
           .map((g) =>
             check(
               g.id,
@@ -1109,6 +1134,11 @@
     if (name === "remove-photo") {
       d.imageDraft = null;
       d.imageKey = "";
+      if (window._tenantImageList) {
+        window._tenantImageList.delete(d.name);
+        window._tenantImageList.delete(`product:${d.id}`);
+        if (d.id) window._tenantImageList.delete(d.id);
+      }
       return render();
     }
     if (name === "groups")
@@ -1403,6 +1433,10 @@
           )?.menu_revision;
           throw new Error("IMAGE_SAVE_FAILED");
         }
+      } else if (!d.imageDraft && !d.imageKey && state.kind === "product" && window._tenantImageList) {
+        window._tenantImageList.delete(d.name);
+        window._tenantImageList.delete(`product:${d.id}`);
+        if (d.id) window._tenantImageList.delete(d.id);
       }
       rebase(kind, d.id, remove, state.optionsOnly);
       if (kind === "group" && !remove) {

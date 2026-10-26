@@ -203,6 +203,16 @@ export function effectiveGroups(catalog: OptionCatalog, productId: string): Opti
 		.filter(Boolean) as OptionGroup[];
 }
 export function validateOptionGraph(catalog: OptionCatalog) {
+	// Guard against direct self-links: a group cannot be linked to a product that is an option within that group
+	for (const link of catalog.links) {
+		if (link.disabled) continue;
+		const group = catalog.groups.find((g) => g.id === link.groupId);
+		if (!group) continue;
+		const opts = groupOptions(catalog, group);
+		if (opts.some((o) => o.productId === link.itemId)) {
+			throw new Error('OPTION_PRODUCT_CYCLE');
+		}
+	}
 	const visiting = new Set<string>();
 	const done = new Set<string>();
 	function visit(id: string, depth: number) {
@@ -227,9 +237,9 @@ export function validateOptionGraph(catalog: OptionCatalog) {
 }
 
 /** Compatibility projection only. Canonical groups are the sole configuration authority. */
-export function projectOptionRule(catalog: OptionCatalog, productId: string, path: string[] = []): any {
+export function projectOptionRule(catalog: OptionCatalog, productId: string, path: string[] = [], groupPath: string[] = []): any {
 	if (path.includes(productId) || path.length > 12) throw new Error('OPTION_PRODUCT_CYCLE');
-	const groups = effectiveGroups(catalog, productId);
+	const groups = effectiveGroups(catalog, productId).filter((g) => !groupPath.includes(g.id));
 	if (!groups.length) return null;
 	const autoPopup = groups.some((g) => g.minSelection > 0 || g.included);
 	return {
@@ -247,7 +257,7 @@ export function projectOptionRule(catalog: OptionCatalog, productId: string, pat
 				...o,
 				id: o.id,
 				surcharge: o.price,
-				optionGroups: o.productId ? projectOptionRule(catalog, o.productId, [...path, productId])?.groups || [] : [],
+				optionGroups: o.productId ? projectOptionRule(catalog, o.productId, [...path, productId], [...groupPath, g.id])?.groups || [] : [],
 			})),
 			items: g.included ? g.options.map((o) => ({ itemId: o.id, quantity: o.quantity, surcharge: o.price })) : [],
 		})),
@@ -444,9 +454,23 @@ export async function saveOptionEntity(request: Request, env: Env, kind: 'produc
 				price: Number(raw.price),
 				badge_text: String(raw.badgeText || ''),
 				is_recommended: raw.isRecommended ? 1 : 0,
-				image_key: typeof raw.imageKey === 'string' ? raw.imageKey : (previous?.image_key ?? null),
+				image_key: typeof raw.imageKey === 'string' ? (raw.imageKey.trim() || null) : (previous?.image_key ?? null),
 				menu_revision: Number(previous?.menu_revision || 0) + 1,
 			};
+			if (previous?.image_key && !product.image_key && env.ORDER_STATE) {
+				await env.ORDER_STATE.delete(`tenant:${tenantId}:image:${previous.image_key}`);
+				const listKey = `tenant:${tenantId}:image_list`;
+				if (typeof env.ORDER_STATE.get === 'function') {
+					const rawList = await env.ORDER_STATE.get(listKey);
+					if (rawList) {
+						try {
+							const list = JSON.parse(rawList);
+							const filtered = list.filter((k: string) => k !== previous.image_key && k !== product.name);
+							await env.ORDER_STATE.put(listKey, JSON.stringify(filtered));
+						} catch {}
+					}
+				}
+			}
 			catalog.products = catalog.products.filter((p) => p.id !== id).concat(product);
 			catalog.links = catalog.links.filter((l) => l.itemId !== id).concat(links);
 			validateOptionGraph(catalog);
@@ -529,6 +553,10 @@ export async function saveOptionEntity(request: Request, env: Env, kind: 'produc
 			const itemIds = raw.itemIds;
 			if (!Array.isArray(itemIds) || itemIds.some((pid: string) => !catalog.products.some((p) => p.id === pid)))
 				throw new Error('INVALID_LINKED_PRODUCTS');
+			const groupOptionsList = groupOptions(catalog, group);
+			if (itemIds.some((itemId: string) => groupOptionsList.some((o) => o.productId === itemId))) {
+				throw new Error('OPTION_PRODUCT_CYCLE');
+			}
 			const categoryIds: string[] = [];
 			catalog.categoryLinks = catalog.categoryLinks.filter((l) => l.groupId !== id);
 			const oldLinks = catalog.links.filter((l) => l.groupId === id);

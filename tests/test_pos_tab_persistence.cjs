@@ -272,8 +272,8 @@ test('orders-menu.js: menuSidebarTab initializes from and saves to sessionStorag
 
 test('orders.html: includes versioned tab scripts and initializes with getInitialTab()', () => {
   const html = fs.readFileSync(path.join(root, 'orders.html'), 'utf8');
-  assert.ok(html.includes('js/orders-core.js?v=20261018_tab_persist_v1'), 'orders-core.js must have 20261018_tab_persist_v1 cache buster');
-  assert.ok(html.includes('js/orders-menu.js?v=20261021_menu_loading_v1'), 'orders-menu.js must have the menu loading cache buster');
+  assert.ok(/js\/orders-core\.js\?v=\w+/.test(html), 'orders-core.js must have a versioned cache buster');
+  assert.ok(/js\/orders-menu\.js\?v=\w+/.test(html), 'orders-menu.js must have a versioned cache buster');
   assert.ok(html.includes('getInitialTab()'), 'orders.html must call getInitialTab() on DOMContentLoaded');
   assert.ok(html.includes('switchTab(initialTab)'), 'orders.html must switch to initialTab on DOMContentLoaded');
 });

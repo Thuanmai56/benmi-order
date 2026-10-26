@@ -1258,6 +1258,7 @@ function renderMenuCategories() {
         catalogList.push({ cat, originalIndex });
       }
     });
+    catalogList.sort((a, b) => (Number(a.cat.sortOrder) || 0) - (Number(b.cat.sortOrder) || 0));
 
     let totalActiveItems = 0;
     catalogList.forEach(({ cat }) => {
@@ -3074,7 +3075,7 @@ function serializeMenuData(categories) {
       __applied_modifiers: cat.appliedModifiers || (cat.allowCustomization === false ? [] : ['*']),
       __sort_order: currentOrder
     };
-    cat.items.forEach(item => {
+    cat.items.forEach((item, itemIdx) => {
         if (item.name && item.name.trim() !== "" && item.price !== null) {
           if (Object.prototype.hasOwnProperty.call(output[cat.id], item.name.trim())) throw new Error(t('menuDuplicateItem'));
         const serializedItem = {
@@ -3082,7 +3083,8 @@ function serializeMenuData(categories) {
           price: item.price,
           badge_text: item.badgeText || null,
           is_recommended: item.isRecommended ? 1 : 0,
-          item_type: item.itemType || (item.bundleRule && item.bundleRule.groups && item.bundleRule.groups.length > 0 ? 'bundle' : 'standard')
+          item_type: item.itemType || (item.bundleRule && item.bundleRule.groups && item.bundleRule.groups.length > 0 ? 'bundle' : 'standard'),
+          sort_order: item.sortOrder !== undefined ? item.sortOrder : (item.sort_order !== undefined ? item.sort_order : (itemIdx + 1))
         };
         const sharedGroups = [];
         ((typeof currentMenuData !== 'undefined' ? currentMenuData : categories) || []).filter(c => isCustomCat(c)).forEach(customCat => {
@@ -5257,7 +5259,18 @@ async function deleteItemDetailPhoto() {
     if (deleteBtn) deleteBtn.style.display = "none";
     if (statusEl) statusEl.innerText = t("imageNoImage");
 
-    if (window._tenantImageList) window._tenantImageList.delete(currentDetailImageKey);
+    if (window._tenantImageList) {
+      window._tenantImageList.delete(currentDetailImageKey);
+      const bareName = currentDetailImageKey.includes("_") ? currentDetailImageKey.split("_").slice(1).join("_") : currentDetailImageKey;
+      window._tenantImageList.delete(bareName);
+    }
+    if (activeItemDetailCatIdx !== null && activeItemDetailItemIdx !== null && currentMenuData?.[activeItemDetailCatIdx]?.items?.[activeItemDetailItemIdx]) {
+      const item = currentMenuData[activeItemDetailCatIdx].items[activeItemDetailItemIdx];
+      item.imageKey = null;
+      if (window._tenantImageList) window._tenantImageList.delete(item.name);
+    }
+    markMenuDirty();
+    renderMenuCategories();
   } catch (err) {
     alert(t("imageDeleteFail") + (err.message || ""));
     if (statusEl) statusEl.innerText = t("imageLoadFail");
