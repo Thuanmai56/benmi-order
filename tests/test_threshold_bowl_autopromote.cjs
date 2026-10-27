@@ -130,7 +130,7 @@ test('Bowl threshold customization: auto-promotes to $0 at >= $250 and reverts t
   inputPaid.value = '加購提碗 (+5元)';
   inputPaid.setAttribute('data-option-id', 'opt_yzs_bowl_paid');
   inputPaid.setAttribute('data-price', '5');
-  inputPaid.setAttribute('data-min-subtotal', '0');
+  // The real renderer omits data-min-subtotal for the paid fallback.
   inputPaid.checked = true;
   inputPaid.parentElement = labelPaid;
 
@@ -167,6 +167,7 @@ test('Bowl threshold customization: auto-promotes to $0 at >= $250 and reverts t
   assert.equal(inputFree.disabled, false, 'Free bowl should be enabled when subtotal >= 250');
   assert.equal(inputFree.checked, true, 'Free bowl should be auto-promoted to checked when subtotal >= 250');
   assert.equal(labelFree.classList.contains('threshold-disabled'), false);
+  assert.equal(inputPaid.disabled, true, 'Paid bowl should be disabled when the free bowl is eligible');
 
   // 3. Subtotal drops back to 150 (< 250)
   app.calculateCurrentFoodSubtotal = () => 150;
@@ -175,4 +176,5 @@ test('Bowl threshold customization: auto-promotes to $0 at >= $250 and reverts t
   // Free option should be disabled AND revert fallback to paid option!
   assert.equal(inputFree.disabled, true, 'Free bowl should be disabled when subtotal drops below 250');
   assert.equal(inputPaid.checked, true, 'Paid bowl should be re-selected automatically when subtotal drops below 250');
+  assert.equal(inputPaid.disabled, false, 'Paid bowl should be enabled again below the threshold');
 });

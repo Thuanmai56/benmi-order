@@ -120,6 +120,26 @@ function updateCustomizationThresholdUI() {
     if (!thresholdInputs || thresholdInputs.length === 0) return;
 
     let hasStateChanged = false;
+    const radioGroups = new Map();
+    const isOutOfStock = input => {
+        const label = input.closest('label');
+        return input.hasAttribute('data-oos') || Boolean(label && (
+            label.classList.contains('oos') || label.style.textDecoration?.includes('line-through')
+        ));
+    };
+
+    // Restore only radios disabled by a free replacement before finding fallbacks.
+    // Paid options need not have data-min-subtotal, so collect their whole group.
+    thresholdInputs.forEach(input => {
+        if (input.type !== 'radio' || radioGroups.has(input.name)) return;
+        const radios = Array.from(document.querySelectorAll(`input[name="${input.name}"]`));
+        radioGroups.set(input.name, radios);
+        radios.forEach(radio => {
+            if (!radio.hasAttribute('data-free-replacement')) return;
+            radio.removeAttribute('data-free-replacement');
+            radio.disabled = isOutOfStock(radio);
+        });
+    });
 
     thresholdInputs.forEach(input => {
         const minSub = Number(input.getAttribute('data-min-subtotal')) || 0;
@@ -127,7 +147,7 @@ function updateCustomizationThresholdUI() {
 
         const labelEl = input.closest('label');
         const isEligible = currentSubtotal >= minSub;
-        const isOos = input.hasAttribute('data-oos') || (labelEl && (labelEl.classList.contains('oos') || (labelEl.style.textDecoration && labelEl.style.textDecoration.includes('line-through'))));
+        const isOos = isOutOfStock(input);
 
         if (!isEligible || isOos) {
             input.disabled = true;
@@ -185,6 +205,23 @@ function updateCustomizationThresholdUI() {
                 }
             }
         }
+    });
+
+    // An eligible free threshold option replaces the paid choices in its group.
+    // Native disabled semantics also apply the existing muted label CSS.
+    radioGroups.forEach(radios => {
+        const hasFreeReplacement = radios.some(radio =>
+            Number(radio.getAttribute('data-min-subtotal')) > 0 &&
+            (Number(radio.getAttribute('data-price')) || 0) === 0 &&
+            !radio.disabled && !isOutOfStock(radio)
+        );
+        if (!hasFreeReplacement) return;
+        radios.forEach(radio => {
+            if (Number(radio.getAttribute('data-price')) > 0 && !radio.disabled && !isOutOfStock(radio)) {
+                radio.disabled = true;
+                radio.setAttribute('data-free-replacement', 'true');
+            }
+        });
     });
 
     if (hasStateChanged && typeof toggleFlavorSubOptions === 'function') {
