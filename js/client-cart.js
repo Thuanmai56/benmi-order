@@ -174,6 +174,16 @@ function updateCustomizationThresholdUI() {
                 labelEl.style.color = '';
                 labelEl.style.cursor = '';
             }
+
+            // Auto-promote: If this free ($0) option with threshold is now eligible, and user currently has a paid option (>0) checked in this same group
+            if (input.type === 'radio' && !input.checked && (Number(input.getAttribute('data-price')) || 0) === 0) {
+                const groupRadios = document.querySelectorAll(`input[name="${input.name}"]`);
+                const currentChecked = Array.from(groupRadios).find(r => r.checked);
+                if (currentChecked && (Number(currentChecked.getAttribute('data-price')) || 0) > 0) {
+                    input.checked = true;
+                    hasStateChanged = true;
+                }
+            }
         }
     });
 
