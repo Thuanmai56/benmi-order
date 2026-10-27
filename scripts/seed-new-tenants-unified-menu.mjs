@@ -202,16 +202,19 @@ const sqlStatements = [
     is_default = excluded.is_default,
     sort_order = excluded.sort_order;`,
 
-  `INSERT INTO category_modifier_links (tenant_id, category_id, group_id, sort_order)
-  VALUES
+  `INSERT INTO item_modifier_links (tenant_id, item_id, group_id, sort_order)
+  SELECT p.tenant_id, p.id, mapping.column3, mapping.column4
+  FROM (VALUES
   ('yanxiansuji', 'cat_yanzisuchun_signature', 'mg_cat_yanxiansuji_cat_yanzisuchun_flavor', 0),
   ('yanxiansuji', 'cat_yanzisuchun_classic',   'mg_cat_yanxiansuji_cat_yanzisuchun_flavor', 0),
   ('yanxiansuji', 'cat_yanzisuchun_snack',     'mg_cat_yanxiansuji_cat_yanzisuchun_flavor', 0),
   ('yanxiansuji', 'cat_yanzisuchun_fries',     'mg_cat_yanxiansuji_cat_yanzisuchun_flavor', 0),
   ('yanxiansuji', 'cat_yanzisuchun_veggies',   'mg_cat_yanxiansuji_cat_yanzisuchun_flavor', 0),
   ('yanxiansuji', 'cat_yanzisuchun_combos',    'mg_cat_yanxiansuji_cat_yanzisuchun_flavor', 0)
-  ON CONFLICT(tenant_id, category_id, group_id) DO UPDATE SET
-    sort_order = excluded.sort_order;`,
+  ) AS mapping
+  JOIN menu_items p ON p.tenant_id = mapping.column1 AND p.category_id = mapping.column2
+  WHERE 1
+  ON CONFLICT(tenant_id, item_id, group_id) DO NOTHING;`,
 
   // 5. yanxiansuji - Combo / Bundle Rule for 個人獨享餐 (yzs_cb_04)
   `INSERT INTO modifier_groups (
@@ -228,7 +231,7 @@ const sqlStatements = [
     0,
     'item',
     0,
-    1,
+    0,
     '[{"type":"category","categoryId":"cat_yanzisuchun_drink_choice"}]',
     '{"zh-TW":"請選擇 1 樣飲料","vi":"Chọn 1 loại đồ uống"}',
     1,
@@ -241,6 +244,7 @@ const sqlStatements = [
     max_selection = excluded.max_selection,
     sort_order = excluded.sort_order,
     scope = excluded.scope,
+    included = excluded.included,
     sources_json = excluded.sources_json,
     labels_json = excluded.labels_json,
     auto_popup = excluded.auto_popup;`,

@@ -4,7 +4,7 @@ export const menuSuites = [
     'menu_sort_button_visibility', 'menu_dirty_detection', 'modifier_option_name_collision',
     'menu_workspace', 'item_modifier_workspace', 'menu_display_scale',
     'category_linked_products_picker', 'pos_tab_persistence',
-    'unified_option_groups', 'unified_menu_drawer', 'unified_menu_sections',
+    'unified_option_groups', 'unified_option_cutover', 'unified_menu_drawer', 'unified_menu_sections',
     'menu_global_group_order', 'customer_option_presentations', 'option_surcharge_cart',
     'real_tenants_parity', 'pos_option_groups_contract', 'new_menu_deep_verification',
     'new_menu_customer_e2e', 'new_menu_category_inheritance', 'new_menu_pos_lifecycle',
