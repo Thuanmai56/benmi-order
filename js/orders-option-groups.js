@@ -1449,6 +1449,8 @@
       if (kind === "group" && !remove) {
         selectedGroup = d.id;
         if (d.scope) groupSectionsOpen[d.scope] = true;
+      } else if (kind === "group" && remove && typeof setMenuMobileView === "function") {
+        setMenuMobileView("master");
       }
       const focusId = returnFocus?.id;
       finish();
@@ -1686,6 +1688,9 @@
               card.setAttribute("aria-pressed", card.dataset.group === selectedGroup);
             });
             this.workspace();
+            if (typeof setMenuMobileView === "function") {
+              setMenuMobileView("detail");
+            }
           }),
       );
       this.filterGroups();

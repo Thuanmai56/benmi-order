@@ -2806,6 +2806,96 @@ body.ug-open { overflow: hidden; }
     width: 100% !important;
   }
 
+  /* Master UnifiedMenu Option Groups List */
+  #view-menu:not([data-mobile-view="detail"]) .ug-group-navigation {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    width: 100% !important;
+    margin-bottom: 4px !important;
+    flex-shrink: 0 !important;
+  }
+
+  #view-menu:not([data-mobile-view="detail"]) #menu-categories .ug-group-navigation > button[data-action="new-group"] {
+    width: 100% !important;
+    min-height: 48px !important;
+    height: 48px !important;
+    margin: 0 !important;
+    border-radius: 14px !important;
+    border: 2px dashed #86efac !important;
+    background: #f0fdf4 !important;
+    color: #15803d !important;
+    font-size: 13.5px !important;
+    font-weight: 700 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    flex-basis: auto !important;
+    box-sizing: border-box !important;
+  }
+
+  #view-menu:not([data-mobile-view="detail"]) .ug-group-search {
+    width: 100% !important;
+    min-height: 44px !important;
+    height: 44px !important;
+    margin: 0 !important;
+    border: 1.5px solid #e2e8f0 !important;
+    border-radius: 12px !important;
+    background: #ffffff !important;
+    flex-basis: auto !important;
+    box-sizing: border-box !important;
+  }
+
+  #view-menu:not([data-mobile-view="detail"]) .ug-group-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    width: 100% !important;
+    flex: 1 1 auto !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 0 !important;
+  }
+
+  #view-menu:not([data-mobile-view="detail"]) .ug-group-section {
+    width: 100% !important;
+  }
+
+  #view-menu:not([data-mobile-view="detail"]) .ug-group-section-heading {
+    min-height: 40px !important;
+    padding: 6px 4px !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+  }
+
+  #view-menu:not([data-mobile-view="detail"]) .ug-group-section-cards {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    width: 100% !important;
+    overflow-x: hidden !important;
+    padding: 2px 0 6px 0 !important;
+  }
+
+  #view-menu:not([data-mobile-view="detail"]) .ug-group-section-cards .menu-option-card {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    min-height: 58px !important;
+    padding: 12px 16px !important;
+    margin: 0 !important;
+    border-radius: 14px !important;
+    border: 1.5px solid #e2e8f0 !important;
+    background: #ffffff !important;
+    color: #334155 !important;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+    box-sizing: border-box !important;
+    cursor: pointer !important;
+  }
+
   /* --------------------------------------------------------------------------
      LEVEL 2: DETAIL (Item Editor / Options Editor)
      When [data-mobile-view="detail"]
@@ -3254,6 +3344,39 @@ body.ug-open { overflow: hidden; }
 
   #view-menu .cust-option-row .menu-item-name-input {
     width: 100% !important;
+  }
+
+  /* Level 2 Detail View: UnifiedMenu Option Workspace */
+  #view-menu[data-mobile-view="detail"] .ug-workspace {
+    background: #ffffff !important;
+    border: 1.5px solid #e2e8f0 !important;
+    border-radius: 14px !important;
+    overflow: hidden !important;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+    margin-bottom: 24px !important;
+  }
+
+  #view-menu[data-mobile-view="detail"] .ug-workspace-linked {
+    padding: 12px 16px !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+  }
+
+  #view-menu[data-mobile-view="detail"] .ug-workspace-rule {
+    padding: 10px 16px !important;
+    font-size: 13px !important;
+    background: #f8fafc !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+  }
+
+  #view-menu[data-mobile-view="detail"] .ug-workspace-options {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  #view-menu[data-mobile-view="detail"] .ug-workspace .ug-row {
+    min-height: 54px !important;
+    padding: 12px 16px !important;
+    border-bottom: 1px solid #f1f5f9 !important;
   }
 
   /* Category Manager / Reorder Screen */

@@ -65,13 +65,17 @@ function updateMenuMobileNavButtons() {
     if (isDetail) {
       btnNav.style.display = 'none';
       btnBack.style.display = 'inline-flex';
-      if (currentMenuData && currentMenuData[activeCategoryIndex]) {
+      let titleText = '';
+      const editorTitle = typeof document.getElementById === 'function' ? document.getElementById('menu-editor-title') : null;
+      if (editorTitle && editorTitle.textContent && editorTitle.textContent.trim()) {
+        titleText = editorTitle.textContent.trim();
+      } else if (currentMenuData && currentMenuData[activeCategoryIndex]) {
         const cat = currentMenuData[activeCategoryIndex];
-        const titleText = isCustomizationCategory(cat)
+        titleText = isCustomizationCategory(cat)
           ? (cat.groups?.[activeOptionGroupIndex]?.title || cat.title)
           : cat.title;
-        if (titleEl && titleText) titleEl.textContent = titleText;
       }
+      if (titleEl && titleText) titleEl.textContent = titleText;
     } else {
       btnNav.style.display = '';
       btnBack.style.display = 'none';
@@ -1140,6 +1144,7 @@ function setMenuSidebarTab(tab) {
 
   isCategoryManagerOpen = false;
   isCustomGroupCreatorOpen = false;
+  setMenuMobileView('master');
 
   if (currentMenuData && currentMenuData.length > 0) {
     if (tab === 'products') {
@@ -1199,6 +1204,7 @@ function handleCreateComboFromSidebar() {
 
   isCategoryManagerOpen = false;
   isCustomGroupCreatorOpen = false;
+  setMenuMobileView('master');
   activeCategoryIndex = comboCatIdx;
   renderMenuCategories();
   renderMenuCategoryEditor(comboCatIdx);

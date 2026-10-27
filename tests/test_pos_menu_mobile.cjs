@@ -214,7 +214,92 @@ async function run() {
   assert.equal(optionsDetailMetrics.editorDisplay, 'flex');
   assert(optionsDetailMetrics.backBtnDisplay.includes('flex'));
 
-  // 6. Test Tablet & Desktop (Ensure 0 regression on larger screens)
+  // 6. Test UnifiedMenu Option Groups click transition on mobile (<680px)
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(async () => {
+    const fakeCatalog = {
+      products: [],
+      categories: [],
+      groups: [
+        { id: 'grp_sugar', name: '甜度選項', scope: 'item', options: [{ id: 'opt_1', name: '正常甜', price: 0 }] },
+        { id: 'grp_ice', name: '冰塊選項', scope: 'item', options: [{ id: 'opt_2', name: '正常冰', price: 0 }] }
+      ],
+      links: []
+    };
+    window.fetch = async (url) => {
+      if (String(url).includes('/api/menu/options')) {
+        return { ok: true, json: async () => fakeCatalog };
+      }
+      return { ok: true, json: async () => ({}) };
+    };
+    await window.UnifiedMenu.load();
+    setMenuSidebarTab('options');
+    setMenuMobileView('master');
+    window.UnifiedMenu.sidebar();
+  });
+  await page.waitForTimeout(300);
+
+  // Check UnifiedMenu master view
+  const umMasterMetrics = await page.evaluate(() => {
+    const sidebar = document.getElementById('menu-sidebar-panel');
+    const editor = document.getElementById('menu-editor-panel');
+    const groupCards = [...document.querySelectorAll('#menu-categories button[data-group]')];
+    return {
+      sidebarDisplay: sidebar ? getComputedStyle(sidebar).display : null,
+      editorDisplay: editor ? getComputedStyle(editor).display : null,
+      groupCardsCount: groupCards.length
+    };
+  });
+  console.log('Mobile UnifiedMenu Master Metrics:', umMasterMetrics);
+  assert.equal(umMasterMetrics.sidebarDisplay, 'flex');
+  assert.equal(umMasterMetrics.editorDisplay, 'none');
+  assert.equal(umMasterMetrics.groupCardsCount, 2);
+
+  // Click on UnifiedMenu group card -> Should transition to detail view!
+  await page.locator('#menu-categories button[data-group="grp_sugar"]').click();
+  await page.waitForTimeout(300);
+
+  const umDetailMetrics = await page.evaluate(() => {
+    const sidebar = document.getElementById('menu-sidebar-panel');
+    const editor = document.getElementById('menu-editor-panel');
+    const backBtn = document.getElementById('btn-menu-mobile-back');
+    const title = document.getElementById('i18n-menu-workspace-title');
+    const workspace = document.querySelector('.ug-workspace');
+    return {
+      sidebarDisplay: sidebar ? getComputedStyle(sidebar).display : null,
+      editorDisplay: editor ? getComputedStyle(editor).display : null,
+      backBtnDisplay: backBtn ? getComputedStyle(backBtn).display : null,
+      titleText: title ? title.textContent : null,
+      hasWorkspace: Boolean(workspace)
+    };
+  });
+  console.log('Mobile UnifiedMenu Detail Metrics:', umDetailMetrics);
+  assert.equal(umDetailMetrics.sidebarDisplay, 'none');
+  assert.equal(umDetailMetrics.editorDisplay, 'flex');
+  assert(umDetailMetrics.backBtnDisplay.includes('flex'));
+  assert.equal(umDetailMetrics.titleText, '甜度選項');
+  assert.equal(umDetailMetrics.hasWorkspace, true);
+
+  // Click back button -> Should return to master view!
+  await page.locator('#btn-menu-mobile-back').click();
+  await page.waitForTimeout(300);
+
+  const umBackMetrics = await page.evaluate(() => {
+    const sidebar = document.getElementById('menu-sidebar-panel');
+    const editor = document.getElementById('menu-editor-panel');
+    const backBtn = document.getElementById('btn-menu-mobile-back');
+    return {
+      sidebarDisplay: sidebar ? getComputedStyle(sidebar).display : null,
+      editorDisplay: editor ? getComputedStyle(editor).display : null,
+      backBtnDisplay: backBtn ? getComputedStyle(backBtn).display : null
+    };
+  });
+  console.log('Mobile UnifiedMenu Back Metrics:', umBackMetrics);
+  assert.equal(umBackMetrics.sidebarDisplay, 'flex');
+  assert.equal(umBackMetrics.editorDisplay, 'none');
+  assert.equal(umBackMetrics.backBtnDisplay, 'none');
+
+  // 7. Test Tablet & Desktop (Ensure 0 regression on larger screens)
   await page.setViewportSize({ width: 820, height: 1180 });
   await page.waitForTimeout(300);
 
