@@ -8,7 +8,7 @@
   <base href="/" />
   <script src="js/orders-display.js?v=20261007_dev_main_sync_v1"></script>
   <link rel="stylesheet" href="css/orders.css?v=20261027_menu_mobile_v1" />
-  <link rel="stylesheet" href="css/orders-menu.css?v=20261027_menu_mobile_v1" />
+  <link rel="stylesheet" href="css/orders-menu.css?v=20261027_menu_mobile_v2" />
     <script>
       (function () {
         document.documentElement.style.setProperty('--primary', '#00b900');
@@ -1324,6 +1324,11 @@
                   <line x1="4" x2="20" y1="18" y2="18"></line>
                 </svg>
               </button>
+              <button type="button" class="menu-mobile-back-btn" id="btn-menu-mobile-back" onclick="setMenuMobileView('master')" style="display:none;" aria-label="Quay lại danh mục">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+              </button>
               <h1 class="menu-workspace-title" id="i18n-menu-workspace-title">菜單管理</h1>
               <div id="menu-workspace-store-slot" class="menu-header-store-slot"></div>
             </div>
@@ -1388,6 +1393,11 @@
         <div class="panel menu-editor-panel" id="menu-editor-panel">
           <div class="panel-header menu-editor-header">
             <div class="menu-editor-title-group">
+              <button type="button" class="menu-editor-back-btn" id="btn-editor-back" onclick="setMenuMobileView('master')" aria-label="Quay lại">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+              </button>
               <div class="panel-title" id="menu-editor-title">分類項目</div>
               <button type="button" class="cat-title-action-btn" id="btn-option-group-edit" hidden aria-label="編輯選項群組" title="編輯選項群組">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
@@ -2786,7 +2796,7 @@
   <script src="js/orders-history.js?v=20261027_history_ui_fix_v1"></script>
   <script src="js/orders-reports.js?v=20261007_dev_main_sync_v1"></script>
   <script src="js/orders-settings.js?v=20261027_history_ui_fix_v1"></script>
-  <script src="js/orders-menu.js?v=20261026_pos_menu_fixes_v1"></script>
+  <script src="js/orders-menu.js?v=20261027_menu_mobile_v2"></script>
   <script src="js/orders-bundle-wizard.js?v=20261007_dev_main_sync_v1"></script>
   <script src="js/orders-option-groups.js?v=20261027_cycle_warning_v1"></script>
 

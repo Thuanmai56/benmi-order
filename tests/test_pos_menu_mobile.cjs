@@ -28,25 +28,25 @@ const sampleMenu = [
     ]
   },
   {
-    id: 'cat_sides',
-    title: '小吃點心 (Ăn vặt)',
-    type: 'catalog',
-    sortOrder: 3,
-    items: [
-      { id: 'item_6', name: '越式炸春捲 Chả Giò', price: 80, isOos: false },
-      { id: 'item_7', name: '生春捲 Gỏi Cuốn', price: 90, isOos: false }
-    ]
-  },
-  {
     id: 'cat_options_sugar',
     title: '甜度選項 (Độ ngọt)',
-    type: 'customization',
+    type: 'order_customization',
     scope: 'item',
-    sortOrder: 4,
+    sortOrder: 3,
+    groups: [
+      {
+        id: 'grp_sugar',
+        title: '甜度選項 (Độ ngọt)',
+        scope: 'item',
+        options: [
+          { id: 'opt_1', name: '正常甜 (100%)', price: 0 },
+          { id: 'opt_2', name: '半糖 (50%)', price: 0 }
+        ]
+      }
+    ],
     items: [
       { id: 'opt_1', name: '正常甜 (100%)', price: 0 },
-      { id: 'opt_2', name: '半糖 (50%)', price: 0 },
-      { id: 'opt_3', name: '無糖 (0%)', price: 0 }
+      { id: 'opt_2', name: '半糖 (50%)', price: 0 }
     ]
   }
 ];
@@ -73,9 +73,7 @@ async function run() {
 
   await page.addInitScript(() => {
     window.setInterval = () => 0;
-    window.fetch = async (url) => {
-      return { ok: true, headers: new Headers(), json: async () => ({}) };
-    };
+    window.fetch = async () => ({ ok: true, headers: new Headers(), json: async () => ({}) });
   });
 
   await page.goto('http://pos.test/orders.html?tenant=benmi');
@@ -86,99 +84,158 @@ async function run() {
     isMenuLoadedCompletely = true;
     switchTab('menu');
     setMenuSidebarTab('products');
-    activeCategoryIndex = 0;
+    setMenuMobileView('master');
     renderMenuCategories();
-    renderMenuCategoryEditor(0);
   }, sampleMenu);
 
-  await page.waitForTimeout(400);
+  await page.waitForTimeout(300);
 
-  // 1. Inspect Products Mode on Mobile
-  const mobileMetrics = await page.evaluate(() => {
-    const heading = document.getElementById('menu-workspace-heading');
-    const split = document.getElementById('menu-standard-workspace');
+  // 1. Verify Level 1: Master View on Mobile (390x844)
+  const masterMetrics = await page.evaluate(() => {
     const sidebar = document.getElementById('menu-sidebar-panel');
-    const categories = document.getElementById('menu-categories');
     const editor = document.getElementById('menu-editor-panel');
-    const editorBody = document.getElementById('menu-editor-body');
-    const cards = [...document.querySelectorAll('.menu-item-row-card')];
+    const backBtn = document.getElementById('btn-menu-mobile-back');
+    const navBtn = document.querySelector('.menu-header-nav-btn');
+    const cards = [...document.querySelectorAll('#menu-categories .menu-option-card')];
     
     return {
-      windowH: window.innerHeight,
-      headingRect: heading ? heading.getBoundingClientRect() : null,
-      splitRect: split ? split.getBoundingClientRect() : null,
-      sidebarRect: sidebar ? sidebar.getBoundingClientRect() : null,
-      categoriesRect: categories ? categories.getBoundingClientRect() : null,
-      editorRect: editor ? editor.getBoundingClientRect() : null,
+      sidebarDisplay: sidebar ? getComputedStyle(sidebar).display : null,
+      editorDisplay: editor ? getComputedStyle(editor).display : null,
+      backBtnDisplay: backBtn ? getComputedStyle(backBtn).display : null,
+      navBtnDisplay: navBtn ? getComputedStyle(navBtn).display : null,
       cardsCount: cards.length,
-      firstCardRect: cards[0] ? cards[0].getBoundingClientRect() : null,
-      lastCardRect: cards[cards.length - 1] ? cards[cards.length - 1].getBoundingClientRect() : null,
-      hasHorizontalPageOverflow: document.documentElement.scrollWidth > window.innerWidth,
-      editorScrollable: editorBody ? editorBody.scrollHeight > editorBody.clientHeight : false
+      firstCardWidth: cards[0] ? cards[0].getBoundingClientRect().width : 0,
+      firstCardHeight: cards[0] ? cards[0].getBoundingClientRect().height : 0,
+      hasHorizontalOverflow: document.documentElement.scrollWidth > window.innerWidth
     };
   });
 
-  console.log('Mobile Products Metrics:', JSON.stringify(mobileMetrics, null, 2));
+  console.log('Mobile Level 1 (Master) Metrics:', masterMetrics);
+  assert.equal(masterMetrics.sidebarDisplay, 'flex', 'Sidebar panel is visible in Level 1');
+  assert.equal(masterMetrics.editorDisplay, 'none', 'Editor panel is hidden in Level 1');
+  assert.equal(masterMetrics.backBtnDisplay, 'none', 'Back button is hidden in Level 1');
+  assert(masterMetrics.navBtnDisplay.includes('flex'), 'Nav hamburger is visible in Level 1');
+  assert.equal(masterMetrics.cardsCount, 2, 'Two category cards rendered');
+  assert(masterMetrics.firstCardWidth >= 340, 'Category card is full width');
+  assert(masterMetrics.firstCardHeight >= 50, 'Category card is spacious');
+  assert(!masterMetrics.hasHorizontalOverflow, 'No horizontal overflow in Level 1');
 
-  fs.mkdirSync(path.join(root, 'temp'), { recursive: true });
-  await page.screenshot({ path: path.join(root, 'temp/menu_mobile_products.png') });
+  // 2. Click on First Category -> Transition to Level 2: Detail View
+  await page.locator('#menu-categories .menu-option-card').first().click();
+  await page.waitForTimeout(300);
 
-  // 2. Switch to Options Mode on Mobile
+  const detailMetrics = await page.evaluate(() => {
+    const sidebar = document.getElementById('menu-sidebar-panel');
+    const editor = document.getElementById('menu-editor-panel');
+    const backBtn = document.getElementById('btn-menu-mobile-back');
+    const navBtn = document.querySelector('.menu-header-nav-btn');
+    const itemCards = [...document.querySelectorAll('.menu-item-row-card')];
+    
+    return {
+      sidebarDisplay: sidebar ? getComputedStyle(sidebar).display : null,
+      editorDisplay: editor ? getComputedStyle(editor).display : null,
+      backBtnDisplay: backBtn ? getComputedStyle(backBtn).display : null,
+      navBtnDisplay: navBtn ? getComputedStyle(navBtn).display : null,
+      itemCardsCount: itemCards.length,
+      firstItemCardWidth: itemCards[0] ? itemCards[0].getBoundingClientRect().width : 0,
+      hasHorizontalOverflow: document.documentElement.scrollWidth > window.innerWidth
+    };
+  });
+
+  console.log('Mobile Level 2 (Detail) Metrics:', detailMetrics);
+  assert.equal(detailMetrics.sidebarDisplay, 'none', 'Sidebar panel is hidden in Level 2');
+  assert.equal(detailMetrics.editorDisplay, 'flex', 'Editor panel is visible in Level 2');
+  assert(detailMetrics.backBtnDisplay.includes('flex'), 'Back button is visible in Level 2');
+  assert.equal(detailMetrics.navBtnDisplay, 'none', 'Nav hamburger is hidden in Level 2');
+  assert.equal(detailMetrics.itemCardsCount, 3, 'Items in selected category are rendered');
+  assert(detailMetrics.firstItemCardWidth >= 340, 'Item card takes full width with padding');
+  assert(!detailMetrics.hasHorizontalOverflow, 'No horizontal overflow in Level 2');
+
+  // 3. Click Back Button -> Return to Level 1: Master View
+  await page.locator('#btn-menu-mobile-back').click();
+  await page.waitForTimeout(300);
+
+  const backMetrics = await page.evaluate(() => {
+    const sidebar = document.getElementById('menu-sidebar-panel');
+    const editor = document.getElementById('menu-editor-panel');
+    const backBtn = document.getElementById('btn-menu-mobile-back');
+    return {
+      sidebarDisplay: sidebar ? getComputedStyle(sidebar).display : null,
+      editorDisplay: editor ? getComputedStyle(editor).display : null,
+      backBtnDisplay: backBtn ? getComputedStyle(backBtn).display : null
+    };
+  });
+
+  console.log('Mobile Back to Master Metrics:', backMetrics);
+  assert.equal(backMetrics.sidebarDisplay, 'flex', 'Sidebar is back to visible');
+  assert.equal(backMetrics.editorDisplay, 'none', 'Editor is back to hidden');
+  assert.equal(backMetrics.backBtnDisplay, 'none', 'Back button is hidden again');
+
+  // 4. Switch to Options Mode -> Level 1 shows Option Groups
   await page.evaluate(() => {
     setMenuSidebarTab('options');
     renderMenuCategories();
-    renderMenuCategoryEditor(3);
   });
   await page.waitForTimeout(300);
 
-  const optionsMetrics = await page.evaluate(() => {
-    const categories = document.getElementById('menu-categories');
-    const editorBody = document.getElementById('menu-editor-body');
+  const optionsMasterMetrics = await page.evaluate(() => {
+    const sidebar = document.getElementById('menu-sidebar-panel');
+    const editor = document.getElementById('menu-editor-panel');
+    const cards = [...document.querySelectorAll('#menu-categories .menu-option-card')];
     return {
-      categoriesH: categories ? categories.getBoundingClientRect().height : null,
-      editorBodyH: editorBody ? editorBody.getBoundingClientRect().height : null,
-      hasHorizontalPageOverflow: document.documentElement.scrollWidth > window.innerWidth
+      sidebarDisplay: sidebar ? getComputedStyle(sidebar).display : null,
+      editorDisplay: editor ? getComputedStyle(editor).display : null,
+      cardsCount: cards.length
     };
   });
-  console.log('Mobile Options Metrics:', JSON.stringify(optionsMetrics, null, 2));
-  await page.screenshot({ path: path.join(root, 'temp/menu_mobile_options.png') });
 
-  // 3. Category Manager / Reorder Screen
-  await page.evaluate(() => {
-    setMenuSidebarTab('products');
-    openCategoriesManager();
-  });
+  console.log('Mobile Options Master Metrics:', optionsMasterMetrics);
+  assert.equal(optionsMasterMetrics.sidebarDisplay, 'flex');
+  assert.equal(optionsMasterMetrics.editorDisplay, 'none');
+  assert.equal(optionsMasterMetrics.cardsCount, 1, 'One option group rendered in options mode');
+
+  // 5. Click Option Group -> Transition to Level 2 Options Detail
+  await page.locator('#menu-categories .menu-option-card').first().click();
   await page.waitForTimeout(300);
 
-  const reorderMetrics = await page.evaluate(() => {
-    const screen = document.getElementById('menu-display-order-screen');
-    const cols = document.querySelector('.menu-order-columns');
+  const optionsDetailMetrics = await page.evaluate(() => {
+    const sidebar = document.getElementById('menu-sidebar-panel');
+    const editor = document.getElementById('menu-editor-panel');
+    const backBtn = document.getElementById('btn-menu-mobile-back');
     return {
-      screenVisible: screen && getComputedStyle(screen).display !== 'none',
-      colsRect: cols ? cols.getBoundingClientRect() : null,
-      hasHorizontalPageOverflow: document.documentElement.scrollWidth > window.innerWidth
+      sidebarDisplay: sidebar ? getComputedStyle(sidebar).display : null,
+      editorDisplay: editor ? getComputedStyle(editor).display : null,
+      backBtnDisplay: backBtn ? getComputedStyle(backBtn).display : null
     };
   });
-  console.log('Mobile Reorder Metrics:', JSON.stringify(reorderMetrics, null, 2));
-  await page.screenshot({ path: path.join(root, 'temp/menu_mobile_reorder.png') });
 
-  // 4. Return to products mode
-  await page.evaluate(() => {
-    closeCategoriesManager();
+  console.log('Mobile Options Detail Metrics:', optionsDetailMetrics);
+  assert.equal(optionsDetailMetrics.sidebarDisplay, 'none');
+  assert.equal(optionsDetailMetrics.editorDisplay, 'flex');
+  assert(optionsDetailMetrics.backBtnDisplay.includes('flex'));
+
+  // 6. Test Tablet & Desktop (Ensure 0 regression on larger screens)
+  await page.setViewportSize({ width: 820, height: 1180 });
+  await page.waitForTimeout(300);
+
+  const tabletMetrics = await page.evaluate(() => {
+    const sidebar = document.getElementById('menu-sidebar-panel');
+    const editor = document.getElementById('menu-editor-panel');
+    const backBtn = document.getElementById('btn-menu-mobile-back');
+    return {
+      sidebarDisplay: sidebar ? getComputedStyle(sidebar).display : null,
+      editorDisplay: editor ? getComputedStyle(editor).display : null,
+      backBtnDisplay: backBtn ? getComputedStyle(backBtn).display : null
+    };
   });
-  await page.waitForTimeout(200);
 
-  // Assertions
-  assert(!mobileMetrics.hasHorizontalPageOverflow, 'No horizontal page overflow on mobile');
-  assert(!optionsMetrics.hasHorizontalPageOverflow, 'No horizontal page overflow in options mode');
-  assert(!reorderMetrics.hasHorizontalPageOverflow, 'No horizontal page overflow in reorder screen');
-  assert(mobileMetrics.headingRect.height <= 105, 'Heading height is compact on mobile');
-  assert(mobileMetrics.categoriesRect.height >= 44 && mobileMetrics.categoriesRect.height <= 60, 'Categories rail is a horizontal pill bar');
-  assert(mobileMetrics.editorRect.bottom <= mobileMetrics.windowH + 1, 'Editor panel stays within viewport');
-  assert(mobileMetrics.cardsCount > 0, 'Menu item cards are rendered');
+  console.log('Tablet (820x1180) Metrics:', tabletMetrics);
+  assert(tabletMetrics.sidebarDisplay !== 'none', 'Tablet shows sidebar');
+  assert(tabletMetrics.editorDisplay !== 'none', 'Tablet shows editor');
+  assert.equal(tabletMetrics.backBtnDisplay, 'none', 'Back button is never shown on tablet');
 
-  assert.deepEqual(errors, [], 'No JS runtime errors');
-  console.log('PASS: Mobile Menu Layout Verified across Products, Options, and Reorder screens!');
+  assert.deepEqual(errors, [], 'No runtime JS errors');
+  console.log('PASS: 2-Level Master-Detail Mobile Menu and Tablet Compatibility Verified!');
 
   await browser.close();
 }

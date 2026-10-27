@@ -41,6 +41,46 @@ function updateMenuWorkspace() {
   }
 }
 
+let menuMobileView = 'master'; // 'master' | 'detail'
+
+function setMenuMobileView(view) {
+  menuMobileView = view === 'detail' ? 'detail' : 'master';
+  if (typeof document === 'undefined') return;
+  const viewMenu = typeof document.getElementById === 'function' ? document.getElementById('view-menu') : null;
+  if (viewMenu && typeof viewMenu.setAttribute === 'function') {
+    viewMenu.setAttribute('data-mobile-view', menuMobileView);
+  }
+  updateMenuMobileNavButtons();
+}
+window.setMenuMobileView = setMenuMobileView;
+
+function updateMenuMobileNavButtons() {
+  if (typeof document === 'undefined') return;
+  const isDetail = menuMobileView === 'detail';
+  const btnNav = typeof document.querySelector === 'function' ? document.querySelector('.menu-header-nav-btn') : null;
+  const btnBack = typeof document.getElementById === 'function' ? document.getElementById('btn-menu-mobile-back') : null;
+  const titleEl = typeof document.getElementById === 'function' ? document.getElementById('i18n-menu-workspace-title') : null;
+
+  if (btnNav && btnBack) {
+    if (isDetail) {
+      btnNav.style.display = 'none';
+      btnBack.style.display = 'inline-flex';
+      if (currentMenuData && currentMenuData[activeCategoryIndex]) {
+        const cat = currentMenuData[activeCategoryIndex];
+        const titleText = isCustomizationCategory(cat)
+          ? (cat.groups?.[activeOptionGroupIndex]?.title || cat.title)
+          : cat.title;
+        if (titleEl && titleText) titleEl.textContent = titleText;
+      }
+    } else {
+      btnNav.style.display = '';
+      btnBack.style.display = 'none';
+      if (titleEl) titleEl.textContent = t('menuWorkspaceTitle') || '菜單管理';
+    }
+  }
+}
+window.updateMenuMobileNavButtons = updateMenuMobileNavButtons;
+
 function moveMenuItem(cIdx, iIdx, direction) {
   const items = currentMenuData?.[cIdx]?.items;
   const target = iIdx + direction;
@@ -239,6 +279,7 @@ window.addEventListener("beforeunload", event => {
 function openMenuSettings() {
   if (isMenuDirty) syncMenuDataFromDOM();
   activeTab = "menu";
+  setMenuMobileView('master');
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
   document.querySelectorAll(".mini-btn").forEach(t => t.classList.remove("active"));
   const tabMenu = document.getElementById("tab-menu");
@@ -1319,6 +1360,7 @@ function renderMenuCategories() {
         activeCategoryIndex = originalIndex;
         renderMenuCategories();
         renderMenuCategoryEditor(originalIndex);
+        setMenuMobileView('detail');
       };
       listEl.appendChild(div);
     });
@@ -1401,6 +1443,7 @@ function renderMenuCategories() {
           activeOptionGroupIndex = card.groupIndex;
           renderMenuCategories();
           renderMenuCategoryEditor(card.catIndex);
+          setMenuMobileView('detail');
           document.querySelector('.menu-sidebar-options-list .menu-option-card.active')?.focus({ preventScroll: true });
           const target = document.querySelector(`.cust-group-card[data-cust-group-index="${card.groupIndex}"]`);
           if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -3545,6 +3588,7 @@ async function deleteCategoryAtIndex(idx) {
     renderCategoriesManagerView();
   } else {
     activeCategoryIndex = -1;
+    setMenuMobileView('master');
     const titleEl = document.getElementById("menu-editor-title");
     if (titleEl) titleEl.innerText = t("menuEditorTitle");
     const bodyEl = document.getElementById("menu-editor-body");
