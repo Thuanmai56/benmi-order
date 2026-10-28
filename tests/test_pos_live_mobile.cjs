@@ -93,7 +93,7 @@ async function touchGesture(page, from, to, { cancel = false, multi = false, ref
 }
 
 async function swipeQueue(page, direction, options) {
-  const info = await page.locator('.live-panel:not([hidden]) .tile-info').evaluateAll(nodes => {
+  const info = await page.locator('.live-panel:not([hidden]) .tile-top').evaluateAll(nodes => {
     const list = nodes[0].closest('.live-panel-body').getBoundingClientRect();
     return nodes.map(node => node.getBoundingClientRect()).find(rect => rect.top >= list.top && rect.top + 20 < list.bottom).toJSON();
   });

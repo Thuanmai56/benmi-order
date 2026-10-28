@@ -56,6 +56,8 @@ const suites = [
   ['print-canvas', ['tests/test_receipt_canvas_height.js']],
   ['pos-display-chromium', ['tests/test_pos_display.cjs'], { POS_DISPLAY_BROWSER: 'chromium' }],
   ['pos-display-webkit', ['tests/test_pos_display.cjs'], { POS_DISPLAY_BROWSER: 'webkit' }],
+  ...['chromium', 'webkit'].map(browser => [`pos-tablet-layout-${browser}`,
+    ['--test', 'tests/test_pos_tablet_layout.cjs'], { POS_DISPLAY_BROWSER: browser }]),
   ['pos-live-mobile', ['tests/test_pos_live_mobile.cjs']],
   ['pos-detail-scroll', ['tests/test_order_detail_mobile_scroll.cjs']]
 ];

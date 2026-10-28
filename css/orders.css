@@ -11375,12 +11375,44 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
 .tile-action-btn > span { font-size: inherit; }
 .tile-actions { width: calc(120px * var(--pos-font-scale)); max-width: none; }
 .tile-action-btn { padding-block: 10px; }
+#view-live .tile-eta {
+  max-width: 100%;
+  margin-left: auto;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+/* Queue cards follow three rows: identity, timing, and quantity/total. The
+   identity row spans the card; the action occupies only the two lower rows. */
+@media (min-width: 681px) {
+  #view-live:not(.live-adaptive-stations) .tile {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) calc(112px * var(--pos-font-scale));
+    gap: 6px 12px;
+    padding: 10px 14px;
+  }
+  #view-live:not(.live-adaptive-stations) .tile-info { display: contents; }
+  #view-live:not(.live-adaptive-stations) .tile-top { grid-column: 1 / -1; grid-row: 1; }
+  #view-live:not(.live-adaptive-stations) .tile-meta-row { grid-column: 1; grid-row: 2; }
+  #view-live:not(.live-adaptive-stations) .tile-count-row { grid-column: 1; grid-row: 3; }
+  #view-live:not(.live-adaptive-stations) .tile-actions {
+    grid-column: 2;
+    grid-row: 2 / 4;
+    align-self: center;
+    width: auto;
+    min-width: 0;
+    padding: 0;
+  }
+}
+@media (min-width: 681px) and (max-width: 1100px) {
+  #view-live .tile-order-key { font-size: var(--pos-text-body); }
+}
 .dining-filter-bar, .dining-filter-group, .dining-filter-stats { flex-wrap: wrap; }
 .dining-filter-bar { overflow-x: hidden; }
 .dining-filter-btn { flex-shrink: 0; }
 .review-item-header > :first-child { min-width: 0; }
 .order-detail-main-col .review-item-meta-right { flex-wrap: wrap; }
-.order-detail-grid { grid-template-columns: minmax(0, 1fr) minmax(280px, calc(290px * var(--pos-font-scale))); }
+.order-detail-grid { grid-template-columns: minmax(0, 1fr) clamp(280px, 32%, calc(290px * var(--pos-font-scale))); }
 .order-detail-grid > * { min-width: 0; }
 .settings-split { grid-template-columns: minmax(200px, 260px) minmax(0, 1fr); }
 .settings-toc-item .toc-item-label { white-space: normal; overflow-wrap: anywhere; }
@@ -11407,8 +11439,12 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
 .pos-display-preview-meta { font-size: var(--pos-text-meta); color: #475569; }
 .pos-display-preview-total { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; border-top: 1px solid var(--border); padding-top: 12px; }
 @media (max-width: 960px) {
-  .order-detail-grid { grid-template-columns: minmax(0, 1fr); }
   .settings-split { grid-template-columns: 200px minmax(0, 1fr); }
+}
+/* Keep items and status/actions alongside each other on tablets, including
+   800–960px Android WebViews. Only phone-sized details use one column. */
+@media (max-width: 767px) {
+  .order-detail-grid { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 680px) {
   .settings-split {
@@ -11920,6 +11956,14 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
     min-width: 80px !important;
     max-width: 96px !important;
     padding: 6px 8px 6px 0 !important;
+  }
+
+  /* In the single-queue layout the action sits below the information. */
+  #view-live.live-adaptive-stations .tile-actions {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    padding: 0 10px 8px !important;
   }
 
   .tile-action-btn {
