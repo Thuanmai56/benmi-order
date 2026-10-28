@@ -504,7 +504,7 @@ function renderListLeft(orders) {
     if (isNew) {
       rightActions = `<button type="button" class="btn tile-action-btn btn-action-review" onclick="event.stopPropagation(); openReview('${escapeHtml(order.key)}')">${POS_SVG.eye}<span>${t('btnReview')}</span></button>`;
     } else if (order.status === "ACCEPTED") {
-      rightActions = `<button type="button" class="btn tile-action-btn btn-action-ready" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','DONE', {}, this)">${POS_SVG.check}<span>${t('btnReady')}</span></button>`;
+      rightActions = `<button type="button" class="btn tile-action-btn btn-action-ready" onclick="event.stopPropagation(); updateStatus('${escapeHtml(order.key)}','DONE', {}, this)">${(typeof POS_SVG !== 'undefined' && POS_SVG.checkCircle) || POS_SVG.check}<span>${t('btnReady')}</span></button>`;
     } else {
       rightActions = `<button type="button" class="btn tile-action-btn btn-action-waiting" disabled><span>${t('btnWaitingReply')}</span></button>`;
     }

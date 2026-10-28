@@ -11382,30 +11382,108 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
   overflow-wrap: anywhere;
   text-align: right;
 }
-/* Queue cards follow three rows: identity, timing, and quantity/total. The
-   identity row spans the card; the action occupies only the two lower rows. */
+/* Tablet POS Squircle Action Button (Ergonomic Kitchen Touch Target) */
 @media (min-width: 681px) {
   #view-live:not(.live-adaptive-stations) .tile {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) calc(112px * var(--pos-font-scale));
-    gap: 6px 12px;
-    padding: 10px 14px;
-  }
-  #view-live:not(.live-adaptive-stations) .tile-info { display: contents; }
-  #view-live:not(.live-adaptive-stations) .tile-top { grid-column: 1 / -1; grid-row: 1; }
-  #view-live:not(.live-adaptive-stations) .tile-meta-row { grid-column: 1; grid-row: 2; }
-  #view-live:not(.live-adaptive-stations) .tile-count-row { grid-column: 1; grid-row: 3; }
-  #view-live:not(.live-adaptive-stations) .tile-actions {
-    grid-column: 2;
-    grid-row: 2 / 4;
-    align-self: center;
-    width: auto;
-    min-width: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
     padding: 0;
+    gap: 0;
+    min-height: 84px;
+    background: #f3f4f6;
+    border-radius: 12px !important;
+    overflow: hidden;
   }
-}
-@media (min-width: 681px) and (max-width: 1100px) {
-  #view-live .tile-order-key { font-size: var(--pos-text-body); }
+  #view-live:not(.live-adaptive-stations) .tile-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 10px 12px 10px 14px;
+    gap: 6px;
+  }
+  #view-live:not(.live-adaptive-stations) .tile-top {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-width: 0;
+    width: 100%;
+  }
+  #view-live:not(.live-adaptive-stations) .tile-meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    min-width: 0;
+    width: 100%;
+  }
+  #view-live:not(.live-adaptive-stations) .tile-count-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+    width: 100%;
+  }
+  #view-live:not(.live-adaptive-stations) .tile-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: clamp(104px, 22%, 118px);
+    min-width: 100px;
+    padding: 8px 12px 8px 0;
+    margin: 0;
+    box-sizing: border-box;
+  }
+  #view-live:not(.live-adaptive-stations) .tile-action-btn {
+    width: 100%;
+    max-width: 98px;
+    height: 68px !important;
+    min-height: 52px !important;
+    max-height: 72px !important;
+    flex: 0 0 auto;
+    padding: 6px 4px;
+    border-radius: 15px !important;
+    font-size: 13px;
+    font-weight: 800;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    white-space: nowrap !important;
+    position: static !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12) !important;
+  }
+  #view-live:not(.live-adaptive-stations) .tile-action-btn > span {
+    white-space: nowrap !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.15;
+    font-size: 13px !important;
+    text-align: center;
+    letter-spacing: 0.1px;
+  }
+  #view-live:not(.live-adaptive-stations) .tile-action-btn > svg {
+    position: static !important;
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: transparent !important;
+  }
+  #view-live:not(.live-adaptive-stations) .tile-order-key {
+    font-size: var(--pos-text-meta) !important;
+    white-space: nowrap !important;
+    flex-shrink: 0;
+  }
 }
 .dining-filter-bar, .dining-filter-group, .dining-filter-stats { flex-wrap: wrap; }
 .dining-filter-bar { overflow-x: hidden; }

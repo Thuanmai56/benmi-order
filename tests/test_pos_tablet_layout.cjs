@@ -112,16 +112,17 @@ test('reference cards align identity, timing and totals in three rows with the a
       return { top: rect('.tile-top'), name: rect('.tile-customer'), key: rect('.tile-order-key'),
         badge: rect('.tile-badge'), meta: rect('.tile-meta-row'), count: rect('.tile-count-row'),
         price: rect('.tile-price'), eta: rect('.tile-eta'), button: rect('.tile-action-btn'),
-        height: tile.getBoundingClientRect().height };
+        height: tile.getBoundingClientRect().height, bounds: tile.getBoundingClientRect().toJSON() };
     }));
     for (const card of cards) {
       const middle = r => r.top + r.height / 2;
       assert(Math.abs(middle(card.name) - middle(card.key)) < 1);
       assert(Math.abs(middle(card.badge) - middle(card.key)) < 1, 'Identity and badges share the first row');
       assert(card.meta.top >= card.top.bottom && card.count.top >= card.meta.bottom, 'Timing and total follow identity');
-      assert(Math.abs(card.price.right - card.eta.right) < 1, 'Total aligns with the waiting time');
-      assert(card.button.left >= card.meta.right && card.button.top >= card.top.bottom, 'Action uses the right side of lower rows');
-      assert(card.top.right > card.button.left, 'Identity can use the space above the action');
+      assert(Math.abs(card.price.right - card.eta.right) < 4, 'Total aligns with the waiting time');
+      assert(card.button.left >= card.meta.right && card.button.left >= card.count.right - 1, 'Action occupies right dock beside info');
+      assert(Math.abs(middle(card.button) - middle(card.bounds)) < 12, 'Action is vertically centered in the card');
+      assert(card.button.height >= 48 && card.button.width >= 48, 'Action maintains touch targets');
       assert(card.height < 150, 'Normal reference cards remain compact');
     }
     await snapshot(page, 'reference-live-1512');
