@@ -7,8 +7,8 @@
   <title id="pos-page-title">Blab POS</title>
   <base href="/" />
   <script src="js/orders-display.js?v=20261007_dev_main_sync_v1"></script>
-  <link rel="stylesheet" href="css/orders.css?v=20261029_tablet_squircle_v1" />
-  <link rel="stylesheet" href="css/orders-menu.css?v=20261027_menu_mobile_v3" />
+  <link rel="stylesheet" href="css/orders.css?v=20261029_staff_rebase_v1" />
+  <link rel="stylesheet" href="css/orders-menu.css?v=20261029_staff_rebase_v1" />
     <script>
       (function () {
         document.documentElement.style.setProperty('--primary', '#00b900');
@@ -918,13 +918,13 @@
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                     </div>
                     <div>
-                      <div style="font-weight: 900; font-size: var(--pos-text-body); color: #1e1b4b;" id="i18n-feature-locked-title">進階功能 (未啟用)</div>
+                      <div style="font-weight: 900; font-size: var(--pos-text-body); color: #1e1b4b;" id="i18n-feature-locked-title" data-staff-i18n="staffFeatureClosed">進階功能 (未啟用)</div>
                       <div style="font-size: var(--pos-text-meta); color: #64748b; line-height: 1.4; margin-top: 2px;" id="i18n-feature-locked-desc">此功能為 BLAB 進階模組，如需啟用「內用接單」請聯繫 BLAB 團隊升級方案。</div>
                     </div>
                   </div>
                   <button type="button" class="btn btn-primary" style="padding: 8px 16px; font-size: var(--pos-text-meta); font-weight: 800; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25); cursor: pointer; white-space: nowrap;" onclick="openBlabContactModal('upgrade')" id="i18n-btn-contact-upgrade">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-                    <span id="i18n-btn-contact-upgrade-text">聯繫升級方案</span>
+                    <span id="i18n-btn-contact-upgrade-text" data-staff-i18n="staffContact">聯繫升級方案</span>
                   </button>
                 </div>
               </div>
@@ -954,13 +954,13 @@
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                     </div>
                     <div>
-                      <div style="font-weight: 900; font-size: 15px; color: #1e1b4b;">進階功能 (未啟用)</div>
-                      <div style="font-size: 13px; color: #64748b; line-height: 1.4; margin-top: 2px;">此功能為 BLAB 進階模組，如需啟用「桌邊點餐」請聯繫 BLAB 團隊升級方案。</div>
+                      <div style="font-weight: 900; font-size: 15px; color: #1e1b4b;" data-staff-i18n="staffFeatureClosed">進階功能 (未啟用)</div>
+                      <div style="font-size: 13px; color: #64748b; line-height: 1.4; margin-top: 2px;" data-staff-i18n="staffFeatureClosedHelp">此功能為 BLAB 進階模組，如需啟用「桌邊點餐」請聯繫 BLAB 團隊升級方案。</div>
                     </div>
                   </div>
                   <button type="button" class="btn btn-primary" style="padding: 8px 16px; font-size: 14px; font-weight: 800; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25); cursor: pointer; white-space: nowrap; min-height: 48px;" onclick="openBlabContactModal('upgrade')">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-                    <span>聯繫升級方案</span>
+                    <span data-staff-i18n="staffContact">聯繫升級方案</span>
                   </button>
                 </div>
 
@@ -1343,13 +1343,13 @@
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                     </div>
                     <div>
-                      <div style="font-weight: 900; font-size: var(--pos-text-body); color: #1e1b4b;" id="i18n-reports-locked-title">進階功能 (未啟用)</div>
+                      <div style="font-weight: 900; font-size: var(--pos-text-body); color: #1e1b4b;" id="i18n-reports-locked-title" data-staff-i18n="staffFeatureClosed">進階功能 (未啟用)</div>
                       <div style="font-size: var(--pos-text-meta); color: #64748b; line-height: 1.4; margin-top: 2px;" id="i18n-reports-locked-desc">此功能為 BLAB 進階模組，如需啟用「銷量與營收報表分析」請聯繫 BLAB 團隊升級方案。</div>
                     </div>
                   </div>
                   <button type="button" class="btn btn-primary" style="padding: 8px 16px; font-size: var(--pos-text-meta); font-weight: 800; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25); cursor: pointer; white-space: nowrap;" onclick="openBlabContactModal('upgrade')">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-                    <span id="i18n-btn-contact-upgrade-rep">聯繫升級方案</span>
+                    <span id="i18n-btn-contact-upgrade-rep" data-staff-i18n="staffContact">聯繫升級方案</span>
                   </button>
                 </div>
               </div>
@@ -1993,23 +1993,23 @@
       <div class="modal-body">
         <input type="hidden" id="table-editor-id" value="">
         <div style="margin-bottom: 16px;">
-          <label style="display: block; font-weight: 700; margin-bottom: 6px; font-size: 14px;" id="i18n-label-table-name">桌號名稱</label>
+          <label style="display: block; font-weight: 700; margin-bottom: 6px; font-size: 14px;" data-staff-i18n="tableName" id="i18n-label-table-name">桌號名稱</label>
           <input type="text" id="table-editor-label" placeholder="例：A-01, 1號桌..." style="width: 100%; height: 48px; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 15px; box-sizing: border-box;">
         </div>
         <div style="margin-bottom: 16px;">
-          <label style="display: block; font-weight: 700; margin-bottom: 6px; font-size: 14px;" id="i18n-label-table-sort">排列順序</label>
+          <label style="display: block; font-weight: 700; margin-bottom: 6px; font-size: 14px;" data-staff-i18n="tableSort" id="i18n-label-table-sort">排列順序</label>
           <input type="number" id="table-editor-sort" placeholder="0" value="0" style="width: 100%; height: 48px; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 15px; box-sizing: border-box;">
         </div>
         <div id="table-editor-active-group" style="margin-bottom: 16px; display: none;">
           <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; min-height: 48px;">
             <input type="checkbox" id="table-editor-active" checked style="width: 20px; height: 20px; accent-color: var(--primary);">
-            <span style="font-weight: 700; font-size: 15px;" id="i18n-label-table-active">啟用此桌號</span>
+            <span style="font-weight: 700; font-size: 15px;" data-staff-i18n="tableStatusActive" id="i18n-label-table-active">啟用此桌號</span>
           </label>
         </div>
       </div>
       <div class="modal-actions two" style="margin-top: 20px; display: flex; gap: 12px;">
-        <button type="button" class="btn btn-ghost" style="flex: 1; height: 48px; font-weight: 700;" onclick="closeTableEditorModal()">取消</button>
-        <button type="button" class="btn btn-primary" id="btn-save-table-editor" style="flex: 1; height: 48px; font-weight: 800;" onclick="submitTableEditor()">儲存</button>
+        <button type="button" class="btn btn-ghost" style="flex: 1; height: 48px; font-weight: 700;" onclick="closeTableEditorModal()" data-staff-i18n="tableCancel">取消</button>
+        <button type="button" class="btn btn-primary" id="btn-save-table-editor" style="flex: 1; height: 48px; font-weight: 800;" onclick="submitTableEditor()" data-staff-i18n="tableSave">儲存</button>
       </div>
     </div>
   </div>
@@ -2901,17 +2901,17 @@
   </section>
 
   <!-- Benmi POS Modular Architecture Scripts -->
-  <script src="js/orders-i18n.js?v=20261022_print_toolbar_v1"></script>
-  <script src="js/orders-core.js?v=20261029_tablet_squircle_v1"></script>
+  <script src="js/orders-i18n.js?v=20261029_staff_rebase_v1"></script>
+  <script src="js/orders-core.js?v=20261029_staff_rebase_v1"></script>
   <script src="js/orders-audio.js?v=20261007_dev_main_sync_v1"></script>
   <script src="js/order-legacy-adapter.js?v=20261017_order_detail_v1"></script>
   <script src="js/order-detail-view.js?v=20261017_order_detail_v1"></script>
-  <script src="js/printer-service.js?v=20261017_order_detail_v1"></script>
-  <script src="js/orders-live.js?v=20261029_tablet_squircle_v1"></script>
+  <script src="js/printer-service.js?v=20261029_staff_rebase_v1"></script>
+  <script src="js/orders-live.js?v=20261029_staff_rebase_v1"></script>
   <script src="js/orders-modals.js?v=20261012_support_modal_v1"></script>
   <script src="js/orders-history.js?v=20261027_history_ui_fix_v1"></script>
   <script src="js/orders-reports.js?v=20261007_dev_main_sync_v1"></script>
-  <script src="js/orders-settings.js?v=20261027_history_ui_fix_v1"></script>
+  <script src="js/orders-settings.js?v=20261029_staff_rebase_v1"></script>
   <script src="js/orders-menu.js?v=20261027_menu_mobile_v3"></script>
   <script src="js/orders-bundle-wizard.js?v=20261007_dev_main_sync_v1"></script>
   <script src="js/orders-option-groups.js?v=20261027_menu_mobile_v3"></script>

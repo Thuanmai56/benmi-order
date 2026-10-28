@@ -1635,6 +1635,7 @@ window.promptUnlinkStoreDevice = promptUnlinkStoreDevice;
 let currentRestaurantTables = [];
 
 async function checkStaffOrderingCapability() {
+  window.staffOrderingCapabilities = {};
   const tenantId = (typeof getTenantIdFromUrl === "function" && getTenantIdFromUrl()) || "";
   if (!tenantId) return false;
   try {
@@ -1642,11 +1643,12 @@ async function checkStaffOrderingCapability() {
     const res = await fetch(`${workerUrl}/api/staff/capabilities?tenant_id=${encodeURIComponent(tenantId)}&_t=${Date.now()}`);
     if (res.ok) {
       const data = await res.json();
-      const enabled = !!data.staff_ordering_enabled;
+      const enabled = data.capabilities?.tables_read === true;
+      window.staffOrderingCapabilities = data.capabilities || {};
       window.isStaffOrderingEnabled = enabled;
       const btnPill = document.getElementById("btn-staff-order-pill");
       if (btnPill) {
-        btnPill.style.display = enabled ? "inline-flex" : "none";
+        btnPill.style.display = data.capabilities?.pos_entry ? "inline-flex" : "none";
       }
       const lockedBody = document.getElementById("setting-tables-locked-body");
       const unlockedBody = document.getElementById("setting-tables-unlocked-body");
@@ -1655,7 +1657,7 @@ async function checkStaffOrderingCapability() {
         if (enabled) {
           lockedBody.style.display = "none";
           unlockedBody.style.display = "flex";
-          if (addBtn) addBtn.style.display = "inline-flex";
+          if (addBtn) addBtn.style.display = data.capabilities?.tables_write ? "inline-flex" : "none";
         } else {
           lockedBody.style.display = "flex";
           unlockedBody.style.display = "none";
@@ -1701,7 +1703,7 @@ async function getStaffSessionToken(forcePrompt = false) {
       return null;
     }
   } catch (e) {
-    alert("連線驗證失敗: " + (e.message || e));
+    alert(t("staffNetworkError"));
     return null;
   }
 }
@@ -1719,13 +1721,13 @@ async function loadRestaurantTables() {
 
   const tbody = document.getElementById("tables-list-tbody");
   if (tbody) {
-    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 24px; color: #94a3b8;">載入中...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 24px; color: #94a3b8;">${t("staffLoading")}</td></tr>`;
   }
 
   let token = await getStaffSessionToken();
   if (!token) {
     if (tbody) {
-      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 24px; color: #ef4444;">尚未驗證 PIN 碼，請點擊重試。 <button class="btn btn-sm" onclick="loadRestaurantTables()" style="margin-left:8px;">重試</button></td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 24px; color: #ef4444;">${t("staffNeedsPin")} <button class="btn btn-sm" onclick="loadRestaurantTables()" style="margin-left:8px;">${t("staffRetry")}</button></td></tr>`;
     }
     return;
   }
@@ -1746,7 +1748,7 @@ async function loadRestaurantTables() {
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     if (tbody) {
-      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 24px; color: #ef4444;">${escapeHtml(err.message || "載入失敗")}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 24px; color: #ef4444;">${escapeHtml(t("tableSaveFail"))}</td></tr>`;
     }
     return;
   }
@@ -1761,52 +1763,52 @@ function renderRestaurantTablesList() {
   if (!tbody) return;
 
   if (currentRestaurantTables.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 32px 16px; color: #94a3b8;">尚未新增任何桌號。點擊上方「新增桌號」開始使用。</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 32px 16px; color: #94a3b8;">${t("staffNoTables")}</td></tr>`;
     return;
   }
 
-  tbody.innerHTML = currentRestaurantTables.map(t => {
-    const isActive = t.is_active === 1 || t.is_active === true;
-    const hasActiveOrder = !!t.active_order_key;
+  tbody.innerHTML = currentRestaurantTables.map(table => {
+    const isActive = table.is_active === 1 || table.is_active === true;
+    const hasActiveOrder = !!table.active_order_key;
     let statusPill = "";
     if (isActive) {
       if (hasActiveOrder) {
         statusPill = `<span style="display:inline-flex; align-items:center; gap:6px; background:#fef3c7; color:#b45309; padding:4px 10px; border-radius:6px; font-weight:700; font-size:12.5px;">
           <span style="width:6px; height:6px; border-radius:50%; background:#f59e0b;"></span>
-          <span>使用中 #${escapeHtml(t.active_display_key || t.active_order_id || '')}</span>
+          <span>${t("tableOccupied")} #${escapeHtml(table.active_display_key || table.active_order_id || '')}</span>
         </span>`;
       } else {
         statusPill = `<span style="display:inline-flex; align-items:center; gap:6px; background:#dcfce7; color:#15803d; padding:4px 10px; border-radius:6px; font-weight:700; font-size:12.5px;">
           <span style="width:6px; height:6px; border-radius:50%; background:#22c55e;"></span>
-          <span>空桌 / 啟用中</span>
+          <span>${t("tableEmpty")}</span>
         </span>`;
       }
     } else {
       statusPill = `<span style="display:inline-flex; align-items:center; gap:6px; background:#f1f5f9; color:#64748b; padding:4px 10px; border-radius:6px; font-weight:700; font-size:12.5px;">
         <span style="width:6px; height:6px; border-radius:50%; background:#94a3b8;"></span>
-        <span>已停用</span>
+        <span>${t("tableStatusDisabled")}</span>
       </span>`;
     }
 
-    const disableAction = hasActiveOrder ? `disabled title="該桌尚有未結帳訂單，無法修改狀態"` : '';
+    const disableAction = hasActiveOrder || !window.staffOrderingCapabilities?.tables_write ? `disabled title="${t("tableHasActiveOrder")}"` : '';
 
     return `
       <tr style="border-bottom: 1px solid var(--border); transition: background 0.15s ease;">
         <td style="padding: 14px 16px; font-weight: 800; color: #1e293b; font-size: 15px;">
-          ${escapeHtml(t.label)}
+          ${escapeHtml(table.label)}
         </td>
         <td style="padding: 14px 16px; color: #64748b; font-weight: 600;">
-          ${t.sort_order || 0}
+          ${table.sort_order || 0}
         </td>
         <td style="padding: 14px 16px;">
           ${statusPill}
         </td>
         <td style="padding: 14px 16px; text-align: right; white-space: nowrap;">
-          <button type="button" class="btn btn-ghost btn-sm" style="margin-right: 6px; padding: 6px 12px; font-weight: 700; border-radius: 6px; min-height: 38px;" onclick="openEditTableModal('${t.id}')">
-            編輯
+          <button type="button" class="btn btn-ghost btn-sm" style="margin-right: 6px; padding: 6px 12px; font-weight: 700; border-radius: 6px; min-height: 48px;" onclick="openEditTableModal('${table.id}')">
+            ${t("tableEdit")}
           </button>
-          <button type="button" class="btn ${isActive ? 'btn-ghost' : 'btn-primary'} btn-sm" style="padding: 6px 12px; font-weight: 700; border-radius: 6px; min-height: 38px; ${isActive ? 'color: #ef4444; border-color: #fee2e2;' : ''}" ${disableAction} onclick="toggleTableActive('${t.id}', ${isActive ? 0 : 1})">
-            ${isActive ? '停用' : '啟用'}
+          <button type="button" class="btn ${isActive ? 'btn-ghost' : 'btn-primary'} btn-sm" style="padding: 6px 12px; font-weight: 700; border-radius: 6px; min-height: 48px; ${isActive ? 'color: #ef4444; border-color: #fee2e2;' : ''}" ${disableAction} onclick="toggleTableActive('${table.id}', ${isActive ? 0 : 1})">
+            ${isActive ? t("tableDisable") : t("tableEnable")}
           </button>
         </td>
       </tr>
@@ -1866,7 +1868,7 @@ async function submitTableEditor() {
   const isActive = chkActive ? (chkActive.checked ? 1 : 0) : 1;
 
   if (!label) {
-    alert("請輸入桌號名稱 / Vui lòng nhập tên bàn");
+    alert(t("tableNamePlaceholder"));
     return;
   }
 
@@ -1904,13 +1906,13 @@ async function submitTableEditor() {
       closeTableEditorModal();
       await loadRestaurantTables();
       if (typeof showToast === "function") {
-        showToast("✅ 桌號設定已儲存 / Đã lưu cài đặt bàn");
+        showToast(t("tableSaveSuccess"));
       }
     } else {
-      alert((data && data.message) || "操作失敗 / Thao tác thất bại");
+      alert(t(data?.error === "TABLE_HAS_ACTIVE_ORDER" ? "tableHasActiveOrder" : "tableSaveFail"));
     }
   } catch (e) {
-    alert("連線錯誤: " + (e.message || e));
+    alert(t("staffNetworkError"));
   } finally {
     if (btnSave) btnSave.disabled = false;
   }
@@ -1938,17 +1940,18 @@ async function toggleTableActive(tableId, newActive) {
     if (res.ok && data && data.ok) {
       await loadRestaurantTables();
     } else {
-      alert((data && data.message) || "更新失敗 / Cập nhật thất bại");
+      alert(t(data?.error === "TABLE_HAS_ACTIVE_ORDER" ? "tableHasActiveOrder" : "tableSaveFail"));
     }
   } catch (e) {
-    alert("連線錯誤: " + (e.message || e));
+    alert(t("staffNetworkError"));
   }
 }
 
 function openStaffOrderWindow() {
   const tenantId = (typeof getTenantIdFromUrl === "function" && getTenantIdFromUrl()) || "";
   if (!tenantId) return;
-  const url = `staff-order.html?tenant_id=${encodeURIComponent(tenantId)}`;
+  const environment = WORKER_BASE.includes("-staging.") ? "staging" : WORKER_BASE.includes("-dev.") ? "dev" : "prod";
+  const url = `staff-order.html?tenant_id=${encodeURIComponent(tenantId)}&env=${environment}`;
   window.open(url, "_blank");
 }
 

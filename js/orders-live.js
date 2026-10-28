@@ -1603,11 +1603,22 @@ async function updateStatus(key, status, extra = {}, btn = null) {
   }
 
   try {
-    const response = await fetch(`${WORKER_BASE}/api/update?tenant_id=${getTenantIdFromUrl()}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key, status, ...extra })
+    const order = latestOrders.find(o=>o.key===key);
+    const staff = order?.source === 'staff';
+    const token = staff ? await getStaffSessionToken() : null;
+    if (staff && !token) return;
+    const endpoint = staff ? `/api/staff/orders/${encodeURIComponent(key)}/status` : '/api/update';
+    const response = await fetch(`${WORKER_BASE}${endpoint}?tenant_id=${getTenantIdFromUrl()}`, {
+      method: staff ? 'PATCH' : 'POST',
+      headers: { 'Content-Type':'application/json', ...(staff ? {Authorization:`Bearer ${token}`} : {}) },
+      body: JSON.stringify({key,status,...extra,...(staff ? {expectedRevision:order.revision} : {})})
     });
+    if (response.status === 409 && staff) {
+      delete localOverrides[key];
+      await fetchOrders();
+      alert(t('staffStatusConflict'));
+      return;
+    }
     if (!response.ok) throw new Error(`update failed: ${response.status}`);
 
     // Apply local override immediately for responsiveness

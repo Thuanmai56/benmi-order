@@ -14,7 +14,8 @@ const _isDev = (
   _coreHostname.startsWith("dev.") ||
   _coreHostname.includes(".dev.") ||
   _coreHostname.includes("-dev.") ||
-  _coreHostname.startsWith("dev-")
+  _coreHostname.startsWith("dev-") ||
+  (!_forcedEnv && _coreHostname.endsWith(".pages.dev") && !["benmi-order.pages.dev","staging.benmi-order.pages.dev"].includes(_coreHostname))
 );
 const _isStaging = (
   _forcedEnv === "staging" ||
@@ -925,6 +926,7 @@ async function fetchOrders() {
     });
 
     // Check for new staff arrivals (which arrive directly as ACCEPTED)
+    if (latestOrders.some(o=>o.source === "staff") && typeof checkStaffOrderingCapability === "function") await checkStaffOrderingCapability();
     const newStaffArrivals = newArrivals.filter(o => o && o.source === "staff" && o.status === "ACCEPTED");
     const hasNewStaffOrders = !isFirstLoad && newStaffArrivals.length > 0;
 

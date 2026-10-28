@@ -74,7 +74,6 @@ export default {
       }
 
       // 5. API Endpoints
-      // 4. API Endpoints
       if (request.method === "POST" && path === "/api/line/order-receipt/push") return requestOrderReceiptPush(request, env, tenantCtx);
       if (request.method === "POST" && path === "/api/line/client-error") return recordLiffClientError(request, tenantCtx);
       if (request.method === "GET" && (path === "/api/marketplace/tenants" || path === "/api/marketplace")) return getMarketplaceTenants(request, env);

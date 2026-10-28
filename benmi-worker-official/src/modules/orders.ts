@@ -1022,6 +1022,8 @@ export async function updateOrder(
   ).bind(await resolveOrderKey(env, tenantCtx?.tenantId || getTenantId(request), data.key), tenantCtx?.tenantId || getTenantId(request)).first<any>();
   if (!orderRow) return json({ error: "order not found" }, 404);
 
+  if (orderRow.source === 'staff') return json({code:'STAFF_ORDER_RESTRICTED'},403);
+
   const effectiveTenantId = orderRow.tenant_id || tenantCtx?.tenantId || getTenantId(request);
   if (!tenantCtx || tenantCtx.tenantId !== effectiveTenantId) {
     tenantCtx = await resolveTenantContext(effectiveTenantId, env);
@@ -1372,6 +1374,7 @@ function mapOrderRows(results: any[]): Order[] {
       note: row.note || "",
       diningOption: (row.dining_option as any) || 'takeaway',
       tableNumber: row.table_number || undefined,
+      tableId: row.table_id || null, table_id: row.table_id || null, source: row.source, revision: Number(row.revision) || 0,
       roundCount: Number(row.round_count) || 1,
       round_count: Number(row.round_count) || 1,
       lastAppendedAt: parsedLastAppendedAt || row.last_appended_at || null,
@@ -1418,7 +1421,7 @@ export async function getOrders(request: Request, env: Env): Promise<Response> {
     const startOfTodayUTC = new Date(new Date(`${todayTwStr}T00:00:00+08:00`).getTime()).toISOString().replace("T", " ").replace(/\.\d+Z$/, "");
 
     const { results } = await env.DB.prepare(
-      `SELECT key, order_id, display_key, business_date, legacy_key, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, round_count, last_appended_at, created_at, is_modified
+      `SELECT key, order_id, display_key, business_date, legacy_key, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, table_id, source, revision, round_count, last_appended_at, created_at, is_modified
        FROM orders 
        WHERE tenant_id = ? 
          AND (status IN ('NEW', 'ACCEPTED', 'WAITING_CUSTOMER_CHANGE', 'WAITING_CUSTOMER_REJECT', 'DONE') 
@@ -1479,7 +1482,7 @@ export async function getOrdersByDate(request: Request, env: Env): Promise<Respo
 
   try {
     const { results } = await env.DB.prepare(
-      `SELECT key, order_id, display_key, business_date, legacy_key, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, round_count, last_appended_at, created_at
+      `SELECT key, order_id, display_key, business_date, legacy_key, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, table_id, source, revision, round_count, last_appended_at, created_at
        FROM orders 
        WHERE tenant_id = ? 
          AND status IN ('PICKED_UP', 'REJECTED', 'PAID')
@@ -1503,7 +1506,7 @@ export async function getHistoryAll(request: Request, env: Env): Promise<Respons
 
   try {
     const { results } = await env.DB.prepare(
-      `SELECT key, order_id, display_key, business_date, legacy_key, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, round_count, last_appended_at, created_at
+      `SELECT key, order_id, display_key, business_date, legacy_key, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, table_id, source, revision, round_count, last_appended_at, created_at
        FROM orders 
        WHERE tenant_id = ? 
          AND status IN ('PICKED_UP', 'REJECTED', 'PAID')
@@ -1620,7 +1623,7 @@ export async function getOrderQueueAhead(env: Env, tenantId: string, orderKey: s
   if (!env.DB) return { order: null, queueAhead: 0 };
   try {
     const row = await env.DB.prepare(
-      "SELECT key, order_id, display_key, business_date, legacy_key, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, round_count, last_appended_at, created_at, user_id FROM orders WHERE key = ? AND tenant_id = ?"
+      "SELECT key, order_id, display_key, business_date, legacy_key, customer_name, pickup_time, status, total_amount, order_content, reason, note, dining_option, table_number, table_id, source, revision, round_count, last_appended_at, created_at, user_id FROM orders WHERE key = ? AND tenant_id = ?"
     ).bind(await resolveOrderKey(env, tenantId, orderKey), tenantId).first<any>();
 
     if (!row) return { order: null, queueAhead: 0 };
@@ -1642,6 +1645,7 @@ export async function getOrderQueueAhead(env: Env, tenantId: string, orderKey: s
       note: row.note || "",
       diningOption: (row.dining_option as any) || 'takeaway',
       tableNumber: row.table_number || undefined,
+      tableId: row.table_id || null, table_id: row.table_id || null, source: row.source, revision: Number(row.revision) || 0,
       roundCount: Number(row.round_count) || 1,
       round_count: Number(row.round_count) || 1,
       lastAppendedAt: row.last_appended_at || null,
@@ -1835,6 +1839,7 @@ export async function modifyOrder(
       return json({ error: "Order not found", code: "ORDER_NOT_FOUND" }, 404);
     }
 
+    if (orderRow.source === 'staff') return json({code:'STAFF_ORDER_RESTRICTED'},403);
     if (Number(orderRow.detail_revision || 0) > 0) return json({ code: 'ORDER_CLIENT_UPGRADE_REQUIRED' }, 409);
 
     if (orderRow.status !== 'WAITING_CUSTOMER_CHANGE') {

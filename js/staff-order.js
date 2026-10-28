@@ -18,6 +18,9 @@
       if (forcedEnv === "staging" || forcedEnv === "test" || hostname.startsWith("staging.") || hostname.includes(".staging.")) {
         return "https://platform-worker-staging.thuanmnc.workers.dev";
       }
+      if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.pages.dev') && hostname !== 'benmi-order.pages.dev') {
+        return "https://platform-worker-dev.thuanmnc.workers.dev";
+      }
       return "https://benmi-worker-official.thuanmnc.workers.dev";
     } catch (e) {
       return "https://benmi-worker-official.thuanmnc.workers.dev";
@@ -29,6 +32,9 @@
   // --- 2. I18N DICTIONARY ---
   const I18N = {
     "vi": {
+      customerPlaceholder:"Ví dụ: Anh Nam, Chị Linh", notePlaceholder:"Ví dụ: Làm nhanh, ít hành",
+      invalidSelections:"Vui lòng kiểm tra món hết hàng và chọn đủ tùy chọn trước khi gửi.",
+      configureOptions:"Chọn tùy chọn", networkError:"Không thể kết nối. Vui lòng thử lại.", submitFailed:"Gửi đơn thất bại. Vui lòng kiểm tra lại.",
       staffBadge: "Nhận đơn tại bàn",
       loginTitle: "Đăng nhập nhân viên",
       loginDesc: "Nhập mã PIN POS để bắt đầu nhận đơn tại bàn",
@@ -64,7 +70,7 @@
       btnSending: "Đang gửi đơn...",
       btnAddItem: "Thêm vào đơn",
       successTitle: "Gửi đơn thành công!",
-      successDesc: "Đơn hàng đã xuất hiện trên POS và máy in quầy.",
+      successDesc: "Đơn hàng đã được gửi tới POS.",
       successOrderKey: "Mã đơn:",
       successTable: "Bàn:",
       successRound: "Lượt gửi:",
@@ -91,6 +97,9 @@
       flavorCartHeader: "Vị chung cho bàn:"
     },
     "zh-TW": {
+      customerPlaceholder:"例如：王先生、林小姐", notePlaceholder:"例如：少蔥、儘快出餐",
+      invalidSelections:"請檢查售完餐點並完成必選選項後再送出。",
+      configureOptions:"設定選項", networkError:"無法連線，請稍後重試。", submitFailed:"訂單送出失敗，請重新確認。",
       staffBadge: "桌邊點餐",
       loginTitle: "門市點餐登入",
       loginDesc: "請輸入門市管理 PIN 碼開始桌邊點餐",
@@ -126,7 +135,7 @@
       btnSending: "送出處理中...",
       btnAddItem: "加入清單",
       successTitle: "點餐送出成功！",
-      successDesc: "訂單已送達 POS 櫃台與出單機。",
+      successDesc: "訂單已送達 POS。",
       successOrderKey: "訂單編號：",
       successTable: "桌號：",
       successRound: "點餐輪次：",
@@ -202,7 +211,7 @@
   // --- 4. INITIALIZATION ---
   async function initApp() {
     const params = new URLSearchParams(window.location.search);
-    state.tenantId = params.get("tenant_id") || params.get("tenant") || (typeof localStorage !== "undefined" && localStorage.getItem("pos_device_tenant_id")) || "benmi";
+    state.tenantId = params.get("tenant_id") || params.get("tenant") || (typeof localStorage !== "undefined" && localStorage.getItem("pos_device_tenant_id")) || "";
 
     applyI18nLabels();
 
@@ -211,15 +220,16 @@
       const capRes = await fetch(`${WORKER_BASE}/api/staff/capabilities?tenant_id=${encodeURIComponent(state.tenantId)}&_t=${Date.now()}`);
       if (capRes.ok) {
         const capData = await capRes.json();
-        state.brandName = capData.brand_name || "";
-        state.storeStatus = capData.store_status || "open";
-        state.allowDineIn = capData.allow_dine_in !== false;
+        state.capabilities = capData.capabilities || {};
+        state.brandName = capData.brandName || "";
+        state.storeStatus = capData.storeStatus || "open";
+        state.allowDineIn = capData.allowDineIn !== false;
         const brandEl = document.getElementById("display-brand-name");
         if (brandEl && state.brandName) {
           brandEl.innerText = state.brandName;
         }
 
-        if (!capData.staff_ordering_enabled) {
+        if (!capData.staff_ordering_enabled || !state.capabilities.session) {
           showLoginError(t("featureDisabled"));
         }
       }
@@ -239,6 +249,7 @@
 
   // --- 5. I18N & LANGUAGE TOGGLE ---
   function applyI18nLabels() {
+    document.documentElement.lang = state.currentLang;
     const langBtn = document.getElementById("current-lang-text");
     if (langBtn) {
       langBtn.innerText = state.currentLang === "vi" ? "VI / 中文" : "中文 / VI";
@@ -269,6 +280,7 @@
       "i18n-btn-confirm-order": "btnConfirmOrder",
       "i18n-btn-add-item": "btnAddItem",
       "i18n-success-title": "successTitle",
+      "success-desc-text":"successDesc",
       "i18n-success-order-key": "successOrderKey",
       "i18n-success-table": "successTable",
       "i18n-success-round": "successRound",
@@ -282,6 +294,8 @@
       if (el) el.innerText = t(key);
     }
 
+    document.getElementById("cart-customer-name").placeholder=t("customerPlaceholder");
+    document.getElementById("cart-order-note").placeholder=t("notePlaceholder");
     const searchInp = document.getElementById("inp-table-search");
     if (searchInp) searchInp.placeholder = t("searchPlaceholder");
   }
@@ -304,6 +318,7 @@
 
   // --- 6. AUTHENTICATION (PIN LOGIN & LOGOUT) ---
   function showLoginView() {
+    document.body.dataset.staffView = "login";
     stopTablePolling();
     document.getElementById("view-login").style.display = "block";
     document.getElementById("view-tables").style.display = "none";
@@ -383,6 +398,7 @@
 
   // --- 7. TABLE SELECTION VIEW ---
   async function showTablesView() {
+    document.body.dataset.staffView = "tables";
     document.getElementById("view-login").style.display = "none";
     document.getElementById("view-tables").style.display = "block";
     document.getElementById("view-menu").style.display = "none";
@@ -484,7 +500,7 @@
       }
 
       return `
-        <div class="table-card ${isOccupied ? 'occupied' : 'empty'}" onclick="handleSelectTable('${tbl.id}')">
+        <div role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();handleSelectTable('${tbl.id}')}" class="table-card ${isOccupied ? 'occupied' : 'empty'}" onclick="handleSelectTable('${tbl.id}')">
           <div class="table-card-top">
             <div class="table-card-label">${escapeHtml(tbl.label)}</div>
             ${statusPill}
@@ -494,7 +510,7 @@
           </div>
           <div class="table-card-bottom">
             <span></span>
-            <button type="button" class="btn-card-action">${actionText}</button>
+            <span class="btn-card-action">${actionText}</span>
           </div>
         </div>
       `;
@@ -524,6 +540,7 @@
   }
 
   async function showMenuView() {
+    document.body.dataset.staffView = "menu";
     document.getElementById("view-login").style.display = "none";
     document.getElementById("view-tables").style.display = "none";
     document.getElementById("view-menu").style.display = "block";
@@ -547,6 +564,7 @@
       renderCategories();
       renderMenuItems();
     }
+    renderCartDrawer();
   }
 
   function updateOrderBanner() {
@@ -577,9 +595,9 @@
   }
 
   // --- 9. CATALOG & BOOTSTRAP LOADING (GROUPED BY CATEGORIES LIKE INDEX.HTML) ---
-  async function loadBootstrapMenu() {
+  async function loadBootstrapMenu(force = false) {
     try {
-      const res = await fetch(`${WORKER_BASE}/api/tenant/bootstrap?tenant_id=${encodeURIComponent(state.tenantId)}&_t=${Date.now()}`);
+      const res = await fetch(`${WORKER_BASE}/api/tenant/bootstrap?tenant_id=${encodeURIComponent(state.tenantId)}&nocache=${force ? 1 : 0}&_t=${Date.now()}`);
       if (res.ok) {
         const data = await res.json();
         
@@ -609,10 +627,29 @@
           });
         });
         state.catalog = allItems;
+        const optionsResponse = await fetch(`${WORKER_BASE}/api/menu/options?tenant_id=${encodeURIComponent(state.tenantId)}`);
+        if (!optionsResponse.ok) throw new Error('MENU_UNAVAILABLE');
+        const optionsCatalog = await optionsResponse.json();
+        state.orderRule = {version:3, groups:optionsCatalog.groups.filter(g => g.scope === 'order').map(g => ({...g,
+          type:g.included?'fixed':'choice', minQuantity:g.minSelection,maxQuantity:g.maxSelection,
+          eligibleItems:g.options.map(o => ({...o,optionGroups:state.catalog.find(i=>i.id===o.productId)?.bundleRule?.groups || []}))}))};
+        state.orderSelections = window.UnifiedOptions.restore(state.orderRule,state.orderSelections || []);
+
         state.modifiers = data.modifiers || [];
         state.customizations = data.customizations || [];
         state.customizationSortOrder = data.customizationSortOrder ?? 0;
         state.translations = data.translations || {};
+        if (force) {
+          state.cart.forEach(line => {
+            const product = state.catalog.find(item=>item.id===line.itemId);
+            if (!product) return;
+            line.groups = window.UnifiedOptions.restore(product.bundleRule || {groups:[]},line.groups || []);
+            line.price = Number(product.price) + line.groups.reduce((n,g)=>n+g.items.reduce((sum,c)=>sum+window.OrderDetailView.extra(c),0),0);
+            line.name = product.name;
+            line.options = window.OrderDetailView.choices(line.groups).map(c=>({name:c.value,price:c.price}));
+          });
+          saveDraftCart(state.currentTable?.id);
+        }
 
         // Initialize default global flavor selections if not set from draft
         if (Object.keys(state.selectedGlobalCustomizations).length === 0) {
@@ -625,6 +662,7 @@
       }
     } catch (e) {
       console.warn("[StaffOrder] Error loading catalog:", e);
+      showLoginError(t("networkError"));
     }
   }
 
@@ -808,6 +846,7 @@
     if (e) e.stopPropagation();
     const item = state.catalog.find(i => i.id === itemId);
     if (!item) return;
+    if (item.bundleRule?.groups?.length) return openCanonicalOptions(item);
 
     state.cart.push({
       uid: crypto.randomUUID(),
@@ -824,12 +863,15 @@
     }
 
     updateCardActionUI(itemId);
+    renderCartDrawer();
     updateStickyCartBar();
   }
 
   function handleQuickQty(itemId, delta, e) {
     if (e) e.stopPropagation();
     if (delta > 0) {
+      const product = state.catalog.find(i=>i.id===itemId);
+      if (product?.bundleRule?.groups?.length) return openCanonicalOptions(product);
       const existing = [...state.cart].reverse().find(c => c.itemId === itemId);
       if (existing) {
         existing.quantity += 1;
@@ -861,6 +903,7 @@
     }
 
     updateCardActionUI(itemId);
+    renderCartDrawer();
     updateStickyCartBar();
   }
 
@@ -938,57 +981,10 @@
 
   // Render Global Customizations Section (#sec-flavor like index.html)
   function renderFlavorSectionHtml() {
-    if (!state.customizations || state.customizations.length === 0) return "";
-
-    let groupsHtml = "";
-    state.customizations.forEach((group, gIdx) => {
-      const isRadio = group.type === "radio";
-      const selectedVals = state.selectedGlobalCustomizations[group.key] || [];
-      const topMargin = gIdx > 0 ? 'margin-top: 14px; padding-top: 14px; border-top: 1px dashed #e2e8f0;' : '';
-
-      const optionsHtml = (group.options || []).map((opt) => {
-        const optName = typeof opt === "string" ? opt : opt.name;
-        const optPrice = typeof opt === "object" ? Number(opt.price) || 0 : 0;
-        const priceLabel = optPrice > 0 ? ` <span class="flavor-price">(+$${optPrice})</span>` : "";
-        const isChecked = selectedVals.includes(optName);
-
-        return `
-          <label class="flavor-chip-label ${isChecked ? 'checked' : ''}">
-            <input type="${isRadio ? 'radio' : 'checkbox'}" 
-                   name="global-flavor-${escapeHtml(group.key)}" 
-                   value="${escapeHtml(optName)}" 
-                   data-group-key="${escapeHtml(group.key)}"
-                   data-price="${optPrice}"
-                   ${isChecked ? 'checked' : ''} 
-                   onchange="handleGlobalFlavorChange('${escapeHtml(group.key)}', '${escapeHtml(optName)}', ${isRadio}, this.checked)">
-            <span class="flavor-name">${escapeHtml(optName)}</span>${priceLabel}
-          </label>
-        `;
-      }).join("");
-
-      groupsHtml += `
-        <div class="custom-group" style="${topMargin}">
-          <div class="custom-group-header">
-            <label class="custom-label">${escapeHtml(group.title)}</label>
-            <span class="custom-group-badge">${isRadio ? t("optSingleChoice") : t("optMultiChoice")}</span>
-          </div>
-          <div class="custom-options-grid">
-            ${optionsHtml}
-          </div>
-        </div>
-      `;
-    });
-
-    return `
-      <div class="section-container" id="sec-flavor">
-        <div class="section-title">
-          <span>${t("flavorSectionTitle")}</span>
-        </div>
-        <div class="custom-panel">
-          ${groupsHtml}
-        </div>
-      </div>
-    `;
+    if (!state.orderRule?.groups?.length) return '';
+    const summary = window.OrderDetailView.choices(state.orderSelections || []).map(c=>`${c.label}: ${c.value}`).join(' · ');
+    return `<section class="section-container" id="sec-flavor"><h3>${t('flavorSectionTitle')}</h3>
+      <p>${escapeHtml(summary)}</p><button type="button" class="btn btn-ghost" onclick="openStaffOrderOptions()">${t('configureOptions')}</button></section>`;
   }
 
   function handleGlobalFlavorChange(groupKey, optName, isRadio, isChecked) {
@@ -1041,9 +1037,7 @@
   }
 
   function formatGlobalCustomizationsSummary() {
-    const structured = getSelectedGlobalCustomizations();
-    if (structured.length === 0) return "";
-    return structured.map(s => `${s.label}: ${s.value}`).join(" • ");
+    return window.OrderDetailView.choices(state.orderSelections || []).map(c=>`${c.label}: ${c.value}`).join(' · ');
   }
 
   function renderMenuItems() {
@@ -1106,6 +1100,8 @@
   }
 
   function openItemModal(itemId) {
+    const canonicalItem = state.catalog.find(i=>i.id===itemId);
+    if (canonicalItem?.bundleRule?.groups?.length) return openCanonicalOptions(canonicalItem);
     const item = state.catalog.find(i => i.id === itemId);
     if (!item) return;
 
@@ -1253,6 +1249,7 @@
 
     updateCardActionUI(state.selectedItem.id);
     closeItemModal();
+    renderCartDrawer();
     updateStickyCartBar();
   }
 
@@ -1262,7 +1259,7 @@
     if (!bar) return;
 
     const totalCount = state.cart.reduce((sum, item) => sum + item.quantity, 0);
-    const totalPrice = state.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const totalPrice = staffTotal();
 
     if (totalCount > 0 && state.currentTable) {
       bar.style.display = "block";
@@ -1308,6 +1305,8 @@
       `;
     }
 
+    const submit = document.getElementById("btn-submit-order");
+    if (submit) submit.disabled = state.submitting || !state.capabilities?.[state.currentTable?.active_order_key ? "append" : "create"];
     const listEl = document.getElementById("cart-items-list");
     if (!listEl) return;
 
@@ -1345,7 +1344,7 @@
     }).join("");
 
     document.getElementById("cart-summary-subtotal").innerText = `$${grandTotal}`;
-    document.getElementById("cart-summary-total").innerText = `$${grandTotal}`;
+    document.getElementById("cart-summary-total").innerText = `$${staffTotal()}`;
   }
 
   function changeCartItemQty(index, delta) {
@@ -1360,6 +1359,7 @@
     }
     renderCartDrawer();
     updateCardActionUI(itemId);
+    renderCartDrawer();
     updateStickyCartBar();
   }
 
@@ -1372,13 +1372,14 @@
     }
     renderCartDrawer();
     updateCardActionUI(itemId);
+    renderCartDrawer();
     updateStickyCartBar();
   }
 
   function saveDraftCart(tableId) {
     if (!tableId || typeof sessionStorage === "undefined") return;
     sessionStorage.setItem(`staff_cart_${state.tenantId}_${tableId}`, JSON.stringify(state.cart));
-    sessionStorage.setItem(`staff_flavor_${state.tenantId}_${tableId}`, JSON.stringify(state.selectedGlobalCustomizations));
+    sessionStorage.setItem(`staff_flavor_${state.tenantId}_${tableId}`, JSON.stringify(state.orderSelections || []));
   }
 
   function loadDraftCart(tableId) {
@@ -1393,7 +1394,7 @@
       state.cart = raw ? JSON.parse(raw) : [];
 
       const rawFlavor = sessionStorage.getItem(`staff_flavor_${state.tenantId}_${tableId}`);
-      state.selectedGlobalCustomizations = rawFlavor ? JSON.parse(rawFlavor) : initDefaultGlobalCustomizations();
+      state.orderSelections = rawFlavor ? JSON.parse(rawFlavor) : window.UnifiedOptions.restore(state.orderRule || {groups:[]});
     } catch (e) {
       state.cart = [];
       state.selectedGlobalCustomizations = initDefaultGlobalCustomizations();
@@ -1406,14 +1407,19 @@
     sessionStorage.removeItem(`staff_cart_${state.tenantId}_${tableId}`);
     sessionStorage.removeItem(`staff_flavor_${state.tenantId}_${tableId}`);
     state.cart = [];
-    state.selectedGlobalCustomizations = initDefaultGlobalCustomizations();
+    state.orderSelections = window.UnifiedOptions.restore(state.orderRule || {groups:[]});
     refreshAllCardActionUIs();
   }
 
   // --- 12. SUBMIT STAFF ORDER (NEW OR APPEND ROUND) ---
   async function submitStaffOrder() {
-    if (!state.currentTable || state.cart.length === 0) return;
+    if (!state.currentTable || state.cart.length === 0 || state.submitting || !state.capabilities?.[state.currentTable.active_order_key ? "append" : "create"]) return;
 
+    const invalid = state.cart.some(line=> {
+      const product=state.catalog.find(item=>item.id===line.itemId);
+      return !product || product.isOutOfStock || !window.UnifiedOptions.valid(product.bundleRule || {groups:[]},{groups:line.groups || []});
+    }) || !window.UnifiedOptions.valid(state.orderRule || {groups:[]},{groups:state.orderSelections || []});
+    if (invalid) return alert(t('invalidSelections'));
     const btnSubmit = document.getElementById("btn-submit-order");
     if (btnSubmit) {
       btnSubmit.disabled = true;
@@ -1425,23 +1431,24 @@
     const customer = customerInp ? customerInp.value.trim() : "";
     const note = noteInp ? noteInp.value.trim() : "";
 
-    const requestId = crypto.randomUUID();
+    if (state.submitting) return;
+    state.submitting = true;
     const isAppend = !!state.currentTable.active_order_key;
 
     const payload = {
-      requestId,
+      detailVersion: 1,
+      total: staffTotal(),
+      orderSelections: state.orderSelections || [],
       tableId: state.currentTable.id,
       customer,
       note,
-      customizations: getSelectedGlobalCustomizations(),
       items: state.cart.map(c => ({
         itemId: c.itemId,
         name: c.name,
         quantity: c.quantity,
         price: c.price,
-        options: c.options || [],
         note: c.note || '',
-        bundleSelections: c.bundleSelections || null
+        bundleSelections: {portions:Array.from({length:c.quantity}, (_,i)=>({portionIndex:i,groups:c.groups || []}))}
       }))
     };
 
@@ -1452,6 +1459,11 @@
         payload.expectedRevision = state.currentTable.active_revision || 0;
       }
 
+      const pendingKey = `staff_pending_${state.tenantId}_${state.currentTable.id}`;
+      const signature = JSON.stringify({endpoint,payload});
+      const pending = JSON.parse(sessionStorage.getItem(pendingKey) || 'null');
+      payload.requestId = pending?.signature === signature ? pending.requestId : crypto.randomUUID();
+      sessionStorage.setItem(pendingKey,JSON.stringify({signature,requestId:payload.requestId}));
       const res = await fetch(endpoint, {
         method: "POST",
         headers: {
@@ -1464,12 +1476,14 @@
       const data = await res.json().catch(() => ({}));
 
       if (res.status === 409) {
+        sessionStorage.removeItem(pendingKey);
         closeCartModal();
-        showConflictModal((data && data.message) || t("conflictDesc"));
+        showConflictModal(t("conflictDesc"));
         return;
       }
 
       if (res.ok && data && data.ok) {
+        sessionStorage.removeItem(pendingKey);
         clearDraftCart(state.currentTable.id);
         closeCartModal();
         updateStickyCartBar();
@@ -1481,13 +1495,15 @@
           total: data.total || data.grandTotal || 0
         });
       } else {
-        alert((data && data.message) || "Gửi đơn thất bại / 送出失敗");
+        if (res.status < 500) sessionStorage.removeItem(pendingKey);
+        alert(t("submitFailed"));
       }
     } catch (err) {
-      alert("Lỗi kết nối / 連線錯誤: " + (err.message || err));
+      alert(t("networkError"));
     } finally {
+      state.submitting = false;
       if (btnSubmit) {
-        btnSubmit.disabled = false;
+        btnSubmit.disabled = !state.capabilities?.[state.currentTable?.active_order_key ? "append" : "create"];
         btnSubmit.innerText = t("btnConfirmOrder");
       }
     }
@@ -1515,17 +1531,74 @@
   }
 
   async function handleResolveConflict() {
-    document.getElementById("conflictModal").style.display = "none";
-    if (state.currentTable) {
-      await loadTablesData();
-      const updatedTable = state.tables.find(t => t.id === state.currentTable.id);
-      if (updatedTable) {
-        state.currentTable = updatedTable;
-        updateOrderBanner();
+    document.getElementById('conflictModal').style.display = 'none';
+    state.submitting = true;
+    const submit = document.getElementById('btn-submit-order');
+    if (submit) submit.disabled = true;
+    try {
+      if (state.currentTable) {
+        await loadTablesData();
+        await loadBootstrapMenu(true);
+        const updatedTable = state.tables.find(table=>table.id===state.currentTable.id);
+        if (updatedTable) { state.currentTable=updatedTable; updateOrderBanner(); }
       }
+    } finally {
+      state.submitting = false;
       openCartModal();
     }
   }
+
+  let optionItem = null;
+  const optionKey = 'staff_selection';
+  window.cart = {};
+  window.WORKER_BASE = WORKER_BASE;
+  window.resolveCatalogItem = () => ({targetItem:optionItem,bundleRule:optionItem?.bundleRule});
+  window.calculateCurrentFoodSubtotal = () => merchandiseTotal();
+  function merchandiseTotal() {
+    let total = state.cart.reduce((n,c)=>n+c.price*c.quantity,0);
+    for (const cat of state.categories) {
+      const rule = cat.pricingRules;
+      if (!rule?.bundle_qty || !rule?.bundle_price) continue;
+      const prices = state.cart.filter(c=>state.catalog.find(i=>i.id===c.itemId)?.categoryId===cat.id)
+        .flatMap(c=>Array(c.quantity).fill(Number(state.catalog.find(i=>i.id===c.itemId)?.price || 0))).sort((a,b)=>b-a);
+      const count = Math.floor(prices.length/rule.bundle_qty);
+      total -= Math.max(0,prices.slice(0,count*rule.bundle_qty).reduce((a,b)=>a+b,0)-count*rule.bundle_price);
+    }
+    return Math.round(total*100)/100;
+  }
+  function staffTotal() {
+    return Math.round((merchandiseTotal()+(state.orderSelections || []).reduce((n,g)=>n+g.items.reduce((sum,c)=>sum+window.OrderDetailView.extra(c),0),0))*100)/100;
+  }
+  function openCanonicalOptions(item) {
+    optionItem = item;
+    window.cart[optionKey] = 0;
+    window.bundleCartData = {};
+    window.customizeData = {};
+    window.UnifiedOptions.open('staff','selection');
+  }
+  window.openStaffOrderOptions = () => {
+    optionItem = {id:'order-options',name:t('flavorSectionTitle'),price:0,bundleRule:state.orderRule};
+    window.cart[optionKey] = 0;
+    window.bundleCartData = {[optionKey]:[{groups:state.orderSelections || []}]};
+    window.customizeData = {};
+    window.UnifiedOptions.open('staff','selection',0);
+  };
+  window.updateTotal = () => {
+    const groups = window.bundleCartData?.[optionKey]?.[0]?.groups || [];
+    if (optionItem?.id === 'order-options') {
+      state.orderSelections = groups;
+      renderMenuItems();
+    } else if (optionItem) {
+      const extra = groups.reduce((n,g)=>n+g.items.reduce((sum,c)=>sum+window.OrderDetailView.extra(c),0),0);
+      state.cart.push({uid:crypto.randomUUID(),itemId:optionItem.id,name:optionItem.name,
+        price:Number(optionItem.price)+extra,quantity:1,groups,note:window.customizeData?.[optionKey]?.[0]?.note || '',
+        options:window.OrderDetailView.choices(groups).map(c=>({name:c.value,price:c.price}))});
+      updateCardActionUI(optionItem.id);
+    }
+    saveDraftCart(state.currentTable?.id);
+    renderCartDrawer();
+    updateStickyCartBar();
+  };
 
   // --- 14. EXPOSE GLOBAL FUNCTIONS ---
   window.toggleLanguage = toggleLanguage;

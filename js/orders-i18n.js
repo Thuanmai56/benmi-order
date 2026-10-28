@@ -963,6 +963,20 @@ const I18N = {
     quickTagRecommend: "推薦",
     quickTagNew: "新品",
     quickTagSpicy: "辣",
+    promptStaffPin: "請輸入門市管理 PIN 碼：",
+    staffLoading: "載入中…",
+    staffNeedsPin: "請先驗證 PIN 碼。",
+    staffRetry: "重試",
+    staffNoTables: "尚未新增桌號，請先新增桌號。",
+    staffNetworkError: "無法連線，請重試。",
+    staffStatusConflict: "訂單已更新，請確認最新內容後再操作。",
+    staffFeatureClosed: "桌邊點餐尚未啟用",
+    staffFeatureClosedHelp: "此門市尚未開放桌邊點餐權限。",
+    staffContact: "聯絡支援",
+    tableDisable: "停用",
+    tableEnable: "啟用",
+    tableEditorAddTitle: "新增桌號",
+    tableEditorEditTitle: "編輯桌號",
     btnStaffOrder: "桌邊點餐",
     btnStaffOrderDesc: "開啟專用點餐頁面",
     tabTables: "桌號管理",
@@ -1947,6 +1961,20 @@ const I18N = {
     quickTagRecommend: "Khuyên dùng",
     quickTagNew: "Món mới",
     quickTagSpicy: "Cay",
+    promptStaffPin: "Nhập mã PIN cửa hàng:",
+    staffLoading: "Đang tải…",
+    staffNeedsPin: "Vui lòng xác thực mã PIN.",
+    staffRetry: "Thử lại",
+    staffNoTables: "Chưa có bàn. Hãy thêm bàn mới.",
+    staffNetworkError: "Không thể kết nối. Vui lòng thử lại.",
+    staffStatusConflict: "Đơn đã thay đổi. Vui lòng kiểm tra lại trước khi thao tác.",
+    staffFeatureClosed: "Chưa bật nhận đơn tại bàn",
+    staffFeatureClosedHelp: "Cửa hàng chưa được bật quyền nhận đơn tại bàn.",
+    staffContact: "Liên hệ hỗ trợ",
+    tableDisable: "Ngừng dùng",
+    tableEnable: "Kích hoạt",
+    tableEditorAddTitle: "Thêm bàn",
+    tableEditorEditTitle: "Sửa bàn",
     btnStaffOrder: "Nhận đơn tại bàn",
     btnStaffOrderDesc: "Mở trang nhận đơn chuyên biệt",
     tabTables: "Quản lý bàn",
@@ -3229,3 +3257,11 @@ function applyLanguageToDOM() {
 }
 
 window.I18N = I18N;
+
+const originalStaffLanguageDOM = applyLanguageToDOM;
+applyLanguageToDOM = function () {
+  originalStaffLanguageDOM();
+  document.querySelectorAll('[data-staff-i18n]').forEach(el=>{el.textContent=t(el.dataset.staffI18n);});
+  const tableLabel=document.getElementById('table-editor-label');
+  if (tableLabel) tableLabel.placeholder=t('tableNamePlaceholder');
+};
