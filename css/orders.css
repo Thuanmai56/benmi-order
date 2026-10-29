@@ -1170,11 +1170,12 @@ body.is-menu-active .main-topbar,
 .tile-price {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   color: #047857;
-  font-weight: 900;
-  font-size: var(--pos-text-body);
+  font-weight: 800;
+  font-size: 16px;
   white-space: nowrap;
   flex-shrink: 0;
-  letter-spacing: -0.3px;
+  letter-spacing: -0.2px;
+  line-height: 1.2;
 }
 
 /* Tablet-first Ergonomic Action Dock */
@@ -11350,7 +11351,7 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
   font-size: var(--pos-text-title);
   line-height: 1.3;
 }
-.tile-price, .total-val, .order-detail-total-row.grand-total-row .total-val,
+.total-val, .order-detail-total-row.grand-total-row .total-val,
 .pos-display-preview-total {
   font-size: var(--pos-text-total);
   line-height: 1.3;
@@ -11434,7 +11435,7 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
     align-items: center;
     justify-content: center;
     flex: 0 0 auto;
-    width: clamp(104px, 22%, 118px);
+    width: clamp(104px, 22%, 116px);
     min-width: 100px;
     padding: 8px 12px 8px 0;
     margin: 0;
@@ -11442,14 +11443,14 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
   }
   #view-live:not(.live-adaptive-stations) .tile-action-btn {
     width: 100%;
-    max-width: 98px;
-    height: 68px !important;
-    min-height: 52px !important;
-    max-height: 72px !important;
+    max-width: 96px;
+    height: 70px !important;
+    min-height: 54px !important;
+    max-height: 74px !important;
     flex: 0 0 auto;
-    padding: 6px 4px;
-    border-radius: 15px !important;
-    font-size: 13px;
+    padding: 8px 4px;
+    border-radius: 16px !important;
+    font-size: 13.5px;
     font-weight: 800;
     display: flex;
     flex-direction: column;
@@ -11465,7 +11466,7 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
     overflow: hidden;
     text-overflow: ellipsis;
     line-height: 1.15;
-    font-size: 13px !important;
+    font-size: 13.5px !important;
     text-align: center;
     letter-spacing: 0.1px;
   }
@@ -11483,6 +11484,12 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
     font-size: var(--pos-text-meta) !important;
     white-space: nowrap !important;
     flex-shrink: 0;
+  }
+  #view-live:not(.live-adaptive-stations) .tile-price {
+    font-size: 16px !important;
+    font-weight: 800 !important;
+    line-height: 1.2 !important;
+    letter-spacing: -0.2px;
   }
 }
 .dining-filter-bar, .dining-filter-group, .dining-filter-stats { flex-wrap: wrap; }
