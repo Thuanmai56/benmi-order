@@ -54,6 +54,18 @@ graph TD
 - **LÝ DO**: Ngăn ngừa hoàn toàn tình trạng thiết bị POS (iPad/Tablet/Capacitor APK) và LINE LIFF chạy code JS/CSS cũ từ cache.
 - Xem chi tiết tại: [frontend-cache-busting.md](file:///.agents/rules/frontend-cache-busting.md).
 
+### D. Chuẩn Kiến Trúc Tùy Chọn Món (Unified Option Groups vs Legacy Modifiers)
+- **CẤM Ghi Đúp Key (Zero Dual-Key Writing)**:
+  - Khi lưu tùy chọn món trong frontend (`draft.single`, `customizeData`), **BẮT BUỘC** chỉ dùng 1 canonical key duy nhất (`targetKey = group.slug || group.id`).
+  - Tuyệt đối không ghi đúp đồng thời cả `modSlug` và `modId` vào `draft.single` (gây nhân đôi tùy chọn trên POS và in bill).
+- **Lưu Tên Hiển Thị (Display Names Only)**:
+  - Lựa chọn trong `draft.single` và `selectedDetails` phải lưu **tên hiển thị** (`opt.name`), tuyệt đối không lưu ID cơ sở dữ liệu (`optId`).
+- **Phân Giải ID & Lọc Trùng (ID Resolution & Deduplication)**:
+  - Tầng POS (`orders-core.js`, `printer-service.js`) và Client Checkout (`client-checkout.js`) luôn duy trì từ điển tra cứu ngược (`posOptionIdMap` / `resolveOptionDisplayName`) và lọc trùng `[...new Set(...)]` để đảm bảo hiển thị sạch sẽ và tương thích ngược với các đơn hàng cũ đã có trong CSDL.
+- **Tránh Xung Đột Dữ Liệu 2 Tầng (No Schema Hybrid Pollution)**:
+  - Toàn bộ menu quán mới hoặc quán sửa đổi phải dùng chuẩn Unified Option Groups (`modifier_groups`, `modifier_options` và `item_modifier_links`).
+  - Khi quán đã dùng `modifier_groups`, không gán danh mục modifier cũ qua `menu_categories.applied_modifiers` để tránh sinh ra 2 nhóm tùy biến trùng nhau cho cùng một món.
+
 ---
 
 ## 3. Database & Caching Architecture

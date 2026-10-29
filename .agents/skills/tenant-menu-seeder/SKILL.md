@@ -36,6 +36,10 @@ With `UNIFIED_MENU_ENABLED="true"` (`unifiedMenu: true`), the **Canonical Option
    - **No Self-Links (`OPTION_PRODUCT_CYCLE`)**: A `modifier_group` must never be linked via `item_modifier_links` to a `menu_item` that is referenced as a `product_id` (or inside `sources_json`) within that same group.
    - **Option Count (`INSUFFICIENT_OPTIONS`)**: Every choice group (`included = 0`) must have at least `max(1, min_selection)` options (either in `modifier_options` or resolved via `sources_json`). If `allow_repeats = 0`, `max_selection` must not exceed the number of options in the group.
    - **Order-Scope Isolation (`INVALID_ORDER_OPTION_PRODUCT`)**: Options in a group with `scope = 'order'` must have `product_id = NULL`.
+5. **No Hybrid Collision & Display Name Integrity (Zero Dual-Key / Raw ID)**:
+   - **No Legacy Hybrid Pollution**: When a tenant uses Unified Option Groups (`modifier_groups`), leave `menu_categories.applied_modifiers` empty (`'[]'`) or omit it. Never link a legacy category modifier to dishes that already have `item_modifier_links`.
+   - **Display Names in Selections**: Client-side customization drafts (`draft.single`, `customizeData`) must store human-readable display names (`opt.name`), NEVER database IDs (`optId`).
+   - **Single Canonical Key**: Modifiers must only use one canonical key (`group.slug || group.id`). Never write dual keys into selection maps.
 
 ---
 

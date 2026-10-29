@@ -25,3 +25,9 @@ Khi thiết kế các tính năng cấu hình (như tùy biến món, phí dịc
   - **D1 Database**: Nguồn sự thật duy nhất (Single Source of Truth), thiết kế chuẩn hóa, có foreign keys, indexes đầy đủ theo `tenant_id`.
   - **Workers KV**: Tầng làm phẳng dữ liệu (Denormalized Cache) phục vụ khách hàng đọc Menu sub-millisecond (`tenant:{tenant_id}:bootstrap`).
 - Mọi thao tác ghi/cập nhật vào CSDL D1 phải đi kèm cơ chế xóa/cập nhật cache (Cache Invalidation) an toàn và tức thì.
+
+### 5. Chuẩn Hóa Quản Lý Tùy Chọn Món (Unified Option Groups Rule)
+- **CẤM**: Để xảy ra xung đột dữ liệu 2 tầng (vừa gắn tùy chọn qua `menu_categories.applied_modifiers` kiểu cũ vừa tạo `modifier_groups` kiểu mới).
+- **BẮT BUỘC**:
+  - Toàn bộ menu quán mới hoặc quán sửa đổi phải chuyển sang bảng chuẩn: `modifier_groups`, `modifier_options` và `item_modifier_links`.
+  - Trong frontend, dữ liệu lựa chọn món của khách phải lưu bằng **tên hiển thị** (`opt.name`), không lưu ID cơ sở dữ liệu (`optId`), và chỉ ghi 1 key đại diện duy nhất (`targetKey = group.slug || group.id`), tuyệt đối không ghi đúp 2 key để tránh lặp tùy chọn trên POS và phiếu in.
