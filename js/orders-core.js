@@ -309,6 +309,10 @@ async function initTenantBranding() {
     if (cachedCat) {
       updatePosCatalogPriceMap(JSON.parse(cachedCat));
     }
+    const cachedBootstrap = localStorage.getItem("tenant_bootstrap_" + tenantId);
+    if (cachedBootstrap) {
+      updatePosOptionIdMap(JSON.parse(cachedBootstrap));
+    }
   } catch(e) {}
 
   // 2. Fetch fresh config from Server and update cache
@@ -316,6 +320,9 @@ async function initTenantBranding() {
     const res = await fetch(`${WORKER_BASE}/api/tenant/bootstrap?tenant_id=${tenantId}&_t=${Date.now()}`);
     if (res.ok) {
       const data = await res.json();
+      try {
+        localStorage.setItem("tenant_bootstrap_" + tenantId, JSON.stringify(data));
+      } catch(e) {}
       updatePosOptionIdMap(data);
       if (data.tenant) {
         try {
@@ -598,10 +605,126 @@ function formatDineInTimeDisplay(order) {
   return formatOrderSubmissionTime(order);
 }
 
-function shortItems(content) {
-  if (!content) return "";
-  const lines = String(content).split("\n").map(s => s.trim()).filter(Boolean);
-  return lines.slice(0, 6).join("\n");
+function shortItems(input, maybeOrder) {
+  if (!input && !maybeOrder) return "";
+
+  const order = (input && typeof input === 'object') ? input : (maybeOrder && typeof maybeOrder === 'object' ? maybeOrder : null);
+  const rawContent = (typeof input === 'string') ? input : (order ? String(order.content || '') : '');
+
+  const resolveVal = (val) => {
+    if (!val || typeof val !== 'string') return '';
+    const clean = val.replace(/^[↳\-+•*]\s*/, '').trim();
+    if (typeof window !== 'undefined' && window.posOptionIdMap && window.posOptionIdMap.has(clean)) {
+      return window.posOptionIdMap.get(clean);
+    }
+    return clean;
+  };
+
+  // 1. Structured items branch: if order has array of items
+  if (order && Array.isArray(order.items) && order.items.length > 0) {
+    const dishSummaries = [];
+    order.items.forEach(it => {
+      const name = (it.item_name || it.name || '').replace(/\$[\d,.]+/g, '').trim();
+      if (!name) return;
+      const qty = parseInt(it.quantity, 10) || 1;
+      const optTexts = [];
+
+      // Extract options from selected_options
+      let opts = it.selected_options || it.options;
+      if (typeof opts === 'string') {
+        try { opts = JSON.parse(opts); } catch(e) {}
+      }
+      if (Array.isArray(opts)) {
+        opts.forEach(o => {
+          let choice = typeof o === 'string' ? o : (o.choice || o.name || '');
+          if (choice) {
+            choice = resolveVal(choice);
+            if (choice && !optTexts.includes(choice)) optTexts.push(choice);
+          }
+        });
+      } else if (typeof opts === 'string' && opts.trim()) {
+        opts.split(/[、,\n]+/).forEach(s => {
+          let choice = resolveVal(s);
+          if (choice && !optTexts.includes(choice)) optTexts.push(choice);
+        });
+      }
+
+      // Extract bundle selections if any
+      if (it.bundle_snapshot_json || it.bundleSelections) {
+        try {
+          const bSnap = typeof it.bundle_snapshot_json === 'string' ? JSON.parse(it.bundle_snapshot_json) : (it.bundleSelections || null);
+          if (bSnap && Array.isArray(bSnap.portions)) {
+            bSnap.portions.forEach(p => (p.groups || []).forEach(g => (g.items || []).forEach(bi => {
+              let bName = resolveVal(bi.name || bi.itemName);
+              if (bName && !optTexts.includes(bName)) optTexts.push(bName);
+            })));
+          }
+        } catch(e) {}
+      }
+
+      const optStr = optTexts.length > 0 ? ` (${optTexts.join('、')})` : '';
+      dishSummaries.push(`${qty}份 x ${name}${optStr}`);
+    });
+
+    if (dishSummaries.length > 0) {
+      return dishSummaries.join(' · ');
+    }
+  }
+
+  // 2. Content text parsing branch: parse raw content lines
+  if (!rawContent) return "";
+  const lines = rawContent.split('\n').map(s => s.trim()).filter(Boolean);
+  const dishes = [];
+  let currentDish = null;
+
+  const isMetadataHeader = (line) => {
+    return /^(?:訂單編號|取餐時間|點餐時間|用餐方式|桌號|聯絡電話|備註|付款方式|總金額|總計|📍|📞|👤|📝|💰|🧂|📦|----\s*|====\s*)/.test(line) ||
+           /^(?:客製化設定|客製設定|口味設定)[：:]/.test(line);
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (isMetadataHeader(line)) continue;
+
+    // Check if line is a dish item
+    const dishMatch = line.match(/^(\d+)\s*(?:份|x|X)\s*(?:x\s*)?(.+)$/) || line.match(/^(.+?)\s*[xX*]\s*(\d+)$/);
+    const isSubOption = line.startsWith('↳') || line.startsWith('-') || line.startsWith('+') || line.startsWith('•') || line.startsWith('*');
+
+    if (dishMatch && !isSubOption) {
+      const qty = parseInt(dishMatch[1] || dishMatch[2], 10) || 1;
+      const name = (dishMatch[2] || dishMatch[1] || '').replace(/\$[\d,.]+/g, '').trim();
+      currentDish = { qty, name, options: [] };
+      dishes.push(currentDish);
+      continue;
+    }
+
+    if (isSubOption && currentDish) {
+      const optText = line.replace(/^[↳\-+•*]\s*/, '').trim();
+      // Match portion prefix e.g. "第一份: yzs_fl_06, yzs_fl_06" or "飲料選擇 (二擇一): 綠茶 x1"
+      const portionMatch = optText.match(/^(?:第[\d一二三四五六七八九十]+份|[^:：]+)[：:]\s*(.+)$/);
+      const choicesStr = portionMatch ? portionMatch[1] : optText;
+
+      const subTokens = choicesStr.split(/[、,，]+/).map(t => {
+        const cleanTok = t.replace(/\s*\(\+?\$?\d+.*?\)/g, '').replace(/\s*x\s*\d+$/g, '').trim();
+        return resolveVal(cleanTok);
+      }).filter(Boolean);
+
+      subTokens.forEach(tok => {
+        if (!currentDish.options.includes(tok)) {
+          currentDish.options.push(tok);
+        }
+      });
+      continue;
+    }
+  }
+
+  if (dishes.length > 0) {
+    return dishes.map(d => `${d.qty}份 x ${d.name}${d.options.length > 0 ? ` (${d.options.join('、')})` : ''}`).join(' · ');
+  }
+
+  // Fallback: take up to 6 non-metadata lines, resolving any option IDs
+  const cleanLines = lines.filter(l => !isMetadataHeader(l)).map(l => resolveVal(l));
+  return cleanLines.slice(0, 6).join(' · ');
 }
 
 function countItemsFromContent(content) {

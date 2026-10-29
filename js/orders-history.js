@@ -349,7 +349,7 @@ function renderHistory(orders) {
         badge = `<span class="badge">${escapeHtml(order.status)}</span>`;
       }
       const totalFormatted = formatOrderTotal(order);
-      const itemsSummary = shortItems(order.content) || "";
+      const itemsSummary = (typeof shortItems === "function") ? shortItems(order) : (order.content || "");
       const isDineIn = typeof isOrderDineIn === "function" ? isOrderDineIn(order) : order.diningOption === "dine_in";
       const isElapsed = typeof isOrderElapsedMode === "function" ? isOrderElapsedMode(order) : isDineIn;
 

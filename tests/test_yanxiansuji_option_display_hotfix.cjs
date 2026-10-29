@@ -179,6 +179,7 @@ test('Yanxiansuji Option Display & Duplication Hotfix Suite', async (t) => {
                 options: [
                     { id: 'yzs_fl_01', name: '不加調味', price: 0 },
                     { id: 'yzs_fl_02', name: '胡椒', price: 0 },
+                    { id: 'yzs_fl_04', name: '小辣', price: 0 },
                     { id: 'yzs_fl_06', name: '青花椒鹽', price: 0 }
                 ]
             }
@@ -245,7 +246,7 @@ test('Yanxiansuji Option Display & Duplication Hotfix Suite', async (t) => {
     await t.test('3. Customization single selection stores display name and does not duplicate keys', () => {
         const sandbox = setupCustomerSandbox(yanxiansujiBootstrap);
         const mod = yanxiansujiBootstrap.modifiers[0];
-        const opt = mod.options[2]; // 青花椒鹽
+        const opt = mod.options.find(o => o.name === '青花椒鹽'); // 青花椒鹽
 
         const draft = { single: {}, multiple: {}, selectedDetails: {} };
         // Test helper function logic inside client-customizations
@@ -264,5 +265,47 @@ test('Yanxiansuji Option Display & Duplication Hotfix Suite', async (t) => {
         assert.equal(Object.keys(draft.single).length, 1, 'Draft single must have exactly 1 key');
         assert.equal(draft.single['flavor-selection'], '青花椒鹽', 'Draft single must hold display name 青花椒鹽');
         assert.equal(draft.single['cat_yanzisuchun_flavor'], undefined, 'Alias key must not be duplicated');
+    });
+
+    await t.test('4. Order History tile itemsSummary resolves raw IDs, deduplicates, and filters metadata', () => {
+        const sandbox = setupPosSandbox(yanxiansujiBootstrap);
+
+        // Case A: Order with structured items containing duplicate raw IDs (e.g. YZS1029-T008)
+        const orderWithItems = {
+            key: 'YZS1029-T008',
+            content: "1份 x 百葉豆腐\n  - yzs_fl_04\n  - yzs_fl_04\n1份 x 美國粗脆薯\n  - yzs_fl_04\n  - yzs_fl_04",
+            items: [
+                {
+                    item_name: '百葉豆腐',
+                    quantity: 1,
+                    selected_options: JSON.stringify([
+                        { group: 'flavor-selection', choice: 'yzs_fl_04' },
+                        { group: 'cat_yanzisuchun_flavor', choice: 'yzs_fl_04' }
+                    ])
+                },
+                {
+                    item_name: '美國粗脆薯',
+                    quantity: 1,
+                    selected_options: JSON.stringify([
+                        { group: 'flavor-selection', choice: 'yzs_fl_04' },
+                        { group: 'cat_yanzisuchun_flavor', choice: 'yzs_fl_04' }
+                    ])
+                }
+            ]
+        };
+
+        const summaryFromOrder = sandbox.shortItems(orderWithItems);
+        assert.ok(!summaryFromOrder.includes('yzs_fl_04'), 'Summary from order must NOT contain raw ID yzs_fl_04');
+        assert.ok(summaryFromOrder.includes('小辣'), 'Summary from order must translate yzs_fl_04 to 小辣');
+        assert.equal(summaryFromOrder, '1份 x 百葉豆腐 (小辣) · 1份 x 美國粗脆薯 (小辣)');
+
+        // Case B: Fallback string with duplicate raw IDs and metadata headers (Cathy / legacy content)
+        const rawContent = `訂單編號：YZS1029-T166\n\n🧂 客製化設定：\n  • 免洗提碗（滿$250免費）：加購提碗 (+5元)(+$5)\n\n📦 訂單內容：\n1份 x 柳葉魚 (4隻) $60\n   ↳ 第一份: yzs_fl_06, yzs_fl_06\n1份 x 甜不辣 $30\n   ↳ 第一份: yzs_fl_02, yzs_fl_02`;
+        const summaryFromContent = sandbox.shortItems(rawContent);
+        assert.ok(!summaryFromContent.includes('訂單編號'), 'Summary must filter out metadata headers');
+        assert.ok(!summaryFromContent.includes('yzs_fl_06'), 'Summary must NOT contain raw ID yzs_fl_06');
+        assert.ok(summaryFromContent.includes('青花椒鹽'), 'Summary must translate yzs_fl_06 to 青花椒鹽');
+        assert.ok(summaryFromContent.includes('胡椒'), 'Summary must translate yzs_fl_02 to 胡椒');
+        assert.equal(summaryFromContent, '1份 x 柳葉魚 (4隻) (青花椒鹽) · 1份 x 甜不辣 (胡椒)');
     });
 });

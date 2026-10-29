@@ -228,6 +228,9 @@ items(order, expand = true) {
       }
 
       items.forEach(item => {
+        if (typeof this.formatPrintOptions === 'function' && item.options) {
+          item.options = this.formatPrintOptions(item.options);
+        }
         const seenNotes = new Set();
         item.options = String(item.options || '').split('\n').filter(line => {
           const key = this.itemNoteKey(line, true);
