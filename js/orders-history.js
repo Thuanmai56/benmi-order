@@ -46,7 +46,8 @@ function matchesHistorySearch(order, query) {
 
   // 5. Order Content / Dish Items (e.g. Bánh mì, Cà phê, Set 11)
   const content = String(order.content || "").toLowerCase();
-  if (content.includes(q) || removeVietnameseDiacritics(content).includes(qClean)) return true;
+  const summary = (typeof shortItems === "function" ? String(shortItems(order) || "") : "").toLowerCase();
+  if (content.includes(q) || summary.includes(q) || removeVietnameseDiacritics(content).includes(qClean) || removeVietnameseDiacritics(summary).includes(qClean)) return true;
 
   // 6. Note
   const note = String(order.note || "").toLowerCase();

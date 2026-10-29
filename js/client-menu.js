@@ -29,7 +29,8 @@ async function fetchMenu() {
             if (freshData?.tenant?.id !== tenantId) {
                 throw new Error(`Bootstrap tenant mismatch for ${tenantId}`);
             }
-            if (!freshData || freshData.menuComplete !== true) {
+            if (!freshData || freshData.menuComplete !== true || !Array.isArray(freshData.catalog) ||
+                freshData.catalog.some(c => !c || !Array.isArray(c.items))) {
                 console.warn('[fetchMenu] Received incomplete menu bootstrap, preserving current state');
                 return;
             }
@@ -42,6 +43,7 @@ async function fetchMenu() {
             if (typeof buildModifierPriceMap === 'function') {
                 buildModifierPriceMap(freshData);
             }
+            if (typeof reconcileCartOptions === 'function') reconcileCartOptions(freshData);
             storeConfig = bootstrapData.tenant ? {
                 allowScheduledPickup: bootstrapData.tenant.allowScheduledPickup,
                 allowDineIn: bootstrapData.tenant.allowDineIn,
@@ -72,6 +74,7 @@ async function fetchMenu() {
             } else {
                 updateDynamicStockAndPrices();
             }
+            if (typeof updateTotal === 'function') updateTotal();
         }
         if (typeof applyPickupConfig === 'function') applyPickupConfig();
         if (typeof checkStoreStatus === 'function') checkStoreStatus();

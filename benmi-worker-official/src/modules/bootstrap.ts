@@ -41,11 +41,14 @@ export interface BootstrapBundleRule {
   groups: BootstrapBundleGroup[];
 }
 
-export const BOOTSTRAP_VERSION = 2;
+// v3 retires legacy category modifiers from the unified customer read model.
+export const BOOTSTRAP_VERSION = 3;
 
 export interface BootstrapResponse {
   bootstrapVersion: number;
   menuComplete: boolean;
+  /** Display lookup for legacy order IDs; never a source of selectable options. */
+  optionDisplayNames?: Record<string, string>;
   customizationCategoryId?: string | null;
   tenant: {
     id: string;
@@ -1042,6 +1045,21 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
 
     if (unifiedMenuEnabled(env)) {
       const options = await loadOptionCatalog(env, tenantId);
+      payload.optionDisplayNames = Object.fromEntries([
+        ...modifiers.flatMap(m => (m.options || []).filter((o: any) => o?.id && o?.name).map((o: any) => [o.id, o.name])),
+        ...options.products.map(p => [p.id, p.name]),
+        ...options.groups.flatMap(g => groupOptions(options, g).map(o => [o.id, o.name]))
+      ]);
+      // Legacy categories/items remain in D1 for rollback and historical orders.
+      // Never expose them as a second configuration authority in unified mode:
+      // older LIFF scripts can otherwise resurrect groups deleted through POS.
+      payload.modifiers = [];
+      payload.categoryModifierLinks = [];
+      for (const category of catalog) {
+        category.appliedModifiers = [];
+        category.modifierGroups = [];
+        category.allowCustomization = false;
+      }
       for (const category of catalog) for (const item of category.items) {
         const product = options.products.find(p=>p.id===item.id);
         (item as any).imageKey = product?.image_key;
@@ -1052,12 +1070,7 @@ export async function getTenantBootstrap(request: Request, env: Env): Promise<Re
         }
         (item as any).modifierGroups = [];
         (item as any).unifiedOptions = true;
-        const rule = projectOptionRule(options, item.id!);
-        if (rule) {
-          (item as any).bundleRule = rule;
-          (item as any).modifierGroups = [];
-          (item as any).unifiedOptions = true;
-        }
+        (item as any).bundleRule = projectOptionRule(options, item.id!);
       }
       for (const customization of customizations) {
         const group=options.groups.find(g=>g.scope==='order' && g.id===customization.id);

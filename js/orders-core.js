@@ -262,6 +262,9 @@ function updatePosOptionIdMap(data) {
   if (!data) return;
   const map = window.posOptionIdMap || new Map();
   window.posOptionIdMap = map;
+  for (const [id, name] of Object.entries(data.optionDisplayNames || {})) {
+    if (typeof name === 'string' && name) map.set(id, name);
+  }
   if (Array.isArray(data.modifiers)) {
     data.modifiers.forEach(m => (m.options || []).forEach(o => {
       if (o.id && o.name) map.set(String(o.id), o.name);

@@ -71,6 +71,7 @@ function createCheckoutEnvironment(overrides = {}) {
     customizeData: {},
     comboDrinkData: {},
     bootstrapData: {
+      menuComplete: true,
       tenant: { id: 'miyansuo', storeStatus: 'open' },
       catalog: [
         {
@@ -104,6 +105,7 @@ function createCheckoutEnvironment(overrides = {}) {
   };
 
   sandbox.window = sandbox;
+  sandbox.__INITIAL_TENANT_ID = 'miyansuo';
   sandbox.elements = elements;
   sandbox.alerts = alerts;
 
@@ -170,6 +172,7 @@ test('doSubmitOrderExecution unlocks submit buttons when pre-submit stock valida
         return {
           ok: true,
           json: async () => ({
+            menuComplete: true,
             tenant: { id: 'miyansuo', storeStatus: 'paused' },
             catalog: [],
           }),

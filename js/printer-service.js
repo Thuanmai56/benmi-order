@@ -620,12 +620,21 @@
           if (otherOptions.length > 0) lines.unshift([...new Set(otherOptions)].join('、'));
           return lines.join('\n');
         }
-        const cleaned = value.map(option => {
+        const cleaned = [];
+        const seenLegacy = new Set();
+        value.forEach(option => {
           let t = typeof option === 'string' ? option : (option.choice || option.name || '');
           t = resolveText(t);
-          return this.stripPrintOptionSurcharges(t);
-        }).filter(Boolean);
-        return [...new Set(cleaned)].join('、');
+          const clean = this.stripPrintOptionSurcharges(t);
+          if (!clean) return;
+          if (option && typeof option === 'object' && option.groupId) {
+            cleaned.push(clean);
+          } else if (!seenLegacy.has(clean)) {
+            seenLegacy.add(clean);
+            cleaned.push(clean);
+          }
+        });
+        return cleaned.join('、');
       }
       return '';
     }

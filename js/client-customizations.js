@@ -229,6 +229,7 @@ function renderComboDrinksInline(origName, qty) {
 
 function getCategoryModifiers(catSlug) {
     const bData = window.bootstrapData || bootstrapData;
+    if (bData?.unifiedMenu) return [];
     const catObj = bData?.catalog?.find(c => c.slug === catSlug);
     if (!catObj) return [];
     if (catObj.allowCustomization === false) return [];
@@ -261,10 +262,11 @@ function getCategoryModifiers(catSlug) {
 }
 
 function getItemModifiers(catSlug, itemName) {
+    const bData = window.bootstrapData || bootstrapData;
+    if (bData?.unifiedMenu) return [];
     if (typeof getEffectiveItemModifierGroups === 'function') {
         return getEffectiveItemModifierGroups(`${catSlug}_${itemName}`, catSlug);
     }
-    const bData = window.bootstrapData || bootstrapData;
     const catObj = bData?.catalog?.find(c => c.slug === catSlug);
     const itemObj = catObj?.items?.find(it => it.name === itemName);
     const itemMods = [];
@@ -456,7 +458,7 @@ function openItemCustomizeModal(category, origName, targetPortionIndex) {
     // Resolve item info and price
     const resolveFn = typeof resolveCatalogItem === 'function' ? resolveCatalogItem : (window.resolveCatalogItem || (k => ({ origName, displayName: origName, price: 0 })));
     const itemInfo = resolveFn(key);
-    const basePrice = Number(itemInfo?.price || 0);
+    const basePrice = Number(itemInfo?.basePrice ?? itemInfo?.targetItem?.price ?? itemInfo?.price ?? 0);
 
     // Close any previous open popup
     if (typeof closePopup === 'function') closePopup();

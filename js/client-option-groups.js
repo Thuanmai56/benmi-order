@@ -803,6 +803,7 @@
   }
   window.UnifiedOptions = {
     restore,
+    receipt,
     presentation,
     open(cat, name, index) {
       const key = cat + "_" + name,

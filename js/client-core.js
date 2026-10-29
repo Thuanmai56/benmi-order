@@ -168,6 +168,9 @@ function buildModifierPriceMap(bData) {
 
 function getEffectiveItemModifierGroups(itemOrKey, catSlugOrNull) {
     const bData = window.bootstrapData || (typeof bootstrapData !== 'undefined' ? bootstrapData : null);
+    // Unified choices come exclusively from the canonical bundleRule projection.
+    // Cached/mixed payloads may lack the per-item marker or contain renamed items.
+    if (bData?.unifiedMenu) return [];
     let targetItem = null;
     let targetCatSlug = catSlugOrNull || '';
 
@@ -296,8 +299,77 @@ function getEffectiveItemModifierGroups(itemOrKey, catSlugOrNull) {
     return [...itemMods, ...catMods];
 }
 
+// Reconcile editable drafts only; persisted order snapshots remain independent.
+function reconcileCartOptions(data) {
+    const bData = data || window.bootstrapData;
+    if (!bData?.unifiedMenu || bData.menuComplete !== true || !Array.isArray(bData.catalog)) return false;
+    const cartObj = window.cart || {};
+    const cData = window.customizeData || {};
+    const bundles = window.bundleCartData || (window.bundleCartData = {});
+    let changed = false;
+    function currentGroups(saved, groups) {
+        return (saved || []).flatMap(selection => {
+            const group = groups.find(g => g.id === selection.groupId || g.metadata?.legacyGroupId === selection.groupId);
+            if (!group) return [];
+            return [{ ...selection, items: (selection.items || []).map(choice => {
+                const option = (group.eligibleItems || group.options || []).find(o =>
+                    o.id === (choice.optionId || choice.itemId) || (o.productId && o.productId === choice.itemId));
+                // Keep unavailable choices in existing groups for explicit removal in the editor.
+                return option && Array.isArray(choice.groups)
+                    ? { ...choice, groups: currentGroups(choice.groups, option.optionGroups || []) } : choice;
+            }) }];
+        });
+    }
+    for (const key of Object.keys(cartObj)) {
+        if (!(cartObj[key] > 0)) continue;
+        let product;
+        for (const category of bData.catalog) {
+            product = (category.items || []).find(item => `${category.slug}_${item.name}` === key || item.id === key);
+            if (product) break;
+        }
+        if (!product) continue; // Stock validation handles missing products.
+        const rule = product.bundleRule;
+        const before = JSON.stringify([cData[key], bundles[key]]);
+        if (Array.isArray(cData[key])) {
+            cData[key] = cData[key].map((portion, index) => {
+                if (!portion) return portion;
+                const hasChoices = ['single', 'multiple', 'selectedByGroup', 'selectedDetails', 'subOptions']
+                    .some(field => Object.keys(portion[field] || {}).length > 0) || portion.topping || portion.spicy;
+                if (!hasChoices) return portion;
+                // Carry still-configured legacy selections into the canonical selection tree.
+                if (rule?.version === 3 && rule.groups?.length && window.UnifiedOptions?.restore) {
+                    bundles[key] = bundles[key] || [];
+                    const saved = bundles[key][index];
+                    const groups = window.UnifiedOptions.restore(rule, saved?.groups || [], portion);
+                    bundles[key][index] = { ...saved, portionIndex: index,
+                        groups: window.UnifiedOptions.receipt ? window.UnifiedOptions.receipt(groups) : groups };
+                }
+                return { note: portion.note || '', customText: portion.customText || '', single: {}, multiple: {} };
+            });
+        }
+        if (Array.isArray(bundles[key])) {
+            if (!rule?.groups?.length) delete bundles[key];
+            else if (Number(rule.version) === 3) {
+                bundles[key] = bundles[key].map(portion => {
+                    if (!portion) return portion;
+                    const groups = currentGroups(portion.groups, rule.groups);
+                    if (JSON.stringify(groups) === JSON.stringify(portion.groups)) return portion;
+                    // Refresh display-only modifiers too, so deleted child groups cannot linger in cart text or prices.
+                    return { ...portion, groups: window.UnifiedOptions?.receipt ? window.UnifiedOptions.receipt(groups) : groups };
+                });
+            }
+        }
+        if (JSON.stringify([cData[key], bundles[key]]) !== before) changed = true;
+    }
+    if (changed) window.cartOptionsNeedReview = true;
+    return changed;
+}
+window.reconcileCartOptions = reconcileCartOptions;
+
 function calculatePortionExtra(itemOrKey, portion) {
     if (!portion) return 0;
+    const bData = window.bootstrapData || bootstrapData;
+    if (bData?.unifiedMenu) return 0; // Unified surcharges live in bundleCartData.
     const effectiveGroups = getEffectiveItemModifierGroups(itemOrKey);
     let extra = 0;
 
@@ -1440,7 +1512,7 @@ async function initApp() {
         const cachedRaw = localStorage.getItem(`tenant_bootstrap_${tenantId}`);
         if (cachedRaw) {
             const parsed = JSON.parse(cachedRaw);
-            if (parsed?.tenant?.id === tenantId) {
+            if (parsed?.tenant?.id === tenantId && parsed.bootstrapVersion === 3 && parsed.menuComplete === true) {
                 bootstrapData = parsed;
                 window.bootstrapData = parsed;
                 if (typeof buildModifierPriceMap === 'function') {
@@ -1507,6 +1579,7 @@ async function initApp() {
                 comboDrinkData = parsed.comboDrinkData || {};
                 window.comboDrinkData = comboDrinkData;
                 window.bundleCartData = parsed.bundleCartData || {};
+                reconcileCartOptions();
                 localStorage.removeItem(`cart_save_${tenantId}`);
                 if (typeof updateQty === 'function') {
                     for (let key in cart) {

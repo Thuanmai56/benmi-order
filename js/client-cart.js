@@ -664,10 +664,12 @@ function updateTotal() {
                         });
                     } else if (c.single) {
                         for (let s in c.single) {
-                            const val = c.single[s];
+                            const rawVal = c.single[s];
+                            const val = (typeof resolveOptionDisplayName === 'function') ? resolveOptionDisplayName(rawVal) : rawVal;
                             if (val && val !== '不辣' && val !== '不需要') {
-                                const addP = getPrice(val);
-                                parts.push(addP > 0 ? `${val} (+$${addP})` : val);
+                                const addP = getPrice(val) || getPrice(rawVal);
+                                const label = addP > 0 ? `${val} (+$${addP})` : val;
+                                if (!parts.includes(label)) parts.push(label);
                             }
                         }
                     }
@@ -748,10 +750,12 @@ function updateTotal() {
                             const c = cData[key][pIdx];
                             if (c.single) {
                                 for (let s in c.single) {
-                                    const val = c.single[s];
+                                    const rawVal = c.single[s];
+                                    const val = (typeof resolveOptionDisplayName === 'function') ? resolveOptionDisplayName(rawVal) : rawVal;
                                     if (val && val !== '不辣' && val !== '不需要') {
-                                        const addP = getPrice(val);
-                                        customParts.push(addP > 0 ? `${val} (+$${addP})` : val);
+                                        const addP = getPrice(val) || getPrice(rawVal);
+                                        const label = addP > 0 ? `${val} (+$${addP})` : val;
+                                        if (!customParts.includes(label)) customParts.push(label);
                                     }
                                 }
                             }

@@ -997,6 +997,9 @@ function resolveOptionDisplayName(val) {
     const trimmed = val.trim();
     const bData = window.bootstrapData || (typeof bootstrapData !== 'undefined' ? bootstrapData : null);
     if (!bData) return trimmed;
+    if (Object.prototype.hasOwnProperty.call(bData.optionDisplayNames || {}, trimmed)) {
+        return bData.optionDisplayNames[trimmed];
+    }
     if (Array.isArray(bData.modifiers)) {
         for (const mod of bData.modifiers) {
             const found = (mod.options || []).find(o => o.id === trimmed || String(o.id) === trimmed);
@@ -1305,7 +1308,9 @@ function buildStructuredCartItems() {
             let itemModifiersTotal = 0;
             const options = [];
             let itemModifiersExtra = 0;
-            const cust = customizeData[key];
+            const cust = bootstrapData?.unifiedMenu
+                ? (customizeData[key] || []).map(p => p && ({ note: p.note, customText: p.customText }))
+                : customizeData[key];
             const getPrice = window.getModifierPrice || (typeof getModifierPrice === 'function' ? getModifierPrice : () => 0);
             if (cust && Array.isArray(cust)) {
                 cust.slice(0, qty).forEach((c, idx) => {
@@ -1804,11 +1809,18 @@ async function validateCartStockBeforeSubmit() {
         });
         if (!res.ok) {
             console.warn(`[Validation] Bootstrap fetch returned status ${res.status}`);
-            return { valid: true, outOfStockItems: [], paused: false };
+            return { valid: false, unavailable: true, outOfStockItems: [], paused: false };
         }
 
         const freshData = await res.json();
+        if (freshData?.tenant?.id !== tenantId || freshData.menuComplete !== true ||
+            !Array.isArray(freshData.catalog) || freshData.catalog.some(c => !c || !Array.isArray(c.items))) {
+            return { valid: false, unavailable: true, outOfStockItems: [], paused: false };
+        }
         bootstrapData = freshData;
+        window.bootstrapData = freshData;
+        if (typeof buildModifierPriceMap === 'function') buildModifierPriceMap(freshData);
+        if (typeof reconcileCartOptions === 'function') reconcileCartOptions(freshData);
         try {
             localStorage.setItem(`tenant_bootstrap_${tenantId}`, JSON.stringify(freshData));
         } catch(e) {}
@@ -1866,10 +1878,15 @@ async function validateCartStockBeforeSubmit() {
             return { valid: false, outOfStockItems, paused: false };
         }
 
+        if (typeof updateTotal === 'function') updateTotal();
+        if (window.cartOptionsNeedReview) {
+            window.cartOptionsNeedReview = false;
+            return { valid: false, optionsChanged: true, outOfStockItems: [], paused: false };
+        }
         return { valid: true, outOfStockItems: [], paused: false };
     } catch (e) {
         console.error("[Validation] Pre-submit stock validation error:", e);
-        return { valid: true, outOfStockItems: [], paused: false };
+        return { valid: false, unavailable: true, outOfStockItems: [], paused: false };
     }
 }
 
@@ -1892,6 +1909,15 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
             isSubmitting = false;
             setAllSubmitButtonsState(false, '確認下單', { cursor: 'pointer', opacity: '1' });
 
+            const vi = (typeof currentLocale !== 'undefined' ? currentLocale : document.documentElement.lang) === 'vi';
+            if (validation.unavailable) {
+                return customAlert(vi ? 'Chưa tải được thực đơn đầy đủ. Giỏ hàng đã được giữ lại; vui lòng thử lại.'
+                    : '尚未取得完整菜單，購物車已保留，請重試。');
+            }
+            if (validation.optionsChanged) {
+                return customAlert(vi ? 'Tùy chọn trong giỏ hàng đã được cập nhật theo thực đơn. Vui lòng kiểm tra và gửi lại đơn.'
+                    : '購物車選項已依最新菜單更新，請確認後再次送出。');
+            }
             if (validation.paused) {
                 return customAlert('店家目前已暫停接單，暫時無法送出訂單，敬請見諒！');
             }
@@ -2501,7 +2527,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
         if (err.serverRejected) {
             const details = err.details || {};
             const code = String(details.code || '');
-            const optionError = code.startsWith('OPTION_') || code === 'PRODUCT_UNAVAILABLE' || code === 'MIN_ORDER_SUBTOTAL_NOT_MET';
+            const optionError = code.startsWith('OPTION_') || code === 'ORDER_PRICE_CHANGED' || code === 'PRODUCT_UNAVAILABLE' || code === 'MIN_ORDER_SUBTOTAL_NOT_MET';
             if (code.startsWith('BUNDLE_') || optionError) {
                 const affected = buildStructuredCartItems()[Number(details.itemIndex || 0)];
                 let key = affected && Object.keys(cart).find(candidate => resolveCatalogItem(candidate)?.itemId === affected.itemId);
@@ -2512,8 +2538,13 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                         signal: AbortSignal.timeout(8000)
                     });
                     if (fresh.ok) {
-                        bootstrapData = await fresh.json();
-                        window.bootstrapData = bootstrapData;
+                        const data = await fresh.json();
+                        if (data?.tenant?.id === getTenantIdFromUrl() && data.menuComplete === true &&
+                            Array.isArray(data.catalog) && data.catalog.every(c => c && Array.isArray(c.items))) {
+                            bootstrapData = data;
+                            window.bootstrapData = data;
+                            if (typeof buildModifierPriceMap === 'function') buildModifierPriceMap(data);
+                        }
                     }
                 } catch (refreshError) { console.warn('[Bundle] Refresh failed', refreshError); }
                 // Cart keys include names: retain selections when the same product was renamed.
@@ -2532,9 +2563,12 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                     key = freshKey;
                     location = { catSlug: category.slug, origName: product.name };
                 }
+                if (typeof reconcileCartOptions === 'function') reconcileCartOptions();
+                // This rejection already asks the customer to review and explicitly retry.
+                window.cartOptionsNeedReview = false;
                 const vi = (typeof currentLocale !== 'undefined' ? currentLocale : document.documentElement.lang) === 'vi';
                 const message = optionError
-                    ? code === 'OPTION_PRICE_CHANGED'
+                    ? code === 'OPTION_PRICE_CHANGED' || code === 'ORDER_PRICE_CHANGED'
                         ? (vi ? 'Giá món đã thay đổi. Vui lòng xác nhận lại tùy chọn.' : '餐點價格已更新，請重新確認選項。')
                         : code === 'PRODUCT_UNAVAILABLE' || code === 'OPTION_UNAVAILABLE' || code === 'OPTION_SUB_INVALID'
                             ? (vi ? 'Một món hoặc tùy chọn đã hết hàng. Vui lòng chọn lại.' : '餐點或選項已售完，請重新選擇。')

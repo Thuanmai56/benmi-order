@@ -683,7 +683,7 @@ test("checkout refreshes canonical options in both languages and preserves a ren
     const oldKey = "food_Old meal", newKey = "food_New meal";
     const selections = [{ groups: [{ groupId: "drinks", items: [{ optionId: "coffee", surcharge: 0 }] }] }];
     const notes = [{ note: "Less salt" }];
-    const fresh = { catalog: [{ slug: "food", items: [{ id: "meal", name: "New meal", price: 110, bundleRule: { version: 3 } }] }] };
+    const fresh = { tenant: { id: "tenant" }, menuComplete: true, catalog: [{ slug: "food", items: [{ id: "meal", name: "New meal", price: 110, bundleRule: { version: 3 } }] }] };
     let alert, callback, opened, refreshed = 0, totals = 0;
     const sandbox = {
       window: { customizeData: { [oldKey]: notes }, comboDrinkData: {}, bundleCartData: { [oldKey]: selections } },

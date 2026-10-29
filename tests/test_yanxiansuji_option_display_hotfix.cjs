@@ -154,6 +154,14 @@ function setupPosSandbox(bootstrapData) {
     return sandbox;
 }
 
+test('display-only legacy IDs resolve in POS printing and LIFF without selectable modifier groups', () => {
+    const data = { unifiedMenu: true, modifiers: [], catalog: [], optionDisplayNames: { old_hot: '胡椒' } };
+    const pos = setupPosSandbox(data);
+    const printer = typeof pos.window.PrinterService === 'function' ? new pos.window.PrinterService() : pos.window.PrinterService;
+    assert.equal(printer.formatPrintOptions([{ group: 'retired', choice: 'old_hot', price: 0 }]), '胡椒');
+    assert.equal(setupCustomerSandbox(data).resolveOptionDisplayName('old_hot'), '胡椒');
+});
+
 test('Yanxiansuji Option Display & Duplication Hotfix Suite', async (t) => {
     const yanxiansujiBootstrap = {
         tenant: { id: 'yanxiansuji', name: '炎鹽酥雞' },
