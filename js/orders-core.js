@@ -258,6 +258,33 @@ function lookupItemPrice(name) {
 }
 window.lookupItemPrice = lookupItemPrice;
 
+function updatePosOptionIdMap(data) {
+  if (!data) return;
+  const map = window.posOptionIdMap || new Map();
+  window.posOptionIdMap = map;
+  if (Array.isArray(data.modifiers)) {
+    data.modifiers.forEach(m => (m.options || []).forEach(o => {
+      if (o.id && o.name) map.set(String(o.id), o.name);
+    }));
+  }
+  if (Array.isArray(data.catalog)) {
+    data.catalog.forEach(c => (c.items || []).forEach(it => {
+      if (it.id && it.name) map.set(String(it.id), it.name);
+      if (Array.isArray(it.modifierGroups)) {
+        it.modifierGroups.forEach(mg => (mg.options || []).forEach(o => {
+          if (o.id && o.name) map.set(String(o.id), o.name);
+        }));
+      }
+    }));
+  }
+  if (Array.isArray(data.customizations)) {
+    data.customizations.forEach(g => (g.options || []).forEach(o => {
+      if (o.id && o.name) map.set(String(o.id), o.name);
+    }));
+  }
+}
+window.updatePosOptionIdMap = updatePosOptionIdMap;
+
 async function initTenantBranding() {
   const tenantId = getTenantIdFromUrl();
   if (!tenantId) {
@@ -289,6 +316,7 @@ async function initTenantBranding() {
     const res = await fetch(`${WORKER_BASE}/api/tenant/bootstrap?tenant_id=${tenantId}&_t=${Date.now()}`);
     if (res.ok) {
       const data = await res.json();
+      updatePosOptionIdMap(data);
       if (data.tenant) {
         try {
           localStorage.setItem("tenant_branding_" + tenantId, JSON.stringify(data.tenant));
@@ -684,7 +712,8 @@ function parsePortionCustomizations(rawOpts) {
   if (matches[0].index > 0) {
     const preContent = str.substring(0, matches[0].index).trim();
     if (preContent) {
-      commonChips = preContent.split(/[、,，\n]+/).map(s => s.trim()).filter(Boolean);
+      const raw = preContent.split(/[、,，\n]+/).map(s => s.trim()).filter(Boolean);
+      commonChips = [...new Set(raw.map(c => (window.posOptionIdMap && window.posOptionIdMap.has(c)) ? window.posOptionIdMap.get(c) : c))];
     }
   }
 
@@ -694,7 +723,9 @@ function parsePortionCustomizations(rawOpts) {
     const contentStart = cur.index + cur.matchLength;
     const nextIndex = (i + 1 < matches.length) ? matches[i + 1].index : str.length;
     const rawContent = str.substring(contentStart, nextIndex).trim();
-    const chips = rawContent.split(/[、,，\n]+/).map(s => s.trim()).filter(Boolean);
+    const rawChips = rawContent.split(/[、,，\n]+/).map(s => s.trim()).filter(Boolean);
+    const resolvedChips = rawChips.map(c => (window.posOptionIdMap && window.posOptionIdMap.has(c)) ? window.posOptionIdMap.get(c) : c);
+    const chips = [...new Set(resolvedChips)];
     portions.push({
       label: cur.label,
       chips: chips

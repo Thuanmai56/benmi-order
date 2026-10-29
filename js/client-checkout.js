@@ -992,6 +992,39 @@ function getStructuredGlobalCustomizations() {
     return result;
 }
 
+function resolveOptionDisplayName(val) {
+    if (!val || typeof val !== 'string') return val;
+    const trimmed = val.trim();
+    const bData = window.bootstrapData || (typeof bootstrapData !== 'undefined' ? bootstrapData : null);
+    if (!bData) return trimmed;
+    if (Array.isArray(bData.modifiers)) {
+        for (const mod of bData.modifiers) {
+            const found = (mod.options || []).find(o => o.id === trimmed || String(o.id) === trimmed);
+            if (found && found.name) return found.name;
+        }
+    }
+    if (Array.isArray(bData.catalog)) {
+        for (const cat of bData.catalog) {
+            for (const it of (cat.items || [])) {
+                if ((it.id === trimmed || String(it.id) === trimmed) && it.name) return it.name;
+                if (Array.isArray(it.modifierGroups)) {
+                    for (const mg of it.modifierGroups) {
+                        const found = (mg.options || []).find(o => o.id === trimmed || String(o.id) === trimmed);
+                        if (found && found.name) return found.name;
+                    }
+                }
+            }
+        }
+    }
+    if (Array.isArray(bData.customizations)) {
+        for (const c of bData.customizations) {
+            const found = (c.options || []).find(o => o.id === trimmed || String(o.id) === trimmed);
+            if (found && found.name) return found.name;
+        }
+    }
+    return trimmed;
+}
+
 // 8.1 Định dạng nội dung tin nhắn đơn hàng
 function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, mainNote) {
     const zhNumbers = ['第一份', '第二份', '第三份', '第四份', '第五份', '第六份', '第七份', '第八份', '第九份', '第十份'];
@@ -1047,7 +1080,7 @@ function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, ma
                     if (c.selectedDetails && typeof c.selectedDetails === 'object' && Object.keys(c.selectedDetails).length > 0) {
                         for (const detail of Object.values(c.selectedDetails)) {
                             if (!detail) continue;
-                            const val = detail.name || detail.id;
+                            const val = resolveOptionDisplayName(detail.name || detail.id);
                             if (val && val !== '不辣' && val !== '不需要') {
                                 let addP = Number(detail.price || 0);
                                 const sub = detail.subOption || (c.subOptions && (c.subOptions[detail.id] || c.subOptions[detail.name]));
@@ -1067,7 +1100,7 @@ function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, ma
                     } else {
                         if (c.single) {
                             for (let s in c.single) {
-                                const val = c.single[s];
+                                const val = resolveOptionDisplayName(c.single[s]);
                                 if (val && val !== '不辣' && val !== '不需要') {
                                     const addP = getPrice(val);
                                     if (addP > 0) {
@@ -1081,11 +1114,12 @@ function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, ma
                         if (c.multiple) {
                             for (let t in c.multiple) {
                                 if (c.multiple[t]) {
+                                    const val = resolveOptionDisplayName(t);
                                     const addP = getPrice(t);
                                     if (addP > 0) {
-                                        parts.push(`${t} (+$${addP})`);
+                                        parts.push(`${val} (+$${addP})`);
                                     } else {
-                                        parts.push(t);
+                                        parts.push(val);
                                     }
                                 }
                             }
@@ -1101,9 +1135,10 @@ function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, ma
                         parts.push(formattedNote);
                     }
 
-                    if (parts.length > 0) {
+                    const uniqueParts = [...new Set(parts)];
+                    if (uniqueParts.length > 0) {
                         let zhIdx = zhNumbers[i] || `第 ${i + 1} 份`;
-                        itemStr += `\n   ↳ ${zhIdx}: ${parts.join(', ')}`;
+                        itemStr += `\n   ↳ ${zhIdx}: ${uniqueParts.join(', ')}`;
                     }
                 });
             }
@@ -1185,7 +1220,7 @@ function formatAppendItemsOnlyText() {
                     if (c.selectedDetails && typeof c.selectedDetails === 'object' && Object.keys(c.selectedDetails).length > 0) {
                         for (const detail of Object.values(c.selectedDetails)) {
                             if (!detail) continue;
-                            const val = detail.name || detail.id;
+                            const val = resolveOptionDisplayName(detail.name || detail.id);
                             if (val && val !== '不辣' && val !== '不需要') {
                                 let addP = Number(detail.price || 0);
                                 const sub = detail.subOption || (c.subOptions && (c.subOptions[detail.id] || c.subOptions[detail.name]));
@@ -1205,7 +1240,7 @@ function formatAppendItemsOnlyText() {
                     } else {
                         if (c.single) {
                             for (let s in c.single) {
-                                const val = c.single[s];
+                                const val = resolveOptionDisplayName(c.single[s]);
                                 if (val && val !== '不辣' && val !== '不需要') {
                                     const addP = getPrice(val);
                                     if (addP > 0) {
@@ -1219,11 +1254,12 @@ function formatAppendItemsOnlyText() {
                         if (c.multiple) {
                             for (let t in c.multiple) {
                                 if (c.multiple[t]) {
+                                    const val = resolveOptionDisplayName(t);
                                     const addP = getPrice(t);
                                     if (addP > 0) {
-                                        parts.push(`${t} (+$${addP})`);
+                                        parts.push(`${val} (+$${addP})`);
                                     } else {
-                                        parts.push(t);
+                                        parts.push(val);
                                     }
                                 }
                             }
@@ -1239,9 +1275,10 @@ function formatAppendItemsOnlyText() {
                         parts.push(formattedNote);
                     }
 
-                    if (parts.length > 0) {
+                    const uniqueParts = [...new Set(parts)];
+                    if (uniqueParts.length > 0) {
                         const prefixLabel = cart[key] > 1 ? `第${i + 1}份: ` : '';
-                        lines.push(`   ↳ ${prefixLabel}${parts.join('、')}`);
+                        lines.push(`   ↳ ${prefixLabel}${uniqueParts.join('、')}`);
                     }
                 });
             }
@@ -1274,10 +1311,11 @@ function buildStructuredCartItems() {
                 cust.slice(0, qty).forEach((c, idx) => {
                     if (!c) return;
                     const portionPrefix = qty > 1 ? `第${idx + 1}份: ` : '';
+                    const seenOptionKeys = new Set();
                     if (c.selectedDetails && typeof c.selectedDetails === 'object' && Object.keys(c.selectedDetails).length > 0) {
                         for (const detail of Object.values(c.selectedDetails)) {
                             if (!detail) continue;
-                            const val = detail.name || detail.id;
+                            const val = resolveOptionDisplayName(detail.name || detail.id);
                             if (val && val !== '不辣' && val !== '不需要') {
                                 let addP = Number(detail.price || 0);
                                 const sub = detail.subOption || (c.subOptions && (c.subOptions[detail.id] || c.subOptions[detail.name]));
@@ -1289,19 +1327,23 @@ function buildStructuredCartItems() {
                                     addP += subP;
                                     subPayload = { id: sub.id, name: sub.name, price: subP };
                                 }
-                                itemModifiersTotal += addP;
-                                options.push({
-                                    group: detail.groupName || detail.groupId || '客製化',
-                                    choice: choiceLabel,
-                                    price: addP,
-                                    subOption: subPayload
-                                });
+                                const optKey = `${detail.id || detail.name}::${choiceLabel}::${addP}`;
+                                if (!seenOptionKeys.has(optKey)) {
+                                    seenOptionKeys.add(optKey);
+                                    itemModifiersTotal += addP;
+                                    options.push({
+                                        group: detail.groupName || detail.groupId || '客製化',
+                                        choice: choiceLabel,
+                                        price: addP,
+                                        subOption: subPayload
+                                    });
+                                }
                             }
                         }
                     } else {
                         if (c.single) {
                             for (let s in c.single) {
-                                const val = c.single[s];
+                                const val = resolveOptionDisplayName(c.single[s]);
                                 if (val && val !== '不辣' && val !== '不需要') {
                                     let addP = getPrice(val, s, key);
                                     const sub = c.subOptions && c.subOptions[val];
@@ -1313,22 +1355,27 @@ function buildStructuredCartItems() {
                                         addP += subP;
                                         subPayload = { id: sub.id, name: sub.name, price: subP };
                                     }
-                                    itemModifiersTotal += addP;
-                                    options.push({ 
-                                        group: s, 
-                                        choice: choiceLabel, 
-                                        price: addP,
-                                        subOption: subPayload
-                                    });
+                                    const optKey = `single::${choiceLabel}::${addP}`;
+                                    if (!seenOptionKeys.has(optKey)) {
+                                        seenOptionKeys.add(optKey);
+                                        itemModifiersTotal += addP;
+                                        options.push({ 
+                                            group: s, 
+                                            choice: choiceLabel, 
+                                            price: addP,
+                                            subOption: subPayload
+                                        });
+                                    }
                                 }
                             }
                         }
                         if (c.multiple) {
                             for (let t in c.multiple) {
                                 if (c.multiple[t]) {
+                                    const val = resolveOptionDisplayName(t);
                                     let addP = getPrice(t, null, key);
                                     const sub = c.subOptions && c.subOptions[t];
-                                    let choiceLabel = `${portionPrefix}${t}`;
+                                    let choiceLabel = `${portionPrefix}${val}`;
                                     let subPayload = undefined;
                                     if (sub) {
                                         choiceLabel += ` (${sub.name})`;
@@ -1336,13 +1383,17 @@ function buildStructuredCartItems() {
                                         addP += subP;
                                         subPayload = { id: sub.id, name: sub.name, price: subP };
                                     }
-                                    itemModifiersTotal += addP;
-                                    options.push({ 
-                                        group: '客製化', 
-                                        choice: choiceLabel, 
-                                        price: addP,
-                                        subOption: subPayload
-                                    });
+                                    const optKey = `multiple::${choiceLabel}::${addP}`;
+                                    if (!seenOptionKeys.has(optKey)) {
+                                        seenOptionKeys.add(optKey);
+                                        itemModifiersTotal += addP;
+                                        options.push({ 
+                                            group: '客製化', 
+                                            choice: choiceLabel, 
+                                            price: addP,
+                                            subOption: subPayload
+                                        });
+                                    }
                                 }
                             }
                         }

@@ -372,18 +372,38 @@ function updateQty(category, origName, change) {
             if (!cData[key]) cData[key] = [];
             const defaultSingle = {};
             const defaultMulti = {};
+            const defaultDetails = {};
             itemModifiers.forEach(m => {
                 const groupKey = m.slug || m.id;
                 if (m.selectionType === 'single') {
                     const def = (m.options || []).find(o => o.isDefault && !o.isOutOfStock);
-                    if (def) defaultSingle[groupKey] = def.name;
+                    if (def) {
+                        defaultSingle[groupKey] = def.name;
+                        const optIdx = (m.options || []).indexOf(def);
+                        const optId = (typeof getUniqueModifierOptionId === 'function') ? getUniqueModifierOptionId(m, def, optIdx) : (def.id || def.name);
+                        defaultDetails[optId] = {
+                            id: optId,
+                            name: def.name,
+                            price: Number(def.price || 0),
+                            groupId: groupKey,
+                            groupName: m.name
+                        };
+                    }
                 } else if (m.selectionType === 'multiple') {
-                    (m.options || []).filter(o => o.isDefault && !o.isOutOfStock).forEach(o => {
+                    (m.options || []).filter(o => o.isDefault && !o.isOutOfStock).forEach((o, optIdx) => {
+                        const optId = (typeof getUniqueModifierOptionId === 'function') ? getUniqueModifierOptionId(m, o, optIdx) : (o.id || o.name);
                         defaultMulti[o.name] = true;
+                        defaultDetails[optId] = {
+                            id: optId,
+                            name: o.name,
+                            price: Number(o.price || 0),
+                            groupId: groupKey,
+                            groupName: m.name
+                        };
                     });
                 }
             });
-            cData[key].push({ single: defaultSingle, multiple: defaultMulti, subOptions: {}, note: '' });
+            cData[key].push({ single: defaultSingle, multiple: defaultMulti, subOptions: {}, selectedDetails: defaultDetails, note: '' });
         }
     }
 

@@ -568,35 +568,64 @@
         .join(' | ');
     }
 
+    resolveOptionIdToName(val) {
+      if (!val || typeof val !== 'string') return val;
+      const trimmed = val.trim();
+      if (typeof window !== 'undefined' && window.posOptionIdMap && window.posOptionIdMap.has(trimmed)) {
+        return window.posOptionIdMap.get(trimmed);
+      }
+      return trimmed;
+    }
+
     formatPrintOptions(value) {
       if (!value) return '';
+      const resolveText = (t) => this.resolveOptionIdToName(t);
+
       if (typeof value === 'string') {
-        try { return this.formatPrintOptions(JSON.parse(value)); } catch { return this.stripPrintOptionSurcharges(value); }
+        try {
+          return this.formatPrintOptions(JSON.parse(value));
+        } catch {
+          const stripped = this.stripPrintOptionSurcharges(value);
+          const parts = stripped.split(/[、,，]+/).map(s => resolveText(s.trim())).filter(Boolean);
+          return [...new Set(parts)].join('、');
+        }
       }
       if (Array.isArray(value)) {
         const portionGroups = {};
         const otherOptions = [];
         let hasPortions = false;
         value.forEach(option => {
-          const text = typeof option === 'string' ? option : (option.choice || option.name || '');
+          let text = typeof option === 'string' ? option : (option.choice || option.name || '');
           if (!text) return;
+          text = resolveText(text);
           const cleanText = this.stripPrintOptionSurcharges(text).replace(/^[↳\-+•*]\s*/, '').trim();
           const m = cleanText.match(/^(第(?:\d+|[一二三四五六七八九十]+)份)[：:]\s*(.+)$/);
           if (m) {
             hasPortions = true;
             const pKey = m[1];
             if (!portionGroups[pKey]) portionGroups[pKey] = [];
-            portionGroups[pKey].push(m[2]);
+            const subChoices = m[2].split(/[、,，]+/).map(s => resolveText(s.trim())).filter(Boolean);
+            subChoices.forEach(sc => {
+              if (!portionGroups[pKey].includes(sc)) portionGroups[pKey].push(sc);
+            });
           } else {
-            otherOptions.push(cleanText);
+            const choices = cleanText.split(/[、,，]+/).map(s => resolveText(s.trim())).filter(Boolean);
+            choices.forEach(c => {
+              if (!otherOptions.includes(c)) otherOptions.push(c);
+            });
           }
         });
         if (hasPortions) {
-          const lines = Object.entries(portionGroups).map(([p, arr]) => `${p}: ${arr.join('、')}`);
-          if (otherOptions.length > 0) lines.unshift(otherOptions.join('、'));
+          const lines = Object.entries(portionGroups).map(([p, arr]) => `${p}: ${[...new Set(arr)].join('、')}`);
+          if (otherOptions.length > 0) lines.unshift([...new Set(otherOptions)].join('、'));
           return lines.join('\n');
         }
-        return value.map(option => this.stripPrintOptionSurcharges(typeof option === 'string' ? option : option.choice || option.name || '')).filter(Boolean).join('、');
+        const cleaned = value.map(option => {
+          let t = typeof option === 'string' ? option : (option.choice || option.name || '');
+          t = resolveText(t);
+          return this.stripPrintOptionSurcharges(t);
+        }).filter(Boolean);
+        return [...new Set(cleaned)].join('、');
       }
       return '';
     }

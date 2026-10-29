@@ -309,7 +309,11 @@ function initPortionDefaults(category, origName, portionIndex) {
             if (defOpt) {
                 const optIdx = (m.options || []).indexOf(defOpt);
                 const optId = getUniqueModifierOptionId(m, defOpt, optIdx);
-                defaultSingle[m.slug] = defOpt.name;
+                const targetKey = m.slug || m.id;
+                defaultSingle[targetKey] = defOpt.name;
+                if (m.id && m.slug && m.id !== m.slug) {
+                    delete defaultSingle[m.id === targetKey ? m.slug : m.id];
+                }
                 selectedDetails[optId] = {
                     id: optId,
                     name: defOpt.name,
@@ -400,7 +404,11 @@ function openItemCustomizeModal(category, origName, targetPortionIndex) {
             if (defOpt) {
                 const optIdx = (m.options || []).indexOf(defOpt);
                 const optId = getUniqueModifierOptionId(m, defOpt, optIdx);
-                defaultSingle[m.slug] = optId;
+                const targetKey = m.slug || m.id;
+                defaultSingle[targetKey] = defOpt.name;
+                if (m.id && m.slug && m.id !== m.slug) {
+                    delete defaultSingle[m.id === targetKey ? m.slug : m.id];
+                }
                 defaultDetails[optId] = {
                     id: optId,
                     name: defOpt.name,
@@ -698,8 +706,10 @@ function openItemCustomizeModal(category, origName, targetPortionIndex) {
                         delete draft.single[modSlug];
                         delete draft.single[modId];
                     } else {
-                        draft.single[modSlug] = optId;
-                        if (modId !== modSlug) draft.single[modId] = optId;
+                        delete draft.single[modSlug];
+                        delete draft.single[modId];
+                        const targetKey = modSlug || modId;
+                        draft.single[targetKey] = optName;
 
                         const optPrice = Number(opt?.price !== undefined ? opt.price : getPrice(optName));
                         draft.selectedDetails[optId] = {

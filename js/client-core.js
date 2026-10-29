@@ -264,9 +264,14 @@ function getEffectiveItemModifierGroups(itemOrKey, catSlugOrNull) {
                 if (Array.isArray(applied) && applied.length > 0) {
                     const allMods = bData.modifiers || [];
                     const matched = applied.includes('*') ? allMods : allMods.filter(m => applied.includes(m.slug) || applied.includes(m.id));
+                    const existingNames = new Set(itemMods.map(m => (m.name || '').trim().toLowerCase()));
+                    const existingGids = new Set(itemMods.map(m => m.id));
                     matched.forEach(m => {
+                        const mId = m.id || m.slug;
+                        const mName = (m.name || '').trim().toLowerCase();
+                        if (existingGids.has(mId) || existingNames.has(mName)) return;
                         catMods.push({
-                            id: m.id || m.slug,
+                            id: mId,
                             slug: m.slug || m.id,
                             name: m.name,
                             source: 'category',

@@ -544,7 +544,7 @@
     if (!draft.addonSelections.selectedDetails) draft.addonSelections.selectedDetails = {};
     const effectiveOptId = optId || optName;
     const effectiveOptName = optName || optId;
-    draft.addonSelections.single[modSlug] = effectiveOptId;
+    draft.addonSelections.single[modSlug] = effectiveOptName;
     for (const k of Object.keys(draft.addonSelections.selectedDetails)) {
       if (draft.addonSelections.selectedDetails[k]?.groupId === modSlug) {
         delete draft.addonSelections.selectedDetails[k];

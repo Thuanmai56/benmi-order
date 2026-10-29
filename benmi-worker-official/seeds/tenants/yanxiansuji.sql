@@ -318,12 +318,12 @@ INSERT INTO modifier_groups (
     'yanxiansuji',
     '口味選擇',
     'single',
-    0,
-    0,
+    1,
+    1,
     1,
     7,
     'category',
-    0,
+    1,
     '{"source_table":"menu_categories","source_id":"cat_yanzisuchun_flavor","slug":"cat_yanzisuchun_flavor","category_type":"modifier"}'
 ) ON CONFLICT(id) DO UPDATE SET
     name = excluded.name,
