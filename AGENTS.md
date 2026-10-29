@@ -25,6 +25,7 @@ graph TD
 - **`benmi-worker-official/`**: Cloudflare Workers backend (TypeScript, D1 migrations, KV edge cache, LINE bot webhook).
 - **`docs/proposals/`**: Principal Design Proposals (PDP) for major feature architectures.
 - **`.agents/`**: Repository-specific AI Agent Rules and Skills.
+- **Bản đồ chỉ mục hàm & file (Đọc đầu tiên để định vị code tức thì, không cần grep)**: Xem chi tiết tại [codebase-map.md](file:///.agents/rules/codebase-map.md).
 
 ---
 

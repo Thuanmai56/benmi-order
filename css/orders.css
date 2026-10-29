@@ -12308,6 +12308,38 @@ body.bundle-wizard-open > :not(#bundle-wizard):not(#imageModal):not(script) { vi
   }
 }
 
+/* Keep the order heading compact while preserving POS text scaling and touch targets. */
+#reviewModal .order-detail-page-container { padding-top: 8px; }
+#reviewModal .order-detail-topbar {
+  padding: 4px 0 !important;
+  margin-bottom: 12px;
+  flex-wrap: nowrap;
+  gap: 12px;
+}
+#reviewModal .order-detail-topbar-left {
+  flex: 1;
+  flex-wrap: nowrap;
+  gap: 12px;
+}
+#reviewModal .order-detail-header-text { min-width: 0; }
+#reviewModal .order-detail-title {
+  font-size: calc(1.125rem * var(--pos-font-scale)) !important;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.25px;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  overflow-wrap: anywhere;
+}
+#reviewModal .order-detail-title > span { min-width: 0; }
+#reviewModal .order-title-dot { margin: 0; }
+#reviewModal .order-detail-topbar-right { flex-shrink: 0; }
+#reviewModal .order-detail-circle-btn { flex: 0 0 48px; }
+@media (max-width: 767px) {
+  #reviewModal .order-detail-topbar { margin-bottom: 8px; gap: 8px; }
+  #reviewModal .order-detail-topbar-left { gap: 8px; }
+}
+
 /* Compact order details: catalog-defined groups remain separate within each portion. */
 #review-content .review-item-row {
   padding: 10px 0;

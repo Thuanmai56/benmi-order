@@ -1,0 +1,10 @@
+# Ignore large snapshot/build artifacts during AI code search
+node_modules/
+.cloudflare/
+.wrangler/
+artifacts/
+docs/proposals/**/artifacts/
+docs/proposals/**/inventory.json
+docs/proposals/**/r00-evidence.json
+*.db
+*.sqlite
