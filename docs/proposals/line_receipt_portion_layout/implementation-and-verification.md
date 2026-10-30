@@ -44,6 +44,8 @@ Evidence tại `artifacts/release-baseline/2026-10-30T11-06-09-123Z/`:
 
 ## Phần còn lại trước phát hành
 
+Điều chỉnh theo phản hồi sau bản xem trước: mỗi nhóm tùy chọn dùng một hàng Flex có nhãn bên trái và toàn bộ lựa chọn nối bằng `、` bên phải; nội dung dài tự wrap trong cột phải. Ghi chú món chuyển ngay dưới tên món với nhãn `品項備註` / `Ghi chú món`, ghi chú phần vẫn thuộc phần tương ứng. Đã bump cache-buster helper lên `20261030_line_portions_v2`. Bộ targeted cho lần chỉnh này đạt 55/55 test, bao gồm hai test mới về danh sách lựa chọn chung hàng và vị trí ghi chú món; frontend static, backend typecheck và cache-buster check đều đạt. Chưa chạy lại full gate cho thay đổi bố cục nhỏ; kết quả và các lỗi baseline đã ghi ở trên vẫn là tham chiếu release.
+
 1. Xử lý 5 suite baseline nêu trên và nghiệm thu release gate theo workflow dự án.
 2. Deploy backend dev trước frontend để hỗ trợ receipt nhiều trang; QA staging và validate API với kênh QA đã chọn. Chưa có lần gửi tin LINE thật hoặc validate API sử dụng channel token trong đợt làm việc này.
 3. QA LINE iOS/Android, cỡ chữ thường/lớn, trường hợp 2 combo khác nhau và đơn dài. Bản preview cục bộ không đảm bảo pixel rendering giống LINE.

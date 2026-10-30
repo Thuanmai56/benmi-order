@@ -9,8 +9,8 @@
   const number = value => Number.isFinite(Number(value)) ? Number(value) : 0;
   const qty = value => number(value) > 0 ? number(value) : 1;
   const labels = locale => locale === 'vi'
-    ? { portion: n => `Phần ${n}`, same: 'Cùng tùy chọn', note: 'Ghi chú', group: 'Tùy chọn', unit: 'Đơn giá' }
-    : { portion: n => `第 ${n} 份`, same: '相同設定', note: '備註', group: '搭配', unit: '單價' };
+    ? { portion: n => `Phần ${n}`, same: 'Cùng tùy chọn', note: 'Ghi chú', itemNote: 'Ghi chú món', group: 'Tùy chọn', unit: 'Đơn giá' }
+    : { portion: n => `第 ${n} 份`, same: '相同設定', note: '備註', itemNote: '品項備註', group: '搭配', unit: '單價' };
   function parse(value) {
     if (typeof value !== 'string') return value;
     try { return JSON.parse(value); } catch { return null; }
@@ -122,42 +122,46 @@
       + (p.end > p.index ? ` · ${l.same}` : '');
   }
   function rows(p, locale) {
-    return p.groups.flatMap(g => g.choices.map(c => ({ label: g.name || labels(locale).group,
-      value: choiceText(c), extra: extra(c) })));
+    return p.groups.filter(g => g.choices.length).map(g => ({ label: g.name || labels(locale).group,
+      value: g.choices.map(c => {
+        const amount = extra(c);
+        return choiceText(c) + (amount ? ` (+$${amount})` : '');
+      }).join('、') }));
   }
   function text(model, locale) {
     const l = labels(locale);
     const amount = model.price;
     const out = [`${model.quantity}${locale === 'vi' ? ' × ' : '份 x '}${model.name}${amount ? ` ${amount.unit ? l.unit + ' ' : ''}$${amount.amount}` : ''}`];
+    if (model.note) out.push(`   ↳ ${l.itemNote}: ${model.note}`);
     model.common.forEach(t => out.push(`   ↳ ${t}`));
     for (const p of runs(model)) {
       if (model.quantity > 1) out.push('', `   ↳ ${title(p, locale)}:`);
       const indent = model.quantity > 1 ? '      ' : '   ';
-      for (const r of rows(p, locale)) out.push(`${indent}↳ ${r.label}：${r.value}${r.extra ? ` (+$${r.extra})` : ''}`);
+      for (const r of rows(p, locale)) out.push(`${indent}↳ ${r.label}：${r.value}`);
       p.opaque.forEach(t => out.push(`${indent}↳ ${t}`));
       if (p.note) out.push(`${indent}↳ ${l.note}: ${p.note}`);
       if (!rows(p, locale).length && !p.opaque.length && !p.note) out.push(`${indent}↳ —`);
     }
-    if (model.note) out.push(`   ↳ ${l.note}: ${model.note}`);
     return out.join('\n');
   }
   const flexText = (text, color = '#64748B') => ({ type: 'text', text: text || '—', size: 'xs', color, wrap: true });
+  const flexRow = (label, value, color = '#1E293B') => ({ type: 'box', layout: 'horizontal', spacing: 'sm', contents: [
+    { ...flexText(label), flex: 2 }, { ...flexText(value, color), flex: 3 }
+  ] });
   function flex(model, locale) {
     const l = labels(locale);
-    const contents = model.common.map(t => flexText(t));
+    const contents = model.note ? [{ ...flexRow(l.itemNote, model.note, '#334155'), margin: 'xs' }] : [];
+    contents.push(...model.common.map(t => flexText(t)));
     for (const p of runs(model)) {
       const body = [];
       if (model.quantity > 1) body.push({ ...flexText(title(p, locale)), size: 'sm', margin: 'xs' });
-      for (const r of rows(p, locale)) body.push({ type: 'box', layout: 'vertical', spacing: 'xs', contents: [
-        { ...flexText(r.label), size: 'xxs' }, flexText(`${r.value}${r.extra ? ` (+$${r.extra})` : ''}`, '#1E293B')
-      ] });
+      for (const r of rows(p, locale)) body.push(flexRow(r.label, r.value));
       p.opaque.forEach(t => body.push(flexText(t, '#1E293B')));
-      if (p.note) body.push(flexText(`${l.note}: ${p.note}`, '#334155'));
+      if (p.note) body.push(flexRow(l.note, p.note, '#334155'));
       if (!rows(p, locale).length && !p.opaque.length && !p.note) body.push(flexText('—'));
       if (body.length) contents.push({ type: 'box', layout: 'vertical', spacing: 'sm', margin: 'sm',
         backgroundColor: '#F8FAFC', cornerRadius: 'md', paddingAll: '8px', contents: body });
     }
-    if (model.note) contents.push({ ...flexText(`${l.note}: ${model.note}`, '#334155'), margin: 'xs' });
     return contents;
   }
   function bytes(value) {

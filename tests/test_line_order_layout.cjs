@@ -73,6 +73,43 @@ test('arbitrary groups, repeated choices and nested child choices retain labels 
   assert.ok(value.includes('Any group Z'));
 });
 
+test('group labels stay left and every selected value shares the right column without forced line breaks', () => {
+  const line = F.line({ quantity: 1, portions: [{ portionIndex: 0, note: 'Separate sauce', groups: [
+    F.group('Extras', [F.choice('Egg', { surcharge: 15 }), F.choice('Kimchi', { quantity: 2, surcharge: 10 })]),
+    F.group('Extras', ['Another group with the same name'])
+  ] }] });
+  const rendered = P.flex(P.item({ detailLine: line }));
+  const portion = rendered.find(n => n.backgroundColor === '#F8FAFC');
+  const [first, second, note] = portion.contents;
+  assert.equal(first.layout, 'horizontal');
+  assert.equal(first.contents.length, 2);
+  assert.equal(first.contents[0].text, 'Extras');
+  assert.equal(first.contents[1].text, 'Egg (+$15)、Kimchi ×2 (+$20)');
+  assert.equal(first.contents[1].text.includes('\n'), false);
+  assert.ok(first.contents[0].flex > 0 && first.contents[1].flex > 0);
+  assert.equal(first.contents[1].wrap, true, 'Long values wrap naturally inside their column');
+  assert.equal(second.contents[1].text, 'Another group with the same name', 'Distinct groups are never merged by label');
+  assert.equal(note.layout, 'horizontal');
+  assert.equal(note.contents[0].text, '備註');
+  assert.equal(note.contents[1].text, 'Separate sauce');
+  const textMessage = P.text(P.item({ detailLine: line }));
+  assert.ok(textMessage.includes('Extras：Egg (+$15)、Kimchi ×2 (+$20)'));
+});
+
+test('item notes appear directly below the item name and before all portion boxes', () => {
+  const model = P.item({ detailLine: F.line() });
+  const rendered = P.flex(model);
+  assert.equal(rendered[0].layout, 'horizontal');
+  assert.equal(rendered[0].contents[0].text, '品項備註');
+  assert.equal(rendered[0].contents[1].text, '分袋');
+  assert.equal(portionBoxes(rendered).length, 2);
+  assert.equal(text(rendered).split('分袋').length - 1, 1);
+  const message = P.text(model);
+  assert.ok(message.indexOf('品項備註: 分袋') < message.indexOf('第 1 份'));
+  const vi = P.flex(model, 'vi');
+  assert.equal(vi[0].contents[0].text, 'Ghi chú món');
+});
+
 test('legacy bundle shapes and JSON normalize equally, malformed JSON stays visible', () => {
   const p = F.portions();
   const expected = P.text(P.item(F.legacy()));
