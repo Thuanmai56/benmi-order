@@ -120,18 +120,28 @@
     }
 
     checkIsNative() {
-      return !!(
+      if (typeof window === 'undefined') return false;
+      const hasPlugin = !!(
         window.Capacitor &&
-        window.Capacitor.isPluginAvailable &&
-        window.Capacitor.isPluginAvailable('ThermalPrinter')
+        ((typeof window.Capacitor.isPluginAvailable === 'function' && window.Capacitor.isPluginAvailable('ThermalPrinter')) ||
+         (window.Capacitor.Plugins && window.Capacitor.Plugins.ThermalPrinter))
       );
+      return hasPlugin;
     }
 
     getPlugin() {
-      if (window.Capacitor && window.Capacitor.Plugins) {
+      if (typeof window !== 'undefined' && window.Capacitor && window.Capacitor.Plugins) {
         return window.Capacitor.Plugins.ThermalPrinter;
       }
       return null;
+    }
+
+    notifyToast(message, type = 'info') {
+      if (typeof showToast === 'function') {
+        showToast(message, type);
+      } else if (typeof window !== 'undefined' && typeof window.showToast === 'function') {
+        window.showToast(message, type);
+      }
     }
 
     // --- 1. SETTINGS & STORAGE (Multi-Tenant isolated) ---
@@ -171,25 +181,36 @@
     }
 
     async getPairedBluetoothDevices() {
-      const plugin = this.getPlugin();
-      if (this.isNative && plugin && typeof plugin.getPairedBluetoothDevices === 'function') {
-        try {
-          const res = await plugin.getPairedBluetoothDevices();
-          return res;
-        } catch (e) {
-          console.error('[PrinterService] Failed to get paired Bluetooth devices:', e);
-          throw e;
-        }
+      if (this._btDevicesPromise) {
+        return this._btDevicesPromise;
       }
-      // Browser fallback simulated devices
-      return {
-        supported: false,
-        enabled: false,
-        devices: [
-          { name: 'Xprinter XP-58IIH (Simulated)', address: '00:11:22:33:44:55', type: 1 },
-          { name: 'Epson TM-T88VI-BT (Simulated)', address: 'AA:BB:CC:DD:EE:FF', type: 1 }
-        ]
-      };
+      this._btDevicesPromise = (async () => {
+        const plugin = this.getPlugin();
+        this.isNative = this.checkIsNative();
+        if (this.isNative && plugin && typeof plugin.getPairedBluetoothDevices === 'function') {
+          try {
+            const res = await plugin.getPairedBluetoothDevices();
+            return res;
+          } catch (e) {
+            console.error('[PrinterService] Failed to get paired Bluetooth devices:', e);
+            throw e;
+          }
+        }
+        // Browser fallback simulated devices
+        return {
+          supported: false,
+          enabled: false,
+          devices: [
+            { name: 'Xprinter XP-58IIH (Simulated)', address: '00:11:22:33:44:55', type: 1 },
+            { name: 'Epson TM-T88VI-BT (Simulated)', address: 'AA:BB:CC:DD:EE:FF', type: 1 }
+          ]
+        };
+      })();
+      try {
+        return await this._btDevicesPromise;
+      } finally {
+        this._btDevicesPromise = null;
+      }
     }
 
     saveSettings(newSettings) {
@@ -353,30 +374,52 @@
       }
 
       if (tasks.length === 0) {
-        if (typeof showToast === 'function') showToast('⚠️ 請先在設定中啟用印表機');
+        this.notifyToast('⚠️ 請先在設定中啟用印表機', 'warning');
         return;
       }
 
       if (this.isPrinterBusy()) {
         const queueNotice = (typeof t === 'function' && t('printerBusyQueued')) || '⏳ 已加入列印排程，將依序出單...';
-        if (typeof showToast === 'function') showToast(queueNotice);
+        this.notifyToast(queueNotice, 'info');
       }
 
+      const results = [];
       try {
-        if (typeof showToast === 'function') showToast(`🖨️ 正在列印訂單 #${orderKey}...`);
-        // Keep manual full-order reprints in the same bill -> stickers order as autoprint.
-        for (const task of tasks) await task.run();
-        this.markOrderAsPrinted(orderKey);
-        if (typeof showToast === 'function') showToast(`✅ 訂單 #${orderKey} 列印完成！`);
+        this.notifyToast(`🖨️ 正在列印訂單 #${orderKey}...`, 'info');
+        // Keep manual full-order reprints in the same bill -> stickers order as autoprint,
+        // while isolating per-station errors so an unconfigured/offline station does not block the other.
+        for (const task of tasks) {
+          try {
+            const res = await task.run();
+            results.push({ station: task.station, result: res });
+          } catch (stationErr) {
+            console.error(`[PrinterService] Manual print failed on station [${task.station}]:`, stationErr);
+            results.push({ station: task.station, error: stationErr });
+          }
+        }
+        const succeeded = results.filter(r => !r.error);
+        const failed = results.filter(r => r.error);
+        if (succeeded.length > 0) {
+          this.markOrderAsPrinted(orderKey);
+        }
+        if (failed.length === 0) {
+          this.notifyToast(`✅ 訂單 #${orderKey} 列印完成！`, 'success');
+        } else if (succeeded.length > 0) {
+          const firstErr = failed[0].error;
+          this.notifyToast(`⚠️ 部分列印完成 (另一台印表機連線失敗: ${firstErr?.message || firstErr})`, 'warning');
+        } else {
+          const firstErr = failed[0].error;
+          this.notifyToast(`❌ 列印失敗: ${firstErr?.message || firstErr}`, 'error');
+        }
       } catch (err) {
         console.error('[PrinterService] Manual print failed:', err);
-        if (typeof showToast === 'function') showToast(`❌ 列印失敗: ${err.message || err}`);
+        this.notifyToast(`❌ 列印失敗: ${err.message || err}`, 'error');
       }
     }
 
     async printFullOrder(orderKey) {
       if (!this.canPrintFullOrder()) {
-        if (typeof showToast === 'function') showToast('⚠️ 請先啟用收銀 Bill 與貼紙印表機');
+        this.notifyToast('⚠️ 請先啟用收銀 Bill 與貼紙印表機', 'warning');
         return;
       }
       return this.printManual(orderKey, 'all');
@@ -499,11 +542,15 @@
 
     resolveOrder(orderKey) {
       if (typeof latestOrders !== 'undefined' && Array.isArray(latestOrders)) {
-        const found = latestOrders.find(o => String(o.key) === String(orderKey));
+        const found = latestOrders.find(o => o && String(o.key) === String(orderKey));
+        if (found) return found;
+      }
+      if (typeof lastHistoryOrders !== 'undefined' && Array.isArray(lastHistoryOrders)) {
+        const found = lastHistoryOrders.find(o => o && String(o.key) === String(orderKey));
         if (found) return found;
       }
       if (typeof historyOrders !== 'undefined' && Array.isArray(historyOrders)) {
-        const found = historyOrders.find(o => String(o.key) === String(orderKey));
+        const found = historyOrders.find(o => o && String(o.key) === String(orderKey));
         if (found) return found;
       }
       if (typeof reviewingOrder !== 'undefined' && reviewingOrder && String(reviewingOrder.key) === String(orderKey)) {
@@ -1032,6 +1079,7 @@
         const paperWidth = parseInt(config.paperWidth, 10) || 80;
         const autoCut = config.autoCut !== false;
         const plugin = this.getPlugin();
+        this.isNative = this.checkIsNative();
 
         if (interfaceType === 'bluetooth') {
           const macAddress = (config.mac_address || '').trim();
@@ -1043,7 +1091,7 @@
 
           if (this.isNative && plugin && typeof plugin.printBluetooth === 'function') {
             console.log(`[PrinterService] 📡 Transmitting ${protocol.toUpperCase()} raster bitmap via Native Bluetooth SPP [${deviceName} (${macAddress})]...`);
-            const res = await plugin.printBluetooth({
+            const btPayload = {
               macAddress: macAddress,
               base64Image: base64Png,
               protocol: protocol,
@@ -1056,7 +1104,18 @@
               xOffsetMm: dim.xOffsetMm,
               yOffsetMm: dim.yOffsetMm,
               timeoutMs: 8000
-            });
+            };
+            let res;
+            try {
+              res = await plugin.printBluetooth(btPayload);
+            } catch (btErr) {
+              if (String(btErr?.message || btErr).includes('BLUETOOTH_CONNECT') && typeof plugin.getPairedBluetoothDevices === 'function') {
+                await this.getPairedBluetoothDevices();
+                res = await plugin.printBluetooth(btPayload);
+              } else {
+                throw btErr;
+              }
+            }
             console.log(`[PrinterService] ✅ Native Bluetooth print success for [${logTitle}]:`, res);
             return res;
           } else {
@@ -1104,12 +1163,21 @@
     async testConnection(config) {
       const interfaceType = config.interface_type || 'network';
       const plugin = this.getPlugin();
+      this.isNative = this.checkIsNative();
 
       if (interfaceType === 'bluetooth') {
         const macAddress = (config.mac_address || '').trim();
         if (!macAddress) throw new Error('未選擇藍牙印表機 (No Bluetooth printer selected)');
         if (this.isNative && plugin && typeof plugin.testBluetoothConnection === 'function') {
-          return await plugin.testBluetoothConnection({ macAddress });
+          try {
+            return await plugin.testBluetoothConnection({ macAddress });
+          } catch (btErr) {
+            if (String(btErr?.message || btErr).includes('BLUETOOTH_CONNECT') && typeof plugin.getPairedBluetoothDevices === 'function') {
+              await this.getPairedBluetoothDevices();
+              return await plugin.testBluetoothConnection({ macAddress });
+            }
+            throw btErr;
+          }
         }
         return { success: true, simulated: true, macAddress };
       } else {
@@ -1138,6 +1206,9 @@
             </body>
           </html>
         `);
+        if (typeof previewWindow.document.close === 'function') {
+          previewWindow.document.close();
+        }
       }
     }
   }

@@ -78,7 +78,7 @@ window.POS_SVG = POS_SVG;
 
 function isNativeAppPlatform() {
   if (typeof window === "undefined") return false;
-  if (typeof window.IS_NATIVE_APP !== "undefined") return window.IS_NATIVE_APP;
+  if (window.IS_NATIVE_APP === true) return true;
   try {
     const params = new URLSearchParams(window.location.search);
     const p = params.get("platform");
@@ -89,10 +89,10 @@ function isNativeAppPlatform() {
       if (typeof window.Capacitor.getPlatform === "function" && window.Capacitor.getPlatform() !== "web") return true;
       if (typeof window.Capacitor.isPluginAvailable === "function" && window.Capacitor.isPluginAvailable("ThermalPrinter")) return true;
     }
-    if (window.AndroidBridge) return true;
+    if (window.AndroidBridge || window.androidBridge) return true;
     if (typeof navigator !== "undefined" && navigator.userAgent && navigator.userAgent.includes("BenmiPOS")) return true;
   } catch (e) {}
-  return false;
+  return Boolean(window.IS_NATIVE_APP);
 }
 window.isNativeAppPlatform = isNativeAppPlatform;
 
@@ -1422,6 +1422,51 @@ function syncStoreStatusPlacement(tab) {
   }
 }
 
+let _posToastTimer = null;
+function showToast(message, type = "info") {
+  if (!message || typeof document === "undefined" || !document.body || typeof document.createElement !== "function") return;
+  let toastEl = typeof document.getElementById === "function" ? document.getElementById("pos-global-toast") : null;
+  if (!toastEl) {
+    toastEl = document.createElement("div");
+    toastEl.id = "pos-global-toast";
+    toastEl.setAttribute("role", "status");
+    toastEl.setAttribute("aria-live", "polite");
+    if (toastEl.style) {
+      toastEl.style.cssText = "position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:99999;max-width:min(92vw,520px);padding:12px 18px;border-radius:10px;background:#0f172a;color:#ffffff;font-size:15px;font-weight:700;line-height:1.4;box-shadow:0 10px 25px rgba(15,23,42,0.28);pointer-events:none;transition:opacity 0.2s ease;opacity:0;text-align:center;";
+    }
+    if (typeof document.body.appendChild === "function") {
+      document.body.appendChild(toastEl);
+    }
+  }
+  const text = String(message);
+  toastEl.textContent = text;
+  if (toastEl.style) {
+    if (type === "error" || text.startsWith("❌")) {
+      toastEl.style.background = "#dc2626";
+    } else if (type === "warning" || text.startsWith("⚠️")) {
+      toastEl.style.background = "#d97706";
+    } else if (type === "success" || text.startsWith("✅")) {
+      toastEl.style.background = "#059669";
+    } else {
+      toastEl.style.background = "#0f172a";
+    }
+    toastEl.style.display = "block";
+    toastEl.style.opacity = "1";
+  }
+  if (_posToastTimer) clearTimeout(_posToastTimer);
+  _posToastTimer = setTimeout(() => {
+    if (toastEl && toastEl.style) {
+      toastEl.style.opacity = "0";
+      setTimeout(() => {
+        if (toastEl && toastEl.style && toastEl.style.opacity === "0") {
+          toastEl.style.display = "none";
+        }
+      }, 220);
+    }
+  }, 3200);
+}
+
+window.showToast = showToast;
 window.syncStoreStatusPlacement = syncStoreStatusPlacement;
 window.toggleSidebar = toggleSidebar;
 window.initSidebarState = initSidebarState;

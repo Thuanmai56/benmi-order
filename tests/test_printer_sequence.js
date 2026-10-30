@@ -61,6 +61,24 @@ service.transmitReceiptBitmap = async (_png, _config, title) => {
   assert.deepStrictEqual(capabilities, { bill: false, stickers: true }, 'disabled bill station must not be part of print capabilities');
   assert.strictEqual(service.canPrintFullOrder(), false, 'full-order action requires both stations');
 
+  // Verify printManual isolates per-station errors so an offline/unconfigured cashier station does not block kitchen stickers
+  service.saveSettings({
+    autoPrintNewOrders: false,
+    cashier: { enabled: true, interface_type: 'network', ip: '192.168.1.100' },
+    kitchen: { enabled: true, interface_type: 'network', ip: '192.168.1.11', tspl_mode: 'item_stickers' }
+  });
+  sequence.length = 0;
+  service.printCashierReceipt = async () => {
+    throw new Error('Connect timeout 192.168.1.100:9100');
+  };
+  await service.printManual('SEQ-001', 'all');
+  assert.deepStrictEqual(sequence, ['(1/3)', '(2/3)', '(3/3)'], 'kitchen stickers must still print when cashier station fails');
+
+  // Verify resolveOrder finds orders in lastHistoryOrders (History tab)
+  global.latestOrders = [];
+  global.lastHistoryOrders = [{ key: 'HIST-009', status: 'PAID', items: [{ name: '雞胸', quantity: 1 }] }];
+  assert.strictEqual(service.resolveOrder('HIST-009')?.key, 'HIST-009', 'resolveOrder must look up lastHistoryOrders');
+
   console.log('✅ Printer sequence and station capability tests passed.');
 })().catch((error) => {
   console.error(error);

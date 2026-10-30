@@ -31,6 +31,7 @@
                 (typeof window.Capacitor.isPluginAvailable === 'function' && window.Capacitor.isPluginAvailable('ThermalPrinter'))
               )) ||
               window.AndroidBridge ||
+              window.androidBridge ||
               (navigator.userAgent && navigator.userAgent.includes('BenmiPOS'))
             ));
 
@@ -1552,7 +1553,7 @@
           </div>
         </div>
         <div class="order-detail-topbar-right">
-          <button type="button" class="order-detail-circle-btn" id="btn-review-quick-print" onclick="if(typeof reviewingOrder !== 'undefined' && reviewingOrder && typeof PrinterService !== 'undefined') PrinterService.printFullOrder(reviewingOrder.key)" title="In đơn hàng">
+          <button type="button" class="order-detail-circle-btn" id="btn-review-quick-print" onclick="if(typeof reviewingOrder !== 'undefined' && reviewingOrder && typeof PrinterService !== 'undefined') (PrinterService.canPrintFullOrder() ? PrinterService.printFullOrder(reviewingOrder.key) : PrinterService.printManual(reviewingOrder.key, 'all'))" title="In đơn hàng">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
           </button>
         </div>
@@ -2786,16 +2787,16 @@
 
   <!-- Benmi POS Modular Architecture Scripts -->
   <script src="js/orders-i18n.js?v=20261022_print_toolbar_v1"></script>
-  <script src="js/orders-core.js?v=20261030_option_display_lookup_v1"></script>
+  <script src="js/orders-core.js?v=20261030_printer_hotfix_v1"></script>
   <script src="js/orders-audio.js?v=20261007_dev_main_sync_v1"></script>
   <script src="js/order-legacy-adapter.js?v=20261029_history_items_summary_v1"></script>
   <script src="js/order-detail-view.js?v=20261017_order_detail_v1"></script>
-  <script src="js/printer-service.js?v=20261030_option_display_dedup_v2"></script>
+  <script src="js/printer-service.js?v=20261030_printer_hotfix_v1"></script>
   <script src="js/orders-live.js?v=20261029_tablet_squircle_v1"></script>
   <script src="js/orders-modals.js?v=20261012_support_modal_v1"></script>
   <script src="js/orders-history.js?v=20261030_option_display_dedup_v2"></script>
   <script src="js/orders-reports.js?v=20261007_dev_main_sync_v1"></script>
-  <script src="js/orders-settings.js?v=20261027_history_ui_fix_v1"></script>
+  <script src="js/orders-settings.js?v=20261030_printer_hotfix_v1"></script>
   <script src="js/orders-menu.js?v=20261027_menu_mobile_v3"></script>
   <script src="js/orders-bundle-wizard.js?v=20261007_dev_main_sync_v1"></script>
   <script src="js/orders-option-groups.js?v=20261027_menu_mobile_v3"></script>
