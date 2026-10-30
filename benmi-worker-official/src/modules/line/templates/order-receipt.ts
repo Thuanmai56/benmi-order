@@ -9,7 +9,7 @@ export function renderReceiptItem(it: OrderItemInput, locale: string) {
   const model = LineOrderPresentation.item(it);
   const price = model.price;
   return {
-    type: 'box', layout: 'vertical', spacing: 'none', margin: 'md', contents: [
+    type: 'box', layout: 'vertical', spacing: 'none', margin: 'sm', contents: [
       { type: 'box', layout: 'horizontal', contents: [
         { type: 'text', text: model.name || '餐點', size: 'sm', weight: 'bold', color: '#1E293B', flex: 1, wrap: true },
         { type: 'text', text: `×${model.quantity}`, size: 'sm', weight: 'bold', color: '#64748B', flex: 0, margin: 'sm' },
@@ -115,8 +115,8 @@ export function buildOrderFlexMessage(
     body: {
       type: "box",
       layout: "vertical",
-      paddingAll: "20px",
-      spacing: "md",
+      paddingAll: "16px",
+      spacing: "sm",
       contents: [
         {
           type: "box",
@@ -450,8 +450,8 @@ export function buildAppendConfirmationFlexMessage(
     body: {
       type: "box",
       layout: "vertical",
-      paddingAll: "20px",
-      spacing: "md",
+      paddingAll: "16px",
+      spacing: "sm",
       contents: [
         {
           type: "box",

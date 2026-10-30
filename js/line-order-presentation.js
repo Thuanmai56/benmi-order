@@ -154,13 +154,13 @@
     contents.push(...model.common.map(t => flexText(t)));
     for (const p of runs(model)) {
       const body = [];
-      if (model.quantity > 1) body.push({ ...flexText(title(p, locale)), size: 'sm', margin: 'xs' });
+      if (model.quantity > 1) body.push({ ...flexText(title(p, locale)), size: 'sm' });
       for (const r of rows(p, locale)) body.push(flexRow(r.label, r.value));
       p.opaque.forEach(t => body.push(flexText(t, '#1E293B')));
       if (p.note) body.push(flexRow(l.note, p.note, '#334155'));
       if (!rows(p, locale).length && !p.opaque.length && !p.note) body.push(flexText('—'));
-      if (body.length) contents.push({ type: 'box', layout: 'vertical', spacing: 'sm', margin: 'sm',
-        backgroundColor: '#F8FAFC', cornerRadius: 'md', paddingAll: '8px', contents: body });
+      if (body.length) contents.push({ type: 'box', layout: 'vertical', spacing: 'xs', margin: 'xs',
+        backgroundColor: '#F8FAFC', cornerRadius: 'md', paddingAll: '6px', contents: body });
     }
     return contents;
   }

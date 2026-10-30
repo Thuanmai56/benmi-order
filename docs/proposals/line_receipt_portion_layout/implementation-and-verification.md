@@ -50,3 +50,5 @@ Evidence tại `artifacts/release-baseline/2026-10-30T11-06-09-123Z/`:
 2. Deploy backend dev trước frontend để hỗ trợ receipt nhiều trang; QA staging và validate API với kênh QA đã chọn. Chưa có lần gửi tin LINE thật hoặc validate API sử dụng channel token trong đợt làm việc này.
 3. QA LINE iOS/Android, cỡ chữ thường/lớn, trường hợp 2 combo khác nhau và đơn dài. Bản preview cục bộ không đảm bảo pixel rendering giống LINE.
 4. Rollback chỉ renderer/checkout khi cần; giữ delivery/page reader tương thích `receipt-pages` trong cửa sổ retry của những receipt đã commit. Không replay receipt sent, không sửa snapshot lịch sử.
+
+Tinh chỉnh khoảng trắng theo phản hồi tiếp theo: spacing/margin của phần giảm từ `sm` xuống `xs`, padding từ 8px xuống 6px; khoảng cách giữa món giảm từ `md` xuống `sm`, body của receipt create/append dùng padding 16px và spacing `sm`. Cache-buster helper tăng lên `20261030_line_portions_v3`. Đã chạy lại 55/55 targeted tests, frontend static, backend typecheck và cache-buster check, tất cả đạt; bản preview cục bộ đã được tạo lại.
