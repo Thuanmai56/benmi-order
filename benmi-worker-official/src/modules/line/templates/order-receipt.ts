@@ -134,20 +134,22 @@ export function buildOrderFlexMessage(
             { type: "text", text: diningLabel, size: "sm", weight: "bold", color: isDineIn ? "#7C3AED" : "#059669", align: "end", flex: 1 }
           ]
         },
-        { type: "separator", margin: "sm", color: "#E2E8F0" },
+        { type: "separator", margin: "4px", color: "#E2E8F0" },
         {
           type: "box",
+          margin: "4px",
           layout: "vertical",
           spacing: "xs",
           contents: [
-            { type: "text", text: "訂單品項", size: "xs", weight: "bold", color: "#64748B", margin: "xs" },
+            { type: "text", text: "訂單品項", size: "xs", weight: "bold", color: "#64748B", margin: "none" },
             ...itemComponents
           ]
         },
         ...(uniqueFlavors.length > 0 || uniqueExtras.length > 0 ? [
-          { type: "separator", margin: "sm", color: "#E2E8F0" },
+          { type: "separator", margin: "4px", color: "#E2E8F0" },
           {
             type: "box",
+            margin: "4px",
             layout: "vertical",
             backgroundColor: "#F8FAFC",
             cornerRadius: "md",
@@ -184,9 +186,10 @@ export function buildOrderFlexMessage(
           }
         ] : []),
         ...(order.note && order.note.trim() ? [
-          { type: "separator", margin: "sm", color: "#E2E8F0" },
+          { type: "separator", margin: "4px", color: "#E2E8F0" },
           {
             type: "box",
+            margin: "4px",
             layout: "horizontal",
             contents: [
               { type: "text", text: "備註說明", size: "xs", color: "#64748B", flex: 0 },
@@ -194,9 +197,10 @@ export function buildOrderFlexMessage(
             ]
           }
         ] : []),
-        { type: "separator", margin: "sm", color: "#E2E8F0" },
+        { type: "separator", margin: "4px", color: "#E2E8F0" },
         {
           type: "box",
+          margin: "4px",
           layout: "horizontal",
           contents: [
             { type: "text", text: timeLabel, size: "xs", color: "#64748B", flex: 0 },
@@ -469,20 +473,22 @@ export function buildAppendConfirmationFlexMessage(
             { type: "text", text: `${displayTable} 桌`, size: "sm", weight: "bold", color: "#7C3AED", align: "end", flex: 1 }
           ]
         },
-        { type: "separator", margin: "sm", color: "#E2E8F0" },
+        { type: "separator", margin: "4px", color: "#E2E8F0" },
         {
           type: "box",
+          margin: "4px",
           layout: "vertical",
           spacing: "xs",
           contents: [
-            { type: "text", text: "本次加點品項", size: "xs", weight: "bold", color: "#64748B", margin: "xs" },
+            { type: "text", text: "本次加點品項", size: "xs", weight: "bold", color: "#64748B", margin: "none" },
             ...contentComponents
           ]
         },
         ...(order.note ? [
-          { type: "separator", margin: "sm", color: "#E2E8F0" },
+          { type: "separator", margin: "4px", color: "#E2E8F0" },
           {
             type: "box",
+            margin: "4px",
             layout: "horizontal",
             contents: [
               { type: "text", text: "備註說明", size: "xs", color: "#64748B", flex: 0 },
@@ -490,9 +496,10 @@ export function buildAppendConfirmationFlexMessage(
             ]
           }
         ] : []),
-        { type: "separator", margin: "sm", color: "#E2E8F0" },
+        { type: "separator", margin: "4px", color: "#E2E8F0" },
         {
           type: "box",
+          margin: "4px",
           layout: "horizontal",
           contents: [
             { type: "text", text: "本次加點金額", size: "xs", color: "#64748B", flex: 0 },
