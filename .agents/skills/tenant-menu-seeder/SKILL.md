@@ -393,8 +393,9 @@ Before completing the task, verify:
 3. **Order-Level Customizations**: `customizations` array contains all `scope = 'order'` groups with accurate prices, defaults, and `minOrderSubtotal` threshold rules.
 4. **No Childish Emojis**: Category titles, item names, badges, and customization titles follow `ui-design-principles.md` (clean typography, no decorative emojis like `🪑`, `➕`, `🛍️`, `📦`, `🎁`).
 
-Provide clickable links to test the seeded tenant:
-- **Customer Menu (LIFF / Web)**: `https://benmi-order.pages.dev/?tenant_id=<tenant_id>`
-- **POS Dashboard (Tablet / Staff)**: `https://benmi-order.pages.dev/orders.html?tenant_id=<tenant_id>`
+Provide clickable links to test the seeded tenant (using the new `blabfood.app` domains):
+- **Customer Menu (LIFF / Web)**: `https://order.blabfood.app/<tenant_id>`
+- **POS Dashboard (Tablet / Staff)**: `https://pos.blabfood.app/<tenant_id>`
+- **Marketplace (Explore)**: `https://explore.blabfood.app`
 - **LINE Webhook URL**: `https://benmi-worker-official.thuanmnc.workers.dev/webhook/<tenant_id>`
-- **Bootstrap API Check**: `curl "https://benmi-worker-official.thuanmnc.workers.dev/api/tenant/bootstrap?tenant_id=<tenant_id>&nocache=1"`
+- **Bootstrap API Check**: `https://benmi-worker-official.thuanmnc.workers.dev/api/tenant/bootstrap?tenant_id=<tenant_id>&nocache=1`
