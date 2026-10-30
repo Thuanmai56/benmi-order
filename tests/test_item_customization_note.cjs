@@ -199,11 +199,18 @@ assert(chickenParsed.options.includes('第1份: 小辣、備註: 不要香菜'),
 assert(chickenParsed.options.includes('第2份: 中辣、備註: 加蔥多一點'), 'Should contain formatted portion 2 note');
 assert.strictEqual(chickenParsed.note, '', 'Notes represented by portion options must not be printed a second time');
 
-// Test renderItemRowHtml for portion chips with .mod-chip-note
+// Legacy portions retain their complete lines; do not require the old chip CSS implementation.
 const chickenHtml = renderItemRowHtml(chickenParsed, 0, mockOrder.key);
-assert(chickenHtml.includes('mod-chip-note'), 'Should apply mod-chip-note class to note chips');
-assert(chickenHtml.includes('備註: 不要香菜'), 'Should display note text in portion chips');
-assert(chickenHtml.includes('備註: 加蔥多一點'), 'Should display portion 2 note text');
+const { Element } = require('./helpers/menu-drawer-dom.cjs');
+const chickenRoot = new Element('div');
+chickenRoot.innerHTML = chickenHtml;
+const notePortions = chickenRoot.querySelectorAll('.detail-portion-block');
+assert.strictEqual(notePortions.length, 2, 'Should retain separate legacy portions');
+assert(notePortions[0].textContent.includes('不要香菜'), 'First note belongs to first portion');
+assert(!notePortions[0].textContent.includes('加蔥多一點'), 'Second note must not leak into first portion');
+assert(notePortions[1].textContent.includes('加蔥多一點'), 'Second note belongs to second portion');
+assert.strictEqual(chickenRoot.textContent.split('不要香菜').length - 1, 1, 'First note renders exactly once');
+assert.strictEqual(chickenRoot.textContent.split('加蔥多一點').length - 1, 1, 'Second note renders exactly once');
 
 // Verify that noteHtml is not duplicated underneath since it is already in portion chips
 assert(!chickenHtml.includes('<div class="review-item-note">'), 'Should not redundantly duplicate review-item-note when already shown in chips');
@@ -211,10 +218,9 @@ assert(!chickenHtml.includes('<div class="review-item-note">'), 'Should not redu
 // Test single item (tea)
 const teaParsed = parsedItems[1];
 const teaHtml = renderItemRowHtml(teaParsed, 1, mockOrder.key);
-assert(teaHtml.includes('mod-chip-note'), 'Single item note should also have mod-chip-note');
-assert(teaHtml.includes('備註: 少珍珠'), 'Single item should show 備註: 少珍珠');
+assert.strictEqual(teaHtml.split('少珍珠').length - 1, 1, 'Single item note renders exactly once');
 
-console.log('  ✓ POS renderItemRowHtml correctly highlights note chips with mod-chip-note without duplicate note blocks.');
+console.log('  ✓ POS notes retain their portion scope and render without duplication.');
 
 // Test fallback parser for legacy text order containing ↳ with 備註
 const legacyOrder = {

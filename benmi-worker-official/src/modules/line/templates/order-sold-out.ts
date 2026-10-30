@@ -1,3 +1,7 @@
+import LineOrderPresentation from '../../../../../js/line-order-presentation.js';
+import type { OrderItemInput } from '../../../types/index';
+import { renderReceiptItem } from './order-receipt';
+
 export function createSoldOutItemFlexBubble(
   orderKey: string,
   soldOutItems: string | string[],
@@ -120,9 +124,11 @@ export function createOrderModifiedConfirmationFlexBubble(
   total: number = 0,
   deltaAmount: number = 0,
   brandName: string = "店家",
-  displayKey: string = orderKey
+  displayKey: string = orderKey,
+  items: OrderItemInput[] = []
 ): any {
-  return {
+  const itemComponents = items.map(it => renderReceiptItem(it, 'zh-TW'));
+  return LineOrderPresentation.paginate({
     type: "bubble",
     size: "kilo",
     body: {
@@ -178,6 +184,7 @@ export function createOrderModifiedConfirmationFlexBubble(
             }
           ]
         },
+        ...(itemComponents.length ? [{ type: 'box', layout: 'vertical', contents: itemComponents }] : []),
         {
           type: "text",
           text: `${brandName} 已收到您重新調整的餐點內容，店員將儘速為您確認製作，謝謝您！`,
@@ -207,5 +214,5 @@ export function createOrderModifiedConfirmationFlexBubble(
         }
       ]
     }
-  };
+  }, itemComponents);
 }

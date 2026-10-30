@@ -216,6 +216,64 @@ test('orders without structured items also persist receipt atomically; fallback 
   assert.equal(f.requests.length, 0);
 });
 
+test('saved portion layout is identical for webhook reply and capability push', async t => {
+  const f = fixture(t), layout = require('../tests/fixtures/line-order-layout.cjs');
+  // This delivery fixture has no bundle rule catalog; use the supported legacy scoped-option payload.
+  const item = layout.legacy({ bundleSelections: null, options: [{ choice: '第1份: 正常' }, { choice: '第2份: 加大' }] });
+  const result = await create(f, { items: [item] });
+  assert(result.success, JSON.stringify(result));
+  const saved = JSON.parse(f.row(result.notification.id).contents_json);
+  assert(JSON.stringify(saved).includes('第 1 份'));
+  assert(JSON.stringify(saved).includes('第 2 份'));
+  await receipts.handleOrderReceiptWebhook(f.env, tenant, userId, text(result), 'portion-reply');
+  assert.deepEqual(f.requests[0].body.messages[0].contents, saved);
+  const other = await create(f, { uuid: 'portion-push', items: [item] });
+  const savedPush = JSON.parse(f.row(other.notification.id).contents_json);
+  await push(f, other.notification);
+  assert.deepEqual(f.requests[1].body.messages[0].contents, savedPush);
+  await push(f, other.notification);
+  assert.equal(f.requests.length, 2);
+});
+
+test('paged receipts obey message count; continuation is bound to recipient and tenant and does not replay delivery', async t => {
+  const f = fixture(t), result = await create(f);
+  const pages = Array.from({ length: 11 }, (_, n) => ({ type: 'bubble', body: { type: 'box', layout: 'vertical', contents: [{ type: 'text', text: `Page ${n}` }] } }));
+  f.db.prepare('UPDATE line_order_receipts SET contents_json = ? WHERE id = ?').run(JSON.stringify({ type: 'receipt-pages', pages }), result.notification.id);
+  await push(f, result.notification);
+  assert.equal(f.requests[0].body.messages.length, 5);
+  assert.deepEqual(f.requests[0].body.messages.slice(0, 4).map(m => m.contents), pages.slice(0, 4));
+  const action = f.requests[0].body.messages[4].contents.body.contents[1].action.data;
+  const before = f.requests.length;
+  for (const [ctx, uid, data] of [[{ ...tenant, tenantId: 'other' }, userId, action], [tenant, 'U' + '9'.repeat(32), action],
+    [tenant, userId, action.replace('offset=4', 'offset=999')], [tenant, userId, action.replace('offset=4', 'offset=-1')]]) {
+    assert.equal(await receipts.handleOrderReceiptPageWebhook(f.env, ctx, uid, data, 'forged-page'), true);
+  }
+  assert.equal(f.requests.length, before);
+  await line.handleLineWebhook(req({ events: [{ type: 'postback', source: { userId }, replyToken: 'next-page', postback: { data: action } }] }), f.env, { waitUntil() {} }, tenant);
+  assert.equal(f.requests.length, before + 1);
+  assert(f.requests.at(-1).url.endsWith('/reply'));
+  assert.deepEqual(f.requests.at(-1).body.messages.slice(0, 4).map(m => m.contents), pages.slice(4, 8));
+  const lastAction = f.requests.at(-1).body.messages[4].contents.body.contents[1].action.data;
+  await receipts.handleOrderReceiptPageWebhook(f.env, tenant, userId, lastAction, 'last-page');
+  assert.deepEqual(f.requests.at(-1).body.messages.map(m => m.contents), pages.slice(8));
+  await push(f, result.notification);
+  assert.equal(f.requests.length, before + 2);
+  assert.equal(f.row(result.notification.id).status, 'sent');
+  assert.equal(f.row(result.notification.id).attempts, 1);
+  // A continuation network error must not poison the committed receipt or schedule another push.
+  t.mock.method(global, 'fetch', async () => { throw new Error('offline'); });
+  assert.equal(await receipts.handleOrderReceiptPageWebhook(f.env, tenant, userId, action, 'offline-page'), true);
+  assert.equal(f.row(result.notification.id).status, 'sent');
+});
+
+test('oversized client text uses committed Push receipt before attempting a rejected LIFF message', async t => {
+  const c = client(t), diagnostic = await c.sandbox.getLiffDeliveryDiagnostic();
+  await c.sandbox.sendOrderConfirmation([{ type: 'text', text: '長'.repeat(5000) }], { tenantId: 'tenant-a', flow: 'create' }, { id: 'receipt', token: 'capability' }, diagnostic);
+  assert.equal(c.send.length, 0);
+  assert.equal(c.calls.length, 1);
+  assert(c.calls[0].url.includes('/order-receipt/push'));
+});
+
 test('cron skips deleted tenants even when a cached LINE context still exists', async t => {
   const f = fixture(t), result = await create(f);
   f.db.exec("UPDATE tenant_lifecycle SET state='deleted'; UPDATE line_order_receipts SET next_attempt_at=0");

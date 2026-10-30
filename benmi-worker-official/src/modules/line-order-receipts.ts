@@ -40,6 +40,53 @@ function logReceipt(row: Receipt, event: string, fields: Record<string, unknown>
   if (event.endsWith('failed')) console.error(record); else console.log(record);
 }
 
+function receiptPages(row: Receipt): unknown[] {
+  const contents = JSON.parse(row.contents_json);
+  return contents?.type === 'receipt-pages' && Array.isArray(contents.pages) ? contents.pages : [contents];
+}
+
+function receiptMessages(row: Receipt, offset = 0) {
+  const pages = receiptPages(row);
+  // LINE accepts five messages in one reply/push. Reserve the fifth for navigation when needed.
+  const count = pages.length - offset > 5 ? 4 : 5;
+  const messages = pages.slice(offset, offset + count).map(contents => ({ type: 'flex', altText: row.alt_text, contents }));
+  if (pages.length > offset + count) messages.push({ type: 'flex', altText: row.alt_text, contents: {
+    type: 'bubble', size: 'kilo', body: { type: 'box', layout: 'vertical', contents: [
+      { type: 'text', text: `尚有 ${pages.length - offset - count} 頁訂單明細`, wrap: true, size: 'sm' },
+      { type: 'button', action: { type: 'postback', label: '查看後續明細',
+        data: `action=receipt_page&receipt_id=${row.id}&offset=${offset + count}` } }
+    ] }
+  } });
+  return messages;
+}
+
+// Continuation pages are bound to the stored tenant and LINE recipient, never to a supplied order payload.
+export async function handleOrderReceiptPageWebhook(
+  env: Env, tenantCtx: TenantContext | null | undefined, userId: string, data: string, replyToken?: string
+): Promise<boolean> {
+  const params = new URLSearchParams(data);
+  if (params.get('action') !== 'receipt_page') return false;
+  const id = params.get('receipt_id') || '', offsetText = params.get('offset') || '';
+  if (!tenantCtx || !replyToken || !UUID.test(id) || !/^\d{1,6}$/.test(offsetText)) return true;
+  const row = await env.DB.prepare("SELECT * FROM line_order_receipts WHERE id = ? AND tenant_id = ? AND user_id = ? AND status = 'sent'")
+    .bind(id, tenantCtx.tenantId, userId).first<Receipt>();
+  const offset = Number(offsetText);
+  if (!row || offset < 1 || offset >= receiptPages(row).length) return true;
+  try {
+    const token = await getLineToken(env, tenantCtx);
+    if (!token) return true;
+    const response = await fetch('https://api.line.me/v2/bot/message/reply', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ replyToken, messages: receiptMessages(row, offset) }), signal: AbortSignal.timeout(8000)
+    });
+    if (!response.ok) logReceipt(row, 'line_order_receipt_page_failed', { httpStatus: response.status });
+    await response.body?.cancel();
+  } catch {
+    logReceipt(row, 'line_order_receipt_page_failed', { error: 'Network error or timeout' });
+  }
+  return true;
+}
+
 export async function deliverOrderReceipt(
   env: Env, id: string, tenantCtx: TenantContext, replyToken?: string
 ): Promise<void> {
@@ -55,7 +102,7 @@ export async function deliverOrderReceipt(
   try {
     const token = await getLineToken(env, tenantCtx);
     if (!token) throw new Error('LINE_CHANNEL_TOKEN missing');
-    const messages = [{ type: 'flex', altText: row.alt_text, contents: JSON.parse(row.contents_json) }];
+    const messages = receiptMessages(row);
     if (replyToken) {
       try {
         const response = await fetch('https://api.line.me/v2/bot/message/reply', {

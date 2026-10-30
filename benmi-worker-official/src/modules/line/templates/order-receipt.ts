@@ -2,7 +2,24 @@ import LegacyOrderAdapter from '../../../../../js/order-legacy-adapter.js';
 import { DetailView } from '../../order-detail';
 import { Order, OrderItemInput } from '../../../types/index';
 import { TenantContext } from '../../../types/tenant';
-import { itemNoteKey, remainingItemNote } from '../../../utils/order-item-notes';
+import { itemNoteKey } from '../../../utils/order-item-notes';
+import LineOrderPresentation from '../../../../../js/line-order-presentation.js';
+
+export function renderReceiptItem(it: OrderItemInput, locale: string) {
+  const model = LineOrderPresentation.item(it);
+  const price = model.price;
+  return {
+    type: 'box', layout: 'vertical', spacing: 'none', margin: 'md', contents: [
+      { type: 'box', layout: 'horizontal', contents: [
+        { type: 'text', text: model.name || '餐點', size: 'sm', weight: 'bold', color: '#1E293B', flex: 1, wrap: true },
+        { type: 'text', text: `×${model.quantity}`, size: 'sm', weight: 'bold', color: '#64748B', flex: 0, margin: 'sm' },
+        ...(price ? [{ type: 'text', text: `${price.unit ? LineOrderPresentation.labels(locale).unit + ' ' : ''}$${price.amount}`,
+          size: 'sm', weight: 'bold', color: '#0F172A', align: 'end', flex: 0, margin: 'sm', wrap: true }] : [])
+      ] },
+      ...LineOrderPresentation.flex(model, locale)
+    ]
+  };
+}
 
 export function buildOrderFlexMessage(
   order: Order,
@@ -65,257 +82,34 @@ export function buildOrderFlexMessage(
   const uniqueFlavors = structured ? flavorPills : Array.from(new Set(flavorPills.filter(Boolean)));
   const uniqueExtras = structured ? extraPills : Array.from(new Set(extraPills.filter(Boolean)));
 
-  // Format Items in a clean POS Table
   const itemComponents: any[] = [];
-  const rawItems: OrderItemInput[] = Array.isArray(items) && items.length > 0 ? items : [];
-  if (structured) for (const r of order.detailSnapshot!.rounds) {
-    if (r.legacyContent !== undefined) itemComponents.push({ type: 'text', text: r.legacyContent || '—', wrap: true, size: 'sm' });
-  }
-
-  if (rawItems.length > 0) {
-    let itemsSubtotalSum = 0;
-    let bundleCategoryName = '';
-
-    rawItems.slice(0, 30).forEach((it, idx) => {
-      const itQty = Number(it.quantity) || 1;
-      const itPrice = Number(it.price || it.unit_price) || 0;
-      const itSubtotal = Number(it.subtotal) || (itPrice * itQty);
-      const itName = it.name || "餐點";
-      itemsSubtotalSum += itSubtotal;
-
-      const catName = it.category || it.category_name || '';
-      if (catName && (catName.includes('蔬菜') || catName.includes('配菜') || catName.includes('小菜') || catName.includes('組合'))) {
-        bundleCategoryName = catName.split(' ')[0];
-      }
-
-      // Parse options / modifiers
-      const optionTexts: string[] = [];
-      const opts = it.options || it.selected_options;
-      if (Array.isArray(opts)) {
-        opts.forEach((o: any) => {
-          if (typeof o === 'string' && o.trim()) {
-            optionTexts.push(o.trim());
-          } else if (o && typeof o === 'object') {
-            const optName = o.choice || o.name || "";
-            const optPrice = Number(o.price) || 0;
-            if (optName) {
-              optionTexts.push(optPrice > 0 ? `${optName} (+$${optPrice})` : optName);
-            }
-          }
-        });
-      } else if (typeof opts === 'string' && opts.trim()) {
-        try {
-          const parsed = JSON.parse(opts);
-          if (Array.isArray(parsed)) {
-            parsed.forEach((o: any) => {
-              const optName = typeof o === 'string' ? o : (o.choice || o.name || "");
-              const optPrice = Number(o.price) || 0;
-              if (optName) optionTexts.push(optPrice > 0 ? `${optName} (+$${optPrice})` : optName);
-            });
-          }
-        } catch {
-          optionTexts.push(opts.trim());
-        }
-      }
-
-      const itemNote = structured ? it.note : remainingItemNote(opts, it.note || it.notes);
-      if (itemNote) optionTexts.push(itemNote);
-
-      const isVi = (order.content || "").includes("Đợt") || (order.content || "").includes("Bàn số") || (order.content || "").includes("Mang về");
-
-      // Parse bundle selections
-      const rawBundle = it.bundleSelections || it.bundle_snapshot_json;
-      let bundlePortions: any[] = [];
-      if (rawBundle) {
-        try {
-          const bData = typeof rawBundle === 'string' ? JSON.parse(rawBundle) : rawBundle;
-          bundlePortions = bData.portions || (Array.isArray(bData) ? (bData[0]?.groups ? bData : [{ groups: bData }]) : []);
-        } catch (e) {
-          console.warn("[buildOrderFlexMessage] Failed to parse bundle:", e);
-        }
-      }
-
-      const itemBoxContents: any[] = [
-        {
-          type: "box",
-          layout: "horizontal",
-          alignItems: "center",
-          contents: [
-            {
-              type: "text",
-              text: itName,
-              size: "sm",
-              weight: "bold",
-              color: "#1E293B",
-              flex: 1,
-              wrap: true
-            },
-            {
-              type: "text",
-              text: `x${itQty}`,
-              size: "sm",
-              color: "#64748B",
-              flex: 0,
-              margin: "md"
-            },
-            {
-              type: "text",
-              text: `$${itSubtotal}`,
-              size: "sm",
-              weight: "bold",
-              color: "#0F172A",
-              align: "end",
-              flex: 0,
-              margin: "md"
-            }
-          ]
-        }
-      ];
-
-      if (bundlePortions.length > 0) {
-        const bundleRows: any[] = [];
-        bundlePortions.forEach((p: any, pIdx: number) => {
-          const pNum = typeof p.portionIndex === 'number' ? p.portionIndex + 1 : pIdx + 1;
-          const pPrefix = bundlePortions.length > 1 ? (isVi ? `Phần ${pNum}: ` : `第${pNum}份 `) : '';
-          const groups = p.groups || [];
-          groups.forEach((g: any) => {
-            const groupName = g.groupName || g.group_name || (isVi ? 'Món kèm' : '搭配');
-            (g.items || []).forEach((bi: any) => {
-              const bName = bi.name || bi.item_name || '';
-              const bQty = Number(bi.quantity) || 1;
-              const bSur = Number(bi.surcharge || 0) + (bi.modifiers || []).reduce((sum: number, mod: any) => sum + Number(mod.price || 0), 0);
-              const modNames = (bi.modifiers || []).map((mod: any) => mod.name).filter(Boolean).join('、');
-              const label = `${pPrefix}${groupName}`;
-              
-              bundleRows.push({
-                type: "box",
-                layout: "horizontal",
-                alignItems: "center",
-                contents: [
-                  {
-                    type: "text",
-                    text: label,
-                    size: "xxs",
-                    color: "#64748B",
-                    flex: 2,
-                    wrap: true
-                  },
-                  {
-                    type: "text",
-                    text: `${bName} x${bQty}${modNames ? ` (${modNames})` : ''}`,
-                    size: "xs",
-                    color: "#1E293B",
-                    weight: "bold",
-                    flex: 3,
-                    wrap: true
-                  },
-                  {
-                    type: "text",
-                    text: bSur > 0 ? `+$${bSur * bQty}` : " ",
-                    size: "xs",
-                    color: bSur > 0 ? "#0F172A" : "#64748B",
-                    align: "end",
-                    flex: 1
-                  }
-                ]
-              });
-            });
-          });
-        });
-
-        if (bundleRows.length > 0) {
-          itemBoxContents.push({
-            type: "box",
-            layout: "vertical",
-            spacing: "xs",
-            backgroundColor: "#F8FAFC",
-            cornerRadius: "md",
-            paddingAll: "8px",
-            margin: "xs",
-            contents: bundleRows
-          });
-        }
-      }
-
-      if (optionTexts.length > 0) {
-        itemBoxContents.push({
-          type: "text",
-          text: `↳ ${optionTexts.join("、")}`,
-          size: "xs",
-          color: "#64748B",
-          wrap: true,
-          margin: "xs"
-        });
-      }
-
-      itemComponents.push({
-        type: "box",
-        layout: "vertical",
-        spacing: "none",
-        margin: idx > 0 ? "md" : "none",
-        contents: itemBoxContents
-      });
-    });
-
-    const parsedTotal = Number(order.total) || 0;
-    if (parsedTotal > 0 && itemsSubtotalSum > parsedTotal) {
-      const discountAmount = itemsSubtotalSum - parsedTotal;
-      const discountLabel = bundleCategoryName ? `${bundleCategoryName} 組合特惠` : "組合優惠折抵";
-      itemComponents.push({
-        type: "box",
-        layout: "horizontal",
-        alignItems: "center",
-        backgroundColor: "#ECFDF5",
-        cornerRadius: "md",
-        paddingAll: "6px",
-        margin: "md",
-        contents: [
-          {
-            type: "text",
-            text: `🏷️ ${discountLabel}`,
-            size: "xs",
-            weight: "bold",
-            color: "#059669",
-            flex: 1
-          },
-          {
-            type: "text",
-            text: `-$${discountAmount}`,
-            size: "xs",
-            weight: "bold",
-            color: "#059669",
-            align: "end",
-            flex: 0
-          }
-        ]
-      });
+  const rawItems = Array.isArray(items) ? items : [];
+  const locale = tenantCtx?.locale === 'vi' || (order.content || '').includes('Đợt') || (order.content || '').includes('Mang về') ? 'vi' : 'zh-TW';
+  if (structured) {
+    for (const round of order.detailSnapshot!.rounds) {
+      if (order.detailSnapshot!.rounds.length > 1) itemComponents.push({ type: 'text', text: `第 ${round.roundNumber} 輪`, size: 'sm', color: '#64748B', margin: 'md' });
+      if (round.legacyContent !== undefined) itemComponents.push({ type: 'text', text: round.legacyContent || '—', wrap: true, size: 'sm' });
+      else DetailView.lines({ schemaVersion: 1, rounds: [round] }).forEach((it: OrderItemInput) => itemComponents.push(renderReceiptItem(it, locale)));
     }
+  } else if (rawItems.length) {
+    rawItems.forEach(it => itemComponents.push(renderReceiptItem(it, locale)));
   } else {
-    LegacyOrderAdapter.receiptLines(order.content, itemNoteKey).slice(0, 30).forEach(({text: cleanLine, isOption}: any, idx: number) => {
-      if (isOption) {
-        itemComponents.push({
-          type: "text",
-          text: `↳ ${cleanLine}`,
-          size: "xs",
-          color: "#64748B",
-          wrap: true,
-          margin: "xs"
-        });
-      } else {
-        itemComponents.push({
-          type: "text",
-          text: cleanLine,
-          size: "sm",
-          weight: "bold",
-          color: "#1E293B",
-          wrap: true,
-          margin: idx > 0 ? "md" : "none"
-        });
-      }
+    LegacyOrderAdapter.receiptLines(order.content, itemNoteKey).forEach(({text, isOption}: any) => {
+      itemComponents.push({ type: 'text', text: text || '—', size: isOption ? 'xs' : 'sm',
+        weight: isOption ? 'regular' : 'bold', color: isOption ? '#64748B' : '#1E293B', wrap: true, margin: 'xs' });
     });
   }
+  // A snapshot discount is authoritative even when paid order-level choices change the total.
+  if (structured || (rawItems.length && rawItems.every(it => it.subtotal != null && Number.isFinite(Number(it.subtotal))))) {
+    const discount = structured ? order.detailSnapshot!.rounds.reduce((sum, round) => sum + Number(round.discount || 0), 0)
+      : Math.round((rawItems.reduce((sum, it) => sum + Number(it.subtotal), 0) - Number(order.total)) * 100) / 100;
+    if (discount > 0) itemComponents.push({ type: 'box', layout: 'horizontal', margin: 'md', contents: [
+      { type: 'text', text: '優惠折抵', size: 'xs', color: '#64748B', flex: 1 },
+      { type: 'text', text: `-$${discount}`, size: 'xs', color: '#059669', align: 'end', flex: 0 }
+    ] });
+  }
 
-  return {
+  return LineOrderPresentation.paginate({
     type: "bubble",
     size: "kilo",
     body: {
@@ -461,7 +255,7 @@ export function buildOrderFlexMessage(
         return buttons;
       })()
     }
-  };
+  }, itemComponents);
 }
 
 export function buildProgressFlexMessage(order: Order, queueAheadCount: number, tenantCtx?: TenantContext | null): any {
@@ -614,7 +408,8 @@ export function buildAppendConfirmationFlexMessage(
   newItemsText: string,
   addedAmount: number,
   roundNumber: number,
-  tenantCtx?: TenantContext | null
+  tenantCtx?: TenantContext | null,
+  items?: OrderItemInput[]
 ): any {
   let rawTable = (order.tableNumber || "").trim();
   if (!rawTable || rawTable === "-") {
@@ -634,7 +429,7 @@ export function buildAppendConfirmationFlexMessage(
   const displayTable = rawTable || "-";
 
   const contentLines = (newItemsText || "").split("\n").filter(l => l.trim().length > 0);
-  const contentComponents = contentLines.slice(0, 30).map(line => {
+  const contentComponents = items?.length ? items.map(it => renderReceiptItem(it, tenantCtx?.locale === 'vi' ? 'vi' : 'zh-TW')) : contentLines.map(line => {
     const isOption = line.startsWith("↳") || line.startsWith("-") || line.startsWith("+") || line.startsWith("  ");
     return {
       type: "text",
@@ -649,7 +444,7 @@ export function buildAppendConfirmationFlexMessage(
   const liffBaseUrl = tenantCtx?.liffUrl || (tenantCtx?.liffId ? `https://liff.line.me/${tenantCtx.liffId}` : "https://liff.line.me/");
   const tenantId = tenantCtx?.tenantId || "benmi";
 
-  return {
+  return LineOrderPresentation.paginate({
     type: "bubble",
     size: "kilo",
     body: {
@@ -745,5 +540,5 @@ export function buildAppendConfirmationFlexMessage(
         }
       ]
     }
-  };
+  }, contentComponents);
 }

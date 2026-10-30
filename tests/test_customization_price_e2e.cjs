@@ -79,6 +79,7 @@ const files = [
   'js/client-menu.js',
   'js/client-customizations.js',
   'js/client-cart.js',
+  'js/line-order-presentation.js',
   'js/client-checkout.js'
 ];
 
@@ -236,8 +237,8 @@ assert.strictEqual(multiStructured[0].quantity, 2);
 assert.strictEqual(multiStructured[0].subtotal, 195, `item.subtotal for 2 qty should be 195, got ${multiStructured[0].subtotal}`);
 
 const multiText = context.window.formatOrderTextMessage('A02', '2026-09-26', '12:00', multiPortionTotal, '');
-assert.ok(multiText.includes('↳ 第一份: 加起司 (+$15)'), `Must format portion 1 with cheese: ${multiText}`);
-assert.ok(multiText.includes('↳ 第二份: 加火腿 (+$20)'), `Must format portion 2 with ham: ${multiText}`);
+assert.ok(multiText.includes('第 1 份:') && multiText.indexOf('加起司 (+$15)') < multiText.indexOf('第 2 份:'), `Cheese belongs to portion 1: ${multiText}`);
+assert.ok(multiText.includes('第 2 份:') && multiText.indexOf('加火腿 (+$20)') > multiText.indexOf('第 2 份:'), `Ham belongs to portion 2: ${multiText}`);
 assert.ok(multiText.includes('總金額：$195'), `Total must be 195: ${multiText}`);
 console.log('✅ 6. Multi-portion test passed (Total: $195)');
 

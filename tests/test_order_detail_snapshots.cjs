@@ -93,3 +93,36 @@ test('cross-tenant products and retired tenants cannot write',async()=>{
   assert.notEqual((await write(f,input())).status,200);
   assert.equal(f.db.prepare('SELECT count(*) n FROM orders').get().n,0);
 });
+
+test('create append and modify persist scoped portion receipt payloads with unchanged order totals', async () => {
+  const f = fixture();
+  const userId = 'U' + '7'.repeat(32);
+  const first = await ok(f, input({ userId, total: 200, items: [{ itemId: 'a_main', quantity: 2, portionNotes: ['First portion', 'Second portion'] }] }));
+  const receipt = result => JSON.parse(f.db.prepare('SELECT contents_json FROM line_order_receipts WHERE id = ?').get(result.notification.id).contents_json);
+  const firstPayload = JSON.stringify(receipt(first));
+  assert(firstPayload.includes('第 1 份'));
+  assert(firstPayload.includes('第 2 份'));
+  assert.equal(firstPayload.split('First portion').length - 1, 1);
+  assert.equal(first.total, 200);
+  const added = await ok(f, input({ parent_order_key: first.key, expectedDetailRevision: 1, userId, total: 200,
+    items: [{ itemId: 'a_main', quantity: 2, portionNotes: ['Added first', 'Added second'] }] }), 'append');
+  const addedPayload = JSON.stringify(receipt(added));
+  assert(addedPayload.includes('Added first'));
+  assert(!addedPayload.includes('First portion'));
+  assert.equal(added.total, 400);
+  f.db.prepare("UPDATE orders SET status = 'WAITING_CUSTOMER_CHANGE' WHERE key = ?").run(first.key);
+  const line = added.detailSnapshot.rounds[1].items[0];
+  const changed = await ok(f, input({ order_key: first.key, expectedDetailRevision: 2, targetRound: 2, userId, total: 200,
+    items: [{ lineId: line.lineId, itemId: 'a_main', quantity: 2, portionNotes: ['Changed first', 'Added second'] }] }), 'modify');
+  const changedPayload = JSON.stringify(receipt(changed));
+  assert(changedPayload.includes('First portion'));
+  assert(changedPayload.includes('Changed first'));
+  assert(!changedPayload.includes('Added first'));
+  assert.equal(changed.total, 400);
+  assert.deepEqual(changed.detailSnapshot.rounds[0], first.detailSnapshot.rounds[0]);
+  f.db.prepare("UPDATE menu_items SET name = 'New catalog name', price = 999 WHERE id = 'a_main'").run();
+  const old = await readDetail(f.env, 'a', first.key);
+  assert.equal(old.snapshot.rounds[0].items[0].name, 'Meal');
+  assert.equal(old.snapshot.rounds[0].items[0].unitPrice, 100);
+  assert.equal(JSON.stringify(receipt(first)), firstPayload);
+});

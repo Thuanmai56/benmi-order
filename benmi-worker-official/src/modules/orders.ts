@@ -836,7 +836,7 @@ export async function executeAppendOrderInternal(
 
   const receipt = await prepareOrderReceipt(env, tenantId, parentKey, updatedOrder.userId, 'append',
     `[${tenantCtx?.brandName || "Benmi"}] 現場加點確認 (第 ${nextRound} 輪)`,
-    buildAppendConfirmationFlexMessage(updatedOrder, appendedContent, appendedTotal, nextRound, tenantCtx));
+    buildAppendConfirmationFlexMessage(updatedOrder, appendedContent, appendedTotal, nextRound, tenantCtx, rawItems));
 
   // 6. Persist to D1: Luôn chuyển trạng thái về NEW khi gọi thêm món để POS hiển thị ở cột Mới và phát chuông báo
   if (rawItems.length > 0) {
@@ -1899,7 +1899,7 @@ export async function modifyOrder(
 
     const receipt = await prepareOrderReceipt(env, tenantId, resolvedKey, orderRow.user_id, 'modify',
       `[${tenantCtx?.brandName || "Benmi"}] 訂單品項已成功更換 #${orderRow.display_key || resolvedKey}`,
-      createOrderModifiedConfirmationFlexBubble(resolvedKey, newTotal, deltaAmount, tenantCtx?.brandName || "Benmi", orderRow.display_key));
+      createOrderModifiedConfirmationFlexBubble(resolvedKey, newTotal, deltaAmount, tenantCtx?.brandName || "Benmi", orderRow.display_key, rawItems));
 
     // 4. Atomic D1 Batch: Update orders, delete old order_items & insert new ones, delete pending_actions
     const batchStatements: any[] = [

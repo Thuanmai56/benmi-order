@@ -21,6 +21,7 @@
     "test:smoke:staging": "node scripts/smoke-test-live-worker.mjs --env staging",
     "test:order-identity": "node tests/test_order_identity.cjs",
     "test:line-order-receipts": "node --test scripts/test-line-order-receipts.cjs",
+    "test:line-order-layout": "node --test tests/test_line_order_layout.cjs tests/test_order_item_note_dedup.cjs tests/test_bundle_display_all_touchpoints.cjs tests/test_item_customization_note.cjs tests/test_customization_price_e2e.cjs",
     "test:liff-message-retry": "node --test scripts/test-liff-message-retry.cjs",
     "test:pos-reliability": "node --test tests/test_pos_polling_timeout.cjs tests/test_order_identity_print.cjs",
     "test:pos-display": "node tests/test_pos_display.cjs",

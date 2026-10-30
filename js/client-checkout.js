@@ -78,6 +78,10 @@ async function sendOrderConfirmation(messages, context, notification, diagnostic
     }
     const trackedMessages = notification?.id ? messages.map(message => message.type === 'text'
         ? { ...message, text: `${message.text}\n確認參考：${notification.id}` } : message) : messages;
+    if (notification?.id && trackedMessages.some(message => message.type === 'text' && message.text.length > 5000)) {
+        await requestOrderConfirmationPush(notification, context.tenantId);
+        return;
+    }
     try {
         await sendLiffMessagesWithRetry(trackedMessages, { ...context, diagnostic });
     } catch (_) {
@@ -1029,7 +1033,7 @@ function resolveOptionDisplayName(val) {
 }
 
 // 8.1 Định dạng nội dung tin nhắn đơn hàng
-function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, mainNote) {
+function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, mainNote, canonical = false) {
     const zhNumbers = ['第一份', '第二份', '第三份', '第四份', '第五份', '第六份', '第七份', '第八份', '第九份', '第十份'];
     let msg = `訂單編號：${orderNum}\n\n`;
 
@@ -1040,8 +1044,9 @@ function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, ma
 
     msg += `📦 訂單內容：\n`;
 
-    const itemLines = [];
-    for (let key in cart) {
+    const presentation = !canonical && typeof LineOrderPresentation !== 'undefined' ? LineOrderPresentation : null;
+    const itemLines = presentation ? buildStructuredCartItems().map(it => presentation.text(presentation.item(it), 'zh-TW')) : [];
+    if (!presentation) for (let key in cart) {
         if (cart[key] > 0) {
             if (typeof isItemOutOfStock === 'function' && isItemOutOfStock(key)) continue;
             const itemInfo = resolveCatalogItem(key);
@@ -1148,7 +1153,7 @@ function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, ma
             itemLines.push(itemStr);
         }
     }
-    msg += itemLines.join('\n') + '\n\n';
+    msg += itemLines.join(presentation ? '\n\n' : '\n') + '\n\n';
 
     const isDineIn = (window.currentDiningOption === 'dine_in');
     const tableInput = document.getElementById('dinein-table-number');
@@ -1175,11 +1180,14 @@ function formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, ma
 }
 
 // 8.2 Định dạng danh sách món cho luồng Gọi thêm (không kèm tiền tổng hoặc mã đơn ảo)
-function formatAppendItemsOnlyText() {
+function formatAppendItemsOnlyText(canonical = false) {
     const lines = [];
     const globalFlavor = formatGlobalCustomizationsText();
     if (globalFlavor) {
         lines.push(globalFlavor.trim());
+    }
+    if (!canonical && typeof LineOrderPresentation !== 'undefined') {
+        return lines.concat(buildStructuredCartItems().map(it => LineOrderPresentation.text(LineOrderPresentation.item(it), 'zh-TW'))).join('\n\n');
     }
     for (let key in cart) {
         if (cart[key] > 0) {
@@ -2117,7 +2125,8 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
 
         // 10.1 Xử lý riêng cho luồng 加點餐點 (Append Mode)
         if (window.isAppendMode && window.parentOrderKey) {
-            const rawItemsText = formatAppendItemsOnlyText();
+            const rawItemsText = formatAppendItemsOnlyText(true);
+            const displayItemsText = formatAppendItemsOnlyText();
             const currentTable = (tableInput && tableInput.value.trim()) || window.appendTableNumber || window.currentTableNumber || '';
             const appendPayload = {
                 parent_order_key: window.parentOrderKey,
@@ -2213,7 +2222,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
 
             const tablePart = currentTable ? `\n桌號：${currentTable}` : '';
             const notePart = mainNote ? `\n📝 備註：${mainNote}` : '';
-            const appendChatMsg = `[加點 #${window.parentOrderDisplayKey || ""}]\n訂單參考：${window.parentOrderKey}${tablePart}\n現場加點品項：\n${rawItemsText}${notePart}\n\n💰 加點金額：+$${currentTotal}`;
+            const appendChatMsg = `[加點 #${window.parentOrderDisplayKey || ""}]\n訂單參考：${window.parentOrderKey}${tablePart}\n現場加點品項：\n${displayItemsText}${notePart}\n\n💰 加點金額：+$${currentTotal}`;
 
             cart = {};
             window.cart = cart;
@@ -2396,7 +2405,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
             time: `${dateInput} ${timeInput}`,
             dining_option: diningOption,
             table_number: tableNumber || undefined,
-            content: msg.split('\n\n🕒')[0].replace(/\[.*?點餐\]\n/g, '').replace('[Benmi 點餐]\n', ''),
+            content: formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, mainNote, true).split('\n\n🕒')[0].replace(/\[.*?點餐\]\n/g, '').replace('[Benmi 點餐]\n', ''),
             total: currentTotal,
             note: mainNote,
             tenant_id: tenantId,
@@ -2607,14 +2616,14 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
 
             if (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient() && typeof liff.sendMessages === 'function') {
                 if (window.isEditOrderMode && window.editOrderKey) {
-                    const rawItemsText = typeof formatAppendItemsOnlyText === 'function' ? formatAppendItemsOnlyText() : '';
+                    const rawItemsText = typeof formatAppendItemsOnlyText === 'function' ? formatAppendItemsOnlyText(true) : '';
                     const notePart = mainNote ? `\n📝 備註：${mainNote}` : '';
                     const editChatMsg = `[更換品項 #${window.editOrderDisplayKey || window.editOrderKey || ""}]\n訂單參考：${window.editOrderKey || ""}\n\n📦 更新後餐點內容：\n${rawItemsText}${notePart}\n\n💰 更新後金額：$${currentTotal}`;
                     await sendLiffMessagesWithRetry([{ type: 'text', text: editChatMsg }], {
                         tenantId, orderKey: window.editOrderKey, flow: 'modify_fallback'
                     });
                 } else if (window.isAppendMode && window.parentOrderKey) {
-                    const rawItemsText = formatAppendItemsOnlyText();
+                    const rawItemsText = formatAppendItemsOnlyText(true);
                     const tableInput = document.getElementById('dinein-table-number');
                     const currentTable = (tableInput && tableInput.value.trim()) || window.appendTableNumber || window.currentTableNumber || '';
                     const tablePart = currentTable ? `\n桌號：${currentTable}` : '';
@@ -2627,7 +2636,7 @@ async function doSubmitOrderExecution(dateInput, timeInput) {
                     const isDineIn = (window.currentDiningOption === 'dine_in');
                     const diningOption = isDineIn ? 'dine_in' : 'takeaway';
                     const orderNum = generateOrderNumber(diningOption);
-                    const msg = formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, mainNote);
+                    const msg = formatOrderTextMessage(orderNum, dateInput, timeInput, currentTotal, mainNote, true);
                     await sendLiffMessagesWithRetry([{ type: 'text', text: msg }], {
                         tenantId, orderKey: orderNum, flow: 'create_fallback'
                     });

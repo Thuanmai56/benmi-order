@@ -1,4 +1,4 @@
-import { handleOrderReceiptWebhook } from './line-order-receipts';
+import { handleOrderReceiptWebhook, handleOrderReceiptPageWebhook, prepareOrderReceipt, deliverOrderReceipt } from './line-order-receipts';
 import { resolveOrderKey, findOrderForCustomer, isOrderId } from './order-identity';
 import { Env } from '../types/env';
 import { TenantContext, resolveTenantOrderPrefix, generateStandardOrderId } from '../types/tenant';
@@ -477,6 +477,7 @@ export async function handleLineWebhook(
     // 0.1) Handle postback events (e.g. Progress Check, Reject/Change Agree/Disagree button taps)
     if (event.type === "postback") {
       const dataStr = event.postback?.data || "";
+      if (await handleOrderReceiptPageWebhook(env, tenantCtx, userId, dataStr, replyToken)) continue;
       console.log(`[${brandName}] [LINE Postback] userId=${userId} data=${dataStr}`);
 
       if (dataStr.includes("action=check_progress")) {
@@ -783,7 +784,15 @@ export async function handleLineWebhook(
             tenantCtx
           );
 
-          await replyLineFlexMessage(replyToken, `現場加點 (第 ${order.roundCount} 輪) #${order.displayKey || order.key}`, flexBubble, env, tenantCtx);
+          const altText = `現場加點 (第 ${order.roundCount} 輪) #${order.displayKey || order.key}`;
+          if (flexBubble.type === 'receipt-pages' && tenantCtx) {
+            // Very large legacy append receipts also need stored, recipient-bound continuation pages.
+            const receipt = await prepareOrderReceipt(env, tenantId, order.key, userId, 'append', altText, flexBubble);
+            if (receipt) {
+              await receipt.statement.run();
+              await deliverOrderReceipt(env, receipt.notification.id, tenantCtx, replyToken);
+            }
+          } else await replyLineFlexMessage(replyToken, altText, flexBubble, env, tenantCtx);
         }
       }
       continue;

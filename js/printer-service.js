@@ -630,7 +630,10 @@
 
       if (typeof value === 'string') {
         try {
-          return this.formatPrintOptions(JSON.parse(value));
+          const parsed = JSON.parse(value);
+          if (Array.isArray(parsed)) return this.formatPrintOptions(parsed);
+          // JSON scalar strings/numbers can be the literal display name of an option.
+          return resolveText(this.stripPrintOptionSurcharges(value));
         } catch {
           const stripped = this.stripPrintOptionSurcharges(value);
           const parts = stripped.split(/[、,，]+/).map(s => resolveText(s.trim())).filter(Boolean);
